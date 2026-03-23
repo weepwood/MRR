@@ -156,7 +156,7 @@ import { useRoute } from 'vue-router'
 // Element Plus 组件导入
 import { ElMessage, ElMessageBox } from 'element-plus'
 // API 工具函数导入
-import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType, getBAHByEncryptID } from '@/utils/api'
+import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
 
 // ==================== 组件属性定义 ====================
 const props = defineProps({
@@ -354,7 +354,7 @@ const searchByIdCard = async () => {
   if (!searchIdCard.value) { idSearchResults.value = []; return }
   idSearchLoading.value = true
   try {
-    const res = await getBAHByEncryptID(searchIdCard.value, userId.value, iv.value, timestamp.value)
+    const res = await getBAHByIdCard(searchIdCard.value)
     if (res.data && res.data.code === 200) {
       idSearchResults.value = Array.isArray(res.data.data) ? res.data.data : []
       // 默认选中病案号区间在startBah 和 endBah之间的第一条记录
@@ -751,15 +751,15 @@ const setupThumbObserver = () => {
  * 从 URL 中获取加密身份证号
  * @returns {string} 加密身份证号
  */
-const getEncryptedIdCardFromUrl = () => {
+const getIdCardFromUrl = () => {
   try {
     const params = new URLSearchParams(window.location.search)
-    const v = params.get('encryptedIdCard') || params.get('encryptedId') || params.get('id')
+    const v = params.get('idCard') || params.get('idcard') || params.get('id')
     if (v) return v
     const segments = (window.location.pathname || '').split('/').filter(Boolean)
     const last = segments[segments.length - 1] || ''
     // 支持加密身份证号格式（通常比普通身份证号更长）
-    if (last && last.length > 18) return last
+    if (/^[0-9Xx]{15,18}$/.test(last)) return last
   } catch (e) {}
   return ''
 }
@@ -770,8 +770,7 @@ const getEncryptedIdCardFromUrl = () => {
  */
 onMounted(async () => {
   // 优先使用加密身份证号，然后使用普通身份证号
-  const urlEncryptedIdCard = props.encryptedIdCard || getEncryptedIdCardFromUrl()
-  const urlIdCard = props.idCard
+  const urlIdCard = props.idCard || getIdCardFromUrl()
   
   try { const saved = localStorage.getItem(LAYOUT_MODE_KEY); const allowed = new Set(['grid-1','grid-2','grid-3']); if (saved && allowed.has(saved)) { thumbsLayoutMode.value = saved } } catch (e) {}
   applyThumbsLayout()
@@ -790,11 +789,7 @@ onMounted(async () => {
   } catch (e) {}
   
   // 优先使用加密身份证号进行搜索
-  if (urlEncryptedIdCard) {
-    searchIdCard.value = String(urlEncryptedIdCard)
-    await searchByIdCard()
-    if (idSearchResults.value.length === 1) { selectRecord(idSearchResults.value[0]); return }
-  } else if (urlIdCard) {
+  if (urlIdCard) {
     searchIdCard.value = String(urlIdCard)
     await searchByIdCard()
     if (idSearchResults.value.length === 1) { selectRecord(idSearchResults.value[0]); return }
@@ -830,22 +825,13 @@ watch(filteredImages, async () => {
  */
 watch(thumbsLayoutMode, (mode) => { try { localStorage.setItem(LAYOUT_MODE_KEY, mode) } catch (e) {} })
 
-/**
- * 监听路由参数 encryptedIdCard 变化
- */
-watch(() => props.encryptedIdCard, async (newEncryptedId) => {
-  if (newEncryptedId && typeof newEncryptedId === 'string') {
-    searchIdCard.value = String(newEncryptedId)
-    await searchByIdCard()
-    if (idSearchResults.value.length === 1) selectRecord(idSearchResults.value[0])
-  }
-})
+// encryptedIdCard 链路暂不使用，保留 props 仅做兼容占位
 
 /**
  * 监听路由参数 idCard 变化（备用）
  */
 watch(() => props.idCard, async (newId) => {
-  if (newId && typeof newId === 'string' && !props.encryptedIdCard) {
+  if (newId && typeof newId === 'string') {
     searchIdCard.value = String(newId)
     await searchByIdCard()
     if (idSearchResults.value.length === 1) selectRecord(idSearchResults.value[0])

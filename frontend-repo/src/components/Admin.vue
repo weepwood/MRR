@@ -256,29 +256,7 @@ const handleLogout = () => {
   border-radius: 18px 18px 0 0;
 }
 
-.feature-card.dashboard::before {
-  background: linear-gradient(90deg, #667eea, #764ba2);
-}
-
-.feature-card.user::before {
-  background: linear-gradient(90deg, #f093fb, #f5576c);
-}
-
-.feature-card.statistics::before {
-  background: linear-gradient(90deg, #34c759, #28a745);
-}
-
-.feature-card.docs::before {
-  background: linear-gradient(90deg, #ff9500, #ff6a00);
-}
-
-.feature-card.record::before {
-  background: linear-gradient(90deg, #4facfe, #00f2fe);
-}
-
-.feature-card.setting::before {
-  background: linear-gradient(90deg, #ff9a9e, #fecfef);
-}
+/*  */
 
 .feature-icon {
   width: 56px;

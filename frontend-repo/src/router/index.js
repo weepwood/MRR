@@ -14,6 +14,14 @@ const IDTest = () => import('../components/IdCardTest.vue')
 const routes = [
   { path: '/', name: 'home', component: Login },
   { path: '/login', name: 'login', component: Login },
+  {
+    path: '/docs/:pathMatch(.*)*',
+    name: 'docs-redirect',
+    beforeEnter: () => {
+      window.location.href = '/docs/index.html'
+      return false
+    }
+  },
   { path: '/admin', name: 'admin', component: Admin, meta: { requiresAdmin: true } },
   { path: '/admin-dashboard', name: 'admin-dashboard', component: AdminDashboard, meta: { requiresAdmin: true } },
   { path: '/admin/statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } },

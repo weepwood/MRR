@@ -1,15 +1,29 @@
-# PMR 文档中心
+---
+layout: home
 
-这是项目的 VitePress 文档站点入口，用于统一维护产品说明、开发说明和部署说明。
+hero:
+  name: PMR 文档中心
+  text: 病案翻拍管理系统文档
+  tagline: 包含快速开始、部署指南、功能说明与维护参考
+  actions:
+    - theme: brand
+      text: 快速开始
+      link: /guide/getting-started
+    - theme: alt
+      text: 浏览功能文档
+      link: /guide/
 
-## 你现在可以做什么
+features:
+  - title: 快速上手
+    details: 提供开发环境准备、常用命令和本地调试流程，减少新成员接入成本。
+  - title: 功能说明
+    details: 按模块记录病案管理、统计、日志、监控等核心能力，便于培训与交接。
+  - title: 部署运维
+    details: 给出构建产物、部署路径、常见问题与发布检查清单，降低上线风险。
+---
 
-- 本地写文档并实时预览：`npm run docs:dev`
-- 构建静态文档站：`npm run docs:build`
-- 预览静态产物：`npm run docs:preview`
+## 使用建议
 
-## 建议维护方式
-
-- 新增说明文档时，优先放在 `docs/` 目录下。
-- 历史说明文档可逐步迁移到 `docs/reference/`。
-- 发布前执行一次 `npm run docs:build` 验证静态产物。
+1. 新成员先阅读 [快速开始](/guide/getting-started)。
+2. 日常开发按模块查阅 [指南](/guide/) 中的功能文档。
+3. 发布前执行 [构建与部署](/guide/deploy) 清单。

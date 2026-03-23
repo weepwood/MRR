@@ -177,8 +177,8 @@ const docsGenerators = [
     name: 'VitePress（已集成）',
     tag: '项目文档站',
     description: '项目已接入 VitePress，可将说明文档构建为静态网站并独立部署。',
-    note: '默认入口为 /docs/，本地可通过 npm run docs:dev 预览。',
-    url: '/docs/'
+    note: '默认入口为 /docs/index.html，本地可通过 npm run docs:dev 预览。',
+    url: '/docs/index.html'
   },
   {
     name: 'Docusaurus',

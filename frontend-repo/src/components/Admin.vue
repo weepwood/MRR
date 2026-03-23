@@ -113,7 +113,7 @@ const goToStatistics = () => {
 }
 
 const goToDocs = () => {
-  window.open('/docs/', '_blank', 'noopener,noreferrer')
+  window.open('/docs/index.html', '_blank', 'noopener,noreferrer')
 }
 
 const handleLogout = () => {

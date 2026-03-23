@@ -220,6 +220,41 @@
           </template>
           
           <div class="table-container">
+            <div class="list-search-bar">
+              <el-input
+                v-model="listSearchKeyword"
+                placeholder="搜索病案号 / 设备ID / 负责人 / 日期 / 类型"
+                clearable
+                class="search-item keyword"
+                @keyup.enter="handleListSearch"
+              />
+              <el-select
+                v-model="listSearchType"
+                placeholder="全部类型"
+                clearable
+                class="search-item type"
+                @change="handleListSearch"
+              >
+                <el-option
+                  v-for="item in statisticsTypeOptions"
+                  :key="item"
+                  :label="item"
+                  :value="item"
+                />
+              </el-select>
+              <el-date-picker
+                v-model="listSearchDateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                value-format="YYYY-MM-DD"
+                class="search-item date"
+              />
+              <el-button type="primary" :icon="Search" @click="handleListSearch">搜索</el-button>
+              <el-button :icon="Delete" @click="resetListSearch">重置</el-button>
+            </div>
+
             <el-table 
               :data="statisticsListData.list" 
               style="width: 100%"
@@ -298,7 +333,9 @@ import {
   Grid, 
   TrendCharts, 
   PieChart,
-  Star
+  Star,
+  Search,
+  Delete
 } from '@element-plus/icons-vue'
 import { getStatisticsSummary, getStatisticsDateSummary, getDashboardData, getStatisticsList } from '@/utils/api'
 
@@ -342,6 +379,16 @@ const statisticsListData = ref({
 // 分页配置
 const currentPage = ref(1)
 const pageSize = ref(100)
+const listSearchKeyword = ref('')
+const listSearchType = ref('')
+const listSearchDateRange = ref([])
+
+const statisticsTypeOptions = computed(() => {
+  const source = summaryData.value?.byType || []
+  return source
+    .map(item => item?.type)
+    .filter(item => item && item !== 'NULL')
+})
 
 // 图表系列显示控制
 const showBarSeries = ref(true) // 控制柱状图显示
@@ -647,7 +694,22 @@ const getAreaPath = (points) => {
 const loadStatisticsList = async () => {
   loading.value = true
   try {
-    const response = await getStatisticsList(currentPage.value, pageSize.value)
+    const params = {
+      page: currentPage.value,
+      size: pageSize.value
+    }
+    if (listSearchKeyword.value.trim()) {
+      params.keyword = listSearchKeyword.value.trim()
+    }
+    if (listSearchType.value) {
+      params.type = listSearchType.value
+    }
+    if (Array.isArray(listSearchDateRange.value) && listSearchDateRange.value.length === 2) {
+      params.startDate = listSearchDateRange.value[0]
+      params.endDate = listSearchDateRange.value[1]
+    }
+
+    const response = await getStatisticsList(params)
     
     if (response.data && response.data.code === 200) {
       statisticsListData.value = response.data.data || {}
@@ -667,6 +729,19 @@ const loadStatisticsList = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleListSearch = () => {
+  currentPage.value = 1
+  loadStatisticsList()
+}
+
+const resetListSearch = () => {
+  listSearchKeyword.value = ''
+  listSearchType.value = ''
+  listSearchDateRange.value = []
+  currentPage.value = 1
+  loadStatisticsList()
 }
 
 // 处理分页大小变化
@@ -1198,6 +1273,26 @@ onUnmounted(() => {
   overflow-x: auto;
 }
 
+.list-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.search-item.keyword {
+  width: 320px;
+}
+
+.search-item.type {
+  width: 160px;
+}
+
+.search-item.date {
+  width: 320px;
+}
+
 .bah-code-link {
   color: #0071e3;
   font-weight: 600;
@@ -1258,6 +1353,17 @@ onUnmounted(() => {
 
   .chart-container {
     overflow-x: scroll;
+  }
+
+  .list-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-item.keyword,
+  .search-item.type,
+  .search-item.date {
+    width: 100%;
   }
   
   /* 表格移动端适配 */

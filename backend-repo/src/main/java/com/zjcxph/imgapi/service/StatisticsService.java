@@ -14,9 +14,11 @@ public interface StatisticsService {
 
     // 查询所有统计数据（带分页）
     List<Statistics> findAllWithPagination(int page, int size);
+    List<Statistics> findWithConditionAndPagination(int page, int size, String keyword, String type, String startDate, String endDate);
 
     // 获取总记录数
     Long getTotalCount();
+    Long getTotalCountByCondition(String keyword, String type, String startDate, String endDate);
 
     // 根据病案号查询
     List<Statistics> findByBah(String bah);

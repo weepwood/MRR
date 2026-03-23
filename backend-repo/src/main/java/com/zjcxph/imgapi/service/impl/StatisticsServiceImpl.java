@@ -33,8 +33,19 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
+    public List<Statistics> findWithConditionAndPagination(int page, int size, String keyword, String type, String startDate, String endDate) {
+        int offset = (page - 1) * size;
+        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, type, startDate, endDate);
+    }
+
+    @Override
     public Long getTotalCount() {
         return statisticsMapper.getTotalCount();
+    }
+
+    @Override
+    public Long getTotalCountByCondition(String keyword, String type, String startDate, String endDate) {
+        return statisticsMapper.getTotalCountByCondition(keyword, type, startDate, endDate);
     }
 
     @Override

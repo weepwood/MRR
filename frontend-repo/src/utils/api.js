@@ -213,13 +213,14 @@ export function getDashboardData() {
  * @param {number} size - 每页数量，默认 100
  * @returns {Promise} 返回 axios Promise
  */
-export function getStatisticsList(page = 1, size = 100) {
-    return authApi.get('/statistics-api', {
-        params: {
-            page,
-            size
-        }
-    })
+export function getStatisticsList(pageOrParams = 1, size = 100) {
+    let params
+    if (typeof pageOrParams === 'object' && pageOrParams !== null) {
+        params = { ...pageOrParams }
+    } else {
+        params = { page: pageOrParams, size }
+    }
+    return authApi.get('/statistics-api', { params })
 }
 
 /**

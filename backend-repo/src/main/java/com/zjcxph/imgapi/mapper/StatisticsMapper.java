@@ -21,9 +21,72 @@ public interface StatisticsMapper {
     @Select("SELECT * FROM mr_statistics ORDER BY date LIMIT #{limit} OFFSET #{offset}")
     List<Statistics> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
 
+    @Select("<script>" +
+            "SELECT * FROM mr_statistics " +
+            "<where>" +
+            "<if test='keyword != null and keyword != \"\"'>" +
+            "AND (" +
+            " bah LIKE '%' || #{keyword} || '%' " +
+            " OR cid LIKE '%' || #{keyword} || '%' " +
+            " OR openerno LIKE '%' || #{keyword} || '%' " +
+            " OR date LIKE '%' || #{keyword} || '%' " +
+            " OR type LIKE '%' || #{keyword} || '%' " +
+            ")" +
+            "</if>" +
+            "<if test='type != null and type != \"\"'>" +
+            "AND type = #{type}" +
+            "</if>" +
+            "<if test='startDate != null and startDate != \"\"'>" +
+            "AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
+            "</if>" +
+            "<if test='endDate != null and endDate != \"\"'>" +
+            "AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
+            "</if>" +
+            "</where>" +
+            "ORDER BY date DESC LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Statistics> findWithConditionAndPagination(
+            @Param("offset") int offset,
+            @Param("limit") int limit,
+            @Param("keyword") String keyword,
+            @Param("type") String type,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate
+    );
+
     // 获取总记录数
     @Select("SELECT COUNT(*) FROM mr_statistics")
     Long getTotalCount();
+
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM mr_statistics " +
+            "<where>" +
+            "<if test='keyword != null and keyword != \"\"'>" +
+            "AND (" +
+            " bah LIKE '%' || #{keyword} || '%' " +
+            " OR cid LIKE '%' || #{keyword} || '%' " +
+            " OR openerno LIKE '%' || #{keyword} || '%' " +
+            " OR date LIKE '%' || #{keyword} || '%' " +
+            " OR type LIKE '%' || #{keyword} || '%' " +
+            ")" +
+            "</if>" +
+            "<if test='type != null and type != \"\"'>" +
+            "AND type = #{type}" +
+            "</if>" +
+            "<if test='startDate != null and startDate != \"\"'>" +
+            "AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
+            "</if>" +
+            "<if test='endDate != null and endDate != \"\"'>" +
+            "AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
+            "</if>" +
+            "</where>" +
+            "</script>")
+    Long getTotalCountByCondition(
+            @Param("keyword") String keyword,
+            @Param("type") String type,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate
+    );
 
     // 根据病案号查询
     @Select("SELECT * FROM mr_statistics WHERE bah = #{bah} ORDER BY date")

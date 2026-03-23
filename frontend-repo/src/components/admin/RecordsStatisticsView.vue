@@ -259,6 +259,7 @@
               class="records-detail-table"
               :data="statisticsListData.list" 
               style="width: 100%"
+              table-layout="fixed"
               stripe
               v-loading="loading"
               :header-cell-class-name="'records-table-header-cell'"
@@ -268,27 +269,27 @@
             >
               <el-table-column type="index" label="序号" width="80" align="center" :index="computeTableIndex" />
               
-              <el-table-column prop="bah" label="病案号" min-width="120" sortable="custom">
+              <el-table-column prop="bah" label="病案号" min-width="120" sortable="custom" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span class="bah-code-link">{{ row.bah || '-' }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="cid" label="扫描设备ID" width="150" sortable="custom" align="center" />
+              <el-table-column prop="cid" label="扫描设备ID" width="150" sortable="custom" align="center" show-overflow-tooltip />
               
-              <el-table-column prop="openerNo" label="扫描负责人" width="150" sortable="custom">
+              <el-table-column prop="openerNo" label="扫描负责人" width="150" sortable="custom" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span>{{ row.openerNo === 'NULL' ? '-' : row.openerNo }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="date" label="日期" width="120" sortable="custom">
+              <el-table-column prop="date" label="日期" width="120" sortable="custom" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span>{{ formatDate(row.date) }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="type" label="类型" width="100" sortable="custom" align="center">
+              <el-table-column prop="type" label="类型" width="100" sortable="custom" align="center" show-overflow-tooltip>
                 <template #default="{ row }">
                   <el-tag size="small" :type="getTypeTagType(row.type)">
                     {{ row.type || '未知' }}
@@ -1299,6 +1300,8 @@ onUnmounted(() => {
 /* 表格容器 */
 .table-container {
   width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
   overflow-x: auto;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;

@@ -9,7 +9,6 @@ import AdminDashboard from '../components/AdminDashboard.vue'
 import RecordsStatisticsView from '../components/admin/RecordsStatisticsView.vue'
 import Test from '../components/Test.vue'
 import IDTest from '../components/IdCardTest.vue'
-import { el } from 'element-plus/es/locales.mjs'
 import { ElMessage } from 'element-plus'
 
 const routes = [

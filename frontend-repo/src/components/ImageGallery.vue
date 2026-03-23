@@ -289,19 +289,11 @@ onUnmounted(() => {
 
 // 显示消息提示
 const showToast = (type, title, description, showUndo = false) => {
-  console.log('showToast called with:', { type, title, description, showUndo }) // 调试日志
   toastType.value = type
   toastTitle.value = title
   toastDescription.value = description
   toastShowUndo.value = showUndo
   toastVisible.value = true
-  console.log('Toast state set to:', { // 调试日志
-    visible: toastVisible.value,
-    type: toastType.value,
-    title: toastTitle.value,
-    description: toastDescription.value,
-    showUndo: toastShowUndo.value
-  })
 }
 
 // 隐藏消息提示
@@ -699,7 +691,6 @@ const onKeyDown = (e) => {
 }
 
 const onSelectType = async (type) => {
-  console.log('onSelectType called with type:', type) // 调试日志
   
   // 保存之前的类型用于撤回
   previousType.value = selectedType.value
@@ -807,7 +798,6 @@ const downloadBahZip = async () => {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     
-    console.log(`下载成功，文件大小: ${(fileSize / 1024 / 1024).toFixed(2)} MB`)
   } catch (err) {
     console.error('下载失败:', err)
     

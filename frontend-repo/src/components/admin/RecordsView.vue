@@ -234,51 +234,34 @@ const loadData = async () => {
       params.keyword = searchKeyword.value.trim()
     }
     
-    console.log('🚀 请求参数:', params)
     const response = await getRecords(params)
-    console.log('📦 完整响应:', response)
-    console.log('📦 响应 data:', response.data)
     
     // 处理响应数据
     if (response.data && response.data.code === 200) {
       const responseData = response.data.data
-      console.log('💡 响应 data 字段内容:', responseData)
-      console.log('💡 数据类型:', Array.isArray(responseData) ? 'Array' : typeof responseData)
-      
       // 判断返回数据结构
       if (responseData && Array.isArray(responseData.records)) {
         // 如果是分页对象 { records: [], total: 100 }
-        console.log('✅ 检测到 records 格式')
         records.value = responseData.records
         total.value = responseData.total || responseData.records.length
-        console.log('📋 设置 records:', records.value)
       } else if (responseData && Array.isArray(responseData.list)) {
         // 如果是分页对象 { list: [], total: 100, page: 1, size: 10 }
-        console.log('✅ 检测到 list 格式，数据长度:', responseData.list.length)
         records.value = responseData.list
         total.value = responseData.total || responseData.list.length
-        console.log('📋 设置 records:', records.value)
       } else if (Array.isArray(responseData)) {
         // 如果直接是数组
-        console.log('✅ 检测到数组格式，数据长度:', responseData.length)
         records.value = responseData
         total.value = responseData.length
-        console.log('📋 设置 records:', records.value)
       } else if (responseData && typeof responseData === 'object') {
         // 如果是单个对象，转为数组
-        console.log('✅ 检测到对象格式，转换为数组')
         records.value = [responseData]
         total.value = 1
-        console.log('📋 设置 records:', records.value)
       } else {
         console.warn('⚠️ 未识别的数据格式:', responseData)
         ElMessage.warning('未获取到有效数据')
         records.value = []
         total.value = 0
       }
-      
-      console.log('🎯 最终渲染数据:', records.value)
-      console.log('🎯 数据长度:', records.value.length)
       
       if (records.value.length === 0) {
         ElMessage.info('暂无数据')

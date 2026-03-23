@@ -11,7 +11,6 @@ const count = ref(0)
 
 const handleGetImg = () => {
   getImgApiByBah('00789508').then(res => {
-    console.log(res)
   })
 }
 </script>

@@ -85,7 +85,6 @@ export default {
     },
     
     handleUndo() {
-      console.log('撤回操作被触发')
       // 这里可以添加撤回逻辑
       this.hideToast()
     }

@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+*.zip
+print_test.html
+test_multiselect_fix.html
 *.local
 
 # Editor directories and files

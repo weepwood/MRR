@@ -297,18 +297,15 @@ const loadPrintData = () => {
     const bahData = sessionStorage.getItem('printBah')
     const recordData = sessionStorage.getItem('printRecord')
     
-    console.log('加载打印数据:', { imagesData, bahData, recordData })
     
     if (imagesData) {
       const parsedImages = JSON.parse(imagesData)
-      console.log('解析的图片数据:', parsedImages)
       
       selectedImages.value = parsedImages.map(img => ({
         ...img,
         loaded: false
       }))
       
-      console.log('设置的图片数据:', selectedImages.value)
     }
     
     if (recordData) {
@@ -319,7 +316,6 @@ const loadPrintData = () => {
       ElMessage.error('没有找到要打印的图片')
       goBack()
     } else {
-      console.log(`成功加载 ${selectedImages.value.length} 张图片`)
     }
   } catch (error) {
     console.error('加载打印数据失败:', error)
@@ -361,7 +357,6 @@ const onImageLoad = async (img, index) => {
   const orientation = await detectImageOrientation(img)
   img.orientation = orientation
   
-  console.log(`图片 P${img.pages} 加载成功`, orientation)
 }
 
 const onImageError = (img, index) => {
@@ -614,7 +609,6 @@ const previewPrint = () => {
                     class="print-image ${rotationClass}"
                     style="transform: rotate(${rotation}deg); width: ${displayWidth}; height: ${displayHeight};"
                     alt="图片 P${img.pages || index + 1}"
-                    onload="console.log('图片 ${index + 1} 加载完成，旋转角度: ${rotation}°')"
                     onerror="console.error('图片 ${index + 1} 加载失败')"
                   />
                   ${printSettings.value.showPageNumbers ? `

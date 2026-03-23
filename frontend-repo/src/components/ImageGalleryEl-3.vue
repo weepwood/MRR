@@ -176,11 +176,6 @@ const userId = computed(() => props.userId || route.query.userId || '')
 const iv = computed(() => props.iv || route.query.iv || '')
 const timestamp = computed(() => props.timestamp || route.query.timestamp || '')
 
-console.log('encryptedIdCard:', props.encryptedIdCard)
-console.log('userId:', userId.value)
-console.log('iv:', iv.value)
-console.log('timestamp:', timestamp.value)
-
 // ==================== 基础状态管理 ====================
 const images = ref([])                    // 图片列表
 const loading = ref(false)                // 加载状态

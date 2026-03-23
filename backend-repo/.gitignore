@@ -5,3 +5,5 @@ target
 .idea
 *.db
 *.gz
+application-local.properties
+date

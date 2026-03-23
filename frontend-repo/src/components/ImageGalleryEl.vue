@@ -174,10 +174,6 @@ const route = useRoute()
 const userid = computed(() => props.userid || route.query.userid || '')
 const iv = computed(() => props.iv || route.query.iv || '')
 
-console.log('encryptedIdCard:', props.encryptedIdCard)
-console.log('userId:', userid.value)
-console.log('iv:', iv.value)
-
 // ==================== 基础状态管理 ====================
 const images = ref([])                    // 图片列表
 const loading = ref(false)                // 加载状态

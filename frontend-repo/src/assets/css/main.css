@@ -1,0 +1,43 @@
+:root {
+    /* 主要颜色 */
+    --primary-color: #667eea;
+    --primary-light: #eef2ff;
+    --primary-dark: #1f2937;
+
+    /* 中性色 */
+    --white: #ffffff;
+    --gray-50: #f9fafb;
+    --gray-100: #f8fafc;
+    --gray-200: #f3f4f6;
+    --gray-300: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --black: #000000;
+
+    /* 文字颜色 */
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-disabled: #999999;
+
+    /* 状态颜色 */
+    --success-color: #48bb78;
+    --success-light: #f0fff4;
+    --warning-color: #f59e0b;
+    --error-color: #e74c3c;
+    --error-light: #fee2e2;
+    --info-color: #606266;
+
+    /* 背景色 */
+    --bg-primary: #c0c0c03f;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+    --bg-modal: rgba(0, 0, 0, 0.15);
+
+    /* 阴影 */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.3);
+}

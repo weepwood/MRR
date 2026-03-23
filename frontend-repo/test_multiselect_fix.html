@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多选功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        button { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <h1>多选功能修复测试</h1>
+    
+    <div class="test-section">
+        <h3>测试说明</h3>
+        <p>这个测试页面用于验证多选功能的修复是否有效。</p>
+        <p><strong>修复内容：</strong>使用图片ID而不是索引来跟踪选中的图片，避免类型切换时选择状态丢失的问题。</p>
+    </div>
+
+    <div class="test-section">
+        <h3>测试步骤</h3>
+        <ol>
+            <li>访问 <a href="http://localhost:5174/test" target="_blank">测试页面</a></li>
+            <li>点击"测试多选功能"按钮</li>
+            <li>在图片画廊页面选择多张图片</li>
+            <li>切换不同的病案类型</li>
+            <li>验证选中的图片状态是否保持</li>
+            <li>点击"打印选中图片"按钮</li>
+            <li>验证打印页面是否显示所有选中的图片</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>预期结果</h3>
+        <div class="test-result success">
+            ✅ 切换病案类型后，之前选中的图片应该保持选中状态<br>
+            ✅ 打印页面应该显示所有选中的图片，而不是只有一张<br>
+            ✅ 选择状态应该基于图片的唯一标识，而不是索引位置
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>快速测试</h3>
+        <button class="btn-primary" onclick="testPrintPage()">测试打印页面</button>
+        <button class="btn-success" onclick="testMultiSelect()">测试多选功能</button>
+    </div>
+
+    <div class="test-section">
+        <h3>修复详情</h3>
+        <h4>问题原因：</h4>
+        <p>原来的实现使用数组索引来跟踪选中的图片，当用户切换病案类型时，<code>filteredImages</code> 会重新计算，导致索引对应关系发生变化。</p>
+        
+        <h4>解决方案：</h4>
+        <ul>
+            <li>使用图片的唯一ID（<code>img.id || img.cx || \`${img.pages}_${img.btype}\`</code>）来跟踪选择状态</li>
+            <li>修改 <code>toggleImageSelection</code> 函数使用图片ID而不是索引</li>
+            <li>修改 <code>goToPrintPage</code> 函数根据图片ID查找对应的图片数据</li>
+            <li>添加 <code>isImageSelected</code> 函数来判断图片是否被选中</li>
+        </ul>
+    </div>
+
+    <script>
+        function testPrintPage() {
+            // 创建测试数据
+            const testImages = [
+                {
+                    id: 1,
+                    pages: 1,
+                    btype: 1,
+                    cx: 'https://via.placeholder.com/800x600/667eea/ffffff?text=Test+Image+1',
+                    blobUrl: 'https://via.placeholder.com/800x600/667eea/ffffff?text=Test+Image+1'
+                },
+                {
+                    id: 2,
+                    pages: 2,
+                    btype: 2,
+                    cx: 'https://via.placeholder.com/800x600/48bb78/ffffff?text=Test+Image+2',
+                    blobUrl: 'https://via.placeholder.com/800x600/48bb78/ffffff?text=Test+Image+2'
+                },
+                {
+                    id: 3,
+                    pages: 3,
+                    btype: 3,
+                    cx: 'https://via.placeholder.com/800x600/e74c3c/ffffff?text=Test+Image+3',
+                    blobUrl: 'https://via.placeholder.com/800x600/e74c3c/ffffff?text=Test+Image+3'
+                }
+            ];
+            
+            const testRecord = {
+                bah: '00788222',
+                name: '测试患者',
+                department: '测试科室'
+            };
+            
+            // 存储测试数据
+            sessionStorage.setItem('selectedImagesForPrint', JSON.stringify(testImages));
+            sessionStorage.setItem('printBah', '00788222');
+            sessionStorage.setItem('printRecord', JSON.stringify(testRecord));
+            
+            // 跳转到打印页面
+            window.open('/print', '_blank');
+        }
+
+        function testMultiSelect() {
+            window.open('http://localhost:5174/test', '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+name: quality-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  frontend-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-repo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend-repo/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  backend-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-repo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+          cache: maven
+
+      - name: Compile Package (Skip Tests)
+        run: mvn -B -ntp -DskipTests package

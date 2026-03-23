@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <span> 病案扫描数据统计</span>
-          <!-- <el-button type="primary" @click="refreshData" :loading="loading" size="small">
-            <el-icon><Refresh /></el-icon>
-            刷新
-          </el-button> -->
         </div>
       </template>
 
@@ -210,7 +206,7 @@
         </el-card>
 
         <!-- 病案明细列表 -->
-        <el-card class="section-card" shadow="hover">
+        <el-card class="section-card list-card" shadow="hover">
           <template #header>
             <div class="section-header">
               <el-icon><Document /></el-icon>
@@ -223,10 +219,11 @@
             <div class="list-search-bar">
               <el-input
                 v-model="listSearchKeyword"
-                placeholder="搜索病案号 / 设备ID / 负责人 / 日期 / 类型"
+                placeholder="搜索病案号"
                 clearable
                 class="search-item keyword"
                 @keyup.enter="handleListSearch"
+                style="width: 50%"
               />
               <el-select
                 v-model="listSearchType"
@@ -250,6 +247,7 @@
                 end-placeholder="结束日期"
                 value-format="YYYY-MM-DD"
                 class="search-item date"
+                style="width: 20%"
               />
               <el-button type="primary" :icon="Search" @click="handleListSearch">搜索</el-button>
               <el-button :icon="Delete" @click="resetListSearch">重置</el-button>
@@ -1295,6 +1293,10 @@ onUnmounted(() => {
   font-size: 13px;
   color: #636366;
   font-weight: 500;
+}
+.list-card{
+  max-width: 1320px;
+  margin: 0 auto;
 }
 
 /* 表格容器 */

@@ -52,10 +52,14 @@ public class StatisticsController {
             @Parameter(description = "开始日期，格式 yyyy-MM-dd", example = "2024-01-01")
             @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期，格式 yyyy-MM-dd", example = "2024-12-31")
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(required = false) String endDate,
+            @Parameter(description = "排序字段：bah/cid/openerNo/date/type/pages", example = "date")
+            @RequestParam(required = false) String sortBy,
+            @Parameter(description = "排序方向：asc/desc", example = "desc")
+            @RequestParam(required = false) String sortOrder) {
 
-        logger.info("获取统计数据：page={}, size={}, keyword={}, type={}, startDate={}, endDate={}",
-                page, size, keyword, type, startDate, endDate);
+        logger.info("获取统计数据：page={}, size={}, keyword={}, type={}, startDate={}, endDate={}, sortBy={}, sortOrder={}",
+                page, size, keyword, type, startDate, endDate, sortBy, sortOrder);
 
         if (page < 1 || size < 1) {
             return Result.fail("页码和每页大小必须大于 0");
@@ -69,6 +73,8 @@ public class StatisticsController {
         String normalizedType = normalize(type);
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
+        String normalizedSortBy = normalizeSortBy(sortBy);
+        String normalizedSortOrder = normalizeSortOrder(sortOrder);
 
         List<Statistics> statistics = statisticsService.findWithConditionAndPagination(
                 page,
@@ -76,7 +82,9 @@ public class StatisticsController {
                 normalizedKeyword,
                 normalizedType,
                 normalizedStartDate,
-                normalizedEndDate
+                normalizedEndDate,
+                normalizedSortBy,
+                normalizedSortOrder
         );
         Long totalCount = statisticsService.getTotalCountByCondition(
                 normalizedKeyword,
@@ -91,6 +99,8 @@ public class StatisticsController {
         response.put("page", page);
         response.put("size", size);
         response.put("totalPages", (totalCount + size - 1) / size);
+        response.put("sortBy", normalizedSortBy);
+        response.put("sortOrder", normalizedSortOrder);
 
         return Result.success(null).data(response);
     }
@@ -234,5 +244,34 @@ public class StatisticsController {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeSortBy(String sortBy) {
+        String value = normalize(sortBy);
+        if (value == null) {
+            return "date";
+        }
+        switch (value) {
+            case "bah":
+            case "cid":
+            case "openerNo":
+            case "date":
+            case "type":
+            case "pages":
+                return value;
+            default:
+                return "date";
+        }
+    }
+
+    private String normalizeSortOrder(String sortOrder) {
+        String value = normalize(sortOrder);
+        if (value == null) {
+            return "desc";
+        }
+        if ("asc".equalsIgnoreCase(value) || "ascending".equalsIgnoreCase(value)) {
+            return "asc";
+        }
+        return "desc";
     }
 }

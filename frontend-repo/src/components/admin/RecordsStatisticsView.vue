@@ -257,7 +257,7 @@
 
             <el-table 
               class="records-detail-table"
-              :data="sortedStatisticsList" 
+              :data="statisticsListData.list" 
               style="width: 100%"
               stripe
               v-loading="loading"
@@ -398,50 +398,10 @@ const statisticsTypeOptions = computed(() => {
     .filter(item => item && item !== 'NULL')
 })
 
-const normalizeText = (value) => {
-  if (value === null || value === undefined || value === 'NULL') return ''
-  return String(value).trim()
+const getBackendSortOrder = (order) => {
+  if (order === 'ascending') return 'asc'
+  return 'desc'
 }
-
-const toNumber = (value) => {
-  const n = Number(value)
-  return Number.isFinite(n) ? n : 0
-}
-
-const toDateTimestamp = (value) => {
-  const text = normalizeText(value)
-  if (!text) return 0
-  const ts = new Date(text.replace(/\//g, '-')).getTime()
-  return Number.isFinite(ts) ? ts : 0
-}
-
-const getSortValue = (row, prop) => {
-  if (!row || !prop) return ''
-  if (prop === 'pages') return toNumber(row.pages)
-  if (prop === 'date') return toDateTimestamp(row.date)
-  return normalizeText(row[prop])
-}
-
-const sortedStatisticsList = computed(() => {
-  const source = Array.isArray(statisticsListData.value?.list) ? statisticsListData.value.list : []
-  const { prop, order } = tableSort.value
-  if (!prop || !order) return source
-
-  const factor = order === 'ascending' ? 1 : -1
-  return [...source].sort((a, b) => {
-    const aValue = getSortValue(a, prop)
-    const bValue = getSortValue(b, prop)
-
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return (aValue - bValue) * factor
-    }
-
-    return String(aValue).localeCompare(String(bValue), 'zh-CN', {
-      numeric: true,
-      sensitivity: 'base'
-    }) * factor
-  })
-})
 
 // 图表系列显示控制
 const showBarSeries = ref(true) // 控制柱状图显示
@@ -747,9 +707,12 @@ const getAreaPath = (points) => {
 const loadStatisticsList = async () => {
   loading.value = true
   try {
+    const { prop, order } = tableSort.value
     const params = {
       page: currentPage.value,
-      size: pageSize.value
+      size: pageSize.value,
+      sortBy: prop || 'date',
+      sortOrder: getBackendSortOrder(order)
     }
     if (listSearchKeyword.value.trim()) {
       params.keyword = listSearchKeyword.value.trim()
@@ -822,7 +785,12 @@ const getTypeTagType = (type) => {
 }
 
 const handleTableSortChange = ({ prop, order }) => {
-  tableSort.value = { prop, order }
+  tableSort.value = {
+    prop: prop || 'date',
+    order: order || 'descending'
+  }
+  currentPage.value = 1
+  loadStatisticsList()
 }
 
 const computeTableIndex = (index) => {

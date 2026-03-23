@@ -43,7 +43,22 @@ public interface StatisticsMapper {
             "AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
             "</if>" +
             "</where>" +
-            "ORDER BY date DESC LIMIT #{limit} OFFSET #{offset}" +
+            "ORDER BY " +
+            "<choose>" +
+            "<when test='sortBy == \"bah\"'>bah</when>" +
+            "<when test='sortBy == \"cid\"'>cid</when>" +
+            "<when test='sortBy == \"openerNo\"'>openerno</when>" +
+            "<when test='sortBy == \"date\"'>REPLACE(date, '/', '-')</when>" +
+            "<when test='sortBy == \"type\"'>type</when>" +
+            "<when test='sortBy == \"pages\"'>pages</when>" +
+            "<otherwise>REPLACE(date, '/', '-')</otherwise>" +
+            "</choose>" +
+            "<choose>" +
+            "<when test='sortOrder == \"asc\"'> ASC </when>" +
+            "<otherwise> DESC </otherwise>" +
+            "</choose>" +
+            ", bah ASC " +
+            "LIMIT #{limit} OFFSET #{offset}" +
             "</script>")
     List<Statistics> findWithConditionAndPagination(
             @Param("offset") int offset,
@@ -51,7 +66,9 @@ public interface StatisticsMapper {
             @Param("keyword") String keyword,
             @Param("type") String type,
             @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("endDate") String endDate,
+            @Param("sortBy") String sortBy,
+            @Param("sortOrder") String sortOrder
     );
 
     // 获取总记录数

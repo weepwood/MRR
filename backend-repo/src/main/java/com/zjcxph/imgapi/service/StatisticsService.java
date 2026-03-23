@@ -14,7 +14,16 @@ public interface StatisticsService {
 
     // 查询所有统计数据（带分页）
     List<Statistics> findAllWithPagination(int page, int size);
-    List<Statistics> findWithConditionAndPagination(int page, int size, String keyword, String type, String startDate, String endDate);
+    List<Statistics> findWithConditionAndPagination(
+            int page,
+            int size,
+            String keyword,
+            String type,
+            String startDate,
+            String endDate,
+            String sortBy,
+            String sortOrder
+    );
 
     // 获取总记录数
     Long getTotalCount();

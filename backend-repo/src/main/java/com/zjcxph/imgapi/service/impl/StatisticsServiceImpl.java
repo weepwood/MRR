@@ -33,9 +33,18 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<Statistics> findWithConditionAndPagination(int page, int size, String keyword, String type, String startDate, String endDate) {
+    public List<Statistics> findWithConditionAndPagination(
+            int page,
+            int size,
+            String keyword,
+            String type,
+            String startDate,
+            String endDate,
+            String sortBy,
+            String sortOrder
+    ) {
         int offset = (page - 1) * size;
-        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, type, startDate, endDate);
+        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, type, startDate, endDate, sortBy, sortOrder);
     }
 
     @Override

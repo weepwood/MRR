@@ -256,35 +256,39 @@
             </div>
 
             <el-table 
-              :data="statisticsListData.list" 
+              class="records-detail-table"
+              :data="sortedStatisticsList" 
               style="width: 100%"
+              stripe
               v-loading="loading"
-              :default-sort="{ prop: 'date', order: descending }"
+              :header-cell-class-name="'records-table-header-cell'"
+              :default-sort="{ prop: 'date', order: 'descending' }"
+              @sort-change="handleTableSortChange"
               empty-text="暂无数据"
             >
-              <el-table-column type="index" label="序号" width="60" align="center" />
+              <el-table-column type="index" label="序号" width="80" align="center" :index="computeTableIndex" />
               
-              <el-table-column prop="bah" label="病案号" min-width="120" sortable>
+              <el-table-column prop="bah" label="病案号" min-width="120" sortable="custom">
                 <template #default="{ row }">
                   <span class="bah-code-link">{{ row.bah || '-' }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="cid" label="扫描设备ID" width="150" sortable align="center" />
+              <el-table-column prop="cid" label="扫描设备ID" width="150" sortable="custom" align="center" />
               
-              <el-table-column prop="openerNo" label="扫描负责人" width="150" sortable>
+              <el-table-column prop="openerNo" label="扫描负责人" width="150" sortable="custom">
                 <template #default="{ row }">
                   <span>{{ row.openerNo === 'NULL' ? '-' : row.openerNo }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="date" label="日期" width="120" sortable>
+              <el-table-column prop="date" label="日期" width="120" sortable="custom">
                 <template #default="{ row }">
                   <span>{{ formatDate(row.date) }}</span>
                 </template>
               </el-table-column>
               
-              <el-table-column prop="type" label="类型" width="100" sortable align="center">
+              <el-table-column prop="type" label="类型" width="100" sortable="custom" align="center">
                 <template #default="{ row }">
                   <el-tag size="small" :type="getTypeTagType(row.type)">
                     {{ row.type || '未知' }}
@@ -292,9 +296,9 @@
                 </template>
               </el-table-column>
               
-              <el-table-column prop="pages" label="页数" width="100" sortable align="center">
+              <el-table-column prop="pages" label="页数" width="100" sortable="custom" align="center">
                 <template #default="{ row }">
-                  <span :class="{ 'highlight-pages': row.pages > 50 }">
+                  <span class="pages-badge">
                     {{ row.pages ?? 0 }}
                   </span>
                 </template>
@@ -382,12 +386,61 @@ const pageSize = ref(100)
 const listSearchKeyword = ref('')
 const listSearchType = ref('')
 const listSearchDateRange = ref([])
+const tableSort = ref({
+  prop: 'date',
+  order: 'descending'
+})
 
 const statisticsTypeOptions = computed(() => {
   const source = summaryData.value?.byType || []
   return source
     .map(item => item?.type)
     .filter(item => item && item !== 'NULL')
+})
+
+const normalizeText = (value) => {
+  if (value === null || value === undefined || value === 'NULL') return ''
+  return String(value).trim()
+}
+
+const toNumber = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+const toDateTimestamp = (value) => {
+  const text = normalizeText(value)
+  if (!text) return 0
+  const ts = new Date(text.replace(/\//g, '-')).getTime()
+  return Number.isFinite(ts) ? ts : 0
+}
+
+const getSortValue = (row, prop) => {
+  if (!row || !prop) return ''
+  if (prop === 'pages') return toNumber(row.pages)
+  if (prop === 'date') return toDateTimestamp(row.date)
+  return normalizeText(row[prop])
+}
+
+const sortedStatisticsList = computed(() => {
+  const source = Array.isArray(statisticsListData.value?.list) ? statisticsListData.value.list : []
+  const { prop, order } = tableSort.value
+  if (!prop || !order) return source
+
+  const factor = order === 'ascending' ? 1 : -1
+  return [...source].sort((a, b) => {
+    const aValue = getSortValue(a, prop)
+    const bValue = getSortValue(b, prop)
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return (aValue - bValue) * factor
+    }
+
+    return String(aValue).localeCompare(String(bValue), 'zh-CN', {
+      numeric: true,
+      sensitivity: 'base'
+    }) * factor
+  })
 })
 
 // 图表系列显示控制
@@ -766,6 +819,14 @@ const getTypeTagType = (type) => {
     'unknown': 'info'
   }
   return typeMap[type] || 'info'
+}
+
+const handleTableSortChange = ({ prop, order }) => {
+  tableSort.value = { prop, order }
+}
+
+const computeTableIndex = (index) => {
+  return (currentPage.value - 1) * pageSize.value + index + 1
 }
 
 // 加载统计数据
@@ -1271,14 +1332,46 @@ onUnmounted(() => {
 .table-container {
   width: 100%;
   overflow-x: auto;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f7faff 100%);
 }
 
 .list-search-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   align-items: center;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 113, 227, 0.12);
+}
+
+:deep(.records-detail-table) {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  --el-table-row-hover-bg-color: #f5faff;
+}
+
+:deep(.records-detail-table .el-table__inner-wrapper::before) {
+  display: none;
+}
+
+:deep(.records-detail-table th.records-table-header-cell) {
+  background: #f4f8ff !important;
+  color: #0f172a;
+  font-weight: 600;
+  border-bottom: 1px solid #e6edf8;
+}
+
+:deep(.records-detail-table .el-table__row td) {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  transition: background-color 0.2s ease;
 }
 
 .search-item.keyword {
@@ -1294,20 +1387,32 @@ onUnmounted(() => {
 }
 
 .bah-code-link {
-  color: #0071e3;
+  color: #005bb5;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  background: rgba(0, 113, 227, 0.1);
+  border: 1px solid rgba(0, 113, 227, 0.18);
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 
 .bah-code-link:hover {
-  color: #005bb5;
-  text-decoration: underline;
+  color: #004a91;
+  background: rgba(0, 113, 227, 0.16);
 }
 
-.highlight-pages {
-  /* color: #ff9500; */
-  /* font-weight: 600; */
+.pages-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #334155;
+  background: #eef2f7;
+  border: 1px solid #e2e8f0;
 }
 
 .pagination-wrapper {
@@ -1364,6 +1469,15 @@ onUnmounted(() => {
   .search-item.type,
   .search-item.date {
     width: 100%;
+  }
+
+  .table-container {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .list-search-bar {
+    padding: 10px;
   }
   
   /* 表格移动端适配 */

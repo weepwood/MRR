@@ -82,7 +82,7 @@
         <TestingView v-if="activeMenu === 'testing'" />
         
         <!-- 系统日志 -->
-        <LogsView v-if="activeMenu === 'logs'" :logs="logs" :log-level="logLevel" @refresh="refreshLogs" @clear="clearLogs" @filter="filterLogs" />
+        <LogsView v-if="activeMenu === 'logs'" />
         
         <!-- 系统监控 -->
         <MonitoringView v-if="activeMenu === 'monitoring'" :system-status="systemStatus" :browser-info="browserInfo" :ip-info="ipInfo" :local-ips="localIps" />

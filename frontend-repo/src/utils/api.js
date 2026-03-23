@@ -221,3 +221,12 @@ export function getStatisticsList(page = 1, size = 100) {
         }
     })
 }
+
+/**
+ * 查询系统访问日志（access_log）
+ * @param {object} params 查询参数
+ * @returns {Promise} 返回 axios Promise
+ */
+export function searchSystemLogs(params = {}) {
+    return authApi.get('/logs-api/search', { params })
+}

@@ -2,7 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.pojo.LoginResponseDTO;
 import com.zjcxph.imgapi.pojo.Result;
-import com.zjcxph.imgapi.utils.jwtUtil;
+import com.zjcxph.imgapi.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class UserController {
         Result<LoginResponseDTO> loginResponseDTOResult = new Result<>();
         if (username.equals(br_admin) && password.equals(br_password)) {
             // 过期时间 24h
-            String token = jwtUtil.getToken(username);
+            String token = JwtUtil.getToken(username);
             logger.info("用户 {} 登录", username);
             LoginResponseDTO loginResponseDTO = new LoginResponseDTO(token);
             loginResponseDTOResult.code(200).message("登录成功").data(loginResponseDTO);

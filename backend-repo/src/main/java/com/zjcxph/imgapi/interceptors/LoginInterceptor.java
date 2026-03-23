@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.controller.ImageController;
-import com.zjcxph.imgapi.utils.jwtUtil;
+import com.zjcxph.imgapi.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -32,7 +32,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         authorization = extractToken(authorization);
         try {
             // username
-             jwtUtil.parseToken(authorization);
+             JwtUtil.parseToken(authorization);
             return true;
         }catch (Exception e){
             logger.error("token invalid: {}", String.valueOf(e));

@@ -140,7 +140,7 @@ export function deleteRecord(id) {
  * @returns {Promise} 返回 axios Promise
  */
 export function batchDownloadRecords(ids) {
-    return authApi.post('/v1/scan-api/batch-download', { ids }, { responseType: 'blob' })
+    return authApi.post('/scan-api/batch-download', { ids }, { responseType: 'blob' })
 }
 
 /**

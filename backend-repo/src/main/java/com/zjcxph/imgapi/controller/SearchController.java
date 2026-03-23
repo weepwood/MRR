@@ -26,7 +26,7 @@ public class SearchController {
         return "hello world search, your IP is: " + clientIP;
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
+    private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
 
     @Autowired
     private SearchService searchService;

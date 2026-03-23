@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.pojo.BatchDownloadRequest;
+import com.zjcxph.imgapi.pojo.PathDO;
 import com.zjcxph.imgapi.pojo.Result;
 import com.zjcxph.imgapi.pojo.Scan;
 import com.zjcxph.imgapi.pojo.ScanRequest;
@@ -10,12 +12,25 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * Scan Controller
@@ -30,6 +45,9 @@ public class ScanController {
 
     @Autowired
     private ScanService scanService;
+
+    @Value("${image.basePath}")
+    private String basePath;
 
     @Operation(summary = "创建新的扫描记录")
     @PostMapping
@@ -207,5 +225,82 @@ public class ScanController {
         
         List<Scan> scans = scanService.findByCondition(request);
         return Result.success(null).data(scans);
+    }
+
+    @PostMapping("/batch-download")
+    public ResponseEntity<?> batchDownload(@RequestBody BatchDownloadRequest request) {
+        if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
+            return ResponseEntity.badRequest().body(Result.fail("ids cannot be empty"));
+        }
+
+        List<PathDO> items = scanService.getImagePathList(request.getIds());
+        if (items == null || items.isEmpty()) {
+            return ResponseEntity.badRequest().body(Result.fail("no downloadable records found"));
+        }
+
+        try {
+            byte[] zipBytes = buildBatchZip(items);
+            ByteArrayResource resource = new ByteArrayResource(zipBytes);
+            String fileName = "scan-batch-" + System.currentTimeMillis() + ".zip";
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(zipBytes.length)
+                    .body(resource);
+        } catch (IOException e) {
+            logger.error("batch download failed", e);
+            return ResponseEntity.internalServerError().body(Result.fail("batch download failed"));
+        }
+    }
+
+    private byte[] buildBatchZip(List<PathDO> items) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos)) {
+            byte[] buffer = new byte[8192];
+            for (PathDO item : items) {
+                if (item == null) {
+                    continue;
+                }
+                Path path = buildImagePath(item);
+                if (path == null) {
+                    continue;
+                }
+                File file = path.toFile();
+                if (!file.exists() || !file.isFile()) {
+                    logger.warn("skip missing file: {}", path);
+                    continue;
+                }
+
+                String bah = item.getBAH() == null ? "unknown" : item.getBAH();
+                String entryName = bah + "/" + file.getName();
+                zos.putNextEntry(new ZipEntry(entryName));
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    int len;
+                    while ((len = fis.read(buffer)) != -1) {
+                        zos.write(buffer, 0, len);
+                    }
+                }
+                zos.closeEntry();
+            }
+            zos.finish();
+            return baos.toByteArray();
+        }
+    }
+
+    private Path buildImagePath(PathDO item) {
+        String folder = item.getFolder();
+        String brxh = item.getBRXH();
+        String bah = item.getBAH();
+        String filename = item.getFilename();
+
+        if (folder == null || folder.length() < 5 || brxh == null || bah == null || filename == null) {
+            logger.warn("incomplete file params: folder={}, brxh={}, bah={}, filename={}", folder, brxh, bah, filename);
+            return null;
+        }
+
+        String parentFolder = folder.substring(0, 5);
+        String folderName = brxh + "-" + bah;
+        return Paths.get(basePath, parentFolder, folder, folderName, filename);
     }
 }

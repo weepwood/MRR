@@ -9,6 +9,10 @@ lerna-debug.log*
 
 node_modules
 dist
+docs/.vitepress/dist
+docs/.vitepress/.temp
+docs/.vitepress/cache
+public/docs
 dist-ssr
 *.zip
 print_test.html

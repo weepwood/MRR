@@ -4,8 +4,13 @@
   "version": "0.0.6",
   "type": "module",
   "scripts": {
+    "predev": "npm run docs:build",
     "dev": "vite",
+    "prebuild": "npm run docs:build",
     "build": "vite build",
+    "docs:dev": "vitepress dev docs --host",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs --host",
     "lint": "eslint src --ext .js,.vue",
     "lint:fix": "eslint src --ext .js,.vue --fix",
     "format": "prettier --write \"src/**/*.{js,vue,css}\" \"*.{js,json,md}\"",
@@ -34,6 +39,7 @@
     "nodemon": "^3.0.1",
     "prettier": "^3.5.3",
     "vite": "^7.1.6",
+    "vitepress": "^1.6.4",
     "vue-eslint-parser": "^10.1.1"
   }
 }

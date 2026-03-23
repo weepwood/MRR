@@ -27,7 +27,7 @@
             <el-icon><DataBoard /></el-icon>
           </div>
           <h3 class="feature-title">管理面板</h3>
-          <p class="feature-description">访问完整的后台管理界面，包含仪表板、用户管理、系统监控等功能</p>
+          <p class="feature-description">访问后台管理界面，包含仪表板、用户管理、系统监控等功能</p>
           <!-- <div class="feature-action">
             <el-button type="primary" class="action-btn">进入面板 →</el-button>
           </div> -->
@@ -43,7 +43,15 @@
             <el-button class="action-btn">开发中...</el-button>
           </div> -->
         </el-card>
-        
+
+        <el-card class="feature-card docs" shadow="hover" @click="goToDocs">
+          <div class="feature-icon docs">
+            <el-icon><Reading /></el-icon>
+          </div>
+          <h3 class="feature-title">文档中心</h3>
+          <p class="feature-description">进入 VitePress 文档站，查看快速开始、部署说明与项目文档索引。</p>
+        </el-card>
+
         <el-card class="feature-card" shadow="hover">
           <div class="feature-icon user">
             <el-icon><User /></el-icon>
@@ -92,7 +100,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 // 导入需要使用的图标组件
-import { User, Document, Setting, SwitchButton, DataBoard, TrendCharts } from '@element-plus/icons-vue'
+import { User, Document, Setting, SwitchButton, DataBoard, TrendCharts, Reading } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -102,6 +110,10 @@ const goToDashboard = () => {
 
 const goToStatistics = () => {
   router.push('/admin/statistics')
+}
+
+const goToDocs = () => {
+  window.open('/docs/', '_blank', 'noopener,noreferrer')
 }
 
 const handleLogout = () => {
@@ -256,6 +268,10 @@ const handleLogout = () => {
   background: linear-gradient(90deg, #34c759, #28a745);
 }
 
+.feature-card.docs::before {
+  background: linear-gradient(90deg, #ff9500, #ff6a00);
+}
+
 .feature-card.record::before {
   background: linear-gradient(90deg, #4facfe, #00f2fe);
 }
@@ -289,6 +305,11 @@ const handleLogout = () => {
 .feature-icon.statistics {
   background: rgba(52, 199, 89, 0.1);
   color: #34c759;
+}
+
+.feature-icon.docs {
+  background: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
 }
 
 .feature-icon.record {

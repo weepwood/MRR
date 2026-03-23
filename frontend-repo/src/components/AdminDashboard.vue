@@ -89,6 +89,31 @@
         
         <!-- 系统设置 -->
         <SettingsView v-if="activeMenu === 'settings'" :settings="settings" @save="saveSettings" @reset="resetSettings" />
+
+        <section v-if="activeMenu === 'dashboard'" class="docs-generator-section">
+          <div class="docs-header">
+            <h3>说明文档静态网站生成器推荐</h3>
+            <p>可将 Markdown 说明文档构建为静态站点，推荐优先考虑与 Vue 生态契合的方案。</p>
+          </div>
+          <div class="docs-grid">
+            <article
+              v-for="item in docsGenerators"
+              :key="item.name"
+              class="docs-card"
+            >
+              <div class="docs-card-head">
+                <h4>{{ item.name }}</h4>
+                <span class="docs-tag">{{ item.tag }}</span>
+              </div>
+              <p class="docs-desc">{{ item.description }}</p>
+              <div class="docs-meta">{{ item.note }}</div>
+              <el-button class="docs-btn" type="primary" plain @click="openExternal(item.url)">
+                <el-icon><Link /></el-icon>
+                查看官方文档
+              </el-button>
+            </article>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -100,7 +125,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { 
   SwitchButton, DataBoard, User, Document, Tools, 
-  DocumentCopy, Monitor, Setting 
+  DocumentCopy, Monitor, Setting, Link
 } from '@element-plus/icons-vue'
 import logger from '../utils/logger.js'
 
@@ -147,6 +172,29 @@ const browserInfo = reactive({
 // IP信息
 const ipInfo = ref(null)
 const localIps = ref([])
+const docsGenerators = [
+  {
+    name: 'VitePress（已集成）',
+    tag: '项目文档站',
+    description: '项目已接入 VitePress，可将说明文档构建为静态网站并独立部署。',
+    note: '默认入口为 /docs/，本地可通过 npm run docs:dev 预览。',
+    url: '/docs/'
+  },
+  {
+    name: 'Docusaurus',
+    tag: '成熟社区',
+    description: '文档、博客、版本化能力完整，生态成熟，适合中大型文档站点或多版本管理。',
+    note: '基于 React 体系，若团队有跨栈经验会更容易发挥优势。',
+    url: 'https://docusaurus.io/'
+  },
+  {
+    name: 'Astro Starlight',
+    tag: '内容体验',
+    description: '基于 Astro 的文档主题，默认样式美观，文档可读性与性能表现都很好。',
+    note: '适合追求站点展示效果和内容组织体验的场景。',
+    url: 'https://starlight.astro.build/'
+  }
+]
 
 // 最近活动
 const recentActivities = ref([
@@ -185,6 +233,11 @@ const settings = reactive({
 // 方法
 const handleMenuSelect = (index) => {
   activeMenu.value = index
+}
+
+const openExternal = (url) => {
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 const handleLogout = () => {
@@ -500,6 +553,77 @@ onMounted(() => {
   overflow-y: auto;
 }
 
+.docs-generator-section {
+  margin-top: 24px;
+  border-top: 1px solid #e8eef8;
+  padding-top: 20px;
+}
+
+.docs-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f3f75;
+}
+
+.docs-header p {
+  margin: 8px 0 0;
+  color: #5f7290;
+  font-size: 13px;
+}
+
+.docs-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.docs-card {
+  border: 1px solid #dce8fb;
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+}
+
+.docs-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.docs-card-head h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #1d2b42;
+}
+
+.docs-tag {
+  font-size: 12px;
+  color: #2d65b7;
+  background: #e9f2ff;
+  border: 1px solid #cfe1ff;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.docs-desc {
+  margin: 10px 0 0;
+  color: #485f80;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.docs-meta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #7388a8;
+}
+
+.docs-btn {
+  margin-top: 12px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .admin-content {
@@ -526,6 +650,11 @@ onMounted(() => {
   
   .header-left h1 {
     font-size: 16px;
+  }
+
+  .docs-generator-section {
+    margin-top: 16px;
+    padding-top: 16px;
   }
 }
 </style>

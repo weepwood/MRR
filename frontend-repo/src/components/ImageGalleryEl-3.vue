@@ -901,7 +901,8 @@ const onPickType = async (newType) => {
   padding: 20px;
   width: 100%;
   margin: 0;
-  height: 100%;
+  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -911,7 +912,7 @@ const onPickType = async (newType) => {
 .split-layout {
   display: flex;
   gap: 20px;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 

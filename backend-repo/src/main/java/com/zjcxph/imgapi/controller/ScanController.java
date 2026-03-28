@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -43,8 +42,11 @@ public class ScanController {
 
     private static final Logger logger = LoggerFactory.getLogger(ScanController.class);
 
-    @Autowired
-    private ScanService scanService;
+    private final ScanService scanService;
+
+    public ScanController(ScanService scanService) {
+        this.scanService = scanService;
+    }
 
     @Value("${image.basePath}")
     private String basePath;

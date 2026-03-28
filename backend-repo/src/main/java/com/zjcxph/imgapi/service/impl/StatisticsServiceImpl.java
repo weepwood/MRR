@@ -5,7 +5,6 @@ import com.zjcxph.imgapi.pojo.BAHStatisticsDTO;
 import com.zjcxph.imgapi.pojo.DateStatisticsDTO;
 import com.zjcxph.imgapi.pojo.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,7 +15,6 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     private final StatisticsMapper statisticsMapper;
 
-    @Autowired
     public StatisticsServiceImpl(StatisticsMapper statisticsMapper) {
         this.statisticsMapper = statisticsMapper;
     }

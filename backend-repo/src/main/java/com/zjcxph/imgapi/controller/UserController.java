@@ -1,17 +1,17 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.pojo.LoginResponseDTO;
 import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.pojo.UserRequest;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import com.zjcxph.imgapi.pojo.UserRequest;
 
 
 @Tag(name = "User Controller", description = "用户管理接口")
@@ -19,11 +19,11 @@ import com.zjcxph.imgapi.pojo.UserRequest;
 public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Value("${image.username}")
-    private String br_admin;
+    private final ImageProperties imageProperties;
 
-    @Value("${image.password}")
-    private String br_password;
+    public UserController(ImageProperties imageProperties) {
+        this.imageProperties = imageProperties;
+    }
 
 
     @Operation(summary = "用户登录")
@@ -36,10 +36,8 @@ public class UserController {
             return Result.fail("用户名或密码不能为空");
         }
 
-        System.out.println(username);
-        System.out.println(password);
         Result<LoginResponseDTO> loginResponseDTOResult = new Result<>();
-        if (username.equals(br_admin) && password.equals(br_password)) {
+        if (username.equals(imageProperties.getUsername()) && password.equals(imageProperties.getPassword())) {
             // 过期时间 24h
             String token = JwtUtil.getToken(username);
             logger.info("用户 {} 登录", username);

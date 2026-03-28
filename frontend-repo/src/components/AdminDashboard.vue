@@ -260,7 +260,6 @@ const router = useRouter()
 const activeMenu = ref('dashboard')
 const searchTerm = ref('')
 const lastRefreshLabel = ref('刚刚')
-const settingsStorageKey = 'admin-dashboard-settings'
 
 const stats = reactive({ totalUsers: 3, totalRecords: 3, todayRecords: 1, onlineUsers: 2 })
 const systemStatus = reactive({ cpu: 45, memory: 62, disk: 38 })

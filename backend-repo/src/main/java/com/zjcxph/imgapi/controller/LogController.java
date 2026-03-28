@@ -3,7 +3,6 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.pojo.Log;
 import com.zjcxph.imgapi.pojo.Result;
 import com.zjcxph.imgapi.service.LogService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,8 +16,11 @@ import java.util.Map;
 @RequestMapping({"/v2/logs", "/v1/logs-api"})
 public class LogController {
 
-    @Autowired
-    private LogService logService;
+    private final LogService logService;
+
+    public LogController(LogService logService) {
+        this.logService = logService;
+    }
 
     private static final int MAX_PAGE_SIZE = 200;
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

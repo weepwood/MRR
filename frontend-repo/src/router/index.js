@@ -1,16 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
-const Login = () => import('../components/Login.vue')
-const ElementImageGallery = () => import('../components/ImageGalleryEl.vue')
-const ElementImageGalleryBAH = () => import('../components/ImageGalleryAdmin.vue')
-const PrintPage = () => import('../components/PrintPage.vue')
-const Admin = () => import('../components/Admin.vue')
-const AdminDashboard = () => import('../components/AdminDashboard.vue')
-const CrudView = () => import('../components/admin/RecordsView.vue')
-const RecordsStatisticsView = () => import('../components/admin/RecordsStatisticsView.vue')
-const Test = () => import('../components/Test.vue')
-const IDTest = () => import('../components/IdCardTest.vue')
+const Login = () => import('@/pages/LoginPage.vue')
+const ElementImageGallery = () => import('@/components/ImageGalleryEl.vue')
+const ElementImageGalleryBAH = () => import('@/components/ImageGalleryAdmin.vue')
+const PrintPage = () => import('@/components/PrintPage.vue')
+const Admin = () => import('@/pages/AdminEntryPage.vue')
+const AdminDashboard = () => import('@/pages/admin/AdminDashboardPage.vue')
+const CrudView = () => import('@/pages/admin/RecordsPage.vue')
+const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
+const Test = () => import('@/components/Test.vue')
+const IDTest = () => import('@/components/IdCardTest.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Login },

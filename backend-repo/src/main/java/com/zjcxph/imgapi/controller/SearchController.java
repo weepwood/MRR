@@ -6,7 +6,6 @@ import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,11 +27,14 @@ public class SearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
 
-    @Autowired
-    private SearchService searchService;
+    private final SearchService searchService;
     
     @Value("${aes.secret.key}")
     private String secretKey;
+
+    public SearchController(SearchService searchService) {
+        this.searchService = searchService;
+    }
 
     // 根据加密的身份证号码获取该病人全部的病案号 需要解密（新版本，包含时间戳）
     // 解密方法 使用 ASE CBC 模式 HEX 编码, 使用密钥为 your-32-byte-secret-key-12345678

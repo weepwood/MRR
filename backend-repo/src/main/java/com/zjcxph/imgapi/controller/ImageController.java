@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.pojo.*;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -10,8 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -37,17 +36,15 @@ public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
 
-    @Value("${image.url}")
-    private String image_url;
+    private final ImageProperties imageProperties;
+    private final ScanService scanService;
+    private final PdfService pdfService;
 
-    @Value("${image.basePath}")
-    private String basePath;
-
-    @Autowired
-    private ScanService scanService;
-
-    @Autowired
-    private PdfService pdfService;
+    public ImageController(ImageProperties imageProperties, ScanService scanService, PdfService pdfService) {
+        this.imageProperties = imageProperties;
+        this.scanService = scanService;
+        this.pdfService = pdfService;
+    }
 
     @Operation(summary = "服务器心跳")
     @GetMapping("/hello")
@@ -105,7 +102,7 @@ public class ImageController {
         List<PathDO> imagePathList = scanService.getImagePathList(ids);
         List<String> collect = imagePathList.stream().map(detail ->
                 String.format("%s/%s/%s/%s-%s/%s",
-                        basePath,
+                        imageProperties.getBasePath(),
                         detail.getFolder().substring(0, 5),
                         detail.getFolder(),
                         detail.getBRXH(),
@@ -184,7 +181,7 @@ public class ImageController {
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
         List<Scan> imageListByBAH = scanService.getImageListByBAH(bah);
-        String imgUrl = image_url;
+        String imgUrl = imageProperties.getUrl();
 
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
@@ -219,7 +216,7 @@ public class ImageController {
         String folderName = BRXH + "-" + BAH;
         String parentFolder = FOLDER.substring(0, 5);
 
-        Path filePath = Paths.get(basePath, parentFolder, FOLDER, folderName, FILENAME);
+        Path filePath = Paths.get(imageProperties.getBasePath(), parentFolder, FOLDER, folderName, FILENAME);
 
         logger.info("获取图片:{}", filePath);
         LocalDateTime timestamp = LocalDateTime.now();
@@ -280,9 +277,6 @@ public class ImageController {
         if (imageType < 0 || imageType > 14) {
             return Result.fail("图片类型错误");
         }
-        System.out.println( id);
-        System.out.println(imageType);
-
         int result = scanService.updateImageType(id, imageType);
         if (result != 1) {
             logger.error("修改图片 {} 的类型为 {}", id, imageType);

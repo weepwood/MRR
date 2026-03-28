@@ -88,13 +88,12 @@ textarea {
 
 .el-button {
   font-weight: var(--pmr-font-weight-medium);
-  border-radius: var(--pmr-radius-xl);
+  border-radius: var(--pmr-radius-lg);
   box-shadow: none;
   transition:
     background-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
     border-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
-    color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
-    transform var(--pmr-motion-duration-fast) var(--pmr-motion-ease-standard);
+    color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
 }
 
 .el-button--primary {
@@ -107,18 +106,17 @@ textarea {
 .el-button--primary:focus-visible {
   background: var(--pmr-color-action-primary-pressed);
   color: #ffffff;
-  transform: translateY(-1px);
 }
 
 .el-button--default {
-  background: #ffffff;
-  border: 1px solid var(--pmr-color-border-default);
+  background: #e9eff9;
+  border: none;
   color: var(--pmr-color-text-primary);
 }
 
 .el-button--default:hover {
-  border-color: var(--pmr-color-action-primary-light);
-  color: var(--pmr-color-action-primary);
+  background: #dce7f7;
+  color: var(--pmr-color-action-primary-pressed);
 }
 
 .el-button--danger {
@@ -137,6 +135,19 @@ textarea {
   background: #64748b;
   border: none;
   color: #ffffff;
+}
+
+.el-button.is-plain,
+.el-button.is-text {
+  background: transparent;
+  border: none;
+  color: var(--pmr-color-text-primary);
+}
+
+.el-button.is-plain:hover,
+.el-button.is-text:hover {
+  background: rgba(47, 111, 255, 0.08);
+  color: var(--pmr-color-action-primary-pressed);
 }
 
 .el-input__wrapper,

@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi;
 
 import com.zjcxph.imgapi.controller.SearchController;
+import com.zjcxph.imgapi.service.SearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,10 +21,12 @@ public class SearchControllerTest {
 
     private MockMvc mockMvc;
     private SearchController searchController;
+    private SearchService searchService;
 
     @BeforeEach
     public void setUp() {
-        searchController = new SearchController();
+        searchService = mock(SearchService.class);
+        searchController = new SearchController(searchService);
         mockMvc = MockMvcBuilders.standaloneSetup(searchController).build();
     }
 

@@ -1,13 +1,12 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.mapper.ScanMapper;
-import com.zjcxph.imgapi.pojo.Scan;
-import com.zjcxph.imgapi.service.ScanService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import com.zjcxph.imgapi.pojo.PathDO;
 import com.zjcxph.imgapi.pojo.ScanRequest;
+import com.zjcxph.imgapi.pojo.Scan;
+import com.zjcxph.imgapi.service.ScanService;
+import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,15 +15,12 @@ import java.util.List;
 @Service
 public class ScanServiceImpl implements ScanService {
 
-    @Value("${image.basePath}")
-    private String basePath;
-
-
     private final ScanMapper scanMapper;
+    private final ImageProperties imageProperties;
 
-    @Autowired
-    public ScanServiceImpl(ScanMapper scanMapper) {
+    public ScanServiceImpl(ScanMapper scanMapper, ImageProperties imageProperties) {
         this.scanMapper = scanMapper;
+        this.imageProperties = imageProperties;
     }
 
     @Override
@@ -45,7 +41,7 @@ public class ScanServiceImpl implements ScanService {
         String parentFolder = folderPath.substring(0, 5);
         String brxh = baData.get(0).getBrxh();
         String folderName = brxh + "-" + bah;
-        return Paths.get(basePath, parentFolder, folderPath, folderName);
+        return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
         
     }
 

@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.scheduler;
 
-import com.zjcxph.imgapi.controller.ImageController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;

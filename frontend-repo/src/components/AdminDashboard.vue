@@ -4,12 +4,15 @@
       <div class="brand-block">
         <p class="brand-eyebrow">CXRMYY</p>
         <h1 class="brand-title">病案管理系统</h1>
-        <p class="brand-subtitle">@weepwood</p>
+        <p class="brand-subtitle">后台管理中心</p>
       </div>
 
       <el-menu :default-active="activeMenu" class="sidebar-menu" @select="handleMenuSelect">
         <el-menu-item index="dashboard"><el-icon><DataBoard /></el-icon><span>仪表盘</span></el-menu-item>
         <el-menu-item index="users"><el-icon><User /></el-icon><span>用户管理</span></el-menu-item>
+        <el-menu-item index="permissions"><el-icon><Key /></el-icon><span>权限管理</span></el-menu-item>
+        <el-menu-item index="testing"><el-icon><Tools /></el-icon><span>测试中心</span></el-menu-item>
+        <el-menu-item index="settings"><el-icon><Setting /></el-icon><span>系统设置</span></el-menu-item>
         <el-menu-item index="records"><el-icon><Document /></el-icon><span>病案管理</span></el-menu-item>
         <el-menu-item index="statistics"><el-icon><TrendCharts /></el-icon><span>统计分析</span></el-menu-item>
         <el-menu-item index="docs"><el-icon><Reading /></el-icon><span>文档中心</span></el-menu-item>
@@ -19,24 +22,25 @@
         <div class="profile-avatar"><el-icon><User /></el-icon></div>
         <div class="profile-copy">
           <p class="profile-name">{{ currentUserName || '管理员' }}</p>
-          <p class="profile-role">{{ currentRoleName || 'Chief of Operations' }}</p>
+          <p class="profile-role">{{ currentRoleName || '未分配角色' }}</p>
         </div>
       </div>
     </aside>
 
     <main class="admin-main">
       <header class="topbar">
-        <div class="search-shell">
-          <el-icon class="search-icon"><Search /></el-icon>
-          <input v-model="searchTerm" type="text" placeholder="搜索病案、用户或日志..." />
+        <div class="topbar-copy">
+          <p class="topbar-eyebrow">后台总览</p>
+          <h2 class="topbar-title">工作台入口</h2>
         </div>
         <div class="topbar-actions">
-          <div class="topbar-copy">
-            <span class="topbar-role">{{ currentUserName || 'Administrator' }}</span>
-            <span class="topbar-version">{{ currentRoleName || 'Admin console' }}</span>
+          <div class="topbar-user">
+            <span>{{ currentUserName || 'Administrator' }}</span>
+            <small>{{ currentRoleName || 'Admin console' }}</small>
           </div>
           <el-button class="logout-btn" type="primary" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>退出登录
+            <el-icon><SwitchButton /></el-icon>
+            退出登录
           </el-button>
         </div>
       </header>
@@ -45,23 +49,30 @@
         <section class="hero-block">
           <div>
             <p class="eyebrow">Clinical Sanctuary</p>
-            <h2>后台入口</h2>
-            <p>系统状态 <span>稳定</span>，当前账号拥有 {{ accessSummary }}。</p>
+            <h2>欢迎进入后台管理中心</h2>
+            <p>
+              当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、系统设置和业务管理页面。
+            </p>
           </div>
-          <div class="hero-tools">
-            <el-button class="export-btn" type="primary" @click="openDocs">
-              <el-icon><Link /></el-icon>打开文档
+          <div class="hero-actions">
+            <el-button type="primary" @click="router.push('/admin/users')">
+              <el-icon><User /></el-icon>
+              用户管理
+            </el-button>
+            <el-button @click="router.push('/admin/permissions')">
+              <el-icon><Key /></el-icon>
+              权限管理
             </el-button>
           </div>
         </section>
 
         <section class="kpi-grid">
-          <article v-for="card in dashboardCards" :key="card.key" class="kpi-card" :class="card.toneClass">
+          <article v-for="card in dashboardCards" :key="card.label" class="kpi-card" :class="card.toneClass">
             <div class="kpi-top">
               <div class="kpi-icon" :class="card.iconClass">
                 <el-icon><component :is="card.icon" /></el-icon>
               </div>
-              <span class="kpi-chip">{{ card.trend }}</span>
+              <span class="kpi-chip">{{ card.badge }}</span>
             </div>
             <p class="kpi-label">{{ card.label }}</p>
             <div class="kpi-value">{{ card.value }}</div>
@@ -87,66 +98,130 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   DataBoard,
   Document,
-  Link,
+  Key,
   Reading,
-  Search,
+  Setting,
   SwitchButton,
+  Tools,
   TrendCharts,
   User
 } from '@element-plus/icons-vue'
-import { getSession, clearSession, isAdminUser } from '@/utils/session.js'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session.js'
 
 const router = useRouter()
-const activeMenu = ref('dashboard')
-const searchTerm = ref('')
+const route = useRoute()
 
-const session = computed(() => getSession())
-const currentUserName = computed(() => session.value?.user?.displayName || session.value?.user?.username || '')
-const currentRoleName = computed(() => session.value?.user?.roleName || session.value?.user?.roleCode || '')
-const accessSummary = computed(() => {
-  if (isAdminUser()) {
-    return '全部后台权限'
-  }
-  return '有限后台权限'
+const currentUser = computed(() => getCurrentUser())
+const currentUserName = computed(() => getUserDisplayName() || currentUser.value?.username || '')
+const currentRoleName = computed(() => getUserRoleName() || currentUser.value?.roleCode || '')
+const isAdmin = computed(() => isAdminUser())
+const accessSummary = computed(() => (isAdmin.value ? '拥有全部后台权限' : '拥有受限后台权限'))
+
+const activeMenu = computed(() => {
+  const path = route.path
+  if (path === '/admin/users') return 'users'
+  if (path === '/admin/permissions') return 'permissions'
+  if (path === '/admin/testing') return 'testing'
+  if (path === '/admin/settings') return 'settings'
+  if (path === '/admin/crud') return 'records'
+  if (path === '/admin/statistics') return 'statistics'
+  if (path === '/docs/index.html') return 'docs'
+  return 'dashboard'
 })
 
 const dashboardCards = [
-  { key: 'users', label: '用户数量', value: '3', note: '管理员、医生、只读用户', trend: 'LIVE', icon: User, iconClass: 'primary', toneClass: 'accent-blue' },
-  { key: 'records', label: '病案数量', value: '3', note: '当前业务数据入口', trend: 'LIVE', icon: Document, iconClass: 'secondary', toneClass: 'accent-violet' },
-  { key: 'stats', label: '统计分析', value: '177', note: '按日期汇总统计', trend: 'SYNC', icon: TrendCharts, iconClass: 'tertiary', toneClass: 'accent-gold' },
-  { key: 'docs', label: '文档中心', value: '1', note: 'VitePress / API 文档', trend: 'DOC', icon: Reading, iconClass: 'primary', toneClass: 'accent-green' }
+  {
+    label: '当前账号',
+    value: currentUserName,
+    note: '登录后会自动沿用会话信息',
+    badge: 'LIVE',
+    icon: User,
+    iconClass: 'primary',
+    toneClass: 'accent-blue'
+  },
+  {
+    label: '当前角色',
+    value: currentRoleName,
+    note: '角色决定默认权限范围',
+    badge: 'ROLE',
+    icon: Key,
+    iconClass: 'secondary',
+    toneClass: 'accent-violet'
+  },
+  {
+    label: '可访问模块',
+    value: isAdmin,
+    note: '用户、权限、测试、设置等后台模块',
+    badge: 'ACCESS',
+    icon: Tools,
+    iconClass: 'tertiary',
+    toneClass: 'accent-gold'
+  },
+  {
+    label: '权限摘要',
+    value: accessSummary,
+    note: '从会话中实时计算当前访问能力',
+    badge: 'OK',
+    icon: TrendCharts,
+    iconClass: 'primary',
+    toneClass: 'accent-green'
+  }
 ]
 
 const featureCards = [
   {
     title: '用户管理',
-    description: '维护账号、角色和权限列表，支持查看、编辑和禁用。',
-    badge: '权限中心',
+    description: '维护账号、角色和基础状态，支持编辑和禁用。',
+    badge: '用户中心',
     tone: 'tone-pink',
     icon: User,
     action: () => router.push('/admin/users')
   },
   {
-    title: '病案管理',
-    description: '进入病案管理页，继续执行查询、编辑和导出操作。',
-    badge: '业务入口',
+    title: '权限管理',
+    description: '查看角色权限矩阵、模块分类和当前账号可见范围。',
+    badge: '权限视图',
+    tone: 'tone-green',
+    icon: Key,
+    action: () => router.push('/admin/permissions')
+  },
+  {
+    title: '测试中心',
+    description: '进入接口冒烟、压力测试和日志清理等后台测试页面。',
+    badge: '测试入口',
     tone: 'tone-cyan',
+    icon: Tools,
+    action: () => router.push('/admin/testing')
+  },
+  {
+    title: '病案管理',
+    description: '继续处理病案列表、编辑和批量操作。',
+    badge: '业务入口',
+    tone: 'tone-orange',
     icon: Document,
     action: () => router.push('/admin/crud')
   },
   {
     title: '统计分析',
-    description: '查看病案统计概览、趋势和汇总图表。',
+    description: '查看病案统计、趋势图表和业务分布。',
     badge: '数据分析',
-    tone: 'tone-green',
+    tone: 'tone-blue',
     icon: TrendCharts,
     action: () => router.push('/admin/statistics')
+  },
+  {
+    title: '系统设置',
+    description: '调整系统参数、日志保留策略和安全配置。',
+    badge: '系统参数',
+    tone: 'tone-slate',
+    icon: Setting,
+    action: () => router.push('/admin/settings')
   },
   {
     title: '文档中心',
@@ -158,29 +233,7 @@ const featureCards = [
   }
 ]
 
-const handleMenuSelect = (index) => {
-  activeMenu.value = index
-  const routes = {
-    users: '/admin/users',
-    records: '/admin/crud',
-    statistics: '/admin/statistics',
-    docs: '/docs/index.html'
-  }
-  const target = routes[index]
-  if (target === '/docs/index.html') {
-    window.open(target, '_blank', 'noopener,noreferrer')
-    return
-  }
-  if (target) {
-    router.push(target)
-  }
-}
-
-function openDocs() {
-  window.open('/docs/index.html', '_blank', 'noopener,noreferrer')
-}
-
-function handleFeatureClick(item) {
+const handleFeatureClick = (item) => {
   if (typeof item.action === 'function') {
     item.action()
     return
@@ -188,16 +241,41 @@ function handleFeatureClick(item) {
   ElMessage.info(`${item.title} feature coming soon`)
 }
 
+const handleMenuSelect = (index) => {
+  const routes = {
+    dashboard: '/admin-dashboard',
+    users: '/admin/users',
+    permissions: '/admin/permissions',
+    testing: '/admin/testing',
+    settings: '/admin/settings',
+    records: '/admin/crud',
+    statistics: '/admin/statistics',
+    docs: '/docs/index.html'
+  }
+
+  const target = routes[index]
+  if (!target) return
+  if (index === 'docs') {
+    openDocs()
+    return
+  }
+  router.push(target)
+}
+
+function openDocs() {
+  window.open('/docs/index.html', '_blank', 'noopener,noreferrer')
+}
+
 function handleLogout() {
-  ElMessageBox.confirm('Are you sure you want to log out?', 'Logout', {
-    confirmButtonText: 'Confirm',
-    cancelButtonText: 'Cancel',
+  ElMessageBox.confirm('确认退出登录吗？', '退出登录', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
     type: 'warning'
   })
     .then(() => {
       clearSession()
       router.push('/login')
-      ElMessage.success('Logged out')
+      ElMessage.success('已退出登录')
     })
     .catch(() => {})
 }
@@ -210,7 +288,6 @@ function handleLogout() {
     radial-gradient(circle at top right, rgba(26, 86, 219, 0.08), transparent 28%),
     linear-gradient(160deg, #f8fbff 0%, #fbfdff 42%, #eef4ff 100%);
   color: #191c1d;
-  font-family: Inter, 'Segoe UI', Arial, sans-serif;
 }
 
 .admin-sidebar {
@@ -242,7 +319,6 @@ function handleLogout() {
   margin: 6px 0 0;
   font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.04em;
   color: #003fb1;
 }
 
@@ -297,7 +373,6 @@ function handleLogout() {
   place-items: center;
   color: #fff;
   background: linear-gradient(135deg, #003fb1, #1a56db);
-  box-shadow: 0 10px 18px rgba(0, 63, 177, 0.18);
 }
 
 .profile-name {
@@ -333,55 +408,48 @@ function handleLogout() {
   box-shadow: 0 12px 32px rgba(25, 28, 29, 0.06);
 }
 
-.search-shell {
-  position: relative;
-  flex: 1;
-  max-width: 560px;
+.topbar-copy {
+  display: grid;
+  gap: 6px;
 }
 
-.search-shell input {
-  width: 100%;
-  border: none;
-  outline: none;
-  border-radius: 999px;
-  background: #f3f4f5;
-  padding: 12px 18px 12px 44px;
-  font-size: 14px;
-  color: #191c1d;
+.topbar-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #737686;
 }
 
-.search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #8b95a7;
+.topbar-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1f2b42;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.topbar-copy {
+.topbar-user {
+  display: grid;
   text-align: right;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
 }
 
-.topbar-role {
+.topbar-user span {
   font-size: 13px;
   font-weight: 700;
   color: #191c1d;
 }
 
-.topbar-version {
-  margin-top: 2px;
+.topbar-user small {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: #737686;
 }
 
@@ -406,6 +474,15 @@ function handleLogout() {
   gap: 24px;
 }
 
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #737686;
+}
+
 .hero-block h2 {
   margin: 0;
   font-size: 44px;
@@ -417,37 +494,17 @@ function handleLogout() {
 
 .hero-block p {
   margin: 12px 0 0;
+  max-width: 720px;
   font-size: 18px;
   line-height: 1.6;
   color: #434654;
 }
 
-.hero-block p span {
-  color: #003fb1;
-  font-weight: 700;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #737686;
-}
-
-.hero-tools {
+.hero-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.export-btn {
-  border: none;
-  border-radius: 12px;
-  background: #003fb1;
-  box-shadow: none;
 }
 
 .kpi-grid {
@@ -463,7 +520,6 @@ function handleLogout() {
   padding: 24px;
   background: #fff;
   border: 1px solid rgba(195, 197, 215, 0.22);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 .kpi-card::before {
@@ -540,8 +596,8 @@ function handleLogout() {
 
 .kpi-value {
   margin-top: 8px;
-  font-size: 36px;
-  line-height: 1;
+  font-size: 28px;
+  line-height: 1.1;
   font-weight: 800;
   color: #191c1d;
 }
@@ -608,6 +664,11 @@ function handleLogout() {
 .tone-cyan {
   color: #0e7490;
   background: rgba(34, 211, 238, 0.18);
+}
+
+.tone-slate {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.2);
 }
 
 .feature-card h3 {

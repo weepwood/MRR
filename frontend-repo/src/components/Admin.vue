@@ -9,7 +9,7 @@
           <p class="eyebrow">Dashboard Entry</p>
           <h1>病案管理后台</h1>
           <p class="hero-copy">
-            这里是后台入口页，你可以快速跳转到工作台、用户管理、病案记录和统计中心。
+            这里是后台入口页，你可以快速跳转到工作台、用户管理、权限管理、测试中心、系统设置和业务页面。
           </p>
         </div>
 
@@ -28,7 +28,7 @@
         <div class="status-copy">
           <p>权限状态</p>
           <strong>{{ isAdmin ? '管理员' : '受限账号' }}</strong>
-          <span>登录后 token 与用户资料会一起保存在本地。</span>
+          <span>登录后的 token 与用户资料会保存在本地。</span>
         </div>
       </section>
 
@@ -51,7 +51,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataBoard, Document, Setting, SwitchButton, TrendCharts, User } from '@element-plus/icons-vue'
+import { DataBoard, Document, Key, Reading, Setting, SwitchButton, Tools, TrendCharts, User } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session.js'
 
@@ -78,6 +78,20 @@ const quickLinks = [
     tone: 'tone-green'
   },
   {
+    title: '权限管理',
+    description: '查看角色权限矩阵与当前账号可见范围。',
+    path: '/admin/permissions',
+    icon: Key,
+    tone: 'tone-slate'
+  },
+  {
+    title: '测试中心',
+    description: '进入接口冒烟、压力测试和日志清理页面。',
+    path: '/admin/testing',
+    icon: Tools,
+    tone: 'tone-cyan'
+  },
+  {
     title: '病案管理',
     description: '进入病案列表、编辑和批量操作。',
     path: '/admin/crud',
@@ -94,13 +108,24 @@ const quickLinks = [
   {
     title: '系统设置',
     description: '管理基础参数、日志与安全策略。',
-    path: '/admin-dashboard',
+    path: '/admin/settings',
     icon: Setting,
     tone: 'tone-slate'
+  },
+  {
+    title: '文档中心',
+    description: '打开项目文档，快速查看接口和部署说明。',
+    path: '/docs/index.html',
+    icon: Reading,
+    tone: 'tone-orange'
   }
 ]
 
 const goTo = (path) => {
+  if (path === '/docs/index.html') {
+    window.open(path, '_blank', 'noopener,noreferrer')
+    return
+  }
   router.push(path)
 }
 
@@ -124,7 +149,8 @@ const handleLogout = () => {
   min-height: 100vh;
   padding: 28px;
   overflow: hidden;
-  background: radial-gradient(circle at top right, rgba(26, 86, 219, 0.08), transparent 28%),
+  background:
+    radial-gradient(circle at top right, rgba(26, 86, 219, 0.08), transparent 28%),
     linear-gradient(160deg, #f8fbff 0%, #fbfdff 42%, #eef4ff 100%);
 }
 

@@ -12,7 +12,7 @@
               <el-icon><Refresh /></el-icon>
               刷新
             </el-button>
-            <el-button type="danger" plain @click="handleClearLogs" :loading="clearing">
+            <el-button type="danger" @click="handleClearLogs" :loading="clearing">
               <el-icon><Delete /></el-icon>
               清空
             </el-button>
@@ -117,11 +117,11 @@
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">
+            <el-button type="primary" @click="openDetail(row)">
               <el-icon><View /></el-icon>
               详情
             </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">
+            <el-button type="danger" @click="handleDelete(row)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>

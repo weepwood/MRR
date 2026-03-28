@@ -80,15 +80,15 @@
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">
+            <el-button type="primary" @click="openDetail(row)">
               <el-icon><View /></el-icon>
               详情
             </el-button>
-            <el-button link type="warning" @click="handleEdit(row)">
+            <el-button type="warning" @click="handleEdit(row)">
               <el-icon><Edit /></el-icon>
               编辑
             </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">
+            <el-button type="danger" @click="handleDelete(row)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>

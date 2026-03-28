@@ -88,6 +88,7 @@ values
 
 insert or ignore into main.mr_auth_user (username, display_name, password_hash, role_code, status)
 values
+    ('br_admin', '系统管理员', 'c6c49412188f4bd8969b7f3997afe001df2cfe77a15e7bb115f102be0a9849cd', 'ADMIN', 'active'),
     ('admin', '系统管理员', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'ADMIN', 'active'),
     ('doctor1', '值班医生', 'f348d5628621f3d8f59c8cabda0f8eb0aa7e0514a90be7571020b1336f26c113', 'DOCTOR', 'active'),
     ('nurse1', '门诊护士', '35608f3146571aa100227a3e68290979ba8a452179a080f888625106076e7de2', 'NURSE', 'active');

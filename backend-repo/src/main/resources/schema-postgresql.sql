@@ -87,14 +87,19 @@ CREATE INDEX IF NOT EXISTS idx_access_log_request_uri ON app.access_log (request
 
 INSERT INTO app.mr_auth_role (code, name, description, permissions, sort_order)
 VALUES
-    ('ADMIN', '系统管理员', '拥有完整的用户与权限管理能力', 'user:manage,role:read,role:manage,record:read,record:manage,log:read,system:read', 1),
-    ('DOCTOR', '医生', '负责病案查询与业务处理', 'record:read,record:edit,search:read,statistics:read', 2),
-    ('NURSE', '护士', '负责基础查询与病案协助', 'record:read,search:read', 3)
+    ('ADMIN', 'System Administrator', 'Full user and permission management access', 'user:manage,role:read,role:manage,record:read,record:manage,log:read,system:read', 1),
+    ('DOCTOR', 'Doctor', 'Query and handle medical records', 'record:read,record:edit,search:read,statistics:read', 2),
+    ('NURSE', 'Nurse', 'Assist with basic queries and records', 'record:read,search:read', 3)
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO app.mr_auth_user (username, display_name, password_hash, role_code, status)
 VALUES
-    ('admin', '系统管理员', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'ADMIN', 'active'),
-    ('doctor1', '值班医生', 'f348d5628621f3d8f59c8cabda0f8eb0aa7e0514a90be7571020b1336f26c113', 'DOCTOR', 'active'),
-    ('nurse1', '门诊护士', '35608f3146571aa100227a3e68290979ba8a452179a080f888625106076e7de2', 'NURSE', 'active')
-ON CONFLICT (username) DO NOTHING;
+    ('br_admin', 'System Administrator', 'c6c49412188f4bd8969b7f3997afe001df2cfe77a15e7bb115f102be0a9849cd', 'ADMIN', 'active'),
+    ('admin', 'System Administrator', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'ADMIN', 'active'),
+    ('doctor1', 'Duty Doctor', 'f348d5628621f3d8f59c8cabda0f8eb0aa7e0514a90be7571020b1336f26c113', 'DOCTOR', 'active'),
+    ('nurse1', 'Outpatient Nurse', '35608f3146571aa100227a3e68290979ba8a452179a080f888625106076e7de2', 'NURSE', 'active')
+ON CONFLICT (username) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    password_hash = EXCLUDED.password_hash,
+    role_code = EXCLUDED.role_code,
+    status = EXCLUDED.status;

@@ -109,13 +109,13 @@ textarea {
 }
 
 .el-button--default {
-  background: #e9eff9;
-  border: none;
+  background: #ffffff;
+  border: 1px solid var(--pmr-color-border-default);
   color: var(--pmr-color-text-primary);
 }
 
 .el-button--default:hover {
-  background: #dce7f7;
+  background: #f7f9fc;
   color: var(--pmr-color-action-primary-pressed);
 }
 

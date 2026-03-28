@@ -1,678 +1,444 @@
 <template>
-  <div class="testing-view">
-    <el-tabs v-model="activeTestTab" type="card">
-      <!-- API接口测试 -->
-      <el-tab-pane label="接口测试" name="api">
-        <div class="test-section">
-          <h3>API接口测试</h3>
-          <div class="form">
-            <div class="form-row">
-              <label>请求地址</label>
-              <el-input v-model="requestUrl" placeholder="https://example.com/api" />
-            </div>
-            <div class="form-row">
-              <label>请求方法</label>
-              <el-select v-model="requestMethod" style="width: 120px;">
-                <el-option label="GET" value="GET" />
-                <el-option label="POST" value="POST" />
-                <el-option label="PUT" value="PUT" />
-                <el-option label="DELETE" value="DELETE" />
+  <div class="pmr-page admin-tool-view">
+    <section class="pmr-page-header">
+      <div>
+        <p class="module-eyebrow">Backend Test Lab</p>
+        <h2 class="pmr-page-title">后端测试</h2>
+        <p class="pmr-page-subtitle">统一跑通健康检查、Swagger、系统概览和关键接口冒烟测试。</p>
+      </div>
+      <div class="pmr-toolbar-actions">
+        <el-button type="primary" :disabled="!resolvedSwaggerUrl" @click="openSwagger">
+          打开 Swagger
+        </el-button>
+        <el-button type="primary" :loading="runningSmokeSuite" @click="runSmokeSuite">
+          运行烟测
+        </el-button>
+        <el-button @click="clearResults">清空结果</el-button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <el-card class="pmr-panel summary-card" shadow="never">
+        <div class="summary-label">状态</div>
+        <div class="summary-value" :class="statusTone">{{ smokeSummary.status }}</div>
+        <div class="summary-note">{{ smokeSummary.note }}</div>
+      </el-card>
+      <el-card class="pmr-panel summary-card" shadow="never">
+        <div class="summary-label">Swagger</div>
+        <div class="summary-value summary-url" :title="resolvedSwaggerUrl || '未配置'">
+          {{ resolvedSwaggerUrl || '未配置' }}
+        </div>
+        <div class="summary-note">地址可在系统设置中修改</div>
+      </el-card>
+      <el-card class="pmr-panel summary-card" shadow="never">
+        <div class="summary-label">本次测试</div>
+        <div class="summary-value">{{ smokeResults.length }}</div>
+        <div class="summary-note">已执行接口数量</div>
+      </el-card>
+      <el-card class="pmr-panel summary-card" shadow="never">
+        <div class="summary-label">最近运行</div>
+        <div class="summary-value">{{ lastRunLabel }}</div>
+        <div class="summary-note">最后一次冒烟测试时间</div>
+      </el-card>
+    </section>
+
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <template #header>
+        <div class="pmr-panel-header">
+          <div>
+            <h3 class="pmr-panel-title">手动接口测试</h3>
+            <p class="pmr-panel-subtitle">直接调用后端 `/v1` 接口，适合排查单个问题。</p>
+          </div>
+          <span class="pmr-badge">Manual</span>
+        </div>
+      </template>
+
+      <el-form :model="manualRequest" class="manual-form" label-width="96px" @submit.prevent>
+        <el-row :gutter="16">
+          <el-col :xs="24" :md="8">
+            <el-form-item label="方法">
+              <el-select v-model="manualRequest.method" style="width: 100%;">
+                <el-option v-for="method in methods" :key="method" :label="method" :value="method" />
               </el-select>
-              <el-button type="primary" @click="sendRequest" :loading="sending">
-                {{ sending ? '发送中...' : '发送请求' }}
-              </el-button>
-            </div>
-            <div class="form-row">
-              <label>请求头 (JSON)</label>
-              <el-input
-                v-model="headersInput"
-                type="textarea"
-                :rows="4"
-                placeholder='{"Content-Type":"application/json"}'
-              />
-            </div>
-            <div class="form-row" v-if="requestMethod !== 'GET'">
-              <label>请求体 (JSON)</label>
-              <el-input
-                v-model="bodyInput"
-                type="textarea"
-                :rows="6"
-                placeholder='{"key":"value"}'
-              />
-            </div>
-          </div>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :md="16">
+            <el-form-item label="路径">
+              <el-input v-model="manualRequest.path" placeholder="/system/health" clearable />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-          <div v-if="response" class="response-section">
-            <h4>响应结果</h4>
-            <div class="response-meta">
-              <span>状态: <strong>{{ response.status }}</strong> {{ response.statusText }}</span>
-              <span>耗时: <strong>{{ responseTimeMs }}ms</strong></span>
-              <span>大小: <strong>{{ prettySize(responseSizeBytes) }}</strong></span>
-            </div>
-            <el-input
-              :model-value="formattedResponse"
-              type="textarea"
-              :rows="10"
-              readonly
-              class="response-content"
-            />
+        <el-form-item label="请求头">
+          <el-input
+            v-model="manualRequest.headers"
+            type="textarea"
+            :rows="3"
+            placeholder='{"Accept":"application/json"}'
+          />
+        </el-form-item>
+
+        <el-form-item label="请求体">
+          <el-input
+            v-model="manualRequest.body"
+            type="textarea"
+            :rows="5"
+            placeholder='{"keyword":"example"}'
+          />
+        </el-form-item>
+
+        <div class="pmr-actions-row">
+          <el-button type="primary" :loading="runningManualRequest" @click="sendManualRequest">发送请求</el-button>
+          <el-button @click="resetManualRequest">重置</el-button>
+        </div>
+      </el-form>
+    </el-card>
+
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <template #header>
+        <div class="pmr-panel-header">
+          <div>
+            <h3 class="pmr-panel-title">冒烟测试结果</h3>
+            <p class="pmr-panel-subtitle">一次性检查关键接口可用性，并记录耗时和响应摘要。</p>
           </div>
-          <div v-if="error" class="error-section">
-            <el-alert :title="error" type="error" show-icon />
+          <span class="pmr-badge">{{ smokeResults.length }} 项</span>
+        </div>
+      </template>
+
+      <el-table :data="smokeResults" border stripe empty-text="尚未运行烟测">
+        <el-table-column prop="name" label="测试项" min-width="160" />
+        <el-table-column prop="method" label="方法" width="96">
+          <template #default="{ row }">
+            <el-tag :type="methodTone(row.method)">{{ row.method }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.ok ? 'success' : 'danger'">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="durationMs" label="耗时" width="110">
+          <template #default="{ row }">{{ row.durationMs }}ms</template>
+        </el-table-column>
+        <el-table-column prop="summary" label="摘要" min-width="260" show-overflow-tooltip />
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" @click="openResult(row)">查看</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <template #header>
+        <div class="pmr-panel-header">
+          <div>
+            <h3 class="pmr-panel-title">响应详情</h3>
+            <p class="pmr-panel-subtitle">显示最新一次手动请求或冒烟测试的返回内容。</p>
           </div>
         </div>
-      </el-tab-pane>
+      </template>
 
-      <!-- 身份证加解密测试 -->
-      <el-tab-pane label="身份证加解密测试" name="idcard">
-        <div class="test-section">
-          <h3>身份证加解密测试</h3>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-card>
-                <template #header>加密测试</template>
-                <div class="form">
-                  <div class="form-row">
-                    <label>身份证号</label>
-                    <el-input v-model="idCardToEncrypt" placeholder="请输入身份证号" />
-                  </div>
-                  <el-button @click="handleEncrypt" :disabled="!idCardToEncrypt" type="primary">
-                    加密
-                  </el-button>
-                  <div v-if="encryptResult" class="result-section">
-                    <h4>加密结果:</h4>
-                    <div class="result-item">
-                      <label>密文:</label>
-                      <el-input :model-value="encryptResult.ciphertext" readonly />
-                      <el-button @click="copyToClipboard(encryptResult.ciphertext)" size="small">复制</el-button>
-                    </div>
-                    <div class="result-item">
-                      <label>IV向量:</label>
-                      <el-input :model-value="encryptResult.iv" readonly />
-                      <el-button @click="copyToClipboard(encryptResult.iv)" size="small">复制</el-button>
-                    </div>
-                  </div>
-                </div>
-              </el-card>
-            </el-col>
-            <el-col :span="8">
-              <el-card>
-                <template #header>解密测试</template>
-                <div class="form">
-                  <div class="form-row">
-                    <label>密文</label>
-                    <el-input v-model="cipherToDecrypt" placeholder="请输入密文" />
-                  </div>
-                  <div class="form-row">
-                    <label>IV向量</label>
-                    <el-input v-model="ivToDecrypt" placeholder="请输入IV向量" />
-                  </div>
-                  <el-button @click="handleDecrypt" :disabled="!cipherToDecrypt || !ivToDecrypt" type="primary">
-                    解密
-                  </el-button>
-                  <div v-if="decryptResult !== null" class="result-section">
-                    <h4>解密结果:</h4>
-                    <div class="result-item">
-                      <label>身份证号:</label>
-                      <el-input :model-value="decryptResult" readonly />
-                      <el-button @click="copyToClipboard(decryptResult)" size="small">复制</el-button>
-                    </div>
-                  </div>
-                  <div v-if="decryptError" class="error-section">
-                    <el-alert :title="decryptError" type="error" show-icon />
-                  </div>
-                </div>
-              </el-card>
-            </el-col>
-            <el-col :span="8">
-              <el-card>
-                <template #header>端到端测试</template>
-                <div class="form">
-                  <div class="form-row">
-                    <label>身份证号</label>
-                    <el-input v-model="idCardToTest" placeholder="请输入身份证号" />
-                  </div>
-                  <el-button @click="handleEndToEndTest" :disabled="!idCardToTest" type="primary">
-                    测试
-                  </el-button>
-                  <div v-if="testResult !== null" class="result-section">
-                    <h4>测试结果:</h4>
-                    <div class="result-item">
-                      <label>原始:</label>
-                      <el-input :model-value="idCardToTest" readonly />
-                    </div>
-                    <div class="result-item">
-                      <label>解密:</label>
-                      <el-input 
-                        :model-value="testResult" 
-                        readonly 
-                        :class="{ 'error-input': testResult !== idCardToTest }"
-                      />
-                    </div>
-                    <div class="result-item">
-                      <label>结果:</label>
-                      <el-tag :type="testResult === idCardToTest ? 'success' : 'danger'">
-                        {{ testResult === idCardToTest ? '✅ 通过' : '❌ 失败' }}
-                      </el-tag>
-                    </div>
-                  </div>
-                </div>
-              </el-card>
-            </el-col>
-          </el-row>
-          
-          <!-- 用户密钥加密测试 -->
-          <div style="margin-top: 30px;">
-            <h3>用户密钥加密测试</h3>
-            <el-row :gutter="20">
-              <el-col :span="8">
-                <el-card>
-                  <template #header>用户密钥加密</template>
-                  <div class="form">
-                    <div class="form-row">
-                      <label>用户ID</label>
-                      <el-input v-model="userIdForEncrypt" placeholder="请输入用户ID" />
-                    </div>
-                    <div class="form-row">
-                      <label>身份证号</label>
-                      <el-input v-model="idCardToEncryptWithUser" placeholder="请输入身份证号" />
-                    </div>
-                    <el-button @click="handleEncryptWithUser" :disabled="!idCardToEncryptWithUser || !userIdForEncrypt" type="primary">
-                      用户密钥加密
-                    </el-button>
-                    <div v-if="encryptWithUserResult" class="result-section">
-                      <h4>加密结果:</h4>
-                      <div class="result-item">
-                        <label>密文:</label>
-                        <el-input :model-value="encryptWithUserResult.ciphertext" readonly />
-                        <el-button @click="copyToClipboard(encryptWithUserResult.ciphertext)" size="small">复制</el-button>
-                      </div>
-                      <div class="result-item">
-                        <label>IV向量:</label>
-                        <el-input :model-value="encryptWithUserResult.iv" readonly />
-                        <el-button @click="copyToClipboard(encryptWithUserResult.iv)" size="small">复制</el-button>
-                      </div>
-                      <div class="result-item">
-                        <label>时间戳:</label>
-                        <el-input :model-value="encryptWithUserResult.timestamp" readonly />
-                        <el-button @click="copyToClipboard(encryptWithUserResult.timestamp)" size="small">复制</el-button>
-                      </div>
-                    </div>
-                  </div>
-                </el-card>
-              </el-col>
-              <el-col :span="8">
-                <el-card>
-                  <template #header>用户密钥解密</template>
-                  <div class="form">
-                    <div class="form-row">
-                      <label>用户ID</label>
-                      <el-input v-model="userIdForDecrypt" placeholder="请输入用户ID" />
-                    </div>
-                    <div class="form-row">
-                      <label>密文</label>
-                      <el-input v-model="cipherToDecryptWithUser" placeholder="请输入密文" />
-                    </div>
-                    <div class="form-row">
-                      <label>IV向量</label>
-                      <el-input v-model="ivToDecryptWithUser" placeholder="请输入IV向量" />
-                    </div>
-                    <div class="form-row">
-                      <label>时间戳</label>
-                      <el-input v-model="timestampToDecryptWithUser" placeholder="请输入时间戳" />
-                    </div>
-                    <el-button @click="handleDecryptWithUser" :disabled="!cipherToDecryptWithUser || !ivToDecryptWithUser || !userIdForDecrypt || !timestampToDecryptWithUser" type="primary">
-                      用户密钥解密
-                    </el-button>
-                    <div v-if="decryptWithUserResult !== null" class="result-section">
-                      <h4>解密结果:</h4>
-                      <div class="result-item">
-                        <label>身份证号:</label>
-                        <el-input :model-value="decryptWithUserResult" readonly />
-                        <el-button @click="copyToClipboard(decryptWithUserResult)" size="small">复制</el-button>
-                      </div>
-                    </div>
-                    <div v-if="decryptWithUserError" class="error-section">
-                      <el-alert :title="decryptWithUserError" type="error" show-icon />
-                    </div>
-                  </div>
-                </el-card>
-              </el-col>
-              <el-col :span="8">
-                <el-card>
-                  <template #header>用户密钥端到端测试</template>
-                  <div class="form">
-                    <div class="form-row">
-                      <label>用户ID</label>
-                      <el-input v-model="userIdForTest" placeholder="请输入用户ID" />
-                    </div>
-                    <div class="form-row">
-                      <label>身份证号</label>
-                      <el-input v-model="idCardToTestWithUser" placeholder="请输入身份证号" />
-                    </div>
-                    <el-button @click="handleEndToEndTestWithUser" :disabled="!idCardToTestWithUser || !userIdForTest" type="primary">
-                      用户密钥测试
-                    </el-button>
-                    <div v-if="testWithUserResult !== null" class="result-section">
-                      <h4>测试结果:</h4>
-                      <div class="result-item">
-                        <label>原始:</label>
-                        <el-input :model-value="idCardToTestWithUser" readonly />
-                      </div>
-                      <div class="result-item">
-                        <label>解密:</label>
-                        <el-input 
-                          :model-value="testWithUserResult" 
-                          readonly 
-                          :class="{ 'error-input': testWithUserResult !== idCardToTestWithUser }"
-                        />
-                      </div>
-                      <div class="result-item">
-                        <label>结果:</label>
-                        <el-tag :type="testWithUserResult === idCardToTestWithUser ? 'success' : 'danger'">
-                          {{ testWithUserResult === idCardToTestWithUser ? '✅ 通过' : '❌ 失败' }}
-                        </el-tag>
-                      </div>
-                    </div>
-                  </div>
-                </el-card>
-              </el-col>
-            </el-row>
-          </div>
+      <div v-if="selectedResult" class="response-shell">
+        <div class="response-meta">
+          <span>接口：{{ selectedResult.path }}</span>
+          <span>状态：{{ selectedResult.status }}</span>
+          <span>耗时：{{ selectedResult.durationMs }}ms</span>
         </div>
-      </el-tab-pane>
-
-      <!-- 功能测试 -->
-      <el-tab-pane label="功能测试" name="features">
-        <div class="test-section">
-          <h3>功能测试</h3>
-          <div class="feature-tests">
-            <el-button @click="testMultiSelect" type="primary">测试多选功能</el-button>
-            <el-button @click="testPrintPage" type="primary">测试打印页面</el-button>
-            <el-button @click="testImageGallery" type="primary">测试图片画廊</el-button>
-            <el-button @click="testLogin" type="primary">测试登录功能</el-button>
-          </div>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
+        <pre class="response-body">{{ selectedResult.preview }}</pre>
+      </div>
+      <el-empty v-else description="请选择一条结果查看详情" />
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { encryptIdCard, decryptIdCard, encryptIdCardWithUserKey, decryptIdCardWithUserKey } from '../../utils/decrypt.js'
+import { useAdminSettings } from '@/shared/composables/useAdminSettings'
 
-// API测试相关
-const activeTestTab = ref('api')
-const requestUrl = ref('')
-const requestMethod = ref('GET')
-const headersInput = ref('')
-const bodyInput = ref('')
-const sending = ref(false)
-const error = ref('')
-const response = ref(null)
-const responseBody = ref(null)
-const responseTimeMs = ref(0)
-const responseSizeBytes = ref(0)
+const { resolvedSwaggerUrl } = useAdminSettings()
 
-// 身份证加解密测试相关
-const idCardToEncrypt = ref('')
-const encryptResult = ref(null)
-const cipherToDecrypt = ref('')
-const ivToDecrypt = ref('')
-const decryptResult = ref(null)
-const decryptError = ref('')
-const idCardToTest = ref('')
-const testResult = ref(null)
+const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+const runningSmokeSuite = ref(false)
+const runningManualRequest = ref(false)
+const smokeResults = ref([])
+const selectedResult = ref(null)
+const lastRunAt = ref('')
 
-// 用户密钥加密测试相关
-const idCardToEncryptWithUser = ref('')
-const userIdForEncrypt = ref('')
-const encryptWithUserResult = ref(null)
-const cipherToDecryptWithUser = ref('')
-const ivToDecryptWithUser = ref('')
-const timestampToDecryptWithUser = ref('')
-const userIdForDecrypt = ref('')
-const decryptWithUserResult = ref(null)
-const decryptWithUserError = ref('')
-const idCardToTestWithUser = ref('')
-const userIdForTest = ref('')
-const testWithUserResult = ref(null)
+const manualRequest = reactive({
+  method: 'GET',
+  path: '/system/health',
+  headers: '',
+  body: ''
+})
 
-// 安全解析JSON
-const safeParseJson = (text, fallback) => {
-  if (!text) return fallback
-  try { 
-    return JSON.parse(text) 
-  } catch { 
-    return fallback 
-  }
-}
-
-// 发送API请求
-const sendRequest = async () => {
-  error.value = ''
-  response.value = null
-  responseBody.value = null
-  responseTimeMs.value = 0
-  responseSizeBytes.value = 0
-  
-  if (!requestUrl.value) { 
-    error.value = '请输入请求地址'
-    return 
-  }
-  
-  const headers = safeParseJson(headersInput.value, {})
-  const bodyObj = safeParseJson(bodyInput.value, undefined)
-  const init = { method: requestMethod.value, headers }
-  
-  if (requestMethod.value !== 'GET' && bodyObj !== undefined) {
-    init.body = JSON.stringify(bodyObj)
-    if (!init.headers) init.headers = {}
-    if (!init.headers['Content-Type'] && !init.headers['content-type']) {
-      init.headers['Content-Type'] = 'application/json'
+const smokeSummary = computed(() => {
+  if (!smokeResults.value.length) {
+    return {
+      status: '未运行',
+      note: '点击“运行烟测”开始检查'
     }
   }
-  
-  sending.value = true
-  const start = performance.now()
-  
-  try {
-    const res = await fetch(requestUrl.value, init)
-    const end = performance.now()
-    response.value = { 
-      status: res.status, 
-      statusText: res.statusText, 
-      ok: res.ok, 
-      headers: {} 
-    }
-    res.headers.forEach((v, k) => { 
-      response.value.headers[k] = v 
-    })
-    responseTimeMs.value = Math.round(end - start)
-    
-    const ct = res.headers.get('content-type') || ''
-    if (ct.includes('application/json')) {
-      const json = await res.json()
-      const jsonStr = JSON.stringify(json)
-      responseSizeBytes.value = jsonStr ? new Blob([jsonStr]).size : 0
-      responseBody.value = json
-    } else {
-      const text = await res.text()
-      responseSizeBytes.value = text ? new Blob([text]).size : 0
-      responseBody.value = text
-    }
-  } catch (e) {
-    error.value = e?.message || '请求失败'
-  } finally {
-    sending.value = false
-  }
-}
 
-// 格式化响应
-const formattedResponse = computed(() => {
-  if (responseBody.value == null) return ''
-  try { 
-    return typeof responseBody.value === 'string' 
-      ? responseBody.value 
-      : JSON.stringify(responseBody.value, null, 2) 
-  } catch { 
-    return String(responseBody.value) 
+  const passed = smokeResults.value.filter((item) => item.ok).length
+  return {
+    status: passed === smokeResults.value.length ? '全部通过' : '部分失败',
+    note: `通过 ${passed}/${smokeResults.value.length} 个接口`
   }
 })
 
-// 格式化文件大小
-const prettySize = (bytes) => {
-  if (!bytes || bytes <= 0) return '0 B'
-  const units = ['B','KB','MB','GB']
-  let i = 0
-  let n = bytes
-  while (n >= 1024 && i < units.length - 1) { 
-    n /= 1024
-    i++ 
-  }
-  return `${n.toFixed(2)} ${units[i]}`
+const statusTone = computed(() => {
+  if (!smokeResults.value.length) return 'neutral'
+  return smokeResults.value.every((item) => item.ok) ? 'success' : 'danger'
+})
+
+const lastRunLabel = computed(() => lastRunAt.value || '暂无')
+
+const buildApiUrl = (path) => {
+  const cleanPath = String(path || '').trim().replace(/^\/+/, '')
+  return `/api/${cleanPath}`
 }
 
-// 身份证加密
-const handleEncrypt = () => {
+const parseJson = (text, fallback = null) => {
+  if (!text || !String(text).trim()) return fallback
   try {
-    encryptResult.value = encryptIdCard(idCardToEncrypt.value)
-  } catch (error) {
-    console.error('加密失败:', error)
+    return JSON.parse(text)
+  } catch {
+    return fallback
   }
 }
 
-// 身份证解密
-const handleDecrypt = () => {
-  try {
-    decryptResult.value = decryptIdCard(cipherToDecrypt.value, ivToDecrypt.value)
-    decryptError.value = ''
-  } catch (error) {
-    decryptError.value = '解密失败: ' + error.message
-    decryptResult.value = null
-  }
+const normalizeBody = (body) => {
+  if (body == null) return ''
+  if (typeof body === 'string') return body
+  return JSON.stringify(body, null, 2)
 }
 
-// 端到端测试
-const handleEndToEndTest = () => {
-  try {
-    const { ciphertext, iv } = encryptIdCard(idCardToTest.value)
-    testResult.value = decryptIdCard(ciphertext, iv)
-  } catch (error) {
-    testResult.value = null
-    console.error('端到端测试失败:', error)
+const requestOnce = async ({ name, method, path, headers = {}, body = '' }) => {
+  const start = performance.now()
+  const finalHeaders = { ...headers }
+  if (body && !Object.keys(finalHeaders).some((key) => key.toLowerCase() === 'content-type')) {
+    finalHeaders['Content-Type'] = 'application/json'
   }
-}
-
-// 用户密钥加密
-const handleEncryptWithUser = () => {
-  try {
-    encryptWithUserResult.value = encryptIdCardWithUserKey(idCardToEncryptWithUser.value, userIdForEncrypt.value)
-  } catch (error) {
-    console.error('用户密钥加密失败:', error)
-  }
-}
-
-// 用户密钥解密
-const handleDecryptWithUser = () => {
-  try {
-    decryptWithUserResult.value = decryptIdCardWithUserKey(cipherToDecryptWithUser.value, ivToDecryptWithUser.value, userIdForDecrypt.value, timestampToDecryptWithUser.value)
-    decryptWithUserError.value = ''
-  } catch (error) {
-    decryptWithUserError.value = '用户密钥解密失败: ' + error.message
-    decryptWithUserResult.value = null
-  }
-}
-
-// 用户密钥端到端测试
-const handleEndToEndTestWithUser = () => {
-  try {
-    const { ciphertext, iv, timestamp } = encryptIdCardWithUserKey(idCardToTestWithUser.value, userIdForTest.value)
-    testWithUserResult.value = decryptIdCardWithUserKey(ciphertext, iv, userIdForTest.value, timestamp)
-  } catch (error) {
-    testWithUserResult.value = null
-    console.error('用户密钥端到端测试失败:', error)
-  }
-}
-
-// 复制到剪贴板
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text).then(() => {
-    ElMessage.success('已复制到剪贴板')
-  }).catch(err => {
-    console.error('复制失败:', err)
-    ElMessage.error('复制失败')
+  const response = await fetch(buildApiUrl(path), {
+    method,
+    headers: finalHeaders,
+    body: ['GET', 'DELETE'].includes(method) || !body ? undefined : body
   })
-}
+  const durationMs = Math.round(performance.now() - start)
+  const contentType = response.headers.get('content-type') || ''
+  const payload = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text()
 
-// 功能测试
-const testMultiSelect = () => {
-  window.location.href = '/00788222'
-}
+  const preview = typeof payload === 'string'
+    ? payload
+    : JSON.stringify(payload, null, 2)
 
-const testPrintPage = () => {
-  const testImages = [
-    {
-      id: 1,
-      pages: 1,
-      btype: 1,
-      cx: 'https://via.placeholder.com/800x600/667eea/ffffff?text=Test+Image+1',
-      blobUrl: 'https://via.placeholder.com/800x600/667eea/ffffff?text=Test+Image+1'
-    },
-    {
-      id: 2,
-      pages: 2,
-      btype: 2,
-      cx: 'https://via.placeholder.com/800x600/48bb78/ffffff?text=Test+Image+2',
-      blobUrl: 'https://via.placeholder.com/800x600/48bb78/ffffff?text=Test+Image+2'
-    }
-  ]
-  
-  const testRecord = {
-    bah: '00788222',
-    name: '测试患者',
-    department: '测试科室'
+  return {
+    name,
+    method,
+    path,
+    status: `${response.status} ${response.statusText}`.trim(),
+    ok: response.ok,
+    durationMs,
+    summary: typeof payload === 'object' && payload !== null
+      ? payload.message || payload?.data?.message || 'JSON response'
+      : String(payload || '').slice(0, 140) || 'empty response',
+    preview
   }
-  
-  sessionStorage.setItem('selectedImagesForPrint', JSON.stringify(testImages))
-  sessionStorage.setItem('printBah', '00788222')
-  sessionStorage.setItem('printRecord', JSON.stringify(testRecord))
-  
-  window.open('/print', '_blank')
 }
 
-const testImageGallery = () => {
-  window.open('/00788222', '_blank')
+const runSmokeSuite = async () => {
+  runningSmokeSuite.value = true
+  try {
+    const suite = [
+      { name: '系统健康', method: 'GET', path: '/system/health' },
+      { name: '系统信息', method: 'GET', path: '/system/info' },
+      { name: '系统概览', method: 'GET', path: '/system/overview' },
+      { name: '统计摘要', method: 'GET', path: '/statistics-api/summary' },
+      { name: '图像心跳', method: 'GET', path: '/img-api/hello' },
+      { name: '数据库心跳', method: 'GET', path: '/db-api/hello' }
+    ]
+
+    const results = []
+    for (const item of suite) {
+      results.push(await requestOnce(item))
+    }
+
+    smokeResults.value = results
+    selectedResult.value = results[0] || null
+    lastRunAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
+    ElMessage.success('冒烟测试完成')
+  } catch (error) {
+    ElMessage.error(error?.message || '冒烟测试失败')
+  } finally {
+    runningSmokeSuite.value = false
+  }
 }
 
-const testLogin = () => {
-  window.open('/login', '_blank')
+const sendManualRequest = async () => {
+  runningManualRequest.value = true
+  try {
+    const headers = parseJson(manualRequest.headers, {})
+    const bodyPayload = parseJson(manualRequest.body, manualRequest.body || '')
+    const result = await requestOnce({
+      name: '手动请求',
+      method: manualRequest.method,
+      path: manualRequest.path,
+      headers,
+      body: typeof bodyPayload === 'string' ? bodyPayload : normalizeBody(bodyPayload)
+    })
+    selectedResult.value = result
+    smokeResults.value = [result, ...smokeResults.value].slice(0, 10)
+    lastRunAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
+    ElMessage.success('请求完成')
+  } catch (error) {
+    ElMessage.error(error?.message || '请求失败')
+  } finally {
+    runningManualRequest.value = false
+  }
+}
+
+const openResult = (row) => {
+  selectedResult.value = row
+}
+
+const clearResults = () => {
+  smokeResults.value = []
+  selectedResult.value = null
+  lastRunAt.value = ''
+}
+
+const openSwagger = () => {
+  if (!resolvedSwaggerUrl.value) {
+    ElMessage.warning('请先在系统设置中配置 Swagger 地址')
+    return
+  }
+  window.open(resolvedSwaggerUrl.value, '_blank', 'noopener,noreferrer')
+}
+
+const resetManualRequest = () => {
+  manualRequest.method = 'GET'
+  manualRequest.path = '/system/health'
+  manualRequest.headers = ''
+  manualRequest.body = ''
+}
+
+const methodTone = (method) => {
+  const value = String(method || '').toUpperCase()
+  if (value === 'GET') return 'primary'
+  if (value === 'POST') return 'success'
+  if (value === 'PUT' || value === 'PATCH') return 'warning'
+  if (value === 'DELETE') return 'danger'
+  return 'info'
 }
 </script>
 
 <style scoped>
-.testing-view {
-  height: 100%;
+.module-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pmr-color-text-secondary);
 }
 
-.test-section {
-  padding: 20px 0;
-}
-
-.test-section h3 {
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
-.form-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.summary-card {
+  padding: 20px;
 }
 
-.form-row label {
-  min-width: 120px;
-  color: #333;
-  font-weight: 500;
+.summary-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pmr-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.response-section {
+.summary-value {
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--pmr-color-text-primary);
+  word-break: break-all;
+}
+
+.summary-value.success {
+  color: var(--pmr-color-success-500);
+}
+
+.summary-value.danger {
+  color: var(--pmr-color-danger-500);
+}
+
+.summary-value.neutral {
+  color: var(--pmr-color-text-primary);
+}
+
+.summary-url {
+  font-size: 16px;
+}
+
+.summary-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--pmr-color-text-secondary);
+}
+
+.pmr-section {
   margin-top: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
 }
 
-.response-section h4 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: #333;
+.manual-form {
+  display: grid;
+  gap: 4px;
+}
+
+.response-shell {
+  display: grid;
+  gap: 12px;
 }
 
 .response-meta {
   display: flex;
-  gap: 20px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #666;
-}
-
-.response-content {
-  font-family: 'Courier New', monospace;
-}
-
-.error-section {
-  margin-top: 16px;
-}
-
-.result-section {
-  margin-top: 16px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-}
-
-.result-section h4 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #333;
-}
-
-.result-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.result-item label {
-  min-width: 60px;
-  font-size: 12px;
-  color: #666;
-}
-
-.result-item .el-input {
-  flex: 1;
-}
-
-.error-input {
-  border-color: #f56c6c;
-}
-
-.feature-tests {
-  display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--pmr-color-text-secondary);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-    align-items: stretch;
+.response-body {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--pmr-radius-xl);
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: var(--pmr-font-family-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 1180px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .form-row label {
-    min-width: auto;
-    margin-bottom: 4px;
-  }
-  
-  .response-meta {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .feature-tests {
-    flex-direction: column;
+}
+
+@media (max-width: 640px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

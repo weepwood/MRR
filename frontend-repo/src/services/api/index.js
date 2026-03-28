@@ -287,3 +287,45 @@ export function updateScan(id, data) {
 export function deleteScan(id) {
     return authApi.delete(`/scan-api/${id}`)
 }
+
+/**
+ * 执行一次压测
+ * @param {object} data 压测参数
+ * @returns {Promise}
+ */
+export function runPressureTest(data) {
+    return authApi.post('/monitoring-api/pressure-tests/run', data)
+}
+
+/**
+ * 获取压测历史
+ * @returns {Promise}
+ */
+export function getPressureTestHistory() {
+    return authApi.get('/monitoring-api/pressure-tests/history')
+}
+
+/**
+ * 获取最新一次压测结果
+ * @returns {Promise}
+ */
+export function getLatestPressureTest() {
+    return authApi.get('/monitoring-api/pressure-tests/latest')
+}
+
+/**
+ * 按运行编号查询压测结果
+ * @param {string} runId 运行编号
+ * @returns {Promise}
+ */
+export function getPressureTestByRunId(runId) {
+    return authApi.get(`/monitoring-api/pressure-tests/${runId}`)
+}
+
+/**
+ * 清空压测历史
+ * @returns {Promise}
+ */
+export function clearPressureTestHistory() {
+    return authApi.delete('/monitoring-api/pressure-tests/history')
+}

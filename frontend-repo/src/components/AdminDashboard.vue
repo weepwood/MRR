@@ -255,6 +255,7 @@ import TestingView from './admin/TestingView.vue'
 import LogsView from './admin/LogsView.vue'
 import MonitoringView from './admin/MonitoringView.vue'
 import SettingsView from './admin/SettingsView.vue'
+import { adminSettingsStorageKey } from '@/shared/constants/adminDashboard'
 
 const router = useRouter()
 const activeMenu = ref('dashboard')
@@ -276,6 +277,7 @@ const defaultSettings = {
   swaggerUrl: '/swagger-ui/index.html'
 }
 const settings = reactive({ ...defaultSettings })
+const settingsStorageKey = adminSettingsStorageKey
 
 const dashboardCards = computed(() => [
   { key: 'users', label: '总用户数', value: stats.totalUsers, note: '管理人员与临床账号总览', trend: '+12% vs 上周', icon: User, iconClass: 'primary', toneClass: 'accent-blue' },

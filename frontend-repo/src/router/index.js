@@ -10,7 +10,9 @@ const AdminDashboard = () => import('@/pages/admin/AdminDashboardPage.vue')
 const UsersPage = () => import('@/pages/admin/UsersPage.vue')
 const PermissionsPage = () => import('@/pages/admin/PermissionsPage.vue')
 const TestingPage = () => import('@/pages/admin/TestingPage.vue')
-const SettingsPage = () => import('@/pages/admin/SettingsPage.vue')
+const LogsView = () => import('@/pages/admin/LogsView.vue')
+const MonitoringView = () => import('@/pages/admin/MonitoringView.vue')
+const SettingsView = () => import('@/pages/admin/SettingsView.vue')
 const CrudView = () => import('@/pages/admin/RecordsPage.vue')
 const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
 const Test = () => import('@/components/Test.vue')
@@ -52,9 +54,21 @@ const routes = [
         meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'log:read', 'role:manage', 'user:manage'] }
       },
       {
+        path: 'logs',
+        name: 'admin-logs',
+        component: LogsView,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['log:read', 'system:read'] }
+      },
+      {
+        path: 'monitoring',
+        name: 'admin-monitoring',
+        component: MonitoringView,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read'] }
+      },
+      {
         path: 'settings',
         name: 'admin-settings',
-        component: SettingsPage,
+        component: SettingsView,
         meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'role:manage', 'user:manage'] }
       },
       { path: 'crud', name: 'admin-crud', component: CrudView, meta: { requiresAdmin: true } },

@@ -337,13 +337,14 @@ onMounted(loadData)
 }
 
 .permission-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
 .permission-card {
   min-width: 0;
+  width: 100%;
 }
 
 .permission-tags {

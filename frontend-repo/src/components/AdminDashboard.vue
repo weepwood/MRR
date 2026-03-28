@@ -24,6 +24,14 @@
           <el-icon><Tools /></el-icon>
           <span>测试中心</span>
         </el-menu-item>
+        <el-menu-item index="logs">
+          <el-icon><Document /></el-icon>
+          <span>日志管理</span>
+        </el-menu-item>
+        <el-menu-item index="monitoring">
+          <el-icon><Monitor /></el-icon>
+          <span>监控中心</span>
+        </el-menu-item>
         <el-menu-item index="records">
           <el-icon><Document /></el-icon>
           <span>病案管理</span>
@@ -86,8 +94,8 @@
               <p class="eyebrow">Clinical Sanctuary</p>
               <h2>欢迎进入后台管理中心</h2>
               <p>
-                当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、病案和系统设置页面，
-                所有功能都会嵌入在同一个后台壳中。
+                当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、日志、监控、
+                病案和系统设置页面，所有功能都会嵌入在同一个后台壳中。
               </p>
             </div>
 
@@ -151,6 +159,7 @@ import {
   DataBoard,
   Document,
   Key,
+  Monitor,
   Reading,
   Setting,
   SwitchButton,
@@ -176,6 +185,8 @@ const activeMenu = computed(() => {
   if (path.startsWith('/admin/users')) return 'users'
   if (path.startsWith('/admin/permissions')) return 'permissions'
   if (path.startsWith('/admin/testing')) return 'testing'
+  if (path.startsWith('/admin/logs')) return 'logs'
+  if (path.startsWith('/admin/monitoring')) return 'monitoring'
   if (path.startsWith('/admin/settings')) return 'settings'
   if (path.startsWith('/admin/crud')) return 'records'
   if (path.startsWith('/admin/statistics')) return 'statistics'
@@ -188,7 +199,7 @@ const showDashboard = computed(() => activeMenu.value === 'dashboard')
 const sectionMetaMap = {
   dashboard: {
     title: '工作台总览',
-    description: '从这里进入用户、权限、测试、病案和系统设置模块。'
+    description: '从这里进入用户、权限、测试、日志、监控、病案和系统设置模块。'
   },
   users: {
     title: '用户管理',
@@ -201,6 +212,14 @@ const sectionMetaMap = {
   testing: {
     title: '测试中心',
     description: '进入接口冒烟、压力测试和日志清理页面。'
+  },
+  logs: {
+    title: '日志管理',
+    description: '查看系统日志、请求明细和审计记录。'
+  },
+  monitoring: {
+    title: '监控中心',
+    description: '查看 CPU、内存、磁盘和系统运行状态。'
   },
   settings: {
     title: '系统设置',
@@ -247,7 +266,7 @@ const dashboardCards = computed(() => [
   {
     label: '可访问模块',
     value: isAdmin.value ? '全部后台模块' : '受限后台模块',
-    note: '用户、权限、测试、病案与设置模块',
+    note: '用户、权限、测试、日志、监控、病案与设置模块',
     badge: 'ACCESS',
     icon: Tools,
     iconClass: 'tertiary',
@@ -288,6 +307,22 @@ const featureCards = [
     tone: 'tone-cyan',
     icon: Tools,
     action: () => router.push('/admin/testing')
+  },
+  {
+    title: '日志管理',
+    description: '查看系统日志、请求明细和审计记录。',
+    badge: '日志入口',
+    tone: 'tone-slate',
+    icon: Document,
+    action: () => router.push('/admin/logs')
+  },
+  {
+    title: '监控中心',
+    description: '查看 CPU、内存、磁盘和系统运行状态。',
+    badge: '监控入口',
+    tone: 'tone-blue',
+    icon: Monitor,
+    action: () => router.push('/admin/monitoring')
   },
   {
     title: '病案管理',
@@ -337,6 +372,8 @@ const handleMenuSelect = (index) => {
     users: '/admin/users',
     permissions: '/admin/permissions',
     testing: '/admin/testing',
+    logs: '/admin/logs',
+    monitoring: '/admin/monitoring',
     settings: '/admin/settings',
     records: '/admin/crud',
     statistics: '/admin/statistics'

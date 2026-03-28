@@ -7,42 +7,11 @@
         <p class="pmr-page-subtitle">统一查看健康检查、Swagger、系统概览、冒烟测试和身份证加解密测试。</p>
       </div>
       <div class="pmr-toolbar-actions">
-        <el-button type="primary" :disabled="!resolvedSwaggerUrl" @click="openSwagger">
-          打开 Swagger
-        </el-button>
-        <el-button type="primary" :loading="runningSmokeSuite" @click="runSmokeSuite">
-          运行烟测
-        </el-button>
-        <el-button @click="clearResults">清空结果</el-button>
+
       </div>
     </section>
 
-    <section class="summary-grid">
-      <el-card class="pmr-panel summary-card" shadow="never">
-        <div class="summary-label">状态</div>
-        <div class="summary-value" :class="statusTone">{{ smokeSummary.status }}</div>
-        <div class="summary-note">{{ smokeSummary.note }}</div>
-      </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
-        <div class="summary-label">Swagger</div>
-        <div class="summary-value summary-url" :title="resolvedSwaggerUrl || '未配置'">
-          {{ resolvedSwaggerUrl || '未配置' }}
-        </div>
-        <div class="summary-note">地址可在系统设置中修改</div>
-      </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
-        <div class="summary-label">本次测试</div>
-        <div class="summary-value">{{ smokeResults.length }}</div>
-        <div class="summary-note">已执行接口数量</div>
-      </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
-        <div class="summary-label">最近运行</div>
-        <div class="summary-value">{{ lastRunLabel }}</div>
-        <div class="summary-note">最后一次测试时间</div>
-      </el-card>
-    </section>
-
-    <el-card class="pmr-panel pmr-section" shadow="never">
+  <el-card class="pmr-panel pmr-section" shadow="never">
       <template #header>
         <div class="pmr-panel-header">
           <div>
@@ -70,21 +39,12 @@
         </el-row>
 
         <el-form-item label="请求头">
-          <el-input
-            v-model="manualRequest.headers"
-            type="textarea"
-            :rows="3"
-            placeholder='{"Accept":"application/json"}'
-          />
+          <el-input v-model="manualRequest.headers" type="textarea" :rows="3"
+            placeholder='{"Accept":"application/json"}' />
         </el-form-item>
 
         <el-form-item label="请求体">
-          <el-input
-            v-model="manualRequest.body"
-            type="textarea"
-            :rows="5"
-            placeholder='{"keyword":"example"}'
-          />
+          <el-input v-model="manualRequest.body" type="textarea" :rows="5" placeholder='{"keyword":"example"}' />
         </el-form-item>
 
         <div class="pmr-actions-row">
@@ -95,60 +55,71 @@
     </el-card>
 
     <el-card class="pmr-panel pmr-section" shadow="never">
-      <template #header>
-        <div class="pmr-panel-header">
-          <div>
-            <h3 class="pmr-panel-title">冒烟测试结果</h3>
-            <p class="pmr-panel-subtitle">一次性检查关键接口可用性，并记录耗时和响应摘要。</p>
+
+
+      <el-card class="pmr-panel pmr-section" shadow="never">
+        <template #header>
+
+          <div class="pmr-panel-header">
+            <div>
+              <h3 class="pmr-panel-title">冒烟测试结果</h3>
+             <div class="pmr-toolbar-actions">
+                <el-button type="primary" :loading="runningSmokeSuite" @click="runSmokeSuite">
+                  运行烟测
+                </el-button>
+                <el-button @click="clearResults">清空结果</el-button>
+              </div>
+              <p class="pmr-panel-subtitle">一次性检查关键接口可用性，并记录耗时和响应摘要。</p>
+            </div>
+            <span class="pmr-badge">{{ smokeResults.length }} 项</span>
           </div>
-          <span class="pmr-badge">{{ smokeResults.length }} 项</span>
-        </div>
-      </template>
+        </template>
 
-      <el-table :data="smokeResults" border stripe empty-text="暂无冒烟结果">
-        <el-table-column prop="name" label="测试项" min-width="160" />
-        <el-table-column prop="method" label="方法" width="96">
-          <template #default="{ row }">
-            <el-tag :type="methodTone(row.method)">{{ row.method }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="110">
-          <template #default="{ row }">
-            <el-tag :type="row.ok ? 'success' : 'danger'">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="durationMs" label="耗时" width="110">
-          <template #default="{ row }">{{ row.durationMs }}ms</template>
-        </el-table-column>
-        <el-table-column prop="summary" label="摘要" min-width="260" show-overflow-tooltip />
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" @click="openResult(row)">查看</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+        <el-table :data="smokeResults" border stripe empty-text="暂无冒烟结果">
+          <el-table-column prop="name" label="测试项" min-width="160" />
+          <el-table-column prop="method" label="方法" width="96">
+            <template #default="{ row }">
+              <el-tag :type="methodTone(row.method)">{{ row.method }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="status" label="状态" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.ok ? 'success' : 'danger'">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="durationMs" label="耗时" width="110">
+            <template #default="{ row }">{{ row.durationMs }}ms</template>
+          </el-table-column>
+          <el-table-column prop="summary" label="摘要" min-width="260" show-overflow-tooltip />
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" @click="openResult(row)">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
 
-    <el-card class="pmr-panel pmr-section" shadow="never">
-      <template #header>
-        <div class="pmr-panel-header">
-          <div>
-            <h3 class="pmr-panel-title">响应详情</h3>
-            <p class="pmr-panel-subtitle">展示最近一次手动请求或冒烟测试的返回内容。</p>
+      <el-card class="pmr-panel pmr-section" shadow="never">
+        <template #header>
+          <div class="pmr-panel-header">
+            <div>
+              <h3 class="pmr-panel-title">响应详情</h3>
+              <p class="pmr-panel-subtitle">展示最近一次手动请求或冒烟测试的返回内容。</p>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
 
-      <div v-if="selectedResult" class="response-shell">
-        <div class="response-meta">
-          <span>接口：{{ selectedResult.path }}</span>
-          <span>状态：{{ selectedResult.status }}</span>
-          <span>耗时：{{ selectedResult.durationMs }}ms</span>
+        <div v-if="selectedResult" class="response-shell">
+          <div class="response-meta">
+            <span>接口：{{ selectedResult.path }}</span>
+            <span>状态：{{ selectedResult.status }}</span>
+            <span>耗时：{{ selectedResult.durationMs }}ms</span>
+          </div>
+          <pre class="response-body">{{ selectedResult.preview }}</pre>
         </div>
-        <pre class="response-body">{{ selectedResult.preview }}</pre>
-      </div>
-      <el-empty v-else description="请选择一条结果查看详情" />
+        <el-empty v-else description="请选择一条结果查看详情" />
+      </el-card>
     </el-card>
 
     <el-card class="pmr-panel pmr-section" shadow="never">
@@ -218,14 +189,8 @@
               </div>
             </div>
 
-            <el-alert
-              v-if="decryptError"
-              :title="decryptError"
-              type="error"
-              show-icon
-              :closable="false"
-              class="idcard-alert"
-            />
+            <el-alert v-if="decryptError" :title="decryptError" type="error" show-icon :closable="false"
+              class="idcard-alert" />
           </el-form>
         </el-card>
 
@@ -263,9 +228,18 @@
       </div>
     </el-card>
 
-    <PasswordCipherView />
-    <PressureTestView />
-    <LogCleanupTestView />
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <PasswordCipherView />
+    </el-card>
+
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <PressureTestView />
+    </el-card>
+
+    <el-card class="pmr-panel pmr-section" shadow="never">
+      <LogCleanupTestView />
+    </el-card>
+
   </div>
 </template>
 

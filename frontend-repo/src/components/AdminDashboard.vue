@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="admin-dashboard">
     <aside class="admin-sidebar">
       <div class="brand-block">
@@ -8,59 +8,91 @@
       </div>
 
       <el-menu :default-active="activeMenu" class="sidebar-menu" @select="handleMenuSelect">
-        <el-menu-item index="dashboard">
-          <el-icon><DataBoard /></el-icon>
-          <span>工作台总览</span>
-        </el-menu-item>
-        <el-menu-item index="users">
-          <el-icon><User /></el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-        <el-menu-item index="permissions">
-          <el-icon><Key /></el-icon>
-          <span>权限管理</span>
-        </el-menu-item>
-        <el-menu-item index="testing">
-          <el-icon><Tools /></el-icon>
-          <span>测试中心</span>
-        </el-menu-item>
-        <el-menu-item index="logs">
-          <el-icon><Document /></el-icon>
-          <span>日志管理</span>
-        </el-menu-item>
-        <el-menu-item index="monitoring">
-          <el-icon><Monitor /></el-icon>
-          <span>监控中心</span>
-        </el-menu-item>
-        <el-menu-item index="records">
-          <el-icon><Document /></el-icon>
-          <span>病案管理</span>
-        </el-menu-item>
-        <el-menu-item index="statistics">
-          <el-icon><TrendCharts /></el-icon>
-          <span>统计分析</span>
-        </el-menu-item>
-        <el-menu-item index="statistics-detail">
-          <el-icon><Document /></el-icon>
-          <span>病案明细</span>
-        </el-menu-item>
-        <el-menu-item index="settings">
-          <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
-        </el-menu-item>
-        <el-menu-item index="docs">
-          <el-icon><Reading /></el-icon>
-          <span>文档中心</span>
-        </el-menu-item>
+        <el-menu-item-group>
+          <template #title>
+            <span class="menu-group-title">总览</span>
+          </template>
+          <el-menu-item index="dashboard">
+            <el-icon><DataBoard /></el-icon>
+            <span>工作台总览</span>
+          </el-menu-item>
+          <el-menu-item index="statistics">
+            <el-icon><TrendCharts /></el-icon>
+            <span>统计分析</span>
+          </el-menu-item>
+          <el-menu-item index="statistics-detail">
+            <el-icon><Document /></el-icon>
+            <span>病案明细</span>
+          </el-menu-item>
+        </el-menu-item-group>
+
+        <el-menu-item-group>
+          <template #title>
+            <span class="menu-group-title">管理</span>
+          </template>
+          <el-menu-item index="users">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="permissions">
+            <el-icon><Key /></el-icon>
+            <span>权限管理</span>
+          </el-menu-item>
+          <el-menu-item index="records">
+            <el-icon><Document /></el-icon>
+            <span>病案管理</span>
+          </el-menu-item>
+        </el-menu-item-group>
+
+        <el-menu-item-group>
+          <template #title>
+            <span class="menu-group-title">运行</span>
+          </template>
+          <el-menu-item index="testing">
+            <el-icon><Tools /></el-icon>
+            <span>测试中心</span>
+          </el-menu-item>
+          <el-menu-item index="logs">
+            <el-icon><Document /></el-icon>
+            <span>日志管理</span>
+          </el-menu-item>
+          <el-menu-item index="monitoring">
+            <el-icon><Monitor /></el-icon>
+            <span>监控中心</span>
+          </el-menu-item>
+          <el-menu-item index="settings">
+            <el-icon><Setting /></el-icon>
+            <span>系统设置</span>
+          </el-menu-item>
+        </el-menu-item-group>
+
+        <el-menu-item-group>
+          <template #title>
+            <span class="menu-group-title">资料</span>
+          </template>
+          <el-menu-item index="docs">
+            <el-icon><Reading /></el-icon>
+            <span>文档中心</span>
+          </el-menu-item>
+        </el-menu-item-group>
       </el-menu>
 
       <div class="profile-card">
-        <div class="profile-avatar">
-          <el-icon><User /></el-icon>
-        </div>
-        <div class="profile-copy">
-          <p class="profile-name">{{ currentUserName || '管理员' }}</p>
-          <p class="profile-role">{{ currentRoleName || '未分配角色' }}</p>
+        <div class="profile-row">
+          <el-button
+            class="logout-sidebar-btn"
+            type="danger"
+            plain
+            aria-label="退出登录"
+            @click="handleLogout"
+          >
+            <el-icon><SwitchButton /></el-icon>
+          </el-button>
+
+          <div class="profile-meta">
+            <p class="profile-name">{{ currentUserName || '管理员' }}</p>
+            <p class="profile-role">{{ currentRoleName || '未分配角色' }}</p>
+          </div>
         </div>
       </div>
     </aside>
@@ -75,8 +107,8 @@
 
         <div class="topbar-actions">
           <div class="topbar-user">
-            <span>{{ currentUserName || 'Administrator' }}</span>
-            <small>{{ currentRoleName || 'Admin console' }}</small>
+            <span>{{ currentUserName || '管理员' }}</span>
+            <small>{{ currentRoleName || '后台控制台' }}</small>
           </div>
 
           <el-button v-if="!showDashboard" class="back-btn" plain @click="router.push('/admin')">
@@ -98,8 +130,8 @@
               <p class="eyebrow">Clinical Sanctuary</p>
               <h2>欢迎进入后台管理中心</h2>
               <p>
-                当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、日志、监控、
-                病案、统计、病案明细和系统设置页面，所有功能都会嵌入在同一个后台壳中。
+                当前账号{{ accessSummary }}。你可以在这里直接进入用户、权限、测试、日志、监控、
+                病案、统计、病案明细和系统设置页面，所有功能都嵌入在同一个后台壳中。
               </p>
             </div>
 
@@ -155,7 +187,6 @@
     </main>
   </div>
 </template>
-
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -204,7 +235,7 @@ const showDashboard = computed(() => activeMenu.value === 'dashboard')
 const sectionMetaMap = {
   dashboard: {
     title: '工作台总览',
-    description: '从这里进入用户、权限、测试、日志、监控、病案、统计、病案明细和系统设置。'
+    description: '从这里进入用户、权限、测试、日志、监控、病案、统计与设置模块。'
   },
   users: {
     title: '用户管理',
@@ -232,7 +263,7 @@ const sectionMetaMap = {
   },
   statistics: {
     title: '统计分析',
-    description: '查看病案统计、趋势图表与概览指标。'
+    description: '查看病案统计、趋势图表与核心指标。'
   },
   'statistics-detail': {
     title: '病案明细',
@@ -481,6 +512,18 @@ function handleLogout() {
   padding: 0 16px 16px;
 }
 
+.menu-group-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #98a2b3;
+}
+
+.sidebar-menu :deep(.el-menu-item-group__title) {
+  padding: 12px 10px 6px;
+}
+
 .sidebar-menu :deep(.el-menu-item) {
   height: 48px;
   line-height: 48px;
@@ -505,32 +548,43 @@ function handleLogout() {
   margin: 0 24px 24px;
   padding: 14px;
   border-radius: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
   background: #eef2f7;
 }
 
-.profile-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logout-sidebar-btn {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.profile-meta {
+  min-width: 0;
   display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, #003fb1, #1a56db);
+  gap: 2px;
 }
 
 .profile-name {
   margin: 0;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
   color: #191c1d;
 }
 
 .profile-role {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 12px;
+  line-height: 1.3;
   color: #737686;
 }
 
@@ -882,3 +936,6 @@ function handleLogout() {
   }
 }
 </style>
+
+
+

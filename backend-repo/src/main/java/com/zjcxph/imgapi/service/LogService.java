@@ -6,6 +6,9 @@ import java.util.List;
 
 public interface LogService {
     void saveLog(Log log);
+    Log getLogById(Long id);
+    boolean deleteLogById(Long id);
+    int clearLogs();
     List<Log> getAllLogs(int page, int size);
     List<Log> getLogsByClientIp(String clientIp, int page, int size);
     List<Log> getLogsByRequestUri(String requestUri, int page, int size);

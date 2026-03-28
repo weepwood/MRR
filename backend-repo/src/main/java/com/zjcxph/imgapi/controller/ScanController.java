@@ -19,7 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -225,6 +225,30 @@ public class ScanController {
         
         List<Scan> scans = scanService.findByCondition(request);
         return Result.success(null).data(scans);
+    }
+
+    @Operation(summary = "鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍")
+    @PostMapping("/page/condition")
+    public Result<Object> findByConditionWithPagination(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestBody ScanRequest request) {
+        logger.info("鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍锛歱age={}, size={}", page, size);
+
+        if (page < 1 || size < 1) {
+            return Result.fail("椤电爜鍜屾瘡椤靛ぇ灏忓繀椤诲ぇ浜?0");
+        }
+
+        List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);
+        long total = scanService.countByCondition(request);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("list", scans);
+        response.put("total", total);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("totalPages", (total + size - 1) / size);
+        return Result.success(null).data(response);
     }
 
     @PostMapping("/batch-download")

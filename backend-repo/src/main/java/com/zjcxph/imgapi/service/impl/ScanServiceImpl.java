@@ -110,4 +110,15 @@ public class ScanServiceImpl implements ScanService {
     public List<Scan> findByCondition(ScanRequest request) {
         return scanMapper.findByCondition(request);
     }
+
+    @Override
+    public List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size) {
+        int offset = (page - 1) * size;
+        return scanMapper.findByConditionWithPagination(request, offset, size);
+    }
+
+    @Override
+    public long countByCondition(ScanRequest request) {
+        return scanMapper.countByCondition(request);
+    }
 }

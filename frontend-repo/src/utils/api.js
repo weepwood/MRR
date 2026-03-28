@@ -184,6 +184,13 @@ export function getSystemHealth() {
 }
 
 /**
+ * 鑾峰彇绯荤粺缁熶竴鏀堕泦淇℃伅
+ */
+export function getSystemOverview() {
+    return authApi.get('/system/overview')
+}
+
+/**
  * 获取病案统计概览信息
  * @returns {Promise} 返回 axios Promise
  */
@@ -230,4 +237,53 @@ export function getStatisticsList(pageOrParams = 1, size = 100) {
  */
 export function searchSystemLogs(params = {}) {
     return authApi.get('/logs-api/search', { params })
+}
+
+export function getLogById(id) {
+    return authApi.get(`/logs-api/${id}`)
+}
+
+export function deleteLogById(id) {
+    return authApi.delete(`/logs-api/${id}`)
+}
+
+export function clearLogs() {
+    return authApi.delete('/logs-api/clear')
+}
+
+export function getScanById(id) {
+    return authApi.get(`/scan-api/${id}`)
+}
+
+export function getScanList(params = {}) {
+    return authApi.get('/scan-api/page', { params })
+}
+
+export function getScanByCondition(request = {}, page = 1, size = 10) {
+    return authApi.post('/scan-api/page/condition', request, {
+        params: {
+            page,
+            size
+        }
+    })
+}
+
+export function getScanByBah(bah) {
+    return authApi.get(`/scan-api/bah/${bah}`)
+}
+
+export function getScanByBrxh(brxh) {
+    return authApi.get(`/scan-api/brxh/${brxh}`)
+}
+
+export function createScan(data) {
+    return authApi.post('/scan-api', data)
+}
+
+export function updateScan(id, data) {
+    return authApi.put(`/scan-api/${id}`, data)
+}
+
+export function deleteScan(id) {
+    return authApi.delete(`/scan-api/${id}`)
 }

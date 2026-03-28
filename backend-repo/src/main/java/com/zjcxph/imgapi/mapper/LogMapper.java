@@ -34,6 +34,15 @@ public interface LogMapper {
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log WHERE request_uri = #{requestUri} ORDER BY access_time DESC LIMIT #{limit} OFFSET #{offset}")
     List<Log> findByRequestUri(@Param("requestUri") String requestUri, @Param("limit") int limit, @Param("offset") int offset);
 
+    @Select("SELECT " + BASE_COLUMNS + " FROM access_log WHERE id = #{id}")
+    Log findById(@Param("id") Long id);
+
+    @Delete("DELETE FROM access_log WHERE id = #{id}")
+    int deleteById(@Param("id") Long id);
+
+    @Delete("DELETE FROM access_log")
+    int clearAll();
+
     @Select({"<script>",
             "SELECT " + BASE_COLUMNS + " FROM access_log",
             "<where>",

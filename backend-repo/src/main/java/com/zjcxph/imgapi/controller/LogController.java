@@ -23,6 +23,15 @@ public class LogController {
     private static final int MAX_PAGE_SIZE = 200;
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    @GetMapping("/{id}")
+    public Result<Log> getLogById(@PathVariable Long id) {
+        Log log = logService.getLogById(id);
+        if (log == null) {
+            return Result.fail("log not found");
+        }
+        return Result.<Log>success("success").data(log);
+    }
+
     @GetMapping("/")
     public Result<List<Log>> getAllLogs(
             @RequestParam(defaultValue = "1") int page,
@@ -30,6 +39,23 @@ public class LogController {
         List<Log> logs = logService.getAllLogs(page, size);
         int total = logService.getTotalLogCount();
         return new Result<>(200, "success", logs, total);
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Object> deleteLog(@PathVariable Long id) {
+        boolean deleted = logService.deleteLogById(id);
+        if (!deleted) {
+            return Result.fail("log not found");
+        }
+        return Result.success("deleted");
+    }
+
+    @DeleteMapping("/clear")
+    public Result<Object> clearLogs() {
+        int deleted = logService.clearLogs();
+        Map<String, Object> data = new HashMap<>();
+        data.put("deleted", deleted);
+        return Result.success("cleared").data(data);
     }
 
     @GetMapping("/ip/{ip}")

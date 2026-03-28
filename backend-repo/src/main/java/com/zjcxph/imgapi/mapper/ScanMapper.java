@@ -9,8 +9,8 @@ import java.util.List;
 
 @Mapper
 public interface ScanMapper {
-    @Select("select * from mr_scan where BAH = #{BAH} ORDER BY pages")
-    List<Scan> findBAH(String bah);
+    @Select("select * from mr_scan where BAH = #{bah} ORDER BY pages")
+    List<Scan> findBAH(@Param("bah") String bah);
 
 
     @Select("<script>" +
@@ -62,11 +62,11 @@ public interface ScanMapper {
 
     // 根据病案号查询（不分页）
     @Select("SELECT * FROM mr_scan WHERE BAH = #{bah} ORDER BY pages")
-    List<Scan> findByBah(String bah);
+    List<Scan> findByBah(@Param("bah") String bah);
 
     // 根据病人序号查询
     @Select("SELECT * FROM mr_scan WHERE BRXH = #{brxh} ORDER BY id")
-    List<Scan> findByBrxh(String brxh);
+    List<Scan> findByBrxh(@Param("brxh") String brxh);
 
     // 分页查询
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{offset}, #{limit}")
@@ -76,13 +76,50 @@ public interface ScanMapper {
     @Select("<script>" +
             "SELECT * FROM mr_scan " +
             "<where>" +
-            "<if test='brxh != null and brxh != \"\"'>AND BRXH LIKE CONCAT('%', #{brxh}, '%')</if>" +
-            "<if test='bah != null and bah != \"\"'>AND BAH LIKE CONCAT('%', #{bah}, '%')</if>" +
-            "<if test='folder != null and folder != \"\"'>AND folder LIKE CONCAT('%', #{folder}, '%')</if>" +
+            "<if test='brxh != null and brxh != \"\"'>AND BRXH LIKE '%' || #{brxh} || '%'</if>" +
+            "<if test='bah != null and bah != \"\"'>AND BAH LIKE '%' || #{bah} || '%'</if>" +
+            "<if test='filename != null and filename != \"\"'>AND filename LIKE '%' || #{filename} || '%'</if>" +
+            "<if test='folder != null and folder != \"\"'>AND folder LIKE '%' || #{folder} || '%'</if>" +
+            "<if test='openerNo != null and openerNo != \"\"'>AND openerno LIKE '%' || #{openerNo} || '%'</if>" +
+            "<if test='uploadDate != null and uploadDate != \"\"'>AND uploaddate LIKE '%' || #{uploadDate} || '%'</if>" +
             "<if test='btype != null'>AND btype = #{btype}</if>" +
             "<if test='uploadFlag != null'>AND uploadflag = #{uploadFlag}</if>" +
+            "<if test='pages != null'>AND pages = #{pages}</if>" +
             "</where>" +
             "ORDER BY id" +
             "</script>")
     List<Scan> findByCondition(ScanRequest request);
+
+    @Select("<script>" +
+            "SELECT * FROM mr_scan " +
+            "<where>" +
+            "<if test='request.brxh != null and request.brxh != \"\"'>AND BRXH LIKE '%' || #{request.brxh} || '%'</if>" +
+            "<if test='request.bah != null and request.bah != \"\"'>AND BAH LIKE '%' || #{request.bah} || '%'</if>" +
+            "<if test='request.filename != null and request.filename != \"\"'>AND filename LIKE '%' || #{request.filename} || '%'</if>" +
+            "<if test='request.folder != null and request.folder != \"\"'>AND folder LIKE '%' || #{request.folder} || '%'</if>" +
+            "<if test='request.openerNo != null and request.openerNo != \"\"'>AND openerno LIKE '%' || #{request.openerNo} || '%'</if>" +
+            "<if test='request.uploadDate != null and request.uploadDate != \"\"'>AND uploaddate LIKE '%' || #{request.uploadDate} || '%'</if>" +
+            "<if test='request.btype != null'>AND btype = #{request.btype}</if>" +
+            "<if test='request.uploadFlag != null'>AND uploadflag = #{request.uploadFlag}</if>" +
+            "<if test='request.pages != null'>AND pages = #{request.pages}</if>" +
+            "</where>" +
+            "ORDER BY id LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request, @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM mr_scan " +
+            "<where>" +
+            "<if test='request.brxh != null and request.brxh != \"\"'>AND BRXH LIKE '%' || #{request.brxh} || '%'</if>" +
+            "<if test='request.bah != null and request.bah != \"\"'>AND BAH LIKE '%' || #{request.bah} || '%'</if>" +
+            "<if test='request.filename != null and request.filename != \"\"'>AND filename LIKE '%' || #{request.filename} || '%'</if>" +
+            "<if test='request.folder != null and request.folder != \"\"'>AND folder LIKE '%' || #{request.folder} || '%'</if>" +
+            "<if test='request.openerNo != null and request.openerNo != \"\"'>AND openerno LIKE '%' || #{request.openerNo} || '%'</if>" +
+            "<if test='request.uploadDate != null and request.uploadDate != \"\"'>AND uploaddate LIKE '%' || #{request.uploadDate} || '%'</if>" +
+            "<if test='request.btype != null'>AND btype = #{request.btype}</if>" +
+            "<if test='request.uploadFlag != null'>AND uploadflag = #{request.uploadFlag}</if>" +
+            "<if test='request.pages != null'>AND pages = #{request.pages}</if>" +
+            "</where>" +
+            "</script>")
+    int countByCondition(@Param("request") ScanRequest request);
 }

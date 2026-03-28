@@ -7,9 +7,9 @@
       <header class="hero-card">
         <div class="hero-main">
           <p class="hero-tag">Dashboard Entry</p>
-          <h1>病案翻拍后台管理</h1>
+          <h1>病案管理后台</h1>
           <p class="hero-subtitle">
-            统一入口，快速进入系统管理、数据统计和文档中心。
+            统一入口，快速进入系统管理、通用 CRUD、日志监控和统计分析。
           </p>
         </div>
         <el-button class="hero-logout" type="danger" plain @click="handleLogout">
@@ -53,70 +53,63 @@
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
-import {
-  DataBoard,
-  Document,
-  Reading,
-  Setting,
-  SwitchButton,
-  TrendCharts,
-  User,
-} from '@element-plus/icons-vue'
+import { DataBoard, Document, Reading, Setting, SwitchButton, TrendCharts, User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
 const overviewCards = [
-  { title: '当前环境', value: 'Production', note: '运行状态稳定' },
+  { title: '当前环境', value: 'Production', note: '稳定运行中' },
   { title: '今日任务', value: '6 项', note: '2 项待处理' },
-  { title: '系统版本', value: 'v2.0', note: '设计已升级' },
+  { title: '系统版本', value: 'v2.0', note: '前后端已升级' }
 ]
 
 const featureCards = [
   {
     title: '管理面板',
-    description: '进入完整后台控制台，查看仪表盘、用户、日志与系统监控。',
+    description: '进入完整后台控制台，查看仪表盘、用户、日志、监控和配置。',
     badge: '推荐入口',
     tone: 'tone-blue',
     icon: DataBoard,
-    action: () => router.push('/admin-dashboard'),
+    action: () => router.push('/admin-dashboard')
   },
   {
-    title: '病案统计',
-    description: '查看病案趋势统计与图表分析，快速掌握业务变化。',
+    title: '通用 CRUD',
+    description: '基于 mr_scan 表的通用管理页面，支持条件分页、新增、编辑、删除和详情。',
+    badge: 'RuoYi 风格',
+    tone: 'tone-cyan',
+    icon: Document,
+    action: () => router.push('/admin/crud')
+  },
+  {
+    title: '统计分析',
+    description: '查看病案统计趋势和汇总图表，快速掌握业务变化。',
     badge: '数据分析',
     tone: 'tone-green',
     icon: TrendCharts,
-    action: () => router.push('/admin/statistics'),
+    action: () => router.push('/admin/statistics')
   },
   {
     title: '文档中心',
-    description: '打开项目文档站，查看规范、部署说明与版本记录。',
+    description: '打开项目文档站点，查看规范、部署说明与版本记录。',
     badge: '团队协作',
     tone: 'tone-orange',
     icon: Reading,
-    action: () => window.open('/docs/index.html', '_blank', 'noopener,noreferrer'),
+    action: () => window.open('/docs/index.html', '_blank', 'noopener,noreferrer')
   },
   {
     title: '用户管理',
-    description: '维护用户角色与权限策略，支持后续扩展审批流程。',
+    description: '维护用户角色和权限策略，支持后续扩展审批流程。',
     badge: '规划中',
     tone: 'tone-pink',
-    icon: User,
-  },
-  {
-    title: '病案管理',
-    description: '统一查看病案内容、元数据和处理状态，便于问题追踪。',
-    badge: '规划中',
-    tone: 'tone-cyan',
-    icon: Document,
+    icon: User
   },
   {
     title: '系统设置',
     description: '管理日志级别、会话时长和系统参数，保障平台稳定。',
     badge: '规划中',
     tone: 'tone-slate',
-    icon: Setting,
-  },
+    icon: Setting
+  }
 ]
 
 const handleFeatureClick = (item) => {
@@ -124,14 +117,14 @@ const handleFeatureClick = (item) => {
     item.action()
     return
   }
-  ElMessage.info(`${item.title}功能即将开放`)
+  ElMessage.info(`${item.title} 功能即将开放`)
 }
 
 const handleLogout = () => {
-  ElMessageBox.confirm('确定要退出登录吗？', '退出确认', {
+  ElMessageBox.confirm('确认要退出登录吗？', '退出确认', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-    type: 'warning',
+    type: 'warning'
   })
     .then(() => {
       localStorage.removeItem('token')
@@ -153,7 +146,6 @@ const handleLogout = () => {
 .hero-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(2px);
   pointer-events: none;
 }
 

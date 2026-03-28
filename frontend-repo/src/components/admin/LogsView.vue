@@ -1,28 +1,31 @@
 <template>
   <div class="logs-view">
-    <el-card class="logs-card">
+    <el-card class="panel-card">
       <template #header>
         <div class="card-header">
-          <div class="title">系统日志</div>
+          <div>
+            <div class="title">系统日志</div>
+            <div class="subtitle">支持筛选、详情查看、单条删除和一键清空</div>
+          </div>
           <div class="header-actions">
-            <el-button type="primary" @click="refreshData" :loading="loading">
+            <el-button @click="refreshData" :loading="loading">
               <el-icon><Refresh /></el-icon>
               刷新
             </el-button>
-            <el-button @click="resetFilters">
+            <el-button type="danger" plain @click="handleClearLogs" :loading="clearing">
               <el-icon><Delete /></el-icon>
-              重置筛选
+              清空
             </el-button>
           </div>
         </div>
       </template>
 
-      <el-form :model="filters" inline class="filter-form">
+      <el-form :model="filters" inline class="filter-form" @submit.prevent>
         <el-form-item label="关键词">
           <el-input
             v-model="filters.keyword"
             clearable
-            placeholder="URI / IP / UA / Query"
+            placeholder="URI / IP / UA / Body"
             @keyup.enter="handleSearch"
             style="width: 220px;"
           />
@@ -31,7 +34,7 @@
           <el-input
             v-model="filters.clientIp"
             clearable
-            placeholder="如 127.0.0.1"
+            placeholder="127.0.0.1"
             @keyup.enter="handleSearch"
             style="width: 160px;"
           />
@@ -40,9 +43,9 @@
           <el-input
             v-model="filters.requestUri"
             clearable
-            placeholder="/statistics-api/summary"
+            placeholder="/scan-api/page"
             @keyup.enter="handleSearch"
-            style="width: 240px;"
+            style="width: 220px;"
           />
         </el-form-item>
         <el-form-item label="方法">
@@ -74,6 +77,7 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch" :loading="loading">查询</el-button>
+          <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -84,12 +88,12 @@
               <div><span class="field">User-Agent:</span> {{ row.userAgent || '-' }}</div>
               <div><span class="field">Query String:</span> {{ row.queryString || '-' }}</div>
               <div><span class="field">Referer:</span> {{ row.referer || '-' }}</div>
-              <div><span class="field">Request Body:</span></div>
+              <div class="field" style="margin-top: 8px;">Request Body:</div>
               <pre>{{ row.requestBody || '-' }}</pre>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="accessTime" label="访问时间" min-width="170">
+        <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatAccessTime(row.accessTime) }}
           </template>
@@ -100,17 +104,27 @@
             <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="requestUri" label="请求 URI" min-width="320" show-overflow-tooltip />
+        <el-table-column prop="requestUri" label="请求 URI" min-width="260" show-overflow-tooltip />
         <el-table-column prop="responseStatus" label="状态码" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.responseStatus)">
-              {{ row.responseStatus || '-' }}
-            </el-tag>
+            <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="executeTime" label="耗时" width="90">
+        <el-table-column prop="executeTime" label="耗时" width="100">
           <template #default="{ row }">
             {{ formatExecuteTime(row.executeTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDetail(row)">
+              <el-icon><View /></el-icon>
+              详情
+            </el-button>
+            <el-button link type="danger" @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -127,20 +141,44 @@
         />
       </div>
     </el-card>
+
+    <el-dialog v-model="detailVisible" title="日志详情" width="720px">
+      <el-descriptions v-if="currentLog" :column="2" border>
+        <el-descriptions-item label="ID">{{ currentLog.id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="请求方法">{{ currentLog.method || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="访问时间" :span="2">{{ formatAccessTime(currentLog.accessTime) }}</el-descriptions-item>
+        <el-descriptions-item label="请求 URI" :span="2">{{ currentLog.requestUri || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="耗时">{{ formatExecuteTime(currentLog.executeTime) }}</el-descriptions-item>
+        <el-descriptions-item label="Referer">{{ currentLog.referer || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Query String" :span="2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="User-Agent" :span="2">{{ currentLog.userAgent || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request Body" :span="2">
+          <pre class="detail-pre">{{ currentLog.requestBody || '-' }}</pre>
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Delete, Refresh, Search } from '@element-plus/icons-vue'
-import { searchSystemLogs } from '@/utils/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Refresh, Search, View } from '@element-plus/icons-vue'
+import { clearLogs, deleteLogById, getLogById, searchSystemLogs } from '@/utils/api'
 
 const loading = ref(false)
+const clearing = ref(false)
 const tableData = ref([])
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
+const detailVisible = ref(false)
+const currentLog = ref(null)
 
 const filters = reactive({
   keyword: '',
@@ -164,17 +202,10 @@ const statusOptions = [
   { label: '500', value: '500' }
 ]
 
-const normalize = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.trim()
-}
+const normalize = (value) => (typeof value === 'string' ? value.trim() : '')
 
 const buildParams = () => {
-  const params = {
-    page: page.value,
-    size: size.value
-  }
-
+  const params = { page: page.value, size: size.value }
   const keyword = normalize(filters.keyword)
   const clientIp = normalize(filters.clientIp)
   const requestUri = normalize(filters.requestUri)
@@ -184,12 +215,10 @@ const buildParams = () => {
   if (requestUri) params.requestUri = requestUri
   if (filters.method) params.method = filters.method
   if (filters.responseStatus) params.responseStatus = filters.responseStatus
-
   if (Array.isArray(filters.timeRange) && filters.timeRange.length === 2) {
     params.startTime = filters.timeRange[0]
     params.endTime = filters.timeRange[1]
   }
-
   return params
 }
 
@@ -198,7 +227,6 @@ const loadData = async () => {
   try {
     const response = await searchSystemLogs(buildParams())
     const result = response?.data
-
     if (!result || result.code !== 200) {
       throw new Error(result?.message || '日志查询失败')
     }
@@ -245,6 +273,72 @@ const resetFilters = () => {
   loadData()
 }
 
+const openDetail = async (row) => {
+  try {
+    const response = await getLogById(row.id)
+    const result = response?.data
+    if (!result || result.code !== 200) {
+      throw new Error(result?.message || '日志详情获取失败')
+    }
+    currentLog.value = result.data || row
+    detailVisible.value = true
+  } catch (error) {
+    currentLog.value = row
+    detailVisible.value = true
+    ElMessage.warning(error?.message || '日志详情获取失败，已显示当前行数据')
+  }
+}
+
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确认删除日志 ID ${row.id} 吗？`, '提示', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+
+  try {
+    const response = await deleteLogById(row.id)
+    if (response?.data?.code !== 200) {
+      throw new Error(response?.data?.message || '删除失败')
+    }
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (error) {
+    ElMessage.error(error?.message || '删除失败')
+  }
+}
+
+const handleClearLogs = async () => {
+  try {
+    await ElMessageBox.confirm('确认清空全部系统日志吗？该操作不可恢复。', '提示', {
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+
+  clearing.value = true
+  try {
+    const response = await clearLogs()
+    if (response?.data?.code !== 200) {
+      throw new Error(response?.data?.message || '清空失败')
+    }
+    ElMessage.success('日志已清空')
+    page.value = 1
+    loadData()
+  } catch (error) {
+    ElMessage.error(error?.message || '清空失败')
+  } finally {
+    clearing.value = false
+  }
+}
+
 const formatExecuteTime = (value) => {
   if (value === null || value === undefined || value === '') return '-'
   return `${value}ms`
@@ -253,12 +347,11 @@ const formatExecuteTime = (value) => {
 const formatAccessTime = (value) => {
   if (!value) return '-'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('zh-CN', { hour12: false })
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 const methodTagType = (method) => {
-  const value = (method || '').toUpperCase()
+  const value = String(method || '').toUpperCase()
   if (value === 'GET') return 'primary'
   if (value === 'POST') return 'success'
   if (value === 'PUT' || value === 'PATCH') return 'warning'
@@ -286,7 +379,7 @@ onMounted(() => {
   height: 100%;
 }
 
-.logs-card {
+.panel-card {
   min-height: 560px;
 }
 
@@ -301,6 +394,12 @@ onMounted(() => {
   font-weight: 700;
   color: #1d2b42;
   font-size: 16px;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: #6a7d99;
+  font-size: 12px;
 }
 
 .header-actions {
@@ -331,7 +430,8 @@ onMounted(() => {
   color: #1f3552;
 }
 
-.expand-content pre {
+.expand-content pre,
+.detail-pre {
   margin: 6px 0 0;
   padding: 8px;
   white-space: pre-wrap;

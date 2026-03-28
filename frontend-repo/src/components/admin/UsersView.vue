@@ -49,6 +49,14 @@
         </article>
       </section>
 
+      <el-alert
+        v-if="!loading && !error && users.length && !hasPermissionMetadata"
+        class="mb-16"
+        type="info"
+        show-icon
+        title="后端暂未返回完整角色权限元数据，当前仅展示角色代码。"
+      />
+
       <div class="table-shell">
         <el-table :data="filteredUsers" v-loading="loading" height="580" stripe>
           <el-table-column prop="username" label="用户名" min-width="130" />
@@ -60,7 +68,7 @@
           </el-table-column>
           <el-table-column label="权限" min-width="320">
             <template #default="{ row }">
-              <div class="permission-tags">
+              <div v-if="getPermissionList(row).length" class="permission-tags">
                 <el-tag
                   v-for="permission in getPermissionList(row)"
                   :key="permission"
@@ -70,6 +78,7 @@
                   {{ permission }}
                 </el-tag>
               </div>
+              <el-tag v-else type="info" effect="plain" size="small">权限数据不可用</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
@@ -144,7 +153,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Edit, Refresh, SwitchButton } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAuthRoles, getAuthUsers, updateAuthUser } from '@/utils/api.js'
+import { disableAuthUser, getAuthRoles, getAuthUsers, updateAuthUser } from '@/utils/api.js'
 
 const users = ref([])
 const roles = ref([])
@@ -163,7 +172,9 @@ const editForm = reactive({
   status: 'active'
 })
 
-const roleMap = computed(() => new Map(roles.value.map((role) => [role.code, role])))
+const roleMap = computed(
+  () => new Map(roles.value.map((role) => [String(role.code || '').toUpperCase(), role]))
+)
 
 const loadData = async () => {
   loading.value = true
@@ -220,8 +231,10 @@ const getRoleType = (roleCode) => {
 const getPermissionList = (item) => {
   const rawPermissions =
     item?.permissions ||
+    item?.permissionsCsv ||
     item?.rolePermissions ||
-    roleMap.value.get(item?.roleCode)?.permissions ||
+    roleMap.value.get(String(item?.roleCode || '').toUpperCase())?.permissions ||
+    roleMap.value.get(String(item?.roleCode || '').toUpperCase())?.permissionsCsv ||
     ''
 
   if (Array.isArray(rawPermissions)) {
@@ -237,6 +250,11 @@ const getPermissionList = (item) => {
 
   return []
 }
+
+const hasPermissionMetadata = computed(() =>
+  users.value.some((user) => getPermissionList(user).length > 0) ||
+  roles.value.some((role) => getPermissionList(role).length > 0)
+)
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -302,11 +320,15 @@ const toggleStatus = async (row) => {
       type: 'warning'
     })
 
-    await updateAuthUser(row.id, {
-      displayName: row.displayName,
-      roleCode: row.roleCode,
-      status: nextStatus
-    })
+    if (nextStatus === 'disabled') {
+      await disableAuthUser(row.id)
+    } else {
+      await updateAuthUser(row.id, {
+        displayName: row.displayName,
+        roleCode: row.roleCode,
+        status: nextStatus
+      })
+    }
 
     ElMessage.success('账号状态已更新')
     await loadData()

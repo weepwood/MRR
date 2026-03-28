@@ -111,7 +111,7 @@ function resolveLoginUser(payload) {
 }
 
 function resolveMessage(payload, fallback) {
-  return payload?.message || payload?.msg || payload?.error || fallback
+  return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
 }
 
 const redirectIfLoggedIn = () => {

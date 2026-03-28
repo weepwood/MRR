@@ -73,7 +73,7 @@ const quickLinks = [
   {
     title: '用户管理',
     description: '维护账号、角色和权限配置。',
-    path: '/admin-dashboard',
+    path: '/admin/users',
     icon: User,
     tone: 'tone-green'
   },

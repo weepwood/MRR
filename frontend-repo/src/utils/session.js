@@ -29,7 +29,9 @@ function normalizePermissions(...sources) {
     }
   }
 
-  return permissions.filter((permission) => typeof permission === 'string' && permission.trim())
+  return permissions
+    .map((permission) => (typeof permission === 'string' ? permission.trim() : ''))
+    .filter(Boolean)
 }
 
 function normalizeUser(user) {

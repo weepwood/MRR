@@ -23,9 +23,7 @@ public interface AuthUserMapper {
                 r.name as roleName,
                 r.permissions as permissionsCsv,
                 u.status as status,
-                u.last_login_at as lastLoginAt,
-                u.created_at as createdAt,
-                u.updated_at as updatedAt
+                u.last_login_at as lastLoginAt
             from mr_auth_user u
             left join mr_auth_role r on r.code = u.role_code
             where u.username = #{username}
@@ -42,9 +40,7 @@ public interface AuthUserMapper {
                 r.name as roleName,
                 r.permissions as permissionsCsv,
                 u.status as status,
-                u.last_login_at as lastLoginAt,
-                u.created_at as createdAt,
-                u.updated_at as updatedAt
+                u.last_login_at as lastLoginAt
             from mr_auth_user u
             left join mr_auth_role r on r.code = u.role_code
             where u.id = #{id}
@@ -61,34 +57,31 @@ public interface AuthUserMapper {
                 r.name as roleName,
                 r.permissions as permissionsCsv,
                 u.status as status,
-                u.last_login_at as lastLoginAt,
-                u.created_at as createdAt,
-                u.updated_at as updatedAt
+                u.last_login_at as lastLoginAt
             from mr_auth_user u
             left join mr_auth_role r on r.code = u.role_code
             order by u.id
             """)
     List<AuthUser> findAll();
 
-    @Update("update mr_auth_user set last_login_at = #{lastLoginAt}, updated_at = now() where id = #{id}")
+    @Update("update mr_auth_user set last_login_at = #{lastLoginAt} where id = #{id}")
     int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
     @Update("""
             update mr_auth_user
             set display_name = #{displayName},
                 role_code = #{roleCode},
-                status = #{status},
-                updated_at = now()
+                status = #{status}
             where id = #{id}
             """)
     int updateUser(AuthUser user);
 
-    @Update("update mr_auth_user set status = #{status}, updated_at = now() where id = #{id}")
+    @Update("update mr_auth_user set status = #{status} where id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     @Insert("""
-            insert into mr_auth_user (username, display_name, password_hash, role_code, status, created_at, updated_at)
-            values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status}, now(), now())
+            insert into mr_auth_user (username, display_name, password_hash, role_code, status)
+            values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status})
             """)
     int insertUser(AuthUser user);
 }

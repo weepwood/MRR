@@ -21,7 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/v1/monitoring-api/pressure-tests")
-@Tag(name = "Pressure Test Monitoring", description = "压测监控与历史记录")
+@Tag(name = "Pressure Test Monitoring", description = "Pressure test monitoring and history")
 public class PressureTestController {
 
     private static final Logger logger = LoggerFactory.getLogger(PressureTestController.class);
@@ -32,22 +32,22 @@ public class PressureTestController {
         this.pressureTestService = pressureTestService;
     }
 
-    @Operation(summary = "执行一次压测")
+    @Operation(summary = "Run a pressure test")
     @PostMapping("/run")
     public Result<Object> run(@Valid @RequestBody PressureTestRequest request) {
-        logger.info("run pressure test: {}", request.targetUrl());
+        logger.info("run pressure test: {}", request.getTargetUrl());
         PressureTestReport report = pressureTestService.run(request);
-        return Result.success("压测完成").data(report);
+        return Result.success("pressure test completed").data(report);
     }
 
-    @Operation(summary = "获取压测历史")
+    @Operation(summary = "Get pressure test history")
     @GetMapping("/history")
     public Result<Object> history() {
         List<PressureTestReport> reports = pressureTestService.getHistory();
         return Result.success("ok").data(reports);
     }
 
-    @Operation(summary = "获取最近一次压测结果")
+    @Operation(summary = "Get latest pressure test result")
     @GetMapping("/latest")
     public Result<Object> latest() {
         return pressureTestService.getLatest()
@@ -55,18 +55,18 @@ public class PressureTestController {
                 .orElseGet(() -> Result.success("ok").data(null));
     }
 
-    @Operation(summary = "按运行编号查询压测结果")
+    @Operation(summary = "Get report by run id")
     @GetMapping("/{runId}")
     public Result<Object> getByRunId(@PathVariable String runId) {
         return pressureTestService.findByRunId(runId)
                 .<Result<Object>>map(report -> Result.success("ok").data(report))
-                .orElseGet(() -> Result.fail("未找到压测记录"));
+                .orElseGet(() -> Result.fail("pressure test record not found"));
     }
 
-    @Operation(summary = "清空压测历史")
+    @Operation(summary = "Clear pressure test history")
     @DeleteMapping("/history")
     public Result<Object> clearHistory() {
         pressureTestService.clearHistory();
-        return Result.success("历史已清空");
+        return Result.success("history cleared");
     }
 }

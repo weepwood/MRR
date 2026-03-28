@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mrr-postgres
+    environment:
+      POSTGRES_DB: imgapi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: weepwood
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d imgapi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend-repo
+    container_name: mrr-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imgapi?currentSchema=app
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: weepwood
+      APP_LOG_RETENTION_ENABLED: "false"
+      APP_LOG_RETENTION_RETENTION_DAYS: "1095"
+      SERVER_PORT: "18045"
+    ports:
+      - "18045:18045"
+
+  frontend:
+    build:
+      context: ./frontend-repo
+    container_name: mrr-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:

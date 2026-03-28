@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -27,8 +26,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 @Service
 public class PressureTestService {
@@ -53,31 +52,36 @@ public class PressureTestService {
         PressureTestSnapshot afterSnapshot = captureSnapshot();
 
         long durationMillis = Math.max(1L, Duration.between(started, Instant.now()).toMillis());
-        List<Long> latencies = samples.stream()
-                .map(PressureTestSample::latencyMillis)
-                .sorted()
-                .collect(Collectors.toList());
+        List<Long> latencies = new ArrayList<>();
+        for (PressureTestSample sample : samples) {
+            latencies.add(sample.latencyMillis());
+        }
+        Collections.sort(latencies);
 
-        int successCount = (int) samples.stream().filter(PressureTestSample::success).count();
+        int successCount = 0;
+        for (PressureTestSample sample : samples) {
+            if (sample.success()) {
+                successCount++;
+            }
+        }
         int failureCount = samples.size() - successCount;
         double successRate = samples.isEmpty() ? 0.0 : (successCount * 100.0 / samples.size());
-        long minLatencyMs = latencies.isEmpty() ? 0L : latencies.getFirst();
-        long avgLatencyMs = latencies.isEmpty() ? 0L : Math.round(latencies.stream().mapToLong(Long::longValue).average().orElse(0.0));
+        long minLatencyMs = latencies.isEmpty() ? 0L : latencies.get(0);
+        long avgLatencyMs = latencies.isEmpty() ? 0L : Math.round(average(latencies));
         long p95LatencyMs = percentile(latencies, 0.95d);
-        long maxLatencyMs = latencies.isEmpty() ? 0L : latencies.getLast();
+        long maxLatencyMs = latencies.isEmpty() ? 0L : latencies.get(latencies.size() - 1);
         double requestsPerSecond = samples.isEmpty() ? 0.0 : (samples.size() * 1000.0 / durationMillis);
 
-        List<PressureTestSample> orderedSamples = samples.stream()
-                .sorted(Comparator.comparingInt(PressureTestSample::index))
-                .toList();
+        List<PressureTestSample> orderedSamples = new ArrayList<>(samples);
+        orderedSamples.sort(Comparator.comparingInt(PressureTestSample::index));
 
         PressureTestReport report = new PressureTestReport(
                 runId,
-                request.name(),
-                request.targetUrl(),
-                request.method(),
-                request.concurrency(),
-                request.totalRequests(),
+                request.getName(),
+                request.getTargetUrl(),
+                request.getMethod(),
+                request.getConcurrency(),
+                request.getTotalRequests(),
                 successCount,
                 failureCount,
                 round(successRate, 2),
@@ -96,8 +100,14 @@ public class PressureTestService {
 
         history.addFirst(report);
         trimHistory();
-        logger.info("pressure test finished: runId={}, targetUrl={}, total={}, success={}, failure={}",
-                runId, request.targetUrl(), request.totalRequests(), successCount, failureCount);
+        logger.info(
+                "pressure test finished: runId={}, targetUrl={}, total={}, success={}, failure={}",
+                runId,
+                request.getTargetUrl(),
+                request.getTotalRequests(),
+                successCount,
+                failureCount
+        );
         return report;
     }
 
@@ -110,10 +120,15 @@ public class PressureTestService {
     }
 
     public Optional<PressureTestReport> findByRunId(String runId) {
-        if (runId == null || runId.isBlank()) {
+        if (runId == null || runId.trim().isEmpty()) {
             return Optional.empty();
         }
-        return history.stream().filter(item -> runId.equals(item.runId())).findFirst();
+        for (PressureTestReport report : history) {
+            if (runId.equals(report.runId())) {
+                return Optional.of(report);
+            }
+        }
+        return Optional.empty();
     }
 
     public void clearHistory() {
@@ -121,26 +136,26 @@ public class PressureTestService {
     }
 
     private List<PressureTestSample> execute(PressureTestRequest request) {
-        URI targetUri = URI.create(request.targetUrl());
-        ExecutorService executor = Executors.newFixedThreadPool(Math.max(1, request.concurrency()));
+        URI targetUri = URI.create(request.getTargetUrl());
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(1, request.getConcurrency()));
         AtomicInteger cursor = new AtomicInteger(0);
-        List<PressureTestSample> samples = Collections.synchronizedList(new ArrayList<>(request.totalRequests()));
+        List<PressureTestSample> samples = Collections.synchronizedList(new ArrayList<PressureTestSample>(request.getTotalRequests()));
 
         try {
-            List<java.util.concurrent.Future<?>> workers = new ArrayList<>();
-            for (int i = 0; i < request.concurrency(); i++) {
+            List<Future<?>> workers = new ArrayList<>();
+            for (int i = 0; i < request.getConcurrency(); i++) {
                 workers.add(executor.submit(() -> {
                     while (true) {
                         int current = cursor.getAndIncrement();
-                        if (current >= request.totalRequests()) {
-                            return null;
+                        if (current >= request.getTotalRequests()) {
+                            return;
                         }
                         samples.add(executeSingle(current + 1, request, targetUri));
                     }
                 }));
             }
 
-            for (java.util.concurrent.Future<?> worker : workers) {
+            for (Future<?> worker : workers) {
                 try {
                     worker.get();
                 } catch (Exception e) {
@@ -175,25 +190,43 @@ public class PressureTestService {
     private HttpRequest buildHttpRequest(PressureTestRequest request, URI targetUri) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(targetUri)
-                .timeout(Duration.ofMillis(request.timeoutMillis()));
+                .timeout(Duration.ofMillis(request.getTimeoutMillis()));
 
-        Map<String, String> headers = new LinkedHashMap<>(Optional.ofNullable(request.headers()).orElse(Map.of()));
-        boolean hasBody = request.body() != null && !request.body().isBlank();
-        if (hasBody && headers.keySet().stream().noneMatch(key -> "content-type".equalsIgnoreCase(key))) {
-            headers.put("Content-Type", "application/json");
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (request.getHeaders() != null) {
+            headers.putAll(request.getHeaders());
+        }
+        boolean hasBody = request.getBody() != null && !request.getBody().trim().isEmpty();
+        if (hasBody) {
+            boolean hasContentType = false;
+            for (String key : headers.keySet()) {
+                if ("content-type".equalsIgnoreCase(key)) {
+                    hasContentType = true;
+                    break;
+                }
+            }
+            if (!hasContentType) {
+                headers.put("Content-Type", "application/json");
+            }
         }
 
-        headers.forEach(builder::header);
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            builder.header(entry.getKey(), entry.getValue());
+        }
 
-        String method = request.method().toUpperCase(Locale.ROOT);
-        return switch (method) {
-            case "POST", "PUT", "PATCH" -> builder.method(method,
-                    hasBody ? HttpRequest.BodyPublishers.ofString(request.body(), StandardCharsets.UTF_8)
-                            : HttpRequest.BodyPublishers.noBody())
-                    .build();
-            case "DELETE" -> builder.DELETE().build();
-            default -> builder.GET().build();
-        };
+        String method = request.getMethod().toUpperCase(Locale.ROOT);
+        if ("POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method)) {
+            return builder.method(
+                    method,
+                    hasBody
+                            ? HttpRequest.BodyPublishers.ofString(request.getBody(), StandardCharsets.UTF_8)
+                            : HttpRequest.BodyPublishers.noBody()
+            ).build();
+        }
+        if ("DELETE".equals(method)) {
+            return builder.DELETE().build();
+        }
+        return builder.GET().build();
     }
 
     private PressureTestSnapshot captureSnapshot() {
@@ -222,8 +255,24 @@ public class PressureTestService {
             return 0L;
         }
         int index = (int) Math.ceil(sortedLatencies.size() * percentile) - 1;
-        index = Math.max(0, Math.min(index, sortedLatencies.size() - 1));
+        if (index < 0) {
+            index = 0;
+        }
+        if (index >= sortedLatencies.size()) {
+            index = sortedLatencies.size() - 1;
+        }
         return sortedLatencies.get(index);
+    }
+
+    private double average(List<Long> values) {
+        if (values.isEmpty()) {
+            return 0.0;
+        }
+        long sum = 0L;
+        for (Long value : values) {
+            sum += value == null ? 0L : value;
+        }
+        return sum * 1.0 / values.size();
     }
 
     private double round(double value, int scale) {

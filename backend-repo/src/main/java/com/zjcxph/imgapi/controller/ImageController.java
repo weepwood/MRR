@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.PathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.Pattern;
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -221,12 +223,8 @@ public class ImageController {
         logger.info("获取图片:{}", filePath);
         LocalDateTime timestamp = LocalDateTime.now();
 
-        InputStream inputStream;
-        try {
-            inputStream = new FileInputStream(String.valueOf(filePath));
-        } catch (FileNotFoundException e) {
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             logger.error("文件不存在:{}", filePath);
-            // 完善 404 错误信息
             Map<String, Object> responseMap = new HashMap<>();
             responseMap.put("code", "404");
             responseMap.put("timestamp", timestamp);
@@ -234,24 +232,20 @@ public class ImageController {
             return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
         }
 
-        InputStreamResource resource = new InputStreamResource(inputStream);
+        PathResource resource = new PathResource(filePath);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline;filename=" + FILENAME);
-        headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
-        headers.add("Pragma", "no-cache");
-        headers.add("Expires", "0");
-        // TODO 注意文件格式检查
+        headers.add("Cache-Control", "public, max-age=86400, immutable");
         headers.setContentType(MediaType.IMAGE_JPEG);
 
         try {
             return ResponseEntity.ok()
                     .headers(headers)
-                    .contentLength(inputStream.available()) // 设置内容长度
+                    .contentLength(Files.size(filePath))
                     .body(resource);
         } catch (IOException e) {
-            // 处理文件读取异常
-            logger.error("文件读取错误:{}", filePath);
+            logger.error("文件读取错误:{}", filePath, e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("code", "500");
             errorResponse.put("timestamp", timestamp);

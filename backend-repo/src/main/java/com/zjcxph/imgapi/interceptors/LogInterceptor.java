@@ -2,15 +2,14 @@ package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.pojo.Log;
 import com.zjcxph.imgapi.service.LogService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.Date;
 
 @Component
@@ -20,27 +19,29 @@ public class LogInterceptor implements HandlerInterceptor {
     private LogService logService;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 记录请求开始时间
-        long startTime = System.currentTimeMillis();
-        request.setAttribute("startTime", startTime);
-        
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (shouldSkipLogging(request, handler)) {
+            return true;
+        }
+
+        request.setAttribute("startTime", System.currentTimeMillis());
         return true;
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
-        // 在视图渲染之前可以添加处理逻辑
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
+        // no-op
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // 获取请求开始时间
-        Long startTime = (Long) request.getAttribute("startTime");
-        long endTime = System.currentTimeMillis();
-        long executeTime = startTime != null ? endTime - startTime : 0;
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        if (shouldSkipLogging(request, handler)) {
+            return;
+        }
 
-        // 创建日志对象
+        Long startTime = (Long) request.getAttribute("startTime");
+        long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
+
         Log log = new Log();
         log.setClientIp(getClientIP(request));
         log.setRequestUri(request.getRequestURI());
@@ -48,13 +49,31 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setUserAgent(request.getHeader("User-Agent"));
         log.setAccessTime(new Date());
         log.setQueryString(request.getQueryString());
-        log.setRequestBody(""); // 不再尝试读取请求体，避免与其它组件冲突
+        log.setRequestBody("");
         log.setResponseStatus(String.valueOf(response.getStatus()));
         log.setExecuteTime(executeTime);
         log.setReferer(request.getHeader("Referer"));
 
-        // 保存日志
         logService.saveLog(log);
+    }
+
+    private boolean shouldSkipLogging(HttpServletRequest request, Object handler) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+        if (handler instanceof ResourceHttpRequestHandler) {
+            return true;
+        }
+
+        String uri = request.getRequestURI();
+        return uri != null && (
+                uri.startsWith("/docs/")
+                        || uri.startsWith("/swagger-ui/")
+                        || uri.startsWith("/v3/api-docs/")
+                        || uri.startsWith("/actuator/")
+                        || "/favicon.ico".equals(uri)
+                        || "/error".equals(uri)
+        );
     }
 
     private String getClientIP(HttpServletRequest request) {
@@ -67,5 +86,4 @@ public class LogInterceptor implements HandlerInterceptor {
         }
         return ip;
     }
-
 }

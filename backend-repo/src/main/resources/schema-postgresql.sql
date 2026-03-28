@@ -84,6 +84,9 @@ CREATE INDEX IF NOT EXISTS idx_access_log_access_time ON app.access_log (access_
 CREATE INDEX IF NOT EXISTS idx_access_log_access_time_id ON app.access_log (access_time ASC, id ASC);
 CREATE INDEX IF NOT EXISTS idx_access_log_client_ip ON app.access_log (client_ip);
 CREATE INDEX IF NOT EXISTS idx_access_log_request_uri ON app.access_log (request_uri);
+CREATE INDEX IF NOT EXISTS idx_access_log_method ON app.access_log (method);
+CREATE INDEX IF NOT EXISTS idx_access_log_response_status ON app.access_log (response_status);
+CREATE INDEX IF NOT EXISTS idx_access_log_method_status ON app.access_log (method, response_status);
 
 INSERT INTO app.mr_auth_role (code, name, description, permissions, sort_order)
 VALUES

@@ -637,7 +637,7 @@ onMounted(async () => {
   width: 108px;
   height: 20px;
   border-radius: 0 0 16px 16px;
-  background: linear-gradient(135deg, var(--folder-accent), color-mix(in srgb, var(--folder-accent) 70%, white));
+  background: linear-gradient(135deg, var(--folder-accent), rgba(255, 255, 255, 0.82));
   box-shadow: 0 10px 20px rgba(24, 65, 134, 0.14);
 }
 

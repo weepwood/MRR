@@ -153,7 +153,7 @@
               class="print-image-item"
               :class="{ 'loading': !img.loaded }"
             >
-              <div class="image-container">
+              <div class="image-container" :class="getImageRotationClass(img)">
                 <el-image 
                   :src="img.blobUrl || img.cx" 
                   class="print-image" 
@@ -195,7 +195,7 @@
               :key="`print-${img.id || index}`" 
               class="print-page"
             >
-              <div class="image-container">
+              <div class="image-container" :class="getImageRotationClass(img)">
                 <img 
                   :src="img.blobUrl || img.cx" 
                   class="print-image"
@@ -516,8 +516,8 @@ const previewPrint = () => {
             }
             
             /* 针对旋转图片的容器优化 */
-            .image-container:has(.rotated-90),
-            .image-container:has(.rotated-270) {
+            .image-container.rotated-90,
+            .image-container.rotated-270 {
               /* 当包含90度或270度旋转的图片时，确保容器足够大 */
               overflow: visible;
             }

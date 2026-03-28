@@ -4,7 +4,7 @@
       <div class="brand-block">
         <p class="brand-eyebrow">MRR</p>
         <h1 class="brand-title">病案管理系统</h1>
-        <p class="brand-subtitle">后台管理中心</p>
+        <p class="brand-subtitle">后台管理中心 V2026.03.28_0.9</p>
       </div>
 
       <el-menu :default-active="activeMenu" class="sidebar-menu" @select="handleMenuSelect">

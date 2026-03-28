@@ -5,7 +5,7 @@ export default defineConfig({
   srcDir: '.',
   outDir: '../public/docs',
   title: 'PMR 文档中心',
-  description: '病案翻拍管理系统使用与维护文档',
+  description: '病案影像管理系统使用与维护文档',
   lang: 'zh-CN',
   lastUpdated: true,
   cleanUrls: true,
@@ -24,6 +24,7 @@ export default defineConfig({
           items: [
             { text: '指南首页', link: '/guide/' },
             { text: '项目说明文档', link: '/guide/项目说明文档' },
+            { text: '当前版本使用说明', link: '/guide/当前版本使用说明' },
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '构建与部署', link: '/guide/deploy' }
           ]

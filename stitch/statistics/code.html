@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>统计分析 | The Clinical Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary": "#852b00",
+                        "on-surface": "#191c1d",
+                        "surface-container-high": "#e7e8e9",
+                        "secondary": "#4b5c92",
+                        "inverse-surface": "#2e3132",
+                        "background": "#f8f9fa",
+                        "inverse-on-surface": "#f0f1f2",
+                        "secondary-fixed-dim": "#b5c4ff",
+                        "on-surface-variant": "#434654",
+                        "on-primary-container": "#d4dcff",
+                        "on-secondary-fixed": "#01174b",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#ad3b00",
+                        "surface-variant": "#e1e3e4",
+                        "surface-tint": "#1353d8",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9fa",
+                        "outline": "#737686",
+                        "inverse-primary": "#b5c4ff",
+                        "primary-container": "#1a56db",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-container": "#3d4e84",
+                        "on-tertiary-fixed": "#380d00",
+                        "on-primary-fixed": "#00174d",
+                        "on-background": "#191c1d",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#b1c2ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#ffd4c5",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#ffdbcf",
+                        "surface-container": "#edeeef",
+                        "on-secondary-fixed-variant": "#334479",
+                        "on-tertiary-fixed-variant": "#802a00",
+                        "surface-container-highest": "#e1e3e4",
+                        "outline-variant": "#c3c5d7",
+                        "primary-fixed-dim": "#b5c4ff",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f3f4f5",
+                        "surface-bright": "#f8f9fa",
+                        "primary": "#003fb1",
+                        "on-primary-fixed-variant": "#003dab"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift {
+            transition: background-color 0.3s ease;
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-surface antialiased">
+<!-- SideNavBar (rail_with_header) -->
+<aside class="flex flex-col h-full fixed left-0 top-0 overflow-y-auto h-screen w-64 border-r border-transparent bg-slate-50 dark:bg-slate-950 z-50">
+<div class="px-6 py-8">
+<h1 class="text-xl font-bold text-blue-700 dark:text-blue-500 tracking-tight">The Clinical Lens</h1>
+<p class="text-xs text-slate-500 font-medium mt-1">Staff Portal</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<!-- Dashboard Tab -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<!-- Case List Tab -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">clinical_notes</span>
+<span class="text-sm font-medium">Case List</span>
+</a>
+<!-- New Case Tab -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="text-sm font-medium">New Case</span>
+</a>
+<!-- Statistics Tab (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-700 dark:text-blue-400 font-bold border-r-4 border-blue-700 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20 active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm">Statistics</span>
+</a>
+<!-- Settings Tab -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-6 mt-auto">
+<div class="flex items-center gap-3 p-3 bg-slate-100 rounded-xl">
+<img alt="Medical Staff Profile" class="w-10 h-10 rounded-full object-cover" data-alt="portrait of a professional male doctor in a white clinical coat smiling confidently in a modern hospital setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOAO37AQ_QPZdzLQ7rjlZVeRcQGVkmAI2Ta-FAiibf_JoVThk-ll-wdmTSw8f3uE2u3WpRf_eRmKA-hkd00qvKt7ux-dig0xKH9ehwaYSFknA-1FhyMTgVdwALmS8LKheotYVx6FuAzS-TKKRGR0H-PZIhciSb9d8PEF0ZYQgJVXp-m3a3nmR48qC0BrB9SPgR3eeZeyqgAa1IyMvJkiZxcUZPjfZOpCPUE6a5HKSnq0rdA-YvScQY2Dn4jF2dEVvnvVg51o16Gck0"/>
+<div>
+<p class="text-xs font-bold text-slate-900">Dr. Aris Chen</p>
+<p class="text-[10px] text-slate-500">Chief of Analytics</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (small) -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 flex justify-between items-center px-8 h-16 w-full glass-header border-b border-slate-100 dark:border-slate-800 shadow-[0px_12px_32px_rgba(25,28,29,0.06)]">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none font-body" placeholder="Search clinical data..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 text-slate-500 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 text-slate-500 transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 mx-2"></div>
+<div class="flex items-center gap-3">
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100 font-headline">Case Manager</span>
+</div>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<div class="pt-24 pb-12 px-8 space-y-8">
+<!-- Page Header Section -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">统计分析</h2>
+<p class="text-on-surface-variant text-sm mt-1">Real-time clinical performance and case throughput metrics.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex bg-surface-container-low p-1 rounded-lg">
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md transition-all bg-surface-container-lowest shadow-sm text-primary">Last 30 Days</button>
+<button class="px-4 py-1.5 text-xs font-medium text-on-surface-variant hover:text-on-surface">Last Quarter</button>
+</div>
+<div class="relative">
+<select class="appearance-none bg-surface-container-low border-none text-xs font-semibold py-2 pl-4 pr-10 rounded-lg focus:ring-2 focus:ring-primary/20 cursor-pointer">
+<option>All Departments</option>
+<option>Cardiology</option>
+<option>Oncology</option>
+<option>Neurology</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">filter_list</span>
+</div>
+<button class="bg-primary-container text-on-primary px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">download</span>
+                        Export Report
+                    </button>
+</div>
+</section>
+<!-- KPI Cards (Bento Style) -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- KPI: Total Cases -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-primary/5 rounded-lg text-primary">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<span class="flex items-center gap-1 text-xs font-bold text-primary-container bg-primary-fixed px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                            5%
+                        </span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Total Cases</h3>
+<p class="text-3xl font-extrabold font-headline mt-1">12,840</p>
+</div>
+<!-- KPI: Recovery Rate -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-tertiary-container/10 text-tertiary">
+<span class="material-symbols-outlined">health_and_safety</span>
+</div>
+<span class="flex items-center gap-1 text-xs font-bold text-primary-container bg-primary-fixed px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                            1.2%
+                        </span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Recovery Rate</h3>
+<p class="text-3xl font-extrabold font-headline mt-1">92.4%</p>
+</div>
+<!-- KPI: Avg. Stay -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-secondary/5 text-secondary">
+<span class="material-symbols-outlined">bed</span>
+</div>
+<span class="flex items-center gap-1 text-xs font-bold text-error bg-error-container px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-xs">trending_down</span>
+                            0.5d
+                        </span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Avg. Hospital Stay</h3>
+<p class="text-3xl font-extrabold font-headline mt-1">4.2 <span class="text-sm font-medium">days</span></p>
+</div>
+<!-- KPI: Accuracy Rate -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-primary/5 text-primary">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<span class="text-xs font-bold text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">
+                            Optimal
+                        </span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Accuracy Rate</h3>
+<p class="text-3xl font-extrabold font-headline mt-1">99.8%</p>
+</div>
+</section>
+<!-- Main Charts Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Case Volume Trends (Large Line Chart Placeholder) -->
+<div class="lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="text-xl font-bold font-headline">Case Volume Trends</h3>
+<p class="text-on-surface-variant text-xs mt-1">Total case influx mapped across daily milestones.</p>
+</div>
+<div class="flex gap-4 items-center text-xs font-semibold">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span> Current
+                            </div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-outline-variant"></span> Previous
+                            </div>
+</div>
+</div>
+<div class="relative h-64 w-full mt-4 bg-slate-50/50 rounded-lg flex items-end justify-between px-4 pb-8 overflow-hidden">
+<!-- Simulated Gradient Background -->
+<div class="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none"></div>
+<!-- Chart Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between px-4 py-8 pointer-events-none">
+<div class="border-t border-slate-100 w-full"></div>
+<div class="border-t border-slate-100 w-full"></div>
+<div class="border-t border-slate-100 w-full"></div>
+<div class="border-t border-slate-100 w-full"></div>
+</div>
+<!-- Visualization Bars/Dots (Simplified Chart Representation) -->
+<div class="flex-1 flex items-end justify-around h-full z-10">
+<div class="w-2 bg-primary rounded-t-full h-2/3 opacity-80 transition-all hover:opacity-100"></div>
+<div class="w-2 bg-primary rounded-t-full h-1/2 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-4/5 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-3/5 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-full opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-3/4 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-2/3 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-4/5 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-2/5 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-3/5 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-3/4 opacity-80"></div>
+<div class="w-2 bg-primary rounded-t-full h-5/6 opacity-80"></div>
+</div>
+<!-- Axis Labels -->
+<div class="absolute bottom-2 left-0 right-0 flex justify-around px-4">
+<span class="text-[10px] text-slate-400 font-bold">Week 1</span>
+<span class="text-[10px] text-slate-400 font-bold">Week 2</span>
+<span class="text-[10px] text-slate-400 font-bold">Week 3</span>
+<span class="text-[10px] text-slate-400 font-bold">Week 4</span>
+</div>
+</div>
+</div>
+<!-- Case Distribution (Pie Chart Placeholder) -->
+<div class="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)] flex flex-col">
+<h3 class="text-xl font-bold font-headline mb-1">By Department</h3>
+<p class="text-on-surface-variant text-xs mb-8">Case breakdown per specialty.</p>
+<div class="relative flex-1 flex items-center justify-center">
+<!-- Visual Donut Placeholder -->
+<div class="w-40 h-40 rounded-full border-[12px] border-primary flex items-center justify-center relative">
+<div class="absolute inset-0 rounded-full border-[12px] border-secondary border-t-transparent border-l-transparent rotate-45"></div>
+<div class="text-center">
+<span class="block text-2xl font-extrabold font-headline">12.8k</span>
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Total</span>
+</div>
+</div>
+</div>
+<div class="mt-8 space-y-3">
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="font-medium">Cardiology</span>
+</div>
+<span class="font-bold">42%</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-medium">Oncology</span>
+</div>
+<span class="font-bold">28%</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+<span class="font-medium">Neurology</span>
+</div>
+<span class="font-bold">15%</span>
+</div>
+<div class="flex justify-between items-center text-xs text-slate-400">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-slate-300"></span>
+<span class="font-medium">Other</span>
+</div>
+<span class="font-bold">15%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Data Table: Key Departmental Metrics -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant/15 shadow-[0px_4px_20px_rgba(0,0,0,0.02)] overflow-hidden">
+<div class="p-8 border-b border-slate-50">
+<h3 class="text-xl font-bold font-headline">Key Departmental Metrics</h3>
+<p class="text-on-surface-variant text-xs mt-1">Cross-department comparison of operational efficiency.</p>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Department Name</th>
+<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Case Count</th>
+<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant text-center">Avg. Cost (¥)</th>
+<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant text-center">Quality Score</th>
+<th class="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant text-right">Trend</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-primary rounded-full"></div>
+<span class="font-bold text-sm">Cardiology Department</span>
+</div>
+</td>
+<td class="px-8 py-5 font-medium text-sm">5,392</td>
+<td class="px-8 py-5 text-sm text-center font-mono">24,500.00</td>
+<td class="px-8 py-5 text-center">
+<div class="flex justify-center">
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded-full">98.2 / 100</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<span class="text-primary text-xs font-bold">↑ High</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-secondary rounded-full"></div>
+<span class="font-bold text-sm">Oncology Center</span>
+</div>
+</td>
+<td class="px-8 py-5 font-medium text-sm">3,595</td>
+<td class="px-8 py-5 text-sm text-center font-mono">58,200.00</td>
+<td class="px-8 py-5 text-center">
+<div class="flex justify-center">
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded-full">94.5 / 100</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<span class="text-primary text-xs font-bold">↑ Med</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-tertiary-container rounded-full"></div>
+<span class="font-bold text-sm">Neurology Unit</span>
+</div>
+</td>
+<td class="px-8 py-5 font-medium text-sm">1,926</td>
+<td class="px-8 py-5 text-sm text-center font-mono">31,000.00</td>
+<td class="px-8 py-5 text-center">
+<div class="flex justify-center">
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold rounded-full">89.1 / 100</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<span class="text-secondary text-xs font-bold">↔ Stable</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-outline-variant rounded-full"></div>
+<span class="font-bold text-sm">Pediatrics Specialty</span>
+</div>
+</td>
+<td class="px-8 py-5 font-medium text-sm">1,210</td>
+<td class="px-8 py-5 text-sm text-center font-mono">12,400.00</td>
+<td class="px-8 py-5 text-center">
+<div class="flex justify-center">
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded-full">99.4 / 100</span>
+</div>
+</td>
+<td class="px-8 py-5 text-right">
+<span class="text-primary text-xs font-bold">↑ High</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-4 bg-surface-container-low flex justify-between items-center">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Page 1 of 8</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-lowest text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Action Button (FAB) - Suppression Logic: 
+         The task is a Statistics page, which is analytic in nature.
+         The prompt mentions "New Case" as a navigation tab, but usually 
+         Stats pages don't need a primary action button like a FAB. 
+         However, if one were needed, it's suppressed here to prioritize canvas depth. 
+    -->
+</body></html>

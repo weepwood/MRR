@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Case Entry - The Clinical Lens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#737686",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-container": "#1a56db",
+                        "surface-dim": "#d9dadb",
+                        "on-surface-variant": "#434654",
+                        "surface-container": "#edeeef",
+                        "on-secondary-fixed-variant": "#334479",
+                        "on-primary-fixed-variant": "#003dab",
+                        "surface-tint": "#1353d8",
+                        "on-primary-fixed": "#00174d",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#01174b",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#191c1d",
+                        "on-surface": "#191c1d",
+                        "surface": "#f8f9fa",
+                        "secondary": "#4b5c92",
+                        "surface-variant": "#e1e3e4",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#b5c4ff",
+                        "tertiary": "#852b00",
+                        "on-tertiary-fixed-variant": "#802a00",
+                        "surface-bright": "#f8f9fa",
+                        "tertiary-fixed": "#ffdbcf",
+                        "inverse-on-surface": "#f0f1f2",
+                        "primary-fixed": "#dbe1ff",
+                        "outline-variant": "#c3c5d7",
+                        "surface-container-highest": "#e1e3e4",
+                        "surface-container-high": "#e7e8e9",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#b1c2ff",
+                        "on-tertiary-fixed": "#380d00",
+                        "on-secondary-container": "#3d4e84",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#b5c4ff",
+                        "on-primary-container": "#d4dcff",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "tertiary-container": "#ad3b00",
+                        "inverse-surface": "#2e3132",
+                        "background": "#f8f9fa",
+                        "primary": "#003fb1",
+                        "on-tertiary-container": "#ffd4c5",
+                        "primary-fixed-dim": "#b5c4ff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift { transition: background-color 0.3s ease; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d9dadb; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar (Shared Component) -->
+<aside class="flex flex-col h-full fixed left-0 top-0 overflow-y-auto h-screen w-64 border-r border-transparent bg-slate-50 dark:bg-slate-950 z-50">
+<div class="px-6 py-8">
+<h1 class="text-xl font-bold text-blue-700 dark:text-blue-500 tracking-tight">The Clinical Lens</h1>
+<p class="text-xs font-medium text-slate-400 mt-1 uppercase tracking-widest">Staff Portal</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<!-- Dashboard -->
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<!-- Case List -->
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="clinical_notes">clinical_notes</span>
+<span class="text-sm font-medium">Case List</span>
+</a>
+<!-- New Case (ACTIVE) -->
+<a class="flex items-center px-4 py-3 text-blue-700 dark:text-blue-400 font-bold border-r-4 border-blue-700 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20 transition-all duration-150 scale-95" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="add_circle">add_circle</span>
+<span class="text-sm">New Case</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-6 mt-auto border-t border-slate-100 dark:border-slate-800">
+<div class="flex items-center">
+<img alt="Medical Staff Profile" class="w-10 h-10 rounded-full object-cover" data-alt="Professional portrait of a male doctor in clinical attire with a friendly and confident expression, clinical office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2Y7jtWNQzMkM6UBMxqX_YFM1avCg7d4wCrfqpHPEgDALXI-DKACgymyeaYfiumXa8-CWWiMui-O0laxDJijc4Uj7_1iwmviZmVsde9vxkz6JK--XVGOZnPlaS5sQxtZPKs3YRkaU8yr3fMxWRsrWNsWy2BXKxrIMZRS8f3Mn6bfuQmACBHkoubuCWYPQrYraqPuxe3aXVhvgYLZxw04Qqh6QI9c3FZvZKq3eKW7UWsjsBF27f6M_W0igmHUoSv-atz5rjOppMI7dC"/>
+<div class="ml-3">
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">Dr. Aris Thorne</p>
+<p class="text-xs text-slate-500">Chief Resident</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 flex justify-between items-center px-8 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-[0px_12px_32px_rgba(25,28,29,0.06)]">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-100/50 dark:bg-slate-800/50 border-none rounded-full py-2 pl-10 pr-4 text-sm font-body focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder="Search patient records or ICD-10 codes..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500" data-icon="help_outline">help_outline</span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Case Manager</p>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="max-w-6xl mx-auto px-12 py-12">
+<!-- Header Section (Editorial) -->
+<div class="mb-12">
+<h2 class="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-2">Create New Case</h2>
+<p class="text-on-surface-variant font-body text-lg max-w-2xl">Initialize a new patient journey. Please ensure all mandatory biometric data and clinical markers are validated before submission.</p>
+</div>
+<!-- Asymmetric Grid Layout -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Left Column: Progress & Context (3 cols) -->
+<div class="col-span-3">
+<div class="sticky top-28 space-y-10">
+<!-- Step Progress Indicator -->
+<nav class="space-y-6">
+<!-- Step 1: Active -->
+<div class="flex items-start space-x-4 group">
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-on-primary font-bold text-sm shadow-lg shadow-primary/20">1</div>
+<div class="w-0.5 h-12 bg-primary/20 mt-2"></div>
+</div>
+<div class="pt-1">
+<span class="block text-xs font-bold text-primary uppercase tracking-widest mb-1">Step 1</span>
+<span class="block text-sm font-bold text-on-surface">Patient Identity</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex items-start space-x-4">
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant font-bold text-sm">2</div>
+<div class="w-0.5 h-12 bg-surface-container-highest mt-2"></div>
+</div>
+<div class="pt-1 opacity-50">
+<span class="block text-xs font-bold uppercase tracking-widest mb-1">Step 2</span>
+<span class="block text-sm font-medium">Encounter Details</span>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex items-start space-x-4">
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant font-bold text-sm">3</div>
+<div class="w-0.5 h-12 bg-surface-container-highest mt-2"></div>
+</div>
+<div class="pt-1 opacity-50">
+<span class="block text-xs font-bold uppercase tracking-widest mb-1">Step 3</span>
+<span class="block text-sm font-medium">Clinical Diagnosis</span>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="flex items-start space-x-4">
+<div class="flex flex-col items-center">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant font-bold text-sm">4</div>
+</div>
+<div class="pt-1 opacity-50">
+<span class="block text-xs font-bold uppercase tracking-widest mb-1">Step 4</span>
+<span class="block text-sm font-medium">Review &amp; Submit</span>
+</div>
+</div>
+</nav>
+<!-- Context Alert Card -->
+<div class="bg-primary-container/10 p-6 rounded-xl border-l-4 border-primary">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="info">info</span>
+<p class="text-sm font-medium text-on-surface leading-relaxed">
+                                You are filing an <strong>Emergency Admission</strong>. Fields marked with an asterisk (*) are required for immediate triage.
+                            </p>
+</div>
+</div>
+</div>
+<!-- Right Column: The Form Sanctuary (9 cols) -->
+<div class="col-span-9 space-y-8">
+<!-- Form Section 1: Patient Identification -->
+<section class="bg-surface-container-lowest p-10 rounded-xl shadow-[0px_12px_32px_rgba(25,28,29,0.06)]">
+<div class="flex items-center mb-10">
+<div class="p-3 bg-blue-50 rounded-lg mr-4">
+<span class="material-symbols-outlined text-blue-700" data-icon="person_search">person_search</span>
+</div>
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Patient Identification</h3>
+<p class="text-sm text-on-surface-variant">Search existing records or create a new profile profile.</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-x-8 gap-y-6">
+<!-- Patient Search / Name -->
+<div class="col-span-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Legal Full Name *</label>
+<input class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" type="text" value="Jonathan Everett Reid"/>
+</div>
+<!-- DOB -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Date of Birth *</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" type="date" value="1982-05-14"/>
+</div>
+</div>
+<!-- Sex -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Sex Assigned at Birth</label>
+<select class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none">
+<option>Male</option>
+<option>Female</option>
+<option>Intersex</option>
+<option>Undisclosed</option>
+</select>
+</div>
+<!-- SSN / ID -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Government ID / SSN</label>
+<input class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="XXX-XX-XXXX" type="text"/>
+</div>
+<!-- Insurance -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Primary Insurance Provider</label>
+<input class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="e.g. BlueCross BlueShield" type="text"/>
+</div>
+</div>
+</section>
+<!-- Form Section 2: Encounter Details -->
+<section class="bg-surface-container-low p-10 rounded-xl">
+<div class="flex items-center mb-10">
+<div class="p-3 bg-secondary-container/30 rounded-lg mr-4 text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="clinical_notes">clinical_notes</span>
+</div>
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Encounter Details</h3>
+<p class="text-sm text-on-surface-variant">Log admission logistics and assigned medical personnel.</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-x-8 gap-y-6">
+<!-- Admission Date/Time -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Admission Timestamp *</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/15 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 outline-none" type="datetime-local"/>
+</div>
+<!-- Department -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Assigned Department</label>
+<select class="w-full bg-surface-container-lowest border border-outline-variant/15 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 outline-none">
+<option>Cardiology (West Wing)</option>
+<option>Neurology (Unit B)</option>
+<option>ICU (Critical Care)</option>
+<option>Emergency Services</option>
+</select>
+</div>
+<!-- Attending MD -->
+<div class="col-span-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Attending Physician *</label>
+<div class="flex items-center p-3 bg-surface-container-lowest border border-outline-variant/15 rounded group hover:border-primary/50 transition-all cursor-pointer">
+<img alt="Physician" class="w-10 h-10 rounded object-cover mr-4" data-alt="Professional female doctor in laboratory coat looking into camera with soft focus hospital corridor background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmTDSxp7K_vn_VstAGvSx_vQbxJIf_3i6P9wi6W9coyvqnmiq5-CHAqJw7km7sKVC83hZ3ZER5Xx7-yl54cAiiiNe7DvOqqt2WifW1SX44fQeo0e-FCsHxbCAgeXZj8zNehdh7x_54grtpt5dxtsdjhhKrciApCYTjJ5gPrLZfD-FD1m9XhuI96VNf14kQTqRYfw0Eno99Z4zOr9wAORy_uqjdTtE1kd-hUK8SPklRrkSeQam24ZmR4A1oOGOyBAb4oxAb7Co3Iv3u"/>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Dr. Elena Rodriguez</p>
+<p class="text-xs text-on-surface-variant">Internal Medicine Specialist • On-Call</p>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="swap_horiz">swap_horiz</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Form Section 3: Initial Diagnosis -->
+<section class="bg-surface-container-lowest p-10 rounded-xl shadow-[0px_12px_32px_rgba(25,28,29,0.06)]">
+<div class="flex items-center mb-10">
+<div class="p-3 bg-tertiary-fixed/40 rounded-lg mr-4 text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined" data-icon="medical_information">medical_information</span>
+</div>
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Initial Diagnosis</h3>
+<p class="text-sm text-on-surface-variant">Preliminary clinical findings and symptom tracking.</p>
+</div>
+</div>
+<div class="space-y-6">
+<!-- ICD-10 Search -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">ICD-10 Code Search</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest/20 border-b-2 border-primary/20 rounded-t px-4 py-4 font-body focus:border-primary transition-all outline-none" placeholder="Search by name (e.g. Hypertension) or code (e.g. I10)" type="text"/>
+<div class="absolute right-4 top-4 flex space-x-2">
+<span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-extrabold rounded-sm">V2024.1</span>
+</div>
+</div>
+<!-- Result Chips -->
+<div class="mt-4 flex flex-wrap gap-2">
+<div class="inline-flex items-center px-3 py-1 bg-secondary-container rounded-full text-xs font-semibold text-on-secondary-container">
+                                        I10: Essential hypertension
+                                        <button class="ml-2 hover:text-error"><span class="material-symbols-outlined text-sm">close</span></button>
+</div>
+<div class="inline-flex items-center px-3 py-1 bg-secondary-container rounded-full text-xs font-semibold text-on-secondary-container">
+                                        E11.9: Type 2 diabetes mellitus
+                                        <button class="ml-2 hover:text-error"><span class="material-symbols-outlined text-sm">close</span></button>
+</div>
+</div>
+</div>
+<!-- Clinical Symptoms -->
+<div>
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Presenting Symptoms &amp; Notes</label>
+<textarea class="w-full bg-surface-container-highest/30 border border-outline-variant/30 rounded px-4 py-3 font-body focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="Enter detailed clinical observations..." rows="4"></textarea>
+</div>
+</div>
+</section>
+<!-- Navigation Footer -->
+<div class="flex items-center justify-between pt-8">
+<button class="px-8 py-3 text-sm font-bold text-on-surface-variant hover:text-on-surface transition-all flex items-center">
+<span class="material-symbols-outlined mr-2" data-icon="arrow_back">arrow_back</span>
+                            Save Draft
+                        </button>
+<div class="flex items-center space-x-4">
+<button class="px-8 py-3 text-sm font-bold text-on-surface bg-surface-container-high rounded-lg hover:bg-surface-dim transition-all">
+                                Previous Step
+                            </button>
+<button class="px-10 py-3 text-sm font-bold text-on-primary bg-gradient-to-r from-primary to-primary-container rounded-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">
+                                Next Step: Clinical Review
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Help Widget (Custom FAB Rule: Only on relevant dashboards/flows) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="flex items-center bg-inverse-surface text-inverse-on-surface px-6 py-4 rounded-full shadow-2xl hover:scale-105 transition-all">
+<span class="material-symbols-outlined mr-2" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-sm font-bold">Clinical AI Assist</span>
+</button>
+</div>
+</body></html>

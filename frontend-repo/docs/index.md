@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: 文档中心 Bata
+  name: 文档中心 Alpha
   text: 病案翻拍管理系统文档
   tagline: 包含快速开始、部署指南、功能说明与维护参考
   actions:

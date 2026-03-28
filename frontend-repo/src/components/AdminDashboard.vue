@@ -40,6 +40,10 @@
           <el-icon><TrendCharts /></el-icon>
           <span>统计分析</span>
         </el-menu-item>
+        <el-menu-item index="statistics-detail">
+          <el-icon><Document /></el-icon>
+          <span>病案明细</span>
+        </el-menu-item>
         <el-menu-item index="settings">
           <el-icon><Setting /></el-icon>
           <span>系统设置</span>
@@ -95,7 +99,7 @@
               <h2>欢迎进入后台管理中心</h2>
               <p>
                 当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、日志、监控、
-                病案和系统设置页面，所有功能都会嵌入在同一个后台壳中。
+                病案、统计、病案明细和系统设置页面，所有功能都会嵌入在同一个后台壳中。
               </p>
             </div>
 
@@ -187,9 +191,10 @@ const activeMenu = computed(() => {
   if (path.startsWith('/admin/testing')) return 'testing'
   if (path.startsWith('/admin/logs')) return 'logs'
   if (path.startsWith('/admin/monitoring')) return 'monitoring'
-  if (path.startsWith('/admin/settings')) return 'settings'
   if (path.startsWith('/admin/crud')) return 'records'
+  if (path.startsWith('/admin/statistics/detail')) return 'statistics-detail'
   if (path.startsWith('/admin/statistics')) return 'statistics'
+  if (path.startsWith('/admin/settings')) return 'settings'
   if (path === '/docs/index.html') return 'docs'
   return 'dashboard'
 })
@@ -199,7 +204,7 @@ const showDashboard = computed(() => activeMenu.value === 'dashboard')
 const sectionMetaMap = {
   dashboard: {
     title: '工作台总览',
-    description: '从这里进入用户、权限、测试、日志、监控、病案和系统设置模块。'
+    description: '从这里进入用户、权限、测试、日志、监控、病案、统计、病案明细和系统设置。'
   },
   users: {
     title: '用户管理',
@@ -221,10 +226,6 @@ const sectionMetaMap = {
     title: '监控中心',
     description: '查看 CPU、内存、磁盘和系统运行状态。'
   },
-  settings: {
-    title: '系统设置',
-    description: '管理基础参数、日志与安全策略。'
-  },
   records: {
     title: '病案管理',
     description: '进入病案列表、编辑和批量操作。'
@@ -232,6 +233,14 @@ const sectionMetaMap = {
   statistics: {
     title: '统计分析',
     description: '查看病案统计、趋势图表与概览指标。'
+  },
+  'statistics-detail': {
+    title: '病案明细',
+    description: '独立查看病案分页列表、筛选和排序结果。'
+  },
+  settings: {
+    title: '系统设置',
+    description: '管理基础参数、日志与安全策略。'
   },
   docs: {
     title: '文档中心',
@@ -266,7 +275,7 @@ const dashboardCards = computed(() => [
   {
     label: '可访问模块',
     value: isAdmin.value ? '全部后台模块' : '受限后台模块',
-    note: '用户、权限、测试、日志、监控、病案与设置模块',
+    note: '用户、权限、测试、日志、监控、病案、统计与设置模块',
     badge: 'ACCESS',
     icon: Tools,
     iconClass: 'tertiary',
@@ -341,6 +350,14 @@ const featureCards = [
     action: () => router.push('/admin/statistics')
   },
   {
+    title: '病案明细',
+    description: '独立查看病案分页列表、筛选和排序结果。',
+    badge: '明细页面',
+    tone: 'tone-slate',
+    icon: Document,
+    action: () => router.push('/admin/statistics/detail')
+  },
+  {
     title: '系统设置',
     description: '管理基础参数、日志与安全策略。',
     badge: '系统参数',
@@ -374,9 +391,10 @@ const handleMenuSelect = (index) => {
     testing: '/admin/testing',
     logs: '/admin/logs',
     monitoring: '/admin/monitoring',
-    settings: '/admin/settings',
     records: '/admin/crud',
-    statistics: '/admin/statistics'
+    statistics: '/admin/statistics',
+    'statistics-detail': '/admin/statistics/detail',
+    settings: '/admin/settings'
   }
 
   if (index === 'docs') {
@@ -612,8 +630,7 @@ function handleLogout() {
   padding: 28px;
   border-radius: 24px;
   border: 1px solid rgba(195, 197, 215, 0.18);
-  background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 248, 255, 0.9) 100%);
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 248, 255, 0.9) 100%);
   box-shadow: 0 16px 40px rgba(24, 65, 134, 0.08);
 }
 

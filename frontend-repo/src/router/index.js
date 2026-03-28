@@ -15,6 +15,7 @@ const MonitoringView = () => import('@/pages/admin/MonitoringView.vue')
 const SettingsView = () => import('@/pages/admin/SettingsView.vue')
 const CrudView = () => import('@/pages/admin/RecordsPage.vue')
 const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
+const StatisticsDetailPage = () => import('@/pages/admin/StatisticsDetailPage.vue')
 const Test = () => import('@/components/Test.vue')
 const IDTest = () => import('@/components/IdCardTest.vue')
 
@@ -72,7 +73,8 @@ const routes = [
         meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'role:manage', 'user:manage'] }
       },
       { path: 'crud', name: 'admin-crud', component: CrudView, meta: { requiresAdmin: true } },
-      { path: 'statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } }
+      { path: 'statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } },
+      { path: 'statistics/detail', name: 'admin-statistics-detail', component: StatisticsDetailPage, meta: { requiresAdmin: true } }
     ]
   },
   { path: '/admin-dashboard', redirect: '/admin' },

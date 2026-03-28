@@ -117,7 +117,7 @@ function resolveMessage(payload, fallback) {
 const redirectIfLoggedIn = () => {
   const session = getSession()
   if (session?.token) {
-    router.replace(isAdminUser() ? '/admin-dashboard' : '/print')
+    router.replace(isAdminUser() ? '/admin' : '/print')
   }
 }
 
@@ -145,7 +145,7 @@ const handleLogin = async () => {
         token,
         user: resolveLoginUser(loginData) || resolveLoginUser(payload)
       })
-      router.push(isAdminUser() ? '/admin-dashboard' : '/print')
+      router.push(isAdminUser() ? '/admin' : '/print')
       return
     }
 

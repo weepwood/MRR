@@ -66,7 +66,7 @@ const quickLinks = [
   {
     title: '后台工作台',
     description: '查看系统概览、任务与运行状态。',
-    path: '/admin-dashboard',
+    path: '/admin',
     icon: DataBoard,
     tone: 'tone-blue'
   },

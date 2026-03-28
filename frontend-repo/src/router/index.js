@@ -6,7 +6,6 @@ const Login = () => import('@/pages/LoginPage.vue')
 const ElementImageGallery = () => import('@/components/ImageGalleryEl.vue')
 const ElementImageGalleryBAH = () => import('@/components/ImageGalleryAdmin.vue')
 const PrintPage = () => import('@/components/PrintPage.vue')
-const Admin = () => import('@/pages/AdminEntryPage.vue')
 const AdminDashboard = () => import('@/pages/admin/AdminDashboardPage.vue')
 const UsersPage = () => import('@/pages/admin/UsersPage.vue')
 const PermissionsPage = () => import('@/pages/admin/PermissionsPage.vue')
@@ -28,34 +27,41 @@ const routes = [
       return false
     }
   },
-  { path: '/admin', name: 'admin', component: Admin, meta: { requiresAdmin: true } },
-  { path: '/admin-dashboard', name: 'admin-dashboard', component: AdminDashboard, meta: { requiresAdmin: true } },
   {
-    path: '/admin/users',
-    name: 'admin-users',
-    component: UsersPage,
-    meta: { requiresAdmin: true, requiredAnyPermissions: ['user:manage'] }
+    path: '/admin',
+    name: 'admin',
+    component: AdminDashboard,
+    meta: { requiresAdmin: true },
+    children: [
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: UsersPage,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['user:manage'] }
+      },
+      {
+        path: 'permissions',
+        name: 'admin-permissions',
+        component: PermissionsPage,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['role:read', 'role:manage', 'user:manage'] }
+      },
+      {
+        path: 'testing',
+        name: 'admin-testing',
+        component: TestingPage,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'log:read', 'role:manage', 'user:manage'] }
+      },
+      {
+        path: 'settings',
+        name: 'admin-settings',
+        component: SettingsPage,
+        meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'role:manage', 'user:manage'] }
+      },
+      { path: 'crud', name: 'admin-crud', component: CrudView, meta: { requiresAdmin: true } },
+      { path: 'statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } }
+    ]
   },
-  {
-    path: '/admin/permissions',
-    name: 'admin-permissions',
-    component: PermissionsPage,
-    meta: { requiresAdmin: true, requiredAnyPermissions: ['role:read', 'role:manage', 'user:manage'] }
-  },
-  {
-    path: '/admin/testing',
-    name: 'admin-testing',
-    component: TestingPage,
-    meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'log:read', 'role:manage', 'user:manage'] }
-  },
-  {
-    path: '/admin/settings',
-    name: 'admin-settings',
-    component: SettingsPage,
-    meta: { requiresAdmin: true, requiredAnyPermissions: ['system:read', 'role:manage', 'user:manage'] }
-  },
-  { path: '/admin/crud', name: 'admin-crud', component: CrudView, meta: { requiresAdmin: true } },
-  { path: '/admin/statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } },
+  { path: '/admin-dashboard', redirect: '/admin' },
   { path: '/test', name: 'test', component: Test },
   { path: '/idtest', name: 'idtest', component: IDTest },
   { path: '/print', name: 'print', component: PrintPage },
@@ -73,7 +79,7 @@ router.beforeEach((to) => {
   const isAuthenticated = Boolean(session?.token)
 
   if ((to.path === '/' || to.path === '/login') && isAuthenticated) {
-    return isAdminUser() ? '/admin-dashboard' : '/print'
+    return isAdminUser() ? '/admin' : '/print'
   }
 
   if (!to.meta.requiresAdmin) {

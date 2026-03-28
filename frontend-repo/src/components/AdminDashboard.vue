@@ -2,24 +2,50 @@
   <div class="admin-dashboard">
     <aside class="admin-sidebar">
       <div class="brand-block">
-        <p class="brand-eyebrow">CXRMYY</p>
+        <p class="brand-eyebrow">MRR</p>
         <h1 class="brand-title">病案管理系统</h1>
         <p class="brand-subtitle">后台管理中心</p>
       </div>
 
       <el-menu :default-active="activeMenu" class="sidebar-menu" @select="handleMenuSelect">
-        <el-menu-item index="dashboard"><el-icon><DataBoard /></el-icon><span>仪表盘</span></el-menu-item>
-        <el-menu-item index="users"><el-icon><User /></el-icon><span>用户管理</span></el-menu-item>
-        <el-menu-item index="permissions"><el-icon><Key /></el-icon><span>权限管理</span></el-menu-item>
-        <el-menu-item index="testing"><el-icon><Tools /></el-icon><span>测试中心</span></el-menu-item>
-        <el-menu-item index="settings"><el-icon><Setting /></el-icon><span>系统设置</span></el-menu-item>
-        <el-menu-item index="records"><el-icon><Document /></el-icon><span>病案管理</span></el-menu-item>
-        <el-menu-item index="statistics"><el-icon><TrendCharts /></el-icon><span>统计分析</span></el-menu-item>
-        <el-menu-item index="docs"><el-icon><Reading /></el-icon><span>文档中心</span></el-menu-item>
+        <el-menu-item index="dashboard">
+          <el-icon><DataBoard /></el-icon>
+          <span>工作台总览</span>
+        </el-menu-item>
+        <el-menu-item index="users">
+          <el-icon><User /></el-icon>
+          <span>用户管理</span>
+        </el-menu-item>
+        <el-menu-item index="permissions">
+          <el-icon><Key /></el-icon>
+          <span>权限管理</span>
+        </el-menu-item>
+        <el-menu-item index="testing">
+          <el-icon><Tools /></el-icon>
+          <span>测试中心</span>
+        </el-menu-item>
+        <el-menu-item index="records">
+          <el-icon><Document /></el-icon>
+          <span>病案管理</span>
+        </el-menu-item>
+        <el-menu-item index="statistics">
+          <el-icon><TrendCharts /></el-icon>
+          <span>统计分析</span>
+        </el-menu-item>
+        <el-menu-item index="settings">
+          <el-icon><Setting /></el-icon>
+          <span>系统设置</span>
+        </el-menu-item>
+        <el-menu-item index="docs">
+          <el-icon><Reading /></el-icon>
+          <span>文档中心</span>
+        </el-menu-item>
       </el-menu>
 
       <div class="profile-card">
-        <div class="profile-avatar"><el-icon><User /></el-icon></div>
+        <div class="profile-avatar">
+          <el-icon><User /></el-icon>
+        </div>
         <div class="profile-copy">
           <p class="profile-name">{{ currentUserName || '管理员' }}</p>
           <p class="profile-role">{{ currentRoleName || '未分配角色' }}</p>
@@ -31,13 +57,21 @@
       <header class="topbar">
         <div class="topbar-copy">
           <p class="topbar-eyebrow">后台总览</p>
-          <h2 class="topbar-title">工作台入口</h2>
+          <h2 class="topbar-title">{{ currentSectionTitle }}</h2>
+          <p class="topbar-subtitle">{{ currentSectionDescription }}</p>
         </div>
+
         <div class="topbar-actions">
           <div class="topbar-user">
             <span>{{ currentUserName || 'Administrator' }}</span>
             <small>{{ currentRoleName || 'Admin console' }}</small>
           </div>
+
+          <el-button v-if="!showDashboard" class="back-btn" plain @click="router.push('/admin')">
+            <el-icon><DataBoard /></el-icon>
+            返回总览
+          </el-button>
+
           <el-button class="logout-btn" type="primary" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
             退出登录
@@ -45,52 +79,65 @@
         </div>
       </header>
 
-      <div class="page-canvas">
-        <section class="hero-block">
-          <div>
-            <p class="eyebrow">Clinical Sanctuary</p>
-            <h2>欢迎进入后台管理中心</h2>
-            <p>
-              当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、系统设置和业务管理页面。
-            </p>
-          </div>
-          <div class="hero-actions">
-            <el-button type="primary" @click="router.push('/admin/users')">
-              <el-icon><User /></el-icon>
-              用户管理
-            </el-button>
-            <el-button @click="router.push('/admin/permissions')">
-              <el-icon><Key /></el-icon>
-              权限管理
-            </el-button>
-          </div>
-        </section>
+      <div class="content-shell">
+        <template v-if="showDashboard">
+          <section class="hero-block">
+            <div class="hero-copy">
+              <p class="eyebrow">Clinical Sanctuary</p>
+              <h2>欢迎进入后台管理中心</h2>
+              <p>
+                当前账号{{ accessSummary }}。你可以从这里直接进入用户、权限、测试、病案和系统设置页面，
+                所有功能都会嵌入在同一个后台壳中。
+              </p>
+            </div>
 
-        <section class="kpi-grid">
-          <article v-for="card in dashboardCards" :key="card.label" class="kpi-card" :class="card.toneClass">
-            <div class="kpi-top">
-              <div class="kpi-icon" :class="card.iconClass">
-                <el-icon><component :is="card.icon" /></el-icon>
+            <div class="hero-actions">
+              <el-button type="primary" @click="router.push('/admin/users')">
+                <el-icon><User /></el-icon>
+                用户管理
+              </el-button>
+              <el-button @click="router.push('/admin/permissions')">
+                <el-icon><Key /></el-icon>
+                权限管理
+              </el-button>
+            </div>
+          </section>
+
+          <section class="kpi-grid">
+            <article v-for="card in dashboardCards" :key="card.label" class="kpi-card" :class="card.toneClass">
+              <div class="kpi-top">
+                <div class="kpi-icon" :class="card.iconClass">
+                  <el-icon><component :is="card.icon" /></el-icon>
+                </div>
+                <span class="kpi-chip">{{ card.badge }}</span>
               </div>
-              <span class="kpi-chip">{{ card.badge }}</span>
-            </div>
-            <p class="kpi-label">{{ card.label }}</p>
-            <div class="kpi-value">{{ card.value }}</div>
-            <p class="kpi-note">{{ card.note }}</p>
-          </article>
-        </section>
+              <p class="kpi-label">{{ card.label }}</p>
+              <div class="kpi-value">{{ card.value }}</div>
+              <p class="kpi-note">{{ card.note }}</p>
+            </article>
+          </section>
 
-        <section class="feature-grid">
-          <article v-for="item in featureCards" :key="item.title" class="feature-card" @click="handleFeatureClick(item)">
-            <div class="feature-icon" :class="item.tone">
-              <el-icon><component :is="item.icon" /></el-icon>
-            </div>
-            <h3>{{ item.title }}</h3>
-            <p>{{ item.description }}</p>
-            <div class="feature-footer">
-              <span>{{ item.badge }}</span>
-            </div>
-          </article>
+          <section class="feature-grid">
+            <article
+              v-for="item in featureCards"
+              :key="item.title"
+              class="feature-card"
+              @click="handleFeatureClick(item)"
+            >
+              <div class="feature-icon" :class="item.tone">
+                <el-icon><component :is="item.icon" /></el-icon>
+              </div>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.description }}</p>
+              <div class="feature-footer">
+                <span>{{ item.badge }}</span>
+              </div>
+            </article>
+          </section>
+        </template>
+
+        <section v-else class="route-panel">
+          <router-view />
         </section>
       </div>
     </main>
@@ -121,24 +168,67 @@ const currentUser = computed(() => getCurrentUser())
 const currentUserName = computed(() => getUserDisplayName() || currentUser.value?.username || '')
 const currentRoleName = computed(() => getUserRoleName() || currentUser.value?.roleCode || '')
 const isAdmin = computed(() => isAdminUser())
-const accessSummary = computed(() => (isAdmin.value ? '拥有全部后台权限' : '拥有受限后台权限'))
+const accessSummary = computed(() => (isAdmin.value ? '拥有完整后台权限' : '拥有受限后台权限'))
 
 const activeMenu = computed(() => {
   const path = route.path
-  if (path === '/admin/users') return 'users'
-  if (path === '/admin/permissions') return 'permissions'
-  if (path === '/admin/testing') return 'testing'
-  if (path === '/admin/settings') return 'settings'
-  if (path === '/admin/crud') return 'records'
-  if (path === '/admin/statistics') return 'statistics'
+  if (path === '/admin' || path === '/admin-dashboard') return 'dashboard'
+  if (path.startsWith('/admin/users')) return 'users'
+  if (path.startsWith('/admin/permissions')) return 'permissions'
+  if (path.startsWith('/admin/testing')) return 'testing'
+  if (path.startsWith('/admin/settings')) return 'settings'
+  if (path.startsWith('/admin/crud')) return 'records'
+  if (path.startsWith('/admin/statistics')) return 'statistics'
   if (path === '/docs/index.html') return 'docs'
   return 'dashboard'
 })
 
-const dashboardCards = [
+const showDashboard = computed(() => activeMenu.value === 'dashboard')
+
+const sectionMetaMap = {
+  dashboard: {
+    title: '工作台总览',
+    description: '从这里进入用户、权限、测试、病案和系统设置模块。'
+  },
+  users: {
+    title: '用户管理',
+    description: '维护账号、角色、状态和最近登录信息。'
+  },
+  permissions: {
+    title: '权限管理',
+    description: '查看角色权限矩阵与当前账号可见范围。'
+  },
+  testing: {
+    title: '测试中心',
+    description: '进入接口冒烟、压力测试和日志清理页面。'
+  },
+  settings: {
+    title: '系统设置',
+    description: '管理基础参数、日志与安全策略。'
+  },
+  records: {
+    title: '病案管理',
+    description: '进入病案列表、编辑和批量操作。'
+  },
+  statistics: {
+    title: '统计分析',
+    description: '查看病案统计、趋势图表与概览指标。'
+  },
+  docs: {
+    title: '文档中心',
+    description: '打开项目说明文档，查看接口和部署说明。'
+  }
+}
+
+const currentSectionTitle = computed(() => sectionMetaMap[activeMenu.value]?.title || '工作台总览')
+const currentSectionDescription = computed(
+  () => sectionMetaMap[activeMenu.value]?.description || '嵌入式后台内容区'
+)
+
+const dashboardCards = computed(() => [
   {
     label: '当前账号',
-    value: currentUserName,
+    value: currentUserName.value || '未登录',
     note: '登录后会自动沿用会话信息',
     badge: 'LIVE',
     icon: User,
@@ -147,7 +237,7 @@ const dashboardCards = [
   },
   {
     label: '当前角色',
-    value: currentRoleName,
+    value: currentRoleName.value || '未分配',
     note: '角色决定默认权限范围',
     badge: 'ROLE',
     icon: Key,
@@ -156,8 +246,8 @@ const dashboardCards = [
   },
   {
     label: '可访问模块',
-    value: isAdmin,
-    note: '用户、权限、测试、设置等后台模块',
+    value: isAdmin.value ? '全部后台模块' : '受限后台模块',
+    note: '用户、权限、测试、病案与设置模块',
     badge: 'ACCESS',
     icon: Tools,
     iconClass: 'tertiary',
@@ -165,14 +255,14 @@ const dashboardCards = [
   },
   {
     label: '权限摘要',
-    value: accessSummary,
-    note: '从会话中实时计算当前访问能力',
+    value: accessSummary.value,
+    note: '会根据当前登录态动态计算',
     badge: 'OK',
     icon: TrendCharts,
     iconClass: 'primary',
     toneClass: 'accent-green'
   }
-]
+])
 
 const featureCards = [
   {
@@ -185,7 +275,7 @@ const featureCards = [
   },
   {
     title: '权限管理',
-    description: '查看角色权限矩阵、模块分类和当前账号可见范围。',
+    description: '查看角色权限矩阵和当前账号可见范围。',
     badge: '权限视图',
     tone: 'tone-green',
     icon: Key,
@@ -193,7 +283,7 @@ const featureCards = [
   },
   {
     title: '测试中心',
-    description: '进入接口冒烟、压力测试和日志清理等后台测试页面。',
+    description: '进入接口冒烟、压力测试和日志清理页面。',
     badge: '测试入口',
     tone: 'tone-cyan',
     icon: Tools,
@@ -201,7 +291,7 @@ const featureCards = [
   },
   {
     title: '病案管理',
-    description: '继续处理病案列表、编辑和批量操作。',
+    description: '进入病案列表、编辑和批量操作。',
     badge: '业务入口',
     tone: 'tone-orange',
     icon: Document,
@@ -217,7 +307,7 @@ const featureCards = [
   },
   {
     title: '系统设置',
-    description: '调整系统参数、日志保留策略和安全配置。',
+    description: '管理基础参数、日志与安全策略。',
     badge: '系统参数',
     tone: 'tone-slate',
     icon: Setting,
@@ -225,7 +315,7 @@ const featureCards = [
   },
   {
     title: '文档中心',
-    description: '打开项目文档，快速查看接口和部署说明。',
+    description: '打开项目说明文档，快速查看接口和部署说明。',
     badge: '团队协作',
     tone: 'tone-orange',
     icon: Reading,
@@ -238,28 +328,29 @@ const handleFeatureClick = (item) => {
     item.action()
     return
   }
-  ElMessage.info(`${item.title} feature coming soon`)
+  ElMessage.info(`${item.title} 功能即将上线`)
 }
 
 const handleMenuSelect = (index) => {
   const routes = {
-    dashboard: '/admin-dashboard',
+    dashboard: '/admin',
     users: '/admin/users',
     permissions: '/admin/permissions',
     testing: '/admin/testing',
     settings: '/admin/settings',
     records: '/admin/crud',
-    statistics: '/admin/statistics',
-    docs: '/docs/index.html'
+    statistics: '/admin/statistics'
   }
 
-  const target = routes[index]
-  if (!target) return
   if (index === 'docs') {
     openDocs()
     return
   }
-  router.push(target)
+
+  const target = routes[index]
+  if (target) {
+    router.push(target)
+  }
 }
 
 function openDocs() {
@@ -429,6 +520,12 @@ function handleLogout() {
   color: #1f2b42;
 }
 
+.topbar-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #667085;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -453,303 +550,281 @@ function handleLogout() {
   color: #737686;
 }
 
+.back-btn,
 .logout-btn {
   border: none;
   border-radius: 12px;
-  background: #003fb1;
   box-shadow: none;
 }
 
-.page-canvas {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 28px 32px 40px;
+.content-shell {
+  display: grid;
+  gap: 20px;
+  padding: 24px 32px 40px;
+}
+
+.route-panel {
+  min-height: calc(100vh - 120px);
 }
 
 .hero-block {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) auto;
+  gap: 20px;
+  align-items: center;
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(195, 197, 215, 0.18);
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 248, 255, 0.9) 100%);
+  box-shadow: 0 16px 40px rgba(24, 65, 134, 0.08);
 }
 
-.eyebrow {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #737686;
-}
-
-.hero-block h2 {
+.hero-copy .eyebrow {
   margin: 0;
-  font-size: 44px;
-  line-height: 1;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: -0.04em;
-  color: #191c1d;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #003fb1;
 }
 
-.hero-block p {
-  margin: 12px 0 0;
-  max-width: 720px;
-  font-size: 18px;
-  line-height: 1.6;
-  color: #434654;
+.hero-copy h2 {
+  margin: 10px 0;
+  font-size: 32px;
+  line-height: 1.2;
+  color: #1f2b42;
+}
+
+.hero-copy p {
+  margin: 0;
+  max-width: 760px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #4b5563;
 }
 
 .hero-actions {
   display: flex;
-  align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .kpi-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 18px;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid rgba(195, 197, 215, 0.22);
-}
-
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, #003fb1, #1a56db);
-}
-
-.kpi-card.accent-violet::before {
-  background: linear-gradient(90deg, #4b5c92, #b5c4ff);
-}
-
-.kpi-card.accent-gold::before {
-  background: linear-gradient(90deg, #d97706, #f59e0b);
-}
-
-.kpi-card.accent-green::before {
-  background: linear-gradient(90deg, #0f9d58, #34c759);
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(195, 197, 215, 0.18);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 28px rgba(24, 65, 134, 0.08);
 }
 
 .kpi-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
 }
 
 .kpi-icon {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
+  color: #fff;
 }
 
 .kpi-icon.primary {
-  background: rgba(0, 63, 177, 0.08);
-  color: #003fb1;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
 }
 
 .kpi-icon.secondary {
-  background: rgba(75, 92, 146, 0.08);
-  color: #4b5c92;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
 
 .kpi-icon.tertiary {
-  background: rgba(173, 59, 0, 0.1);
-  color: #852b00;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
 }
 
 .kpi-chip {
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: #dbe1ff;
-  color: #003fb1;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6b7280;
 }
 
 .kpi-label {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #434654;
+  margin: 14px 0 8px;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .kpi-value {
-  margin-top: 8px;
-  font-size: 28px;
-  line-height: 1.1;
+  font-size: 22px;
   font-weight: 800;
-  color: #191c1d;
+  color: #111827;
+  word-break: break-word;
 }
 
 .kpi-note {
   margin: 10px 0 0;
-  font-size: 13px;
-  color: #5f6b84;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.6;
 }
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .feature-card {
+  min-height: 180px;
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid rgba(195, 197, 215, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 28px rgba(24, 65, 134, 0.08);
   cursor: pointer;
   transition:
-    transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
-    box-shadow var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
-    border-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
-  border: 1px solid rgba(195, 197, 215, 0.18);
-  border-radius: 18px;
-  padding: 22px;
-  background: #fff;
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .feature-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--pmr-shadow-surface-lg);
-  border-color: #cddcf9;
+  box-shadow: 0 16px 34px rgba(24, 65, 134, 0.12);
+  border-color: rgba(0, 63, 177, 0.24);
 }
 
 .feature-icon {
   width: 46px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  font-size: 22px;
-}
-
-.tone-blue {
-  color: #1e54d6;
-  background: rgba(47, 111, 255, 0.12);
-}
-
-.tone-green {
-  color: #0f766e;
-  background: rgba(20, 184, 166, 0.14);
-}
-
-.tone-orange {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.16);
+  color: #fff;
 }
 
 .tone-pink {
-  color: #be185d;
-  background: rgba(244, 114, 182, 0.18);
+  background: linear-gradient(135deg, #d946ef, #ec4899);
+}
+
+.tone-green {
+  background: linear-gradient(135deg, #16a34a, #14b8a6);
 }
 
 .tone-cyan {
-  color: #0e7490;
-  background: rgba(34, 211, 238, 0.18);
+  background: linear-gradient(135deg, #0891b2, #06b6d4);
+}
+
+.tone-orange {
+  background: linear-gradient(135deg, #ea580c, #fb923c);
+}
+
+.tone-blue {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
 }
 
 .tone-slate {
-  color: #475569;
-  background: rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, #475569, #64748b);
 }
 
 .feature-card h3 {
   margin: 14px 0 8px;
-  font-size: 19px;
-  color: #1f2b42;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
 }
 
 .feature-card p {
   margin: 0;
-  color: #566887;
-  line-height: 1.65;
-  min-height: 72px;
   font-size: 14px;
+  line-height: 1.7;
+  color: #6b7280;
 }
 
 .feature-footer {
-  margin-top: 16px;
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .feature-footer span {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 0 10px;
-  color: #1e54d6;
-  background: rgba(47, 111, 255, 0.12);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #003fb1;
 }
 
-@media (max-width: 1200px) {
-  .kpi-grid {
+@media (max-width: 1280px) {
+  .kpi-grid,
+  .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .admin-sidebar {
     position: relative;
-    width: 100%;
-    height: auto;
     inset: auto;
-    border-right: none;
-    border-bottom: 1px solid rgba(195, 197, 215, 0.18);
+    width: 100%;
   }
 
   .admin-main {
     margin-left: 0;
   }
 
-  .topbar {
-    position: relative;
-    flex-direction: column;
-    align-items: stretch;
+  .hero-block {
+    grid-template-columns: 1fr;
   }
 
-  .topbar-actions {
-    justify-content: space-between;
+  .topbar {
+    padding: 16px 20px;
     flex-wrap: wrap;
   }
 
-  .page-canvas {
+  .content-shell {
     padding: 20px;
-  }
-
-  .hero-block {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .kpi-grid,
   .feature-grid {
     grid-template-columns: 1fr;
   }
 
-  .hero-block h2 {
-    font-size: 32px;
+  .topbar-actions,
+  .hero-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .topbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .topbar-user {
+    width: 100%;
+    text-align: left;
+  }
+
+  .back-btn,
+  .logout-btn,
+  .hero-actions :deep(.el-button) {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

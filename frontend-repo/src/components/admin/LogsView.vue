@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="logs-view pmr-page">
     <el-card class="panel-card pmr-panel">
       <template #header>

@@ -210,6 +210,7 @@ import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } fr
 import Viewer from 'viewerjs'
 import 'viewerjs/dist/viewer.css'
 import MessageToast from './MessageToast.vue'
+import { clearSession } from '@/utils/session.js'
 
 // -----------------------------
 // 组件入参与基础状态
@@ -826,7 +827,7 @@ const downloadBahZip = async () => {
 // 退出登录：清除 token 并刷新页面
 const handleLogout = () => {
   if (confirm('确定要退出登录吗？')) {
-    localStorage.removeItem('token')
+    clearSession()
     window.location.reload()
   }
 }

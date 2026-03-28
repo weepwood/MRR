@@ -6,9 +6,9 @@
     <div class="login-layout pmr-fade-up">
       <aside class="brand-panel">
         <p class="brand-tag">Medical Record Platform</p>
-        <h1>病案翻拍系统</h1>
+        <h1>病案管理系统</h1>
         <p class="brand-subtitle">
-          统一管理病案影像、日志与统计数据，让后台操作更清晰高效。
+          统一管理病案影像、日志与统计数据，让后台操作更安全、更高效。
         </p>
 
         <ul class="feature-list">
@@ -31,7 +31,7 @@
         <h2>欢迎回来</h2>
         <p class="form-subtitle">请输入账号密码进入后台管理。</p>
 
-        <form @submit.prevent="handleLogin" class="login-form">
+        <form class="login-form" @submit.prevent="handleLogin">
           <label for="username">用户名</label>
           <div class="input-shell">
             <span class="input-icon">
@@ -42,7 +42,7 @@
               v-model.trim="formData.username"
               type="text"
               autocomplete="username"
-              placeholder="请输入用户名"
+              placeholder="Enter your username"
               required
             />
           </div>
@@ -54,16 +54,16 @@
             </span>
             <input
               id="password"
-              v-model.trim="formData.password"
+              v-model="formData.password"
               type="password"
               autocomplete="current-password"
-              placeholder="请输入密码"
+              placeholder="Enter your password"
               required
             />
           </div>
 
-          <button type="submit" :disabled="loading" class="login-btn">
-            {{ loading ? '登录中...' : '登录系统' }}
+          <button class="login-btn" type="submit" :disabled="loading">
+            {{ loading ? 'Logging in...' : 'Login' }}
           </button>
         </form>
 
@@ -77,10 +77,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { DataBoard, Document, Key, Lock, UserFilled, Warning } from '@element-plus/icons-vue'
-import { login } from '../utils/api.js'
+import { login } from '@/utils/api.js'
+import { getSession, isAdminUser, setSession } from '@/utils/session.js'
 
 const router = useRouter()
 const loading = ref(false)
@@ -88,12 +89,45 @@ const error = ref('')
 
 const formData = reactive({
   username: '',
-  password: '',
+  password: ''
+})
+
+function resolveLoginUser(payload) {
+  const user = payload?.user || payload?.profile || payload?.currentUser || payload?.data
+  if (user && typeof user === 'object' && !Array.isArray(user)) {
+    return user
+  }
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    (payload.username || payload.displayName || payload.roleCode || payload.id)
+  ) {
+    return payload
+  }
+
+  return null
+}
+
+function resolveMessage(payload, fallback) {
+  return payload?.message || payload?.msg || payload?.error || fallback
+}
+
+const redirectIfLoggedIn = () => {
+  const session = getSession()
+  if (session?.token) {
+    router.replace(isAdminUser() ? '/admin-dashboard' : '/print')
+  }
+}
+
+onMounted(() => {
+  redirectIfLoggedIn()
 })
 
 const handleLogin = async () => {
   if (!formData.username || !formData.password) {
-    error.value = '请输入用户名和密码'
+    error.value = 'Please enter username and password'
     return
   }
 
@@ -102,15 +136,23 @@ const handleLogin = async () => {
 
   try {
     const response = await login(formData)
-    if (response.data.code === 200) {
-      localStorage.setItem('token', response.data.data.token)
-      router.push('/admin')
+    const payload = response?.data || {}
+    const loginData = payload?.data || payload
+    const token = loginData?.token || loginData?.accessToken || loginData?.jwt
+
+    if (token) {
+      setSession({
+        token,
+        user: resolveLoginUser(loginData) || resolveLoginUser(payload)
+      })
+      router.push(isAdminUser() ? '/admin-dashboard' : '/print')
       return
     }
-    error.value = response.data.message || '登录失败，请检查账号信息'
+
+    error.value = resolveMessage(payload, 'Login failed, please check your account')
   } catch (err) {
-    console.error('登录错误:', err)
-    error.value = err.response?.data?.message || '登录失败，请检查网络后重试'
+    console.error('Login failed:', err)
+    error.value = resolveMessage(err.response?.data, 'Login failed, please try again')
   } finally {
     loading.value = false
   }
@@ -265,7 +307,9 @@ const handleLogin = async () => {
   padding: 0 14px 0 42px;
   font-size: 14px;
   color: var(--pmr-color-text-primary);
-  transition: border-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), box-shadow var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
+  transition:
+    border-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
+    box-shadow var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
 }
 
 .input-shell input:focus {
@@ -284,7 +328,10 @@ const handleLogin = async () => {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), background-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), opacity var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
+  transition:
+    transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
+    background-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
+    opacity var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
   box-shadow: none;
 }
 

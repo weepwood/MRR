@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearSession, getToken } from '@/utils/session.js'
 
 const loginApi = axios.create({
     baseURL: '/loginApi',
@@ -19,7 +20,7 @@ const searchApi = axios.create({
 // 请求拦截器：自动添加token到请求头
 authApi.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token')
+        const token = getToken()
         if (token) {
             config.headers.Authorization = `Bearer ${token}`
         }
@@ -36,8 +37,10 @@ authApi.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401 || error.response?.status === 403) {
             // token过期，清除本地存储并跳转到登录页
-            localStorage.removeItem('token')
-            window.location.reload()
+            clearSession()
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login'
+            }
         }
         return Promise.reject(error)
     }
@@ -51,6 +54,26 @@ authApi.interceptors.response.use(
 export function login(credentials) {
     // 通过专用实例，复用超时与后续可加的拦截器
     return loginApi.post('', credentials)
+}
+
+export function getCurrentUser() {
+    return authApi.get('/auth/me')
+}
+
+export function getAuthUsers() {
+    return authApi.get('/auth/users')
+}
+
+export function getAuthRoles() {
+    return authApi.get('/auth/roles')
+}
+
+export function updateAuthUser(id, payload) {
+    return authApi.put(`/auth/users/${id}`, payload)
+}
+
+export function disableAuthUser(id) {
+    return authApi.delete(`/auth/users/${id}`)
 }
 
 /**

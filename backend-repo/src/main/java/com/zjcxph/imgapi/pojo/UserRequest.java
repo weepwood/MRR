@@ -1,7 +1,12 @@
 package com.zjcxph.imgapi.pojo;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class UserRequest {
+    @NotBlank(message = "用户名不能为空")
     private String username;
+
+    @NotBlank(message = "密码不能为空")
     private String password;
 
     public String getUsername() {

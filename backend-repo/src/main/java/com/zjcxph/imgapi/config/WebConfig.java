@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.config;
 
+import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,24 +13,39 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private LoginInterceptor loginInterceptor;
-    
+
+    @Autowired
+    private AuthorizationInterceptor authorizationInterceptor;
+
     @Autowired
     private LogInterceptor logInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 登录拦截器
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/**")
-                .excludePathPatterns("/v1/user/login")
-                .excludePathPatterns("/v2/search/hello")
-                .excludePathPatterns("/swagger-ui/**")
-                .excludePathPatterns("/v3/api-docs/**")
-                .excludePathPatterns("/v2/logs/*")
-        ;
+                .excludePathPatterns(
+                        "/login",
+                        "/login/**",
+                        "/v1/auth/login",
+                        "/v1/auth/login/**",
+                        "/v1/img-api/hello",
+                        "/v1/system/**",
+                        "/v1/statistics-api/**",
+                        "/v1/monitoring-api/pressure-tests/**",
+                        "/v2/search/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/docs/**",
+                        "/error",
+                        "/favicon.ico",
+                        "/actuator/health",
+                        "/actuator/info"
+                );
 
-        // 日志拦截器
+        registry.addInterceptor(authorizationInterceptor)
+                .addPathPatterns("/**");
+
         registry.addInterceptor(logInterceptor)
                 .addPathPatterns("/**");
     }

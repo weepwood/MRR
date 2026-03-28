@@ -1,171 +1,156 @@
 <template>
-  <div class="admin-page">
-    <div class="hero-glow glow-left"></div>
-    <div class="hero-glow glow-right"></div>
+  <div class="admin-entry">
+    <div class="entry-glow glow-a"></div>
+    <div class="entry-glow glow-b"></div>
 
-    <main class="admin-shell pmr-fade-up">
+    <main class="entry-shell pmr-fade-up">
       <header class="hero-card">
-        <div class="hero-main">
-          <p class="hero-tag">Dashboard Entry</p>
+        <div>
+          <p class="eyebrow">Dashboard Entry</p>
           <h1>病案管理后台</h1>
-          <p class="hero-subtitle">
-            统一入口，快速进入系统管理、通用 CRUD、日志监控和统计分析。
+          <p class="hero-copy">
+            这里是后台入口页，你可以快速跳转到工作台、用户管理、病案记录和统计中心。
           </p>
         </div>
-        <el-button class="hero-logout" type="danger" plain @click="handleLogout">
+
+        <el-button type="danger" plain class="logout-btn" @click="handleLogout">
           <el-icon><SwitchButton /></el-icon>
           退出登录
         </el-button>
       </header>
 
-      <section class="overview-grid">
-        <article v-for="item in overviewCards" :key="item.title" class="overview-item">
-          <p>{{ item.title }}</p>
-          <strong>{{ item.value }}</strong>
-          <span>{{ item.note }}</span>
-        </article>
+      <section class="status-card">
+        <div class="profile-block">
+          <p class="label">当前账号</p>
+          <strong>{{ currentUserName }}</strong>
+          <span>{{ currentRoleName }}</span>
+        </div>
+        <div class="status-copy">
+          <p>权限状态</p>
+          <strong>{{ isAdmin ? '管理员' : '受限账号' }}</strong>
+          <span>登录后 token 与用户资料会一起保存在本地。</span>
+        </div>
       </section>
 
-      <section class="feature-grid">
-        <el-card
-          v-for="item in featureCards"
-          :key="item.title"
-          class="feature-card"
-          shadow="never"
-          @click="handleFeatureClick(item)"
-        >
-          <div class="feature-icon" :class="item.tone">
+      <section class="quick-grid">
+        <article v-for="item in quickLinks" :key="item.title" class="quick-card" @click="goTo(item.path)">
+          <div class="quick-icon" :class="item.tone">
             <el-icon>
               <component :is="item.icon" />
             </el-icon>
           </div>
           <h3>{{ item.title }}</h3>
           <p>{{ item.description }}</p>
-          <div class="feature-footer">
-            <span>{{ item.badge }}</span>
-          </div>
-        </el-card>
+          <span>{{ item.path }}</span>
+        </article>
       </section>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataBoard, Document, Reading, Setting, SwitchButton, TrendCharts, User } from '@element-plus/icons-vue'
+import { DataBoard, Document, Setting, SwitchButton, TrendCharts, User } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session.js'
 
 const router = useRouter()
 
-const overviewCards = [
-  { title: '当前环境', value: 'Production', note: '稳定运行中' },
-  { title: '今日任务', value: '6 项', note: '2 项待处理' },
-  { title: '系统版本', value: 'v2026.03.28_0.9', note: '前后端已升级' }
-]
+const currentUser = computed(() => getCurrentUser())
+const currentUserName = computed(() => getUserDisplayName() || currentUser.value?.username || '未登录')
+const currentRoleName = computed(() => getUserRoleName() || currentUser.value?.roleCode || '未分配角色')
+const isAdmin = computed(() => isAdminUser())
 
-const featureCards = [
+const quickLinks = [
   {
-    title: '管理面板',
-    description: '进入完整后台控制台，查看仪表盘、用户、日志、监控和配置。',
-    badge: '推荐入口',
-    tone: 'tone-blue',
+    title: '后台工作台',
+    description: '查看系统概览、任务与运行状态。',
+    path: '/admin-dashboard',
     icon: DataBoard,
-    action: () => router.push('/admin-dashboard')
-  },
-  {
-    title: '通用 CRUD',
-    description: '基于 mr_scan 表的通用管理页面，支持条件分页、新增、编辑、删除和详情。',
-    badge: 'RuoYi 风格',
-    tone: 'tone-cyan',
-    icon: Document,
-    action: () => router.push('/admin/crud')
-  },
-  {
-    title: '统计分析',
-    description: '查看病案统计趋势和汇总图表，快速掌握业务变化。',
-    badge: '数据分析',
-    tone: 'tone-green',
-    icon: TrendCharts,
-    action: () => router.push('/admin/statistics')
-  },
-  {
-    title: '文档中心',
-    description: '打开项目文档站点，查看规范、部署说明与版本记录。',
-    badge: '团队协作',
-    tone: 'tone-orange',
-    icon: Reading,
-    action: () => window.open('/docs/index.html', '_blank', 'noopener,noreferrer')
+    tone: 'tone-blue'
   },
   {
     title: '用户管理',
-    description: '维护用户角色和权限策略，支持后续扩展审批流程。',
-    badge: '规划中',
-    tone: 'tone-pink',
-    icon: User
+    description: '维护账号、角色和权限配置。',
+    path: '/admin-dashboard',
+    icon: User,
+    tone: 'tone-green'
+  },
+  {
+    title: '病案管理',
+    description: '进入病案列表、编辑和批量操作。',
+    path: '/admin/crud',
+    icon: Document,
+    tone: 'tone-orange'
+  },
+  {
+    title: '统计分析',
+    description: '查看病案统计和趋势图表。',
+    path: '/admin/statistics',
+    icon: TrendCharts,
+    tone: 'tone-cyan'
   },
   {
     title: '系统设置',
-    description: '管理日志级别、会话时长和系统参数，保障平台稳定。',
-    badge: '规划中',
-    tone: 'tone-slate',
-    icon: Setting
+    description: '管理基础参数、日志与安全策略。',
+    path: '/admin-dashboard',
+    icon: Setting,
+    tone: 'tone-slate'
   }
 ]
 
-const handleFeatureClick = (item) => {
-  if (typeof item.action === 'function') {
-    item.action()
-    return
-  }
-  ElMessage.info(`${item.title} 功能即将开放`)
+const goTo = (path) => {
+  router.push(path)
 }
 
 const handleLogout = () => {
-  ElMessageBox.confirm('确认要退出登录吗？', '退出确认', {
+  ElMessageBox.confirm('确认退出登录吗？', '退出登录', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   })
     .then(() => {
-      localStorage.removeItem('token')
+      clearSession()
       router.push('/login')
-      ElMessage.success('已退出登录')
     })
     .catch(() => {})
 }
 </script>
 
 <style scoped>
-.admin-page {
+.admin-entry {
   position: relative;
   min-height: 100vh;
   padding: 28px;
   overflow: hidden;
+  background: radial-gradient(circle at top right, rgba(26, 86, 219, 0.08), transparent 28%),
+    linear-gradient(160deg, #f8fbff 0%, #fbfdff 42%, #eef4ff 100%);
 }
 
-.hero-glow {
+.entry-glow {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
 }
 
-.glow-left {
-  width: 540px;
-  height: 540px;
-  left: -170px;
+.glow-a {
+  width: 520px;
+  height: 520px;
+  left: -180px;
   top: -220px;
-  background: radial-gradient(circle at center, rgba(47, 111, 255, 0.2), transparent 68%);
+  background: radial-gradient(circle at center, rgba(47, 111, 255, 0.18), transparent 68%);
 }
 
-.glow-right {
-  width: 480px;
-  height: 480px;
-  right: -150px;
-  bottom: -220px;
-  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.23), transparent 70%);
+.glow-b {
+  width: 460px;
+  height: 460px;
+  right: -160px;
+  bottom: -200px;
+  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.2), transparent 70%);
 }
 
-.admin-shell {
+.entry-shell {
   position: relative;
   z-index: 1;
   width: min(1180px, 100%);
@@ -174,106 +159,98 @@ const handleLogout = () => {
   gap: 18px;
 }
 
+.hero-card,
+.status-card,
+.quick-card {
+  border: 1px solid rgba(195, 197, 215, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px rgba(24, 65, 134, 0.08);
+}
+
 .hero-card {
-  padding: 26px 28px;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: linear-gradient(120deg, rgba(31, 84, 214, 0.95) 0%, rgba(47, 111, 255, 0.92) 56%, rgba(20, 184, 166, 0.86) 100%);
-  box-shadow: var(--pmr-shadow-surface-lg);
-  color: #fff;
+  padding: 28px;
+  border-radius: 24px;
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   align-items: flex-start;
 }
 
-.hero-tag {
+.eyebrow {
   margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #003fb1;
+}
+
+.hero-card h1 {
+  margin: 10px 0 10px;
+  font-size: 36px;
+  line-height: 1.2;
+  color: #1f2b42;
+}
+
+.hero-copy {
+  margin: 0;
+  max-width: 640px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #566887;
+}
+
+.logout-btn {
+  flex-shrink: 0;
+}
+
+.status-card {
+  border-radius: 20px;
+  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-block .label,
+.status-copy p {
+  margin: 0;
+  color: #7386a8;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.85;
 }
 
-.hero-main h1 {
-  margin: 8px 0 10px;
-  font-size: 34px;
-  line-height: 1.2;
-}
-
-.hero-subtitle {
-  margin: 0;
-  max-width: 560px;
-  font-size: 15px;
-  line-height: 1.7;
-  opacity: 0.9;
-}
-
-.hero-logout {
-  margin-top: 4px;
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(6px);
-}
-
-.hero-logout:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.overview-item {
-  border-radius: 16px;
-  border: 1px solid #dce8fb;
-  background: rgba(255, 255, 255, 0.86);
-  padding: 16px 18px;
-  box-shadow: 0 8px 20px rgba(24, 65, 134, 0.1);
-}
-
-.overview-item p {
-  margin: 0;
-  color: #5f7090;
-  font-size: 13px;
-}
-
-.overview-item strong {
+.profile-block strong,
+.status-copy strong {
   display: block;
   margin-top: 6px;
+  font-size: 24px;
   color: #1f2b42;
-  font-size: 28px;
-  line-height: 1.2;
 }
 
-.overview-item span {
+.profile-block span,
+.status-copy span {
   display: block;
   margin-top: 4px;
   color: #7386a8;
-  font-size: 12px;
+  font-size: 13px;
 }
 
-.feature-grid {
+.quick-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
-.feature-card {
+.quick-card {
+  border-radius: 18px;
+  padding: 18px;
   cursor: pointer;
-  transition: transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), box-shadow var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), border-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
 }
 
-.feature-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--pmr-shadow-surface-lg);
-  border-color: #cddcf9;
-}
-
-.feature-icon {
+.quick-icon {
   width: 46px;
   height: 46px;
   border-radius: 12px;
@@ -297,11 +274,6 @@ const handleLogout = () => {
   background: rgba(245, 158, 11, 0.16);
 }
 
-.tone-pink {
-  color: #be185d;
-  background: rgba(244, 114, 182, 0.18);
-}
-
 .tone-cyan {
   color: #0e7490;
   background: rgba(34, 211, 238, 0.18);
@@ -312,63 +284,49 @@ const handleLogout = () => {
   background: rgba(148, 163, 184, 0.2);
 }
 
-.feature-card h3 {
+.quick-card h3 {
   margin: 14px 0 8px;
-  font-size: 19px;
+  font-size: 18px;
   color: #1f2b42;
 }
 
-.feature-card p {
+.quick-card p {
   margin: 0;
   color: #566887;
-  line-height: 1.65;
-  min-height: 72px;
+  line-height: 1.6;
+  min-height: 52px;
   font-size: 14px;
 }
 
-.feature-footer {
-  margin-top: 16px;
-}
-
-.feature-footer span {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  border-radius: 999px;
+.quick-card span {
+  display: inline-block;
+  margin-top: 14px;
   font-size: 12px;
-  font-weight: 600;
-  padding: 0 10px;
-  color: #1e54d6;
-  background: rgba(47, 111, 255, 0.12);
+  color: #7386a8;
 }
 
 @media (max-width: 1040px) {
-  .feature-grid {
+  .quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .admin-page {
+  .admin-entry {
     padding: 16px;
   }
 
   .hero-card {
-    padding: 20px;
     flex-direction: column;
-    align-items: stretch;
   }
 
-  .hero-main h1 {
-    font-size: 28px;
-  }
-
-  .overview-grid {
+  .status-card,
+  .quick-grid {
     grid-template-columns: 1fr;
   }
 
-  .feature-grid {
-    grid-template-columns: 1fr;
+  .hero-card h1 {
+    font-size: 30px;
   }
 }
 </style>

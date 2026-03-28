@@ -1,55 +1,94 @@
 package com.zjcxph.imgapi.controller;
 
-import com.zjcxph.imgapi.config.ImageProperties;
+import com.zjcxph.imgapi.annotation.RequirePermissions;
+import com.zjcxph.imgapi.pojo.AuthRole;
+import com.zjcxph.imgapi.pojo.AuthSession;
+import com.zjcxph.imgapi.pojo.AuthUserProfileDTO;
+import com.zjcxph.imgapi.pojo.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.pojo.LoginResponseDTO;
 import com.zjcxph.imgapi.pojo.Result;
 import com.zjcxph.imgapi.pojo.UserRequest;
-import com.zjcxph.imgapi.utils.JwtUtil;
+import com.zjcxph.imgapi.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 
-@Tag(name = "User Controller", description = "用户管理接口")
+@Tag(name = "Auth API", description = "Authentication and permission management")
 @RestController
 public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    private final ImageProperties imageProperties;
+    private final AuthService authService;
 
-    public UserController(ImageProperties imageProperties) {
-        this.imageProperties = imageProperties;
+    public UserController(AuthService authService) {
+        this.authService = authService;
     }
 
-
-    @Operation(summary = "用户登录")
+    @Operation(summary = "Login")
     @PostMapping("/login")
-    public Result<?> login(
-            @RequestBody UserRequest req) {
-        String username = req.getUsername();
-        String password = req.getPassword();
-        if (username == null || password == null) {
-            return Result.fail("用户名或密码不能为空");
+    public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req) {
+        LoginResponseDTO response = authService.login(req);
+        if (response.getToken() == null || response.getToken().isBlank()) {
+            return Result.<LoginResponseDTO>fail("Invalid username or password");
         }
-
-        Result<LoginResponseDTO> loginResponseDTOResult = new Result<>();
-        if (username.equals(imageProperties.getUsername()) && password.equals(imageProperties.getPassword())) {
-            // 过期时间 24h
-            String token = JwtUtil.getToken(username);
-            logger.info("用户 {} 登录", username);
-            LoginResponseDTO loginResponseDTO = new LoginResponseDTO(token);
-            loginResponseDTOResult.code(200).message("登录成功").data(loginResponseDTO);
-        } else {
-            String token = "";
-            LoginResponseDTO loginResponseDTO = new LoginResponseDTO(token);
-            logger.info("用户 {} 密码错误", username);
-            loginResponseDTOResult.code(400).message("用户名或密码错误").data(loginResponseDTO);
-        }
-        return loginResponseDTOResult;
+        logger.info("User {} logged in successfully", req.getUsername());
+        return Result.<LoginResponseDTO>success("Login success").data(response);
     }
 
+    @Operation(summary = "Current user")
+    @GetMapping("/v1/auth/me")
+    public Result<AuthSession> currentUser() {
+        AuthSession session = authService.currentUser();
+        if (session == null) {
+            return Result.<AuthSession>fail("Not logged in or token expired");
+        }
+        return Result.<AuthSession>success("success").data(session);
+    }
+
+    @Operation(summary = "List users")
+    @RequirePermissions({"user:manage"})
+    @GetMapping("/v1/auth/users")
+    public Result<List<AuthUserProfileDTO>> listUsers() {
+        return Result.<List<AuthUserProfileDTO>>success("success").data(authService.listUsers());
+    }
+
+    @Operation(summary = "List roles")
+    @RequirePermissions({"role:read"})
+    @GetMapping("/v1/auth/roles")
+    public Result<List<AuthRole>> listRoles() {
+        return Result.<List<AuthRole>>success("success").data(authService.listRoles());
+    }
+
+    @Operation(summary = "Update user")
+    @RequirePermissions({"user:manage"})
+    @PutMapping("/v1/auth/users/{id}")
+    public Result<AuthUserProfileDTO> updateUser(@PathVariable Long id, @Valid @RequestBody AuthUserUpdateRequest request) {
+        AuthUserProfileDTO updated = authService.updateUser(id, request);
+        if (updated == null) {
+            return Result.<AuthUserProfileDTO>fail("User not found");
+        }
+        return Result.<AuthUserProfileDTO>success("Update success").data(updated);
+    }
+
+    @Operation(summary = "Disable user")
+    @RequirePermissions({"user:manage"})
+    @DeleteMapping("/v1/auth/users/{id}")
+    public Result<Void> disableUser(@PathVariable Long id) {
+        int updated = authService.disableUser(id);
+        if (updated == 0) {
+            return Result.<Void>fail("User not found");
+        }
+        return Result.<Void>success("Disable success");
+    }
 }

@@ -22,6 +22,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Result<String>> handleIllegalArgumentException(IllegalArgumentException e) {
+        logger.warn(String.valueOf(e));
+        Result<String> result = new Result<>(400, StringUtils.hasLength(e.getMessage()) ? e.getMessage() : "请求参数错误", null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Result<String>> handleIllegalStateException(IllegalStateException e) {
+        logger.warn(String.valueOf(e));
+        Result<String> result = new Result<>(403, StringUtils.hasLength(e.getMessage()) ? e.getMessage() : "无权限访问", null);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<String>> handleException(Exception e) {
         logger.error(String.valueOf(e));

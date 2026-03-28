@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { clearSession, getSession, hasAnyPermission, isAdminUser } from '@/utils/session.js'
 
 const Login = () => import('@/pages/LoginPage.vue')
 const ElementImageGallery = () => import('@/components/ImageGalleryEl.vue')
@@ -40,11 +41,29 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (!to.meta.requiresAdmin) return true
-  const isLoggedIn = localStorage.getItem('token')
-  if (isLoggedIn) return true
-  ElMessage.error('请先登录')
-  return '/login'
+  const session = getSession()
+  const isAuthenticated = Boolean(session?.token)
+
+  if ((to.path === '/' || to.path === '/login') && isAuthenticated) {
+    return isAdminUser() ? '/admin-dashboard' : '/print'
+  }
+
+  if (!to.meta.requiresAdmin) {
+    return true
+  }
+
+  if (!isAuthenticated) {
+    clearSession()
+    ElMessage.error('Please log in first')
+    return '/login'
+  }
+
+  if (!isAdminUser() && !hasAnyPermission(['user:manage', 'role:manage'])) {
+    ElMessage.error('Current account has no admin permission')
+    return '/login'
+  }
+
+  return true
 })
 
 export default router

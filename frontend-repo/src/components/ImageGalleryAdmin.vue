@@ -178,6 +178,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
 import { en } from 'element-plus/es/locales.mjs'
+import { clearSession } from '@/utils/session.js'
 
 const props = defineProps({
   bah: { type: String, default: '' },
@@ -626,7 +627,7 @@ const downloadBahZip = async () => {
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' })
-    localStorage.removeItem('token'); window.location.reload()
+    clearSession(); window.location.reload()
   } catch (e) { /* 用户取消 */ }
 }
 

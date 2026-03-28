@@ -157,6 +157,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 // API 工具函数导入
 import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
+import { clearSession } from '@/utils/session.js'
 
 // ==================== 组件属性定义 ====================
 const props = defineProps({
@@ -582,7 +583,7 @@ const downloadBahZip = async () => {
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' })
-    localStorage.removeItem('token'); window.location.reload()
+    clearSession(); window.location.reload()
   } catch (e) { /* 用户取消 */ }
 }
 

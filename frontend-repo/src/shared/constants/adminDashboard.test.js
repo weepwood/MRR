@@ -26,6 +26,12 @@ describe('admin dashboard constants', () => {
       'settings'
     ])
 
+    expect(adminSectionMetaMap.monitoring).toMatchObject({
+      title: '系统监控',
+      description: '查看 CPU、内存、磁盘和网络的运行状态。',
+      pill: '监控模块'
+    })
+
     for (const meta of Object.values(adminSectionMetaMap)) {
       expect(meta).toEqual(
         expect.objectContaining({

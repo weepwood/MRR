@@ -63,6 +63,7 @@ public class SystemInfoController {
         osInfo.put("version", osBean.getVersion());
         osInfo.put("arch", osBean.getArch());
         osInfo.put("availableProcessors", String.valueOf(osBean.getAvailableProcessors()));
+        osInfo.put("systemLoadAverage", String.valueOf(osBean.getSystemLoadAverage()));
         info.put("operatingSystem", osInfo);
 
         return info;

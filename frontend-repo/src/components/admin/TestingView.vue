@@ -150,6 +150,8 @@
       </div>
       <el-empty v-else description="请选择一条结果查看详情" />
     </el-card>
+
+    <PressureTestView />
   </div>
 </template>
 
@@ -157,6 +159,7 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAdminSettings } from '@/shared/composables/useAdminSettings'
+import PressureTestView from './PressureTestView.vue'
 
 const { resolvedSwaggerUrl } = useAdminSettings()
 

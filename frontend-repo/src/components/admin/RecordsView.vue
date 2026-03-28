@@ -78,20 +78,22 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" @click="openDetail(row)">
-              <el-icon><View /></el-icon>
-              详情
-            </el-button>
-            <el-button type="warning" @click="handleEdit(row)">
-              <el-icon><Edit /></el-icon>
-              编辑
-            </el-button>
-            <el-button type="danger" @click="handleDelete(row)">
-              <el-icon><Delete /></el-icon>
-              删除
-            </el-button>
+            <div class="table-actions pmr-table-actions">
+              <el-button size="small" type="primary" @click="openDetail(row)">
+                <el-icon><View /></el-icon>
+                详情
+              </el-button>
+              <el-button size="small" type="warning" @click="handleEdit(row)">
+                <el-icon><Edit /></el-icon>
+                编辑
+              </el-button>
+              <el-button size="small" type="danger" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>

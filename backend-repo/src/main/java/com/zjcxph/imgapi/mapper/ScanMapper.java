@@ -3,7 +3,12 @@ package com.zjcxph.imgapi.mapper;
 import com.zjcxph.imgapi.pojo.PathDO;
 import com.zjcxph.imgapi.pojo.Scan;
 import com.zjcxph.imgapi.pojo.ScanRequest;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -31,7 +36,7 @@ public interface ScanMapper {
     int insert(Scan scan);
 
     // 删除
-    @Delete("DELETE FROM mr_scan WHERE id = #{id}")
+    @Update("UPDATE mr_scan SET uploadflag = 0 WHERE id = #{id} AND uploadflag <> 0")
     int deleteById(Integer id);
 
     // 更新

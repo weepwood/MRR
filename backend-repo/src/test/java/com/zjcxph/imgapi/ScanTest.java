@@ -172,9 +172,10 @@ public class ScanTest {
         assertTrue(deleted, "删除应该成功");
         logger.info("成功删除记录 ID: {}", testId);
         
-        // 验证已删除
+        // 验证已逻辑删除
         Scan deletedScan = scanService.findById(testId);
-        assertNull(deletedScan, "删除后查询应该返回 null");
+        assertNotNull(deletedScan, "逻辑删除后记录仍应存在");
+        assertEquals(0, deletedScan.getUploadFlag(), "逻辑删除后状态应为 0");
     }
 
     /**

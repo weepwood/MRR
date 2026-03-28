@@ -1,23 +1,5 @@
 <template>
   <div class="statistics-detail-view pmr-page">
-    <section class="pmr-page-header">
-      <div>
-        <p class="module-eyebrow">Record Detail</p>
-        <h2 class="pmr-page-title">病案明细</h2>
-        <p class="pmr-page-subtitle">独立查看病案分页记录、筛选条件和排序结果。</p>
-      </div>
-
-      <div class="pmr-toolbar-actions">
-        <el-button @click="goBackToStatistics">
-          <el-icon><DataBoard /></el-icon>
-          返回统计分析
-        </el-button>
-        <el-button type="primary" :loading="loading" @click="loadStatisticsList">
-          <el-icon><Refresh /></el-icon>
-          刷新
-        </el-button>
-      </div>
-    </section>
 
     <el-alert
       v-if="error"

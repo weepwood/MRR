@@ -17,7 +17,6 @@ const CrudView = () => import('@/pages/admin/RecordsPage.vue')
 const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
 const StatisticsDetailPage = () => import('@/pages/admin/StatisticsDetailPage.vue')
 const Test = () => import('@/components/Test.vue')
-const IDTest = () => import('@/components/IdCardTest.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Login },
@@ -79,7 +78,7 @@ const routes = [
   },
   { path: '/admin-dashboard', redirect: '/admin' },
   { path: '/test', name: 'test', component: Test },
-  { path: '/idtest', name: 'idtest', component: IDTest },
+  { path: '/idtest', redirect: '/admin/testing' },
   { path: '/print', name: 'print', component: PrintPage },
   { path: '/:idCard', name: 'galleryByIdCard', component: ElementImageGallery, props: true },
   { path: '/admin/:idCard/:bah', name: 'galleryByBah', component: ElementImageGalleryBAH, props: true, meta: { requiresAdmin: true } }

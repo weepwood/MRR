@@ -98,30 +98,6 @@
     </aside>
 
     <main class="admin-main">
-      <header class="topbar">
-        <div class="topbar-copy">
-          <p class="topbar-eyebrow">后台总览</p>
-          <h2 class="topbar-title">{{ currentSectionTitle }}</h2>
-          <p class="topbar-subtitle">{{ currentSectionDescription }}</p>
-        </div>
-
-        <div class="topbar-actions">
-          <div class="topbar-user">
-            <span>{{ currentUserName || '管理员' }}</span>
-            <small>{{ currentRoleName || '后台控制台' }}</small>
-          </div>
-
-          <el-button v-if="!showDashboard" class="back-btn" plain @click="router.push('/admin')">
-            <el-icon><DataBoard /></el-icon>
-            返回总览
-          </el-button>
-
-          <el-button class="logout-btn" type="primary" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
-            退出登录
-          </el-button>
-        </div>
-      </header>
 
       <div class="content-shell">
         <template v-if="showDashboard">

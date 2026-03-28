@@ -53,7 +53,9 @@ public class ImageController {
     @GetMapping("/hello")
     public Result<Object> hello() {
         logger.info("服务正常");
-        return Result.success("服务正常");
+        Map<String, Object> data = new HashMap<>();
+        data.put("message", "服务正常");
+        return Result.<Object>success("服务正常").data(data);
     }
 
     @Operation(summary = "下载病案压缩包")

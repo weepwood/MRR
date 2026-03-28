@@ -22,7 +22,7 @@ public interface LogMapper {
     
     @Insert("INSERT INTO access_log (client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer) " +
             "VALUES (#{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
+    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Log log);
 
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log ORDER BY access_time DESC LIMIT #{limit} OFFSET #{offset}")
@@ -67,10 +67,10 @@ public interface LogMapper {
             "    AND response_status LIKE #{responseStatus} || '%'",
             "  </if>",
             "  <if test='startTime != null and startTime != \"\"'>",
-            "    AND datetime(access_time) &gt;= datetime(#{startTime})",
+            "    AND access_time &gt;= CAST(#{startTime} AS timestamp)",
             "  </if>",
             "  <if test='endTime != null and endTime != \"\"'>",
-            "    AND datetime(access_time) &lt;= datetime(#{endTime})",
+            "    AND access_time &lt;= CAST(#{endTime} AS timestamp)",
             "  </if>",
             "</where>",
             "ORDER BY access_time DESC",
@@ -112,10 +112,10 @@ public interface LogMapper {
             "    AND response_status LIKE #{responseStatus} || '%'",
             "  </if>",
             "  <if test='startTime != null and startTime != \"\"'>",
-            "    AND datetime(access_time) &gt;= datetime(#{startTime})",
+            "    AND access_time &gt;= CAST(#{startTime} AS timestamp)",
             "  </if>",
             "  <if test='endTime != null and endTime != \"\"'>",
-            "    AND datetime(access_time) &lt;= datetime(#{endTime})",
+            "    AND access_time &lt;= CAST(#{endTime} AS timestamp)",
             "  </if>",
             "</where>",
             "</script>"})

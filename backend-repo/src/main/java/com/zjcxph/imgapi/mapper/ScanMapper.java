@@ -27,7 +27,7 @@ public interface ScanMapper {
     // 新增
     @Insert("INSERT INTO mr_scan (BRXH, BAH, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
             "VALUES (#{brxh}, #{bah}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
+    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Scan scan);
 
     // 删除
@@ -69,7 +69,7 @@ public interface ScanMapper {
     List<Scan> findByBrxh(@Param("brxh") String brxh);
 
     // 分页查询
-    @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{offset}, #{limit}")
+    @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit} OFFSET #{offset}")
     List<Scan> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
 
     // 根据条件动态查询

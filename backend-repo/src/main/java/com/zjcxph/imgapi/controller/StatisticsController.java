@@ -94,6 +94,7 @@ public class StatisticsController {
         );
 
         Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
         response.put("list", statistics);
         response.put("total", totalCount);
         response.put("page", page);

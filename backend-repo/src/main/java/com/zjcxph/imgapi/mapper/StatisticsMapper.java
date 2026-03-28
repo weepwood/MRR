@@ -25,7 +25,7 @@ public interface StatisticsMapper {
             "SELECT * FROM mr_statistics " +
             "<where>" +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "AND (" +
+            " AND (" +
             " bah LIKE '%' || #{keyword} || '%' " +
             " OR cid LIKE '%' || #{keyword} || '%' " +
             " OR openerno LIKE '%' || #{keyword} || '%' " +
@@ -34,13 +34,13 @@ public interface StatisticsMapper {
             ")" +
             "</if>" +
             "<if test='type != null and type != \"\"'>" +
-            "AND type = #{type}" +
+            " AND type = #{type}" +
             "</if>" +
             "<if test='startDate != null and startDate != \"\"'>" +
-            "AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
+            " AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
             "</if>" +
             "<if test='endDate != null and endDate != \"\"'>" +
-            "AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
+            " AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
             "</if>" +
             "</where>" +
             "ORDER BY " +
@@ -79,7 +79,7 @@ public interface StatisticsMapper {
             "SELECT COUNT(*) FROM mr_statistics " +
             "<where>" +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "AND (" +
+            " AND (" +
             " bah LIKE '%' || #{keyword} || '%' " +
             " OR cid LIKE '%' || #{keyword} || '%' " +
             " OR openerno LIKE '%' || #{keyword} || '%' " +
@@ -88,13 +88,13 @@ public interface StatisticsMapper {
             ")" +
             "</if>" +
             "<if test='type != null and type != \"\"'>" +
-            "AND type = #{type}" +
+            " AND type = #{type}" +
             "</if>" +
             "<if test='startDate != null and startDate != \"\"'>" +
-            "AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
+            " AND REPLACE(date, '/', '-') &gt;= #{startDate}" +
             "</if>" +
             "<if test='endDate != null and endDate != \"\"'>" +
-            "AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
+            " AND REPLACE(date, '/', '-') &lt;= #{endDate}" +
             "</if>" +
             "</where>" +
             "</script>")
@@ -133,13 +133,13 @@ public interface StatisticsMapper {
             "FROM mr_statistics " +
             "<where>" +
             "<if test='startDate != null and startDate != \"\"'>" +
-            "AND date &gt;= #{startDate}" +
+            " AND date &gt;= #{startDate}" +
             "</if>" +
             "<if test='endDate != null and endDate != \"\"'>" +
-            "AND date &lt;= #{endDate}" +
+            " AND date &lt;= #{endDate}" +
             "</if>" +
             "<if test='type != null and type != \"\"'>" +
-            "AND type = #{type}" +
+            " AND type = #{type}" +
             "</if>" +
             "</where>" +
             "GROUP BY date " +
@@ -151,7 +151,7 @@ public interface StatisticsMapper {
             @Param("type") String type);
 
     // 获取总记录数和总页数
-    @Select("SELECT COUNT(*) as totalRecords, COALESCE(SUM(pages), 0) as totalPages FROM mr_statistics")
+    @Select("SELECT COUNT(*) AS \"totalRecords\", COALESCE(SUM(pages), 0) AS \"totalPages\" FROM mr_statistics")
     Map<String, Object> getTotalStatistics();
 
     // 获取不同病案号的数量

@@ -1,13 +1,13 @@
 <template>
-  <div class="crud-view">
-    <el-card class="panel-card">
+  <div class="crud-view pmr-page">
+    <el-card class="panel-card pmr-panel">
       <template #header>
-        <div class="card-header">
+        <div class="card-header pmr-panel-header">
           <div>
             <div class="title">通用 CRUD</div>
             <div class="subtitle">当前模块基于 `mr_scan` 表，支持增删改查与条件分页</div>
           </div>
-          <div class="header-actions">
+          <div class="header-actions pmr-toolbar-actions">
             <el-button type="primary" @click="handleAdd">
               <el-icon><Plus /></el-icon>
               新增

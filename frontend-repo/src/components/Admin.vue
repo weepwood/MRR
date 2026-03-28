@@ -60,7 +60,7 @@ const router = useRouter()
 const overviewCards = [
   { title: '当前环境', value: 'Production', note: '稳定运行中' },
   { title: '今日任务', value: '6 项', note: '2 项待处理' },
-  { title: '系统版本', value: 'v2.0', note: '前后端已升级' }
+  { title: '系统版本', value: 'v2026.03.28_0.9', note: '前后端已升级' }
 ]
 
 const featureCards = [

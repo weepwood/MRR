@@ -279,16 +279,17 @@ const handleLogin = async () => {
   height: 46px;
   border: none;
   border-radius: 12px;
-  background: var(--pmr-gradient-brand);
+  background: var(--pmr-color-action-primary);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), box-shadow var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), opacity var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
-  box-shadow: var(--pmr-shadow-brand);
+  transition: transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), background-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard), opacity var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
+  box-shadow: none;
 }
 
 .login-btn:hover:not(:disabled) {
+  background: var(--pmr-color-action-primary-pressed);
   transform: translateY(-1px);
 }
 

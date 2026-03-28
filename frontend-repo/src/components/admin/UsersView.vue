@@ -1,8 +1,8 @@
 <template>
-  <div class="users-view">
-    <el-card>
+  <div class="users-view pmr-page">
+    <el-card class="pmr-panel panel-card">
       <template #header>
-        <div class="card-header">
+        <div class="card-header pmr-panel-header">
           <span>用户管理</span>
           <el-button type="primary" @click="$emit('add-user')">
             <el-icon><Plus /></el-icon>
@@ -49,7 +49,7 @@
       </el-table>
       
       <!-- 分页 -->
-      <div class="pagination-container">
+      <div class="pagination-container pmr-actions-row">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"

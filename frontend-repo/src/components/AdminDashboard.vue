@@ -63,6 +63,19 @@
             </div>
           </section>
 
+          <section class="api-access-panel">
+            <div class="api-access-copy">
+              <p class="eyebrow">API Gateway</p>
+              <h3>Swagger 文档</h3>
+              <p>当前地址：{{ swaggerUrl || '未配置' }}</p>
+            </div>
+            <div class="api-access-actions">
+              <el-button class="swagger-btn" type="primary" :disabled="!swaggerUrl" @click="openSwagger">
+                <el-icon><Link /></el-icon>打开 Swagger
+              </el-button>
+            </div>
+          </section>
+
           <section class="kpi-grid">
             <article v-for="card in dashboardCards" :key="card.key" class="kpi-card" :class="card.toneClass">
               <div class="kpi-top">
@@ -202,7 +215,12 @@
             <TestingView v-if="activeMenu === 'testing'" />
             <LogsView v-if="activeMenu === 'logs'" />
             <MonitoringView v-if="activeMenu === 'monitoring'" />
-            <SettingsView v-if="activeMenu === 'settings'" :settings="settings" />
+            <SettingsView
+              v-if="activeMenu === 'settings'"
+              :settings="settings"
+              @save="handleSaveSettings"
+              @reset="handleResetSettings"
+            />
           </div>
         </section>
       </div>
@@ -242,6 +260,7 @@ const router = useRouter()
 const activeMenu = ref('dashboard')
 const searchTerm = ref('')
 const lastRefreshLabel = ref('刚刚')
+const settingsStorageKey = 'admin-dashboard-settings'
 
 const stats = reactive({ totalUsers: 3, totalRecords: 3, todayRecords: 1, onlineUsers: 2 })
 const systemStatus = reactive({ cpu: 45, memory: 62, disk: 38 })
@@ -250,7 +269,14 @@ const users = ref([
   { id: 2, username: 'doctor1', email: 'doctor1@example.com', role: '医生', status: 'active', lastLogin: '2024-01-15 09:15' },
   { id: 3, username: 'nurse1', email: 'nurse1@example.com', role: '护士', status: 'active', lastLogin: '2024-01-15 08:45' }
 ])
-const settings = reactive({ systemName: '病案管理系统', maxFileSize: 10, sessionTimeout: 30, logLevel: 'info' })
+const defaultSettings = {
+  systemName: '病案管理系统',
+  maxFileSize: 10,
+  sessionTimeout: 30,
+  logLevel: 'info',
+  swaggerUrl: '/swagger-ui/index.html'
+}
+const settings = reactive({ ...defaultSettings })
 
 const dashboardCards = computed(() => [
   { key: 'users', label: '总用户数', value: stats.totalUsers, note: '管理人员与临床账号总览', trend: '+12% vs 上周', icon: User, iconClass: 'primary', toneClass: 'accent-blue' },
@@ -311,9 +337,37 @@ const systemHealth = computed(() => {
   return '高负载'
 })
 
+const swaggerUrl = computed(() => (settings.swaggerUrl || '').trim())
+const normalizeUrl = (value) => {
+  const raw = (value || '').trim()
+  if (!raw) return ''
+  try {
+    return new URL(raw, window.location.origin).toString()
+  } catch {
+    return raw
+  }
+}
+
 let statusTimer = null
 const handleMenuSelect = (index) => { activeMenu.value = index }
 const openExternal = (url) => { if (url) window.open(url, '_blank', 'noopener,noreferrer') }
+const openSwagger = () => {
+  const url = normalizeUrl(swaggerUrl.value)
+  if (!url) {
+    ElMessage.warning('请先在系统设置中配置 Swagger 地址')
+    return
+  }
+  openExternal(url)
+}
+const handleSaveSettings = (updatedSettings = settings) => {
+  localStorage.setItem(settingsStorageKey, JSON.stringify(updatedSettings))
+  ElMessage.success('系统设置已保存')
+}
+const handleResetSettings = () => {
+  Object.assign(settings, defaultSettings)
+  localStorage.removeItem(settingsStorageKey)
+  ElMessage.success('已恢复默认设置')
+}
 const handleLogout = () => {
   ElMessageBox.confirm('确认要退出登录吗？', '确认退出', {
     confirmButtonText: '确定',
@@ -327,6 +381,16 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
+  try {
+    const storedSettings = localStorage.getItem(settingsStorageKey)
+    if (storedSettings) {
+      const parsedSettings = JSON.parse(storedSettings)
+      Object.assign(settings, defaultSettings, parsedSettings)
+    }
+  } catch {
+    Object.assign(settings, defaultSettings)
+  }
+
   statusTimer = setInterval(() => {
     systemStatus.cpu = Math.floor(Math.random() * 100)
     systemStatus.memory = Math.floor(Math.random() * 100)
@@ -352,7 +416,7 @@ onUnmounted(() => {
 .search-shell{position:relative;flex:1;max-width:560px}.search-shell input{width:100%;border:none;outline:none;border-radius:999px;background:#f3f4f5;padding:12px 18px 12px 44px;font-size:14px;color:#191c1d;transition:box-shadow .2s ease,background-color .2s ease}.search-shell input:focus{background:#fff;box-shadow:0 0 0 2px rgba(19,83,216,.16)}.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8b95a7}
 .topbar-actions{display:flex;align-items:center;gap:10px}.icon-button{width:40px;height:40px;border:none;border-radius:12px;display:grid;place-items:center;background:#003fb1;color:#fff;cursor:pointer;transition:background-color .2s ease,color .2s ease}.icon-button:hover{background:#1a56db;color:#fff}.topbar-divider{width:1px;height:32px;background:#e2e8f0;margin:0 4px}.topbar-copy{text-align:right;display:flex;flex-direction:column;align-items:flex-end}.topbar-role{font-size:13px;font-weight:700;color:#191c1d}.topbar-version{margin-top:2px;font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#737686}.logout-btn{border:none;border-radius:12px;background:#003fb1;box-shadow:none}
 .page-canvas{display:flex;flex-direction:column;gap:24px;padding:28px 32px 40px}.hero-block{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}.hero-block h2{margin:0;font-family:Manrope,Inter,sans-serif;font-size:44px;line-height:1;font-weight:800;letter-spacing:-.04em;color:#191c1d}.hero-block p{margin:12px 0 0;font-size:18px;line-height:1.6;color:#434654}.hero-block p span{color:#003fb1;font-weight:700}.eyebrow{margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#737686}
-.hero-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.segmented{display:flex;padding:4px;border-radius:14px;background:#f3f4f5}.segmented button{border:none;border-radius:10px;background:#e7e8e9;padding:10px 16px;font-size:12px;font-weight:700;color:#191c1d;cursor:pointer}.segmented button.active{background:#003fb1;color:#fff;box-shadow:none}.export-btn{border:none;border-radius:12px;background:#003fb1;box-shadow:none}
+.hero-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.segmented{display:flex;padding:4px;border-radius:14px;background:#f3f4f5}.segmented button{border:none;border-radius:10px;background:#e7e8e9;padding:10px 16px;font-size:12px;font-weight:700;color:#191c1d;cursor:pointer}.segmented button.active{background:#003fb1;color:#fff;box-shadow:none}.export-btn{border:none;border-radius:12px;background:#003fb1;box-shadow:none}.api-access-panel{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 24px;border-radius:18px;background:#fff;border:1px solid rgba(195,197,215,.18);box-shadow:0 4px 20px rgba(0,0,0,.02)}.api-access-copy h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em;color:#191c1d}.api-access-copy p{margin:8px 0 0;font-size:13px;color:#5f6b84;word-break:break-all}.swagger-btn{border:none;border-radius:12px;background:#003fb1;box-shadow:none}.swagger-btn:hover{background:#1a56db}.swagger-btn.is-disabled{background:#b5c4ff;color:#fff;box-shadow:none}
 .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.kpi-card{position:relative;overflow:hidden;border-radius:18px;padding:24px;background:#fff;border:1px solid rgba(195,197,215,.22);box-shadow:0 4px 20px rgba(0,0,0,.02)}.kpi-card::before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:4px;background:linear-gradient(90deg,#003fb1,#1a56db)}.kpi-card.accent-violet::before{background:linear-gradient(90deg,#4b5c92,#b5c4ff)}.kpi-card.accent-gold::before{background:linear-gradient(90deg,#d97706,#f59e0b)}.kpi-card.accent-green::before{background:linear-gradient(90deg,#0f9d58,#34c759)}.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}.kpi-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center}.kpi-icon.primary{background:rgba(0,63,177,.08);color:#003fb1}.kpi-icon.secondary{background:rgba(75,92,146,.08);color:#4b5c92}.kpi-icon.tertiary{background:rgba(173,59,0,.1);color:#852b00}.kpi-chip{padding:5px 10px;border-radius:999px;background:#dbe1ff;color:#003fb1;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.kpi-label{margin:0;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#434654}.kpi-value{margin-top:8px;font-family:Manrope,Inter,sans-serif;font-size:36px;line-height:1;font-weight:800;color:#191c1d}.kpi-note{margin:10px 0 0;font-size:13px;color:#5f6b84}
 .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.9fr);gap:24px;align-items:start}.left-column,.right-column{display:flex;flex-direction:column;gap:24px}.panel{border-radius:18px;padding:28px;background:#fff;border:1px solid rgba(195,197,215,.18);box-shadow:0 4px 20px rgba(0,0,0,.02)}.panel-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}.panel-title{margin:0;font-family:Manrope,Inter,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.03em;color:#191c1d}.panel-subtitle{margin:4px 0 0;font-size:13px;color:#5f6b84}.panel-action{border:none;background:#e7e8e9;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#191c1d;cursor:pointer;padding:10px 14px;border-radius:12px}.panel-action:hover{background:#d9dadb}
 .task-list{display:flex;flex-direction:column;gap:12px}.task-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px;border-radius:16px;background:linear-gradient(180deg,#fbfdff 0%,#f4f8ff 100%);transition:transform .2s ease,background-color .2s ease}.task-row:hover{transform:translateY(-1px);background:#fff}.task-left{display:flex;align-items:center;gap:14px;min-width:0}.task-mark{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;flex-shrink:0;font-size:12px;font-weight:800;letter-spacing:.08em}.task-mark.critical{background:rgba(173,59,0,.12);color:#ad3b00}.task-mark.stable{background:rgba(0,63,177,.1);color:#003fb1}.task-mark.pending{background:rgba(255,181,154,.22);color:#852a00}.task-title{margin:0;font-size:15px;font-weight:800;color:#191c1d}.task-desc{margin:6px 0 0;font-size:12px;color:#434654}.task-badge{flex-shrink:0;padding:6px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.task-badge.critical{background:#ffdad6;color:#93000a}.task-badge.stable{background:#dbe1ff;color:#003fb1}.task-badge.pending{background:#ffdbcf;color:#802a00}

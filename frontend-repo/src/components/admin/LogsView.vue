@@ -1,13 +1,13 @@
 <template>
-  <div class="logs-view">
-    <el-card class="panel-card">
+  <div class="logs-view pmr-page">
+    <el-card class="panel-card pmr-panel">
       <template #header>
-        <div class="card-header">
+        <div class="card-header pmr-panel-header">
           <div>
             <div class="title">系统日志</div>
             <div class="subtitle">支持筛选、详情查看、单条删除和一键清空</div>
           </div>
-          <div class="header-actions">
+          <div class="header-actions pmr-toolbar-actions">
             <el-button @click="refreshData" :loading="loading">
               <el-icon><Refresh /></el-icon>
               刷新

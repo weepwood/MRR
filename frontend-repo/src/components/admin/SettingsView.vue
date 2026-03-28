@@ -1,16 +1,19 @@
 <template>
-  <div class="settings-view">
+  <div class="settings-view pmr-page">
     <el-row :gutter="20">
       <el-col :span="12">
-        <el-card>
+        <el-card class="pmr-panel">
           <template #header>
-            <div class="card-header">
+            <div class="card-header pmr-panel-header">
               <span>基本设置</span>
             </div>
           </template>
           <el-form :model="settings" label-width="120px">
             <el-form-item label="系统名称">
               <el-input v-model="settings.systemName" />
+            </el-form-item>
+            <el-form-item label="Swagger 地址">
+              <el-input v-model="settings.swaggerUrl" placeholder="/swagger-ui/index.html" clearable />
             </el-form-item>
             <el-form-item label="最大文件大小">
               <el-input-number v-model="settings.maxFileSize" :min="1" :max="100" />
@@ -39,9 +42,9 @@
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card>
+        <el-card class="pmr-panel">
           <template #header>
-            <div class="card-header">
+            <div class="card-header pmr-panel-header">
               <span>安全设置</span>
             </div>
           </template>
@@ -76,9 +79,9 @@
 
     <el-row :gutter="20" style="margin-top: 20px;">
       <el-col :span="12">
-        <el-card>
+        <el-card class="pmr-panel">
           <template #header>
-            <div class="card-header">
+            <div class="card-header pmr-panel-header">
               <span>通知设置</span>
             </div>
           </template>
@@ -105,9 +108,9 @@
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card>
+        <el-card class="pmr-panel">
           <template #header>
-            <div class="card-header">
+            <div class="card-header pmr-panel-header">
               <span>维护设置</span>
             </div>
           </template>
@@ -143,7 +146,7 @@
     </el-row>
 
     <!-- 操作按钮 -->
-    <div class="settings-actions">
+    <div class="settings-actions pmr-actions-row">
       <el-button type="primary" @click="$emit('save', settings)">
         <el-icon><Check /></el-icon>
         保存设置

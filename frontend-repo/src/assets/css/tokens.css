@@ -43,13 +43,13 @@
   --pmr-color-info-500: #606266;
 
   /* ========= Semantic / Color ========= */
-  --pmr-color-bg-page: var(--pmr-color-blue-50);
+  --pmr-color-bg-page: #f5f7fb;
   --pmr-color-bg-card: var(--pmr-color-neutral-0);
-  --pmr-color-bg-soft: rgba(201, 214, 239, 0.28);
+  --pmr-color-bg-soft: rgba(226, 233, 245, 0.78);
   --pmr-color-bg-overlay: rgba(0, 0, 0, 0.5);
   --pmr-color-bg-modal: rgba(0, 0, 0, 0.15);
-  --pmr-color-bg-glass: rgba(255, 255, 255, 0.78);
-  --pmr-color-bg-glass-heavy: rgba(255, 255, 255, 0.92);
+  --pmr-color-bg-glass: rgba(255, 255, 255, 0.92);
+  --pmr-color-bg-glass-heavy: rgba(255, 255, 255, 0.96);
 
   --pmr-color-text-primary: #1b2435;
   --pmr-color-text-secondary: #51607a;
@@ -60,11 +60,12 @@
   --pmr-color-action-primary-light: var(--pmr-color-brand-100);
   --pmr-color-action-primary-pressed: var(--pmr-color-brand-700);
   --pmr-color-action-danger: var(--pmr-color-danger-500);
-  --pmr-gradient-page: radial-gradient(1200px 600px at 10% -10%, rgba(47, 111, 255, 0.14), transparent 56%), radial-gradient(1000px 480px at 100% -20%, rgba(20, 184, 166, 0.18), transparent 60%), linear-gradient(135deg, #f7faff 0%, #eef4ff 48%, #f8fbff 100%);
-  --pmr-gradient-brand: linear-gradient(135deg, #2f6fff 0%, #14b8a6 100%);
+  --pmr-gradient-page: linear-gradient(180deg, #f5f7fb 0%, #f8fafc 100%);
+  --pmr-gradient-brand: linear-gradient(135deg, #2f6fff 0%, #1e54d6 100%);
 
   /* ========= Typography ========= */
-  --pmr-font-family-ui: 'Plus Jakarta Sans', 'SF Pro Display', 'PingFang SC', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --pmr-font-family-ui: 'Inter', 'PingFang SC', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --pmr-font-family-display: 'Manrope', 'Inter', 'PingFang SC', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --pmr-font-family-mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
 
   --pmr-font-size-caption: 12px;
@@ -178,10 +179,10 @@
   --el-bg-color-page: #f4f8ff;
   --el-fill-color-light: #f2f7ff;
   --el-fill-color-blank: rgba(255, 255, 255, 0.8);
-  --el-border-radius-base: 12px;
+  --el-border-radius-base: 10px;
   --el-border-radius-small: 8px;
   --el-border-radius-round: 999px;
   --el-box-shadow-light: var(--pmr-shadow-surface-sm);
-  --el-box-shadow: var(--pmr-shadow-surface-md);
-  --el-box-shadow-dark: var(--pmr-shadow-surface-lg);
+  --el-box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --el-box-shadow-dark: 0 20px 36px rgba(15, 23, 42, 0.14);
 }

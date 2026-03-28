@@ -1,8 +1,8 @@
 <template>
-  <div class="monitoring-view">
-    <el-card class="panel-card">
+  <div class="monitoring-view pmr-page">
+    <el-card class="panel-card pmr-panel">
       <template #header>
-        <div class="card-header">
+        <div class="card-header pmr-panel-header">
           <div>
             <div class="title">系统监控</div>
             <div class="subtitle">运行时、内存、JVM 和系统属性</div>

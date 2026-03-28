@@ -157,7 +157,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getAuthRoles } from '@/services/api'
-import { getCurrentUser, isAdminUser } from '@/utils/session.js'
+import { getCurrentUser, isAdminUser } from '@/utils/session'
 
 const loading = ref(false)
 const error = ref('')

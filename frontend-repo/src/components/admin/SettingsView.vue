@@ -204,7 +204,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Download, RefreshLeft, Upload } from '@element-plus/icons-vue'
-import { useAdminSettings } from '@/shared/composables/useAdminSettings.js'
+import { useAdminSettings } from '@/shared/composables/useAdminSettings'
 
 const fileInput = ref(null)
 const { settings, loadSettings, saveSettings, resetSettings } = useAdminSettings()

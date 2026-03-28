@@ -1,26 +1,24 @@
 /**
- * 系统日志服务
- * 提供统一的日志记录和管理功能
+ * 绯荤粺鏃ュ織鏈嶅姟
+ * 鎻愪緵缁熶竴鐨勬棩蹇楄褰曞拰绠＄悊鍔熻兘
  */
 
 class Logger {
-  constructor() {
-    this.logs = []
-    this.maxLogs = 1000 // 最大日志条数
-    this.logLevel = 'info' // 默认日志级别
-  }
+  logs = []
+  maxLogs = 1000 // 鏈€澶ф棩蹇楁潯鏁?
+  logLevel = 'info' // 榛樿鏃ュ織绾у埆
 
   /**
-   * 设置日志级别
-   * @param {string} level - 日志级别: debug, info, warn, error
+   * 璁剧疆鏃ュ織绾у埆
+   * @param {string} level - 鏃ュ織绾у埆: debug, info, warn, error
    */
   setLevel(level) {
     this.logLevel = level
   }
 
   /**
-   * 检查是否应该记录该级别的日志
-   * @param {string} level - 日志级别
+   * 妫€鏌ユ槸鍚﹀簲璇ヨ褰曡绾у埆鐨勬棩蹇?
+   * @param {string} level - 鏃ュ織绾у埆
    * @returns {boolean}
    */
   shouldLog(level) {
@@ -31,11 +29,11 @@ class Logger {
   }
 
   /**
-   * 添加日志
-   * @param {string} level - 日志级别
-   * @param {string} message - 日志消息
-   * @param {string} details - 详细信息
-   * @param {object} context - 上下文信息
+   * 娣诲姞鏃ュ織
+   * @param {string} level - 鏃ュ織绾у埆
+   * @param {string} message - 鏃ュ織娑堟伅
+   * @param {string} details - 璇︾粏淇℃伅
+   * @param {object} context - 涓婁笅鏂囦俊鎭?
    */
   addLog(level, message, details = '', context = {}) {
     if (!this.shouldLog(level)) {
@@ -52,27 +50,23 @@ class Logger {
       timestamp: Date.now()
     }
 
-    this.logs.unshift(log) // 新日志添加到开头
+    this.logs.unshift(log)
 
-    // 限制日志数量
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(0, this.maxLogs)
     }
 
-    // 输出到控制台
     this.consoleLog(level, message, details, context)
-
-    // 触发日志更新事件
     this.emitLogUpdate()
   }
 
   /**
-   * 控制台输出
+   * 鎺у埗鍙拌緭鍑?
    */
   consoleLog(level, message, details, context) {
     const timestamp = new Date().toLocaleTimeString()
     const prefix = `[${timestamp}] [${level.toUpperCase()}]`
-    
+
     switch (level) {
       case 'error':
         console.error(prefix, message, details, context)
@@ -92,20 +86,19 @@ class Logger {
   }
 
   /**
-   * 触发日志更新事件
+   * 瑙﹀彂鏃ュ織鏇存柊浜嬩欢
    */
   emitLogUpdate() {
-    // 可以在这里添加事件发射逻辑，通知组件更新
     if (typeof window !== 'undefined' && window.dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('logUpdate', { 
-        detail: { logs: this.logs } 
+      window.dispatchEvent(new CustomEvent('logUpdate', {
+        detail: { logs: this.logs }
       }))
     }
   }
 
   /**
-   * 获取日志
-   * @param {string} level - 可选的日志级别过滤
+   * 鑾峰彇鏃ュ織
+   * @param {string} level - 鍙€夌殑鏃ュ織绾у埆杩囨护
    * @returns {Array}
    */
   getLogs(level = null) {
@@ -116,7 +109,7 @@ class Logger {
   }
 
   /**
-   * 清空日志
+   * 娓呯┖鏃ュ織
    */
   clearLogs() {
     this.logs = []
@@ -124,22 +117,21 @@ class Logger {
   }
 
   /**
-   * 导出日志
-   * @param {string} format - 导出格式: json, txt
+   * 瀵煎嚭鏃ュ織
+   * @param {string} format - 瀵煎嚭鏍煎紡: json, txt
    * @returns {string}
    */
   exportLogs(format = 'json') {
     if (format === 'json') {
       return JSON.stringify(this.logs, null, 2)
     } else if (format === 'txt') {
-      return this.logs.map(log => 
+      return this.logs.map(log =>
         `[${log.time}] [${log.level.toUpperCase()}] ${log.message}${log.details ? ' - ' + log.details : ''}`
       ).join('\n')
     }
     return ''
   }
 
-  // 便捷方法
   debug(message, details = '', context = {}) {
     this.addLog('debug', message, details, context)
   }
@@ -157,13 +149,11 @@ class Logger {
   }
 }
 
-// 创建全局日志实例
 const logger = new Logger()
 
-// 监听全局错误
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
-    logger.error('JavaScript错误', event.message, {
+    logger.error('JavaScript閿欒', event.message, {
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
@@ -172,7 +162,7 @@ if (typeof window !== 'undefined') {
   })
 
   window.addEventListener('unhandledrejection', (event) => {
-    logger.error('未处理的Promise拒绝', event.reason, {
+    logger.error('鏈鐞嗙殑Promise鎷掔粷', event.reason, {
       promise: event.promise
     })
   })

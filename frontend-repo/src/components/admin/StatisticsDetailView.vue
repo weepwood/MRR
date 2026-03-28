@@ -176,7 +176,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { DataBoard, Delete, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getStatisticsList, getStatisticsSummary } from '@/services/api/index.js'
+import { getStatisticsList, getStatisticsSummary } from '@/services/api/index'
 
 const router = useRouter()
 const loading = ref(false)

@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-// https://vite.dev/config/
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
 export default defineConfig({
   plugins: [vue()],
   esbuild: {
@@ -35,7 +37,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.js'],
+    setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{js,ts}']
   },
   optimizeDeps: {
@@ -50,15 +52,15 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/v1')
       },
-      '/loginApi':{
+      '/loginApi': {
         target: 'http://localhost:18045',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/loginApi/,'/login')
+        rewrite: (path) => path.replace(/^\/loginApi/, '/login')
       },
-      '/searchApi':{
+      '/searchApi': {
         target: 'http://localhost:18045',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/searchApi/,'/v2')
+        rewrite: (path) => path.replace(/^\/searchApi/, '/v2')
       }
     }
   }

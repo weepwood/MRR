@@ -1,8 +1,27 @@
+export interface SessionUser {
+  username?: string
+  displayName?: string
+  roleCode?: string
+  roleName?: string
+  permissions?: string[]
+  [key: string]: unknown
+}
+
+export interface AuthSessionState {
+  token: string
+  user: SessionUser | null
+  updatedAt?: string
+}
+
 const SESSION_KEY = 'pmr-auth-session'
 const LEGACY_TOKEN_KEY = 'token'
 const ADMIN_PERMISSION_CANDIDATES = ['user:manage', 'role:manage', 'auth:user:manage', 'auth:role:manage']
 
-function pickFirstString(...values) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object'
+}
+
+function pickFirstString(...values: unknown[]): string {
   for (const value of values) {
     if (typeof value === 'string' && value.trim()) {
       return value.trim()
@@ -11,8 +30,8 @@ function pickFirstString(...values) {
   return ''
 }
 
-function normalizePermissions(...sources) {
-  const permissions = []
+function normalizePermissions(...sources: unknown[]): string[] {
+  const permissions: unknown[] = []
 
   for (const source of sources) {
     if (!source) {
@@ -34,12 +53,12 @@ function normalizePermissions(...sources) {
     .filter(Boolean)
 }
 
-function normalizeUser(user) {
-  if (!user || typeof user !== 'object') {
+function normalizeUser(user: unknown): SessionUser | null {
+  if (!isRecord(user)) {
     return null
   }
 
-  const role = user.role && typeof user.role === 'object' ? user.role : null
+  const role = isRecord(user.role) ? user.role : null
   const permissions = normalizePermissions(
     user.permissions,
     user.permissionsCsv,
@@ -57,7 +76,7 @@ function normalizeUser(user) {
   }
 }
 
-function normalizeSession(session) {
+function normalizeSession(session: unknown): AuthSessionState | null {
   if (!session) {
     return null
   }
@@ -67,6 +86,10 @@ function normalizeSession(session) {
       token: session,
       user: null
     }
+  }
+
+  if (!isRecord(session)) {
+    return null
   }
 
   const token = pickFirstString(session.token, session.accessToken, session.jwt)
@@ -79,11 +102,11 @@ function normalizeSession(session) {
   return {
     token,
     user,
-    updatedAt: session.updatedAt || new Date().toISOString()
+    updatedAt: typeof session.updatedAt === 'string' ? session.updatedAt : new Date().toISOString()
   }
 }
 
-export function getSession() {
+export function getSession(): AuthSessionState {
   if (typeof window === 'undefined') {
     return { token: '', user: null }
   }
@@ -91,7 +114,10 @@ export function getSession() {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY)
     if (raw) {
-      return normalizeSession(JSON.parse(raw))
+      const parsed = normalizeSession(JSON.parse(raw))
+      if (parsed) {
+        return parsed
+      }
     }
   } catch (error) {
     console.warn('Failed to parse auth session', error)
@@ -99,13 +125,16 @@ export function getSession() {
 
   const legacyToken = window.localStorage.getItem(LEGACY_TOKEN_KEY)
   if (legacyToken) {
-    return normalizeSession(legacyToken)
+    const parsed = normalizeSession(legacyToken)
+    if (parsed) {
+      return parsed
+    }
   }
 
   return { token: '', user: null }
 }
 
-export function setSession(session) {
+export function setSession(session: unknown) {
   if (typeof window === 'undefined') {
     return
   }
@@ -131,15 +160,15 @@ export function clearSession() {
   window.localStorage.removeItem(LEGACY_TOKEN_KEY)
 }
 
-export function getToken() {
+export function getToken(): string {
   return getSession()?.token || ''
 }
 
-export function getCurrentUser() {
+export function getCurrentUser(): SessionUser | null {
   return getSession()?.user || null
 }
 
-export function hasPermission(permission) {
+export function hasPermission(permission: string): boolean {
   if (!permission) {
     return false
   }
@@ -147,11 +176,11 @@ export function hasPermission(permission) {
   return permissions.includes(permission)
 }
 
-export function hasAnyPermission(permissions = []) {
+export function hasAnyPermission(permissions: string[] = []): boolean {
   return permissions.some((permission) => hasPermission(permission))
 }
 
-export function isAdminUser() {
+export function isAdminUser(): boolean {
   const user = getCurrentUser()
   if (!user) {
     return false
@@ -160,12 +189,12 @@ export function isAdminUser() {
   return roleCode === 'ADMIN' || hasAnyPermission(ADMIN_PERMISSION_CANDIDATES)
 }
 
-export function getUserDisplayName() {
+export function getUserDisplayName(): string {
   const user = getCurrentUser()
   return user?.displayName || user?.username || ''
 }
 
-export function getUserRoleName() {
+export function getUserRoleName(): string {
   const user = getCurrentUser()
   return user?.roleName || user?.roleCode || ''
 }

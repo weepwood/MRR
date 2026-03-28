@@ -16,7 +16,7 @@ const escapeHtml = (value) =>
 const sanitizeFileName = (value) => String(value || 'archive').replace(/[\\/:*?"<>|]+/g, '_').trim()
 
 const waitForImage = (imageEl) =>
-  new Promise((resolve, reject) => {
+  new Promise<void>((resolve, reject) => {
     if (!imageEl) {
       resolve()
       return
@@ -223,7 +223,7 @@ const createStyle = () => {
   return style
 }
 
-const buildRoot = ({ title, record, images }) => {
+const buildRoot = ({ title, record, images }: any) => {
   const root = document.createElement('div')
   root.className = 'archive-pdf-root'
 
@@ -315,7 +315,7 @@ const buildRoot = ({ title, record, images }) => {
   return root
 }
 
-export async function exportArchiveImagesToPdf({ images = [], record = {}, title = '病案档案图片', fileName }) {
+export async function exportArchiveImagesToPdf({ images = [], record = {}, title = '病案档案图片', fileName }: any) {
   if (!Array.isArray(images) || images.length === 0) {
     throw new Error('没有可导出的图片')
   }
@@ -334,7 +334,7 @@ export async function exportArchiveImagesToPdf({ images = [], record = {}, title
   document.body.appendChild(root)
 
   try {
-    const imageEls = Array.from(root.querySelectorAll('img'))
+    const imageEls = Array.from(root.querySelectorAll('img')) as HTMLImageElement[]
     await Promise.all(imageEls.map(waitForImage))
 
     const pdf = new jsPDF({
@@ -344,7 +344,7 @@ export async function exportArchiveImagesToPdf({ images = [], record = {}, title
       compress: true
     })
 
-    const pages = Array.from(root.querySelectorAll('.archive-pdf-page'))
+    const pages = Array.from(root.querySelectorAll('.archive-pdf-page')) as HTMLElement[]
 
     for (let index = 0; index < pages.length; index += 1) {
       const canvas = await html2canvas(pages[index], {
@@ -361,7 +361,7 @@ export async function exportArchiveImagesToPdf({ images = [], record = {}, title
     }
 
     const resolvedFileName = sanitizeFileName(
-      fileName || `${record.bah || 'archive'}-images.pdf`
+      fileName || `${String(record?.bah || 'archive')}-images.pdf`
     )
     pdf.save(resolvedFileName)
   } finally {

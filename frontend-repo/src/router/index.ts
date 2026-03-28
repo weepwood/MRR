@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { clearSession, getSession, hasAnyPermission, isAdminUser } from '@/utils/session.js'
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
+import { clearSession, getSession, hasAnyPermission, isAdminUser } from '@/utils/session'
 
 const Login = () => import('@/pages/LoginPage.vue')
 const ElementImageGallery = () => import('@/components/ImageGalleryEl.vue')
@@ -19,17 +20,19 @@ const StatisticsDetailPage = () => import('@/pages/admin/StatisticsDetailPage.vu
 const ArchiveImagePage = () => import('@/pages/admin/ArchiveImagePage.vue')
 const Test = () => import('@/components/Test.vue')
 
-const routes = [
+const docsRedirectRoute = {
+  path: '/docs/:pathMatch(.*)*',
+  name: 'docs-redirect',
+  beforeEnter: () => {
+    window.location.href = '/docs/index.html'
+    return false
+  }
+} as unknown as RouteRecordRaw
+
+const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: Login },
   { path: '/login', name: 'login', component: Login },
-  {
-    path: '/docs/:pathMatch(.*)*',
-    name: 'docs-redirect',
-    beforeEnter: () => {
-      window.location.href = '/docs/index.html'
-      return false
-    }
-  },
+  docsRedirectRoute,
   {
     path: '/admin',
     name: 'admin',

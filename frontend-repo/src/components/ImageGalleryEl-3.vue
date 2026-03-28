@@ -157,7 +157,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 // API 工具函数导入
 import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
-import { clearSession } from '@/utils/session.js'
+import { clearSession } from '@/utils/session'
 
 // ==================== 组件属性定义 ====================
 const props = defineProps({

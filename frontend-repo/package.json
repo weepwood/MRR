@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "npm run docs:build",
     "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "docs:dev": "vitepress dev docs --host",
@@ -36,6 +37,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-vue": "^6.0.1",
     "eslint": "^9.22.0",
     "eslint-plugin-vue": "^9.33.0",
@@ -43,9 +47,11 @@
     "jsdom": "^26.1.0",
     "nodemon": "^3.0.1",
     "prettier": "^3.5.3",
+    "typescript": "^5.9.3",
     "vite": "^7.1.6",
     "vitepress": "^1.6.4",
     "vitest": "^3.2.4",
-    "vue-eslint-parser": "^10.1.1"
+    "vue-eslint-parser": "^10.1.1",
+    "vue-tsc": "^3.2.6"
   }
 }

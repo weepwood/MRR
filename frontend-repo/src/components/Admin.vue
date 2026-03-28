@@ -53,7 +53,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { DataBoard, Document, Key, Reading, Setting, SwitchButton, Tools, TrendCharts, User } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
-import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session.js'
+import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
 
 const router = useRouter()
 

@@ -93,7 +93,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { encryptIdCard, decryptIdCard } from '../utils/decrypt.js'
+import { encryptIdCard, decryptIdCard } from '../utils/decrypt'
 
 const idCardToEncrypt = ref('')
 const encryptResult = ref(null)

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearSession, getToken } from '@/utils/session.js'
+import { clearSession, getToken } from '@/utils/session'
 
 const loginApi = axios.create({
     baseURL: '/loginApi',
@@ -246,7 +246,7 @@ export function getDashboardData() {
 export function getStatisticsList(pageOrParams = 1, size = 100) {
     let params
     if (typeof pageOrParams === 'object' && pageOrParams !== null) {
-        params = { ...pageOrParams }
+        params = { ...(pageOrParams as Record<string, unknown>) }
     } else {
         params = { page: pageOrParams, size }
     }

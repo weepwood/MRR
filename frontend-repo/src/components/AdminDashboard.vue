@@ -186,7 +186,7 @@ import {
   User
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session.js'
+import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
 
 const router = useRouter()
 const route = useRoute()
@@ -924,4 +924,3 @@ function handleLogout() {
   }
 }
 </style>
-

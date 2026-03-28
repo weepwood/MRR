@@ -210,7 +210,7 @@ import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } fr
 import Viewer from 'viewerjs'
 import 'viewerjs/dist/viewer.css'
 import MessageToast from './MessageToast.vue'
-import { clearSession } from '@/utils/session.js'
+import { clearSession } from '@/utils/session'
 
 // -----------------------------
 // 组件入参与基础状态

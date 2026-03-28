@@ -28,6 +28,8 @@
     "crypto-js": "^4.2.0",
     "element-plus": "^2.11.1",
     "express": "^4.18.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "viewerjs": "^1.11.6",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
@@ -42,8 +44,8 @@
     "nodemon": "^3.0.1",
     "prettier": "^3.5.3",
     "vite": "^7.1.6",
-    "vitest": "^3.2.4",
     "vitepress": "^1.6.4",
+    "vitest": "^3.2.4",
     "vue-eslint-parser": "^10.1.1"
   }
 }

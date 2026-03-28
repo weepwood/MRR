@@ -16,6 +16,7 @@ const SettingsView = () => import('@/pages/admin/SettingsView.vue')
 const CrudView = () => import('@/pages/admin/RecordsPage.vue')
 const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
 const StatisticsDetailPage = () => import('@/pages/admin/StatisticsDetailPage.vue')
+const ArchiveImagePage = () => import('@/pages/admin/ArchiveImagePage.vue')
 const Test = () => import('@/components/Test.vue')
 
 const routes = [
@@ -73,7 +74,14 @@ const routes = [
       },
       { path: 'crud', name: 'admin-crud', component: CrudView, meta: { requiresAdmin: true } },
       { path: 'statistics', name: 'admin-statistics', component: RecordsStatisticsView, meta: { requiresAdmin: true } },
-      { path: 'statistics/detail', name: 'admin-statistics-detail', component: StatisticsDetailPage, meta: { requiresAdmin: true } }
+      { path: 'statistics/detail', name: 'admin-statistics-detail', component: StatisticsDetailPage, meta: { requiresAdmin: true } },
+      {
+        path: 'statistics/detail/:bah',
+        name: 'admin-statistics-archive',
+        component: ArchiveImagePage,
+        props: true,
+        meta: { requiresAdmin: true }
+      }
     ]
   },
   { path: '/admin-dashboard', redirect: '/admin' },

@@ -147,7 +147,7 @@
 
           <div class="folder-footer">
             <span class="folder-pages">{{ item.pages ?? 0 }} 页档案</span>
-            <el-button text type="primary" @click.stop="selectArchive(item, index)">
+            <el-button text type="primary" @click.stop="openArchiveImages(item, index)">
               查看详情
             </el-button>
           </div>
@@ -348,6 +348,27 @@ const handleCurrentChange = async (newPage) => {
 const selectArchive = (item, index = 0) => {
   selectedArchive.value = item
   selectedArchiveKey.value = buildArchiveKey(item, index)
+}
+
+const openArchiveImages = (item, index = 0) => {
+  if (!item?.bah) {
+    ElMessage.warning('当前档案缺少病案号，无法打开图片页')
+    return
+  }
+
+  router.push({
+    name: 'admin-statistics-archive',
+    params: { bah: item.bah },
+    query: {
+      bah: item.bah,
+      cid: item.cid || '',
+      type: item.type || '',
+      date: item.date || '',
+      pages: item.pages ?? '',
+      openerNo: item.openerNo || '',
+      index: String(index)
+    }
+  })
 }
 
 const goBackToStatistics = () => {

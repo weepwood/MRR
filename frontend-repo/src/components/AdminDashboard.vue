@@ -199,6 +199,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/admin/logs')) return 'logs'
   if (path.startsWith('/admin/monitoring')) return 'monitoring'
   if (path.startsWith('/admin/crud')) return 'records'
+  if (path.startsWith('/admin/statistics/detail/') && path !== '/admin/statistics/detail') return 'statistics-archive'
   if (path.startsWith('/admin/statistics/detail')) return 'statistics-detail'
   if (path.startsWith('/admin/statistics')) return 'statistics'
   if (path.startsWith('/admin/settings')) return 'settings'
@@ -244,6 +245,10 @@ const sectionMetaMap = {
   'statistics-detail': {
     title: '病案明细',
     description: '独立查看病案分页列表、筛选和排序结果。'
+  },
+  'statistics-archive': {
+    title: '病案档案图片',
+    description: '查看单个病案的图片、批量选择、打印与 PDF 导出。'
   },
   settings: {
     title: '系统设置',
@@ -912,6 +917,5 @@ function handleLogout() {
   }
 }
 </style>
-
 
 

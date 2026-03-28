@@ -25,14 +25,18 @@ public class LogRetentionCleaner {
 
     @Scheduled(cron = "${app.log-retention.cron:0 30 2 * * ?}")
     public void cleanExpiredLogs() {
-        performCleanup();
+        performCleanup(null, false);
     }
 
     public LogRetentionCleanupResult cleanupNow() {
-        return performCleanup();
+        return performCleanup(null, true);
     }
 
-    private LogRetentionCleanupResult performCleanup() {
+    public LogRetentionCleanupResult cleanupNow(LocalDateTime cutoff) {
+        return performCleanup(cutoff, true);
+    }
+
+    private LogRetentionCleanupResult performCleanup(LocalDateTime providedCutoff, boolean forceWhenDisabled) {
         LogRetentionCleanupResult result = new LogRetentionCleanupResult();
         result.setEnabled(properties.isEnabled());
 
@@ -44,7 +48,7 @@ public class LogRetentionCleaner {
         result.setMaxBatchesPerRun(maxBatches);
         result.setExecutedAt(LocalDateTime.now());
 
-        if (!properties.isEnabled()) {
+        if (!properties.isEnabled() && !forceWhenDisabled) {
             result.setSkipped(true);
             result.setSuccess(true);
             result.setMessage("log retention cleanup is disabled");
@@ -59,7 +63,7 @@ public class LogRetentionCleaner {
             return result;
         }
 
-        LocalDateTime cutoff = result.getExecutedAt().minusDays(retentionDays);
+        LocalDateTime cutoff = providedCutoff != null ? providedCutoff : result.getExecutedAt().minusDays(retentionDays);
         result.setCutoff(cutoff);
         int totalDeleted = 0;
         int batches = 0;

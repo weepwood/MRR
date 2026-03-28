@@ -5,9 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.log-retention")
 public class LogRetentionProperties {
 
-    private boolean enabled = true;
+    private boolean enabled = false;
     private String cron = "0 30 2 * * ?";
-    private int retentionDays = 90;
+    private int retentionDays = 1095;
     private int batchSize = 5000;
     private int maxBatchesPerRun = 20;
 

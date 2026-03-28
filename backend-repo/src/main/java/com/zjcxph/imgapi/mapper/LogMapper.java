@@ -57,6 +57,18 @@ public interface LogMapper {
 
     @Select({"<script>",
             "SELECT " + BASE_COLUMNS + " FROM access_log",
+            "WHERE access_time &lt; #{cutoff}",
+            "ORDER BY access_time ASC, id ASC",
+            "LIMIT #{limit} OFFSET #{offset}",
+            "</script>"})
+    List<Log> findOlderThan(
+            @Param("cutoff") LocalDateTime cutoff,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    @Select({"<script>",
+            "SELECT " + BASE_COLUMNS + " FROM access_log",
             "<where>",
             "  <if test='keyword != null and keyword != \"\"'>",
             "    AND (client_ip LIKE '%' || #{keyword} || '%'",

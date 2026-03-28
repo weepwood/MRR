@@ -247,8 +247,16 @@ export function getLogById(id) {
  * 手动触发一次日志保留期清理
  * @returns {Promise}
  */
-export function runLogRetentionCleanup() {
-    return authApi.post('/logs-api/retention/cleanup')
+export function runLogRetentionCleanup(params = {}) {
+    return authApi.post('/logs-api/retention/cleanup', null, { params })
+}
+
+/**
+ * 导出当前保留期之外的日志记录
+ * @returns {Promise}
+ */
+export function exportLogRetentionLogs() {
+    return authApi.get('/logs-api/retention/export', { responseType: 'blob' })
 }
 
 export function getScanById(id) {

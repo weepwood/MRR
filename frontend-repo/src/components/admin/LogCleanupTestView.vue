@@ -4,15 +4,17 @@
       <div class="pmr-panel-header">
         <div>
           <h3 class="pmr-panel-title">日志清理测试</h3>
-          <p class="pmr-panel-subtitle">手动触发一次日志保留期清理，用来验证定时任务和数据库删除逻辑是否正常。</p>
+          <p class="pmr-panel-subtitle">
+            先导出过期日志，再执行手动清理。自动清理默认关闭，仅保留手动测试入口。
+          </p>
         </div>
         <span class="pmr-badge">Retention</span>
       </div>
     </template>
 
     <div class="cleanup-actions">
-      <el-button type="primary" :loading="runningCleanup" @click="runCleanup">
-        执行日志清理测试
+      <el-button type="primary" :loading="runningCleanup" @click="runExportAndCleanup">
+        导出并清理日志
       </el-button>
       <el-button @click="resetResult">清空结果</el-button>
     </div>
@@ -27,7 +29,7 @@
     />
 
     <el-descriptions v-if="cleanupResult" :column="2" border class="cleanup-descriptions">
-      <el-descriptions-item label="是否启用">{{ cleanupResult.enabled ? '是' : '否' }}</el-descriptions-item>
+      <el-descriptions-item label="自动清理">{{ cleanupResult.enabled ? '开启' : '关闭' }}</el-descriptions-item>
       <el-descriptions-item label="是否跳过">{{ cleanupResult.skipped ? '是' : '否' }}</el-descriptions-item>
       <el-descriptions-item label="是否成功">{{ cleanupResult.success ? '是' : '否' }}</el-descriptions-item>
       <el-descriptions-item label="保留天数">{{ cleanupResult.retentionDays }}</el-descriptions-item>
@@ -43,14 +45,14 @@
       </el-descriptions-item>
     </el-descriptions>
 
-    <el-empty v-else description="点击按钮后可查看本次清理结果" />
+    <el-empty v-else description="点击按钮后会先下载导出文件，再执行手动清理" />
   </el-card>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { runLogRetentionCleanup } from '@/services/api'
+import { exportLogRetentionLogs, runLogRetentionCleanup } from '@/services/api'
 
 const runningCleanup = ref(false)
 const cleanupResult = ref(null)
@@ -79,10 +81,48 @@ const formatDateTime = (value) => {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false })
 }
 
-const runCleanup = async () => {
+const getDownloadFileName = (headers) => {
+  const disposition = headers?.['content-disposition'] || headers?.['Content-Disposition'] || ''
+  const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)
+  if (match?.[1]) {
+    return decodeURIComponent(match[1].replace(/"/g, ''))
+  }
+  return `access-log-retention-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`
+}
+
+const downloadBlob = (blob, fileName) => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+const exportLogsFirst = async () => {
+  const response = await exportLogRetentionLogs()
+  const blob = response?.data
+  if (!(blob instanceof Blob)) {
+    throw new Error('日志导出失败')
+  }
+  const fileName = getDownloadFileName(response.headers)
+  downloadBlob(blob, fileName)
+  return {
+    fileName,
+    total: Number.parseInt(response.headers?.['x-export-total'] || response.headers?.['X-Export-Total'] || '0', 10) || 0,
+    cutoff: response.headers?.['x-export-cutoff'] || response.headers?.['X-Export-Cutoff'] || ''
+  }
+}
+
+const runExportAndCleanup = async () => {
   runningCleanup.value = true
   try {
-    const response = await runLogRetentionCleanup()
+    const exportInfo = await exportLogsFirst()
+    ElMessage.success(exportInfo.total > 0 ? `已导出 ${exportInfo.total} 条日志` : '已导出日志文件')
+
+    const response = await runLogRetentionCleanup(exportInfo.cutoff ? { cutoff: exportInfo.cutoff } : {})
     const result = response?.data
     if (!result || result.code !== 200) {
       throw new Error(result?.message || '日志清理测试失败')

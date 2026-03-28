@@ -1,6 +1,6 @@
 <template>
   <div class="archive-image-page pmr-page">
-    <section class="page-hero pmr-page-header">
+    <section class="page-hero pmr-page-header pmr-fade-up">
       <div class="hero-copy">
         <p class="module-eyebrow">Archive Gallery</p>
         <h2 class="pmr-page-title">{{ archiveTitle }}</h2>
@@ -15,8 +15,14 @@
       </div>
     </section>
 
-    <section class="summary-grid">
-      <el-card v-for="card in summaryCards" :key="card.label" class="pmr-panel summary-card" shadow="never">
+    <section class="summary-grid pmr-stagger">
+      <el-card
+        v-for="(card, index) in summaryCards"
+        :key="card.label"
+        class="pmr-panel summary-card pmr-stagger-item pmr-hover-lift"
+        shadow="never"
+        :style="{ '--pmr-stagger-index': index }"
+      >
         <div class="summary-label">{{ card.label }}</div>
         <div class="summary-value">{{ card.value }}</div>
         <div class="summary-note">{{ card.note }}</div>
@@ -32,7 +38,7 @@
       :closable="false"
     />
 
-    <section class="workspace">
+    <section class="workspace pmr-fade-up">
       <aside class="control-panel">
         <el-card class="pmr-panel control-card" shadow="never">
           <template #header>
@@ -167,7 +173,7 @@
               <div class="viewer-toolbar">
                 <button
                   type="button"
-                  class="view-mode-btn"
+                  class="view-mode-btn pmr-hover-lift"
                   :class="{ active: thumbsViewMode === 'grid' }"
                   @click="setThumbsViewMode('grid')"
                 >
@@ -175,7 +181,7 @@
                 </button>
                 <button
                   type="button"
-                  class="view-mode-btn"
+                  class="view-mode-btn pmr-hover-lift"
                   :class="{ active: thumbsViewMode === 'list' }"
                   @click="setThumbsViewMode('list')"
                 >
@@ -204,14 +210,15 @@
                 <span>{{ selectedImageLabel }}</span>
               </div>
 
-              <div class="thumb-list" :class="{ 'is-list': thumbsViewMode === 'list' }">
+              <div class="thumb-list pmr-stagger" :class="{ 'is-list': thumbsViewMode === 'list' }">
                 <template v-if="thumbsViewMode === 'grid'">
                   <article
                     v-for="(img, idx) in filteredImages"
                     :key="getImageId(img)"
                     :ref="(el) => setThumbRef(el, idx)"
-                    class="thumb-card"
+                    class="thumb-card pmr-stagger-item pmr-hover-lift"
                     :class="{ active: idx === selectedImageIndex, selected: isImageSelected(img) }"
+                    :style="{ '--pmr-stagger-index': idx }"
                     @click="selectImage(idx)"
                   >
                     <div class="thumb-select" @click.stop="toggleImageSelection(img)">
@@ -237,8 +244,9 @@
                     v-for="(img, idx) in filteredImages"
                     :key="getImageId(img)"
                     :ref="(el) => setThumbRef(el, idx)"
-                    class="thumb-row"
+                    class="thumb-row pmr-stagger-item pmr-hover-lift"
                     :class="{ active: idx === selectedImageIndex, selected: isImageSelected(img) }"
+                    :style="{ '--pmr-stagger-index': idx }"
                     @click="selectImage(idx)"
                   >
                     <div class="thumb-select thumb-select-row" @click.stop="toggleImageSelection(img)">
@@ -277,7 +285,8 @@
               <div class="viewer-frame">
                 <el-image
                   v-if="currentImage"
-                  class="main-image"
+                  :key="getImageId(currentImage)"
+                  class="main-image pmr-fade-up"
                   :src="currentImage.displayUrl"
                   fit="contain"
                   :preview-src-list="previewList"

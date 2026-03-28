@@ -120,10 +120,12 @@
   --pmr-shadow-brand: 0 12px 28px rgba(47, 111, 255, 0.28);
 
   /* ========= Motion ========= */
+  --pmr-motion-duration-entrance: 520ms;
   --pmr-motion-duration-fast: 150ms;
   --pmr-motion-duration-normal: 220ms;
   --pmr-motion-duration-slow: 300ms;
   --pmr-motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --pmr-motion-stagger-step: 72ms;
 
   /* ========= Legacy aliases (keep existing pages stable) ========= */
   --primary-color: var(--pmr-color-action-primary);

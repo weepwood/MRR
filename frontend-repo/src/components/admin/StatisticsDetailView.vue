@@ -13,23 +13,23 @@
       </div>
     </section>
 
-    <section class="summary-grid">
-      <el-card class="pmr-panel summary-card" shadow="never">
+    <section class="summary-grid pmr-stagger">
+      <el-card class="pmr-panel summary-card pmr-stagger-item pmr-hover-lift" shadow="never" :style="{ '--pmr-stagger-index': 0 }">
         <div class="summary-label">档案总数</div>
         <div class="summary-value">{{ statisticsListData.total || 0 }}</div>
         <div class="summary-note">来自病案明细接口的总记录数</div>
       </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
+      <el-card class="pmr-panel summary-card pmr-stagger-item pmr-hover-lift" shadow="never" :style="{ '--pmr-stagger-index': 1 }">
         <div class="summary-label">类型种类</div>
         <div class="summary-value">{{ statisticsTypeOptions.length }}</div>
         <div class="summary-note">按病案类型聚合后的分类数量</div>
       </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
+      <el-card class="pmr-panel summary-card pmr-stagger-item pmr-hover-lift" shadow="never" :style="{ '--pmr-stagger-index': 2 }">
         <div class="summary-label">当前页</div>
         <div class="summary-value">{{ statisticsListData.page || currentPage }}</div>
         <div class="summary-note">每页 {{ pageSize }} 条，支持翻页查看</div>
       </el-card>
-      <el-card class="pmr-panel summary-card" shadow="never">
+      <el-card class="pmr-panel summary-card pmr-stagger-item pmr-hover-lift" shadow="never" :style="{ '--pmr-stagger-index': 3 }">
         <div class="summary-label">已选档案</div>
         <div class="summary-value">{{ selectedArchive ? formatArchiveLabel(selectedArchive) : '未选择' }}</div>
         <div class="summary-note">点击任意档案袋可查看档案详情</div>
@@ -38,7 +38,7 @@
 
     <el-alert v-if="error" :title="error" type="error" show-icon class="archive-alert" />
 
-    <el-card class="pmr-panel archive-filter-panel" shadow="never">
+    <el-card class="pmr-panel archive-filter-panel pmr-fade-up" shadow="never">
       <template #header>
         <div class="pmr-panel-header">
           <div>
@@ -100,17 +100,18 @@
     </el-card>
 
 
-    <section class="archive-shelf">
+    <section class="archive-shelf pmr-fade-up">
       <div v-if="loading && !statisticsListData.list.length" class="archive-loading">
         <el-skeleton :rows="6" animated />
       </div>
 
-      <div v-else class="archive-grid">
+      <div v-else class="archive-grid pmr-stagger">
         <article
           v-for="(item, index) in statisticsListData.list"
           :key="buildArchiveKey(item, index)"
-          class="archive-folder-card"
+          class="archive-folder-card pmr-stagger-item pmr-hover-lift"
           :class="[getToneClass(item, index), { 'is-selected': selectedArchiveKey === buildArchiveKey(item, index) }]"
+          :style="{ '--pmr-stagger-index': index }"
           @click="selectArchive(item, index)"
         >
           <div class="folder-tab"></div>

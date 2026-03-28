@@ -99,9 +99,9 @@
 
     <main class="admin-main">
 
-      <div class="content-shell">
+      <div class="content-shell pmr-fade-up">
         <template v-if="showDashboard">
-          <section class="hero-block">
+          <section class="hero-block pmr-hover-lift">
             <div class="hero-copy">
               <p class="eyebrow">Clinical Sanctuary</p>
               <h2>欢迎进入后台管理中心</h2>
@@ -123,8 +123,14 @@
             </div>
           </section>
 
-          <section class="kpi-grid">
-            <article v-for="card in dashboardCards" :key="card.label" class="kpi-card" :class="card.toneClass">
+          <section class="kpi-grid pmr-stagger">
+            <article
+              v-for="(card, index) in dashboardCards"
+              :key="card.label"
+              class="kpi-card pmr-stagger-item pmr-hover-lift"
+              :class="card.toneClass"
+              :style="{ '--pmr-stagger-index': index }"
+            >
               <div class="kpi-top">
                 <div class="kpi-icon" :class="card.iconClass">
                   <el-icon><component :is="card.icon" /></el-icon>
@@ -137,11 +143,12 @@
             </article>
           </section>
 
-          <section class="feature-grid">
+          <section class="feature-grid pmr-stagger">
             <article
-              v-for="item in featureCards"
+              v-for="(item, index) in featureCards"
               :key="item.title"
-              class="feature-card"
+              class="feature-card pmr-stagger-item pmr-hover-lift"
+              :style="{ '--pmr-stagger-index': index }"
               @click="handleFeatureClick(item)"
             >
               <div class="feature-icon" :class="item.tone">
@@ -156,7 +163,7 @@
           </section>
         </template>
 
-        <section v-else class="route-panel">
+        <section v-else class="route-panel pmr-fade-up">
           <router-view />
         </section>
       </div>
@@ -917,5 +924,4 @@ function handleLogout() {
   }
 }
 </style>
-
 

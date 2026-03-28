@@ -22,7 +22,7 @@ export const adminSectionMetaMap = {
   testing: {
     title: '系统测试',
     description: '执行接口请求和功能验证，检查系统可用性。',
-    pill: '测试模块'
+    pill: '                                                                                                               '
   },
   logs: {
     title: '系统日志',

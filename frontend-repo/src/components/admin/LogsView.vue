@@ -1,20 +1,16 @@
-<template>
+﻿<template>
   <div class="logs-view pmr-page">
     <el-card class="panel-card pmr-panel">
       <template #header>
         <div class="card-header pmr-panel-header">
           <div>
             <div class="title">系统日志</div>
-            <div class="subtitle">支持筛选、详情查看、单条删除和一键清空</div>
+            <div class="subtitle">支持筛选、详情查看、分页查询和访问控制</div>
           </div>
           <div class="header-actions pmr-toolbar-actions">
             <el-button @click="refreshData" :loading="loading">
               <el-icon><Refresh /></el-icon>
               刷新
-            </el-button>
-            <el-button type="danger" @click="handleClearLogs" :loading="clearing">
-              <el-icon><Delete /></el-icon>
-              清空
             </el-button>
           </div>
         </div>
@@ -115,16 +111,12 @@
             {{ formatExecuteTime(row.executeTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <div class="table-actions pmr-table-actions">
               <el-button size="small" type="primary" @click="openDetail(row)">
                 <el-icon><View /></el-icon>
                 详情
-              </el-button>
-              <el-button size="small" type="danger" @click="handleDelete(row)">
-                <el-icon><Delete /></el-icon>
-                删除
               </el-button>
             </div>
           </template>
@@ -169,12 +161,11 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Refresh, Search, View } from '@element-plus/icons-vue'
-import { clearLogs, deleteLogById, getLogById, searchSystemLogs } from '@/utils/api'
+import { ElMessage } from 'element-plus'
+import { Refresh, Search, View } from '@element-plus/icons-vue'
+import { getLogById, searchSystemLogs } from '@/utils/api'
 
 const loading = ref(false)
-const clearing = ref(false)
 const tableData = ref([])
 const page = ref(1)
 const size = ref(20)
@@ -288,56 +279,6 @@ const openDetail = async (row) => {
     currentLog.value = row
     detailVisible.value = true
     ElMessage.warning(error?.message || '日志详情获取失败，已显示当前行数据')
-  }
-}
-
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(`确认删除日志 ID ${row.id} 吗？`, '提示', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-  } catch {
-    return
-  }
-
-  try {
-    const response = await deleteLogById(row.id)
-    if (response?.data?.code !== 200) {
-      throw new Error(response?.data?.message || '删除失败')
-    }
-    ElMessage.success('删除成功')
-    loadData()
-  } catch (error) {
-    ElMessage.error(error?.message || '删除失败')
-  }
-}
-
-const handleClearLogs = async () => {
-  try {
-    await ElMessageBox.confirm('确认清空全部系统日志吗？该操作不可恢复。', '提示', {
-      confirmButtonText: '清空',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-  } catch {
-    return
-  }
-
-  clearing.value = true
-  try {
-    const response = await clearLogs()
-    if (response?.data?.code !== 200) {
-      throw new Error(response?.data?.message || '清空失败')
-    }
-    ElMessage.success('日志已清空')
-    page.value = 1
-    loadData()
-  } catch (error) {
-    ElMessage.error(error?.message || '清空失败')
-  } finally {
-    clearing.value = false
   }
 }
 

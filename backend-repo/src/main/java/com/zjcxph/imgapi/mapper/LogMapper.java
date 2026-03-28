@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.pojo.Log;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Mapper
 public interface LogMapper {
@@ -37,11 +38,22 @@ public interface LogMapper {
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log WHERE id = #{id}")
     Log findById(@Param("id") Long id);
 
-    @Delete("DELETE FROM access_log WHERE id = #{id}")
-    int deleteById(@Param("id") Long id);
+    @Delete({"<script>",
+            "WITH target AS (",
+            "    SELECT id FROM access_log",
+            "    WHERE access_time &lt; #{cutoff}",
+            "    ORDER BY access_time ASC, id ASC",
+            "    LIMIT #{limit}",
+            ")",
+            "DELETE FROM access_log",
+            "WHERE id IN (SELECT id FROM target)",
+            "</script>"})
+    int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
 
-    @Delete("DELETE FROM access_log")
-    int clearAll();
+    @Select({"<script>",
+            "SELECT COUNT(*) FROM access_log WHERE access_time &lt; #{cutoff}",
+            "</script>"})
+    int countOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
     @Select({"<script>",
             "SELECT " + BASE_COLUMNS + " FROM access_log",

@@ -1,10 +1,17 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.pojo.Log;
+import com.zjcxph.imgapi.pojo.LogRetentionCleanupResult;
 import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.scheduler.LogRetentionCleaner;
 import com.zjcxph.imgapi.service.LogService;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,14 +23,16 @@ import java.util.Map;
 @RequestMapping({"/v2/logs", "/v1/logs-api"})
 public class LogController {
 
-    private final LogService logService;
-
-    public LogController(LogService logService) {
-        this.logService = logService;
-    }
-
     private static final int MAX_PAGE_SIZE = 200;
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private final LogService logService;
+    private final LogRetentionCleaner logRetentionCleaner;
+
+    public LogController(LogService logService, LogRetentionCleaner logRetentionCleaner) {
+        this.logService = logService;
+        this.logRetentionCleaner = logRetentionCleaner;
+    }
 
     @GetMapping("/{id}")
     public Result<Log> getLogById(@PathVariable Long id) {
@@ -41,23 +50,6 @@ public class LogController {
         List<Log> logs = logService.getAllLogs(page, size);
         int total = logService.getTotalLogCount();
         return new Result<>(200, "success", logs, total);
-    }
-
-    @DeleteMapping("/{id}")
-    public Result<Object> deleteLog(@PathVariable Long id) {
-        boolean deleted = logService.deleteLogById(id);
-        if (!deleted) {
-            return Result.fail("log not found");
-        }
-        return Result.success("deleted");
-    }
-
-    @DeleteMapping("/clear")
-    public Result<Object> clearLogs() {
-        int deleted = logService.clearLogs();
-        Map<String, Object> data = new HashMap<>();
-        data.put("deleted", deleted);
-        return Result.success("cleared").data(data);
     }
 
     @GetMapping("/ip/{ip}")
@@ -78,6 +70,16 @@ public class LogController {
         List<Log> logs = logService.getLogsByRequestUri(uri, page, size);
         int total = logService.getLogCountByRequestUri(uri);
         return new Result<>(200, "success", logs, total);
+    }
+
+    @PostMapping("/retention/cleanup")
+    public Result<LogRetentionCleanupResult> cleanupRetentionLogs() {
+        LogRetentionCleanupResult cleanupResult = logRetentionCleaner.cleanupNow();
+        String message = cleanupResult.getMessage();
+        if (message == null || message.isBlank()) {
+            message = cleanupResult.isSuccess() ? "log retention cleanup executed" : "log retention cleanup skipped";
+        }
+        return Result.<LogRetentionCleanupResult>success(message).data(cleanupResult);
     }
 
     @GetMapping("/search")

@@ -243,12 +243,12 @@ export function getLogById(id) {
     return authApi.get(`/logs-api/${id}`)
 }
 
-export function deleteLogById(id) {
-    return authApi.delete(`/logs-api/${id}`)
-}
-
-export function clearLogs() {
-    return authApi.delete('/logs-api/clear')
+/**
+ * 手动触发一次日志保留期清理
+ * @returns {Promise}
+ */
+export function runLogRetentionCleanup() {
+    return authApi.post('/logs-api/retention/cleanup')
 }
 
 export function getScanById(id) {

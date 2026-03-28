@@ -25,16 +25,6 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
-    public boolean deleteLogById(Long id) {
-        return logMapper.deleteById(id) > 0;
-    }
-
-    @Override
-    public int clearLogs() {
-        return logMapper.clearAll();
-    }
-
-    @Override
     public List<Log> getAllLogs(int page, int size) {
         int offset = (page - 1) * size;
         return logMapper.findAll(size, offset);

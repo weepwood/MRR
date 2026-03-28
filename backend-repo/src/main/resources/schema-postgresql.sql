@@ -59,5 +59,6 @@ CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON app.mr_patient (idcard);
 CREATE INDEX IF NOT EXISTS idx_access_log_access_time ON app.access_log (access_time DESC);
+CREATE INDEX IF NOT EXISTS idx_access_log_access_time_id ON app.access_log (access_time ASC, id ASC);
 CREATE INDEX IF NOT EXISTS idx_access_log_client_ip ON app.access_log (client_ip);
 CREATE INDEX IF NOT EXISTS idx_access_log_request_uri ON app.access_log (request_uri);

@@ -152,6 +152,7 @@
     </el-card>
 
     <PressureTestView />
+    <LogCleanupTestView />
   </div>
 </template>
 
@@ -160,6 +161,7 @@ import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAdminSettings } from '@/shared/composables/useAdminSettings'
 import PressureTestView from './PressureTestView.vue'
+import LogCleanupTestView from './LogCleanupTestView.vue'
 
 const { resolvedSwaggerUrl } = useAdminSettings()
 

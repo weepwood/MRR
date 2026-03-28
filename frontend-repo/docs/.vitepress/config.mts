@@ -23,6 +23,7 @@ export default defineConfig({
           text: '入门',
           items: [
             { text: '指南首页', link: '/guide/' },
+            { text: '项目说明文档', link: '/guide/项目说明文档' },
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '构建与部署', link: '/guide/deploy' }
           ]
@@ -34,6 +35,7 @@ export default defineConfig({
             { text: '病案统计页面说明', link: '/guide/病案统计页面说明' },
             { text: '系统日志功能说明', link: '/guide/系统日志功能说明' },
             { text: '系统监控功能说明', link: '/guide/系统监控功能说明' },
+            { text: '前端 Figma 规范', link: '/guide/前端Figma规范' },
             { text: '功能演示说明', link: '/guide/功能演示说明' },
             { text: '多选 Bug 修复说明', link: '/guide/多选Bug修复说明' },
             { text: '打印功能修复说明', link: '/guide/打印功能修复说明' }
@@ -43,7 +45,10 @@ export default defineConfig({
       '/reference/': [
         {
           text: '参考',
-          items: [{ text: '项目文档索引', link: '/reference/project-docs' }]
+          items: [
+            { text: '项目文档索引', link: '/reference/project-docs' },
+            { text: '设计变量对照', link: '/reference/design-tokens' }
+          ]
         }
       ]
     },

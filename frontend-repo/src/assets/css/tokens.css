@@ -1,0 +1,187 @@
+/*
+ * PMR Design Tokens
+ * Source of truth for frontend CSS variables.
+ * Keep names aligned with docs/guide/前端Figma规范.md and docs/reference/figma-variables.json.
+ */
+
+:root {
+  /* ========= Foundation / Color ========= */
+  --pmr-color-blue-50: #f2f7ff;
+  --pmr-color-blue-100: #e9f2ff;
+  --pmr-color-blue-200: #dceaff;
+  --pmr-color-blue-300: #cbe0ff;
+  --pmr-color-blue-500: #3f85ff;
+  --pmr-color-blue-600: #2e70ea;
+  --pmr-color-blue-700: #2259c3;
+  --pmr-color-blue-800: #1a3e82;
+
+  --pmr-color-brand-50: #f1f5ff;
+  --pmr-color-brand-100: #e2edff;
+  --pmr-color-brand-500: #2f6fff;
+  --pmr-color-brand-700: #1e54d6;
+  --pmr-color-accent-100: #def7f5;
+  --pmr-color-accent-500: #14b8a6;
+  --pmr-color-accent-700: #0f766e;
+
+  --pmr-color-neutral-0: #ffffff;
+  --pmr-color-neutral-50: #f9fafb;
+  --pmr-color-neutral-100: #f8fafc;
+  --pmr-color-neutral-200: #f3f4f6;
+  --pmr-color-neutral-300: #e5e7eb;
+  --pmr-color-neutral-400: #9ca3af;
+  --pmr-color-neutral-500: #6b7280;
+  --pmr-color-neutral-600: #4b5563;
+  --pmr-color-neutral-700: #374151;
+  --pmr-color-neutral-800: #1f2937;
+  --pmr-color-neutral-900: #0f172a;
+
+  --pmr-color-success-500: #48bb78;
+  --pmr-color-success-50: #f0fff4;
+  --pmr-color-warning-500: #f59e0b;
+  --pmr-color-danger-500: #e45757;
+  --pmr-color-danger-50: #fee2e2;
+  --pmr-color-info-500: #606266;
+
+  /* ========= Semantic / Color ========= */
+  --pmr-color-bg-page: var(--pmr-color-blue-50);
+  --pmr-color-bg-card: var(--pmr-color-neutral-0);
+  --pmr-color-bg-soft: rgba(201, 214, 239, 0.28);
+  --pmr-color-bg-overlay: rgba(0, 0, 0, 0.5);
+  --pmr-color-bg-modal: rgba(0, 0, 0, 0.15);
+  --pmr-color-bg-glass: rgba(255, 255, 255, 0.78);
+  --pmr-color-bg-glass-heavy: rgba(255, 255, 255, 0.92);
+
+  --pmr-color-text-primary: #1b2435;
+  --pmr-color-text-secondary: #51607a;
+  --pmr-color-text-disabled: #999999;
+
+  --pmr-color-border-default: #d9e4fb;
+  --pmr-color-action-primary: var(--pmr-color-brand-500);
+  --pmr-color-action-primary-light: var(--pmr-color-brand-100);
+  --pmr-color-action-primary-pressed: var(--pmr-color-brand-700);
+  --pmr-color-action-danger: var(--pmr-color-danger-500);
+  --pmr-gradient-page: radial-gradient(1200px 600px at 10% -10%, rgba(47, 111, 255, 0.14), transparent 56%), radial-gradient(1000px 480px at 100% -20%, rgba(20, 184, 166, 0.18), transparent 60%), linear-gradient(135deg, #f7faff 0%, #eef4ff 48%, #f8fbff 100%);
+  --pmr-gradient-brand: linear-gradient(135deg, #2f6fff 0%, #14b8a6 100%);
+
+  /* ========= Typography ========= */
+  --pmr-font-family-ui: 'Plus Jakarta Sans', 'SF Pro Display', 'PingFang SC', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --pmr-font-family-mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+
+  --pmr-font-size-caption: 12px;
+  --pmr-font-size-body-s: 13px;
+  --pmr-font-size-body-m: 14px;
+  --pmr-font-size-title: 18px;
+  --pmr-font-size-heading-m: 20px;
+  --pmr-font-size-heading-l: 24px;
+  --pmr-font-size-display-l: 32px;
+
+  --pmr-line-height-caption: 18px;
+  --pmr-line-height-body-s: 20px;
+  --pmr-line-height-body-m: 22px;
+  --pmr-line-height-title: 26px;
+  --pmr-line-height-heading-m: 28px;
+  --pmr-line-height-heading-l: 32px;
+  --pmr-line-height-display-l: 40px;
+
+  --pmr-font-weight-regular: 400;
+  --pmr-font-weight-medium: 500;
+  --pmr-font-weight-semibold: 600;
+  --pmr-font-weight-bold: 700;
+
+  /* ========= Spacing ========= */
+  --pmr-space-1: 4px;
+  --pmr-space-2: 8px;
+  --pmr-space-3: 12px;
+  --pmr-space-4: 16px;
+  --pmr-space-5: 20px;
+  --pmr-space-6: 24px;
+  --pmr-space-8: 32px;
+  --pmr-space-10: 40px;
+  --pmr-space-12: 48px;
+
+  /* ========= Radius ========= */
+  --pmr-radius-sm: 6px;
+  --pmr-radius-md: 8px;
+  --pmr-radius-lg: 10px;
+  --pmr-radius-xl: 12px;
+  --pmr-radius-2xl: 14px;
+  --pmr-radius-3xl: 18px;
+
+  /* ========= Shadow ========= */
+  --pmr-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --pmr-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
+  --pmr-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --pmr-shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  --pmr-shadow-surface-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --pmr-shadow-surface-md: 0 10px 30px rgba(25, 65, 130, 0.14);
+  --pmr-shadow-surface-lg: 0 24px 60px rgba(12, 30, 66, 0.22);
+  --pmr-shadow-brand: 0 12px 28px rgba(47, 111, 255, 0.28);
+
+  /* ========= Motion ========= */
+  --pmr-motion-duration-fast: 150ms;
+  --pmr-motion-duration-normal: 220ms;
+  --pmr-motion-duration-slow: 300ms;
+  --pmr-motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ========= Legacy aliases (keep existing pages stable) ========= */
+  --primary-color: var(--pmr-color-action-primary);
+  --primary-light: var(--pmr-color-action-primary-light);
+  --primary-dark: var(--pmr-color-action-primary-pressed);
+
+  --white: var(--pmr-color-neutral-0);
+  --gray-50: var(--pmr-color-neutral-50);
+  --gray-100: var(--pmr-color-neutral-100);
+  --gray-200: var(--pmr-color-neutral-200);
+  --gray-300: var(--pmr-color-neutral-300);
+  --gray-400: var(--pmr-color-neutral-400);
+  --gray-500: var(--pmr-color-neutral-500);
+  --gray-600: var(--pmr-color-neutral-600);
+  --gray-700: var(--pmr-color-neutral-700);
+  --gray-800: var(--pmr-color-neutral-800);
+  --black: #000000;
+
+  --text-primary: var(--pmr-color-text-primary);
+  --text-secondary: var(--pmr-color-text-secondary);
+  --text-disabled: var(--pmr-color-text-disabled);
+
+  --success-color: var(--pmr-color-success-500);
+  --success-light: var(--pmr-color-success-50);
+  --warning-color: var(--pmr-color-warning-500);
+  --error-color: var(--pmr-color-danger-500);
+  --error-light: var(--pmr-color-danger-50);
+  --info-color: var(--pmr-color-info-500);
+
+  --bg-primary: var(--pmr-color-bg-soft);
+  --bg-overlay: var(--pmr-color-bg-overlay);
+  --bg-modal: var(--pmr-color-bg-modal);
+
+  --shadow-sm: var(--pmr-shadow-sm);
+  --shadow-md: var(--pmr-shadow-md);
+  --shadow-lg: var(--pmr-shadow-lg);
+  --shadow-xl: var(--pmr-shadow-xl);
+
+  /* ========= Element Plus bridge ========= */
+  --el-color-primary: var(--pmr-color-action-primary);
+  --el-color-primary-light-9: var(--pmr-color-brand-50);
+  --el-color-primary-light-8: var(--pmr-color-brand-100);
+  --el-color-primary-dark-2: var(--pmr-color-brand-700);
+  --el-color-success: var(--pmr-color-success-500);
+  --el-color-warning: var(--pmr-color-warning-500);
+  --el-color-danger: var(--pmr-color-danger-500);
+  --el-text-color-primary: var(--pmr-color-text-primary);
+  --el-text-color-regular: var(--pmr-color-text-secondary);
+  --el-border-color: var(--pmr-color-border-default);
+  --el-border-color-light: #e6eefc;
+  --el-border-color-lighter: #eef3ff;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f4f8ff;
+  --el-fill-color-light: #f2f7ff;
+  --el-fill-color-blank: rgba(255, 255, 255, 0.8);
+  --el-border-radius-base: 12px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
+  --el-box-shadow-light: var(--pmr-shadow-surface-sm);
+  --el-box-shadow: var(--pmr-shadow-surface-md);
+  --el-box-shadow-dark: var(--pmr-shadow-surface-lg);
+}

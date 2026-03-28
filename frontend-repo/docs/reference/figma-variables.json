@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "name": "PMR Design Tokens",
+    "version": "1.0.0",
+    "mode": "Light",
+    "updatedAt": "2026-03-24",
+    "cssSource": "src/assets/css/tokens.css",
+    "note": "Each token includes cssVar for one-to-one handoff between Figma and frontend."
+  },
+  "collections": [
+    {
+      "name": "Color / Foundation",
+      "variables": [
+        { "name": "color/blue/50", "type": "COLOR", "value": "#F2F7FF", "cssVar": "--pmr-color-blue-50" },
+        { "name": "color/blue/100", "type": "COLOR", "value": "#E9F2FF", "cssVar": "--pmr-color-blue-100" },
+        { "name": "color/blue/200", "type": "COLOR", "value": "#DCEAFF", "cssVar": "--pmr-color-blue-200" },
+        { "name": "color/blue/300", "type": "COLOR", "value": "#CBE0FF", "cssVar": "--pmr-color-blue-300" },
+        { "name": "color/blue/500", "type": "COLOR", "value": "#409EFF", "cssVar": "--pmr-color-blue-500" },
+        { "name": "color/blue/600", "type": "COLOR", "value": "#2E81FF", "cssVar": "--pmr-color-blue-600" },
+        { "name": "color/blue/700", "type": "COLOR", "value": "#2467C6", "cssVar": "--pmr-color-blue-700" },
+        { "name": "color/blue/800", "type": "COLOR", "value": "#1F3F75", "cssVar": "--pmr-color-blue-800" },
+
+        { "name": "color/brand/100", "type": "COLOR", "value": "#EEF2FF", "cssVar": "--pmr-color-brand-100" },
+        { "name": "color/brand/500", "type": "COLOR", "value": "#667EEA", "cssVar": "--pmr-color-brand-500" },
+        { "name": "color/brand/700", "type": "COLOR", "value": "#4F46E5", "cssVar": "--pmr-color-brand-700" },
+
+        { "name": "color/neutral/0", "type": "COLOR", "value": "#FFFFFF", "cssVar": "--pmr-color-neutral-0" },
+        { "name": "color/neutral/50", "type": "COLOR", "value": "#F9FAFB", "cssVar": "--pmr-color-neutral-50" },
+        { "name": "color/neutral/100", "type": "COLOR", "value": "#F8FAFC", "cssVar": "--pmr-color-neutral-100" },
+        { "name": "color/neutral/200", "type": "COLOR", "value": "#F3F4F6", "cssVar": "--pmr-color-neutral-200" },
+        { "name": "color/neutral/300", "type": "COLOR", "value": "#E5E7EB", "cssVar": "--pmr-color-neutral-300" },
+        { "name": "color/neutral/400", "type": "COLOR", "value": "#9CA3AF", "cssVar": "--pmr-color-neutral-400" },
+        { "name": "color/neutral/500", "type": "COLOR", "value": "#6B7280", "cssVar": "--pmr-color-neutral-500" },
+        { "name": "color/neutral/600", "type": "COLOR", "value": "#4B5563", "cssVar": "--pmr-color-neutral-600" },
+        { "name": "color/neutral/700", "type": "COLOR", "value": "#374151", "cssVar": "--pmr-color-neutral-700" },
+        { "name": "color/neutral/800", "type": "COLOR", "value": "#1F2937", "cssVar": "--pmr-color-neutral-800" },
+        { "name": "color/neutral/900", "type": "COLOR", "value": "#0F172A", "cssVar": "--pmr-color-neutral-900" },
+
+        { "name": "color/success/500", "type": "COLOR", "value": "#48BB78", "cssVar": "--pmr-color-success-500" },
+        { "name": "color/success/50", "type": "COLOR", "value": "#F0FFF4", "cssVar": "--pmr-color-success-50" },
+        { "name": "color/warning/500", "type": "COLOR", "value": "#F59E0B", "cssVar": "--pmr-color-warning-500" },
+        { "name": "color/danger/500", "type": "COLOR", "value": "#E74C3C", "cssVar": "--pmr-color-danger-500" },
+        { "name": "color/danger/50", "type": "COLOR", "value": "#FEE2E2", "cssVar": "--pmr-color-danger-50" },
+        { "name": "color/info/500", "type": "COLOR", "value": "#606266", "cssVar": "--pmr-color-info-500" }
+      ]
+    },
+    {
+      "name": "Color / Semantic",
+      "variables": [
+        { "name": "color/bg/page", "type": "COLOR", "value": "{color/blue/50}", "cssVar": "--pmr-color-bg-page" },
+        { "name": "color/bg/card", "type": "COLOR", "value": "{color/neutral/0}", "cssVar": "--pmr-color-bg-card" },
+        { "name": "color/bg/soft", "type": "COLOR", "value": "#C0C0C03F", "cssVar": "--pmr-color-bg-soft" },
+        { "name": "color/bg/overlay", "type": "COLOR", "value": "#00000080", "cssVar": "--pmr-color-bg-overlay" },
+        { "name": "color/bg/modal", "type": "COLOR", "value": "#00000026", "cssVar": "--pmr-color-bg-modal" },
+
+        { "name": "color/text/primary", "type": "COLOR", "value": "#333333", "cssVar": "--pmr-color-text-primary" },
+        { "name": "color/text/secondary", "type": "COLOR", "value": "#666666", "cssVar": "--pmr-color-text-secondary" },
+        { "name": "color/text/disabled", "type": "COLOR", "value": "#999999", "cssVar": "--pmr-color-text-disabled" },
+
+        { "name": "color/border/default", "type": "COLOR", "value": "{color/blue/200}", "cssVar": "--pmr-color-border-default" },
+        { "name": "color/action/primary", "type": "COLOR", "value": "{color/brand/500}", "cssVar": "--pmr-color-action-primary" },
+        { "name": "color/action/primary-light", "type": "COLOR", "value": "{color/brand/100}", "cssVar": "--pmr-color-action-primary-light" },
+        { "name": "color/action/primary-pressed", "type": "COLOR", "value": "{color/brand/700}", "cssVar": "--pmr-color-action-primary-pressed" },
+        { "name": "color/action/danger", "type": "COLOR", "value": "{color/danger/500}", "cssVar": "--pmr-color-action-danger" }
+      ]
+    },
+    {
+      "name": "Typography",
+      "variables": [
+        { "name": "font/family/ui", "type": "STRING", "value": "SF Pro Display, PingFang SC, Helvetica Neue, Arial, sans-serif", "cssVar": "--pmr-font-family-ui" },
+        { "name": "font/size/caption", "type": "NUMBER", "value": 12, "unit": "px", "cssVar": "--pmr-font-size-caption" },
+        { "name": "font/size/body-s", "type": "NUMBER", "value": 13, "unit": "px", "cssVar": "--pmr-font-size-body-s" },
+        { "name": "font/size/body-m", "type": "NUMBER", "value": 14, "unit": "px", "cssVar": "--pmr-font-size-body-m" },
+        { "name": "font/size/title", "type": "NUMBER", "value": 18, "unit": "px", "cssVar": "--pmr-font-size-title" },
+        { "name": "font/weight/regular", "type": "NUMBER", "value": 400, "cssVar": "--pmr-font-weight-regular" },
+        { "name": "font/weight/medium", "type": "NUMBER", "value": 500, "cssVar": "--pmr-font-weight-medium" },
+        { "name": "font/weight/semibold", "type": "NUMBER", "value": 600, "cssVar": "--pmr-font-weight-semibold" },
+        { "name": "font/weight/bold", "type": "NUMBER", "value": 700, "cssVar": "--pmr-font-weight-bold" }
+      ]
+    },
+    {
+      "name": "Spacing and Radius",
+      "variables": [
+        { "name": "space/1", "type": "NUMBER", "value": 4, "unit": "px", "cssVar": "--pmr-space-1" },
+        { "name": "space/2", "type": "NUMBER", "value": 8, "unit": "px", "cssVar": "--pmr-space-2" },
+        { "name": "space/3", "type": "NUMBER", "value": 12, "unit": "px", "cssVar": "--pmr-space-3" },
+        { "name": "space/4", "type": "NUMBER", "value": 16, "unit": "px", "cssVar": "--pmr-space-4" },
+        { "name": "space/5", "type": "NUMBER", "value": 20, "unit": "px", "cssVar": "--pmr-space-5" },
+        { "name": "space/6", "type": "NUMBER", "value": 24, "unit": "px", "cssVar": "--pmr-space-6" },
+        { "name": "space/8", "type": "NUMBER", "value": 32, "unit": "px", "cssVar": "--pmr-space-8" },
+        { "name": "space/10", "type": "NUMBER", "value": 40, "unit": "px", "cssVar": "--pmr-space-10" },
+        { "name": "space/12", "type": "NUMBER", "value": 48, "unit": "px", "cssVar": "--pmr-space-12" },
+
+        { "name": "radius/sm", "type": "NUMBER", "value": 6, "unit": "px", "cssVar": "--pmr-radius-sm" },
+        { "name": "radius/md", "type": "NUMBER", "value": 8, "unit": "px", "cssVar": "--pmr-radius-md" },
+        { "name": "radius/lg", "type": "NUMBER", "value": 10, "unit": "px", "cssVar": "--pmr-radius-lg" },
+        { "name": "radius/xl", "type": "NUMBER", "value": 12, "unit": "px", "cssVar": "--pmr-radius-xl" },
+        { "name": "radius/2xl", "type": "NUMBER", "value": 14, "unit": "px", "cssVar": "--pmr-radius-2xl" },
+        { "name": "radius/3xl", "type": "NUMBER", "value": 18, "unit": "px", "cssVar": "--pmr-radius-3xl" }
+      ]
+    },
+    {
+      "name": "Shadow and Motion",
+      "variables": [
+        { "name": "shadow/sm", "type": "STRING", "value": "0 2px 8px rgba(0, 0, 0, 0.1)", "cssVar": "--pmr-shadow-sm" },
+        { "name": "shadow/md", "type": "STRING", "value": "0 2px 6px rgba(0, 0, 0, 0.15)", "cssVar": "--pmr-shadow-md" },
+        { "name": "shadow/lg", "type": "STRING", "value": "0 10px 30px rgba(0, 0, 0, 0.35)", "cssVar": "--pmr-shadow-lg" },
+        { "name": "shadow/xl", "type": "STRING", "value": "0 10px 30px rgba(0, 0, 0, 0.3)", "cssVar": "--pmr-shadow-xl" },
+        { "name": "duration/fast", "type": "NUMBER", "value": 150, "unit": "ms", "cssVar": "--pmr-motion-duration-fast" },
+        { "name": "duration/normal", "type": "NUMBER", "value": 220, "unit": "ms", "cssVar": "--pmr-motion-duration-normal" },
+        { "name": "duration/slow", "type": "NUMBER", "value": 300, "unit": "ms", "cssVar": "--pmr-motion-duration-slow" },
+        { "name": "easing/standard", "type": "STRING", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "cssVar": "--pmr-motion-ease-standard" }
+      ]
+    }
+  ],
+  "legacyAliases": [
+    { "legacyVar": "--primary-color", "mapsTo": "--pmr-color-action-primary" },
+    { "legacyVar": "--primary-light", "mapsTo": "--pmr-color-action-primary-light" },
+    { "legacyVar": "--primary-dark", "mapsTo": "--pmr-color-action-primary-pressed" },
+    { "legacyVar": "--white", "mapsTo": "--pmr-color-neutral-0" },
+    { "legacyVar": "--gray-50", "mapsTo": "--pmr-color-neutral-50" },
+    { "legacyVar": "--gray-100", "mapsTo": "--pmr-color-neutral-100" },
+    { "legacyVar": "--gray-200", "mapsTo": "--pmr-color-neutral-200" },
+    { "legacyVar": "--gray-300", "mapsTo": "--pmr-color-neutral-300" },
+    { "legacyVar": "--gray-400", "mapsTo": "--pmr-color-neutral-400" },
+    { "legacyVar": "--gray-500", "mapsTo": "--pmr-color-neutral-500" },
+    { "legacyVar": "--gray-600", "mapsTo": "--pmr-color-neutral-600" },
+    { "legacyVar": "--gray-700", "mapsTo": "--pmr-color-neutral-700" },
+    { "legacyVar": "--gray-800", "mapsTo": "--pmr-color-neutral-800" },
+    { "legacyVar": "--text-primary", "mapsTo": "--pmr-color-text-primary" },
+    { "legacyVar": "--text-secondary", "mapsTo": "--pmr-color-text-secondary" },
+    { "legacyVar": "--text-disabled", "mapsTo": "--pmr-color-text-disabled" },
+    { "legacyVar": "--success-color", "mapsTo": "--pmr-color-success-500" },
+    { "legacyVar": "--success-light", "mapsTo": "--pmr-color-success-50" },
+    { "legacyVar": "--warning-color", "mapsTo": "--pmr-color-warning-500" },
+    { "legacyVar": "--error-color", "mapsTo": "--pmr-color-danger-500" },
+    { "legacyVar": "--error-light", "mapsTo": "--pmr-color-danger-50" },
+    { "legacyVar": "--info-color", "mapsTo": "--pmr-color-info-500" },
+    { "legacyVar": "--bg-primary", "mapsTo": "--pmr-color-bg-soft" },
+    { "legacyVar": "--bg-overlay", "mapsTo": "--pmr-color-bg-overlay" },
+    { "legacyVar": "--bg-modal", "mapsTo": "--pmr-color-bg-modal" },
+    { "legacyVar": "--shadow-sm", "mapsTo": "--pmr-shadow-sm" },
+    { "legacyVar": "--shadow-md", "mapsTo": "--pmr-shadow-md" },
+    { "legacyVar": "--shadow-lg", "mapsTo": "--pmr-shadow-lg" },
+    { "legacyVar": "--shadow-xl", "mapsTo": "--pmr-shadow-xl" }
+  ]
+}

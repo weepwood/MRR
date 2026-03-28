@@ -1,43 +1,110 @@
-:root {
-    /* 主要颜色 */
-    --primary-color: #667eea;
-    --primary-light: #eef2ff;
-    --primary-dark: #1f2937;
+@import './tokens.css';
 
-    /* 中性色 */
-    --white: #ffffff;
-    --gray-50: #f9fafb;
-    --gray-100: #f8fafc;
-    --gray-200: #f3f4f6;
-    --gray-300: #e5e7eb;
-    --gray-400: #9ca3af;
-    --gray-500: #6b7280;
-    --gray-600: #4b5563;
-    --gray-700: #374151;
-    --gray-800: #1f2937;
-    --black: #000000;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-    /* 文字颜色 */
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --text-disabled: #999999;
+html,
+body,
+#app {
+  min-height: 100%;
+}
 
-    /* 状态颜色 */
-    --success-color: #48bb78;
-    --success-light: #f0fff4;
-    --warning-color: #f59e0b;
-    --error-color: #e74c3c;
-    --error-light: #fee2e2;
-    --info-color: #606266;
+html {
+  scroll-behavior: smooth;
+}
 
-    /* 背景色 */
-    --bg-primary: #c0c0c03f;
-    --bg-overlay: rgba(0, 0, 0, 0.5);
-    --bg-modal: rgba(0, 0, 0, 0.15);
+body {
+  margin: 0;
+  font-family: var(--pmr-font-family-ui);
+  line-height: 1.55;
+  color: var(--pmr-color-text-primary);
+  background: var(--pmr-gradient-page);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
 
-    /* 阴影 */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.35);
-    --shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.3);
+a {
+  color: inherit;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  background: rgba(43, 90, 173, 0.28);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 74, 143, 0.38);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(43, 90, 173, 0.35) transparent;
+}
+
+.pmr-fade-up {
+  animation: pmr-fade-up 420ms var(--pmr-motion-ease-standard) both;
+}
+
+@keyframes pmr-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.el-card {
+  border-radius: var(--pmr-radius-3xl);
+  border: 1px solid var(--pmr-color-border-default);
+  background: var(--pmr-color-bg-glass);
+  box-shadow: var(--pmr-shadow-surface-md);
+  backdrop-filter: blur(10px);
+}
+
+.el-button {
+  font-weight: var(--pmr-font-weight-medium);
+}
+
+.el-button--primary {
+  border: none;
+  background: var(--pmr-gradient-brand);
+  box-shadow: var(--pmr-shadow-brand);
+}
+
+.el-button--primary:hover {
+  transform: translateY(-1px);
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: var(--pmr-radius-xl);
+}
+
+.el-table {
+  border-radius: var(--pmr-radius-2xl);
+  overflow: hidden;
+}
+
+.el-dialog {
+  border-radius: var(--pmr-radius-3xl);
 }

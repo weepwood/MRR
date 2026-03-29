@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="admin-dashboard">
     <aside class="admin-sidebar">
       <div class="brand-block">

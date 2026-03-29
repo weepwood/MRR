@@ -19,7 +19,9 @@
             </div>
             <div class="content">
               <div class="label">总记录数</div>
-              <div class="value">{{ formatNumber(summaryData.total?.totalRecords) }}</div>
+              <div class="value">
+                <GsapCounter :value="summaryData.total?.totalRecords || 0" />
+              </div>
             </div>
           </div>
 
@@ -30,7 +32,9 @@
             </div>
             <div class="content">
               <div class="label">项目期间总页数</div>
-              <div class="value">{{ formatNumber(summaryData.total?.totalPages) }}</div>
+              <div class="value">
+                <GsapCounter :value="summaryData.total?.totalPages || 0" />
+              </div>
             </div>
           </div>
 
@@ -44,7 +48,9 @@
             <div class="content">
               <div class="label">项目期间扫描病案数</div>
               <!-- 过滤掉 null 值后计算唯一病案号数量 -->
-              <div class="value">{{ formatNumber(summaryData.uniqueBAHCount) }}</div>
+              <div class="value">
+                <GsapCounter :value="summaryData.uniqueBAHCount || 0" />
+              </div>
             </div>
           </div>
 
@@ -115,7 +121,7 @@
                   fill="url(#gradientBar)"
                   rx="4"
                   ry="4"
-                  class="bar-item"
+                  class="bar-item pmr-svg-bar"
                 >
                   <title>{{ formatDate(item.date) }}: {{ item.recordCount }} 条记录</title>
                 </rect>
@@ -142,6 +148,8 @@
                   stroke-width="3"
                   stroke-linecap="round"
                   stroke-linejoin="round"
+                  class="cumulative-line-path"
+                  filter="url(#glow)"
                 />
 
                 <!-- 数据点 -->
@@ -174,16 +182,20 @@
                 </text>
               </g>
 
-              <!-- 渐变定义 -->
+              <!-- 渐变与滤镜定义 -->
               <defs>
                 <linearGradient id="gradientBar" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" style="stop-color:#0071e3;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#00c6fb;stop-opacity:1" />
+                  <stop offset="0%" style="stop-color:#00c6fb;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#0071e3;stop-opacity:1" />
                 </linearGradient>
                 <linearGradient id="gradientCumulative" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" style="stop-color:#ff2d55;stop-opacity:1" />
                   <stop offset="100%" style="stop-color:#ff6b8a;stop-opacity:1" />
                 </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
               </defs>
             </svg>
           </div>
@@ -326,7 +338,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
+import { ref, onMounted, computed, nextTick, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { 
   DataAnalysis, 
@@ -341,6 +353,9 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { getStatisticsSummary, getStatisticsDateSummary, getDashboardData, getStatisticsList } from '@/utils/api'
+import GsapCounter from '@/components/shared/GsapCounter.vue'
+import { animateStaggeredEntrance } from '@/utils/animations'
+import gsap from 'gsap'
 
 const loading = ref(false)
 const chartContainerRef = ref(null)
@@ -796,6 +811,55 @@ const computeTableIndex = (index) => {
   return (currentPage.value - 1) * pageSize.value + index + 1
 }
 
+// GSAP Animations
+const initStatisticsAnimations = async () => {
+  await nextTick()
+  
+  // 1. Info Cards Staggered entrance
+  animateStaggeredEntrance('.info-card', 0.1)
+}
+
+const animateChart = async () => {
+  await nextTick()
+  
+  // 1. Animate Bars (Grow effect)
+  const bars = document.querySelectorAll('.pmr-svg-bar')
+  if (bars.length > 0) {
+    gsap.from(bars, {
+      attr: { height: 0, y: paddingTop + chartHeight },
+      duration: 0.6,
+      stagger: 0.01,
+      ease: 'power3.out',
+      clearProps: 'all'
+    })
+  }
+  
+  // 2. Animate Cumulative Line (Draw effect)
+  const line = document.querySelector('.cumulative-line-path')
+  if (line) {
+    const length = 5000 // Approximate length for DRAW effect
+    gsap.fromTo(line, 
+      { strokeDasharray: length, strokeDashoffset: length },
+      { strokeDashoffset: 0, duration: 2.5, ease: 'power2.inOut' }
+    )
+  }
+}
+
+onMounted(() => {
+  initStatisticsAnimations()
+})
+
+// Trigger chart animation when data loads or visibility changes
+watch(() => sortedDateData.value, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    animateChart()
+  }
+}, { immediate: true })
+
+watch(showLineSeries, (newVal) => {
+  if (newVal) animateChart()
+})
+
 // 加载统计数据
 const loadSummary = async () => {
   try {
@@ -948,19 +1012,19 @@ onUnmounted(() => {
 }
 
 .info-card.total-records::before {
-  background: linear-gradient(90deg, #0071e3, #005bb5);
+  background: linear-gradient(90deg, #0071e3, #00c6fb);
 }
 
 .info-card.total-pages::before {
-  background: linear-gradient(90deg, #ff2d55, #d41a4a);
+  background: linear-gradient(90deg, #ff2d55, #ff6b8a);
 }
 
 .info-card.unique-bah::before {
-  background: linear-gradient(90deg, #34c759, #28a745);
+  background: linear-gradient(90deg, #34c759, #30d158);
 }
 
 .info-card.overview::before {
-  background: linear-gradient(90deg, #ff9500, #ff7f00);
+  background: linear-gradient(90deg, #ff9500, #ffcc00);
 }
 
 .info-card .icon {
@@ -975,23 +1039,27 @@ onUnmounted(() => {
 }
 
 .info-card.total-records .icon {
-  background: linear-gradient(135deg, #0071e3 0%, #005bb5 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.1) 0%, rgba(0, 198, 251, 0.1) 100%);
+  color: #0071e3;
+  border: 1px solid rgba(0, 113, 227, 0.15);
 }
 
 .info-card.total-pages .icon {
-  background: linear-gradient(135deg, #ff2d55 0%, #d41a4a 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.1) 0%, rgba(255, 107, 138, 0.1) 100%);
+  color: #ff2d55;
+  border: 1px solid rgba(255, 45, 85, 0.15);
 }
 
 .info-card.unique-bah .icon {
-  background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(48, 209, 88, 0.1) 100%);
+  color: #34c759;
+  border: 1px solid rgba(52, 199, 89, 0.15);
 }
 
 .info-card.overview .icon {
-  background: linear-gradient(135deg, #ff9500 0%, #ff7f00 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.1) 0%, rgba(255, 204, 0, 0.1) 100%);
+  color: #ff9500;
+  border: 1px solid rgba(255, 149, 0, 0.15);
 }
 
 .info-card .content {
@@ -1195,13 +1263,14 @@ onUnmounted(() => {
 }
 
 .chart-container::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #0071e3, #00c6fb);
-  border-radius: 4px;
-  opacity: 0.8;
+  background: rgba(0, 113, 227, 0.2);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 .chart-container::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #005bb5, #00a8e8);
+  background: rgba(0, 113, 227, 0.4);
 }
 
 .trend-chart {
@@ -1305,27 +1374,28 @@ onUnmounted(() => {
   max-width: 1320px;
   margin: 0 auto;
   overflow-x: auto;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
-  padding: 14px;
-  background: linear-gradient(180deg, #fcfdff 0%, #f7faff 100%);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  padding: 0;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
 .list-search-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 16px;
+  margin: 24px;
   align-items: center;
-  padding: 12px;
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 113, 227, 0.12);
+  padding: 16px;
+  background: #fbfbfd;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 :deep(.records-detail-table) {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
   --el-table-row-hover-bg-color: #f5faff;
 }
@@ -1335,10 +1405,13 @@ onUnmounted(() => {
 }
 
 :deep(.records-detail-table th.records-table-header-cell) {
-  background: #f4f8ff !important;
-  color: #0f172a;
-  font-weight: 600;
-  border-bottom: 1px solid #e6edf8;
+  background: transparent !important;
+  color: #86868b;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 :deep(.records-detail-table .el-table__row td) {
@@ -1360,14 +1433,16 @@ onUnmounted(() => {
 }
 
 .bah-code-link {
-  color: #005bb5;
+  color: #0071e3;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: rgba(0, 113, 227, 0.1);
-  border: 1px solid rgba(0, 113, 227, 0.18);
-  border-radius: 999px;
-  padding: 2px 10px;
+  background: rgba(0, 113, 227, 0.05);
+  border: 1px solid rgba(0, 113, 227, 0.1);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-family: 'SF Mono', 'Roboto Mono', monospace;
+  font-size: 13px;
 }
 
 .bah-code-link:hover {

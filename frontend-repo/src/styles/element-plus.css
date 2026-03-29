@@ -6,12 +6,12 @@
 :root {
   /* Brand Colors */
   --el-color-primary: var(--pmr-color-action-primary);
-  --el-color-primary-light-1: #447eff;
-  --el-color-primary-light-2: #598dff;
-  --el-color-primary-light-3: #6e9bff;
-  --el-color-primary-light-4: #83aaff;
-  --el-color-primary-light-5: #97b9ff;
-  --el-color-primary-light-7: #c1d5ff;
+  --el-color-primary-light-1: color-mix(in srgb, var(--el-color-primary), white 10%);
+  --el-color-primary-light-2: color-mix(in srgb, var(--el-color-primary), white 20%);
+  --el-color-primary-light-3: color-mix(in srgb, var(--el-color-primary), white 30%);
+  --el-color-primary-light-4: color-mix(in srgb, var(--el-color-primary), white 40%);
+  --el-color-primary-light-5: color-mix(in srgb, var(--el-color-primary), white 50%);
+  --el-color-primary-light-7: color-mix(in srgb, var(--el-color-primary), white 70%);
   --el-color-primary-light-8: var(--pmr-color-brand-100);
   --el-color-primary-light-9: var(--pmr-color-brand-50);
   --el-color-primary-dark-2: var(--pmr-color-brand-700);

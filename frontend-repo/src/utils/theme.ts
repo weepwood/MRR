@@ -13,16 +13,15 @@ export const applyTheme = (settings: Record<string, any>) => {
   const root = document.documentElement
 
   // Primary Action Color
+  // All variations (brand-50, 100, 700 and el-primary-light-*) are now 
+  // automatically derived in CSS via color-mix() based on this token.
   if (settings.primaryColor) {
     root.style.setProperty('--pmr-color-action-primary', settings.primaryColor)
-    
-    // Auto-generate some variations if needed (or just let the bridge handle it)
-    // For Element Plus, we often need light/dark variations
-    // Here we'll just set the main one, as our element-plus.css bridge 
-    // is designed to follow this token.
   }
 
   // Border Radius
+  // Higher level radii are derived in CSS where possible, 
+  // but we still set the base and its immediate variations here for precision.
   if (settings.borderRadius !== undefined) {
     const radius = Number(settings.borderRadius)
     root.style.setProperty('--pmr-radius-xl', `${radius}px`)

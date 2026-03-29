@@ -17,10 +17,10 @@
   --pmr-color-blue-700: #2259c3;
   --pmr-color-blue-800: #1a3e82;
 
-  --pmr-color-brand-50: #f1f5ff;
-  --pmr-color-brand-100: #e2edff;
-  --pmr-color-brand-500: #2f6fff;
-  --pmr-color-brand-700: #1e54d6;
+  --pmr-color-brand-50: color-mix(in srgb, var(--pmr-color-action-primary), white 95%);
+  --pmr-color-brand-100: color-mix(in srgb, var(--pmr-color-action-primary), white 85%);
+  --pmr-color-brand-500: var(--pmr-color-action-primary);
+  --pmr-color-brand-700: color-mix(in srgb, var(--pmr-color-action-primary), black 20%);
   
   --pmr-color-accent-100: #def7f5;
   --pmr-color-accent-500: #14b8a6;

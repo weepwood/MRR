@@ -7,121 +7,8 @@
         <p class="pmr-page-subtitle">统一查看健康检查、Swagger、系统概览、冒烟测试和身份证加解密测试。</p>
       </div>
       <div class="pmr-toolbar-actions">
-
       </div>
     </section>
-
-  <el-card class="pmr-panel pmr-section" shadow="never">
-      <template #header>
-        <div class="pmr-panel-header">
-          <div>
-            <h3 class="pmr-panel-title">手动接口测试</h3>
-            <p class="pmr-panel-subtitle">直接调用后端 `/v1` 接口，适合排查单个问题。</p>
-          </div>
-          <span class="pmr-badge">Manual</span>
-        </div>
-      </template>
-
-      <el-form :model="manualRequest" class="manual-form" label-width="96px" @submit.prevent>
-        <el-row :gutter="16">
-          <el-col :xs="24" :md="8">
-            <el-form-item label="方法">
-              <el-select v-model="manualRequest.method" style="width: 100%;">
-                <el-option v-for="method in methods" :key="method" :label="method" :value="method" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :md="16">
-            <el-form-item label="路径">
-              <el-input v-model="manualRequest.path" placeholder="/system/health" clearable />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-form-item label="请求头">
-          <el-input v-model="manualRequest.headers" type="textarea" :rows="3"
-            placeholder='{"Accept":"application/json"}' />
-        </el-form-item>
-
-        <el-form-item label="请求体">
-          <el-input v-model="manualRequest.body" type="textarea" :rows="5" placeholder='{"keyword":"example"}' />
-        </el-form-item>
-
-        <div class="pmr-actions-row">
-          <el-button type="primary" :loading="runningManualRequest" @click="sendManualRequest">发送请求</el-button>
-          <el-button @click="resetManualRequest">重置</el-button>
-        </div>
-      </el-form>
-    </el-card>
-
-    <el-card class="pmr-panel pmr-section" shadow="never">
-
-
-      <el-card class="pmr-panel pmr-section" shadow="never">
-        <template #header>
-
-          <div class="pmr-panel-header">
-            <div>
-              <h3 class="pmr-panel-title">冒烟测试结果</h3>
-             <div class="pmr-toolbar-actions">
-                <el-button type="primary" :loading="runningSmokeSuite" @click="runSmokeSuite">
-                  运行烟测
-                </el-button>
-                <el-button @click="clearResults">清空结果</el-button>
-              </div>
-              <p class="pmr-panel-subtitle">一次性检查关键接口可用性，并记录耗时和响应摘要。</p>
-            </div>
-            <span class="pmr-badge">{{ smokeResults.length }} 项</span>
-          </div>
-        </template>
-
-        <el-table :data="smokeResults" border stripe empty-text="暂无冒烟结果">
-          <el-table-column prop="name" label="测试项" min-width="160" />
-          <el-table-column prop="method" label="方法" width="96">
-            <template #default="{ row }">
-              <el-tag :type="methodTone(row.method)">{{ row.method }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="status" label="状态" width="110">
-            <template #default="{ row }">
-              <el-tag :type="row.ok ? 'success' : 'danger'">{{ row.status }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="durationMs" label="耗时" width="110">
-            <template #default="{ row }">{{ row.durationMs }}ms</template>
-          </el-table-column>
-          <el-table-column prop="summary" label="摘要" min-width="260" show-overflow-tooltip />
-          <el-table-column label="操作" width="120" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" @click="openResult(row)">查看</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
-
-      <el-card class="pmr-panel pmr-section" shadow="never">
-        <template #header>
-          <div class="pmr-panel-header">
-            <div>
-              <h3 class="pmr-panel-title">响应详情</h3>
-              <p class="pmr-panel-subtitle">展示最近一次手动请求或冒烟测试的返回内容。</p>
-            </div>
-          </div>
-        </template>
-
-        <div v-if="selectedResult" class="response-shell">
-          <div class="response-meta">
-            <span>接口：{{ selectedResult.path }}</span>
-            <span>状态：{{ selectedResult.status }}</span>
-            <span>耗时：{{ selectedResult.durationMs }}ms</span>
-          </div>
-          <pre class="response-body">{{ selectedResult.preview }}</pre>
-        </div>
-        <el-empty v-else description="请选择一条结果查看详情" />
-      </el-card>
-    </el-card>
-
     <el-card class="pmr-panel pmr-section" shadow="never">
       <template #header>
         <div class="pmr-panel-header">
@@ -260,6 +147,7 @@ const runningManualRequest = ref(false)
 const smokeResults = ref([])
 const selectedResult = ref(null)
 const lastRunAt = ref('')
+const activeTab = ref('manual')
 
 const manualRequest = reactive({
   method: 'GET',
@@ -490,56 +378,75 @@ const copyToClipboard = async (text) => {
   color: var(--pmr-color-text-secondary);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-card {
-  padding: 20px;
-}
-
-.summary-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--pmr-color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.summary-value {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--pmr-color-text-primary);
-  word-break: break-all;
-}
-
-.summary-value.success {
-  color: var(--pmr-color-success-500);
-}
-
-.summary-value.danger {
-  color: var(--pmr-color-danger-500);
-}
-
-.summary-value.neutral {
-  color: var(--pmr-color-text-primary);
-}
-
-.summary-url {
-  font-size: 16px;
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--pmr-color-text-secondary);
-}
-
 .pmr-section {
   margin-top: 20px;
+}
+
+.test-lab-layout {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.layout-main {
+  min-width: 0;
+}
+
+.layout-side {
+  min-width: 0;
+}
+
+/* Tab Styling Overrides */
+.testing-tabs {
+  padding: 0;
+  overflow: hidden;
+}
+
+.testing-tabs :deep(.el-tabs__header) {
+  margin: 0;
+  padding: 0 20px;
+  background: var(--pmr-color-neutral-50);
+  border-bottom: 1px solid var(--pmr-color-border-default);
+}
+
+.testing-tabs :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
+.testing-tabs :deep(.el-tabs__item) {
+  height: 52px;
+  font-weight: 600;
+  color: var(--pmr-color-text-secondary);
+}
+
+.testing-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--pmr-color-action-primary);
+}
+
+.tab-content-wrapper {
+  padding: 0;
+}
+
+.pane-inner-header,
+.inspector-header {
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--pmr-color-border-low);
+  background: white;
+}
+
+.pane-body {
+  padding: 24px;
+}
+
+.sticky-info {
+  position: sticky;
+  top: 20px;
 }
 
 .manual-form {
@@ -547,30 +454,60 @@ const copyToClipboard = async (text) => {
   gap: 4px;
 }
 
+.pmr-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--pmr-color-border-default);
+}
+
 .response-shell {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .response-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: 13px;
+}
+
+.meta-item .label {
+  font-weight: 700;
   color: var(--pmr-color-text-secondary);
+  width: 42px;
+  flex-shrink: 0;
+}
+
+.meta-item .value {
+  color: var(--pmr-color-text-primary);
+  font-family: var(--pmr-font-family-mono);
+  word-break: break-all;
 }
 
 .response-body {
   margin: 0;
-  padding: 16px;
+  padding: 20px;
   border-radius: var(--pmr-radius-xl);
   background: #0f172a;
   color: #e2e8f0;
   font-family: var(--pmr-font-family-mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+  max-height: calc(100vh - 460px);
+  min-height: 400px;
+  overflow-y: auto;
 }
 
 .idcard-grid {
@@ -636,19 +573,18 @@ const copyToClipboard = async (text) => {
   color: var(--pmr-color-danger-500);
 }
 
-@media (max-width: 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 1400px) {
+  .test-lab-layout {
+    grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 1180px) {
   .idcard-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

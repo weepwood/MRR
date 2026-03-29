@@ -59,6 +59,101 @@ export const animateSvgPath = (element: SVGPathElement | SVGPolylineElement, dur
 }
 
 /**
+ * Elegant Sidebar Reveal - wide-arc glide.
+ */
+export const revealSidebar = (element: string | Element) => {
+  return gsap.from(element, {
+    x: -256,
+    opacity: 0,
+    duration: 1.4,
+    ease: 'expo.out'
+  })
+}
+
+/**
+ * Elegant Hero Reveal - soft scale-fade.
+ */
+export const revealHero = (element: string | Element) => {
+  return gsap.from(element, {
+    y: 40,
+    scale: 0.98,
+    opacity: 0,
+    duration: 1.2,
+    ease: 'power3.out',
+    delay: 0.2
+  })
+}
+
+/**
+ * Wave-staggered Grid Entrance.
+ */
+export const revealStaggeredGrid = (elements: string | Element[], delay = 0.4) => {
+  return gsap.from(elements, {
+    y: 30,
+    opacity: 0,
+    duration: 1,
+    stagger: {
+      amount: 0.4,
+      from: 'start',
+      grid: 'auto'
+    },
+    ease: 'power2.out',
+    delay
+  })
+}
+
+/**
+ * Ultra-subtle Magnetic Hover Interaction.
+ */
+export const applyMagneticEffect = (element: Element, strength = 0.05) => {
+  const onMouseMove = (e: MouseEvent) => {
+    const rect = element.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const deltaX = (e.clientX - centerX) * strength
+    const deltaY = (e.clientY - centerY) * strength
+
+    gsap.to(element, {
+      x: deltaX,
+      y: deltaY,
+      rotateX: -deltaY * 0.5,
+      rotateY: deltaX * 0.5,
+      duration: 0.6,
+      ease: 'power2.out'
+    })
+  }
+
+  const onMouseLeave = () => {
+    gsap.to(element, {
+      x: 0,
+      y: 0,
+      rotateX: 0,
+      rotateY: 0,
+      duration: 0.8,
+      ease: 'elastic.out(1, 0.5)'
+    })
+  }
+
+  element.addEventListener('mousemove', onMouseMove as any)
+  element.addEventListener('mouseleave', onMouseLeave as any)
+
+  return () => {
+    element.removeEventListener('mousemove', onMouseMove as any)
+    element.removeEventListener('mouseleave', onMouseLeave as any)
+  }
+}
+
+/**
+ * Fluid Page Transition.
+ */
+export const animatePageTransition = (element: string | Element) => {
+  return gsap.fromTo(element, 
+    { opacity: 0, x: 10 },
+    { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', clearProps: 'all' }
+  )
+}
+
+/**
  * Counter animation for numbers.
  */
 export const animateCounter = (element: HTMLElement, endValue: number, duration = 1.6) => {

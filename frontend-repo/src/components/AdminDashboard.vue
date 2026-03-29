@@ -1,6 +1,6 @@
 <template>
   <div class="admin-dashboard">
-    <aside class="admin-sidebar">
+    <aside ref="sidebarRef" class="admin-sidebar">
       <div class="brand-block">
         <p class="brand-eyebrow">MRR</p>
         <h1 class="brand-title">病案管理系统</h1>
@@ -99,9 +99,9 @@
 
     <main class="admin-main">
 
-      <div class="content-shell pmr-fade-up">
+      <div ref="contentShellRef" class="content-shell pmr-fade-up">
         <template v-if="showDashboard">
-          <section class="hero-block pmr-hover-lift">
+          <section ref="heroRef" class="hero-block pmr-hover-lift">
             <div class="hero-copy">
               <p class="eyebrow">Clinical Sanctuary</p>
               <h2>欢迎进入后台管理中心</h2>
@@ -123,7 +123,7 @@
             </div>
           </section>
 
-          <section class="kpi-grid pmr-stagger">
+          <section ref="kpiGridRef" class="kpi-grid pmr-stagger">
             <article
               v-for="(card, index) in dashboardCards"
               :key="card.label"
@@ -143,11 +143,11 @@
             </article>
           </section>
 
-          <section class="feature-grid pmr-stagger">
+          <section ref="featureGridRef" class="feature-grid pmr-stagger">
             <article
               v-for="(item, index) in featureCards"
               :key="item.title"
-              class="feature-card pmr-stagger-item pmr-hover-lift"
+              class="feature-card pmr-stagger-item pmr-hover-lift magnetic-card"
               :style="{ '--pmr-stagger-index': index }"
               @click="handleFeatureClick(item)"
             >
@@ -171,7 +171,7 @@
   </div>
 </template>
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   DataBoard,
@@ -187,6 +187,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
+import { animatePageTransition, applyMagneticEffect, revealHero, revealSidebar, revealStaggeredGrid } from '@/utils/animations'
 
 const router = useRouter()
 const route = useRoute()
@@ -426,6 +427,54 @@ const handleMenuSelect = (index) => {
     router.push(target)
   }
 }
+
+const sidebarRef = ref(null)
+const contentShellRef = ref(null)
+const heroRef = ref(null)
+const kpiGridRef = ref(null)
+const featureGridRef = ref(null)
+
+// 初始化动画
+onMounted(() => {
+  // 1. 侧边栏优雅滑入
+  revealSidebar(sidebarRef.value)
+
+  // 2. 初始仪表盘揭晓
+  if (showDashboard.value) {
+    nextTick(() => {
+      revealHero(heroRef.value)
+      
+      const kpiItems = kpiGridRef.value?.querySelectorAll('.kpi-card')
+      if (kpiItems) revealStaggeredGrid(kpiItems, 0.5)
+      
+      const featureItems = featureGridRef.value?.querySelectorAll('.feature-card')
+      if (featureItems) revealStaggeredGrid(featureItems, 0.7)
+
+      // 3. 应用磁吸交互
+      featureItems?.forEach(item => applyMagneticEffect(item, 0.04))
+    })
+  } else {
+    // 处理路由子页面进入动画
+    nextTick(() => {
+      animatePageTransition(contentShellRef.value)
+    })
+  }
+})
+
+// 监听路由变化，触发现代感的切页效果
+watch(() => route.path, () => {
+  nextTick(() => {
+    animatePageTransition(contentShellRef.value)
+    
+    // 如果回到仪表盘，重新绑定磁吸
+    if (showDashboard.value) {
+      setTimeout(() => {
+        const featureItems = featureGridRef.value?.querySelectorAll('.feature-card')
+        featureItems?.forEach(item => applyMagneticEffect(item, 0.04))
+      }, 100)
+    }
+  })
+})
 
 function openDocs() {
   window.open('/docs/index.html', '_blank', 'noopener,noreferrer')

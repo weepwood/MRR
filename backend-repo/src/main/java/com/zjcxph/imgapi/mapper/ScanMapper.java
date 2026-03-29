@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.mapper;
 
-import com.zjcxph.imgapi.pojo.PathDO;
-import com.zjcxph.imgapi.pojo.Scan;
-import com.zjcxph.imgapi.pojo.ScanRequest;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.dto.req.ScanRequest;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;

@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.mapper;
 
-import com.zjcxph.imgapi.pojo.User;
+import com.zjcxph.imgapi.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 

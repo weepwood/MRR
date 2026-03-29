@@ -1,5 +1,8 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.entity;
 
+import lombok.Data;
+
+@Data
 public class Patient {
     private Integer id;
     // 身份证号

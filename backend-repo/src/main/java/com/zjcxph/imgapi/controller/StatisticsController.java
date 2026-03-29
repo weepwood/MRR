@@ -1,9 +1,9 @@
 package com.zjcxph.imgapi.controller;
 
-import com.zjcxph.imgapi.pojo.BAHStatisticsDTO;
-import com.zjcxph.imgapi.pojo.DateStatisticsDTO;
-import com.zjcxph.imgapi.pojo.Result;
-import com.zjcxph.imgapi.pojo.Statistics;
+import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
+import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
+import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

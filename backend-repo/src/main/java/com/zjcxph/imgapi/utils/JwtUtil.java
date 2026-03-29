@@ -3,7 +3,7 @@ package com.zjcxph.imgapi.utils;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.zjcxph.imgapi.pojo.AuthSession;
+import com.zjcxph.imgapi.common.AuthSession;
 
 import java.util.Date;
 import java.util.List;

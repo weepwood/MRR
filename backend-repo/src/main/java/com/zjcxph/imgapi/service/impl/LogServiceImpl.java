@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.mapper.LogMapper;
-import com.zjcxph.imgapi.pojo.Log;
+import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

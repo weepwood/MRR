@@ -1,28 +1,31 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.resp;
+
+import lombok.Data;
 
 /**
- * 病案统计 DTO
+ * 日期统计 DTO
  */
-public class BAHStatisticsDTO {
-    private String bah;           // 病案号
-    private Long recordCount;     // 记录数（有多少条记录）
+@Data
+public class DateStatisticsDTO {
+    private String date;          // 日期
+    private Long recordCount;     // 记录数
     private Long totalPages;      // 总页数
 
-    public BAHStatisticsDTO() {
+    public DateStatisticsDTO() {
     }
 
-    public BAHStatisticsDTO(String bah, Long recordCount, Long totalPages) {
-        this.bah = bah;
+    public DateStatisticsDTO(String date, Long recordCount, Long totalPages) {
+        this.date = date;
         this.recordCount = recordCount;
         this.totalPages = totalPages;
     }
 
-    public String getBah() {
-        return bah;
+    public String getDate() {
+        return date;
     }
 
-    public void setBah(String bah) {
-        this.bah = bah;
+    public void setDate(String date) {
+        this.date = date;
     }
 
     public Long getRecordCount() {

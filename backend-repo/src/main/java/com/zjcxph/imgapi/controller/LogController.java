@@ -1,9 +1,9 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.config.LogRetentionProperties;
-import com.zjcxph.imgapi.pojo.Log;
-import com.zjcxph.imgapi.pojo.LogRetentionCleanupResult;
-import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.entity.Log;
+import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
+import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.scheduler.LogRetentionCleaner;
 import com.zjcxph.imgapi.service.LogService;

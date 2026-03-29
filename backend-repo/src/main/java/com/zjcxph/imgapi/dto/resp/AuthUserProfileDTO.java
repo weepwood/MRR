@@ -1,9 +1,12 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.resp;
+
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Data
 public class AuthUserProfileDTO {
     private Long id;
     private String username;

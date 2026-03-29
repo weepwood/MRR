@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.pojo.BAHStatisticsDTO;
-import com.zjcxph.imgapi.pojo.DateStatisticsDTO;
-import com.zjcxph.imgapi.pojo.Statistics;
+import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
+import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
+import com.zjcxph.imgapi.entity.Statistics;
 
 import java.util.List;
 import java.util.Map;

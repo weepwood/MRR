@@ -1,0 +1,645 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.fusesource.jansi.internal.JansiLoader in an unnamed module (file:/D:/App/DevEnv/maven-3.9.9/lib/jansi-2.4.1.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/D:/App/DevEnv/maven-3.9.9/lib/guava-33.2.1-jre.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< com.zjcxph:imgapi >--------------------------
+[INFO] Building imageAPI 0.0.7-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ imgapi ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ imgapi ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 73 source files with javac [debug parameters release 21] to target\classes
+[INFO] -------------------------------------------------------------
+[WARNING] COMPILATION WARNING : 
+[INFO] -------------------------------------------------------------
+[WARNING] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[238,9] org.springframework.core.io 中的 org.springframework.core.io.PathResource 已过时, 且标记为待删除
+[WARNING] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[238,37] org.springframework.core.io 中的 org.springframework.core.io.PathResource 已过时, 且标记为待删除
+[INFO] 2 warnings 
+[INFO] -------------------------------------------------------------
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java:[12,13] 找不到符号
+  符号:   类 AuthSession
+  位置: 类 com.zjcxph.imgapi.dto.resp.LoginResponseDTO
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/entity/AuthUser.java:[32,5] com.fasterxml.jackson.annotation.JsonIgnore 不是可重复的批注接口
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/common/Result.java:[20,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/common/Result.java:[24,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[47,43] 找不到符号
+  符号:   方法 getPermissions()
+  位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[47,122] 找不到符号
+  符号:   方法 getPermissions()
+  位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[54,64] 找不到符号
+  符号:   方法 getUsername()
+  位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[71,45] 找不到符号
+  符号:   方法 getRoleCode()
+  位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[74,43] 找不到符号
+  符号:   方法 getPermissions()
+  位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[46,12] 找不到符号
+  符号:   方法 setClientIp(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[47,12] 找不到符号
+  符号:   方法 setRequestUri(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[48,12] 找不到符号
+  符号:   方法 setMethod(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[49,12] 找不到符号
+  符号:   方法 setUserAgent(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[50,12] 找不到符号
+  符号:   方法 setAccessTime(java.util.Date)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[51,12] 找不到符号
+  符号:   方法 setQueryString(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[52,12] 找不到符号
+  符号:   方法 setRequestBody(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[53,12] 找不到符号
+  符号:   方法 setResponseStatus(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[54,12] 找不到符号
+  符号:   方法 setExecuteTime(long)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[55,12] 找不到符号
+  符号:   方法 setReferer(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[94,35] 找不到符号
+  符号:   方法 getId()
+  位置: 类型为com.zjcxph.imgapi.dto.req.IdRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[111,31] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[112,31] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[113,31] 找不到符号
+  符号:   方法 getBRXH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[114,31] 找不到符号
+  符号:   方法 getBAH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[115,31] 找不到符号
+  符号:   方法 getFilename()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[116,18] 不兼容的类型: 推论变量 T 具有不兼容的上限
+    等式约束条件：java.lang.String
+    下限：java.lang.Object
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[196,66] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[196,91] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,25] 找不到符号
+  符号:   方法 getBrxh()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,47] 找不到符号
+  符号:   方法 getBah()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,69] 找不到符号
+  符号:   方法 getFilename()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[200,31] 找不到符号
+  符号:   方法 setImg_url(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO的变量 bAHDataResponseDTO
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[267,32] 找不到符号
+  符号:   方法 getBtype()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ImageRequest的变量 req
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[71,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[81,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[91,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[101,39] 找不到符号
+  符号:   方法 getMessage()
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 cleanupResult
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[218,28] 找不到符号
+  符号:   方法 getId()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[219,28] 找不到符号
+  符号:   方法 getClientIp()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[220,28] 找不到符号
+  符号:   方法 getRequestUri()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[221,28] 找不到符号
+  符号:   方法 getMethod()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[222,28] 找不到符号
+  符号:   方法 getUserAgent()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[223,45] 找不到符号
+  符号:   方法 getAccessTime()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[224,28] 找不到符号
+  符号:   方法 getQueryString()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[225,28] 找不到符号
+  符号:   方法 getRequestBody()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[226,28] 找不到符号
+  符号:   方法 getResponseStatus()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[227,28] 找不到符号
+  符号:   方法 getExecuteTime()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[228,28] 找不到符号
+  符号:   方法 getReferer()
+  位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[41,15] 找不到符号
+  符号:   方法 setEnabled(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[46,15] 找不到符号
+  符号:   方法 setRetentionDays(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[47,15] 找不到符号
+  符号:   方法 setBatchSize(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[48,15] 找不到符号
+  符号:   方法 setMaxBatchesPerRun(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[49,15] 找不到符号
+  符号:   方法 setExecutedAt(java.time.LocalDateTime)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[52,19] 找不到符号
+  符号:   方法 setSkipped(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[53,19] 找不到符号
+  符号:   方法 setSuccess(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[54,19] 找不到符号
+  符号:   方法 setMessage(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[59,19] 找不到符号
+  符号:   方法 setSkipped(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[60,19] 找不到符号
+  符号:   方法 setSuccess(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[61,19] 找不到符号
+  符号:   方法 setMessage(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[66,80] 找不到符号
+  符号:   方法 getExecutedAt()
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[67,15] 找不到符号
+  符号:   方法 setCutoff(java.time.LocalDateTime)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[82,19] 找不到符号
+  符号:   方法 setDeleted(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[83,19] 找不到符号
+  符号:   方法 setRemainingOlderThanCutoff(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[84,19] 找不到符号
+  符号:   方法 setBatches(int)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[85,19] 找不到符号
+  符号:   方法 setSuccess(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[87,23] 找不到符号
+  符号:   方法 setMessage(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[96,23] 找不到符号
+  符号:   方法 setMessage(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[101,41] 找不到符号
+  符号:   方法 getMessage()
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[111,19] 找不到符号
+  符号:   方法 setSuccess(boolean)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[112,19] 找不到符号
+  符号:   方法 setMessage(java.lang.String)
+  位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[57,45] 找不到符号
+  符号:   方法 getBah()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[69,20] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[68,20] 找不到符号
+  符号:   方法 getUploadFlag()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[66,20] 找不到符号
+  符号:   方法 getOpenerNo()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[65,20] 找不到符号
+  符号:   方法 getPages()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[64,20] 找不到符号
+  符号:   方法 getBtype()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[63,20] 找不到符号
+  符号:   方法 getFilename()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[62,20] 找不到符号
+  符号:   方法 getBah()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[61,20] 找不到符号
+  符号:   方法 getBrxh()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[74,46] 找不到符号
+  符号:   方法 getId()
+  位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 created
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[127,20] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[126,20] 找不到符号
+  符号:   方法 getUploadFlag()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[124,20] 找不到符号
+  符号:   方法 getOpenerNo()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[123,20] 找不到符号
+  符号:   方法 getPages()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[122,20] 找不到符号
+  符号:   方法 getBtype()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[121,20] 找不到符号
+  符号:   方法 getFilename()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[120,20] 找不到符号
+  符号:   方法 getBah()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[119,20] 找不到符号
+  符号:   方法 getBrxh()
+  位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[258,39] 找不到符号
+  符号:   方法 getIds()
+  位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[258,67] 找不到符号
+  符号:   方法 getIds()
+  位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[262,66] 找不到符号
+  符号:   方法 getIds()
+  位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[301,34] 找不到符号
+  符号:   方法 getBAH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[301,70] 找不到符号
+  符号:   方法 getBAH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[318,29] 找不到符号
+  符号:   方法 getFolder()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[319,27] 找不到符号
+  符号:   方法 getBRXH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[320,26] 找不到符号
+  符号:   方法 getBAH()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[321,31] 找不到符号
+  符号:   方法 getFilename()
+  位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[50,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[53,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[67,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+  原因: 无法推断类型变量 T
+    (实际参数列表和形式参数列表长度不同)
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.424 s
+[INFO] Finished at: 2026-03-29T15:23:20+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project imgapi: Compilation failure: Compilation failure: 
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java:[12,13] 找不到符号
+[ERROR]   符号:   类 AuthSession
+[ERROR]   位置: 类 com.zjcxph.imgapi.dto.resp.LoginResponseDTO
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/entity/AuthUser.java:[32,5] com.fasterxml.jackson.annotation.JsonIgnore 不是可重复的批注接口
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/common/Result.java:[20,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/common/Result.java:[24,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[47,43] 找不到符号
+[ERROR]   符号:   方法 getPermissions()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[47,122] 找不到符号
+[ERROR]   符号:   方法 getPermissions()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[54,64] 找不到符号
+[ERROR]   符号:   方法 getUsername()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[71,45] 找不到符号
+[ERROR]   符号:   方法 getRoleCode()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java:[74,43] 找不到符号
+[ERROR]   符号:   方法 getPermissions()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.common.AuthSession的变量 session
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[46,12] 找不到符号
+[ERROR]   符号:   方法 setClientIp(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[47,12] 找不到符号
+[ERROR]   符号:   方法 setRequestUri(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[48,12] 找不到符号
+[ERROR]   符号:   方法 setMethod(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[49,12] 找不到符号
+[ERROR]   符号:   方法 setUserAgent(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[50,12] 找不到符号
+[ERROR]   符号:   方法 setAccessTime(java.util.Date)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[51,12] 找不到符号
+[ERROR]   符号:   方法 setQueryString(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[52,12] 找不到符号
+[ERROR]   符号:   方法 setRequestBody(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[53,12] 找不到符号
+[ERROR]   符号:   方法 setResponseStatus(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[54,12] 找不到符号
+[ERROR]   符号:   方法 setExecuteTime(long)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java:[55,12] 找不到符号
+[ERROR]   符号:   方法 setReferer(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[94,35] 找不到符号
+[ERROR]   符号:   方法 getId()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.IdRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[111,31] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[112,31] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[113,31] 找不到符号
+[ERROR]   符号:   方法 getBRXH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[114,31] 找不到符号
+[ERROR]   符号:   方法 getBAH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[115,31] 找不到符号
+[ERROR]   符号:   方法 getFilename()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 detail
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[116,18] 不兼容的类型: 推论变量 T 具有不兼容的上限
+[ERROR]     等式约束条件：java.lang.String
+[ERROR]     下限：java.lang.Object
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[196,66] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[196,91] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,25] 找不到符号
+[ERROR]   符号:   方法 getBrxh()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,47] 找不到符号
+[ERROR]   符号:   方法 getBah()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[197,69] 找不到符号
+[ERROR]   符号:   方法 getFilename()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 scan
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[200,31] 找不到符号
+[ERROR]   符号:   方法 setImg_url(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO的变量 bAHDataResponseDTO
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java:[267,32] 找不到符号
+[ERROR]   符号:   方法 getBtype()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ImageRequest的变量 req
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[71,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[81,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[91,16] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[101,39] 找不到符号
+[ERROR]   符号:   方法 getMessage()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 cleanupResult
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[218,28] 找不到符号
+[ERROR]   符号:   方法 getId()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[219,28] 找不到符号
+[ERROR]   符号:   方法 getClientIp()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[220,28] 找不到符号
+[ERROR]   符号:   方法 getRequestUri()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[221,28] 找不到符号
+[ERROR]   符号:   方法 getMethod()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[222,28] 找不到符号
+[ERROR]   符号:   方法 getUserAgent()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[223,45] 找不到符号
+[ERROR]   符号:   方法 getAccessTime()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[224,28] 找不到符号
+[ERROR]   符号:   方法 getQueryString()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[225,28] 找不到符号
+[ERROR]   符号:   方法 getRequestBody()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[226,28] 找不到符号
+[ERROR]   符号:   方法 getResponseStatus()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[227,28] 找不到符号
+[ERROR]   符号:   方法 getExecuteTime()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java:[228,28] 找不到符号
+[ERROR]   符号:   方法 getReferer()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Log的变量 log
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[41,15] 找不到符号
+[ERROR]   符号:   方法 setEnabled(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[46,15] 找不到符号
+[ERROR]   符号:   方法 setRetentionDays(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[47,15] 找不到符号
+[ERROR]   符号:   方法 setBatchSize(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[48,15] 找不到符号
+[ERROR]   符号:   方法 setMaxBatchesPerRun(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[49,15] 找不到符号
+[ERROR]   符号:   方法 setExecutedAt(java.time.LocalDateTime)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[52,19] 找不到符号
+[ERROR]   符号:   方法 setSkipped(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[53,19] 找不到符号
+[ERROR]   符号:   方法 setSuccess(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[54,19] 找不到符号
+[ERROR]   符号:   方法 setMessage(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[59,19] 找不到符号
+[ERROR]   符号:   方法 setSkipped(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[60,19] 找不到符号
+[ERROR]   符号:   方法 setSuccess(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[61,19] 找不到符号
+[ERROR]   符号:   方法 setMessage(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[66,80] 找不到符号
+[ERROR]   符号:   方法 getExecutedAt()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[67,15] 找不到符号
+[ERROR]   符号:   方法 setCutoff(java.time.LocalDateTime)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[82,19] 找不到符号
+[ERROR]   符号:   方法 setDeleted(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[83,19] 找不到符号
+[ERROR]   符号:   方法 setRemainingOlderThanCutoff(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[84,19] 找不到符号
+[ERROR]   符号:   方法 setBatches(int)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[85,19] 找不到符号
+[ERROR]   符号:   方法 setSuccess(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[87,23] 找不到符号
+[ERROR]   符号:   方法 setMessage(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[96,23] 找不到符号
+[ERROR]   符号:   方法 setMessage(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[101,41] 找不到符号
+[ERROR]   符号:   方法 getMessage()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[111,19] 找不到符号
+[ERROR]   符号:   方法 setSuccess(boolean)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/scheduler/LogRetentionCleaner.java:[112,19] 找不到符号
+[ERROR]   符号:   方法 setMessage(java.lang.String)
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult的变量 result
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[57,45] 找不到符号
+[ERROR]   符号:   方法 getBah()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[69,20] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[68,20] 找不到符号
+[ERROR]   符号:   方法 getUploadFlag()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[66,20] 找不到符号
+[ERROR]   符号:   方法 getOpenerNo()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[65,20] 找不到符号
+[ERROR]   符号:   方法 getPages()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[64,20] 找不到符号
+[ERROR]   符号:   方法 getBtype()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[63,20] 找不到符号
+[ERROR]   符号:   方法 getFilename()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[62,20] 找不到符号
+[ERROR]   符号:   方法 getBah()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[61,20] 找不到符号
+[ERROR]   符号:   方法 getBrxh()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[74,46] 找不到符号
+[ERROR]   符号:   方法 getId()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.Scan的变量 created
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[127,20] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[126,20] 找不到符号
+[ERROR]   符号:   方法 getUploadFlag()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[124,20] 找不到符号
+[ERROR]   符号:   方法 getOpenerNo()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[123,20] 找不到符号
+[ERROR]   符号:   方法 getPages()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[122,20] 找不到符号
+[ERROR]   符号:   方法 getBtype()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[121,20] 找不到符号
+[ERROR]   符号:   方法 getFilename()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[120,20] 找不到符号
+[ERROR]   符号:   方法 getBah()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[119,20] 找不到符号
+[ERROR]   符号:   方法 getBrxh()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.ScanRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[258,39] 找不到符号
+[ERROR]   符号:   方法 getIds()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[258,67] 找不到符号
+[ERROR]   符号:   方法 getIds()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[262,66] 找不到符号
+[ERROR]   符号:   方法 getIds()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.dto.req.BatchDownloadRequest的变量 request
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[301,34] 找不到符号
+[ERROR]   符号:   方法 getBAH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[301,70] 找不到符号
+[ERROR]   符号:   方法 getBAH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[318,29] 找不到符号
+[ERROR]   符号:   方法 getFolder()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[319,27] 找不到符号
+[ERROR]   符号:   方法 getBRXH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[320,26] 找不到符号
+[ERROR]   符号:   方法 getBAH()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java:[321,31] 找不到符号
+[ERROR]   符号:   方法 getFilename()
+[ERROR]   位置: 类型为com.zjcxph.imgapi.entity.PathDO的变量 item
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[50,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[53,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] /D:/Project/MRR/backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java:[67,20] 无法推断com.zjcxph.imgapi.common.Result<>的类型参数
+[ERROR]   原因: 无法推断类型变量 T
+[ERROR]     (实际参数列表和形式参数列表长度不同)
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

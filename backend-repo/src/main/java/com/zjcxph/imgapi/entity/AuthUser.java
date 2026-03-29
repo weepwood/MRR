@@ -1,4 +1,6 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.entity;
+
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -7,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Data
 public class AuthUser {
     private Long id;
     private String username;

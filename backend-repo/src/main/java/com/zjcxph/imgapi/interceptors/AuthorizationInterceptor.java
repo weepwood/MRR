@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
-import com.zjcxph.imgapi.pojo.AuthSession;
+import com.zjcxph.imgapi.common.AuthSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

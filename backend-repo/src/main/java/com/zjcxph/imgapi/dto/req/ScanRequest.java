@@ -1,24 +1,24 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.req;
 
-import java.util.Date;
-import java.util.Objects;
+import lombok.Data;
 
-
-public class Scan {
-    private Integer id;
+@Data
+public class ScanRequest {
     private String brxh;
     private String bah;
     private String filename;
     private Integer btype;
     private Integer pages;
     private String openerNo;
-    private Date uploadDate;
+    private String uploadDate;
     private Integer uploadFlag;
     private String folder;
 
-    public Scan(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
-                String openerNo, Date uploadDate, Integer uploadFlag, String folder) {
-        this.id = id;
+    public ScanRequest() {
+    }
+
+    public ScanRequest(String brxh, String bah, String filename, Integer btype, Integer pages,
+                       String openerNo, String uploadDate, Integer uploadFlag, String folder) {
         this.brxh = brxh;
         this.bah = bah;
         this.filename = filename;
@@ -28,14 +28,6 @@ public class Scan {
         this.uploadDate = uploadDate;
         this.uploadFlag = uploadFlag;
         this.folder = folder;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
     }
 
     public String getBrxh() {
@@ -86,11 +78,11 @@ public class Scan {
         this.openerNo = openerNo;
     }
 
-    public Date getUploadDate() {
+    public String getUploadDate() {
         return uploadDate;
     }
 
-    public void setUploadDate(Date uploadDate) {
+    public void setUploadDate(String uploadDate) {
         this.uploadDate = uploadDate;
     }
 

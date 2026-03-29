@@ -1,8 +1,13 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.entity;
+
+import lombok.Data;
 
 import java.util.Date;
+import java.util.Objects;
 
-public class BAHDataResponseDTO {
+
+@Data
+public class Scan {
     private Integer id;
     private String brxh;
     private String bah;
@@ -12,13 +17,10 @@ public class BAHDataResponseDTO {
     private String openerNo;
     private Date uploadDate;
     private Integer uploadFlag;
-    private String img_url;
+    private String folder;
 
-    public BAHDataResponseDTO() {
-    }
-
-    public BAHDataResponseDTO(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
-                              String openerNo, Date uploadDate, Integer uploadFlag, String img_url) {
+    public Scan(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
+                String openerNo, Date uploadDate, Integer uploadFlag, String folder) {
         this.id = id;
         this.brxh = brxh;
         this.bah = bah;
@@ -28,7 +30,7 @@ public class BAHDataResponseDTO {
         this.openerNo = openerNo;
         this.uploadDate = uploadDate;
         this.uploadFlag = uploadFlag;
-        this.img_url = img_url;
+        this.folder = folder;
     }
 
     public Integer getId() {
@@ -103,11 +105,11 @@ public class BAHDataResponseDTO {
         this.uploadFlag = uploadFlag;
     }
 
-    public String getImg_url() {
-        return img_url;
+    public String getFolder() {
+        return folder;
     }
 
-    public void setImg_url(String img_url) {
-        this.img_url = img_url;
+    public void setFolder(String folder) {
+        this.folder = folder;
     }
 }

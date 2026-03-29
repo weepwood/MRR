@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.mapper;
 
-import com.zjcxph.imgapi.pojo.Log;
+import com.zjcxph.imgapi.entity.Log;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi;
 
 import com.zjcxph.imgapi.mapper.ScanMapper;
-import com.zjcxph.imgapi.pojo.Scan;
+import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

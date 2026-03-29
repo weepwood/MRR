@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.mapper.UserMapper;
-import com.zjcxph.imgapi.pojo.User;
+import com.zjcxph.imgapi.entity.User;
 import com.zjcxph.imgapi.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

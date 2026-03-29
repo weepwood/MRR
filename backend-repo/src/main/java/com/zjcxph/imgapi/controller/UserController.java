@@ -1,13 +1,13 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
-import com.zjcxph.imgapi.pojo.AuthRole;
-import com.zjcxph.imgapi.pojo.AuthSession;
-import com.zjcxph.imgapi.pojo.AuthUserProfileDTO;
-import com.zjcxph.imgapi.pojo.AuthUserUpdateRequest;
-import com.zjcxph.imgapi.pojo.LoginResponseDTO;
-import com.zjcxph.imgapi.pojo.Result;
-import com.zjcxph.imgapi.pojo.UserRequest;
+import com.zjcxph.imgapi.entity.AuthRole;
+import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
+import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
+import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
+import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

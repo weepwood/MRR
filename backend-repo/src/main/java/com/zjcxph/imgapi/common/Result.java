@@ -1,4 +1,4 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.common;
 
 import java.time.LocalDateTime;
 

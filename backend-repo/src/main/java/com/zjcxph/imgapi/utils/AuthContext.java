@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.utils;
 
-import com.zjcxph.imgapi.pojo.AuthSession;
+import com.zjcxph.imgapi.common.AuthSession;
 
 public final class AuthContext {
 

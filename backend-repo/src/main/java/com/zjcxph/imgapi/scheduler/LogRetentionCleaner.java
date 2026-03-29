@@ -2,7 +2,7 @@ package com.zjcxph.imgapi.scheduler;
 
 import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.mapper.LogMapper;
-import com.zjcxph.imgapi.pojo.LogRetentionCleanupResult;
+import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;

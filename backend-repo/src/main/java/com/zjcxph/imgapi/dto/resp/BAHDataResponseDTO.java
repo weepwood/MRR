@@ -1,21 +1,28 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.resp;
 
-public class ScanRequest {
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class BAHDataResponseDTO {
+    private Integer id;
     private String brxh;
     private String bah;
     private String filename;
     private Integer btype;
     private Integer pages;
     private String openerNo;
-    private String uploadDate;
+    private Date uploadDate;
     private Integer uploadFlag;
-    private String folder;
+    private String img_url;
 
-    public ScanRequest() {
+    public BAHDataResponseDTO() {
     }
 
-    public ScanRequest(String brxh, String bah, String filename, Integer btype, Integer pages,
-                       String openerNo, String uploadDate, Integer uploadFlag, String folder) {
+    public BAHDataResponseDTO(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
+                              String openerNo, Date uploadDate, Integer uploadFlag, String img_url) {
+        this.id = id;
         this.brxh = brxh;
         this.bah = bah;
         this.filename = filename;
@@ -24,7 +31,15 @@ public class ScanRequest {
         this.openerNo = openerNo;
         this.uploadDate = uploadDate;
         this.uploadFlag = uploadFlag;
-        this.folder = folder;
+        this.img_url = img_url;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getBrxh() {
@@ -75,11 +90,11 @@ public class ScanRequest {
         this.openerNo = openerNo;
     }
 
-    public String getUploadDate() {
+    public Date getUploadDate() {
         return uploadDate;
     }
 
-    public void setUploadDate(String uploadDate) {
+    public void setUploadDate(Date uploadDate) {
         this.uploadDate = uploadDate;
     }
 
@@ -91,11 +106,11 @@ public class ScanRequest {
         this.uploadFlag = uploadFlag;
     }
 
-    public String getFolder() {
-        return folder;
+    public String getImg_url() {
+        return img_url;
     }
 
-    public void setFolder(String folder) {
-        this.folder = folder;
+    public void setImg_url(String img_url) {
+        this.img_url = img_url;
     }
 }

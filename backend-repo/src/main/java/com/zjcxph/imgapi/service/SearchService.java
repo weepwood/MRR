@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.pojo.Patient;
+import com.zjcxph.imgapi.entity.Patient;
 
 import java.util.List;
 

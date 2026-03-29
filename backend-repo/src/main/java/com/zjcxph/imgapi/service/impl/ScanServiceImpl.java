@@ -2,9 +2,9 @@ package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.mapper.ScanMapper;
-import com.zjcxph.imgapi.pojo.PathDO;
-import com.zjcxph.imgapi.pojo.ScanRequest;
-import com.zjcxph.imgapi.pojo.Scan;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +43,20 @@ public class ScanServiceImpl implements ScanService {
         String folderName = brxh + "-" + bah;
         return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
         
+    }
+
+    @Override
+    public java.io.File createZipForBAH(String bah) throws java.io.IOException {
+        Path imagePath = getImagePath(bah);
+        if (imagePath == null) {
+            throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到该病案号的图片路径");
+        }
+        
+        String fileNameTemp = bah + ".temp";
+        String zipPath = "./temp/" + fileNameTemp;
+        
+        com.zjcxph.imgapi.utils.ZipUtil.zipJpgFiles(imagePath.toString(), zipPath);
+        return new java.io.File(zipPath);
     }
 
     @Override

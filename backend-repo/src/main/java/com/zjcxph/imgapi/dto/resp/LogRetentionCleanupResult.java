@@ -1,7 +1,10 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.resp;
+
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
+@Data
 public class LogRetentionCleanupResult {
 
     private boolean enabled;

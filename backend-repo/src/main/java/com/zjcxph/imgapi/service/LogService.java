@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.pojo.Log;
+import com.zjcxph.imgapi.entity.Log;
 
 import java.util.List;
 

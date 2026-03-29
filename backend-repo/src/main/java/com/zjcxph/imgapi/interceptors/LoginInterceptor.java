@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zjcxph.imgapi.pojo.AuthSession;
+import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import org.slf4j.Logger;

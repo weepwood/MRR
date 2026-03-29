@@ -1,11 +1,11 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.pojo.AuthRole;
-import com.zjcxph.imgapi.pojo.AuthSession;
-import com.zjcxph.imgapi.pojo.AuthUserProfileDTO;
-import com.zjcxph.imgapi.pojo.AuthUserUpdateRequest;
-import com.zjcxph.imgapi.pojo.LoginResponseDTO;
-import com.zjcxph.imgapi.pojo.UserRequest;
+import com.zjcxph.imgapi.entity.AuthRole;
+import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
+import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
+import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
+import com.zjcxph.imgapi.dto.req.UserRequest;
 
 import java.util.List;
 

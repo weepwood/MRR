@@ -1,10 +1,10 @@
 package com.zjcxph.imgapi.controller;
 
-import com.zjcxph.imgapi.pojo.BatchDownloadRequest;
-import com.zjcxph.imgapi.pojo.PathDO;
-import com.zjcxph.imgapi.pojo.Result;
-import com.zjcxph.imgapi.pojo.Scan;
-import com.zjcxph.imgapi.pojo.ScanRequest;
+import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.service.ScanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

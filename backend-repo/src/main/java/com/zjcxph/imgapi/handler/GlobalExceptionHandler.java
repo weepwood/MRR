@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.handler;
 
-import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.common.Result;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,11 +9,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.zjcxph.imgapi.exception.BusinessException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Result<String>> handleBusinessException(BusinessException e) {
+        logger.warn("业务异常: {}", e.getMessage());
+        Result<String> result = new Result<>(e.getCode(), StringUtils.hasLength(e.getMessage()) ? e.getMessage() : "业务处理失败", null);
+        HttpStatus status;
+        try {
+            status = HttpStatus.valueOf(e.getCode());
+        } catch (IllegalArgumentException ex) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        return ResponseEntity.status(status).body(result);
+    }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Result<String>> handleConstraintViolationException(ConstraintViolationException e) {

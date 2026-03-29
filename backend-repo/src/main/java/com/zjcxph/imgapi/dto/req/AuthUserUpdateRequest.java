@@ -1,7 +1,10 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.req;
+
+import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
 
+@Data
 public class AuthUserUpdateRequest {
     private String displayName;
 

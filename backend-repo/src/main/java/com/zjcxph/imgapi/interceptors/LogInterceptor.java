@@ -1,6 +1,6 @@
 package com.zjcxph.imgapi.interceptors;
 
-import com.zjcxph.imgapi.pojo.Log;
+import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

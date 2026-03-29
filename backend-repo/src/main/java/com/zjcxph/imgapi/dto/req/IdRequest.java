@@ -1,7 +1,10 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.dto.req;
+
+import lombok.Data;
 
 import java.util.List;
 
+@Data
 public class IdRequest {
 
     private List<String> id;

@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.pojo.PathDO;
-import com.zjcxph.imgapi.pojo.Scan;
-import com.zjcxph.imgapi.pojo.ScanRequest;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.dto.req.ScanRequest;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -11,6 +11,8 @@ public interface ScanService {
     List<Scan> getImageListByBAH(String bah);
 
     Path getImagePath(String bah);
+    
+    java.io.File createZipForBAH(String bah) throws java.io.IOException;
 
     List<PathDO> getImagePathList(List<String> ids);
 

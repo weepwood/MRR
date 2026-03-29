@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.mapper;
 
-import com.zjcxph.imgapi.pojo.BAHStatisticsDTO;
-import com.zjcxph.imgapi.pojo.DateStatisticsDTO;
-import com.zjcxph.imgapi.pojo.Statistics;
+import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
+import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
+import com.zjcxph.imgapi.entity.Statistics;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

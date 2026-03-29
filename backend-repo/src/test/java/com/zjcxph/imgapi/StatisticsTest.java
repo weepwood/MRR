@@ -1,9 +1,9 @@
 package com.zjcxph.imgapi;
 
 import com.zjcxph.imgapi.mapper.StatisticsMapper;
-import com.zjcxph.imgapi.pojo.BAHStatisticsDTO;
-import com.zjcxph.imgapi.pojo.DateStatisticsDTO;
-import com.zjcxph.imgapi.pojo.Statistics;
+import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
+import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
+import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

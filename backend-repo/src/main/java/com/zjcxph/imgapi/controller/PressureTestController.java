@@ -3,7 +3,7 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.monitoring.PressureTestReport;
 import com.zjcxph.imgapi.monitoring.PressureTestRequest;
 import com.zjcxph.imgapi.monitoring.PressureTestService;
-import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.common.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

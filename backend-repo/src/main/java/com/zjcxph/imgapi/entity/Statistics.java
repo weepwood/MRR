@@ -1,5 +1,8 @@
-package com.zjcxph.imgapi.pojo;
+package com.zjcxph.imgapi.entity;
 
+import lombok.Data;
+
+@Data
 public class Statistics {
     private String bah;
     private String cid;

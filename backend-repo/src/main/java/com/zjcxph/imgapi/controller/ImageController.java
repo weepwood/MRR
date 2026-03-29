@@ -1,7 +1,10 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.config.ImageProperties;
-import com.zjcxph.imgapi.pojo.*;
+import com.zjcxph.imgapi.entity.*;
+import com.zjcxph.imgapi.dto.req.*;
+import com.zjcxph.imgapi.dto.resp.*;
+import com.zjcxph.imgapi.common.*;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.ZipUtil;
@@ -63,13 +66,8 @@ public class ImageController {
                                                        @Pattern(regexp = "\\d{8}", message = "请输入正确的 8 位病案号")
                                                        @Parameter(description = "病案号", example = "00789508")
                                                        String BAH) throws IOException {
-        Path imagePath = scanService.getImagePath(BAH);
-        // temp 文件夹放本地，定时删除
-        String fileNameTemp = BAH + ".temp";
+        File zipFile = scanService.createZipForBAH(BAH);
         String fileNameZip = BAH + ".zip";
-        ZipUtil.zipJpgFiles(imagePath.toString(), "./temp/" + fileNameTemp);
-
-        File zipFile = new File("./temp/" + fileNameTemp);
         FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
 
         logger.info("生成压缩包:{}", fileNameZip);

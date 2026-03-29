@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.controller;
 
-import com.zjcxph.imgapi.pojo.Patient;
-import com.zjcxph.imgapi.pojo.Result;
+import com.zjcxph.imgapi.entity.Patient;
+import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
 import jakarta.servlet.http.HttpServletRequest;

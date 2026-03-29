@@ -83,6 +83,8 @@
             class="logout-sidebar-btn"
             type="danger"
             plain
+            :loading="isLoggingOut"
+            :disabled="isLoggingOut"
             aria-label="退出登录"
             @click="handleLogout"
           >
@@ -184,11 +186,13 @@ import {
   TrendCharts,
   User
 } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
 import { animatePageTransition, applyMagneticEffect, revealHero, revealSidebar, revealStaggeredGrid } from '@/utils/animations'
 
 const router = useRouter()
 const route = useRoute()
+const isLoggingOut = ref(false)
 
 const currentUser = computed(() => getCurrentUser())
 const currentUserName = computed(() => getUserDisplayName() || currentUser.value?.username || '')
@@ -496,17 +500,22 @@ function openDocs() {
 }
 
 function handleLogout() {
+  if (isLoggingOut.value) return
+  
   ElMessageBox.confirm('确认退出登录吗？', '退出登录', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   })
     .then(() => {
+      isLoggingOut.value = true
       clearSession()
-      router.push('/login')
-      ElMessage.success('已退出登录')
+      // Use window.location.href instead of router.push to force a clean slate
+      window.location.href = '/login'
     })
-    .catch(() => {})
+    .catch(() => {
+      isLoggingOut.value = false
+    })
 }
 </script>
 

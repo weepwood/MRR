@@ -146,13 +146,51 @@ export function setSession(session: unknown) {
   const store = getStore()
   // store uses a general setSession action that takes the raw or normalized data
   store.setSession(normalized)
+
+  // Sync back to local storage for getSession fallback to work properly
+  try {
+    const json = JSON.stringify(normalized)
+    window.localStorage.setItem(SESSION_KEY, json)
+    if (normalized.token) {
+      window.localStorage.setItem(LEGACY_TOKEN_KEY, normalized.token)
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
 export const saveSession = setSession
 
 export function clearSession() {
   if (typeof window === 'undefined') return
-  getStore().clearSession()
+  
+  // 1. Clear memory state
+  const store = getStore()
+  store.clearSession()
+  
+  // 2. Clear all possible persistent storage keys
+  try {
+    const keys = [
+      SESSION_KEY, 
+      LEGACY_TOKEN_KEY, 
+      'pmr-auth-user', 
+      'pmr-auth-session', 
+      'token',
+      'accessToken',
+      'user'
+    ]
+    
+    keys.forEach(key => {
+      window.localStorage.removeItem(key)
+      window.sessionStorage.removeItem(key)
+    })
+    
+    // Fallback: Clear the entire sessionStorage if used for session state
+    window.sessionStorage.clear()
+    
+  } catch (e) {
+    // ignore
+  }
 }
 
 export function getToken(): string {

@@ -13,7 +13,14 @@
           </p>
         </div>
 
-        <el-button type="danger" plain class="logout-btn" @click="handleLogout">
+        <el-button 
+          type="danger" 
+          plain 
+          class="logout-btn" 
+          :loading="isLoggingOut"
+          :disabled="isLoggingOut"
+          @click="handleLogout"
+        >
           <el-icon><SwitchButton /></el-icon>
           退出登录
         </el-button>
@@ -49,12 +56,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { DataBoard, Document, Key, Reading, Setting, SwitchButton, Tools, TrendCharts, User } from '@element-plus/icons-vue'
 import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
 
 const router = useRouter()
+const isLoggingOut = ref(false)
 
 const currentUser = computed(() => getCurrentUser())
 const currentUserName = computed(() => getUserDisplayName() || currentUser.value?.username || '未登录')
@@ -129,16 +137,22 @@ const goTo = (path) => {
 }
 
 const handleLogout = () => {
+  if (isLoggingOut.value) return
+  
   ElMessageBox.confirm('确认退出登录吗？', '退出登录', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   })
     .then(() => {
+      isLoggingOut.value = true
       clearSession()
-      router.push('/login')
+      // Use window.location.href instead of router.push to force a clean slate
+      window.location.href = '/login'
     })
-    .catch(() => {})
+    .catch(() => {
+      isLoggingOut.value = false
+    })
 }
 </script>
 

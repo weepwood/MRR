@@ -189,7 +189,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Edit, Plus, Refresh, Search, View } from '@element-plus/icons-vue'
 import { createScan, deleteScan, getScanByCondition, updateScan } from '@/utils/api'
 

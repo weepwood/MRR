@@ -123,7 +123,6 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearPressureTestHistory, getLatestPressureTest, getPressureTestHistory, runPressureTest } from '@/utils/api'
 
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']

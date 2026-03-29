@@ -224,7 +224,6 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTypeName } from '../utils/printUtils'
 
 // 响应式数据

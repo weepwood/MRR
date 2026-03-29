@@ -1,4 +1,3 @@
-import { ElMessage } from 'element-plus'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { clearSession, getSession, hasAnyPermission, isAdminUser } from '@/utils/session'

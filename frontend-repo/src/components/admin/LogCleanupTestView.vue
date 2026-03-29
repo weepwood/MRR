@@ -51,7 +51,6 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { exportLogRetentionLogs, runLogRetentionCleanup } from '@/services/api'
 
 const runningCleanup = ref(false)

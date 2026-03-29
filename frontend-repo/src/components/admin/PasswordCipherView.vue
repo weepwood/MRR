@@ -84,7 +84,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { SHA256 } from 'crypto-js'
 
 const plainText = ref('')

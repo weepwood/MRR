@@ -82,7 +82,6 @@
 import { onMounted, reactive, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
-import { ElMessage } from 'element-plus'
 import { DataBoard, Document, Key, Lock, UserFilled, Warning } from '@element-plus/icons-vue'
 import { login } from '@/utils/api'
 import { getSession, isAdminUser, setSession } from '@/utils/session'

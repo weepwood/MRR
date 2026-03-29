@@ -243,7 +243,6 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Download, RefreshLeft, Upload } from '@element-plus/icons-vue'
 import { useAdminSettings } from '@/shared/composables/useAdminSettings'
 import { applyTheme } from '@/utils/theme'

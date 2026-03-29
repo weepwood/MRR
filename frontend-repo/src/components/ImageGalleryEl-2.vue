@@ -144,7 +144,6 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
 import { en } from 'element-plus/es/locales.mjs'
 import { clearSession } from '@/utils/session'

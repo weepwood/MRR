@@ -176,7 +176,6 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getSystemHealth, getSystemInfo, getSystemMemory, getSystemProperties, getSystemRuntime } from '@/utils/api'
 
 const loading = ref(false)

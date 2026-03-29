@@ -66,7 +66,8 @@ export const revealSidebar = (element: string | Element) => {
     x: -256,
     opacity: 0,
     duration: 1.4,
-    ease: 'expo.out'
+    ease: 'expo.out',
+    clearProps: 'all'
   })
 }
 
@@ -80,7 +81,8 @@ export const revealHero = (element: string | Element) => {
     opacity: 0,
     duration: 1.2,
     ease: 'power3.out',
-    delay: 0.2
+    delay: 0.2,
+    clearProps: 'all'
   })
 }
 
@@ -98,7 +100,8 @@ export const revealStaggeredGrid = (elements: string | Element[], delay = 0.4) =
       grid: 'auto'
     },
     ease: 'power2.out',
-    delay
+    delay,
+    clearProps: 'all'
   })
 }
 

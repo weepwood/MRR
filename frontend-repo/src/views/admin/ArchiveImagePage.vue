@@ -330,7 +330,6 @@
 import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CircleCheckFilled, CirclePlusFilled, ArrowLeft, Download, Printer, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { getImgApiByBah } from '@/utils/api'
 import { exportArchiveImagesToPdf } from '@/utils/archivePdf'
 

@@ -99,7 +99,7 @@
 
     <main class="admin-main">
 
-      <div ref="contentShellRef" class="content-shell pmr-fade-up">
+      <div ref="contentShellRef" class="content-shell">
         <template v-if="showDashboard">
           <section ref="heroRef" class="hero-block pmr-hover-lift">
             <div class="hero-copy">
@@ -110,7 +110,6 @@
                 病案、统计、病案明细和系统设置页面，所有功能都嵌入在同一个后台壳中。
               </p>
             </div>
-
             <div class="hero-actions">
               <el-button type="primary" @click="router.push('/admin/users')">
                 <el-icon><User /></el-icon>
@@ -123,11 +122,11 @@
             </div>
           </section>
 
-          <section ref="kpiGridRef" class="kpi-grid pmr-stagger">
+          <section ref="kpiGridRef" class="kpi-grid">
             <article
               v-for="(card, index) in dashboardCards"
               :key="card.label"
-              class="kpi-card pmr-stagger-item pmr-hover-lift"
+              class="kpi-card pmr-hover-lift"
               :class="card.toneClass"
               :style="{ '--pmr-stagger-index': index }"
             >
@@ -143,11 +142,11 @@
             </article>
           </section>
 
-          <section ref="featureGridRef" class="feature-grid pmr-stagger">
+          <section ref="featureGridRef" class="feature-grid">
             <article
               v-for="(item, index) in featureCards"
               :key="item.title"
-              class="feature-card pmr-stagger-item pmr-hover-lift magnetic-card"
+              class="feature-card pmr-hover-lift magnetic-card"
               :style="{ '--pmr-stagger-index': index }"
               @click="handleFeatureClick(item)"
             >
@@ -185,7 +184,6 @@ import {
   TrendCharts,
   User
 } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearSession, getCurrentUser, getUserDisplayName, getUserRoleName, isAdminUser } from '@/utils/session'
 import { animatePageTransition, applyMagneticEffect, revealHero, revealSidebar, revealStaggeredGrid } from '@/utils/animations'
 
@@ -703,9 +701,10 @@ function handleLogout() {
 }
 
 .content-shell {
-  display: grid;
-  gap: 20px;
-  padding: 24px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
 }
 
 .route-panel {
@@ -758,7 +757,7 @@ function handleLogout() {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 
 .kpi-card {
@@ -827,7 +826,7 @@ function handleLogout() {
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 
 .feature-card {

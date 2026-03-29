@@ -154,7 +154,6 @@
 import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 // Element Plus 组件导入
-import { ElMessage, ElMessageBox } from 'element-plus'
 // API 工具函数导入
 import { getImgApiByBah, downloadBah, getImg, getBAHByIdCard, updateImgType } from '@/utils/api'
 import { clearSession } from '@/utils/session'

@@ -339,7 +339,6 @@
 
 <script setup>
 import { ref, onMounted, computed, nextTick, onUnmounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { 
   DataAnalysis, 
   Refresh, 

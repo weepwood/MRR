@@ -132,7 +132,6 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { useAdminSettings } from '@/shared/composables/useAdminSettings'
 import { decryptIdCard, encryptIdCard } from '@/utils/decrypt'
 import PasswordCipherView from './PasswordCipherView.vue'

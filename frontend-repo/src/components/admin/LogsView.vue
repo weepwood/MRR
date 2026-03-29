@@ -161,7 +161,6 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { Refresh, Search, View } from '@element-plus/icons-vue'
 import { getLogById, searchSystemLogs } from '@/utils/api'
 

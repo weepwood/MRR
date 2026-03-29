@@ -432,24 +432,41 @@ const heroRef = ref(null)
 const kpiGridRef = ref(null)
 const featureGridRef = ref(null)
 
-// 初始化动画
+// 初始化动画 - 减少不必要的动画
 onMounted(() => {
-  // 1. 侧边栏优雅滑入
+  // 只保留侧边栏动画
   revealSidebar(sidebarRef.value)
 
-  // 2. 初始仪表盘揭晓
+  // 如果显示仪表盘，添加基本的元素淡入效果
   if (showDashboard.value) {
     nextTick(() => {
-      revealHero(heroRef.value)
+      // 只为关键元素添加简单的淡入动画
+      if (heroRef.value) {
+        gsap.fromTo(heroRef.value, 
+          { opacity: 0, y: 20 }, 
+          { opacity: 1, y: 0, duration: 0.5 }
+        )
+      }
       
+      // 为网格项添加简单延迟动画
       const kpiItems = kpiGridRef.value?.querySelectorAll('.kpi-card')
-      if (kpiItems) revealStaggeredGrid(kpiItems, 0.5)
+      if (kpiItems) {
+        gsap.fromTo(kpiItems, 
+          { opacity: 0, y: 15 }, 
+          { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, delay: 0.2 }
+        )
+      }
       
       const featureItems = featureGridRef.value?.querySelectorAll('.feature-card')
-      if (featureItems) revealStaggeredGrid(featureItems, 0.7)
+      if (featureItems) {
+        gsap.fromTo(featureItems, 
+          { opacity: 0, y: 15 }, 
+          { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, delay: 0.3 }
+        )
 
-      // 3. 应用磁吸交互
-      featureItems?.forEach(item => applyMagneticEffect(item, 0.04))
+        // 仅对功能卡片应用磁吸效果
+        featureItems?.forEach(item => applyMagneticEffect(item, 0.03))
+      }
     })
   } else {
     // 处理路由子页面进入动画
@@ -459,16 +476,16 @@ onMounted(() => {
   }
 })
 
-// 监听路由变化，触发现代感的切页效果
+// 监听路由变化，简化页面切换效果
 watch(() => route.path, () => {
   nextTick(() => {
     animatePageTransition(contentShellRef.value)
     
-    // 如果回到仪表盘，重新绑定磁吸
+    // 如果回到仪表盘，重新绑定磁吸效果
     if (showDashboard.value) {
       setTimeout(() => {
         const featureItems = featureGridRef.value?.querySelectorAll('.feature-card')
-        featureItems?.forEach(item => applyMagneticEffect(item, 0.04))
+        featureItems?.forEach(item => applyMagneticEffect(item, 0.03))
       }, 100)
     }
   })
@@ -500,6 +517,7 @@ function handleLogout() {
     radial-gradient(circle at top right, rgba(26, 86, 219, 0.08), transparent 28%),
     linear-gradient(160deg, #f8fbff 0%, #fbfdff 42%, #eef4ff 100%);
   color: #191c1d;
+  transition: background 0.5s ease;
 }
 
 .admin-sidebar {
@@ -838,15 +856,16 @@ function handleLogout() {
   box-shadow: 0 10px 28px rgba(24, 65, 134, 0.08);
   cursor: pointer;
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+    transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .feature-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 34px rgba(24, 65, 134, 0.12);
-  border-color: rgba(0, 63, 177, 0.24);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(24, 65, 134, 0.15);
+  border-color: rgba(0, 63, 177, 0.3);
+  z-index: 5;
 }
 
 .feature-icon {

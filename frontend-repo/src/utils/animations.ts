@@ -1,8 +1,8 @@
 import gsap from 'gsap'
 
 /**
- * Statistics Animation Library (GSAP powered)
- * Specialized motion patterns for data visualization.
+ * Simplified Animation Library (GSAP powered)
+ * Streamlined motion patterns for better performance.
  */
 
 /**
@@ -10,12 +10,12 @@ import gsap from 'gsap'
  */
 export const animateStaggeredEntrance = (elements: string | Element[], delay = 0.2) => {
   return gsap.from(elements, {
-    y: 20,
+    y: 10,
     opacity: 0,
-    duration: 0.8,
-    stagger: 0.1,
+    duration: 0.5,
+    stagger: 0.05,
     delay,
-    ease: 'power3.out',
+    ease: 'power2.out',
     clearProps: 'all'
   })
 }
@@ -36,9 +36,8 @@ export const animateSvgBars = (elements: string | Element[]) => {
       { attr: { height: 0, y: baselineY } },
       { 
         attr: { height: targetHeight, y: targetY },
-        duration: 1.2,
-        ease: 'elastic.out(1, 0.75)',
-        stagger: 0.05
+        duration: 0.8,
+        ease: 'power2.out'
       }
     )
   })
@@ -47,7 +46,7 @@ export const animateSvgBars = (elements: string | Element[]) => {
 /**
  * Draw animation for SVG lines and paths.
  */
-export const animateSvgPath = (element: SVGPathElement | SVGPolylineElement, duration = 2) => {
+export const animateSvgPath = (element: SVGPathElement | SVGPolylineElement, duration = 1.5) => {
   if (!element) return
   
   const length = element instanceof SVGPathElement ? element.getTotalLength() : 1000 // Fallback for polyline if needed
@@ -59,46 +58,40 @@ export const animateSvgPath = (element: SVGPathElement | SVGPolylineElement, dur
 }
 
 /**
- * Elegant Sidebar Reveal - wide-arc glide.
+ * Simple Sidebar Reveal.
  */
 export const revealSidebar = (element: string | Element) => {
   return gsap.from(element, {
     x: -256,
     opacity: 0,
-    duration: 1.4,
-    ease: 'expo.out',
+    duration: 0.6,
+    ease: 'power2.out',
     clearProps: 'all'
   })
 }
 
 /**
- * Elegant Hero Reveal - soft scale-fade.
+ * Simple Hero Reveal.
  */
 export const revealHero = (element: string | Element) => {
   return gsap.from(element, {
-    y: 40,
-    scale: 0.98,
+    y: 20,
     opacity: 0,
-    duration: 1.2,
-    ease: 'power3.out',
-    delay: 0.2,
+    duration: 0.5,
+    ease: 'power2.out',
     clearProps: 'all'
   })
 }
 
 /**
- * Wave-staggered Grid Entrance.
+ * Simple Staggered Grid Entrance.
  */
-export const revealStaggeredGrid = (elements: string | Element[], delay = 0.4) => {
+export const revealStaggeredGrid = (elements: string | Element[], delay = 0.2) => {
   return gsap.from(elements, {
-    y: 30,
+    y: 15,
     opacity: 0,
-    duration: 1,
-    stagger: {
-      amount: 0.4,
-      from: 'start',
-      grid: 'auto'
-    },
+    duration: 0.4,
+    stagger: 0.08,
     ease: 'power2.out',
     delay,
     clearProps: 'all'
@@ -106,9 +99,9 @@ export const revealStaggeredGrid = (elements: string | Element[], delay = 0.4) =
 }
 
 /**
- * Ultra-subtle Magnetic Hover Interaction.
+ * Subtle Magnetic Hover Interaction.
  */
-export const applyMagneticEffect = (element: Element, strength = 0.05) => {
+export const applyMagneticEffect = (element: Element, strength = 0.02) => {
   const onMouseMove = (e: MouseEvent) => {
     const rect = element.getBoundingClientRect()
     const centerX = rect.left + rect.width / 2
@@ -119,9 +112,7 @@ export const applyMagneticEffect = (element: Element, strength = 0.05) => {
     gsap.to(element, {
       x: deltaX,
       y: deltaY,
-      rotateX: -deltaY * 0.5,
-      rotateY: deltaX * 0.5,
-      duration: 0.6,
+      duration: 0.3,
       ease: 'power2.out'
     })
   }
@@ -130,10 +121,8 @@ export const applyMagneticEffect = (element: Element, strength = 0.05) => {
     gsap.to(element, {
       x: 0,
       y: 0,
-      rotateX: 0,
-      rotateY: 0,
-      duration: 0.8,
-      ease: 'elastic.out(1, 0.5)'
+      duration: 0.3,
+      ease: 'power2.out'
     })
   }
 
@@ -147,24 +136,24 @@ export const applyMagneticEffect = (element: Element, strength = 0.05) => {
 }
 
 /**
- * Fluid Page Transition.
+ * Simple Page Transition.
  */
 export const animatePageTransition = (element: string | Element) => {
   return gsap.fromTo(element, 
-    { opacity: 0, x: 10 },
-    { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', clearProps: 'all' }
+    { opacity: 0 },
+    { opacity: 1, duration: 0.3, ease: 'power1.out', clearProps: 'all' }
   )
 }
 
 /**
  * Counter animation for numbers.
  */
-export const animateCounter = (element: HTMLElement, endValue: number, duration = 1.6) => {
+export const animateCounter = (element: HTMLElement, endValue: number, duration = 1.0) => {
   const obj = { value: 0 }
   return gsap.to(obj, {
     value: endValue,
     duration,
-    ease: 'power3.out',
+    ease: 'power2.out',
     onUpdate: () => {
       element.innerText = Math.floor(obj.value).toLocaleString('zh-CN')
     }

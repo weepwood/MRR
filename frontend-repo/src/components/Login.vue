@@ -1,5 +1,6 @@
-<template>
+﻿<template>
   <div class="login-page">
+    <div class="glow-bg"></div>
     <div class="light-orb orb-a"></div>
     <div class="light-orb orb-b"></div>
 
@@ -167,6 +168,24 @@ const handleLogin = async () => {
   display: grid;
   place-items: center;
   overflow: hidden;
+  background-image:
+    linear-gradient(rgba(156, 163, 175, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 163, 175, 0.18) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-color: #f5f7fb;
+}
+
+.glow-bg {
+  position: absolute;
+  width: 740px;
+  height: 740px;
+  border-radius: 50%;
+  top: 20%;
+  left: 15%;
+  background: rgba(88, 101, 242, 0.35);
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .light-orb {
@@ -200,10 +219,10 @@ const handleLogin = async () => {
   grid-template-columns: 1.1fr 1fr;
   border-radius: 24px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: var(--pmr-shadow-surface-lg);
-  background: var(--pmr-color-bg-glass-heavy);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
+  box-shadow: var(--pmr-shadow-surface-lg);
 }
 
 .brand-panel {

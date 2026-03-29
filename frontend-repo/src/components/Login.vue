@@ -70,7 +70,7 @@
             @mouseenter="animateButtonHover(true)"
             @mouseleave="animateButtonHover(false)"
           >
-            {{ loading ? '登录中...' : '登录' }}
+            {{ buttonText }}
           </button>
         </form>
       </section>
@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
 import { ElMessage } from 'element-plus'
@@ -90,6 +90,8 @@ import { getSession, isAdminUser, setSession } from '@/utils/session'
 const router = useRouter()
 const loading = ref(false)
 const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+
+const buttonText = computed(() => (loading.value ? '登录中...' : '登录'))
 
 const formData = reactive({
   username: '',
@@ -217,6 +219,15 @@ const animateButtonHover = (isHovering) => {
   })
 }
 
+watch(loading, (isLoading) => {
+  if (prefersReducedMotion) return
+  gsap.fromTo(
+    '.login-btn',
+    { opacity: 0.6, scale: 0.97 },
+    { opacity: 1, scale: 1, duration: 0.35, ease: 'power1.inOut' }
+  )
+})
+
 const handleLogin = async () => {
   if (!formData.username || !formData.password) {
     ElMessage({ message: 'Please enter username and password', type: 'error', position: 'top-right', offset: 90 })
@@ -224,6 +235,9 @@ const handleLogin = async () => {
   }
 
   loading.value = true
+  if (!prefersReducedMotion) {
+    gsap.to('.login-layout', { opacity: 0.88, duration: 0.18, ease: 'power1.out' })
+  }
 
   try {
     const response = await login(formData)
@@ -236,6 +250,7 @@ const handleLogin = async () => {
         token,
         user: resolveLoginUser(loginData) || resolveLoginUser(payload)
       })
+      ElMessage({ message: '登录成功，欢迎回来！', type: 'success', position: 'top-right', offset: 90 })
       animateLoginSuccess(isAdminUser() ? '/admin' : '/print')
       return
     }
@@ -250,6 +265,9 @@ const handleLogin = async () => {
     animateLoginFailure()
   } finally {
     loading.value = false
+    if (!prefersReducedMotion) {
+      gsap.to('.login-layout', { opacity: 1, duration: 0.2, ease: 'power1.inOut' })
+    }
   }
 }
 </script>
@@ -457,6 +475,7 @@ const handleLogin = async () => {
 .login-btn:disabled {
   cursor: not-allowed;
   opacity: 0.72;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {

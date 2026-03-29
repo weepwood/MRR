@@ -3,21 +3,21 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { clearSession, getSession, hasAnyPermission, isAdminUser } from '@/utils/session'
 
-const Login = () => import('@/pages/LoginPage.vue')
+const Login = () => import('@/views/LoginPage.vue')
 const ElementImageGallery = () => import('@/components/ImageGalleryEl.vue')
 const ElementImageGalleryBAH = () => import('@/components/ImageGalleryAdmin.vue')
 const PrintPage = () => import('@/components/PrintPage.vue')
-const AdminDashboard = () => import('@/pages/admin/AdminDashboardPage.vue')
-const UsersPage = () => import('@/pages/admin/UsersPage.vue')
-const PermissionsPage = () => import('@/pages/admin/PermissionsPage.vue')
-const TestingPage = () => import('@/pages/admin/TestingPage.vue')
-const LogsView = () => import('@/pages/admin/LogsView.vue')
-const MonitoringView = () => import('@/pages/admin/MonitoringView.vue')
-const SettingsView = () => import('@/pages/admin/SettingsView.vue')
-const CrudView = () => import('@/pages/admin/RecordsPage.vue')
-const RecordsStatisticsView = () => import('@/pages/admin/StatisticsPage.vue')
-const StatisticsDetailPage = () => import('@/pages/admin/StatisticsDetailPage.vue')
-const ArchiveImagePage = () => import('@/pages/admin/ArchiveImagePage.vue')
+const AdminDashboard = () => import('@/views/admin/AdminDashboardPage.vue')
+const UsersPage = () => import('@/views/admin/UsersPage.vue')
+const PermissionsPage = () => import('@/views/admin/PermissionsPage.vue')
+const TestingPage = () => import('@/views/admin/TestingPage.vue')
+const LogsView = () => import('@/views/admin/LogsView.vue')
+const MonitoringView = () => import('@/views/admin/MonitoringView.vue')
+const SettingsView = () => import('@/views/admin/SettingsView.vue')
+const CrudView = () => import('@/views/admin/RecordsPage.vue')
+const RecordsStatisticsView = () => import('@/views/admin/StatisticsPage.vue')
+const StatisticsDetailPage = () => import('@/views/admin/StatisticsDetailPage.vue')
+const ArchiveImagePage = () => import('@/views/admin/ArchiveImagePage.vue')
 const Test = () => import('@/components/Test.vue')
 
 const docsRedirectRoute = {

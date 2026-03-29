@@ -1,3 +1,6 @@
+import pinia from '@/store'
+import { useUserStore } from '@/store/modules/user'
+
 export interface SessionUser {
   username?: string
   displayName?: string
@@ -15,7 +18,10 @@ export interface AuthSessionState {
 
 const SESSION_KEY = 'pmr-auth-session'
 const LEGACY_TOKEN_KEY = 'token'
-const ADMIN_PERMISSION_CANDIDATES = ['user:manage', 'role:manage', 'auth:user:manage', 'auth:role:manage']
+
+function getStore() {
+  return useUserStore(pinia)
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object'
@@ -34,9 +40,7 @@ function normalizePermissions(...sources: unknown[]): string[] {
   const permissions: unknown[] = []
 
   for (const source of sources) {
-    if (!source) {
-      continue
-    }
+    if (!source) continue
 
     if (Array.isArray(source)) {
       permissions.push(...source)
@@ -54,9 +58,7 @@ function normalizePermissions(...sources: unknown[]): string[] {
 }
 
 function normalizeUser(user: unknown): SessionUser | null {
-  if (!isRecord(user)) {
-    return null
-  }
+  if (!isRecord(user)) return null
 
   const role = isRecord(user.role) ? user.role : null
   const permissions = normalizePermissions(
@@ -77,27 +79,18 @@ function normalizeUser(user: unknown): SessionUser | null {
 }
 
 function normalizeSession(session: unknown): AuthSessionState | null {
-  if (!session) {
-    return null
-  }
+  if (!session) return null
 
   if (typeof session === 'string') {
-    return {
-      token: session,
-      user: null
-    }
+    return { token: session, user: null }
   }
 
-  if (!isRecord(session)) {
-    return null
-  }
+  if (!isRecord(session)) return null
 
   const token = pickFirstString(session.token, session.accessToken, session.jwt)
   const user = normalizeUser(session.user || session.profile || session.currentUser)
 
-  if (!token) {
-    return null
-  }
+  if (!token) return null
 
   return {
     token,
@@ -111,22 +104,29 @@ export function getSession(): AuthSessionState {
     return { token: '', user: null }
   }
 
+  const store = getStore()
+  if (store.token) {
+    return { token: store.token, user: store.user as SessionUser }
+  }
+
   try {
     const raw = window.localStorage.getItem(SESSION_KEY)
     if (raw) {
       const parsed = normalizeSession(JSON.parse(raw))
       if (parsed) {
+        setSession(parsed)
         return parsed
       }
     }
   } catch (error) {
-    console.warn('Failed to parse auth session', error)
+    // ignore
   }
 
   const legacyToken = window.localStorage.getItem(LEGACY_TOKEN_KEY)
   if (legacyToken) {
     const parsed = normalizeSession(legacyToken)
     if (parsed) {
+      setSession(parsed)
       return parsed
     }
   }
@@ -135,9 +135,7 @@ export function getSession(): AuthSessionState {
 }
 
 export function setSession(session: unknown) {
-  if (typeof window === 'undefined') {
-    return
-  }
+  if (typeof window === 'undefined') return
 
   const normalized = normalizeSession(session)
   if (!normalized) {
@@ -145,56 +143,43 @@ export function setSession(session: unknown) {
     return
   }
 
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(normalized))
-  window.localStorage.setItem(LEGACY_TOKEN_KEY, normalized.token)
+  const store = getStore()
+  // store uses a general setSession action that takes the raw or normalized data
+  store.setSession(normalized)
 }
 
 export const saveSession = setSession
 
 export function clearSession() {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.localStorage.removeItem(SESSION_KEY)
-  window.localStorage.removeItem(LEGACY_TOKEN_KEY)
+  if (typeof window === 'undefined') return
+  getStore().clearSession()
 }
 
 export function getToken(): string {
-  return getSession()?.token || ''
+  return getStore().token || getSession().token || ''
 }
 
 export function getCurrentUser(): SessionUser | null {
-  return getSession()?.user || null
+  return getStore().user as SessionUser | null || getSession().user || null
 }
 
 export function hasPermission(permission: string): boolean {
-  if (!permission) {
-    return false
-  }
-  const permissions = getCurrentUser()?.permissions || []
-  return permissions.includes(permission)
+  if (!permission) return false
+  return getStore().hasPermission(permission)
 }
 
 export function hasAnyPermission(permissions: string[] = []): boolean {
-  return permissions.some((permission) => hasPermission(permission))
+  return getStore().hasAnyPermission(permissions)
 }
 
 export function isAdminUser(): boolean {
-  const user = getCurrentUser()
-  if (!user) {
-    return false
-  }
-  const roleCode = (user.roleCode || '').toUpperCase()
-  return roleCode === 'ADMIN' || hasAnyPermission(ADMIN_PERMISSION_CANDIDATES)
+  return getStore().isAdminUser
 }
 
 export function getUserDisplayName(): string {
-  const user = getCurrentUser()
-  return user?.displayName || user?.username || ''
+  return getStore().userDisplayName
 }
 
 export function getUserRoleName(): string {
-  const user = getCurrentUser()
-  return user?.roleName || user?.roleCode || ''
+  return getStore().userRoleName
 }

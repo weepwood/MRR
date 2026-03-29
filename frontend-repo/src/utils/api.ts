@@ -1,1 +1,1 @@
-export * from '@/services/api/index'
+export * from '@/api'

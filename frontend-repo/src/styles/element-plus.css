@@ -1,0 +1,99 @@
+/*
+ * Element Plus Theme Integration
+ * Maps Element Plus internal variables to PMR design tokens.
+ */
+
+:root {
+  /* Brand Colors */
+  --el-color-primary: var(--pmr-color-action-primary);
+  --el-color-primary-light-1: #447eff;
+  --el-color-primary-light-2: #598dff;
+  --el-color-primary-light-3: #6e9bff;
+  --el-color-primary-light-4: #83aaff;
+  --el-color-primary-light-5: #97b9ff;
+  --el-color-primary-light-7: #c1d5ff;
+  --el-color-primary-light-8: var(--pmr-color-brand-100);
+  --el-color-primary-light-9: var(--pmr-color-brand-50);
+  --el-color-primary-dark-2: var(--pmr-color-brand-700);
+
+  /* Status Colors */
+  --el-color-success: var(--pmr-color-success-500);
+  --el-color-warning: var(--pmr-color-warning-500);
+  --el-color-danger: var(--pmr-color-danger-500);
+  --el-color-info: var(--pmr-color-info-500);
+
+  /* Text & Content */
+  --el-text-color-primary: var(--pmr-color-text-primary);
+  --el-text-color-regular: var(--pmr-color-text-secondary);
+  --el-text-color-secondary: var(--pmr-color-text-secondary);
+  --el-text-color-placeholder: var(--pmr-color-text-disabled);
+  --el-text-color-disabled: var(--pmr-color-text-disabled);
+
+  /* Border & Background */
+  --el-border-color: var(--pmr-color-border-default);
+  --el-border-color-light: #e6eefc;
+  --el-border-color-lighter: #eef3ff;
+  --el-border-color-extra-light: #f5f8ff;
+  
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: var(--pmr-color-bg-page);
+  --el-fill-color-light: #f2f7ff;
+  --el-fill-color-blank: rgba(255, 255, 255, 0.82);
+
+  /* Radius */
+  --el-border-radius-base: var(--pmr-radius-lg);
+  --el-border-radius-small: var(--pmr-radius-md);
+  --el-border-radius-round: 999px;
+
+  /* Shadows */
+  --el-box-shadow-light: var(--pmr-shadow-surface-sm);
+  --el-box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --el-box-shadow-dark: 0 20px 36px rgba(15, 23, 42, 0.14);
+}
+
+/* Custom Overrides for Element Plus Components */
+
+/* Table */
+.el-table {
+  --el-table-header-bg-color: #f7f9fc;
+  --el-table-header-text-color: var(--pmr-color-text-primary);
+  --el-table-tr-bg-color: #ffffff;
+  --el-table-border-color: #e6edf7;
+  --el-table-row-hover-bg-color: #f7fbff;
+  border-radius: var(--pmr-radius-2xl);
+  overflow: hidden;
+}
+
+/* Pagination */
+.el-pagination {
+  --el-pagination-bg-color: transparent;
+}
+
+/* Card */
+.el-card {
+  --el-card-border-radius: var(--pmr-radius-2xl);
+  --el-card-border-color: var(--pmr-color-border-default);
+  --el-card-bg-color: var(--pmr-color-bg-card);
+  box-shadow: var(--pmr-shadow-surface-sm);
+}
+
+/* Input */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: var(--pmr-radius-xl);
+  box-shadow: 0 0 0 1px var(--el-border-color) inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus,
+.el-select__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+}
+
+/* Tag */
+.el-tag {
+  border: none;
+  border-radius: 999px;
+  font-weight: var(--pmr-font-weight-medium);
+}

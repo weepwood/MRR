@@ -1,4 +1,12 @@
 <script setup>
+import { onMounted } from 'vue'
+import { useAdminSettings } from '@/shared/composables/useAdminSettings'
+
+const { loadSettings } = useAdminSettings()
+
+onMounted(() => {
+  loadSettings()
+})
 </script>
 
 <template>

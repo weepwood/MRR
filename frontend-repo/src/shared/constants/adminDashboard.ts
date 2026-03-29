@@ -5,7 +5,9 @@ export const adminDefaultSettings = {
   maxFileSize: 10,
   sessionTimeout: 30,
   logLevel: 'info',
-  swaggerUrl: '/swagger-ui/index.html'
+  swaggerUrl: '/swagger-ui/index.html',
+  primaryColor: '#2f6fff',
+  borderRadius: 12
 }
 
 export const adminSectionMetaMap = {

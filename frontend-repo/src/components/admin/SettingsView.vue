@@ -171,6 +171,47 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="20" class="settings-row mt-20">
+      <el-col :span="24">
+        <el-card class="pmr-panel">
+          <template #header>
+            <div class="card-header pmr-panel-header">
+              <span>界面样式 (动态预览)</span>
+            </div>
+          </template>
+
+          <el-form :model="settings" label-width="100px" inline>
+            <el-form-item label="品牌主色">
+              <el-color-picker 
+                v-model="settings.primaryColor" 
+                @change="val => applyTheme({ ...settings, primaryColor: val })" 
+              />
+              <span class="unit-text" style="font-family: monospace;">{{ settings.primaryColor }}</span>
+            </el-form-item>
+            
+            <el-form-item label="圆角半径">
+              <el-input-number 
+                v-model="settings.borderRadius" 
+                :min="0" 
+                :max="32" 
+                @change="val => applyTheme({ ...settings, borderRadius: val })"
+              />
+              <span class="unit-text">px</span>
+            </el-form-item>
+
+            <el-form-item label="常用预设" style="margin-left: 20px;">
+              <el-button-group>
+                <el-button size="small" @click="setPreset('#2f6fff', 12)">默认蓝</el-button>
+                <el-button size="small" @click="setPreset('#14b8a6', 8)">薄荷绿</el-button>
+                <el-button size="small" @click="setPreset('#6366f1', 14)">靛青紫</el-button>
+                <el-button size="small" @click="setPreset('#f43f5e', 10)">珊瑚红</el-button>
+              </el-button-group>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <div class="settings-actions pmr-actions-row">
       <el-button type="primary" @click="handleSave">
         <el-icon><Check /></el-icon>
@@ -205,6 +246,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Download, RefreshLeft, Upload } from '@element-plus/icons-vue'
 import { useAdminSettings } from '@/shared/composables/useAdminSettings'
+import { applyTheme } from '@/utils/theme'
 
 const fileInput = ref(null)
 const { settings, loadSettings, saveSettings, resetSettings } = useAdminSettings()
@@ -240,6 +282,12 @@ const handleSave = () => {
 const handleReset = () => {
   resetSettings()
   ElMessage.success('配置已恢复默认')
+}
+
+const setPreset = (color, radius) => {
+  settings.primaryColor = color
+  settings.borderRadius = radius
+  applyTheme({ primaryColor: color, borderRadius: radius })
 }
 
 const handleFileImport = (event) => {
@@ -319,6 +367,10 @@ onMounted(() => {
 
 .mb-16 {
   margin-bottom: 16px;
+}
+
+.mt-20 {
+  margin-top: 20px;
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,6 @@
 import { computed, reactive } from 'vue'
 import { adminDefaultSettings, adminSettingsStorageKey } from '../constants/adminDashboard'
+import { applyTheme } from '@/utils/theme'
 
 const cloneDefaults = () => ({ ...adminDefaultSettings })
 
@@ -36,22 +37,28 @@ export const normalizeAdminUrl = (value) => {
   }
 }
 
+const globalSettings = reactive(cloneDefaults())
+
 export function useAdminSettings() {
-  const settings = reactive(cloneDefaults())
+  const settings = globalSettings
 
   const loadSettings = () => {
-    Object.assign(settings, readSettings())
+    const loaded = readSettings()
+    Object.assign(settings, loaded)
+    applyTheme(loaded)
   }
 
   const saveSettings = (nextSettings = settings) => {
     const snapshot = { ...adminDefaultSettings, ...nextSettings }
     Object.assign(settings, snapshot)
     writeSettings(snapshot)
+    applyTheme(snapshot)
     return snapshot
   }
 
   const resetSettings = () => {
     Object.assign(settings, cloneDefaults())
+    applyTheme(adminDefaultSettings)
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(adminSettingsStorageKey)
     }

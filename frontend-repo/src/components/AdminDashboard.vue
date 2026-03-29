@@ -529,7 +529,6 @@ function handleLogout() {
   background: rgba(219, 225, 255, 0.55);
   color: #003fb1;
   font-weight: 700;
-  border-left: 4px solid #003fb1;
 }
 
 .profile-card {

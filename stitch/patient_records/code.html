@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Patient Management | Zendenta</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed": "#ffdbcc",
+              "inverse-on-surface": "#eff1f3",
+              "surface-bright": "#f7f9fb",
+              "on-secondary-container": "#454386",
+              "on-tertiary-fixed-variant": "#7b2f00",
+              "on-primary": "#ffffff",
+              "surface": "#f7f9fb",
+              "on-error": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed": "#0f0069",
+              "on-error-container": "#93000a",
+              "outline": "#777587",
+              "secondary-fixed": "#e2dfff",
+              "surface-variant": "#e0e3e5",
+              "tertiary": "#7e3000",
+              "primary": "#3525cd",
+              "surface-container-high": "#e6e8ea",
+              "inverse-primary": "#c3c0ff",
+              "tertiary-container": "#a44100",
+              "secondary-container": "#b6b4ff",
+              "on-secondary-fixed": "#140f54",
+              "primary-fixed": "#e2dfff",
+              "background": "#f7f9fb",
+              "surface-container": "#eceef0",
+              "on-tertiary-fixed": "#351000",
+              "on-surface": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#464555",
+              "surface-container-highest": "#e0e3e5",
+              "primary-container": "#4f46e5",
+              "outline-variant": "#c7c4d8",
+              "on-secondary-fixed-variant": "#413f82",
+              "inverse-surface": "#2d3133",
+              "on-tertiary-container": "#ffd2be",
+              "primary-fixed-dim": "#c3c0ff",
+              "on-secondary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed-dim": "#c3c0ff",
+              "on-primary-fixed-variant": "#3323cc",
+              "secondary": "#58579b",
+              "error": "#ba1a1a",
+              "on-background": "#191c1e",
+              "surface-tint": "#4d44e3",
+              "surface-dim": "#d8dadc",
+              "tertiary-fixed-dim": "#ffb695",
+              "on-primary-container": "#dad7ff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, .font-headline {
+        font-family: 'Manrope', sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-50 dark:bg-slate-950 flex flex-col py-4 z-50">
+<div class="text-2xl font-black text-indigo-600 dark:text-indigo-400 px-6 py-6 font-manrope">
+            Zendenta
+            <span class="block text-[10px] tracking-widest uppercase text-slate-400 font-bold">Management System</span>
+</div>
+<nav class="flex-1 mt-4 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="event_note">event_note</span>
+                Reservations
+            </a>
+<!-- Active Tab: Patients -->
+<a class="flex items-center gap-3 px-4 py-3 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20 border-l-4 border-indigo-600 font-semibold transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+                Patients
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="medical_services">medical_services</span>
+                Treatments
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+                Staff List
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Accounts
+            </a>
+</nav>
+<div class="mt-auto px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 ease-in-out font-manrope text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                Logout
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full h-16 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none flex items-center justify-between px-8 sticky top-0 z-40">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container rounded-xl border-none focus:ring-2 focus:ring-primary/40 text-sm placeholder:text-on-surface-variant/60" placeholder="Search patients, ID, or appointments..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<div class="flex items-center gap-3 ml-2 pl-4 border-l border-outline-variant/30">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface">Darrell Steward</p>
+<p class="text-[10px] text-on-surface-variant">Super admin</p>
+</div>
+<img alt="Profile" class="w-9 h-9 rounded-full bg-surface-container" data-alt="close-up portrait of a professional man in a clinical setting with warm lighting and a friendly expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCH0yeOSLuZzSPDZv08L76mujfozGbki6vIRi-z3TdDr8E9H-CeVaIGtt56q_QNJXW6wENFMzpJ7FGjLfp5R4C-p6igD4SN31zB7z7u92TQMisFq0bGNoirhkUXpCsxkViZsUVbF2rgZ1XZTnzM-YdVjFPB0RtNnDxjtUzZAaWtg5tKXsLPCmu7ZmRarcnmAtwrUTIuxF0EF-4B8qAlrG_T8VdreDSWGU7jmQLIxxoUFCtXrV7yTAp0C4vjHNoloL8xVSXZXcnr-TaB"/>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-8 flex gap-8 h-[calc(100vh-64px)] overflow-hidden">
+<!-- Left Side: Patient List -->
+<div class="flex-1 flex flex-col min-w-0">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h1 class="text-3xl font-extrabold text-on-surface tracking-tight">Patient Records</h1>
+<p class="text-on-surface-variant text-sm mt-1">Manage 1,248 active patients in your clinic.</p>
+</div>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add Patient
+                    </button>
+</div>
+<!-- Filters -->
+<div class="flex items-center gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-4 py-2 bg-primary text-white rounded-full text-xs font-semibold whitespace-nowrap">All Patients</button>
+<button class="px-4 py-2 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container transition-colors rounded-full text-xs font-medium border border-outline-variant/20 whitespace-nowrap">Recent Visits</button>
+<button class="px-4 py-2 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container transition-colors rounded-full text-xs font-medium border border-outline-variant/20 whitespace-nowrap">Critical Status</button>
+<button class="px-4 py-2 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container transition-colors rounded-full text-xs font-medium border border-outline-variant/20 whitespace-nowrap">Upcoming Appointments</button>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-xs text-on-surface-variant">Sort by:</span>
+<select class="bg-transparent border-none text-xs font-bold text-on-surface p-0 focus:ring-0 cursor-pointer">
+<option>Name (A-Z)</option>
+<option>Last Visit</option>
+<option>Patient ID</option>
+</select>
+</div>
+</div>
+<!-- Patient Grid (Bento Style) -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 overflow-y-auto pr-2 custom-scrollbar">
+<!-- Patient Card Active -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl border-2 border-primary/20 shadow-sm relative group cursor-pointer">
+<div class="absolute top-4 right-4 flex gap-1">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-[10px] font-bold text-emerald-600 uppercase">Stable</span>
+</div>
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="professional portrait of an elderly woman with silver hair and a kind expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCra8tobNM3AmQkf93XjHmkFnBMubUh73QYzk01VNzYa-IsICrSFYjnI31YGhZjntcmcHK2KlPyTGtJJpSu7xC1jWaxEAsl9N7Cp9_boDISyUTadUUaSWKOEHOElTBKC3rltYfRwGE4Ok4WHzDwCCmYbKuyltTgs3hxVKIYCrakJa2znKt5jF-GgKhPdgZeXEkKcgYS2ZWPeYt2ujYLZbz1I1h5ZMzxWT4L1FNrA-UDxJZJJwxIDZKzB4DxxUIXeyDl7ndukTjdBs9B"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Eleanor Pena</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88219</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Oct 12, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface text-primary">Dental Braces</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="absolute top-4 right-4 flex gap-1">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-[10px] font-bold text-amber-600 uppercase">Follow-up</span>
+</div>
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="headshot of a young adult male with glasses and a friendly smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI0N9ZrZjY_rvA2BdtPVpOKTPA9pnqPEwXHCP99Em3VIHtbJWLdIoooUiowIQKzI9JLY1gW8itSkWZnZ6gme3ae_xsokIwApWqlO9AhBeVFnTgu3YVuRAkImljaidGhLMg5r67JdDTiXaVD3NuTEN2SY1L7E39H306vVcAuIofUCOcj5gEd3CzPv5g8bfi5hiFutr4oCgiMKLau54vbLtCKDGF9m8XD__uy_3bUNnXnm1NOVrObzji4PafuRuA4BdJy8xDSjIVYFK1"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Bessie Cooper</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88220</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Oct 10, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface">Root Canal</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="portrait of a middle-aged man with a warm smile in a casual setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGRAjqfqTx9GywUscvXzXJDi6r2n51-3kkRsmHNKrz7rkcaskqb2SUUQG_9-FprCDzLyPPXowvXUD18Lp9r3xLS_47elk-zWWDw6R91dz0lMUikt1bQX000KHSfRGadEdKr-HF-i3a66FwK0gxu8FKkS3HSWu0mE2JXVBr3XzhBb7pLbViH_bvrcFxRBDzpAKZwsX-jiCE5SvgjEzQ68OXvUe6mCUa2QSOdKNBLDHfugiEoKUf8zxdwBTehYGK_JeTqGd00Mb_yfy9"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Arlene McCoy</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88221</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Sep 28, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface">Cleaning</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="professional headshot of a young woman with a pleasant and confident look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjUTOVmk2MjQR6IBTJwlKg0QnUpyyVn8fF7nuS5MsambEJd-LafZQrhVWzJMGXT2QXWgBPGHN42MrOrnroXDCdoFmzU8_bxLFOu_1YpvTNkjqVbsJfZFm7m3sGwXsRB52YfzVP6Zma7SpQ2tOp1EYjfjEV2lU0QdAhugl2KEAI6GSuIbM567J4q6JnrNMMAWffEWNNxDENz2A8w6FAv8bQbXWA_E76uqeQ3YH0-OmbZ8I_ZXzb_9fjar-eNt8wvS6mPEvUtl7vNa-S"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Guy Hawkins</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88222</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Oct 14, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface">Crown Install</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="headshot of a smiling young woman with curly hair against a clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVnzbTVzBWdFcK5MfR7vmW6coROBQN73_603wWCb_UU1HIbtUxLkg6a5OgCThsjXXq2iiDis7G-Jaw5J_HjppOkxEFaAGjQWuc9f0dBZYRnG0HokocWZgTx9KR2ThdjznpSAtTTPjde3d97Ne8OnFQnrWFhaPCzhWAmAV5p9XHjYa8yVM_-nY2_hdPsvxSZxDgoM7qVubKAS6FAiO4BncxMU8VpDJffsShIMae4mIJhY4TTnClSCCrlCrzONh1cjVWkJLTc17xST1M"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Jerome Bell</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88223</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Oct 01, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface text-primary">Orthodontics</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl hover:bg-surface-container-low transition-all cursor-pointer">
+<div class="flex gap-4">
+<img class="w-14 h-14 rounded-xl bg-surface-container" data-alt="close-up of a smiling man with a beard and clear skin in soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATLoxuuv_CBQXWe8_rwew1-S289gKSKaBV2Y5BoGo6ItdO1XJGdOQQwuBBFfoLalvkh3v5_nZEK6elOoZw35r2Lor93wOvoB38P1sEVvHgO1jP0It2r97Xwp2DrYUGknu44jI-Bw__2IdsG4BedGA9iujetGgYAmTdU8edC-fOoNz58kUd0jotzu_0swOmToD8LImIK4v5JG95zUKWwL1m0hVdd-O46FdV22XbhXUsBVGKUXfpjtZUY6eUfKhVv2uCZoW_mwuVKuC8"/>
+<div class="flex-1">
+<h3 class="text-lg font-bold text-on-surface">Floyd Miles</h3>
+<p class="text-xs text-on-surface-variant font-medium">ID: #PT-88224</p>
+<div class="mt-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Last Visit</p>
+<p class="text-sm font-semibold text-on-surface">Oct 05, 2023</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant/60 font-bold">Treatment</p>
+<p class="text-sm font-semibold text-on-surface">Extraction</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side: Preview Pane (Glassmorphism & Layering) -->
+<aside class="w-96 bg-surface-container-lowest rounded-3xl p-8 flex flex-col gap-8 shadow-2xl shadow-primary/5 border border-outline-variant/10 overflow-y-auto">
+<div class="flex items-center justify-between">
+<span class="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase tracking-widest">Medical Profile</span>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-xl" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+<div class="text-center">
+<div class="relative inline-block">
+<img class="w-24 h-24 rounded-3xl mx-auto border-4 border-surface-container shadow-xl" data-alt="high-resolution medical profile picture of a female patient with friendly features" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYl1LInI9-k2B3Uksnykx9rihj6gJLkYA9upTuOXinjfH02KJNeSIc452dVB9Sa_49sATviLevbiOxMNhwF266CNiP-goOdYEiFuoJ5NWs9ZNOOa_nzWpLLA40Bq9hu-mBEMUJ3iXj_--tmmOcb9hUbqSpeSIO5ZWYJEEZQ2LkyR75LD8XeB-rOo72LPnwAf3wlNZSi90l3HgGGFb4t0atpZR7jXM0NROH4Nexqsm6gheHBKYuFdUQZvt5HvAile8MFIdfMjYuRkPe"/>
+<div class="absolute -bottom-2 -right-2 bg-emerald-500 w-6 h-6 rounded-full border-4 border-white"></div>
+</div>
+<h2 class="text-2xl font-extrabold mt-6 text-on-surface">Eleanor Pena</h2>
+<p class="text-sm text-on-surface-variant font-medium">Female, 42 years old</p>
+</div>
+<!-- Info Grid -->
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-container-low rounded-2xl">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="bloodtype">bloodtype</span>
+<p class="text-[10px] font-bold text-on-surface-variant/60 uppercase">Blood Type</p>
+<p class="text-sm font-bold text-on-surface">A Rh +</p>
+</div>
+<div class="p-4 bg-surface-container-low rounded-2xl">
+<span class="material-symbols-outlined text-primary mb-2" data-icon="height">height</span>
+<p class="text-[10px] font-bold text-on-surface-variant/60 uppercase">Weight</p>
+<p class="text-sm font-bold text-on-surface">62 Kg</p>
+</div>
+</div>
+<!-- Upcoming Appointment -->
+<div class="bg-primary/5 p-6 rounded-3xl border border-primary/10">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-sm font-extrabold text-on-surface">Next Appointment</h4>
+<span class="text-[10px] font-bold text-primary">VIEW ALL</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-primary text-white p-3 rounded-2xl text-center min-w-[50px]">
+<p class="text-[10px] uppercase font-bold leading-none">Oct</p>
+<p class="text-xl font-black leading-tight">24</p>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Dental Braces Check</p>
+<p class="text-xs text-on-surface-variant">09:30 AM - 10:30 AM</p>
+</div>
+</div>
+<button class="w-full mt-6 py-3 bg-white text-primary text-xs font-extrabold rounded-xl shadow-sm border border-primary/5 hover:bg-primary hover:text-white transition-all">
+                        Reschedule Appointment
+                    </button>
+</div>
+<!-- History -->
+<div>
+<h4 class="text-sm font-extrabold text-on-surface mb-4">Patient History</h4>
+<div class="space-y-4">
+<div class="flex items-start gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-primary ring-4 ring-primary/10"></div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Root Canal Treatment</p>
+<p class="text-xs text-on-surface-variant">Sep 12, 2023 • Dr. Robert Fox</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">General Consultation</p>
+<p class="text-xs text-on-surface-variant">Aug 05, 2023 • Dr. Jane Cooper</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">X-Ray Panoramic</p>
+<p class="text-xs text-on-surface-variant">Jul 28, 2023 • Lab Dept.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto">
+<button class="w-full py-4 bg-surface-container text-on-surface-variant text-sm font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="print">print</span>
+                        Print Full Record
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+<style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #eceef0;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #c7c4d8;
+        }
+    </style>
+</body></html>

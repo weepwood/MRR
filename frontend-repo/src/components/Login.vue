@@ -6,7 +6,7 @@
     <div class="login-layout pmr-fade-up">
       <aside class="brand-panel">
         <p class="brand-tag">Medical Record Platform</p>
-        <h1>病案管理系统</h1>
+        <h1>病案管理系统 v0.0.7</h1>
         <p class="brand-subtitle">
           统一管理病案影像、日志与统计数据，让后台操作更安全、更高效。
         </p>

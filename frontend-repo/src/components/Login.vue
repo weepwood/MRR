@@ -63,15 +63,16 @@
             />
           </div>
 
-          <button class="login-btn" type="submit" :disabled="loading">
-            {{ loading ? 'Logging in...' : 'Login' }}
+          <button
+            class="login-btn"
+            type="submit"
+            :disabled="loading"
+            @mouseenter="animateButtonHover(true)"
+            @mouseleave="animateButtonHover(false)"
+          >
+            {{ loading ? '登录中...' : '登录' }}
           </button>
         </form>
-
-        <p v-if="error" class="error-message">
-          <el-icon><Warning /></el-icon>
-          {{ error }}
-        </p>
       </section>
     </div>
   </div>
@@ -80,13 +81,15 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import gsap from 'gsap'
+import { ElMessage } from 'element-plus'
 import { DataBoard, Document, Key, Lock, UserFilled, Warning } from '@element-plus/icons-vue'
 import { login } from '@/utils/api'
 import { getSession, isAdminUser, setSession } from '@/utils/session'
 
 const router = useRouter()
 const loading = ref(false)
-const error = ref('')
+const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
 
 const formData = reactive({
   username: '',
@@ -124,16 +127,103 @@ const redirectIfLoggedIn = () => {
 
 onMounted(() => {
   redirectIfLoggedIn()
+
+  if (prefersReducedMotion) {
+    gsap.set('.login-layout', { opacity: 1, y: 0, scale: 1 })
+    return
+  }
+
+  gsap.fromTo(
+    '.login-layout',
+    { opacity: 0, y: 30, scale: 0.96 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power1.inOut' }
+  )
+
+  gsap.to('.glow-bg', {
+    scale: 1.08,
+    duration: 0.8,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true
+  })
+
+  gsap.to('.light-orb.orb-a', {
+    x: 80,
+    y: -70,
+    duration: 6,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1
+  })
+
+  gsap.to('.light-orb.orb-b', {
+    x: -80,
+    y: 70,
+    duration: 7,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1
+  })
 })
+
+const animateLoginSuccess = (nextRoute) => {
+  if (prefersReducedMotion) {
+    router.push(nextRoute)
+    return
+  }
+
+  const tl = gsap.timeline({ defaults: { duration: 0.28, ease: 'power1.inOut' } })
+
+  // 简洁流畅的出场动画。
+  gsap.to('.glow-bg', { opacity: 1, duration: 0.18, ease: 'power1.inOut', yoyo: true, repeat: 1 })
+
+  tl.to('.login-layout', { scale: 1.03, boxShadow: '0 22px 40px rgba(89, 109, 255, 0.3)' })
+    .to('.login-layout', { rotate: 4, filter: 'grayscale(30%)', opacity: 0.75 })
+    .to('.login-layout', { scale: 0.25, opacity: 0, rotate: 8 })
+
+  gsap.to('.login-page', { filter: 'grayscale(40%)', duration: 0.5, ease: 'power1.out' })
+
+  // 通过 GSAP 延迟调用, 避免 setTimeout
+  gsap.delayedCall(0.85, () => {
+    router.push(nextRoute)
+  })
+}
+
+const animateLoginFailure = () => {
+  if (prefersReducedMotion) {
+    return
+  }
+
+  const tl = gsap.timeline({ defaults: { duration: 0.06, ease: 'power1.inOut' } })
+  tl.to('.login-layout', { x: -10 })
+    .to('.login-layout', { x: 10 })
+    .to('.login-layout', { x: -8 })
+    .to('.login-layout', { x: 8 })
+    .to('.login-layout', { x: 0 })
+
+  gsap.to('.login-layout', {
+    boxShadow: '0 0 0 rgba(89, 109, 255, 0)',
+    duration: 0.7,
+    ease: 'power1.inOut'
+  })
+}
+
+const animateButtonHover = (isHovering) => {
+  gsap.to('.login-btn', {
+    scale: isHovering ? 1.04 : 1,
+    boxShadow: isHovering ? '0 12px 24px rgba(47, 111, 255, 0.25)' : '0 8px 18px rgba(47, 111, 255, 0.12)',
+    duration: 0.25,
+    ease: 'power2.out'
+  })
+}
 
 const handleLogin = async () => {
   if (!formData.username || !formData.password) {
-    error.value = 'Please enter username and password'
+    ElMessage({ message: 'Please enter username and password', type: 'error', position: 'top-right', offset: 90 })
     return
   }
 
   loading.value = true
-  error.value = ''
 
   try {
     const response = await login(formData)
@@ -146,14 +236,18 @@ const handleLogin = async () => {
         token,
         user: resolveLoginUser(loginData) || resolveLoginUser(payload)
       })
-      router.push(isAdminUser() ? '/admin' : '/print')
+      animateLoginSuccess(isAdminUser() ? '/admin' : '/print')
       return
     }
 
-    error.value = resolveMessage(payload, 'Login failed, please check your account')
+    const msg = resolveMessage(payload, 'Login failed, please check your account')
+    ElMessage({ message: msg, type: 'error', position: 'top-right', offset: 90 })
+    animateLoginFailure()
   } catch (err) {
     console.error('Login failed:', err)
-    error.value = resolveMessage(err.response?.data, 'Login failed, please try again')
+    const msg = resolveMessage(err.response?.data, 'Login failed, please try again')
+    ElMessage({ message: msg, type: 'error', position: 'top-right', offset: 90 })
+    animateLoginFailure()
   } finally {
     loading.value = false
   }
@@ -276,6 +370,7 @@ const handleLogin = async () => {
 .form-panel {
   padding: 44px 40px;
   background: rgba(255, 255, 255, 0.92);
+  position: relative;
 }
 
 .form-panel h2 {
@@ -351,7 +446,7 @@ const handleLogin = async () => {
     transform var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
     background-color var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard),
     opacity var(--pmr-motion-duration-normal) var(--pmr-motion-ease-standard);
-  box-shadow: none;
+  box-shadow: 0 8px 18px rgba(47, 111, 255, 0.12);
 }
 
 .login-btn:hover:not(:disabled) {
@@ -362,19 +457,6 @@ const handleLogin = async () => {
 .login-btn:disabled {
   cursor: not-allowed;
   opacity: 0.72;
-}
-
-.error-message {
-  margin-top: 14px;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  border: 1px solid rgba(228, 87, 87, 0.25);
-  background: rgba(228, 87, 87, 0.08);
-  color: #b32626;
-  font-size: 13px;
 }
 
 @media (max-width: 900px) {

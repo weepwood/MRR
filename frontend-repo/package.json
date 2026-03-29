@@ -29,6 +29,7 @@
     "crypto-js": "^4.2.0",
     "element-plus": "^2.11.1",
     "express": "^4.18.2",
+    "gsap": "^3.14.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "viewerjs": "^1.11.6",

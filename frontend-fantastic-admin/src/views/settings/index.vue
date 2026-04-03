@@ -23,12 +23,12 @@ const settings = reactive({
 })
 
 function handleSave() {
-  localStorage.setItem('fantastic-admin:system-settings', JSON.stringify(settings))
+  localStorage.setItem('MRR-ADMIN:system-settings', JSON.stringify(settings))
   ElMessage.success('设置已保存到本地草稿')
 }
 
 function handleReset() {
-  localStorage.removeItem('fantastic-admin:system-settings')
+  localStorage.removeItem('MRR-ADMIN:system-settings')
   ElMessage.success('已清除本地草稿，当前页面保留默认值')
 }
 </script>

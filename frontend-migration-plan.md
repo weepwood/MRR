@@ -2,10 +2,10 @@
 
 ## 1. 目标与范围
 
-本计划用于指导将现有 `frontend-repo` 中的管理页面，在 `frontend-fantastic-admin` 框架下重新实现，目标是：
+本计划用于指导将现有 `frontend-repo` 中的管理页面，在 `frontend-MRR-ADMIN` 框架下重新实现，目标是：
 
 - 完整保留现有业务功能、权限控制和关键交互流程。
-- 利用 `frontend-fantastic-admin` 现有的布局、路由、菜单、标签页、主题、权限、工程化能力提升可维护性。
+- 利用 `frontend-MRR-ADMIN` 现有的布局、路由、菜单、标签页、主题、权限、工程化能力提升可维护性。
 - 在不影响业务连续性的前提下，分阶段迁移、分批验收、可灰度上线、可快速回滚。
 
 本次迁移的核心范围包括：
@@ -58,7 +58,7 @@
 - `StatisticsDetailPage.vue`
 - `ArchiveImagePage.vue`
 
-### 2.2 目标项目 `frontend-fantastic-admin`
+### 2.2 目标项目 `frontend-MRR-ADMIN`
 
 当前已识别的框架能力：
 
@@ -82,7 +82,7 @@
 - 双向校验：每迁完一个模块，必须与旧系统进行功能对比。
 - 最小中断：通过并行开发、测试环境联调、灰度验证减少上线风险。
 - 可回退：保留旧版本部署产物和回滚脚本，确保故障可在分钟级恢复。
-- 统一规范：新实现统一收敛到 `frontend-fantastic-admin` 的目录、状态、路由、样式和组件规范。
+- 统一规范：新实现统一收敛到 `frontend-MRR-ADMIN` 的目录、状态、路由、样式和组件规范。
 
 ## 4. 页面映射与迁移对象
 
@@ -172,7 +172,7 @@ src/
 ```
 
 - 路由策略设计：
-  - 使用 `frontend-fantastic-admin` 现有路由体系统一承载后台页面
+  - 使用 `frontend-MRR-ADMIN` 现有路由体系统一承载后台页面
   - 将后台业务路由拆分到独立模块
   - 为详情页、归档页、预览页明确动态参数规范
 - 菜单策略设计：
@@ -189,7 +189,7 @@ src/
   - 明确后端字段适配层，避免页面直接依赖不稳定字段
 - 组件策略设计：
   - 公共表格、搜索栏、统计卡片、详情抽屉、图片预览统一沉淀为业务组件
-  - 基础 UI 优先复用 `frontend-fantastic-admin` 现有组件和布局能力
+  - 基础 UI 优先复用 `frontend-MRR-ADMIN` 现有组件和布局能力
 - 样式策略设计：
   - 页面骨架、间距、响应式规则统一
   - 旧项目中零散样式迁移时避免原样复制，优先收敛到框架设计规范
@@ -234,7 +234,7 @@ src/
 #### 3.2 登录与权限子任务
 
 - 对齐旧项目 `session`、`isAdminUser`、`hasAnyPermission` 行为
-- 完善 `frontend-fantastic-admin` 中 `user store` 的权限拉取与初始化逻辑
+- 完善 `frontend-MRR-ADMIN` 中 `user store` 的权限拉取与初始化逻辑
 - 保证以下行为一致：
   - 未登录跳转登录页
   - 已登录访问登录页自动跳转
@@ -463,7 +463,7 @@ src/
 
 满足以下条件方可视为迁移完成：
 
-- 所有现有业务功能已在 `frontend-fantastic-admin` 中可用
+- 所有现有业务功能已在 `frontend-MRR-ADMIN` 中可用
 - 与旧系统对照后的 P0/P1 功能无缺失
 - 主流浏览器兼容性测试通过
 - 性能测试达到预设指标
@@ -475,7 +475,7 @@ src/
 为尽快进入实施，建议下一步按以下顺序推进：
 
 1. 冻结最终页面清单与权限矩阵
-2. 完成 `frontend-fantastic-admin` 正式业务菜单与路由结构
+2. 完成 `frontend-MRR-ADMIN` 正式业务菜单与路由结构
 3. 统一登录态、权限守卫和 API 错误处理
 4. 以 `Users`、`Permissions` 作为模板模块完成规范沉淀
 5. 优先迁移 `Records` 与 `Statistics` 两个高价值且高风险模块

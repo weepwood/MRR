@@ -1,22 +1,22 @@
 **中文** | [English](./README.EN.md)
 
 <p align="center">
-  <img src="https://fantastic-admin.hurui.me/logo.svg" width="200" height="200" alt="Fantastic-admin" />
+  <img src="https://MRR-ADMIN.hurui.me/logo.svg" width="200" height="200" alt="MRR-ADMIN" />
 </p>
 
-<h1 align="center">Fantastic-admin</h1>
+<h1 align="center">MRR-ADMIN</h1>
 
 <p align="center">一款<b>开箱即用</b>的 Vue3 管理系统框架</p>
 
 <p align="center">
-  <a href="https://fantastic-admin.hurui.me" target="_blank">官网</a>
+  <a href="https://MRR-ADMIN.hurui.me" target="_blank">官网</a>
   <span>&nbsp;|&nbsp;</span>
-  <a href="https://fantastic-admin.pages.dev" target="_blank">备用地址</a>
+  <a href="https://MRR-ADMIN.pages.dev" target="_blank">备用地址</a>
 <p>
 
 <p align="center">
-  <a href="###"><img src="https://img.shields.io/github/license/fantastic-admin/basic?label=%E5%BC%80%E6%BA%90%E5%8D%8F%E8%AE%AE&style=flat-square" alt="" /></a>
-  <a href="https://github.com/fantastic-admin/basic/releases" target="_blank"><img src="https://img.shields.io/github/v/release/fantastic-admin/basic?label=%E5%BD%93%E5%89%8D%E7%89%88%E6%9C%AC&style=flat-square" alt="" /></a>
+  <a href="###"><img src="https://img.shields.io/github/license/MRR-ADMIN/basic?label=%E5%BC%80%E6%BA%90%E5%8D%8F%E8%AE%AE&style=flat-square" alt="" /></a>
+  <a href="https://github.com/MRR-ADMIN/basic/releases" target="_blank"><img src="https://img.shields.io/github/v/release/MRR-ADMIN/basic?label=%E5%BD%93%E5%89%8D%E7%89%88%E6%9C%AC&style=flat-square" alt="" /></a>
 </p>
 
 ## 特点
@@ -33,9 +33,9 @@
 
 ## 下载
 
-> 本仓库为基础版
+> 本仓库为
 
-**直接拉取源码可能会包含未发布的内容，推荐去 [Github Releases](https://github.com/fantastic-admin/basic/releases) 页面下载稳定版本的压缩包**。如果确定需要拉取源码，请参考下列分支说明：
+**直接拉取源码可能会包含未发布的内容，推荐去 [Github Releases](https://github.com/MRR-ADMIN/basic/releases) 页面下载稳定版本的压缩包**。如果确定需要拉取源码，请参考下列分支说明：
 
 - `main` Vue3 版本框架源码分支，不含示例代码，可直接用于实际开发
 - `example` Vue3 版本演示源码分支，同线上演示站，包含大量示例，可用于参考学习
@@ -48,31 +48,31 @@
 
 <table>
   <tr>
-    <td><img src="https://fantastic-admin.hurui.me/preview1.png" alt="" /></td>
-    <td><img src="https://fantastic-admin.hurui.me/preview2.png" alt="" /></td>
-    <td><img src="https://fantastic-admin.hurui.me/preview3.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview1.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview2.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview3.png" alt="" /></td>
   </tr>
   <tr>
-    <td><img src="https://fantastic-admin.hurui.me/preview4.png" alt="" /></td>
-    <td><img src="https://fantastic-admin.hurui.me/preview5.png" alt="" /></td>
-    <td><img src="https://fantastic-admin.hurui.me/preview6.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview4.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview5.png" alt="" /></td>
+    <td><img src="https://MRR-ADMIN.hurui.me/preview6.png" alt="" /></td>
   </tr>
 </table>
 
 ## 支持
 
-如果觉得 Fantastic-admin 这个框架不错，或者已经在使用了，希望你可以在 **Github** / **Gitee** / **GitCode** 帮我点个 ⭐ ，这将对我是极大的鼓励。
+如果觉得 MRR-ADMIN 这个框架不错，或者已经在使用了，希望你可以在 **Github** / **Gitee** / **GitCode** 帮我点个 ⭐ ，这将对我是极大的鼓励。
 
-[![star](https://img.shields.io/github/stars/fantastic-admin/basic?style=social)](https://github.com/fantastic-admin/basic)
+[![star](https://img.shields.io/github/stars/MRR-ADMIN/basic?style=social)](https://github.com/MRR-ADMIN/basic)
 
-[![star](https://gitee.com/fantastic-admin/basic/badge/star.svg?theme=dark)](https://gitee.com/fantastic-admin/basic)
+[![star](https://gitee.com/MRR-ADMIN/basic/badge/star.svg?theme=dark)](https://gitee.com/MRR-ADMIN/basic)
 
-[![star](https://atomgit.com/fantastic-admin/basic/star/badge.svg)](https://atomgit.com/fantastic-admin/basic)
+[![star](https://atomgit.com/MRR-ADMIN/basic/star/badge.svg)](https://atomgit.com/MRR-ADMIN/basic)
 
 <details>
 <summary>Github Stars 曲线</summary>
 
-[![Stargazers over time](https://starchart.cc/fantastic-admin/basic.svg)](https://starchart.cc/fantastic-admin/basic)
+[![Stargazers over time](https://starchart.cc/MRR-ADMIN/basic.svg)](https://starchart.cc/MRR-ADMIN/basic)
 </details>
 
 ## 生态

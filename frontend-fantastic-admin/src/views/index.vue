@@ -31,12 +31,12 @@ const fantasticAdminInfo = ref({
   imageVisible: false,
   index: 0,
   data: [
-    'https://fantastic-admin.hurui.me/preview1.png',
-    'https://fantastic-admin.hurui.me/preview2.png',
-    'https://fantastic-admin.hurui.me/preview3.png',
-    'https://fantastic-admin.hurui.me/preview4.png',
-    'https://fantastic-admin.hurui.me/preview5.png',
-    'https://fantastic-admin.hurui.me/preview6.png',
+    'https://MRR-ADMIN.hurui.me/preview1.png',
+    'https://MRR-ADMIN.hurui.me/preview2.png',
+    'https://MRR-ADMIN.hurui.me/preview3.png',
+    'https://MRR-ADMIN.hurui.me/preview4.png',
+    'https://MRR-ADMIN.hurui.me/preview5.png',
+    'https://MRR-ADMIN.hurui.me/preview6.png',
   ],
 })
 
@@ -63,10 +63,10 @@ function open(url: string) {
     <FaPageHeader>
       <template #title>
         <div class="flex items-center gap-4">
-          欢迎使用 Fantastic-admin
+          欢迎使用 MRR-ADMIN
           <FaTabs
             v-model="versionType" :list="[
-              { label: '基础版', value: 'basic' },
+              { label: '', value: 'basic' },
               { label: '专业版', value: 'pro' },
             ]" class="-mb-2"
           />
@@ -83,16 +83,16 @@ function open(url: string) {
         </div>
       </template>
       <div class="flex gap-2">
-        <FaButton variant="outline" @click="open('https://fantastic-admin.hurui.me')">
+        <FaButton variant="outline" @click="open('https://MRR-ADMIN.hurui.me')">
           <FaIcon name="i-ri:file-text-line" />
           开发文档
         </FaButton>
         <FaDropdown
           :items="[
             [
-              { label: 'Github', icon: 'i-simple-icons:github', handle: () => open('https://github.com/fantastic-admin/basic') },
-              { label: 'Gitee', icon: 'i-simple-icons:gitee', handle: () => open('https://gitee.com/fantastic-admin/basic') },
-              { label: 'GitCode', icon: 'i-simple-icons:gitcode', handle: () => open('https://atomgit.com/fantastic-admin/basic') },
+              { label: 'Github', icon: 'i-simple-icons:github', handle: () => open('https://github.com/MRR-ADMIN/basic') },
+              { label: 'Gitee', icon: 'i-simple-icons:gitee', handle: () => open('https://gitee.com/MRR-ADMIN/basic') },
+              { label: 'GitCode', icon: 'i-simple-icons:gitcode', handle: () => open('https://atomgit.com/MRR-ADMIN/basic') },
             ],
           ]"
         >
@@ -131,16 +131,16 @@ function open(url: string) {
       <FaPageMain class="m-0 flex-1" title-class="flex flex-wrap items-center justify-between gap-4">
         <template #title>
           <div class="title-info">
-            <img src="https://fantastic-admin.hurui.me/logo.svg">
+            <img src="https://MRR-ADMIN.hurui.me/logo.svg">
             <div>
               <h1 class="c-[#41b883]">
-                Fantastic-admin
+                MRR-ADMIN
               </h1>
               <h2>一款开箱即用的 Vue 中后台管理系统框架</h2>
             </div>
           </div>
           <div class="ms-auto">
-            <FaButton @click="open('https://fantastic-admin.hurui.me')">
+            <FaButton @click="open('https://MRR-ADMIN.hurui.me')">
               访问官网
             </FaButton>
           </div>

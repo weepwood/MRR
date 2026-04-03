@@ -4,7 +4,18 @@ import settingsDefault from '@/settings.default'
 import { merge } from '@/utils/object'
 
 const globalSettings: Settings.all = {
-  // 请在此处编写或粘贴配置代码
+  "app": {
+    "enableDynamicTitle": true
+  },
+  "menu": {
+    "mode": "single",
+    "subMenuUniqueOpened": false
+  },
+  "toolbar": {
+    "enable": false,
+    "breadcrumb": false,
+    "navSearch": false
+  }
 }
 
 export default merge(globalSettings, cloneDeep(settingsDefault)) as RecursiveRequired<Settings.all>

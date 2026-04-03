@@ -25,7 +25,7 @@ export default defineConfig(({ mode, command }) => {
       proxy: {
         '/proxy': {
           target: env.VITE_APP_API_BASEURL,
-          changeOrigin: true,
+          changeOrigin: command === 'serve' && env.VITE_OPEN_PROXY === 'true',
           rewrite: path => path.replace(/\/proxy/, ''),
         },
       },
@@ -34,9 +34,6 @@ export default defineConfig(({ mode, command }) => {
     build: {
       outDir: mode === 'production' ? 'dist' : `dist-${mode}`,
       sourcemap: env.VITE_BUILD_SOURCEMAP === 'true',
-      // 性能优化配置
-      minify: 'esbuild',
-      cssCodeSplit: true,
     },
     define: {
       __SYSTEM_INFO__: JSON.stringify({

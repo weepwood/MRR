@@ -1,24 +1,26 @@
 import api from '../index'
 
-export async function getStatisticsSummary() {
-  const response = await api.get('/v1/statistics-api/summary')
-  return response
+export function getStatisticsSummary() {
+  return api.get('/v1/statistics/summary')
 }
 
-export async function getStatisticsDateSummary() {
-  const response = await api.get('/v1/statistics-api/date-summary')
-  return response
+export function getStatisticsList(params: {
+  page: number
+  size: number
+  keyword?: string
+  type?: string
+  startDate?: string
+  endDate?: string
+  sortBy?: string
+  sortOrder?: string
+}) {
+  return api.get('/v1/statistics/list', { params })
 }
 
-export async function getDashboardData() {
-  const response = await api.get('/v1/statistics-api/dashboard')
-  return response
+export function getStatisticsDateSummary() {
+  return api.get('/v1/statistics/date-summary')
 }
 
-export async function getStatisticsList(pageOrParams: any = 1, size = 100) {
-  const params = typeof pageOrParams === 'object' && pageOrParams !== null
-    ? { ...pageOrParams }
-    : { page: pageOrParams, size }
-  const response = await api.get('/v1/statistics-api', { params })
-  return response
+export function getDashboardData() {
+  return api.get('/v1/statistics/dashboard')
 }

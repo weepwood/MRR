@@ -1,31 +1,25 @@
 import api from '../index'
 
-export async function getSystemRuntime() {
-  const response = await api.get('/v1/system/runtime')
-  return response.data
+export function getSystemHealth() {
+  return api.get('/v1/system/health')
 }
 
-export async function getSystemProperties() {
-  const response = await api.get('/v1/system/properties')
-  return response.data
+export function getSystemOverview() {
+  return api.get('/v1/system/overview')
 }
 
-export async function getSystemMemory() {
-  const response = await api.get('/v1/system/memory')
-  return response.data
+export function getSystemRuntime() {
+  return api.get('/v1/system/runtime')
 }
 
-export async function getSystemInfo() {
-  const response = await api.get('/v1/system/info')
-  return response.data
+export function getSystemMemory() {
+  return api.get('/v1/system/memory')
 }
 
-export async function getSystemHealth() {
-  const response = await api.get('/v1/system/health')
-  return response.data
+export function getSystemInfo() {
+  return api.get('/v1/system/info')
 }
 
-export async function getSystemOverview() {
-  const response = await api.get('/v1/system/overview')
-  return response.data
+export function getSystemProperties() {
+  return api.get('/v1/system/properties')
 }

@@ -1,17 +1,19 @@
 import api from '../index'
 
-export function searchSystemLogs(params: any = {}) {
-  return api.get('/v1/logs-api/search', { params })
+export function searchSystemLogs(params: {
+  page: number
+  size: number
+  keyword?: string
+  clientIp?: string
+  requestUri?: string
+  method?: string
+  responseStatus?: string
+  startTime?: string
+  endTime?: string
+}) {
+  return api.get('/v1/logs', { params })
 }
 
 export function getLogById(id: string | number) {
-  return api.get(`/v1/logs-api/${id}`)
-}
-
-export function runLogRetentionCleanup(params: any = {}) {
-  return api.post('/v1/logs-api/retention/cleanup', null, { params })
-}
-
-export function exportLogRetentionLogs() {
-  return api.get('/v1/logs-api/retention/export', { responseType: 'blob' })
+  return api.get(`/v1/logs/${id}`)
 }

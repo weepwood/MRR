@@ -4,11 +4,13 @@ import pinia from '@/store'
 import setupExtensions from './extensions'
 import setupGuards from './guards'
 // 路由相关数据
-import { constantRoutes, constantRoutesByFilesystem } from './routes'
+import { constantRoutes, constantRoutesByFilesystem, systemRoutes } from './routes'
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes: useSettingsStore(pinia).settings.app.routeBaseOn === 'filesystem' ? constantRoutesByFilesystem : constantRoutes,
+  routes: useSettingsStore(pinia).settings.app.routeBaseOn === 'filesystem'
+    ? constantRoutesByFilesystem
+    : [...constantRoutes, ...systemRoutes],
 })
 
 setupGuards(router)

@@ -9,21 +9,21 @@ function setupRoutes(router: Router) {
     const userStore = useUserStore()
     const routeStore = useRouteStore()
     const menuStore = useMenuStore()
-    // 是否已登录
+
     if (userStore.isLogin) {
-      // 是否已根据权限动态生成并注册路由
       if (routeStore.isGenerate) {
-        // 导航栏如果不是 single 模式，则需要根据 path 定位主导航的选中状态
-        settingsStore.settings.menu.mode !== 'single' && menuStore.setActived(to.path)
-        // 如果已登录状态下，进入登录页会强制跳转到主页
+        if (settingsStore.settings.menu.mode !== 'single') {
+          menuStore.setActived(to.path)
+        }
+
         if (to.name === 'login') {
           return {
             path: settingsStore.settings.home.fullPath,
             replace: true,
           }
         }
-        // 如果未开启主页，但进入的是主页，则会进入侧边栏导航第一个模块
-        else if (!settingsStore.settings.home.enable && to.fullPath === settingsStore.settings.home.fullPath) {
+
+        if (!settingsStore.settings.home.enable && to.fullPath === settingsStore.settings.home.fullPath) {
           if (menuStore.sidebarMenus.length > 0) {
             return {
               path: menuStore.sidebarMenusFirstDeepestPath,
@@ -34,9 +34,10 @@ function setupRoutes(router: Router) {
       }
       else {
         try {
-          // 获取用户权限
-          settingsStore.settings.app.enablePermission && await userStore.getPermissions()
-          // 生成动态路由
+          if (settingsStore.settings.app.enablePermission) {
+            await userStore.getPermissions()
+          }
+
           switch (settingsStore.settings.app.routeBaseOn) {
             case 'frontend':
               routeStore.generateRoutesAtFront(asyncRoutes)
@@ -46,7 +47,6 @@ function setupRoutes(router: Router) {
               break
             case 'filesystem':
               routeStore.generateRoutesAtFilesystem(asyncRoutesByFilesystem)
-              // 文件系统生成的路由，需要手动生成导航数据
               switch (settingsStore.settings.menu.baseOn) {
                 case 'frontend':
                   menuStore.generateMenusAtFront()
@@ -57,29 +57,34 @@ function setupRoutes(router: Router) {
               }
               break
           }
-          // 注册并记录路由数据
-          // 记录的数据会在登出时会使用到，不使用 router.removeRoute 是考虑配置的路由可能不一定有设置 name ，则通过调用 router.addRoute() 返回的回调进行删除
+
           const removeRoutes: (() => void)[] = []
           routeStore.routes.forEach((route) => {
             if (!/^(?:https?:|mailto:|tel:)/.test(route.path)) {
-              removeRoutes.push(router.addRoute('layout', route as RouteRecordRaw))
+              const childRoute = { ...route } as RouteRecordRaw
+              if (childRoute.path.startsWith('/')) {
+                childRoute.path = childRoute.path.slice(1)
+              }
+              removeRoutes.push(router.addRoute('layout', childRoute))
             }
           })
-          if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
-            routeStore.systemRoutes.forEach((route) => {
-              removeRoutes.push(router.addRoute(route as RouteRecordRaw))
-            })
-          }
           routeStore.setCurrentRemoveRoutes(removeRoutes)
+
+          return {
+            path: to.path,
+            query: to.query,
+            replace: true,
+          }
         }
-        catch {
+        catch (error) {
+          console.error('[Router Guard] Failed to generate routes:', error)
           userStore.logout()
-        }
-        // 动态路由生成并注册后，重新进入当前路由
-        return {
-          path: to.path,
-          query: to.query,
-          replace: true,
+          return {
+            name: 'login',
+            query: {
+              redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
+            },
+          }
         }
       }
     }

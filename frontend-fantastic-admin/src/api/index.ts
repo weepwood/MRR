@@ -76,11 +76,18 @@ api.interceptors.response.use(
 
     if (payload && typeof payload === 'object') {
       if ('status' in payload && !('code' in payload)) {
-        if (payload.status === 1) {
+        const statusValue = payload.status
+        if (statusValue === 1) {
           return payload
         }
-        if (payload.status === 0) {
+        if (statusValue === 0) {
           useUserStore().requestLogout()
+        }
+        if (typeof statusValue === 'string') {
+          const upperStatus = statusValue.toUpperCase()
+          if (['UP', 'DOWN', 'WARNING', 'UNKNOWN'].includes(upperStatus)) {
+            return payload
+          }
         }
         return Promise.reject(payload)
       }

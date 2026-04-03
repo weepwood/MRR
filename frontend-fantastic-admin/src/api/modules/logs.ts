@@ -11,9 +11,9 @@ export function searchSystemLogs(params: {
   startTime?: string
   endTime?: string
 }) {
-  return api.get('/v1/logs', { params })
+  return api.get('/v1/logs-api/search', { params })
 }
 
 export function getLogById(id: string | number) {
-  return api.get(`/v1/logs/${id}`)
+  return api.get(`/v1/logs-api/${id}`)
 }

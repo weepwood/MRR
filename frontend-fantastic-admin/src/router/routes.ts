@@ -2,10 +2,8 @@ import type { Route } from '#/global'
 import type { RouteRecordRaw } from 'vue-router'
 import generatedRoutes from 'virtual:generated-pages'
 import { setupLayouts } from 'virtual:meta-layouts'
-import MultilevelMenuExample from './modules/multilevel.menu.example'
 import { useSettingsStore } from '@/store/modules/settings'
 
-// 固定路由（默认路由）
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -20,12 +18,11 @@ const constantRoutes: RouteRecordRaw[] = [
     name: 'notFound',
     component: () => import('@/views/[...all].vue'),
     meta: {
-      title: '找不到页面',
+      title: '页面不存在',
     },
   },
 ]
 
-// 系统路由
 const systemRoutes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -57,17 +54,7 @@ const systemRoutes: RouteRecordRaw[] = [
   },
 ]
 
-// 动态路由（异步路由、导航栏路由）
 const asyncRoutes: Route.recordMainRaw[] = [
-  {
-    meta: {
-      title: '演示',
-      icon: 'i-uim:box',
-    },
-    children: [
-      MultilevelMenuExample,
-    ],
-  },
   {
     meta: {
       title: '系统管理',
@@ -80,6 +67,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '用户管理',
           icon: 'i-ant-design:user-twotone',
+          auth: ['user:manage'],
         },
       },
       {
@@ -88,19 +76,108 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '权限管理',
           icon: 'i-ant-design:lock-twotone',
+          auth: ['role:read', 'role:manage', 'user:manage'],
+        },
+      },
+      {
+        path: '/settings',
+        component: () => import('@/views/settings/index.vue'),
+        meta: {
+          title: '系统设置',
+          icon: 'i-ant-design:tool-twotone',
+          auth: ['system:read', 'role:manage', 'user:manage'],
+        },
+      },
+    ],
+  },
+  {
+    meta: {
+      title: '业务管理',
+      icon: 'i-ant-design:appstore-twotone',
+    },
+    children: [
+      {
+        path: '/records',
+        component: () => import('@/views/records/index.vue'),
+        meta: {
+          title: '记录管理',
+          icon: 'i-ant-design:database-twotone',
+          auth: ['user:manage', 'role:manage', 'system:read'],
+        },
+      },
+      {
+        path: '/statistics',
+        component: () => import('@/views/statistics/index.vue'),
+        meta: {
+          title: '统计分析',
+          icon: 'i-ant-design:area-chart-twotone',
+          auth: ['system:read', 'user:manage', 'role:manage'],
+        },
+      },
+      {
+        path: '/statistics/detail',
+        component: () => import('@/views/statistics/detail.vue'),
+        meta: {
+          title: '统计明细',
+          menu: false,
+          auth: ['system:read', 'user:manage', 'role:manage'],
+        },
+      },
+      {
+        path: '/statistics/archive/:bah',
+        component: () => import('@/views/statistics/archive.vue'),
+        meta: {
+          title: '归档图像',
+          menu: false,
+          auth: ['system:read', 'user:manage', 'role:manage'],
+        },
+      },
+    ],
+  },
+  {
+    meta: {
+      title: '运维中心',
+      icon: 'i-ant-design:control-twotone',
+    },
+    children: [
+      {
+        path: '/logs',
+        component: () => import('@/views/logs/index.vue'),
+        meta: {
+          title: '日志管理',
+          icon: 'i-ant-design:file-search-twotone',
+          auth: ['log:read', 'system:read'],
+        },
+      },
+      {
+        path: '/monitoring',
+        component: () => import('@/views/monitoring/index.vue'),
+        meta: {
+          title: '系统监控',
+          icon: 'i-ant-design:dashboard-twotone',
+          auth: ['system:read'],
+        },
+      },
+      {
+        path: '/testing',
+        component: () => import('@/views/testing/index.vue'),
+        meta: {
+          title: '测试中心',
+          icon: 'i-ant-design:experiment-twotone',
+          auth: ['system:read', 'log:read', 'role:manage', 'user:manage'],
         },
       },
     ],
   },
 ]
 
-const constantRoutesByFilesystem = generatedRoutes.filter((item) => {
-  return item.meta?.enabled !== false && item.meta?.constant === true
-})
+const constantRoutesByFilesystem = generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant === true)
 
-const asyncRoutesByFilesystem = [...setupLayouts(generatedRoutes.filter((item) => {
-  return item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false
-}))]
+const asyncRoutesByFilesystem = [
+  ...setupLayouts(
+    generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false),
+  ),
+]
 
 export {
   asyncRoutes,

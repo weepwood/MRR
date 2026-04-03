@@ -1,21 +1,26 @@
 import api from '../index'
 
-export function runPressureTest(data: any) {
-  return api.post('/monitoring-api/pressure-tests/run', data)
+export async function runPressureTest(data: any) {
+  const response = await api.post('/v1/monitoring-api/pressure-tests/run', data)
+  return response.data
 }
 
-export function getPressureTestHistory() {
-  return api.get('/monitoring-api/pressure-tests/history')
+export async function getPressureTestHistory() {
+  const response = await api.get('/v1/monitoring-api/pressure-tests/history')
+  return response.data
 }
 
-export function getLatestPressureTest() {
-  return api.get('/monitoring-api/pressure-tests/latest')
+export async function getLatestPressureTest() {
+  const response = await api.get('/v1/monitoring-api/pressure-tests/latest')
+  return response.data
 }
 
-export function getPressureTestByRunId(runId: string) {
-  return api.get(`/monitoring-api/pressure-tests/${runId}`)
+export async function getPressureTestByRunId(runId: string) {
+  const response = await api.get(`/v1/monitoring-api/pressure-tests/${runId}`)
+  return response.data
 }
 
-export function clearPressureTestHistory() {
-  return api.delete('/monitoring-api/pressure-tests/history')
+export async function clearPressureTestHistory() {
+  const response = await api.delete('/v1/monitoring-api/pressure-tests/history')
+  return response.data
 }

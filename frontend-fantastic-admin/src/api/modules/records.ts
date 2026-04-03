@@ -1,55 +1,55 @@
 import api from '../index'
 
 export function getRecords(params: any = {}) {
-  return api.get('/scan-api/page', { params })
+  return api.get('/v1/scan-api/page', { params })
 }
 
 export function getRecordByBah(bah: string) {
-  return api.get(`/scan-api/${bah}`)
+  return api.get(`/v1/scan-api/bah/${bah}`)
 }
 
 export function updateRecord(id: string | number, data: any) {
-  return api.put(`/scan-api/${id}`, data)
+  return api.put(`/v1/scan-api/${id}`, data)
 }
 
 export function deleteRecord(id: string | number) {
-  return api.delete(`/scan-api/${id}`)
+  return api.delete(`/v1/scan-api/${id}`)
 }
 
 export function batchDownloadRecords(ids: (string | number)[]) {
-  return api.post('/scan-api/batch-download', { ids }, { responseType: 'blob' })
+  return api.post('/v1/scan-api/batch-download', { ids }, { responseType: 'blob' })
 }
 
 export function getScanById(id: string | number) {
-  return api.get(`/scan-api/${id}`)
+  return api.get(`/v1/scan-api/${id}`)
 }
 
 export function getScanList(params: any = {}) {
-  return api.get('/scan-api/page', { params })
+  return api.get('/v1/scan-api/page', { params })
 }
 
 export function getScanByCondition(request: any = {}, page = 1, size = 10) {
-  return api.post('/scan-api/page/condition', request, {
-    params: { page, size }
+  return api.post('/v1/scan-api/page/condition', request, {
+    params: { page, size },
   })
 }
 
 export function getScanByBah(bah: string) {
-  return api.get(`/scan-api/bah/${bah}`)
+  return api.get(`/v1/scan-api/bah/${bah}`)
 }
 
 export function getScanByBrxh(brxh: string) {
-  return api.get(`/scan-api/brxh/${brxh}`)
+  return api.get(`/v1/scan-api/brxh/${brxh}`)
 }
 
 export function createScan(data: any) {
-  return api.post('/scan-api', data)
+  return api.post('/v1/scan-api', data)
 }
 
 export function updateScan(id: string | number, data: any) {
-  return api.put(`/scan-api/${id}`, data)
+  return api.put(`/v1/scan-api/${id}`, data)
 }
 
 export function deleteScan(id: string | number) {
-  return api.delete(`/scan-api/${id}`)
+  return api.delete(`/v1/scan-api/${id}`)
 }

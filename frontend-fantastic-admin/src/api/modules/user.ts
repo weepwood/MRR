@@ -1,27 +1,18 @@
 import api from '../index'
 
 export default {
-  // 登录
-  login: (data: {
-    account: string
-    password: string
-  }) => api.post('', data),
+  login: (data: { account: string, password: string }) => api.post('/login', {
+    username: data.account,
+    password: data.password,
+  }, { skipGlobalError: true }),
 
-  // 获取权限
-  permission: () => api.get('/auth/roles'),
+  permission: () => api.get('/v1/auth/me', { skipGlobalError: true }),
 
-  // 修改密码
-  passwordEdit: (data: {
-    password: string
-    newPassword: string
-  }) => api.post('/auth/password/edit', data),
+  passwordEdit: (data: { password: string, newPassword: string }) => api.post('/v1/auth/password/edit', data),
 
-  // 获取用户列表
-  getUsers: () => api.get('/auth/users'),
+  getUsers: () => api.get('/v1/auth/users'),
 
-  // 更新用户
-  updateUser: (id: string | number, data: any) => api.put(`/auth/users/${id}`, data),
+  updateUser: (id: string | number, data: any) => api.put(`/v1/auth/users/${id}`, data),
 
-  // 禁用用户
-  disableUser: (id: string | number) => api.delete(`/auth/users/${id}`),
+  disableUser: (id: string | number) => api.delete(`/v1/auth/users/${id}`),
 }

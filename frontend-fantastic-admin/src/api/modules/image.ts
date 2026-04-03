@@ -1,15 +1,15 @@
 import api from '../index'
 
 export function getImgApiByBah(bah: string, config: any = {}) {
-  return api.get(`/img-api/${bah}`, config)
+  return api.get(`/v1/img-api/${bah}`, config)
 }
 
 export function downloadBah(bah: string, config: any = {}) {
-  return api.get(`/img-api/download/${bah}`, config)
+  return api.get(`/v1/img-api/download/${bah}`, config)
 }
 
 export function getImg(cx: string, config: any = {}) {
-  return api.get(`/img-api/image/${cx}`, config)
+  return api.get(`/v1/img-api/image/${cx}`, config)
 }
 
 export function getBAHByIdCard(idCard: string) {
@@ -18,10 +18,10 @@ export function getBAHByIdCard(idCard: string) {
 
 export function getBAHByEncryptID(EncryptID: string, userId: string, iv: string, timestamp: string) {
   return api.get('/search/getBAHByEncryptID', {
-    params: { EncryptID, userId, iv, timestamp }
+    params: { EncryptID, userId, iv, timestamp },
   })
 }
 
 export function updateImgType(imageId: string | number, btype: any) {
-  return api.put(`/img-api/updateImageType/${imageId}`, btype)
+  return api.put(`/v1/img-api/updateImageType/${imageId}`, btype)
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { onMounted, ref } from 'vue'
 
 defineOptions({ name: 'PermissionsPage' })
 
@@ -10,9 +10,11 @@ async function loadPermissions() {
   loading.value = true
   try {
     // TODO: 实现权限列表加载
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '权限列表加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -23,13 +25,19 @@ onMounted(loadPermissions)
 <template>
   <div class="page-shell">
     <div>
-      <p class="eyebrow">Permission Management</p>
+      <p class="eyebrow">
+        Permission Management
+      </p>
       <h2>权限管理</h2>
-      <p class="subtitle">配置角色权限与访问控制策略。</p>
+      <p class="subtitle">
+        配置角色权限与访问控制策略。
+      </p>
     </div>
 
     <el-card shadow="never" :loading="loading">
-      <template #header>权限配置</template>
+      <template #header>
+        权限配置
+      </template>
       <el-empty description="权限管理功能开发中" />
     </el-card>
   </div>

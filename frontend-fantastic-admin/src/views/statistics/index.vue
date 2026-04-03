@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { ArrowRight } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowRight } from '@element-plus/icons-vue'
 import { getDashboardData, getStatisticsDateSummary, getStatisticsSummary } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsPage' })
@@ -35,9 +35,11 @@ async function loadData() {
     summaryData.value = summaryRes.data || { total: {}, byType: [] }
     dashboardData.value = dashboardRes.data || { recentTrend: [], topBAH: [] }
     dateSummaryData.value = Array.isArray(dateRes.data) ? dateRes.data : []
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '统计数据加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -57,9 +59,13 @@ onMounted(loadData)
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Statistics Center</p>
+        <p class="eyebrow">
+          Statistics Center
+        </p>
         <h2>统计分析</h2>
-        <p class="subtitle">聚合查看病案统计概览、类型分布、趋势变化与高频病案归档情况。</p>
+        <p class="subtitle">
+          聚合查看病案统计概览、类型分布、趋势变化与高频病案归档情况。
+        </p>
       </div>
       <el-button type="primary" @click="goToDetail">
         查看统计明细
@@ -69,16 +75,24 @@ onMounted(loadData)
 
     <section class="summary-grid">
       <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">{{ item.label }}</div>
-        <div class="summary-value">{{ item.value }}</div>
-        <div class="summary-note">{{ item.note }}</div>
+        <div class="summary-label">
+          {{ item.label }}
+        </div>
+        <div class="summary-value">
+          {{ item.value }}
+        </div>
+        <div class="summary-note">
+          {{ item.note }}
+        </div>
       </el-card>
     </section>
 
     <el-row :gutter="20">
       <el-col :span="12">
         <el-card shadow="never" :loading="loading">
-          <template #header>类型分布</template>
+          <template #header>
+            类型分布
+          </template>
           <div class="stack-list">
             <article v-for="item in typeList" :key="item.type" class="stack-item">
               <div>
@@ -92,14 +106,18 @@ onMounted(loadData)
       </el-col>
       <el-col :span="12">
         <el-card shadow="never" :loading="loading">
-          <template #header>近 10 日趋势</template>
+          <template #header>
+            近 10 日趋势
+          </template>
           <div class="stack-list">
             <article v-for="item in recentDates" :key="item.date" class="stack-item">
               <div>
                 <strong>{{ item.date || '-' }}</strong>
                 <p>记录数 {{ item.recordCount || 0 }}</p>
               </div>
-              <el-tag type="success">{{ item.totalPages || 0 }} 页</el-tag>
+              <el-tag type="success">
+                {{ item.totalPages || 0 }} 页
+              </el-tag>
             </article>
           </div>
         </el-card>
@@ -107,14 +125,18 @@ onMounted(loadData)
     </el-row>
 
     <el-card shadow="never" :loading="loading">
-      <template #header>高频病案号</template>
+      <template #header>
+        高频病案号
+      </template>
       <el-table :data="topBahList" stripe>
         <el-table-column prop="bah" label="病案号" min-width="140" />
         <el-table-column prop="recordCount" label="记录数" width="120" />
         <el-table-column prop="totalPages" label="总页数" width="120" />
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openArchive(row.bah)">归档图像</el-button>
+            <el-button size="small" type="primary" @click="openArchive(row.bah)">
+              归档图像
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

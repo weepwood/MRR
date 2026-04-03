@@ -1,5 +1,5 @@
-import axios from 'axios'
 import type { AxiosError } from 'axios'
+import axios from 'axios'
 import { toast } from 'vue-sonner'
 
 declare module 'axios' {
@@ -108,9 +108,9 @@ api.interceptors.response.use(
 export default api
 
 export * from './modules/auth'
-export * from './modules/system'
+export * from './modules/image'
 export * from './modules/logs'
 export * from './modules/monitoring'
 export * from './modules/records'
 export * from './modules/statistics'
-export * from './modules/image'
+export * from './modules/system'

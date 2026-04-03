@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { Key, UserFilled } from '@element-plus/icons-vue'
 import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as z from 'zod'
-import gsap from 'gsap'
-import { UserFilled, Key } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import gsap from 'gsap'
+import { useForm } from 'vee-validate'
+import { computed, ref, watch } from 'vue'
+import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem } from '@/ui/shadcn/ui/form'
 
@@ -69,19 +69,24 @@ const onSubmit = form.handleSubmit(async (values) => {
       else {
         localStorage.removeItem('login_account')
       }
-      ElMessage({ message: '登录成功，欢迎回来！', type: 'success', position: 'top-right', offset: 90 })
+      ElMessage({ message: '登录成功，欢迎回来！', type: 'success' })
       emits('onLogin', values.account)
     }
     else {
       const msg = resolveMessage(payload, '登录失败，请检查账号信息')
-      ElMessage({ message: msg, type: 'error', position: 'top-right', offset: 90 })
+      ElMessage({ message: msg, type: 'error' })
       animateFailure()
     }
   }
   catch (err: any) {
     console.error('Login failed:', err)
     const msg = resolveMessage(err.response?.data, '登录失败，请重试')
-    ElMessage({ message: msg, type: 'error', position: 'top-right', offset: 90 })
+    ElMessage({
+      message: msg,
+      type: 'error',
+      grouping: true,
+      offset: 90,
+    })
     animateFailure()
   }
   finally {
@@ -93,7 +98,9 @@ const onSubmit = form.handleSubmit(async (values) => {
 })
 
 function animateFailure() {
-  if (prefersReducedMotion) return
+  if (prefersReducedMotion) {
+    return
+  }
   const tl = gsap.timeline({ defaults: { duration: 0.06, ease: 'power1.inOut' } })
   tl.to('.login-form-inner', { x: -10 })
     .to('.login-form-inner', { x: 10 })
@@ -104,7 +111,9 @@ function animateFailure() {
 
 function animateButtonHover(isHovering: boolean) {
   const btn = document.querySelector('.login-submit-btn') as HTMLElement | null
-  if (!btn) return
+  if (!btn) {
+    return
+  }
   gsap.to(btn, {
     scale: isHovering ? 1.04 : 1,
     boxShadow: isHovering ? '0 12px 24px rgba(47, 111, 255, 0.25)' : '0 8px 18px rgba(47, 111, 255, 0.12)',
@@ -113,8 +122,10 @@ function animateButtonHover(isHovering: boolean) {
   })
 }
 
-watch(loading, (isLoading) => {
-  if (prefersReducedMotion) return
+watch(loading, (_isLoading) => {
+  if (prefersReducedMotion) {
+    return
+  }
   gsap.fromTo(
     '.login-form-inner',
     { opacity: 0.6, scale: 0.97 },

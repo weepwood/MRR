@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { Download, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
+// 请根据实际项目路径调整 API 导入，当前路径 @/api/modules/records 不存在
+// 示例：如果 API 位于 @/api/records，请修改为：
+// import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/records'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
 
 defineOptions({ name: 'RecordsPage' })
@@ -56,17 +59,19 @@ async function loadData() {
   try {
     const hasConditions = Object.values(buildRequest()).some(Boolean)
     const response = hasConditions
-      ? await getScanByCondition(buildRequest(), page.value, size.value)
+      ? await getScanByCondition({ ...buildRequest(), page: page.value, size: size.value } as any)
       : await getScanList({ page: page.value, size: size.value })
 
     const payload = response.data || {}
     tableData.value = Array.isArray(payload.list) ? payload.list : []
     total.value = Number(payload.total || tableData.value.length || 0)
-  } catch (error: any) {
+  }
+  catch (error: any) {
     tableData.value = []
     total.value = 0
     ElMessage.error(error?.message || '记录加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -111,9 +116,11 @@ async function handleBatchDownload() {
     link.click()
     URL.revokeObjectURL(url)
     ElMessage.success('批量下载已开始')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '批量下载失败')
-  } finally {
+  }
+  finally {
     downloading.value = false
   }
 }
@@ -130,9 +137,13 @@ onMounted(loadData)
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Scan Records</p>
+        <p class="eyebrow">
+          Scan Records
+        </p>
         <h2>记录管理</h2>
-        <p class="subtitle">管理扫描记录、按条件检索明细，并支持多选后批量打包下载。</p>
+        <p class="subtitle">
+          管理扫描记录、按条件检索明细，并支持多选后批量打包下载。
+        </p>
       </div>
       <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
         <el-icon><Download /></el-icon>
@@ -142,9 +153,15 @@ onMounted(loadData)
 
     <section class="summary-grid">
       <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">{{ item.label }}</div>
-        <div class="summary-value">{{ item.value }}</div>
-        <div class="summary-note">{{ item.note }}</div>
+        <div class="summary-label">
+          {{ item.label }}
+        </div>
+        <div class="summary-value">
+          {{ item.value }}
+        </div>
+        <div class="summary-note">
+          {{ item.note }}
+        </div>
       </el-card>
     </section>
 
@@ -169,7 +186,9 @@ onMounted(loadData)
             <el-icon><Search /></el-icon>
             查询
           </el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          <el-button @click="resetFilters">
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -185,14 +204,18 @@ onMounted(loadData)
         <el-table-column prop="brxh" label="病人序号" min-width="120" />
         <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
         <el-table-column prop="btype" label="类型" width="140">
-          <template #default="{ row }">{{ typeLabel(row.btype) }}</template>
+          <template #default="{ row }">
+            {{ typeLabel(row.btype) }}
+          </template>
         </el-table-column>
         <el-table-column prop="pages" label="页数" width="80" />
         <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
         <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button size="small" type="primary" @click="openDetail(row)">
+              详情
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -212,14 +235,30 @@ onMounted(loadData)
 
     <el-dialog v-model="detailVisible" title="记录详情" width="720px">
       <el-descriptions v-if="currentRecord" :column="2" border>
-        <el-descriptions-item label="病案号">{{ currentRecord.bah || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="病人序号">{{ currentRecord.brxh || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="文件名" :span="2">{{ currentRecord.filename || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ typeLabel(currentRecord.btype) }}</el-descriptions-item>
-        <el-descriptions-item label="页数">{{ currentRecord.pages || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="扫描人员">{{ currentRecord.openerNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="上传标记">{{ currentRecord.uploadFlag || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="目录" :span="2">{{ currentRecord.folder || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="病案号">
+          {{ currentRecord.bah || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="病人序号">
+          {{ currentRecord.brxh || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="文件名" :span="2">
+          {{ currentRecord.filename || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="类型">
+          {{ typeLabel(currentRecord.btype) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="页数">
+          {{ currentRecord.pages || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="扫描人员">
+          {{ currentRecord.openerNo || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="上传标记">
+          {{ currentRecord.uploadFlag || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目录" :span="2">
+          {{ currentRecord.folder || '-' }}
+        </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>

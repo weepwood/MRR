@@ -1,13 +1,13 @@
-import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import router from '@/router'
-import { useSettingsStore } from './settings'
-import { useRouteStore } from './route'
 import { useMenuStore } from './menu'
+import { useRouteStore } from './route'
+import { useSettingsStore } from './settings'
 import { useTabbarStore } from './tabbar'
 
-type Profile = {
+interface Profile {
   id?: number
   username?: string
   displayName?: string
@@ -45,8 +45,8 @@ export const useUserStore = defineStore('user', () => {
     const user = session.user || {}
     token.value = session.token || ''
     localStorage.setItem('token', session.token || '')
-    avatar.value = user.avatar || ''
-    localStorage.setItem('avatar', user.avatar || '')
+    avatar.value = (user as any).avatar || ''
+    localStorage.setItem('avatar', (user as any).avatar || '')
     account.value = user.displayName || user.username || ''
     persistProfile(user)
   }

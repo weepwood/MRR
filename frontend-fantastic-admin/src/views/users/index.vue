@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Edit, Delete } from '@element-plus/icons-vue'
+import { onMounted, ref } from 'vue'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -13,9 +12,11 @@ async function loadUsers() {
   try {
     // TODO: 实现用户列表加载
     users.value = []
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '用户列表加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -26,13 +27,19 @@ onMounted(loadUsers)
 <template>
   <div class="page-shell">
     <div>
-      <p class="eyebrow">User Management</p>
+      <p class="eyebrow">
+        User Management
+      </p>
       <h2>用户管理</h2>
-      <p class="subtitle">管理系统用户账户、角色分配与权限控制。</p>
+      <p class="subtitle">
+        管理系统用户账户、角色分配与权限控制。
+      </p>
     </div>
 
     <el-card shadow="never" :loading="loading">
-      <template #header>用户列表</template>
+      <template #header>
+        用户列表
+      </template>
       <el-empty description="用户管理功能开发中" />
     </el-card>
   </div>

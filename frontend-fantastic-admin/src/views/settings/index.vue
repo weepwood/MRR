@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import { reactive } from 'vue'
 
 defineOptions({ name: 'SettingsPage' })
 
@@ -37,20 +37,30 @@ function handleReset() {
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">System Settings</p>
+        <p class="eyebrow">
+          System Settings
+        </p>
         <h2>系统设置</h2>
-        <p class="subtitle">先完成新后台的配置页面容器迁移，后续再逐步接入真实系统参数接口。</p>
+        <p class="subtitle">
+          先完成新后台的配置页面容器迁移，后续再逐步接入真实系统参数接口。
+        </p>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="handleSave">保存设置</el-button>
-        <el-button @click="handleReset">清除草稿</el-button>
+        <el-button type="primary" @click="handleSave">
+          保存设置
+        </el-button>
+        <el-button @click="handleReset">
+          清除草稿
+        </el-button>
       </div>
     </div>
 
     <el-row :gutter="20">
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>基础设置</template>
+          <template #header>
+            基础设置
+          </template>
           <el-form :model="settings" label-width="120px">
             <el-form-item label="系统名称">
               <el-input v-model="settings.systemName" />
@@ -77,7 +87,9 @@ function handleReset() {
       </el-col>
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>运维与通知</template>
+          <template #header>
+            运维与通知
+          </template>
           <el-form :model="settings" label-width="120px">
             <el-form-item label="自动备份">
               <el-switch v-model="settings.autoBackup" />

@@ -6,9 +6,9 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import gsap from 'gsap'
 import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
+import gsap from 'gsap'
+import { onMounted } from 'vue'
 import LoginForm from '@/components/AccountForm/LoginForm.vue'
 import RegisterForm from '@/components/AccountForm/RegisterForm.vue'
 import ResetPasswordForm from '@/components/AccountForm/ResetPasswordForm.vue'

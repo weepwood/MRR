@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
 import { getSystemHealth, getSystemInfo, getSystemMemory, getSystemOverview, getSystemProperties, getSystemRuntime } from '@/api/modules/system'
 
 defineOptions({ name: 'MonitoringPage' })
@@ -14,8 +14,8 @@ const properties = ref<Record<string, string>>({})
 
 const healthTone = computed(() => {
   const value = String(healthStatus.value.status || '').toUpperCase()
-  if (value === 'UP') return 'success'
-  if (value === 'WARNING') return 'warning'
+  if (value === 'UP') { return 'success' }
+  if (value === 'WARNING') { return 'warning' }
   return 'danger'
 })
 
@@ -23,7 +23,7 @@ const memoryPercent = computed(() => Number.parseFloat(String(memoryInfo.value.u
 const cpuLoadPercent = computed(() => {
   const processors = Number(systemInfo.value.jvm?.availableProcessors || 0)
   const loadAverage = Number(systemInfo.value.operatingSystem?.systemLoadAverage || 0)
-  if (!processors || !Number.isFinite(loadAverage)) return 0
+  if (!processors || !Number.isFinite(loadAverage)) { return 0 }
   return Math.max(0, Math.min(100, Math.round((loadAverage / processors) * 100)))
 })
 
@@ -52,9 +52,11 @@ async function loadAll() {
     memoryInfo.value = memoryRes || overview.memory || {}
     systemInfo.value = infoRes || overview.info || { application: {}, jvm: {}, operatingSystem: {} }
     properties.value = propertiesRes || overview.properties || {}
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '监控信息加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -66,39 +68,69 @@ onMounted(loadAll)
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">System Monitor</p>
+        <p class="eyebrow">
+          System Monitor
+        </p>
         <h2>系统监控</h2>
-        <p class="subtitle">统一查看运行时、内存、JVM 与系统属性信息，用于排查环境与性能问题。</p>
+        <p class="subtitle">
+          统一查看运行时、内存、JVM 与系统属性信息，用于排查环境与性能问题。
+        </p>
       </div>
-      <el-button type="primary" :loading="loading" @click="loadAll">刷新监控</el-button>
+      <el-button type="primary" :loading="loading" @click="loadAll">
+        刷新监控
+      </el-button>
     </div>
 
     <section class="summary-grid">
       <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">{{ item.label }}</div>
-        <div class="summary-value" :class="item.label === '健康状态' ? healthTone : ''">{{ item.value }}</div>
-        <div class="summary-note">{{ item.note }}</div>
+        <div class="summary-label">
+          {{ item.label }}
+        </div>
+        <div class="summary-value" :class="item.label === '健康状态' ? healthTone : ''">
+          {{ item.value }}
+        </div>
+        <div class="summary-note">
+          {{ item.note }}
+        </div>
       </el-card>
     </section>
 
     <el-row :gutter="20">
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>JVM 与应用信息</template>
+          <template #header>
+            JVM 与应用信息
+          </template>
           <el-descriptions :column="1" border>
-            <el-descriptions-item label="应用名称">{{ systemInfo.application?.name || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="启动时间">{{ systemInfo.application?.startTime || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="运行时长">{{ systemInfo.application?.runTime || runtimeInfo.uptimeFormatted || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Java 版本">{{ systemInfo.jvm?.javaVersion || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Java Vendor">{{ systemInfo.jvm?.javaVendor || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="可用处理器">{{ systemInfo.jvm?.availableProcessors || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="系统负载">{{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="应用名称">
+              {{ systemInfo.application?.name || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="启动时间">
+              {{ systemInfo.application?.startTime || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="运行时长">
+              {{ systemInfo.application?.runTime || runtimeInfo.uptimeFormatted || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Java 版本">
+              {{ systemInfo.jvm?.javaVersion || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Java Vendor">
+              {{ systemInfo.jvm?.javaVendor || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="可用处理器">
+              {{ systemInfo.jvm?.availableProcessors || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="系统负载">
+              {{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}
+            </el-descriptions-item>
           </el-descriptions>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>内存概览</template>
+          <template #header>
+            内存概览
+          </template>
           <div class="metric">
             <div class="metric-top">
               <span>堆内存使用率</span>
@@ -107,22 +139,38 @@ onMounted(loadAll)
             <el-progress :percentage="memoryPercent" :stroke-width="12" />
           </div>
           <el-descriptions :column="1" border style="margin-top: 16px">
-            <el-descriptions-item label="Heap Used">{{ memoryInfo.heap?.used || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Heap Committed">{{ memoryInfo.heap?.committed || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Heap Max">{{ memoryInfo.heap?.max || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Non-Heap Used">{{ memoryInfo.nonHeap?.used || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Non-Heap Committed">{{ memoryInfo.nonHeap?.committed || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="Heap Used">
+              {{ memoryInfo.heap?.used || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Heap Committed">
+              {{ memoryInfo.heap?.committed || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Heap Max">
+              {{ memoryInfo.heap?.max || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Non-Heap Used">
+              {{ memoryInfo.nonHeap?.used || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Non-Heap Committed">
+              {{ memoryInfo.nonHeap?.committed || '-' }}
+            </el-descriptions-item>
           </el-descriptions>
         </el-card>
       </el-col>
     </el-row>
 
     <el-card shadow="never">
-      <template #header>系统属性</template>
+      <template #header>
+        系统属性
+      </template>
       <div class="properties-grid">
         <article v-for="(value, key) in properties" :key="key" class="property-item">
-          <div class="property-key">{{ key }}</div>
-          <div class="property-value" :title="value">{{ value }}</div>
+          <div class="property-key">
+            {{ key }}
+          </div>
+          <div class="property-value" :title="value">
+            {{ value }}
+          </div>
         </article>
       </div>
     </el-card>

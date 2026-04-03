@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { getStatisticsList } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -35,11 +35,13 @@ async function loadData() {
     const payload = response.data || {}
     tableData.value = Array.isArray(payload.list) ? payload.list : []
     total.value = Number(payload.total || 0)
-  } catch (error: any) {
+  }
+  catch (error: any) {
     tableData.value = []
     total.value = 0
     ElMessage.error(error?.message || '统计明细加载失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -69,9 +71,13 @@ onMounted(loadData)
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Statistics Detail</p>
+        <p class="eyebrow">
+          Statistics Detail
+        </p>
         <h2>统计明细</h2>
-        <p class="subtitle">对统计明细按病案号、日期范围和类型进行二次筛选，并可继续跳转归档图像页。</p>
+        <p class="subtitle">
+          对统计明细按病案号、日期范围和类型进行二次筛选，并可继续跳转归档图像页。
+        </p>
       </div>
     </div>
 
@@ -94,7 +100,9 @@ onMounted(loadData)
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button type="primary" @click="handleSearch">
+            查询
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -107,7 +115,9 @@ onMounted(loadData)
         <el-table-column prop="pages" label="页数" width="100" />
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openArchive(row)">归档图像</el-button>
+            <el-button size="small" type="primary" @click="openArchive(row)">
+              归档图像
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

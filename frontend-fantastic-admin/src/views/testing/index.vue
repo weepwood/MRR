@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { reactive, ref } from 'vue'
 import { clearPressureTestHistory, getLatestPressureTest, getPressureTestHistory, runPressureTest } from '@/api/modules/monitoring'
 import { getSystemHealth, getSystemOverview } from '@/api/modules/system'
 
@@ -26,10 +26,12 @@ async function runSmokeSuite() {
       { name: '系统概览', ok: true, summary: JSON.stringify(overview).slice(0, 120) },
     ]
     ElMessage.success('冒烟测试完成')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     smokeResults.value = [{ name: '冒烟测试', ok: false, summary: error?.message || '执行失败' }]
     ElMessage.error(error?.message || '冒烟测试失败')
-  } finally {
+  }
+  finally {
     smokeLoading.value = false
   }
 }
@@ -38,7 +40,8 @@ async function loadPressureHistory() {
   try {
     const history = await getPressureTestHistory()
     pressureHistory.value = Array.isArray(history) ? history : []
-  } catch {
+  }
+  catch {
     pressureHistory.value = []
   }
 }
@@ -53,9 +56,11 @@ async function runPressure() {
     })
     await loadPressureHistory()
     ElMessage.success('压测任务已提交')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '压测执行失败')
-  } finally {
+  }
+  finally {
     pressureLoading.value = false
   }
 }
@@ -66,7 +71,8 @@ async function refreshLatest() {
     if (latest) {
       pressureHistory.value = [latest, ...pressureHistory.value.filter(item => item?.runId !== latest?.runId)]
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '获取最近压测失败')
   }
 }
@@ -76,7 +82,8 @@ async function clearHistory() {
     await clearPressureTestHistory()
     pressureHistory.value = []
     ElMessage.success('压测历史已清空')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '清空压测历史失败')
   }
 }
@@ -85,30 +92,42 @@ async function clearHistory() {
 <template>
   <div class="page-shell">
     <div>
-      <p class="eyebrow">Backend Test Lab</p>
+      <p class="eyebrow">
+        Backend Test Lab
+      </p>
       <h2>测试中心</h2>
-      <p class="subtitle">集中管理冒烟检查与压测任务，帮助迁移后后台快速做联调和回归。</p>
+      <p class="subtitle">
+        集中管理冒烟检查与压测任务，帮助迁移后后台快速做联调和回归。
+      </p>
     </div>
 
     <el-row :gutter="20">
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>冒烟测试</template>
-          <el-button type="primary" :loading="smokeLoading" @click="runSmokeSuite">执行冒烟测试</el-button>
+          <template #header>
+            冒烟测试
+          </template>
+          <el-button type="primary" :loading="smokeLoading" @click="runSmokeSuite">
+            执行冒烟测试
+          </el-button>
           <div class="stack-list" style="margin-top: 16px">
             <article v-for="item in smokeResults" :key="item.name" class="stack-item">
               <div>
                 <strong>{{ item.name }}</strong>
                 <p>{{ item.summary }}</p>
               </div>
-              <el-tag :type="item.ok ? 'success' : 'danger'">{{ item.ok ? '通过' : '失败' }}</el-tag>
+              <el-tag :type="item.ok ? 'success' : 'danger'">
+                {{ item.ok ? '通过' : '失败' }}
+              </el-tag>
             </article>
           </div>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>压测任务</template>
+          <template #header>
+            压测任务
+          </template>
           <el-form :model="pressureForm" label-width="100px">
             <el-form-item label="并发数">
               <el-input-number v-model="pressureForm.concurrency" :min="1" :max="200" />
@@ -120,9 +139,15 @@ async function clearHistory() {
               <el-input v-model="pressureForm.targetPath" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" :loading="pressureLoading" @click="runPressure">启动压测</el-button>
-              <el-button @click="refreshLatest">刷新最近结果</el-button>
-              <el-button type="danger" plain @click="clearHistory">清空历史</el-button>
+              <el-button type="primary" :loading="pressureLoading" @click="runPressure">
+                启动压测
+              </el-button>
+              <el-button @click="refreshLatest">
+                刷新最近结果
+              </el-button>
+              <el-button type="danger" plain @click="clearHistory">
+                清空历史
+              </el-button>
             </el-form-item>
           </el-form>
 

@@ -26,6 +26,7 @@ const constantRoutes: RouteRecordRaw[] = [
 const systemRoutes: RouteRecordRaw[] = [
   {
     path: '/',
+    name: 'layout',
     component: () => import('@/layouts/index.vue'),
     meta: {
       title: () => useSettingsStore().settings.home.title,

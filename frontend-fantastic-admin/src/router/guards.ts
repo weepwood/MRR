@@ -62,7 +62,7 @@ function setupRoutes(router: Router) {
           const removeRoutes: (() => void)[] = []
           routeStore.routes.forEach((route) => {
             if (!/^(?:https?:|mailto:|tel:)/.test(route.path)) {
-              removeRoutes.push(router.addRoute(route as RouteRecordRaw))
+              removeRoutes.push(router.addRoute('layout', route as RouteRecordRaw))
             }
           })
           if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {

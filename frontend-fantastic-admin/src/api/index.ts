@@ -14,7 +14,7 @@ const MAX_RETRY_COUNT = 3
 const RETRY_DELAY = 1000
 
 const api = axios.create({
-  baseURL: (import.meta.env.DEV && import.meta.env.VITE_OPEN_PROXY) ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
+  baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
   timeout: 1000 * 60,
   responseType: 'json',
 })
@@ -65,7 +65,7 @@ async function handleError(error: AxiosError | any) {
 api.interceptors.request.use((request) => {
   const userStore = useUserStore()
   if (request.headers && userStore.isLogin) {
-    request.headers.Token = userStore.token
+    request.headers.Authorization = `Bearer ${userStore.token}`
   }
   return request
 })

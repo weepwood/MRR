@@ -41,17 +41,26 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('account', nextProfile.displayName || nextProfile.username || account.value || '')
   }
 
+  function setSession(session: { token: string, user: Profile }) {
+    const user = session.user || {}
+    token.value = session.token || ''
+    localStorage.setItem('token', session.token || '')
+    avatar.value = user.avatar || ''
+    localStorage.setItem('avatar', user.avatar || '')
+    account.value = user.displayName || user.username || ''
+    persistProfile(user)
+  }
+
   async function login(data: { account: string, password: string }) {
     const res = await apiUser.login(data)
     const payload = res.data || {}
-    const user = payload.user || {}
+    const loginData = payload.data || payload
+    const user = loginData.user || loginData.profile || payload.user || {}
 
-    localStorage.setItem('token', payload.token || '')
-    localStorage.setItem('avatar', user.avatar || '')
-    token.value = payload.token || ''
-    avatar.value = user.avatar || ''
-    account.value = user.displayName || user.username || data.account
-    persistProfile(user)
+    setSession({ token: loginData.token || loginData.accessToken || loginData.jwt || '', user })
+    if (!user.displayName && !user.username) {
+      account.value = data.account
+    }
   }
 
   function logout(redirect = router.currentRoute.value.fullPath) {
@@ -62,7 +71,7 @@ export const useUserStore = defineStore('user', () => {
       query: {
         ...(redirect !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect }),
       },
-    }).then(logoutCleanStatus)
+    }).then(clearSession)
   }
 
   function requestLogout() {
@@ -75,10 +84,10 @@ export const useUserStore = defineStore('user', () => {
           && router.currentRoute.value.name !== 'login'
           && { redirect: router.currentRoute.value.fullPath }),
       },
-    }).then(logoutCleanStatus)
+    }).then(clearSession)
   }
 
-  function logoutCleanStatus() {
+  function clearSession() {
     ;['account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
     account.value = ''
     avatar.value = ''
@@ -109,8 +118,10 @@ export const useUserStore = defineStore('user', () => {
     profile,
     isLogin,
     login,
+    setSession,
     logout,
     requestLogout,
+    clearSession,
     getPermissions,
     editPassword,
   }

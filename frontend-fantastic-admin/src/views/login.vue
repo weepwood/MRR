@@ -6,6 +6,9 @@ meta:
 </route>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import gsap from 'gsap'
+import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
 import LoginForm from '@/components/AccountForm/LoginForm.vue'
 import RegisterForm from '@/components/AccountForm/RegisterForm.vue'
 import ResetPasswordForm from '@/components/AccountForm/ResetPasswordForm.vue'
@@ -20,141 +23,306 @@ const router = useRouter()
 const settingsStore = useSettingsStore()
 
 const redirect = ref(route.query.redirect?.toString() ?? settingsStore.settings.home.fullPath)
-const account = ref<string>()
-// 表单类型
+const loginAccount = ref<string>()
 const formType = ref<'login' | 'register' | 'resetPassword'>('login')
+
+function handleLogin(account?: string) {
+  loginAccount.value = account
+  const target = redirect.value
+  router.push(target)
+}
+
+const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
+
+function onLoginSuccess() {
+  if (prefersReducedMotion) {
+    handleLogin()
+    return
+  }
+  const tl = gsap.timeline({ defaults: { duration: 0.28, ease: 'power1.inOut' } })
+  tl.to('.login-layout', { scale: 1.03, boxShadow: '0 22px 40px rgba(89, 109, 255, 0.3)' })
+    .to('.login-layout', { rotate: 4, filter: 'grayscale(30%)', opacity: 0.75 })
+    .to('.login-layout', { scale: 0.25, opacity: 0, rotate: 8 })
+  gsap.to('.login-page', { filter: 'grayscale(40%)', duration: 0.5, ease: 'power1.out' })
+  gsap.delayedCall(0.85, () => {
+    handleLogin()
+  })
+}
+
+onMounted(() => {
+  if (prefersReducedMotion) {
+    gsap.set('.login-layout', { opacity: 1, y: 0, scale: 1 })
+    return
+  }
+
+  gsap.fromTo(
+    '.login-layout',
+    { opacity: 0, y: 30, scale: 0.96 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power1.inOut' },
+  )
+
+  gsap.to('.glow-bg', {
+    scale: 1.08,
+    duration: 0.8,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true,
+  })
+
+  gsap.to('.light-orb.orb-a', {
+    x: 80,
+    y: -70,
+    duration: 6,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+  })
+
+  gsap.to('.light-orb.orb-b', {
+    x: -80,
+    y: 70,
+    duration: 7,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+  })
+})
 </script>
 
 <template>
-  <div class="bg-banner" />
-  <div class="absolute right-4 top-4 z-1 flex-center border rounded-lg bg-background p-1 text-base">
-    <ColorScheme v-if="settingsStore.settings.toolbar.colorScheme" />
-  </div>
-  <div class="login-box">
-    <div class="login-banner">
-      <img src="@/assets/images/logo.svg" class="absolute inset-s-4 inset-t-4 h-8 rounded">
-      <img src="@/assets/images/login-banner.png" class="banner">
+  <div class="login-page">
+    <div class="glow-bg" />
+    <div class="light-orb orb-a" />
+    <div class="light-orb orb-b" />
+
+    <div class="absolute right-4 top-4 z-1 flex-center border rounded-lg bg-background p-1 text-base">
+      <ColorScheme v-if="settingsStore.settings.toolbar.colorScheme" />
     </div>
-    <div class="login-form flex-col-center">
-      <Transition name="fade" mode="out-in">
-        <LoginForm
-          v-if="formType === 'login'"
-          :account
-          @on-login="router.push(redirect)"
-          @on-register="(val) => { formType = 'register'; account = val }"
-          @on-reset-password="(val) => { formType = 'resetPassword'; account = val }"
-        />
-        <RegisterForm
-          v-else-if="formType === 'register'"
-          :account
-          @on-register="(val) => { formType = 'login'; account = val }"
-          @on-login="formType = 'login'"
-        />
-        <ResetPasswordForm
-          v-else-if="formType === 'resetPassword'"
-          :account
-          @on-reset-password="(val) => { formType = 'login'; account = val }"
-          @on-login="formType = 'login'"
-        />
-      </Transition>
+
+    <div class="login-layout">
+      <aside class="brand-panel">
+        <p class="brand-tag">
+          Medical Record Platform
+        </p>
+        <h1>病案管理系统 v0.0.7</h1>
+        <p class="brand-subtitle">
+          统一管理病案影像、日志与统计数据，让后台操作更安全、更高效。
+        </p>
+        <ul class="feature-list">
+          <li>
+            <el-icon><DataBoard /></el-icon>
+            可视化统计总览
+          </li>
+          <li>
+            <el-icon><Document /></el-icon>
+            病案资料集中管理
+          </li>
+          <li>
+            <el-icon><Lock /></el-icon>
+            安全登录与权限隔离
+          </li>
+        </ul>
+      </aside>
+
+      <section class="form-panel">
+        <Transition name="fade" mode="out-in">
+          <div v-if="formType === 'login'">
+            <h2>欢迎回来</h2>
+            <p class="form-subtitle">
+              请输入账号密码进入后台管理。
+            </p>
+            <LoginForm
+              :account="loginAccount"
+              @on-login="onLoginSuccess"
+            />
+            <div class="mt-4 flex-center gap-2 text-sm">
+              <span class="text-secondary-foreground op-50">还没有帐号?</span>
+              <FaButton variant="link" class="h-auto p-0" type="button" @click="formType = 'register'">
+                注册新帐号
+              </FaButton>
+            </div>
+            <div class="mt-1 text-center">
+              <FaButton variant="link" class="h-auto p-0" type="button" @click="formType = 'resetPassword'">
+                忘记密码了?
+              </FaButton>
+            </div>
+          </div>
+          <div v-else-if="formType === 'register'">
+            <h2>注册新帐号</h2>
+            <p class="form-subtitle">
+              创建你的管理平台帐号
+            </p>
+            <RegisterForm
+              :account="loginAccount"
+              @on-register="(val) => { loginAccount = val; formType = 'login' }"
+              @on-login="formType = 'login'"
+            />
+          </div>
+          <div v-else-if="formType === 'resetPassword'">
+            <h2>重置密码</h2>
+            <p class="form-subtitle">
+              请输入用户名以重置密码
+            </p>
+            <ResetPasswordForm
+              :account="loginAccount"
+              @on-reset-password="(val) => { loginAccount = val; formType = 'login' }"
+              @on-login="formType = 'login'"
+            />
+          </div>
+        </Transition>
+      </section>
     </div>
+
+    <FaCopyright class="copyright" />
   </div>
-  <FaCopyright class="copyright" />
 </template>
 
 <style scoped>
-.bg-banner {
-  position: fixed;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  background:
-    radial-gradient(closest-side, hsl(var(--border) / 10%) 30%, hsl(var(--primary) / 20%) 30%, hsl(var(--border) / 30%) 50%) no-repeat,
-    radial-gradient(closest-side, hsl(var(--border) / 10%) 30%, hsl(var(--primary) / 20%) 30%, hsl(var(--border) / 30%) 50%) no-repeat;
-  background-position: 100% 100%, 0% 0%;
-  background-size: 200vw 200vh;
-  filter: blur(100px);
-}
-
-[data-mode="mobile"] {
-  .login-box {
-    position: relative;
-    flex-direction: column;
-    justify-content: start;
-    width: 100%;
-
-    .login-banner {
-      width: 100%;
-      padding: 20px 0;
-
-      .banner {
-        position: relative;
-        top: inherit;
-        right: inherit;
-        display: inherit;
-        width: 100%;
-        max-width: 375px;
-        margin: 0 auto;
-        transform: translateY(0);
-      }
-    }
-
-    .login-form {
-      width: 100%;
-    }
-  }
-
-  .copyright {
-    position: relative;
-  }
-}
-
-.login-box {
-  position: absolute;
-  display: flex;
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  background-image:
+    linear-gradient(rgba(156, 163, 175, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 163, 175, 0.18) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-color: #f5f7fb;
+}
+
+[data-mode="dark"] .login-page {
   background-color: hsl(var(--background));
+  background-image:
+    linear-gradient(rgba(156, 163, 175, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 163, 175, 0.08) 1px, transparent 1px);
+}
 
-  [data-mode="pc"] & {
-    --uno: shadow-md rounded-md;
+.glow-bg {
+  position: absolute;
+  width: 740px;
+  height: 740px;
+  border-radius: 50%;
+  top: 20%;
+  left: 15%;
+  background: rgba(88, 101, 242, 0.35);
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
 
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-  }
+.light-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(2px);
+}
 
-  .login-banner {
-    --uno: bg-muted dark:bg-muted/30;
+.orb-a {
+  width: 460px;
+  height: 460px;
+  left: -120px;
+  top: -120px;
+  background: radial-gradient(circle at center, rgba(47, 111, 255, 0.3), transparent 70%);
+}
 
-    position: relative;
-    width: 450px;
-    overflow: hidden;
+.orb-b {
+  width: 420px;
+  height: 420px;
+  right: -120px;
+  bottom: -160px;
+  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.3), transparent 70%);
+}
 
-    &::before {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      content: "";
-      background:
-        radial-gradient(closest-side, hsl(var(--border) / 10%) 30%, hsl(var(--primary) / 20%) 30%, hsl(var(--border) / 30%) 50%) no-repeat,
-        radial-gradient(closest-side, hsl(var(--border) / 10%) 30%, hsl(var(--primary) / 20%) 30%, hsl(var(--border) / 30%) 50%) no-repeat;
-      background-position: 100% 100%, 0% 0%;
-      background-size: 200vw 200vh;
-      filter: blur(100px);
-    }
+.login-layout {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
 
-    .banner {
-      position: absolute;
-      top: 50%;
-      width: 100%;
-      transform: translateY(-50%);
-    }
-  }
+[data-mode="dark"] .login-layout {
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
 
-  .login-form {
-    width: 500px;
-    transition: height 0.15s ease;
-  }
+.brand-panel {
+  padding: 44px;
+  color: #f8fbff;
+  background: linear-gradient(140deg, #1e54d6 0%, #2f6fff 48%, #0f766e 100%);
+}
+
+.brand-tag {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.brand-panel h1 {
+  margin: 14px 0 10px;
+  font-size: 36px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.brand-subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  opacity: 0.92;
+  max-width: 320px;
+}
+
+.feature-list {
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.form-panel {
+  padding: 44px 40px;
+  background: rgba(255, 255, 255, 0.92);
+  position: relative;
+}
+
+[data-mode="dark"] .form-panel {
+  background: hsl(var(--background));
+}
+
+.form-panel h2 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--el-text-color-primary);
+  letter-spacing: 0.01em;
+}
+
+.form-subtitle {
+  margin: 10px 0 0;
+  color: var(--el-text-color-secondary, hsl(var(--muted-foreground, #6d7d96)));
+  font-size: 14px;
 }
 
 .copyright {
@@ -173,5 +341,42 @@ const formType = ref<'login' | 'register' | 'resetPassword'>('login')
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .login-layout {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+
+  .brand-panel {
+    padding: 28px;
+  }
+
+  .brand-panel h1 {
+    font-size: 28px;
+  }
+
+  .brand-subtitle {
+    max-width: none;
+  }
+
+  .form-panel {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-page {
+    padding: 14px;
+  }
+
+  .brand-panel {
+    display: none;
+  }
+
+  .form-panel h2 {
+    font-size: 24px;
+  }
 }
 </style>

@@ -68,7 +68,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/users/index.vue'),
         meta: {
           title: '用户管理',
-          icon: 'i-ant-design:user-twotone',
+          icon: 'i-ant-design:user-outlined',
           auth: ['user:manage'],
         },
       },
@@ -112,7 +112,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/statistics/index.vue'),
         meta: {
           title: '统计分析',
-          icon: 'i-ant-design:area-chart-twotone',
+          icon: 'i-ant-design:area-chart-outlined',
           auth: ['system:read', 'user:manage', 'role:manage'],
         },
       },
@@ -147,7 +147,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/logs/index.vue'),
         meta: {
           title: '日志管理',
-          icon: 'i-ant-design:file-search-twotone',
+          icon: 'i-ant-design:file-search-outlined',
           auth: ['log:read', 'system:read'],
         },
       },

@@ -18,7 +18,6 @@ public class Scan {
     private Date uploadDate;
     private Integer uploadFlag;
     private String folder;
-    private String ossUrl;
 
     public Scan(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
                 String openerNo, Date uploadDate, Integer uploadFlag, String folder) {

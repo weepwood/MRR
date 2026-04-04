@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS app.mr_scan (
     openerno TEXT,
     uploaddate TEXT,
     uploadflag INTEGER,
-    folder TEXT,
-    oss_url TEXT
+    folder TEXT
 );
 
 CREATE TABLE IF NOT EXISTS app.mr_statistics (

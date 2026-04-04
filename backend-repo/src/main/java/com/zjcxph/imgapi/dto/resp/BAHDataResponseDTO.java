@@ -16,7 +16,6 @@ public class BAHDataResponseDTO {
     private Date uploadDate;
     private Integer uploadFlag;
     private String img_url;
-    private String ossUrl;
 
     public BAHDataResponseDTO() {
     }

@@ -8,7 +8,6 @@ public class PathDO {
     private String filename;
     private String BRXH;
     private String BAH;
-    private String ossUrl;
 
     public PathDO(String folder, String filename, String BRXH, String BAH) {
         this.folder = folder;

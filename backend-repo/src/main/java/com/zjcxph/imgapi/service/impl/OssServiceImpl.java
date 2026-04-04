@@ -43,11 +43,24 @@ public class OssServiceImpl implements OssService {
             return;
         }
 
+        // 验证配置是否正确（检查是否包含引号）
+        String accessKeyId = ossProperties.getAccessKeyId();
+        String accessKeySecret = ossProperties.getAccessKeySecret();
+        
+        if (accessKeyId.startsWith("\"") || accessKeyId.endsWith("\"")) {
+            logger.error("OSS Access Key ID contains quotes! This will cause authentication failures. " +
+                        "Please remove quotes from application.properties or environment variables.");
+            throw new IllegalStateException("Invalid OSS Access Key ID format: contains quotes");
+        }
+        
+        if (accessKeySecret.startsWith("\"") || accessKeySecret.endsWith("\"")) {
+            logger.error("OSS Access Key Secret contains quotes! This will cause authentication failures. " +
+                        "Please remove quotes from application.properties or environment variables.");
+            throw new IllegalStateException("Invalid OSS Access Key Secret format: contains quotes");
+        }
+
         try {
-            BasicAWSCredentials credentials = new BasicAWSCredentials(
-                    ossProperties.getAccessKeyId(),
-                    ossProperties.getAccessKeySecret()
-            );
+            BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
 
             ClientConfiguration clientConfig = new ClientConfiguration();
             clientConfig.setConnectionTimeout(30000);
@@ -67,7 +80,11 @@ public class OssServiceImpl implements OssService {
                     .withPathStyleAccessEnabled(false)
                     .build();
 
-            logger.info("OSS client initialized: endpoint={}, bucket={}", ossProperties.getEndpoint(), ossProperties.getBucket());
+            // 隐藏敏感信息，只显示前4位和后4位
+            String maskedKeyId = accessKeyId.length() > 8 ? 
+                accessKeyId.substring(0, 4) + "****" + accessKeyId.substring(accessKeyId.length() - 4) : "****";
+            logger.info("OSS client initialized successfully: endpoint={}, bucket={}, accessKeyId={}", 
+                       ossProperties.getEndpoint(), ossProperties.getBucket(), maskedKeyId);
         } catch (Exception e) {
             logger.error("Failed to initialize OSS client", e);
         }

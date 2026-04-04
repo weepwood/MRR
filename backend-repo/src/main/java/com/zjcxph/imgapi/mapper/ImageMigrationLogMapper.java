@@ -24,10 +24,38 @@ public interface ImageMigrationLogMapper {
 
     @Select("SELECT * FROM image_migration_log WHERE scan_id = #{scanId} " +
             "ORDER BY created_at DESC LIMIT 1")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "scanId", column = "scan_id"),
+            @Result(property = "localPath", column = "local_path"),
+            @Result(property = "ossUrl", column = "oss_url"),
+            @Result(property = "migrationStatus", column = "migration_status"),
+            @Result(property = "errorMessage", column = "error_message"),
+            @Result(property = "fileSize", column = "file_size"),
+            @Result(property = "checksumMd5", column = "checksum_md5"),
+            @Result(property = "migratedAt", column = "migrated_at"),
+            @Result(property = "verifiedAt", column = "verified_at"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "updatedAt", column = "updated_at")
+    })
     ImageMigrationLog findByScanId(@Param("scanId") Integer scanId);
 
     @Select("SELECT * FROM image_migration_log WHERE migration_status = #{status} " +
             "ORDER BY created_at DESC LIMIT #{limit}")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "scanId", column = "scan_id"),
+            @Result(property = "localPath", column = "local_path"),
+            @Result(property = "ossUrl", column = "oss_url"),
+            @Result(property = "migrationStatus", column = "migration_status"),
+            @Result(property = "errorMessage", column = "error_message"),
+            @Result(property = "fileSize", column = "file_size"),
+            @Result(property = "checksumMd5", column = "checksum_md5"),
+            @Result(property = "migratedAt", column = "migrated_at"),
+            @Result(property = "verifiedAt", column = "verified_at"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "updatedAt", column = "updated_at")
+    })
     List<ImageMigrationLog> findByStatus(@Param("status") String status, @Param("limit") int limit);
 
     @Select("<script>" +
@@ -37,6 +65,20 @@ public interface ImageMigrationLogMapper {
             "</where>" +
             "ORDER BY created_at DESC LIMIT #{limit} OFFSET #{offset}" +
             "</script>")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "scanId", column = "scan_id"),
+            @Result(property = "localPath", column = "local_path"),
+            @Result(property = "ossUrl", column = "oss_url"),
+            @Result(property = "migrationStatus", column = "migration_status"),
+            @Result(property = "errorMessage", column = "error_message"),
+            @Result(property = "fileSize", column = "file_size"),
+            @Result(property = "checksumMd5", column = "checksum_md5"),
+            @Result(property = "migratedAt", column = "migrated_at"),
+            @Result(property = "verifiedAt", column = "verified_at"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "updatedAt", column = "updated_at")
+    })
     List<ImageMigrationLog> findWithPagination(@Param("status") String status,
                                                 @Param("offset") int offset,
                                                 @Param("limit") int limit);

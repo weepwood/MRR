@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Refresh, Search, UploadFilled } from '@element-plus/icons-vue'
+import { Link, Refresh, Search, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingMigrations, uploadByBah, uploadToOss } from '@/api/modules/oss'
@@ -205,6 +205,12 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleString('zh-CN')
 }
 
+// 获取 OSS 图片的完整 URL
+// 后端已经为成功的记录生成了预签名 URL，直接返回即可
+function getOssImageUrl(ossUrl?: string) {
+  return ossUrl || ''
+}
+
 // ==================== Lifecycle ====================
 onMounted(refreshAll)
 </script>
@@ -299,6 +305,21 @@ onMounted(refreshAll)
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="OSS 链接" min-width="250">
+            <template #default="{ row }">
+              <a
+                v-if="row.ossUrl && row.status === 'success'"
+                :href="row.ossUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="oss-link"
+              >
+                <el-icon><Link /></el-icon>
+                <span class="link-text">查看图片</span>
+              </a>
+              <span v-else class="no-link">-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="fileSize" label="文件大小" width="120">
             <template #default="{ row }">
               {{ formatBytes(row.fileSize) }}
@@ -377,7 +398,22 @@ onMounted(refreshAll)
       </template>
       <el-table v-loading="loading.logs" :data="logList" stripe size="small">
         <el-table-column prop="scanId" label="Scan ID" width="90" />
-        <el-table-column prop="localPath" label="本地路径" min-width="250" show-overflow-tooltip />
+        <el-table-column prop="localPath" label="本地路径" min-width="200" show-overflow-tooltip />
+        <el-table-column label="OSS 链接" min-width="150">
+          <template #default="{ row }">
+            <a
+              v-if="row.ossUrl && row.migrationStatus === 'success'"
+              :href="getOssImageUrl(row.ossUrl)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="oss-link"
+            >
+              <el-icon><Link /></el-icon>
+              <span class="link-text">查看</span>
+            </a>
+            <span v-else class="no-link">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="migrationStatus" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.migrationStatus).type as any" size="small">
@@ -504,6 +540,35 @@ h2 {
   margin: 0 0 8px;
   font-size: 14px;
   color: #303133;
+}
+
+.oss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #409eff;
+  text-decoration: none;
+  transition: all 0.2s;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.oss-link:hover {
+  color: #66b1ff;
+  background-color: #ecf5ff;
+}
+
+.oss-link .el-icon {
+  font-size: 14px;
+}
+
+.link-text {
+  font-size: 13px;
+}
+
+.no-link {
+  color: #c0c4cc;
+  font-size: 13px;
 }
 
 .log-filters {

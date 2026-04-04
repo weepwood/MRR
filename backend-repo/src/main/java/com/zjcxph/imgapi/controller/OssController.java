@@ -143,6 +143,18 @@ public class OssController {
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
 
+        // 为成功的记录生成预签名 URL
+        for (ImageMigrationLog log : logs) {
+            if ("success".equals(log.getMigrationStatus()) && log.getOssUrl() != null && !log.getOssUrl().isBlank()) {
+                try {
+                    String presignedUrl = ossService.generatePresignedUrl(log.getOssUrl());
+                    log.setOssUrl(presignedUrl);
+                } catch (Exception e) {
+                    logger.warn("Failed to generate presigned URL for log id={}", log.getId(), e);
+                }
+            }
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("list", logs);
         response.put("total", total);

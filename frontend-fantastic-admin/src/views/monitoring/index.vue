@@ -46,6 +46,7 @@ async function loadAll() {
       getSystemProperties(),
     ])
 
+    // 后端返回格式: { code: 200, message: '...', data: {...}, timestamp: '...' }
     const overview = overviewRes.data || {}
     healthStatus.value = healthRes.data || overview.health || {}
     runtimeInfo.value = runtimeRes.data || overview.runtime || {}

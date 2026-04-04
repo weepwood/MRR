@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.common.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class SystemInfoController {
 
     @Operation(summary = "获取系统基本信息")
     @GetMapping("/info")
-    public Map<String, Object> getSystemInfo() {
+    public Result<Map<String, Object>> getSystemInfo() {
         logger.info("获取系统基本信息");
 
         Map<String, Object> info = new HashMap<>();
@@ -66,12 +67,12 @@ public class SystemInfoController {
         osInfo.put("systemLoadAverage", String.valueOf(osBean.getSystemLoadAverage()));
         info.put("operatingSystem", osInfo);
 
-        return info;
+        return Result.<Map<String, Object>>success("获取系统信息成功").data(info);
     }
 
     @Operation(summary = "获取内存详细信息")
     @GetMapping("/memory")
-    public Map<String, Object> getMemoryInfo() {
+    public Result<Map<String, Object>> getMemoryInfo() {
         logger.info("获取内存详细信息");
 
         Map<String, Object> memoryInfo = new HashMap<>();
@@ -96,12 +97,12 @@ public class SystemInfoController {
         double usagePercent = (maxMemory > 0) ? (usedMemory * 100.0 / maxMemory) : 0;
         memoryInfo.put("usagePercent", String.format("%.2f%%", usagePercent));
 
-        return memoryInfo;
+        return Result.<Map<String, Object>>success("获取内存信息成功").data(memoryInfo);
     }
 
     @Operation(summary = "获取运行时信息")
     @GetMapping("/runtime")
-    public Map<String, Object> getRuntimeInfo() {
+    public Result<Map<String, Object>> getRuntimeInfo() {
         logger.info("获取运行时信息");
 
         Map<String, Object> runtimeInfo = new HashMap<>();
@@ -114,12 +115,12 @@ public class SystemInfoController {
         runtimeInfo.put("classPath", System.getProperty("java.class.path"));
         runtimeInfo.put("inputArguments", runtimeMXBean.getInputArguments());
 
-        return runtimeInfo;
+        return Result.<Map<String, Object>>success("获取运行时信息成功").data(runtimeInfo);
     }
 
     @Operation(summary = "系统健康检查")
     @GetMapping("/health")
-    public Map<String, Object> healthCheck() {
+    public Result<Map<String, Object>> healthCheck() {
         logger.debug("健康检查");
 
         Map<String, Object> health = new HashMap<>();
@@ -140,12 +141,12 @@ public class SystemInfoController {
         components.put("memory", memoryHealth);
         health.put("components", components);
 
-        return health;
+        return Result.<Map<String, Object>>success("健康检查成功").data(health);
     }
 
     @Operation(summary = "获取系统属性")
     @GetMapping("/properties")
-    public Map<String, String> getSystemProperties() {
+    public Result<Map<String, String>> getSystemProperties() {
         logger.info("获取系统属性");
 
         Map<String, String> properties = new HashMap<>();
@@ -164,19 +165,19 @@ public class SystemInfoController {
             }
         }
 
-        return properties;
+        return Result.<Map<String, String>>success("获取系统属性成功").data(properties);
     }
 
     @Operation(summary = "获取统一监控数据")
     @GetMapping("/overview")
-    public Map<String, Object> getOverview() {
+    public Result<Map<String, Object>> getOverview() {
         Map<String, Object> overview = new HashMap<>();
-        overview.put("info", getSystemInfo());
-        overview.put("memory", getMemoryInfo());
-        overview.put("runtime", getRuntimeInfo());
-        overview.put("health", healthCheck());
-        overview.put("properties", getSystemProperties());
-        return overview;
+        overview.put("info", getSystemInfo().getData());
+        overview.put("memory", getMemoryInfo().getData());
+        overview.put("runtime", getRuntimeInfo().getData());
+        overview.put("health", healthCheck().getData());
+        overview.put("properties", getSystemProperties().getData());
+        return Result.<Map<String, Object>>success("获取统一监控数据成功").data(overview);
     }
 
     private String formatBytes(long bytes) {

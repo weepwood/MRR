@@ -43,4 +43,13 @@ public interface OssService {
      * @return file size in bytes
      */
     long getFileSize(String filePath);
+
+    /**
+     * Verify uploaded file integrity by downloading and comparing MD5.
+     * This is a strict verification method that ensures data integrity.
+     * @param ossKey the OSS object key
+     * @param expectedMd5 the expected MD5 checksum
+     * @return true if the file integrity is verified
+     */
+    boolean verifyUploadIntegrity(String ossKey, String expectedMd5);
 }

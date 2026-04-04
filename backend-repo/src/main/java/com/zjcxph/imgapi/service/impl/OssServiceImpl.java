@@ -9,6 +9,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
 import com.zjcxph.imgapi.config.OssProperties;
 import com.zjcxph.imgapi.service.OssService;
 import jakarta.annotation.PostConstruct;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.Date;
 
@@ -117,6 +120,10 @@ public class OssServiceImpl implements OssService {
         }
 
         try {
+            // 1. 计算本地文件 MD5（用于后续校验）
+            String localMd5 = calculateMd5(localFilePath);
+            logger.debug("Local file MD5: {} for {}", localMd5, localFilePath);
+
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.length());
 
@@ -138,7 +145,32 @@ public class OssServiceImpl implements OssService {
                     ossProperties.getBucket(), ossKey, file)
                     .withMetadata(metadata);
 
-            s3Client.putObject(putRequest);
+            // 2. 上传文件并获取结果
+            PutObjectResult result = s3Client.putObject(putRequest);
+            
+            // 3. 上传后校验：对比 ETag 和 MD5
+            String etag = result.getETag();
+            if (etag != null) {
+                // ETag 通常带引号，需要去除
+                etag = etag.replace("\"", "").trim();
+                
+                // 对于单部分上传，ETag 就是 MD5；对于多部分上传则不同
+                // 这里我们进行对比并记录日志
+                if (etag.equalsIgnoreCase(localMd5)) {
+                    logger.info("Upload verified: MD5 match for {} -> {} (MD5: {})", 
+                               localFilePath, ossKey, localMd5);
+                } else {
+                    logger.warn("ETag differs from local MD5 for {} -> {}. " +
+                               "Local MD5: {}, OSS ETag: {}. " +
+                               "This is normal for multi-part uploads.", 
+                               localFilePath, ossKey, localMd5, etag);
+                    // 注意：多部分上传时 ETag 不是简单的 MD5，所以不视为错误
+                    // 如果需要严格校验，可以下载文件重新计算 MD5
+                }
+            } else {
+                logger.warn("No ETag returned from OSS for {} -> {}", localFilePath, ossKey);
+            }
+            
             logger.info("Uploaded to OSS: {} -> {}", localFilePath, ossKey);
             return ossKey;
         } catch (Exception e) {
@@ -206,5 +238,38 @@ public class OssServiceImpl implements OssService {
             throw new IllegalArgumentException("File does not exist: " + filePath);
         }
         return file.length();
+    }
+
+    @Override
+    public boolean verifyUploadIntegrity(String ossKey, String expectedMd5) {
+        ensureClient();
+        
+        if (expectedMd5 == null || expectedMd5.isBlank()) {
+            logger.warn("Cannot verify integrity: expected MD5 is empty for {}", ossKey);
+            return false;
+        }
+        
+        try {
+            // 从 OSS 下载文件到临时流并计算 MD5
+            S3Object s3Object = s3Client.getObject(ossProperties.getBucket(), ossKey);
+            
+            try (InputStream inputStream = s3Object.getObjectContent()) {
+                String actualMd5 = DigestUtils.md5Hex(inputStream);
+                
+                boolean match = actualMd5.equalsIgnoreCase(expectedMd5);
+                
+                if (match) {
+                    logger.info("Integrity verification passed for {}: MD5={}", ossKey, actualMd5);
+                } else {
+                    logger.error("Integrity verification FAILED for {}! Expected: {}, Actual: {}", 
+                                ossKey, expectedMd5, actualMd5);
+                }
+                
+                return match;
+            }
+        } catch (Exception e) {
+            logger.error("Failed to verify upload integrity for {}", ossKey, e);
+            return false;
+        }
     }
 }

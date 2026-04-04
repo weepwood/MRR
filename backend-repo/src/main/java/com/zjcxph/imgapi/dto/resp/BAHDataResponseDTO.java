@@ -16,6 +16,7 @@ public class BAHDataResponseDTO {
     private Date uploadDate;
     private Integer uploadFlag;
     private String img_url;
+    private String ossUrl;
 
     public BAHDataResponseDTO() {
     }
@@ -112,5 +113,13 @@ public class BAHDataResponseDTO {
 
     public void setImg_url(String img_url) {
         this.img_url = img_url;
+    }
+
+    public String getOssUrl() {
+        return ossUrl;
+    }
+
+    public void setOssUrl(String ossUrl) {
+        this.ossUrl = ossUrl;
     }
 }

@@ -10,6 +10,11 @@ export interface ScanRecord {
   uploadDate?: string | null
   uploadFlag?: number | null
   folder?: string
+  ossUrl?: string
+  fileSize?: number | null
+  checksumMd5?: string
+  migrationStatus?: string
+  migratedAt?: string | null
 }
 
 /** 扫描记录创建/更新请求 */
@@ -189,4 +194,39 @@ export interface LoginRequest {
 export interface LoginResponse {
   token?: string
   user?: AuthUser
+}
+
+/** OSS 上传结果 */
+export interface OssUploadResult {
+  scanId?: number
+  ossUrl?: string
+  fileSize?: number
+  checksumMd5?: string
+  status?: string
+  errorMessage?: string
+}
+
+/** 迁移统计 */
+export interface MigrationStatistics {
+  totalCount?: number
+  migratedCount?: number
+  pendingCount?: number
+  failedCount?: number
+  percentage?: number
+}
+
+/** 迁移日志记录 */
+export interface MigrationLogRecord {
+  id?: number
+  scanId?: number
+  localPath?: string
+  ossUrl?: string
+  migrationStatus?: string
+  errorMessage?: string
+  fileSize?: number
+  checksumMd5?: string
+  migratedAt?: string
+  verifiedAt?: string
+  createdAt?: string
+  updatedAt?: string
 }

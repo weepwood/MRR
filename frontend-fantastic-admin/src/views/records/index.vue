@@ -9,6 +9,12 @@ import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/mod
 
 defineOptions({ name: 'RecordsPage' })
 
+const migrationStatusMap: Record<string, { label: string, type: string }> = {
+  not_migrated: { label: '未迁移', type: 'info' },
+  migrated: { label: '已迁移', type: 'success' },
+  verified: { label: '已验证', type: 'success' },
+}
+
 const loading = ref(false)
 const downloading = ref(false)
 const tableData = ref<any[]>([])
@@ -211,6 +217,18 @@ onMounted(loadData)
         <el-table-column prop="pages" label="页数" width="80" />
         <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
         <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="迁移状态" width="100">
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.migrationStatus"
+              :type="(migrationStatusMap[row.migrationStatus]?.type || 'info') as any"
+              size="small"
+            >
+              {{ migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus }}
+            </el-tag>
+            <span v-else style="color: #94a3b8">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="openDetail(row)">
@@ -258,6 +276,22 @@ onMounted(loadData)
         </el-descriptions-item>
         <el-descriptions-item label="目录" :span="2">
           {{ currentRecord.folder || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="迁移状态">
+          <el-tag
+            v-if="currentRecord.migrationStatus"
+            :type="(migrationStatusMap[currentRecord.migrationStatus]?.type || 'info') as any"
+            size="small"
+          >
+            {{ migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus }}
+          </el-tag>
+          <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="文件大小">
+          {{ currentRecord.fileSize ? `${(currentRecord.fileSize / 1024).toFixed(1)} KB` : '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="MD5" :span="2">
+          {{ currentRecord.checksumMd5 || '-' }}
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>

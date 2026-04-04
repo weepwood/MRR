@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.entity.*;
 import com.zjcxph.imgapi.dto.req.*;
 import com.zjcxph.imgapi.dto.resp.*;
 import com.zjcxph.imgapi.common.*;
+import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.ZipUtil;
@@ -45,12 +46,15 @@ public class ImageController {
     private final ImageProperties imageProperties;
     private final ScanService scanService;
     private final PdfService pdfService;
+    private final OssService ossService;
     private final RestTemplate restTemplate;
 
-    public ImageController(ImageProperties imageProperties, ScanService scanService, PdfService pdfService) {
+    public ImageController(ImageProperties imageProperties, ScanService scanService,
+                           PdfService pdfService, OssService ossService) {
         this.imageProperties = imageProperties;
         this.scanService = scanService;
         this.pdfService = pdfService;
+        this.ossService = ossService;
         this.restTemplate = new RestTemplate();
     }
 
@@ -189,13 +193,22 @@ public class ImageController {
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
         for (Scan scan : imageListByBAH) {
-//            String img_url = imgUrl + "/" + scan.getBah() + "/" + scan.getBrxh() + "/" +
-//                    scan.getFolder() + "/" + scan.getFilename();
             String img_url = imgUrl + "/" + extractYearMonth(scan.getFolder()) + "/" +scan.getFolder() + "/" +
                     scan.getBrxh()+ "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO bAHDataResponseDTO = new BAHDataResponseDTO();
             BeanUtils.copyProperties(scan, bAHDataResponseDTO);
             bAHDataResponseDTO.setImg_url(img_url);
+
+            // If OSS URL exists, generate a signed URL for private read access
+            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
+                try {
+                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
+                    bAHDataResponseDTO.setOssUrl(signedUrl);
+                } catch (Exception e) {
+                    logger.warn("Failed to generate signed URL for scan {}: {}", scan.getId(), e.getMessage());
+                }
+            }
+
             items.add(bAHDataResponseDTO);
         }
         logger.info("获取 {} 病案号下的图片数据", bah);
@@ -281,5 +294,35 @@ public class ImageController {
         logger.info("修改图片 {} 的类型为 {}", id, imageType);
 
         return Result.success("修改图片类型成功");
+    }
+
+    @Operation(summary = "通过后端代理获取 OSS 图片")
+    @GetMapping("/oss-image/{id}")
+    public ResponseEntity<?> getOssImage(
+            @PathVariable
+            @Parameter(description = "扫描记录 ID", example = "1")
+            Integer id) {
+        Scan scan = scanService.findById(id);
+        if (scan == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String ossKey = scan.getOssUrl();
+        if (ossKey == null || ossKey.isBlank()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Result.fail("该记录未迁移到 OSS"));
+        }
+
+        try {
+            String signedUrl = ossService.generatePresignedUrl(ossKey);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, signedUrl)
+                    .header("Cache-Control", "private, max-age=3600")
+                    .build();
+        } catch (Exception e) {
+            logger.error("获取 OSS 图片失败：id={}", id, e);
+            return ResponseEntity.internalServerError()
+                    .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
+        }
     }
 }

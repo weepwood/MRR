@@ -151,6 +151,15 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/oss-migration',
+        component: () => import('@/views/oss-migration/index.vue'),
+        meta: {
+          title: 'OSS 迁移管理',
+          icon: 'i-ant-design:cloud-upload-outlined',
+          auth: ['system:read', 'user:manage'],
+        },
+      },
+      {
         path: '/statistics/archive/:bah',
         component: () => import('@/views/statistics/archive.vue'),
         meta: {

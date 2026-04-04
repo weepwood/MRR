@@ -127,4 +127,22 @@ public interface ScanMapper {
             "</where>" +
             "</script>")
     int countByCondition(@Param("request") ScanRequest request);
+
+    // OSS migration methods
+    @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +
+            "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +
+            "migrated_at = NOW() WHERE id = #{id}")
+    int updateOssInfo(@Param("id") Integer id, @Param("ossUrl") String ossUrl,
+                      @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
+                      @Param("migrationStatus") String migrationStatus);
+
+    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND " +
+            "(oss_url IS NULL OR oss_url = '') ORDER BY id LIMIT #{limit}")
+    List<Scan> findPendingMigration(@Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM mr_scan WHERE migration_status = #{status}")
+    long countByMigrationStatus(@Param("status") String status);
+
+    @Select("SELECT COUNT(*) FROM mr_scan WHERE uploadflag != 0")
+    long countTotalUploadedScans();
 }

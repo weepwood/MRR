@@ -1,0 +1,17 @@
+{
+  "name": "mrr-docs",
+  "version": "1.0.0",
+  "description": "MRR 医疗影像记录管理系统文档",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "dependencies": {
+    "vitepress": "^1.5.0"
+  },
+  "devDependencies": {
+    "@vueuse/core": "^10.9.0"
+  }
+}

@@ -1,5 +1,5 @@
 import api from '../index'
-import type { BAHImageData, ImageTypeRequest } from '../types'
+import type { BAHImageData, BAHRecord, ImageTypeRequest } from '../types'
 
 /** GET /v1/img-api/{bah} — 获取病案号下的图片数据 */
 export function getImgApiByBah(bah: string) {
@@ -23,4 +23,14 @@ export function getImage(bah: string, brxh: string, folder: string, filename: st
 /** PUT /v1/img-api/updateImageType/{id} — 更新图片类型 */
 export function updateImageType(imageId: string | number, data: ImageTypeRequest) {
   return api.put(`/v1/img-api/updateImageType/${imageId}`, data)
+}
+
+/** GET /v1/img-api/image/{cx} — 获取单张图片（blob 流） */
+export function getImgByCx(cx: string) {
+  return api.get(`/v1/img-api/image/${cx}`, { responseType: 'blob' })
+}
+
+/** GET /v1/search/getBAHByID/{idCard} — 根据身份证号查询病案记录列表 */
+export function getBAHByIdCard(idCard: string) {
+  return api.get<BAHRecord[]>(`/v1/search/getBAHByID/${idCard}`)
 }

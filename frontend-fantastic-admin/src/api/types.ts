@@ -38,6 +38,15 @@ export interface BAHImageData {
   img_url?: string
 }
 
+/** 病案记录（身份证查询返回） */
+export interface BAHRecord {
+  id?: number
+  bah?: string
+  name?: string
+  department?: string
+  admissionTime?: string
+}
+
 /** 图片类型更新请求 */
 export interface ImageTypeRequest {
   btype: number

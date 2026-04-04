@@ -7,28 +7,22 @@ meta:
 </route>
 
 <script setup lang="ts">
-const router = useRouter()
+import { useIntervalFn } from '@vueuse/core'
 
+const router = useRouter()
 const settingsStore = useSettingsStore()
 
-const data = ref({
-  inter: Number.NaN,
-  countdown: 5,
-})
+const countdown = ref(5)
 
-onBeforeRouteLeave(() => {
-  data.value.inter && window.clearInterval(data.value.inter)
-})
+const { pause } = useIntervalFn(() => {
+  countdown.value--
+  if (countdown.value <= 0) {
+    pause()
+    goBack()
+  }
+}, 1000)
 
-onMounted(() => {
-  data.value.inter = window.setInterval(() => {
-    data.value.countdown--
-    if (data.value.countdown === 0) {
-      data.value.inter && window.clearInterval(data.value.inter)
-      goBack()
-    }
-  }, 1000)
-})
+onBeforeRouteLeave(() => pause())
 
 function goBack() {
   router.push(settingsStore.settings.home.fullPath)
@@ -36,19 +30,39 @@ function goBack() {
 </script>
 
 <template>
-  <div class="absolute left-[50%] top-[50%] flex flex-col items-center justify-between lg-flex-row -translate-x-50% -translate-y-50% lg-gap-12">
-    <FaIcon name="404" class="text-[300px] lg-text-[400px]" />
-    <div class="flex flex-col gap-4">
-      <h1 class="m-0 text-6xl font-sans">
-        404
-      </h1>
-      <div class="mx-0 text-xl text-secondary-foreground/50">
-        抱歉，你访问的页面不存在
+  <div class="relative h-screen w-screen overflow-hidden bg-background">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 opacity-5">
+      <div class="absolute left-1/4 top-1/4 h-64 w-64 animate-pulse rounded-full bg-primary blur-3xl" />
+      <div class="absolute bottom-1/4 right-1/4 h-96 w-96 animate-pulse rounded-full bg-primary blur-3xl" style="animation-delay: 1s;" />
+    </div>
+
+    <!-- 主内容 -->
+    <div
+      class="absolute left-1/2 top-1/2 flex flex-col items-center justify-between gap-8 lg:flex-row -translate-x-1/2 -translate-y-1/2 lg:gap-16"
+    >
+      <!-- 左侧图标区域 -->
+      <div class="relative select-none">
+        <FaIcon name="404" class="text-[200px] text-primary/20 lg:text-[350px]" />
+        <div class="absolute inset-0 flex items-center justify-center" />
       </div>
-      <div>
-        <FaButton @click="goBack">
-          {{ data.countdown }} 秒后，返回首页
-        </FaButton>
+
+      <!-- 右侧文案区域 -->
+      <div class="flex flex-col items-center gap-5 text-center lg:items-start lg:text-left">
+        <h1 class="m-0 text-5xl font-bold tracking-tight lg:text-7xl">
+          页面走丢了
+        </h1>
+        <p class="m-0 max-w-md text-lg text-muted-foreground leading-relaxed">
+          抱歉，你访问的页面不存在或已被移除
+        </p>
+        <div class="mt-2 flex gap-3">
+          <FaButton @click="goBack">
+            返回首页 ({{ countdown }}s)
+          </FaButton>
+          <FaButton variant="outline" @click="router.back()">
+            返回上页
+          </FaButton>
+        </div>
       </div>
     </div>
   </div>

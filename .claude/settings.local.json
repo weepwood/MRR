@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "mcp__plugin_everything-claude-code_sequential-thinking__sequentialthinking"
+    ]
+  }
+}

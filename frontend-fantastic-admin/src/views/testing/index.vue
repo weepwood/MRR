@@ -52,7 +52,7 @@ async function runPressure() {
     await runPressureTest({
       concurrency: pressureForm.concurrency,
       requests: pressureForm.requests,
-      targetPath: pressureForm.targetPath,
+      targetUrl: pressureForm.targetPath,
     })
     await loadPressureHistory()
     ElMessage.success('压测任务已提交')

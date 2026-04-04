@@ -12,6 +12,8 @@ export default {
 
   getUsers: () => api.get('/v1/auth/users'),
 
+  getRoles: () => api.get('/v1/auth/roles'),
+
   updateUser: (id: string | number, data: any) => api.put(`/v1/auth/users/${id}`, data),
 
   disableUser: (id: string | number) => api.delete(`/v1/auth/users/${id}`),

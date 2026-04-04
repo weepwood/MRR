@@ -17,3 +17,15 @@ export function searchSystemLogs(params: {
 export function getLogById(id: string | number) {
   return api.get(`/v1/logs-api/${id}`)
 }
+
+/** POST /v1/logs-api/retention/cleanup — 运行日志清理 */
+export function runLogRetentionCleanup(params?: Record<string, any>) {
+  return api.post('/v1/logs-api/retention/cleanup', null, { params })
+}
+
+/** GET /v1/logs-api/retention/export — 导出待清理日志 */
+export function exportLogRetentionLogs() {
+  return api.get('/v1/logs-api/retention/export', {
+    responseType: 'blob',
+  })
+}

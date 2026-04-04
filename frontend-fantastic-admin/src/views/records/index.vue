@@ -59,7 +59,7 @@ async function loadData() {
   try {
     const hasConditions = Object.values(buildRequest()).some(Boolean)
     const response = hasConditions
-      ? await getScanByCondition({ ...buildRequest(), page: page.value, size: size.value } as any)
+      ? await getScanByCondition(buildRequest(), page.value, size.value)
       : await getScanList({ page: page.value, size: size.value })
 
     const payload = response.data || {}

@@ -235,15 +235,32 @@ onMounted(refreshAll)
 
     <!-- Statistics Cards -->
     <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-icon">
-          <i :class="item.icon" :style="{ color: item.color, fontSize: '28px' }" />
+      <el-card shadow="never" class="stat-card total-count">
+        <div class="stat-icon"><i :class="summaryCards[0].icon" /></div>
+        <div class="stat-body">
+          <div class="stat-label">{{ summaryCards[0].label }}</div>
+          <div class="stat-value">{{ summaryCards[0].value.toLocaleString() }}</div>
         </div>
-        <div class="summary-label">
-          {{ item.label }}
+      </el-card>
+      <el-card shadow="never" class="stat-card migrated-count">
+        <div class="stat-icon"><i :class="summaryCards[1].icon" /></div>
+        <div class="stat-body">
+          <div class="stat-label">{{ summaryCards[1].label }}</div>
+          <div class="stat-value">{{ summaryCards[1].value.toLocaleString() }}</div>
         </div>
-        <div class="summary-value" :style="{ color: item.color }">
-          {{ item.value.toLocaleString() }}
+      </el-card>
+      <el-card shadow="never" class="stat-card pending-count">
+        <div class="stat-icon"><i :class="summaryCards[2].icon" /></div>
+        <div class="stat-body">
+          <div class="stat-label">{{ summaryCards[2].label }}</div>
+          <div class="stat-value">{{ summaryCards[2].value.toLocaleString() }}</div>
+        </div>
+      </el-card>
+      <el-card shadow="never" class="stat-card failed-count">
+        <div class="stat-icon"><i :class="summaryCards[3].icon" /></div>
+        <div class="stat-body">
+          <div class="stat-label">{{ summaryCards[3].label }}</div>
+          <div class="stat-value">{{ summaryCards[3].value.toLocaleString() }}</div>
         </div>
       </el-card>
     </section>
@@ -483,23 +500,66 @@ h2 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
-.summary-icon {
-  margin-bottom: 8px;
+/* el-card 本身只承载顶部彩条，内容由 __body 控制 */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  border-top: 3px solid transparent;
 }
 
-.summary-label {
-  font-size: 12px;
-  color: #64748b;
+.stat-card.total-count { border-top-color: #409eff; }
+.stat-card.migrated-count { border-top-color: #67c23a; }
+.stat-card.pending-count { border-top-color: #e6a23c; }
+.stat-card.failed-count { border-top-color: #f56c6c; }
+
+/* 穿透 el-card__body，实现 icon + body 横排 */
+.stat-card :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
 }
 
-.summary-value {
-  margin-top: 8px;
-  font-size: 28px;
-  font-weight: 800;
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.stat-card.total-count .stat-icon { background: rgba(64,158,255,0.09); color: #409eff; }
+.stat-card.migrated-count .stat-icon { background: rgba(103,194,58,0.09); color: #67c23a; }
+.stat-card.pending-count .stat-icon { background: rgba(230,162,60,0.09); color: #e6a23c; }
+.stat-card.failed-count .stat-icon { background: rgba(245,108,108,0.09); color: #f56c6c; }
+
+.stat-body { flex: 1; min-width: 0; }
+
+.stat-label {
+  font-size: 11px;
+  color: #86868b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f2b42;
+  line-height: 1.2;
+  word-break: break-all;
 }
 
 .progress-section {
@@ -581,5 +641,18 @@ h2 {
   margin-top: 16px;
   display: flex;
   justify-content: center;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

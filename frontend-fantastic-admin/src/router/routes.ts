@@ -75,7 +75,7 @@ const systemRoutes: RouteRecordRaw[] = [
 const asyncRoutes: Route.recordMainRaw[] = [
   {
     meta: {
-      title: '系统管理',
+      title: '系统',
       icon: 'i-ant-design:setting-twotone',
     },
     children: [
@@ -110,7 +110,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
   {
     meta: {
-      title: '业务管理',
+      title: '业务',
       icon: 'i-ant-design:appstore-twotone',
     },
     children: [
@@ -172,7 +172,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
   {
     meta: {
-      title: '运维中心',
+      title: '运维',
       icon: 'i-ant-design:control-twotone',
     },
     children: [

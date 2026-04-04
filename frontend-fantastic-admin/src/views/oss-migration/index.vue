@@ -225,7 +225,7 @@ onMounted(refreshAll)
         </p>
         <h2>OSS 迁移管理</h2>
         <p class="subtitle">
-          管理本地图片到阿里云 OSS 的迁移，支持按病案号和批量上传。
+          管理本地图片到 OSS 的迁移，支持按病案号和批量上传。
         </p>
       </div>
       <el-button type="primary" :icon="Refresh" @click="refreshAll">

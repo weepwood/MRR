@@ -573,7 +573,6 @@ watch(sortedDateData, (v) => { if (v.length) nextTick(updateChartWidth) })
 /* ===== 区块卡片 ===== */
 .chart-card,
 .list-card {
-  border-radius: 16px;
 }
 
 .section-header {

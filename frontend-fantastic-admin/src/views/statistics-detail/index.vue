@@ -586,8 +586,8 @@ h2 {
   display: grid;
   gap: 12px;
   padding: 18px 18px 16px;
-  border-radius: 24px 24px 20px 20px;
-  border: 1px solid rgba(195, 197, 215, 0.18);
+  border-radius: 7px 7px 5px 5px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
   border-top-width: 6px;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.92));
   box-shadow: 0 14px 34px rgba(24, 65, 134, 0.08);
@@ -642,13 +642,21 @@ h2 {
 /* 档案袋标签页 */
 .folder-tab {
   position: absolute;
-  top: -1px;
+  top: -2px;
   left: 18px;
-  width: 108px;
+  width: 70px;
   height: 20px;
-  border-radius: 0 0 16px 16px;
-  background: linear-gradient(135deg, var(--folder-accent, #1d4ed8), rgba(255, 255, 255, 0.82));
+  border-radius: 0 0 5px 5px;
+  background: var(--folder-accent, #1d4fd840);
   box-shadow: 0 10px 20px rgba(24, 65, 134, 0.14);
+  transform-origin: center bottom;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+
+.archive-folder-card:hover .folder-tab {
+  transform: translateY(-10px) rotateX(-15deg) scale(1.05);
+  opacity: 0.9;
+  box-shadow: 0 15px 30px rgba(24, 65, 134, 0.25);
 }
 
 .folder-top {

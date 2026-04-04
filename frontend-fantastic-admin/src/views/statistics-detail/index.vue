@@ -315,12 +315,14 @@ onMounted(refreshAll)
 
       <div class="filter-grid">
         <el-input
+          class="filter-keyword"
           v-model="filters.keyword"
           placeholder="搜索病案号或扫描设备"
           clearable
           @keyup.enter="handleSearch"
         />
         <el-select
+          class="filter-type"
           v-model="filters.type"
           placeholder="全部类型"
           clearable
@@ -334,6 +336,7 @@ onMounted(refreshAll)
           />
         </el-select>
         <el-date-picker
+          class="filter-date"
           v-model="filters.dateRange"
           type="daterange"
           range-separator="至"
@@ -341,7 +344,7 @@ onMounted(refreshAll)
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
         />
-        <el-select v-model="sortKey" @change="handleSortChange">
+        <el-select class="filter-sort" v-model="sortKey" @change="handleSortChange">
           <el-option
             v-for="item in sortOptions"
             :key="item.key"
@@ -526,15 +529,35 @@ h2 {
 }
 
 .filter-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) 180px 260px 180px auto;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
 }
 
+.filter-grid .filter-keyword {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.filter-grid .filter-type {
+  flex: 0 0 160px;
+}
+
+.filter-grid .filter-date {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.filter-grid .filter-sort {
+  flex: 0 0 160px;
+}
+
 .filter-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 /* 档案袋书架 */
@@ -712,26 +735,33 @@ h2 {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 720px) {
   .summary-grid,
-  .filter-grid,
   .folder-meta-grid {
     grid-template-columns: 1fr;
   }
 
-  .filter-actions,
-  .pagination-wrapper {
+  .filter-grid .filter-keyword,
+  .filter-grid .filter-type,
+  .filter-grid .filter-date,
+  .filter-grid .filter-sort {
+    flex: 1 1 100%;
+  }
+
+  .filter-actions {
+    flex: 1 1 100%;
+    margin-left: 0;
     justify-content: stretch;
   }
 
   .filter-actions :deep(.el-button) {
-    width: 100%;
+    flex: 1;
+  }
+
+  .pagination-wrapper {
+    justify-content: stretch;
   }
 }
 </style>

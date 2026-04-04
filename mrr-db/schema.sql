@@ -34,7 +34,8 @@ create table main.mr_scan
     openerno   TEXT,
     uploaddate TEXT,
     uploadflag INTEGER,
-    folder     TEXT
+    folder     TEXT,
+    oss_url    TEXT
 );
 
 create table main.mr_statistics

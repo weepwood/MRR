@@ -23,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import jakarta.validation.constraints.Pattern;
 import java.io.*;
@@ -44,11 +45,13 @@ public class ImageController {
     private final ImageProperties imageProperties;
     private final ScanService scanService;
     private final PdfService pdfService;
+    private final RestTemplate restTemplate;
 
     public ImageController(ImageProperties imageProperties, ScanService scanService, PdfService pdfService) {
         this.imageProperties = imageProperties;
         this.scanService = scanService;
         this.pdfService = pdfService;
+        this.restTemplate = new RestTemplate();
     }
 
     @Operation(summary = "服务器心跳")
@@ -193,6 +196,10 @@ public class ImageController {
             BAHDataResponseDTO bAHDataResponseDTO = new BAHDataResponseDTO();
             BeanUtils.copyProperties(scan, bAHDataResponseDTO);
             bAHDataResponseDTO.setImg_url(img_url);
+            // 设置 OSS URL（如果存在）
+            if (scan.getOssUrl() != null && !scan.getOssUrl().trim().isEmpty()) {
+                bAHDataResponseDTO.setOssUrl(scan.getOssUrl());
+            }
             items.add(bAHDataResponseDTO);
         }
         logger.info("获取 {} 病案号下的图片数据", bah);
@@ -278,5 +285,63 @@ public class ImageController {
         logger.info("修改图片 {} 的类型为 {}", id, imageType);
 
         return Result.success("修改图片类型成功");
+    }
+
+    @Operation(summary = "从 OSS URL 获取图片")
+    @GetMapping("/oss-image/{id}")
+    public ResponseEntity<?> getImageFromOss(
+            @PathVariable
+            @Parameter(description = "扫描记录ID", example = "1")
+            Integer id) {
+        
+        // 根据 ID 查询扫描记录
+        Scan scan = scanService.findById(id);
+        if (scan == null) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", "404");
+            errorResponse.put("message", "扫描记录不存在");
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
+
+        // 检查是否有 OSS URL
+        String ossUrl = scan.getOssUrl();
+        if (ossUrl == null || ossUrl.trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", "404");
+            errorResponse.put("message", "该记录没有配置 OSS URL");
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            logger.info("从 OSS 获取图片: {}", ossUrl);
+            
+            // 从 OSS URL 下载图片
+            byte[] imageBytes = restTemplate.getForObject(ossUrl, byte[].class);
+            
+            if (imageBytes == null || imageBytes.length == 0) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("code", "404");
+                errorResponse.put("message", "无法从 OSS 获取图片");
+                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+            }
+
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline;filename=" + scan.getFilename());
+            headers.add("Cache-Control", "public, max-age=86400, immutable");
+            headers.setContentType(MediaType.IMAGE_JPEG);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(imageBytes.length)
+                    .body(imageBytes);
+
+        } catch (Exception e) {
+            logger.error("从 OSS 获取图片失败: {}", ossUrl, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", "500");
+            errorResponse.put("message", "从 OSS 获取图片失败: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

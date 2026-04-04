@@ -30,6 +30,11 @@ export function getImgByCx(cx: string) {
   return api.get(`/v1/img-api/image/${cx}`, { responseType: 'blob' })
 }
 
+/** GET /v1/img-api/oss-image/{id} — 从 OSS URL 获取图片（blob 流） */
+export function getImageFromOss(imageId: number | string) {
+  return api.get(`/v1/img-api/oss-image/${imageId}`, { responseType: 'blob' })
+}
+
 /** GET /v2/search/getBAHByID/{idCard} — 根据身份证号查询病案记录列表 */
 export function getBAHByIdCard(idCard: string) {
   return api.get<BAHRecord[]>(`/v2/search/getBAHByID/${idCard}`)

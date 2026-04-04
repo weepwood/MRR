@@ -36,6 +36,7 @@ export interface BAHImageData {
   uploadDate?: string | null
   uploadFlag?: number | null
   img_url?: string
+  ossUrl?: string
 }
 
 /** 病案记录（身份证查询返回） */

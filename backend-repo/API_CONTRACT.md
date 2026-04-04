@@ -20,6 +20,8 @@ This file records current frontend/backend API alignment.
 - `GET /v1/img-api/download/{BAH}`
 - `GET /v1/img-api/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}`
 - `PUT /v1/img-api/updateImageType/{id}`
+- `GET /v1/img-api/oss-image/{id}` (NEW: 从 OSS URL 获取图片)
+  - response: image/jpeg or error object
 
 ## Search
 

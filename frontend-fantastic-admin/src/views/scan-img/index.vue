@@ -210,7 +210,7 @@
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { downloadBah, getBAHByIdCard, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { downloadBah, getBAHByIdCard, getImageFromOss, getImgApiByBah, updateImageType } from '@/api/modules/image'
 import type { BAHImageData, BAHRecord } from '@/api/types'
 
 defineOptions({ name: 'ScanImgPage' })
@@ -222,6 +222,7 @@ const route = useRoute()
 interface GalleryImage extends BAHImageData {
   cx?: string
   blobUrl?: string
+  ossUrl?: string
 }
 
 // ==================== 基础状态 ====================
@@ -346,8 +347,9 @@ const loadImages = async () => {
     const response = await getImgApiByBah(searchBah.value)
     const rawList = Array.isArray(response.data) ? response.data : []
     images.value = rawList.map((item: BAHImageData) => {
-      const originalUrl = item?.img_url || ''
-      return { ...item, cx: originalUrl, blobUrl: originalUrl } as GalleryImage
+      // 优先使用 ossUrl，如果没有则使用 img_url
+      const imageUrl = item?.ossUrl || item?.img_url || ''
+      return { ...item, cx: imageUrl, blobUrl: imageUrl, ossUrl: item?.ossUrl } as GalleryImage
     })
     selectedType.value = 'all'
     selectedImageIndex.value = 0

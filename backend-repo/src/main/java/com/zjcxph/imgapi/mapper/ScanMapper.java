@@ -19,7 +19,7 @@ public interface ScanMapper {
 
 
     @Select("<script>" +
-            "SELECT BRXH, BAH, folder, filename FROM mr_scan WHERE id IN " +
+            "SELECT BRXH, BAH, folder, filename, oss_url FROM mr_scan WHERE id IN " +
             "<foreach item='id' collection='ids' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +
@@ -30,8 +30,8 @@ public interface ScanMapper {
     int updateImageType(@Param("id") Integer id, @Param("type") Integer type);
 
     // 新增
-    @Insert("INSERT INTO mr_scan (BRXH, BAH, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
-            "VALUES (#{brxh}, #{bah}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
+    @Insert("INSERT INTO mr_scan (BRXH, BAH, filename, btype, pages, openerno, uploaddate, uploadflag, folder, oss_url) " +
+            "VALUES (#{brxh}, #{bah}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder}, #{ossUrl})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Scan scan);
 
@@ -52,6 +52,7 @@ public interface ScanMapper {
             "<if test='uploadDate != null'>uploaddate = #{uploadDate},</if>" +
             "<if test='uploadFlag != null'>uploadflag = #{uploadFlag},</if>" +
             "<if test='folder != null'>folder = #{folder},</if>" +
+            "<if test='ossUrl != null'>oss_url = #{ossUrl},</if>" +
             "</set>" +
             "WHERE id = #{id}" +
             "</script>")

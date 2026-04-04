@@ -1,5 +1,5 @@
 import { loadingFadeOut } from 'virtual:app-loading'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import pinia from '@/store'
 import setupExtensions from './extensions'
 import setupGuards from './guards'
@@ -7,7 +7,7 @@ import setupGuards from './guards'
 import { constantRoutes, constantRoutesByFilesystem, systemRoutes } from './routes'
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes: useSettingsStore(pinia).settings.app.routeBaseOn === 'filesystem'
     ? constantRoutesByFilesystem
     : [...constantRoutes, ...systemRoutes],

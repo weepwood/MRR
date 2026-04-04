@@ -14,6 +14,14 @@ const constantRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/idcard/:idCard',
+    name: 'scanImg',
+    component: () => import('@/views/scan-img/index.vue'),
+    meta: {
+      title: '病案图像查询',
+    },
+  },
+  {
     path: '/:all(.*)*',
     name: 'notFound',
     component: () => import('@/views/[...all].vue'),
@@ -172,6 +180,8 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
 ]
+
+
 
 const constantRoutesByFilesystem = generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant === true)
 

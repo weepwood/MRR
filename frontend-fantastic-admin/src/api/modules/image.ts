@@ -30,7 +30,7 @@ export function getImgByCx(cx: string) {
   return api.get(`/v1/img-api/image/${cx}`, { responseType: 'blob' })
 }
 
-/** GET /v1/search/getBAHByID/{idCard} — 根据身份证号查询病案记录列表 */
+/** GET /v2/search/getBAHByID/{idCard} — 根据身份证号查询病案记录列表 */
 export function getBAHByIdCard(idCard: string) {
-  return api.get<BAHRecord[]>(`/v1/search/getBAHByID/${idCard}`)
+  return api.get<BAHRecord[]>(`/v2/search/getBAHByID/${idCard}`)
 }

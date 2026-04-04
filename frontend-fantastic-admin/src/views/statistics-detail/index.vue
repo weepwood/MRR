@@ -72,7 +72,7 @@ function formatDate(dateStr: string | undefined) {
   return String(dateStr).replace(/\//g, '-')
 }
 
-function getTypeTagType(type: string | undefined): '' | 'success' | 'warning' | 'danger' | 'primary' | 'info' {
+function getTypeTagType(type: string | undefined): 'success' | 'warning' | 'danger' | 'primary' | 'info' | undefined {
   const value = String(type || '').toLowerCase()
   if (value.includes('急')) { return 'danger' }
   if (value.includes('高')) { return 'warning' }
@@ -120,7 +120,7 @@ async function loadStatisticsList() {
   loading.value = true
   error.value = ''
   try {
-    const params: Record<string, any> = {
+    const params: any = {
       page: currentPage.value,
       size: pageSize.value,
       sortBy: currentSort.value.prop || 'date',

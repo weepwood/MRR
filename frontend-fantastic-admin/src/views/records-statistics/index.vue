@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import {
-  Delete,
   Document,
   Grid,
-  Search,
   Tickets,
   TrendCharts,
 } from '@element-plus/icons-vue'
@@ -249,7 +247,7 @@ async function loadStatisticsList() {
   loading.value = true
   try {
     const { prop, order } = tableSort.value
-    const params: Record<string, any> = {
+    const params: any = {
       page: currentPage.value,
       size: pageSize.value,
       sortBy: prop || 'date',

@@ -1,5 +1,5 @@
 import api from '../index'
-import type { ScanRecord, ScanRequest } from '../types'
+import type { ScanRequest } from '../types'
 
 /** GET /v1/scan-api/page — 分页获取扫描记录 */
 export function getScanList(params: { page: number, size: number }) {

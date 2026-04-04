@@ -46,12 +46,12 @@ async function loadAll() {
       getSystemProperties(),
     ])
 
-    const overview = overviewRes || {}
-    healthStatus.value = healthRes || overview.health || {}
-    runtimeInfo.value = runtimeRes || overview.runtime || {}
-    memoryInfo.value = memoryRes || overview.memory || {}
-    systemInfo.value = infoRes || overview.info || { application: {}, jvm: {}, operatingSystem: {} }
-    properties.value = propertiesRes || overview.properties || {}
+    const overview = overviewRes.data || {}
+    healthStatus.value = healthRes.data || overview.health || {}
+    runtimeInfo.value = runtimeRes.data || overview.runtime || {}
+    memoryInfo.value = memoryRes.data || overview.memory || {}
+    systemInfo.value = infoRes.data || overview.info || { application: {}, jvm: {}, operatingSystem: {} }
+    properties.value = propertiesRes.data || overview.properties || {}
   }
   catch (error: any) {
     ElMessage.error(error?.message || '监控信息加载失败')

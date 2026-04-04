@@ -68,8 +68,9 @@ async function runPressure() {
 async function refreshLatest() {
   try {
     const latest = await getLatestPressureTest()
-    if (latest) {
-      pressureHistory.value = [latest, ...pressureHistory.value.filter(item => item?.runId !== latest?.runId)]
+    if (latest && latest.data) {
+      const latestData = latest.data
+      pressureHistory.value = [latestData, ...pressureHistory.value.filter(item => item?.runId !== latestData?.runId)]
     }
   }
   catch (error: any) {

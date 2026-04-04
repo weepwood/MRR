@@ -49,8 +49,8 @@ function buildRequest() {
     bah: filters.bah.trim() || undefined,
     brxh: filters.brxh.trim() || undefined,
     openerNo: filters.openerNo.trim() || undefined,
-    btype: filters.btype || undefined,
-    uploadFlag: filters.uploadFlag || undefined,
+    btype: filters.btype ? Number(filters.btype) : undefined,
+    uploadFlag: filters.uploadFlag ? Number(filters.uploadFlag) : undefined,
   }
 }
 

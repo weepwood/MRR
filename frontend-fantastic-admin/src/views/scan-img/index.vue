@@ -210,7 +210,8 @@
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { downloadBah, getBAHByIdCard, getImageFromOss, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { downloadBah, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { getBAHByIdCard } from '@/api/modules/search'
 import type { BAHImageData, BAHRecord } from '@/api/types'
 
 defineOptions({ name: 'ScanImgPage' })

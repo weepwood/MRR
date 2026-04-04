@@ -197,6 +197,7 @@ const enableAppSetting = import.meta.env.VITE_APP_SETTING
       position: relative;
       flex: auto;
       height: 100%;
+      padding: 30px;
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
     }

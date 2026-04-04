@@ -117,11 +117,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
-        path: '/statistics/detail',
-        component: () => import('@/views/statistics/detail.vue'),
+        path: '/statistics-detail',
+        component: () => import('@/views/statistics-detail/index.vue'),
         meta: {
           title: '统计明细',
-          menu: false,
+          icon: 'i-ant-design:profile-twotone',
           auth: ['system:read', 'user:manage', 'role:manage'],
         },
       },

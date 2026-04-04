@@ -45,7 +45,7 @@ async function loadData() {
 }
 
 function goToDetail() {
-  router.push('/statistics/detail')
+  router.push('/statistics-detail')
 }
 
 function openArchive(bah: string) {

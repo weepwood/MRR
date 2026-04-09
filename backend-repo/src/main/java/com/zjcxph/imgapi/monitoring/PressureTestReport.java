@@ -1,8 +1,11 @@
 package com.zjcxph.imgapi.monitoring;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class PressureTestReport {
 
     private String runId;
@@ -74,20 +77,12 @@ public class PressureTestReport {
         this.samples = samples == null ? new ArrayList<>() : new ArrayList<>(samples);
     }
 
-    public String getRunId() {
-        return runId;
-    }
-
     public String runId() {
         return runId;
     }
 
     public void setRunId(String runId) {
         this.runId = runId;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public String name() {
@@ -98,20 +93,12 @@ public class PressureTestReport {
         this.name = name;
     }
 
-    public String getTargetUrl() {
-        return targetUrl;
-    }
-
     public String targetUrl() {
         return targetUrl;
     }
 
     public void setTargetUrl(String targetUrl) {
         this.targetUrl = targetUrl;
-    }
-
-    public String getMethod() {
-        return method;
     }
 
     public String method() {
@@ -122,20 +109,12 @@ public class PressureTestReport {
         this.method = method;
     }
 
-    public int getConcurrency() {
-        return concurrency;
-    }
-
     public int concurrency() {
         return concurrency;
     }
 
     public void setConcurrency(int concurrency) {
         this.concurrency = concurrency;
-    }
-
-    public int getTotalRequests() {
-        return totalRequests;
     }
 
     public int totalRequests() {
@@ -146,20 +125,12 @@ public class PressureTestReport {
         this.totalRequests = totalRequests;
     }
 
-    public int getSuccessCount() {
-        return successCount;
-    }
-
     public int successCount() {
         return successCount;
     }
 
     public void setSuccessCount(int successCount) {
         this.successCount = successCount;
-    }
-
-    public int getFailureCount() {
-        return failureCount;
     }
 
     public int failureCount() {
@@ -170,20 +141,12 @@ public class PressureTestReport {
         this.failureCount = failureCount;
     }
 
-    public double getSuccessRate() {
-        return successRate;
-    }
-
     public double successRate() {
         return successRate;
     }
 
     public void setSuccessRate(double successRate) {
         this.successRate = successRate;
-    }
-
-    public long getMinLatencyMs() {
-        return minLatencyMs;
     }
 
     public long minLatencyMs() {
@@ -194,20 +157,12 @@ public class PressureTestReport {
         this.minLatencyMs = minLatencyMs;
     }
 
-    public long getAvgLatencyMs() {
-        return avgLatencyMs;
-    }
-
     public long avgLatencyMs() {
         return avgLatencyMs;
     }
 
     public void setAvgLatencyMs(long avgLatencyMs) {
         this.avgLatencyMs = avgLatencyMs;
-    }
-
-    public long getP95LatencyMs() {
-        return p95LatencyMs;
     }
 
     public long p95LatencyMs() {
@@ -218,20 +173,12 @@ public class PressureTestReport {
         this.p95LatencyMs = p95LatencyMs;
     }
 
-    public long getMaxLatencyMs() {
-        return maxLatencyMs;
-    }
-
     public long maxLatencyMs() {
         return maxLatencyMs;
     }
 
     public void setMaxLatencyMs(long maxLatencyMs) {
         this.maxLatencyMs = maxLatencyMs;
-    }
-
-    public double getRequestsPerSecond() {
-        return requestsPerSecond;
     }
 
     public double requestsPerSecond() {
@@ -242,20 +189,12 @@ public class PressureTestReport {
         this.requestsPerSecond = requestsPerSecond;
     }
 
-    public long getDurationMillis() {
-        return durationMillis;
-    }
-
     public long durationMillis() {
         return durationMillis;
     }
 
     public void setDurationMillis(long durationMillis) {
         this.durationMillis = durationMillis;
-    }
-
-    public String getStartedAt() {
-        return startedAt;
     }
 
     public String startedAt() {
@@ -266,20 +205,12 @@ public class PressureTestReport {
         this.startedAt = startedAt;
     }
 
-    public String getFinishedAt() {
-        return finishedAt;
-    }
-
     public String finishedAt() {
         return finishedAt;
     }
 
     public void setFinishedAt(String finishedAt) {
         this.finishedAt = finishedAt;
-    }
-
-    public PressureTestSnapshot getBeforeSnapshot() {
-        return beforeSnapshot;
     }
 
     public PressureTestSnapshot beforeSnapshot() {
@@ -290,20 +221,12 @@ public class PressureTestReport {
         this.beforeSnapshot = beforeSnapshot;
     }
 
-    public PressureTestSnapshot getAfterSnapshot() {
-        return afterSnapshot;
-    }
-
     public PressureTestSnapshot afterSnapshot() {
         return afterSnapshot;
     }
 
     public void setAfterSnapshot(PressureTestSnapshot afterSnapshot) {
         this.afterSnapshot = afterSnapshot;
-    }
-
-    public List<PressureTestSample> getSamples() {
-        return samples;
     }
 
     public List<PressureTestSample> samples() {

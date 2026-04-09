@@ -15,19 +15,4 @@ public class LoginResponseDTO {
         this.user = user;
     }
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public AuthSession getUser() {
-        return user;
-    }
-
-    public void setUser(AuthSession user) {
-        this.user = user;
-    }
 }

@@ -1,5 +1,10 @@
 package com.zjcxph.imgapi.monitoring;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class PressureTestSample {
 
     private int index;
@@ -19,63 +24,24 @@ public class PressureTestSample {
         this.errorMessage = errorMessage;
     }
 
-    public int getIndex() {
-        return index;
-    }
-
     public int index() {
         return index;
-    }
-
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
     }
 
     public int statusCode() {
         return statusCode;
     }
 
-    public void setStatusCode(int statusCode) {
-        this.statusCode = statusCode;
-    }
-
-    public boolean isSuccess() {
-        return success;
-    }
-
     public boolean success() {
         return success;
-    }
-
-    public void setSuccess(boolean success) {
-        this.success = success;
-    }
-
-    public long getLatencyMillis() {
-        return latencyMillis;
     }
 
     public long latencyMillis() {
         return latencyMillis;
     }
 
-    public void setLatencyMillis(long latencyMillis) {
-        this.latencyMillis = latencyMillis;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
     public String errorMessage() {
         return errorMessage;
     }
 
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
 }

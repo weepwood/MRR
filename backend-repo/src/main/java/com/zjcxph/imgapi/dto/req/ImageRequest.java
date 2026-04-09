@@ -10,10 +10,6 @@ public class ImageRequest {
     }
 
 
-    public Integer getBtype() {
-        return btype;
-    }
-
     public void setBtype(Integer btype) {
         this.btype = btype;
     }

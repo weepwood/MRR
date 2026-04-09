@@ -1,12 +1,17 @@
 package com.zjcxph.imgapi.common;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
+@Getter
 public class Result<T> {
     private Integer code;
     private final LocalDateTime timestamp;
     private String message;
     private T data;
+    @Setter
     private Integer total; // 用于分页时返回总记录数
 
     public static <E> Result<E> success(String message){
@@ -51,27 +56,4 @@ public class Result<T> {
         return this;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public Integer getTotal() {
-        return total;
-    }
-
-    public void setTotal(Integer total) {
-        this.total = total;
-    }
 }

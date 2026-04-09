@@ -4,11 +4,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.Getter;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+@Getter
 public class PressureTestRequest {
 
     @NotBlank(message = "Test name cannot be blank")
@@ -77,20 +79,12 @@ public class PressureTestRequest {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public String name() {
         return name;
     }
 
     public void setName(String name) {
         this.name = normalize(name, "pressure-test");
-    }
-
-    public String getTargetUrl() {
-        return targetUrl;
     }
 
     public String targetUrl() {
@@ -101,20 +95,12 @@ public class PressureTestRequest {
         this.targetUrl = targetUrl;
     }
 
-    public String getMethod() {
-        return method;
-    }
-
     public String method() {
         return method;
     }
 
     public void setMethod(String method) {
         this.method = normalize(method, "GET").toUpperCase(Locale.ROOT);
-    }
-
-    public int getConcurrency() {
-        return concurrency;
     }
 
     public int concurrency() {
@@ -125,20 +111,12 @@ public class PressureTestRequest {
         this.concurrency = concurrency;
     }
 
-    public int getTotalRequests() {
-        return totalRequests;
-    }
-
     public int totalRequests() {
         return totalRequests;
     }
 
     public void setTotalRequests(int totalRequests) {
         this.totalRequests = totalRequests;
-    }
-
-    public int getTimeoutMillis() {
-        return timeoutMillis;
     }
 
     public int timeoutMillis() {
@@ -149,20 +127,12 @@ public class PressureTestRequest {
         this.timeoutMillis = timeoutMillis;
     }
 
-    public String getBody() {
-        return body;
-    }
-
     public String body() {
         return body;
     }
 
     public void setBody(String body) {
         this.body = normalizeNullable(body);
-    }
-
-    public Map<String, String> getHeaders() {
-        return headers;
     }
 
     public Map<String, String> headers() {

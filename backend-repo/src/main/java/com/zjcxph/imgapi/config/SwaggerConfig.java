@@ -16,7 +16,7 @@ public class SwaggerConfig {
         final String securitySchemeName = "bearerAuth";
         final String apiTitle = "住院部翻拍病案 API";
         final String apiVersion = "1.0.0";
-        final String apiDescription = "慈溪人民医院";
+        final String apiDescription = "人民医院";
 
         return new OpenAPI()
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))

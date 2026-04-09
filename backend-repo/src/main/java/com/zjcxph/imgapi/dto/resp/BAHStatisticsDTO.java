@@ -20,27 +20,4 @@ public class BAHStatisticsDTO {
         this.totalPages = totalPages;
     }
 
-    public String getBah() {
-        return bah;
-    }
-
-    public void setBah(String bah) {
-        this.bah = bah;
-    }
-
-    public Long getRecordCount() {
-        return recordCount;
-    }
-
-    public void setRecordCount(Long recordCount) {
-        this.recordCount = recordCount;
-    }
-
-    public Long getTotalPages() {
-        return totalPages;
-    }
-
-    public void setTotalPages(Long totalPages) {
-        this.totalPages = totalPages;
-    }
 }

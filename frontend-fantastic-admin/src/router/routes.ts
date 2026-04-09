@@ -207,8 +207,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
 ]
 
-
-
 const constantRoutesByFilesystem = generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant === true)
 
 const asyncRoutesByFilesystem = [

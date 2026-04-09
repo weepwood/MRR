@@ -1,5 +1,5 @@
-import api from '../index'
 import type { BAHImageData, ImageTypeRequest } from '../types'
+import api from '../index'
 
 /** GET /v1/img-api/{bah} — 获取病案号下的图片数据 */
 export function getImgApiByBah(bah: string) {

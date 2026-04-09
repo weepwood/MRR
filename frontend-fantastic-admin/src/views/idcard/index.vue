@@ -1,3 +1,25 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const idCard = ref('')
+const loading = ref(false)
+const errorMsg = ref('')
+
+const isValid = computed(() => /^\d{15}(\d{2}[\dX])?$/i.test(idCard.value.trim()))
+
+function handleSearch() {
+  if (!isValid.value) { return }
+  errorMsg.value = ''
+  loading.value = true
+  // 跳转到图库页，由目标页负责查询
+  router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
+    loading.value = false
+  })
+}
+</script>
+
 <template>
   <div class="search-page">
     <div class="search-card">
@@ -6,8 +28,12 @@
         <div class="search-logo">
           <i class="i-ant-design:file-search-outlined" />
         </div>
-        <h1 class="search-title">病案图像查询</h1>
-        <p class="search-subtitle">请输入患者身份证号，查询对应的住院病案图像</p>
+        <h1 class="search-title">
+          病案图像查询
+        </h1>
+        <p class="search-subtitle">
+          请输入患者身份证号，查询对应的住院病案图像
+        </p>
       </div>
 
       <!-- 搜索区 -->
@@ -19,8 +45,8 @@
             placeholder="请输入18位身份证号"
             maxlength="18"
             clearable
-            @keyup.enter="handleSearch"
             :disabled="loading"
+            @keyup.enter="handleSearch"
           >
             <template #prefix>
               <i class="i-ant-design:idcard-outlined" style="font-size:16px;" />
@@ -40,7 +66,7 @@
       </div>
 
       <!-- 输入提示 -->
-      <p class="search-hint" v-if="idCard && !isValid">
+      <p v-if="idCard && !isValid" class="search-hint">
         请输入正确格式的身份证号
       </p>
 
@@ -56,28 +82,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-const idCard = ref('')
-const loading = ref(false)
-const errorMsg = ref('')
-
-const isValid = computed(() => /^\d{15}(\d{2}[\dXx])?$/.test(idCard.value.trim()))
-
-function handleSearch() {
-  if (!isValid.value) return
-  errorMsg.value = ''
-  loading.value = true
-  // 跳转到图库页，由目标页负责查询
-  router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
-    loading.value = false
-  })
-}
-</script>
 
 <style scoped>
 .search-page {

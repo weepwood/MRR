@@ -1,5 +1,5 @@
-import api from '../index'
 import type { PressureTestRequest } from '../types'
+import api from '../index'
 
 /** POST /v1/monitoring-api/pressure-tests/run — 执行压测 */
 export function runPressureTest(data: PressureTestRequest) {

@@ -1,5 +1,5 @@
-import api from '../index'
 import type { EncryptIDSearchParams } from '../types'
+import api from '../index'
 
 /** GET /v2/search/getBAHByID/{idCard} — 根据身份证号获取BAH */
 export function getBAHByIdCard(idCard: string) {

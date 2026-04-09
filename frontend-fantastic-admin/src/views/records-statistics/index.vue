@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { StatisticsRecord } from '@/api/types'
 import {
   Document,
   Grid,
@@ -13,15 +14,14 @@ import {
   getStatisticsList,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
-import type { StatisticsRecord } from '@/api/types'
 
 defineOptions({ name: 'RecordsStatisticsPage' })
 
 // ---------- types ----------
 interface SummaryData {
-  total?: { totalRecords?: number; totalPages?: number }
+  total?: { totalRecords?: number, totalPages?: number }
   uniqueBAHCount?: number
-  byType?: Array<{ type?: string; recordCount?: number; totalPages?: number }>
+  byType?: Array<{ type?: string, recordCount?: number, totalPages?: number }>
 }
 interface DateStatItem {
   date: string
@@ -95,20 +95,20 @@ const sortedDateData = computed<DateStatItem[]>(() => {
 })
 
 const dateRange = computed(() => {
-  if (!sortedDateData.value.length) return { start: '-', end: '-' }
+  if (!sortedDateData.value.length) { return { start: '-', end: '-' } }
   return {
     start: formatDate(sortedDateData.value[0].date),
-    end: formatDate(sortedDateData.value[sortedDateData.value.length - 1].date),
+    end: formatDate(sortedDateData.value.at(-1).date),
   }
 })
 
 const displayDateLabels = computed(() => {
   const data = sortedDateData.value
-  if (data.length <= 5) return data.map(i => formatDateShort(i.date))
+  if (data.length <= 5) { return data.map(i => formatDateShort(i.date)) }
   const step = Math.ceil(data.length / 8)
   const labels: string[] = []
-  for (let i = 0; i < data.length; i += step) labels[i] = formatDateShort(data[i].date)
-  labels[data.length - 1] = formatDateShort(data[data.length - 1].date)
+  for (let i = 0; i < data.length; i += step) { labels[i] = formatDateShort(data[i].date) }
+  labels[data.length - 1] = formatDateShort(data.at(-1).date)
   return labels
 })
 
@@ -130,7 +130,7 @@ const maxCumulativeCount = computed(() => {
 
 const barWidth = computed(() => {
   const n = sortedDateData.value.length
-  if (n <= 1) return Math.min(40, chartWidth.value)
+  if (n <= 1) { return Math.min(40, chartWidth.value) }
   const slot = chartWidth.value / n
   return Math.max(6, Math.min(35, slot - 6))
 })
@@ -138,7 +138,7 @@ const barWidth = computed(() => {
 const cumulativeRecords = computed(() => calculateCumulativeRecords())
 
 const cumulativeRecordPoints = computed(() => {
-  if (!sortedDateData.value.length) return []
+  if (!sortedDateData.value.length) { return [] }
   const cum = calculateCumulativeRecords()
   return sortedDateData.value.map((_, idx) => {
     const x = paddingLeft + idx * xStep.value
@@ -154,12 +154,12 @@ function calculateCumulativeRecords(): number[] {
 }
 
 function calcY(value: number) {
-  if (!value || value <= 0) return paddingTop + chartHeight
+  if (!value || value <= 0) { return paddingTop + chartHeight }
   return paddingTop + chartHeight - (Math.min(value / maxRecordCount.value, 1) * chartHeight)
 }
 
 function calcCumY(value: number) {
-  if (!value || value <= 0) return paddingTop + chartHeight
+  if (!value || value <= 0) { return paddingTop + chartHeight }
   return paddingTop + chartHeight - (Math.min(value / maxCumulativeCount.value, 1) * chartHeight)
 }
 
@@ -168,24 +168,24 @@ function getBarX(index: number) {
 }
 function getBarY(value: number) { return calcY(value) }
 function getBarHeight(value: number) {
-  if (!value || value <= 0) return 0
+  if (!value || value <= 0) { return 0 }
   return paddingTop + chartHeight - calcY(value)
 }
 
 function getAreaPath(points: string[]) {
-  if (!points.length) return ''
+  if (!points.length) { return '' }
   const fx = points[0].split(',')[0]
-  const lx = points[points.length - 1].split(',')[0]
+  const lx = points.at(-1).split(',')[0]
   const by = paddingTop + chartHeight
   return `${points.join(' ')} L ${lx} ${by} L ${fx} ${by} Z`
 }
 
 function formatDate(dateStr?: string) {
-  if (!dateStr) return '无日期'
+  if (!dateStr) { return '无日期' }
   return dateStr.replace(/\//g, '-')
 }
 function formatDateShort(dateStr?: string) {
-  if (!dateStr) return ''
+  if (!dateStr) { return '' }
   const parts = dateStr.split('/')
   return parts.length >= 2 ? `${parts[1]}/${parts[2]}` : dateStr
 }
@@ -207,7 +207,7 @@ function getBackendSortOrder(order: string) {
 
 // ---------- chart width ----------
 function updateChartWidth() {
-  if (!chartContainerRef.value) return
+  if (!chartContainerRef.value) { return }
   const containerWidth = chartContainerRef.value.offsetWidth
   const n = sortedDateData.value.length
   if (n > minDateCountForScroll) {
@@ -253,8 +253,8 @@ async function loadStatisticsList() {
       sortBy: prop || 'date',
       sortOrder: getBackendSortOrder(order),
     }
-    if (listSearchKeyword.value.trim()) params.keyword = listSearchKeyword.value.trim()
-    if (listSearchType.value) params.type = listSearchType.value
+    if (listSearchKeyword.value.trim()) { params.keyword = listSearchKeyword.value.trim() }
+    if (listSearchType.value) { params.type = listSearchType.value }
     if (Array.isArray(listSearchDateRange.value) && listSearchDateRange.value.length === 2) {
       params.startDate = listSearchDateRange.value[0]
       params.endDate = listSearchDateRange.value[1]
@@ -294,7 +294,7 @@ function handleCurrentChange(v: number) {
   currentPage.value = v
   loadStatisticsList()
 }
-function handleTableSortChange({ prop, order }: { prop: string; order: string }) {
+function handleTableSortChange({ prop, order }: { prop: string, order: string }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
   currentPage.value = 1
   loadStatisticsList()
@@ -311,7 +311,9 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('resize', updateChartWidth))
 
-watch(sortedDateData, (v) => { if (v.length) nextTick(updateChartWidth) })
+watch(sortedDateData, (v) => {
+  if (v.length) { nextTick(updateChartWidth) }
+})
 </script>
 
 <template>
@@ -319,40 +321,68 @@ watch(sortedDateData, (v) => { if (v.length) nextTick(updateChartWidth) })
     <!-- 页头 -->
     <div class="page-header">
       <div>
-        <p class="eyebrow">Records Statistics</p>
+        <p class="eyebrow">
+          Records Statistics
+        </p>
         <h2>病案扫描数据统计</h2>
-        <p class="subtitle">查看扫描总量、每日趋势与病案明细列表。</p>
+        <p class="subtitle">
+          查看扫描总量、每日趋势与病案明细列表。
+        </p>
       </div>
     </div>
 
     <!-- 顶部统计卡片 -->
     <section class="summary-grid">
       <el-card shadow="never" class="stat-card total-records">
-        <div class="stat-icon"><el-icon><Grid /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon><Grid /></el-icon>
+        </div>
         <div class="stat-body">
-          <div class="stat-label">总记录数</div>
-          <div class="stat-value">{{ (summaryData.total?.totalRecords ?? 0).toLocaleString('zh-CN') }}</div>
+          <div class="stat-label">
+            总记录数
+          </div>
+          <div class="stat-value">
+            {{ (summaryData.total?.totalRecords ?? 0).toLocaleString('zh-CN') }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card total-pages">
-        <div class="stat-icon"><el-icon><Tickets /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon><Tickets /></el-icon>
+        </div>
         <div class="stat-body">
-          <div class="stat-label">项目期间总页数</div>
-          <div class="stat-value">{{ (summaryData.total?.totalPages ?? 0).toLocaleString('zh-CN') }}</div>
+          <div class="stat-label">
+            项目期间总页数
+          </div>
+          <div class="stat-value">
+            {{ (summaryData.total?.totalPages ?? 0).toLocaleString('zh-CN') }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card unique-bah">
-        <div class="stat-icon"><el-icon><Document /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon><Document /></el-icon>
+        </div>
         <div class="stat-body">
-          <div class="stat-label">项目期间扫描病案数</div>
-          <div class="stat-value">{{ (summaryData.uniqueBAHCount ?? 0).toLocaleString('zh-CN') }}</div>
+          <div class="stat-label">
+            项目期间扫描病案数
+          </div>
+          <div class="stat-value">
+            {{ (summaryData.uniqueBAHCount ?? 0).toLocaleString('zh-CN') }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card overview">
-        <div class="stat-icon"><el-icon><TrendCharts /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon><TrendCharts /></el-icon>
+        </div>
         <div class="stat-body">
-          <div class="stat-label">统计时间范围</div>
-          <div class="stat-value range-text">{{ dateRange.start }} — {{ dateRange.end }}</div>
+          <div class="stat-label">
+            统计时间范围
+          </div>
+          <div class="stat-value range-text">
+            {{ dateRange.start }} — {{ dateRange.end }}
+          </div>
         </div>
       </el-card>
     </section>
@@ -363,7 +393,9 @@ watch(sortedDateData, (v) => { if (v.length) nextTick(updateChartWidth) })
         <div class="section-header">
           <el-icon><TrendCharts /></el-icon>
           <span>每日扫描记录</span>
-          <el-tag size="small" type="success">最近 {{ sortedDateData.length }} 天</el-tag>
+          <el-tag size="small" type="success">
+            最近 {{ sortedDateData.length }} 天
+          </el-tag>
         </div>
       </template>
 

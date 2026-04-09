@@ -14,6 +14,7 @@ declare const __SYSTEM_INFO__: {
 
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
+
   const component: DefineComponent<{}, {}, any>
   export default component
 }

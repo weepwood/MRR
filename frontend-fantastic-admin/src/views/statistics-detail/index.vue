@@ -315,15 +315,15 @@ onMounted(refreshAll)
 
       <div class="filter-grid">
         <el-input
-          class="filter-keyword"
           v-model="filters.keyword"
+          class="filter-keyword"
           placeholder="搜索病案号或扫描设备"
           clearable
           @keyup.enter="handleSearch"
         />
         <el-select
-          class="filter-type"
           v-model="filters.type"
+          class="filter-type"
           placeholder="全部类型"
           clearable
           @change="handleSearch"
@@ -336,15 +336,15 @@ onMounted(refreshAll)
           />
         </el-select>
         <el-date-picker
-          class="filter-date"
           v-model="filters.dateRange"
+          class="filter-date"
           type="daterange"
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
         />
-        <el-select class="filter-sort" v-model="sortKey" @change="handleSortChange">
+        <el-select v-model="sortKey" class="filter-sort" @change="handleSortChange">
           <el-option
             v-for="item in sortOptions"
             :key="item.key"

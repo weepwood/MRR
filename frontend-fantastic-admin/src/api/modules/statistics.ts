@@ -1,5 +1,5 @@
-import api from '../index'
 import type { BAHStatistics, DateStatistics, StatisticsRecord, StatisticsSummary, TypeStatistics } from '../types'
+import api from '../index'
 
 /** GET /v1/statistics-api — 获取所有统计数据(分页+条件) */
 export function getStatisticsList(params: {

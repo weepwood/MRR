@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Link, Refresh, Search, UploadFilled } from '@element-plus/icons-vue'
+import type { MigrationLogRecord, MigrationStatistics, OssUploadResult, ScanRecord } from '@/api/types'
+import { Link, Refresh, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingMigrations, uploadByBah, uploadToOss } from '@/api/modules/oss'
-import type { MigrationLogRecord, MigrationStatistics, OssUploadResult, ScanRecord } from '@/api/types'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -35,8 +35,8 @@ const progressPercentage = computed(() => {
 
 const progressStatus = computed(() => {
   const pct = progressPercentage.value
-  if (pct >= 100) return 'success'
-  if (pct >= 50) return ''
+  if (pct >= 100) { return 'success' }
+  if (pct >= 50) { return '' }
   return 'warning'
 })
 
@@ -194,14 +194,14 @@ function statusTag(status?: string) {
 }
 
 function formatBytes(bytes?: number) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (!bytes) { return '-' }
+  if (bytes < 1024) { return `${bytes} B` }
+  if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB` }
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 function formatDate(d?: string) {
-  if (!d) return '-'
+  if (!d) { return '-' }
   return new Date(d).toLocaleString('zh-CN')
 }
 
@@ -236,31 +236,55 @@ onMounted(refreshAll)
     <!-- Statistics Cards -->
     <section class="summary-grid">
       <el-card shadow="never" class="stat-card total-count">
-        <div class="stat-icon"><i :class="summaryCards[0].icon" /></div>
+        <div class="stat-icon">
+          <i :class="summaryCards[0].icon" />
+        </div>
         <div class="stat-body">
-          <div class="stat-label">{{ summaryCards[0].label }}</div>
-          <div class="stat-value">{{ summaryCards[0].value.toLocaleString() }}</div>
+          <div class="stat-label">
+            {{ summaryCards[0].label }}
+          </div>
+          <div class="stat-value">
+            {{ summaryCards[0].value.toLocaleString() }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card migrated-count">
-        <div class="stat-icon"><i :class="summaryCards[1].icon" /></div>
+        <div class="stat-icon">
+          <i :class="summaryCards[1].icon" />
+        </div>
         <div class="stat-body">
-          <div class="stat-label">{{ summaryCards[1].label }}</div>
-          <div class="stat-value">{{ summaryCards[1].value.toLocaleString() }}</div>
+          <div class="stat-label">
+            {{ summaryCards[1].label }}
+          </div>
+          <div class="stat-value">
+            {{ summaryCards[1].value.toLocaleString() }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card pending-count">
-        <div class="stat-icon"><i :class="summaryCards[2].icon" /></div>
+        <div class="stat-icon">
+          <i :class="summaryCards[2].icon" />
+        </div>
         <div class="stat-body">
-          <div class="stat-label">{{ summaryCards[2].label }}</div>
-          <div class="stat-value">{{ summaryCards[2].value.toLocaleString() }}</div>
+          <div class="stat-label">
+            {{ summaryCards[2].label }}
+          </div>
+          <div class="stat-value">
+            {{ summaryCards[2].value.toLocaleString() }}
+          </div>
         </div>
       </el-card>
       <el-card shadow="never" class="stat-card failed-count">
-        <div class="stat-icon"><i :class="summaryCards[3].icon" /></div>
+        <div class="stat-icon">
+          <i :class="summaryCards[3].icon" />
+        </div>
         <div class="stat-body">
-          <div class="stat-label">{{ summaryCards[3].label }}</div>
-          <div class="stat-value">{{ summaryCards[3].value.toLocaleString() }}</div>
+          <div class="stat-label">
+            {{ summaryCards[3].label }}
+          </div>
+          <div class="stat-value">
+            {{ summaryCards[3].value.toLocaleString() }}
+          </div>
         </div>
       </el-card>
     </section>

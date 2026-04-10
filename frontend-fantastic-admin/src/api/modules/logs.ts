@@ -11,21 +11,21 @@ export function searchSystemLogs(params: {
   startTime?: string
   endTime?: string
 }) {
-  return api.get('/v1/logs-api/search', { params })
+  return api.get('/api/v1/logs/search', { params })
 }
 
 export function getLogById(id: string | number) {
-  return api.get(`/v1/logs-api/${id}`)
+  return api.get(`/api/v1/logs/${id}`)
 }
 
-/** POST /v1/logs-api/retention/cleanup — 运行日志清理 */
+/** POST /api/v1/logs/retention/cleanup — 运行日志清理 */
 export function runLogRetentionCleanup(params?: Record<string, any>) {
-  return api.post('/v1/logs-api/retention/cleanup', null, { params })
+  return api.post('/api/v1/logs/retention/cleanup', null, { params })
 }
 
-/** GET /v1/logs-api/retention/export — 导出待清理日志 */
+/** GET /api/v1/logs/retention/export — 导出待清理日志 */
 export function exportLogRetentionLogs() {
-  return api.get('/v1/logs-api/retention/export', {
+  return api.get('/api/v1/logs/retention/export', {
     responseType: 'blob',
   })
 }

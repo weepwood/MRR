@@ -20,12 +20,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @Tag(name = "Auth API", description = "Authentication and permission management")
 @RestController
+@RequestMapping("/api/v1/auth")
 public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -47,7 +49,7 @@ public class UserController {
     }
 
     @Operation(summary = "Current user")
-    @GetMapping("/v1/auth/me")
+    @GetMapping("/me")
     public Result<AuthSession> currentUser() {
         AuthSession session = authService.currentUser();
         if (session == null) {
@@ -58,21 +60,21 @@ public class UserController {
 
     @Operation(summary = "List users")
     @RequirePermissions({"user:manage"})
-    @GetMapping("/v1/auth/users")
+    @GetMapping("/users")
     public Result<List<AuthUserProfileDTO>> listUsers() {
         return Result.<List<AuthUserProfileDTO>>success("success").data(authService.listUsers());
     }
 
     @Operation(summary = "List roles")
     @RequirePermissions({"role:read"})
-    @GetMapping("/v1/auth/roles")
+    @GetMapping("/roles")
     public Result<List<AuthRole>> listRoles() {
         return Result.<List<AuthRole>>success("success").data(authService.listRoles());
     }
 
     @Operation(summary = "Update user")
     @RequirePermissions({"user:manage"})
-    @PutMapping("/v1/auth/users/{id}")
+    @PutMapping("/users/{id}")
     public Result<AuthUserProfileDTO> updateUser(@PathVariable Long id, @Valid @RequestBody AuthUserUpdateRequest request) {
         AuthUserProfileDTO updated = authService.updateUser(id, request);
         if (updated == null) {
@@ -83,7 +85,7 @@ public class UserController {
 
     @Operation(summary = "Disable user")
     @RequirePermissions({"user:manage"})
-    @DeleteMapping("/v1/auth/users/{id}")
+    @DeleteMapping("/users/{id}")
     public Result<Void> disableUser(@PathVariable Long id) {
         int updated = authService.disableUser(id);
         if (updated == 0) {

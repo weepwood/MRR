@@ -1,25 +1,25 @@
 import api from '../index'
 
 export function getSystemHealth() {
-  return api.get('/v1/system/health')
+  return api.get('/api/v1/system/health')
 }
 
 export function getSystemOverview() {
-  return api.get('/v1/system/overview')
+  return api.get('/api/v1/system/overview')
 }
 
 export function getSystemRuntime() {
-  return api.get('/v1/system/runtime')
+  return api.get('/api/v1/system/runtime')
 }
 
 export function getSystemMemory() {
-  return api.get('/v1/system/memory')
+  return api.get('/api/v1/system/memory')
 }
 
 export function getSystemInfo() {
-  return api.get('/v1/system/info')
+  return api.get('/api/v1/system/info')
 }
 
 export function getSystemProperties() {
-  return api.get('/v1/system/properties')
+  return api.get('/api/v1/system/properties')
 }

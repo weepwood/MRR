@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Properties;
 
 @RestController
-@RequestMapping("/v1/system")
-@Tag(name = "System Management", description = "系统管理接口")
+@RequestMapping("/api/v1/system")
+@Tag(name = "System Info", description = "系统信息和监控接口")
 public class SystemInfoController {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemInfoController.class);

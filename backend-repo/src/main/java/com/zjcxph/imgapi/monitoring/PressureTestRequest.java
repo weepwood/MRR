@@ -24,20 +24,17 @@ public class PressureTestRequest {
     @Pattern(regexp = "GET|POST|PUT|PATCH|DELETE", message = "Method must be one of GET/POST/PUT/PATCH/DELETE")
     private String method;
 
-    @Setter
     @Min(value = 1, message = "Concurrency must be greater than 0")
     @Max(value = 128, message = "Concurrency must not exceed 128")
-    private int concurrency;
+    private Integer concurrency;
 
-    @Setter
     @Min(value = 1, message = "Total requests must be greater than 0")
     @Max(value = 10000, message = "Total requests must not exceed 10000")
-    private int totalRequests;
+    private Integer totalRequests;
 
-    @Setter
     @Min(value = 100, message = "Timeout must be at least 100ms")
     @Max(value = 30000, message = "Timeout must not exceed 30000ms")
-    private int timeoutMillis;
+    private Integer timeoutMillis;
 
     private String body;
     private Map<String, String> headers;
@@ -51,22 +48,34 @@ public class PressureTestRequest {
         this.headers = new LinkedHashMap<>();
     }
 
+    public void setConcurrency(Integer concurrency) {
+        this.concurrency = concurrency != null ? concurrency : 1;
+    }
+
+    public void setTotalRequests(Integer totalRequests) {
+        this.totalRequests = totalRequests != null ? totalRequests : 1;
+    }
+
+    public void setTimeoutMillis(Integer timeoutMillis) {
+        this.timeoutMillis = timeoutMillis != null ? timeoutMillis : 3000;
+    }
+
     public PressureTestRequest(
             String name,
             String targetUrl,
             String method,
-            int concurrency,
-            int totalRequests,
-            int timeoutMillis,
+            Integer concurrency,
+            Integer totalRequests,
+            Integer timeoutMillis,
             String body,
             Map<String, String> headers
     ) {
         this.name = normalize(name, "pressure-test");
         this.targetUrl = targetUrl;
         this.method = normalize(method, "GET").toUpperCase(Locale.ROOT);
-        this.concurrency = concurrency;
-        this.totalRequests = totalRequests;
-        this.timeoutMillis = timeoutMillis;
+        this.concurrency = concurrency != null ? concurrency : 1;
+        this.totalRequests = totalRequests != null ? totalRequests : 1;
+        this.timeoutMillis = timeoutMillis != null ? timeoutMillis : 3000;
         this.body = normalizeNullable(body);
         setHeaders(headers);
     }

@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.PathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,7 +36,7 @@ import java.util.stream.Collectors;
 
 @Validated
 @RestController
-@RequestMapping("/v1/img-api")
+@RequestMapping("/api/v1/img")
 @Tag(name = "IMG Controller", description = "图片管理接口")
 public class ImageController {
 
@@ -244,7 +243,7 @@ public class ImageController {
             return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
         }
 
-        PathResource resource = new PathResource(filePath);
+        FileSystemResource resource = new FileSystemResource(filePath.toFile());
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline;filename=" + FILENAME);

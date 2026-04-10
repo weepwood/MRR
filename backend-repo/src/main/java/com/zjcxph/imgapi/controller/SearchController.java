@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v2/search")
+@RequestMapping("/api/v1/search")
 public class SearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);

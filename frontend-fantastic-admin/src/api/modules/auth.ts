@@ -1,25 +1,25 @@
 import api from '../index'
 
 export function login(credentials: { username: string, password: string }) {
-  return api.post('/login', credentials, { skipGlobalError: true })
+  return api.post('/api/v1/auth/login', credentials, { skipGlobalError: true })
 }
 
 export function getCurrentUser() {
-  return api.get('/v1/auth/me', { skipGlobalError: true })
+  return api.get('/api/v1/auth/me', { skipGlobalError: true })
 }
 
 export function getAuthUsers() {
-  return api.get('/v1/auth/users')
+  return api.get('/api/v1/auth/users')
 }
 
 export function getAuthRoles() {
-  return api.get('/v1/auth/roles')
+  return api.get('/api/v1/auth/roles')
 }
 
 export function updateAuthUser(id: string | number, payload: any) {
-  return api.put(`/v1/auth/users/${id}`, payload)
+  return api.put(`/api/v1/auth/users/${id}`, payload)
 }
 
 export function disableAuthUser(id: string | number) {
-  return api.delete(`/v1/auth/users/${id}`)
+  return api.delete(`/api/v1/auth/users/${id}`)
 }

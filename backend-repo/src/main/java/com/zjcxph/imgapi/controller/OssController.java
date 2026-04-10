@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/v1/oss-api")
+@RequestMapping("/api/v1/oss")
 @Tag(name = "OSS Management", description = "OSS 图片上传与迁移管理接口")
 public class OssController {
 

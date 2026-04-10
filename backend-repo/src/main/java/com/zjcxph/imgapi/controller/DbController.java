@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
-@RequestMapping("/v1/db-api")
+@RequestMapping("/api/v1/db")
 @Tag(name = "DB Controller", description = "数据库管理接口")
 public class DbController {
     @GetMapping("/hello")

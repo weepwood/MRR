@@ -20,5 +20,8 @@ public class ImageMigrationLog {
     private Date verifiedAt;
     private Date createdAt;
     private Date updatedAt;
+    
+    // 用于接收统计查询结果的临时字段
+    private Long count;
 
 }

@@ -1,27 +1,27 @@
 import type { PressureTestRequest } from '../types'
 import api from '../index'
 
-/** POST /v1/monitoring-api/pressure-tests/run — 执行压测 */
+/** POST /api/v1/monitoring/pressure-tests/run — 执行压测 */
 export function runPressureTest(data: PressureTestRequest) {
-  return api.post('/v1/monitoring-api/pressure-tests/run', data)
+  return api.post('/api/v1/monitoring/pressure-tests/run', data)
 }
 
-/** GET /v1/monitoring-api/pressure-tests/history — 获取压测历史 */
+/** GET /api/v1/monitoring/pressure-tests/history — 获取压测历史 */
 export function getPressureTestHistory() {
-  return api.get('/v1/monitoring-api/pressure-tests/history')
+  return api.get('/api/v1/monitoring/pressure-tests/history')
 }
 
-/** GET /v1/monitoring-api/pressure-tests/latest — 获取最近一次压测结果 */
+/** GET /api/v1/monitoring/pressure-tests/latest — 获取最近一次压测结果 */
 export function getLatestPressureTest() {
-  return api.get('/v1/monitoring-api/pressure-tests/latest')
+  return api.get('/api/v1/monitoring/pressure-tests/latest')
 }
 
-/** GET /v1/monitoring-api/pressure-tests/{runId} — 根据runId获取压测详情 */
+/** GET /api/v1/monitoring/pressure-tests/{runId} — 根据runId获取压测详情 */
 export function getPressureTestByRunId(runId: string) {
-  return api.get(`/v1/monitoring-api/pressure-tests/${runId}`)
+  return api.get(`/api/v1/monitoring/pressure-tests/${runId}`)
 }
 
-/** DELETE /v1/monitoring-api/pressure-tests/history — 清空压测历史 */
+/** DELETE /api/v1/monitoring/pressure-tests/history — 清空压测历史 */
 export function clearPressureTestHistory() {
-  return api.delete('/v1/monitoring-api/pressure-tests/history')
+  return api.delete('/api/v1/monitoring/pressure-tests/history')
 }

@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/v2/logs", "/v1/logs-api"})
+@RequestMapping("/api/v1/logs")
 public class LogController {
 
     private static final int MAX_PAGE_SIZE = 200;

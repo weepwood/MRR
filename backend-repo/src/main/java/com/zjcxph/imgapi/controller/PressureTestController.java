@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/monitoring-api/pressure-tests")
+@RequestMapping("/api/v1/monitoring/pressure-tests")
 @Tag(name = "Pressure Test Monitoring", description = "Pressure test monitoring and history")
 public class PressureTestController {
 

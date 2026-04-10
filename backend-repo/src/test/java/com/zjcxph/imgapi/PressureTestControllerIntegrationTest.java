@@ -88,6 +88,36 @@ class PressureTestControllerIntegrationTest {
     }
 
     @Test
+    void runPressureTestWithNullFieldsShouldUseDefaults() {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("name", "null-fields-test");
+        request.put("targetUrl", targetUrl);
+        request.put("method", "GET");
+        request.put("concurrency", null);
+        request.put("totalRequests", null);
+        request.put("timeoutMillis", null);
+        request.put("body", null);
+        request.put("headers", null);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "/v1/monitoring-api/pressure-tests/run",
+                request,
+                Map.class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(200, body.get("code"));
+
+        Map<String, Object> report = castMap(body.get("data"));
+        assertEquals("null-fields-test", report.get("name"));
+        assertEquals(1, ((Number) report.get("concurrency")).intValue());
+        assertEquals(1, ((Number) report.get("totalRequests")).intValue());
+        assertEquals(1, ((Number) report.get("successCount")).intValue());
+    }
+
+    @Test
     void latestEndpointShouldBeAccessible() {
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 "/v1/monitoring-api/pressure-tests/latest",

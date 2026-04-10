@@ -38,7 +38,7 @@ import java.util.zip.ZipOutputStream;
  * 提供 mr_scan 表的增删改查功能
  */
 @RestController
-@RequestMapping("/v1/scan-api")
+@RequestMapping("/api/v1/scan")
 @Tag(name = "Scan Management", description = "病案扫描记录管理接口")
 public class ScanController {
 

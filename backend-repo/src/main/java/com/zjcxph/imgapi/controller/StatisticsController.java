@@ -30,7 +30,7 @@ import java.util.Map;
  * 提供 mr_statistics 表的统计查询接口
  */
 @RestController
-@RequestMapping("/v1/statistics-api")
+@RequestMapping("/api/v1/statistics")
 @Tag(name = "Statistics Management", description = "病案统计管理接口")
 public class StatisticsController {
 

@@ -27,15 +27,12 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/login",
-                        "/login/**",
-                        "/v1/auth/login",
-                        "/v1/auth/login/**",
-                        "/v1/img-api/hello",
-                        "/v1/system/**",
-                        "/v1/statistics-api/**",
-                        "/v1/monitoring-api/pressure-tests/**",
-                        "/v2/search/**",
+                        "/api/v1/auth/login",
+                        "/api/v1/img/hello",
+                        "/api/v1/system/**",
+                        "/api/v1/statistics/**",
+                        "/api/v1/monitoring/pressure-tests/**",
+                        "/api/v1/search/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/docs/**",

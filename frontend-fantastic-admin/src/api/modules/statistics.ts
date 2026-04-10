@@ -1,7 +1,7 @@
 import type { BAHStatistics, DateStatistics, StatisticsRecord, StatisticsSummary, TypeStatistics } from '../types'
 import api from '../index'
 
-/** GET /v1/statistics-api — 获取所有统计数据(分页+条件) */
+/** GET /api/v1/statistics — 获取所有统计数据(分页+条件) */
 export function getStatisticsList(params: {
   page: number
   size: number
@@ -12,49 +12,49 @@ export function getStatisticsList(params: {
   sortBy?: string
   sortOrder?: string
 }) {
-  return api.get('/v1/statistics-api', { params })
+  return api.get('/api/v1/statistics', { params })
 }
 
-/** GET /v1/statistics-api/summary — 获取总体统计信息 */
+/** GET /api/v1/statistics/summary — 获取总体统计信息 */
 export function getStatisticsSummary() {
-  return api.get<StatisticsSummary>('/v1/statistics-api/summary')
+  return api.get<StatisticsSummary>('/api/v1/statistics/summary')
 }
 
-/** GET /v1/statistics-api/date-summary — 统计每个日期的记录数和总页数 */
+/** GET /api/v1/statistics/date-summary — 统计每个日期的记录数和总页数 */
 export function getStatisticsDateSummary() {
-  return api.get<DateStatistics[]>('/v1/statistics-api/date-summary')
+  return api.get<DateStatistics[]>('/api/v1/statistics/date-summary')
 }
 
-/** GET /v1/statistics-api/dashboard — 获取综合统计面板数据 */
+/** GET /api/v1/statistics/dashboard — 获取综合统计面板数据 */
 export function getDashboardData() {
-  return api.get('/v1/statistics-api/dashboard')
+  return api.get('/api/v1/statistics/dashboard')
 }
 
-/** GET /v1/statistics-api/bah/{bah} — 根据病案号查询统计数据 */
+/** GET /api/v1/statistics/bah/{bah} — 根据病案号查询统计数据 */
 export function getStatisticsByBah(bah: string) {
-  return api.get<StatisticsRecord[]>(`/v1/statistics-api/bah/${bah}`)
+  return api.get<StatisticsRecord[]>(`/api/v1/statistics/bah/${bah}`)
 }
 
-/** GET /v1/statistics-api/date/{date} — 根据日期查询统计数据 */
+/** GET /api/v1/statistics/date/{date} — 根据日期查询统计数据 */
 export function getStatisticsByDate(date: string) {
-  return api.get<StatisticsRecord[]>(`/v1/statistics-api/date/${date}`)
+  return api.get<StatisticsRecord[]>(`/api/v1/statistics/date/${date}`)
 }
 
-/** GET /v1/statistics-api/bah-summary — 统计每个病案号的记录数和总页数 */
+/** GET /api/v1/statistics/bah-summary — 统计每个病案号的记录数和总页数 */
 export function getBAHStatistics() {
-  return api.get<BAHStatistics[]>('/v1/statistics-api/bah-summary')
+  return api.get<BAHStatistics[]>('/api/v1/statistics/bah-summary')
 }
 
-/** GET /v1/statistics-api/type-summary — 按类型统计 */
+/** GET /api/v1/statistics/type-summary — 按类型统计 */
 export function getTypeStatistics() {
-  return api.get<TypeStatistics[]>('/v1/statistics-api/type-summary')
+  return api.get<TypeStatistics[]>('/api/v1/statistics/type-summary')
 }
 
-/** GET /v1/statistics-api/date-summary/condition — 按条件统计每日数据 */
+/** GET /api/v1/statistics/date-summary/condition — 按条件统计每日数据 */
 export function getDateSummaryByCondition(params?: {
   startDate?: string
   endDate?: string
   type?: string
 }) {
-  return api.get<DateStatistics[]>('/v1/statistics-api/date-summary/condition', { params })
+  return api.get<DateStatistics[]>('/api/v1/statistics/date-summary/condition', { params })
 }

@@ -95,7 +95,7 @@ public interface ImageMigrationLogMapper {
             "GROUP BY migration_status")
     @Results({
             @Result(property = "migrationStatus", column = "migration_status"),
-            @Result(property = "id", column = "cnt")
+            @Result(property = "count", column = "cnt")
     })
     List<ImageMigrationLog> getStatusCounts();
 }

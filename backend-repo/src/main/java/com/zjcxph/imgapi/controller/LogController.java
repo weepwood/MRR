@@ -61,7 +61,7 @@ public class LogController {
         if (log == null) {
             return Result.fail("log not found");
         }
-        return Result.<Log>success("success").data(log);
+        return Result.<Log>success().data(log);
     }
 
     @GetMapping("/")
@@ -72,7 +72,7 @@ public class LogController {
         List<Log> logs = logService.getAllLogs(page, size);
         int total = logService.getTotalLogCount();
         PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
-        return Result.<PageResult<Log>>success("success").data(pageResult);
+        return Result.<PageResult<Log>>success().data(pageResult);
     }
 
     @GetMapping("/ip/{ip}")
@@ -84,7 +84,7 @@ public class LogController {
         List<Log> logs = logService.getLogsByClientIp(ip, page, size);
         int total = logService.getLogCountByClientIp(ip);
         PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
-        return Result.<PageResult<Log>>success("success").data(pageResult);
+        return Result.<PageResult<Log>>success().data(pageResult);
     }
 
     @GetMapping("/uri")
@@ -96,7 +96,7 @@ public class LogController {
         List<Log> logs = logService.getLogsByRequestUri(uri, page, size);
         int total = logService.getLogCountByRequestUri(uri);
         PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
-        return Result.<PageResult<Log>>success("success").data(pageResult);
+        return Result.<PageResult<Log>>success().data(pageResult);
     }
 
     @PostMapping("/retention/cleanup")
@@ -110,7 +110,7 @@ public class LogController {
         if (message == null || message.isBlank()) {
             message = cleanupResult.isSuccess() ? "log retention cleanup executed" : "log retention cleanup skipped";
         }
-        return Result.<LogRetentionCleanupResult>success(message).data(cleanupResult);
+        return Result.<LogRetentionCleanupResult>success().data(cleanupResult);
     }
 
     @GetMapping("/retention/export")
@@ -200,7 +200,7 @@ public class LogController {
         );
 
         PageResult<Log> pageResult = PageResult.of(list, total, page, safeSize);
-        return Result.<PageResult<Log>>success("success").data(pageResult);
+        return Result.<PageResult<Log>>success().data(pageResult);
     }
 
     private String normalize(String value) {

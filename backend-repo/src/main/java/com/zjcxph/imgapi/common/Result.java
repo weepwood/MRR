@@ -12,14 +12,6 @@ import java.time.LocalDateTime;
 @Getter
 public class Result<T> {
     
-    // ==================== 常用状态码常量 ====================
-    public static final int SUCCESS_CODE = 200;
-    public static final int BAD_REQUEST_CODE = 400;
-    public static final int UNAUTHORIZED_CODE = 401;
-    public static final int FORBIDDEN_CODE = 403;
-    public static final int NOT_FOUND_CODE = 404;
-    public static final int INTERNAL_ERROR_CODE = 500;
-    
     // ==================== 字段定义 ====================
     private Integer code;
     private String message;
@@ -56,16 +48,16 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> success() {
-        return (Result<T>) new Result<>(SUCCESS_CODE, "操作成功", null);
+        return (Result<T>) new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), null);
     }
     
     /**
-     * 成功响应(带消息)
+     * 成功响应(带自定义消息)
      * 使用示例: Result.success("操作成功")
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> success(String message) {
-        return (Result<T>) new Result<>(SUCCESS_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.SUCCESS.getCode(), message, null);
     }
     
     /**
@@ -73,7 +65,7 @@ public class Result<T> {
      * 使用示例: Result.success(user) -> Result<User>
      */
     public static <T> Result<T> success(T data) {
-        return new Result<>(SUCCESS_CODE, "操作成功", data);
+        return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
     }
     
     /**
@@ -81,7 +73,7 @@ public class Result<T> {
      * 使用示例: Result.success("查询成功", user) -> Result<User>
      */
     public static <T> Result<T> success(String message, T data) {
-        return new Result<>(SUCCESS_CODE, message, data);
+        return new Result<>(ResultCode.SUCCESS.getCode(), message, data);
     }
     
     /**
@@ -89,7 +81,7 @@ public class Result<T> {
      * 使用示例: Result.successPage(users, total) -> Result<List<User>>
      */
     public static <T> Result<T> successPage(T data, Integer total) {
-        Result<T> result = new Result<>(SUCCESS_CODE, "查询成功", data);
+        Result<T> result = new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
         result.setTotal(total);
         return result;
     }
@@ -102,7 +94,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> fail() {
-        return (Result<T>) new Result<>(BAD_REQUEST_CODE, "操作失败", null);
+        return (Result<T>) new Result<>(ResultCode.BAD_REQUEST.getCode(), ResultCode.BAD_REQUEST.getMessage(), null);
     }
     
     /**
@@ -111,7 +103,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> fail(String message) {
-        return (Result<T>) new Result<>(BAD_REQUEST_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.BAD_REQUEST.getCode(), message, null);
     }
     
     /**
@@ -129,7 +121,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> unauthorized(String message) {
-        return (Result<T>) new Result<>(UNAUTHORIZED_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.UNAUTHORIZED.getCode(), message, null);
     }
     
     /**
@@ -138,7 +130,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> forbidden(String message) {
-        return (Result<T>) new Result<>(FORBIDDEN_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.FORBIDDEN.getCode(), message, null);
     }
     
     /**
@@ -147,7 +139,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> notFound(String message) {
-        return (Result<T>) new Result<>(NOT_FOUND_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.NOT_FOUND.getCode(), message, null);
     }
     
     /**
@@ -156,7 +148,7 @@ public class Result<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> Result<T> error(String message) {
-        return (Result<T>) new Result<>(INTERNAL_ERROR_CODE, message, null);
+        return (Result<T>) new Result<>(ResultCode.INTERNAL_ERROR.getCode(), message, null);
     }
 
     // ==================== 链式调用方法 ====================
@@ -191,7 +183,7 @@ public class Result<T> {
      * 判断是否成功
      */
     public boolean isSuccess() {
-        return SUCCESS_CODE == (this.code != null ? this.code : -1);
+        return ResultCode.SUCCESS.getCode() == (this.code != null ? this.code : -1);
     }
 
     /**

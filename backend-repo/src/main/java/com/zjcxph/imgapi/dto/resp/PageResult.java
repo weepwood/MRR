@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.dto.resp;
 
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,13 +51,18 @@ public class PageResult<T> {
     }
 
     /**
-     * 计算总页数
+     * 计算总页数。
+     * <p>
+     * 根据总记录数和每页大小计算出总的页数，用于分页响应结果的构建。
+     * 该方法委托给 {@link PaginationUtils#calculateTotalPages(long, int)} 进行实际计算。
+     * </p>
+     *
+     * @param total 总记录数，必须大于等于 0
+     * @param size 每页大小（每页记录数），必须大于 0
+     * @return 总页数，如果总记录数为 0 则返回 0，否则返回向上取整的页数
      */
     public static int calculateTotalPages(long total, int size) {
-        if (size <= 0) {
-            return 0;
-        }
-        return (int) Math.ceil((double) total / size);
+        return PaginationUtils.calculateTotalPages(total, size);
     }
 
     /**

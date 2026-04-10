@@ -1,18 +1,17 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -75,6 +74,15 @@ public class SearchController {
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);
         logger.info("Found {} records for idCard={}", patients.size(), idCard);
+        return Result.success(patients);
+    }
+
+    @Operation(summary = "通过身份证号查询病案号")
+    @PostMapping("/getBAHByID")
+    public Result<List<Patient>> getBAHByIdCard(@Valid @RequestBody IdCardQueryRequest request) {
+        List<Patient> patients = searchService.getBAHByID(request.getIdCard());
+        logger.info("Found {} records for idCard={}***", patients.size(),
+                request.getIdCard().substring(0, 4));
         return Result.success(patients);
     }
 

@@ -32,9 +32,6 @@ const isProfileShow = ref(false)
         { label: '个人设置', icon: 'i-mdi:account', handle: () => isProfileShow = true },
       ],
       [
-        { label: '快捷键介绍', icon: 'i-mdi:keyboard', handle: () => eventBus.emit('global-hotkeys-intro-toggle'), hide: settingsStore.mode !== 'pc' },
-      ],
-      [
         { label: '退出登录', icon: 'i-mdi:logout', handle: () => userStore.logout(settingsStore.settings.home.fullPath) },
       ],
     ]" class="flex-center"
@@ -49,9 +46,6 @@ const isProfileShow = ref(false)
           <div class="space-y-1">
             <div class="text-base lh-none">
               {{ userStore.account }}
-            </div>
-            <div class="text-xs text-secondary-foreground/50 font-normal">
-              [ 这里可以显示邮箱 ]
             </div>
           </div>
         </div>

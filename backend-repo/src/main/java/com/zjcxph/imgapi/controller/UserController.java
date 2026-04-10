@@ -37,13 +37,30 @@ public class UserController {
         this.authService = authService;
     }
 
+    /**
+     * 用户登录接口。
+     * <p>
+     * 验证用户提供的用户名和密码，如果认证成功则返回包含 Token 的登录响应。
+     * 认证失败时返回错误提示，成功时记录日志并返回 Token 信息。
+     * </p>
+     *
+     * @param req 用户登录请求对象，包含用户名和密码等认证信息，必须通过参数校验
+     * @return Result<LoginResponseDTO> 统一响应结果，包含：
+     *         - 成功时：返回 "Login success" 消息和包含 Token 的 LoginResponseDTO 对象
+     *         - 失败时：返回 "Invalid username or password" 错误消息
+     */
     @Operation(summary = "Login")
     @PostMapping("/login")
     public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req) {
+        // 调用认证服务执行登录逻辑
         LoginResponseDTO response = authService.login(req);
+        
+        // 验证 Token 是否有效，无效则返回认证失败
         if (response.getToken() == null || response.getToken().isBlank()) {
             return Result.<LoginResponseDTO>fail("Invalid username or password");
         }
+        
+        // 记录成功登录日志并返回响应
         logger.info("User {} logged in successfully", req.getUsername());
         return Result.<LoginResponseDTO>success("Login success").data(response);
     }

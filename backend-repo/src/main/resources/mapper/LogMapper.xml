@@ -6,13 +6,13 @@
 
     <!-- 删除指定时间之前的日志（分批删除） -->
     <delete id="deleteOlderThan">
-        WITH target AS (
-            SELECT id FROM access_log
-            WHERE access_time &lt; #{cutoff}
-            ORDER BY access_time ASC, id ASC
-            LIMIT #{limit}
-        )
-        DELETE FROM access_log
+        WITH target AS (SELECT id
+                        FROM access_log
+                        WHERE access_time &lt; #{cutoff}
+                        ORDER BY access_time, id
+                        LIMIT #{limit})
+        DELETE
+        FROM access_log
         WHERE id IN (SELECT id FROM target)
     </delete>
 
@@ -23,21 +23,20 @@
 
     <!-- 查询指定时间之前的日志（带分页） -->
     <select id="findOlderThan" resultType="com.zjcxph.imgapi.entity.Log">
-        SELECT
-            id,
-            client_ip AS clientIp,
-            request_uri AS requestUri,
-            method,
-            user_agent AS userAgent,
-            access_time AS accessTime,
-            query_string AS queryString,
-            request_body AS requestBody,
-            response_status AS responseStatus,
-            execute_time AS executeTime,
-            referer
+        SELECT id,
+               client_ip       AS clientIp,
+               request_uri     AS requestUri,
+               method,
+               user_agent      AS userAgent,
+               access_time     AS accessTime,
+               query_string    AS queryString,
+               request_body    AS requestBody,
+               response_status AS responseStatus,
+               execute_time    AS executeTime,
+               referer
         FROM access_log
         WHERE access_time &lt; #{cutoff}
-        ORDER BY access_time ASC, id ASC
+        ORDER BY access_time, id
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

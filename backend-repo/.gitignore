@@ -7,3 +7,5 @@ target
 *.gz
 application-local.properties
 date
+export_to_markdown.py
+folder_summary.md

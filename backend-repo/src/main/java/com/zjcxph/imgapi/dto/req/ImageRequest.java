@@ -8,9 +8,4 @@ public class ImageRequest {
 
     public ImageRequest() {
     }
-
-
-    public void setBtype(Integer btype) {
-        this.btype = btype;
-    }
 }

@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.monitoring;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,26 +9,45 @@ import java.util.List;
 @Getter
 public class PressureTestReport {
 
+    @Setter
     private String runId;
+    @Setter
     private String name;
+    @Setter
     private String targetUrl;
+    @Setter
     private String method;
+    @Setter
     private int concurrency;
+    @Setter
     private int totalRequests;
+    @Setter
     private int successCount;
+    @Setter
     private int failureCount;
+    @Setter
     private double successRate;
+    @Setter
     private long minLatencyMs;
+    @Setter
     private long avgLatencyMs;
+    @Setter
     private long p95LatencyMs;
+    @Setter
     private long maxLatencyMs;
+    @Setter
     private double requestsPerSecond;
+    @Setter
     private long durationMillis;
+    @Setter
     private String startedAt;
+    @Setter
     private String finishedAt;
+    @Setter
     private PressureTestSnapshot beforeSnapshot;
+    @Setter
     private PressureTestSnapshot afterSnapshot;
-    private List<PressureTestSample> samples;
+    private final List<PressureTestSample> samples;
 
     public PressureTestReport() {
         this.samples = new ArrayList<>();
@@ -81,159 +101,55 @@ public class PressureTestReport {
         return runId;
     }
 
-    public void setRunId(String runId) {
-        this.runId = runId;
-    }
-
     public String name() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String targetUrl() {
-        return targetUrl;
-    }
-
-    public void setTargetUrl(String targetUrl) {
-        this.targetUrl = targetUrl;
     }
 
     public String method() {
         return method;
     }
 
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
-    public int concurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
-    }
-
     public int totalRequests() {
         return totalRequests;
-    }
-
-    public void setTotalRequests(int totalRequests) {
-        this.totalRequests = totalRequests;
     }
 
     public int successCount() {
         return successCount;
     }
 
-    public void setSuccessCount(int successCount) {
-        this.successCount = successCount;
-    }
-
     public int failureCount() {
         return failureCount;
-    }
-
-    public void setFailureCount(int failureCount) {
-        this.failureCount = failureCount;
-    }
-
-    public double successRate() {
-        return successRate;
-    }
-
-    public void setSuccessRate(double successRate) {
-        this.successRate = successRate;
     }
 
     public long minLatencyMs() {
         return minLatencyMs;
     }
 
-    public void setMinLatencyMs(long minLatencyMs) {
-        this.minLatencyMs = minLatencyMs;
-    }
-
     public long avgLatencyMs() {
         return avgLatencyMs;
-    }
-
-    public void setAvgLatencyMs(long avgLatencyMs) {
-        this.avgLatencyMs = avgLatencyMs;
     }
 
     public long p95LatencyMs() {
         return p95LatencyMs;
     }
 
-    public void setP95LatencyMs(long p95LatencyMs) {
-        this.p95LatencyMs = p95LatencyMs;
-    }
-
     public long maxLatencyMs() {
         return maxLatencyMs;
-    }
-
-    public void setMaxLatencyMs(long maxLatencyMs) {
-        this.maxLatencyMs = maxLatencyMs;
     }
 
     public double requestsPerSecond() {
         return requestsPerSecond;
     }
 
-    public void setRequestsPerSecond(double requestsPerSecond) {
-        this.requestsPerSecond = requestsPerSecond;
-    }
-
-    public long durationMillis() {
-        return durationMillis;
-    }
-
-    public void setDurationMillis(long durationMillis) {
-        this.durationMillis = durationMillis;
-    }
-
-    public String startedAt() {
-        return startedAt;
-    }
-
-    public void setStartedAt(String startedAt) {
-        this.startedAt = startedAt;
-    }
-
-    public String finishedAt() {
-        return finishedAt;
-    }
-
-    public void setFinishedAt(String finishedAt) {
-        this.finishedAt = finishedAt;
-    }
-
     public PressureTestSnapshot beforeSnapshot() {
         return beforeSnapshot;
-    }
-
-    public void setBeforeSnapshot(PressureTestSnapshot beforeSnapshot) {
-        this.beforeSnapshot = beforeSnapshot;
     }
 
     public PressureTestSnapshot afterSnapshot() {
         return afterSnapshot;
     }
 
-    public void setAfterSnapshot(PressureTestSnapshot afterSnapshot) {
-        this.afterSnapshot = afterSnapshot;
-    }
-
     public List<PressureTestSample> samples() {
         return samples;
-    }
-
-    public void setSamples(List<PressureTestSample> samples) {
-        this.samples = samples == null ? new ArrayList<>() : new ArrayList<>(samples);
     }
 }

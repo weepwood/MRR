@@ -66,10 +66,10 @@ public class PressureTestService {
         }
         int failureCount = samples.size() - successCount;
         double successRate = samples.isEmpty() ? 0.0 : (successCount * 100.0 / samples.size());
-        long minLatencyMs = latencies.isEmpty() ? 0L : latencies.get(0);
+        long minLatencyMs = latencies.isEmpty() ? 0L : latencies.getFirst();
         long avgLatencyMs = latencies.isEmpty() ? 0L : Math.round(average(latencies));
         long p95LatencyMs = percentile(latencies, 0.95d);
-        long maxLatencyMs = latencies.isEmpty() ? 0L : latencies.get(latencies.size() - 1);
+        long maxLatencyMs = latencies.isEmpty() ? 0L : latencies.getLast();
         double requestsPerSecond = samples.isEmpty() ? 0.0 : (samples.size() * 1000.0 / durationMillis);
 
         List<PressureTestSample> orderedSamples = new ArrayList<>(samples);

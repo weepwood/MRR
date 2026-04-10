@@ -30,63 +30,7 @@ public class Patient {
 
     public Patient() {
     }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getIdCard() {
-        return idCard;
-    }
-
-    public void setIdCard(String idCard) {
-        this.idCard = idCard;
-    }
-
-//    public String getBrxh() {
-//        return brxh;
-//    }
-//
-//    public void setBrxh(String brxh) {
-//        this.brxh = brxh;
-//    }
-
-    public String getBah() {
-        return bah;
-    }
-
-    public void setBah(String bah) {
-        this.bah = bah;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getAdmissionTime() {
-        return admissiontime;
-    }
-
-    public void setAdmissionTime(String admissionTime) {
-        this.admissiontime = admissionTime;
-    }
-
-    public String getDepartment() {
-        return department;
-    }
-
-    public void setDepartment(String department) {
-        this.department = department;
-    }
-
+    
     @Override
     public String toString() {
         return "Patient{" +

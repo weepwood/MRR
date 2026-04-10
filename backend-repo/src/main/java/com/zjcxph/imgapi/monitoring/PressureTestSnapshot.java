@@ -36,30 +36,6 @@ public class PressureTestSnapshot {
         this.timestamp = timestamp;
     }
 
-    public long heapUsedBytes() {
-        return heapUsedBytes;
-    }
-
-    public long heapCommittedBytes() {
-        return heapCommittedBytes;
-    }
-
-    public long heapMaxBytes() {
-        return heapMaxBytes;
-    }
-
-    public double heapUsagePercent() {
-        return heapUsagePercent;
-    }
-
-    public double systemLoadAverage() {
-        return systemLoadAverage;
-    }
-
-    public int availableProcessors() {
-        return availableProcessors;
-    }
-
     public String timestamp() {
         return timestamp;
     }

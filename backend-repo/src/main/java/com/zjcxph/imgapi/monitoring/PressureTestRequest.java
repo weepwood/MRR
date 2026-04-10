@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -16,20 +17,24 @@ public class PressureTestRequest {
     @NotBlank(message = "Test name cannot be blank")
     private String name;
 
+    @Setter
     @NotBlank(message = "Target URL cannot be blank")
     private String targetUrl;
 
     @Pattern(regexp = "GET|POST|PUT|PATCH|DELETE", message = "Method must be one of GET/POST/PUT/PATCH/DELETE")
     private String method;
 
+    @Setter
     @Min(value = 1, message = "Concurrency must be greater than 0")
     @Max(value = 128, message = "Concurrency must not exceed 128")
     private int concurrency;
 
+    @Setter
     @Min(value = 1, message = "Total requests must be greater than 0")
     @Max(value = 10000, message = "Total requests must not exceed 10000")
     private int totalRequests;
 
+    @Setter
     @Min(value = 100, message = "Timeout must be at least 100ms")
     @Max(value = 30000, message = "Timeout must not exceed 30000ms")
     private int timeoutMillis;
@@ -87,14 +92,6 @@ public class PressureTestRequest {
         this.name = normalize(name, "pressure-test");
     }
 
-    public String targetUrl() {
-        return targetUrl;
-    }
-
-    public void setTargetUrl(String targetUrl) {
-        this.targetUrl = targetUrl;
-    }
-
     public String method() {
         return method;
     }
@@ -103,40 +100,8 @@ public class PressureTestRequest {
         this.method = normalize(method, "GET").toUpperCase(Locale.ROOT);
     }
 
-    public int concurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
-    }
-
-    public int totalRequests() {
-        return totalRequests;
-    }
-
-    public void setTotalRequests(int totalRequests) {
-        this.totalRequests = totalRequests;
-    }
-
-    public int timeoutMillis() {
-        return timeoutMillis;
-    }
-
-    public void setTimeoutMillis(int timeoutMillis) {
-        this.timeoutMillis = timeoutMillis;
-    }
-
     public String body() {
         return body;
-    }
-
-    public void setBody(String body) {
-        this.body = normalizeNullable(body);
-    }
-
-    public Map<String, String> headers() {
-        return headers;
     }
 
     public void setHeaders(Map<String, String> headers) {

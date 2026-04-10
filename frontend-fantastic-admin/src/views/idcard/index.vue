@@ -15,7 +15,7 @@ function handleSearch() {
   }
   errorMsg.value = ''
   loading.value = true
-  // 跳转到图库页,由目标页负责查询
+  // 跳转到图库页，由目标页负责查询
   router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
     loading.value = false
   })

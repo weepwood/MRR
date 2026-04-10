@@ -20,7 +20,7 @@ public interface ScanService {
 
     Scan create(Scan scan);
 
-    boolean deleteById(Integer id);
+    boolean softDeleteById(Integer id);
 
     Scan update(Scan scan);
 

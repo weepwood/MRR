@@ -168,7 +168,7 @@ public class ScanTest {
         logger.info("创建测试记录，ID: {}", testId);
         
         // 删除记录
-        boolean deleted = scanService.deleteById(testId);
+        boolean deleted = scanService.softDeleteById(testId);
         assertTrue(deleted, "删除应该成功");
         logger.info("成功删除记录 ID: {}", testId);
         

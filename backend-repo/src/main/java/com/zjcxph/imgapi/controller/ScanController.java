@@ -93,7 +93,7 @@ public class ScanController {
             return Result.fail("ID 不能为空");
         }
         
-        boolean deleted = scanService.deleteById(id);
+        boolean deleted = scanService.softDeleteById(id);
         if (deleted) {
             logger.info("删除成功：ID={}", id);
             return Result.success("删除成功");

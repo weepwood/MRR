@@ -31,7 +31,7 @@ public interface ScanMapper {
 
     // 删除
     @Update("UPDATE mr_scan SET uploadflag = 0 WHERE id = #{id} AND uploadflag <> 0")
-    int deleteById(Integer id);
+    int softDeleteById(Integer id);
 
     // 动态更新 - XML 实现
     int update(Scan scan);

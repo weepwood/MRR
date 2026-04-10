@@ -83,8 +83,8 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deleteById(Integer id) {
-        return scanMapper.deleteById(id) > 0;
+    public boolean softDeleteById(Integer id) {
+        return scanMapper.softDeleteById(id) > 0;
     }
 
     @Override

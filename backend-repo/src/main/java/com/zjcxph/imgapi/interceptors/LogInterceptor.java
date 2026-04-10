@@ -4,11 +4,14 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Date;
 
 @Component
@@ -21,7 +24,7 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
         if (shouldSkipLogging(request, handler)) {
             return true;
         }
@@ -31,12 +34,12 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
+    public void postHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler, ModelAndView modelAndView) {
         // no-op
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+    public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler, Exception ex) {
         if (shouldSkipLogging(request, handler)) {
             return;
         }
@@ -51,7 +54,7 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setUserAgent(request.getHeader("User-Agent"));
         log.setAccessTime(new Date());
         log.setQueryString(request.getQueryString());
-        log.setRequestBody("");
+        log.setRequestBody(getRequestBody(request));
         log.setResponseStatus(String.valueOf(response.getStatus()));
         log.setExecuteTime(executeTime);
         log.setReferer(request.getHeader("Referer"));
@@ -87,5 +90,37 @@ public class LogInterceptor implements HandlerInterceptor {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    /**
+     * 从 ContentCachingRequestWrapper 中读取请求体
+     */
+    private String getRequestBody(HttpServletRequest request) {
+        if (!(request instanceof ContentCachingRequestWrapper)) {
+            return "";
+        }
+
+        ContentCachingRequestWrapper wrapper = (ContentCachingRequestWrapper) request;
+        byte[] content = wrapper.getContentAsByteArray();
+
+        if (content.length == 0) {
+            return "";
+        }
+
+        try {
+            // 限制请求体大小,避免日志过大 (最大 10KB)
+            int maxLength = 10240;
+            String body = new String(content, 0, Math.min(content.length, maxLength), 
+                    wrapper.getCharacterEncoding());
+            
+            // 如果内容被截断,添加提示
+            if (content.length > maxLength) {
+                body += "... [请求体过大,已截断]";
+            }
+            
+            return body;
+        } catch (UnsupportedEncodingException e) {
+            return "[无法解码请求体]";
+        }
     }
 }

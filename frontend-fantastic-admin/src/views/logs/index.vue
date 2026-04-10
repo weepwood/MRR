@@ -228,7 +228,7 @@ onMounted(loadData)
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="loading" :data="tableData" stripe style="margin-top: 12px">
+      <el-table v-loading="loading" :data="tableData" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}
@@ -326,18 +326,18 @@ onMounted(loadData)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -351,14 +351,14 @@ h2 {
 }
 
 .pager {
-  margin-top: 16px;
   display: flex;
   justify-content: center;
+  margin-top: 16px;
 }
 
 .detail-pre {
   margin: 0;
-  white-space: pre-wrap;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 </style>

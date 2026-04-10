@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/utils'
-import eventBus from '@/utils/eventBus'
 import Profile from './profile.vue'
 
 const props = withDefaults(defineProps<{

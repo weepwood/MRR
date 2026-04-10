@@ -461,12 +461,12 @@ watch(sortedDateData, (v) => {
           <!-- 渐变 -->
           <defs>
             <linearGradient id="gradientBar" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:#00c6fb;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#0071e3;stop-opacity:1" />
+              <stop offset="0%" style="stop-color: #00c6fb;stop-opacity: 1;" />
+              <stop offset="100%" style="stop-color: #0071e3;stop-opacity: 1;" />
             </linearGradient>
             <linearGradient id="gradientCumulative" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#ff2d55;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#ff6b8a;stop-opacity:1" />
+              <stop offset="0%" style="stop-color: #ff2d55;stop-opacity: 1;" />
+              <stop offset="100%" style="stop-color: #ff6b8a;stop-opacity: 1;" />
             </linearGradient>
           </defs>
         </svg>
@@ -501,9 +501,9 @@ watch(sortedDateData, (v) => {
 
 .page-header {
   display: flex;
+  gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
   padding-bottom: 4px;
 }
 
@@ -511,9 +511,9 @@ watch(sortedDateData, (v) => {
   margin: 0 0 4px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--el-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   opacity: 0.7;
 }
 
@@ -545,53 +545,53 @@ watch(sortedDateData, (v) => {
 }
 
 .stat-card.total-records { border-top-color: #0071e3; }
-.stat-card.total-pages   { border-top-color: #ff2d55; }
-.stat-card.unique-bah    { border-top-color: #34c759; }
-.stat-card.overview      { border-top-color: #ff9500; }
+.stat-card.total-pages { border-top-color: #ff2d55; }
+.stat-card.unique-bah { border-top-color: #34c759; }
+.stat-card.overview { border-top-color: #ff9500; }
 
 /* 穿透 el-card__body，实现 icon + body 横排 */
 .stat-card :deep(.el-card__body) {
   display: flex;
-  align-items: center;
   gap: 18px;
+  align-items: center;
   padding: 20px 22px;
 }
 
 .stat-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 52px;
+  height: 52px;
   font-size: 26px;
-  flex-shrink: 0;
+  border-radius: 14px;
 }
 
-.stat-card.total-records .stat-icon { background: rgba(0,113,227,0.09); color: #0071e3; }
-.stat-card.total-pages .stat-icon   { background: rgba(255,45,85,0.09);  color: #ff2d55; }
-.stat-card.unique-bah .stat-icon    { background: rgba(52,199,89,0.09);  color: #34c759; }
-.stat-card.overview .stat-icon      { background: rgba(255,149,0,0.09);  color: #ff9500; }
+.stat-card.total-records .stat-icon { color: #0071e3; background: rgb(0 113 227 / 9%); }
+.stat-card.total-pages .stat-icon { color: #ff2d55; background: rgb(255 45 85 / 9%); }
+.stat-card.unique-bah .stat-icon { color: #34c759; background: rgb(52 199 89 / 9%); }
+.stat-card.overview .stat-icon { color: #ff9500; background: rgb(255 149 0 / 9%); }
 
 .stat-body { flex: 1; min-width: 0; }
 
 .stat-label {
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
+  font-weight: 600;
   color: #86868b;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
-  font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: #1f2b42;
   line-height: 1.2;
+  color: #1f2b42;
   word-break: break-all;
 }
 
@@ -609,10 +609,10 @@ watch(sortedDateData, (v) => {
 
 .section-header {
   display: flex;
-  align-items: center;
   gap: 10px;
-  font-weight: 600;
+  align-items: center;
   font-size: 15px;
+  font-weight: 600;
 }
 
 .section-header .el-icon {
@@ -623,17 +623,17 @@ watch(sortedDateData, (v) => {
 /* ===== 图表 ===== */
 .chart-container {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
   margin-bottom: 12px;
+  overflow: auto hidden;
+  scrollbar-color: rgb(0 0 0 / 15%) transparent;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,0,0,0.15) transparent;
 }
 
 .chart-container::-webkit-scrollbar { height: 6px; }
 .chart-container::-webkit-scrollbar-track { background: transparent; }
+
 .chart-container::-webkit-scrollbar-thumb {
-  background: rgba(0,113,227,0.2);
+  background: rgb(0 113 227 / 20%);
   border-radius: 8px;
 }
 
@@ -658,13 +658,13 @@ watch(sortedDateData, (v) => {
   gap: 24px;
   justify-content: center;
   padding-top: 14px;
-  border-top: 1px solid rgba(0,0,0,0.05);
+  border-top: 1px solid rgb(0 0 0 / 5%);
 }
 
 .legend-item {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
 }
 
 .legend-item.legend-toggle {
@@ -676,19 +676,20 @@ watch(sortedDateData, (v) => {
 .legend-item.legend-inactive .legend-text { color: #b0b0b0; }
 
 .legend-dot {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  flex-shrink: 0;
 }
 .legend-dot.bar { background: linear-gradient(180deg, #00c6fb, #0071e3); }
+
 .legend-dot.line {
   height: 3px;
   background: linear-gradient(90deg, #ff2d55, #ff6b8a);
   border-radius: 2px;
 }
 
-.legend-text { font-size: 13px; color: #636366; font-weight: 500; }
+.legend-text { font-size: 13px; font-weight: 500; color: #636366; }
 
 /* ===== 搜索栏 ===== */
 .list-search-bar {
@@ -699,33 +700,33 @@ watch(sortedDateData, (v) => {
   padding: 16px;
   margin-bottom: 16px;
   background: #f8fafc;
+  border: 1px solid rgb(0 0 0 / 4%);
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .search-keyword { flex: 1 1 200px; min-width: 160px; }
-.search-type    { flex: 0 0 150px; }
-.search-date    { flex: 1 1 260px; min-width: 220px; }
+.search-type { flex: 0 0 150px; }
+.search-date { flex: 1 1 260px; min-width: 220px; }
 
 /* ===== 表格 ===== */
 :deep(.records-header-cell) {
-  background: transparent !important;
-  color: #86868b;
   font-size: 12px;
   font-weight: 600;
+  color: #86868b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  background: transparent !important;
 }
 
 .bah-badge {
-  color: #0071e3;
-  font-weight: 600;
-  background: rgba(0,113,227,0.06);
-  border: 1px solid rgba(0,113,227,0.12);
-  border-radius: 6px;
   padding: 2px 10px;
-  font-family: 'SF Mono', 'Roboto Mono', monospace;
+  font-family: "SF Mono", "Roboto Mono", monospace;
   font-size: 13px;
+  font-weight: 600;
+  color: #0071e3;
+  background: rgb(0 113 227 / 6%);
+  border: 1px solid rgb(0 113 227 / 12%);
+  border-radius: 6px;
 }
 
 .pages-badge {
@@ -734,12 +735,12 @@ watch(sortedDateData, (v) => {
   justify-content: center;
   min-width: 28px;
   padding: 2px 8px;
-  border-radius: 999px;
-  font-weight: 600;
   font-size: 13px;
+  font-weight: 600;
   color: #334155;
   background: #eef2f7;
   border: 1px solid #e2e8f0;
+  border-radius: 999px;
 }
 
 /* ===== 分页 ===== */
@@ -748,17 +749,17 @@ watch(sortedDateData, (v) => {
   justify-content: center;
   padding-top: 20px;
   margin-top: 12px;
-  border-top: 1px solid rgba(0,0,0,0.05);
+  border-top: 1px solid rgb(0 0 0 / 5%);
 }
 
 /* ===== 响应式 ===== */
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }

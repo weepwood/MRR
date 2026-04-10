@@ -784,42 +784,42 @@ watch(idCardParam, async (newId) => {
 <style scoped>
 /* ==================== 基础布局 ==================== */
 .image-gallery {
-  width: 100%;
-  margin: 0;
-  height: 100vh;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
 }
 
 .split-layout {
   display: flex;
-  gap: 20px;
   flex: 1 1 auto;
+  gap: 20px;
   min-height: 0;
 }
 
 /* ==================== 左侧面板 ==================== */
 .left-pane {
-  width: 30%;
-  min-width: 280px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow: hidden;
+  width: 30%;
+  min-width: 280px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .left-top,
 .left-bottom {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  padding: 12px;
   display: flex;
   flex-direction: column;
   min-height: 220px;
+  padding: 12px;
   overflow: hidden;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
 
 .left-top {
@@ -832,38 +832,38 @@ watch(idCardParam, async (newId) => {
 
 .left-top h3,
 .left-bottom h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 10px;
 }
 
 /* ==================== 身份证提示 ==================== */
 .id-card-hint {
+  margin-top: 4px;
   font-size: 12px;
   color: #94a3b8;
-  margin-top: 4px;
 }
 
 /* ==================== 病案列表 ==================== */
 .id-results {
-  overflow-y: auto;
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .id-results-empty {
-  color: #94a3b8;
-  font-size: 14px;
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
+  font-size: 14px;
+  color: #94a3b8;
 }
 
 .id-result-item {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
   padding: 8px;
   cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -872,13 +872,13 @@ watch(idCardParam, async (newId) => {
 }
 
 .id-result-item.active {
-  border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
 }
 
 .id-result-item.disabled {
-  opacity: 0.55;
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .rec-row {
@@ -912,12 +912,12 @@ watch(idCardParam, async (newId) => {
 
 .thumbs-mode-btn {
   padding: 4px 10px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #475569;
   font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
 }
 
 .thumbs-mode-btn.active,
@@ -936,10 +936,10 @@ watch(idCardParam, async (newId) => {
 .type-item {
   display: flex;
   justify-content: space-between;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
   padding: 8px 10px;
   cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
@@ -948,23 +948,23 @@ watch(idCardParam, async (newId) => {
 }
 
 .type-item.active {
-  border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
 }
 
 .type-item.disabled {
-  opacity: 0.55;
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .type-name {
-  color: #1e293b;
   font-size: 12px;
+  color: #1e293b;
 }
 
 .type-count {
-  color: #64748b;
   font-size: 12px;
+  color: #64748b;
 }
 
 .type-empty {
@@ -973,51 +973,51 @@ watch(idCardParam, async (newId) => {
 
 /* ==================== 右侧面板 ==================== */
 .right-pane {
-  flex: 1;
+  position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  position: relative;
 }
 
 .viewer-split {
   display: flex;
+  flex: 1 1 auto;
   gap: 0;
+  min-height: 0;
+  overflow: hidden;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  flex: 1 1 auto;
-  overflow: hidden;
-  min-height: 0;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
 
 /* ==================== 缩略图区域 ==================== */
 .thumbs {
-  width: 200px;
-  min-width: 200px;
-  max-width: 360px;
-  border-right: 1px solid #e2e8f0;
-  background: #f8fafc;
-  overflow-y: auto;
-  height: 100%;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px;
-  overscroll-behavior: contain;
   display: grid;
   gap: 8px;
   align-content: start;
+  width: 200px;
+  min-width: 200px;
+  max-width: 360px;
+  height: 100%;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .thumb-item {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 6px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  align-items: center;
   padding: 6px;
   cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
@@ -1026,8 +1026,8 @@ watch(idCardParam, async (newId) => {
 }
 
 .thumb-item.active {
-  border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
 }
 
 .thumb-image {
@@ -1047,20 +1047,20 @@ watch(idCardParam, async (newId) => {
 }
 
 .thumbs-empty {
+  grid-column: 1 / -1;
+  margin-top: 20px;
   color: #94a3b8;
   text-align: center;
-  margin-top: 20px;
-  grid-column: 1 / -1;
 }
 
 .thumb-row {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
   padding: 6px;
+  cursor: pointer;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
@@ -1069,22 +1069,22 @@ watch(idCardParam, async (newId) => {
 }
 
 .thumb-row.active {
-  border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
 }
 
 .thumb-row-title {
   font-size: 14px;
-  color: #1e293b;
   font-weight: 600;
+  color: #1e293b;
 }
 
 /* ==================== 主视图 ==================== */
 .main-view {
-  flex: 1;
   position: relative;
-  background: #fff;
+  flex: 1;
   min-height: 0;
+  background: #fff;
 }
 
 .viewer-source {
@@ -1097,10 +1097,10 @@ watch(idCardParam, async (newId) => {
 }
 
 .viewer-image-el {
-  max-width: 100%;
-  max-height: 100%;
   width: auto;
+  max-width: 100%;
   height: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -1108,51 +1108,51 @@ watch(idCardParam, async (newId) => {
 .main-placeholder {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 16px;
+  align-items: center;
 }
 
 .placeholder-text {
-  color: #94a3b8;
-  font-size: 14px;
   margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
 }
 
 /* ==================== 图片信息 ==================== */
 .main-meta {
   position: absolute;
-  bottom: 10px;
   right: 10px;
-  background: rgba(59, 130, 246, 0.85);
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 12px;
+  bottom: 10px;
   z-index: 3;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  opacity: 0.9;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #fff;
   pointer-events: none;
+  background: rgb(59 130 246 / 85%);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  opacity: 0.9;
+  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 /* ==================== 类型选择器 ==================== */
 .type-picker {
   position: absolute;
-  bottom: 36px;
   right: 0;
-  background: #1e3a5f;
-  color: #fff;
-  border-radius: 10px;
-  padding: 8px;
+  bottom: 36px;
   min-width: 180px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  color: #fff;
+  background: #1e3a5f;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
 
 .type-picker-title {
+  margin-bottom: 6px;
   font-size: 12px;
   opacity: 0.8;
-  margin-bottom: 6px;
 }
 
 .type-options {
@@ -1165,19 +1165,19 @@ watch(idCardParam, async (newId) => {
 
 .type-option {
   padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  cursor: pointer;
   font-size: 13px;
+  cursor: pointer;
+  background: rgb(255 255 255 / 6%);
+  border-radius: 6px;
   transition: background 0.2s ease;
 }
 
 .type-option:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(255 255 255 / 12%);
 }
 
 .type-option.active {
-  background: rgba(59, 130, 246, 0.4);
+  background: rgb(59 130 246 / 40%);
 }
 
 /* ==================== 全屏预览 ==================== */
@@ -1185,41 +1185,41 @@ watch(idCardParam, async (newId) => {
   position: fixed;
   right: 20px;
   bottom: 30px;
-  background: rgba(59, 130, 246, 0.85);
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 12px;
   z-index: 4000;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #fff;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgb(59 130 246 / 85%);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
+  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 /* ==================== 状态 ==================== */
 .loading {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(2px);
-  z-index: 5;
   color: #64748b;
+  background: rgb(255 255 255 / 80%);
+  backdrop-filter: blur(2px);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
+  margin-bottom: 20px;
   border: 4px solid #e2e8f0;
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 20px;
 }
 
 @keyframes spin {
@@ -1228,19 +1228,19 @@ watch(idCardParam, async (newId) => {
 }
 
 .error {
-  text-align: center;
   padding: 40px;
   color: var(--el-color-danger);
+  text-align: center;
 }
 
 .retry-btn {
-  background: var(--el-color-danger);
-  color: #fff;
-  border: none;
   padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
   margin-top: 15px;
+  color: #fff;
+  cursor: pointer;
+  background: var(--el-color-danger);
+  border: none;
+  border-radius: 6px;
   transition: opacity 0.2s ease;
 }
 
@@ -1252,70 +1252,74 @@ watch(idCardParam, async (newId) => {
 .download-status {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  background: rgb(0 0 0 / 45%);
 }
 
 .download-status-content {
-  background: #fff;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
-  max-width: 400px;
   width: 90%;
+  max-width: 400px;
+  padding: 30px;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
 }
 
 .download-spinner-large {
   width: 50px;
   height: 50px;
+  margin: 0 auto 20px;
   border: 4px solid #e2e8f0;
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
 }
 
 .download-status-content p {
   margin: 10px 0;
-  color: #1e293b;
   font-size: 16px;
+  color: #1e293b;
 }
 
 .download-tip {
+  margin-top: 15px;
   font-size: 14px !important;
   color: #64748b !important;
-  margin-top: 15px;
 }
 
 /* ==================== 响应式 ==================== */
-@media (max-width: 1200px) {
+@media (width <= 1200px) {
   .split-layout { gap: 15px; }
   .left-pane { min-width: 250px; }
 }
 
-@media (max-width: 992px) {
+@media (width <= 992px) {
   .image-gallery { padding: 15px; }
   .split-layout { gap: 10px; }
   .left-pane { min-width: 220px; }
   .type-list { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .split-layout { flex-direction: column; }
   .left-pane { width: 100%; }
-  .thumbs { min-width: 100px; width: 100px; }
+  .thumbs { width: 100px; min-width: 100px; }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .image-gallery { padding: 10px; }
   .split-layout { gap: 8px; }
-  .left-pane, .right-pane { gap: 8px; }
-  .left-top, .left-bottom { padding: 10px; }
-  .type-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  .left-pane,
+ .right-pane { gap: 8px; }
+
+  .left-top,
+ .left-bottom { padding: 10px; }
+  .type-header { flex-direction: column; gap: 8px; align-items: flex-start; }
   .thumbs-toolbar { align-self: flex-end; }
 }
 

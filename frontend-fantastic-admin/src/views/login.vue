@@ -180,73 +180,73 @@ onMounted(() => {
 <style scoped>
 .login-page {
   position: relative;
-  min-height: 100vh;
-  padding: 24px;
   display: grid;
   place-items: center;
+  min-height: 100vh;
+  padding: 24px;
   overflow: hidden;
-  background-image:
-    linear-gradient(rgba(156, 163, 175, 0.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(156, 163, 175, 0.18) 1px, transparent 1px);
-  background-size: 40px 40px;
   background-color: #f5f7fb;
+  background-image:
+    linear-gradient(rgb(156 163 175 / 18%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(156 163 175 / 18%) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 [data-mode="dark"] .login-page {
   background-color: hsl(var(--background));
   background-image:
-    linear-gradient(rgba(156, 163, 175, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(156, 163, 175, 0.08) 1px, transparent 1px);
+    linear-gradient(rgb(156 163 175 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(156 163 175 / 8%) 1px, transparent 1px);
 }
 
 .glow-bg {
   position: absolute;
-  width: 740px;
-  height: 740px;
-  border-radius: 50%;
   top: 20%;
   left: 15%;
-  background: rgba(88, 101, 242, 0.35);
-  filter: blur(100px);
-  pointer-events: none;
   z-index: 0;
+  width: 740px;
+  height: 740px;
+  pointer-events: none;
+  background: rgb(88 101 242 / 35%);
+  border-radius: 50%;
+  filter: blur(100px);
 }
 
 .light-orb {
   position: absolute;
-  border-radius: 50%;
   pointer-events: none;
+  border-radius: 50%;
   filter: blur(2px);
 }
 
 .orb-a {
+  top: -120px;
+  left: -120px;
   width: 460px;
   height: 460px;
-  left: -120px;
-  top: -120px;
-  background: radial-gradient(circle at center, rgba(47, 111, 255, 0.3), transparent 70%);
+  background: radial-gradient(circle at center, rgb(47 111 255 / 30%), transparent 70%);
 }
 
 .orb-b {
-  width: 420px;
-  height: 420px;
   right: -120px;
   bottom: -160px;
-  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.3), transparent 70%);
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle at center, rgb(20 184 166 / 30%), transparent 70%);
 }
 
 .login-layout {
   position: relative;
   z-index: 1;
-  width: min(980px, 100%);
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  border-radius: 24px;
+  width: min(980px, 100%);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255 255 255 / 70%);
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgb(0 0 0 / 12%);
   backdrop-filter: blur(12px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
 [data-mode="dark"] .login-layout {
@@ -263,8 +263,8 @@ onMounted(() => {
 .brand-tag {
   margin: 0;
   font-size: 12px;
-  letter-spacing: 0.09em;
   text-transform: uppercase;
+  letter-spacing: 0.09em;
   opacity: 0.82;
 }
 
@@ -276,36 +276,36 @@ onMounted(() => {
 }
 
 .brand-subtitle {
+  max-width: 320px;
   margin: 0;
   font-size: 15px;
   line-height: 1.7;
   opacity: 0.92;
-  max-width: 320px;
 }
 
 .feature-list {
-  margin: 26px 0 0;
-  padding: 0;
-  list-style: none;
   display: grid;
   gap: 12px;
+  padding: 0;
+  margin: 26px 0 0;
+  list-style: none;
 }
 
 .feature-list li {
   display: flex;
-  align-items: center;
   gap: 10px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 12px;
+  align-items: center;
   padding: 10px 12px;
+  font-size: 14px;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 12px;
 }
 
 .form-panel {
-  padding: 44px 40px;
-  background: rgba(255, 255, 255, 0.92);
   position: relative;
+  padding: 44px 40px;
+  background: rgb(255 255 255 / 92%);
 }
 
 [data-mode="dark"] .form-panel {
@@ -321,8 +321,8 @@ onMounted(() => {
 
 .form-subtitle {
   margin: 10px 0 0;
-  color: var(--el-text-color-secondary, hsl(var(--muted-foreground, #6d7d96)));
   font-size: 14px;
+  color: var(--el-text-color-secondary, hsl(var(--muted-foreground, #6d7d96)));
 }
 
 .copyright {
@@ -343,7 +343,7 @@ onMounted(() => {
   opacity: 0;
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .login-layout {
     grid-template-columns: 1fr;
     max-width: 520px;
@@ -366,7 +366,7 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
   .login-page {
     padding: 14px;
   }

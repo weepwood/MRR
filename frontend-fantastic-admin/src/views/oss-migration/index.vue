@@ -318,7 +318,7 @@ onMounted(refreshAll)
             v-model="bahInput"
             placeholder="输入8位病案号"
             clearable
-            style="width: 200px"
+            style="width: 200px;"
             @keyup.enter="handleBahUpload"
           />
         </el-form-item>
@@ -423,7 +423,7 @@ onMounted(refreshAll)
               clearable
               placeholder="全部状态"
               size="small"
-              style="width: 130px"
+              style="width: 130px;"
               @change="loadLogs"
             >
               <el-option label="全部" value="" />
@@ -498,18 +498,18 @@ onMounted(refreshAll)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -543,46 +543,46 @@ h2 {
 /* 穿透 el-card__body，实现 icon + body 横排 */
 .stat-card :deep(.el-card__body) {
   display: flex;
-  align-items: center;
   gap: 18px;
+  align-items: center;
   padding: 20px 22px;
 }
 
 .stat-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 52px;
+  height: 52px;
   font-size: 26px;
-  flex-shrink: 0;
+  border-radius: 14px;
 }
 
-.stat-card.total-count .stat-icon { background: rgba(64,158,255,0.09); color: #409eff; }
-.stat-card.migrated-count .stat-icon { background: rgba(103,194,58,0.09); color: #67c23a; }
-.stat-card.pending-count .stat-icon { background: rgba(230,162,60,0.09); color: #e6a23c; }
-.stat-card.failed-count .stat-icon { background: rgba(245,108,108,0.09); color: #f56c6c; }
+.stat-card.total-count .stat-icon { color: #409eff; background: rgb(64 158 255 / 9%); }
+.stat-card.migrated-count .stat-icon { color: #67c23a; background: rgb(103 194 58 / 9%); }
+.stat-card.pending-count .stat-icon { color: #e6a23c; background: rgb(230 162 60 / 9%); }
+.stat-card.failed-count .stat-icon { color: #f56c6c; background: rgb(245 108 108 / 9%); }
 
 .stat-body { flex: 1; min-width: 0; }
 
 .stat-label {
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
+  font-weight: 600;
   color: #86868b;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
-  font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: #1f2b42;
   line-height: 1.2;
+  color: #1f2b42;
   word-break: break-all;
 }
 
@@ -592,8 +592,8 @@ h2 {
 
 .progress-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -610,14 +610,14 @@ h2 {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .upload-results {
+  padding-top: 12px;
   margin-top: 16px;
   border-top: 1px solid #ebeef5;
-  padding-top: 12px;
 }
 
 .upload-results h4 {
@@ -628,13 +628,13 @@ h2 {
 
 .oss-link {
   display: inline-flex;
-  align-items: center;
   gap: 4px;
+  align-items: center;
+  padding: 4px 8px;
   color: #409eff;
   text-decoration: none;
-  transition: all 0.2s;
-  padding: 4px 8px;
   border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .oss-link:hover {
@@ -651,8 +651,8 @@ h2 {
 }
 
 .no-link {
-  color: #c0c4cc;
   font-size: 13px;
+  color: #c0c4cc;
 }
 
 .log-filters {
@@ -662,19 +662,19 @@ h2 {
 }
 
 .pager {
-  margin-top: 16px;
   display: flex;
   justify-content: center;
+  margin-top: 16px;
 }
 
 /* ===== 响应式 ===== */
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }

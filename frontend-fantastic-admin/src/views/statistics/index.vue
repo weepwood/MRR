@@ -152,18 +152,18 @@ onMounted(loadData)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -196,8 +196,8 @@ h2 {
 
 .summary-note {
   margin-top: 8px;
-  color: #64748b;
   font-size: 12px;
+  color: #64748b;
 }
 
 .stack-list {
@@ -207,12 +207,12 @@ h2 {
 
 .stack-item {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
   align-items: center;
+  justify-content: space-between;
   padding: 14px;
+  background: rgb(15 23 42 / 3%);
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.03);
 }
 
 .stack-item strong {

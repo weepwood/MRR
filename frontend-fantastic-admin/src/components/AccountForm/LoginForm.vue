@@ -201,15 +201,15 @@ watch(loading, (_isLoading) => {
 }
 
 .login-form {
-  margin-top: 24px;
   display: grid;
   gap: 12px;
+  margin-top: 24px;
 }
 
 .login-form label {
   font-size: 13px;
-  color: var(--el-text-color-secondary, hsl(var(--muted-foreground)));
   font-weight: 600;
+  color: var(--el-text-color-secondary, hsl(var(--muted-foreground)));
 }
 
 .input-shell {
@@ -221,22 +221,22 @@ watch(loading, (_isLoading) => {
 .input-icon {
   position: absolute;
   left: 14px;
+  z-index: 1;
   display: grid;
   place-items: center;
   color: #6d7d96;
-  z-index: 1;
 }
 
 .input-shell :deep(.fa-input__wrapper),
 .input-shell :deep(input) {
   width: 100%;
   height: 46px;
-  border: 1px solid #d7e4fa;
-  background: #ffffff;
-  border-radius: 12px;
   padding: 0 14px 0 42px;
   font-size: 14px;
   color: var(--el-text-color-primary);
+  background: #fff;
+  border: 1px solid #d7e4fa;
+  border-radius: 12px;
   transition:
     border-color 0.25s ease,
     box-shadow 0.25s ease;
@@ -244,33 +244,33 @@ watch(loading, (_isLoading) => {
 
 [data-mode="dark"] .input-shell :deep(.fa-input__wrapper),
 [data-mode="dark"] .input-shell :deep(input) {
-  border-color: hsl(var(--border));
-  background: hsl(var(--background));
   color: var(--el-text-color-primary);
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
 }
 
 .input-shell :deep(.fa-input__wrapper):focus-within,
 .input-shell :deep(input:focus) {
   outline: none;
   border-color: #2f6fff;
-  box-shadow: 0 0 0 4px rgba(47, 111, 255, 0.14);
+  box-shadow: 0 0 0 4px rgb(47 111 255 / 14%);
 }
 
 .login-submit-btn {
-  margin-top: 8px;
   height: 46px;
-  border: none;
-  border-radius: 12px;
-  background: #2f6fff;
-  color: #fff;
+  margin-top: 8px;
   font-size: 15px;
   font-weight: 600;
+  color: #fff;
   cursor: pointer;
+  background: #2f6fff;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgb(47 111 255 / 12%);
   transition:
     transform 0.25s ease,
     background-color 0.25s ease,
     opacity 0.25s ease;
-  box-shadow: 0 8px 18px rgba(47, 111, 255, 0.12);
 }
 
 .login-submit-btn:hover:not(:disabled) {
@@ -279,8 +279,8 @@ watch(loading, (_isLoading) => {
 }
 
 .login-submit-btn:disabled {
+  pointer-events: none;
   cursor: not-allowed;
   opacity: 0.72;
-  pointer-events: none;
 }
 </style>

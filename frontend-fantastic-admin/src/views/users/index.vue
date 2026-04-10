@@ -199,7 +199,7 @@ onMounted(loadData)
           <el-input v-model="editForm.displayName" placeholder="可不填，默认使用用户名" clearable />
         </el-form-item>
         <el-form-item label="角色" prop="roleCode">
-          <el-select v-model="editForm.roleCode" placeholder="请选择角色" style="width: 100%">
+          <el-select v-model="editForm.roleCode" placeholder="请选择角色" style="width: 100%;">
             <el-option
               v-for="role in roles"
               :key="role.code"
@@ -209,7 +209,7 @@ onMounted(loadData)
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="editForm.status" placeholder="请选择状态" style="width: 100%">
+          <el-select v-model="editForm.status" placeholder="请选择状态" style="width: 100%;">
             <el-option
               v-for="opt in statusOptions"
               :key="opt.value"
@@ -239,18 +239,18 @@ onMounted(loadData)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -264,8 +264,8 @@ h2 {
 }
 
 .readonly-field {
-  color: #64748b;
   font-size: 14px;
+  color: #64748b;
 }
 
 .no-perm {

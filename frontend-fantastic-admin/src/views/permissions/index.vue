@@ -112,18 +112,18 @@ onMounted(loadPermissions)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -154,15 +154,15 @@ h2 {
 
 .role-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 .role-name {
-  font-size: 16px;
   display: inline-block;
   margin-right: 8px;
+  font-size: 16px;
 }
 
 .role-code-tag {
@@ -178,8 +178,8 @@ h2 {
 .role-desc {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
   line-height: 1.6;
+  color: #64748b;
 }
 
 .perm-section {

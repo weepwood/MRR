@@ -447,24 +447,24 @@ onMounted(refreshAll)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
   flex-shrink: 0;
+  gap: 10px;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -513,14 +513,14 @@ h2 {
 /* 筛选栏 */
 .panel-header {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
 .panel-title {
-  font-weight: 700;
   margin-right: 8px;
+  font-weight: 700;
 }
 
 .panel-subtitle {
@@ -554,8 +554,8 @@ h2 {
 }
 
 .filter-actions {
-  flex: 0 0 auto;
   display: flex;
+  flex: 0 0 auto;
   gap: 8px;
   margin-left: auto;
 }
@@ -586,26 +586,26 @@ h2 {
   display: grid;
   gap: 12px;
   padding: 18px 18px 16px;
-  border-radius: 7px 7px 5px 5px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  border-top-width: 6px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.92));
-  box-shadow: 0 14px 34px rgba(24, 65, 134, 0.08);
-  cursor: pointer;
   overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(160deg, rgb(255 255 255 / 95%), rgb(247 250 255 / 92%));
+  border: 1px solid rgb(0 0 0 / 18%);
+  border-top-width: 6px;
+  border-radius: 7px 7px 5px 5px;
+  box-shadow: 0 14px 34px rgb(24 65 134 / 8%);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
 }
 
 .archive-folder-card:hover {
+  box-shadow: 0 20px 40px rgb(24 65 134 / 12%);
   transform: translateY(-3px);
-  box-shadow: 0 20px 40px rgba(24, 65, 134, 0.12);
 }
 
 .archive-folder-card.is-selected {
+  box-shadow: 0 24px 48px rgb(0 63 177 / 18%);
   transform: translateY(-2px);
-  box-shadow: 0 24px 48px rgba(0, 63, 177, 0.18);
 }
 
 /* 配色变量 */
@@ -635,8 +635,8 @@ h2 {
 }
 
 .archive-folder-card {
+  background-image: linear-gradient(180deg, var(--folder-bg, #eef4ff), rgb(255 255 255 / 0%) 55%);
   border-top-color: var(--folder-accent, #1d4ed8);
-  background-image: linear-gradient(180deg, var(--folder-bg, #eef4ff), rgba(255, 255, 255, 0) 55%);
 }
 
 /* 档案袋标签页 */
@@ -646,39 +646,39 @@ h2 {
   left: 18px;
   width: 70px;
   height: 20px;
-  border-radius: 0 0 5px 5px;
   background: var(--folder-accent, #1d4fd840);
-  box-shadow: 0 10px 20px rgba(24, 65, 134, 0.14);
+  border-radius: 0 0 5px 5px;
+  box-shadow: 0 10px 20px rgb(24 65 134 / 14%);
   transform-origin: center bottom;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
 }
 
 .archive-folder-card:hover .folder-tab {
-  transform: translateY(-10px) rotateX(-15deg) scale(1.05);
+  box-shadow: 0 15px 30px rgb(24 65 134 / 25%);
   opacity: 0.9;
-  box-shadow: 0 15px 30px rgba(24, 65, 134, 0.25);
+  transform: translateY(-10px) rotateX(-15deg) scale(1.05);
 }
 
 .folder-top {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding-top: 14px;
 }
 
 .folder-index {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.14em;
   color: #64748b;
+  letter-spacing: 0.14em;
 }
 
 .folder-title {
   margin: 0;
   font-size: 18px;
-  line-height: 1.3;
   font-weight: 800;
+  line-height: 1.3;
   color: #1f2b42;
 }
 
@@ -703,9 +703,9 @@ h2 {
 .folder-meta-grid dt {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: #80879a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .folder-meta-grid dd {
@@ -718,11 +718,11 @@ h2 {
 
 .folder-footer {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(128, 135, 154, 0.24);
+  border-top: 1px dashed rgb(128 135 154 / 24%);
 }
 
 .folder-pages {
@@ -739,13 +739,13 @@ h2 {
 }
 
 /* 响应式 */
-@media (max-width: 1220px) {
+@media (width <= 1220px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .summary-grid,
   .folder-meta-grid {
     grid-template-columns: 1fr;
@@ -760,8 +760,8 @@ h2 {
 
   .filter-actions {
     flex: 1 1 100%;
-    margin-left: 0;
     justify-content: stretch;
+    margin-left: 0;
   }
 
   .filter-actions :deep(.el-button) {

@@ -51,7 +51,7 @@ function handleSearch() {
             @keyup.enter="handleSearch"
           >
             <template #prefix>
-              <i class="i-ant-design:idcard-outlined" style="font-size:16px;" />
+              <i class="i-ant-design:idcard-outlined" style="font-size: 16px;" />
             </template>
           </el-input>
         </div>
@@ -87,27 +87,27 @@ function handleSearch() {
 
 <style scoped>
 .search-page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 60%, #f0f9ff 100%);
+  min-height: 100vh;
   padding: 24px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 60%, #f0f9ff 100%);
 }
 
 .search-card {
   width: 100%;
   max-width: 480px;
+  padding: 48px 40px 40px;
   background: #fff;
   border-radius: 20px;
-  box-shadow: 0 8px 40px rgba(59, 130, 246, 0.1);
-  padding: 48px 40px 40px;
+  box-shadow: 0 8px 40px rgb(59 130 246 / 10%);
 }
 
 /* ===== 头部 ===== */
 .search-header {
-  text-align: center;
   margin-bottom: 36px;
+  text-align: center;
 }
 
 .search-logo {
@@ -116,11 +116,11 @@ function handleSearch() {
   justify-content: center;
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  border-radius: 16px;
   margin-bottom: 20px;
   font-size: 32px;
   color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border-radius: 16px;
 }
 
 .search-title {
@@ -134,8 +134,8 @@ function handleSearch() {
 .search-subtitle {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
   line-height: 1.6;
+  color: #64748b;
 }
 
 /* ===== 搜索区 ===== */
@@ -154,8 +154,8 @@ function handleSearch() {
   height: 44px;
   font-size: 15px;
   font-weight: 600;
-  border-radius: 10px;
   letter-spacing: 0.5px;
+  border-radius: 10px;
 }
 
 /* ===== 提示 ===== */
@@ -171,10 +171,11 @@ function handleSearch() {
 }
 
 /* ===== 响应式 ===== */
-@media (max-width: 520px) {
+@media (width <= 520px) {
   .search-card {
     padding: 36px 24px 32px;
   }
+
   .search-title {
     font-size: 20px;
   }

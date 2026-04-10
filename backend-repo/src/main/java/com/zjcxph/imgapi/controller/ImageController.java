@@ -94,7 +94,7 @@ public class ImageController {
     public ResponseEntity<?> pdf(@RequestBody IdRequest request) {
 
         List<String> ids = request.getId();
-        System.out.println("ids: " + ids);
+        logger.info("接收到 PDF 生成请求，ids: {}", ids);
 
         // 判断 id 是否为空
         if (ids == null || ids.isEmpty()) {

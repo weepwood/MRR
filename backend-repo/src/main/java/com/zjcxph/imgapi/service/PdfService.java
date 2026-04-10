@@ -5,12 +5,15 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.io.image.ImageDataFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class PdfService {
+    private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
     public boolean createPdfFromImages(String outputPath, List<String> imagePathList) {
         try {
             // 创建 PDF
@@ -27,7 +30,7 @@ public class PdfService {
             return true;
 
         } catch (Exception e) {
-            System.out.println("Error creating PDF: " + e.getMessage());
+            logger.error("Error creating PDF: {}", e.getMessage(), e);
             return false;
         }
 

@@ -38,68 +38,20 @@ public interface LogMapper {
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log WHERE id = #{id}")
     Log findById(@Param("id") Long id);
 
-    @Delete({"<script>",
-            "WITH target AS (",
-            "    SELECT id FROM access_log",
-            "    WHERE access_time &lt; #{cutoff}",
-            "    ORDER BY access_time ASC, id ASC",
-            "    LIMIT #{limit}",
-            ")",
-            "DELETE FROM access_log",
-            "WHERE id IN (SELECT id FROM target)",
-            "</script>"})
+    // 删除指定时间之前的日志（分批删除）- XML 实现
     int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
 
-    @Select({"<script>",
-            "SELECT COUNT(*) FROM access_log WHERE access_time &lt; #{cutoff}",
-            "</script>"})
+    // 统计指定时间之前的日志数量 - XML 实现
     int countOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
-    @Select({"<script>",
-            "SELECT " + BASE_COLUMNS + " FROM access_log",
-            "WHERE access_time &lt; #{cutoff}",
-            "ORDER BY access_time ASC, id ASC",
-            "LIMIT #{limit} OFFSET #{offset}",
-            "</script>"})
+    // 查询指定时间之前的日志（带分页）- XML 实现
     List<Log> findOlderThan(
             @Param("cutoff") LocalDateTime cutoff,
             @Param("limit") int limit,
             @Param("offset") int offset
     );
 
-    @Select({"<script>",
-            "SELECT " + BASE_COLUMNS + " FROM access_log",
-            "<where>",
-            "  <if test='keyword != null and keyword != \"\"'>",
-            "    AND (client_ip LIKE '%' || #{keyword} || '%'",
-            "      OR request_uri LIKE '%' || #{keyword} || '%'",
-            "      OR query_string LIKE '%' || #{keyword} || '%'",
-            "      OR user_agent LIKE '%' || #{keyword} || '%'",
-            "      OR request_body LIKE '%' || #{keyword} || '%'",
-            "      OR referer LIKE '%' || #{keyword} || '%')",
-            "  </if>",
-            "  <if test='clientIp != null and clientIp != \"\"'>",
-            "    AND client_ip LIKE '%' || #{clientIp} || '%'",
-            "  </if>",
-            "  <if test='requestUri != null and requestUri != \"\"'>",
-            "    AND request_uri LIKE '%' || #{requestUri} || '%'",
-            "  </if>",
-            "  <if test='method != null and method != \"\"'>",
-            "    AND method = #{method}",
-            "  </if>",
-            "  <if test='responseStatus != null and responseStatus != \"\"'>",
-            "    AND response_status LIKE #{responseStatus} || '%'",
-            "  </if>",
-            "  <if test='startTime != null and startTime != \"\"'>",
-            "    AND access_time &gt;= CAST(#{startTime} AS timestamp)",
-            "  </if>",
-            "  <if test='endTime != null and endTime != \"\"'>",
-            "    AND access_time &lt;= CAST(#{endTime} AS timestamp)",
-            "  </if>",
-            "</where>",
-            "ORDER BY access_time DESC",
-            "LIMIT #{limit} OFFSET #{offset}",
-            "</script>"})
+    // 动态搜索日志 - XML 实现
     List<Log> search(
             @Param("keyword") String keyword,
             @Param("clientIp") String clientIp,
@@ -112,37 +64,7 @@ public interface LogMapper {
             @Param("offset") int offset
     );
 
-    @Select({"<script>",
-            "SELECT COUNT(*) FROM access_log",
-            "<where>",
-            "  <if test='keyword != null and keyword != \"\"'>",
-            "    AND (client_ip LIKE '%' || #{keyword} || '%'",
-            "      OR request_uri LIKE '%' || #{keyword} || '%'",
-            "      OR query_string LIKE '%' || #{keyword} || '%'",
-            "      OR user_agent LIKE '%' || #{keyword} || '%'",
-            "      OR request_body LIKE '%' || #{keyword} || '%'",
-            "      OR referer LIKE '%' || #{keyword} || '%')",
-            "  </if>",
-            "  <if test='clientIp != null and clientIp != \"\"'>",
-            "    AND client_ip LIKE '%' || #{clientIp} || '%'",
-            "  </if>",
-            "  <if test='requestUri != null and requestUri != \"\"'>",
-            "    AND request_uri LIKE '%' || #{requestUri} || '%'",
-            "  </if>",
-            "  <if test='method != null and method != \"\"'>",
-            "    AND method = #{method}",
-            "  </if>",
-            "  <if test='responseStatus != null and responseStatus != \"\"'>",
-            "    AND response_status LIKE #{responseStatus} || '%'",
-            "  </if>",
-            "  <if test='startTime != null and startTime != \"\"'>",
-            "    AND access_time &gt;= CAST(#{startTime} AS timestamp)",
-            "  </if>",
-            "  <if test='endTime != null and endTime != \"\"'>",
-            "    AND access_time &lt;= CAST(#{endTime} AS timestamp)",
-            "  </if>",
-            "</where>",
-            "</script>"})
+    // 动态搜索日志总数 - XML 实现
     int countSearch(
             @Param("keyword") String keyword,
             @Param("clientIp") String clientIp,

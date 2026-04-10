@@ -7,13 +7,15 @@ const idCard = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
-const isValid = computed(() => /^\d{15}(\d{2}[\dX])?$/i.test(idCard.value.trim()))
+const isValid = computed(() => /^\d{15}(?:\d{2}[\dX])?$/i.test(idCard.value.trim()))
 
 function handleSearch() {
-  if (!isValid.value) { return }
+  if (!isValid.value) {
+    return
+  }
   errorMsg.value = ''
   loading.value = true
-  // 跳转到图库页，由目标页负责查询
+  // 跳转到图库页,由目标页负责查询
   router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
     loading.value = false
   })

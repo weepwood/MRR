@@ -48,7 +48,7 @@ public class TempZipCleaner {
                     }
                 } catch (Exception e) {
                     // 处理可能发生的异常，比如权限问题等
-                    e.printStackTrace();
+                    logger.error("删除临时文件失败: {}", file.getName(), e);
                 }
             }
         }

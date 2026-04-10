@@ -70,6 +70,7 @@ public class SearchController {
         }
     }
 
+    @Deprecated
     @GetMapping("/getBAHByID/{idCard}")
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);

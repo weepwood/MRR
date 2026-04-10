@@ -4,9 +4,11 @@ import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.scheduler.LogRetentionCleaner;
 import com.zjcxph.imgapi.service.LogService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -63,32 +65,38 @@ public class LogController {
     }
 
     @GetMapping("/")
-    public Result<List<Log>> getAllLogs(
+    public Result<PageResult<Log>> getAllLogs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
+        PaginationUtils.validatePageParams(page, size);
         List<Log> logs = logService.getAllLogs(page, size);
         int total = logService.getTotalLogCount();
-        return new Result<>(200, "success", logs, total);
+        PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
+        return Result.<PageResult<Log>>success("success").data(pageResult);
     }
 
     @GetMapping("/ip/{ip}")
-    public Result<List<Log>> getLogsByClientIp(
+    public Result<PageResult<Log>> getLogsByClientIp(
             @PathVariable String ip,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
+        PaginationUtils.validatePageParams(page, size);
         List<Log> logs = logService.getLogsByClientIp(ip, page, size);
         int total = logService.getLogCountByClientIp(ip);
-        return new Result<>(200, "success", logs, total);
+        PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
+        return Result.<PageResult<Log>>success("success").data(pageResult);
     }
 
     @GetMapping("/uri")
-    public Result<List<Log>> getLogsByRequestUri(
+    public Result<PageResult<Log>> getLogsByRequestUri(
             @RequestParam String uri,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
+        PaginationUtils.validatePageParams(page, size);
         List<Log> logs = logService.getLogsByRequestUri(uri, page, size);
         int total = logService.getLogCountByRequestUri(uri);
-        return new Result<>(200, "success", logs, total);
+        PageResult<Log> pageResult = PageResult.of(logs, total, page, size);
+        return Result.<PageResult<Log>>success("success").data(pageResult);
     }
 
     @PostMapping("/retention/cleanup")
@@ -148,7 +156,7 @@ public class LogController {
     }
 
     @GetMapping("/search")
-    public Result<Map<String, Object>> searchLogs(
+    public Result<PageResult<Log>> searchLogs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
@@ -159,8 +167,8 @@ public class LogController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
     ) {
-        int safePage = Math.max(page, 1);
-        int safeSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
+        PaginationUtils.validatePageParams(page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
 
         String normalizedKeyword = normalize(keyword);
         String normalizedClientIp = normalize(clientIp);
@@ -178,7 +186,7 @@ public class LogController {
                 normalizedResponseStatus,
                 startTimeText,
                 endTimeText,
-                safePage,
+                page,
                 safeSize
         );
         int total = logService.countSearchLogs(
@@ -191,14 +199,8 @@ public class LogController {
                 endTimeText
         );
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("list", list);
-        data.put("total", total);
-        data.put("page", safePage);
-        data.put("size", safeSize);
-        data.put("totalPages", (total + safeSize - 1) / safeSize);
-
-        return Result.<Map<String, Object>>success("success").data(data).code(200);
+        PageResult<Log> pageResult = PageResult.of(list, total, page, safeSize);
+        return Result.<PageResult<Log>>success("success").data(pageResult);
     }
 
     private String normalize(String value) {

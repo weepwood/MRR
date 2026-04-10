@@ -3,9 +3,11 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.service.ScanService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -199,25 +201,19 @@ public class ScanController {
 
     @Operation(summary = "分页查询所有扫描记录")
     @GetMapping("/page")
-    public Result<Object> findAllWithPagination(
+    public Result<PageResult<Scan>> findAllWithPagination(
             @Parameter(description = "页码", example = "1") 
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小", example = "10") 
             @RequestParam(defaultValue = "10") int size) {
         logger.info("分页查询扫描记录：page={}, size={}", page, size);
         
-        if (page < 1 || size < 1) {
-            return Result.fail("页码和每页大小必须大于 0");
-        }
-        
+        PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findAllWithPagination(page, size);
-        Map<String, Object> response = new HashMap<>();
-        response.put("list", scans);
-        response.put("total", scanService.findAll().size());
-        response.put("page", page);
-        response.put("size", size);
+        long total = scanService.countByCondition(new ScanRequest());
         
-        return Result.success(null).data(response);
+        PageResult<Scan> pageResult = PageResult.of(scans, total, page, size);
+        return Result.success(pageResult);
     }
 
     @Operation(summary = "根据条件动态查询扫描记录")
@@ -231,26 +227,18 @@ public class ScanController {
 
     @Operation(summary = "鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍")
     @PostMapping("/page/condition")
-    public Result<Object> findByConditionWithPagination(
+    public Result<PageResult<Scan>> findByConditionWithPagination(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestBody ScanRequest request) {
         logger.info("鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍锛歱age={}, size={}", page, size);
 
-        if (page < 1 || size < 1) {
-            return Result.fail("椤电爜鍜屾瘡椤靛ぇ灏忓繀椤诲ぇ浜?0");
-        }
-
+        PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);
         long total = scanService.countByCondition(request);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("list", scans);
-        response.put("total", total);
-        response.put("page", page);
-        response.put("size", size);
-        response.put("totalPages", (total + size - 1) / size);
-        return Result.success(null).data(response);
+        PageResult<Scan> pageResult = PageResult.of(scans, total, page, size);
+        return Result.success(pageResult);
     }
 
     @PostMapping("/batch-download")

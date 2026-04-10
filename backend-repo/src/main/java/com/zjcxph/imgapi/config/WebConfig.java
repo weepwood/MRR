@@ -3,7 +3,6 @@ package com.zjcxph.imgapi.config;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -11,14 +10,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
-    private LoginInterceptor loginInterceptor;
+    private final LoginInterceptor loginInterceptor;
+    private final AuthorizationInterceptor authorizationInterceptor;
+    private final LogInterceptor logInterceptor;
 
-    @Autowired
-    private AuthorizationInterceptor authorizationInterceptor;
-
-    @Autowired
-    private LogInterceptor logInterceptor;
+    public WebConfig(LoginInterceptor loginInterceptor,
+                     AuthorizationInterceptor authorizationInterceptor,
+                     LogInterceptor logInterceptor) {
+        this.loginInterceptor = loginInterceptor;
+        this.authorizationInterceptor = authorizationInterceptor;
+        this.logInterceptor = logInterceptor;
+    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

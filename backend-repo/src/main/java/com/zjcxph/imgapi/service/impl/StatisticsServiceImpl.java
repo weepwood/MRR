@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,7 +27,8 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public List<Statistics> findAllWithPagination(int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return statisticsMapper.findAllWithPagination(offset, size);
     }
 
@@ -41,7 +43,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             String sortBy,
             String sortOrder
     ) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, type, startDate, endDate, sortBy, sortOrder);
     }
 

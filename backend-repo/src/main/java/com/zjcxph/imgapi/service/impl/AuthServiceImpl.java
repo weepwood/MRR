@@ -14,6 +14,7 @@ import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import com.zjcxph.imgapi.utils.PasswordUtil;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public LoginResponseDTO login(UserRequest req) {
         String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
         String password = Optional.ofNullable(req.getPassword()).map(String::trim).orElse("");
@@ -72,6 +74,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public AuthUserProfileDTO updateUser(Long id, AuthUserUpdateRequest request) {
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
@@ -91,6 +94,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int disableUser(Long id) {
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {

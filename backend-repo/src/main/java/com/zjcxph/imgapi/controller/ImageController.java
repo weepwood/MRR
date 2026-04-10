@@ -325,4 +325,8 @@ public class ImageController {
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
     }
+
+    public RestTemplate getRestTemplate() {
+        return restTemplate;
+    }
 }

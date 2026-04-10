@@ -4,10 +4,12 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.OssUploadRequest;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -134,12 +136,13 @@ public class OssController {
 
     @Operation(summary = "获取迁移日志列表")
     @GetMapping("/migration/logs")
-    public Result<Object> getMigrationLogs(
+    public Result<PageResult<ImageMigrationLog>> getMigrationLogs(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         logger.info("获取迁移日志：status={}, page={}, size={}", status, page, size);
 
+        PaginationUtils.validatePageParams(page, size);
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
 
@@ -155,13 +158,8 @@ public class OssController {
             }
         }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("list", logs);
-        response.put("total", total);
-        response.put("page", page);
-        response.put("size", size);
-
-        return Result.success(null).data(response);
+        PageResult<ImageMigrationLog> pageResult = PageResult.of(logs, total, page, size);
+        return Result.<PageResult<ImageMigrationLog>>success(null).data(pageResult);
     }
 
     @Operation(summary = "删除 OSS 文件")

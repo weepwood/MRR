@@ -4,7 +4,6 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -15,8 +14,11 @@ import java.util.Date;
 @Component
 public class LogInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private LogService logService;
+    private final LogService logService;
+
+    public LogInterceptor(LogService logService) {
+        this.logService = logService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

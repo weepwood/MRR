@@ -3,8 +3,10 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,7 +44,7 @@ public class StatisticsController {
 
     @Operation(summary = "获取所有统计数据（分页+条件）")
     @GetMapping
-    public Result<Object> getAllStatistics(
+    public Result<PageResult<Statistics>> getAllStatistics(
             @Parameter(description = "页码", example = "1")
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小", example = "100")
@@ -63,10 +65,7 @@ public class StatisticsController {
         logger.info("获取统计数据：page={}, size={}, keyword={}, type={}, startDate={}, endDate={}, sortBy={}, sortOrder={}",
                 page, size, keyword, type, startDate, endDate, sortBy, sortOrder);
 
-        if (page < 1 || size < 1) {
-            return Result.fail("页码和每页大小必须大于 0");
-        }
-
+        PaginationUtils.validatePageParams(page, size);
         if (size > 1000) {
             size = 1000;
         }
@@ -95,17 +94,8 @@ public class StatisticsController {
                 normalizedEndDate
         );
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 200);
-        response.put("list", statistics);
-        response.put("total", totalCount);
-        response.put("page", page);
-        response.put("size", size);
-        response.put("totalPages", (totalCount + size - 1) / size);
-        response.put("sortBy", normalizedSortBy);
-        response.put("sortOrder", normalizedSortOrder);
-
-        return Result.success(null).data(response);
+        PageResult<Statistics> pageResult = PageResult.of(statistics, totalCount, page, size);
+        return Result.success(pageResult);
     }
 
     @Operation(summary = "根据病案号查询统计数据")

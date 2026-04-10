@@ -9,9 +9,11 @@ import com.zjcxph.imgapi.mapper.ImageMigrationLogMapper;
 import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -40,6 +42,7 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public OssUploadResult uploadSingleScan(Integer scanId) {
         Scan scan = scanMapper.findById(scanId);
         if (scan == null) {
@@ -171,7 +174,8 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public List<ImageMigrationLog> getMigrationLogs(String status, int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return migrationLogMapper.findWithPagination(status, offset, size);
     }
 

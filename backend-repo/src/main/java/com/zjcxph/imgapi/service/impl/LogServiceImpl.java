@@ -3,18 +3,23 @@ package com.zjcxph.imgapi.service.impl;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class LogServiceImpl implements LogService {
 
-    @Autowired
-    private LogMapper logMapper;
+    private final LogMapper logMapper;
+
+    public LogServiceImpl(LogMapper logMapper) {
+        this.logMapper = logMapper;
+    }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveLog(Log log) {
         logMapper.insert(log);
     }
@@ -26,25 +31,29 @@ public class LogServiceImpl implements LogService {
 
     @Override
     public List<Log> getAllLogs(int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return logMapper.findAll(size, offset);
     }
 
     @Override
     public List<Log> getLogsByClientIp(String clientIp, int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return logMapper.findByClientIp(clientIp, size, offset);
     }
 
     @Override
     public List<Log> getLogsByRequestUri(String requestUri, int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return logMapper.findByRequestUri(requestUri, size, offset);
     }
 
     @Override
     public List<Log> searchLogs(String keyword, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime, int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return logMapper.search(keyword, clientIp, requestUri, method, responseStatus, startTime, endTime, size, offset);
     }
 

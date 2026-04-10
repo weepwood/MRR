@@ -6,7 +6,9 @@ import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,11 +67,13 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int updateImageType(Integer id, Integer type) {
         return scanMapper.updateImageType(id, type);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Scan create(Scan scan) {
         if (scanMapper.insert(scan) > 0) {
             return scan;
@@ -78,11 +82,13 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Integer id) {
         return scanMapper.deleteById(id) > 0;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Scan update(Scan scan) {
         if (scanMapper.update(scan) > 0) {
             return scan;
@@ -112,7 +118,8 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findAllWithPagination(int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return scanMapper.findAllWithPagination(offset, size);
     }
 
@@ -123,7 +130,8 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size) {
-        int offset = (page - 1) * size;
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
         return scanMapper.findByConditionWithPagination(request, offset, size);
     }
 

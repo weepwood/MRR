@@ -36,6 +36,7 @@ export default {
     'scss/double-slash-comment-empty-line-before': null,
     'scss/no-global-function-names': null,
     '@stylistic/max-line-length': null,
+    'declaration-block-single-line-max-declarations': null,
     '@stylistic/block-closing-brace-newline-after': [
       'always',
       {

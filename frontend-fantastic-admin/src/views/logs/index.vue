@@ -358,7 +358,7 @@ h2 {
 
 .detail-pre {
   margin: 0;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 </style>

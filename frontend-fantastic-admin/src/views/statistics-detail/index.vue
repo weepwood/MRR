@@ -713,7 +713,7 @@ h2 {
   font-size: 13px;
   font-weight: 600;
   color: #24324b;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .folder-footer {

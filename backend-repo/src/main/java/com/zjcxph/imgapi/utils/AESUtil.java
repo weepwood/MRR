@@ -28,15 +28,15 @@ public class AESUtil {
      * 根据用户ID和密钥生成用户特定的密钥（旧版本，不包含时间戳）
      * @param userId 用户ID
      * @param key 基础密钥
-     * @return 用户特定密钥（32字节）
+     * @return 用户特定密钥（32 字节）
      */
     private static String generateUserSpecificKey(String userId, String key) {
         String combinedKey = userId + "_" + key;
-        // 确保密钥长度为32字节
+        // 确保密钥长度为 32 字节
         if (combinedKey.length() > 32) {
             return combinedKey.substring(0, 32);
         } else {
-            // 如果长度不足32字节，用0填充
+            // 如果长度不足 32 字节，用 0 填充
             return String.format("%-32s", combinedKey).replace(' ', '0');
         }
     }

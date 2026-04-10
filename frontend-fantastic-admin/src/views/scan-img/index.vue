@@ -432,7 +432,7 @@ function setThumbsViewMode(mode: 'icons' | 'details') {
 }
 
 // ==================== 下载 ====================
-async function downloadBahZip() {
+async function _downloadBahZip() {
   if (!searchBah.value.trim()) { ElMessage.warning('请先选择病案'); return }
   if (images.value.length === 0) { ElMessage.warning('没有找到相关病案数据，无法下载'); return }
   downloading.value = true
@@ -1133,7 +1133,6 @@ watch(idCardParam, async (newId) => {
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
   backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
 }
 
 /* ==================== 类型选择器 ==================== */
@@ -1194,7 +1193,6 @@ watch(idCardParam, async (newId) => {
   border-radius: 20px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
-  backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -1315,10 +1313,10 @@ watch(idCardParam, async (newId) => {
   .split-layout { gap: 8px; }
 
   .left-pane,
- .right-pane { gap: 8px; }
+  .right-pane { gap: 8px; }
 
   .left-top,
- .left-bottom { padding: 10px; }
+  .left-bottom { padding: 10px; }
   .type-header { flex-direction: column; gap: 8px; align-items: flex-start; }
   .thumbs-toolbar { align-self: flex-end; }
 }

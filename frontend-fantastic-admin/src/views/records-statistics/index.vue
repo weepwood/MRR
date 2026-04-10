@@ -77,7 +77,7 @@ const chartHeight = svgHeight - paddingTop - paddingBottom
 const minDateCountForScroll = 100
 
 // ---------- computed ----------
-const statisticsTypeOptions = computed(() =>
+const _statisticsTypeOptions = computed(() =>
   (summaryData.value.byType ?? [])
     .map(i => i.type)
     .filter((t): t is string => !!t && t !== 'NULL'),
@@ -96,9 +96,10 @@ const sortedDateData = computed<DateStatItem[]>(() => {
 
 const dateRange = computed(() => {
   if (!sortedDateData.value.length) { return { start: '-', end: '-' } }
+  const lastItem = sortedDateData.value.at(-1)
   return {
     start: formatDate(sortedDateData.value[0].date),
-    end: formatDate(sortedDateData.value.at(-1).date),
+    end: formatDate(lastItem?.date ?? ''),
   }
 })
 
@@ -108,7 +109,10 @@ const displayDateLabels = computed(() => {
   const step = Math.ceil(data.length / 8)
   const labels: string[] = []
   for (let i = 0; i < data.length; i += step) { labels[i] = formatDateShort(data[i].date) }
-  labels[data.length - 1] = formatDateShort(data.at(-1).date)
+  const lastIndex = data.length - 1
+  if (lastIndex >= 0 && data[lastIndex]) {
+    labels[lastIndex] = formatDateShort(data[lastIndex].date)
+  }
   return labels
 })
 
@@ -150,7 +154,10 @@ const cumulativeRecordPoints = computed(() => {
 // ---------- helpers ----------
 function calculateCumulativeRecords(): number[] {
   let sum = 0
-  return sortedDateData.value.map(i => (sum += i.recordCount ?? 0, sum))
+  return sortedDateData.value.map((i) => {
+    sum += i.recordCount ?? 0
+    return sum
+  })
 }
 
 function calcY(value: number) {
@@ -175,7 +182,9 @@ function getBarHeight(value: number) {
 function getAreaPath(points: string[]) {
   if (!points.length) { return '' }
   const fx = points[0].split(',')[0]
-  const lx = points.at(-1).split(',')[0]
+  const lastPoint = points.at(-1)
+  if (!lastPoint) { return '' }
+  const lx = lastPoint.split(',')[0]
   const by = paddingTop + chartHeight
   return `${points.join(' ')} L ${lx} ${by} L ${fx} ${by} Z`
 }
@@ -189,7 +198,7 @@ function formatDateShort(dateStr?: string) {
   const parts = dateStr.split('/')
   return parts.length >= 2 ? `${parts[1]}/${parts[2]}` : dateStr
 }
-function getTypeTagType(type?: string): '' | 'success' | 'warning' | 'info' {
+function _getTypeTagType(type?: string): '' | 'success' | 'warning' | 'info' {
   const map: Record<string, '' | 'success' | 'warning' | 'info'> = {
     普通: '',
     质控: 'success',
@@ -198,7 +207,7 @@ function getTypeTagType(type?: string): '' | 'success' | 'warning' | 'info' {
   }
   return map[type ?? ''] ?? 'info'
 }
-function computeTableIndex(index: number) {
+function _computeTableIndex(index: number) {
   return (currentPage.value - 1) * pageSize.value + index + 1
 }
 function getBackendSortOrder(order: string) {
@@ -274,27 +283,27 @@ async function loadStatisticsList() {
   }
 }
 
-function handleListSearch() {
+function _handleListSearch() {
   currentPage.value = 1
   loadStatisticsList()
 }
-function resetListSearch() {
+function _resetListSearch() {
   listSearchKeyword.value = ''
   listSearchType.value = ''
   listSearchDateRange.value = []
   currentPage.value = 1
   loadStatisticsList()
 }
-function handleSizeChange(v: number) {
+function _handleSizeChange(v: number) {
   pageSize.value = v
   currentPage.value = 1
   loadStatisticsList()
 }
-function handleCurrentChange(v: number) {
+function _handleCurrentChange(v: number) {
   currentPage.value = v
   loadStatisticsList()
 }
-function handleTableSortChange({ prop, order }: { prop: string, order: string }) {
+function _handleTableSortChange({ prop, order }: { prop: string, order: string }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
   currentPage.value = 1
   loadStatisticsList()
@@ -603,10 +612,6 @@ watch(sortedDateData, (v) => {
 }
 
 /* ===== 区块卡片 ===== */
-.chart-card,
-.list-card {
-}
-
 .section-header {
   display: flex;
   gap: 10px;

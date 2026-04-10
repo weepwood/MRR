@@ -13,6 +13,7 @@ export default antfu(
       'e18e/prefer-static-regex': 'off',
       'eslint-comments/no-unlimited-disable': 'off',
       'curly': ['error', 'all'],
+      'style/max-statements-per-line': 'off',
       'ts/no-unused-expressions': ['error', {
         allowShortCircuit: true,
         allowTernary: true,

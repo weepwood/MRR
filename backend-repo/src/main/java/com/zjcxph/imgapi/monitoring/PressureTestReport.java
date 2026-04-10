@@ -1,51 +1,32 @@
 package com.zjcxph.imgapi.monitoring;
 
+import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
+@Data
 public class PressureTestReport {
 
-    @Setter
     private String runId;
-    @Setter
     private String name;
-    @Setter
     private String targetUrl;
-    @Setter
     private String method;
-    @Setter
     private int concurrency;
-    @Setter
     private int totalRequests;
-    @Setter
     private int successCount;
-    @Setter
     private int failureCount;
-    @Setter
     private double successRate;
-    @Setter
     private long minLatencyMs;
-    @Setter
     private long avgLatencyMs;
-    @Setter
     private long p95LatencyMs;
-    @Setter
     private long maxLatencyMs;
-    @Setter
     private double requestsPerSecond;
-    @Setter
     private long durationMillis;
-    @Setter
     private String startedAt;
-    @Setter
     private String finishedAt;
-    @Setter
     private PressureTestSnapshot beforeSnapshot;
-    @Setter
     private PressureTestSnapshot afterSnapshot;
     private final List<PressureTestSample> samples;
 
@@ -99,57 +80,5 @@ public class PressureTestReport {
 
     public String runId() {
         return runId;
-    }
-
-    public String name() {
-        return name;
-    }
-
-    public String method() {
-        return method;
-    }
-
-    public int totalRequests() {
-        return totalRequests;
-    }
-
-    public int successCount() {
-        return successCount;
-    }
-
-    public int failureCount() {
-        return failureCount;
-    }
-
-    public long minLatencyMs() {
-        return minLatencyMs;
-    }
-
-    public long avgLatencyMs() {
-        return avgLatencyMs;
-    }
-
-    public long p95LatencyMs() {
-        return p95LatencyMs;
-    }
-
-    public long maxLatencyMs() {
-        return maxLatencyMs;
-    }
-
-    public double requestsPerSecond() {
-        return requestsPerSecond;
-    }
-
-    public PressureTestSnapshot beforeSnapshot() {
-        return beforeSnapshot;
-    }
-
-    public PressureTestSnapshot afterSnapshot() {
-        return afterSnapshot;
-    }
-
-    public List<PressureTestSample> samples() {
-        return samples;
     }
 }

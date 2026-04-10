@@ -11,28 +11,28 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "DB Controller", description = "数据库管理接口")
 public class DbController {
     @GetMapping("/hello")
-    public Result<Object> hello() {
+    public Result<String> hello() {
         return Result.success("db-api success, hello world");
     }
 
     // TODO: 添加数据库管理接口
     // @PostMapping("/add")
-    public Result<Object> add() {
+    public Result<String> add() {
         return Result.success("add success");
     }
 
     // @DeleteMapping("/delete")
-    public Result<Object> delete() {
+    public Result<String> delete() {
         return Result.success("delete success");
     }
 
     // @PostMapping("/update")
-    public Result<Object> update() {
+    public Result<String> update() {
         return Result.success("update success");
     }
 
     // @PostMapping("/query/{id}")
-    public Result<Object> query(@PathVariable String id) {
+    public Result<String> query(@PathVariable String id) {
         return Result.success(id + " query success");
     }
 

@@ -39,7 +39,7 @@ public class OssController {
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
     @PostMapping("/upload")
-    public Result<Object> upload(@RequestBody OssUploadRequest request) {
+    public Result<Map<String, Object>> upload(@RequestBody OssUploadRequest request) {
         if (request == null || request.getScanIds() == null || request.getScanIds().isEmpty()) {
             return Result.fail("scanIds 不能为空");
         }
@@ -62,12 +62,12 @@ public class OssController {
         response.put("failed", failedCount);
 
         logger.info("OSS 上传完成：成功 {}/{}", successCount, results.size());
-        return Result.success("上传完成").data(response);
+        return Result.success(response).message("上传完成");
     }
 
     @Operation(summary = "按病案号批量上传图片到 OSS")
     @PostMapping("/upload/bah/{bah}")
-    public Result<Object> uploadByBah(
+    public Result<Map<String, Object>> uploadByBah(
             @PathVariable
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
@@ -86,12 +86,12 @@ public class OssController {
         response.put("success", successCount);
         response.put("bah", bah);
 
-        return Result.success("上传完成").data(response);
+        return Result.success(response).message("上传完成");
     }
 
     @Operation(summary = "获取指定 Scan 的 OSS 签名 URL")
     @GetMapping("/url/{scanId}")
-    public Result<Object> getOssUrl(
+    public Result<Map<String, Object>> getOssUrl(
             @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer scanId) {
@@ -105,7 +105,7 @@ public class OssController {
             Map<String, Object> response = new HashMap<>();
             response.put("scanId", scanId);
             response.put("message", "Please use the /v1/img-api/{bah} endpoint which includes ossUrl in the response");
-            return Result.success(null).data(response);
+            return Result.success(response);
         } catch (Exception e) {
             logger.error("获取 OSS URL 失败：scanId={}", scanId, e);
             return Result.fail("获取 OSS URL 失败：" + e.getMessage());
@@ -114,15 +114,15 @@ public class OssController {
 
     @Operation(summary = "获取迁移统计信息")
     @GetMapping("/migration/statistics")
-    public Result<Object> getMigrationStatistics() {
+    public Result<MigrationStatisticsDTO> getMigrationStatistics() {
         logger.info("获取迁移统计信息");
         MigrationStatisticsDTO stats = migrationService.getStatistics();
-        return Result.success(null).data(stats);
+        return Result.success(stats);
     }
 
     @Operation(summary = "获取待迁移记录列表")
     @GetMapping("/migration/pending")
-    public Result<Object> getPendingMigrations(
+    public Result<Map<String, Object>> getPendingMigrations(
             @RequestParam(defaultValue = "50") int limit) {
         logger.info("获取待迁移记录列表：limit={}", limit);
         List<Scan> pending = migrationService.getPendingMigrations(limit);
@@ -131,7 +131,7 @@ public class OssController {
         response.put("list", pending);
         response.put("total", pending.size());
 
-        return Result.success(null).data(response);
+        return Result.success(response);
     }
 
     @Operation(summary = "获取迁移日志列表")
@@ -164,7 +164,7 @@ public class OssController {
 
     @Operation(summary = "删除 OSS 文件")
     @DeleteMapping("/{ossKey}")
-    public Result<Object> deleteOssFile(
+    public Result<String> deleteOssFile(
             @PathVariable
             @Parameter(description = "OSS 对象 Key")
             String ossKey) {

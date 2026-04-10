@@ -37,7 +37,7 @@ public class SearchController {
     }
 
     @GetMapping("/getBAHByEncryptID")
-    public Result<Object> getBAHByEncryptID(
+    public Result<List<Patient>> getBAHByEncryptID(
             @RequestParam String EncryptID,
             @RequestParam String userId,
             @RequestParam String iv,
@@ -47,15 +47,15 @@ public class SearchController {
             String decryptedIdCard = AESUtil.decryptIdCardWithTimestamp(EncryptID, iv, userId, timestamp, secretKey);
             List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
             logger.info("Found {} records for decrypted id-card", patients.size());
-            return new Result<>(200, "success", patients);
+            return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt id-card failed: {}", e.getMessage(), e);
-            return new Result<>(500, "decrypt failed: " + e.getMessage(), null);
+            return Result.fail("decrypt failed: " + e.getMessage());
         }
     }
 
     @GetMapping("/getBAHByEncryptIDLegacy")
-    public Result<Object> getBAHByEncryptIDLegacy(
+    public Result<List<Patient>> getBAHByEncryptIDLegacy(
             @RequestParam String EncryptID,
             @RequestParam String userId,
             @RequestParam String iv) {
@@ -64,18 +64,18 @@ public class SearchController {
             String decryptedIdCard = AESUtil.decryptIdCard(EncryptID, iv, userId, secretKey);
             List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
             logger.info("Found {} records for decrypted legacy id-card", patients.size());
-            return new Result<>(200, "success", patients);
+            return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt legacy id-card failed: {}", e.getMessage(), e);
-            return new Result<>(500, "decrypt failed: " + e.getMessage(), null);
+            return Result.fail("decrypt failed: " + e.getMessage());
         }
     }
 
     @GetMapping("/getBAHByID/{idCard}")
-    public Result<Object> getBAHByiDCard(@PathVariable String idCard) {
+    public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);
         logger.info("Found {} records for idCard={}", patients.size(), idCard);
-        return new Result<>(200, "success", patients);
+        return Result.success(patients);
     }
 
     private String getClientIP(HttpServletRequest request) {

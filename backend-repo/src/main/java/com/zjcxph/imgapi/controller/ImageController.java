@@ -60,11 +60,11 @@ public class ImageController {
 
     @Operation(summary = "服务器心跳")
     @GetMapping("/hello")
-    public Result<Object> hello() {
+    public Result<Map<String, Object>> hello() {
         logger.info("服务正常");
         Map<String, Object> data = new HashMap<>();
         data.put("message", "服务正常");
-        return Result.<Object>success("服务正常").data(data);
+        return Result.success(data);
     }
 
     @Operation(summary = "下载病案压缩包")
@@ -182,7 +182,7 @@ public class ImageController {
 
     @Operation(summary = "获取病案号下的图片数据")
     @GetMapping("/{bah}")
-    public Result<Object> getDataByBAH(
+    public Result<List<BAHDataResponseDTO>> getDataByBAH(
             @PathVariable
             @Pattern(regexp = "\\d{8}", message = "请输入正确的 8 位病案号")
             @Parameter(description = "病案号", example = "00789508")
@@ -212,9 +212,7 @@ public class ImageController {
             items.add(bAHDataResponseDTO);
         }
         logger.info("获取 {} 病案号下的图片数据", bah);
-        Result<Object> objectResult = new Result<>();
-        objectResult.code(200).message(bah + " 数据获取成功").data(items);
-        return objectResult;
+        return Result.success(items).message(bah + " 数据获取成功");
     }
 
     @Operation(summary = "获取病案号下的对应单张图片")

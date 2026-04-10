@@ -55,7 +55,7 @@ public class ScanController {
 
     @Operation(summary = "创建新的扫描记录")
     @PostMapping
-    public Result<Object> create(@Valid @RequestBody ScanRequest request) {
+    public Result<Scan> create(@Valid @RequestBody ScanRequest request) {
         logger.info("创建扫描记录：BAH={}", request.getBah());
         
         Scan scan = new Scan(
@@ -74,16 +74,16 @@ public class ScanController {
         Scan created = scanService.create(scan);
         if (created != null) {
             logger.info("创建成功，ID={}", created.getId());
-            return Result.success(null).data(created);
+            return Result.success(created);
         } else {
             logger.error("创建失败");
-            return Result.<Object>fail("创建扫描记录失败");
+            return Result.fail("创建扫描记录失败");
         }
     }
 
     @Operation(summary = "根据 ID 删除扫描记录")
     @DeleteMapping("/{id}")
-    public Result<Object> deleteById(
+    public Result<String> deleteById(
             @PathVariable 
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
@@ -105,7 +105,7 @@ public class ScanController {
 
     @Operation(summary = "更新扫描记录")
     @PutMapping("/{id}")
-    public Result<Object> update(
+    public Result<Scan> update(
             @PathVariable 
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id,
@@ -132,7 +132,7 @@ public class ScanController {
         Scan updated = scanService.update(scan);
         if (updated != null) {
             logger.info("更新成功：ID={}", id);
-            return Result.success(null).data(updated);
+            return Result.success(updated);
         } else {
             logger.error("更新失败：ID={}", id);
             return Result.fail("更新失败，记录不存在");
@@ -141,15 +141,15 @@ public class ScanController {
 
     @Operation(summary = "获取所有扫描记录")
     @GetMapping
-    public Result<Object> findAll() {
+    public Result<List<Scan>> findAll() {
         logger.info("获取所有扫描记录");
         List<Scan> scans = scanService.findAll();
-        return Result.success(null).data(scans);
+        return Result.success(scans);
     }
 
     @Operation(summary = "根据 ID 查询扫描记录")
     @GetMapping("/{id}")
-    public Result<Object> findById(
+    public Result<Scan> findById(
             @PathVariable 
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
@@ -161,7 +161,7 @@ public class ScanController {
         
         Scan scan = scanService.findById(id);
         if (scan != null) {
-            return Result.success(null).data(scan);
+            return Result.success(scan);
         } else {
             return Result.fail("未找到该扫描记录");
         }
@@ -169,7 +169,7 @@ public class ScanController {
 
     @Operation(summary = "根据病案号查询扫描记录")
     @GetMapping("/bah/{bah}")
-    public Result<Object> findByBah(
+    public Result<List<Scan>> findByBah(
             @PathVariable 
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
@@ -180,12 +180,12 @@ public class ScanController {
         }
         
         List<Scan> scans = scanService.findByBah(bah);
-        return Result.success(null).data(scans);
+        return Result.success(scans);
     }
 
     @Operation(summary = "根据病人序号查询扫描记录")
     @GetMapping("/brxh/{brxh}")
-    public Result<Object> findByBrxh(
+    public Result<List<Scan>> findByBrxh(
             @PathVariable 
             @Parameter(description = "病人序号", example = "605746")
             String brxh) {
@@ -196,7 +196,7 @@ public class ScanController {
         }
         
         List<Scan> scans = scanService.findByBrxh(brxh);
-        return Result.success(null).data(scans);
+        return Result.success(scans);
     }
 
     @Operation(summary = "分页查询所有扫描记录")
@@ -218,11 +218,11 @@ public class ScanController {
 
     @Operation(summary = "根据条件动态查询扫描记录")
     @PostMapping("/condition")
-    public Result<Object> findByCondition(@RequestBody ScanRequest request) {
+    public Result<List<Scan>> findByCondition(@RequestBody ScanRequest request) {
         logger.info("根据条件查询扫描记录");
         
         List<Scan> scans = scanService.findByCondition(request);
-        return Result.success(null).data(scans);
+        return Result.success(scans);
     }
 
     @Operation(summary = "鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍")

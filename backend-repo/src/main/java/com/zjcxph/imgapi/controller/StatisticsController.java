@@ -100,7 +100,7 @@ public class StatisticsController {
 
     @Operation(summary = "根据病案号查询统计数据")
     @GetMapping("/bah/{bah}")
-    public Result<Object> getStatisticsByBah(
+    public Result<List<Statistics>> getStatisticsByBah(
             @PathVariable
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
@@ -111,12 +111,12 @@ public class StatisticsController {
         }
 
         List<Statistics> statistics = statisticsService.findByBah(bah);
-        return Result.success(null).data(statistics);
+        return Result.success(statistics);
     }
 
     @Operation(summary = "根据日期查询统计数据")
     @GetMapping("/date/{date}")
-    public Result<Object> getStatisticsByDate(
+    public Result<List<Statistics>> getStatisticsByDate(
             @PathVariable
             @Parameter(description = "日期，格式：YYYY-MM-DD 或 YYYY.MM.DD", example = "2024-01-15")
             String date) {
@@ -128,28 +128,28 @@ public class StatisticsController {
 
         List<Statistics> statistics = statisticsService.findByDate(date);
         logger.info("查询到 {} 条记录", statistics.size());
-        return Result.success(null).data(statistics);
+        return Result.success(statistics);
     }
 
     @Operation(summary = "统计每个病案号的记录数和总页数")
     @GetMapping("/bah-summary")
-    public Result<Object> getBAHStatistics() {
+    public Result<List<BAHStatisticsDTO>> getBAHStatistics() {
         logger.info("统计每个病案号的记录数和总页数");
         List<BAHStatisticsDTO> bahStats = statisticsService.getBAHStatistics();
-        return Result.success(null).data(bahStats);
+        return Result.success(bahStats);
     }
 
     @Operation(summary = "统计每个日期的记录数和总页数")
     @GetMapping("/date-summary")
-    public Result<Object> getDateStatistics() {
+    public Result<List<DateStatisticsDTO>> getDateStatistics() {
         logger.info("统计每个日期的记录数和总页数");
         List<DateStatisticsDTO> dateStats = statisticsService.getDateStatistics();
-        return Result.success(null).data(dateStats);
+        return Result.success(dateStats);
     }
 
     @Operation(summary = "按条件统计每日数据（支持日期范围和类型）")
     @GetMapping("/date-summary/condition")
-    public Result<Object> getDateStatisticsByCondition(
+    public Result<List<DateStatisticsDTO>> getDateStatisticsByCondition(
             @Parameter(description = "开始日期，格式：YYYY-MM-DD", example = "2024-01-01")
             @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
@@ -173,12 +173,12 @@ public class StatisticsController {
         }
 
         List<DateStatisticsDTO> dateStats = statisticsService.getDateStatisticsByCondition(startDateStr, endDateStr, type);
-        return Result.success(null).data(dateStats);
+        return Result.success(dateStats);
     }
 
     @Operation(summary = "获取总体统计信息")
     @GetMapping("/summary")
-    public Result<Object> getTotalStatistics() {
+    public Result<Map<String, Object>> getTotalStatistics() {
         logger.info("获取总体统计信息");
 
         Map<String, Object> summary = new HashMap<>();
@@ -191,20 +191,20 @@ public class StatisticsController {
         List<Map<String, Object>> typeStats = statisticsService.getTypeStatistics();
         summary.put("byType", typeStats);
 
-        return Result.success(null).data(summary);
+        return Result.success(summary);
     }
 
     @Operation(summary = "按类型统计")
     @GetMapping("/type-summary")
-    public Result<Object> getTypeStatistics() {
+    public Result<List<Map<String, Object>>> getTypeStatistics() {
         logger.info("按类型统计");
         List<Map<String, Object>> typeStats = statisticsService.getTypeStatistics();
-        return Result.success(null).data(typeStats);
+        return Result.success(typeStats);
     }
 
     @Operation(summary = "获取综合统计面板数据")
     @GetMapping("/dashboard")
-    public Result<Object> getDashboardData() {
+    public Result<Map<String, Object>> getDashboardData() {
         logger.info("获取综合统计面板数据");
 
         Map<String, Object> dashboard = new HashMap<>();
@@ -228,7 +228,7 @@ public class StatisticsController {
         }
         dashboard.put("topBAH", bahStats);
 
-        return Result.success(null).data(dashboard);
+        return Result.success(dashboard);
     }
 
     private String normalize(String value) {

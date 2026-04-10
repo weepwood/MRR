@@ -34,38 +34,38 @@ public class PressureTestController {
 
     @Operation(summary = "Run a pressure test")
     @PostMapping("/run")
-    public Result<Object> run(@Valid @RequestBody PressureTestRequest request) {
+    public Result<PressureTestReport> run(@Valid @RequestBody PressureTestRequest request) {
         logger.info("run pressure test: {}", request.getTargetUrl());
         PressureTestReport report = pressureTestService.run(request);
-        return Result.success("pressure test completed").data(report);
+        return Result.success(report).message("pressure test completed");
     }
 
     @Operation(summary = "Get pressure test history")
     @GetMapping("/history")
-    public Result<Object> history() {
+    public Result<List<PressureTestReport>> history() {
         List<PressureTestReport> reports = pressureTestService.getHistory();
-        return Result.success("ok").data(reports);
+        return Result.success(reports);
     }
 
     @Operation(summary = "Get latest pressure test result")
     @GetMapping("/latest")
-    public Result<Object> latest() {
+    public Result<PressureTestReport> latest() {
         return pressureTestService.getLatest()
-                .<Result<Object>>map(report -> Result.success("ok").data(report))
-                .orElseGet(() -> Result.success("ok").data(null));
+                .map(report -> Result.success(report))
+                .orElse(Result.success(null));
     }
 
     @Operation(summary = "Get report by run id")
     @GetMapping("/{runId}")
-    public Result<Object> getByRunId(@PathVariable String runId) {
+    public Result<PressureTestReport> getByRunId(@PathVariable String runId) {
         return pressureTestService.findByRunId(runId)
-                .<Result<Object>>map(report -> Result.success("ok").data(report))
-                .orElseGet(() -> Result.fail("pressure test record not found"));
+                .map(report -> Result.success(report))
+                .orElse(Result.fail("pressure test record not found"));
     }
 
     @Operation(summary = "Clear pressure test history")
     @DeleteMapping("/history")
-    public Result<Object> clearHistory() {
+    public Result<String> clearHistory() {
         pressureTestService.clearHistory();
         return Result.success("history cleared");
     }

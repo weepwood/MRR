@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.entity.AuthRole;
@@ -49,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("用户名或密码错误");
         }
         if (!"active".equalsIgnoreCase(user.getStatus())) {
-            throw new IllegalStateException("账号已被禁用，请联系管理员");
+            throw new BusinessException("账号已被禁用，请联系管理员");
         }
         if (!PasswordUtil.matches(password, user.getPasswordHash())) {
             throw new IllegalArgumentException("用户名或密码错误");

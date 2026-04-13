@@ -1,7 +1,8 @@
 package com.zjcxph.imgapi.common;
 
-import lombok.Getter;
-import lombok.Setter;
+
+
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
@@ -9,15 +10,13 @@ import java.time.LocalDateTime;
  * 统一响应结果封装类
  * @param <T> 数据类型
  */
-@Getter
+@Data
 public class Result<T> {
     
     // ==================== 字段定义 ====================
     private Integer code;
     private String message;
     private T data;
-    @Setter
-    private Integer total; // 分页总记录数
     private final LocalDateTime timestamp;
 
     // ==================== 构造方法 ====================
@@ -32,13 +31,7 @@ public class Result<T> {
         this.timestamp = LocalDateTime.now();
     }
 
-    public Result(Integer code, String message, T data, Integer total) {
-        this.code = code;
-        this.message = message;
-        this.data = data;
-        this.total = total;
-        this.timestamp = LocalDateTime.now();
-    }
+
 
     // ==================== 静态工厂方法 - 成功响应 ====================
         
@@ -46,18 +39,16 @@ public class Result<T> {
      * 成功响应(无数据)
      * 使用示例: Result.success()
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> success() {
-        return (Result<T>) new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), null);
+        return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), null);
     }
     
     /**
      * 成功响应(带自定义消息)
      * 使用示例: Result.success("操作成功")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> success(String message) {
-        return (Result<T>) new Result<>(ResultCode.SUCCESS.getCode(), message, null);
+        return new Result<>(ResultCode.SUCCESS.getCode(), message, null);
     }
     
     /**
@@ -76,15 +67,7 @@ public class Result<T> {
         return new Result<>(ResultCode.SUCCESS.getCode(), message, data);
     }
     
-    /**
-     * 成功响应(分页数据) - 自动推断泛型类型
-     * 使用示例: Result.successPage(users, total) -> Result<List<User>>
-     */
-    public static <T> Result<T> successPage(T data, Integer total) {
-        Result<T> result = new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
-        result.setTotal(total);
-        return result;
-    }
+
 
     // ==================== 静态工厂方法 - 失败响应 ====================
         
@@ -92,63 +75,56 @@ public class Result<T> {
      * 失败响应(默认 400)
      * 使用示例: Result.fail()
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> fail() {
-        return (Result<T>) new Result<>(ResultCode.BAD_REQUEST.getCode(), ResultCode.BAD_REQUEST.getMessage(), null);
+        return new Result<>(ResultCode.BAD_REQUEST.getCode(), ResultCode.BAD_REQUEST.getMessage(), null);
     }
     
     /**
      * 失败响应(带消息)
      * 使用示例: Result.fail("参数错误")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> fail(String message) {
-        return (Result<T>) new Result<>(ResultCode.BAD_REQUEST.getCode(), message, null);
+        return new Result<>(ResultCode.BAD_REQUEST.getCode(), message, null);
     }
     
     /**
      * 失败响应(带状态码和消息)
      * 使用示例: Result.fail(422, "验证失败")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> fail(Integer code, String message) {
-        return (Result<T>) new Result<>(code, message, null);
+        return new Result<>(code, message, null);
     }
     
     /**
      * 未授权响应
      * 使用示例: Result.unauthorized("请先登录")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> unauthorized(String message) {
-        return (Result<T>) new Result<>(ResultCode.UNAUTHORIZED.getCode(), message, null);
+        return new Result<>(ResultCode.UNAUTHORIZED.getCode(), message, null);
     }
     
     /**
      * 禁止访问响应
      * 使用示例: Result.forbidden("权限不足")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> forbidden(String message) {
-        return (Result<T>) new Result<>(ResultCode.FORBIDDEN.getCode(), message, null);
+        return new Result<>(ResultCode.FORBIDDEN.getCode(), message, null);
     }
     
     /**
      * 资源不存在响应
      * 使用示例: Result.notFound("用户不存在")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> notFound(String message) {
-        return (Result<T>) new Result<>(ResultCode.NOT_FOUND.getCode(), message, null);
+        return new Result<>(ResultCode.NOT_FOUND.getCode(), message, null);
     }
     
     /**
      * 服务器内部错误响应
      * 使用示例: Result.error("系统异常")
      */
-    @SuppressWarnings("unchecked")
     public static <T> Result<T> error(String message) {
-        return (Result<T>) new Result<>(ResultCode.INTERNAL_ERROR.getCode(), message, null);
+        return new Result<>(ResultCode.INTERNAL_ERROR.getCode(), message, null);
     }
 
     // ==================== 链式调用方法 ====================

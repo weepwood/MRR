@@ -49,7 +49,7 @@ public class UserController {
      *         - 成功时：返回 "Login success" 消息和包含 Token 的 LoginResponseDTO 对象
      *         - 失败时：返回 "Invalid username or password" 错误消息
      */
-    @Operation(summary = "Login")
+    @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req) {
         // 调用认证服务执行登录逻辑
@@ -65,7 +65,18 @@ public class UserController {
         return Result.<LoginResponseDTO>success("Login success").data(response);
     }
 
-    @Operation(summary = "Current user")
+    /**
+     * 获取当前登录用户信息
+     * <p>
+     * 通过认证服务获取当前会话中的用户信息，用于前端页面展示当前登录用户的详细资料。
+     * 如果用户未登录或Token已过期，则返回失败响应。
+     * </p>
+     *
+     * @return Result<AuthSession> 统一响应结果
+     *         - 成功时(code=200)：data字段包含AuthSession对象，其中有用户ID、用户名、显示名称、角色信息、权限列表等
+     *         - 失败时(code=400)：message字段包含"Not logged in or token expired"提示信息
+     */
+    @Operation(summary = "当前用户")
     @GetMapping("/me")
     public Result<AuthSession> currentUser() {
         AuthSession session = authService.currentUser();
@@ -75,21 +86,54 @@ public class UserController {
         return Result.<AuthSession>success("success").data(session);
     }
 
-    @Operation(summary = "List users")
+    /**
+     * 获取用户列表
+     * <p>
+     * 查询系统中所有用户的资料信息，需要"user:manage"权限才能访问。
+     * 返回的用户信息包括用户ID、用户名、显示名称、角色信息和状态等。
+     * </p>
+     *
+     * @return Result<List<AuthUserProfileDTO>> 统一响应结果
+     *         - 成功时(code=200)：data字段包含AuthUserProfileDTO对象列表，每个对象包含用户的完整资料信息
+     */
+    @Operation(summary = "获取用户列表")
     @RequirePermissions({"user:manage"})
     @GetMapping("/users")
     public Result<List<AuthUserProfileDTO>> listUsers() {
         return Result.<List<AuthUserProfileDTO>>success("success").data(authService.listUsers());
     }
 
-    @Operation(summary = "List roles")
+    /**
+     * 获取角色列表
+     * <p>
+     * 查询系统中所有角色的信息，需要"role:read"权限才能访问。
+     * 返回的角色信息包括角色代码、角色名称、描述、权限配置和排序等。
+     * </p>
+     *
+     * @return Result<List<AuthRole>> 统一响应结果
+     *         - 成功时(code=200)：data字段包含AuthRole对象列表，每个对象包含角色的完整信息（代码、名称、描述、权限配置等）
+     */
+    @Operation(summary = "获取角色列表")
     @RequirePermissions({"role:read"})
     @GetMapping("/roles")
     public Result<List<AuthRole>> listRoles() {
         return Result.<List<AuthRole>>success("success").data(authService.listRoles());
     }
 
-    @Operation(summary = "Update user")
+    /**
+     * 更新用户信息
+     * <p>
+     * 根据用户ID更新指定用户的资料，需要"user:manage"权限才能访问。
+     * 可以更新用户的显示名称、角色代码和状态等信息。
+     * </p>
+     *
+     * @param id 用户ID，从URL路径中获取
+     * @param request 用户更新请求对象，包含displayName（显示名称）、roleCode（角色代码）、status（状态）等字段，需通过验证
+     * @return Result<AuthUserProfileDTO> 统一响应结果
+     *         - 成功时(code=200)：data字段包含更新后的AuthUserProfileDTO对象
+     *         - 失败时(code=400)：message字段包含"User not found"提示信息，表示用户不存在
+     */
+    @Operation(summary = "更新用户信息")
     @RequirePermissions({"user:manage"})
     @PutMapping("/users/{id}")
     public Result<AuthUserProfileDTO> updateUser(@PathVariable Long id, @Valid @RequestBody AuthUserUpdateRequest request) {
@@ -100,7 +144,19 @@ public class UserController {
         return Result.<AuthUserProfileDTO>success("Update success").data(updated);
     }
 
-    @Operation(summary = "Disable user")
+    /**
+     * 禁用用户账号
+     * <p>
+     * 根据用户ID禁用指定的用户账号，需要"user:manage"权限才能访问。
+     * 该操作会将用户状态设置为禁用，使用户无法再登录系统。
+     * </p>
+     *
+     * @param id 用户ID，从URL路径中获取
+     * @return Result<Void> 统一响应结果
+     *         - 成功时(code=200)：表示用户已成功禁用
+     *         - 失败时(code=400)：message字段包含"User not found"提示信息，表示用户不存在
+     */
+    @Operation(summary = "禁用用户账号")
     @RequirePermissions({"user:manage"})
     @DeleteMapping("/users/{id}")
     public Result<Void> disableUser(@PathVariable Long id) {

@@ -4,8 +4,6 @@ import com.zjcxph.imgapi.common.Result;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.*;
 
 @DisplayName("Result 统一响应封装测试")
@@ -27,14 +25,6 @@ class ResultTest {
         Result<String> result = Result.success("hello");
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).isEqualTo("hello");
-    }
-
-    @Test
-    @DisplayName("successPage — 分页数据")
-    void successPage() {
-        Result<List<String>> result = Result.successPage(List.of("a", "b"), 10);
-        assertThat(result.getTotal()).isEqualTo(10);
-        assertThat(result.getData()).hasSize(2);
     }
 
     @Test

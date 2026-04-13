@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.AsyncLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -13,6 +14,7 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class LogInterceptor implements HandlerInterceptor {
@@ -29,7 +31,23 @@ public class LogInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 生成请求ID并设置到 MDC 上下文，用于日志追踪
+        String requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        MDC.put("requestId", requestId);
+        MDC.put("clientIp", getClientIP(request));
+        
+        // 从请求头或 session 中获取用户信息（如果已认证）
+        String userId = request.getHeader("X-User-Id");
+        String userRole = request.getHeader("X-User-Role");
+        if (userId != null && !userId.isEmpty()) {
+            MDC.put("userId", userId);
+        }
+        if (userRole != null && !userRole.isEmpty()) {
+            MDC.put("userRole", userRole);
+        }
+
         request.setAttribute("startTime", System.currentTimeMillis());
+        request.setAttribute("requestId", requestId);
         return true;
     }
 
@@ -61,6 +79,9 @@ public class LogInterceptor implements HandlerInterceptor {
 
         // 异步保存日志,不阻塞请求响应
         asyncLogService.saveLogAsync(log);
+        
+        // 清理 MDC 上下文，防止内存泄漏
+        MDC.clear();
     }
 
     private boolean shouldSkipLogging(HttpServletRequest request, Object handler) {

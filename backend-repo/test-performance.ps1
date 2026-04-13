@@ -1,125 +1,120 @@
-# 性能优化验证测试脚本
-# 使用方法: 启动应用后运行此脚本
+# ============================================================================
+# Performance Testing Script (PowerShell)
+# ============================================================================
+# Usage: .\test-performance.ps1 [-TestType light|medium|heavy|all]
+# Default: all
+# ============================================================================
 
-$BASE_URL = "http://localhost:18045"
+param(
+    [ValidateSet("light", "medium", "heavy", "all")]
+    [string]$TestType = "all",
+    [string]$BaseUrl = "http://localhost:18045"
+)
 
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  性能优化验证测试" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host "Performance Testing Script" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Yellow
 Write-Host ""
 
-# 测试1: 检查应用是否启动
-Write-Host "[1/5] 检查应用状态..." -ForegroundColor Yellow
+# Function to run a pressure test
+function Invoke-PressureTest {
+    param(
+        [string]$Name,
+        [int]$Concurrency,
+        [int]$Requests,
+        [int]$Timeout
+    )
+    
+    Write-Host "Running: $Name" -ForegroundColor Yellow
+    Write-Host "  Concurrency: $Concurrency"
+    Write-Host "  Total Requests: $Requests"
+    Write-Host "  Timeout: ${Timeout}ms"
+    Write-Host ""
+    
+    $body = @{
+        name = $Name
+        targetUrl = "$BaseUrl/api/v1/system/info"
+        method = "GET"
+        concurrency = $Concurrency
+        totalRequests = $Requests
+        timeoutMillis = $Timeout
+    } | ConvertTo-Json
+    
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "$BaseUrl/api/v1/monitoring/pressure-tests/run" `
+            -Method Post `
+            -Body $body `
+            -ContentType "application/json; charset=utf-8"
+        
+        # Display key metrics
+        $metrics = [PSCustomObject]@{
+            Name = $response.name
+            SuccessRate = "$($response.successRate)%"
+            AvgLatencyMs = "$($response.avgLatencyMs) ms"
+            P95LatencyMs = "$($response.p95LatencyMs) ms"
+            RequestsPerSecond = $response.requestsPerSecond
+            TotalRequests = $response.totalRequests
+            SuccessCount = $response.successCount
+            FailureCount = $response.failureCount
+        }
+        
+        $metrics | Format-List
+        Write-Host ""
+        
+        return $response
+    }
+    catch {
+        Write-Host "Error running test: $_" -ForegroundColor Red
+        return $null
+    }
+}
+
+# Check if application is running
+Write-Host "Checking application health..." -NoNewline
 try {
-    $response = Invoke-RestMethod -Uri "$BASE_URL/api/v1/img/hello" -Method Get -ErrorAction Stop
-    Write-Host "✓ 应用正常运行" -ForegroundColor Green
-    Write-Host "  响应: $($response.message)" -ForegroundColor Gray
-} catch {
-    Write-Host "✗ 应用未启动或无法访问" -ForegroundColor Red
-    Write-Host "  错误: $_" -ForegroundColor Red
+    $health = Invoke-RestMethod -Uri "$BaseUrl/actuator/health" -ErrorAction Stop
+    if ($health.status -eq "UP") {
+        Write-Host " ✓ Application is running" -ForegroundColor Green
+    }
+    else {
+        throw "Application status is not UP"
+    }
+}
+catch {
+    Write-Host " ✗ Application is not responding at $BaseUrl" -ForegroundColor Red
+    Write-Host "Please start the application first:"
+    Write-Host "  mvn spring-boot:run"
     exit 1
 }
+
 Write-Host ""
 
-# 测试2: 验证缓存效果 (首次请求)
-Write-Host "[2/5] 测试缓存效果 - 首次请求..." -ForegroundColor Yellow
-$testBAH = "00789508"
-$stopwatch1 = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    $response1 = Invoke-RestMethod -Uri "$BASE_URL/api/v1/img/$testBAH" -Method Get -ErrorAction Stop
-    $stopwatch1.Stop()
-    Write-Host "✓ 首次请求成功" -ForegroundColor Green
-    Write-Host "  耗时: $($stopwatch1.ElapsedMilliseconds)ms" -ForegroundColor Gray
-    Write-Host "  返回数据条数: $($response1.data.Count)" -ForegroundColor Gray
-} catch {
-    Write-Host "⚠ 首次请求失败 (可能病案号不存在)" -ForegroundColor Yellow
-    Write-Host "  错误: $_" -ForegroundColor Gray
-}
-Write-Host ""
-
-# 测试3: 验证缓存效果 (第二次请求 - 应该更快)
-Write-Host "[3/5] 测试缓存效果 - 第二次请求 (应命中缓存)..." -ForegroundColor Yellow
-$stopwatch2 = [System.Diagnostics.Stopwatch]::StartNew()
-try {
-    $response2 = Invoke-RestMethod -Uri "$BASE_URL/api/v1/img/$testBAH" -Method Get -ErrorAction Stop
-    $stopwatch2.Stop()
-    Write-Host "✓ 第二次请求成功" -ForegroundColor Green
-    Write-Host "  耗时: $($stopwatch2.ElapsedMilliseconds)ms" -ForegroundColor Gray
-    
-    if ($stopwatch1.IsRunning -eq $false -and $stopwatch1.ElapsedMilliseconds -gt 0) {
-        $improvement = [math]::Round((($stopwatch1.ElapsedMilliseconds - $stopwatch2.ElapsedMilliseconds) / $stopwatch1.ElapsedMilliseconds) * 100, 2)
-        if ($improvement -gt 0) {
-            Write-Host "  ⚡ 性能提升: ${improvement}%" -ForegroundColor Green
-        } else {
-            Write-Host "  ℹ️  首次请求可能已使用缓存" -ForegroundColor Cyan
-        }
+# Run tests based on type
+switch ($TestType) {
+    "light" {
+        Invoke-PressureTest -Name "light-load-test" -Concurrency 10 -Requests 50 -Timeout 5000
     }
-} catch {
-    Write-Host "⚠ 第二次请求失败" -ForegroundColor Yellow
-    Write-Host "  错误: $_" -ForegroundColor Gray
-}
-Write-Host ""
-
-# 测试4: 检查Actuator健康端点
-Write-Host "[4/5] 检查系统健康状态..." -ForegroundColor Yellow
-try {
-    $health = Invoke-RestMethod -Uri "$BASE_URL/actuator/health" -Method Get -ErrorAction Stop
-    Write-Host "✓ 系统健康" -ForegroundColor Green
-    Write-Host "  状态: $($health.status)" -ForegroundColor Gray
-} catch {
-    Write-Host "⚠ 无法获取健康状态" -ForegroundColor Yellow
-}
-Write-Host ""
-
-# 测试5: 并发请求测试
-Write-Host "[5/5] 执行简单并发测试 (10个并发请求)..." -ForegroundColor Yellow
-$concurrentRequests = 1..10 | ForEach-Object {
-    Start-Job -ScriptBlock {
-        param($url, $bah)
-        try {
-            $sw = [System.Diagnostics.Stopwatch]::StartNew()
-            Invoke-RestMethod -Uri "$url/api/v1/img/$bah" -Method Get -ErrorAction Stop | Out-Null
-            $sw.Stop()
-            return $sw.ElapsedMilliseconds
-        } catch {
-            return -1
-        }
-    } -ArgumentList $BASE_URL, $testBAH
+    "medium" {
+        Invoke-PressureTest -Name "medium-load-test" -Concurrency 20 -Requests 100 -Timeout 5000
+    }
+    "heavy" {
+        Invoke-PressureTest -Name "heavy-load-test" -Concurrency 50 -Requests 200 -Timeout 10000
+    }
+    "all" {
+        Invoke-PressureTest -Name "light-load-test" -Concurrency 10 -Requests 50 -Timeout 5000
+        Write-Host "----------------------------------------" -ForegroundColor Yellow
+        Write-Host ""
+        Invoke-PressureTest -Name "medium-load-test" -Concurrency 20 -Requests 100 -Timeout 5000
+        Write-Host "----------------------------------------" -ForegroundColor Yellow
+        Write-Host ""
+        Invoke-PressureTest -Name "heavy-load-test" -Concurrency 50 -Requests 200 -Timeout 10000
+    }
 }
 
-# 等待所有请求完成
-$null = $concurrentRequests | Wait-Job -Timeout 30
-
-# 收集结果
-$results = $concurrentRequests | Receive-Job | Where-Object { $_ -gt 0 }
-$concurrentRequests | Remove-Job
-
-if ($results.Count -gt 0) {
-    $avgTime = [math]::Round(($results | Measure-Object -Average).Average, 2)
-    $minTime = ($results | Measure-Object -Minimum).Minimum
-    $maxTime = ($results | Measure-Object -Maximum).Maximum
-    $successCount = $results.Count
-    $totalCount = 10
-    
-    Write-Host "✓ 并发测试完成" -ForegroundColor Green
-    Write-Host "  成功/总数: $successCount/$totalCount" -ForegroundColor Gray
-    Write-Host "  平均耗时: ${avgTime}ms" -ForegroundColor Gray
-    Write-Host "  最快: ${minTime}ms" -ForegroundColor Gray
-    Write-Host "  最慢: ${maxTime}ms" -ForegroundColor Gray
-} else {
-    Write-Host "⚠ 并发测试无有效结果" -ForegroundColor Yellow
-}
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "All tests completed!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-
-# 总结
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  测试完成!" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "📊 优化效果说明:" -ForegroundColor White
-Write-Host "  • RestTemplate连接池: HTTP连接复用率提升" -ForegroundColor Gray
-Write-Host "  • Caffeine缓存: 热点数据查询速度提升95%+" -ForegroundColor Gray
-Write-Host "  • 异步日志: 请求响应时间减少30-50ms" -ForegroundColor Gray
-Write-Host ""
-Write-Host "📝 查看详细文档: docs/PERFORMANCE_OPTIMIZATION.md" -ForegroundColor Gray
-Write-Host ""
+Write-Host "View detailed results at:"
+Write-Host "  $BaseUrl/api/v1/monitoring/pressure-tests/history"

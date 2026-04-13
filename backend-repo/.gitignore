@@ -6,6 +6,13 @@ target
 *.db
 *.gz
 application-local.properties
+application-*.properties
+!application-local.template.properties
 date
 export_to_markdown*
 folder_summary*
+
+# Test artifacts
+*-test-result.json
+performance-report.md
+reports/

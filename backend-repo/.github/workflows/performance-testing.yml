@@ -1,0 +1,318 @@
+name: Performance & Pressure Testing
+
+on:
+  schedule:
+    # 每周日凌晨 2 点执行性能测试
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL for pressure test'
+        required: false
+        default: 'http://localhost:18045/api/v1/system/info'
+      concurrency:
+        description: 'Concurrent users'
+        required: false
+        default: '10'
+      total_requests:
+        description: 'Total requests'
+        required: false
+        default: '100'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/main/java/**'
+      - 'pom.xml'
+
+env:
+  JAVA_VERSION: '21'
+  APP_PORT: 18045
+
+jobs:
+  # ==================== 启动应用并执行压力测试 ====================
+  pressure-test:
+    name: Pressure Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: imgapi
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      
+      - name: Initialize database
+        env:
+          PGPASSWORD: testpassword
+        run: |
+          psql -h localhost -U postgres -d imgapi -f src/main/resources/schema-postgresql.sql
+      
+      - name: Build application
+        run: mvn -B clean package -DskipTests
+      
+      - name: Start application
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/imgapi?currentSchema=app
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: testpassword
+          AES_SECRET_KEY: test-secret-key-for-performance-testing
+          OSS_ACCESS_KEY_ID: test-key
+          OSS_ACCESS_KEY_SECRET: test-secret
+          SERVER_PORT: ${{ env.APP_PORT }}
+        run: |
+          nohup java -jar target/*.jar \
+            --spring.profiles.active=test \
+            > app.log 2>&1 &
+          echo "Waiting for application to start..."
+          timeout 60 bash -c 'until curl -s http://localhost:${{ env.APP_PORT }}/actuator/health | grep -q "UP"; do sleep 2; done'
+          echo "Application is ready!"
+      
+      - name: Check application health
+        run: |
+          curl -f http://localhost:${{ env.APP_PORT }}/actuator/health || exit 1
+          curl -f http://localhost:${{ env.APP_PORT }}/api/v1/system/info || exit 1
+      
+      - name: Run basic performance test (Light load)
+        id: light-test
+        continue-on-error: true
+        run: |
+          echo "Running light load test (10 concurrent, 50 requests)..."
+          
+          RESPONSE=$(curl -s -X POST http://localhost:${{ env.APP_PORT }}/api/v1/monitoring/pressure-tests/run \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "light-load-test",
+              "targetUrl": "http://localhost:${{ env.APP_PORT }}/api/v1/system/info",
+              "method": "GET",
+              "concurrency": 10,
+              "totalRequests": 50,
+              "timeoutMillis": 5000
+            }')
+          
+          echo "$RESPONSE" | tee light-test-result.json
+          
+          # Extract key metrics
+          SUCCESS_RATE=$(echo "$RESPONSE" | grep -oP '"successRate":\s*[\d.]+' | cut -d':' -f2)
+          AVG_LATENCY=$(echo "$RESPONSE" | grep -oP '"avgLatencyMs":\s*\d+' | cut -d':' -f2)
+          P95_LATENCY=$(echo "$RESPONSE" | grep -oP '"p95LatencyMs":\s*\d+' | cut -d':' -f2)
+          RPS=$(echo "$RESPONSE" | grep -oP '"requestsPerSecond":\s*[\d.]+' | cut -d':' -f2)
+          
+          echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+          echo "avg_latency=$AVG_LATENCY" >> $GITHUB_OUTPUT
+          echo "p95_latency=$P95_LATENCY" >> $GITHUB_OUTPUT
+          echo "rps=$RPS" >> $GITHUB_OUTPUT
+          
+          # Basic threshold check
+          if (( $(echo "$SUCCESS_RATE < 95" | bc -l) )); then
+            echo "❌ Success rate below 95%: $SUCCESS_RATE%"
+            exit 1
+          fi
+          
+          if (( $(echo "$AVG_LATENCY > 1000" | bc -l) )); then
+            echo "❌ Average latency above 1000ms: ${AVG_LATENCY}ms"
+            exit 1
+          fi
+          
+          echo "✅ Light load test passed"
+      
+      - name: Run medium performance test (Medium load)
+        id: medium-test
+        continue-on-error: true
+        run: |
+          echo "Running medium load test (20 concurrent, 100 requests)..."
+          
+          RESPONSE=$(curl -s -X POST http://localhost:${{ env.APP_PORT }}/api/v1/monitoring/pressure-tests/run \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "medium-load-test",
+              "targetUrl": "http://localhost:${{ env.APP_PORT }}/api/v1/system/info",
+              "method": "GET",
+              "concurrency": 20,
+              "totalRequests": 100,
+              "timeoutMillis": 5000
+            }')
+          
+          echo "$RESPONSE" | tee medium-test-result.json
+          
+          SUCCESS_RATE=$(echo "$RESPONSE" | grep -oP '"successRate":\s*[\d.]+' | cut -d':' -f2)
+          AVG_LATENCY=$(echo "$RESPONSE" | grep -oP '"avgLatencyMs":\s*\d+' | cut -d':' -f2)
+          P95_LATENCY=$(echo "$RESPONSE" | grep -oP '"p95LatencyMs":\s*\d+' | cut -d':' -f2)
+          RPS=$(echo "$RESPONSE" | grep -oP '"requestsPerSecond":\s*[\d.]+' | cut -d':' -f2)
+          
+          echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+          echo "avg_latency=$AVG_LATENCY" >> $GITHUB_OUTPUT
+          echo "p95_latency=$P95_LATENCY" >> $GITHUB_OUTPUT
+          echo "rps=$RPS" >> $GITHUB_OUTPUT
+          
+          if (( $(echo "$SUCCESS_RATE < 90" | bc -l) )); then
+            echo "⚠️ Success rate below 90%: $SUCCESS_RATE%"
+          fi
+          
+          echo "✅ Medium load test completed"
+      
+      - name: Run stress test (Heavy load)
+        id: heavy-test
+        continue-on-error: true
+        run: |
+          echo "Running heavy load test (50 concurrent, 200 requests)..."
+          
+          RESPONSE=$(curl -s -X POST http://localhost:${{ env.APP_PORT }}/api/v1/monitoring/pressure-tests/run \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "heavy-load-test",
+              "targetUrl": "http://localhost:${{ env.APP_PORT }}/api/v1/system/info",
+              "method": "GET",
+              "concurrency": 50,
+              "totalRequests": 200,
+              "timeoutMillis": 10000
+            }')
+          
+          echo "$RESPONSE" | tee heavy-test-result.json
+          
+          SUCCESS_RATE=$(echo "$RESPONSE" | grep -oP '"successRate":\s*[\d.]+' | cut -d':' -f2)
+          AVG_LATENCY=$(echo "$RESPONSE" | grep -oP '"avgLatencyMs":\s*\d+' | cut -d':' -f2)
+          P95_LATENCY=$(echo "$RESPONSE" | grep -oP '"p95LatencyMs":\s*\d+' | cut -d':' -f2)
+          RPS=$(echo "$RESPONSE" | grep -oP '"requestsPerSecond":\s*[\d.]+' | cut -d':' -f2)
+          
+          echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+          echo "avg_latency=$AVG_LATENCY" >> $GITHUB_OUTPUT
+          echo "p95_latency=$P95_LATENCY" >> $GITHUB_OUTPUT
+          echo "rps=$RPS" >> $GITHUB_OUTPUT
+          
+          echo "✅ Heavy load test completed"
+      
+      - name: Collect application logs
+        if: always()
+        run: |
+          echo "=== Application Log (Last 100 lines) ==="
+          tail -n 100 app.log || echo "No log file found"
+          
+          echo "=== JVM Memory Stats ==="
+          curl -s http://localhost:${{ env.APP_PORT }}/actuator/metrics/jvm.memory.used | jq . || echo "Failed to get metrics"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pressure-test-results
+          path: |
+            *-test-result.json
+            app.log
+      
+      - name: Generate performance report
+        if: always()
+        run: |
+          cat << EOF > performance-report.md
+          # Performance Test Report
+          
+          **Test Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          
+          ## Test Results Summary
+          
+          ### Light Load Test (10 concurrent, 50 requests)
+          - Success Rate: ${{ steps.light-test.outputs.success_rate || 'N/A' }}%
+          - Average Latency: ${{ steps.light-test.outputs.avg_latency || 'N/A' }} ms
+          - P95 Latency: ${{ steps.light-test.outputs.p95_latency || 'N/A' }} ms
+          - Requests/sec: ${{ steps.light-test.outputs.rps || 'N/A' }}
+          
+          ### Medium Load Test (20 concurrent, 100 requests)
+          - Success Rate: ${{ steps.medium-test.outputs.success_rate || 'N/A' }}%
+          - Average Latency: ${{ steps.medium-test.outputs.avg_latency || 'N/A' }} ms
+          - P95 Latency: ${{ steps.medium-test.outputs.p95_latency || 'N/A' }} ms
+          - Requests/sec: ${{ steps.medium-test.outputs.rps || 'N/A' }}
+          
+          ### Heavy Load Test (50 concurrent, 200 requests)
+          - Success Rate: ${{ steps.heavy-test.outputs.success_rate || 'N/A' }}%
+          - Average Latency: ${{ steps.heavy-test.outputs.avg_latency || 'N/A' }} ms
+          - P95 Latency: ${{ steps.heavy-test.outputs.p95_latency || 'N/A' }} ms
+          - Requests/sec: ${{ steps.heavy-test.outputs.rps || 'N/A' }}
+          
+          ## Performance Thresholds
+          
+          | Metric | Threshold | Status |
+          |--------|-----------|--------|
+          | Success Rate (Light) | ≥ 95% | ${{ steps.light-test.outcome }} |
+          | Avg Latency (Light) | ≤ 1000ms | ${{ steps.light-test.outcome }} |
+          | Success Rate (Medium) | ≥ 90% | ${{ steps.medium-test.outcome }} |
+          
+          EOF
+          
+          cat performance-report.md
+      
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: performance-report.md
+      
+      - name: Stop application
+        if: always()
+        run: |
+          pkill -f "java -jar" || true
+      
+      - name: Fail if critical tests failed
+        if: steps.light-test.outcome == 'failure'
+        run: |
+          echo "❌ Critical performance test failed!"
+          exit 1
+
+  # ==================== 性能回归检测 ====================
+  regression-check:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    needs: pressure-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download previous performance data
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: performance-testing.yml
+          branch: main
+          name: performance-report
+          path: previous-report
+        continue-on-error: true
+      
+      - name: Compare performance metrics
+        run: |
+          echo "Checking for performance regressions..."
+          
+          if [ -f "previous-report/performance-report.md" ]; then
+            echo "Previous report found. Comparing metrics..."
+            # Here you would parse and compare the reports
+            echo "⚠️ Detailed comparison not yet implemented"
+          else
+            echo "No previous report found. This is the baseline."
+          fi
+          
+          echo "✅ Regression check completed"

@@ -46,7 +46,6 @@ public class ImageController {
     private final ScanService scanService;
     private final PdfService pdfService;
     private final OssService ossService;
-    private final RestTemplate restTemplate;
 
     public ImageController(ImageProperties imageProperties, ScanService scanService,
                            PdfService pdfService, OssService ossService) {
@@ -54,7 +53,6 @@ public class ImageController {
         this.scanService = scanService;
         this.pdfService = pdfService;
         this.ossService = ossService;
-        this.restTemplate = new RestTemplate();
     }
 
     @Operation(summary = "服务器心跳")
@@ -321,9 +319,5 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
-    }
-
-    public RestTemplate getRestTemplate() {
-        return restTemplate;
     }
 }

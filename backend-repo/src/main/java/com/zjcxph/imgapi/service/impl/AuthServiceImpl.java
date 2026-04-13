@@ -14,6 +14,7 @@ import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import com.zjcxph.imgapi.utils.PasswordUtil;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -65,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Cacheable(value = "userByUsername", key = "#username", unless = "#result == null")
     public AuthSession currentUser() {
         return AuthContext.getCurrentUser();
     }

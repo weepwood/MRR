@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Cacheable(value = "scanByBah", key = "#bah", unless = "#result == null || #result.isEmpty()")
     public List<Scan> getImageListByBAH(String bah) {
         return scanMapper.findBAH(bah);
     }
@@ -102,6 +104,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Cacheable(value = "scanById", key = "#id", unless = "#result == null")
     public Scan findById(Integer id) {
         return scanMapper.findById(id);
     }

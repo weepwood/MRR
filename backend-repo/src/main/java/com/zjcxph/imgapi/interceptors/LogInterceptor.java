@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.entity.Log;
-import com.zjcxph.imgapi.service.LogService;
+import com.zjcxph.imgapi.service.AsyncLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
@@ -17,10 +17,10 @@ import java.util.Date;
 @Component
 public class LogInterceptor implements HandlerInterceptor {
 
-    private final LogService logService;
+    private final AsyncLogService asyncLogService;
 
-    public LogInterceptor(LogService logService) {
-        this.logService = logService;
+    public LogInterceptor(AsyncLogService asyncLogService) {
+        this.asyncLogService = asyncLogService;
     }
 
     @Override
@@ -59,7 +59,8 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setExecuteTime(executeTime);
         log.setReferer(request.getHeader("Referer"));
 
-        logService.saveLog(log);
+        // 异步保存日志,不阻塞请求响应
+        asyncLogService.saveLogAsync(log);
     }
 
     private boolean shouldSkipLogging(HttpServletRequest request, Object handler) {

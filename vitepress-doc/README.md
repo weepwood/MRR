@@ -145,7 +145,9 @@ npm run docs:preview
 
 [链接文本](链接地址)
 
-![图片描述](图片路径)
+```markdown
+![图片描述](https://example.com/image.png)
+```
 
 ::: tip 提示
 提示内容
@@ -163,7 +165,7 @@ npm run docs:preview
 ### 图片资源
 
 - 放置在 `vitepress-doc/public/` 目录下
-- 使用绝对路径引用：`/图片路径/图片名.png`
+- 使用绝对路径引用：`/images/example.png`
 - 示例：`![系统截图](/ai-generation/imgs/v0.0.9_imgs/登录界面.png)`
 
 ## 🎨 主题定制

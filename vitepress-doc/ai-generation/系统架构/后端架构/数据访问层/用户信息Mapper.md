@@ -1,6 +1,6 @@
 # 用户信息Mapper
 
-<cite>
+
 **本文档引用的文件**
 - [UserMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/UserMapper.java)
 - [User.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/User.java)
@@ -16,7 +16,7 @@
 - [AuthUserProfileDTO.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/AuthUserProfileDTO.java)
 - [AuthUserUpdateRequest.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/req/AuthUserUpdateRequest.java)
 - [AuthSession.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/common/AuthSession.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

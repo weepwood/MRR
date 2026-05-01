@@ -1,6 +1,6 @@
 # 日志管理API
 
-<cite>
+
 **本文档引用的文件**
 - [LogController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java)
 - [LogService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/LogService.java)
@@ -17,7 +17,7 @@
 - [logs.ts](file://frontend-fantastic-admin/src/api/modules/logs.ts)
 - [系统日志功能说明.md](file://frontend-repo/docs/guide/系统日志功能说明.md)
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

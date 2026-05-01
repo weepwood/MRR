@@ -1,6 +1,6 @@
 # 日志记录Mapper
 
-<cite>
+
 **本文档引用的文件**
 - [LogMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/LogMapper.java)
 - [Log.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/Log.java)
@@ -12,7 +12,7 @@
 - [LogRetentionCleanupResult.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LogRetentionCleanupResult.java)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

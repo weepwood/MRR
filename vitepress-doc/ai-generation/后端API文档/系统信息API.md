@@ -1,6 +1,6 @@
 # 系统信息API
 
-<cite>
+
 **本文档引用的文件**
 - [SystemInfoController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/SystemInfoController.java)
 - [PressureTestService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/monitoring/PressureTestService.java)
@@ -13,7 +13,7 @@
 - [system.ts（前端repo）](file://frontend-repo/src/api/system.ts)
 - [index.vue（前端监控页面）](file://frontend-fantastic-admin/src/views/monitoring/index.vue)
 - [MonitoringView.vue（前端admin监控）](file://frontend-repo/src/components/admin/MonitoringView.vue)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

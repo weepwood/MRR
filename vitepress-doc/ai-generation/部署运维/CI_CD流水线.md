@@ -1,6 +1,6 @@
 # CI/CD流水线
 
-<cite>
+
 **本文档引用的文件**
 - [.github/workflows/quality-gate.yml](file://.github/workflows/quality-gate.yml)
 - [.github/workflows/version-build.yml](file://.github/workflows/version-build.yml)
@@ -14,7 +14,7 @@
 - [frontend-repo/vite.config.ts](file://frontend-repo/vite.config.ts)
 - [frontend-repo/Dockerfile](file://frontend-repo/Dockerfile)
 - [docker-compose.yml](file://docker-compose.yml)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

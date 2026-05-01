@@ -1,6 +1,6 @@
 # 扫描记录Mapper技术文档
 
-<cite>
+
 **本文档引用的文件**
 - [ScanMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/ScanMapper.java)
 - [Scan.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/Scan.java)
@@ -13,7 +13,7 @@
 - [AuthorizationInterceptor.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java)
 - [RequirePermissions.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/annotation/RequirePermissions.java)
 - [ScanTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/ScanTest.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

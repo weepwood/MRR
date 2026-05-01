@@ -1,6 +1,6 @@
 # Web拦截器与过滤器
 
-<cite>
+
 **本文档引用的文件**
 - [AuthorizationInterceptor.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/AuthorizationInterceptor.java)
 - [LogInterceptor.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java)
@@ -13,7 +13,7 @@
 - [AuthServiceImpl.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/AuthServiceImpl.java)
 - [UserController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java)
 - [SystemInfoController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/SystemInfoController.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

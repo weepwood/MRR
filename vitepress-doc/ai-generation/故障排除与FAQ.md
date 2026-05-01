@@ -1,6 +1,6 @@
 # 故障排除与FAQ
 
-<cite>
+
 **本文引用的文件**
 - [ImageApiApplication.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/ImageApiApplication.java)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
@@ -16,7 +16,7 @@
 - [AuthServiceImpl.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/AuthServiceImpl.java)
 - [AuthContext.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/AuthContext.java)
 - [docker-compose.yml](file://docker-compose.yml)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

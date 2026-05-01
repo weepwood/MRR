@@ -1,6 +1,6 @@
 # mr_scan（扫描记录表）
 
-<cite>
+
 **本文引用的文件**
 - [schema.sql](file://mrr-db/schema.sql)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
@@ -14,7 +14,7 @@
 - [records.ts（后端）](file://frontend-repo/src/api/records.ts)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
 - [ScanTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/ScanTest.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

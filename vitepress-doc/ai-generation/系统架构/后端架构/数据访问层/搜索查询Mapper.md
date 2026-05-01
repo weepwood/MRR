@@ -1,6 +1,6 @@
 # 搜索查询Mapper
 
-<cite>
+
 **本文引用的文件**
 - [SearchMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/SearchMapper.java)
 - [SearchService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/SearchService.java)
@@ -13,7 +13,7 @@
 - [search.ts](file://frontend-fantastic-admin/src/api/modules/search.ts)
 - [records.ts](file://frontend-repo/src/api/records.ts)
 - [SearchControllerTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/SearchControllerTest.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -133,7 +133,7 @@ Ctrl-->>FE : "Result{code,message,data,total}"
 ### SearchMapper 接口与SQL设计
 - 设计目标：根据身份证号进行精确匹配查询，返回患者相关信息（含病案号）。
 - SQL实现：通过MyBatis注解@Select直接声明查询语句，限定字段以减少网络传输与序列化开销。
-- 返回类型：List<Patient>，便于后续服务层统一处理。
+- 返回类型：`List<Patient>`，便于后续服务层统一处理。
 - 性能考量：当前SQL为等值匹配，配合数据库对idcard列建立索引可显著提升命中效率。
 
 ```mermaid

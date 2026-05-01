@@ -1,6 +1,6 @@
 # mr_patient（患者表）
 
-<cite>
+
 **本文档引用的文件**
 - [schema.sql](file://mrr-db/schema.sql)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
@@ -10,7 +10,7 @@
 - [SearchServiceImpl.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/SearchServiceImpl.java)
 - [SearchController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java)
 - [records.ts](file://frontend-fantastic-admin/src/api/modules/records.ts)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

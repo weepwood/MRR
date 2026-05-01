@@ -1,6 +1,6 @@
 # 后端API文档
 
-<cite>
+
 **本文档引用的文件**
 - [ImageApiApplication.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/ImageApiApplication.java)
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
@@ -21,7 +21,7 @@
 - [Scan.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/Scan.java)
 - [UserRequest.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/req/UserRequest.java)
 - [LoginResponseDTO.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -193,14 +193,14 @@ SVC5 --> DB[(PostgreSQL)]
 - 登录
   - 方法与路径：POST /login
   - 请求体：UserRequest（用户名、密码）
-  - 成功响应：Result<LoginResponseDTO>，包含token与用户会话信息
-  - 失败响应：Result<LoginResponseDTO>，错误消息
+  - 成功响应：`Result<LoginResponseDTO>`，包含token与用户会话信息
+  - 失败响应：`Result<LoginResponseDTO>`，错误消息
   - 示例请求：见[UserRequest.java:8-31](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/req/UserRequest.java#L8-L31)
   - 示例响应：见[LoginResponseDTO.java:7-34](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java#L7-L34)
 - 当前用户
   - 方法与路径：GET /v1/auth/me
-  - 成功响应：Result<AuthSession>
-  - 失败响应：Result<AuthSession>，未登录或令牌过期
+  - 成功响应：`Result<AuthSession>`
+  - 失败响应：`Result<AuthSession>`，未登录或令牌过期
 - 用户列表与角色列表
   - 方法与路径：GET /v1/auth/users、GET /v1/auth/roles
   - 需要权限：user:manage、role:read
@@ -208,11 +208,11 @@ SVC5 --> DB[(PostgreSQL)]
 - 更新用户
   - 方法与路径：PUT /v1/auth/users/{id}
   - 请求体：AuthUserUpdateRequest
-  - 成功响应：Result<AuthUserProfileDTO>
+  - 成功响应：`Result<AuthUserProfileDTO>`
   - 失败响应：用户不存在
 - 禁用用户
   - 方法与路径：DELETE /v1/auth/users/{id}
-  - 成功响应：Result<Void>
+  - 成功响应：`Result<Void>`
   - 失败响应：用户不存在
 
 ```mermaid
@@ -226,11 +226,11 @@ Ctrl->>Svc : login(UserRequest)
 Svc->>DB : 校验凭据
 DB-->>Svc : 用户信息
 Svc-->>Ctrl : LoginResponseDTO(token, user)
-Ctrl-->>Client : Result<LoginResponseDTO>
+Ctrl-->>Client : Result&lt;LoginResponseDTO&gt;
 Client->>Ctrl : GET /v1/auth/me
 Ctrl->>Svc : currentUser()
 Svc-->>Ctrl : AuthSession
-Ctrl-->>Client : Result<AuthSession>
+Ctrl-->>Client : Result&lt;AuthSession&gt;
 ```
 
 **图表来源**
@@ -247,7 +247,7 @@ Ctrl-->>Client : Result<AuthSession>
 ### 影像管理 API
 - 心跳检测
   - 方法与路径：GET /v1/img-api/hello
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 下载病案压缩包
   - 方法与路径：GET /v1/img-api/download/{BAH}
   - 参数：BAH（8位数字）
@@ -255,7 +255,7 @@ Ctrl-->>Client : Result<AuthSession>
 - 获取病案号下的图片数据
   - 方法与路径：GET /v1/img-api/{bah}
   - 参数：bah（8位数字）
-  - 成功响应：Result<Object>，包含图片URL与元数据
+  - 成功响应：`Result<Object>`，包含图片URL与元数据
 - 获取单张图片
   - 方法与路径：GET /v1/img-api/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}
   - 参数：BAH、BRXH、FOLDER、FILENAME
@@ -263,7 +263,7 @@ Ctrl-->>Client : Result<AuthSession>
 - 修改图片类型
   - 方法与路径：PUT /v1/img-api/updateImageType/{id}
   - 请求体：ImageRequest（含btype）
-  - 成功响应：Result<Void>
+  - 成功响应：`Result<Void>`
 
 ```mermaid
 sequenceDiagram
@@ -294,24 +294,24 @@ Ctrl-->>Client : image/jpeg + 缓存头
 - 创建扫描记录
   - 方法与路径：POST /v1/scan-api
   - 请求体：ScanRequest
-  - 成功响应：Result<Object>，返回创建后的Scan
+  - 成功响应：`Result<Object>`，返回创建后的Scan
 - 更新扫描记录
   - 方法与路径：PUT /v1/scan-api/{id}
   - 请求体：ScanRequest
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 删除扫描记录
   - 方法与路径：DELETE /v1/scan-api/{id}
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 查询扫描记录
   - 方法与路径：GET /v1/scan-api、GET /v1/scan-api/{id}、GET /v1/scan-api/bah/{bah}、GET /v1/scan-api/brxh/{brxh}
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 分页查询
   - 方法与路径：GET /v1/scan-api/page?page=&size=
-  - 成功响应：Result<Object>，包含list、total、page、size
+  - 成功响应：`Result<Object>`，包含list、total、page、size
 - 条件查询
   - 方法与路径：POST /v1/scan-api/condition、POST /v1/scan-api/page/condition
   - 请求体：ScanRequest
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 批量下载
   - 方法与路径：POST /v1/scan-api/batch-download
   - 请求体：BatchDownloadRequest（ids数组）
@@ -341,15 +341,15 @@ Send --> End
 ### 搜索 API
 - 默认流程：根据身份证（明文）查询病案号
   - 方法与路径：GET /v2/search/getBAHByID/{idCard}
-  - 成功响应：Result<Object>，返回患者列表
+  - 成功响应：`Result<Object>`，返回患者列表
 - 加密ID查询（新方案）
   - 方法与路径：GET /v2/search/getBAHByEncryptID
   - 参数：EncryptID、userId、iv、timestamp
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 加密ID查询（兼容旧版）
   - 方法与路径：GET /v2/search/getBAHByEncryptIDLegacy
   - 参数：EncryptID、userId、iv
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 
 ```mermaid
 sequenceDiagram
@@ -365,7 +365,7 @@ Ctrl->>Svc : getBAHByID(明文身份证)
 Svc->>DB : 查询患者
 DB-->>Svc : 患者列表
 Svc-->>Ctrl : 患者列表
-Ctrl-->>Client : Result<Object>
+Ctrl-->>Client : Result&lt;Object&gt;
 ```
 
 **图表来源**
@@ -378,23 +378,23 @@ Ctrl-->>Client : Result<Object>
 - 分页+条件查询
   - 方法与路径：GET /v1/statistics-api
   - 参数：page、size、keyword、type、startDate、endDate、sortBy、sortOrder
-  - 成功响应：Result<Object>，包含list、total、page、size、totalPages、sortBy、sortOrder
+  - 成功响应：`Result<Object>`，包含list、total、page、size、totalPages、sortBy、sortOrder
 - 按病案号查询
   - 方法与路径：GET /v1/statistics-api/bah/{bah}
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 按日期查询
   - 方法与路径：GET /v1/statistics-api/date/{date}
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 统计汇总
   - 方法与路径：GET /v1/statistics-api/bah-summary、/v1/statistics-api/date-summary、/v1/statistics-api/summary、/v1/statistics-api/type-summary
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 条件统计（按日期范围与类型）
   - 方法与路径：GET /v1/statistics-api/date-summary/condition
   - 参数：startDate、endDate、type
-  - 成功响应：Result<Object>
+  - 成功响应：`Result<Object>`
 - 综合仪表盘
   - 方法与路径：GET /v1/statistics-api/dashboard
-  - 成功响应：Result<Object>，包含概览、近期趋势、TOP病案号等
+  - 成功响应：`Result<Object>`，包含概览、近期趋势、TOP病案号等
 
 **章节来源**
 - [StatisticsController.java:30-281](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/StatisticsController.java#L30-L281)
@@ -406,14 +406,14 @@ Ctrl-->>Client : Result<Object>
 - 清理保留策略
   - 方法与路径：POST /v2/logs/retention/cleanup
   - 参数：cutoff（可选）
-  - 成功响应：Result<LogRetentionCleanupResult>
+  - 成功响应：`Result<LogRetentionCleanupResult>`
 - 导出保留日志
   - 方法与路径：GET /v2/logs/retention/export
   - 成功响应：CSV流，包含导出总量与截止时间头
 - 搜索日志
   - 方法与路径：GET /v2/logs/search
   - 参数：page、size、keyword、clientIp、requestUri、method、responseStatus、startTime、endTime
-  - 成功响应：Result<Map<String, Object>>
+  - 成功响应：Result<`Map<String, Object>`>
 
 **章节来源**
 - [LogController.java:32-245](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/LogController.java#L32-L245)
@@ -542,7 +542,7 @@ POM --> LOMB[Lombok]
 
 ### 响应模型与错误处理
 - 统一响应结构
-  - Result<T>包含code、timestamp、message、data、total
+  - `Result<T>`包含code、timestamp、message、data、total
 - 错误处理策略
   - 参数校验失败返回400
   - 业务逻辑失败返回400

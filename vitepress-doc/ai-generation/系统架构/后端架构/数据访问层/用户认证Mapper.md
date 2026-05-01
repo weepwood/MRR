@@ -1,6 +1,6 @@
 # 用户认证Mapper
 
-<cite>
+
 **本文档引用的文件**
 - [AuthUserMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/AuthUserMapper.java)
 - [AuthUser.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/AuthUser.java)
@@ -13,7 +13,7 @@
 - [JwtUtil.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java)
 - [AuthContext.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/AuthContext.java)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -239,7 +239,7 @@ note right of deleted : 逻辑删除<br/>不参与认证
 
 #### 权限存储结构
 - 角色表存储逗号分隔的权限列表
-- 用户实体提供权限字符串解析为List<String>
+- 用户实体提供权限字符串解析为`List<String>`
 - 支持权限存在性检查
 
 #### 权限解析流程

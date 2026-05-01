@@ -1,6 +1,6 @@
 # 压力测试API
 
-<cite>
+
 **本文档引用的文件**
 - [PressureTestController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/PressureTestController.java)
 - [PressureTestService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/monitoring/PressureTestService.java)
@@ -13,7 +13,7 @@
 - [PressureTestView.vue](file://frontend-repo/src/components/admin/PressureTestView.vue)
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
 - [SYSTEM_ARCHITECTURE.md](file://SYSTEM_ARCHITECTURE.md)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -149,7 +149,7 @@ Controller-->>Client : 成功响应
 | 端点 | 方法 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
 | `/v1/monitoring-api/pressure-tests/run` | POST | 运行压力测试 | PressureTestRequest | PressureTestReport |
-| `/v1/monitoring-api/pressure-tests/history` | GET | 获取测试历史 | 无 | List<PressureTestReport> |
+| `/v1/monitoring-api/pressure-tests/history` | GET | 获取测试历史 | 无 | `List<PressureTestReport>` |
 | `/v1/monitoring-api/pressure-tests/latest` | GET | 获取最新测试结果 | 无 | PressureTestReport 或 null |
 | `/v1/monitoring-api/pressure-tests/{runId}` | GET | 根据运行ID获取报告 | 无 | PressureTestReport 或错误 |
 | `/v1/monitoring-api/pressure-tests/history` | DELETE | 清空测试历史 | 无 | 成功消息 |

@@ -1,6 +1,6 @@
 # JWT认证机制
 
-<cite>
+
 **本文档引用的文件**
 - [JwtUtil.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java)
 - [AuthSession.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/common/AuthSession.java)
@@ -15,7 +15,7 @@
 - [LoginResponseDTO.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
 - [session.ts](file://frontend-repo/src/utils/session.ts)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -296,7 +296,7 @@ RequirePermissions注解提供了声明式的权限控制机制。
 ```java
 @RequirePermissions({"user:manage", "role:read"})
 @GetMapping("/users")
-public List<User> getUsers() {
+public List&lt;User&gt; getUsers() {
     // 只有具备user:manage和role:read权限的用户才能访问
 }
 ```

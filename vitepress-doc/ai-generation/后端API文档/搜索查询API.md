@@ -1,6 +1,6 @@
 # 搜索查询API
 
-<cite>
+
 **本文引用的文件**
 - [SearchController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/SearchController.java)
 - [SearchService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/SearchService.java)
@@ -13,7 +13,7 @@
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
 - [search.ts](file://frontend-fantastic-admin/src/api/modules/search.ts)
 - [SearchControllerTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/SearchControllerTest.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -103,9 +103,9 @@ FE->>CTRL : GET /v2/search/getBAHByID/{idCard}
 CTRL->>SVC : getBAHByID(idCard)
 SVC->>MAP : findBAHByIDCard(idCard)
 MAP->>DB : SELECT ... FROM mr_patient WHERE idcard = ?
-DB-->>MAP : List<Patient>
-MAP-->>SVC : List<Patient>
-SVC-->>CTRL : List<Patient>
+DB-->>MAP : List&lt;Patient&gt;
+MAP-->>SVC : List&lt;Patient&gt;
+SVC-->>CTRL : List&lt;Patient&gt;
 CTRL-->>FE : Result{code, msg, data}
 Note over FE,CTRL : 兼容性流程：新版加密ID(含时间戳)
 FE->>CTRL : GET /v2/search/getBAHByEncryptID?EncryptID&userId&iv&timestamp
@@ -114,9 +114,9 @@ UTIL-->>CTRL : idCard
 CTRL->>SVC : getBAHByID(idCard)
 SVC->>MAP : findBAHByIDCard(idCard)
 MAP->>DB : SELECT ... FROM mr_patient WHERE idcard = ?
-DB-->>MAP : List<Patient>
-MAP-->>SVC : List<Patient>
-SVC-->>CTRL : List<Patient>
+DB-->>MAP : List&lt;Patient&gt;
+MAP-->>SVC : List&lt;Patient&gt;
+SVC-->>CTRL : List&lt;Patient&gt;
 CTRL-->>FE : Result{code, msg, data}
 ```
 
@@ -307,7 +307,7 @@ SearchController --> AESUtil : "解密"
   - 路径参数
     - idCard：字符串，身份证号
   - 响应
-    - Result 对象，包含 code、msg、data（List<Patient>）
+    - Result 对象，包含 code、msg、data（`List<Patient>`）
 
 - 新版加密ID：GET /v2/search/getBAHByEncryptID
   - 查询参数
@@ -316,7 +316,7 @@ SearchController --> AESUtil : "解密"
     - iv：字符串，初始化向量（十六进制）
     - timestamp：字符串，时间戳（用于新版本密钥派生）
   - 响应
-    - Result 对象，包含 code、msg、data（List<Patient>）
+    - Result 对象，包含 code、msg、data（`List<Patient>`）
 
 - 旧版兼容：GET /v2/search/getBAHByEncryptIDLegacy
   - 查询参数
@@ -324,7 +324,7 @@ SearchController --> AESUtil : "解密"
     - userId：字符串，用户标识
     - iv：字符串，初始化向量（十六进制）
   - 响应
-    - Result 对象，包含 code、msg、data（List<Patient>）
+    - Result 对象，包含 code、msg、data（`List<Patient>`）
 
 - 前端调用
   - getBAHByIdCard(idCard)：调用默认流程
@@ -339,7 +339,7 @@ SearchController --> AESUtil : "解密"
   - code：整数，状态码
   - msg：字符串，消息
   - data：对象或数组，实际数据
-- List<Patient>
+- `List<Patient>`
   - id：整数，主键
   - idCard：字符串，身份证号
   - bah：字符串，病案号

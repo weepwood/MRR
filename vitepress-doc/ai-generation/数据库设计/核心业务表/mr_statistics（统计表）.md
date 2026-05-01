@@ -1,6 +1,6 @@
 # mr_statistics（统计表）
 
-<cite>
+
 **本文引用的文件列表**
 - [schema.sql](file://mrr-db/schema.sql)
 - [Statistics.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/Statistics.java)
@@ -15,7 +15,7 @@
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
 - [StatisticsPage.vue](file://frontend-repo/src/views/admin/StatisticsPage.vue)
 - [StatisticsDetailPage.vue](file://frontend-repo/src/views/admin/StatisticsDetailPage.vue)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

@@ -1,6 +1,6 @@
 # 角色权限Mapper
 
-<cite>
+
 **本文档引用的文件**
 - [AuthRoleMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/AuthRoleMapper.java)
 - [AuthRole.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/AuthRole.java)
@@ -13,7 +13,7 @@
 - [WebConfig.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/config/WebConfig.java)
 - [UserController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java)
 - [schema.sql](file://mrr-db/schema.sql)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -168,7 +168,7 @@ AuthRoleMapper --> AuthRole : "返回"
 
 ### 角色权限存储结构与权限字符串处理
 - 存储结构：mr_auth_role表包含code、name、description、permissions、sort_order字段，其中permissions为权限字符串，多个权限以逗号分隔。
-- 权限字符串处理：服务层在构建AuthSession时，将用户权限字符串按逗号分割并去重，最终以List<String>形式存储，便于快速判断权限存在性。
+- 权限字符串处理：服务层在构建AuthSession时，将用户权限字符串按逗号分割并去重，最终以`List<String>`形式存储，便于快速判断权限存在性。
 - 权限验证：AuthSession提供hasPermission方法，AuthorizationInterceptor在拦截请求时对注解声明的权限进行校验。
 
 ```mermaid

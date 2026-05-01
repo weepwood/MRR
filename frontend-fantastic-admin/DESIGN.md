@@ -307,3 +307,11 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 6. The warm white (#f6f5f4) section background is essential for visual rhythm
 7. Pill badges (9999px) for status/tags, 4px radius for buttons and inputs
 8. Notion Blue (#0075de) is the only saturated color in core UI -- use it sparingly for CTAs and links
+
+---
+
+## 相关文档
+
+- **[工程规范](ENGINEERING.md)** — Vue 3 编码约定、API 模式、组件规范、状态管理、路由、性能
+- **[主题变量](themes/index.ts)** — 完整的 HSL 主题色阶定义
+- **[UnoCSS 配置](uno.config.ts)** — 原子化 CSS 预设与自定义规则

@@ -1,6 +1,6 @@
 # Spring Boot配置
 
-<cite>
+
 **本文引用的文件**
 - [ImageApiApplication.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/ImageApiApplication.java)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
@@ -16,7 +16,7 @@
 - [SwaggerConfig.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/config/SwaggerConfig.java)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
 - [pom.xml](file://backend-repo/pom.xml)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

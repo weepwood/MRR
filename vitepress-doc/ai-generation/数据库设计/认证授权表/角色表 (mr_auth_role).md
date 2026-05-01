@@ -1,6 +1,6 @@
 # 角色表 (mr_auth_role)
 
-<cite>
+
 **本文档引用的文件**
 - [schema.sql](file://mrr-db/schema.sql)
 - [AuthRole.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/entity/AuthRole.java)
@@ -13,7 +13,7 @@
 - [PermissionsView.vue](file://frontend-repo/src/components/admin/PermissionsView.vue)
 - [index.vue](file://frontend-fantastic-admin/src/views/permissions/index.vue)
 - [user.ts](file://frontend-repo/src/store/modules/user.ts)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

@@ -1,6 +1,6 @@
 # 扫描记录API
 
-<cite>
+
 **本文档引用的文件**
 - [ScanController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java)
 - [ScanServiceImpl.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/ScanServiceImpl.java)
@@ -16,7 +16,7 @@
 - [records.ts](file://frontend-repo/src/api/records.ts)
 - [records.ts](file://frontend-fantastic-admin/src/api/modules/records.ts)
 - [ScanTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/ScanTest.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -270,14 +270,14 @@ ScanService实现了业务逻辑封装，提供数据访问和文件操作功能
 | `findById(Integer)` | 根据ID查询 | Scan或null |
 | `update(Scan)` | 更新扫描记录 | Scan或null |
 | `deleteById(Integer)` | 删除扫描记录 | boolean |
-| `findAll()` | 获取所有记录 | List<Scan> |
-| `findByBah(String)` | 按病案号查询 | List<Scan> |
-| `findByBrxh(String)` | 按病人序号查询 | List<Scan> |
-| `findAllWithPagination(int,int)` | 分页查询 | List<Scan> |
-| `findByCondition(ScanRequest)` | 条件查询 | List<Scan> |
-| `findByConditionWithPagination(ScanRequest,int,int)` | 条件分页查询 | List<Scan> |
+| `findAll()` | 获取所有记录 | List&lt;Scan&gt; |
+| `findByBah(String)` | 按病案号查询 | List&lt;Scan&gt; |
+| `findByBrxh(String)` | 按病人序号查询 | List&lt;Scan&gt; |
+| `findAllWithPagination(int,int)` | 分页查询 | List&lt;Scan&gt; |
+| `findByCondition(ScanRequest)` | 条件查询 | List&lt;Scan&gt; |
+| `findByConditionWithPagination(ScanRequest,int,int)` | 条件分页查询 | List&lt;Scan&gt; |
 | `countByCondition(ScanRequest)` | 统计符合条件的记录数 | long |
-| `getImagePathList(List<String>)` | 获取文件路径列表 | List<PathDO> |
+| `getImagePathList(List&lt;String&gt;)` | 获取文件路径列表 | List&lt;PathDO&gt; |
 | `getImagePath(String)` | 获取图片路径 | Path或null |
 
 **章节来源**
@@ -292,7 +292,7 @@ ScanMapper使用MyBatis注解实现数据持久化操作。
 | 方法 | 对应SQL | 功能 |
 |------|---------|------|
 | `findBAH(String)` | `SELECT * FROM mr_scan WHERE BAH = #{bah} ORDER BY pages` | 按病案号查询 |
-| `getImagePathList(List<String>)` | `IN`查询语句 | 批量获取文件路径 |
+| `getImagePathList(List&lt;String&gt;)` | `IN`查询语句 | 批量获取文件路径 |
 | `insert(Scan)` | `INSERT`语句 | 创建记录 |
 | `update(Scan)` | `UPDATE`语句（动态） | 更新记录 |
 | `deleteById(Integer)` | `UPDATE uploadflag = 0` | 逻辑删除 |

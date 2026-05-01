@@ -1,6 +1,6 @@
 # Vue应用结构
 
-<cite>
+
 **本文档引用的文件**
 - [main.ts](file://frontend-fantastic-admin/src/main.ts)
 - [App.vue](file://frontend-fantastic-admin/src/App.vue)
@@ -20,7 +20,7 @@
 - [utils/systemCopyright.ts](file://frontend-fantastic-admin/src/utils/systemCopyright.ts)
 - [router/guards.ts](file://frontend-fantastic-admin/src/router/guards.ts)
 - [router/extensions.ts](file://frontend-fantastic-admin/src/router/extensions.ts)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

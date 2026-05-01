@@ -1,6 +1,6 @@
 # 统计数据Mapper技术文档
 
-<cite>
+
 **本文档引用的文件**
 - [StatisticsMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/StatisticsMapper.java)
 - [StatisticsService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/StatisticsService.java)
@@ -13,7 +13,7 @@
 - [StatisticsTest.java](file://backend-repo/src/test/java/com/zjcxph/imgapi/StatisticsTest.java)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
 - [statistics.ts](file://frontend-repo/src/api/statistics.ts)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -213,20 +213,20 @@ StatisticsMapper作为数据访问层的核心接口，设计了全面的统计�
 
 | 方法名 | 参数 | 返回值 | 功能描述 |
 |-------|------|--------|----------|
-| findAll | 无 | List<Statistics> | 查询所有统计数据 |
-| findAllWithPagination | offset, limit | List<Statistics> | 分页查询所有统计数据 |
-| findByBah | bah | List<Statistics> | 根据病案号查询 |
-| findByDate | date | List<Statistics> | 根据日期查询 |
+| findAll | 无 | `List<Statistics>` | 查询所有统计数据 |
+| findAllWithPagination | offset, limit | `List<Statistics>` | 分页查询所有统计数据 |
+| findByBah | bah | `List<Statistics>` | 根据病案号查询 |
+| findByDate | date | `List<Statistics>` | 根据日期查询 |
 
 #### 高级统计方法
 
 | 方法名 | 参数 | 返回值 | 功能描述 |
 |-------|------|--------|----------|
-| getBAHStatistics | 无 | List<BAHStatisticsDTO> | 按病案号统计 |
-| getDateStatistics | 无 | List<DateStatisticsDTO> | 按日期统计 |
-| getDateStatisticsByCondition | startDate, endDate, type | List<DateStatisticsDTO> | 条件日期统计 |
-| getTotalStatistics | 无 | Map<String, Object> | 总体统计信息 |
-| getTypeStatistics | 无 | List<Map<String, Object>> | 类型统计 |
+| getBAHStatistics | 无 | `List<BAHStatisticsDTO>` | 按病案号统计 |
+| getDateStatistics | 无 | `List<DateStatisticsDTO>` | 按日期统计 |
+| getDateStatisticsByCondition | startDate, endDate, type | `List<DateStatisticsDTO>` | 条件日期统计 |
+| getTotalStatistics | 无 | `Map<String, Object>` | 总体统计信息 |
+| getTypeStatistics | 无 | List<`Map<String, Object>`> | 类型统计 |
 
 **章节来源**
 - [StatisticsMapper.java:16-167](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/StatisticsMapper.java#L16-L167)

@@ -1,6 +1,6 @@
 # 用户表 (mr_auth_user)
 
-<cite>
+
 **本文档引用的文件**
 - [schema.sql](file://mrr-db/schema.sql)
 - [schema-postgresql.sql](file://backend-repo/src/main/resources/schema-postgresql.sql)
@@ -14,7 +14,7 @@
 - [LoginResponseDTO.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/dto/resp/LoginResponseDTO.java)
 - [reset-br-admin-password.sql](file://backend-repo/src/main/resources/reset-br-admin-password.sql)
 - [AuthSession.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/common/AuthSession.java)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

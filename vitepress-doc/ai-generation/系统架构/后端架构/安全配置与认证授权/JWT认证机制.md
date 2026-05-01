@@ -1,6 +1,6 @@
 # JWT认证机制
 
-<cite>
+
 **本文档引用的文件**
 - [JwtUtil.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java)
 - [AuthSession.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/common/AuthSession.java)
@@ -10,7 +10,7 @@
 - [AuthServiceImpl.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/AuthServiceImpl.java)
 - [SwaggerConfig.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/config/SwaggerConfig.java)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

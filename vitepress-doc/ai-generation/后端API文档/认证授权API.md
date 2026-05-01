@@ -1,6 +1,6 @@
 # 认证授权API
 
-<cite>
+
 **本文引用的文件**
 - [UserController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java)
 - [AuthService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/AuthService.java)
@@ -17,7 +17,7 @@
 - [AuthUserMapper.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/mapper/AuthUserMapper.java)
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)
@@ -117,14 +117,14 @@ SVC->>MAP : "updateLastLoginAt(userId, now)"
 SVC->>JWT : "getToken(AuthSession)"
 JWT-->>SVC : "token"
 SVC-->>CTRL : "LoginResponseDTO{token,user}"
-CTRL-->>FE : "Result<LoginResponseDTO>"
+CTRL-->>FE : "Result&lt;LoginResponseDTO&gt;"
 FE->>GW : "GET /api/v1/auth/me"
 GW->>INT1 : "拦截并解析 Authorization : Bearer"
 INT1->>JWT : "parseToken(token)"
 JWT-->>INT1 : "AuthSession"
 INT1->>INT2 : "注入会话并放行"
 INT2->>CTRL : "currentUser()"
-CTRL-->>FE : "Result<AuthSession>"
+CTRL-->>FE : "Result&lt;AuthSession&gt;"
 ```
 
 图表来源
@@ -143,7 +143,7 @@ CTRL-->>FE : "Result<AuthSession>"
 - 请求体
   - 字段：username（必填）、password（必填）
 - 成功响应
-  - 结构：Result<LoginResponseDTO>
+  - 结构：`Result<LoginResponseDTO>`
   - LoginResponseDTO 包含：token（字符串）、user（AuthSession）
 - 失败响应
   - 返回 Result.fail，消息包含“用户名或密码错误”、“账号已被禁用，请联系管理员”等
@@ -379,13 +379,13 @@ AuthorizationInterceptor --> AuthContext : "使用"
   - 示例请求
     - POST /login
     - Content-Type: application/json
-    - Body: {"username":"<用户名>","password":"<密码>"}
+    - Body: {"username":"`<用户名>`","password":"`<密码>`"}
   - 示例成功响应
     - {
       "code": 200,
       "message": "Login success",
       "data": {
-        "token": "<JWT>",
+        "token": "`<JWT>`",
         "user": {
           "id": 1,
           "username": "admin",
@@ -408,7 +408,7 @@ AuthorizationInterceptor --> AuthContext : "使用"
 - 获取当前用户
   - 方法：GET
   - 路径：/v1/auth/me
-  - 请求头：Authorization: Bearer <token>
+  - 请求头：Authorization: Bearer `<token>`
   - 成功响应：Result.success(AuthSession)
   - 失败响应：Result.fail("Not logged in or token expired")
 
@@ -416,13 +416,13 @@ AuthorizationInterceptor --> AuthContext : "使用"
   - 方法：GET
   - 路径：/v1/auth/users
   - 需要权限：user:manage
-  - 成功响应：Result.success(List<AuthUserProfileDTO>)
+  - 成功响应：Result.success(`List<AuthUserProfileDTO>`)
 
 - 列出角色
   - 方法：GET
   - 路径：/v1/auth/roles
   - 需要权限：role:read
-  - 成功响应：Result.success(List<AuthRole>)
+  - 成功响应：Result.success(`List<AuthRole>`)
 
 - 更新用户
   - 方法：PUT

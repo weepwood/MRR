@@ -1,6 +1,6 @@
 # PDF处理服务
 
-<cite>
+
 **本文引用的文件**
 - [PdfService.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/service/PdfService.java)
 - [ImageController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java)
@@ -13,7 +13,7 @@
 - [printUtils.ts](file://frontend-repo/src/utils/printUtils.ts)
 - [archivePdf.ts](file://frontend-repo/src/utils/archivePdf.ts)
 - [SKILL.md](file://.trae/skills/nutrient-document-processing/SKILL.md)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

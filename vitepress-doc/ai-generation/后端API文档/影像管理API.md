@@ -1,6 +1,6 @@
 # 影像管理API
 
-<cite>
+
 **本文档引用的文件**
 - [ImageController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/ImageController.java)
 - [ScanController.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/controller/ScanController.java)
@@ -14,7 +14,7 @@
 - [ZipUtil.java](file://backend-repo/src/main/java/com/zjcxph/imgapi/utils/ZipUtil.java)
 - [API_CONTRACT.md](file://backend-repo/API_CONTRACT.md)
 - [application.properties](file://backend-repo/src/main/resources/application.properties)
-</cite>
+
 
 ## 目录
 1. [简介](#简介)

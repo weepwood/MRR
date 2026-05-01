@@ -60,9 +60,6 @@ public class LoginInterceptor implements HandlerInterceptor {
         response.setStatus(401);
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
-        response.getWriter().write(OBJECT_MAPPER.writeValueAsString(Map.of(
-                "code", 401,
-                "message", message
-        )));
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", 401, "message", message));
     }
 }

@@ -70,4 +70,10 @@ class PasswordUtilTest {
     void encode_returnsHash() {
         assertThat(PasswordUtil.encode("number")).hasSize(64);
     }
+
+    @Test
+    @DisplayName("encode — null返回null")
+    void encode_null() {
+        assertThat(PasswordUtil.encode(null)).isNull();
+    }
 }

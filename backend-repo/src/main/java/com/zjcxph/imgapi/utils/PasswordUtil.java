@@ -32,6 +32,9 @@ public final class PasswordUtil {
     }
 
     public static String encode(String number) {
+        if (number == null) {
+            return null;
+        }
         return DigestUtils.sha256Hex(number);
     }
 }

@@ -8,16 +8,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class AuthorizationInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
     public static final String AUTH_SESSION_ATTRIBUTE = "AUTH_SESSION";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -36,7 +39,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
 
         AuthSession session = (AuthSession) request.getAttribute(AUTH_SESSION_ATTRIBUTE);
         if (session == null) {
-            unauthorized(response, "Please login first");
+            writeJsonResponse(response, 401, "Please login first");
             return false;
         }
 
@@ -44,10 +47,10 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        List<String> permissions = session.getPermissions() == null ? java.util.Collections.<String>emptyList() : session.getPermissions();
+        List<String> permissions = session.getPermissions() == null ? java.util.Collections.emptyList() : session.getPermissions();
         boolean allowed = Arrays.stream(annotation.value()).allMatch(permissions::contains);
         if (!allowed) {
-            forbidden(response, "No permission");
+            writeJsonResponse(response, 403, "No permission");
             return false;
         }
 
@@ -55,16 +58,10 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private void unauthorized(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(401);
+    private void writeJsonResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"code\":401,\"message\":\"" + message + "\"}");
-    }
-
-    private void forbidden(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(403);
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"code\":403,\"message\":\"" + message + "\"}");
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", status, "message", message));
     }
 
     private boolean isAdmin(AuthSession session) {

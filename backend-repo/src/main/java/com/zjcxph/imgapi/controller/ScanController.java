@@ -225,13 +225,13 @@ public class ScanController {
         return Result.success(scans);
     }
 
-    @Operation(summary = "鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍")
+    @Operation(summary = "根据条件分页查询扫描记录")
     @PostMapping("/page/condition")
     public Result<PageResult<Scan>> findByConditionWithPagination(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestBody ScanRequest request) {
-        logger.info("鏍规嵁鏉′欢鍒嗛〉鏌ヨ鎵弿璁板綍锛歱age={}, size={}", page, size);
+        logger.info("根据条件分页查询扫描记录: page={}, size={}", page, size);
 
         PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);

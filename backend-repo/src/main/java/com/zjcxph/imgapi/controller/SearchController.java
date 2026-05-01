@@ -74,7 +74,8 @@ public class SearchController {
     @GetMapping("/getBAHByID/{idCard}")
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);
-        logger.info("Found {} records for idCard={}", patients.size(), idCard);
+        String masked = idCard.length() > 4 ? idCard.substring(0, 4) + "***" : "***";
+        logger.info("Found {} records for idCard={}", patients.size(), masked);
         return Result.success(patients);
     }
 

@@ -38,12 +38,13 @@ public class ScanServiceImpl implements ScanService {
         if (baData.isEmpty()) {
             return null;
         }
-        // 文件夹地址 YY.MM.DD
-        String folderPath = baData.get(0).getFolder();
-        // 文件夹的父文件夹,目前截取前 5 位 YY.MM
-        // 注意:如果调整文件夹结构,记得修改此处
+        Scan scan = baData.get(0);
+        String folderPath = scan.getFolder();
+        String brxh = scan.getBrxh();
+        if (folderPath == null || folderPath.length() < 5 || brxh == null) {
+            return null;
+        }
         String parentFolder = folderPath.substring(0, 5);
-        String brxh = baData.get(0).getBrxh();
         String folderName = brxh + "-" + bah;
         return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
         

@@ -1,4 +1,4 @@
- package com.zjcxph.imgapi.config;
+package com.zjcxph.imgapi.config;
 
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.config.RequestConfig;

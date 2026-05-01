@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -86,97 +85,6 @@ public class ImageController {
                 .body(fileSystemResource);
     }
 
-//    @Operation(summary = "下载病案PDF文件(未完成)")
-//    @PostMapping("/pdf")
-    public ResponseEntity<?> pdf(@RequestBody IdRequest request) {
-
-        List<String> ids = request.getId();
-        logger.info("接收到 PDF 生成请求，ids: {}", ids);
-
-        // 判断 id 是否为空
-        if (ids == null || ids.isEmpty()) {
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("code", "400");
-            responseMap.put("message", "参数错误");
-            return new ResponseEntity<>(responseMap, HttpStatus.BAD_REQUEST);
-        }
-
-
-        // 根据 ID 获取图片路径
-        List<PathDO> imagePathList = scanService.getImagePathList(ids);
-        List<String> collect = imagePathList.stream().map(detail ->
-                String.format("%s/%s/%s/%s-%s/%s",
-                        imageProperties.getBasePath(),
-                        detail.getFolder().substring(0, 5),
-                        detail.getFolder(),
-                        detail.getBRXH(),
-                        detail.getBAH(),
-                        detail.getFilename())
-        ).collect(Collectors.toList());
-
-        if (imagePathList.isEmpty()) {
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("code", "404");
-            responseMap.put("message", "未找到图片");
-            return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
-        }
-
-        logger.info("开始生成 PDF");
-        // 格式化时间
-        String time = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss"));
-        String outPdf = "./temp/" + time + ".pdf";
-
-        try {
-            boolean pdfFromImages = pdfService.createPdfFromImages(outPdf, collect);
-            if (!pdfFromImages) {
-                Map<String, Object> responseMap = new HashMap<>();
-                responseMap.put("code", "500");
-                responseMap.put("message", "生成 PDF 失败");
-                return new ResponseEntity<>(responseMap, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            File file = new File(outPdf);
-
-            // 文件为空
-
-            if (!file.exists()) {
-                Map<String, Object> responseMap = new HashMap<>();
-                responseMap.put("code", "404");
-                responseMap.put("message", "文件不存在");
-                return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
-            }
-
-            FileSystemResource fileSystemResource = new FileSystemResource(file);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("Content-Disposition", "inline; filename=sample.pdf");
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentLength(file.length())
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(fileSystemResource);
-
-
-        } catch (Exception e) {
-            logger.error(String.valueOf(e));
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("code", "404");
-            responseMap.put("message", String.valueOf(e));
-            return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
-//            return "生成 PDF 失败";
-        }
-//        return "Received IDs: " + ids;
-    }
-
-    public static String extractYearMonth(String dateStr) {
-        String[] parts = dateStr.split("\\.");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid date format");
-        }
-        return parts[0] + "." + parts[1];
-    }
-
     @Operation(summary = "获取病案号下的图片数据")
     @GetMapping("/{bah}")
     public Result<List<BAHDataResponseDTO>> getDataByBAH(
@@ -190,25 +98,29 @@ public class ImageController {
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
         for (Scan scan : imageListByBAH) {
-            String img_url = imgUrl + "/" + extractYearMonth(scan.getFolder()) + "/" +scan.getFolder() + "/" +
-                    scan.getBrxh()+ "-" + scan.getBah() + "/" + scan.getFilename();
-            BAHDataResponseDTO bAHDataResponseDTO = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, bAHDataResponseDTO);
-            bAHDataResponseDTO.setImg_url(img_url);
+            String folder = scan.getFolder();
+            String brxh = scan.getBrxh();
+            if (folder == null || brxh == null) {
+                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
+                continue;
+            }
+            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
+                    brxh + "-" + scan.getBah() + "/" + scan.getFilename();
+            BAHDataResponseDTO dto = new BAHDataResponseDTO();
+            BeanUtils.copyProperties(scan, dto);
+            dto.setImg_url(img_url);
 
-            // If OSS URL exists, generate a signed URL for private read access
             if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
                     String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-                    bAHDataResponseDTO.setOssUrl(signedUrl);
+                    dto.setOssUrl(signedUrl);
                 } catch (Exception e) {
-                    logger.warn("Failed to generate signed URL for scan {}: {}", scan.getId(), e.getMessage());
+                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
                 }
             }
 
-            items.add(bAHDataResponseDTO);
+            items.add(dto);
         }
-        logger.info("获取 {} 病案号下的图片数据", bah);
         return Result.success(items).message(bah + " 数据获取成功");
     }
 
@@ -224,21 +136,38 @@ public class ImageController {
             @Parameter(description = "文件名", example = "0072.jpg")
             @PathVariable String FILENAME) {
 
+        if (BAH == null || BRXH == null || FOLDER == null || FILENAME == null) {
+            return ResponseEntity.badRequest().body(Result.fail("参数不能为空"));
+        }
+
+        if (FOLDER.length() < 5) {
+            return ResponseEntity.badRequest().body(Result.fail("文件夹格式错误"));
+        }
+
+        if (FILENAME.contains("..") || FOLDER.contains("..") || BAH.contains("..") || BRXH.contains("..")) {
+            logger.warn("检测到路径遍历尝试: BAH={}, BRXH={}, FOLDER={}, FILENAME={}", BAH, BRXH, FOLDER, FILENAME);
+            return ResponseEntity.badRequest().body(Result.fail("非法的路径参数"));
+        }
+
         String folderName = BRXH + "-" + BAH;
         String parentFolder = FOLDER.substring(0, 5);
 
-        Path filePath = Paths.get(imageProperties.getBasePath(), parentFolder, FOLDER, folderName, FILENAME);
+        Path basePath = Paths.get(imageProperties.getBasePath()).normalize();
+        Path resolvedPath = Paths.get(basePath.toString(), parentFolder, FOLDER, folderName, FILENAME).normalize();
+
+        if (!resolvedPath.startsWith(basePath)) {
+            logger.warn("路径遍历拦截: {} 不在允许的基路径内", resolvedPath);
+            return ResponseEntity.badRequest().body(Result.fail("非法的路径参数"));
+        }
+
+        Path filePath = resolvedPath;
 
         logger.info("获取图片:{}", filePath);
-        LocalDateTime timestamp = LocalDateTime.now();
 
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             logger.error("文件不存在:{}", filePath);
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("code", "404");
-            responseMap.put("timestamp", timestamp);
-            responseMap.put("message", "图片不存在");
-            return new ResponseEntity<>(responseMap, HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Result.fail("图片不存在"));
         }
 
         FileSystemResource resource = new FileSystemResource(filePath.toFile());
@@ -255,11 +184,8 @@ public class ImageController {
                     .body(resource);
         } catch (IOException e) {
             logger.error("文件读取错误:{}", filePath, e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("code", "500");
-            errorResponse.put("timestamp", timestamp);
-            errorResponse.put("message", "图片读取错误");
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Result.fail("图片读取错误"));
         }
     }
 
@@ -269,7 +195,7 @@ public class ImageController {
             @PathVariable
             @Parameter(description = "图片id", example = "1")
             Integer id,
-            @RequestBody ImageRequest  req) {
+            @RequestBody ImageRequest req) {
         Integer imageType = req.getBtype();
         if (imageType == null) {
             return Result.fail("图片类型不能为空");
@@ -282,12 +208,11 @@ public class ImageController {
         }
         int result = scanService.updateImageType(id, imageType);
         if (result != 1) {
-            logger.error("修改图片 {} 的类型为 {}", id, imageType);
+            logger.error("修改图片 {} 的类型为 {} 失败", id, imageType);
             return Result.fail("修改图片类型失败");
         }
 
         logger.info("修改图片 {} 的类型为 {}", id, imageType);
-
         return Result.success("修改图片类型成功");
     }
 
@@ -319,5 +244,16 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
+    }
+
+    public static String extractYearMonth(String dateStr) {
+        if (dateStr == null) {
+            throw new IllegalArgumentException("dateStr must not be null");
+        }
+        String[] parts = dateStr.split("\\.");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("Invalid date format: " + dateStr);
+        }
+        return parts[0] + "." + parts[1];
     }
 }

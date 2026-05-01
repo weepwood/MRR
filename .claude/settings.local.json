@@ -1,8 +1,41 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs ls:*)",
-      "mcp__plugin_everything-claude-code_sequential-thinking__sequentialthinking"
-    ]
+      "Read",
+      "Edit(./src/**)",
+      "Write(./src/**)",
+      "MultiEdit(./src/**)",
+      "Bash(pnpm run dev)",
+      "Bash(pnpm run build)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm run test *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git log *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(mkdir *)",
+      "Bash(pnpm lint:tsc)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm test:run)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(curl *)",
+      "Read(./.env*)",
+      "Read(./secrets/**)",
+      "Edit(./.env*)",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(pnpm install *)",
+      "Bash(npx prisma migrate *)"
+    ],
+    "defaultMode": "acceptEdits"
   }
 }

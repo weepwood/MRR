@@ -1,7 +1,11 @@
 /** @type {import('cz-git').UserConfig} */
 export default {
   rules: {
-    // @see: https://commitlint.js.org/#/reference-rules
+    'type-enum': [2, 'always', ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'revert', 'chore']],
+    'type-case': [2, 'always', 'lower-case'],
+    'type-empty': [2, 'never'],
+    'subject-case': [0],
+    'subject-empty': [2, 'never'],
   },
   prompt: {
     alias: { fd: 'docs: fix typos' },

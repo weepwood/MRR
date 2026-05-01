@@ -107,6 +107,35 @@ api.interceptors.response.use(
 
 export default api
 
+/**
+ * 类型安全的 GET 请求。
+ * 已对齐响应拦截器行为，返回 Promise<ApiResult<T>> 而非 AxiosResponse。
+ */
+export function getRequest<T = any>(url: string, config?: import('axios').AxiosRequestConfig): Promise<import('./types').ApiResult<T>> {
+  return api.get(url, config) as Promise<import('./types').ApiResult<T>>
+}
+
+/**
+ * 类型安全的 POST 请求。
+ */
+export function postRequest<T = any, D = any>(url: string, data?: D, config?: import('axios').AxiosRequestConfig): Promise<import('./types').ApiResult<T>> {
+  return api.post(url, data, config) as Promise<import('./types').ApiResult<T>>
+}
+
+/**
+ * 类型安全的 PUT 请求。
+ */
+export function putRequest<T = any, D = any>(url: string, data?: D, config?: import('axios').AxiosRequestConfig): Promise<import('./types').ApiResult<T>> {
+  return api.put(url, data, config) as Promise<import('./types').ApiResult<T>>
+}
+
+/**
+ * 类型安全的 DELETE 请求。
+ */
+export function deleteRequest<T = any>(url: string, config?: import('axios').AxiosRequestConfig): Promise<import('./types').ApiResult<T>> {
+  return api.delete(url, config) as Promise<import('./types').ApiResult<T>>
+}
+
 export * from './modules/auth'
 export * from './modules/image'
 export * from './modules/logs'

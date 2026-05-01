@@ -3,8 +3,7 @@ import type { BAHImageData, BAHRecord } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { downloadBah, getImgApiByBah, updateImageType } from '@/api/modules/image'
-import { getBAHByIdCard } from '@/api/modules/search'
+import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
@@ -31,15 +30,15 @@ const endBah = ref('00855320')
 const contentNotice = ref(`查询 2018 - 2020 期间的住院记录，目前可访问的病案区间为 [${startBah.value}, ${endBah.value}]`)
 
 // ==================== 身份证查询 ====================
-const searchIdCard = ref('')
 const idSearchResults = ref<BAHRecord[]>([])
-const idSearchLoading = ref(false)
 const selectedRecord = ref<BAHRecord | null>(null)
 
 // ==================== 图片查看器 ====================
 const selectedImageIndex = ref(0)
+// @ts-ignore: used as template ref
 const viewerContainer = ref<HTMLElement | null>(null)
 const thumbsContainer = ref<HTMLElement | null>(null)
+// @ts-ignore: used as template ref
 const viewerSplitRef = ref<HTMLElement | null>(null)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 
@@ -144,20 +143,6 @@ async function loadImages() {
   finally {
     loading.value = false
   }
-}
-
-async function _searchByIdCard() {
-  if (!searchIdCard.value) { idSearchResults.value = []; return }
-  idSearchLoading.value = true
-  try {
-    const res = await getBAHByIdCard(searchIdCard.value)
-    const data = res.data
-    idSearchResults.value = Array.isArray(data) ? data : []
-    const firstInRange = idSearchResults.value.find(r => isBahClickable(r.bah))
-    if (firstInRange) { selectRecord(firstInRange) }
-  }
-  catch { idSearchResults.value = [] }
-  finally { idSearchLoading.value = false }
 }
 
 // ==================== 选择和导航 ====================
@@ -402,35 +387,6 @@ function setThumbsViewMode(mode: 'icons' | 'details') {
     setupThumbObserver()
     scrollActiveThumbIntoView('keyboard')
   })
-}
-
-// ==================== 下载 ====================
-async function _downloadBahZip() {
-  if (!searchBah.value.trim()) { ElMessage.warning('请先输入病案号'); return }
-  if (images.value.length === 0) { ElMessage.warning('没有找到相关病案数据，无法下载'); return }
-  downloading.value = true
-  try {
-    const response = await downloadBah(searchBah.value)
-    if (response.status !== 200) { throw new Error('下载失败：服务器响应错误') }
-    const blob = new Blob([response.data], { type: 'application/zip' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `病案_${searchBah.value}_${new Date().toISOString().slice(0, 10)}.zip`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    ElMessage.success('下载成功')
-  }
-  catch (err: any) {
-    let msg = '下载失败，请重试'
-    if (err?.response?.status === 404) { msg = '未找到该病案的压缩包' }
-    else if (err?.response?.status === 500) { msg = '服务器错误，请稍后重试' }
-    else if (err?.message) { msg = err.message }
-    ElMessage.error(msg)
-  }
-  finally { downloading.value = false }
 }
 
 // ==================== 类型修改 ====================

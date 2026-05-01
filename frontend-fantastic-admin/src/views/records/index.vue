@@ -64,13 +64,12 @@ async function loadData() {
   loading.value = true
   try {
     const hasConditions = Object.values(buildRequest()).some(Boolean)
-    const response = hasConditions
+    const { data: pageResult } = hasConditions
       ? await getScanByCondition(buildRequest(), page.value, size.value)
       : await getScanList({ page: page.value, size: size.value })
 
-    const payload = response.data || {}
-    tableData.value = Array.isArray(payload.list) ? payload.list : []
-    total.value = Number(payload.total || tableData.value.length || 0)
+    tableData.value = Array.isArray(pageResult?.list) ? pageResult!.list : []
+    total.value = Number(pageResult?.total ?? tableData.value.length)
   }
   catch (error: any) {
     tableData.value = []

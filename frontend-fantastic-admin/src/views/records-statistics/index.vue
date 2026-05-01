@@ -77,12 +77,6 @@ const chartHeight = svgHeight - paddingTop - paddingBottom
 const minDateCountForScroll = 100
 
 // ---------- computed ----------
-const _statisticsTypeOptions = computed(() =>
-  (summaryData.value.byType ?? [])
-    .map(i => i.type)
-    .filter((t): t is string => !!t && t !== 'NULL'),
-)
-
 const sortedDateData = computed<DateStatItem[]>(() => {
   const valid = (dateSummaryData.value ?? []).filter(
     i => i && i.date && i.date.trim() !== '' && i.date !== 'NULL',
@@ -198,18 +192,6 @@ function formatDateShort(dateStr?: string) {
   const parts = dateStr.split('/')
   return parts.length >= 2 ? `${parts[1]}/${parts[2]}` : dateStr
 }
-function _getTypeTagType(type?: string): '' | 'success' | 'warning' | 'info' {
-  const map: Record<string, '' | 'success' | 'warning' | 'info'> = {
-    普通: '',
-    质控: 'success',
-    高拍: 'warning',
-    unknown: 'info',
-  }
-  return map[type ?? ''] ?? 'info'
-}
-function _computeTableIndex(index: number) {
-  return (currentPage.value - 1) * pageSize.value + index + 1
-}
 function getBackendSortOrder(order: string) {
   return order === 'ascending' ? 'asc' : 'desc'
 }
@@ -281,32 +263,6 @@ async function loadStatisticsList() {
   finally {
     loading.value = false
   }
-}
-
-function _handleListSearch() {
-  currentPage.value = 1
-  loadStatisticsList()
-}
-function _resetListSearch() {
-  listSearchKeyword.value = ''
-  listSearchType.value = ''
-  listSearchDateRange.value = []
-  currentPage.value = 1
-  loadStatisticsList()
-}
-function _handleSizeChange(v: number) {
-  pageSize.value = v
-  currentPage.value = 1
-  loadStatisticsList()
-}
-function _handleCurrentChange(v: number) {
-  currentPage.value = v
-  loadStatisticsList()
-}
-function _handleTableSortChange({ prop, order }: { prop: string, order: string }) {
-  tableSort.value = { prop: prop || 'date', order: order || 'descending' }
-  currentPage.value = 1
-  loadStatisticsList()
 }
 
 // ---------- lifecycle ----------

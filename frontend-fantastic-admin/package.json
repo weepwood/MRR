@@ -18,9 +18,13 @@
     "lint:tsc": "vue-tsc -b",
     "lint:eslint": "eslint . --cache --fix",
     "lint:stylelint": "stylelint \"src/**/*.{css,scss,vue}\" --cache --fix",
+    "lint:last-commit": "commitlint --from HEAD~1 --to HEAD",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks",
     "taze": "taze minor -wIr",
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "test:coverage": "vitest run --coverage",
     "commit": "git cz",
     "release": "bumpp"
   },
@@ -62,9 +66,11 @@
   "devDependencies": {
     "@antfu/eslint-config": "^7.7.3",
     "@clack/prompts": "^1.1.0",
+    "@commitlint/cli": "^19.8.1",
     "@faker-js/faker": "^10.4.0",
     "@iconify/json": "^2.2.456",
     "@iconify/vue": "^5.0.0",
+    "@pinia/testing": "^1.0.3",
     "@stylistic/stylelint-config": "^5.0.0",
     "@types/nprogress": "^0.2.3",
     "@types/path-browserify": "^1.0.3",
@@ -75,6 +81,7 @@
     "@vitejs/plugin-legacy": "^8.0.1",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vitejs/plugin-vue-jsx": "^5.1.5",
+    "@vue/test-utils": "^2.4.10",
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.4.27",
     "boxen": "^8.0.1",
@@ -83,6 +90,7 @@
     "eslint": "^10.1.0",
     "fs-extra": "^11.3.4",
     "http-server": "^14.1.1",
+    "jsdom": "^26.1.0",
     "lint-staged": "^16.4.0",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
@@ -116,10 +124,12 @@
     "vite-plugin-svg-icons": "^2.0.1",
     "vite-plugin-vue-devtools": "^8.1.1",
     "vite-plugin-vue-meta-layouts": "^0.6.1",
+    "vitest": "^3.2.4",
     "vue-tsc": "^3.2.6"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",
+    "commit-msg": "pnpm commitlint --edit $1",
     "preserveUnused": true
   },
   "config": {

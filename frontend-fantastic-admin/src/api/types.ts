@@ -1,3 +1,19 @@
+/** 后端统一响应格式 */
+export interface ApiResult<T = unknown> {
+  code?: number
+  message?: string
+  data?: T
+  timestamp?: string
+}
+
+/** 分页响应包装 */
+export interface PaginatedResult<T> {
+  list: T[]
+  total: number
+  page: number
+  size: number
+}
+
 /** 扫描记录 */
 export interface ScanRecord {
   id?: number

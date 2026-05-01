@@ -22,9 +22,17 @@ class ResultTest {
     @Test
     @DisplayName("success(data) — 自动推断泛型")
     void success_withData() {
-        Result<String> result = Result.success("hello");
+        Result<Integer> result = Result.success(42);
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getData()).isEqualTo("hello");
+        assertThat(result.getData()).isEqualTo(42);
+    }
+
+    @Test
+    @DisplayName("success(msg, data) — 同时指定消息和数据")
+    void success_withMessageAndData() {
+        Result<String> result = Result.success("查询成功", "data");
+        assertThat(result.getMessage()).isEqualTo("查询成功");
+        assertThat(result.getData()).isEqualTo("data");
     }
 
     @Test

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -67,17 +66,14 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("正常登录 — 返回 Token 和用户信息")
         void login_success() {
-            // given
             UserRequest req = new UserRequest();
             req.setUsername("admin");
             req.setPassword("123456");
             when(authUserMapper.findByUsername("admin")).thenReturn(mockUser);
             when(authUserMapper.updateLastLoginAt(eq(1L), any(LocalDateTime.class))).thenReturn(1);
 
-            // when
             LoginResponseDTO result = authService.login(req);
 
-            // then
             assertThat(result).isNotNull();
             assertThat(result.getToken()).isNotBlank();
             assertThat(result.getUser()).isNotNull();
@@ -87,8 +83,8 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("用户名为空 — 抛出 IllegalArgumentException")
-        void login_emptyUsername_throwsException() {
+        @DisplayName("用户名为空 — 抛出异常")
+        void login_emptyUsername() {
             UserRequest req = new UserRequest();
             req.setUsername("");
             req.setPassword("123456");
@@ -99,8 +95,8 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("用户不存在 — 抛出 IllegalArgumentException")
-        void login_userNotFound_throwsException() {
+        @DisplayName("用户不存在 — 抛出异常")
+        void login_userNotFound() {
             UserRequest req = new UserRequest();
             req.setUsername("ghost");
             req.setPassword("123456");
@@ -112,8 +108,8 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("密码错误 — 抛出 IllegalArgumentException")
-        void login_wrongPassword_throwsException() {
+        @DisplayName("密码错误 — 抛出异常")
+        void login_wrongPassword() {
             UserRequest req = new UserRequest();
             req.setUsername("admin");
             req.setPassword("wrong_password");
@@ -125,8 +121,8 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("账号被禁用 — 抛出 IllegalStateException")
-        void login_disabledUser_throwsException() {
+        @DisplayName("账号禁用 — 抛出 BusinessException")
+        void login_disabledUser() {
             mockUser.setStatus("disabled");
             UserRequest req = new UserRequest();
             req.setUsername("admin");
@@ -134,7 +130,7 @@ class AuthServiceImplTest {
             when(authUserMapper.findByUsername("admin")).thenReturn(mockUser);
 
             assertThatThrownBy(() -> authService.login(req))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
                     .hasMessageContaining("禁用");
         }
     }
@@ -144,7 +140,7 @@ class AuthServiceImplTest {
     class ListUsersTests {
 
         @Test
-        @DisplayName("返回所有用户的 Profile 列表")
+        @DisplayName("返回所有用户 Profile 列表")
         void listUsers_returnsProfiles() {
             when(authUserMapper.findAll()).thenReturn(List.of(mockUser));
 
@@ -161,14 +157,45 @@ class AuthServiceImplTest {
     class DisableUserTests {
 
         @Test
-        @DisplayName("禁用用户 — 返回影响行数")
+        @DisplayName("禁用用户返回影响行数")
         void disableUser_success() {
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.updateStatus(1L, "disabled")).thenReturn(1);
 
             int result = authService.disableUser(1L);
 
             assertThat(result).isEqualTo(1);
             verify(authUserMapper).updateStatus(1L, "disabled");
+        }
+    }
+
+    @Nested
+    @DisplayName("currentUser 方法")
+    class CurrentUserTests {
+
+        @Test
+        @DisplayName("未登录时返回null")
+        void currentUser_notLoggedIn() {
+            assertThat(authService.currentUser()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("listRoles 方法")
+    class ListRolesTests {
+
+        @Test
+        @DisplayName("返回所有角色列表")
+        void listRoles_returnsRoles() {
+            var role = new com.zjcxph.imgapi.entity.AuthRole();
+            role.setCode("ADMIN");
+            role.setName("管理员");
+            when(authRoleMapper.findAll()).thenReturn(List.of(role));
+
+            var roles = authService.listRoles();
+
+            assertThat(roles).hasSize(1);
+            assertThat(roles.getFirst().getCode()).isEqualTo("ADMIN");
         }
     }
 }

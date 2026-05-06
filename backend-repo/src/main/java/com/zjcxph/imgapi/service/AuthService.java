@@ -11,6 +11,7 @@ import java.util.List;
 
 public interface AuthService {
     LoginResponseDTO login(UserRequest req);
+    void register(UserRequest req);
 
     AuthSession currentUser();
 

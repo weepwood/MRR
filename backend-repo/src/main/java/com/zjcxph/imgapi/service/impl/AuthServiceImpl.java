@@ -62,6 +62,28 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void register(UserRequest req) {
+        String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
+        String password = Optional.ofNullable(req.getPassword()).map(String::trim).orElse("");
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            throw new IllegalArgumentException("用户名和密码不能为空");
+        }
+        if (password.length() < 6 || password.length() > 18) {
+            throw new IllegalArgumentException("密码长度应为6到18位");
+        }
+        if (authUserMapper.findByUsername(username) != null) {
+            throw new IllegalArgumentException("用户名已存在");
+        }
+        AuthUser user = new AuthUser();
+        user.setUsername(username);
+        user.setDisplayName(username);
+        user.setPasswordHash(PasswordUtil.encode(password));
+        user.setRoleCode("NURSE");
+        user.setStatus("active");
+        authUserMapper.insertUser(user);
+    }
+
+    @Override
     public AuthSession currentUser() {
         return AuthContext.getCurrentUser();
     }

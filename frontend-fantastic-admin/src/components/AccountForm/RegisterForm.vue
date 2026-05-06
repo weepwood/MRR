@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
+import { ElMessage } from 'element-plus'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
+import apiUser from '@/api/modules/user'
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 
 defineOptions({
@@ -36,9 +38,26 @@ const form = useForm({
     checkPassword: '',
   },
 })
-const onSubmit = form.handleSubmit((values) => {
+function resolveMessage(payload: any, fallback: string): string {
+  return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
+}
+
+const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
-  emits('onRegister', values.account)
+  try {
+    await apiUser.register({
+      account: values.account,
+      password: values.password,
+    })
+    ElMessage({ message: '注册成功，请登录', type: 'success' })
+    emits('onRegister', values.account)
+  }
+  catch (err: any) {
+    ElMessage({ message: resolveMessage(err.response?.data, '注册失败，请重试'), type: 'error' })
+  }
+  finally {
+    loading.value = false
+  }
 })
 </script>
 

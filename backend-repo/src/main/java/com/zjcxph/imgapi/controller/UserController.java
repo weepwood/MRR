@@ -46,6 +46,13 @@ public class UserController {
         return Result.<LoginResponseDTO>success("Login success").data(response);
     }
 
+    @Operation(summary = "Register")
+    @PostMapping("/v1/auth/register")
+    public Result<Void> register(@Valid @RequestBody UserRequest req) {
+        authService.register(req);
+        return Result.<Void>success("Register success");
+    }
+
     @Operation(summary = "Current user")
     @GetMapping("/v1/auth/me")
     public Result<AuthSession> currentUser() {

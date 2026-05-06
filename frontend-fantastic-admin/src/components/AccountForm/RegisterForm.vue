@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
+import { ElMessage } from 'element-plus'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
+import apiUser from '@/api/modules/user'
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 
 defineOptions({
@@ -17,7 +19,12 @@ const emits = defineEmits<{
   onRegister: [account?: string]
 }>()
 
+const userStore = useUserStore()
 const loading = ref(false)
+
+function resolveMessage(payload: any, fallback: string): string {
+  return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
+}
 
 const form = useForm({
   validationSchema: toTypedSchema(
@@ -36,9 +43,36 @@ const form = useForm({
     checkPassword: '',
   },
 })
-const onSubmit = form.handleSubmit((values) => {
+
+const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
-  emits('onRegister', values.account)
+  try {
+    const res = await apiUser.register({ account: values.account, password: values.password })
+    const payload = res.data || {}
+    const registerData = payload.data || payload
+    const token = registerData?.token || registerData?.accessToken || registerData?.jwt
+
+    if (token) {
+      userStore.setSession({
+        token,
+        user: registerData?.user || registerData?.profile || payload?.user || {},
+      })
+      ElMessage({ message: '注册成功，欢迎加入！', type: 'success' })
+      emits('onRegister', values.account)
+    }
+    else {
+      const msg = resolveMessage(payload, '注册失败，请稍后重试')
+      ElMessage({ message: msg, type: 'error' })
+    }
+  }
+  catch (err: any) {
+    console.error('Registration failed:', err)
+    const msg = resolveMessage(err.response?.data, '注册失败，请重试')
+    ElMessage({ message: msg, type: 'error', grouping: true, offset: 90 })
+  }
+  finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -47,10 +81,10 @@ const onSubmit = form.handleSubmit((values) => {
     <form @submit="onSubmit">
       <div class="mb-8 space-y-2">
         <h3 class="text-4xl color-[var(--el-text-color-primary)] font-bold">
-          探索从这里开始 🚀
+          创建新帐号
         </h3>
         <p class="text-sm text-muted-foreground lg:text-base">
-          演示系统未提供该功能
+          注册后默认分配医生角色权限
         </p>
       </div>
       <FormField v-slot="{ componentField, errors }" name="account">

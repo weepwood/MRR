@@ -154,7 +154,7 @@ onMounted(() => {
             </p>
             <RegisterForm
               :account="loginAccount"
-              @on-register="(val) => { loginAccount = val; formType = 'login' }"
+              @on-register="onLoginSuccess"
               @on-login="formType = 'login'"
             />
           </div>

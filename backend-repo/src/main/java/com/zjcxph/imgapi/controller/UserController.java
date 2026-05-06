@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.RegisterRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,6 +64,27 @@ public class UserController {
         // 记录成功登录日志并返回响应
         logger.info("User {} logged in successfully", req.getUsername());
         return Result.<LoginResponseDTO>success("Login success").data(response);
+    }
+
+    /**
+     * 用户注册接口。
+     * <p>
+     * 创建新用户账号，默认分配 DOCTOR 角色。
+     * 注册成功后自动登录，返回包含 Token 的登录响应。
+     * </p>
+     *
+     * @param req 用户注册请求对象，包含用户名、密码和可选的显示名称，必须通过参数校验
+     * @return Result<LoginResponseDTO> 统一响应结果，包含 Token 和用户信息
+     */
+    @Operation(summary = "用户注册")
+    @PostMapping("/register")
+    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req) {
+        LoginResponseDTO response = authService.register(req);
+        if (response.getToken() == null || response.getToken().isBlank()) {
+            return Result.<LoginResponseDTO>fail("Registration failed");
+        }
+        logger.info("User {} registered successfully", req.getUsername());
+        return Result.<LoginResponseDTO>success("Registration success").data(response);
     }
 
     /**

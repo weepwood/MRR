@@ -212,6 +212,19 @@ export interface LoginResponse {
   user?: AuthUser
 }
 
+/** 注册请求 */
+export interface RegisterRequest {
+  username: string
+  password: string
+  displayName?: string
+}
+
+/** 注册响应（与登录响应结构一致） */
+export interface RegisterResponse {
+  token?: string
+  user?: AuthUser
+}
+
 /** OSS 上传结果 */
 export interface OssUploadResult {
   scanId?: number

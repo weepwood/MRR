@@ -6,6 +6,12 @@ export default {
     password: data.password,
   }, { skipGlobalError: true }),
 
+  register: (data: { account: string, password: string, displayName?: string }) => api.post('/api/v1/auth/register', {
+    username: data.account,
+    password: data.password,
+    displayName: data.displayName,
+  }, { skipGlobalError: true }),
+
   permission: () => api.get('/api/v1/auth/me', { skipGlobalError: true }),
 
   passwordEdit: (data: { password: string, newPassword: string }) => api.post('/api/v1/auth/password/edit', data),

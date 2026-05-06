@@ -28,6 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/api/v1/auth/login",
+                        "/api/v1/auth/register",
                         "/api/v1/img/hello",
                         "/api/v1/system/**",
                         "/api/v1/statistics/**",

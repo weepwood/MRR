@@ -20,7 +20,8 @@
       "Bash(mkdir *)",
       "Bash(pnpm lint:tsc)",
       "Bash(pnpm build *)",
-      "Bash(pnpm test:run)"
+      "Bash(pnpm test:run)",
+      "Bash(mvn compile:*)"
     ],
     "deny": [
       "Bash(rm -rf *)",

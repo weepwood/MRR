@@ -1,7 +1,12 @@
 import api from '../index'
+import type { RegisterRequest } from '../types'
 
 export function login(credentials: { username: string, password: string }) {
   return api.post('/api/v1/auth/login', credentials, { skipGlobalError: true })
+}
+
+export function register(data: RegisterRequest) {
+  return api.post('/api/v1/auth/register', data, { skipGlobalError: true })
 }
 
 export function getCurrentUser() {

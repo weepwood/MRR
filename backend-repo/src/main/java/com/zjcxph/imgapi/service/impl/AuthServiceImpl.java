@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
+import com.zjcxph.imgapi.dto.req.RegisterRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.service.AuthService;
@@ -61,6 +62,38 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(now);
 
         AuthSession session = toSession(user);
+        return new LoginResponseDTO(JwtUtil.getToken(session), session);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginResponseDTO register(RegisterRequest req) {
+        String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
+        String password = Optional.ofNullable(req.getPassword()).map(String::trim).orElse("");
+
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            throw new IllegalArgumentException("用户名和密码不能为空");
+        }
+        if (password.length() < 6 || password.length() > 18) {
+            throw new IllegalArgumentException("密码长度为6到18位");
+        }
+
+        AuthUser existing = authUserMapper.findByUsername(username);
+        if (existing != null) {
+            throw new BusinessException("用户名已存在");
+        }
+
+        AuthUser user = new AuthUser();
+        user.setUsername(username);
+        user.setDisplayName(Optional.ofNullable(req.getDisplayName()).map(String::trim).orElse(username));
+        user.setPasswordHash(PasswordUtil.sha256(password));
+        user.setRoleCode("DOCTOR");
+        user.setStatus("active");
+
+        authUserMapper.insertUser(user);
+
+        AuthUser created = authUserMapper.findByUsername(username);
+        AuthSession session = toSession(created);
         return new LoginResponseDTO(JwtUtil.getToken(session), session);
     }
 

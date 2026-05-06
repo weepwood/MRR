@@ -16,6 +16,7 @@ const currentLog = ref<any>(null)
 
 const filters = reactive({
   keyword: '',
+  username: '',
   clientIp: '',
   requestUri: '',
   method: '',
@@ -40,6 +41,9 @@ function buildParams() {
   const params: Record<string, any> = { page: page.value, size: size.value }
   if (filters.keyword.trim()) {
     params.keyword = filters.keyword.trim()
+  }
+  if (filters.username.trim()) {
+    params.username = filters.username.trim()
   }
   if (filters.clientIp.trim()) {
     params.clientIp = filters.clientIp.trim()
@@ -95,6 +99,7 @@ function handleSearch() {
 
 function resetFilters() {
   filters.keyword = ''
+  filters.username = ''
   filters.clientIp = ''
   filters.requestUri = ''
   filters.method = ''
@@ -188,7 +193,10 @@ onMounted(loadData)
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="关键字">
-          <el-input v-model="filters.keyword" clearable placeholder="URI / Body / UA" @keyup.enter="handleSearch" />
+          <el-input v-model="filters.keyword" clearable placeholder="URI / Body / UA / 用户名" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="用户">
+          <el-input v-model="filters.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="客户端 IP">
           <el-input v-model="filters.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
@@ -232,6 +240,11 @@ onMounted(loadData)
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="username" label="用户" min-width="120">
+          <template #default="{ row }">
+            {{ row.username || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
@@ -282,6 +295,9 @@ onMounted(loadData)
       <el-descriptions v-if="currentLog" :column="2" border>
         <el-descriptions-item label="ID">
           {{ currentLog.id || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="用户">
+          {{ currentLog.username || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="客户端 IP">
           {{ currentLog.clientIp || '-' }}

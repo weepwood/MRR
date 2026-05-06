@@ -1,6 +1,7 @@
 create table main.access_log
 (
     id              INTEGER primary key autoincrement,
+    username        TEXT,
     client_ip       TEXT,
     request_uri     TEXT,
     method          TEXT,

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public interface LogMapper {
 
     String BASE_COLUMNS = "id, " +
+            "username, " +
             "client_ip AS clientIp, " +
             "request_uri AS requestUri, " +
             "method, " +
@@ -21,8 +22,8 @@ public interface LogMapper {
             "execute_time AS executeTime, " +
             "referer";
     
-    @Insert("INSERT INTO access_log (client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer) " +
-            "VALUES (#{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer})")
+    @Insert("INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer) " +
+            "VALUES (#{username}, #{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Log log);
 
@@ -54,6 +55,7 @@ public interface LogMapper {
     // 动态搜索日志 - XML 实现
     List<Log> search(
             @Param("keyword") String keyword,
+            @Param("username") String username,
             @Param("clientIp") String clientIp,
             @Param("requestUri") String requestUri,
             @Param("method") String method,
@@ -67,6 +69,7 @@ public interface LogMapper {
     // 动态搜索日志总数 - XML 实现
     int countSearch(
             @Param("keyword") String keyword,
+            @Param("username") String username,
             @Param("clientIp") String clientIp,
             @Param("requestUri") String requestUri,
             @Param("method") String method,

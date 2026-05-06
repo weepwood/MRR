@@ -7,6 +7,7 @@ import java.util.Date;
 @Data
 public class Log {
     private Long id;
+    private String username;
     private String clientIp;
     private String requestUri;
     private String method;
@@ -35,6 +36,7 @@ public class Log {
     public String toString() {
         return "Log{" +
                 "id=" + id +
+                ", username='" + username + '\'' +
                 ", clientIp='" + clientIp + '\'' +
                 ", requestUri='" + requestUri + '\'' +
                 ", method='" + method + '\'' +

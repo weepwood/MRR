@@ -24,6 +24,7 @@
     <!-- 查询指定时间之前的日志（带分页） -->
     <select id="findOlderThan" resultType="com.zjcxph.imgapi.entity.Log">
         SELECT id,
+               username,
                client_ip       AS clientIp,
                request_uri     AS requestUri,
                method,
@@ -44,6 +45,7 @@
     <select id="search" resultType="com.zjcxph.imgapi.entity.Log">
         SELECT
             id,
+            username,
             client_ip AS clientIp,
             request_uri AS requestUri,
             method,
@@ -57,12 +59,16 @@
         FROM access_log
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (client_ip LIKE '%' || #{keyword} || '%'
+                AND (username LIKE '%' || #{keyword} || '%'
+                    OR client_ip LIKE '%' || #{keyword} || '%'
                     OR request_uri LIKE '%' || #{keyword} || '%'
                     OR query_string LIKE '%' || #{keyword} || '%'
                     OR user_agent LIKE '%' || #{keyword} || '%'
                     OR request_body LIKE '%' || #{keyword} || '%'
                     OR referer LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="username != null and username != ''">
+                AND username LIKE '%' || #{username} || '%'
             </if>
             <if test="clientIp != null and clientIp != ''">
                 AND client_ip LIKE '%' || #{clientIp} || '%'
@@ -92,12 +98,16 @@
         SELECT COUNT(*) FROM access_log
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (client_ip LIKE '%' || #{keyword} || '%'
+                AND (username LIKE '%' || #{keyword} || '%'
+                    OR client_ip LIKE '%' || #{keyword} || '%'
                     OR request_uri LIKE '%' || #{keyword} || '%'
                     OR query_string LIKE '%' || #{keyword} || '%'
                     OR user_agent LIKE '%' || #{keyword} || '%'
                     OR request_body LIKE '%' || #{keyword} || '%'
                     OR referer LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="username != null and username != ''">
+                AND username LIKE '%' || #{username} || '%'
             </if>
             <if test="clientIp != null and clientIp != ''">
                 AND client_ip LIKE '%' || #{clientIp} || '%'

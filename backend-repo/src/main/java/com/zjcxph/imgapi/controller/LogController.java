@@ -128,7 +128,7 @@ public class LogController {
         StreamingResponseBody body = outputStream -> {
             try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
                 writer.write('\ufeff');
-                writer.write("id,client_ip,request_uri,method,user_agent,access_time,query_string,request_body,response_status,execute_time,referer");
+                writer.write("id,username,client_ip,request_uri,method,user_agent,access_time,query_string,request_body,response_status,execute_time,referer");
                 writer.newLine();
 
                 int offset = 0;
@@ -160,6 +160,7 @@ public class LogController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String username,
             @RequestParam(required = false) String clientIp,
             @RequestParam(required = false) String requestUri,
             @RequestParam(required = false) String method,
@@ -171,6 +172,7 @@ public class LogController {
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
 
         String normalizedKeyword = normalize(keyword);
+        String normalizedUsername = normalize(username);
         String normalizedClientIp = normalize(clientIp);
         String normalizedRequestUri = normalize(requestUri);
         String normalizedMethod = normalize(method);
@@ -180,6 +182,7 @@ public class LogController {
 
         List<Log> list = logService.searchLogs(
                 normalizedKeyword,
+                normalizedUsername,
                 normalizedClientIp,
                 normalizedRequestUri,
                 normalizedMethod,
@@ -191,6 +194,7 @@ public class LogController {
         );
         int total = logService.countSearchLogs(
                 normalizedKeyword,
+                normalizedUsername,
                 normalizedClientIp,
                 normalizedRequestUri,
                 normalizedMethod,
@@ -218,6 +222,7 @@ public class LogController {
     private String toCsvRow(Log log) {
         return String.join(",",
                 csvCell(log.getId()),
+                csvCell(log.getUsername()),
                 csvCell(log.getClientIp()),
                 csvCell(log.getRequestUri()),
                 csvCell(log.getMethod()),

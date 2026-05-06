@@ -51,10 +51,10 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
-    public List<Log> searchLogs(String keyword, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime, int page, int size) {
+    public List<Log> searchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime, int page, int size) {
         PaginationUtils.validatePageParams(page, size);
         int offset = PaginationUtils.calculateOffset(page, size);
-        return logMapper.search(keyword, clientIp, requestUri, method, responseStatus, startTime, endTime, size, offset);
+        return logMapper.search(keyword, username, clientIp, requestUri, method, responseStatus, startTime, endTime, size, offset);
     }
 
     @Override
@@ -73,7 +73,7 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
-    public int countSearchLogs(String keyword, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime) {
-        return logMapper.countSearch(keyword, clientIp, requestUri, method, responseStatus, startTime, endTime);
+    public int countSearchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime) {
+        return logMapper.countSearch(keyword, username, clientIp, requestUri, method, responseStatus, startTime, endTime);
     }
 }

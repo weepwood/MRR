@@ -127,6 +127,7 @@ export interface DashboardData {
 /** 日志记录 */
 export interface LogRecord {
   id?: number
+  username?: string
   clientIp?: string
   requestUri?: string
   method?: string

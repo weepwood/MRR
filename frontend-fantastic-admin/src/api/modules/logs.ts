@@ -4,6 +4,7 @@ export function searchSystemLogs(params: {
   page: number
   size: number
   keyword?: string
+  username?: string
   clientIp?: string
   requestUri?: string
   method?: string

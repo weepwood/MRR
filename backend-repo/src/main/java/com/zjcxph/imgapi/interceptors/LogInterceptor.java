@@ -1,7 +1,10 @@
 package com.zjcxph.imgapi.interceptors;
 
+import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.Log;
+import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.service.AsyncLogService;
+import com.zjcxph.imgapi.utils.AuthContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
@@ -18,6 +21,8 @@ import java.util.UUID;
 
 @Component
 public class LogInterceptor implements HandlerInterceptor {
+
+    private static final String AUTH_SESSION_ATTR = "AUTH_SESSION";
 
     private final AsyncLogService asyncLogService;
 
@@ -66,6 +71,16 @@ public class LogInterceptor implements HandlerInterceptor {
         long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
 
         Log log = new Log();
+
+        // 捕获当前登录用户：优先从 request attribute 获取（LoginInterceptor 设置），ThreadLocal 兜底
+        AuthSession currentUser = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
+        if (currentUser == null) {
+            currentUser = AuthContext.getCurrentUser();
+        }
+        if (currentUser != null && currentUser.getUsername() != null) {
+            log.setUsername(currentUser.getUsername());
+        }
+
         log.setClientIp(getClientIP(request));
         log.setRequestUri(request.getRequestURI());
         log.setMethod(request.getMethod());

@@ -135,13 +135,3 @@ export function putRequest<T = any, D = any>(url: string, data?: D, config?: imp
 export function deleteRequest<T = any>(url: string, config?: import('axios').AxiosRequestConfig): Promise<import('./types').ApiResult<T>> {
   return api.delete(url, config) as Promise<import('./types').ApiResult<T>>
 }
-
-export * from './modules/auth'
-export * from './modules/image'
-export * from './modules/logs'
-export * from './modules/monitoring'
-export * from './modules/oss'
-export * from './modules/records'
-export * from './modules/search'
-export * from './modules/statistics'
-export * from './modules/system'

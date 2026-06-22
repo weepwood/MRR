@@ -64,7 +64,6 @@
                     OR request_uri LIKE '%' || #{keyword} || '%'
                     OR query_string LIKE '%' || #{keyword} || '%'
                     OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR request_body LIKE '%' || #{keyword} || '%'
                     OR referer LIKE '%' || #{keyword} || '%')
             </if>
             <if test="username != null and username != ''">
@@ -103,7 +102,6 @@
                     OR request_uri LIKE '%' || #{keyword} || '%'
                     OR query_string LIKE '%' || #{keyword} || '%'
                     OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR request_body LIKE '%' || #{keyword} || '%'
                     OR referer LIKE '%' || #{keyword} || '%')
             </if>
             <if test="username != null and username != ''">

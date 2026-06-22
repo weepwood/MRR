@@ -15,25 +15,4 @@ public class DbController {
         return Result.success("db-api success, hello world");
     }
 
-    // TODO: 添加数据库管理接口
-    // @PostMapping("/add")
-    public Result<String> add() {
-        return Result.success("add success");
-    }
-
-    // @DeleteMapping("/delete")
-    public Result<String> delete() {
-        return Result.success("delete success");
-    }
-
-    // @PostMapping("/update")
-    public Result<String> update() {
-        return Result.success("update success");
-    }
-
-    // @PostMapping("/query/{id}")
-    public Result<String> query(@PathVariable String id) {
-        return Result.success(id + " query success");
-    }
-
 }

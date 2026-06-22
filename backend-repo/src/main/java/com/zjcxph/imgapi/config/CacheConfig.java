@@ -36,8 +36,6 @@ public class CacheConfig {
         cacheManager.setCacheNames(java.util.List.of(
                 "scanByBah",           // 病案号查询缓存
                 "scanById",            // ID查询缓存
-                "userByUsername",      // 用户查询缓存
-                "patientByIdcard",     // 患者身份证查询缓存
                 "ossSignedUrl"         // OSS签名URL缓存
         ));
         

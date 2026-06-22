@@ -1,17 +1,7 @@
 import type { Menu } from '#/global'
 
-import MultilevelMenuExample from './modules/multilevel.menu.example'
-
-const menu: Menu.recordMainRaw[] = [
-  {
-    meta: {
-      title: '演示',
-      icon: 'uim:box',
-    },
-    children: [
-      MultilevelMenuExample,
-    ],
-  },
-]
+// 静态菜单数据（仅 routeBaseOn 为 'filesystem' 时使用）
+// 业务页面导航默认由路由自动生成（routeBaseOn: 'frontend'），此处保留为空。
+const menu: Menu.recordMainRaw[] = []
 
 export default menu

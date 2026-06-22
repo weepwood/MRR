@@ -18,6 +18,7 @@ import jakarta.annotation.PreDestroy;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -222,6 +223,7 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
+    @CacheEvict(value = "ossSignedUrl", key = "#ossKey")
     public void deleteObject(String ossKey) {
         ensureClient();
         try {

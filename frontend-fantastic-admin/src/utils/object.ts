@@ -21,7 +21,7 @@ const mergeWithoutUndefinedProps = createDefu((obj, key, value) => {
 })
 
 function isObject(value: any) {
-  return typeof value === 'object' && !Array.isArray(value)
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 /** 比较两个对象，提取出不同的部分 */
 function diffTwoObj(originalObj: Record<string, any>, diffObj: Record<string, any>) {

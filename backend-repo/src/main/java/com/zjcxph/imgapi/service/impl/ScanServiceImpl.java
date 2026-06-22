@@ -7,7 +7,9 @@ import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,12 +73,17 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", key = "#id")
+    })
     public int updateImageType(Integer id, Integer type) {
         return scanMapper.updateImageType(id, type);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "scanByBah", allEntries = true)
     public Scan create(Scan scan) {
         if (scanMapper.insert(scan) > 0) {
             return scan;
@@ -86,12 +93,20 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", key = "#id")
+    })
     public boolean softDeleteById(Integer id) {
         return scanMapper.softDeleteById(id) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", key = "#scan.id")
+    })
     public Scan update(Scan scan) {
         if (scanMapper.update(scan) > 0) {
             return scan;

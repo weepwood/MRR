@@ -1,9 +1,16 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import autoImport from 'unplugin-auto-import/vite'
 import path from 'node:path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    autoImport({
+      imports: ['vue', 'vue-router', 'pinia'],
+      dirs: ['./src/store/modules', './src/utils/composables'],
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

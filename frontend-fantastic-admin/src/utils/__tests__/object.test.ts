@@ -89,8 +89,11 @@ describe('diffTwoObj', () => {
   })
 
   it('当输入不是对象时应直接返回 diffObj', () => {
-    // 注意：`typeof null === 'object'`，因此 null 会被 isObject 误判，
-    // diffTwoObj(null, ...) 会抛出 TypeError，后续阶段应修复 isObject
     expect(diffTwoObj(undefined as any, 'string' as any)).toBe('string')
+  })
+
+  it('当输入为 null 时应直接返回 diffObj', () => {
+    // isObject(null) 现已修复：null 不再被误判为 object
+    expect(diffTwoObj(null as any, { a: 1 })).toEqual({ a: 1 })
   })
 })

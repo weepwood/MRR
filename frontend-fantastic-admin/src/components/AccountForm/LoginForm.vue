@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Key, UserFilled } from '@element-plus/icons-vue'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
 import gsap from 'gsap'
@@ -25,8 +26,9 @@ const emits = defineEmits<{
 
 const userStore = useUserStore()
 
-const loading = ref(false)
-const buttonText = computed(() => loading.value ? '登录中...' : '登录')
+	const loading = ref(false)
+	const showPassword = ref(false)
+	const buttonText = computed(() => loading.value ? '登录中...' : '登录')
 
 const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
 
@@ -155,18 +157,22 @@ watch(loading, (_isLoading) => {
       </FormField>
       <FormField v-slot="{ componentField }" name="password">
         <label for="login-password">密码</label>
-        <div class="input-shell">
+        <div class="input-shell relative">
           <span class="input-icon">
             <el-icon><Key /></el-icon>
           </span>
           <FaInput
             id="login-password"
-            type="password"
+            :type="showPassword ? 'text' : 'password'"
             placeholder="Enter your password"
             autocomplete="current-password"
-            class="w-full"
+            class="w-full pr-12"
             v-bind="componentField"
           />
+          <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-gray-400 hover:text-gray-600" @click="showPassword = !showPassword">
+            <Eye v-if="!showPassword" class="size-4" />
+            <EyeOff v-else class="size-4" />
+          </button>
         </div>
       </FormField>
 

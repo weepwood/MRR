@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 
 defineOptions({
@@ -21,6 +22,8 @@ const emits = defineEmits<{
 
 const userStore = useUserStore()
 const loading = ref(false)
+const showPwd = ref(false)
+const showCheckPwd = ref(false)
 
 function resolveMessage(payload: any, fallback: string): string {
   return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
@@ -100,7 +103,13 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormField v-slot="{ componentField, value, errors }" name="password">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" placeholder="请输入密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <div class="relative w-full">
+              <FaInput :type="showPwd ? 'text' : 'password'" placeholder="请输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showPwd = !showPwd">
+                <Eye v-if="!showPwd" class="size-4" />
+                <EyeOff v-else class="size-4" />
+              </button>
+            </div>
           </FormControl>
           <FormDescription>
             <FaPasswordStrength :password="value" class="mt-2" />
@@ -113,7 +122,13 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormField v-slot="{ componentField, errors }" name="checkPassword">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" placeholder="请再次输入密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <div class="relative w-full">
+              <FaInput :type="showCheckPwd ? 'text' : 'password'" placeholder="请再次输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showCheckPwd = !showCheckPwd">
+                <Eye v-if="!showCheckPwd" class="size-4" />
+                <EyeOff v-else class="size-4" />
+              </button>
+            </div>
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />

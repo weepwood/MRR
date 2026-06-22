@@ -3,9 +3,6 @@ package com.zjcxph.imgapi.unit.utils;
 import com.zjcxph.imgapi.utils.PasswordUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -13,7 +10,42 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PasswordUtilTest {
 
     @Test
-    @DisplayName("sha256 — 返回64位十六进制哈希")
+    @DisplayName("encode — 返回 bcrypt 哈希（$2a$12$ 前缀）")
+    void encode_returnsBcryptHash() {
+        String hash = PasswordUtil.encode("hello123");
+        assertThat(hash).isNotNull().startsWith("$2a$12$");
+    }
+
+    @Test
+    @DisplayName("encode — null 返回 null")
+    void encode_null() {
+        assertThat(PasswordUtil.encode(null)).isNull();
+    }
+
+    @Test
+    @DisplayName("matches — 正确密码返回 true")
+    void matches_correctPassword() {
+        String hash = PasswordUtil.encode("mypassword");
+        assertThat(PasswordUtil.matches("mypassword", hash)).isTrue();
+    }
+
+    @Test
+    @DisplayName("matches — 错误密码返回 false")
+    void matches_wrongPassword() {
+        String hash = PasswordUtil.encode("correct");
+        assertThat(PasswordUtil.matches("wrong", hash)).isFalse();
+    }
+
+    @Test
+    @DisplayName("matches — null 参数返回 false")
+    void matches_nullArgs() {
+        String hash = PasswordUtil.encode("test");
+        assertThat(PasswordUtil.matches(null, hash)).isFalse();
+        assertThat(PasswordUtil.matches("test", null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("sha256 — 返回64位十六进制哈希（遗留兼容）")
     void sha256_returns64CharHex() {
         String hash = PasswordUtil.sha256("hello123");
         assertThat(hash).isNotNull().hasSize(64);
@@ -21,59 +53,16 @@ class PasswordUtilTest {
     }
 
     @Test
-    @DisplayName("sha256 — 相同输入产生相同哈希")
-    void sha256_isDeterministic() {
-        assertThat(PasswordUtil.sha256("test")).isEqualTo(PasswordUtil.sha256("test"));
-    }
-
-    @Test
-    @DisplayName("sha256 — 不同输入产生不同哈希")
-    void sha256_differentInputDifferentHash() {
-        assertThat(PasswordUtil.sha256("abc")).isNotEqualTo(PasswordUtil.sha256("xyz"));
-    }
-
-    @Test
-    @DisplayName("sha256 — null返回null")
+    @DisplayName("sha256 — null 返回 null")
     void sha256_null() {
         assertThat(PasswordUtil.sha256(null)).isNull();
     }
 
     @Test
-    @DisplayName("sha256 — 空字符串返回空串哈希值")
-    void sha256_empty() {
-        assertThat(PasswordUtil.sha256("")).isEqualTo("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-    }
-
-    @Test
-    @DisplayName("matches — 密码匹配返回true")
-    void matches_correctPassword() {
-        String hash = PasswordUtil.sha256("mypassword");
-        assertThat(PasswordUtil.matches("mypassword", hash)).isTrue();
-    }
-
-    @Test
-    @DisplayName("matches — 密码不匹配返回false")
-    void matches_wrongPassword() {
-        String hash = PasswordUtil.sha256("correct");
-        assertThat(PasswordUtil.matches("wrong", hash)).isFalse();
-    }
-
-    @ParameterizedTest
-    @CsvSource({",hash", "password,"})
-    @DisplayName("matches — null参数返回false")
-    void matches_nullArgs(String raw, String hash) {
-        assertThat(PasswordUtil.matches(raw, hash)).isFalse();
-    }
-
-    @Test
-    @DisplayName("encode — 返回64位十六进制字符串")
-    void encode_returnsHash() {
-        assertThat(PasswordUtil.encode("number")).hasSize(64);
-    }
-
-    @Test
-    @DisplayName("encode — null返回null")
-    void encode_null() {
-        assertThat(PasswordUtil.encode(null)).isNull();
+    @DisplayName("sha256Matches — 匹配 SHA-256 哈希")
+    void sha256Matches_correct() {
+        String hash = PasswordUtil.sha256("password");
+        assertThat(PasswordUtil.sha256Matches("password", hash)).isTrue();
+        assertThat(PasswordUtil.sha256Matches("wrong", hash)).isFalse();
     }
 }

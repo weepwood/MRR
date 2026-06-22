@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.OssUploadRequest;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
@@ -25,6 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/oss")
 @Tag(name = "OSS Management", description = "OSS 图片上传与迁移管理接口")
+@RequirePermissions({"record:read"})
 public class OssController {
 
     private static final Logger logger = LoggerFactory.getLogger(OssController.class);

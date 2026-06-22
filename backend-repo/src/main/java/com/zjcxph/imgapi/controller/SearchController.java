@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.common.Result;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/search")
+@RequirePermissions({"search:read"})
 public class SearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);

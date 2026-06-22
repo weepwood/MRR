@@ -64,8 +64,11 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function logout(redirect = router.currentRoute.value.fullPath) {
+    // 先清除本地 token，避免路由守卫误判
     localStorage.removeItem('token')
     token.value = ''
+    // 通知后端撤销 token（fire-and-forget，失败不影响登出）
+    apiUser.logout().catch(() => {})
     router.push({
       name: 'login',
       query: {

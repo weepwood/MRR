@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
@@ -33,6 +34,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/logs")
+@RequirePermissions({"log:read"})
 public class LogController {
 
     private static final int MAX_PAGE_SIZE = 200;

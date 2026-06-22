@@ -107,10 +107,10 @@ ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO app.mr_auth_user (username, display_name, password_hash, role_code, status)
 VALUES
-    ('br_admin', 'System Administrator', 'c6c49412188f4bd8969b7f3997afe001df2cfe77a15e7bb115f102be0a9849cd', 'ADMIN', 'active'),
-    ('admin', 'System Administrator', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'ADMIN', 'active'),
-    ('doctor1', 'Duty Doctor', 'f348d5628621f3d8f59c8cabda0f8eb0aa7e0514a90be7571020b1336f26c113', 'DOCTOR', 'active'),
-    ('nurse1', 'Outpatient Nurse', '35608f3146571aa100227a3e68290979ba8a452179a080f888625106076e7de2', 'NURSE', 'active')
+	    ('br_admin', 'System Administrator', '$2a$12$1MBK2EugjPA4k45jzanZwOfP8WAHFW7Upb.EnqBIWhFoYp3tKx4za', 'ADMIN', 'active'),
+	    ('admin', 'System Administrator', '$2a$12$NiQwMT54aA1Un.FOjzVWR.5J/PDIGQHwp0nMEGatrdCerqfSvbHqS', 'ADMIN', 'active'),
+	    ('doctor1', 'Duty Doctor', '$2a$12$Y2mlZdwNkLhUj5PeKKXVPuqlXW/HUX9rJ0uWtqOQQDm0ipmBYB21q', 'DOCTOR', 'active'),
+	    ('nurse1', 'Outpatient Nurse', '$2a$12$YUwhuNhN4rj0p6jZP6RcoOD/IbVx/uZuhB597kngo/L3fxZL5vNbS', 'NURSE', 'active')
 ON CONFLICT (username) DO UPDATE SET
     display_name = EXCLUDED.display_name,
     password_hash = EXCLUDED.password_hash,

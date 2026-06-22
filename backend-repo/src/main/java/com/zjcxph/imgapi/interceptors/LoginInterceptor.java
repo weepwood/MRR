@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.interceptors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import org.slf4j.Logger;
@@ -18,6 +19,12 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final TokenBlacklist tokenBlacklist;
+
+    public LoginInterceptor(TokenBlacklist tokenBlacklist) {
+        this.tokenBlacklist = tokenBlacklist;
+    }
 
     private String extractToken(String authorization) {
         if (authorization != null && authorization.startsWith("Bearer ")) {
@@ -39,6 +46,12 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         try {
+            // 检查是否在黑名单中
+            if (tokenBlacklist.isRevoked(JwtUtil.getJti(authorization))) {
+                writeUnauthorized(response, "token has been revoked");
+                return false;
+            }
+
             AuthSession session = JwtUtil.parseToken(authorization);
             AuthContext.setCurrentUser(session);
             request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);

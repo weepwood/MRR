@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
+import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +29,8 @@ class UserControllerTest {
 
     @Mock
     private AuthService authService;
+    @Mock
+    private TokenBlacklist tokenBlacklist;
 
     @InjectMocks
     private UserController userController;
@@ -121,13 +124,14 @@ class UserControllerTest {
         AuthUserProfileDTO profile = new AuthUserProfileDTO();
         profile.setUsername("admin");
         profile.setRoleCode("ADMIN");
-        when(authService.listUsers()).thenReturn(List.of(profile));
+        when(authService.listUsersPaginated(1, 20))
+                .thenReturn(com.zjcxph.imgapi.dto.resp.PageResult.of(List.of(profile), 1, 1, 20));
 
-        Result<List<AuthUserProfileDTO>> result = userController.listUsers();
+        Result<com.zjcxph.imgapi.dto.resp.PageResult<AuthUserProfileDTO>> result = userController.listUsers(1, 20);
 
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getData()).hasSize(1);
-        assertThat(result.getData().getFirst().getUsername()).isEqualTo("admin");
+        assertThat(result.getData().getList()).hasSize(1);
+        assertThat(result.getData().getList().getFirst().getUsername()).isEqualTo("admin");
     }
 
     @Test

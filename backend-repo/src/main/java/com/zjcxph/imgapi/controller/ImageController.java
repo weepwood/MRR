@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.entity.*;
 import com.zjcxph.imgapi.dto.req.*;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/img")
 @Tag(name = "IMG Controller", description = "图片管理接口")
+@RequirePermissions({"record:read"})
 public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);

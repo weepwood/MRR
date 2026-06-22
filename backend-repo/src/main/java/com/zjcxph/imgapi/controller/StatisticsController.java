@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.common.Result;
@@ -32,6 +33,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/statistics")
 @Tag(name = "Statistics Management", description = "病案统计管理接口")
+@RequirePermissions({"statistics:read"})
 public class StatisticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);

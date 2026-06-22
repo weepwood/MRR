@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ import java.util.Properties;
 @RestController
 @RequestMapping("/api/v1/system")
 @Tag(name = "System Info", description = "系统信息和监控接口")
+@RequirePermissions({"system:read"})
 public class SystemInfoController {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemInfoController.class);

@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.common.Result;
@@ -40,6 +41,7 @@ import java.util.zip.ZipOutputStream;
 @RestController
 @RequestMapping("/api/v1/scan")
 @Tag(name = "Scan Management", description = "病案扫描记录管理接口")
+@RequirePermissions({"record:read"})
 public class ScanController {
 
     private static final Logger logger = LoggerFactory.getLogger(ScanController.class);

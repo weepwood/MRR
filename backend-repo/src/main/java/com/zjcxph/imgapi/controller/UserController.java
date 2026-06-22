@@ -7,24 +7,23 @@ import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
+import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
+import com.zjcxph.imgapi.utils.AuthContext;
+import com.zjcxph.imgapi.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Auth API", description = "Authentication and permission management")
 @RestController
@@ -33,9 +32,11 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final AuthService authService;
+    private final TokenBlacklist tokenBlacklist;
 
-    public UserController(AuthService authService) {
+    public UserController(AuthService authService, TokenBlacklist tokenBlacklist) {
         this.authService = authService;
+        this.tokenBlacklist = tokenBlacklist;
     }
 
     /**
@@ -118,11 +119,14 @@ public class UserController {
      * @return Result<List<AuthUserProfileDTO>> 统一响应结果
      *         - 成功时(code=200)：data字段包含AuthUserProfileDTO对象列表，每个对象包含用户的完整资料信息
      */
-    @Operation(summary = "获取用户列表")
+    @Operation(summary = "获取用户列表（支持分页）")
     @RequirePermissions({"user:manage"})
     @GetMapping("/users")
-    public Result<List<AuthUserProfileDTO>> listUsers() {
-        return Result.<List<AuthUserProfileDTO>>success("success").data(authService.listUsers());
+    public Result<PageResult<AuthUserProfileDTO>> listUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.<PageResult<AuthUserProfileDTO>>success("success")
+                .data(authService.listUsersPaginated(page, size));
     }
 
     /**
@@ -187,5 +191,44 @@ public class UserController {
             return Result.<Void>fail("User not found");
         }
         return Result.<Void>success("Disable success");
+    }
+
+    @Operation(summary = "用户登出")
+    @PostMapping("/logout")
+    public Result<String> logout(HttpServletRequest request) {
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            String token = authorization.substring(7);
+            try {
+                String jti = JwtUtil.getJti(token);
+                long expiry = JwtUtil.getExpirationMillis(token);
+                tokenBlacklist.revoke(jti, expiry);
+                AuthContext.clear();
+                logger.info("User logged out, token revoked: jti={}", jti);
+            } catch (Exception e) {
+                logger.warn("Logout failed to parse token: {}", e.getMessage());
+            }
+        }
+        return Result.success("已登出");
+    }
+
+    @Operation(summary = "修改当前用户密码")
+    @PostMapping("/password/edit")
+    public Result<Void> changePassword(@RequestBody Map<String, String> body) {
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session == null || session.getId() == null) {
+            return Result.fail("未登录");
+        }
+        String oldPassword = body.get("password");
+        String newPassword = body.get("newPassword");
+        if (oldPassword == null || newPassword == null) {
+            return Result.fail("password 和 newPassword 不能为空");
+        }
+        try {
+            authService.changePassword(session.getId(), oldPassword, newPassword);
+            return Result.success("密码修改成功");
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
+        }
     }
 }

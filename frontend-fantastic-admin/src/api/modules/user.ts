@@ -16,7 +16,9 @@ export default {
 
   passwordEdit: (data: { password: string, newPassword: string }) => api.post('/api/v1/auth/password/edit', data),
 
-  getUsers: () => api.get('/api/v1/auth/users'),
+  logout: () => api.post('/api/v1/auth/logout'),
+
+  getUsers: (page = 1, size = 20) => api.get('/api/v1/auth/users', { params: { page, size } }),
 
   getRoles: () => api.get('/api/v1/auth/roles'),
 

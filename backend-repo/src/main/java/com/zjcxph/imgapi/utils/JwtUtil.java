@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.common.AuthSession;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public final class JwtUtil {
 
@@ -31,7 +32,9 @@ public final class JwtUtil {
         }
 
         com.auth0.jwt.JWTCreator.Builder builder = JWT.create()
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_MILLIS));
+                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_MILLIS))
+                .withJWTId(UUID.randomUUID().toString()); // 用于登出撤销
+
         if (session.getId() != null) {
             builder.withClaim("id", session.getId());
         }
@@ -72,5 +75,21 @@ public final class JwtUtil {
             session.setPermissions(java.util.Arrays.asList(permissions));
         }
         return session;
+    }
+
+    /**
+     * 从原始 token 字符串中提取 jti，用于黑名单检查。
+     */
+    public static String getJti(String token) {
+        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
+        return decodedJWT.getId();
+    }
+
+    /**
+     * 获取 token 的过期时间戳（毫秒），用于黑名单条目 TTL。
+     */
+    public static long getExpirationMillis(String token) {
+        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
+        return decodedJWT.getExpiresAt().getTime();
     }
 }

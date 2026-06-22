@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.monitoring.PressureTestReport;
 import com.zjcxph.imgapi.monitoring.PressureTestRequest;
 import com.zjcxph.imgapi.monitoring.PressureTestService;
@@ -22,6 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/monitoring/pressure-tests")
 @Tag(name = "Pressure Test Monitoring", description = "Pressure test monitoring and history")
+@RequirePermissions({"system:read"})
 public class PressureTestController {
 
     private static final Logger logger = LoggerFactory.getLogger(PressureTestController.class);

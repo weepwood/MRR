@@ -20,4 +20,7 @@ public class RegisterRequest {
 
     @Schema(description = "显示名称", example = "新医生")
     private String displayName;
+
+    @Schema(description = "角色代码：DOCTOR 或 NURSE，默认 DOCTOR", example = "DOCTOR")
+    private String roleCode;
 }

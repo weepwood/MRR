@@ -10,7 +10,9 @@ import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
+import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.req.UserRequest;
+import com.zjcxph.imgapi.security.LoginRateLimiter;
 import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -30,10 +32,13 @@ public class AuthServiceImpl implements AuthService {
 
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;
+    private final LoginRateLimiter rateLimiter;
 
-    public AuthServiceImpl(AuthUserMapper authUserMapper, AuthRoleMapper authRoleMapper) {
+    public AuthServiceImpl(AuthUserMapper authUserMapper, AuthRoleMapper authRoleMapper,
+                           LoginRateLimiter rateLimiter) {
         this.authUserMapper = authUserMapper;
         this.authRoleMapper = authRoleMapper;
+        this.rateLimiter = rateLimiter;
     }
 
     @Override
@@ -46,16 +51,25 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("用户名和密码不能为空");
         }
 
+        // 频率限制检查
+        if (rateLimiter.isLoginBlocked(username)) {
+            throw new BusinessException("登录尝试过于频繁，请15分钟后重试");
+        }
+
         AuthUser user = authUserMapper.findByUsername(username);
         if (user == null) {
+            rateLimiter.recordLoginFailure(username);
             throw new IllegalArgumentException("用户名或密码错误");
         }
         if (!"active".equalsIgnoreCase(user.getStatus())) {
             throw new BusinessException("账号已被禁用，请联系管理员");
         }
         if (!PasswordUtil.matches(password, user.getPasswordHash())) {
+            rateLimiter.recordLoginFailure(username);
             throw new IllegalArgumentException("用户名或密码错误");
         }
+
+        rateLimiter.resetLoginFailures(username);
 
         LocalDateTime now = LocalDateTime.now();
         authUserMapper.updateLastLoginAt(user.getId(), now);
@@ -83,11 +97,18 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("用户名已存在");
         }
 
+        // 角色验证：仅允许 NURSE 或 DOCTOR，默认 DOCTOR
+        String roleCode = Optional.ofNullable(req.getRoleCode()).map(String::trim)
+                .filter(r -> !r.isEmpty()).orElse("DOCTOR").toUpperCase();
+        if (!"DOCTOR".equals(roleCode) && !"NURSE".equals(roleCode)) {
+            throw new BusinessException("无效的角色代码，仅支持 DOCTOR 或 NURSE");
+        }
+
         AuthUser user = new AuthUser();
         user.setUsername(username);
         user.setDisplayName(Optional.ofNullable(req.getDisplayName()).map(String::trim).orElse(username));
-        user.setPasswordHash(PasswordUtil.sha256(password));
-        user.setRoleCode("DOCTOR");
+        user.setPasswordHash(PasswordUtil.encode(password));
+        user.setRoleCode(roleCode);
         user.setStatus("active");
 
         authUserMapper.insertUser(user);
@@ -105,6 +126,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public List<AuthUserProfileDTO> listUsers() {
         return authUserMapper.findAll().stream().map(this::toProfile).toList();
+    }
+
+    @Override
+    public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size) {
+        int offset = (page - 1) * size;
+        List<AuthUser> users = authUserMapper.findAllWithPagination(offset, size);
+        int total = authUserMapper.countAll();
+        return PageResult.of(users.stream().map(this::toProfile).toList(), total, page, size);
     }
 
     @Override
@@ -135,6 +164,24 @@ public class AuthServiceImpl implements AuthService {
             return 0;
         }
         return authUserMapper.updateStatus(id, "disabled");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        if (oldPassword == null || newPassword == null || newPassword.length() < 6 || newPassword.length() > 18) {
+            throw new IllegalArgumentException("密码长度为6到18位");
+        }
+
+        AuthUser user = authUserMapper.findById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        if (!PasswordUtil.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("原密码错误");
+        }
+
+        authUserMapper.updatePassword(userId, PasswordUtil.encode(newPassword));
     }
 
     @Override

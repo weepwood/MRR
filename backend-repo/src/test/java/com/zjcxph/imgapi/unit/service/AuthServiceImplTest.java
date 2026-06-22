@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
+import com.zjcxph.imgapi.security.LoginRateLimiter;
 import com.zjcxph.imgapi.service.impl.AuthServiceImpl;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.PasswordUtil;
@@ -34,6 +35,9 @@ class AuthServiceImplTest {
 
     @Mock
     private AuthRoleMapper authRoleMapper;
+
+    @Mock
+    private LoginRateLimiter rateLimiter;
 
     @InjectMocks
     private AuthServiceImpl authService;

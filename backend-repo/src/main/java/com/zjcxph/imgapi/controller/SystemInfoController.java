@@ -6,15 +6,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.sql.DataSource;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -34,6 +37,9 @@ public class SystemInfoController {
 
     @Value("${spring.application.name:imgapi}")
     private String applicationName;
+
+    @Autowired(required = false)
+    private DataSource dataSource;
 
     @Operation(summary = "获取系统基本信息")
     @GetMapping("/info")
@@ -137,10 +143,27 @@ public class SystemInfoController {
         double usagePercent = (maxMemory > 0) ? (usedMemory * 100.0 / maxMemory) : 0;
 
         Map<String, Object> components = new HashMap<>();
+
+        // 内存健康
         Map<String, Object> memoryHealth = new HashMap<>();
         memoryHealth.put("status", usagePercent < 90 ? "UP" : "WARNING");
         memoryHealth.put("usagePercent", String.format("%.2f%%", usagePercent));
         components.put("memory", memoryHealth);
+
+        // 数据库连通性
+        Map<String, Object> dbHealth = new HashMap<>();
+        if (dataSource != null) {
+            try (Connection conn = dataSource.getConnection()) {
+                dbHealth.put("status", conn.isValid(3) ? "UP" : "DOWN");
+            } catch (Exception e) {
+                dbHealth.put("status", "DOWN");
+                dbHealth.put("error", e.getMessage());
+            }
+        } else {
+            dbHealth.put("status", "UNKNOWN");
+        }
+        components.put("database", dbHealth);
+
         health.put("components", components);
 
         return Result.<Map<String, Object>>success("健康检查成功").data(health);
@@ -179,7 +202,43 @@ public class SystemInfoController {
         overview.put("runtime", getRuntimeInfo().getData());
         overview.put("health", healthCheck().getData());
         overview.put("properties", getSystemProperties().getData());
+        overview.put("gc", getGcStats().getData());
+        overview.put("threads", getThreadStats().getData());
         return Result.<Map<String, Object>>success("获取统一监控数据成功").data(overview);
+    }
+
+    @Operation(summary = "获取 GC 统计信息")
+    @GetMapping("/gc")
+    public Result<Map<String, Object>> getGcStats() {
+        Map<String, Object> gc = new HashMap<>();
+        java.util.List<java.lang.management.GarbageCollectorMXBean> gcBeans =
+                java.lang.management.ManagementFactory.getGarbageCollectorMXBeans();
+        long totalCollections = 0;
+        long totalTimeMs = 0;
+        for (var bean : gcBeans) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", bean.getName());
+            item.put("count", bean.getCollectionCount());
+            item.put("timeMs", bean.getCollectionTime());
+            gc.put(bean.getName(), item);
+            totalCollections += bean.getCollectionCount();
+            totalTimeMs += bean.getCollectionTime();
+        }
+        gc.put("totalCollections", totalCollections);
+        gc.put("totalTimeMs", totalTimeMs);
+        return Result.<Map<String, Object>>success("success").data(gc);
+    }
+
+    @Operation(summary = "获取线程统计信息")
+    @GetMapping("/threads")
+    public Result<Map<String, Object>> getThreadStats() {
+        java.lang.management.ThreadMXBean threadMX = java.lang.management.ManagementFactory.getThreadMXBean();
+        Map<String, Object> threads = new HashMap<>();
+        threads.put("currentCount", threadMX.getThreadCount());
+        threads.put("daemonCount", threadMX.getDaemonThreadCount());
+        threads.put("peakCount", threadMX.getPeakThreadCount());
+        threads.put("totalStarted", threadMX.getTotalStartedThreadCount());
+        return Result.<Map<String, Object>>success("success").data(threads);
     }
 
     private String formatBytes(long bytes) {

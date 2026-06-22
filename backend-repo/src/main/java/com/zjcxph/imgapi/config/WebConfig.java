@@ -35,8 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/docs/**",
                         "/error",
                         "/favicon.ico",
-                        "/actuator/health",
-                        "/actuator/info"
+                        "/actuator/**"
                 );
 
         registry.addInterceptor(authorizationInterceptor)

@@ -13,7 +13,7 @@ const pressureHistory = ref<any[]>([])
 
 const pressureForm = reactive({
   concurrency: 5,
-  requests: 50,
+  totalRequests: 100,
   targetPath: '/v1/system/health',
 })
 
@@ -51,7 +51,7 @@ async function runPressure() {
   try {
     await runPressureTest({
       concurrency: pressureForm.concurrency,
-      requests: pressureForm.requests,
+      totalRequests: pressureForm.totalRequests,
       targetUrl: pressureForm.targetPath,
     })
     await loadPressureHistory()
@@ -134,7 +134,7 @@ async function clearHistory() {
               <el-input-number v-model="pressureForm.concurrency" :min="1" :max="200" />
             </el-form-item>
             <el-form-item label="请求数">
-              <el-input-number v-model="pressureForm.requests" :min="1" :max="5000" />
+              <el-input-number v-model="pressureForm.totalRequests" :min="1" :max="5000" />
             </el-form-item>
             <el-form-item label="目标路径">
               <el-input v-model="pressureForm.targetPath" />
@@ -156,9 +156,11 @@ async function clearHistory() {
             <article v-for="(item, index) in pressureHistory" :key="item?.runId || index" class="stack-item">
               <div>
                 <strong>{{ item?.runId || `记录 ${index + 1}` }}</strong>
-                <p>{{ item?.message || JSON.stringify(item).slice(0, 140) }}</p>
+                <p>成功 {{ item.successCount }}/{{ item.totalRequests }}，avg {{ item.avgLatencyMs }}ms，p95 {{ item.p95LatencyMs }}ms</p>
               </div>
-              <el-tag>{{ item?.status || '记录' }}</el-tag>
+              <el-tag :type="(item.successRate ?? 0) >= 95 ? 'success' : 'warning'">
+                {{ item.successRate ?? '-' }}%
+              </el-tag>
             </article>
             <el-empty v-if="!pressureHistory.length" description="暂无压测历史" />
           </div>

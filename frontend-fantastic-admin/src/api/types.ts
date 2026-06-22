@@ -142,27 +142,35 @@ export interface LogRecord {
 
 /** 压测请求 */
 export interface PressureTestRequest {
-  concurrency: number
-  requests: number
+  name?: string
   targetUrl: string
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  concurrency?: number
+  totalRequests?: number
+  timeoutMillis?: number
+  body?: string
+  headers?: Record<string, string>
 }
 
 /** 压测报告 */
 export interface PressureTestReport {
   runId?: string
+  name?: string
   targetUrl?: string
+  method?: string
   concurrency?: number
   totalRequests?: number
-  successfulRequests?: number
-  failedRequests?: number
-  averageResponseTime?: number
-  minResponseTime?: number
-  maxResponseTime?: number
-  p95ResponseTime?: number
-  startTime?: string
-  endTime?: string
-  status?: string
-  message?: string
+  successCount?: number
+  failureCount?: number
+  successRate?: number
+  minLatencyMs?: number
+  avgLatencyMs?: number
+  p95LatencyMs?: number
+  maxLatencyMs?: number
+  requestsPerSecond?: number
+  durationMillis?: number
+  startedAt?: string
+  finishedAt?: string
 }
 
 /** 加密ID搜索参数 */

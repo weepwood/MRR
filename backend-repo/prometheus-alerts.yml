@@ -1,0 +1,65 @@
+# Prometheus Alerting Rules for MRR imgapi
+# 配合 AlertManager 使用，将规则文件路径配置到 prometheus.yml 的 rule_files 中
+
+groups:
+  - name: imgapi_alerts
+    rules:
+
+    # ==================== JVM 内存告警 ====================
+    - alert: HighHeapMemoryUsage
+      expr: jvm_memory_used_bytes{area="heap", application="imgapi"} / jvm_memory_max_bytes{area="heap", application="imgapi"} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "堆内存使用率超过90%"
+        description: "当前堆内存使用率 {{ $value | humanizePercentage }}，应用 {{ $labels.application }}"
+
+    - alert: CriticalHeapMemoryUsage
+      expr: jvm_memory_used_bytes{area="heap", application="imgapi"} / jvm_memory_max_bytes{area="heap", application="imgapi"} > 0.95
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "堆内存使用率超过95%（临界）"
+        description: "当前堆内存使用率 {{ $value | humanizePercentage }}，即将 OOM"
+
+    # ==================== GC 告警 ====================
+    - alert: HighGcRate
+      expr: rate(jvm_gc_pause_seconds_count{application="imgapi"}[5m]) > 10
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "GC 频率过高"
+        description: "过去5分钟 GC 速率 {{ $value | humanize }} 次/秒，可能影响响应时间"
+
+    # ==================== HTTP 错误率告警 ====================
+    - alert: HighHttpErrorRate
+      expr: rate(http_requests_total{status=~"5..", application="imgapi"}[5m]) / rate(http_requests_total{application="imgapi"}[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "HTTP 5xx 错误率超过5%"
+        description: "过去5分钟 5xx 错误占比 {{ $value | humanizePercentage }}"
+
+    # ==================== 应用宕机告警 ====================
+    - alert: ApplicationDown
+      expr: up{job="imgapi"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "应用 {{ $labels.instance }} 不可达"
+        description: "Prometheus 无法抓取 {{ $labels.instance }} 指标，已超过1分钟"
+
+    # ==================== 数据库连接池告警 ====================
+    - alert: HighDbConnectionUsage
+      expr: hikaricp_connections_active{application="imgapi"} / hikaricp_connections_max{application="imgapi"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "数据库连接池使用率超过80%"
+        description: "活跃连接 {{ $value | humanizePercentage }}，可能导致连接等待"

@@ -5,6 +5,9 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.service.AsyncLogService;
 import com.zjcxph.imgapi.utils.AuthContext;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
@@ -25,9 +28,11 @@ public class LogInterceptor implements HandlerInterceptor {
     private static final String AUTH_SESSION_ATTR = "AUTH_SESSION";
 
     private final AsyncLogService asyncLogService;
+    private final MeterRegistry meterRegistry;
 
-    public LogInterceptor(AsyncLogService asyncLogService) {
+    public LogInterceptor(AsyncLogService asyncLogService, MeterRegistry meterRegistry) {
         this.asyncLogService = asyncLogService;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -94,6 +99,20 @@ public class LogInterceptor implements HandlerInterceptor {
 
         // 异步保存日志,不阻塞请求响应
         asyncLogService.saveLogAsync(log);
+
+        // Micrometer 指标：请求计数 + 耗时分布
+        Counter.builder("http.requests.total")
+                .tag("method", request.getMethod())
+                .tag("status", String.valueOf(response.getStatus()))
+                .description("HTTP 请求总数（按方法和状态码）")
+                .register(meterRegistry)
+                .increment();
+        Timer.builder("http.requests.duration")
+                .tag("method", request.getMethod())
+                .tag("uri", log.getRequestUri().length() > 80 ? log.getRequestUri().substring(0, 80) : log.getRequestUri())
+                .description("HTTP 请求耗时分布")
+                .register(meterRegistry)
+                .record(executeTime, java.util.concurrent.TimeUnit.MILLISECONDS);
         
         // 清理 MDC 上下文，防止内存泄漏
         MDC.clear();

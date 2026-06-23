@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.common;
 
+import com.zjcxph.imgapi.utils.PermissionResolver;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -22,11 +23,10 @@ public class AuthSession {
     }
 
     public boolean isAdmin() {
-        return "ADMIN".equalsIgnoreCase(roleCode)
-                || (permissions != null && (permissions.contains("user:manage") || permissions.contains("role:manage")));
+        return "ADMIN".equalsIgnoreCase(roleCode);
     }
 
     public boolean hasPermission(String permission) {
-        return permission != null && permissions != null && permissions.contains(permission);
+        return PermissionResolver.hasPermission(permissions, permission);
     }
 }

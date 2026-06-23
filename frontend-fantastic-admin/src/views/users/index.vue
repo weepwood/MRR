@@ -112,6 +112,11 @@ async function handleSaveEdit() {
   await editFormRef.value.validate()
   if (!editTarget.value?.id) { return }
 
+  if (isSelf(editTarget.value.id) && normalizeStatus(editForm.status) === 'disabled') {
+    ElMessage.warning('不能禁用当前登录账号')
+    return
+  }
+
   editSaving.value = true
   try {
     const res = await apiUser.updateUser(editTarget.value.id, {
@@ -135,9 +140,15 @@ async function handleSaveEdit() {
   }
 }
 
+function isSelf(rowId: number | string | undefined): boolean {
+  const profileId = userStore.profile.id
+  if (rowId == null || profileId == null) { return false }
+  return Number(rowId) === Number(profileId)
+}
+
 async function handleDisable(row: AuthUser) {
   if (!row.id) { return }
-  if (row.id === userStore.profile.id) {
+  if (isSelf(row.id)) {
     ElMessage.warning('不能禁用当前登录账号')
     return
   }
@@ -289,7 +300,7 @@ onMounted(loadData)
               <el-button
                 size="small"
                 type="danger"
-                :disabled="normalizeStatus(row.status) === 'disabled' || row.id === userStore.profile.id"
+                :disabled="normalizeStatus(row.status) === 'disabled' || isSelf(row.id)"
                 @click="handleDisable(row)"
               >
                 禁用

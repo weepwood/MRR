@@ -1,4 +1,5 @@
 import { useUserStore } from '@/store/modules/user'
+import { checkAnyPermission, checkPermission } from './permission'
 
 export function getCurrentUser() {
   return useUserStore().profile || {}
@@ -16,18 +17,15 @@ export function getUserRoleName() {
 
 export function isAdminUser() {
   const profile = useUserStore().profile
-  const permissions = useUserStore().permissions || []
   return String(profile?.roleCode || '').toUpperCase() === 'ADMIN'
-    || permissions.includes('user:manage')
-    || permissions.includes('role:manage')
 }
 
 export function hasPermission(permission: string) {
-  return useUserStore().permissions.includes(permission)
+  return checkPermission(useUserStore().permissions || [], permission)
 }
 
 export function hasAnyPermission(permissions: string[]) {
-  return permissions.some(permission => hasPermission(permission))
+  return checkAnyPermission(useUserStore().permissions || [], permissions)
 }
 
 export function clearSession() {

@@ -1,9 +1,11 @@
+import { checkPermission } from '@/utils/permission'
+
 export default function useAuth() {
   function hasPermission(permission: string) {
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
     if (settingsStore.settings.app.enablePermission) {
-      return userStore.permissions.includes(permission)
+      return checkPermission(userStore.permissions || [], permission)
     }
     else {
       return true

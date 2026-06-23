@@ -32,6 +32,8 @@ public interface AuthService {
 
     List<AuthRole> listRoles();
 
+    AuthRole updateRole(String code, String name, String description, String permissions, Integer sortOrder);
+
     AuthUserProfileDTO updateUser(Long id, AuthUserUpdateRequest request);
 
     int disableUser(Long id);

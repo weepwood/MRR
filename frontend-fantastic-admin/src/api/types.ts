@@ -209,6 +209,14 @@ export interface AuthRole {
   sortOrder?: number
 }
 
+/** 角色更新请求 */
+export interface AuthRoleUpdatePayload {
+  name?: string
+  description?: string
+  permissions?: string
+  sortOrder?: number
+}
+
 /** 用户更新请求（对齐后端 AuthUserUpdateRequest） */
 export interface AuthUserUpdatePayload {
   displayName?: string

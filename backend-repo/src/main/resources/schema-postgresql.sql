@@ -104,8 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_access_log_method_status ON app.access_log (metho
 
 INSERT INTO app.mr_auth_role (code, name, description, permissions, sort_order)
 VALUES
-    ('ADMIN', 'System Administrator', 'Full user and permission management access', 'user:manage,role:read,role:manage,record:read,record:manage,log:read,system:read,test:read', 1),
-    ('DOCTOR', 'Doctor', 'Query and handle medical records', 'record:read,record:edit,search:read,statistics:read', 2),
+    ('ADMIN', 'System Administrator', 'Full user and permission management access', 'user:manage,role:manage,record:manage,log:read,system:read,test:read', 1),
+    ('DOCTOR', 'Doctor', 'Query and handle medical records', 'record:edit,search:read,statistics:read', 2),
     ('NURSE', 'Nurse', 'Assist with basic queries and records', 'record:read,search:read', 3)
 ON CONFLICT (code) DO NOTHING;
 

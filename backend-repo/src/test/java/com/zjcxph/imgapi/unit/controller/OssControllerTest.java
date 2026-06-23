@@ -120,7 +120,7 @@ class OssControllerTest {
         @DisplayName("getPendingMigrations — 透传")
         void getPendingMigrations() {
             when(migrationService.getPendingMigrations(50)).thenReturn(List.of());
-            Result<Map<String, Object>> r = controller.getPendingMigrations(50);
+            Result<Map<String, Object>> r = controller.getPendingMigrations(50, null);
             assertThat(r.getCode()).isEqualTo(200);
         }
 

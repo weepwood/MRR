@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
+import com.zjcxph.imgapi.dto.req.AuthRoleUpdateRequest;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.common.Result;
@@ -149,6 +150,18 @@ public class UserController {
         return Result.<List<AuthRole>>success("success").data(authService.listRoles());
     }
 
+    @Operation(summary = "更新角色信息")
+    @RequirePermissions({"role:manage"})
+    @PutMapping("/roles/{code}")
+    public Result<AuthRole> updateRole(@PathVariable String code, @Valid @RequestBody AuthRoleUpdateRequest request) {
+        try {
+            AuthRole role = authService.updateRole(code, request.getName(), request.getDescription(), request.getPermissions(), request.getSortOrder());
+            return Result.<AuthRole>success("角色更新成功").data(role);
+        } catch (IllegalArgumentException e) {
+            return Result.<AuthRole>fail(e.getMessage());
+        }
+    }
+
     /**
      * 更新用户信息
      * <p>
@@ -166,6 +179,11 @@ public class UserController {
     @RequirePermissions({"user:manage"})
     @PutMapping("/users/{id}")
     public Result<AuthUserProfileDTO> updateUser(@PathVariable Long id, @Valid @RequestBody AuthUserUpdateRequest request) {
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session != null && session.getId() != null && session.getId().equals(id)
+                && "disabled".equalsIgnoreCase(request.getStatus())) {
+            return Result.<AuthUserProfileDTO>fail("不能禁用当前登录账号");
+        }
         AuthUserProfileDTO updated = authService.updateUser(id, request);
         if (updated == null) {
             return Result.<AuthUserProfileDTO>fail("User not found");
@@ -189,6 +207,10 @@ public class UserController {
     @RequirePermissions({"user:manage"})
     @DeleteMapping("/users/{id}")
     public Result<Void> disableUser(@PathVariable Long id) {
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session != null && session.getId() != null && session.getId().equals(id)) {
+            return Result.<Void>fail("不能禁用当前登录账号");
+        }
         int updated = authService.disableUser(id);
         if (updated == 0) {
             return Result.<Void>fail("User not found");

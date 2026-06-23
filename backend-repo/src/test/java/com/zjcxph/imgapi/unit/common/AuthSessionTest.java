@@ -20,11 +20,12 @@ class AuthSessionTest {
     }
 
     @Test
-    @DisplayName("isAdmin — 拥有user:manage权限返回true")
-    void isAdmin_hasUserManage() {
+    @DisplayName("isAdmin — 非ADMIN角色即使有user:manage也返回false")
+    void isAdmin_hasUserManage_butNotAdmin() {
         AuthSession s = new AuthSession();
+        s.setRoleCode("DOCTOR");
         s.setPermissions(List.of("user:manage"));
-        assertThat(s.isAdmin()).isTrue();
+        assertThat(s.isAdmin()).isFalse();
     }
 
     @Test
@@ -57,6 +58,26 @@ class AuthSessionTest {
     void hasPermission_nullPermission() {
         AuthSession s = new AuthSession();
         assertThat(s.hasPermission(null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasPermission — 层级继承: record:manage 包含 record:read")
+    void hasPermission_hierarchy_recordManageImpliesRecordRead() {
+        AuthSession s = new AuthSession();
+        s.setPermissions(List.of("record:manage"));
+        assertThat(s.hasPermission("record:read")).isTrue();
+        assertThat(s.hasPermission("record:edit")).isTrue();
+        assertThat(s.hasPermission("record:manage")).isTrue();
+        assertThat(s.hasPermission("record:delete")).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasPermission — 层级继承: role:manage 包含 role:read")
+    void hasPermission_hierarchy_roleManageImpliesRoleRead() {
+        AuthSession s = new AuthSession();
+        s.setPermissions(List.of("role:manage"));
+        assertThat(s.hasPermission("role:read")).isTrue();
+        assertThat(s.hasPermission("role:manage")).isTrue();
     }
 
     @Test

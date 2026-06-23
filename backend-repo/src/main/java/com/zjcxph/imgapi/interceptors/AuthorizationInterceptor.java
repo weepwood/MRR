@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.utils.PermissionResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -48,7 +49,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         }
 
         List<String> permissions = session.getPermissions() == null ? java.util.Collections.emptyList() : session.getPermissions();
-        boolean allowed = Arrays.stream(annotation.value()).allMatch(permissions::contains);
+        boolean allowed = Arrays.stream(annotation.value()).allMatch(p -> PermissionResolver.hasPermission(permissions, p));
         if (!allowed) {
             writeJsonResponse(response, 403, "No permission");
             return false;
@@ -65,10 +66,6 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
     }
 
     private boolean isAdmin(AuthSession session) {
-        if ("ADMIN".equalsIgnoreCase(session.getRoleCode())) {
-            return true;
-        }
-        List<String> permissions = session.getPermissions();
-        return permissions != null && (permissions.contains("user:manage") || permissions.contains("role:manage"));
+        return "ADMIN".equalsIgnoreCase(session.getRoleCode());
     }
 }

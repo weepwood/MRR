@@ -17,11 +17,15 @@ import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import com.zjcxph.imgapi.utils.PasswordUtil;
+import com.zjcxph.imgapi.utils.PermissionResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +33,8 @@ import java.util.Optional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;
@@ -194,6 +200,22 @@ public class AuthServiceImpl implements AuthService {
         return authRoleMapper.findAll();
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AuthRole updateRole(String code, String name, String description, String permissions, Integer sortOrder) {
+        AuthRole role = authRoleMapper.findByCode(code);
+        if (role == null) {
+            throw new IllegalArgumentException("Role not found: " + code);
+        }
+        if (name != null) role.setName(name);
+        if (description != null) role.setDescription(description);
+        if (permissions != null) role.setPermissions(permissions);
+        if (sortOrder != null) role.setSortOrder(sortOrder);
+        authRoleMapper.update(role);
+        logger.info("Role updated: code={}, name={}, permissions={}", code, role.getName(), role.getPermissions());
+        return role;
+    }
+
     private AuthSession toSession(AuthUser user) {
         AuthSession session = new AuthSession();
         session.setId(user.getId());
@@ -201,7 +223,7 @@ public class AuthServiceImpl implements AuthService {
         session.setDisplayName(firstText(user.getDisplayName(), user.getUsername()));
         session.setRoleCode(user.getRoleCode());
         session.setRoleName(firstText(user.getRoleName(), user.getRoleCode()));
-        session.setPermissions(splitPermissions(user.getPermissionsCsv()));
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
         session.setStatus(user.getStatus());
         session.setLastLoginAt(user.getLastLoginAt());
         return session;
@@ -217,7 +239,7 @@ public class AuthServiceImpl implements AuthService {
         profile.setDisplayName(firstText(user.getDisplayName(), user.getUsername()));
         profile.setRoleCode(user.getRoleCode());
         profile.setRoleName(firstText(user.getRoleName(), user.getRoleCode()));
-        profile.setPermissions(splitPermissions(user.getPermissionsCsv()));
+        profile.setPermissions(new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
         profile.setStatus(user.getStatus());
         profile.setLastLoginAt(user.getLastLoginAt());
         return profile;

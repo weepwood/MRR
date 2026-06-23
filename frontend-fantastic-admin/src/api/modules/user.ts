@@ -1,4 +1,4 @@
-import type { AuthRole, AuthUser, AuthUserUpdatePayload, PaginatedResult } from '../types'
+import type { AuthRole, AuthRoleUpdatePayload, AuthUser, AuthUserUpdatePayload, PaginatedResult } from '../types'
 import api, { deleteRequest, getRequest, putRequest } from '../index'
 
 export default {
@@ -31,6 +31,9 @@ export default {
     }),
 
   getRoles: () => getRequest<AuthRole[]>('/api/v1/auth/roles'),
+
+  updateRole: (code: string, data: AuthRoleUpdatePayload) =>
+    putRequest<AuthRole, AuthRoleUpdatePayload>(`/api/v1/auth/roles/${code}`, data),
 
   updateUser: (id: string | number, data: AuthUserUpdatePayload) =>
     putRequest<AuthUser, AuthUserUpdatePayload>(`/api/v1/auth/users/${id}`, data),

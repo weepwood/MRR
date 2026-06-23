@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { StatisticsRecord } from '@/api/types'
-import { DataBoard, Download, FolderOpened, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { DataBoard, Refresh, Search } from '@element-plus/icons-vue'
+
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { downloadBah } from '@/api/modules/image'
+
 import { getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -21,7 +22,7 @@ interface ListData {
 
 const router = useRouter()
 const loading = ref(false)
-const downloadingBah = ref('')
+
 const error = ref('')
 const summaryData = ref<any>({ byType: [], total: {} })
 const listData = ref<ListData>({
@@ -60,16 +61,7 @@ const typeOptions = computed(() => {
 
 const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
 
-const selectedRecords = computed(() => {
-  if (!selectedArchive.value?.bah) {
-    return []
-  }
-  return listData.value.list.filter(item => item.bah === selectedArchive.value?.bah)
-})
 
-const selectedTotalPages = computed(() =>
-  selectedRecords.value.reduce((sum, item) => sum + Number(item.pages || 0), 0),
-)
 
 const summaryCards = computed(() => [
   { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
@@ -216,34 +208,6 @@ function openArchive(item = selectedArchive.value) {
       openerNo: item.openerNo || '',
     },
   })
-}
-
-async function handleDownload(item = selectedArchive.value) {
-  if (!item?.bah) {
-    ElMessage.warning('请先选择档案袋')
-    return
-  }
-  downloadingBah.value = item.bah
-  try {
-    const result = await downloadBah(item.bah)
-    const blob = result instanceof Blob ? result : (result as any)?.data
-    if (!(blob instanceof Blob)) {
-      throw new TypeError('下载响应不是文件')
-    }
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${item.bah}.zip`
-    link.click()
-    URL.revokeObjectURL(url)
-    ElMessage.success('档案袋下载已开始')
-  }
-  catch (err: any) {
-    ElMessage.error(err?.message || '下载失败')
-  }
-  finally {
-    downloadingBah.value = ''
-  }
 }
 
 function goBackToStatistics() {
@@ -411,46 +375,7 @@ onMounted(refreshAll)
         </div>
       </div>
 
-      <aside class="detail-panel">
-        <div class="detail-title">
-          <el-icon><FolderOpened /></el-icon>
-          <span>档案袋详情</span>
-        </div>
-        <template v-if="selectedArchive">
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="病案号">
-              {{ normalizeText(selectedArchive.bah) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="档案类型">
-              {{ normalizeText(selectedArchive.type) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="扫描设备">
-              {{ normalizeText(selectedArchive.cid) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="扫描人员">
-              {{ normalizeText(selectedArchive.openerNo) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="归档日期">
-              {{ formatDate(selectedArchive.date) }}
-            </el-descriptions-item>
-            <el-descriptions-item label="当前页数">
-              {{ Number(selectedArchive.pages || 0).toLocaleString('zh-CN') }} 页
-            </el-descriptions-item>
-            <el-descriptions-item label="本页同病案记录">
-              {{ selectedRecords.length }} 条 / {{ selectedTotalPages.toLocaleString('zh-CN') }} 页
-            </el-descriptions-item>
-          </el-descriptions>
-          <div class="detail-actions">
-            <el-button type="primary" :icon="FolderOpened" @click="openArchive()">
-              打开影像
-            </el-button>
-            <el-button :icon="Download" :loading="downloadingBah === selectedArchive.bah" @click="handleDownload()">
-              下载档案袋
-            </el-button>
-          </div>
-        </template>
-        <el-empty v-else description="请选择一个档案袋" />
-      </aside>
+
     </section>
   </div>
 </template>
@@ -567,9 +492,7 @@ h2 {
 
 .content-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
-  align-items: start;
 }
 
 .archive-shelf {
@@ -701,41 +624,9 @@ h2 {
   justify-content: flex-end;
 }
 
-.detail-panel {
-  position: sticky;
-  top: 16px;
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-}
-
-.detail-title {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-weight: 800;
-  color: #172033;
-}
-
-.detail-actions {
-  display: grid;
-  gap: 10px;
-}
-
 @media (max-width: 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .content-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-panel {
-    position: static;
   }
 }
 

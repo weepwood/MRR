@@ -142,6 +142,9 @@ export interface LogRecord {
   responseStatus?: number
   executeTime?: number | null
   referer?: string
+  auditAction?: string
+  auditTarget?: string
+  auditDescription?: string
 }
 
 /** 压测请求 */

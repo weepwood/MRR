@@ -58,3 +58,18 @@ export function getDateSummaryByCondition(params?: {
 }) {
   return api.get<DateStatistics[]>('/api/v1/statistics/date-summary/condition', { params })
 }
+
+/** GET /api/v1/statistics/export/csv — 导出统计明细 CSV */
+export function exportStatisticsCsv(params: {
+  keyword?: string
+  bah?: string
+  sjh?: string
+  type?: string
+  startDate?: string
+  endDate?: string
+}) {
+  return api.get('/api/v1/statistics/export/csv', {
+    params,
+    responseType: 'blob',
+  })
+}

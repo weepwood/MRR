@@ -11,6 +11,7 @@ import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -241,6 +244,75 @@ public class StatisticsController {
         dashboard.put("topBAH", bahStats);
 
         return Result.success(dashboard);
+    }
+
+    @Operation(summary = "导出统计明细 CSV")
+    @GetMapping("/export/csv")
+    @RequirePermissions({"statistics:read"})
+    public void exportCsv(
+            @Parameter(description = "关键字，匹配 cid/openerNo/date/type")
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "病案号模糊匹配")
+            @RequestParam(required = false) String bah,
+            @Parameter(description = "上架号模糊匹配")
+            @RequestParam(required = false) String sjh,
+            @Parameter(description = "类型精确匹配")
+            @RequestParam(required = false) String type,
+            @Parameter(description = "开始日期")
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期")
+            @RequestParam(required = false) String endDate,
+            HttpServletResponse response) {
+
+        String normalizedKeyword = normalize(keyword);
+        String normalizedBah = normalize(bah);
+        String normalizedSjh = normalize(sjh);
+        String normalizedType = normalize(type);
+        String normalizedStartDate = normalize(startDate);
+        String normalizedEndDate = normalize(endDate);
+
+        List<Statistics> list = statisticsService.findWithConditionAndPagination(
+                1, 10000, normalizedKeyword, normalizedBah, normalizedSjh,
+                normalizedType, normalizedStartDate, normalizedEndDate, "date", "asc");
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"statistics.csv\"");
+        response.setCharacterEncoding("UTF-8");
+
+        try (OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8)) {
+            writer.write('\uFEFF');
+            writer.write("病案号,设备,负责人,日期,类型,页数,上架号\n");
+            for (Statistics s : list) {
+                writer.write(escapeCsv(s.getBah()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getCid()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getOpenerNo()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getDate()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getType()));
+                writer.write(',');
+                writer.write(s.getPages() != null ? String.valueOf(s.getPages()) : "");
+                writer.write(',');
+                writer.write(escapeCsv(s.getSjh()));
+                writer.write('\n');
+            }
+            writer.flush();
+        } catch (Exception e) {
+            logger.error("导出 CSV 失败", e);
+            response.setStatus(500);
+        }
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     private String normalize(String value) {

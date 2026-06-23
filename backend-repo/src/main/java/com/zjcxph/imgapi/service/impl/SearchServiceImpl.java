@@ -22,4 +22,9 @@ public class SearchServiceImpl implements SearchService {
     public List<Patient> getBAHByID(String id) {
         return searchMapper.findBAHByIDCard(id);
     }
+
+    @Override
+    public List<Patient> getPatientByBah(String bah) {
+        return searchMapper.findPatientByBah(bah);
+    }
 }

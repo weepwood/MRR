@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { BAHImageData } from '@/api/types'
-import { ArrowLeft, Download, Grid, List, Refresh, Search } from '@element-plus/icons-vue'
+import type { BAHImageData, BAHRecord } from '@/api/types'
+import { ArrowLeft, Download, Grid, List, Refresh, Search, User } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { downloadBah, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { getPatientByBah } from '@/api/modules/search'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
@@ -20,6 +21,8 @@ const loading = ref(false)
 const downloading = ref(false)
 const savingType = ref(false)
 const errorMsg = ref('')
+const patientList = ref<BAHRecord[]>([])
+const patientLoading = ref(false)
 const searchBah = ref(String(route.params.bah || route.query.bah || ''))
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
@@ -129,6 +132,7 @@ async function loadImages() {
     }))
     selectedType.value = 'all'
     selectedImageIndex.value = 0
+    loadPatient(bah)
     await nextTick()
     scrollCurrentIntoView(false)
   }
@@ -139,6 +143,20 @@ async function loadImages() {
   }
   finally {
     loading.value = false
+  }
+}
+
+async function loadPatient(bah: string) {
+  patientLoading.value = true
+  try {
+    const res = await getPatientByBah(bah)
+    patientList.value = Array.isArray((res as any).data) ? (res as any).data : []
+  }
+  catch {
+    patientList.value = []
+  }
+  finally {
+    patientLoading.value = false
   }
 }
 
@@ -300,6 +318,33 @@ onMounted(() => {
         <span>日期：{{ formatDate(routeArchive.date) }}</span>
         <span>人员：{{ normalizeText(routeArchive.openerNo) }}</span>
         <span>上架号：{{ normalizeText(routeArchive.sjh) }}</span>
+      </div>
+    </el-card>
+
+    <el-card v-if="patientList.length > 0" shadow="never" class="patient-card">
+      <template #header>
+        <div class="patient-header">
+          <el-icon><User /></el-icon>
+          <span>患者信息</span>
+        </div>
+      </template>
+      <div v-for="p in patientList" :key="p.id" class="patient-body">
+        <div class="patient-field">
+          <span class="field-label">姓名</span>
+          <span class="field-value">{{ p.name || '-' }}</span>
+        </div>
+        <div class="patient-field">
+          <span class="field-label">病案号</span>
+          <span class="field-value">{{ p.bah || '-' }}</span>
+        </div>
+        <div class="patient-field">
+          <span class="field-label">科室</span>
+          <span class="field-value">{{ p.department || '-' }}</span>
+        </div>
+        <div class="patient-field">
+          <span class="field-label">入院时间</span>
+          <span class="field-value">{{ p.admissionTime || '-' }}</span>
+        </div>
       </div>
     </el-card>
 
@@ -473,6 +518,44 @@ h2 {
   margin-top: 12px;
   font-size: 13px;
   color: #64748b;
+}
+
+.patient-card {
+  margin-top: 0;
+}
+
+.patient-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.patient-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.patient-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.field-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .workspace {

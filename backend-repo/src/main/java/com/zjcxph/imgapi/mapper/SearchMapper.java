@@ -13,4 +13,7 @@ public interface SearchMapper {
     * */
     @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where idcard = #{idCard}")
     List<Patient> findBAHByIDCard(String idCard);
+
+    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where bah = #{bah}")
+    List<Patient> findPatientByBah(String bah);
 }

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { StatisticsRecord } from '@/api/types'
 import { ElMessage } from 'element-plus'
-import { DataBoard, Refresh, Search } from '@element-plus/icons-vue'
+import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
+import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
@@ -225,6 +225,32 @@ function goBackToStatistics() {
   router.push('/statistics')
 }
 
+async function handleExportCsv() {
+  const params: any = {}
+  if (filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
+  if (filters.bah.trim()) { params.bah = filters.bah.trim() }
+  if (filters.sjh.trim()) { params.sjh = filters.sjh.trim() }
+  if (filters.type) { params.type = filters.type }
+  if (filters.dateRange.length === 2) {
+    params.startDate = filters.dateRange[0]
+    params.endDate = filters.dateRange[1]
+  }
+  try {
+    const res = await exportStatisticsCsv(params)
+    const blob = new Blob([(res as any).data], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `statistics-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  }
+  catch {
+    ElMessage.error('导出失败')
+  }
+}
+
 onMounted(refreshAll)
 </script>
 
@@ -241,6 +267,9 @@ onMounted(refreshAll)
         </p>
       </div>
       <div class="header-actions">
+        <el-button :icon="Download" @click="handleExportCsv">
+          导出 CSV
+        </el-button>
         <el-button :icon="Refresh" :loading="loading" @click="refreshAll">
           刷新
         </el-button>

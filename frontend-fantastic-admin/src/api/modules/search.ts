@@ -10,3 +10,8 @@ export function getBAHByIdCard(idCard: string) {
 export function getBAHByEncryptID(params: EncryptIDSearchParams) {
   return api.get('/api/v1/search/getBAHByEncryptID', { params })
 }
+
+/** GET /api/v1/search/patient/{bah} — 根据病案号查询患者信息 */
+export function getPatientByBah(bah: string) {
+  return api.get(`/api/v1/search/patient/${bah}`)
+}

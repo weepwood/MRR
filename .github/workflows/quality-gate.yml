@@ -37,6 +37,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Test
+        run: pnpm test:run
+
   backend-gate:
     runs-on: ubuntu-latest
     defaults:
@@ -53,5 +56,8 @@ jobs:
           java-version: 25
           cache: maven
 
-      - name: Compile Package (Skip Tests)
+      - name: Test
+        run: mvn -B -ntp test
+
+      - name: Package
         run: mvn -B -ntp -DskipTests package

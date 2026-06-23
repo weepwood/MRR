@@ -72,6 +72,17 @@ public class SearchController {
         }
     }
 
+    @Operation(summary = "根据病案号查询患者信息")
+    @GetMapping("/patient/{bah}")
+    public Result<List<Patient>> getPatientByBah(@PathVariable String bah) {
+        logger.info("查询病案号 {} 的患者信息", bah);
+        if (bah == null || bah.isEmpty()) {
+            return Result.fail("病案号不能为空");
+        }
+        List<Patient> patients = searchService.getPatientByBah(bah);
+        return Result.success(patients);
+    }
+
     @Deprecated
     @GetMapping("/getBAHByID/{idCard}")
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {

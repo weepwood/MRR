@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/search")
+@Tag(name = "Search", description = "病案搜索与患者查询接口")
 @RequirePermissions({"search:read"})
 public class SearchController {
 
@@ -32,11 +34,13 @@ public class SearchController {
         this.searchService = searchService;
     }
 
+    @Operation(summary = "健康检查")
     @GetMapping("/hello")
     public String hello(HttpServletRequest request) {
         return "hello world search, your IP is: " + getClientIP(request);
     }
 
+    @Operation(summary = "通过加密身份证号查询病案号（带时间戳）")
     @GetMapping("/getBAHByEncryptID")
     public Result<List<Patient>> getBAHByEncryptID(
             @RequestParam String EncryptID,
@@ -55,6 +59,7 @@ public class SearchController {
         }
     }
 
+    @Operation(summary = "通过加密身份证号查询病案号（旧版）")
     @GetMapping("/getBAHByEncryptIDLegacy")
     public Result<List<Patient>> getBAHByEncryptIDLegacy(
             @RequestParam String EncryptID,
@@ -84,6 +89,7 @@ public class SearchController {
     }
 
     @Deprecated
+    @Operation(summary = "通过身份证号查询病案号（已弃用，使用POST版本）")
     @GetMapping("/getBAHByID/{idCard}")
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);

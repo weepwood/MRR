@@ -8,10 +8,12 @@ import com.zjcxph.imgapi.dto.resp.OssUploadResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.MigrationJob;
+import com.zjcxph.imgapi.mapper.MigrationJobMapper;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
+import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,12 +38,14 @@ public class OssController {
     private final MigrationService migrationService;
     private final OssService ossService;
     private final ScanMapper scanMapper;
+    private final MigrationJobMapper migrationJobMapper;
 
     public OssController(MigrationService migrationService, OssService ossService,
-                         ScanMapper scanMapper) {
+                         ScanMapper scanMapper, MigrationJobMapper migrationJobMapper) {
         this.migrationService = migrationService;
         this.ossService = ossService;
         this.scanMapper = scanMapper;
+        this.migrationJobMapper = migrationJobMapper;
     }
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
@@ -195,5 +199,113 @@ public class OssController {
             logger.error("删除 OSS 文件失败：{}", ossKey, e);
             return Result.fail("删除失败：" + e.getMessage());
         }
+    }
+
+    @Operation(summary = "创建迁移任务（异步执行）")
+    @PostMapping("/migration/jobs")
+    public Result<MigrationJob> createMigrationJob() {
+        MigrationStatisticsDTO stats = migrationService.getStatistics();
+        long pendingCount = stats.getPendingCount();
+        if (pendingCount == 0) {
+            return Result.fail("没有待迁移的文件");
+        }
+
+        MigrationJob job = new MigrationJob();
+        job.setStatus("pending");
+        job.setTotalCount(pendingCount);
+        job.setProcessedCount(0L);
+        job.setFailedCount(0L);
+        job.setRate(java.math.BigDecimal.ZERO);
+        job.setCreatedBy(AuthContext.getCurrentUser() != null ? AuthContext.getCurrentUser().getUsername() : "system");
+
+        migrationJobMapper.insert(job);
+        logger.info("Migration job created: id={}, total={}", job.getId(), pendingCount);
+
+        executeMigrationJobAsync(job.getId());
+
+        return Result.<MigrationJob>success("迁移任务已创建").data(job);
+    }
+
+    @Operation(summary = "获取迁移任务详情")
+    @GetMapping("/migration/jobs/{id}")
+    public Result<MigrationJob> getMigrationJob(@PathVariable Long id) {
+        MigrationJob job = migrationJobMapper.findById(id);
+        if (job == null) {
+            return Result.fail("任务不存在");
+        }
+        return Result.<MigrationJob>success().data(job);
+    }
+
+    @Operation(summary = "分页查询迁移任务列表")
+    @GetMapping("/migration/jobs")
+    public Result<PageResult<MigrationJob>> listMigrationJobs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PaginationUtils.validatePageParams(page, size);
+        int offset = (page - 1) * size;
+        List<MigrationJob> jobs = migrationJobMapper.findAllPaginated(offset, size);
+        int total = migrationJobMapper.countAll();
+        return Result.<PageResult<MigrationJob>>success().data(PageResult.of(jobs, total, page, size));
+    }
+
+    private void executeMigrationJobAsync(Long jobId) {
+        new Thread(() -> {
+            try {
+                MigrationJob job = migrationJobMapper.findById(jobId);
+                if (job == null) { return; }
+                job.setStatus("running");
+                job.setStartedAt(new java.util.Date());
+                migrationJobMapper.update(job);
+
+                List<Scan> pending = migrationService.getPendingMigrations(1000);
+                long processed = 0;
+                long failed = 0;
+
+                for (Scan scan : pending) {
+                    try {
+                        OssUploadResult result = migrationService.uploadSingleScan(scan.getId().intValue());
+                        if ("success".equals(result.getStatus()) || "skipped".equals(result.getStatus())) {
+                            processed++;
+                        } else {
+                            failed++;
+                        }
+                    } catch (Exception e) {
+                        failed++;
+                        logger.error("Migration failed for scan {}: {}", scan.getId(), e.getMessage());
+                    }
+
+                    if ((processed + failed) % 10 == 0) {
+                        job.setProcessedCount(processed);
+                        job.setFailedCount(failed);
+                        job.setRate(java.math.BigDecimal.valueOf(
+                                processed * 100.0 / Math.max(1, job.getTotalCount()))
+                                .setScale(2, java.math.RoundingMode.HALF_UP));
+                        migrationJobMapper.update(job);
+                    }
+                }
+
+                job.setProcessedCount(processed);
+                job.setFailedCount(failed);
+                job.setRate(java.math.BigDecimal.valueOf(100).setScale(2, java.math.RoundingMode.HALF_UP));
+                job.setStatus(failed > 0 ? "completed" : "completed");
+                job.setCompletedAt(new java.util.Date());
+                if (failed > 0 && processed == 0) {
+                    job.setStatus("failed");
+                    job.setErrorMessage("全部迁移失败");
+                }
+                migrationJobMapper.update(job);
+                logger.info("Migration job {} completed: processed={}, failed={}", jobId, processed, failed);
+            } catch (Exception e) {
+                logger.error("Migration job {} error: {}", jobId, e.getMessage(), e);
+                MigrationJob job = migrationJobMapper.findById(jobId);
+                if (job != null) {
+                    job.setStatus("failed");
+                    job.setErrorMessage(e.getMessage());
+                    job.setCompletedAt(new java.util.Date());
+                    migrationJobMapper.update(job);
+                }
+            }
+        }, "migration-job-" + jobId).start();
     }
 }

@@ -20,6 +20,12 @@ const actionOptions = [
   { label: '查看本地病案图片', value: 'VIEW_IMAGE' },
   { label: '查看 OSS 病案图片', value: 'VIEW_OSS_IMAGE' },
   { label: '下载病案压缩包', value: 'DOWNLOAD' },
+  { label: '禁用用户', value: 'DISABLE_USER' },
+  { label: '更新用户信息', value: 'UPDATE_USER' },
+  { label: '更新角色权限配置', value: 'UPDATE_ROLE' },
+  { label: '修改密码', value: 'CHANGE_PASSWORD' },
+  { label: '上传图片到 OSS', value: 'OSS_UPLOAD' },
+  { label: '删除 OSS 对象', value: 'DELETE_OSS_OBJECT' },
 ]
 const statusOptions = [{ label: '全部', value: '' }, { label: '2xx', value: '2' }, { label: '4xx', value: '4' }, { label: '5xx', value: '5' }, { label: '200', value: '200' }, { label: '302', value: '302' }, { label: '404', value: '404' }]
 

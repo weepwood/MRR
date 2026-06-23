@@ -243,6 +243,7 @@ public class ScanController {
         return Result.success(pageResult);
     }
 
+    @Operation(summary = "批量下载病案图片（ZIP）")
     @PostMapping("/batch-download")
     public ResponseEntity<?> batchDownload(@RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {

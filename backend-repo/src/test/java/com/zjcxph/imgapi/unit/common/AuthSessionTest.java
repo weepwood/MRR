@@ -87,4 +87,33 @@ class AuthSessionTest {
         s.setPermissions(null);
         assertThat(s.getPermissions()).isEmpty();
     }
+
+    @Test
+    @DisplayName("hasPermission — ADMIN角色对任意权限返回true（admin bypass）")
+    void hasPermission_adminBypass() {
+        AuthSession s = new AuthSession();
+        s.setRoleCode("ADMIN");
+        s.setPermissions(List.of());
+        assertThat(s.hasPermission("record:read")).isTrue();
+        assertThat(s.hasPermission("statistics:read")).isTrue();
+        assertThat(s.hasPermission("any:permission")).isTrue();
+    }
+
+    @Test
+    @DisplayName("hasPermission — ADMIN角色不区分大小写")
+    void hasPermission_adminCaseInsensitive() {
+        AuthSession s = new AuthSession();
+        s.setRoleCode("admin");
+        assertThat(s.isAdmin()).isTrue();
+        assertThat(s.hasPermission("record:read")).isTrue();
+    }
+
+    @Test
+    @DisplayName("hasPermission — 空权限列表的非ADMIN用户返回false")
+    void hasPermission_emptyPerms_nonAdmin() {
+        AuthSession s = new AuthSession();
+        s.setRoleCode("DOCTOR");
+        s.setPermissions(List.of());
+        assertThat(s.hasPermission("record:read")).isFalse();
+    }
 }

@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.config;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
+import com.zjcxph.imgapi.interceptors.RateLimitInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -13,17 +14,31 @@ public class WebConfig implements WebMvcConfigurer {
     private final LoginInterceptor loginInterceptor;
     private final AuthorizationInterceptor authorizationInterceptor;
     private final LogInterceptor logInterceptor;
+    private final RateLimitInterceptor rateLimitInterceptor;
 
     public WebConfig(LoginInterceptor loginInterceptor,
                      AuthorizationInterceptor authorizationInterceptor,
-                     LogInterceptor logInterceptor) {
+                     LogInterceptor logInterceptor,
+                     RateLimitInterceptor rateLimitInterceptor) {
         this.loginInterceptor = loginInterceptor;
         this.authorizationInterceptor = authorizationInterceptor;
         this.logInterceptor = logInterceptor;
+        this.rateLimitInterceptor = rateLimitInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/docs/**",
+                        "/error",
+                        "/favicon.ico",
+                        "/actuator/**"
+                );
+
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(

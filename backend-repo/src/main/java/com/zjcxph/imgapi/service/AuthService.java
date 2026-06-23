@@ -16,6 +16,8 @@ public interface AuthService {
 
     LoginResponseDTO register(RegisterRequest req);
 
+    LoginResponseDTO register(RegisterRequest req, String clientIp);
+
     AuthSession currentUser();
 
     List<AuthUserProfileDTO> listUsers();

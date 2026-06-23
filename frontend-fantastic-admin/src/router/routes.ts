@@ -124,6 +124,15 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/patients',
+        component: () => import('@/views/patients/index.vue'),
+        meta: {
+          title: '患者管理',
+          icon: 'i-ant-design:team-outlined',
+          auth: ['record:read'],
+        },
+      },
+      {
         path: '/statistics',
         component: () => import('@/views/statistics/index.vue'),
         meta: {

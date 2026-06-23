@@ -97,6 +97,8 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setExecuteTime(executeTime);
         log.setReferer(request.getHeader("Referer"));
 
+        enrichAuditFields(log, request);
+
         // 异步保存日志,不阻塞请求响应
         asyncLogService.saveLogAsync(log);
 
@@ -146,6 +148,100 @@ public class LogInterceptor implements HandlerInterceptor {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    /**
+     * 根据请求 URI 和方法 enrich 审计字段（auditAction/auditTarget/auditDescription）。
+     * 覆盖：用户管理、角色管理、权限变更、图片访问等敏感操作。
+     */
+    private void enrichAuditFields(Log log, HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        if (uri == null) {
+            return;
+        }
+
+        if (uri.startsWith("/api/v1/img/")) {
+            enrichImageAudit(log, uri);
+        } else if (uri.startsWith("/api/v1/auth/users")) {
+            enrichUserManagementAudit(log, uri, method);
+        } else if (uri.startsWith("/api/v1/auth/roles")) {
+            enrichRoleManagementAudit(log, uri, method);
+        } else if (uri.startsWith("/api/v1/auth/password/edit")) {
+            log.setAuditAction("CHANGE_PASSWORD");
+            log.setAuditTarget(currentUserUsername(request));
+            log.setAuditDescription("修改密码");
+        } else if (uri.startsWith("/api/v1/oss/") && ("POST".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method))) {
+            enrichOssAudit(log, uri, method);
+        }
+    }
+
+    private void enrichImageAudit(Log log, String uri) {
+        String[] parts = uri.split("/");
+        if (uri.contains("/download/")) {
+            log.setAuditAction("DOWNLOAD");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("下载病案图片压缩包");
+        } else if (uri.contains("/oss-image/")) {
+            log.setAuditAction("VIEW_OSS_IMAGE");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("查看 OSS 病案图片");
+        } else if (uri.startsWith("/api/v1/img/image/")) {
+            log.setAuditAction("VIEW_IMAGE");
+            log.setAuditTarget(parts.length > 5 ? parts[5] : uri);
+            log.setAuditDescription("查看本地病案图片");
+        } else if (uri.startsWith("/api/v1/img/") && !uri.contains("/hello")) {
+            log.setAuditAction("LIST");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("查询病案图片列表");
+        }
+    }
+
+    private void enrichUserManagementAudit(Log log, String uri, String method) {
+        String target = uri.startsWith("/api/v1/auth/users/") ? uri.substring("/api/v1/auth/users/".length()) : "list";
+        if ("DELETE".equalsIgnoreCase(method)) {
+            log.setAuditAction("DISABLE_USER");
+            log.setAuditTarget(target);
+            log.setAuditDescription("禁用用户");
+        } else if ("PUT".equalsIgnoreCase(method)) {
+            log.setAuditAction("UPDATE_USER");
+            log.setAuditTarget(target);
+            log.setAuditDescription("更新用户信息");
+        } else if ("GET".equalsIgnoreCase(method)) {
+            log.setAuditAction("LIST_USERS");
+            log.setAuditTarget("all");
+            log.setAuditDescription("查询用户列表");
+        }
+    }
+
+    private void enrichRoleManagementAudit(Log log, String uri, String method) {
+        String target = uri.startsWith("/api/v1/auth/roles/") ? uri.substring("/api/v1/auth/roles/".length()) : "all";
+        if ("PUT".equalsIgnoreCase(method)) {
+            log.setAuditAction("UPDATE_ROLE");
+            log.setAuditTarget(target);
+            log.setAuditDescription("更新角色权限配置");
+        } else if ("GET".equalsIgnoreCase(method)) {
+            log.setAuditAction("LIST_ROLES");
+            log.setAuditTarget("all");
+            log.setAuditDescription("查询角色列表");
+        }
+    }
+
+    private void enrichOssAudit(Log log, String uri, String method) {
+        if ("DELETE".equalsIgnoreCase(method)) {
+            log.setAuditAction("DELETE_OSS_OBJECT");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("删除 OSS 对象");
+        } else if (uri.contains("/upload")) {
+            log.setAuditAction("OSS_UPLOAD");
+            log.setAuditTarget(uri);
+            log.setAuditDescription("上传图片到 OSS");
+        }
+    }
+
+    private String currentUserUsername(HttpServletRequest request) {
+        AuthSession session = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
+        return session != null ? session.getUsername() : "unknown";
     }
 
     /**

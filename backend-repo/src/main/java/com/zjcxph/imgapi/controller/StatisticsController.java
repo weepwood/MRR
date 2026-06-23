@@ -248,7 +248,6 @@ public class StatisticsController {
 
     @Operation(summary = "导出统计明细 CSV")
     @GetMapping("/export/csv")
-    @RequirePermissions({"statistics:read"})
     public void exportCsv(
             @Parameter(description = "关键字，匹配 cid/openerNo/date/type")
             @RequestParam(required = false) String keyword,

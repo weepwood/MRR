@@ -10,6 +10,8 @@ import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.scheduler.LogRetentionCleaner;
 import com.zjcxph.imgapi.service.LogService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +36,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/logs")
+@Tag(name = "Log Management", description = "访问日志查询、审计与清理接口")
 @RequirePermissions({"log:read"})
 public class LogController {
 
@@ -57,6 +60,7 @@ public class LogController {
         this.logRetentionProperties = logRetentionProperties;
     }
 
+    @Operation(summary = "根据ID获取日志详情")
     @GetMapping("/{id}")
     public Result<Log> getLogById(@PathVariable Long id) {
         Log log = logService.getLogById(id);
@@ -66,6 +70,7 @@ public class LogController {
         return Result.<Log>success().data(log);
     }
 
+    @Operation(summary = "分页获取所有日志")
     @GetMapping("/")
     public Result<PageResult<Log>> getAllLogs(
             @RequestParam(defaultValue = "1") int page,
@@ -77,6 +82,7 @@ public class LogController {
         return Result.<PageResult<Log>>success().data(pageResult);
     }
 
+    @Operation(summary = "按客户端IP分页查询日志")
     @GetMapping("/ip/{ip}")
     public Result<PageResult<Log>> getLogsByClientIp(
             @PathVariable String ip,
@@ -89,6 +95,7 @@ public class LogController {
         return Result.<PageResult<Log>>success().data(pageResult);
     }
 
+    @Operation(summary = "按请求URI分页查询日志")
     @GetMapping("/uri")
     public Result<PageResult<Log>> getLogsByRequestUri(
             @RequestParam String uri,
@@ -101,6 +108,7 @@ public class LogController {
         return Result.<PageResult<Log>>success().data(pageResult);
     }
 
+    @Operation(summary = "手动触发日志保留清理")
     @PostMapping("/retention/cleanup")
     public Result<LogRetentionCleanupResult> cleanupRetentionLogs(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cutoff
@@ -115,6 +123,7 @@ public class LogController {
         return Result.<LogRetentionCleanupResult>success().data(cleanupResult);
     }
 
+    @Operation(summary = "导出过期日志为CSV")
     @GetMapping("/retention/export")
     public ResponseEntity<StreamingResponseBody> exportRetentionLogs() {
         int retentionDays = logRetentionProperties.getRetentionDays();
@@ -157,6 +166,7 @@ public class LogController {
                 .body(body);
     }
 
+    @Operation(summary = "高级日志搜索（多条件组合）")
     @GetMapping("/search")
     public Result<PageResult<Log>> searchLogs(
             @RequestParam(defaultValue = "1") int page,
@@ -210,6 +220,7 @@ public class LogController {
     }
 
 
+    @Operation(summary = "查询图片访问审计日志")
     @GetMapping("/audit/images")
     public Result<PageResult<Log>> searchImageAuditLogs(
             @RequestParam(defaultValue = "1") int page,

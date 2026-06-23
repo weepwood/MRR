@@ -2,9 +2,6 @@
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
-// 请根据实际项目路径调整 API 导入，当前路径 @/api/modules/records 不存在
-// 示例：如果 API 位于 @/api/records，请修改为：
-// import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/records'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
 
 defineOptions({ name: 'RecordsPage' })

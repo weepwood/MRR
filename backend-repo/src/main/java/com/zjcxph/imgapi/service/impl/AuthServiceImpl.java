@@ -89,8 +89,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public LoginResponseDTO register(RegisterRequest req) {
+        return register(req, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LoginResponseDTO register(RegisterRequest req, String clientIp) {
         String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
         String password = Optional.ofNullable(req.getPassword()).map(String::trim).orElse("");
+
+        if (clientIp != null && rateLimiter.isRegisterBlocked(clientIp)) {
+            throw new BusinessException("注册请求过于频繁，请稍后重试");
+        }
 
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             throw new IllegalArgumentException("用户名和密码不能为空");
@@ -119,6 +129,10 @@ public class AuthServiceImpl implements AuthService {
         user.setStatus("active");
 
         authUserMapper.insertUser(user);
+
+        if (clientIp != null) {
+            rateLimiter.recordRegisterAttempt(clientIp);
+        }
 
         AuthUser created = authUserMapper.findByUsername(username);
         AuthSession session = toSession(created);

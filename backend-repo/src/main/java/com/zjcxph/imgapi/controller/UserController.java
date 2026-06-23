@@ -80,8 +80,8 @@ public class UserController {
      */
     @Operation(summary = "用户注册")
     @PostMapping("/register")
-    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req) {
-        LoginResponseDTO response = authService.register(req);
+    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req, HttpServletRequest httpRequest) {
+        LoginResponseDTO response = authService.register(req, getClientIp(httpRequest));
         if (response.getToken() == null || response.getToken().isBlank()) {
             return Result.<LoginResponseDTO>fail("Registration failed");
         }
@@ -255,5 +255,16 @@ public class UserController {
         } catch (Exception e) {
             return Result.fail(e.getMessage());
         }
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
     }
 }

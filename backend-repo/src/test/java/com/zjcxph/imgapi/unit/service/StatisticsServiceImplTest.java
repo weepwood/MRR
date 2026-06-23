@@ -146,6 +146,15 @@ class StatisticsServiceImplTest {
         }
 
         @Test
+        @DisplayName("findWithConditionAndPagination — 含 bah/sjh 条件")
+        void findWithConditionAndPagination_withBahAndSjh() {
+            when(statisticsMapper.findWithConditionAndPagination(0, 10, null, "0078", "SJH001", null, null, null, "date", "desc"))
+                .thenReturn(List.of(mockStat));
+            var result = statisticsService.findWithConditionAndPagination(1, 10, null, "0078", "SJH001", null, null, null, "date", "desc");
+            assertThat(result).hasSize(1);
+        }
+
+        @Test
         @DisplayName("getTotalCountByCondition — 条件总数")
         void getTotalCountByCondition() {
             when(statisticsMapper.getTotalCountByCondition("007", null, null, "CT", null, null)).thenReturn(5L);

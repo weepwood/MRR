@@ -50,6 +50,11 @@ create table main.mr_statistics
     sjh      TEXT
 );
 
+create index if not exists idx_mr_statistics_bah on main.mr_statistics (bah);
+create index if not exists idx_mr_statistics_date on main.mr_statistics (date);
+create index if not exists idx_mr_statistics_type on main.mr_statistics (type);
+create index if not exists idx_mr_statistics_sjh on main.mr_statistics (sjh);
+
 create table main.mr_user
 (
     id    INTEGER not null primary key,

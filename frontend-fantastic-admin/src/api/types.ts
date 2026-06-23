@@ -80,7 +80,6 @@ export interface ImageTypeRequest {
 
 /** 统计记录 */
 export interface StatisticsRecord {
-  id?: number
   bah?: string
   cid?: string
   openerNo?: string

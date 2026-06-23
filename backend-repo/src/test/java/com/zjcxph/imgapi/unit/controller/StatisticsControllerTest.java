@@ -60,6 +60,19 @@ class StatisticsControllerTest {
             verify(statisticsService).findWithConditionAndPagination(
                     eq(1), eq(20), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
         }
+
+        @Test
+        @DisplayName("传递非空 bah 和 sjh")
+        void nonEmptyBahAndSjh() {
+            when(statisticsService.findWithConditionAndPagination(anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(List.of());
+            when(statisticsService.getTotalCountByCondition(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+
+            controller.getAllStatistics(1, 20, null, "0078", "SJH001", null, null, null, null, null);
+
+            verify(statisticsService).findWithConditionAndPagination(
+                eq(1), eq(20), isNull(), eq("0078"), eq("SJH001"), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
+        }
     }
 
     @Nested

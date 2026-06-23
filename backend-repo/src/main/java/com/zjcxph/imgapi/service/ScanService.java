@@ -10,6 +10,8 @@ import java.util.List;
 public interface ScanService {
     List<Scan> getImageListByBAH(String bah);
 
+    List<Scan> getImageListByCode(String bah, String sjh);
+
     Path getImagePath(String bah);
     
     java.io.File createZipForBAH(String bah) throws java.io.IOException;

@@ -4,7 +4,7 @@ import { ArrowLeft, Download, Grid, List, Refresh, Search, User } from '@element
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { downloadBah, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { downloadBah, getImgByCode, getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
 
 defineOptions({ name: 'StatisticsArchivePage' })
@@ -16,6 +16,11 @@ interface GalleryImage extends BAHImageData {
 const route = useRoute()
 const router = useRouter()
 
+function sanitizeParam(val: unknown) {
+  const s = String(val ?? '').trim()
+  return s.startsWith(':') ? '' : s
+}
+
 const images = ref<GalleryImage[]>([])
 const loading = ref(false)
 const downloading = ref(false)
@@ -23,7 +28,8 @@ const savingType = ref(false)
 const errorMsg = ref('')
 const patientList = ref<BAHRecord[]>([])
 const patientLoading = ref(false)
-const searchBah = ref(String(route.params.bah || route.query.bah || ''))
+const searchBah = ref(sanitizeParam(route.params.bah || route.query.bah))
+const searchSjh = ref(sanitizeParam(route.query.sjh))
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<'thumb' | 'list'>('thumb')
@@ -74,17 +80,6 @@ const typeStats = computed(() => {
   return typeOptions.map(item => ({ ...item, count: counts.get(item.value) || 0 }))
 })
 
-const totalPages = computed(() =>
-  images.value.reduce((sum, item) => sum + Number(item.pages || 0), 0),
-)
-
-const summaryCards = computed(() => [
-  { label: '病案号', value: searchBah.value || '-', note: '当前影像档案袋' },
-  { label: '影像数', value: images.value.length, note: '该病案下的扫描记录' },
-  { label: '页码累计', value: totalPages.value, note: '按扫描记录页码汇总' },
-  { label: '当前类型', value: selectedType.value === 'all' ? '全部' : typeLabel(selectedType.value), note: `${filteredImages.value.length} 张影像` },
-])
-
 function imageUrl(item: BAHImageData) {
   return item.ossUrl || item.img_url || ''
 }
@@ -106,25 +101,28 @@ function formatDate(value: string | undefined) {
   return String(value).replace(/\//g, '-')
 }
 
-function isValidBah(value: string) {
-  return /^\d{8}$/.test(value)
+function padCode(value: string) {
+  const trimmed = value.trim()
+  if (trimmed.length > 0 && trimmed.length < 8 && /^\d+$/.test(trimmed)) {
+    return trimmed.padStart(8, '0')
+  }
+  return trimmed
 }
 
 async function loadImages() {
-  const bah = searchBah.value.trim()
-  if (!bah) {
-    ElMessage.warning('请输入病案号')
-    return
-  }
-  if (!isValidBah(bah)) {
-    ElMessage.warning('请输入 8 位病案号')
+  const bah = padCode(searchBah.value)
+  const sjh = padCode(searchSjh.value)
+  if (!bah && !sjh) {
+    ElMessage.warning('请输入病案号或上架号')
     return
   }
 
   loading.value = true
   errorMsg.value = ''
   try {
-    const response = await getImgApiByBah(bah)
+    const response = bah && !sjh
+      ? await getImgApiByBah(bah)
+      : await getImgByCode(bah, sjh)
     const rawList = Array.isArray((response as any).data) ? (response as any).data : []
     images.value = rawList.map((item: BAHImageData) => ({
       ...item,
@@ -132,14 +130,13 @@ async function loadImages() {
     }))
     selectedType.value = 'all'
     selectedImageIndex.value = 0
-    loadPatient(bah)
+    loadPatient(bah || sjh)
     await nextTick()
     scrollCurrentIntoView(false)
   }
   catch (err: any) {
     errorMsg.value = err?.message || '影像加载失败'
     images.value = []
-    ElMessage.error(errorMsg.value)
   }
   finally {
     loading.value = false
@@ -208,9 +205,9 @@ async function saveCurrentType(nextType: number) {
 }
 
 async function handleDownload() {
-  const bah = searchBah.value.trim()
-  if (!isValidBah(bah)) {
-    ElMessage.warning('请输入 8 位病案号')
+  const bah = padCode(searchBah.value)
+  if (!bah) {
+    ElMessage.warning('请输入病案号')
     return
   }
   downloading.value = true
@@ -252,7 +249,7 @@ watch(filteredImages, () => {
 })
 
 onMounted(() => {
-  if (searchBah.value) {
+  if (searchBah.value || searchSjh.value) {
     loadImages()
   }
 })
@@ -262,12 +259,9 @@ onMounted(() => {
   <div class="archive-page">
     <div class="page-header">
       <div>
-        <p class="eyebrow">
-          Archive Images
-        </p>
         <h2>影像档案袋</h2>
         <p class="subtitle">
-          查看单个病案的扫描影像，支持类型筛选、预览、分类修正和整袋下载。
+          病案影像检索、预览与归档
         </p>
       </div>
       <div class="header-actions">
@@ -283,26 +277,15 @@ onMounted(() => {
       </div>
     </div>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
-        </div>
-        <div class="summary-value">
-          {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
-    </section>
-
     <el-card shadow="never">
-      <div class="query-bar">
-        <el-input v-model="searchBah" clearable placeholder="输入 8 位病案号" @keyup.enter="loadImages" />
-        <el-button type="primary" :icon="Search" :loading="loading" @click="loadImages">
-          查询
-        </el-button>
+      <div class="search-bar">
+        <div class="search-fields">
+          <el-input v-model="searchBah" clearable placeholder="病案号" @keyup.enter="loadImages" />
+          <el-input v-model="searchSjh" clearable placeholder="上架号" @keyup.enter="loadImages" />
+          <el-button type="primary" :icon="Search" :loading="loading" @click="loadImages">
+            查询
+          </el-button>
+        </div>
         <el-segmented
           v-model="viewMode"
           :options="[
@@ -311,7 +294,7 @@ onMounted(() => {
           ]"
         />
       </div>
-      <div class="route-meta">
+      <div v-if="images.length" class="route-meta">
         <span>病案号：{{ normalizeText(routeArchive.bah) }}</span>
         <span>设备：{{ normalizeText(routeArchive.cid) }}</span>
         <span>类型：{{ normalizeText(routeArchive.type) }}</span>
@@ -350,35 +333,32 @@ onMounted(() => {
 
     <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
 
-    <section class="workspace">
-      <aside class="type-panel">
-        <div class="panel-title">
-          影像类型
-        </div>
-        <button class="type-item" :class="{ active: selectedType === 'all' }" @click="selectType('all')">
-          <span>全部影像</span>
-          <strong>{{ images.length }}</strong>
+    <template v-if="images.length">
+      <div class="type-bar">
+        <button class="type-tab" :class="{ active: selectedType === 'all' }" @click="selectType('all')">
+          全部
+          <el-tag size="small" class="type-count">{{ images.length }}</el-tag>
         </button>
         <button
           v-for="item in typeStats"
           :key="item.value"
-          class="type-item"
+          class="type-tab"
           :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
           :disabled="item.count === 0"
           @click="selectType(item.value)"
         >
-          <span>{{ item.label }}</span>
-          <strong>{{ item.count }}</strong>
+          {{ item.label }}
+          <el-tag v-if="item.count" size="small" :type="selectedType === item.value ? 'primary' : 'info'" class="type-count">{{ item.count }}</el-tag>
         </button>
-      </aside>
+      </div>
 
-      <main class="viewer-shell">
-        <div ref="thumbsContainer" class="image-list" :class="viewMode">
+      <div class="viewer-layout">
+        <div ref="thumbsContainer" class="thumb-strip" :class="viewMode">
           <button
             v-for="(img, index) in filteredImages"
             :key="img.id || img.filename || index"
             :ref="(el: any) => { thumbRefs[index] = el }"
-            class="image-list-item"
+            class="thumb-item"
             :class="{ active: index === selectedImageIndex }"
             @click="selectImage(index)"
           >
@@ -389,7 +369,7 @@ onMounted(() => {
               loading="lazy"
               @error="onImageError"
             >
-            <span>P{{ img.pages ?? '-' }}</span>
+            <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
             <small>{{ typeLabel(img.btype) }}</small>
           </button>
           <div v-if="!loading && filteredImages.length === 0" class="empty-list">
@@ -397,10 +377,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-loading="loading" class="main-view">
+        <div v-loading="loading" class="preview-panel">
           <template v-if="currentImage">
             <el-image
-              class="main-image"
+              class="preview-image"
               :src="currentImage.imageUrl"
               fit="contain"
               :preview-src-list="previewList"
@@ -408,8 +388,8 @@ onMounted(() => {
               :preview-teleported="true"
               :hide-on-click-modal="false"
             />
-            <div class="image-meta">
-              <div>
+            <div class="preview-bar">
+              <div class="preview-info">
                 <strong>P{{ currentImage.pages ?? '-' }}</strong>
                 <span>{{ normalizeText(currentImage.filename) }}</span>
               </div>
@@ -434,15 +414,19 @@ onMounted(() => {
           </template>
           <el-empty v-else description="请选择影像" />
         </div>
-      </main>
-    </section>
+      </div>
+    </template>
+
+    <div v-if="!images.length && !loading && !errorMsg" class="empty-state">
+      <el-empty description="输入病案号或上架号查询影像" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .archive-page {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .page-header {
@@ -455,69 +439,48 @@ onMounted(() => {
 .header-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  gap: 8px;
 }
 
 h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
+  font-weight: 800;
 }
 
 .subtitle {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
+  font-size: 13px;
   color: #64748b;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.summary-value {
-  margin-top: 8px;
-  overflow-wrap: anywhere;
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.summary-note {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.query-bar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
-  gap: 10px;
+.search-bar {
+  display: flex;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1 1 360px;
+}
+
+.search-fields .el-input {
+  flex: 1 1 160px;
 }
 
 .route-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
-  margin-top: 12px;
+  gap: 6px 16px;
+  margin-top: 14px;
+  padding-top: 14px;
   font-size: 13px;
-  color: #64748b;
+  color: #475569;
+  border-top: 1px solid #e5e7eb;
 }
 
 .patient-card {
@@ -558,119 +521,112 @@ h2 {
   color: #0f172a;
 }
 
-.workspace {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 16px;
-  min-height: 620px;
-}
-
-.type-panel {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  padding: 14px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-}
-
-.panel-title {
-  margin-bottom: 4px;
-  font-weight: 800;
-  color: #172033;
-}
-
-.type-item {
+.type-bar {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
-  font-size: 13px;
-  color: #24324b;
-  text-align: left;
-  cursor: pointer;
+  padding: 8px 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 7px;
 }
 
-.type-item.active,
-.type-item:hover:not(.disabled) {
+.type-tab {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.type-tab.active {
   color: var(--el-color-primary);
+  font-weight: 700;
   background: var(--el-color-primary-light-9);
   border-color: var(--el-color-primary);
 }
 
-.type-item.disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+.type-tab:hover:not(.disabled) {
+  background: #f1f5f9;
 }
 
-.viewer-shell {
+.type-tab.disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.type-count {
+  pointer-events: none;
+}
+
+.viewer-layout {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  min-height: 620px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0;
+  min-height: 600px;
   overflow: hidden;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 7px;
 }
 
-.image-list {
+.thumb-strip {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   align-content: start;
-  max-height: 720px;
-  padding: 10px;
-  overflow: auto;
+  max-height: 700px;
+  padding: 8px;
+  overflow-y: auto;
   background: #f8fafc;
   border-right: 1px solid #e5e7eb;
 }
 
-.image-list.thumb {
+.thumb-strip.thumb {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.image-list.list {
+.thumb-strip.list {
   grid-template-columns: 1fr;
 }
 
-.image-list-item {
+.thumb-item {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
-  padding: 7px;
+  padding: 6px;
   color: #24324b;
   cursor: pointer;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
-.image-list-item.active,
-.image-list-item:hover {
+.thumb-item.active,
+.thumb-item:hover {
   border-color: var(--el-color-primary);
   box-shadow: 0 0 0 2px var(--el-color-primary-light-8);
 }
 
-.image-list-item img {
+.thumb-item img {
   width: 100%;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: #eef2f7;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
-.image-list-item span {
+.thumb-page {
   font-size: 12px;
   font-weight: 800;
 }
 
-.image-list-item small {
+.thumb-item small {
   overflow: hidden;
   font-size: 11px;
   color: #64748b;
@@ -679,43 +635,50 @@ h2 {
 }
 
 .empty-list {
-  padding: 40px 0;
+  padding: 30px 0;
   color: #94a3b8;
   text-align: center;
 }
 
-.main-view {
+.preview-panel {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 620px;
-  padding: 18px;
+  min-height: 600px;
+  padding: 16px;
   background: #eef2f7;
 }
 
-.main-image {
+.preview-image {
   width: 100%;
-  height: 560px;
+  height: 540px;
 }
 
-.image-meta {
+.preview-bar {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
-  left: 18px;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
   display: flex;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: rgb(255 255 255 / 92%);
+  padding: 10px 14px;
+  background: rgb(255 255 255 / 93%);
   border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  box-shadow: 0 10px 24px rgb(15 23 42 / 10%);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 10%);
 }
 
-.image-meta strong {
-  margin-right: 8px;
+.preview-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.preview-info strong {
+  margin-right: 2px;
 }
 
 .type-editor {
@@ -726,42 +689,39 @@ h2 {
   color: #64748b;
 }
 
-@media (max-width: 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.empty-state {
+  padding: 60px 0;
+}
 
-  .workspace {
+@media (max-width: 1100px) {
+  .viewer-layout {
     grid-template-columns: 1fr;
   }
 
-  .type-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .panel-title {
-    grid-column: 1 / -1;
+  .thumb-strip {
+    max-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 720px) {
   .page-header,
-  .image-meta {
+  .preview-bar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .summary-grid,
-  .query-bar,
-  .viewer-shell,
-  .type-panel {
-    grid-template-columns: 1fr;
+  .search-fields {
+    flex-direction: column;
   }
 
-  .image-list {
-    max-height: 260px;
-    border-right: 0;
-    border-bottom: 1px solid #e5e7eb;
+  .search-fields .el-input {
+    width: 100%;
+  }
+
+  .thumb-strip {
+    max-height: 200px;
   }
 }
 </style>

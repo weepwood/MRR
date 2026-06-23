@@ -6,6 +6,13 @@ export function getImgApiByBah(bah: string) {
   return api.get<BAHImageData[]>(`/api/v1/img/${bah}`)
 }
 
+/** GET /api/v1/img/search — 按病案号和/或上架号查询图片数据 */
+export function getImgByCode(bah?: string, sjh?: string) {
+  return api.get<BAHImageData[]>('/api/v1/img/search', {
+    params: { bah, sjh },
+  })
+}
+
 /** GET /api/v1/img/download/{bah} — 下载病案压缩包 */
 export function downloadBah(bah: string) {
   return api.get(`/api/v1/img/download/${bah}`, {

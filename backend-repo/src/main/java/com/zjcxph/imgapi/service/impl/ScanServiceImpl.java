@@ -35,6 +35,11 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    public List<Scan> getImageListByCode(String bah, String sjh) {
+        return scanMapper.findByCode(bah, sjh);
+    }
+
+    @Override
     public Path getImagePath(String bah) {
         List<Scan> baData = scanMapper.findBAH(bah);
         if (baData.isEmpty()) {

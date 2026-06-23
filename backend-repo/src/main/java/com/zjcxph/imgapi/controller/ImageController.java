@@ -12,6 +12,7 @@ import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.ZipUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.Pattern;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import jakarta.validation.constraints.Pattern;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -124,6 +124,46 @@ public class ImageController {
             items.add(dto);
         }
         return Result.success(items).message(bah + " 数据获取成功");
+    }
+
+    @Operation(summary = "按病案号和/或上架号查询图片数据")
+    @GetMapping("/search")
+    public Result<List<BAHDataResponseDTO>> searchByCode(
+            @Parameter(description = "病案号")
+            @RequestParam(required = false) String bah,
+            @Parameter(description = "上架号")
+            @RequestParam(required = false) String sjh) {
+        String normalizedBah = bah != null ? normalizeCode(bah) : "";
+        String normalizedSjh = sjh != null ? sjh.trim() : "";
+        if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
+            return Result.fail("病案号和上架号不能同时为空");
+        }
+        List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
+        String imgUrl = imageProperties.getUrl();
+        List<BAHDataResponseDTO> items = new ArrayList<>();
+        for (Scan scan : list) {
+            String folder = scan.getFolder();
+            String brxh = scan.getBrxh();
+            if (folder == null || brxh == null) {
+                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
+                continue;
+            }
+            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
+                    brxh + "-" + scan.getBah() + "/" + scan.getFilename();
+            BAHDataResponseDTO dto = new BAHDataResponseDTO();
+            BeanUtils.copyProperties(scan, dto);
+            dto.setImg_url(img_url);
+            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
+                try {
+                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
+                    dto.setOssUrl(signedUrl);
+                } catch (Exception e) {
+                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
+                }
+            }
+            items.add(dto);
+        }
+        return Result.success(items);
     }
 
     @Operation(summary = "获取病案号下的对应单张图片")
@@ -257,5 +297,14 @@ public class ImageController {
             throw new IllegalArgumentException("Invalid date format: " + dateStr);
         }
         return parts[0] + "." + parts[1];
+    }
+
+    private static String normalizeCode(String code) {
+        if (code == null) return "";
+        String trimmed = code.trim();
+        if (trimmed.length() > 0 && trimmed.length() < 8 && trimmed.matches("\\d+")) {
+            return "0".repeat(8 - trimmed.length()) + trimmed;
+        }
+        return trimmed;
     }
 }

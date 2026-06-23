@@ -14,8 +14,25 @@ import java.util.List;
 
 @Mapper
 public interface ScanMapper {
-    @Select("select * from mr_scan where BAH = #{bah} ORDER BY pages")
+    @Select("select * from mr_scan where BAH = #{bah} OR SJH = #{bah} ORDER BY pages")
     List<Scan> findBAH(@Param("bah") String bah);
+
+    @Select("<script>"
+            + "SELECT * FROM mr_scan WHERE "
+            + "<choose>"
+            + "<when test='bah != null and bah != \"\" and sjh != null and sjh != \"\"'>"
+            + "BAH = #{bah} OR SJH = #{sjh}"
+            + "</when>"
+            + "<when test='bah != null and bah != \"\"'>"
+            + "BAH = #{bah}"
+            + "</when>"
+            + "<when test='sjh != null and sjh != \"\"'>"
+            + "SJH = #{sjh}"
+            + "</when>"
+            + "</choose>"
+            + " ORDER BY pages"
+            + "</script>")
+    List<Scan> findByCode(@Param("bah") String bah, @Param("sjh") String sjh);
 
     // 根据 ID 列表查询图片路径 - XML 实现
     List<PathDO> getImagePathList(@Param("ids") List<String> ids);

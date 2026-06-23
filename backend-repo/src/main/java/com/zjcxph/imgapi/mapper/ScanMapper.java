@@ -11,6 +11,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface ScanMapper {
@@ -65,6 +66,10 @@ public interface ScanMapper {
     @Select("SELECT * FROM mr_scan WHERE BAH = #{bah} ORDER BY pages")
     List<Scan> findByBah(@Param("bah") String bah);
 
+    // 根据文件夹查询
+    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id")
+    List<Scan> findByFolder(@Param("folder") String folder);
+
     // 根据病人序号查询
     @Select("SELECT * FROM mr_scan WHERE BRXH = #{brxh} ORDER BY id")
     List<Scan> findByBrxh(@Param("brxh") String brxh);
@@ -99,4 +104,14 @@ public interface ScanMapper {
 
     @Select("SELECT COUNT(*) FROM mr_scan WHERE uploadflag != 0")
     long countTotalUploadedScans();
+
+    @Select("SELECT folder, COUNT(*) AS cnt FROM mr_scan "
+            + "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "GROUP BY folder ORDER BY folder")
+    List<Map<String, Object>> findPendingFolders();
+
+    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} "
+            + "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "ORDER BY id")
+    List<Scan> findPendingByFolder(@Param("folder") String folder);
 }

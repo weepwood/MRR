@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult, ScanRecord } from '@/api/types'
-import { Link, Refresh, UploadFilled } from '@element-plus/icons-vue'
+import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getMigrationLogs, getMigrationStatistics, getPendingMigrations, uploadByBah, uploadToOss } from '@/api/modules/oss'
+import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
 
 defineOptions({ name: 'OssMigrationPage' })
+
+// ==================== Types ====================
+interface FolderNode {
+  id: string
+  label: string
+  folder?: string
+  count?: number
+  children?: FolderNode[]
+  isLeaf: boolean
+}
 
 // ==================== State ====================
 const stats = ref<MigrationStatistics>({})
@@ -22,11 +32,16 @@ const loading = reactive({
   logs: false,
   upload: false,
   bahUpload: false,
+  folderUpload: false,
+  folders: false,
 })
 
 const bahInput = ref('')
+const folderInput = ref('')
 const uploadResults = ref<OssUploadResult[]>([])
 const selectedPending = ref<ScanRecord[]>([])
+const folderTree = ref<FolderNode[]>([])
+const selectedFolder = ref('')
 
 // ==================== Computed ====================
 const progressPercentage = computed(() => {
@@ -47,6 +62,145 @@ const summaryCards = computed(() => [
   { label: '失败', value: stats.value?.failedCount ?? 0, color: '#f56c6c', icon: 'i-ant-design:close-circle-twotone' },
 ])
 
+const pendingTitle = computed(() => {
+  return selectedFolder.value ? `待迁移记录 - ${selectedFolder.value} (${pendingList.value.length})` : `待迁移记录 (${pendingList.value.length})`
+})
+
+const totalPendingCount = computed(() => {
+  let total = 0
+  function walk(nodes: FolderNode[]) {
+    for (const n of nodes) {
+      if (n.isLeaf && n.count) { total += n.count }
+      if (n.children) { walk(n.children) }
+    }
+  }
+  walk(folderTree.value)
+  return total
+})
+
+// ==================== Folder Tree ====================
+function buildFolderTree(folders: { folder: string, cnt: number }[]): FolderNode[] {
+  const hasNested = folders.some(f => f.folder.includes('/'))
+
+  if (!hasNested) {
+    return folders
+      .map(f => ({
+        id: f.folder,
+        label: f.folder,
+        folder: f.folder,
+        count: f.cnt,
+        isLeaf: true,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }
+
+  const rootMap = new Map<string, { node: FolderNode, childMap: Map<string, FolderNode> }>()
+
+  for (const f of folders) {
+    const parts = f.folder.split('/')
+    const rootKey = parts[0]
+    if (!rootMap.has(rootKey)) {
+      rootMap.set(rootKey, {
+        node: { id: rootKey, label: rootKey, folder: rootKey, children: [], isLeaf: false },
+        childMap: new Map(),
+      })
+    }
+    const entry = rootMap.get(rootKey)!
+
+    if (parts.length === 1) {
+      entry.node.count = (entry.node.count || 0) + f.cnt
+    }
+    else {
+      const childKey = f.folder
+      if (!entry.childMap.has(childKey)) {
+        entry.childMap.set(childKey, {
+          id: childKey,
+          label: parts.slice(1).join('/'),
+          folder: childKey,
+          count: f.cnt,
+          isLeaf: true,
+        })
+      }
+    }
+  }
+
+  const result: FolderNode[] = []
+  for (const [, entry] of rootMap) {
+    entry.node.children = Array.from(entry.childMap.values())
+    const childSum = entry.node.children.reduce((s, c) => s + (c.count || 0), 0)
+    entry.node.count = (entry.node.count || 0) + childSum
+    if (entry.node.children.length === 0) {
+      delete entry.node.children
+      entry.node.isLeaf = true
+    }
+    result.push(entry.node)
+  }
+
+  result.sort((a, b) => a.label.localeCompare(b.label))
+  return result
+}
+
+async function loadFolders() {
+  loading.folders = true
+  try {
+    const res = await getPendingFolders()
+    const data = res.data || res || []
+    const list = Array.isArray(data) ? data : []
+    folderTree.value = buildFolderTree(list)
+  }
+  catch (err: any) {
+    console.error('[OSS] load folders error:', err)
+  }
+  finally {
+    loading.folders = false
+  }
+}
+
+function handleFolderClick(node: FolderNode) {
+  if (node.isLeaf && node.folder) {
+    selectedFolder.value = node.folder
+    loadPendingByFolder(node.folder)
+  }
+  else {
+    selectedFolder.value = ''
+    loadPending()
+  }
+}
+
+async function loadPendingByFolder(folder: string) {
+  loading.pending = true
+  try {
+    const res = await getPendingMigrations({ folder })
+    const data = res.data || res || {}
+    pendingList.value = Array.isArray(data.list) ? data.list : []
+    selectedPending.value = []
+  }
+  catch (err: any) {
+    console.error('[OSS] load pending by folder error:', err)
+    ElMessage.error(err?.message || '加载文件夹记录失败')
+  }
+  finally {
+    loading.pending = false
+  }
+}
+
+async function loadPending() {
+  selectedFolder.value = ''
+  loading.pending = true
+  try {
+    const res = await getPendingMigrations({ limit: 50 })
+    const data = res.data || res || {}
+    pendingList.value = Array.isArray(data.list) ? data.list : []
+  }
+  catch (err: any) {
+    console.error('[OSS] load pending error:', err)
+    ElMessage.error(err?.message || '加载待迁移列表失败')
+  }
+  finally {
+    loading.pending = false
+  }
+}
+
 // ==================== Data Loading ====================
 async function loadStats() {
   loading.stats = true
@@ -54,26 +208,11 @@ async function loadStats() {
     const res = await getMigrationStatistics()
     stats.value = res.data || res || {}
   }
-  catch (err: any) {
-    ElMessage.error(err?.message || '加载统计数据失败')
+  catch {
+    // silent
   }
   finally {
     loading.stats = false
-  }
-}
-
-async function loadPending() {
-  loading.pending = true
-  try {
-    const res = await getPendingMigrations(50)
-    const data = res.data || res || {}
-    pendingList.value = Array.isArray(data.list) ? data.list : []
-  }
-  catch (err: any) {
-    ElMessage.error(err?.message || '加载待迁移列表失败')
-  }
-  finally {
-    loading.pending = false
   }
 }
 
@@ -89,8 +228,8 @@ async function loadLogs() {
     logList.value = Array.isArray(data.list) ? data.list : []
     logTotal.value = Number(data.total || 0)
   }
-  catch (err: any) {
-    ElMessage.error(err?.message || '加载迁移日志失败')
+  catch {
+    // silent
   }
   finally {
     loading.logs = false
@@ -98,7 +237,7 @@ async function loadLogs() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadStats(), loadPending(), loadLogs()])
+  await Promise.all([loadStats(), loadFolders(), loadPending(), loadLogs()])
 }
 
 // ==================== Upload Actions ====================
@@ -135,6 +274,42 @@ async function handleBahUpload() {
   }
   finally {
     loading.bahUpload = false
+  }
+}
+
+async function handleFolderUpload() {
+  const folder = folderInput.value.trim()
+  if (!folder) {
+    ElMessage.warning('请输入文件夹路径')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确认上传文件夹 ${folder} 下的所有图片到 OSS？`,
+      '确认上传',
+      { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'info' },
+    )
+  }
+  catch {
+    return
+  }
+
+  loading.folderUpload = true
+  uploadResults.value = []
+  try {
+    const res = await uploadByFolder(folder)
+    const data = res.data || res || {}
+    uploadResults.value = Array.isArray(data.results) ? data.results : []
+    const successCount = uploadResults.value.filter(r => r.status === 'success').length
+    ElMessage.success(`上传完成：${successCount}/${uploadResults.value.length} 成功`)
+    await refreshAll()
+  }
+  catch (err: any) {
+    ElMessage.error(err?.message || '上传失败')
+  }
+  finally {
+    loading.folderUpload = false
   }
 }
 
@@ -205,8 +380,6 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleString('zh-CN')
 }
 
-// 获取 OSS 图片的完整 URL
-// 后端已经为成功的记录生成了预签名 URL，直接返回即可
 function getOssImageUrl(ossUrl?: string) {
   return ossUrl || ''
 }
@@ -225,7 +398,7 @@ onMounted(refreshAll)
         </p>
         <h2>OSS 迁移管理</h2>
         <p class="subtitle">
-          管理本地图片到 OSS 的迁移，支持按病案号和批量上传。
+          管理本地图片到 OSS 的迁移，支持按文件夹/病案号/批量上传。
         </p>
       </div>
       <el-button type="primary" :icon="Refresh" @click="refreshAll">
@@ -305,6 +478,121 @@ onMounted(refreshAll)
       </div>
     </el-card>
 
+    <!-- Folder Tree + Pending Table (side-by-side) -->
+    <div class="folder-pending-row">
+      <el-card shadow="never" class="folder-tree-card">
+        <template #header>
+          <div class="card-header">
+            <span>待迁移文件夹</span>
+            <el-tag size="small" type="info">{{ totalPendingCount }}</el-tag>
+          </div>
+        </template>
+        <div v-loading="loading.folders" class="tree-wrapper">
+          <el-tree
+            :data="folderTree"
+            :props="{ children: 'children', label: 'label' }"
+            node-key="id"
+            highlight-current
+            @node-click="handleFolderClick"
+          >
+            <template #default="{ data }">
+              <span class="tree-node">
+                <el-icon :size="16">
+                  <FolderOpened v-if="!data.isLeaf" />
+                  <Folder v-else />
+                </el-icon>
+                <span class="tree-label">{{ data.label }}</span>
+                <el-tag v-if="data.count" size="small" type="info" class="tree-count">
+                  {{ data.count }}
+                </el-tag>
+              </span>
+            </template>
+          </el-tree>
+        </div>
+      </el-card>
+
+      <el-card shadow="never" class="pending-table-card">
+        <template #header>
+          <div class="card-header">
+            <span>{{ pendingTitle }}</span>
+            <div class="pending-actions">
+              <el-button
+                v-if="selectedFolder"
+                size="small"
+                @click="loadPending()"
+              >
+                显示全部
+              </el-button>
+              <el-button
+                type="primary"
+                size="small"
+                :loading="loading.upload"
+                :disabled="!selectedPending.length"
+                @click="handleBatchUpload"
+              >
+                批量上传 ({{ selectedPending.length }})
+              </el-button>
+            </div>
+          </div>
+        </template>
+        <el-table
+          v-loading="loading.pending"
+          :data="pendingList"
+          stripe
+          size="small"
+          max-height="450"
+          @selection-change="handlePendingSelection"
+        >
+          <el-table-column type="selection" width="48" />
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column prop="bah" label="病案号" width="110" />
+          <el-table-column prop="brxh" label="病人序号" width="90" />
+          <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="folder" label="目录" min-width="110" show-overflow-tooltip />
+          <el-table-column prop="migrationStatus" label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="statusTag(row.migrationStatus).type as any" size="small">
+                {{ statusTag(row.migrationStatus).label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="!pendingList.length && !loading.pending" class="empty-pending">
+          暂无待迁移记录
+        </div>
+      </el-card>
+    </div>
+
+    <!-- Upload by Folder -->
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header">
+          <span>按文件夹上传</span>
+        </div>
+      </template>
+      <el-form inline @submit.prevent="handleFolderUpload">
+        <el-form-item label="文件夹">
+          <el-input
+            v-model="folderInput"
+            placeholder="输入文件夹路径"
+            clearable
+            style="width: 260px;"
+            @keyup.enter="handleFolderUpload"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            :loading="loading.folderUpload"
+            :icon="UploadFilled"
+            @click="handleFolderUpload"
+          >
+            上传到 OSS
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <!-- Upload by BAH -->
     <el-card shadow="never">
       <template #header>
@@ -370,46 +658,6 @@ onMounted(refreshAll)
           <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
         </el-table>
       </div>
-    </el-card>
-
-    <!-- Pending Migrations Table -->
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>待迁移记录 ({{ pendingList.length }})</span>
-          <el-button
-            type="primary"
-            size="small"
-            :loading="loading.upload"
-            :disabled="!selectedPending.length"
-            @click="handleBatchUpload"
-          >
-            批量上传 ({{ selectedPending.length }})
-          </el-button>
-        </div>
-      </template>
-      <el-table
-        v-loading="loading.pending"
-        :data="pendingList"
-        stripe
-        size="small"
-        max-height="400"
-        @selection-change="handlePendingSelection"
-      >
-        <el-table-column type="selection" width="48" />
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="bah" label="病案号" width="120" />
-        <el-table-column prop="brxh" label="病人序号" width="100" />
-        <el-table-column prop="filename" label="文件名" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="folder" label="目录" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusTag(row.migrationStatus).type as any" size="small">
-              {{ statusTag(row.migrationStatus).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
     </el-card>
 
     <!-- Migration Logs -->
@@ -528,7 +776,6 @@ h2 {
   gap: 16px;
 }
 
-/* el-card 本身只承载顶部彩条，内容由 __body 控制 */
 .stat-card {
   position: relative;
   overflow: hidden;
@@ -540,7 +787,6 @@ h2 {
 .stat-card.pending-count { border-top-color: #e6a23c; }
 .stat-card.failed-count { border-top-color: #f56c6c; }
 
-/* 穿透 el-card__body，实现 icon + body 横排 */
 .stat-card :deep(.el-card__body) {
   display: flex;
   gap: 18px;
@@ -614,6 +860,62 @@ h2 {
   justify-content: space-between;
 }
 
+/* ===== Folder Tree + Pending Table Row ===== */
+.folder-pending-row {
+  display: flex;
+  gap: 20px;
+}
+
+.folder-tree-card {
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.pending-table-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-wrapper {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.tree-node {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-count {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.pending-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.empty-pending {
+  padding: 32px 0;
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
+}
+
 .upload-results {
   padding-top: 12px;
   margin-top: 16px;
@@ -667,10 +969,17 @@ h2 {
   margin-top: 16px;
 }
 
-/* ===== 响应式 ===== */
 @media (width <= 900px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .folder-pending-row {
+    flex-direction: column;
+  }
+
+  .folder-tree-card {
+    width: 100%;
   }
 }
 

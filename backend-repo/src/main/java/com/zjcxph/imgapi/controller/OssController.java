@@ -7,7 +7,9 @@ import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.ImageMigrationLog;
+import com.zjcxph.imgapi.entity.MigrationJob;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
@@ -33,10 +35,13 @@ public class OssController {
 
     private final MigrationService migrationService;
     private final OssService ossService;
+    private final ScanMapper scanMapper;
 
-    public OssController(MigrationService migrationService, OssService ossService) {
+    public OssController(MigrationService migrationService, OssService ossService,
+                         ScanMapper scanMapper) {
         this.migrationService = migrationService;
         this.ossService = ossService;
+        this.scanMapper = scanMapper;
     }
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
@@ -125,15 +130,28 @@ public class OssController {
     @Operation(summary = "获取待迁移记录列表")
     @GetMapping("/migration/pending")
     public Result<Map<String, Object>> getPendingMigrations(
-            @RequestParam(defaultValue = "50") int limit) {
-        logger.info("获取待迁移记录列表：limit={}", limit);
-        List<Scan> pending = migrationService.getPendingMigrations(limit);
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) String folder) {
+        logger.info("获取待迁移记录列表：limit={}, folder={}", limit, folder);
+        List<Scan> pending;
+        if (folder != null && !folder.isBlank()) {
+            pending = scanMapper.findPendingByFolder(folder);
+        } else {
+            pending = migrationService.getPendingMigrations(limit);
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("list", pending);
         response.put("total", pending.size());
 
         return Result.success(response);
+    }
+
+    @Operation(summary = "获取待迁移文件夹列表")
+    @GetMapping("/migration/pending-folders")
+    public Result<List<Map<String, Object>>> getPendingFolders() {
+        List<Map<String, Object>> folders = scanMapper.findPendingFolders();
+        return Result.success(folders);
     }
 
     @Operation(summary = "获取迁移日志列表")

@@ -27,6 +27,9 @@ public class AuthSession {
     }
 
     public boolean hasPermission(String permission) {
+        if (isAdmin()) {
+            return true;
+        }
         return PermissionResolver.hasPermission(permissions, permission);
     }
 }

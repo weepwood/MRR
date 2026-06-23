@@ -94,7 +94,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '权限管理',
           icon: 'i-ant-design:lock-twotone',
-          auth: ['role:read', 'role:manage', 'user:manage'],
+          auth: ['role:read'],
         },
       },
       {
@@ -103,7 +103,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '系统设置',
           icon: 'i-ant-design:tool-twotone',
-          auth: ['system:read', 'role:manage', 'user:manage'],
+          auth: ['system:read'],
         },
       },
     ],
@@ -120,7 +120,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '记录管理',
           icon: 'i-ant-design:database-twotone',
-          auth: ['user:manage', 'role:manage', 'system:read'],
+          auth: ['record:read'],
         },
       },
       {
@@ -129,7 +129,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '统计分析',
           icon: 'i-ant-design:area-chart-outlined',
-          auth: ['system:read', 'user:manage', 'role:manage'],
+          auth: ['statistics:read'],
         },
       },
       {
@@ -138,7 +138,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '统计明细',
           icon: 'i-ant-design:profile-twotone',
-          auth: ['system:read', 'user:manage', 'role:manage'],
+          auth: ['statistics:read'],
         },
       },
       {
@@ -147,7 +147,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '病案统计',
           icon: 'i-ant-design:bar-chart-outlined',
-          auth: ['system:read', 'user:manage', 'role:manage'],
+          auth: ['statistics:read'],
         },
       },
       {
@@ -156,7 +156,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: 'OSS 迁移管理',
           icon: 'i-ant-design:cloud-upload-outlined',
-          auth: ['system:read', 'user:manage'],
+          auth: ['record:read'],
         },
       },
       {
@@ -165,7 +165,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '影像档案袋',
           icon: 'i-ant-design:folder-open-twotone',
-          auth: ['system:read', 'user:manage', 'role:manage'],
+          auth: ['record:read'],
         },
       },
     ],
@@ -182,7 +182,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '日志管理',
           icon: 'i-ant-design:file-search-outlined',
-          auth: ['log:read', 'system:read'],
+          auth: ['log:read'],
         },
       },
       {
@@ -191,7 +191,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '病案图片访问审计',
           icon: 'i-ant-design:security-scan-outlined',
-          auth: ['log:read', 'system:read'],
+          auth: ['log:read'],
         },
       },
       {
@@ -209,7 +209,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '测试中心',
           icon: 'i-ant-design:experiment-twotone',
-          auth: ['test:read', 'system:read', 'log:read', 'role:manage', 'user:manage'],
+          auth: ['test:read'],
         },
       },
     ],

@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
@@ -126,7 +127,11 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthSession currentUser() {
-        return AuthContext.getCurrentUser();
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session != null && session.isAdmin()) {
+            session.setPermissions(adminPermissions());
+        }
+        return session;
     }
 
     @Override
@@ -223,7 +228,9 @@ public class AuthServiceImpl implements AuthService {
         session.setDisplayName(firstText(user.getDisplayName(), user.getUsername()));
         session.setRoleCode(user.getRoleCode());
         session.setRoleName(firstText(user.getRoleName(), user.getRoleCode()));
-        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
+        session.setPermissions(isAdminRole(user.getRoleCode())
+                ? adminPermissions()
+                : new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
         session.setStatus(user.getStatus());
         session.setLastLoginAt(user.getLastLoginAt());
         return session;
@@ -239,10 +246,20 @@ public class AuthServiceImpl implements AuthService {
         profile.setDisplayName(firstText(user.getDisplayName(), user.getUsername()));
         profile.setRoleCode(user.getRoleCode());
         profile.setRoleName(firstText(user.getRoleName(), user.getRoleCode()));
-        profile.setPermissions(new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
+        profile.setPermissions(isAdminRole(user.getRoleCode())
+                ? adminPermissions()
+                : new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
         profile.setStatus(user.getStatus());
         profile.setLastLoginAt(user.getLastLoginAt());
         return profile;
+    }
+
+    private boolean isAdminRole(String roleCode) {
+        return "ADMIN".equalsIgnoreCase(roleCode);
+    }
+
+    private ArrayList<String> adminPermissions() {
+        return new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS));
     }
 
     private List<String> splitPermissions(String rawPermissions) {

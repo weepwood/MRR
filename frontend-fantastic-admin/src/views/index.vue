@@ -11,6 +11,7 @@ import { useUserStore } from '@/store/modules/user'
 import { getDashboardData } from '@/api/modules/statistics'
 import { getSystemHealth } from '@/api/modules/system'
 import { searchImageAuditLogs } from '@/api/modules/logs'
+import { hasPermission } from '@/utils/session'
 import type { DashboardData, LogRecord } from '@/api/types'
 
 defineOptions({ name: 'HomePage' })
@@ -23,6 +24,10 @@ const health = ref<Record<string, any>>({})
 const auditLogs = ref<LogRecord[]>([])
 const loading = ref(true)
 
+const canViewStats = computed(() => hasPermission('statistics:read'))
+const canViewHealth = computed(() => hasPermission('system:read'))
+const canViewAudit = computed(() => hasPermission('log:read'))
+
 const statsCards = computed(() => [
   { label: '总记录数', value: dashboard.value.overview?.totalRecords ?? '-', icon: 'i-ant-design:file-text-twotone', color: '#409eff' },
   { label: '总页数', value: dashboard.value.overview?.totalPages ?? '-', icon: 'i-ant-design:book-twotone', color: '#67c23a' },
@@ -31,13 +36,15 @@ const statsCards = computed(() => [
 ])
 
 const quickActions = [
-  { label: '记录管理', icon: 'i-ant-design:database-twotone', path: '/records', color: '#409eff' },
-  { label: '统计分析', icon: 'i-ant-design:bar-chart-twotone', path: '/statistics', color: '#67c23a' },
-  { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c' },
-  { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive', color: '#909399' },
-  { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c' },
-  { label: '测试中心', icon: 'i-ant-design:experiment-twotone', path: '/testing', color: '#8b5cf6' },
+  { label: '记录管理', icon: 'i-ant-design:database-twotone', path: '/records', color: '#409eff', perm: 'record:read' },
+  { label: '统计分析', icon: 'i-ant-design:bar-chart-twotone', path: '/statistics', color: '#67c23a', perm: 'statistics:read' },
+  { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
+  { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive', color: '#909399', perm: 'record:read' },
+  { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
+  { label: '测试中心', icon: 'i-ant-design:experiment-twotone', path: '/testing', color: '#8b5cf6', perm: 'test:read' },
 ]
+
+const visibleQuickActions = computed(() => quickActions.filter(a => hasPermission(a.perm)))
 
 const trendMax = computed(() => {
   if (!dashboard.value.recentTrend?.length) return 100
@@ -55,17 +62,31 @@ const memOk = computed(() => health.value?.components?.memory?.status === 'UP')
 async function loadData() {
   loading.value = true
   try {
-    const [dashRes, healthRes, auditRes] = await Promise.allSettled([
-      getDashboardData(),
-      getSystemHealth(),
-      searchImageAuditLogs({ page: 1, size: 10 }),
-    ])
-    if (dashRes.status === 'fulfilled') dashboard.value = (dashRes.value as any)?.data ?? {}
-    if (healthRes.status === 'fulfilled') health.value = (healthRes.value as any)?.data ?? {}
-    if (auditRes.status === 'fulfilled') {
-      const payload = auditRes.value as any
-      auditLogs.value = payload?.data?.list ?? payload?.list ?? payload?.data ?? []
+    const tasks: Promise<any>[] = []
+    const keys: ('dash' | 'health' | 'audit')[] = []
+    if (canViewStats.value) {
+      tasks.push(getDashboardData())
+      keys.push('dash')
     }
+    if (canViewHealth.value) {
+      tasks.push(getSystemHealth())
+      keys.push('health')
+    }
+    if (canViewAudit.value) {
+      tasks.push(searchImageAuditLogs({ page: 1, size: 10 }))
+      keys.push('audit')
+    }
+    const results = await Promise.allSettled(tasks)
+    results.forEach((res, i) => {
+      if (res.status !== 'fulfilled') { return }
+      const key = keys[i]
+      if (key === 'dash') { dashboard.value = (res.value as any)?.data ?? {} }
+      if (key === 'health') { health.value = (res.value as any)?.data ?? {} }
+      if (key === 'audit') {
+        const payload = res.value as any
+        auditLogs.value = payload?.data?.list ?? payload?.list ?? payload?.data ?? []
+      }
+    })
   } finally {
     loading.value = false
   }
@@ -109,7 +130,7 @@ onMounted(() => {
     </div>
 
     <!-- 统计卡片 -->
-    <el-row :gutter="16">
+    <el-row v-if="canViewStats" :gutter="16">
       <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6">
         <el-card shadow="never" class="stat-card">
           <div class="stat-inner">
@@ -125,9 +146,9 @@ onMounted(() => {
       </el-col>
     </el-row>
 
-    <el-row :gutter="16">
+    <el-row v-if="canViewStats || canViewHealth" :gutter="16">
       <!-- 近 30 天趋势 -->
-      <el-col :span="16">
+      <el-col v-if="canViewStats" :span="canViewHealth ? 16 : 24">
         <el-card shadow="never">
           <template #header>
             <div class="card-header">
@@ -151,7 +172,7 @@ onMounted(() => {
       </el-col>
 
       <!-- 系统状态 + 快捷入口 -->
-      <el-col :span="8">
+      <el-col v-if="canViewHealth" :span="canViewStats ? 8 : 24">
         <el-card shadow="never" class="mb-4">
           <template #header>
             <span>系统状态</span>
@@ -174,7 +195,7 @@ onMounted(() => {
           </template>
           <div class="quick-grid">
             <button
-              v-for="action in quickActions"
+              v-for="action in visibleQuickActions"
               :key="action.label"
               class="quick-item"
               @click="navigate(action.path)"
@@ -188,7 +209,7 @@ onMounted(() => {
     </el-row>
 
     <!-- 用户病案访问情况 -->
-    <el-card shadow="never">
+    <el-card v-if="canViewAudit" shadow="never">
       <template #header>
         <div class="card-header">
           <span>用户病案访问情况</span>

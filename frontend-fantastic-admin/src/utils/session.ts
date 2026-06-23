@@ -21,10 +21,16 @@ export function isAdminUser() {
 }
 
 export function hasPermission(permission: string) {
+  if (isAdminUser()) {
+    return true
+  }
   return checkPermission(useUserStore().permissions || [], permission)
 }
 
 export function hasAnyPermission(permissions: string[]) {
+  if (isAdminUser()) {
+    return true
+  }
   return checkAnyPermission(useUserStore().permissions || [], permissions)
 }
 

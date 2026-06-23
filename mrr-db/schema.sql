@@ -29,6 +29,7 @@ create table main.mr_scan
     id         INTEGER not null primary key,
     BRXH       TEXT,
     BAH        TEXT,
+    sjh        TEXT,
     filename   TEXT,
     btype      INTEGER,
     pages      INTEGER,

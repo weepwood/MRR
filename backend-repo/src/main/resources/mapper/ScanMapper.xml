@@ -18,6 +18,7 @@
         <set>
             <if test="brxh != null">BRXH = #{brxh},</if>
             <if test="bah != null">BAH = #{bah},</if>
+            <if test="sjh != null">sjh = #{sjh},</if>
             <if test="filename != null">filename = #{filename},</if>
             <if test="btype != null">btype = #{btype},</if>
             <if test="pages != null">pages = #{pages},</if>
@@ -35,6 +36,7 @@
         <where>
             <if test="brxh != null and brxh != ''">AND BRXH LIKE '%' || #{brxh} || '%'</if>
             <if test="bah != null and bah != ''">AND BAH LIKE '%' || #{bah} || '%'</if>
+            <if test="sjh != null and sjh != ''">AND sjh LIKE '%' || #{sjh} || '%'</if>
             <if test="filename != null and filename != ''">AND filename LIKE '%' || #{filename} || '%'</if>
             <if test="folder != null and folder != ''">AND folder LIKE '%' || #{folder} || '%'</if>
             <if test="openerNo != null and openerNo != ''">AND openerno LIKE '%' || #{openerNo} || '%'</if>
@@ -52,6 +54,7 @@
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>
             <if test="request.bah != null and request.bah != ''">AND BAH LIKE '%' || #{request.bah} || '%'</if>
+            <if test="request.sjh != null and request.sjh != ''">AND sjh LIKE '%' || #{request.sjh} || '%'</if>
             <if test="request.filename != null and request.filename != ''">AND filename LIKE '%' || #{request.filename} || '%'</if>
             <if test="request.folder != null and request.folder != ''">AND folder LIKE '%' || #{request.folder} || '%'</if>
             <if test="request.openerNo != null and request.openerNo != ''">AND openerno LIKE '%' || #{request.openerNo} || '%'</if>
@@ -69,6 +72,7 @@
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>
             <if test="request.bah != null and request.bah != ''">AND BAH LIKE '%' || #{request.bah} || '%'</if>
+            <if test="request.sjh != null and request.sjh != ''">AND sjh LIKE '%' || #{request.sjh} || '%'</if>
             <if test="request.filename != null and request.filename != ''">AND filename LIKE '%' || #{request.filename} || '%'</if>
             <if test="request.folder != null and request.folder != ''">AND folder LIKE '%' || #{request.folder} || '%'</if>
             <if test="request.openerNo != null and request.openerNo != ''">AND openerno LIKE '%' || #{request.openerNo} || '%'</if>

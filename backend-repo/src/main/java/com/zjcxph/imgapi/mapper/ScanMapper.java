@@ -24,8 +24,8 @@ public interface ScanMapper {
     int updateImageType(@Param("id") Integer id, @Param("type") Integer type);
 
     // 新增
-    @Insert("INSERT INTO mr_scan (BRXH, BAH, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
-            "VALUES (#{brxh}, #{bah}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
+    @Insert("INSERT INTO mr_scan (BRXH, BAH, sjh, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
+            "VALUES (#{brxh}, #{bah}, #{sjh}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Scan scan);
 

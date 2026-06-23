@@ -198,7 +198,7 @@ function openArchive(item = selectedArchive.value) {
     return
   }
   router.push({
-    path: `/statistics/archive/${item.bah}`,
+    path: `/archive/${item.bah}`,
     query: {
       bah: item.bah,
       cid: item.cid || '',

@@ -160,11 +160,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
-        path: '/statistics/archive/:bah',
+        path: '/archive/:bah?',
         component: () => import('@/views/statistics/archive.vue'),
         meta: {
-          title: '归档图像',
-          menu: false,
+          title: '影像档案袋',
+          icon: 'i-ant-design:folder-open-twotone',
           auth: ['system:read', 'user:manage', 'role:manage'],
         },
       },

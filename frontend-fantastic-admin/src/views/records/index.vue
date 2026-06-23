@@ -28,6 +28,7 @@ const selectedRows = ref<any[]>([])
 const filters = reactive({
   bah: '',
   brxh: '',
+  sjh: '',
   openerNo: '',
   btype: '',
   uploadFlag: '',
@@ -54,6 +55,7 @@ function buildRequest() {
   return {
     bah: filters.bah.trim() || undefined,
     brxh: filters.brxh.trim() || undefined,
+    sjh: filters.sjh.trim() || undefined,
     openerNo: filters.openerNo.trim() || undefined,
     btype: filters.btype ? Number(filters.btype) : undefined,
     uploadFlag: filters.uploadFlag ? Number(filters.uploadFlag) : undefined,
@@ -89,6 +91,7 @@ function handleSearch() {
 function resetFilters() {
   filters.bah = ''
   filters.brxh = ''
+  filters.sjh = ''
   filters.openerNo = ''
   filters.btype = ''
   filters.uploadFlag = ''
@@ -178,6 +181,9 @@ onMounted(loadData)
         <el-form-item label="病人序号">
           <el-input v-model="filters.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
         </el-form-item>
+        <el-form-item label="上架号">
+          <el-input v-model="filters.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
+        </el-form-item>
         <el-form-item label="扫描人员">
           <el-input v-model="filters.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
@@ -207,6 +213,7 @@ onMounted(loadData)
         <el-table-column type="selection" width="48" />
         <el-table-column prop="bah" label="病案号" min-width="140" />
         <el-table-column prop="brxh" label="病人序号" min-width="120" />
+        <el-table-column prop="sjh" label="上架号" min-width="120" />
         <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
         <el-table-column prop="btype" label="类型" width="140">
           <template #default="{ row }">
@@ -258,7 +265,10 @@ onMounted(loadData)
         <el-descriptions-item label="病人序号">
           {{ currentRecord.brxh || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="文件名" :span="2">
+        <el-descriptions-item label="上架号">
+          {{ currentRecord.sjh || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="文件名">
           {{ currentRecord.filename || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="类型">

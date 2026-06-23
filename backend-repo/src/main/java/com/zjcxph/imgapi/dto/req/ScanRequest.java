@@ -6,6 +6,7 @@ import lombok.Data;
 public class ScanRequest {
     private String brxh;
     private String bah;
+    private String sjh;
     private String filename;
     private Integer btype;
     private Integer pages;

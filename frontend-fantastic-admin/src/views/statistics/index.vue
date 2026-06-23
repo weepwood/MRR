@@ -49,7 +49,7 @@ function goToDetail() {
 }
 
 function openArchive(bah: string) {
-  router.push(`/statistics/archive/${bah}`)
+  router.push(`/archive/${bah}`)
 }
 
 onMounted(loadData)

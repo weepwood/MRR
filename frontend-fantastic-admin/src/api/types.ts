@@ -20,6 +20,7 @@ export interface ScanRecord {
   id?: number
   brxh?: string
   bah?: string
+  sjh?: string
   filename?: string
   btype?: number | null
   pages?: number | null
@@ -38,6 +39,7 @@ export interface ScanRecord {
 export interface ScanRequest {
   bah?: string
   brxh?: string
+  sjh?: string
   filename?: string
   btype?: number | null
   pages?: number | null
@@ -51,6 +53,7 @@ export interface BAHImageData {
   id?: number
   brxh?: string
   bah?: string
+  sjh?: string
   filename?: string
   btype?: number | null
   pages?: number | null

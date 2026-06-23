@@ -209,6 +209,48 @@ public class LogController {
         return Result.<PageResult<Log>>success().data(pageResult);
     }
 
+
+    @GetMapping("/audit/images")
+    public Result<PageResult<Log>> searchImageAuditLogs(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String clientIp,
+            @RequestParam(required = false) String auditAction,
+            @RequestParam(required = false) String responseStatus,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
+    ) {
+        PaginationUtils.validatePageParams(page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+
+        String startTimeText = formatDateTime(startTime);
+        String endTimeText = formatDateTime(endTime);
+        List<Log> list = logService.searchImageAuditLogs(
+                normalize(keyword),
+                normalize(username),
+                normalize(clientIp),
+                normalize(auditAction),
+                normalize(responseStatus),
+                startTimeText,
+                endTimeText,
+                page,
+                safeSize
+        );
+        list.forEach(this::decorateAuditLog);
+        int total = logService.countImageAuditLogs(
+                normalize(keyword),
+                normalize(username),
+                normalize(clientIp),
+                normalize(auditAction),
+                normalize(responseStatus),
+                startTimeText,
+                endTimeText
+        );
+        return Result.<PageResult<Log>>success().data(PageResult.of(list, total, page, safeSize));
+    }
+
     private String normalize(String value) {
         if (value == null) {
             return null;
@@ -219,6 +261,32 @@ public class LogController {
 
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime == null ? null : dateTime.format(DATETIME_FORMATTER);
+    }
+
+    private void decorateAuditLog(Log log) {
+        String uri = log.getRequestUri() == null ? "" : log.getRequestUri();
+        if (uri.matches("^/api/v1/img/download/\\d{8}$")) {
+            log.setAuditAction("DOWNLOAD");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("下载病案图片压缩包");
+        } else if (uri.startsWith("/api/v1/img/image/")) {
+            log.setAuditAction("VIEW_IMAGE");
+            String[] parts = uri.split("/");
+            log.setAuditTarget(parts.length > 5 ? parts[5] : uri);
+            log.setAuditDescription("查看本地病案图片");
+        } else if (uri.startsWith("/api/v1/img/oss-image/")) {
+            log.setAuditAction("VIEW_OSS_IMAGE");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("查看 OSS 病案图片");
+        } else if (uri.matches("^/api/v1/img/\\d{8}$")) {
+            log.setAuditAction("LIST");
+            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("查询病案图片列表");
+        } else {
+            log.setAuditAction("UNKNOWN");
+            log.setAuditTarget(uri);
+            log.setAuditDescription("敏感病案图片访问");
+        }
     }
 
     private String toCsvRow(Log log) {

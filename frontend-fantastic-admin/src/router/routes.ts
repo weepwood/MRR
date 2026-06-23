@@ -186,6 +186,15 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/audit-images',
+        component: () => import('@/views/audit-images/index.vue'),
+        meta: {
+          title: '病案图片访问审计',
+          icon: 'i-ant-design:security-scan-outlined',
+          auth: ['log:read', 'system:read'],
+        },
+      },
+      {
         path: '/monitoring',
         component: () => import('@/views/monitoring/index.vue'),
         meta: {

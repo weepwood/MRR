@@ -66,6 +66,30 @@ public interface LogMapper {
             @Param("offset") int offset
     );
 
+    // 敏感病案图片访问审计搜索 - XML 实现
+    List<Log> searchImageAudit(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
+    // 敏感病案图片访问审计总数 - XML 实现
+    int countImageAudit(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime
+    );
+
     // 动态搜索日志总数 - XML 实现
     int countSearch(
             @Param("keyword") String keyword,

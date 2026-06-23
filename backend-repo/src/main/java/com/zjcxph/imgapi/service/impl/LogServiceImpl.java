@@ -76,4 +76,16 @@ public class LogServiceImpl implements LogService {
     public int countSearchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime) {
         return logMapper.countSearch(keyword, username, clientIp, requestUri, method, responseStatus, startTime, endTime);
     }
+
+    @Override
+    public List<Log> searchImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime, int page, int size) {
+        PaginationUtils.validatePageParams(page, size);
+        int offset = PaginationUtils.calculateOffset(page, size);
+        return logMapper.searchImageAudit(keyword, username, clientIp, auditAction, responseStatus, startTime, endTime, size, offset);
+    }
+
+    @Override
+    public int countImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime) {
+        return logMapper.countImageAudit(keyword, username, clientIp, auditAction, responseStatus, startTime, endTime);
+    }
 }

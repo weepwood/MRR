@@ -18,6 +18,9 @@ public class Log {
     private String responseStatus;
     private Long executeTime;
     private String referer;
+    private String auditAction;
+    private String auditTarget;
+    private String auditDescription;
 
     public Log() {
     }
@@ -47,6 +50,9 @@ public class Log {
                 ", responseStatus='" + responseStatus + '\'' +
                 ", executeTime=" + executeTime +
                 ", referer='" + referer + '\'' +
+                ", auditAction='" + auditAction + '\'' +
+                ", auditTarget='" + auditTarget + '\'' +
+                ", auditDescription='" + auditDescription + '\'' +
                 '}';
     }
 }

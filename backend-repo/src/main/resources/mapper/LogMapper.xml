@@ -128,4 +128,86 @@
         </where>
     </select>
 
+    <!-- 敏感病案图片访问审计搜索 -->
+    <select id="searchImageAudit" resultType="com.zjcxph.imgapi.entity.Log">
+        SELECT
+            id, username, client_ip AS clientIp, request_uri AS requestUri, method,
+            user_agent AS userAgent, access_time AS accessTime, query_string AS queryString,
+            request_body AS requestBody, response_status AS responseStatus, execute_time AS executeTime, referer
+        FROM access_log
+        <where>
+            AND (
+                request_uri ~ '^/api/v1/img/[0-9]{8}$'
+                OR request_uri ~ '^/api/v1/img/download/[0-9]{8}$'
+                OR request_uri LIKE '/api/v1/img/image/%'
+                OR request_uri LIKE '/api/v1/img/oss-image/%'
+            )
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE '%' || #{keyword} || '%'
+                    OR client_ip LIKE '%' || #{keyword} || '%'
+                    OR request_uri LIKE '%' || #{keyword} || '%'
+                    OR query_string LIKE '%' || #{keyword} || '%'
+                    OR user_agent LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="username != null and username != ''">
+                AND username LIKE '%' || #{username} || '%'
+            </if>
+            <if test="clientIp != null and clientIp != ''">
+                AND client_ip LIKE '%' || #{clientIp} || '%'
+            </if>
+            <if test="auditAction != null and auditAction != ''">
+                <choose>
+                    <when test="auditAction == 'LIST'">AND request_uri ~ '^/api/v1/img/[0-9]{8}$'</when>
+                    <when test="auditAction == 'DOWNLOAD'">AND request_uri ~ '^/api/v1/img/download/[0-9]{8}$'</when>
+                    <when test="auditAction == 'VIEW_IMAGE'">AND request_uri LIKE '/api/v1/img/image/%'</when>
+                    <when test="auditAction == 'VIEW_OSS_IMAGE'">AND request_uri LIKE '/api/v1/img/oss-image/%'</when>
+                </choose>
+            </if>
+            <if test="responseStatus != null and responseStatus != ''">
+                AND response_status LIKE #{responseStatus} || '%'
+            </if>
+            <if test="startTime != null and startTime != ''">
+                AND access_time &gt;= CAST(#{startTime} AS timestamp)
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND access_time &lt;= CAST(#{endTime} AS timestamp)
+            </if>
+        </where>
+        ORDER BY access_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 敏感病案图片访问审计总数 -->
+    <select id="countImageAudit" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM access_log
+        <where>
+            AND (
+                request_uri ~ '^/api/v1/img/[0-9]{8}$'
+                OR request_uri ~ '^/api/v1/img/download/[0-9]{8}$'
+                OR request_uri LIKE '/api/v1/img/image/%'
+                OR request_uri LIKE '/api/v1/img/oss-image/%'
+            )
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE '%' || #{keyword} || '%'
+                    OR client_ip LIKE '%' || #{keyword} || '%'
+                    OR request_uri LIKE '%' || #{keyword} || '%'
+                    OR query_string LIKE '%' || #{keyword} || '%'
+                    OR user_agent LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
+            <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
+            <if test="auditAction != null and auditAction != ''">
+                <choose>
+                    <when test="auditAction == 'LIST'">AND request_uri ~ '^/api/v1/img/[0-9]{8}$'</when>
+                    <when test="auditAction == 'DOWNLOAD'">AND request_uri ~ '^/api/v1/img/download/[0-9]{8}$'</when>
+                    <when test="auditAction == 'VIEW_IMAGE'">AND request_uri LIKE '/api/v1/img/image/%'</when>
+                    <when test="auditAction == 'VIEW_OSS_IMAGE'">AND request_uri LIKE '/api/v1/img/oss-image/%'</when>
+                </choose>
+            </if>
+            <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
+            <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
+            <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
+        </where>
+    </select>
+
 </mapper>

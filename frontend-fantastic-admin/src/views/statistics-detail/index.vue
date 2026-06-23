@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { DataBoard, Delete, Refresh, Search } from '@element-plus/icons-vue'
+import type { StatisticsRecord } from '@/api/types'
+import { DataBoard, Download, FolderOpened, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { downloadBah } from '@/api/modules/image'
 import { getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
-interface ArchiveItem {
-  bah?: string
-  cid?: string
-  openerNo?: string
-  date?: string
-  type?: string
-  pages?: number | null
-}
+interface ArchiveItem extends StatisticsRecord {}
 
 interface ListData {
   total: number
@@ -26,9 +21,10 @@ interface ListData {
 
 const router = useRouter()
 const loading = ref(false)
+const downloadingBah = ref('')
 const error = ref('')
-const summaryData = ref<any>({ byType: [] })
-const statisticsListData = ref<ListData>({
+const summaryData = ref<any>({ byType: [], total: {} })
+const listData = ref<ListData>({
   total: 0,
   size: 18,
   totalPages: 0,
@@ -49,61 +45,76 @@ const filters = reactive({
 
 const sortKey = ref('date-desc')
 const sortOptions = [
-  { key: 'date-desc', label: '按日期倒序', prop: 'date', order: 'descending' },
-  { key: 'bah-asc', label: '按病案号升序', prop: 'bah', order: 'ascending' },
-  { key: 'pages-desc', label: '按页数倒序', prop: 'pages', order: 'descending' },
+  { key: 'date-desc', label: '按日期倒序', prop: 'date', order: 'desc' },
+  { key: 'date-asc', label: '按日期升序', prop: 'date', order: 'asc' },
+  { key: 'bah-asc', label: '按病案号升序', prop: 'bah', order: 'asc' },
+  { key: 'pages-desc', label: '按页数倒序', prop: 'pages', order: 'desc' },
 ]
 
-const statisticsTypeOptions = computed(() => {
+const typeOptions = computed(() => {
   const source: any[] = summaryData.value?.byType || []
-  return source.map((item: any) => item?.type).filter((t: any) => t && t !== 'NULL')
+  return source
+    .map(item => String(item?.type || '').trim())
+    .filter(item => item && item.toUpperCase() !== 'NULL')
 })
 
-const currentSort = computed(
-  () => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0],
+const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
+
+const selectedRecords = computed(() => {
+  if (!selectedArchive.value?.bah) {
+    return []
+  }
+  return listData.value.list.filter(item => item.bah === selectedArchive.value?.bah)
+})
+
+const selectedTotalPages = computed(() =>
+  selectedRecords.value.reduce((sum, item) => sum + Number(item.pages || 0), 0),
 )
 
-function getBackendSortOrder(order: string) {
-  return order === 'ascending' ? 'asc' : 'desc'
+const summaryCards = computed(() => [
+  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
+  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量' },
+  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数' },
+  { label: '当前选中', value: selectedArchive.value?.bah || '未选择', note: '可进入影像档案袋查看原图' },
+])
+
+function normalizeText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text && text.toUpperCase() !== 'NULL' ? text : '-'
 }
 
-function formatDate(dateStr: string | undefined) {
-  if (!dateStr) { return '无日期' }
-  return String(dateStr).replace(/\//g, '-')
+function formatDate(value: string | undefined) {
+  if (!value || value.toUpperCase?.() === 'NULL') {
+    return '-'
+  }
+  return String(value).replace(/\//g, '-')
 }
 
-function getTypeTagType(type: string | undefined): 'success' | 'warning' | 'danger' | 'primary' | 'info' | undefined {
-  const value = String(type || '').toLowerCase()
-  if (value.includes('急')) { return 'danger' }
-  if (value.includes('高')) { return 'warning' }
-  if (value.includes('住')) { return 'success' }
-  if (value.includes('门')) { return 'primary' }
+function archiveKey(item: ArchiveItem, index = 0) {
+  return [item.bah, item.cid, item.date, item.type, item.pages, item.openerNo, index].join('|')
+}
+
+function tableIndex(index: number) {
+  return (currentPage.value - 1) * pageSize.value + index + 1
+}
+
+function typeTone(type: string | undefined) {
+  const value = String(type || '')
+  if (value.includes('首页')) { return 'success' }
+  if (value.includes('手术')) { return 'warning' }
+  if (value.includes('护理')) { return 'primary' }
+  if (value.includes('其它') || value.includes('其他')) { return 'info' }
   return 'info'
 }
 
-function pickToneClass(seed: string) {
+function toneClass(item: ArchiveItem, index = 0) {
   const palette = ['tone-blue', 'tone-green', 'tone-amber', 'tone-rose', 'tone-slate']
+  const seed = `${item.bah || ''}-${item.type || ''}-${index}`
   let hash = 0
   for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
   }
   return palette[hash % palette.length]
-}
-
-function getToneClass(item: ArchiveItem, index = 0) {
-  return pickToneClass(`${item?.bah || ''}-${item?.cid || ''}-${index}`)
-}
-
-function buildArchiveKey(item: ArchiveItem, index = 0) {
-  return [item?.bah, item?.cid, item?.date, item?.type, item?.pages, item?.openerNo, index].join('|')
-}
-
-function computeTableIndex(index: number) {
-  return (currentPage.value - 1) * pageSize.value + index + 1
-}
-
-function formatArchiveLabel(item: ArchiveItem | null) {
-  return item?.bah || '未命名病案'
 }
 
 async function loadSummary() {
@@ -116,43 +127,44 @@ async function loadSummary() {
   }
 }
 
-async function loadStatisticsList() {
+async function loadArchiveList() {
   loading.value = true
   error.value = ''
   try {
     const params: any = {
       page: currentPage.value,
       size: pageSize.value,
-      sortBy: currentSort.value.prop || 'date',
-      sortOrder: getBackendSortOrder(currentSort.value.order),
+      sortBy: currentSort.value.prop,
+      sortOrder: currentSort.value.order,
     }
-    if (filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
-    if (filters.type) { params.type = filters.type }
-    if (Array.isArray(filters.dateRange) && filters.dateRange.length === 2) {
+    if (filters.keyword.trim()) {
+      params.keyword = filters.keyword.trim()
+    }
+    if (filters.type) {
+      params.type = filters.type
+    }
+    if (filters.dateRange.length === 2) {
       params.startDate = filters.dateRange[0]
       params.endDate = filters.dateRange[1]
     }
 
     const res = await getStatisticsList(params)
     const payload = (res as any).data || {}
-    statisticsListData.value = {
+    const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
+    listData.value = {
       total: Number(payload.total || 0),
       size: Number(payload.size || pageSize.value),
       totalPages: Number(payload.totalPages || 0),
       page: Number(payload.page || currentPage.value),
-      list: Array.isArray(payload.list)
-        ? payload.list.filter((item: any) => item !== null)
-        : [],
+      list,
     }
-
-    const firstItem = statisticsListData.value.list[0] || null
-    selectedArchive.value = firstItem
-    selectedArchiveKey.value = firstItem ? buildArchiveKey(firstItem, 0) : ''
+    selectedArchive.value = list[0] || null
+    selectedArchiveKey.value = selectedArchive.value ? archiveKey(selectedArchive.value, 0) : ''
   }
   catch (err: any) {
-    error.value = err?.message || '加载病案明细失败'
+    error.value = err?.message || '病案明细加载失败'
     ElMessage.error(error.value)
-    statisticsListData.value = { total: 0, size: pageSize.value, totalPages: 0, page: 1, list: [] }
+    listData.value = { total: 0, size: pageSize.value, totalPages: 0, page: 1, list: [] }
   }
   finally {
     loading.value = false
@@ -160,13 +172,12 @@ async function loadStatisticsList() {
 }
 
 async function refreshAll() {
-  await loadSummary()
-  await loadStatisticsList()
+  await Promise.all([loadSummary(), loadArchiveList()])
 }
 
 function handleSearch() {
   currentPage.value = 1
-  loadStatisticsList()
+  loadArchiveList()
 }
 
 function resetSearch() {
@@ -175,33 +186,23 @@ function resetSearch() {
   filters.dateRange = []
   sortKey.value = 'date-desc'
   currentPage.value = 1
-  loadStatisticsList()
+  loadArchiveList()
 }
 
-function handleSortChange() {
+function handlePageSizeChange(value: number) {
+  pageSize.value = value
   currentPage.value = 1
-  loadStatisticsList()
-}
-
-function handleSizeChange(newSize: number) {
-  pageSize.value = newSize
-  currentPage.value = 1
-  loadStatisticsList()
-}
-
-function handleCurrentChange(newPage: number) {
-  currentPage.value = newPage
-  loadStatisticsList()
+  loadArchiveList()
 }
 
 function selectArchive(item: ArchiveItem, index = 0) {
   selectedArchive.value = item
-  selectedArchiveKey.value = buildArchiveKey(item, index)
+  selectedArchiveKey.value = archiveKey(item, index)
 }
 
-function openArchiveImages(item: ArchiveItem, index = 0) {
+function openArchive(item = selectedArchive.value) {
   if (!item?.bah) {
-    ElMessage.warning('当前档案缺少病案号，无法打开图片页')
+    ElMessage.warning('当前档案袋缺少病案号，无法打开影像')
     return
   }
   router.push({
@@ -213,9 +214,36 @@ function openArchiveImages(item: ArchiveItem, index = 0) {
       date: item.date || '',
       pages: String(item.pages ?? ''),
       openerNo: item.openerNo || '',
-      index: String(index),
     },
   })
+}
+
+async function handleDownload(item = selectedArchive.value) {
+  if (!item?.bah) {
+    ElMessage.warning('请先选择档案袋')
+    return
+  }
+  downloadingBah.value = item.bah
+  try {
+    const result = await downloadBah(item.bah)
+    const blob = result instanceof Blob ? result : (result as any)?.data
+    if (!(blob instanceof Blob)) {
+      throw new TypeError('下载响应不是文件')
+    }
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${item.bah}.zip`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('档案袋下载已开始')
+  }
+  catch (err: any) {
+    ElMessage.error(err?.message || '下载失败')
+  }
+  finally {
+    downloadingBah.value = ''
+  }
 }
 
 function goBackToStatistics() {
@@ -227,7 +255,6 @@ onMounted(refreshAll)
 
 <template>
   <div class="page-shell">
-    <!-- 页头 -->
     <div class="page-header">
       <div>
         <p class="eyebrow">
@@ -235,12 +262,12 @@ onMounted(refreshAll)
         </p>
         <h2>病案明细档案袋</h2>
         <p class="subtitle">
-          以仿真的档案袋卡片形式展示病案明细，保留筛选、分页和排序能力。
+          以档案袋方式查看病案统计明细，支持筛选、排序、影像查看和整袋下载。
         </p>
       </div>
       <div class="header-actions">
         <el-button :icon="Refresh" :loading="loading" @click="refreshAll">
-          刷新档案
+          刷新
         </el-button>
         <el-button :icon="DataBoard" @click="goBackToStatistics">
           返回统计
@@ -248,193 +275,182 @@ onMounted(refreshAll)
       </div>
     </div>
 
-    <!-- 摘要卡片 -->
     <section class="summary-grid">
-      <el-card shadow="never">
+      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
         <div class="summary-label">
-          档案总数
+          {{ item.label }}
         </div>
         <div class="summary-value">
-          {{ statisticsListData.total || 0 }}
+          {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
         </div>
         <div class="summary-note">
-          来自病案明细接口的总记录数
-        </div>
-      </el-card>
-      <el-card shadow="never">
-        <div class="summary-label">
-          类型种类
-        </div>
-        <div class="summary-value">
-          {{ statisticsTypeOptions.length }}
-        </div>
-        <div class="summary-note">
-          按病案类型聚合后的分类数量
-        </div>
-      </el-card>
-      <el-card shadow="never">
-        <div class="summary-label">
-          当前页
-        </div>
-        <div class="summary-value">
-          {{ statisticsListData.page || currentPage }}
-        </div>
-        <div class="summary-note">
-          每页 {{ pageSize }} 条，支持翻页查看
-        </div>
-      </el-card>
-      <el-card shadow="never">
-        <div class="summary-label">
-          已选档案
-        </div>
-        <div class="summary-value selected-archive-val">
-          {{ selectedArchive ? formatArchiveLabel(selectedArchive) : '未选择' }}
-        </div>
-        <div class="summary-note">
-          点击任意档案袋可查看档案详情
+          {{ item.note }}
         </div>
       </el-card>
     </section>
 
-    <!-- 错误提示 -->
     <el-alert v-if="error" :title="error" type="error" show-icon />
 
-    <!-- 筛选栏 -->
     <el-card shadow="never">
       <template #header>
         <div class="panel-header">
           <div>
             <span class="panel-title">档案筛选</span>
-            <span class="panel-subtitle">按病案号、扫描设备、类型和日期范围缩小结果范围。</span>
+            <span class="panel-subtitle">按病案号、设备、类型和日期范围定位档案袋</span>
           </div>
           <el-tag type="info">
-            {{ statisticsListData.total || 0 }} 条记录
+            {{ listData.total || 0 }} 条
           </el-tag>
         </div>
       </template>
 
       <div class="filter-grid">
         <el-input
-          class="filter-keyword"
           v-model="filters.keyword"
-          placeholder="搜索病案号或扫描设备"
+          class="filter-keyword"
           clearable
+          placeholder="搜索病案号、设备、人员或日期"
           @keyup.enter="handleSearch"
         />
-        <el-select
-          class="filter-type"
-          v-model="filters.type"
-          placeholder="全部类型"
-          clearable
-          @change="handleSearch"
-        >
-          <el-option
-            v-for="item in statisticsTypeOptions"
-            :key="item"
-            :label="item"
-            :value="item"
-          />
+        <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
+          <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
         <el-date-picker
-          class="filter-date"
           v-model="filters.dateRange"
+          class="filter-date"
           type="daterange"
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
         />
-        <el-select class="filter-sort" v-model="sortKey" @change="handleSortChange">
-          <el-option
-            v-for="item in sortOptions"
-            :key="item.key"
-            :label="item.label"
-            :value="item.key"
-          />
+        <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
+          <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
         <div class="filter-actions">
           <el-button type="primary" :icon="Search" @click="handleSearch">
-            筛选
+            查询
           </el-button>
-          <el-button :icon="Delete" @click="resetSearch">
+          <el-button @click="resetSearch">
             重置
           </el-button>
         </div>
       </div>
     </el-card>
 
-    <!-- 档案袋书架 -->
-    <section class="archive-shelf">
-      <div v-if="loading && !statisticsListData.list.length" class="archive-loading">
-        <el-skeleton :rows="6" animated />
+    <section class="content-layout">
+      <div class="archive-shelf">
+        <div v-if="loading && !listData.list.length" class="archive-loading">
+          <el-skeleton :rows="8" animated />
+        </div>
+        <div v-else class="archive-grid">
+          <article
+            v-for="(item, index) in listData.list"
+            :key="archiveKey(item, index)"
+            class="archive-folder-card"
+            :class="[toneClass(item, index), { 'is-selected': selectedArchiveKey === archiveKey(item, index) }]"
+            @click="selectArchive(item, index)"
+          >
+            <div class="folder-tab" />
+            <div class="folder-top">
+              <span class="folder-index">A{{ tableIndex(index) }}</span>
+              <el-tag size="small" :type="typeTone(item.type)">
+                {{ normalizeText(item.type) }}
+              </el-tag>
+            </div>
+
+            <h4 class="folder-title">
+              {{ normalizeText(item.bah) }}
+            </h4>
+            <p class="folder-subtitle">
+              {{ formatDate(item.date) }} / {{ normalizeText(item.cid) }}
+            </p>
+
+            <dl class="folder-meta-grid">
+              <div>
+                <dt>扫描设备</dt>
+                <dd>{{ normalizeText(item.cid) }}</dd>
+              </div>
+              <div>
+                <dt>负责人</dt>
+                <dd>{{ normalizeText(item.openerNo) }}</dd>
+              </div>
+              <div>
+                <dt>归档日期</dt>
+                <dd>{{ formatDate(item.date) }}</dd>
+              </div>
+              <div>
+                <dt>页数</dt>
+                <dd>{{ Number(item.pages || 0).toLocaleString('zh-CN') }} 页</dd>
+              </div>
+            </dl>
+
+            <div class="folder-footer">
+              <span>{{ Number(item.pages || 0).toLocaleString('zh-CN') }} 页档案</span>
+              <el-button text type="primary" @click.stop="openArchive(item)">
+                查看影像
+              </el-button>
+            </div>
+          </article>
+        </div>
+
+        <div v-if="!loading && listData.list.length === 0" class="empty-wrap">
+          <el-empty description="暂无档案袋数据" />
+        </div>
+
+        <div class="pagination-wrapper">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[18, 50, 100, 200]"
+            :total="listData.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handlePageSizeChange"
+            @current-change="loadArchiveList"
+          />
+        </div>
       </div>
 
-      <div v-else class="archive-grid">
-        <article
-          v-for="(item, index) in statisticsListData.list"
-          :key="buildArchiveKey(item, index)"
-          class="archive-folder-card"
-          :class="[getToneClass(item, index), { 'is-selected': selectedArchiveKey === buildArchiveKey(item, index) }]"
-          @click="selectArchive(item, index)"
-        >
-          <div class="folder-tab" />
-          <div class="folder-top">
-            <span class="folder-index">A{{ computeTableIndex(index) }}</span>
-            <el-tag size="small" :type="getTypeTagType(item.type)">
-              {{ item.type || '未分类' }}
-            </el-tag>
-          </div>
-
-          <h4 class="folder-title">
-            {{ item.bah || '未命名病案' }}
-          </h4>
-          <p class="folder-subtitle">
-            {{ formatDate(item.date) }} · {{ item.cid || '未识别设备' }}
-          </p>
-
-          <dl class="folder-meta-grid">
-            <div>
-              <dt>扫描设备</dt>
-              <dd>{{ item.cid || '-' }}</dd>
-            </div>
-            <div>
-              <dt>扫描负责人</dt>
-              <dd>{{ item.openerNo === 'NULL' ? '-' : item.openerNo || '-' }}</dd>
-            </div>
-            <div>
-              <dt>归档日期</dt>
-              <dd>{{ formatDate(item.date) }}</dd>
-            </div>
-            <div>
-              <dt>页数</dt>
-              <dd>{{ item.pages ?? 0 }} 页</dd>
-            </div>
-          </dl>
-
-          <div class="folder-footer">
-            <span class="folder-pages">{{ item.pages ?? 0 }} 页档案</span>
-            <el-button text type="primary" @click.stop="openArchiveImages(item, index)">
-              查看详情
+      <aside class="detail-panel">
+        <div class="detail-title">
+          <el-icon><FolderOpened /></el-icon>
+          <span>档案袋详情</span>
+        </div>
+        <template v-if="selectedArchive">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="病案号">
+              {{ normalizeText(selectedArchive.bah) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="档案类型">
+              {{ normalizeText(selectedArchive.type) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="扫描设备">
+              {{ normalizeText(selectedArchive.cid) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="扫描人员">
+              {{ normalizeText(selectedArchive.openerNo) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="归档日期">
+              {{ formatDate(selectedArchive.date) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="当前页数">
+              {{ Number(selectedArchive.pages || 0).toLocaleString('zh-CN') }} 页
+            </el-descriptions-item>
+            <el-descriptions-item label="本页同病案记录">
+              {{ selectedRecords.length }} 条 / {{ selectedTotalPages.toLocaleString('zh-CN') }} 页
+            </el-descriptions-item>
+          </el-descriptions>
+          <div class="detail-actions">
+            <el-button type="primary" :icon="FolderOpened" @click="openArchive()">
+              打开影像
+            </el-button>
+            <el-button :icon="Download" :loading="downloadingBah === selectedArchive.bah" @click="handleDownload()">
+              下载档案袋
             </el-button>
           </div>
-        </article>
-      </div>
-
-      <div v-if="!loading && statisticsListData.list.length === 0" class="empty-wrap">
-        <el-empty description="暂无档案数据" />
-      </div>
-
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[18, 50, 100, 200]"
-          :total="statisticsListData.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+        </template>
+        <el-empty v-else description="请选择一个档案袋" />
+      </aside>
     </section>
   </div>
 </template>
@@ -447,24 +463,24 @@ onMounted(refreshAll)
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
   flex-shrink: 0;
+  gap: 10px;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
   font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h2 {
@@ -477,7 +493,6 @@ h2 {
   color: #64748b;
 }
 
-/* 摘要卡片 */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -488,20 +503,14 @@ h2 {
   font-size: 12px;
   font-weight: 700;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .summary-value {
   margin-top: 10px;
+  overflow-wrap: anywhere;
   font-size: 24px;
   font-weight: 800;
   color: #0f172a;
-  word-break: break-all;
-}
-
-.selected-archive-val {
-  font-size: 16px;
 }
 
 .summary-note {
@@ -510,17 +519,16 @@ h2 {
   color: #64748b;
 }
 
-/* 筛选栏 */
 .panel-header {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
 .panel-title {
-  font-weight: 700;
   margin-right: 8px;
+  font-weight: 700;
 }
 
 .panel-subtitle {
@@ -535,32 +543,35 @@ h2 {
   align-items: center;
 }
 
-.filter-grid .filter-keyword {
-  flex: 1 1 200px;
-  min-width: 160px;
+.filter-keyword {
+  flex: 1 1 220px;
+  min-width: 180px;
 }
 
-.filter-grid .filter-type {
+.filter-type,
+.filter-sort {
   flex: 0 0 160px;
 }
 
-.filter-grid .filter-date {
-  flex: 1 1 260px;
-  min-width: 220px;
-}
-
-.filter-grid .filter-sort {
-  flex: 0 0 160px;
+.filter-date {
+  flex: 1 1 280px;
+  min-width: 240px;
 }
 
 .filter-actions {
-  flex: 0 0 auto;
   display: flex;
+  flex: 0 0 auto;
   gap: 8px;
   margin-left: auto;
 }
 
-/* 档案袋书架 */
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
 .archive-shelf {
   display: grid;
   gap: 16px;
@@ -572,204 +583,179 @@ h2 {
   gap: 16px;
 }
 
-.archive-loading {
-  padding: 10px 4px 6px;
-}
-
+.archive-loading,
 .empty-wrap {
   padding: 40px 0;
 }
 
-/* 档案袋卡片 */
 .archive-folder-card {
+  --folder-accent: #1d4ed8;
+  --folder-bg: #eef4ff;
+
   position: relative;
   display: grid;
   gap: 12px;
-  padding: 18px 18px 16px;
-  border-radius: 7px 7px 5px 5px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  border-top-width: 6px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.92));
-  box-shadow: 0 14px 34px rgba(24, 65, 134, 0.08);
-  cursor: pointer;
+  min-height: 270px;
+  padding: 18px;
   overflow: hidden;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--folder-bg), #fff 58%);
+  border: 1px solid rgb(15 23 42 / 14%);
+  border-top: 6px solid var(--folder-accent);
+  border-radius: 7px;
+  box-shadow: 0 12px 28px rgb(15 23 42 / 7%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.archive-folder-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 20px 40px rgba(24, 65, 134, 0.12);
+.archive-folder-card:hover,
+.archive-folder-card.is-selected {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 42px rgb(15 23 42 / 12%);
 }
 
 .archive-folder-card.is-selected {
-  transform: translateY(-2px);
-  box-shadow: 0 24px 48px rgba(0, 63, 177, 0.18);
+  outline: 2px solid color-mix(in srgb, var(--folder-accent) 70%, transparent);
 }
 
-/* 配色变量 */
-.archive-folder-card.tone-blue {
-  --folder-accent: #1d4ed8;
-  --folder-bg: #eef4ff;
-}
+.tone-blue { --folder-accent: #2563eb; --folder-bg: #eef4ff; }
+.tone-green { --folder-accent: #0f766e; --folder-bg: #ecfdf7; }
+.tone-amber { --folder-accent: #c97b18; --folder-bg: #fff6e8; }
+.tone-rose { --folder-accent: #be185d; --folder-bg: #fff0f5; }
+.tone-slate { --folder-accent: #475569; --folder-bg: #f1f5f9; }
 
-.archive-folder-card.tone-green {
-  --folder-accent: #0f766e;
-  --folder-bg: #ecfdf7;
-}
-
-.archive-folder-card.tone-amber {
-  --folder-accent: #c97b18;
-  --folder-bg: #fff6e8;
-}
-
-.archive-folder-card.tone-rose {
-  --folder-accent: #be185d;
-  --folder-bg: #fff0f5;
-}
-
-.archive-folder-card.tone-slate {
-  --folder-accent: #475569;
-  --folder-bg: #f1f5f9;
-}
-
-.archive-folder-card {
-  border-top-color: var(--folder-accent, #1d4ed8);
-  background-image: linear-gradient(180deg, var(--folder-bg, #eef4ff), rgba(255, 255, 255, 0) 55%);
-}
-
-/* 档案袋标签页 */
 .folder-tab {
   position: absolute;
-  top: -2px;
+  top: 0;
   left: 18px;
   width: 70px;
-  height: 20px;
+  height: 18px;
+  background: var(--folder-accent);
   border-radius: 0 0 5px 5px;
-  background: var(--folder-accent, #1d4fd840);
-  box-shadow: 0 10px 20px rgba(24, 65, 134, 0.14);
-  transform-origin: center bottom;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+  opacity: 0.22;
 }
 
-.archive-folder-card:hover .folder-tab {
-  transform: translateY(-10px) rotateX(-15deg) scale(1.05);
-  opacity: 0.9;
-  box-shadow: 0 15px 30px rgba(24, 65, 134, 0.25);
+.folder-top,
+.folder-footer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .folder-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding-top: 14px;
 }
 
 .folder-index {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.14em;
   color: #64748b;
+  letter-spacing: 0.12em;
 }
 
 .folder-title {
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: 18px;
-  line-height: 1.3;
   font-weight: 800;
-  color: #1f2b42;
+  color: #172033;
 }
 
 .folder-subtitle {
   margin: 0;
   font-size: 13px;
-  color: #667085;
+  color: #64748b;
 }
 
 .folder-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 14px;
-  margin: 2px 0 0;
-}
-
-.folder-meta-grid div {
-  display: grid;
-  gap: 4px;
+  gap: 12px;
+  margin: 0;
 }
 
 .folder-meta-grid dt {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: #80879a;
 }
 
 .folder-meta-grid dd {
-  margin: 0;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 600;
   color: #24324b;
-  word-break: break-word;
 }
 
 .folder-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(128, 135, 154, 0.24);
-}
-
-.folder-pages {
   font-size: 12px;
   font-weight: 700;
-  color: var(--folder-accent, #1d4ed8);
+  color: var(--folder-accent);
+  border-top: 1px dashed rgb(100 116 139 / 28%);
 }
 
-/* 分页 */
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 4px;
 }
 
-/* 响应式 */
-@media (max-width: 1220px) {
+.detail-panel {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+}
+
+.detail-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 800;
+  color: #172033;
+}
+
+.detail-actions {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    position: static;
   }
 }
 
 @media (max-width: 720px) {
+  .page-header {
+    flex-direction: column;
+  }
+
   .summary-grid,
   .folder-meta-grid {
     grid-template-columns: 1fr;
   }
 
-  .filter-grid .filter-keyword,
-  .filter-grid .filter-type,
-  .filter-grid .filter-date,
-  .filter-grid .filter-sort {
-    flex: 1 1 100%;
-  }
-
+  .filter-keyword,
+  .filter-type,
+  .filter-date,
+  .filter-sort,
   .filter-actions {
     flex: 1 1 100%;
     margin-left: 0;
-    justify-content: stretch;
-  }
-
-  .filter-actions :deep(.el-button) {
-    flex: 1;
-  }
-
-  .pagination-wrapper {
-    justify-content: stretch;
   }
 }
 </style>

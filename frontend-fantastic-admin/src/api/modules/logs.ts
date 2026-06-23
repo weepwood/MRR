@@ -15,6 +15,20 @@ export function searchSystemLogs(params: {
   return api.get('/api/v1/logs/search', { params })
 }
 
+export function searchImageAuditLogs(params: {
+  page: number
+  size: number
+  keyword?: string
+  username?: string
+  clientIp?: string
+  auditAction?: string
+  responseStatus?: string
+  startTime?: string
+  endTime?: string
+}) {
+  return api.get('/api/v1/logs/audit/images', { params })
+}
+
 export function getLogById(id: string | number) {
   return api.get(`/api/v1/logs/${id}`)
 }

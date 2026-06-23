@@ -15,4 +15,6 @@ public interface LogService {
     int getLogCountByClientIp(String clientIp);
     int getLogCountByRequestUri(String requestUri);
     int countSearchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime);
+    List<Log> searchImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime, int page, int size);
+    int countImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime);
 }

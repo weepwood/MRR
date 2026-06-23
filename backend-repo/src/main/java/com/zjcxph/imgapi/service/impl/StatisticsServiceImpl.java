@@ -37,6 +37,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             int page,
             int size,
             String keyword,
+            String bah,
+            String sjh,
             String type,
             String startDate,
             String endDate,
@@ -45,7 +47,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     ) {
         PaginationUtils.validatePageParams(page, size);
         int offset = PaginationUtils.calculateOffset(page, size);
-        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, type, startDate, endDate, sortBy, sortOrder);
+        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, bah, sjh, type, startDate, endDate, sortBy, sortOrder);
     }
 
     @Override
@@ -54,8 +56,8 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public Long getTotalCountByCondition(String keyword, String type, String startDate, String endDate) {
-        return statisticsMapper.getTotalCountByCondition(keyword, type, startDate, endDate);
+    public Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate) {
+        return statisticsMapper.getTotalCountByCondition(keyword, bah, sjh, type, startDate, endDate);
     }
 
     @Override

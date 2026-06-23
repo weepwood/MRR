@@ -26,6 +26,8 @@ public interface StatisticsMapper {
             @Param("offset") int offset,
             @Param("limit") int limit,
             @Param("keyword") String keyword,
+            @Param("bah") String bah,
+            @Param("sjh") String sjh,
             @Param("type") String type,
             @Param("startDate") String startDate,
             @Param("endDate") String endDate,
@@ -40,6 +42,8 @@ public interface StatisticsMapper {
     // 获取总记录数（根据条件）- XML 实现
     Long getTotalCountByCondition(
             @Param("keyword") String keyword,
+            @Param("bah") String bah,
+            @Param("sjh") String sjh,
             @Param("type") String type,
             @Param("startDate") String startDate,
             @Param("endDate") String endDate

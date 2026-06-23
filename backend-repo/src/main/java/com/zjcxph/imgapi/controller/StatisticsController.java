@@ -51,21 +51,25 @@ public class StatisticsController {
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小", example = "100")
             @RequestParam(defaultValue = "100") int size,
-            @Parameter(description = "关键字，匹配 bah/cid/openerNo/date/type", example = "0078")
+            @Parameter(description = "关键字，匹配 cid/openerNo/date/type", example = "CT")
             @RequestParam(required = false) String keyword,
+            @Parameter(description = "病案号模糊匹配", example = "0078")
+            @RequestParam(required = false) String bah,
+            @Parameter(description = "上架号模糊匹配", example = "SJH001")
+            @RequestParam(required = false) String sjh,
             @Parameter(description = "类型精确匹配", example = "普通")
             @RequestParam(required = false) String type,
             @Parameter(description = "开始日期，格式 yyyy-MM-dd", example = "2024-01-01")
             @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期，格式 yyyy-MM-dd", example = "2024-12-31")
             @RequestParam(required = false) String endDate,
-            @Parameter(description = "排序字段：bah/cid/openerNo/date/type/pages", example = "date")
+            @Parameter(description = "排序字段：bah/cid/openerNo/date/type/pages/sjh", example = "date")
             @RequestParam(required = false) String sortBy,
             @Parameter(description = "排序方向：asc/desc", example = "desc")
             @RequestParam(required = false) String sortOrder) {
 
-        logger.info("获取统计数据：page={}, size={}, keyword={}, type={}, startDate={}, endDate={}, sortBy={}, sortOrder={}",
-                page, size, keyword, type, startDate, endDate, sortBy, sortOrder);
+        logger.info("获取统计数据：page={}, size={}, keyword={}, bah={}, sjh={}, type={}, startDate={}, endDate={}, sortBy={}, sortOrder={}",
+                page, size, keyword, bah, sjh, type, startDate, endDate, sortBy, sortOrder);
 
         PaginationUtils.validatePageParams(page, size);
         if (size > 1000) {
@@ -73,6 +77,8 @@ public class StatisticsController {
         }
 
         String normalizedKeyword = normalize(keyword);
+        String normalizedBah = normalize(bah);
+        String normalizedSjh = normalize(sjh);
         String normalizedType = normalize(type);
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
@@ -83,6 +89,8 @@ public class StatisticsController {
                 page,
                 size,
                 normalizedKeyword,
+                normalizedBah,
+                normalizedSjh,
                 normalizedType,
                 normalizedStartDate,
                 normalizedEndDate,
@@ -91,6 +99,8 @@ public class StatisticsController {
         );
         Long totalCount = statisticsService.getTotalCountByCondition(
                 normalizedKeyword,
+                normalizedBah,
+                normalizedSjh,
                 normalizedType,
                 normalizedStartDate,
                 normalizedEndDate
@@ -253,6 +263,7 @@ public class StatisticsController {
             case "date":
             case "type":
             case "pages":
+            case "sjh":
                 return value;
             default:
                 return "date";

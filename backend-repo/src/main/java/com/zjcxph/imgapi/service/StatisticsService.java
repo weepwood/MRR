@@ -18,6 +18,8 @@ public interface StatisticsService {
             int page,
             int size,
             String keyword,
+            String bah,
+            String sjh,
             String type,
             String startDate,
             String endDate,
@@ -27,7 +29,7 @@ public interface StatisticsService {
 
     // 获取总记录数
     Long getTotalCount();
-    Long getTotalCountByCondition(String keyword, String type, String startDate, String endDate);
+    Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate);
 
     // 根据病案号查询
     List<Statistics> findByBah(String bah);

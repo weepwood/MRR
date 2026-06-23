@@ -34,6 +34,7 @@ const routeArchive = computed(() => ({
   date: String(route.query.date || ''),
   pages: String(route.query.pages || ''),
   openerNo: String(route.query.openerNo || ''),
+  sjh: String(route.query.sjh || ''),
 }))
 
 const typeOptions = [
@@ -298,6 +299,7 @@ onMounted(() => {
         <span>类型：{{ normalizeText(routeArchive.type) }}</span>
         <span>日期：{{ formatDate(routeArchive.date) }}</span>
         <span>人员：{{ normalizeText(routeArchive.openerNo) }}</span>
+        <span>上架号：{{ normalizeText(routeArchive.sjh) }}</span>
       </div>
     </el-card>
 

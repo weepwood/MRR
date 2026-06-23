@@ -87,6 +87,7 @@ export interface StatisticsRecord {
   date?: string
   type?: string
   pages?: number
+  sjh?: string
 }
 
 /** BAH 统计汇总 */

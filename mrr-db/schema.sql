@@ -46,7 +46,8 @@ create table main.mr_statistics
     openerno TEXT,
     date     TEXT,
     type     TEXT,
-    pages    integer
+    pages    integer,
+    sjh      TEXT
 );
 
 create table main.mr_user

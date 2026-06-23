@@ -139,17 +139,17 @@ class StatisticsServiceImplTest {
         @Test
         @DisplayName("findWithConditionAndPagination — 多条件分页查询")
         void findWithConditionAndPagination() {
-            when(statisticsMapper.findWithConditionAndPagination(0, 10, "007", "CT", "2026-01-01", "2026-01-31", "date", "desc"))
+            when(statisticsMapper.findWithConditionAndPagination(0, 10, "007", null, null, "CT", "2026-01-01", "2026-01-31", "date", "desc"))
                     .thenReturn(List.of(mockStat));
-            var result = statisticsService.findWithConditionAndPagination(1, 10, "007", "CT", "2026-01-01", "2026-01-31", "date", "desc");
+            var result = statisticsService.findWithConditionAndPagination(1, 10, "007", null, null, "CT", "2026-01-01", "2026-01-31", "date", "desc");
             assertThat(result).hasSize(1);
         }
 
         @Test
         @DisplayName("getTotalCountByCondition — 条件总数")
         void getTotalCountByCondition() {
-            when(statisticsMapper.getTotalCountByCondition("007", "CT", null, null)).thenReturn(5L);
-            assertThat(statisticsService.getTotalCountByCondition("007", "CT", null, null)).isEqualTo(5L);
+            when(statisticsMapper.getTotalCountByCondition("007", null, null, "CT", null, null)).thenReturn(5L);
+            assertThat(statisticsService.getTotalCountByCondition("007", null, null, "CT", null, null)).isEqualTo(5L);
         }
 
         @Test

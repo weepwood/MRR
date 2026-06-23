@@ -10,12 +10,17 @@
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (
-                    bah LIKE '%' || #{keyword} || '%'
-                    OR cid LIKE '%' || #{keyword} || '%'
+                    cid LIKE '%' || #{keyword} || '%'
                     OR openerno LIKE '%' || #{keyword} || '%'
                     OR date LIKE '%' || #{keyword} || '%'
                     OR type LIKE '%' || #{keyword} || '%'
                 )
+            </if>
+            <if test="bah != null and bah != ''">
+                AND bah LIKE '%' || #{bah} || '%'
+            </if>
+            <if test="sjh != null and sjh != ''">
+                AND sjh LIKE '%' || #{sjh} || '%'
             </if>
             <if test="type != null and type != ''">
                 AND type = #{type}
@@ -35,6 +40,7 @@
             <when test="sortBy == 'date'">REPLACE(date, '/', '-')</when>
             <when test="sortBy == 'type'">type</when>
             <when test="sortBy == 'pages'">pages</when>
+            <when test="sortBy == 'sjh'">sjh</when>
             <otherwise>REPLACE(date, '/', '-')</otherwise>
         </choose>
         <choose>
@@ -51,12 +57,17 @@
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (
-                    bah LIKE '%' || #{keyword} || '%'
-                    OR cid LIKE '%' || #{keyword} || '%'
+                    cid LIKE '%' || #{keyword} || '%'
                     OR openerno LIKE '%' || #{keyword} || '%'
                     OR date LIKE '%' || #{keyword} || '%'
                     OR type LIKE '%' || #{keyword} || '%'
                 )
+            </if>
+            <if test="bah != null and bah != ''">
+                AND bah LIKE '%' || #{bah} || '%'
+            </if>
+            <if test="sjh != null and sjh != ''">
+                AND sjh LIKE '%' || #{sjh} || '%'
             </if>
             <if test="type != null and type != ''">
                 AND type = #{type}

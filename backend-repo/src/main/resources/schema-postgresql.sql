@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS app.mr_statistics (
     openerno TEXT,
     date TEXT,
     type TEXT,
-    pages INTEGER
+    pages INTEGER,
+    sjh TEXT
 );
 
 CREATE TABLE IF NOT EXISTS app.mr_patient (
@@ -83,6 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_mr_scan_sjh ON app.mr_scan (sjh);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah ON app.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh ON app.mr_statistics (sjh);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON app.mr_patient (idcard);
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_username ON app.mr_auth_user (username);
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_role_code ON app.mr_auth_user (role_code);

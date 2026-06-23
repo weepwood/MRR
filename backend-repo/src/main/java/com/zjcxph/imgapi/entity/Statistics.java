@@ -10,17 +10,19 @@ public class Statistics {
     private String date;
     private String type;
     private Integer pages;
+    private String sjh;
 
     public Statistics() {
     }
 
-    public Statistics(String bah, String cid, String openerNo, String date, String type, Integer pages) {
+    public Statistics(String bah, String cid, String openerNo, String date, String type, Integer pages, String sjh) {
         this.bah = bah;
         this.cid = cid;
         this.openerNo = openerNo;
         this.date = date;
         this.type = type;
         this.pages = pages;
+        this.sjh = sjh;
     }
 
 }

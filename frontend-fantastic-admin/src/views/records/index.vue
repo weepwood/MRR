@@ -188,7 +188,7 @@ onMounted(loadData)
           <el-input v-model="filters.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="filters.btype" clearable placeholder="全部类型">
+          <el-select v-model="filters.btype" clearable placeholder="全部类型" style="width: 140px">
             <el-option v-for="item in typeOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>

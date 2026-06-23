@@ -40,6 +40,8 @@ const selectedArchiveKey = ref('')
 
 const filters = reactive({
   keyword: '',
+  bah: '',
+  sjh: '',
   type: '',
   dateRange: [] as string[],
 })
@@ -83,7 +85,7 @@ function formatDate(value: string | undefined) {
 }
 
 function archiveKey(item: ArchiveItem, index = 0) {
-  return [item.bah, item.cid, item.date, item.type, item.pages, item.openerNo, index].join('|')
+  return [item.bah, item.cid, item.date, item.type, item.pages, item.openerNo, item.sjh, index].join('|')
 }
 
 function tableIndex(index: number) {
@@ -132,6 +134,12 @@ async function loadArchiveList() {
     if (filters.keyword.trim()) {
       params.keyword = filters.keyword.trim()
     }
+    if (filters.bah.trim()) {
+      params.bah = filters.bah.trim()
+    }
+    if (filters.sjh.trim()) {
+      params.sjh = filters.sjh.trim()
+    }
     if (filters.type) {
       params.type = filters.type
     }
@@ -174,6 +182,8 @@ function handleSearch() {
 
 function resetSearch() {
   filters.keyword = ''
+  filters.bah = ''
+  filters.sjh = ''
   filters.type = ''
   filters.dateRange = []
   sortKey.value = 'date-desc'
@@ -206,6 +216,7 @@ function openArchive(item = selectedArchive.value) {
       date: item.date || '',
       pages: String(item.pages ?? ''),
       openerNo: item.openerNo || '',
+      sjh: item.sjh || '',
     },
   })
 }
@@ -270,10 +281,24 @@ onMounted(refreshAll)
 
       <div class="filter-grid">
         <el-input
+          v-model="filters.bah"
+          class="filter-bah"
+          clearable
+          placeholder="病案号"
+          @keyup.enter="handleSearch"
+        />
+        <el-input
+          v-model="filters.sjh"
+          class="filter-sjh"
+          clearable
+          placeholder="上架号"
+          @keyup.enter="handleSearch"
+        />
+        <el-input
           v-model="filters.keyword"
           class="filter-keyword"
           clearable
-          placeholder="搜索病案号、设备、人员或日期"
+          placeholder="搜索设备、人员或日期"
           @keyup.enter="handleSearch"
         />
         <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
@@ -346,6 +371,10 @@ onMounted(refreshAll)
               <div>
                 <dt>页数</dt>
                 <dd>{{ Number(item.pages || 0).toLocaleString('zh-CN') }} 页</dd>
+              </div>
+              <div>
+                <dt>上架号</dt>
+                <dd>{{ normalizeText(item.sjh) }}</dd>
               </div>
             </dl>
 
@@ -466,6 +495,11 @@ h2 {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.filter-bah,
+.filter-sjh {
+  flex: 0 0 140px;
 }
 
 .filter-keyword {
@@ -640,6 +674,8 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .filter-bah,
+  .filter-sjh,
   .filter-keyword,
   .filter-type,
   .filter-date,

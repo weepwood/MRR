@@ -41,24 +41,24 @@ class StatisticsControllerTest {
         @Test
         @DisplayName("page<1 抛异常")
         void invalidPage() {
-            assertThatThrownBy(() -> controller.getAllStatistics(0, 10, null, null, null, null, null, null))
+            assertThatThrownBy(() -> controller.getAllStatistics(0, 10, null, null, null, null, null, null, null, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("空白参数规范化为null，sortBy默认date")
         void blankParamsAndDefaults() {
-            when(statisticsService.findWithConditionAndPagination(anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
+            when(statisticsService.findWithConditionAndPagination(anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(List.of());
-            when(statisticsService.getTotalCountByCondition(any(), any(), any(), any())).thenReturn(0L);
+            when(statisticsService.getTotalCountByCondition(any(), any(), any(), any(), any(), any())).thenReturn(0L);
 
-            Result<PageResult<Statistics>> r = controller.getAllStatistics(1, 20, "  ", "", "  \t", null, "", "  ");
+            Result<PageResult<Statistics>> r = controller.getAllStatistics(1, 20, "  ", "", "  \t", null, null, null, "", "  ");
 
             assertThat(r.getCode()).isEqualTo(200);
             // 验证空白 key/type/startDate/endDate/sortBy 均被 normalize 为 null，
             // sortOrder 默认为 "desc"
             verify(statisticsService).findWithConditionAndPagination(
-                    eq(1), eq(20), isNull(), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
+                    eq(1), eq(20), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
         }
     }
 

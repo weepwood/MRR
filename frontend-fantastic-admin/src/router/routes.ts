@@ -209,7 +209,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '测试中心',
           icon: 'i-ant-design:experiment-twotone',
-          auth: ['system:read', 'log:read', 'role:manage', 'user:manage'],
+          auth: ['test:read', 'system:read', 'log:read', 'role:manage', 'user:manage'],
         },
       },
     ],

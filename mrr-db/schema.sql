@@ -90,7 +90,7 @@ create index if not exists idx_mr_auth_user_role_code on main.mr_auth_user (role
 
 insert or ignore into main.mr_auth_role (code, name, description, permissions, sort_order)
 values
-    ('ADMIN', '系统管理员', '拥有完整的用户与权限管理能力', 'user:manage,role:read,role:manage,record:read,record:manage,log:read,system:read', 1),
+    ('ADMIN', '系统管理员', '拥有完整的用户与权限管理能力', 'user:manage,role:read,role:manage,record:read,record:manage,log:read,system:read,test:read', 1),
     ('DOCTOR', '医生', '负责病案查询与业务处理', 'record:read,record:edit,search:read,statistics:read', 2),
     ('NURSE', '护士', '负责基础查询与病案协助', 'record:read,search:read', 3);
 

@@ -21,6 +21,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MigrationServiceImpl implements MigrationService {
@@ -142,21 +143,20 @@ public class MigrationServiceImpl implements MigrationService {
     public MigrationStatisticsDTO getStatistics() {
         MigrationStatisticsDTO stats = new MigrationStatisticsDTO();
 
-        long total = scanMapper.countTotalUploadedScans();
-        long migrated = scanMapper.countByMigrationStatus("migrated");
-        long verified = scanMapper.countByMigrationStatus("verified");
-        long notMigrated = scanMapper.countByMigrationStatus("not_migrated");
+        Map<String, Object> counts = scanMapper.countMigrationStats();
+        long total = ((Number) counts.getOrDefault("total", 0L)).longValue();
+        long migrated = ((Number) counts.getOrDefault("migrated", 0L)).longValue();
+        long verified = ((Number) counts.getOrDefault("verified", 0L)).longValue();
 
         stats.setTotalCount(total);
         stats.setMigratedCount(migrated + verified);
         stats.setPendingCount(total - migrated - verified);
-        stats.setFailedCount(0); // failed records revert to not_migrated
+        stats.setFailedCount(0);
 
         if (total > 0) {
             stats.setPercentage(Math.round((migrated + verified) * 10000.0 / total) / 100.0);
         }
 
-        // Count failed from migration logs
         try {
             long failedLogs = migrationLogMapper.countWithFilter("failed");
             stats.setFailedCount(failedLogs);

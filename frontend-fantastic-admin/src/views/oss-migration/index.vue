@@ -2,7 +2,7 @@
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult, ScanRecord } from '@/api/types'
 import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
 
 defineOptions({ name: 'OssMigrationPage' })
@@ -237,7 +237,9 @@ async function loadLogs() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadStats(), loadFolders(), loadPending(), loadLogs()])
+  await Promise.all([loadStats(), loadFolders()])
+  await loadPending()
+  nextTick(() => loadLogs())
 }
 
 // ==================== Upload Actions ====================

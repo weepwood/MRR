@@ -105,6 +105,14 @@ public interface ScanMapper {
     @Select("SELECT COUNT(*) FROM mr_scan WHERE uploadflag != 0")
     long countTotalUploadedScans();
 
+    @Select("SELECT "
+            + "SUM(CASE WHEN uploadflag != 0 THEN 1 ELSE 0 END) AS total, "
+            + "SUM(CASE WHEN migration_status = 'migrated' THEN 1 ELSE 0 END) AS migrated, "
+            + "SUM(CASE WHEN migration_status = 'verified' THEN 1 ELSE 0 END) AS verified, "
+            + "SUM(CASE WHEN migration_status = 'not_migrated' THEN 1 ELSE 0 END) AS not_migrated "
+            + "FROM mr_scan")
+    Map<String, Object> countMigrationStats();
+
     @Select("SELECT folder, COUNT(*) AS cnt FROM mr_scan "
             + "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
             + "GROUP BY folder ORDER BY folder")

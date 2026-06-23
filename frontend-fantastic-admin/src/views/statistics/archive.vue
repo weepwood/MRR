@@ -2,7 +2,7 @@
 import type { BAHImageData, BAHRecord } from '@/api/types'
 import { ArrowLeft, Download, Grid, List, Refresh, Search, User } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { downloadBah, getImgByCode, getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
@@ -35,6 +35,52 @@ const selectedImageIndex = ref(0)
 const viewMode = ref<'thumb' | 'list'>('thumb')
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 const thumbsContainer = ref<HTMLElement | null>(null)
+const thumbColumns = ref(2)
+const thumbStripWidth = ref(220)
+const thumbItemWidth = ref(96)
+const pageSize = ref(20)
+
+let resizeObserver: ResizeObserver | null = null
+
+function calcThumbColumns() {
+  if (!thumbsContainer.value) {
+    thumbColumns.value = viewMode.value === 'thumb' ? 2 : 1
+    return
+  }
+  const containerWidth = thumbsContainer.value.clientWidth
+  thumbStripWidth.value = containerWidth
+  if (viewMode.value === 'list') {
+    thumbColumns.value = 1
+    return
+  }
+  const gap = 6
+  const minItemWidth = 80
+  const maxItemWidth = 130
+  const idealCols = Math.max(1, Math.floor((containerWidth + gap) / (minItemWidth + gap)))
+  const actualItemWidth = Math.min(maxItemWidth, Math.max(minItemWidth, (containerWidth - (idealCols - 1) * gap) / idealCols))
+  thumbItemWidth.value = actualItemWidth
+  thumbColumns.value = idealCols
+  const viewportHeight = window.innerHeight
+  const stripTop = thumbsContainer.value.getBoundingClientRect().top
+  const availableHeight = viewportHeight - stripTop - 24
+  const itemHeight = actualItemWidth * 4 / 3 + 36
+  const rows = Math.max(1, Math.floor(availableHeight / itemHeight))
+  pageSize.value = thumbColumns.value * rows
+}
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(() => { calcThumbColumns() })
+  if (thumbsContainer.value) {
+    resizeObserver.observe(thumbsContainer.value)
+  }
+  calcThumbColumns()
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
+
+watch(viewMode, () => { nextTick(() => calcThumbColumns()) })
 
 const routeArchive = computed(() => ({
   bah: String(route.query.bah || searchBah.value || ''),
@@ -360,6 +406,7 @@ onMounted(() => {
             :ref="(el: any) => { thumbRefs[index] = el }"
             class="thumb-item"
             :class="{ active: index === selectedImageIndex }"
+            :style="viewMode === 'thumb' ? { width: thumbItemWidth + 'px' } : {}"
             @click="selectImage(index)"
           >
             <img
@@ -567,9 +614,10 @@ h2 {
 
 .viewer-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0;
-  min-height: 600px;
+  height: calc(100vh - 260px);
+  min-height: 450px;
   overflow: hidden;
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -577,22 +625,30 @@ h2 {
 }
 
 .thumb-strip {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  align-content: start;
-  max-height: 700px;
+  align-content: flex-start;
+  width: 240px;
+  min-width: 180px;
+  max-width: 300px;
   padding: 8px;
   overflow-y: auto;
   background: #f8fafc;
   border-right: 1px solid #e5e7eb;
-}
-
-.thumb-strip.thumb {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  resize: horizontal;
 }
 
 .thumb-strip.list {
-  grid-template-columns: 1fr;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  width: 220px;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.thumb-strip.list .thumb-item {
+  width: 100% !important;
 }
 
 .thumb-item {
@@ -644,14 +700,16 @@ h2 {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 600px;
+  min-height: 0;
+  height: 100%;
   padding: 16px;
   background: #eef2f7;
 }
 
 .preview-image {
   width: 100%;
-  height: 540px;
+  height: 100%;
+  max-height: calc(100vh - 380px);
 }
 
 .preview-bar {
@@ -696,12 +754,20 @@ h2 {
 @media (max-width: 1100px) {
   .viewer-layout {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
   }
 
   .thumb-strip {
-    max-height: 260px;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 220px;
     border-right: 0;
     border-bottom: 1px solid #e5e7eb;
+  }
+
+  .thumb-strip.list {
+    max-height: 200px;
   }
 }
 
@@ -718,10 +784,6 @@ h2 {
 
   .search-fields .el-input {
     width: 100%;
-  }
-
-  .thumb-strip {
-    max-height: 200px;
   }
 }
 </style>

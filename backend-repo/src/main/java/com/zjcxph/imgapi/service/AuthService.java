@@ -21,7 +21,11 @@ public interface AuthService {
     List<AuthUserProfileDTO> listUsers();
 
     /** 分页查询用户列表 */
-    PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size);
+    PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status);
+
+    default PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size) {
+        return listUsersPaginated(page, size, null, null, null);
+    }
 
     /** 修改当前用户密码 */
     void changePassword(Long userId, String oldPassword, String newPassword);

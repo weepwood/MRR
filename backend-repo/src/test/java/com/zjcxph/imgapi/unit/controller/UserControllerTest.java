@@ -124,10 +124,10 @@ class UserControllerTest {
         AuthUserProfileDTO profile = new AuthUserProfileDTO();
         profile.setUsername("admin");
         profile.setRoleCode("ADMIN");
-        when(authService.listUsersPaginated(1, 20))
+        when(authService.listUsersPaginated(1, 20, null, null, null))
                 .thenReturn(com.zjcxph.imgapi.dto.resp.PageResult.of(List.of(profile), 1, 1, 20));
 
-        Result<com.zjcxph.imgapi.dto.resp.PageResult<AuthUserProfileDTO>> result = userController.listUsers(1, 20);
+        Result<com.zjcxph.imgapi.dto.resp.PageResult<AuthUserProfileDTO>> result = userController.listUsers(1, 20, null, null, null);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData().getList()).hasSize(1);

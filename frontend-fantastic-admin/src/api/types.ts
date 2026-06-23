@@ -12,6 +12,7 @@ export interface PaginatedResult<T> {
   total: number
   page: number
   size: number
+  totalPages?: number
 }
 
 /** 扫描记录 */

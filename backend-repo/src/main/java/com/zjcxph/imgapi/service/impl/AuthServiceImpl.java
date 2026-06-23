@@ -129,10 +129,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size) {
+    public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status) {
         int offset = (page - 1) * size;
-        List<AuthUser> users = authUserMapper.findAllWithPagination(offset, size);
-        int total = authUserMapper.countAll();
+        String normalizedKeyword = trimToNull(keyword);
+        String normalizedRoleCode = trimToNull(roleCode);
+        String normalizedStatus = Optional.ofNullable(trimToNull(status))
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .orElse(null);
+        List<AuthUser> users = authUserMapper.findAllWithPagination(offset, size, normalizedKeyword, normalizedRoleCode, normalizedStatus);
+        int total = authUserMapper.countAll(normalizedKeyword, normalizedRoleCode, normalizedStatus);
         return PageResult.of(users.stream().map(this::toProfile).toList(), total, page, size);
     }
 
@@ -231,5 +236,12 @@ public class AuthServiceImpl implements AuthService {
 
     private String firstText(String primary, String fallback) {
         return StringUtils.hasText(primary) ? primary : fallback;
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 }

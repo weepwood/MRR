@@ -31,13 +31,6 @@ const healthTone = computed(() => {
 
 const memoryPercent = computed(() => Number.parseFloat(String(memoryInfo.value.usagePercent || '0').replace('%', '')) || 0)
 
-const cpuLoadPercent = computed(() => {
-  const processors = Number(systemInfo.value.jvm?.availableProcessors || 0)
-  const loadAverage = Number(systemInfo.value.operatingSystem?.systemLoadAverage || 0)
-  if (!processors || !Number.isFinite(loadAverage)) return 0
-  return Math.max(0, Math.min(100, Math.round((loadAverage / processors) * 100)))
-})
-
 const totalGcCount = computed(() => Number(gcStats.value.totalCollections || 0))
 const totalGcTime = computed(() => {
   const ms = Number(gcStats.value.totalTimeMs || 0)

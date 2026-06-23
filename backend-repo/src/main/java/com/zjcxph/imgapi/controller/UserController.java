@@ -124,9 +124,12 @@ public class UserController {
     @GetMapping("/users")
     public Result<PageResult<AuthUserProfileDTO>> listUsers(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String roleCode,
+            @RequestParam(required = false) String status) {
         return Result.<PageResult<AuthUserProfileDTO>>success("success")
-                .data(authService.listUsersPaginated(page, size));
+                .data(authService.listUsersPaginated(page, size, keyword, roleCode, status));
     }
 
     /**

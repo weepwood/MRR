@@ -80,9 +80,27 @@ public interface AuthUserMapper {
             "values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status})")
     int insertUser(AuthUser user);
 
-    @Select("SELECT u.*, r.name as role_name, r.permissions as permissions_csv " +
-            "FROM mr_auth_user u LEFT JOIN mr_auth_role r ON u.role_code = r.code " +
-            "ORDER BY u.id LIMIT #{limit} OFFSET #{offset}")
+    @Select({
+            "<script>",
+            "SELECT u.*, r.name as role_name, r.permissions as permissions_csv",
+            "FROM mr_auth_user u LEFT JOIN mr_auth_role r ON u.role_code = r.code",
+            "<where>",
+            "  <if test='keyword != null and keyword != \"\"'>",
+            "    AND (LOWER(u.username) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.display_name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(r.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.role_code, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))",
+            "  </if>",
+            "  <if test='roleCode != null and roleCode != \"\"'>",
+            "    AND u.role_code = #{roleCode}",
+            "  </if>",
+            "  <if test='status != null and status != \"\"'>",
+            "    AND LOWER(u.status) = LOWER(#{status})",
+            "  </if>",
+            "</where>",
+            "ORDER BY u.id LIMIT #{limit} OFFSET #{offset}",
+            "</script>"
+    })
     @Results({
             @Result(property = "id", column = "id"),
             @Result(property = "username", column = "username"),
@@ -96,8 +114,33 @@ public interface AuthUserMapper {
             @Result(property = "createdAt", column = "created_at"),
             @Result(property = "updatedAt", column = "updated_at")
     })
-    List<AuthUser> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
+    List<AuthUser> findAllWithPagination(@Param("offset") int offset,
+                                          @Param("limit") int limit,
+                                          @Param("keyword") String keyword,
+                                          @Param("roleCode") String roleCode,
+                                          @Param("status") String status);
 
-    @Select("SELECT COUNT(*) FROM mr_auth_user")
-    int countAll();
+    @Select({
+            "<script>",
+            "SELECT COUNT(*)",
+            "FROM mr_auth_user u LEFT JOIN mr_auth_role r ON u.role_code = r.code",
+            "<where>",
+            "  <if test='keyword != null and keyword != \"\"'>",
+            "    AND (LOWER(u.username) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.display_name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(r.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.role_code, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))",
+            "  </if>",
+            "  <if test='roleCode != null and roleCode != \"\"'>",
+            "    AND u.role_code = #{roleCode}",
+            "  </if>",
+            "  <if test='status != null and status != \"\"'>",
+            "    AND LOWER(u.status) = LOWER(#{status})",
+            "  </if>",
+            "</where>",
+            "</script>"
+    })
+    int countAll(@Param("keyword") String keyword,
+                 @Param("roleCode") String roleCode,
+                 @Param("status") String status);
 }

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useSlots } from '@/slots'
-import eventBus from '@/utils/eventBus'
-import AppSetting from './components/AppSetting/index.vue'
+
 import Header from './components/Header/index.vue'
 import HotkeysIntro from './components/HotkeysIntro/index.vue'
 import MainSidebar from './components/MainSidebar/index.vue'
@@ -72,7 +71,6 @@ watch(() => routeInfo.path, () => {
   }
 })
 
-const enableAppSetting = import.meta.env.VITE_APP_SETTING
 </script>
 
 <template>
@@ -110,12 +108,6 @@ const enableAppSetting = import.meta.env.VITE_APP_SETTING
       </div>
     </div>
     <HotkeysIntro />
-    <template v-if="enableAppSetting">
-      <div class="app-setting" @click="eventBus.emit('global-app-setting-toggle')">
-        <FaIcon name="i-uiw:setting-o" class="icon" />
-      </div>
-      <AppSetting />
-    </template>
     <component :is="useSlots('free-position')" />
   </div>
 </template>
@@ -200,36 +192,6 @@ const enableAppSetting = import.meta.env.VITE_APP_SETTING
       padding: 30px;
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
-    }
-  }
-}
-
-.app-setting {
-  --uno: bg-primary text-primary-foreground rounded-l-md;
-
-  position: fixed;
-  top: calc(50% + 250px);
-  right: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  font-size: 24px;
-  cursor: pointer;
-
-  .icon {
-    animation: rotate 5s linear infinite;
-  }
-
-  @keyframes rotate {
-    from {
-      transform: rotate(0deg);
-    }
-
-    to {
-      transform: rotate(360deg);
     }
   }
 }

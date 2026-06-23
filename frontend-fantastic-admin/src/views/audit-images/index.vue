@@ -90,12 +90,12 @@ onMounted(loadData)
           <el-input v-model="filters.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="敏感操作">
-          <el-select v-model="filters.auditAction" clearable placeholder="全部">
+          <el-select v-model="filters.auditAction" clearable placeholder="全部" style="width:200px">
             <el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="filters.responseStatus" clearable placeholder="全部">
+          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width:140px">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>

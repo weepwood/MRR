@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.service.AsyncLogService;
 import com.zjcxph.imgapi.utils.AuthContext;
+import com.zjcxph.imgapi.utils.IpUtil;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -44,7 +45,7 @@ public class LogInterceptor implements HandlerInterceptor {
         // 生成请求ID并设置到 MDC 上下文，用于日志追踪
         String requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         MDC.put("requestId", requestId);
-        MDC.put("clientIp", getClientIP(request));
+        MDC.put("clientIp", IpUtil.getClientIp(request));
         
         // 从请求头或 session 中获取用户信息（如果已认证）
         String userId = request.getHeader("X-User-Id");
@@ -86,7 +87,7 @@ public class LogInterceptor implements HandlerInterceptor {
             log.setUsername(currentUser.getUsername());
         }
 
-        log.setClientIp(getClientIP(request));
+        log.setClientIp(IpUtil.getClientIp(request));
         log.setRequestUri(request.getRequestURI());
         log.setMethod(request.getMethod());
         log.setUserAgent(request.getHeader("User-Agent"));
@@ -137,17 +138,6 @@ public class LogInterceptor implements HandlerInterceptor {
                         || "/favicon.ico".equals(uri)
                         || "/error".equals(uri)
         );
-    }
-
-    private String getClientIP(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 
     /**

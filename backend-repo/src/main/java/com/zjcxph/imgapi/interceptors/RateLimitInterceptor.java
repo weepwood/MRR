@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.security.ApiRateLimiter;
+import com.zjcxph.imgapi.utils.IpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -55,7 +56,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String clientIp = extractClientIp(request);
+        String clientIp = IpUtil.getClientIp(request);
         if (!apiRateLimiter.tryAcquire(clientIp)) {
             writeRateLimitResponse(response);
             return false;
@@ -65,17 +66,6 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private boolean isRateLimited(String path) {
         return RATE_LIMITED_PATHS.stream().anyMatch(path::startsWith);
-    }
-
-    private String extractClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 
     private void writeRateLimitResponse(HttpServletResponse response) throws IOException {

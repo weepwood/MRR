@@ -42,19 +42,9 @@ function setupRoutes(router: Router) {
             case 'frontend':
               routeStore.generateRoutesAtFront(asyncRoutes)
               break
-            case 'backend':
-              await routeStore.generateRoutesAtBack()
-              break
             case 'filesystem':
               routeStore.generateRoutesAtFilesystem(asyncRoutesByFilesystem)
-              switch (settingsStore.settings.menu.baseOn) {
-                case 'frontend':
-                  menuStore.generateMenusAtFront()
-                  break
-                case 'backend':
-                  await menuStore.generateMenusAtBack()
-                  break
-              }
+              menuStore.generateMenusAtFront()
               break
           }
 

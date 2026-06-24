@@ -2,7 +2,6 @@ import type { Route } from '#/global'
 import type { RouteRecordRaw, RouterMatcher } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
 import { createRouterMatcher } from 'vue-router'
-import apiApp from '@/api/modules/app'
 import { systemRoutes as systemRoutesRaw } from '@/router/routes'
 
 export const useRouteStore = defineStore(
@@ -95,43 +94,6 @@ export const useRouteStore = defineStore(
       routesMatcher.value = createRouterMatcher(routes, {})
       isGenerate.value = true
     }
-    // 格式化后端路由数据
-    function formatBackRoutes(routes: any, views = import.meta.glob('../../views/**/*.vue')): Route.recordMainRaw[] {
-      return routes.map((route: any) => {
-        switch (route.component) {
-          case 'Layout':
-            route.component = () => import('@/layouts/index.vue')
-            break
-          default:
-            if (route.component) {
-              route.component = views[`../../views/${route.component}`]
-            }
-            else {
-              delete route.component
-            }
-        }
-        if (route.children) {
-          route.children = formatBackRoutes(route.children, views)
-        }
-        return route
-      })
-    }
-    // 生成路由（后端获取）
-    async function generateRoutesAtBack() {
-      await apiApp.routeList().then((res) => {
-        // 设置 routes 数据
-        routesRaw.value = formatBackRoutes(res.data) as any
-        // 创建路由匹配器
-        const routes: RouteRecordRaw[] = []
-        routesRaw.value.forEach((route) => {
-          if (route.children) {
-            routes.push(...route.children)
-          }
-        })
-        routesMatcher.value = createRouterMatcher(routes, {})
-        isGenerate.value = true
-      })
-    }
     // 生成路由（文件系统生成）
     function generateRoutesAtFilesystem(asyncRoutes: RouteRecordRaw[]) {
       // 设置 routes 数据
@@ -161,7 +123,6 @@ export const useRouteStore = defineStore(
       systemRoutes,
       getRouteMatchedByPath,
       generateRoutesAtFront,
-      generateRoutesAtBack,
       generateRoutesAtFilesystem,
       setCurrentRemoveRoutes,
       removeRoutes,

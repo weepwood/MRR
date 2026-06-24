@@ -1,7 +1,6 @@
 import type { Menu, Route } from '#/global'
 import type { RouteRecordRaw } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
-import apiApp from '@/api/modules/app'
 import menu from '@/menu'
 import { resolveRoutePath } from '@/utils'
 
@@ -171,12 +170,6 @@ export const useMenuStore = defineStore(
     async function generateMenusAtFront() {
       filesystemMenusRaw.value = menu.filter(item => item.children.length !== 0)
     }
-    // 生成导航（后端生成）
-    async function generateMenusAtBack() {
-      await apiApp.menuList().then(async (res) => {
-        filesystemMenusRaw.value = (res.data as Menu.recordMainRaw[]).filter(item => item.children.length !== 0)
-      }).catch(() => {})
-    }
     // 设置主导航
     function isPathInMenus(menus: Menu.recordRaw[], path: string) {
       let flag = false
@@ -210,7 +203,6 @@ export const useMenuStore = defineStore(
       sidebarMenusHasOnlyMenu,
       defaultOpenedPaths,
       generateMenusAtFront,
-      generateMenusAtBack,
       setActived,
     }
   },

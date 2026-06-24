@@ -14,6 +14,7 @@ import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
+import com.zjcxph.imgapi.utils.IpUtil;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -81,7 +82,7 @@ public class UserController {
     @Operation(summary = "用户注册")
     @PostMapping("/register")
     public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req, HttpServletRequest httpRequest) {
-        LoginResponseDTO response = authService.register(req, getClientIp(httpRequest));
+        LoginResponseDTO response = authService.register(req, IpUtil.getClientIp(httpRequest));
         if (response.getToken() == null || response.getToken().isBlank()) {
             return Result.<LoginResponseDTO>fail("Registration failed");
         }
@@ -257,14 +258,4 @@ public class UserController {
         }
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
-    }
 }

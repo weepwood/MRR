@@ -288,7 +288,7 @@ public class OssController {
                 job.setProcessedCount(processed);
                 job.setFailedCount(failed);
                 job.setRate(java.math.BigDecimal.valueOf(100).setScale(2, java.math.RoundingMode.HALF_UP));
-                job.setStatus(failed > 0 ? "completed" : "completed");
+                job.setStatus(failed > 0 ? "completed_with_errors" : "completed");
                 job.setCompletedAt(new java.util.Date());
                 if (failed > 0 && processed == 0) {
                     job.setStatus("failed");

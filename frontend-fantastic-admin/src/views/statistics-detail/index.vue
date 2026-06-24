@@ -585,8 +585,8 @@ h2 {
   padding: 18px;
   overflow: hidden;
   cursor: pointer;
-  background: linear-gradient(180deg, var(--folder-bg), #fff 58%);
-  border: 1px solid rgb(15 23 42 / 14%);
+  background: linear-gradient(180deg, var(--folder-bg), var(--surface) 58%);
+  border: 1px solid var(--divider);
   border-top: 6px solid var(--folder-accent);
   border-radius: 7px;
   box-shadow: 0 12px 28px rgb(15 23 42 / 7%);
@@ -608,6 +608,11 @@ h2 {
 .tone-amber { --folder-accent: #c97b18; --folder-bg: #fff6e8; }
 .tone-rose { --folder-accent: #be185d; --folder-bg: #fff0f5; }
 .tone-slate { --folder-accent: var(--text-secondary); --folder-bg: var(--surface-alt); }
+
+:global(.dark) .tone-blue { --folder-bg: color-mix(in srgb, #2563eb 18%, var(--surface)); }
+:global(.dark) .tone-green { --folder-bg: color-mix(in srgb, #0f766e 18%, var(--surface)); }
+:global(.dark) .tone-amber { --folder-bg: color-mix(in srgb, #c97b18 18%, var(--surface)); }
+:global(.dark) .tone-rose { --folder-bg: color-mix(in srgb, #be185d 18%, var(--surface)); }
 
 .folder-tab {
   position: absolute;
@@ -663,14 +668,14 @@ h2 {
 .folder-meta-grid dt {
   font-size: 11px;
   font-weight: 700;
-  color: #80879a;
+  color: var(--text-secondary);
 }
 
 .folder-meta-grid dd {
   margin: 4px 0 0;
   font-size: 13px;
   font-weight: 600;
-  color: #24324b;
+  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
@@ -679,7 +684,7 @@ h2 {
   font-size: 12px;
   font-weight: 700;
   color: var(--folder-accent);
-  border-top: 1px dashed rgb(100 116 139 / 28%);
+  border-top: 1px dashed var(--divider);
 }
 
 .pagination-wrapper {

@@ -1,5 +1,5 @@
 import type { PaginatedResult } from '../types'
-import api, { getRequest } from '../index'
+import { getRequest } from '../index'
 
 export interface PatientRecord {
   id?: number
@@ -25,7 +25,3 @@ export function getPatientByIdCard(idCard: string) {
   return getRequest<PatientRecord[]>(`/api/v1/patients/idcard/${idCard}`)
 }
 
-/** GET /api/v1/patients/export/excel — 导出患者列表为 Excel */
-export function exportPatientsExcel(params?: { keyword?: string }) {
-  return api.get('/api/v1/patients/export/excel', { params, responseType: 'blob' })
-}

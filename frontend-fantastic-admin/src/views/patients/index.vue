@@ -3,7 +3,7 @@ import type { PatientRecord } from '@/api/modules/patients'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
-import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
+import { getPatients } from '@/api/modules/patients'
 
 defineOptions({ name: 'PatientsPage' })
 
@@ -37,25 +37,6 @@ function resetFilters() { filters.keyword = ''; handleSearch() }
 function handlePageChange(p: number) { page.value = p; loadData() }
 function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData() }
 
-async function exportExcel() {
-  try {
-    const params = filters.keyword.trim() ? { keyword: filters.keyword.trim() } : undefined
-    const response = await exportPatientsExcel(params)
-    const blob = new Blob([response.data as BlobPart], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `patients-${new Date().toISOString().slice(0, 10)}.xlsx`
-    link.click()
-    URL.revokeObjectURL(link.href)
-    ElMessage.success('导出成功')
-  }
-  catch (error: any) {
-    ElMessage.error(error?.message || '导出失败')
-  }
-}
-
 onMounted(loadData)
 </script>
 
@@ -74,9 +55,7 @@ onMounted(loadData)
       <el-button :loading="loading" :icon="Refresh" @click="loadData">
         刷新
       </el-button>
-      <el-button type="success" @click="exportExcel">
-        导出 Excel
-      </el-button>
+
     </div>
 
     <el-card shadow="never">

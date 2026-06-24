@@ -357,15 +357,9 @@ onMounted(loadPermissions)
           <p v-if="role.description" class="role-desc">
             {{ role.description }}
           </p>
-          <el-alert
-            v-if="isAdminRole(role.code)"
-            type="info"
-            :closable="false"
-            class="admin-note"
-            title="管理员自动拥有所有权限"
-            description="权限由系统统一授予，不可手动修改。"
-            show-icon
-          />
+          <p v-if="isAdminRole(role.code)" class="admin-note">
+            自动拥有全部权限，不可修改
+          </p>
 
           <div class="perm-view">
             <div v-if="viewDirectPermsFor(role).length === 0" class="no-perm">
@@ -524,7 +518,11 @@ h2 { margin: 0; font-size: 28px; }
 .role-name { font-size: 16px; }
 .role-perm-count { font-size: 12px; color: var(--text-tertiary); }
 .role-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
-.admin-note { margin: 4px 0; }
+.admin-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
 .role-header-actions { display: flex; flex-shrink: 0; gap: 8px; align-items: center; }
 .edit-fields { display: flex; gap: 8px; align-items: center; }
 .edit-fields :deep(.el-input) { width: 140px; }

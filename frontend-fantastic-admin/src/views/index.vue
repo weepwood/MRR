@@ -249,16 +249,16 @@ onMounted(() => {
 
 .home-header {
   display: flex;
+  gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
 }
 
 .eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -271,7 +271,7 @@ h2 {
 .subtitle {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* 统计卡片 */
@@ -281,19 +281,19 @@ h2 {
 
 .stat-inner {
   display: flex;
-  align-items: center;
   gap: 14px;
+  align-items: center;
 }
 
 .stat-icon {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
   font-size: 22px;
-  flex-shrink: 0;
+  border-radius: 12px;
 }
 
 .stat-info {
@@ -310,7 +310,7 @@ h2 {
 .stat-label {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* 卡片头部 */
@@ -323,19 +323,19 @@ h2 {
 /* 趋势图 */
 .trend-chart {
   display: flex;
-  align-items: flex-end;
   gap: 3px;
+  align-items: flex-end;
   height: 170px;
   padding-top: 8px;
 }
 
 .trend-bar {
+  position: relative;
   flex: 1;
   min-width: 4px;
+  cursor: pointer;
   background: linear-gradient(180deg, #409eff, #79bbff);
   border-radius: 3px 3px 0 0;
-  position: relative;
-  cursor: pointer;
   transition: opacity 0.2s;
 }
 
@@ -347,10 +347,10 @@ h2 {
   position: absolute;
   top: -16px;
   left: 50%;
-  transform: translateX(-50%);
   font-size: 10px;
-  color: #64748b;
+  color: var(--text-secondary);
   white-space: nowrap;
+  transform: translateX(-50%);
 }
 
 /* 系统状态 */
@@ -367,7 +367,7 @@ h2 {
 
 .health-label {
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 /* 快捷入口 */
@@ -380,21 +380,21 @@ h2 {
 .quick-item {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   padding: 12px 4px;
   font-size: 12px;
-  color: #475569;
+  color: var(--text-secondary);
   cursor: pointer;
+  background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: transparent;
   transition: all 0.2s;
 }
 
 .quick-item:hover {
-  background: #f1f5f9;
-  border-color: #e5e7eb;
+  background: var(--surface-alt);
+  border-color: var(--divider);
 }
 
 .quick-item i {
@@ -414,17 +414,17 @@ h2 {
   align-items: center;
   padding: 8px 4px;
   font-size: 13px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--surface-alt);
 }
 
 .audit-row.audit-header {
+  padding: 4px 4px 8px;
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding: 4px 4px 8px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid var(--divider);
 }
 
 .audit-row:last-child {

@@ -28,7 +28,6 @@ const filters = reactive({
   sjh: '',
   openerNo: '',
   btype: '',
-  uploadFlag: '',
 })
 
 const typeOptions = [
@@ -55,7 +54,6 @@ function buildRequest() {
     sjh: filters.sjh.trim() || undefined,
     openerNo: filters.openerNo.trim() || undefined,
     btype: filters.btype ? Number(filters.btype) : undefined,
-    uploadFlag: filters.uploadFlag ? Number(filters.uploadFlag) : undefined,
   }
 }
 
@@ -91,7 +89,6 @@ function resetFilters() {
   filters.sjh = ''
   filters.openerNo = ''
   filters.btype = ''
-  filters.uploadFlag = ''
   handleSearch()
 }
 
@@ -185,7 +182,7 @@ onMounted(loadData)
           <el-input v-model="filters.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="filters.btype" clearable placeholder="全部类型" style="width: 140px">
+          <el-select v-model="filters.btype" clearable placeholder="全部类型" style="width: 140px;">
             <el-option v-for="item in typeOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -254,7 +251,7 @@ onMounted(loadData)
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="记录详情" width="720px">
+    <el-dialog v-model="detailVisible" title="记录详情" width="720px" :close-on-click-modal="false">
       <el-descriptions v-if="currentRecord" :column="2" border>
         <el-descriptions-item label="病案号">
           {{ currentRecord.bah || '-' }}
@@ -321,7 +318,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -333,7 +330,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-grid {
@@ -344,20 +341,20 @@ h2 {
 
 .summary-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-value {
   margin-top: 8px;
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .summary-note {
   margin-top: 8px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .pager {

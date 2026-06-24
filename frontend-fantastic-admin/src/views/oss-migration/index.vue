@@ -236,6 +236,11 @@ async function loadLogs() {
   }
 }
 
+function handleLogFilterChange() {
+  logPage.value = 1
+  loadLogs()
+}
+
 async function refreshAll() {
   await Promise.all([loadStats(), loadFolders()])
   await loadPending()
@@ -559,9 +564,6 @@ onMounted(refreshAll)
             </template>
           </el-table-column>
         </el-table>
-        <div v-if="!pendingList.length && !loading.pending" class="empty-pending">
-          暂无待迁移记录
-        </div>
       </el-card>
     </div>
 
@@ -674,7 +676,7 @@ onMounted(refreshAll)
               placeholder="全部状态"
               size="small"
               style="width: 130px;"
-              @change="loadLogs"
+              @change="handleLogFilterChange"
             >
               <el-option label="全部" value="" />
               <el-option label="成功" value="success" />
@@ -757,7 +759,7 @@ onMounted(refreshAll)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -769,7 +771,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-grid {
@@ -820,7 +822,7 @@ h2 {
   text-overflow: ellipsis;
   font-size: 11px;
   font-weight: 600;
-  color: #86868b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -830,7 +832,7 @@ h2 {
   font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
-  color: #1f2b42;
+  color: var(--text-primary);
   word-break: break-all;
 }
 
@@ -869,8 +871,8 @@ h2 {
 }
 
 .folder-tree-card {
-  width: 300px;
   flex-shrink: 0;
+  width: 300px;
 }
 
 .pending-table-card {
@@ -913,9 +915,9 @@ h2 {
 
 .empty-pending {
   padding: 32px 0;
-  text-align: center;
-  color: #909399;
   font-size: 14px;
+  color: #909399;
+  text-align: center;
 }
 
 .upload-results {

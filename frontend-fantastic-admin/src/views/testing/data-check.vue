@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import type { DataCheckItem } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import { runDataCheck } from '@/api/modules/testing'
-import type { DataCheckItem } from '@/api/types'
 
 defineOptions({ name: 'DataCheckPage' })
 
@@ -18,23 +18,26 @@ async function execute() {
     const warned = items.value.filter(i => i.status === 'WARN')
     if (failed.length === 0 && warned.length === 0) {
       ElMessage.success('数据完整性检查全部通过')
-    } else {
+    }
+    else {
       const parts: string[] = []
-      if (failed.length) parts.push(`${failed.length} 项失败`)
-      if (warned.length) parts.push(`${warned.length} 项告警`)
+      if (failed.length) { parts.push(`${failed.length} 项失败`) }
+      if (warned.length) { parts.push(`${warned.length} 项告警`) }
       ElMessage.warning(parts.join('，'))
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     ElMessage.error(error?.message || '数据检查执行失败')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 
 function tagType(status?: string) {
-  if (status === 'PASS') return 'success'
-  if (status === 'WARN') return 'warning'
-  if (status === 'FAIL' || status === 'ERROR') return 'danger'
+  if (status === 'PASS') { return 'success' }
+  if (status === 'WARN') { return 'warning' }
+  if (status === 'FAIL' || status === 'ERROR') { return 'danger' }
   return 'info'
 }
 
@@ -43,11 +46,11 @@ const expandedRows = ref<string[]>([])
 
 <template>
   <div>
-    <div class="flex items-center gap-3 mb-4">
+    <div class="mb-4 flex items-center gap-3">
       <el-button type="primary" :loading="loading" @click="execute">
         {{ loading ? '检查中...' : '执行数据检查' }}
       </el-button>
-      <span class="text-sm color-#64748b">检查数据完整性、一致性、异常记录</span>
+      <span class="text-sm text-muted-foreground">检查数据完整性、一致性、异常记录</span>
     </div>
 
     <div v-if="items.length" class="grid gap-3">
@@ -55,12 +58,14 @@ const expandedRows = ref<string[]>([])
         v-for="item in items"
         :key="item.checkName"
         shadow="never"
-        :class="item.status === 'PASS' ? 'border-l-4 border-l-green-5' : item.status === 'WARN' ? 'border-l-4 border-l-yellow-5' : item.status === 'FAIL' ? 'border-l-4 border-l-red-5' : ''"
+        :class="item.status === 'PASS' ? 'border-l-4 border-l-green-500' : item.status === 'WARN' ? 'border-l-4 border-l-yellow-500' : item.status === 'FAIL' ? 'border-l-4 border-l-red-500' : ''"
       >
         <div class="flex items-center justify-between">
           <div>
             <strong>{{ item.checkName }}</strong>
-            <p class="mt-1 text-sm color-#64748b">{{ item.summary }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {{ item.summary }}
+            </p>
           </div>
           <div class="flex items-center gap-2">
             <el-tag v-if="item.issueCount" type="warning">
@@ -72,10 +77,12 @@ const expandedRows = ref<string[]>([])
           </div>
         </div>
 
-        <el-collapse v-if="item.details?.length" class="mt-3" v-model="expandedRows">
-          <el-collapse-item title="查看详情" name="details">
-            <ul class="list-disc pl-5 text-sm color-#64748b grid gap-1">
-              <li v-for="(d, i) in item.details" :key="i">{{ d }}</li>
+        <el-collapse v-if="item.details?.length" v-model="expandedRows" class="mt-3">
+          <el-collapse-item title="查看详情" :name="item.checkName">
+            <ul class="grid list-disc gap-1 pl-5 text-sm text-muted-foreground">
+              <li v-for="(d, i) in item.details" :key="i">
+                {{ d }}
+              </li>
             </ul>
           </el-collapse-item>
         </el-collapse>

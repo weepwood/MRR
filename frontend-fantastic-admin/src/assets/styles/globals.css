@@ -22,6 +22,16 @@
   /* 滚动条颜色 */
   --scrollbar-color: 240 5.9% 90%;
 
+  /* 语义化文本/表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(var(--muted-foreground) / 70%);
+  --text-hint: hsl(var(--muted-foreground) / 50%);
+  --surface: hsl(var(--card));
+  --surface-muted: hsl(var(--muted));
+  --surface-alt: hsl(var(--secondary));
+  --divider: hsl(var(--border));
+
   &.dark {
     color-scheme: dark;
 

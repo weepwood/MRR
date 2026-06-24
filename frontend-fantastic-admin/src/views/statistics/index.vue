@@ -89,46 +89,52 @@ onMounted(loadData)
 
     <el-row :gutter="20">
       <el-col :span="12">
-        <el-card shadow="never" :loading="loading">
+        <el-card shadow="never">
           <template #header>
             类型分布
           </template>
-          <div class="stack-list">
-            <article v-for="item in typeList" :key="item.type" class="stack-item">
-              <div>
-                <strong>{{ item.type || '未分类' }}</strong>
-                <p>记录数 {{ item.recordCount || item.totalRecords || 0 }}</p>
-              </div>
-              <el-tag>{{ item.totalPages || item.pageCount || 0 }} 页</el-tag>
-            </article>
+          <div v-loading="loading" class="stack-list">
+            <template v-if="typeList.length">
+              <article v-for="item in typeList" :key="item.type" class="stack-item">
+                <div>
+                  <strong>{{ item.type || '未分类' }}</strong>
+                  <p>记录数 {{ item.recordCount || item.totalRecords || 0 }}</p>
+                </div>
+                <el-tag>{{ item.totalPages || item.pageCount || 0 }} 页</el-tag>
+              </article>
+            </template>
+            <el-empty v-else-if="!loading" description="暂无类型分布数据" :image-size="60" />
           </div>
         </el-card>
       </el-col>
       <el-col :span="12">
-        <el-card shadow="never" :loading="loading">
+        <el-card shadow="never">
           <template #header>
             近 10 日趋势
           </template>
-          <div class="stack-list">
-            <article v-for="item in recentDates" :key="item.date" class="stack-item">
-              <div>
-                <strong>{{ item.date || '-' }}</strong>
-                <p>记录数 {{ item.recordCount || 0 }}</p>
-              </div>
-              <el-tag type="success">
-                {{ item.totalPages || 0 }} 页
-              </el-tag>
-            </article>
+          <div v-loading="loading" class="stack-list">
+            <template v-if="recentDates.length">
+              <article v-for="item in recentDates" :key="item.date" class="stack-item">
+                <div>
+                  <strong>{{ item.date || '-' }}</strong>
+                  <p>记录数 {{ item.recordCount || 0 }}</p>
+                </div>
+                <el-tag type="success">
+                  {{ item.totalPages || 0 }} 页
+                </el-tag>
+              </article>
+            </template>
+            <el-empty v-else-if="!loading" description="暂无趋势数据" :image-size="60" />
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-card shadow="never" :loading="loading">
+    <el-card shadow="never">
       <template #header>
         高频病案号
       </template>
-      <el-table :data="topBahList" stripe>
+      <el-table v-loading="loading" :data="topBahList" stripe empty-text="暂无高频病案数据">
         <el-table-column prop="bah" label="病案号" min-width="140" />
         <el-table-column prop="recordCount" label="记录数" width="120" />
         <el-table-column prop="totalPages" label="总页数" width="120" />
@@ -161,7 +167,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -173,7 +179,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-grid {
@@ -184,20 +190,20 @@ h2 {
 
 .summary-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-value {
   margin-top: 8px;
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .summary-note {
   margin-top: 8px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .stack-list {
@@ -221,6 +227,6 @@ h2 {
 
 .stack-item p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 </style>

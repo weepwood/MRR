@@ -50,7 +50,7 @@ function handleReset() {
       </div>
       <div class="header-actions">
         <el-button type="primary" @click="handleSave">
-          保存设置
+          保存本地草稿
         </el-button>
         <el-button @click="handleReset">
           清除草稿
@@ -158,7 +158,7 @@ function handleReset() {
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -170,6 +170,6 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 </style>

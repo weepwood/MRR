@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { PatientRecord } from '@/api/modules/patients'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
-import { getPatients, type PatientRecord } from '@/api/modules/patients'
+import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
 
 defineOptions({ name: 'PatientsPage' })
 
@@ -38,13 +39,11 @@ function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData(
 
 async function exportExcel() {
   try {
-    const params = new URLSearchParams()
-    if (filters.keyword.trim()) { params.set('keyword', filters.keyword.trim()) }
-    const url = `/proxy/api/v1/patients/export/excel?${params.toString()}`
-    const token = localStorage.getItem('token') || ''
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    if (!response.ok) { throw new Error('导出失败') }
-    const blob = await response.blob()
+    const params = filters.keyword.trim() ? { keyword: filters.keyword.trim() } : undefined
+    const response = await exportPatientsExcel(params)
+    const blob = new Blob([response.data as BlobPart], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `patients-${new Date().toISOString().slice(0, 10)}.xlsx`
@@ -64,12 +63,20 @@ onMounted(loadData)
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">Patient Management</p>
+        <p class="eyebrow">
+          Patient Management
+        </p>
         <h2>患者管理</h2>
-        <p class="subtitle">查询和管理患者基本信息，支持按病案号、姓名、身份证号、科室搜索。</p>
+        <p class="subtitle">
+          查询和管理患者基本信息，支持按病案号、姓名、身份证号、科室搜索。
+        </p>
       </div>
-      <el-button :loading="loading" :icon="Refresh" @click="loadData">刷新</el-button>
-      <el-button type="success" @click="exportExcel">导出 Excel</el-button>
+      <el-button :loading="loading" :icon="Refresh" @click="loadData">
+        刷新
+      </el-button>
+      <el-button type="success" @click="exportExcel">
+        导出 Excel
+      </el-button>
     </div>
 
     <el-card shadow="never">
@@ -81,15 +88,21 @@ onMounted(loadData)
           class="filter-input"
           @keyup.enter="handleSearch"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
         </el-input>
-        <el-button type="primary" @click="handleSearch">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+        <el-button type="primary" @click="handleSearch">
+          查询
+        </el-button>
+        <el-button @click="resetFilters">
+          重置
+        </el-button>
       </div>
     </el-card>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="tableData" stripe style="width: 100%">
+      <el-table v-loading="loading" :data="tableData" stripe style="width: 100%;">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />

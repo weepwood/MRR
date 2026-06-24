@@ -498,21 +498,21 @@ h2 {
 .subtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .search-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .search-fields {
   display: flex;
+  flex: 1 1 360px;
   gap: 8px;
   align-items: center;
-  flex: 1 1 360px;
 }
 
 .search-fields .el-input {
@@ -523,11 +523,11 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 16px;
-  margin-top: 14px;
   padding-top: 14px;
+  margin-top: 14px;
   font-size: 13px;
-  color: #475569;
-  border-top: 1px solid #e5e7eb;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--divider);
 }
 
 .patient-card {
@@ -538,8 +538,8 @@ h2 {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-weight: 700;
   font-size: 14px;
+  font-weight: 700;
 }
 
 .patient-body {
@@ -557,7 +557,7 @@ h2 {
 .field-label {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -565,7 +565,7 @@ h2 {
 .field-value {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .type-bar {
@@ -574,8 +574,8 @@ h2 {
   gap: 6px;
   align-items: center;
   padding: 8px 12px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--divider);
   border-radius: 7px;
 }
 
@@ -585,7 +585,7 @@ h2 {
   align-items: center;
   padding: 4px 10px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
@@ -593,14 +593,14 @@ h2 {
 }
 
 .type-tab.active {
-  color: var(--el-color-primary);
   font-weight: 700;
+  color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   border-color: var(--el-color-primary);
 }
 
 .type-tab:hover:not(.disabled) {
-  background: #f1f5f9;
+  background: var(--surface-alt);
 }
 
 .type-tab.disabled {
@@ -619,8 +619,8 @@ h2 {
   height: calc(100vh - 260px);
   min-height: 450px;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--divider);
   border-radius: 7px;
 }
 
@@ -634,14 +634,13 @@ h2 {
   max-width: 300px;
   padding: 8px;
   overflow-y: auto;
-  background: #f8fafc;
-  border-right: 1px solid #e5e7eb;
   resize: horizontal;
+  background: var(--surface-muted);
+  border-right: 1px solid var(--divider);
 }
 
 .thumb-strip.list {
-  flex-direction: column;
-  flex-wrap: nowrap;
+  flex-flow: column nowrap;
   width: 220px;
   min-width: 160px;
   max-width: 280px;
@@ -658,8 +657,8 @@ h2 {
   padding: 6px;
   color: #24324b;
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--divider);
   border-radius: 6px;
 }
 
@@ -673,7 +672,7 @@ h2 {
   width: 100%;
   aspect-ratio: 3 / 4;
   object-fit: cover;
-  background: #eef2f7;
+  background: var(--surface-alt);
   border-radius: 4px;
 }
 
@@ -684,15 +683,15 @@ h2 {
 
 .thumb-item small {
   overflow: hidden;
-  font-size: 11px;
-  color: #64748b;
   text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .empty-list {
   padding: 30px 0;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -700,10 +699,10 @@ h2 {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 0;
   height: 100%;
+  min-height: 0;
   padding: 16px;
-  background: #eef2f7;
+  background: var(--surface-alt);
 }
 
 .preview-image {
@@ -723,7 +722,7 @@ h2 {
   justify-content: space-between;
   padding: 10px 14px;
   background: rgb(255 255 255 / 93%);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--divider);
   border-radius: 6px;
   box-shadow: 0 8px 20px rgb(15 23 42 / 10%);
 }
@@ -744,14 +743,14 @@ h2 {
   gap: 8px;
   align-items: center;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .empty-state {
   padding: 60px 0;
 }
 
-@media (max-width: 1100px) {
+@media (width <= 1100px) {
   .viewer-layout {
     grid-template-columns: 1fr;
     height: auto;
@@ -763,7 +762,7 @@ h2 {
     max-width: none !important;
     max-height: 220px;
     border-right: 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--divider);
   }
 
   .thumb-strip.list {
@@ -771,7 +770,7 @@ h2 {
   }
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .page-header,
   .preview-bar {
     flex-direction: column;

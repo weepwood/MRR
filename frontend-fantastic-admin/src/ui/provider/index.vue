@@ -4,8 +4,8 @@ import zhCN from 'element-plus/es/locale/lang/zh-cn'
 const settingsStore = useSettingsStore()
 
 // 跟随框架主题
-const isSupprotColorMix = CSS.supports('color', 'color-mix(in srgb, #fff, #000)')
-if (isSupprotColorMix) {
+const isSupportColorMix = CSS.supports('color', 'color-mix(in srgb, #fff, #000)')
+if (isSupportColorMix) {
   document.body.style.setProperty('--el-bg-color', 'hsl(var(--background))')
   document.body.style.setProperty('--el-color-primary', 'hsl(var(--primary))')
   document.body.style.setProperty('--el-color-white', 'hsl(var(--primary-foreground))')

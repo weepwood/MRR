@@ -129,7 +129,7 @@ function prettyBody(body?: string) {
         <el-tab-pane label="响应 Headers" name="headers">
           <div class="grid gap-1 text-sm font-mono">
             <div v-for="(v, k) in response.responseHeaders" :key="k" class="flex gap-2">
-              <span class="color-#64748b">{{ k }}:</span>
+              <span class="text-muted-foreground">{{ k }}:</span>
               <span>{{ v }}</span>
             </div>
             <el-empty v-if="!response.responseHeaders || !Object.keys(response.responseHeaders).length" description="无响应头" />
@@ -142,15 +142,14 @@ function prettyBody(body?: string) {
 
 <style scoped>
 .response-body {
-  margin: 0;
+  max-height: 400px;
   padding: 12px;
-  background: #1e293b;
-  color: #e2e8f0;
-  border-radius: 8px;
+  margin: 0;
+  overflow: auto;
   font-size: 13px;
   line-height: 1.5;
-  overflow-x: auto;
-  max-height: 400px;
-  overflow-y: auto;
+  color: #e2e8f0;
+  background: #1e293b;
+  border-radius: 8px;
 }
 </style>

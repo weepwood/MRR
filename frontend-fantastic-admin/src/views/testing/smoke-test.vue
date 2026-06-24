@@ -41,7 +41,7 @@ function tagType(status?: string) {
       <el-button type="primary" :loading="loading" @click="execute">
         {{ loading ? '执行中...' : '执行冒烟测试' }}
       </el-button>
-      <span class="text-sm color-#64748b">检测数据库、JVM 内存、OSS 配置、API 自检</span>
+      <span class="text-sm text-muted-foreground">检测数据库、JVM 内存、OSS 配置、API 自检</span>
     </div>
 
     <div v-if="results.length" class="grid gap-3">
@@ -53,7 +53,7 @@ function tagType(status?: string) {
       >
         <div>
           <strong>{{ item.name }}</strong>
-          <p class="mt-1 text-sm color-#64748b">{{ item.detail }}</p>
+          <p class="mt-1 text-sm text-muted-foreground">{{ item.detail }}</p>
         </div>
         <el-tag :type="tagType(item.status)" size="large">
           {{ item.status === 'PASS' ? '通过' : item.status === 'WARN' ? '告警' : item.status === 'SKIP' ? '跳过' : '失败' }}

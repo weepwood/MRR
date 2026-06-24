@@ -276,6 +276,26 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('resize', updateChartWidth))
 
+function handleListSearch() {
+  currentPage.value = 1
+  loadStatisticsList()
+}
+function resetListSearch() {
+  listSearchKeyword.value = ''
+  listSearchType.value = ''
+  listSearchDateRange.value = []
+  currentPage.value = 1
+  loadStatisticsList()
+}
+function handleListSizeChange() {
+  currentPage.value = 1
+  loadStatisticsList()
+}
+function handleSortChange({ prop, order }: { prop: string, order: string | null }) {
+  tableSort.value = { prop: prop || 'date', order: order || 'descending' }
+  loadStatisticsList()
+}
+
 watch(sortedDateData, (v) => {
   if (v.length) { nextTick(updateChartWidth) }
 })
@@ -453,6 +473,77 @@ watch(sortedDateData, (v) => {
         </div>
       </div>
     </el-card>
+
+    <!-- 病案明细列表 -->
+    <el-card shadow="never" class="list-card">
+      <template #header>
+        <div class="section-header">
+          <el-icon><Document /></el-icon>
+          <span>病案明细列表</span>
+          <el-tag size="small" type="info">
+            共 {{ statisticsListData.total ?? 0 }} 条
+          </el-tag>
+        </div>
+      </template>
+
+      <div class="list-search-bar">
+        <el-input
+          v-model="listSearchKeyword"
+          placeholder="搜索病案号 / 上架号 / 操作员"
+          clearable
+          class="list-search-input"
+          @keyup.enter="handleListSearch"
+        />
+        <el-select
+          v-model="listSearchType"
+          placeholder="类型筛选"
+          clearable
+          class="list-search-type"
+          @change="handleListSearch"
+        >
+          <el-option label="全部" value="" />
+        </el-select>
+        <el-date-picker
+          v-model="listSearchDateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="YYYY-MM-DD"
+          @change="handleListSearch"
+        />
+        <el-button type="primary" @click="handleListSearch">查询</el-button>
+        <el-button @click="resetListSearch">重置</el-button>
+      </div>
+
+      <el-table
+        v-loading="loading"
+        :data="statisticsListData.list"
+        stripe
+        empty-text="暂无病案明细数据"
+        @sort-change="handleSortChange"
+      >
+        <el-table-column prop="bah" label="病案号" min-width="130" sortable="custom" show-overflow-tooltip />
+        <el-table-column prop="sjh" label="上架号" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="date" label="日期" width="120" sortable="custom" />
+        <el-table-column prop="type" label="类型" width="100" />
+        <el-table-column prop="pages" label="页数" width="80" sortable="custom" />
+        <el-table-column prop="openerNo" label="操作员" width="100" />
+        <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
+      </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="statisticsListData.total ?? 0"
+          :page-sizes="[20, 50, 100, 200]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="loadStatisticsList"
+          @size-change="handleListSizeChange"
+        />
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -486,13 +577,13 @@ watch(sortedDateData, (v) => {
   margin: 0 0 6px;
   font-size: 22px;
   font-weight: 800;
-  color: #1f2b42;
+  color: var(--text-primary);
 }
 
 .subtitle {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* ===== 统计卡片 ===== */
@@ -546,7 +637,7 @@ watch(sortedDateData, (v) => {
   text-overflow: ellipsis;
   font-size: 11px;
   font-weight: 600;
-  color: #86868b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -556,7 +647,7 @@ watch(sortedDateData, (v) => {
   font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
-  color: #1f2b42;
+  color: var(--text-primary);
   word-break: break-all;
 }
 
@@ -603,8 +694,8 @@ watch(sortedDateData, (v) => {
   max-width: 100%;
 }
 
-.axis-label { font-size: 12px; fill: #86868b; }
-.date-label { font-size: 11px; fill: #636366; }
+.axis-label { font-size: 12px; fill: var(--text-secondary); }
+.date-label { font-size: 11px; fill: var(--text-secondary); }
 
 .bar-item {
   cursor: pointer;
@@ -650,7 +741,7 @@ watch(sortedDateData, (v) => {
   border-radius: 2px;
 }
 
-.legend-text { font-size: 13px; font-weight: 500; color: #636366; }
+.legend-text { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 
 /* ===== 搜索栏 ===== */
 .list-search-bar {
@@ -660,7 +751,7 @@ watch(sortedDateData, (v) => {
   align-items: center;
   padding: 16px;
   margin-bottom: 16px;
-  background: #f8fafc;
+  background: var(--surface-muted);
   border: 1px solid rgb(0 0 0 / 4%);
   border-radius: 12px;
 }
@@ -673,7 +764,7 @@ watch(sortedDateData, (v) => {
 :deep(.records-header-cell) {
   font-size: 12px;
   font-weight: 600;
-  color: #86868b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: transparent !important;
@@ -700,7 +791,7 @@ watch(sortedDateData, (v) => {
   font-weight: 600;
   color: #334155;
   background: #eef2f7;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--divider);
   border-radius: 999px;
 }
 

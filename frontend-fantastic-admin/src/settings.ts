@@ -12,9 +12,9 @@ const globalSettings: Settings.all = {
     subMenuUniqueOpened: false,
   },
   toolbar: {
-    enable: false,
-    breadcrumb: false,
-    navSearch: false,
+    enable: true,
+    breadcrumb: true,
+    navSearch: true,
   },
 }
 

@@ -115,7 +115,7 @@ async function clearHistory() {
         >
           <div>
             <strong class="text-sm">{{ item?.name || item?.targetUrl || `记录 ${index + 1}` }}</strong>
-            <p class="mt-1 text-xs color-#64748b">
+            <p class="mt-1 text-xs text-muted-foreground">
               成功 {{ item.successCount }}/{{ item.totalRequests }}
               | avg {{ item.avgLatencyMs }}ms | p95 {{ item.p95LatencyMs }}ms
               | {{ item.requestsPerSecond }} req/s

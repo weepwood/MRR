@@ -96,12 +96,12 @@ onMounted(loadData)
           <el-input v-model="filters.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="敏感操作">
-          <el-select v-model="filters.auditAction" clearable placeholder="全部" style="width:200px">
+          <el-select v-model="filters.auditAction" clearable placeholder="全部" style="width: 200px;">
             <el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width:140px">
+          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -192,8 +192,8 @@ onMounted(loadData)
 <style scoped>
 .page-shell { display: grid; gap: 20px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; color: #64748b; }
+.subtitle { margin: 8px 0 0; color: var(--text-secondary); }
 .pager { display: flex; justify-content: center; margin-top: 16px; }
 </style>

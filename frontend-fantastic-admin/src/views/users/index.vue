@@ -387,7 +387,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -399,7 +399,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-grid {
@@ -410,20 +410,20 @@ h2 {
 
 .summary-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-value {
   margin-top: 8px;
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .summary-note {
   margin-top: 8px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .filter-form {
@@ -438,15 +438,15 @@ h2 {
 
 .readonly-field {
   font-size: 14px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .no-perm {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
-@media (max-width: 960px) {
+@media (width <= 960px) {
   .page-header {
     flex-direction: column;
   }
@@ -456,7 +456,7 @@ h2 {
   }
 }
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }

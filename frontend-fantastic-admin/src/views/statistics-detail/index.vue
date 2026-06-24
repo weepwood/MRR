@@ -461,7 +461,7 @@ onMounted(refreshAll)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -473,7 +473,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-grid {
@@ -485,21 +485,21 @@ h2 {
 .summary-label {
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .summary-value {
   margin-top: 10px;
-  overflow-wrap: anywhere;
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .summary-note {
   margin-top: 8px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .panel-header {
@@ -516,7 +516,7 @@ h2 {
 
 .panel-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .filter-grid {
@@ -595,8 +595,8 @@ h2 {
 
 .archive-folder-card:hover,
 .archive-folder-card.is-selected {
-  transform: translateY(-2px);
   box-shadow: 0 20px 42px rgb(15 23 42 / 12%);
+  transform: translateY(-2px);
 }
 
 .archive-folder-card.is-selected {
@@ -607,7 +607,7 @@ h2 {
 .tone-green { --folder-accent: #0f766e; --folder-bg: #ecfdf7; }
 .tone-amber { --folder-accent: #c97b18; --folder-bg: #fff6e8; }
 .tone-rose { --folder-accent: #be185d; --folder-bg: #fff0f5; }
-.tone-slate { --folder-accent: #475569; --folder-bg: #f1f5f9; }
+.tone-slate { --folder-accent: var(--text-secondary); --folder-bg: var(--surface-alt); }
 
 .folder-tab {
   position: absolute;
@@ -635,22 +635,22 @@ h2 {
 .folder-index {
   font-size: 11px;
   font-weight: 800;
-  color: #64748b;
+  color: var(--text-secondary);
   letter-spacing: 0.12em;
 }
 
 .folder-title {
   margin: 0;
-  overflow-wrap: anywhere;
   font-size: 18px;
   font-weight: 800;
-  color: #172033;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .folder-subtitle {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .folder-meta-grid {
@@ -668,10 +668,10 @@ h2 {
 
 .folder-meta-grid dd {
   margin: 4px 0 0;
-  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 600;
   color: #24324b;
+  overflow-wrap: anywhere;
 }
 
 .folder-footer {
@@ -687,13 +687,13 @@ h2 {
   justify-content: flex-end;
 }
 
-@media (max-width: 1180px) {
+@media (width <= 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .page-header {
     flex-direction: column;
   }

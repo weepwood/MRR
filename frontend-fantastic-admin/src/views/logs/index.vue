@@ -205,12 +205,12 @@ onMounted(loadData)
           <el-input v-model="filters.requestUri" clearable placeholder="/v1/scan-api/page" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="方法">
-          <el-select v-model="filters.method" clearable placeholder="全部" style="width:140px">
+          <el-select v-model="filters.method" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width:140px">
+          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -351,7 +351,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -363,7 +363,7 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .pager {

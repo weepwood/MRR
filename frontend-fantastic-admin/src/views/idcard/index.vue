@@ -99,7 +99,7 @@ function handleSearch() {
   width: 100%;
   max-width: 480px;
   padding: 48px 40px 40px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 20px;
   box-shadow: 0 8px 40px rgb(59 130 246 / 10%);
 }
@@ -118,7 +118,7 @@ function handleSearch() {
   height: 64px;
   margin-bottom: 20px;
   font-size: 32px;
-  color: #fff;
+  color: var(--surface);
   background: linear-gradient(135deg, #3b82f6, #6366f1);
   border-radius: 16px;
 }
@@ -135,7 +135,7 @@ function handleSearch() {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* ===== 搜索区 ===== */

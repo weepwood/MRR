@@ -332,32 +332,32 @@ onMounted(loadPermissions)
 <style scoped>
 .page-shell { display: grid; gap: 20px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; color: #64748b; }
+.subtitle { margin: 8px 0 0; color: var(--text-secondary); }
 .empty-wrap { padding: 40px 0; }
 .roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
 .role-card { display: flex; flex-direction: column; gap: 12px; }
 .role-header { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
 .role-name { display: inline-block; margin-right: 8px; font-size: 16px; }
 .role-code-tag { vertical-align: middle; }
-.role-order { font-size: 12px; color: #94a3b8; white-space: nowrap; }
-.role-desc { margin: 0; font-size: 13px; line-height: 1.6; color: #64748b; }
+.role-order { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
+.role-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
 .admin-note { margin: 4px 0; }
 .role-header-actions { display: flex; gap: 8px; align-items: center; }
 .edit-name-input { display: inline-block; width: 160px; margin-right: 8px; }
 .edit-desc-input { margin-top: 4px; }
 .perm-section { margin-top: 4px; }
-.perm-label { margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
-.inherited-label { color: #94a3b8; opacity: 0.7; }
-.perm-hint { font-weight: 400; color: #cbd5e1; text-transform: none; letter-spacing: normal; }
+.perm-label { margin: 0 0 8px; font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+.inherited-label { color: var(--text-tertiary); opacity: 0.7; }
+.perm-hint { font-weight: 400; color: var(--text-hint); text-transform: none; letter-spacing: normal; }
 .perm-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.no-perm { font-size: 12px; color: #cbd5e1; }
+.no-perm { font-size: 12px; color: var(--text-hint); }
 .perm-view { display: flex; flex-direction: column; gap: 6px; }
 .perm-group { display: flex; flex-direction: column; gap: 2px; }
-.perm-direct { display: flex; align-items: center; gap: 8px; }
-.perm-implies { font-size: 11px; color: #94a3b8; }
+.perm-direct { display: flex; gap: 8px; align-items: center; }
+.perm-implies { font-size: 11px; color: var(--text-tertiary); }
 .perm-add { display: flex; gap: 6px; margin-top: 8px; }
 .perm-add-select { flex: 1; max-width: 360px; }
-.option-hint { font-size: 11px; color: #94a3b8; }
+.option-hint { font-size: 11px; color: var(--text-tertiary); }
 </style>

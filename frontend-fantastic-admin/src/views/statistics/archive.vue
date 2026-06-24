@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { BAHImageData, BAHRecord } from '@/api/types'
-import { ArrowLeft, Download, Grid, List, Refresh, Search, User } from '@element-plus/icons-vue'
+import { ArrowLeft, Download, Grid, List, Printer, Refresh, Search, User } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { downloadBah, getImgByCode, getImgApiByBah, updateImageType } from '@/api/modules/image'
+import { downloadBah, getImgApiByBah, getImgByCode, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
 
 defineOptions({ name: 'StatisticsArchivePage' })
@@ -33,6 +33,8 @@ const searchSjh = ref(sanitizeParam(route.query.sjh))
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<'thumb' | 'list'>('thumb')
+const selectedIds = ref<Set<string>>(new Set())
+const printing = ref(false)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 const thumbsContainer = ref<HTMLElement | null>(null)
 const thumbColumns = ref(2)
@@ -283,16 +285,148 @@ function goBack() {
   router.push('/statistics-detail')
 }
 
-function onImageError(event: Event) {
-  const target = event.target as HTMLImageElement
-  target.style.opacity = '0.35'
+function imgKey(img: GalleryImage): string {
+  return String(img.id || img.filename || '')
 }
+
+function toggleSelect(img: GalleryImage) {
+  const key = imgKey(img)
+  const next = new Set(selectedIds.value)
+  if (next.has(key)) {
+    next.delete(key)
+  }
+  else {
+    next.add(key)
+  }
+  selectedIds.value = next
+}
+
+function isSelected(img: GalleryImage): boolean {
+  return selectedIds.value.has(imgKey(img))
+}
+
+const selectedCount = computed(() => selectedIds.value.size)
+
+function selectAllVisible() {
+  if (selectedIds.value.size === filteredImages.value.length && filteredImages.value.length > 0) {
+    selectedIds.value = new Set()
+  }
+  else {
+    selectedIds.value = new Set(filteredImages.value.map(imgKey))
+  }
+}
+
+const allVisibleSelected = computed(() =>
+  filteredImages.value.length > 0 && filteredImages.value.every(isSelected),
+)
 
 watch(filteredImages, () => {
   if (selectedImageIndex.value >= filteredImages.value.length) {
     selectedImageIndex.value = 0
   }
+  const validKeys = new Set(filteredImages.value.map(imgKey))
+  const filtered = new Set([...selectedIds.value].filter(k => validKeys.has(k)))
+  if (filtered.size !== selectedIds.value.size) {
+    selectedIds.value = filtered
+  }
 })
+
+async function printSelected() {
+  const selected = filteredImages.value.filter(isSelected)
+  if (!selected.length) {
+    ElMessage.warning('请先选择要打印的影像')
+    return
+  }
+  printing.value = true
+  try {
+    const patient = patientList.value[0]
+    const bah = patient?.bah || searchBah.value || ''
+    const headerHtml = `
+      <div class="print-header">
+        <h1>影像档案袋</h1>
+        <div class="patient-info">
+          ${patient ? `<span>姓名：${patient.name || '-'}</span>` : ''}
+          <span>病案号：${bah}</span>
+          ${patient?.department ? `<span>科室：${patient.department}</span>` : ''}
+          ${patient?.admissionTime ? `<span>入院：${patient.admissionTime}</span>` : ''}
+          <span>共 ${selected.length} 张</span>
+          <span>打印：${new Date().toLocaleString('zh-CN')}</span>
+        </div>
+      </div>`
+
+    const imagesHtml = selected.map((img) => {
+      const src = img.imageUrl || ''
+      return `
+        <div class="print-page">
+          <div class="print-img-meta">
+            <span>P${img.pages ?? '-'}</span>
+            <span>${typeLabel(img.btype)}</span>
+          </div>
+          <img src="${src}" alt="" />
+        </div>`
+    }).join('')
+
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) {
+      document.body.removeChild(iframe)
+      return
+    }
+    doc.open()
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>影像打印 - ${bah}</title>
+      <style>
+        @page { margin: 8mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, "Microsoft YaHei", sans-serif; color: #1e293b; }
+        .print-header { text-align: center; padding: 6px 0 10px; border-bottom: 2px solid #1e293b; margin-bottom: 8px; }
+        .print-header h1 { font-size: 16px; margin: 0 0 4px; }
+        .patient-info { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 11px; color: #64748b; }
+        .print-page { page-break-after: always; text-align: center; }
+        .print-page:last-child { page-break-after: auto; }
+        .print-img-meta { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; padding: 2px 4px; }
+        .print-page img { max-width: 100%; max-height: 88vh; object-fit: contain; }
+      </style></head><body>${headerHtml}${imagesHtml}</body></html>`)
+    doc.close()
+
+    const win = iframe.contentWindow
+    if (!win) {
+      document.body.removeChild(iframe)
+      return
+    }
+    const cleanup = () => {
+      setTimeout(() => {
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe)
+        }
+      }, 2000)
+    }
+    iframe.onload = () => {
+      win.focus()
+      win.print()
+      cleanup()
+    }
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        win.focus()
+        win.print()
+        cleanup()
+      }
+    }, 1500)
+  }
+  catch (err: any) {
+    ElMessage.error(err?.message || '打印失败')
+  }
+  finally {
+    printing.value = false
+  }
+}
+
+function onImageError(event: Event) {
+  const target = event.target as HTMLImageElement
+  target.style.opacity = '0.35'
+}
 
 onMounted(() => {
   if (searchBah.value || searchSjh.value) {
@@ -319,6 +453,9 @@ onMounted(() => {
         </el-button>
         <el-button type="primary" :icon="Download" :loading="downloading" @click="handleDownload">
           下载档案袋
+        </el-button>
+        <el-button type="primary" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="printSelected">
+          打印选中{{ selectedCount ? ` (${selectedCount})` : '' }}
         </el-button>
       </div>
     </div>
@@ -381,34 +518,49 @@ onMounted(() => {
 
     <template v-if="images.length">
       <div class="type-bar">
-        <button class="type-tab" :class="{ active: selectedType === 'all' }" @click="selectType('all')">
-          全部
-          <el-tag size="small" class="type-count">{{ images.length }}</el-tag>
-        </button>
-        <button
-          v-for="item in typeStats"
-          :key="item.value"
-          class="type-tab"
-          :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
-          :disabled="item.count === 0"
-          @click="selectType(item.value)"
-        >
-          {{ item.label }}
-          <el-tag v-if="item.count" size="small" :type="selectedType === item.value ? 'primary' : 'info'" class="type-count">{{ item.count }}</el-tag>
-        </button>
+        <div class="type-tabs">
+          <button class="type-tab" :class="{ active: selectedType === 'all' }" @click="selectType('all')">
+            全部
+            <el-tag size="small" class="type-count">
+              {{ images.length }}
+            </el-tag>
+          </button>
+          <button
+            v-for="item in typeStats"
+            :key="item.value"
+            class="type-tab"
+            :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
+            :disabled="item.count === 0"
+            @click="selectType(item.value)"
+          >
+            {{ item.label }}
+            <el-tag v-if="item.count" size="small" :type="selectedType === item.value ? 'primary' : 'info'" class="type-count">
+              {{ item.count }}
+            </el-tag>
+          </button>
+        </div>
+        <div class="type-bar-actions">
+          <span class="select-count">已选 {{ selectedCount }}/{{ filteredImages.length }}</span>
+          <el-button size="small" link @click="selectAllVisible">
+            {{ allVisibleSelected ? '取消全选' : '全选' }}
+          </el-button>
+        </div>
       </div>
 
       <div class="viewer-layout">
         <div ref="thumbsContainer" class="thumb-strip" :class="viewMode">
-          <button
+          <div
             v-for="(img, index) in filteredImages"
             :key="img.id || img.filename || index"
             :ref="(el: any) => { thumbRefs[index] = el }"
             class="thumb-item"
-            :class="{ active: index === selectedImageIndex }"
-            :style="viewMode === 'thumb' ? { width: thumbItemWidth + 'px' } : {}"
+            :class="{ active: index === selectedImageIndex, checked: isSelected(img) }"
+            :style="viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
             @click="selectImage(index)"
           >
+            <span class="thumb-check" :class="{ checked: isSelected(img) }" @click.stop="toggleSelect(img)">
+              <svg v-if="isSelected(img)" viewBox="0 0 16 16" width="12" height="12"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
+            </span>
             <img
               v-if="viewMode === 'thumb'"
               :src="img.imageUrl"
@@ -418,7 +570,7 @@ onMounted(() => {
             >
             <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
             <small>{{ typeLabel(img.btype) }}</small>
-          </button>
+          </div>
           <div v-if="!loading && filteredImages.length === 0" class="empty-list">
             暂无影像
           </div>
@@ -440,22 +592,27 @@ onMounted(() => {
                 <strong>P{{ currentImage.pages ?? '-' }}</strong>
                 <span>{{ normalizeText(currentImage.filename) }}</span>
               </div>
-              <div class="type-editor">
-                <span>分类</span>
-                <el-select
-                  :model-value="Number(currentImage.btype || 0)"
-                  :loading="savingType"
-                  size="small"
-                  style="width: 180px;"
-                  @change="saveCurrentType"
-                >
-                  <el-option
-                    v-for="item in typeOptions"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
+              <div class="preview-actions">
+                <el-button size="small" :type="isSelected(currentImage) ? 'success' : 'default'" @click="toggleSelect(currentImage)">
+                  {{ isSelected(currentImage) ? '已选' : '选中' }}
+                </el-button>
+                <div class="type-editor">
+                  <span>分类</span>
+                  <el-select
+                    :model-value="Number(currentImage.btype || 0)"
+                    :loading="savingType"
+                    size="small"
+                    style="width: 180px;"
+                    @change="saveCurrentType"
+                  >
+                    <el-option
+                      v-for="item in typeOptions"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value"
+                    />
+                  </el-select>
+                </div>
               </div>
             </div>
           </template>
@@ -571,12 +728,33 @@ h2 {
 .type-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
+  justify-content: space-between;
   padding: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 7px;
+}
+
+.type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.type-bar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.select-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .type-tab {
@@ -651,21 +829,51 @@ h2 {
 }
 
 .thumb-item {
+  position: relative;
   display: grid;
   gap: 3px;
   min-width: 0;
   padding: 6px;
-  color: #24324b;
+  color: var(--text-primary);
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .thumb-item.active,
 .thumb-item:hover {
   border-color: var(--el-color-primary);
   box-shadow: 0 0 0 2px var(--el-color-primary-light-8);
+}
+
+.thumb-item.checked {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 25%);
+}
+
+.thumb-check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  background: rgb(255 255 255 / 80%);
+  border: 1.5px solid var(--divider);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.thumb-check.checked {
+  color: #fff;
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
 }
 
 .thumb-item img {
@@ -721,7 +929,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: rgb(255 255 255 / 93%);
+  background: var(--surface-overlay, rgb(255 255 255 / 93%));
   border: 1px solid var(--divider);
   border-radius: 6px;
   box-shadow: 0 8px 20px rgb(15 23 42 / 10%);
@@ -736,6 +944,12 @@ h2 {
 
 .preview-info strong {
   margin-right: 2px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .type-editor {

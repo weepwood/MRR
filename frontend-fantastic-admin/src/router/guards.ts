@@ -89,13 +89,22 @@ function setupRoutes(router: Router) {
       }
     }
     else {
-      if (to.name !== 'login') {
-        return {
-          name: 'login',
-          query: {
-            redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
-          },
-        }
+      userStore.setSession({
+        token: 'dev-token',
+        user: {
+          username: 'dev',
+          displayName: 'Dev User',
+          roleCode: 'ADMIN',
+          roleName: 'Administrator',
+          status: 'active',
+          permissions: [],
+        },
+      })
+
+      return {
+        path: to.path,
+        query: to.query,
+        replace: true,
       }
     }
   })

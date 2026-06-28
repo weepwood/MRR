@@ -67,7 +67,7 @@ class ImageControllerTest {
     @Test
     @DisplayName("getDataByBAH — 返回图片列表")
     void getDataByBAH() {
-        when(scanService.getImageListByBAH("00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
         when(imageProperties.getUrl()).thenReturn("http://localhost:8005/ba-img");
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
@@ -80,7 +80,7 @@ class ImageControllerTest {
     @DisplayName("getDataByBAH — folder为null时跳过该记录")
     void getDataByBAH_nullFolder() {
         mockScan.setFolder(null);
-        when(scanService.getImageListByBAH("00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
@@ -93,7 +93,7 @@ class ImageControllerTest {
     void getDataByBAH_nullBrxh() {
         mockScan.setBrxh(null);
         mockScan.setFolder("25.03.15");
-        when(scanService.getImageListByBAH("00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 

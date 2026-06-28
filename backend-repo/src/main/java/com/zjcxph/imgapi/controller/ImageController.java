@@ -91,10 +91,11 @@ public class ImageController {
     @GetMapping("/{bah}")
     public Result<List<BAHDataResponseDTO>> getDataByBAH(
             @PathVariable
-            @Pattern(regexp = "\\d{8}", message = "请输入正确的 8 位病案号")
+            @Pattern(regexp = "\\d{6,8}", message = "请输入正确的 6-8 位病案号")
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
-        List<Scan> imageListByBAH = scanService.getImageListByBAH(bah);
+        String paddedBah = normalizeCode(bah);
+        List<Scan> imageListByBAH = scanService.getImageListByBAH(paddedBah, bah);
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
         for (Scan scan : imageListByBAH) {

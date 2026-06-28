@@ -113,7 +113,7 @@ class ScanServiceImplTest {
         @Test
         @DisplayName("getImagePath — 正常返回路径")
         void getImagePath_success() {
-            when(scanMapper.findBAH("00789508")).thenReturn(List.of(mockScan));
+            when(scanMapper.findBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
             when(imageProperties.getBasePath()).thenReturn("C:/images");
             java.nio.file.Path result = scanService.getImagePath("00789508");
             assertThat(result).isNotNull();
@@ -123,7 +123,7 @@ class ScanServiceImplTest {
         @Test
         @DisplayName("getImagePath — 空结果返回null")
         void getImagePath_empty() {
-            when(scanMapper.findBAH("00000000")).thenReturn(List.of());
+            when(scanMapper.findBAH("00000000", "00000000")).thenReturn(List.of());
             assertThat(scanService.getImagePath("00000000")).isNull();
         }
 
@@ -131,7 +131,7 @@ class ScanServiceImplTest {
         @DisplayName("getImagePath — folder为null返回null")
         void getImagePath_nullFolder() {
             mockScan.setFolder(null);
-            when(scanMapper.findBAH("00789508")).thenReturn(List.of(mockScan));
+            when(scanMapper.findBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
             assertThat(scanService.getImagePath("00789508")).isNull();
         }
 
@@ -139,7 +139,7 @@ class ScanServiceImplTest {
         @DisplayName("getImagePath — folder长度不足5返回null")
         void getImagePath_shortFolder() {
             mockScan.setFolder("12");
-            when(scanMapper.findBAH("00789508")).thenReturn(List.of(mockScan));
+            when(scanMapper.findBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
             assertThat(scanService.getImagePath("00789508")).isNull();
         }
 
@@ -147,7 +147,7 @@ class ScanServiceImplTest {
         @DisplayName("getImagePath — brxh为null返回null")
         void getImagePath_nullBrxh() {
             mockScan.setBrxh(null);
-            when(scanMapper.findBAH("00789508")).thenReturn(List.of(mockScan));
+            when(scanMapper.findBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
             assertThat(scanService.getImagePath("00789508")).isNull();
         }
     }

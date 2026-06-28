@@ -95,17 +95,16 @@ public class ImageController {
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
         List<Scan> imageListByBAH = scanService.getImageListByBAH(bah);
-        String imgUrl = imageProperties.getUrl();
-
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
         for (Scan scan : imageListByBAH) {
             String folder = scan.getFolder();
             String brxh = scan.getBrxh();
-            if (folder == null || brxh == null) {
+            if (folder == null || folder.isBlank() || brxh == null) {
                 logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
                 continue;
             }
+            String imgUrl = determineImageUrl(folder);
             String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
                     brxh + "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
@@ -139,15 +138,15 @@ public class ImageController {
             return Result.fail("病案号和上架号不能同时为空");
         }
         List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
-        String imgUrl = imageProperties.getUrl();
         List<BAHDataResponseDTO> items = new ArrayList<>();
         for (Scan scan : list) {
             String folder = scan.getFolder();
             String brxh = scan.getBrxh();
-            if (folder == null || brxh == null) {
+            if (folder == null || folder.isBlank() || brxh == null) {
                 logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
                 continue;
             }
+            String imgUrl = determineImageUrl(folder);
             String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
                     brxh + "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
@@ -286,6 +285,40 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
+    }
+
+    private String determineImageUrl(String folder) {
+        if (folder == null || folder.isBlank()) {
+            return "http://192.2.1.182:8001/ba-img-00";
+        }
+
+        Set<String> baImg01YearMonth = Set.of(
+            "24.04", "24.05", "24.06", "24.07", "24.08", "24.09",
+            "24.10", "24.11", "25.07", "25.08"
+        );
+        Set<String> baImg02YearMonth = Set.of(
+            "2025.08", "2025.09", "2025.10", "2025.11", "2025.12",
+            "2026.01", "2026.02", "2026.03", "2026.04", "2026.05", "2026.06"
+        );
+        Set<String> baImg03Exact = Set.of(
+            "2026.06.05", "2026.06.08", "2026.06.09"
+        );
+
+        if (baImg03Exact.contains(folder)) {
+            return "http://192.2.1.135:8001/ba-img-03";
+        }
+
+        String yearMonth = extractYearMonth(folder);
+
+        if (baImg02YearMonth.contains(yearMonth)) {
+            return "http://192.2.1.135:8001/ba-img-02";
+        }
+
+        if (baImg01YearMonth.contains(yearMonth)) {
+            return "http://192.2.1.182:8001/ba-img-01";
+        }
+
+        return imageProperties.getUrl();
     }
 
     public static String extractYearMonth(String dateStr) {

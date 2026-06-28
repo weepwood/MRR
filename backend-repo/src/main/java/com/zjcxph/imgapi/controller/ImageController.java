@@ -153,8 +153,14 @@ public class ImageController {
                 continue;
             }
             String imgUrl = determineImageUrl(folder);
+            String scanPaddedBah = normalizeCode(scan.getBah());
+            String folderKey = scanPaddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
+            if (folderKey == null || folderKey.isBlank()) {
+                logger.warn("跳过扫描记录 id={}, {} 为空", scan.getId(), scanPaddedBah.compareTo("10000000") >= 0 ? "上架号" : "病人序号");
+                continue;
+            }
             String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                    brxh + "-" + scan.getBah() + "/" + scan.getFilename();
+                    folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             BeanUtils.copyProperties(scan, dto);
             dto.setImg_url(img_url);

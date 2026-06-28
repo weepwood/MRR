@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 测试工具 - MRR Backend</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.layout{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+.sidebar{background:#1e293b;border-right:1px solid #334155;padding:20px;overflow-y:auto;height:100vh;position:sticky;top:0}
+.main{display:flex;flex-direction:column;gap:16px;padding:24px}
+h1{font-size:18px;font-weight:700;color:#38bdf8;margin-bottom:16px;letter-spacing:-0.3px}
+h2{font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin:16px 0 8px}
+h3{font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px}
+.group{margin-bottom:4px}
+.group-header{display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;border-radius:6px;font-size:13px;color:#94a3b8;font-weight:500;transition:all .15s;user-select:none}
+.group-header:hover{background:#334155;color:#e2e8f0}
+.group-header .arrow{font-size:10px;transition:transform .2s;color:#64748b}
+.group-header.open .arrow{transform:rotate(90deg)}
+.group-body{display:none;padding-left:8px}
+.group-body.open{display:block}
+.endpoint{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:6px;font-size:13px;transition:all .1s;color:#cbd5e1}
+.endpoint:hover{background:#334155}
+.endpoint.active{background:#0ea5e9;color:#fff}
+.method{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;min-width:42px;text-align:center;flex-shrink:0}
+.method.get{background:#05966920;color:#34d399}
+.method.post{background:#d9770620;color:#fbbf24}
+.method.put{background:#0284c720;color:#38bdf8}
+.method.delete{background:#dc262620;color:#f87171}
+.endpoint .path{font-size:12px;font-family:'Cascadia Code','Fira Code',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.request-panel{background:#1e293b;border-radius:12px;border:1px solid #334155;overflow:hidden}
+.request-panel .header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #334155}
+.request-panel .method-label{font-size:14px;font-weight:700;padding:4px 10px;border-radius:6px}
+.request-panel .path-label{font-family:'Cascadia Code','Fira Code',monospace;font-size:14px;color:#e2e8f0}
+.section{padding:16px 20px;border-top:1px solid #1e293b}
+.section-title{font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.form-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.form-row label{font-size:12px;color:#94a3b8;min-width:80px;flex-shrink:0}
+.form-row input,.form-row select{flex:1;padding:7px 10px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+.form-row input:focus,.form-row select:focus{border-color:#0ea5e9}
+.form-row textarea{flex:1;padding:7px 10px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:13px;font-family:'Cascadia Code','Fira Code',monospace;outline:none;resize:vertical;min-height:80px}
+.form-row textarea:focus{border-color:#0ea5e9}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-primary{background:#0ea5e9;color:#fff}
+.btn-primary:hover{background:#0284c7}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:#334155;color:#e2e8f0}
+.btn-secondary:hover{background:#475569}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-sm{padding:5px 12px;font-size:12px}
+.toolbar{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid #334155}
+.spinner{width:16px;height:16px;border:2px solid #334155;border-top-color:#0ea5e9;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.spinner.show{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.response-panel{background:#1e293b;border-radius:12px;border:1px solid #334155;overflow:hidden}
+.response-panel .header{padding:12px 20px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:12px}
+.status-badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.status-badge.success{background:#05966920;color:#34d399}
+.status-badge.error{background:#dc262620;color:#f87171}
+.status-badge.pending{background:#d9770620;color:#fbbf24}
+.response-time{font-size:12px;color:#64748b}
+.response-tabs{display:flex;border-bottom:1px solid #334155}
+.response-tab{padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#64748b;transition:all .15s}
+.response-tab:hover{color:#e2e8f0}
+.response-tab.active{color:#38bdf8;border-bottom-color:#38bdf8}
+.response-body{padding:0;max-height:500px;overflow:auto}
+.response-body pre{margin:0;padding:16px 20px;font-family:'Cascadia Code','Fira Code',monospace;font-size:13px;line-height:1.6;background:#0f172a;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.response-body .empty{display:flex;align-items:center;justify-content:center;height:100px;color:#64748b;font-size:13px}
+.hidden{display:none}
+.kv-list{display:flex;flex-direction:column;gap:4px}
+.kv-row{display:flex;gap:8px;align-items:center}
+.kv-row .key{font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;color:#38bdf8;min-width:120px}
+.kv-row .value{font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;color:#e2e8f0;word-break:break-all}
+.tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;background:#334155;color:#94a3b8;margin-left:auto}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#64748b}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#64748b;text-align:center}
+.empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.empty-state p{font-size:14px;max-width:400px;line-height:1.6}
+.badge-count{font-size:11px;color:#64748b;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <h1>🧪 API 测试工具</h1>
+  <div class="form-row" style="margin-bottom:12px">
+    <input id="baseUrl" value="/api/v1" placeholder="Base URL">
+  </div>
+  <div class="form-row" style="margin-bottom:12px">
+    <input id="authToken" placeholder="Bearer Token (可选)" style="font-family:monospace;font-size:12px">
+  </div>
+  <div id="sidebarEndpoints"></div>
+</aside>
+<div class="main">
+  <div class="request-panel">
+    <div class="header">
+      <span class="method-label" id="reqMethod" style="background:#05966920;color:#34d399">GET</span>
+      <span class="path-label" id="reqPath">选择端点开始测试</span>
+    </div>
+    <div class="section">
+      <div class="section-title">路径参数</div>
+      <div id="pathParams"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">查询参数</div>
+      <div id="queryParams">
+        <div class="form-row"><label>参数名</label><input placeholder="key"><label>值</label><input placeholder="value"><button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove()">✕</button></div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="addQueryParam()" style="margin-top:4px">+ 添加参数</button>
+    </div>
+    <div class="section" id="bodySection">
+      <div class="section-title">请求体 (JSON)</div>
+      <div class="form-row">
+        <textarea id="requestBody" placeholder='{"key": "value"}' rows="4"></textarea>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="sendBtn" onclick="sendRequest()">
+        <span id="sendIcon">▶</span> 发送请求
+      </button>
+      <div class="spinner" id="spinner"></div>
+      <button class="btn btn-secondary btn-sm" onclick="curlCopy()" style="margin-left:auto">📋 cURL</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetForm()">↻ 重置</button>
+    </div>
+  </div>
+  <div class="response-panel" id="responsePanel">
+    <div class="header">
+      <span class="status-badge pending" id="statusBadge">等待请求</span>
+      <span class="response-time" id="responseTime"></span>
+    </div>
+    <div class="response-tabs">
+      <span class="response-tab active" onclick="switchRespTab(this,'respBody')">响应体</span>
+      <span class="response-tab" onclick="switchRespTab(this,'respHeaders')">响应头</span>
+    </div>
+    <div class="response-body" id="respBody"><div class="empty">选择一个端点并发送请求</div></div>
+    <div class="response-body hidden" id="respHeaders"><div class="empty">无数据</div></div>
+  </div>
+</div>
+</div>
+
+<script>
+const endpoints = [
+  {group:'Auth',items:[
+    {method:'POST',path:'/auth/login',desc:'登录',body:'{"username":"admin","password":"123456"}'},
+    {method:'POST',path:'/auth/register',desc:'注册',body:'{"username":"user","password":"123456","displayName":"User"}'},
+    {method:'GET',path:'/auth/me',desc:'当前用户'},
+    {method:'GET',path:'/auth/users',desc:'用户列表',query:[{k:'page',v:'1'},{k:'size',v:'20'}]},
+    {method:'GET',path:'/auth/roles',desc:'角色列表'},
+    {method:'POST',path:'/auth/logout',desc:'注销'},
+    {method:'POST',path:'/auth/password/edit',desc:'修改密码',body:'{"password":"old","newPassword":"new"}'},
+  ]},
+  {group:'Scan',items:[
+    {method:'GET',path:'/scan',desc:'全部记录'},
+    {method:'GET',path:'/scan/{id}',desc:'按ID查询',params:[{k:'id',v:'1'}]},
+    {method:'GET',path:'/scan/bah/{bah}',desc:'按病案号查询',params:[{k:'bah',v:'00789508'}]},
+    {method:'GET',path:'/scan/brxh/{brxh}',desc:'按病人序号查询',params:[{k:'brxh',v:'605746'}]},
+    {method:'GET',path:'/scan/page',desc:'分页查询',query:[{k:'page',v:'1'},{k:'size',v:'10'}]},
+    {method:'POST',path:'/scan/condition',desc:'条件查询',body:'{"bah":"00789508"}'},
+  ]},
+  {group:'Image',items:[
+    {method:'GET',path:'/img/hello',desc:'心跳'},
+    {method:'GET',path:'/img/{bah}',desc:'病案号图片数据',params:[{k:'bah',v:'00789508'}]},
+    {method:'GET',path:'/img/search',desc:'搜索图片',query:[{k:'bah',v:'00789508'}]},
+    {method:'PUT',path:'/img/updateImageType/{id}',desc:'修改图片类型',params:[{k:'id',v:'1'}],body:'{"btype":2}'},
+  ]},
+  {group:'Patient',items:[
+    {method:'GET',path:'/patients',desc:'患者列表',query:[{k:'page',v:'1'},{k:'size',v:'20'}]},
+    {method:'GET',path:'/patients/bah/{bah}',desc:'按病案号查患者',params:[{k:'bah',v:'00789508'}]},
+  ]},
+  {group:'Statistics',items:[
+    {method:'GET',path:'/statistics',desc:'统计列表',query:[{k:'page',v:'1'},{k:'size',v:'20'}]},
+    {method:'GET',path:'/statistics/bah/{bah}',desc:'按病案号统计',params:[{k:'bah',v:'00789508'}]},
+    {method:'GET',path:'/statistics/summary',desc:'总览'},
+    {method:'GET',path:'/statistics/dashboard',desc:'仪表盘'},
+    {method:'GET',path:'/statistics/type-summary',desc:'类型统计'},
+    {method:'GET',path:'/statistics/date-summary',desc:'按日期统计'},
+    {method:'GET',path:'/statistics/bah-summary',desc:'按病案号汇总'},
+  ]},
+  {group:'Search',items:[
+    {method:'GET',path:'/search/hello',desc:'健康检查'},
+    {method:'GET',path:'/search/patient/{bah}',desc:'查询患者',params:[{k:'bah',v:'00789508'}]},
+    {method:'POST',path:'/search/getBAHByID',desc:'按身份证查病案号',body:'{"idCard":"110101199001011234"}'},
+  ]},
+  {group:'Logs',items:[
+    {method:'GET',path:'/logs/',desc:'日志列表',query:[{k:'page',v:'1'},{k:'size',v:'10'}]},
+    {method:'GET',path:'/logs/{id}',desc:'按ID查日志',params:[{k:'id',v:'1'}]},
+    {method:'GET',path:'/logs/ip/{ip}',desc:'按IP查日志',params:[{k:'ip',v:'127.0.0.1'}]},
+    {method:'GET',path:'/logs/search',desc:'高级搜索',query:[{k:'page',v:'1'},{k:'size',v:'20'}]},
+  ]},
+  {group:'OSS',items:[
+    {method:'GET',path:'/oss/migration/statistics',desc:'迁移统计'},
+    {method:'GET',path:'/oss/migration/pending',desc:'待迁移列表',query:[{k:'limit',v:'50'}]},
+    {method:'GET',path:'/oss/url/{scanId}',desc:'获取签名URL',params:[{k:'scanId',v:'1'}]},
+  ]},
+  {group:'System',items:[
+    {method:'GET',path:'/system/info',desc:'系统信息'},
+    {method:'GET',path:'/system/health',desc:'健康检查'},
+    {method:'GET',path:'/system/memory',desc:'内存详情'},
+    {method:'GET',path:'/system/overview',desc:'总览'},
+  ]},
+  {group:'Testing',items:[
+    {method:'GET',path:'/testing/smoke',desc:'冒烟测试'},
+    {method:'POST',path:'/testing/api-test',desc:'测试指定API',body:'{"url":"/api/v1/img/hello","method":"GET"}'},
+    {method:'GET',path:'/testing/data-check',desc:'数据完整性检查'},
+  ]},
+];
+
+let curEndpoint = null;
+
+function renderSidebar(){const c=document.getElementById('sidebarEndpoints');c.innerHTML='';endpoints.forEach(g=>{const gr=document.createElement('div');gr.className='group';const h=document.createElement('div');h.className='group-header open';h.innerHTML=`<span class="arrow">▶</span>${g.group}<span class="badge-count">${g.items.length}</span>`;h.onclick=()=>{h.classList.toggle('open');h.nextElementSibling.classList.toggle('open')};const b=document.createElement('div');b.className='group-body open';g.items.forEach(ep=>{const e=document.createElement('div');e.className='endpoint';e.innerHTML=`<span class="method ${ep.method.toLowerCase()}">${ep.method}</span><span class="path">${ep.path}</span><span class="tag">${ep.desc}</span>`;e.onclick=()=>selectEndpoint(ep);b.appendChild(e)});gr.appendChild(h);gr.appendChild(b);c.appendChild(gr)})}
+
+function selectEndpoint(ep){curEndpoint=ep;document.querySelectorAll('.endpoint').forEach(e=>e.classList.remove('active'));event.currentTarget.classList.add('active');const ml=document.getElementById('reqMethod');ml.textContent=ep.method;ml.style.background=methodColor(ep.method);ml.style.color=methodTextColor(ep.method);document.getElementById('reqPath').textContent=ep.path;const pp=document.getElementById('pathParams');pp.innerHTML='';if(ep.params){ep.params.forEach(p=>{const r=document.createElement('div');r.className='form-row';r.innerHTML=`<label>${p.k}</label><input id="pp_${p.k}" value="${p.v||''}" placeholder="${p.k}">`;pp.appendChild(r)})}else{pp.innerHTML='<div style="color:#64748b;font-size:12px;padding:4px 0">无路径参数</div>'}const qp=document.getElementById('queryParams');qp.innerHTML='';if(ep.query){ep.query.forEach(q=>addQueryParam(q.k,q.v))}else if(ep.method==='GET'){addQueryParam('','')}const bs=document.getElementById('bodySection');const rb=document.getElementById('requestBody');if(ep.method==='GET'||ep.method==='DELETE'){bs.classList.add('hidden')}else{bs.classList.remove('hidden');rb.value=ep.body||''}}
+
+function addQueryParam(k,v){const c=document.getElementById('queryParams');const r=document.createElement('div');r.className='form-row';r.innerHTML=`<label>参数名</label><input class="qp-key" value="${k||''}" placeholder="key"><label>值</label><input class="qp-val" value="${v||''}" placeholder="value"><button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove()">✕</button>`;c.appendChild(r)}
+
+function methodColor(m){return{GET:'#05966920',POST:'#d9770620',PUT:'#0284c720',DELETE:'#dc262620'}[m]||'#64748b20'}
+function methodTextColor(m){return{GET:'#34d399',POST:'#fbbf24',PUT:'#38bdf8',DELETE:'#f87171'}[m]||'#94a3b8'}
+
+async function sendRequest(){if(!curEndpoint){alert('请先选择一个端点');return}const btn=document.getElementById('sendBtn');const icon=document.getElementById('sendIcon');const spin=document.getElementById('spinner');btn.disabled=true;icon.classList.add('hidden');spin.classList.add('show');document.getElementById('statusBadge').textContent='请求中...';document.getElementById('statusBadge').className='status-badge pending';try{let path=curEndpoint.path;const base=document.getElementById('baseUrl').value.replace(/\/+$/,'');const token=document.getElementById('authToken').value.trim();if(curEndpoint.params){curEndpoint.params.forEach(p=>{const inp=document.getElementById(`pp_${p.k}`);if(inp)path=path.replace(`{${p.k}}`,encodeURIComponent(inp.value))})}const qp=[];document.querySelectorAll('#queryParams .form-row').forEach(r=>{const k=r.querySelector('.qp-key')?.value?.trim();const v=r.querySelector('.qp-val')?.value?.trim();if(k)qp.push(k+'='+encodeURIComponent(v||''))});const qs=qp.length?'?'+qp.join('&'):'';const url=base+path+qs;const opts={method:curEndpoint.method,headers:{'Accept':'application/json'}};if(token)opts.headers['Authorization']='Bearer '+token;if(curEndpoint.method!=='GET'&&curEndpoint.method!=='DELETE'){const body=document.getElementById('requestBody').value.trim();if(body){opts.headers['Content-Type']='application/json';opts.body=body}}const t0=performance.now();const resp=await fetch(url,opts);const t1=performance.now();const ct=resp.headers.get('content-type')||'';const isJson=ct.includes('json');let data;try{data=isJson?await resp.json():await resp.text()}catch(e){data=await resp.text()}const ms=Math.round(t1-t0);document.getElementById('statusBadge').textContent=resp.status+' '+(resp.ok?'OK':'Error');document.getElementById('statusBadge').className='status-badge '+(resp.ok?'success':'error');document.getElementById('responseTime').textContent=ms+'ms';const bodyEl=document.getElementById('respBody');const hdrEl=document.getElementById('respHeaders');bodyEl.innerHTML='<pre>'+escapeHtml(JSON.stringify(data,null,2))+'</pre>';let hdrHtml='<div class="empty" style="padding:16px 20px">';resp.headers.forEach((v,k)=>{hdrHtml+=`<div class="kv-row"><span class="key">${k}</span><span class="value">${escapeHtml(v)}</span></div>`});hdrHtml+='</div>';hdrEl.innerHTML=hdrHtml;switchRespTab(document.querySelector('.response-tab.active')||document.querySelector('.response-tab'),'respBody')}catch(e){document.getElementById('statusBadge').textContent='请求失败';document.getElementById('statusBadge').className='status-badge error';document.getElementById('responseTime').textContent='';document.getElementById('respBody').innerHTML='<pre>'+escapeHtml(String(e))+'</pre>'}finally{btn.disabled=false;icon.classList.remove('hidden');spin.classList.remove('show')}}
+
+function switchRespTab(tab,id){document.querySelectorAll('.response-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');document.querySelectorAll('.response-body').forEach(e=>e.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
+
+function resetForm(){curEndpoint=null;document.querySelectorAll('.endpoint').forEach(e=>e.classList.remove('active'));document.getElementById('reqMethod').textContent='GET';document.getElementById('reqMethod').style.background='#05966920';document.getElementById('reqMethod').style.color='#34d399';document.getElementById('reqPath').textContent='选择端点开始测试';document.getElementById('pathParams').innerHTML='';document.getElementById('queryParams').innerHTML='<div class="form-row"><label>参数名</label><input placeholder="key"><label>值</label><input placeholder="value"><button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove()">✕</button></div>';document.getElementById('requestBody').value='';document.getElementById('respBody').innerHTML='<div class="empty">选择一个端点并发送请求</div>';document.getElementById('respHeaders').innerHTML='<div class="empty">无数据</div>';document.getElementById('statusBadge').textContent='等待请求';document.getElementById('statusBadge').className='status-badge pending';document.getElementById('responseTime').textContent='';document.getElementById('bodySection').classList.remove('hidden')}
+
+function curlCopy(){if(!curEndpoint){alert('请先选择端点');return}let path=curEndpoint.path;const base=document.getElementById('baseUrl').value.replace(/\/+$/,'');const token=document.getElementById('authToken').value.trim();if(curEndpoint.params){curEndpoint.params.forEach(p=>{const inp=document.getElementById(`pp_${p.k}`);if(inp)path=path.replace(`{${p.k}}`,encodeURIComponent(inp.value))})}const qp=[];document.querySelectorAll('#queryParams .form-row').forEach(r=>{const k=r.querySelector('.qp-key')?.value?.trim();const v=r.querySelector('.qp-val')?.value?.trim();if(k)qp.push(k+'='+encodeURIComponent(v||''))});const qs=qp.length?'?'+qp.join('&'):'';let cmd=`curl -X ${curEndpoint.method} "${base+path+qs}"`;if(token)cmd+=` \\\n  -H "Authorization: Bearer ${token}"`;if(curEndpoint.method!=='GET'&&curEndpoint.method!=='DELETE'){const body=document.getElementById('requestBody').value.trim();if(body){cmd+=` \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'`}}navigator.clipboard.writeText(cmd).then(()=>{const btn=document.querySelector('.toolbar .btn-secondary:first-of-type');const t=btn.textContent;btn.textContent='✓ 已复制';setTimeout(()=>btn.textContent=t,1500)})}
+
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+renderSidebar();
+</script>
+</body>
+</html>

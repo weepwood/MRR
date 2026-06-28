@@ -8,8 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.util.Date;
@@ -19,6 +18,8 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MybatisTest
+@TestPropertySource(properties = "mybatis.configuration.map-underscore-to-camel-case=true")
+@Sql("classpath:schema-itest.sql")
 @DisplayName("ScanMapper 集成测试 (H2)")
 class ScanMapperIntegrationTest {
 
@@ -91,15 +92,17 @@ class ScanMapperIntegrationTest {
     @DisplayName("countMigrationStats — 迁移统计汇总")
     void countMigrationStats() {
         Map<String, Object> stats = scanMapper.countMigrationStats();
-        assertThat(stats).containsKey("total");
-        assertThat(((Number) stats.get("total")).longValue()).isEqualTo(1);
+        assertThat(stats).containsKey("TOTAL");
+        assertThat(((Number) stats.get("TOTAL")).longValue()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("updateOssInfo — 更新 OSS 信息")
     void updateOssInfo() {
-        scanMapper.updateOssInfo(1, "https://oss/test.jpg", 1024L, "md5hash", "migrated");
+        int affected = scanMapper.updateOssInfo(1, "https://oss/test.jpg", 1024L, "md5hash", "migrated");
+        assertThat(affected).isEqualTo(1);
         Scan updated = scanMapper.findById(1);
+        assertThat(updated).isNotNull();
         assertThat(updated.getOssUrl()).isEqualTo("https://oss/test.jpg");
         assertThat(updated.getFileSize()).isEqualTo(1024L);
         assertThat(updated.getChecksumMd5()).isEqualTo("md5hash");

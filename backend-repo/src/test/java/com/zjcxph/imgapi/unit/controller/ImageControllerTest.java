@@ -77,7 +77,7 @@ class ImageControllerTest {
     }
 
     @Test
-    @DisplayName("getDataByBAH — folder为null时跳过该记录")
+    @DisplayName("getDataByBAH — folder为null时返回ba-img-00的img_url")
     void getDataByBAH_nullFolder() {
         mockScan.setFolder(null);
         when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
@@ -85,11 +85,12 @@ class ImageControllerTest {
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getData()).isEmpty();
+        assertThat(result.getData()).hasSize(1);
+        assertThat(result.getData().get(0).getImg_url()).isEqualTo("http://192.2.1.182:8001/ba-img-00/605746-00789508/test.jpg");
     }
 
     @Test
-    @DisplayName("getDataByBAH — brxh为null时跳过该记录")
+    @DisplayName("getDataByBAH — brxh为null时仍返回记录，img_url为null")
     void getDataByBAH_nullBrxh() {
         mockScan.setBrxh(null);
         mockScan.setFolder("25.03.15");
@@ -98,7 +99,8 @@ class ImageControllerTest {
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getData()).isEmpty();
+        assertThat(result.getData()).hasSize(1);
+        assertThat(result.getData().get(0).getImg_url()).isNull();
     }
 
     @Test

@@ -99,23 +99,9 @@ public class ImageController {
         List<BAHDataResponseDTO> items = new ArrayList<>();
 
         for (Scan scan : imageListByBAH) {
-            String folder = scan.getFolder();
-            String brxh = scan.getBrxh();
-            if (folder == null || folder.isBlank() || brxh == null) {
-                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
-                continue;
-            }
-            String imgUrl = determineImageUrl(folder);
-            String folderKey = paddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
-            if (folderKey == null || folderKey.isBlank()) {
-                logger.warn("跳过扫描记录 id={}, {} 为空", scan.getId(), paddedBah.compareTo("10000000") >= 0 ? "上架号" : "病人序号");
-                continue;
-            }
-            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                    folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(img_url);
+            dto.setImg_url(buildImageUrl(scan));
 
             if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
@@ -146,24 +132,9 @@ public class ImageController {
         List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
         List<BAHDataResponseDTO> items = new ArrayList<>();
         for (Scan scan : list) {
-            String folder = scan.getFolder();
-            String brxh = scan.getBrxh();
-            if (folder == null || folder.isBlank() || brxh == null) {
-                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
-                continue;
-            }
-            String imgUrl = determineImageUrl(folder);
-            String scanPaddedBah = normalizeCode(scan.getBah());
-            String folderKey = scanPaddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
-            if (folderKey == null || folderKey.isBlank()) {
-                logger.warn("跳过扫描记录 id={}, {} 为空", scan.getId(), scanPaddedBah.compareTo("10000000") >= 0 ? "上架号" : "病人序号");
-                continue;
-            }
-            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                    folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(img_url);
+            dto.setImg_url(buildImageUrl(scan));
             if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
                     String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
@@ -269,6 +240,23 @@ public class ImageController {
         return Result.success("修改图片类型成功");
     }
 
+    @Operation(summary = "获取图片URL")
+    @GetMapping("/url/{id}")
+    public Result<String> getImageUrl(
+            @PathVariable
+            @Parameter(description = "扫描记录 ID", example = "1")
+            Integer id) {
+        Scan scan = scanService.findById(id);
+        if (scan == null) {
+            return Result.fail("扫描记录不存在");
+        }
+        String url = buildImageUrl(scan);
+        if (url == null) {
+            return Result.fail("无法构造图片URL，缺少必要字段");
+        }
+        return Result.success(url);
+    }
+
     @Operation(summary = "通过后端代理获取 OSS 图片")
     @GetMapping("/oss-image/{id}")
     public ResponseEntity<?> getOssImage(
@@ -297,6 +285,26 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
+    }
+
+    private String buildImageUrl(Scan scan) {
+        String folder = scan.getFolder();
+        String brxh = scan.getBrxh();
+        if (brxh == null) {
+            return null;
+        }
+        String paddedBah = normalizeCode(scan.getBah());
+        String folderKey = paddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
+        if (folderKey == null || folderKey.isBlank()) {
+            return null;
+        }
+        if (folder == null || folder.isBlank()) {
+            return "http://192.2.1.182:8001/ba-img-00/" + folderKey + "-" +
+                    scan.getBah() + "/" + scan.getFilename();
+        }
+        String imgUrl = determineImageUrl(folder);
+        return imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
+                folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
     }
 
     private String determineImageUrl(String folder) {

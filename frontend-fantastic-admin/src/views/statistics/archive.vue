@@ -11,7 +11,7 @@ import TypeFilterBar from './archive/components/TypeFilterBar.vue'
 import { useArchiveImages } from './archive/composables/useArchiveImages'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
-import { buildTypeStats, padCode } from './archive/constants'
+import { buildTypeStats } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
@@ -92,8 +92,7 @@ function handleSaveType(type: number) {
 }
 
 function handlePrint() {
-  const bah = padCode(searchBah.value) || patient.value?.bah || ''
-  printSelected(selectedItems.value, patient.value, bah)
+  printSelected(selectedItems.value)
 }
 
 function goBack() {

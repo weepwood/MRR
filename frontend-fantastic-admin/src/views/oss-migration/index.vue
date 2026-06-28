@@ -144,9 +144,7 @@ async function loadFolders() {
   loading.folders = true
   try {
     const res = await getPendingFolders()
-    const data = res.data || res || []
-    const list = Array.isArray(data) ? data : []
-    folderTree.value = buildFolderTree(list)
+    folderTree.value = buildFolderTree(res.data ?? [])
   }
   catch (err: any) {
     console.error('[OSS] load folders error:', err)
@@ -171,8 +169,7 @@ async function loadPendingByFolder(folder: string) {
   loading.pending = true
   try {
     const res = await getPendingMigrations({ folder })
-    const data = res.data || res || {}
-    pendingList.value = Array.isArray(data.list) ? data.list : []
+    pendingList.value = res.data?.list ?? []
     selectedPending.value = []
   }
   catch (err: any) {
@@ -189,8 +186,7 @@ async function loadPending() {
   loading.pending = true
   try {
     const res = await getPendingMigrations({ limit: 50 })
-    const data = res.data || res || {}
-    pendingList.value = Array.isArray(data.list) ? data.list : []
+    pendingList.value = res.data?.list ?? []
   }
   catch (err: any) {
     console.error('[OSS] load pending error:', err)
@@ -206,7 +202,7 @@ async function loadStats() {
   loading.stats = true
   try {
     const res = await getMigrationStatistics()
-    stats.value = res.data || res || {}
+    stats.value = res.data ?? {}
   }
   catch {
     // silent
@@ -224,9 +220,9 @@ async function loadLogs() {
       page: logPage.value,
       size: logSize.value,
     })
-    const data = res.data || res || {}
-    logList.value = Array.isArray(data.list) ? data.list : []
-    logTotal.value = Number(data.total || 0)
+    const data = res.data ?? { list: [], total: 0 }
+    logList.value = data.list
+    logTotal.value = data.total
   }
   catch {
     // silent

@@ -1,53 +1,31 @@
-import type { GalleryImage, PatientInfo } from '../types'
+import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import { getTypeLabel } from '../constants'
 
 export function useArchivePrint() {
   const printing = ref(false)
 
-  function buildPrintHtml(images: GalleryImage[], patient: PatientInfo | undefined, bah: string): string {
-    const headerHtml = `
-      <div class="print-header">
-        <h1>影像档案袋</h1>
-        <div class="patient-info">
-          ${patient ? `<span>姓名：${patient.name || '-'}</span>` : ''}
-          <span>病案号：${bah}</span>
-          ${patient?.department ? `<span>科室：${patient.department}</span>` : ''}
-          ${patient?.admissionTime ? `<span>入院：${patient.admissionTime}</span>` : ''}
-          <span>共 ${images.length} 张</span>
-          <span>打印：${new Date().toLocaleString('zh-CN')}</span>
-        </div>
-      </div>`
-
+  function buildPrintHtml(images: GalleryImage[]): string {
     const imagesHtml = images.map((img) => {
       const src = img.imageUrl || ''
       return `
         <div class="print-page">
-          <div class="print-img-meta">
-            <span>P${img.pages ?? '-'}</span>
-            <span>${getTypeLabel(img.btype)}</span>
-          </div>
           <img src="${src}" alt="" />
         </div>`
     }).join('')
 
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>影像打印 - ${bah}</title>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>影像打印</title>
       <style>
-        @page { margin: 8mm; }
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: -apple-system, "Microsoft YaHei", sans-serif; color: #1e293b; }
-        .print-header { text-align: center; padding: 6px 0 10px; border-bottom: 2px solid #1e293b; margin-bottom: 8px; }
-        .print-header h1 { font-size: 16px; margin: 0 0 4px; }
-        .patient-info { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 11px; color: #64748b; }
-        .print-page { page-break-after: always; text-align: center; }
+        @page { margin: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; }
+        .print-page { page-break-after: always; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .print-page:last-child { page-break-after: auto; }
-        .print-img-meta { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; padding: 2px 4px; }
-        .print-page img { max-width: 100%; max-height: 88vh; object-fit: contain; }
-      </style></head><body>${headerHtml}${imagesHtml}</body></html>`
+        .print-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+      </style></head><body>${imagesHtml}</body></html>`
   }
 
-  async function printSelected(images: GalleryImage[], patient: PatientInfo | undefined, bah: string): Promise<void> {
+  async function printSelected(images: GalleryImage[]): Promise<void> {
     if (!images.length) {
       ElMessage.warning('请先选择要打印的影像')
       return
@@ -64,7 +42,7 @@ export function useArchivePrint() {
         return
       }
       doc.open()
-      doc.write(buildPrintHtml(images, patient, bah))
+      doc.write(buildPrintHtml(images))
       doc.close()
 
       const cleanup = () => {

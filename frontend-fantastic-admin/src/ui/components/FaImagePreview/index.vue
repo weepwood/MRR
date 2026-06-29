@@ -49,9 +49,12 @@ function handleClick() {
   <div class="group/image-preview relative inline-block overflow-hidden border rounded-lg">
     <img
       :src="src"
+      alt=""
       :class="cn('size-50 object-contain cursor-pointer bg-background transition-all duration-300 group-hover/image-preview:scale-110', props.class, {
         invisible: isError || isLoading,
       })"
+      width="200"
+      height="200"
       @error="handleError"
       @load="handleLoad"
       @click="!isLoading && !isError && handleClick()"

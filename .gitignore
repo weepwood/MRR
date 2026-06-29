@@ -6,3 +6,8 @@ python-test-tools
 backend-repo/test-out.txt
 nul
 static
+.agents
+.claude
+.opencode
+.trae
+.qoder

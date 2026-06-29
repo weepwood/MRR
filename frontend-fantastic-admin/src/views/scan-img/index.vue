@@ -705,15 +705,16 @@ watch(idCardParam, async (newId) => {
                   切换类型
                 </div>
                 <div class="type-options">
-                  <div
+                  <button
                     v-for="t in typeOptions"
                     :key="t"
+                    type="button"
                     class="type-option"
                     :class="{ active: currentImage && currentImage.btype === t }"
                     @click.stop="onPickType(t)"
                   >
                     {{ getTypeName(t) }}
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -913,7 +914,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .type-item:hover {
@@ -991,7 +992,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .thumb-item:hover {
@@ -1034,7 +1035,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .thumb-row:hover {
@@ -1297,4 +1298,15 @@ watch(idCardParam, async (newId) => {
 /* ==================== 类型修改消息 ==================== */
 :global(.type-success-prev) { color: var(--el-color-danger); }
 :global(.type-success-new) { color: var(--el-color-success); }
+
+@media (prefers-reduced-motion: reduce) {
+  .id-result-item,
+  .type-item,
+  .thumb-item,
+  .thumb-row,
+  .type-option,
+  .retry-btn {
+    transition: none;
+  }
+}
 </style>

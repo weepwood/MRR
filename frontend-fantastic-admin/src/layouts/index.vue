@@ -90,7 +90,7 @@ watch(() => routeInfo.path, () => {
           <MainSidebar />
           <SubSidebar />
         </div>
-        <div class="invisible fixed inset-0 z-1009 bg-black/50 op-0 backdrop-blur-sm transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
+        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 backdrop-blur-sm transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
@@ -213,5 +213,23 @@ watch(() => routeInfo.path, () => {
 .slide-right-leave-to {
   margin-left: 20px;
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-right-enter-active,
+  .slide-right-leave-active {
+    transition: none;
+  }
+
+  .slide-right-enter-from,
+  .slide-right-leave-to {
+    opacity: 1;
+  }
+
+  .wrapper,
+  .sidebar-container,
+  .main-container {
+    transition: none;
+  }
 }
 </style>

@@ -155,7 +155,7 @@ function onMove(index: number, direction: 'forward' | 'backward') {
           height: `${props.height}px`,
         }"
       >
-        <img :src="img" class="h-full w-full object-contain">
+        <img :src="img" alt="" class="h-full w-full object-contain">
         <div v-if="!props.disabled" class="absolute inset-0 grid grid-cols-2 place-items-center rounded-lg bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover/image-upload:opacity-100">
           <div class="flex-center cursor-pointer opacity-60 transition-all hover:(scale-110 opacity-100)" @click.prevent="onPreview(index)">
             <FaIcon name="i-icon-park-outline:preview-open" class="size-6" />

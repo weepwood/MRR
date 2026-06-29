@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS main.mr_patient (
 
 -- 3. 核心业务表：统计
 CREATE TABLE IF NOT EXISTS main.mr_statistics (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
     bah      TEXT,
     cid      TEXT,
     openerno TEXT,
@@ -79,7 +80,10 @@ CREATE TABLE IF NOT EXISTS main.access_log (
     request_body    TEXT,
     response_status TEXT,
     execute_time    INTEGER,
-    referer         TEXT
+    referer         TEXT,
+    audit_action    TEXT,
+    audit_target    TEXT,
+    audit_description TEXT
 );
 
 -- 7. 运维表：图片迁移日志

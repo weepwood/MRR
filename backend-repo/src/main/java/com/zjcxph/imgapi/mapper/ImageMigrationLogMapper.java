@@ -5,7 +5,6 @@ import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
-@Mapper
 public interface ImageMigrationLogMapper {
 
     @Insert("INSERT INTO image_migration_log (scan_id, local_path, oss_url, migration_status, " +

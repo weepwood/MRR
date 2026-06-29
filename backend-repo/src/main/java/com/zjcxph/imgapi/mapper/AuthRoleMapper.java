@@ -8,7 +8,6 @@ import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
-@Mapper
 public interface AuthRoleMapper {
 
     @Select("select code as code, name as name, description as description, permissions as permissions, sort_order as sortOrder from mr_auth_role order by sort_order, code")

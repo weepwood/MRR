@@ -18,15 +18,17 @@ public class BAHDataResponseDTO {
     private Integer uploadFlag;
     private String img_url;
     private String ossUrl;
+    private String folder;
 
     public BAHDataResponseDTO() {
     }
 
-    public BAHDataResponseDTO(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
-                              String openerNo, Date uploadDate, Integer uploadFlag, String img_url) {
+    public BAHDataResponseDTO(Integer id, String brxh, String bah, String sjh, String filename, Integer btype, Integer pages,
+                              String openerNo, Date uploadDate, Integer uploadFlag, String img_url, String folder) {
         this.id = id;
         this.brxh = brxh;
         this.bah = bah;
+        this.sjh = sjh;
         this.filename = filename;
         this.btype = btype;
         this.pages = pages;
@@ -34,6 +36,7 @@ public class BAHDataResponseDTO {
         this.uploadDate = uploadDate;
         this.uploadFlag = uploadFlag;
         this.img_url = img_url;
+        this.folder = folder;
     }
 
 }

@@ -57,6 +57,7 @@ public class ScanController {
 
     @Operation(summary = "创建新的扫描记录")
     @PostMapping
+    @RequirePermissions({"record:edit"})
     public Result<Scan> create(@Valid @RequestBody ScanRequest request) {
         logger.info("创建扫描记录：BAH={}", request.getBah());
         
@@ -64,6 +65,7 @@ public class ScanController {
             null,
             request.getBrxh(),
             request.getBah(),
+            request.getSjh(),
             request.getFilename(),
             request.getBtype(),
             request.getPages(),
@@ -85,6 +87,7 @@ public class ScanController {
 
     @Operation(summary = "根据 ID 删除扫描记录")
     @DeleteMapping("/{id}")
+    @RequirePermissions({"record:edit"})
     public Result<String> deleteById(
             @PathVariable 
             @Parameter(description = "扫描记录 ID", example = "1")
@@ -107,6 +110,7 @@ public class ScanController {
 
     @Operation(summary = "更新扫描记录")
     @PutMapping("/{id}")
+    @RequirePermissions({"record:edit"})
     public Result<Scan> update(
             @PathVariable 
             @Parameter(description = "扫描记录 ID", example = "1")
@@ -122,6 +126,7 @@ public class ScanController {
             id,
             request.getBrxh(),
             request.getBah(),
+            request.getSjh(),
             request.getFilename(),
             request.getBtype(),
             request.getPages(),
@@ -289,7 +294,7 @@ public class ScanController {
                     continue;
                 }
 
-                String bah = item.getBAH() == null ? "unknown" : item.getBAH();
+                String bah = item.getBah() == null ? "unknown" : item.getBah();
                 String entryName = bah + "/" + file.getName();
                 zos.putNextEntry(new ZipEntry(entryName));
                 try (FileInputStream fis = new FileInputStream(file)) {
@@ -307,8 +312,8 @@ public class ScanController {
 
     private Path buildImagePath(PathDO item) {
         String folder = item.getFolder();
-        String brxh = item.getBRXH();
-        String bah = item.getBAH();
+        String brxh = item.getBrxh();
+        String bah = item.getBah();
         String filename = item.getFilename();
 
         if (folder == null || folder.length() < 5 || brxh == null || bah == null || filename == null) {

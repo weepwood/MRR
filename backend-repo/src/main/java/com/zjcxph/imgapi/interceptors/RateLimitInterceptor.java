@@ -27,20 +27,23 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(RateLimitInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    static final Set<String> RATE_LIMITED_PATHS = Set.of(
+    static final Set<String> EXACT_PATHS = Set.of(
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/password/edit",
             "/api/v1/search/getBAHByEncryptID",
             "/api/v1/search/getBAHByEncryptIDLegacy",
             "/api/v1/search/getBAHByID",
-            "/api/v1/img/download",
-            "/api/v1/scan/batch-download",
             "/api/v1/oss/upload",
             "/api/v1/statistics/export/csv",
             "/api/v1/logs/retention/export",
             "/api/v1/monitoring/pressure-tests/run",
             "/api/v1/testing/api-test"
+    );
+
+    static final Set<String> PREFIX_PATHS = Set.of(
+            "/api/v1/img/download",
+            "/api/v1/scan/batch-download"
     );
 
     private final ApiRateLimiter apiRateLimiter;
@@ -65,7 +68,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     private boolean isRateLimited(String path) {
-        return RATE_LIMITED_PATHS.stream().anyMatch(path::startsWith);
+        return EXACT_PATHS.contains(path)
+                || PREFIX_PATHS.stream().anyMatch(path::startsWith);
     }
 
     private void writeRateLimitResponse(HttpServletResponse response) throws IOException {

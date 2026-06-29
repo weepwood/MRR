@@ -20,12 +20,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 @RestController
 @RequestMapping("/api/v1/oss")
@@ -39,13 +41,16 @@ public class OssController {
     private final OssService ossService;
     private final ScanMapper scanMapper;
     private final MigrationJobMapper migrationJobMapper;
+    private final Executor taskAsyncExecutor;
 
     public OssController(MigrationService migrationService, OssService ossService,
-                         ScanMapper scanMapper, MigrationJobMapper migrationJobMapper) {
+                         ScanMapper scanMapper, MigrationJobMapper migrationJobMapper,
+                         @Qualifier("taskAsyncExecutor") Executor taskAsyncExecutor) {
         this.migrationService = migrationService;
         this.ossService = ossService;
         this.scanMapper = scanMapper;
         this.migrationJobMapper = migrationJobMapper;
+        this.taskAsyncExecutor = taskAsyncExecutor;
     }
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
@@ -250,7 +255,7 @@ public class OssController {
     }
 
     private void executeMigrationJobAsync(Long jobId) {
-        new Thread(() -> {
+        taskAsyncExecutor.execute(() -> {
             try {
                 MigrationJob job = migrationJobMapper.findById(jobId);
                 if (job == null) { return; }
@@ -306,6 +311,6 @@ public class OssController {
                     migrationJobMapper.update(job);
                 }
             }
-        }, "migration-job-" + jobId).start();
+        });
     }
 }

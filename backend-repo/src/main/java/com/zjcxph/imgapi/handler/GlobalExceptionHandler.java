@@ -55,11 +55,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Result<Void>> handleException(Exception e) {
+    public ResponseEntity<Result<String>> handleException(Exception e) {
         logger.error("未处理异常", e);
-        // 生产环境不暴露内部错误信息
+        String message = e.getMessage() != null ? e.getMessage() : "服务器内部错误，请联系管理员";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.fail(500, "服务器内部错误，请联系管理员"));
+                .body(Result.<String>fail(500, "服务器内部错误，请联系管理员").data(message));
     }
 
     /**

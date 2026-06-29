@@ -252,12 +252,12 @@ public class ScanController {
     @PostMapping("/batch-download")
     public ResponseEntity<?> batchDownload(@RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
-            return ResponseEntity.badRequest().body(Result.fail("ids cannot be empty"));
+            return ResponseEntity.badRequest().body(Result.fail("ID 列表不能为空"));
         }
 
         List<PathDO> items = scanService.getImagePathList(request.getIds());
         if (items == null || items.isEmpty()) {
-            return ResponseEntity.badRequest().body(Result.fail("no downloadable records found"));
+            return ResponseEntity.badRequest().body(Result.fail("没有可下载的记录"));
         }
 
         try {
@@ -272,7 +272,7 @@ public class ScanController {
                     .body(resource);
         } catch (IOException e) {
             logger.error("batch download failed", e);
-            return ResponseEntity.internalServerError().body(Result.fail("batch download failed"));
+            return ResponseEntity.internalServerError().body(Result.fail("批量下载失败"));
         }
     }
 
@@ -321,8 +321,18 @@ public class ScanController {
             return null;
         }
 
+        if (folder.contains("..") || brxh.contains("..") || bah.contains("..") || filename.contains("..")) {
+            logger.warn("path traversal detected: folder={}, brxh={}, bah={}, filename={}", folder, brxh, bah, filename);
+            return null;
+        }
+
         String parentFolder = folder.substring(0, 5);
         String folderName = brxh + "-" + bah;
-        return Paths.get(basePath, parentFolder, folder, folderName, filename);
+        Path resolved = Paths.get(basePath, parentFolder, folder, folderName, filename).normalize();
+        if (!resolved.startsWith(Paths.get(basePath).normalize())) {
+            logger.warn("path traversal blocked: {}", resolved);
+            return null;
+        }
+        return resolved;
     }
 }

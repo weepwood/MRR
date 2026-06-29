@@ -270,9 +270,13 @@ public class StatisticsController {
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
 
+        int exportLimit = 100000;
         List<Statistics> list = statisticsService.findWithConditionAndPagination(
-                1, 10000, normalizedKeyword, normalizedBah, normalizedSjh,
+                1, exportLimit, normalizedKeyword, normalizedBah, normalizedSjh,
                 normalizedType, normalizedStartDate, normalizedEndDate, "date", "asc");
+        if (list.size() >= exportLimit) {
+            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", exportLimit);
+        }
 
         response.setContentType("text/csv; charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=\"statistics.csv\"");

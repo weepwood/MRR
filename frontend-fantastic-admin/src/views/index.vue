@@ -41,7 +41,7 @@ const quickActions = [
   { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
   { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive', color: '#909399', perm: 'record:read' },
   { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
-  { label: '测试中心', icon: 'i-ant-design:experiment-twotone', path: '/testing', color: '#8b5cf6', perm: 'test:read' },
+
 ]
 
 const visibleQuickActions = computed(() => quickActions.filter(a => hasPermission(a.perm)))

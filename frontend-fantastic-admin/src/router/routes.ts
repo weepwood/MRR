@@ -221,15 +221,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           auth: ['system:read'],
         },
       },
-      {
-        path: '/testing',
-        component: () => import('@/views/testing/index.vue'),
-        meta: {
-          title: '测试中心',
-          icon: 'i-ant-design:experiment-twotone',
-          auth: ['test:read'],
-        },
-      },
+
     ],
   },
 ]

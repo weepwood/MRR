@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 
@@ -32,6 +34,8 @@ import java.util.List;
 @Tag(name = "Patient Management", description = "患者信息管理接口")
 @RequirePermissions({"record:read"})
 public class PatientController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PatientController.class);
 
     private final SearchMapper searchMapper;
 
@@ -86,7 +90,11 @@ public class PatientController {
             normalizedKeyword = null;
         }
 
-        List<Patient> patients = searchMapper.findAllPaginated(0, 10000, normalizedKeyword);
+        int exportLimit = 100000;
+        List<Patient> patients = searchMapper.findAllPaginated(0, exportLimit, normalizedKeyword);
+        if (patients.size() >= exportLimit) {
+            logger.warn("患者导出达到上限 {} 条，数据可能不完整", exportLimit);
+        }
 
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("患者列表");

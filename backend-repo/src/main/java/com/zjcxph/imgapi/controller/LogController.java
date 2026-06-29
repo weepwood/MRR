@@ -65,13 +65,13 @@ public class LogController {
     public Result<Log> getLogById(@PathVariable Long id) {
         Log log = logService.getLogById(id);
         if (log == null) {
-            return Result.fail("log not found");
+            return Result.fail("日志不存在");
         }
         return Result.<Log>success().data(log);
     }
 
     @Operation(summary = "分页获取所有日志")
-    @GetMapping("/")
+    @GetMapping
     public Result<PageResult<Log>> getAllLogs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {

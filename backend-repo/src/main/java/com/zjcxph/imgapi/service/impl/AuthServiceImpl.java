@@ -224,7 +224,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthRole updateRole(String code, String name, String description, String permissions, Integer sortOrder) {
         AuthRole role = authRoleMapper.findByCode(code);
         if (role == null) {
-            throw new IllegalArgumentException("Role not found: " + code);
+            throw new IllegalArgumentException("角色不存在: " + code);
         }
         if (name != null) role.setName(name);
         if (description != null) role.setDescription(description);

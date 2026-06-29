@@ -12,4 +12,9 @@ public class ImageProperties {
     private String password;
     private String basePath;
 
+    private String serverUrlDefault;
+    private String serverUrlBa01;
+    private String serverUrlBa02;
+    private String serverUrlBa03;
+
 }

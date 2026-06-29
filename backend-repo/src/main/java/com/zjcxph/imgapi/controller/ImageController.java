@@ -72,13 +72,14 @@ public class ImageController {
                                                        @Parameter(description = "病案号", example = "00789508")
                                                        String BAH) throws IOException {
         File zipFile = scanService.createZipForBAH(BAH);
+        zipFile.deleteOnExit();
         String fileNameZip = BAH + ".zip";
         FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
 
         logger.info("生成压缩包:{}", fileNameZip);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileNameZip);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileNameZip + "\"");
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -299,7 +300,7 @@ public class ImageController {
             return null;
         }
         if (folder == null || folder.isBlank()) {
-            return "http://192.2.1.182:8001/ba-img-00/" + folderKey + "-" +
+            return imageProperties.getServerUrlDefault() + "/" + folderKey + "-" +
                     scan.getBah() + "/" + scan.getFilename();
         }
         String imgUrl = determineImageUrl(folder);
@@ -309,33 +310,31 @@ public class ImageController {
 
     private String determineImageUrl(String folder) {
         if (folder == null || folder.isBlank()) {
-            return "http://192.2.1.182:8001/ba-img-00";
+            return imageProperties.getServerUrlDefault();
+        }
+
+        Set<String> baImg03Exact = Set.of(
+            "2026.06.05", "2026.06.08", "2026.06.09"
+        );
+        if (baImg03Exact.contains(folder)) {
+            return imageProperties.getServerUrlBa03();
+        }
+
+        Set<String> baImg02YearMonth = Set.of(
+            "2025.08", "2025.09", "2025.10", "2025.11", "2025.12",
+            "2026.01", "2026.02", "2026.03", "2026.04", "2026.05", "2026.06"
+        );
+        String yearMonth = extractYearMonth(folder);
+        if (baImg02YearMonth.contains(yearMonth)) {
+            return imageProperties.getServerUrlBa02();
         }
 
         Set<String> baImg01YearMonth = Set.of(
             "24.04", "24.05", "24.06", "24.07", "24.08", "24.09",
             "24.10", "24.11", "25.07", "25.08"
         );
-        Set<String> baImg02YearMonth = Set.of(
-            "2025.08", "2025.09", "2025.10", "2025.11", "2025.12",
-            "2026.01", "2026.02", "2026.03", "2026.04", "2026.05", "2026.06"
-        );
-        Set<String> baImg03Exact = Set.of(
-            "2026.06.05", "2026.06.08", "2026.06.09"
-        );
-
-        if (baImg03Exact.contains(folder)) {
-            return "http://192.2.1.135:8001/ba-img-03";
-        }
-
-        String yearMonth = extractYearMonth(folder);
-
-        if (baImg02YearMonth.contains(yearMonth)) {
-            return "http://192.2.1.135:8001/ba-img-02";
-        }
-
         if (baImg01YearMonth.contains(yearMonth)) {
-            return "http://192.2.1.182:8001/ba-img-01";
+            return imageProperties.getServerUrlBa01();
         }
 
         return imageProperties.getUrl();

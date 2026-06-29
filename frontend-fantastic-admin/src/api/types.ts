@@ -147,39 +147,6 @@ export interface LogRecord {
   auditDescription?: string
 }
 
-/** 压测请求 */
-export interface PressureTestRequest {
-  name?: string
-  targetUrl: string
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  concurrency?: number
-  totalRequests?: number
-  timeoutMillis?: number
-  body?: string
-  headers?: Record<string, string>
-}
-
-/** 压测报告 */
-export interface PressureTestReport {
-  runId?: string
-  name?: string
-  targetUrl?: string
-  method?: string
-  concurrency?: number
-  totalRequests?: number
-  successCount?: number
-  failureCount?: number
-  successRate?: number
-  minLatencyMs?: number
-  avgLatencyMs?: number
-  p95LatencyMs?: number
-  maxLatencyMs?: number
-  requestsPerSecond?: number
-  durationMillis?: number
-  startedAt?: string
-  finishedAt?: string
-}
-
 /** 加密ID搜索参数 */
 export interface EncryptIDSearchParams {
   EncryptID: string
@@ -247,40 +214,6 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   token?: string
   user?: AuthUser
-}
-
-/** 测试中心 — 冒烟测试单项结果 */
-export interface SmokeTestItem {
-  name?: string
-  status?: string
-  detail?: string
-}
-
-/** 测试中心 — API 测试请求 */
-export interface ApiTestRequest {
-  url: string
-  method?: string
-  headers?: Record<string, string>
-  body?: string
-  timeoutMillis?: number
-}
-
-/** 测试中心 — API 测试响应 */
-export interface ApiTestResponse {
-  statusCode?: number
-  responseHeaders?: Record<string, string>
-  body?: string
-  latencyMs?: number
-  error?: string
-}
-
-/** 测试中心 — 数据检查单项结果 */
-export interface DataCheckItem {
-  checkName?: string
-  status?: string
-  issueCount?: number
-  summary?: string
-  details?: string[]
 }
 
 /** OSS 上传结果 */

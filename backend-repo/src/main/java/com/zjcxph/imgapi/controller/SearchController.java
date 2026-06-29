@@ -56,7 +56,7 @@ public class SearchController {
             return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt id-card failed: {}", e.getMessage(), e);
-            return Result.fail("decrypt failed: " + e.getMessage());
+            return Result.fail("解密失败：" + e.getMessage());
         }
     }
 
@@ -74,7 +74,7 @@ public class SearchController {
             return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt legacy id-card failed: {}", e.getMessage(), e);
-            return Result.fail("decrypt failed: " + e.getMessage());
+            return Result.fail("解密失败：" + e.getMessage());
         }
     }
 

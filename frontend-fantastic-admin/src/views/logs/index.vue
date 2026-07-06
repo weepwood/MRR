@@ -3,13 +3,17 @@ import { Refresh, Search, View } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import { useCrudList } from '@/composables/useCrudList'
-import type { LogRecord } from '@/api/types'
+import type { LogRecord, PaginatedResult } from '@/api/types'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'LogsPage' })
 
 // 业务状态（非 CRUD 通用部分）
 const detailVisible = ref(false)
 const currentLog = ref<LogRecord | null>(null)
+const error = ref('')
 
 const methodOptions = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 const statusOptions = [
@@ -53,7 +57,15 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       apiParams.startTime = timeRange[0]
       apiParams.endTime = timeRange[1]
     }
-    return searchSystemLogs(apiParams)
+    try {
+      error.value = ''
+      return searchSystemLogs(apiParams)
+    }
+    catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '加载日志记录失败'
+      error.value = msg
+      return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
+    }
   },
   defaultQuery: { keyword: '', username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
 })
@@ -184,7 +196,10 @@ function statusTagType(status: string | number) {
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="loading" :data="list" stripe style="margin-top: 12px;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
+      <el-table v-else :data="list" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}

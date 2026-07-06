@@ -16,3 +16,8 @@ folder_summary*
 *-test-result.json
 performance-report.md
 reports/
+
+# Maven wrapper (安装 mvn wrapper 后生成，不应提交)
+.mvn/
+mvnw
+mvnw.cmd

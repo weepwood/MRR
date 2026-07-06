@@ -119,6 +119,16 @@ CREATE TABLE IF NOT EXISTS main.migration_job (
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 9. 系统表：系统设置
+CREATE TABLE IF NOT EXISTS main.mr_system_settings (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_key     TEXT    NOT NULL UNIQUE,
+    setting_value   TEXT,
+    description     TEXT,
+    updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by      TEXT
+);
+
 -- ============================================
 -- 索引
 -- ============================================

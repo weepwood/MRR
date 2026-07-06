@@ -4,6 +4,9 @@ import { Edit, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -13,6 +16,7 @@ const canManage = computed(() => auth('user:manage'))
 
 const loading = ref(false)
 const users = ref<AuthUser[]>([])
+const error = ref('')
 const roles = ref<AuthRole[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -73,10 +77,10 @@ async function loadData() {
     total.value = Number(pageData?.total ?? users.value.length)
     roles.value = Array.isArray(rolesRes.data) ? rolesRes.data : []
   }
-  catch (error: any) {
+  catch (err: any) {
     users.value = []
     total.value = 0
-    ElMessage.error(error?.message || '用户列表加载失败')
+    error.value = err?.message || '用户列表加载失败'
   }
   finally {
     loading.value = false
@@ -264,7 +268,10 @@ onMounted(loadData)
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="loading" :data="users" stripe style="margin-top: 12px;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!users.length" description="暂无用户记录" />
+      <el-table v-else :data="users" stripe style="margin-top: 12px;">
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="displayName" label="显示名称" min-width="130">
           <template #default="{ row }">

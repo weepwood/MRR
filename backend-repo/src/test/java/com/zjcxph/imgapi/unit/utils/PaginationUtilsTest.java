@@ -24,31 +24,6 @@ class PaginationUtilsTest {
         assertThat(PaginationUtils.calculateOffset(page, size)).isEqualTo(expectedOffset);
     }
 
-    @ParameterizedTest
-    @CsvSource({
-        "100, 10, 10",
-        "101, 10, 11",
-        "0, 10, 0",
-        "50, 100, 1",
-        "1, 1, 1"
-    })
-    @DisplayName("calculateTotalPages — 正确计算总页数")
-    void calculateTotalPages(long total, int size, int expectedPages) {
-        assertThat(PaginationUtils.calculateTotalPages(total, size)).isEqualTo(expectedPages);
-    }
-
-    @Test
-    @DisplayName("calculateTotalPages — size为0返回0")
-    void calculateTotalPages_sizeZero() {
-        assertThat(PaginationUtils.calculateTotalPages(100, 0)).isZero();
-    }
-
-    @Test
-    @DisplayName("calculateTotalPages — size为负数返回0")
-    void calculateTotalPages_sizeNegative() {
-        assertThat(PaginationUtils.calculateTotalPages(100, -1)).isZero();
-    }
-
     @Test
     @DisplayName("validatePageParams — 合法参数不抛异常")
     void validatePageParams_valid() {

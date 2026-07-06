@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.ImageController;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -22,7 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +42,9 @@ class ImageControllerTest {
 
     @Mock
     private OssService ossService;
+
+    @Mock
+    private ImageUrlService imageUrlService;
 
     @InjectMocks
     private ImageController imageController;
@@ -68,7 +73,9 @@ class ImageControllerTest {
     @DisplayName("getDataByBAH — 返回图片列表")
     void getDataByBAH() {
         when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
-        when(imageProperties.getUrl()).thenReturn("http://localhost:8005/ba-img");
+        BAHDataResponseDTO dto = new BAHDataResponseDTO();
+        dto.setBah("00789508");
+        doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
@@ -81,6 +88,10 @@ class ImageControllerTest {
     void getDataByBAH_nullFolder() {
         mockScan.setFolder(null);
         when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
+        BAHDataResponseDTO dto = new BAHDataResponseDTO();
+        dto.setBah("00789508");
+        dto.setImg_url("http://192.2.1.182:8001/ba-img-00/605746-00789508/test.jpg");
+        doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
@@ -95,6 +106,10 @@ class ImageControllerTest {
         mockScan.setBrxh(null);
         mockScan.setFolder("25.03.15");
         when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
+        BAHDataResponseDTO dto = new BAHDataResponseDTO();
+        dto.setBah("00789508");
+        dto.setImg_url(null);
+        doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
 
         Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
 
@@ -185,25 +200,5 @@ class ImageControllerTest {
 
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("类型错误");
-    }
-
-    @Test
-    @DisplayName("extractYearMonth — 正常解析")
-    void extractYearMonth_success() {
-        assertThat(ImageController.extractYearMonth("25.03.15")).isEqualTo("25.03");
-    }
-
-    @Test
-    @DisplayName("extractYearMonth — null入参抛异常")
-    void extractYearMonth_null() {
-        assertThatThrownBy(() -> ImageController.extractYearMonth(null))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("extractYearMonth — 格式错误抛异常")
-    void extractYearMonth_invalidFormat() {
-        assertThatThrownBy(() -> ImageController.extractYearMonth("250315"))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 }

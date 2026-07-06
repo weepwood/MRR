@@ -59,7 +59,7 @@ public class SystemSettingController {
         }
         systemSettingService.saveSettings(settings, null);
         logger.info("系统设置已更新: {} 项", settings.size());
-        return Result.success(null).message("设置已保存");
+        return Result.<Void>success(null).message("设置已保存");
     }
 
     @Operation(summary = "保存单个设置值")
@@ -71,7 +71,7 @@ public class SystemSettingController {
             return Result.fail(400, "value 不能为空");
         }
         systemSettingService.setSetting(key, value, null);
-        return Result.success(null).message("设置已更新");
+        return Result.<Void>success(null).message("设置已更新");
     }
 
     @Operation(summary = "删除单个设置")
@@ -79,6 +79,6 @@ public class SystemSettingController {
     @RequirePermissions("system:read")
     public Result<Void> deleteSetting(@PathVariable String key) {
         systemSettingService.deleteSetting(key);
-        return Result.success(null).message("设置已删除");
+        return Result.<Void>success(null).message("设置已删除");
     }
 }

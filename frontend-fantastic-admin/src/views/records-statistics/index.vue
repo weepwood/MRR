@@ -213,19 +213,21 @@ function updateChartWidth() {
 async function loadSummary() {
   try {
     const res = await getStatisticsSummary()
-    summaryData.value = (res as any).data ?? {}
+    summaryData.value = res.data ?? { byType: [], total: {} }
   }
-  catch (e: any) {
-    ElMessage.error(`加载统计概览失败：${e?.message ?? '未知错误'}`)
+  catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '未知错误'
+    ElMessage.error(`加载统计概览失败：${msg}`)
   }
 }
 async function loadDateSummary() {
   try {
     const res = await getStatisticsDateSummary()
-    dateSummaryData.value = Array.isArray((res as any).data) ? (res as any).data : []
+    dateSummaryData.value = Array.isArray(res.data) ? res.data : []
   }
-  catch (e: any) {
-    ElMessage.error(`加载日期统计失败：${e?.message ?? '未知错误'}`)
+  catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '未知错误'
+    ElMessage.error(`加载日期统计失败：${msg}`)
   }
 }
 async function loadDashboard() {
@@ -238,7 +240,7 @@ async function loadStatisticsList() {
   loading.value = true
   try {
     const { prop, order } = tableSort.value
-    const params: any = {
+    const params: Record<string, string | number> = {
       page: currentPage.value,
       size: pageSize.value,
       sortBy: prop || 'date',
@@ -250,15 +252,19 @@ async function loadStatisticsList() {
       params.startDate = listSearchDateRange.value[0]
       params.endDate = listSearchDateRange.value[1]
     }
-    const res = await getStatisticsList(params)
-    const raw = (res as any).data ?? {}
+    const res = await getStatisticsList(params as unknown as {
+      page: number; size: number; keyword?: string; type?: string
+      startDate?: string; endDate?: string; sortBy?: string; sortOrder?: string
+    })
+    const raw = res.data ?? { list: [], total: 0, page: 1, size: 20 }
     statisticsListData.value = raw
     if (statisticsListData.value.list) {
-      statisticsListData.value.list = statisticsListData.value.list.filter((i: any) => i !== null)
+      statisticsListData.value.list = statisticsListData.value.list.filter((i) => i !== null)
     }
   }
-  catch (e: any) {
-    ElMessage.error(`加载病案列表失败：${e?.message ?? '未知错误'}`)
+  catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '未知错误'
+    ElMessage.error(`加载病案列表失败：${msg}`)
   }
   finally {
     loading.value = false

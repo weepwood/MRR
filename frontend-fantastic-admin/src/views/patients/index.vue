@@ -20,14 +20,15 @@ async function loadData() {
   try {
     const params = { page: page.value, size: size.value, ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }) }
     const res = await getPatients(params)
-    const payload = res.data || {} as any
+    const payload = res.data ?? { list: [], total: 0 }
     tableData.value = Array.isArray(payload.list) ? payload.list : []
     total.value = Number(payload.total || 0)
   }
-  catch (error: any) {
+  catch (error: unknown) {
     tableData.value = []
     total.value = 0
-    ElMessage.error(error?.message || '患者列表加载失败')
+    const msg = error instanceof Error ? error.message : '患者列表加载失败'
+    ElMessage.error(msg)
   }
   finally { loading.value = false }
 }

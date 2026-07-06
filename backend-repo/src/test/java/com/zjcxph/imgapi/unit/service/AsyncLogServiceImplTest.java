@@ -16,6 +16,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +54,9 @@ class AsyncLogServiceImplTest {
             for (int i = 0; i < 50; i++) {
                 asyncLogService.saveLogAsync(newLog(i));
             }
-            verify(logMapper, times(50)).insert(any(Log.class));
+            // 实现调用 batchInsert 一次（传入 50 条），而非逐条 insert
+            verify(logMapper).batchInsert(anyList());
+            verify(logMapper, never()).insert(any(Log.class));
         }
 
         @Test
@@ -66,7 +69,9 @@ class AsyncLogServiceImplTest {
 
             asyncLogService.destroy();
 
-            verify(logMapper, times(10)).insert(any(Log.class));
+            // destroy 调用 batchInsertLogs -> batchInsert 一次（传入 10 条）
+            verify(logMapper).batchInsert(anyList());
+            verify(logMapper, never()).insert(any(Log.class));
         }
 
         @Test
@@ -79,16 +84,17 @@ class AsyncLogServiceImplTest {
         @Test
         @DisplayName("批量插入失败时逐条重试，不抛出（saveLogAsync 吞异常）")
         void saveLogAsync_batchFails_retriesOneByOne() {
-            // 前 50 次 insert（首次批量）全部抛异常 -> 触发 retryInsertOneByOne，再尝试 50 次
-            when(logMapper.insert(any(Log.class)))
+            // batchInsert 抛异常 -> 触发 retryInsertOneByOne 逐条 insert（50 次）
+            when(logMapper.batchInsert(anyList()))
                     .thenThrow(new RuntimeException("db down"));
 
             for (int i = 0; i < 50; i++) {
                 asyncLogService.saveLogAsync(newLog(i));
             }
 
-            // batchInsertLogs 首条插即失败(1次) → 进入 retryInsertOneByOne 逐条重试(50) = 51 次
-            verify(logMapper, times(51)).insert(any(Log.class));
+            // batchInsert 失败 1 次 → retryInsertOneByOne 逐条 insert 50 次
+            verify(logMapper).batchInsert(anyList());
+            verify(logMapper, times(50)).insert(any(Log.class));
         }
     }
 
@@ -111,20 +117,22 @@ class AsyncLogServiceImplTest {
         }
 
         @Test
-        @DisplayName("非空列表逐条 insert")
+        @DisplayName("非空列表批量 insert")
         void batchSaveLogsAsync_insertsEach() {
             List<Log> logs = List.of(newLog(1), newLog(2), newLog(3));
 
             asyncLogService.batchSaveLogsAsync(logs);
 
-            verify(logMapper, times(3)).insert(any(Log.class));
+            // 实现调用 batchInsert 一次（传入 3 条）
+            verify(logMapper).batchInsert(anyList());
+            verify(logMapper, never()).insert(any(Log.class));
         }
 
         @Test
-        @DisplayName("insert 抛异常时向上抛出（不吞异常）")
+        @DisplayName("batchInsert 抛异常时向上抛出（不吞异常）")
         void batchSaveLogsAsync_propagatesException() {
             List<Log> logs = List.of(newLog(1));
-            when(logMapper.insert(any(Log.class))).thenThrow(new RuntimeException("boom"));
+            when(logMapper.batchInsert(anyList())).thenThrow(new RuntimeException("boom"));
 
             assertThatThrownBy(() -> asyncLogService.batchSaveLogsAsync(logs))
                     .isInstanceOf(RuntimeException.class)

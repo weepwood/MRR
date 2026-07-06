@@ -10,6 +10,7 @@ import Unocss from 'unocss/vite'
 import autoImport from 'unplugin-auto-import/vite'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { loadEnv } from 'vite'
 import AppLoading from 'vite-plugin-app-loading'
 import Archiver from 'vite-plugin-archiver'
@@ -52,6 +53,10 @@ export default function createVitePlugins(mode: string, isBuild = false) {
         'vue-router',
         'pinia',
       ],
+      resolvers: [
+        // Element Plus API 按需自动导入（ElMessage、ElMessageBox 等）
+        ElementPlusResolver(),
+      ],
       dts: './src/types/auto-imports.d.ts',
       dirs: [
         './src/store/modules',
@@ -64,6 +69,13 @@ export default function createVitePlugins(mode: string, isBuild = false) {
       globs: [
         'src/ui/components/*/index.vue',
         'src/components/*/index.vue',
+      ],
+      resolvers: [
+        // Element Plus 组件按需自动注册，配合 importStyle: 'css' 按需引入样式，
+        // 避免 bundle 包含全量 Element Plus 组件（数百 KB）
+        ElementPlusResolver({
+          importStyle: 'css',
+        }),
       ],
       dts: './src/types/components.d.ts',
     }),

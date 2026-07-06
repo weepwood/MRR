@@ -6,7 +6,6 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.resp.PageResult;
-import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.scheduler.LogRetentionCleaner;
 import com.zjcxph.imgapi.service.LogService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
@@ -45,18 +44,15 @@ public class LogController {
 
     private final LogService logService;
     private final LogRetentionCleaner logRetentionCleaner;
-    private final LogMapper logMapper;
     private final LogRetentionProperties logRetentionProperties;
 
     public LogController(
             LogService logService,
             LogRetentionCleaner logRetentionCleaner,
-            LogMapper logMapper,
             LogRetentionProperties logRetentionProperties
     ) {
         this.logService = logService;
         this.logRetentionCleaner = logRetentionCleaner;
-        this.logMapper = logMapper;
         this.logRetentionProperties = logRetentionProperties;
     }
 
@@ -133,7 +129,7 @@ public class LogController {
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
         int batchSize = Math.max(1, logRetentionProperties.getBatchSize());
-        int total = logMapper.countOlderThan(cutoff);
+        int total = logService.countOlderThan(cutoff);
         String fileName = "access-log-retention-" + DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now()) + ".csv";
 
         StreamingResponseBody body = outputStream -> {
@@ -144,7 +140,7 @@ public class LogController {
 
                 int offset = 0;
                 while (true) {
-                    List<Log> logs = logMapper.findOlderThan(cutoff, batchSize, offset);
+                    List<Log> logs = logService.findOlderThan(cutoff, batchSize, offset);
                     if (logs.isEmpty()) {
                         break;
                     }

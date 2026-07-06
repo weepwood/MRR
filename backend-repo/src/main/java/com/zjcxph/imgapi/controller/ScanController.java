@@ -20,12 +20,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -45,6 +49,12 @@ import java.util.zip.ZipOutputStream;
 public class ScanController {
 
     private static final Logger logger = LoggerFactory.getLogger(ScanController.class);
+
+    /** findAll 全表查询的最大返回条数兜底，防止 OOM */
+    private static final int MAX_FIND_ALL_LIMIT = 1000;
+
+    /** 批量下载 ZIP 的最大文件数，防止滥用 */
+    private static final int MAX_BATCH_DOWNLOAD_COUNT = 200;
 
     private final ScanService scanService;
 
@@ -146,11 +156,24 @@ public class ScanController {
         }
     }
 
-    @Operation(summary = "获取所有扫描记录")
+    /**
+     * 获取所有扫描记录（全表查询，已废弃）。
+     * <p>
+     * 数据量增长后全表查询会导致 OOM 和长事务，建议改用 {@code GET /api/v1/scan/page} 分页接口。
+     * 当前为兼容保留，并对返回结果做最大条数限制。
+     * </p>
+     */
+    @Deprecated
+    @Operation(summary = "获取所有扫描记录（已废弃，请使用 /page 分页接口）")
     @GetMapping
     public Result<List<Scan>> findAll() {
-        logger.info("获取所有扫描记录");
+        logger.warn("findAll 全表查询被调用，建议改用 /page 分页接口");
         List<Scan> scans = scanService.findAll();
+        // 安全兜底：限制最大返回条数，防止全表数据导致内存溢出
+        if (scans.size() > MAX_FIND_ALL_LIMIT) {
+            logger.warn("findAll 结果被截断：{} -> {}", scans.size(), MAX_FIND_ALL_LIMIT);
+            scans = scans.subList(0, MAX_FIND_ALL_LIMIT);
+        }
         return Result.success(scans);
     }
 
@@ -248,66 +271,62 @@ public class ScanController {
         return Result.success(pageResult);
     }
 
-    @Operation(summary = "批量下载病案图片（ZIP）")
+    @Operation(summary = "批量下载病案图片（ZIP，流式传输）")
     @PostMapping("/batch-download")
-    public ResponseEntity<?> batchDownload(@RequestBody BatchDownloadRequest request) {
+    public ResponseEntity<StreamingResponseBody> batchDownload(@RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
-            return ResponseEntity.badRequest().body(Result.fail("ID 列表不能为空"));
+            return ResponseEntity.badRequest().build();
+        }
+        if (request.getIds().size() > MAX_BATCH_DOWNLOAD_COUNT) {
+            return ResponseEntity.badRequest().build();
         }
 
         List<PathDO> items = scanService.getImagePathList(request.getIds());
         if (items == null || items.isEmpty()) {
-            return ResponseEntity.badRequest().body(Result.fail("没有可下载的记录"));
+            return ResponseEntity.badRequest().build();
         }
 
-        try {
-            byte[] zipBytes = buildBatchZip(items);
-            ByteArrayResource resource = new ByteArrayResource(zipBytes);
-            String fileName = "scan-batch-" + System.currentTimeMillis() + ".zip";
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(zipBytes.length)
-                    .body(resource);
-        } catch (IOException e) {
-            logger.error("batch download failed", e);
-            return ResponseEntity.internalServerError().body(Result.fail("批量下载失败"));
-        }
-    }
-
-    private byte[] buildBatchZip(List<PathDO> items) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             ZipOutputStream zos = new ZipOutputStream(baos)) {
-            byte[] buffer = new byte[8192];
-            for (PathDO item : items) {
-                if (item == null) {
-                    continue;
-                }
-                Path path = buildImagePath(item);
-                if (path == null) {
-                    continue;
-                }
-                File file = path.toFile();
-                if (!file.exists() || !file.isFile()) {
-                    logger.warn("skip missing file: {}", path);
-                    continue;
-                }
-
-                String bah = item.getBah() == null ? "unknown" : item.getBah();
-                String entryName = bah + "/" + file.getName();
-                zos.putNextEntry(new ZipEntry(entryName));
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    int len;
-                    while ((len = fis.read(buffer)) != -1) {
-                        zos.write(buffer, 0, len);
+        // 流式写入 ZIP，直接输出到响应流，避免全内存构建导致 OOM
+        StreamingResponseBody body = outputStream -> {
+            try (ZipOutputStream zos = new ZipOutputStream(outputStream)) {
+                byte[] buffer = new byte[8192];
+                for (PathDO item : items) {
+                    if (item == null) {
+                        continue;
                     }
+                    Path path = buildImagePath(item);
+                    if (path == null) {
+                        continue;
+                    }
+                    File file = path.toFile();
+                    if (!file.exists() || !file.isFile()) {
+                        logger.warn("skip missing file: {}", path);
+                        continue;
+                    }
+
+                    String bah = item.getBah() == null ? "unknown" : item.getBah();
+                    String entryName = bah + "/" + file.getName();
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        int len;
+                        while ((len = fis.read(buffer)) != -1) {
+                            zos.write(buffer, 0, len);
+                        }
+                    }
+                    zos.closeEntry();
                 }
-                zos.closeEntry();
+                zos.finish();
+            } catch (IOException e) {
+                logger.error("batch download streaming failed", e);
+                throw e;
             }
-            zos.finish();
-            return baos.toByteArray();
-        }
+        };
+
+        String fileName = "scan-batch-" + System.currentTimeMillis() + ".zip";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(body);
     }
 
     private Path buildImagePath(PathDO item) {

@@ -15,6 +15,34 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 
+/**
+ * 登录拦截器 — 开发模式（dev-no-login 分支）。
+ *
+ * <p><b>重要：本拦截器当前屏蔽了 JWT Token 验证。</b></p>
+ *
+ * <p>
+ * 在 dev-no-login 分支中，该拦截器不再校验客户端传递的 Bearer Token，
+ * 而是直接注入一个具备 ADMIN 角色和全部权限的虚拟开发会话。
+ * 这意味着所有 API 请求均以管理员身份通过，无需登录。
+ * </p>
+ *
+ * <p>注入的虚拟会话属性：</p>
+ * <ul>
+ *   <li>userId: 1 (dev)</li>
+ *   <li>username: "dev"</li>
+ *   <li>roleCode: "ADMIN"</li>
+ *   <li>permissions: ALL_PERMISSIONS（全部权限）</li>
+ * </ul>
+ *
+ * <p>
+ * 恢复登录验证：将本拦截器的 preHandle 逻辑改为从 Authorization Header
+ * 提取并验证 JWT Token，将解析后的用户信息注入 AuthSession。
+ * 原始 JWT 验证逻辑参见该文件的 git history（本分支之前）。
+ * </p>
+ *
+ * @see AuthorizationInterceptor 后续鉴权拦截器
+ * @see AuthContext 线程级用户会话
+ */
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
 
@@ -40,6 +68,10 @@ public class LoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // ============================================================
+        // dev-no-login 模式：跳过 Token 校验，注入虚拟开发管理员会话
+        // 如需恢复登录验证，用 JwtUtil 校验 Authorization Header 中的 Bearer Token
+        // ============================================================
         AuthSession session = new AuthSession();
         session.setId(1L);
         session.setUsername("dev");

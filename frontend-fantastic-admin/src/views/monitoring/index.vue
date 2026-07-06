@@ -113,12 +113,26 @@ const { pause, resume } = useIntervalFn(() => {
   }
 }, 10000)
 
+// 页面可见性门控：隐藏时暂停轮询，可见时恢复，避免后台标签页浪费资源
+function handleVisibilityChange() {
+  if (document.hidden) {
+    pause()
+  }
+  else if (autoRefresh.value) {
+    resume()
+  }
+}
+
 onMounted(() => {
   loadAll()
   resume()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
-onUnmounted(pause)
+onUnmounted(() => {
+  pause()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <template>

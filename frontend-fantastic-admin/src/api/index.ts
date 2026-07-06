@@ -13,6 +13,9 @@ declare module 'axios' {
 const MAX_RETRY_COUNT = 3
 const RETRY_DELAY = 1000
 
+// 401 登出防抖标志：并发多个 401 时只触发一次登出，避免多次 router.push('login')
+let isLoggingOut = false
+
 const api = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
   timeout: 1000 * 60,
@@ -40,7 +43,16 @@ function getErrorMessage(error: AxiosError | any) {
 async function handleError(error: AxiosError | any) {
   const config = error?.config
   if (error?.response?.status === 401) {
-    useUserStore().requestLogout()
+    // 防抖：并发 401 时只触发一次登出
+    if (!isLoggingOut) {
+      isLoggingOut = true
+      try {
+        await useUserStore().requestLogout()
+      }
+      finally {
+        isLoggingOut = false
+      }
+    }
     return Promise.reject(error)
   }
 
@@ -81,7 +93,11 @@ api.interceptors.response.use(
           return payload
         }
         if (statusValue === 0) {
-          useUserStore().requestLogout()
+          // 防抖：并发请求收到 status=0 时只触发一次登出
+          if (!isLoggingOut) {
+            isLoggingOut = true
+            useUserStore().requestLogout().finally(() => { isLoggingOut = false })
+          }
         }
         if (typeof statusValue === 'string') {
           const upperStatus = statusValue.toUpperCase()

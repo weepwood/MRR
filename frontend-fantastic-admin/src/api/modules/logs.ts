@@ -1,4 +1,5 @@
-import api from '../index'
+import type { LogRecord, PaginatedResult } from '../types'
+import api, { getRequest, postRequest } from '../index'
 
 export function searchSystemLogs(params: {
   page: number
@@ -12,7 +13,7 @@ export function searchSystemLogs(params: {
   startTime?: string
   endTime?: string
 }) {
-  return api.get('/api/v1/logs/search', { params })
+  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/search', { params })
 }
 
 export function searchImageAuditLogs(params: {
@@ -26,21 +27,21 @@ export function searchImageAuditLogs(params: {
   startTime?: string
   endTime?: string
 }) {
-  return api.get('/api/v1/logs/audit/images', { params })
+  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/audit/images', { params })
 }
 
 export function getLogById(id: string | number) {
-  return api.get(`/api/v1/logs/${id}`)
+  return getRequest<LogRecord>(`/api/v1/logs/${id}`)
 }
 
 /** POST /api/v1/logs/retention/cleanup — 运行日志清理 */
 export function runLogRetentionCleanup(params?: Record<string, any>) {
-  return api.post('/api/v1/logs/retention/cleanup', null, { params })
+  return postRequest<void>('/api/v1/logs/retention/cleanup', null, { params })
 }
 
-/** GET /api/v1/logs/retention/export — 导出待清理日志 */
+/** GET /api/v1/logs/retention/export — 导出待清理日志（blob 下载，不走 Result 包装） */
 export function exportLogRetentionLogs() {
-  return api.get('/api/v1/logs/retention/export', {
+  return api.get<Blob>('/api/v1/logs/retention/export', {
     responseType: 'blob',
   })
 }

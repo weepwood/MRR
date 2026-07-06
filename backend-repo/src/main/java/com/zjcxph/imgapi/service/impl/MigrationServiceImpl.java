@@ -16,7 +16,9 @@ import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,15 @@ public class MigrationServiceImpl implements MigrationService {
     private final MigrationJobMapper migrationJobMapper;
     private final ImageProperties imageProperties;
     private final Executor taskAsyncExecutor;
+
+    /**
+     * 自身代理引用：用于规避 Spring AOP 自调用失效问题。
+     * uploadSingleScan 标注了 @Transactional，若通过 this. 直接调用事务不生效，
+     * 必须通过代理对象调用。@Lazy 避免启动期循环依赖。
+     */
+    @Lazy
+    @Autowired
+    private MigrationService self;
 
     public MigrationServiceImpl(OssService ossService, ScanMapper scanMapper,
                                  ImageMigrationLogMapper migrationLogMapper,
@@ -131,7 +142,8 @@ public class MigrationServiceImpl implements MigrationService {
             if (scan.getUploadFlag() == null || scan.getUploadFlag() == 0) {
                 continue;
             }
-            results.add(uploadSingleScan(scan.getId()));
+            // 通过代理调用，确保 @Transactional 生效（避免自调用事务失效）
+            results.add(self.uploadSingleScan(scan.getId()));
         }
 
         long successCount = results.stream().filter(r -> "success".equals(r.getStatus())).count();
@@ -277,7 +289,8 @@ public class MigrationServiceImpl implements MigrationService {
 
                     for (Scan scan : batch) {
                         try {
-                            OssUploadResult result = uploadSingleScan(scan.getId());
+                            // 通过代理调用，确保 @Transactional 生效（避免自调用事务失效）
+                            OssUploadResult result = self.uploadSingleScan(scan.getId());
                             if ("success".equals(result.getStatus()) || "skipped".equals(result.getStatus())) {
                                 processed++;
                             } else {

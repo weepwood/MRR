@@ -375,6 +375,7 @@ async function preloadAroundIndex(centerIndex: number, radius = 3) {
 }
 
 let thumbIO: IntersectionObserver | null = null
+let resizeObserver: ResizeObserver | null = null
 function setupThumbObserver() {
   try { if (thumbIO) { thumbIO.disconnect(); thumbIO = null } }
   catch {}
@@ -473,13 +474,13 @@ onMounted(async () => {
   window.addEventListener('resize', onWindowResize)
   try {
     if (window.ResizeObserver && thumbsContainer.value) {
-      const ro = new ResizeObserver(() => {
+      resizeObserver = new ResizeObserver(() => {
         try {
           if (thumbsContainer.value) { thumbsPaneWidth.value = thumbsContainer.value.clientWidth || thumbsPaneWidth.value }
         }
         catch {}
       })
-      ro.observe(thumbsContainer.value)
+      resizeObserver.observe(thumbsContainer.value)
     }
   }
   catch {}
@@ -497,6 +498,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   window.removeEventListener('keydown', onKeyDown)
   try { if (thumbIO) { thumbIO.disconnect(); thumbIO = null } }
+  catch {}
+  try { if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null } }
   catch {}
 })
 
@@ -791,7 +794,7 @@ watch(idCardParam, async (newId) => {
   min-height: 220px;
   padding: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg);
   border-radius: 12px;
   box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
@@ -813,7 +816,7 @@ watch(idCardParam, async (newId) => {
 .id-card-hint {
   margin-top: 4px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* ==================== 病案列表 ==================== */
@@ -830,19 +833,19 @@ watch(idCardParam, async (newId) => {
   gap: 6px;
   align-items: center;
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .id-result-item {
   padding: 8px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .id-result-item:hover {
-  background: #f8fafc;
+  background: var(--color-bg-warm);
 }
 
 .id-result-item.active {
@@ -859,7 +862,7 @@ watch(idCardParam, async (newId) => {
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--color-text);
 }
 
 .rec-bah {
@@ -868,7 +871,7 @@ watch(idCardParam, async (newId) => {
 
 .rec-dept,
 .rec-time {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 /* ==================== 类型筛选 ==================== */
@@ -887,10 +890,10 @@ watch(idCardParam, async (newId) => {
 .thumbs-mode-btn {
   padding: 4px 10px;
   font-size: 12px;
-  color: #475569;
+  color: var(--color-text-muted);
   cursor: pointer;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-warm);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
 }
 
@@ -912,13 +915,13 @@ watch(idCardParam, async (newId) => {
   justify-content: space-between;
   padding: 8px 10px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .type-item:hover {
-  background: #f8fafc;
+  background: var(--color-bg-warm);
 }
 
 .type-item.active {
@@ -933,16 +936,16 @@ watch(idCardParam, async (newId) => {
 
 .type-name {
   font-size: 12px;
-  color: #1e293b;
+  color: var(--color-text);
 }
 
 .type-count {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .type-empty {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* ==================== 右侧面板 ==================== */
@@ -961,7 +964,7 @@ watch(idCardParam, async (newId) => {
   gap: 0;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg);
   border-radius: 12px;
   box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
@@ -978,8 +981,8 @@ watch(idCardParam, async (newId) => {
   padding: 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
+  background: var(--color-bg-warm);
+  border-right: 1px solid var(--color-border);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -990,13 +993,13 @@ watch(idCardParam, async (newId) => {
   align-items: center;
   padding: 6px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .thumb-item:hover {
-  background: #e2e8f0;
+  background: var(--color-border);
 }
 
 .thumb-item.active {
@@ -1008,7 +1011,7 @@ watch(idCardParam, async (newId) => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #f0f4f8;
+  background: var(--color-bg-warm);
   border-radius: 4px;
   opacity: 1;
   transition: opacity 0.3s ease;
@@ -1016,14 +1019,14 @@ watch(idCardParam, async (newId) => {
 
 .thumb-meta {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
 .thumbs-empty {
   grid-column: 1 / -1;
   margin-top: 20px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
@@ -1033,13 +1036,13 @@ watch(idCardParam, async (newId) => {
   align-items: center;
   padding: 6px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .thumb-row:hover {
-  background: #e2e8f0;
+  background: var(--color-border);
 }
 
 .thumb-row.active {
@@ -1050,7 +1053,7 @@ watch(idCardParam, async (newId) => {
 .thumb-row-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text);
 }
 
 /* ==================== 主视图 ==================== */
@@ -1058,7 +1061,7 @@ watch(idCardParam, async (newId) => {
   position: relative;
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--color-bg);
 }
 
 .viewer-source {
@@ -1089,7 +1092,7 @@ watch(idCardParam, async (newId) => {
 .placeholder-text {
   margin: 0;
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* ==================== 图片信息 ==================== */
@@ -1102,7 +1105,7 @@ watch(idCardParam, async (newId) => {
   font-size: 12px;
   color: #fff;
   pointer-events: none;
-  background: rgb(59 130 246 / 85%);
+  background: var(--color-primary);
   border-radius: 20px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
@@ -1117,7 +1120,7 @@ watch(idCardParam, async (newId) => {
   min-width: 180px;
   padding: 8px;
   color: #fff;
-  background: #1e3a5f;
+  background: var(--color-bg-dark);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
@@ -1150,7 +1153,7 @@ watch(idCardParam, async (newId) => {
 }
 
 .type-option.active {
-  background: rgb(59 130 246 / 40%);
+  background: var(--color-primary);
 }
 
 /* ==================== 全屏预览 ==================== */
@@ -1163,7 +1166,7 @@ watch(idCardParam, async (newId) => {
   font-size: 12px;
   color: #fff;
   pointer-events: none;
-  background: rgb(59 130 246 / 85%);
+  background: var(--color-primary);
   border-radius: 20px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
@@ -1179,8 +1182,8 @@ watch(idCardParam, async (newId) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #64748b;
-  background: rgb(255 255 255 / 80%);
+  color: var(--color-text-muted);
+  background: var(--color-bg-warm);
   backdrop-filter: blur(2px);
 }
 
@@ -1188,7 +1191,7 @@ watch(idCardParam, async (newId) => {
   width: 40px;
   height: 40px;
   margin-bottom: 20px;
-  border: 4px solid #e2e8f0;
+  border: 4px solid var(--color-border);
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1236,7 +1239,7 @@ watch(idCardParam, async (newId) => {
   max-width: 400px;
   padding: 30px;
   text-align: center;
-  background: #fff;
+  background: var(--color-bg);
   border-radius: 12px;
   box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
 }
@@ -1245,7 +1248,7 @@ watch(idCardParam, async (newId) => {
   width: 50px;
   height: 50px;
   margin: 0 auto 20px;
-  border: 4px solid #e2e8f0;
+  border: 4px solid var(--color-border);
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1254,13 +1257,13 @@ watch(idCardParam, async (newId) => {
 .download-status-content p {
   margin: 10px 0;
   font-size: 16px;
-  color: #1e293b;
+  color: var(--color-text);
 }
 
 .download-tip {
   margin-top: 15px;
   font-size: 14px !important;
-  color: #64748b !important;
+  color: var(--color-text-muted) !important;
 }
 
 /* ==================== 响应式 ==================== */

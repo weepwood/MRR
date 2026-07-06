@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { Refresh, Search, View } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { getLogById, searchImageAuditLogs } from '@/api/modules/logs'
+import { useCrudList } from '@/composables/useCrudList'
+import type { LogRecord } from '@/api/types'
 
 defineOptions({ name: 'ImageAuditPage' })
 
-const loading = ref(false)
-const tableData = ref<any[]>([])
-const page = ref(1)
-const size = ref(20)
-const total = ref(0)
+// 业务状态（非 CRUD 通用部分）
 const detailVisible = ref(false)
-const currentLog = ref<any>(null)
+const currentLog = ref<LogRecord | null>(null)
 
-const filters = reactive({ keyword: '', username: '', clientIp: '', auditAction: '', responseStatus: '', timeRange: [] as string[] })
 const actionOptions = [
   { label: '查询病案图片列表', value: 'LIST' },
   { label: '查看本地病案图片', value: 'VIEW_IMAGE' },
@@ -29,44 +25,53 @@ const actionOptions = [
 ]
 const statusOptions = [{ label: '全部', value: '' }, { label: '2xx', value: '2' }, { label: '4xx', value: '4' }, { label: '5xx', value: '5' }, { label: '200', value: '200' }, { label: '302', value: '302' }, { label: '404', value: '404' }]
 
-function buildParams() {
-  const params: Record<string, any> = { page: page.value, size: size.value }
-  for (const key of ['keyword', 'username', 'clientIp', 'auditAction', 'responseStatus']) {
-    const value = String((filters as any)[key] || '').trim()
-    if (value) { params[key] = value }
-  }
-  if (filters.timeRange.length === 2) {
-    params.startTime = filters.timeRange[0]
-    params.endTime = filters.timeRange[1]
-  }
-  return params
+// CRUD 列表逻辑：复用 useCrudList composable
+interface AuditQuery {
+  keyword: string
+  username: string
+  clientIp: string
+  auditAction: string
+  responseStatus: string
+  timeRange: string[]
 }
-async function loadData() {
-  loading.value = true
+
+const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, loadData } = useCrudList<
+  LogRecord,
+  AuditQuery
+>({
+  fetchApi: async (params) => {
+    const { page, size, keyword, username, clientIp, auditAction, responseStatus, timeRange } = params
+    const apiParams: Record<string, any> = { page, size }
+    for (const [k, v] of Object.entries({ keyword, username, clientIp, auditAction, responseStatus })) {
+      const trimmed = String(v || '').trim()
+      if (trimmed) {
+        apiParams[k] = trimmed
+      }
+    }
+    if (timeRange?.length === 2) {
+      apiParams.startTime = timeRange[0]
+      apiParams.endTime = timeRange[1]
+    }
+    return searchImageAuditLogs(apiParams)
+  },
+  defaultQuery: { keyword: '', username: '', clientIp: '', auditAction: '', responseStatus: '', timeRange: [] },
+})
+
+async function openDetail(row: LogRecord) {
   try {
-    const response = await searchImageAuditLogs(buildParams() as any)
-    const payload = response.data || {}
-    tableData.value = Array.isArray(payload.list) ? payload.list : []
-    total.value = Number(payload.total || 0)
+    const res = await getLogById(row.id!)
+    currentLog.value = { ...(res.data || {}), ...row }
   }
-  catch (error: any) {
-    tableData.value = []
-    total.value = 0
-    ElMessage.error(error?.message || '审计日志查询失败')
+  catch {
+    currentLog.value = row
   }
-  finally { loading.value = false }
-}
-function handleSearch() { page.value = 1; loadData() }
-function resetFilters() { filters.keyword = ''; filters.username = ''; filters.clientIp = ''; filters.auditAction = ''; filters.responseStatus = ''; filters.timeRange = []; handleSearch() }
-async function openDetail(row: any) {
-  try { const res = await getLogById(row.id); currentLog.value = { ...(res.data || {}), ...row } }
-  catch { currentLog.value = row }
-  finally { detailVisible.value = true }
+  finally {
+    detailVisible.value = true
+  }
 }
 function formatDateTime(value: unknown) { if (!value) { return '-' }; const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false }) }
 function statusTagType(status: string | number) { const code = Number(status); if (Number.isNaN(code)) { return 'info' }; if (code >= 500) { return 'danger' }; if (code >= 400) { return 'warning' }; if (code >= 200 && code < 400) { return 'success' }; return 'info' }
 function actionLabel(value: string) { return actionOptions.find(item => item.value === value)?.label || value || '-' }
-onMounted(loadData)
 </script>
 
 <template>
@@ -87,26 +92,26 @@ onMounted(loadData)
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="关键字">
-          <el-input v-model="filters.keyword" clearable placeholder="用户 / IP / URI / 病案号" @keyup.enter="handleSearch" />
+          <el-input v-model="query.keyword" clearable placeholder="用户 / IP / URI / 病案号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="用户">
-          <el-input v-model="filters.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
+          <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="客户端 IP">
-          <el-input v-model="filters.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
+          <el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="敏感操作">
-          <el-select v-model="filters.auditAction" clearable placeholder="全部" style="width: 200px;">
+          <el-select v-model="query.auditAction" clearable placeholder="全部" style="width: 200px;">
             <el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="访问时间">
-          <el-date-picker v-model="filters.timeRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" />
+          <el-date-picker v-model="query.timeRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -116,7 +121,7 @@ onMounted(loadData)
           </el-button>
         </el-form-item>
       </el-form>
-      <el-table v-loading="loading" :data="tableData" stripe style="margin-top: 12px;">
+      <el-table v-loading="loading" :data="list" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}
@@ -158,7 +163,7 @@ onMounted(loadData)
         </el-table-column>
       </el-table>
       <div class="pager">
-        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSearch" @current-change="loadData" />
+        <el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSearch" @current-change="loadData" />
       </div>
     </el-card>
     <el-dialog v-model="detailVisible" title="审计详情" width="760px">

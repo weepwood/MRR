@@ -144,3 +144,58 @@ docker compose up -d postgres  # 仅启动数据库 (开发模式)
 - **Git Hooks**: simple-git-hooks (pre-commit: lint-staged, commit-msg: commitlint)
 - **Commit**: Conventional Commits (cz-git), 类型: feat/fix/docs/style/refactor/perf/test/chore/ci
 - **Mock**: `vite-plugin-fake-server` (开发环境)
+
+## Superpowers (Claude Code Plugin)
+
+项目安装了 [Superpowers](https://github.com/obra/superpowers) v6.1.1 插件，提供自动触发的开发工作流技能。无需手动调用，Agent 会在合适的时机自动激活对应技能。
+
+### 核心技能及其触发时机
+
+| 技能 | 触发时机 | 作用 |
+|------|----------|------|
+| **brainstorming** | 开始写代码之前 | 先理清需求、探索方案，分块展示设计供确认，保存设计文档 |
+| **using-git-worktrees** | 设计批准后 | 创建隔离的 git worktree 分支，验证测试基线 |
+| **writing-plans** | 设计确认后 | 将工作拆分为 2-5 分钟的小任务，每个任务包含具体文件路径和验证步骤 |
+| **subagent-driven-development** | 计划就绪后 | 为每个任务派发独立子代理，两阶段审查（规格合规 → 代码质量） |
+| **test-driven-development** | 实现阶段 | 强制 RED-GREEN-REFACTOR 循环：先写失败测试 → 最少代码通过 → 重构 → 提交 |
+| **requesting-code-review** | 任务之间 | 对照计划审查代码，按严重程度报告问题 |
+| **systematic-debugging** | 调试时 | 4 阶段根因分析：复现 → 诊断 → 修复 → 验证 |
+| **verification-before-completion** | 修完后 | 确保问题确实已解决，不只靠测试通过 |
+| **finishing-a-development-branch** | 任务完成 | 验证测试、展示选项（合并/PR/保留/丢弃），清理 worktree |
+
+### 关键原则
+
+- **TDD 优先**: 永远先写测试，后写代码
+- **系统化而非临时**: 流程驱动，不靠猜测
+- **YAGNI**: 不写不需要的代码
+- **证据优于声称**: 在宣布完成之前验证
+
+### 更新
+
+```bash
+claude plugin update superpowers@superpowers-marketplace
+```
+
+## 当前分支：`dev-no-login` (认证屏蔽)
+
+> **⚠️ 重要：本分支故意屏蔽了登录验证。不要将其合并到 main！
+
+### 认证屏蔽机制
+
+| 层级 | 文件 | 说明 |
+|------|------|------|
+| **后端拦截器** | `backend-repo/.../interceptors/LoginInterceptor.java` | `preHandle()` 跳过 JWT 校验，直接注入硬编码 dev/ADMIN 会话 |
+| **权限检查** | `backend-repo/.../interceptors/AuthorizationInterceptor.java` | `isAdmin()` 短路：ADMIN 角色直接通过所有 `@RequirePermissions` |
+| **前端路由** | `frontend-fantastic-admin/src/router/guards.ts` | 未登录时自动注入 `dev-token` 和 ADMIN 用户信息，不跳转登录页 |
+
+### 虚拟会话属性
+
+- **用户名**: dev（userId=1）
+- **角色**: ADMIN（全部权限）
+- **权限**: ALL_PERMISSIONS（record、search、statistics、user、role、log、system、test 全部读写）
+
+### 恢复登录验证
+
+将 `LoginInterceptor.preHandle()` 改为从 `Authorization: Bearer <token>` 提取并验证 JWT，原始逻辑见该文件的 git history。同时撤销：
+1. 前端 `guards.ts` 中的硬编码 `userStore.setSession()`
+2. 前端 `guards.ts` 中移除的 login 页重定向

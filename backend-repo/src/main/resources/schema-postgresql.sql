@@ -175,23 +175,32 @@ COMMENT ON COLUMN app.migration_job.created_by      IS '任务创建者（用户
 -- 4. 索引
 -- ============================================
 
+-- 4.1 mr_scan 索引
 CREATE INDEX IF NOT EXISTS idx_mr_scan_bah               ON app.mr_scan (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_brxh              ON app.mr_scan (brxh);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_sjh               ON app.mr_scan (sjh);
-CREATE INDEX IF NOT EXISTS idx_mr_scan_migration_status  ON app.mr_scan (migration_status);
-CREATE INDEX IF NOT EXISTS idx_mr_scan_oss_url           ON app.mr_scan (oss_url) WHERE oss_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_mr_scan_folder_bah         ON app.mr_scan (folder, bah);
+CREATE INDEX IF NOT EXISTS idx_mr_scan_migration_status   ON app.mr_scan (migration_status);
+CREATE INDEX IF NOT EXISTS idx_mr_scan_oss_url            ON app.mr_scan (oss_url) WHERE oss_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_migration  ON app.mr_scan (id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
+CREATE INDEX IF NOT EXISTS idx_mr_scan_bah_cover          ON app.mr_scan (bah) INCLUDE (filename, pages, btype);
 
+-- 4.2 mr_statistics 索引
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah  ON app.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 
+-- 4.3 mr_patient 索引
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON app.mr_patient (idcard);
+CREATE INDEX IF NOT EXISTS idx_mr_patient_bah     ON app.mr_patient (bah);
 
+-- 4.4 mr_auth_user 索引
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_username  ON app.mr_auth_user (username);
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_role_code ON app.mr_auth_user (role_code);
 
-CREATE INDEX IF NOT EXISTS idx_access_log_access_time      ON app.access_log (access_time DESC);
+-- 4.5 access_log 索引（BRIN 适用于大容量追加型日志表）
+CREATE INDEX IF NOT EXISTS idx_access_log_access_time      ON app.access_log USING BRIN (access_time) WITH (pages_per_range = 32);
 CREATE INDEX IF NOT EXISTS idx_access_log_access_time_id   ON app.access_log (access_time ASC, id ASC);
 CREATE INDEX IF NOT EXISTS idx_access_log_client_ip        ON app.access_log (client_ip);
 CREATE INDEX IF NOT EXISTS idx_access_log_request_uri      ON app.access_log (request_uri);
@@ -199,11 +208,13 @@ CREATE INDEX IF NOT EXISTS idx_access_log_method           ON app.access_log (me
 CREATE INDEX IF NOT EXISTS idx_access_log_response_status  ON app.access_log (response_status);
 CREATE INDEX IF NOT EXISTS idx_access_log_method_status    ON app.access_log (method, response_status);
 
+-- 4.6 image_migration_log 索引
 CREATE INDEX IF NOT EXISTS idx_migration_status         ON app.image_migration_log (migration_status);
 CREATE INDEX IF NOT EXISTS idx_migration_scan_id        ON app.image_migration_log (scan_id);
 CREATE INDEX IF NOT EXISTS idx_migration_created_at     ON app.image_migration_log (created_at);
 CREATE INDEX IF NOT EXISTS idx_migration_status_created ON app.image_migration_log (migration_status, created_at);
 
+-- 4.7 migration_job 索引
 CREATE INDEX IF NOT EXISTS idx_migration_job_status     ON app.migration_job (status);
 CREATE INDEX IF NOT EXISTS idx_migration_job_created_at ON app.migration_job (created_at DESC);
 
@@ -321,7 +332,7 @@ COMMENT ON FUNCTION app.update_migration_status(INTEGER, VARCHAR, TEXT, TEXT, VA
 INSERT INTO app.mr_auth_role (code, name, description, permissions, sort_order)
 VALUES
     ('ADMIN',  'System Administrator', 'Full user and permission management access',
-     'user:manage,role:manage,record:manage,log:read,system:read,test:read,statistics:read', 1),
+     'user:manage,role:manage,record:manage,log:read,system:read,statistics:read', 1),
     ('DOCTOR', 'Doctor', 'Query and handle medical records',
      'record:edit,search:read,statistics:read', 2),
     ('NURSE',  'Nurse', 'Assist with basic queries and records',

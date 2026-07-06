@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.entity.*;
 import com.zjcxph.imgapi.dto.req.*;
 import com.zjcxph.imgapi.dto.resp.*;
 import com.zjcxph.imgapi.common.*;
+import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -47,13 +48,16 @@ public class ImageController {
     private final ScanService scanService;
     private final PdfService pdfService;
     private final OssService ossService;
+    private final ImageUrlService imageUrlService;
 
     public ImageController(ImageProperties imageProperties, ScanService scanService,
-                           PdfService pdfService, OssService ossService) {
+                           PdfService pdfService, OssService ossService,
+                           ImageUrlService imageUrlService) {
         this.imageProperties = imageProperties;
         this.scanService = scanService;
         this.pdfService = pdfService;
         this.ossService = ossService;
+        this.imageUrlService = imageUrlService;
     }
 
     @Operation(summary = "服务器心跳")
@@ -95,26 +99,10 @@ public class ImageController {
             @Pattern(regexp = "\\d{6,8}", message = "请输入正确的 6-8 位病案号")
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
-        String paddedBah = normalizeCode(bah);
+        String paddedBah = ImageUrlService.normalizeCode(bah);
         List<Scan> imageListByBAH = scanService.getImageListByBAH(paddedBah, bah);
-        List<BAHDataResponseDTO> items = new ArrayList<>();
-
-        for (Scan scan : imageListByBAH) {
-            BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(buildImageUrl(scan));
-
-            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
-                try {
-                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-                    dto.setOssUrl(signedUrl);
-                } catch (Exception e) {
-                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
-                }
-            }
-
-            items.add(dto);
-        }
+        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(imageListByBAH);
         return Result.success(items).message(bah + " 数据获取成功");
     }
 
@@ -125,27 +113,14 @@ public class ImageController {
             @RequestParam(required = false) String bah,
             @Parameter(description = "上架号")
             @RequestParam(required = false) String sjh) {
-        String normalizedBah = bah != null ? normalizeCode(bah) : "";
+        String normalizedBah = bah != null ? ImageUrlService.normalizeCode(bah) : "";
         String normalizedSjh = sjh != null ? sjh.trim() : "";
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
         }
         List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
-        List<BAHDataResponseDTO> items = new ArrayList<>();
-        for (Scan scan : list) {
-            BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(buildImageUrl(scan));
-            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
-                try {
-                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-                    dto.setOssUrl(signedUrl);
-                } catch (Exception e) {
-                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
-                }
-            }
-            items.add(dto);
-        }
+        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(list);
         return Result.success(items);
     }
 
@@ -251,7 +226,7 @@ public class ImageController {
         if (scan == null) {
             return Result.fail("扫描记录不存在");
         }
-        String url = buildImageUrl(scan);
+        String url = imageUrlService.buildImageUrl(scan);
         if (url == null) {
             return Result.fail("无法构造图片URL，缺少必要字段");
         }
@@ -286,77 +261,5 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
-    }
-
-    private String buildImageUrl(Scan scan) {
-        String folder = scan.getFolder();
-        String brxh = scan.getBrxh();
-        if (brxh == null) {
-            return null;
-        }
-        String paddedBah = normalizeCode(scan.getBah());
-        String folderKey = paddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
-        if (folderKey == null || folderKey.isBlank()) {
-            return null;
-        }
-        if (folder == null || folder.isBlank()) {
-            return imageProperties.getServerUrlDefault() + "/" + folderKey + "-" +
-                    scan.getBah() + "/" + scan.getFilename();
-        }
-        String imgUrl = determineImageUrl(folder);
-        return imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
-    }
-
-    private String determineImageUrl(String folder) {
-        if (folder == null || folder.isBlank()) {
-            return imageProperties.getServerUrlDefault();
-        }
-
-        Set<String> baImg03Exact = Set.of(
-            "2026.06.05", "2026.06.08", "2026.06.09"
-        );
-        if (baImg03Exact.contains(folder)) {
-            return imageProperties.getServerUrlBa03();
-        }
-
-        Set<String> baImg02YearMonth = Set.of(
-            "2025.08", "2025.09", "2025.10", "2025.11", "2025.12",
-            "2026.01", "2026.02", "2026.03", "2026.04", "2026.05", "2026.06"
-        );
-        String yearMonth = extractYearMonth(folder);
-        if (baImg02YearMonth.contains(yearMonth)) {
-            return imageProperties.getServerUrlBa02();
-        }
-
-        Set<String> baImg01YearMonth = Set.of(
-            "24.04", "24.05", "24.06", "24.07", "24.08", "24.09",
-            "24.10", "24.11", "25.07", "25.08"
-        );
-        if (baImg01YearMonth.contains(yearMonth)) {
-            return imageProperties.getServerUrlBa01();
-        }
-
-        return imageProperties.getUrl();
-    }
-
-    public static String extractYearMonth(String dateStr) {
-        if (dateStr == null) {
-            throw new IllegalArgumentException("dateStr must not be null");
-        }
-        String[] parts = dateStr.split("\\.");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid date format: " + dateStr);
-        }
-        return parts[0] + "." + parts[1];
-    }
-
-    private static String normalizeCode(String code) {
-        if (code == null) return "";
-        String trimmed = code.trim();
-        if (trimmed.length() > 0 && trimmed.length() < 8 && trimmed.matches("\\d+")) {
-            return "0".repeat(8 - trimmed.length()) + trimmed;
-        }
-        return trimmed;
     }
 }

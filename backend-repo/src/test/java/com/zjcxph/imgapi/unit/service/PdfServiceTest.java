@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.PdfService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,12 +8,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("PdfService PDF 生成测试")
 class PdfServiceTest {
@@ -31,17 +32,16 @@ class PdfServiceTest {
     }
 
     @Test
-    @DisplayName("合法图片列表 — 生成 PDF 返回 true 且文件非空")
+    @DisplayName("合法图片列表 — 成功生成 PDF 且文件非空")
     void createPdfFromImages_validImages() throws Exception {
         Path img1 = createRealJpeg(tempDir, "a.jpg");
         Path img2 = createRealJpeg(tempDir, "b.jpg");
         Path output = tempDir.resolve("result.pdf");
 
-        boolean ok = pdfService.createPdfFromImages(
+        pdfService.createPdfFromImages(
                 output.toString(),
                 List.of(img1.toString(), img2.toString()));
 
-        assertThat(ok).isTrue();
         assertThat(Files.exists(output)).isTrue();
         assertThat(Files.size(output)).isPositive();
         // PDF 文件头魔数
@@ -49,25 +49,24 @@ class PdfServiceTest {
     }
 
     @Test
-    @DisplayName("非法图片路径 — 返回 false 不抛异常")
-    void createPdfFromImages_invalidPath_returnsFalse() {
+    @DisplayName("非法图片路径 — 抛出 BusinessException")
+    void createPdfFromImages_invalidPath_throwsBusinessException() {
         Path output = tempDir.resolve("fail.pdf");
 
-        boolean ok = pdfService.createPdfFromImages(
+        assertThatThrownBy(() -> pdfService.createPdfFromImages(
                 output.toString(),
-                List.of(tempDir.resolve("not-exist.jpg").toString()));
-
-        assertThat(ok).isFalse();
+                List.of(tempDir.resolve("not-exist.jpg").toString())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("PDF 创建失败");
     }
 
     @Test
-    @DisplayName("空图片列表 — 返回 true（生成空白 PDF）")
+    @DisplayName("空图片列表 — 成功生成空白 PDF")
     void createPdfFromImages_emptyList() {
         Path output = tempDir.resolve("empty.pdf");
 
-        boolean ok = pdfService.createPdfFromImages(output.toString(), List.of());
+        pdfService.createPdfFromImages(output.toString(), List.of());
 
-        assertThat(ok).isTrue();
         assertThat(Files.exists(output)).isTrue();
     }
 }

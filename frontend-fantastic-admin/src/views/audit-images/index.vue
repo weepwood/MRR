@@ -4,12 +4,16 @@ import { ref } from 'vue'
 import { getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import { useCrudList } from '@/composables/useCrudList'
 import type { LogRecord } from '@/api/types'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
 
 // 业务状态（非 CRUD 通用部分）
 const detailVisible = ref(false)
 const currentLog = ref<LogRecord | null>(null)
+const error = ref('')
 
 const actionOptions = [
   { label: '查询病案图片列表', value: 'LIST' },
@@ -40,19 +44,26 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
   AuditQuery
 >({
   fetchApi: async (params) => {
-    const { page, size, keyword, username, clientIp, auditAction, responseStatus, timeRange } = params
-    const apiParams: Record<string, any> = { page, size }
-    for (const [k, v] of Object.entries({ keyword, username, clientIp, auditAction, responseStatus })) {
-      const trimmed = String(v || '').trim()
-      if (trimmed) {
-        apiParams[k] = trimmed
+    error.value = ''
+    try {
+      const { page, size, keyword, username, clientIp, auditAction, responseStatus, timeRange } = params
+      const apiParams: Record<string, any> = { page, size }
+      for (const [k, v] of Object.entries({ keyword, username, clientIp, auditAction, responseStatus })) {
+        const trimmed = String(v || '').trim()
+        if (trimmed) {
+          apiParams[k] = trimmed
+        }
       }
+      if (timeRange?.length === 2) {
+        apiParams.startTime = timeRange[0]
+        apiParams.endTime = timeRange[1]
+      }
+      return searchImageAuditLogs(apiParams)
     }
-    if (timeRange?.length === 2) {
-      apiParams.startTime = timeRange[0]
-      apiParams.endTime = timeRange[1]
+    catch (err: any) {
+      error.value = err?.message || '加载失败'
+      return { list: [], total: 0, page: 1, size: 20 }
     }
-    return searchImageAuditLogs(apiParams)
   },
   defaultQuery: { keyword: '', username: '', clientIp: '', auditAction: '', responseStatus: '', timeRange: [] },
 })
@@ -121,7 +132,10 @@ function actionLabel(value: string) { return actionOptions.find(item => item.val
           </el-button>
         </el-form-item>
       </el-form>
-      <el-table v-loading="loading" :data="list" stripe style="margin-top: 12px;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
+      <el-table v-else :data="list" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}

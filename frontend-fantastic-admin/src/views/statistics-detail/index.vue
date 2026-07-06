@@ -7,6 +7,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
@@ -311,8 +314,6 @@ onMounted(refreshAll)
       </el-card>
     </section>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon />
-
     <el-card shadow="never">
       <template #header>
         <div class="panel-header">
@@ -376,9 +377,9 @@ onMounted(refreshAll)
 
     <section class="content-layout">
       <div class="archive-shelf">
-        <div v-if="loading && !listData.list.length" class="archive-loading">
-          <el-skeleton :rows="8" animated />
-        </div>
+        <AppLoading v-if="loading" type="table" :rows="8" />
+        <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
+        <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
         <div v-else class="archive-grid">
           <article
             v-for="(item, index) in listData.list"
@@ -432,10 +433,6 @@ onMounted(refreshAll)
               </el-button>
             </div>
           </article>
-        </div>
-
-        <div v-if="!loading && listData.list.length === 0" class="empty-wrap">
-          <el-empty description="暂无档案袋数据" />
         </div>
 
         <div class="pagination-wrapper">

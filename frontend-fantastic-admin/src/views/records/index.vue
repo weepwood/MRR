@@ -5,6 +5,9 @@ import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
 import { useCrudList } from '@/composables/useCrudList'
 import type { PaginatedResult, ScanRecord } from '@/api/types'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -19,6 +22,8 @@ const downloading = ref(false)
 const detailVisible = ref(false)
 const currentRecord = ref<ScanRecord | null>(null)
 const selectedRows = ref<ScanRecord[]>([])
+
+const error = ref('')
 
 const typeOptions = [
   { label: '全部类型', value: '' },
@@ -54,9 +59,18 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       btype: rest.btype ? Number(rest.btype) : undefined,
     }
     const hasConditions = Object.values(request).some(v => v !== undefined)
-    return hasConditions
-      ? await getScanByCondition(request, page, size)
-      : await getScanList({ page, size }) as unknown as Promise<import('@/api/types').ApiResult<PaginatedResult<ScanRecord>>>
+    try {
+      error.value = ''
+      const res = hasConditions
+        ? await getScanByCondition(request, page, size)
+        : await getScanList({ page, size }) as unknown as Promise<import('@/api/types').ApiResult<PaginatedResult<ScanRecord>>>
+      return res
+    }
+    catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '加载扫描记录失败'
+      error.value = msg
+      return { list: [], total: 0, page: 1, size: 20 } as unknown as PaginatedResult<ScanRecord>
+    }
   },
   defaultQuery: { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' },
 })
@@ -171,8 +185,11 @@ function typeLabel(value: unknown) {
         </el-form-item>
       </el-form>
 
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
       <el-table
-        v-loading="loading"
+        v-else
         :data="list"
         stripe
         style="margin-top: 12px;"

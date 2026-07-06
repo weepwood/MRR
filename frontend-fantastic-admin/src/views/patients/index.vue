@@ -22,6 +22,7 @@ const filters = reactive({ keyword: '' })
 async function loadData() {
   loading.value = true
   try {
+    error.value = ''
     const params = { page: page.value, size: size.value, ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }) }
     const res = await getPatients(params)
     const payload = res.data ?? { list: [], total: 0 }

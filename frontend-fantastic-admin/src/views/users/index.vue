@@ -62,6 +62,7 @@ const summaryCards = computed(() => {
 async function loadData() {
   loading.value = true
   try {
+    error.value = ''
     const [usersRes, rolesRes] = await Promise.all([
       apiUser.getUsers({
         page: page.value,
@@ -77,10 +78,11 @@ async function loadData() {
     total.value = Number(pageData?.total ?? users.value.length)
     roles.value = Array.isArray(rolesRes.data) ? rolesRes.data : []
   }
-  catch (err: any) {
+  catch (err: unknown) {
     users.value = []
     total.value = 0
-    error.value = err?.message || '用户列表加载失败'
+    const msg = err instanceof Error ? err.message : '用户列表加载失败'
+    error.value = msg
   }
   finally {
     loading.value = false

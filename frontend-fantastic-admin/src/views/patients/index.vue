@@ -4,11 +4,15 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { getPatients } from '@/api/modules/patients'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
 const loading = ref(false)
 const tableData = ref<PatientRecord[]>([])
+const error = ref('')
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
@@ -24,11 +28,10 @@ async function loadData() {
     tableData.value = Array.isArray(payload.list) ? payload.list : []
     total.value = Number(payload.total || 0)
   }
-  catch (error: unknown) {
+  catch (err: unknown) {
     tableData.value = []
     total.value = 0
-    const msg = error instanceof Error ? error.message : '患者列表加载失败'
-    ElMessage.error(msg)
+    error.value = err instanceof Error ? err.message : '患者列表加载失败'
   }
   finally { loading.value = false }
 }
@@ -82,7 +85,10 @@ onMounted(loadData)
     </el-card>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="tableData" stripe style="width: 100%;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
+      <el-table v-else :data="tableData" stripe style="width: 100%;">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />

@@ -4,6 +4,9 @@ import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -20,6 +23,7 @@ interface FolderNode {
 // ==================== State ====================
 const stats = ref<MigrationStatistics>({})
 const pendingList = ref<ScanRecord[]>([])
+const error = ref('')
 const logList = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
 const logPage = ref(1)
@@ -184,12 +188,14 @@ async function loadPendingByFolder(folder: string) {
 async function loadPending() {
   selectedFolder.value = ''
   loading.pending = true
+  error.value = ''
   try {
     const res = await getPendingMigrations({ limit: 50 })
     pendingList.value = res.data?.list ?? []
   }
   catch (err: any) {
     console.error('[OSS] load pending error:', err)
+    error.value = err?.message || '加载待迁移列表失败'
     ElMessage.error(err?.message || '加载待迁移列表失败')
   }
   finally {
@@ -538,8 +544,10 @@ onMounted(refreshAll)
             </div>
           </div>
         </template>
-        <el-table
-          v-loading="loading.pending"
+        <AppLoading v-if="loading.pending" type="table" :rows="6" />
+        <AppError v-else-if="error" :message="error" @retry="loadPending" />
+        <AppEmpty v-else-if="!pendingList.length" description="暂无待迁移记录" />
+        <el-table v-else
           :data="pendingList"
           stripe
           size="small"

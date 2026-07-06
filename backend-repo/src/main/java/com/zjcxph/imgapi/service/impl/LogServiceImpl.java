@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -87,5 +88,15 @@ public class LogServiceImpl implements LogService {
     @Override
     public int countImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime) {
         return logMapper.countImageAudit(keyword, username, clientIp, auditAction, responseStatus, startTime, endTime);
+    }
+
+    @Override
+    public int countOlderThan(LocalDateTime cutoff) {
+        return logMapper.countOlderThan(cutoff);
+    }
+
+    @Override
+    public List<Log> findOlderThan(LocalDateTime cutoff, int batchSize, int offset) {
+        return logMapper.findOlderThan(cutoff, batchSize, offset);
     }
 }

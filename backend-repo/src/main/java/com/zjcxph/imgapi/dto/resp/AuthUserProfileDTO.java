@@ -16,4 +16,6 @@ public class AuthUserProfileDTO {
     private List<String> permissions = new ArrayList<>();
     private String status;
     private LocalDateTime lastLoginAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

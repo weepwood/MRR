@@ -6,7 +6,7 @@
 
     <!-- 根据 ID 列表查询图片路径 -->
     <select id="getImagePathList" resultType="com.zjcxph.imgapi.entity.PathDO">
-        SELECT BRXH, BAH, folder, filename FROM mr_scan WHERE id IN
+        SELECT BRXH AS brxh, BAH AS bah, folder, filename FROM mr_scan WHERE id IN
         <foreach item="id" collection="ids" open="(" separator="," close=")">
             #{id}
         </foreach>

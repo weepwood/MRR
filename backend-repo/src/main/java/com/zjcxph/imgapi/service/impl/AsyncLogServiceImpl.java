@@ -57,9 +57,7 @@ public class AsyncLogServiceImpl implements AsyncLogService {
             return;
         }
         try {
-            for (Log log : logs) {
-                logMapper.insert(log);
-            }
+            logMapper.batchInsert(logs);
             logger.debug("批量保存日志成功, 数量: {}", logs.size());
         } catch (Exception e) {
             logger.error("批量保存日志失败", e);
@@ -69,9 +67,7 @@ public class AsyncLogServiceImpl implements AsyncLogService {
 
     private void batchInsertLogs(List<Log> logs) {
         try {
-            for (Log log : logs) {
-                logMapper.insert(log);
-            }
+            logMapper.batchInsert(logs);
             logger.debug("批量刷新日志缓冲区成功, 数量: {}", logs.size());
         } catch (Exception e) {
             logger.error("批量刷新日志缓冲区失败, 将逐条重试", e);

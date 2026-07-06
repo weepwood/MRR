@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface ScanService {
-    List<Scan> getImageListByBAH(String bah);
+    List<Scan> getImageListByBAH(String bah, String bahRaw);
 
     List<Scan> getImageListByCode(String bah, String sjh);
 

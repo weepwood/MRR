@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.*;
 import java.util.List;
 import java.time.LocalDateTime;
 
-@Mapper
 public interface LogMapper {
 
     String BASE_COLUMNS = "id, " +
@@ -20,10 +19,13 @@ public interface LogMapper {
             "request_body AS requestBody, " +
             "response_status AS responseStatus, " +
             "execute_time AS executeTime, " +
-            "referer";
+            "referer, " +
+            "audit_action AS auditAction, " +
+            "audit_target AS auditTarget, " +
+            "audit_description AS auditDescription";
     
-    @Insert("INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer) " +
-            "VALUES (#{username}, #{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer})")
+    @Insert("INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer, audit_action, audit_target, audit_description) " +
+            "VALUES (#{username}, #{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer}, #{auditAction}, #{auditTarget}, #{auditDescription})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Log log);
 
@@ -110,5 +112,17 @@ public interface LogMapper {
 
     @Select("SELECT COUNT(*) FROM access_log WHERE request_uri = #{requestUri}")
     int countByRequestUri(@Param("requestUri") String requestUri);
+
+    @Insert({"<script>",
+             "INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, ",
+             "query_string, request_body, response_status, execute_time, referer, ",
+             "audit_action, audit_target, audit_description) VALUES ",
+             "<foreach item='log' collection='list' separator=','>",
+             "(#{log.username}, #{log.clientIp}, #{log.requestUri}, #{log.method}, #{log.userAgent}, ",
+             "#{log.accessTime}, #{log.queryString}, #{log.requestBody}, #{log.responseStatus}, ",
+             "#{log.executeTime}, #{log.referer}, #{log.auditAction}, #{log.auditTarget}, #{log.auditDescription})",
+             "</foreach>",
+             "</script>"})
+    int batchInsert(@Param("list") List<Log> logs);
     
 }

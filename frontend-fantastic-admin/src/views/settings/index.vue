@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
+import type { SystemSettingService } from '@/api/modules/settings'
+import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
 import AppConfigPanel from './components/AppConfigPanel.vue'
 
 defineOptions({ name: 'SettingsPage' })
 
 const activeTab = ref<'system' | 'app'>('system')
+const loading = ref(false)
+const saving = ref(false)
 
 const settings = reactive({
   systemName: 'MRR 后台管理中心',
@@ -25,15 +29,101 @@ const settings = reactive({
   errorReporting: true,
 })
 
-function handleSave() {
-  localStorage.setItem('MRR-ADMIN:system-settings', JSON.stringify(settings))
-  ElMessage.success('设置已保存到本地草稿')
+const LOCAL_KEY = 'MRR-ADMIN:system-settings'
+
+/** 加载本地草稿覆盖默认值（优先从后端，回退到本地） */
+async function loadSettings() {
+  loading.value = true
+  try {
+    const res = await getSystemSettings()
+    const serverSettings = res.data
+    if (serverSettings && Object.keys(serverSettings).length > 0) {
+      // 后端返回的是字符串键值对，需将数字/布尔字段转换
+      Object.assign(settings, serverSettings)
+      // 类型转换：将字符串还原为正确类型
+      const intFields = ['maxFileSize', 'sessionTimeout', 'backupInterval', 'smtpPort']
+      const boolFields = ['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting']
+      for (const f of intFields) {
+        const v = Number((settings as any)[f])
+        if (!Number.isNaN(v)) (settings as any)[f] = v
+      }
+      for (const f of boolFields) {
+        (settings as any)[f] = (settings as any)[f] === 'true' || (settings as any)[f] === true
+      }
+      // 延迟同步到本地草稿
+      syncToLocal()
+      return
+    }
+  }
+  catch {
+    // 后端不可用时回退到本地草稿
+  }
+  finally {
+    // 从 localStorage 读取覆盖默认值
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY)
+      if (raw) {
+        const local = JSON.parse(raw)
+        Object.assign(settings, local)
+      }
+    }
+    catch { /* 忽略解析错误 */ }
+    loading.value = false
+  }
+}
+
+function syncToLocal() {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(settings))
+  }
+  catch { /* 忽略 */ }
+}
+
+/** 将 settings 中 boolean/number 字段转为字符串以便后端存储 */
+function prepareSaveData(): Record<string, string> {
+  const data: Record<string, string> = {}
+  const intFields = new Set(['maxFileSize', 'sessionTimeout', 'backupInterval', 'smtpPort'])
+  const boolFields = new Set(['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting'])
+  for (const [key, val] of Object.entries(settings)) {
+    if (intFields.has(key)) {
+      data[key] = String(val)
+    }
+    else if (boolFields.has(key)) {
+      data[key] = val ? 'true' : 'false'
+    }
+    else {
+      data[key] = String(val ?? '')
+    }
+  }
+  return data
+}
+
+async function handleSave() {
+  saving.value = true
+  try {
+    await saveSystemSettings(prepareSaveData())
+    syncToLocal()
+    ElMessage.success('设置已保存到服务器')
+  }
+  catch {
+    // 后端保存失败时降级到本地
+    syncToLocal()
+    ElMessage.warning('服务端保存失败，已保存到本地草稿')
+  }
+  finally {
+    saving.value = false
+  }
 }
 
 function handleReset() {
-  localStorage.removeItem('MRR-ADMIN:system-settings')
-  ElMessage.success('已清除本地草稿，当前页面保留默认值')
+  localStorage.removeItem(LOCAL_KEY)
+  ElMessage.success('已清除本地草稿，下次加载将使用默认值')
 }
+
+onMounted(async () => {
+  await nextTick()
+  loadSettings()
+})
 </script>
 
 <template>
@@ -45,14 +135,14 @@ function handleReset() {
         </p>
         <h2>系统设置</h2>
         <p class="subtitle">
-          管理系统与应用的全局配置
+          管理系统与应用的全局配置 · 设置将持久化到服务器
         </p>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="handleSave">
-          保存本地草稿
+        <el-button type="primary" :loading="saving" @click="handleSave">
+          保存设置
         </el-button>
-        <el-button @click="handleReset">
+        <el-button :disabled="loading" @click="handleReset">
           清除草稿
         </el-button>
       </div>

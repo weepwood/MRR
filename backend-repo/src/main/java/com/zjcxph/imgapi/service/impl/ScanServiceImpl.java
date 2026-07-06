@@ -30,8 +30,8 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Cacheable(value = "scanByBah", key = "#bah", unless = "#result == null || #result.isEmpty()")
-    public List<Scan> getImageListByBAH(String bah) {
-        return scanMapper.findBAH(bah);
+    public List<Scan> getImageListByBAH(String bah, String bahRaw) {
+        return scanMapper.findBAH(bah, bahRaw);
     }
 
     @Override
@@ -41,7 +41,7 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public Path getImagePath(String bah) {
-        List<Scan> baData = scanMapper.findBAH(bah);
+        List<Scan> baData = scanMapper.findBAH(bah, bah);
         if (baData.isEmpty()) {
             return null;
         }

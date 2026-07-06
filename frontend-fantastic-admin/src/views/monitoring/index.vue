@@ -3,7 +3,25 @@ import { useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getMetric } from '@/api/modules/actuator'
-import { getSystemHealth, getSystemInfo, getSystemMemory, getSystemOverview, getSystemProperties, getSystemRuntime } from '@/api/modules/system'
+import type {
+  ActuatorMetric,
+  ComponentHealth,
+  GcStatItem,
+  GcStats,
+  HealthInfo,
+  MemoryInfo,
+  RuntimeInfo,
+  SystemInfo,
+  ThreadStats,
+} from '@/api/types'
+import {
+  getSystemHealth,
+  getSystemInfo,
+  getSystemMemory,
+  getSystemOverview,
+  getSystemProperties,
+  getSystemRuntime,
+} from '@/api/modules/system'
 
 defineOptions({ name: 'MonitoringPage' })
 
@@ -11,16 +29,28 @@ const loading = ref(false)
 const autoRefreshing = ref(false)
 const autoRefresh = ref(true)
 const lastRefresh = ref('')
-const healthStatus = ref<any>({})
-const runtimeInfo = ref<any>({})
-const memoryInfo = ref<any>({ heap: {}, nonHeap: {} })
-const systemInfo = ref<any>({ application: {}, jvm: {}, operatingSystem: {} })
+const healthStatus = ref<HealthInfo>({})
+const runtimeInfo = ref<RuntimeInfo>({})
+const memoryInfo = ref<MemoryInfo>({ heap: {}, nonHeap: {} })
+const systemInfo = ref<SystemInfo>({ application: {}, jvm: {}, operatingSystem: {} })
 const properties = ref<Record<string, string>>({})
-const gcStats = ref<any>({})
-const threadStats = ref<any>({})
+const gcStats = ref<GcStats>({})
+const threadStats = ref<ThreadStats>({})
 const hikariActive = ref<number | null>(null)
 const hikariIdle = ref<number | null>(null)
 const hikariPending = ref<number | null>(null)
+
+// 过滤 GC 统计中的非聚合条目（排除 totalCollections、totalTimeMs）
+const gcItems = computed<GcStatItem[]>(() => {
+  const items: GcStatItem[] = []
+  for (const [key, value] of Object.entries(gcStats.value)) {
+    if (key.startsWith('total')) continue
+    if (typeof value === 'object' && value !== null) {
+      items.push(value as GcStatItem)
+    }
+  }
+  return items
+})
 
 // ---- computed ----
 const healthTone = computed(() => {
@@ -45,7 +75,7 @@ const summaryCards = computed(() => [
   { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今' },
   { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标' },
   { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}` },
-  { label: '线程', value: `${threadStats.value.currentCount || 0}/${threadStats.value.peakCount || 0}`, note: '当前 / 历史峰值' },
+  { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值' },
 ])
 
 // ---- data loading ----
@@ -59,18 +89,23 @@ async function loadOverview() {
       getSystemInfo(),
       getSystemProperties(),
     ])
-    const overview = overviewRes.data || {}
-    healthStatus.value = healthRes.data || overview.health || {}
-    runtimeInfo.value = runtimeRes.data || overview.runtime || {}
-    memoryInfo.value = memoryRes.data || overview.memory || {}
-    systemInfo.value = infoRes.data || overview.info || { application: {}, jvm: {}, operatingSystem: {} }
-    properties.value = propertiesRes.data || overview.properties || {}
-    gcStats.value = overview.gc || {}
-    threadStats.value = overview.threads || {}
+    const overview = overviewRes.data ?? {}
+    healthStatus.value = healthRes.data ?? (overview.health as HealthInfo) ?? {}
+    runtimeInfo.value = runtimeRes.data ?? (overview.runtime as RuntimeInfo) ?? {}
+    memoryInfo.value = memoryRes.data ?? (overview.memory as MemoryInfo) ?? {}
+    systemInfo.value = infoRes.data ?? (overview.info as SystemInfo) ?? ({ application: {}, jvm: {}, operatingSystem: {} })
+    properties.value = propertiesRes.data ?? (overview.properties as Record<string, string>) ?? {}
+    gcStats.value = (overview.gc ?? {}) as GcStats
+    threadStats.value = (overview.threads ?? {}) as ThreadStats
   }
-  catch (error: any) {
-    ElMessage.error(error?.message || '监控信息加载失败')
+  catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : '监控信息加载失败'
+    ElMessage.error(msg)
   }
+}
+
+function extractMetricValue(metric: ActuatorMetric): number | null {
+  return metric?.measurements?.[0]?.value ?? null
 }
 
 async function loadActuatorMetrics() {
@@ -81,17 +116,13 @@ async function loadActuatorMetrics() {
       getMetric('hikaricp.connections.pending'),
     ])
     if (activeRes.status === 'fulfilled') {
-      // actuator 返回 { name, measurements: [{value}] }，无 code/data 包装
-      const m = activeRes.value as any
-      hikariActive.value = m?.measurements?.[0]?.value ?? null
+      hikariActive.value = extractMetricValue(activeRes.value.data ?? {})
     }
     if (idleRes.status === 'fulfilled') {
-      const m = idleRes.value as any
-      hikariIdle.value = m?.measurements?.[0]?.value ?? null
+      hikariIdle.value = extractMetricValue(idleRes.value.data ?? {})
     }
     if (pendingRes.status === 'fulfilled') {
-      const m = pendingRes.value as any
-      hikariPending.value = m?.measurements?.[0]?.value ?? null
+      hikariPending.value = extractMetricValue(pendingRes.value.data ?? {})
     }
   }
   catch { /* actuator 不可用时静默 */ }
@@ -113,12 +144,26 @@ const { pause, resume } = useIntervalFn(() => {
   }
 }, 10000)
 
+// 页面可见性门控：隐藏时暂停轮询，可见时恢复，避免后台标签页浪费资源
+function handleVisibilityChange() {
+  if (document.hidden) {
+    pause()
+  }
+  else if (autoRefresh.value) {
+    resume()
+  }
+}
+
 onMounted(() => {
   loadAll()
   resume()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
-onUnmounted(pause)
+onUnmounted(() => {
+  pause()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <template>
@@ -235,8 +280,8 @@ onUnmounted(pause)
             <el-descriptions-item label="累计耗时">
               {{ totalGcTime }}
             </el-descriptions-item>
-            <el-descriptions-item v-for="(v, k) in gcStats" v-show="typeof v === 'object'" :key="k" :label="(v as any).name || k">
-              {{ (v as any).count }} 次 / {{ (v as any).timeMs }}ms
+            <el-descriptions-item v-for="(item, idx) in gcItems" :key="idx" :label="item.name || String(idx)">
+              {{ item.count ?? 0 }} 次 / {{ item.timeMs ?? 0 }}ms
             </el-descriptions-item>
           </el-descriptions>
         </el-card>

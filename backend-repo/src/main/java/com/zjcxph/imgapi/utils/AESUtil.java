@@ -31,16 +31,9 @@ public class AESUtil {
      * @return 用户特定密钥（32 字节）
      */
     private static String generateUserSpecificKey(String userId, String key) {
-        String combinedKey = userId + "_" + key;
-        // 确保密钥长度为 32 字节
-        if (combinedKey.length() > 32) {
-            return combinedKey.substring(0, 32);
-        } else {
-            // 如果长度不足 32 字节，用 0 填充
-            return String.format("%-32s", combinedKey).replace(' ', '0');
-        }
+        return padOrTruncateTo32(userId + "_" + key);
     }
-    
+
     /**
      * 根据用户ID、时间戳和密钥生成用户特定的密钥（新版本，包含时间戳）
      * @param userId 用户ID
@@ -49,16 +42,22 @@ public class AESUtil {
      * @return 用户特定密钥（32字节）
      */
     private static String generateUserSpecificKeyWithTimestamp(String userId, String timestamp, String key) {
-        String combinedKey = userId + "_" + timestamp + "_" + key;
-        // 确保密钥长度为32字节
+        return padOrTruncateTo32(userId + "_" + timestamp + "_" + key);
+    }
+
+    /**
+     * 将密钥材料规范为 32 字节：超长截断，不足补 0。
+     * <p>
+     * 抽取自原 generateUserSpecificKey / generateUserSpecificKeyWithTimestamp 中重复的长度处理逻辑。
+     * </p>
+     */
+    private static String padOrTruncateTo32(String combinedKey) {
         if (combinedKey.length() > 32) {
             return combinedKey.substring(0, 32);
-        } else {
-            // 如果长度不足32字节，用0填充
-            return String.format("%-32s", combinedKey).replace(' ', '0');
         }
+        return String.format("%-32s", combinedKey).replace(' ', '0');
     }
-    
+
     /**
      * 解密身份证号码
      * @param ciphertext 密文（十六进制字符串）
@@ -68,36 +67,10 @@ public class AESUtil {
      * @return 解密后的身份证号码
      */
     public static String decryptIdCard(String ciphertext, String iv, String userId, String key) {
-        try {
-            // 生成用户特定密钥
-            String userSpecificKey = generateUserSpecificKey(userId, key);
-            
-            // 将十六进制字符串转换为字节数组
-            byte[] ciphertextBytes = Hex.decodeHex(ciphertext);
-            byte[] ivBytes = Hex.decodeHex(iv);
-            byte[] keyBytes = userSpecificKey.getBytes(StandardCharsets.UTF_8);
-            
-            // 创建密钥规范
-            SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, ALGORITHM);
-            
-            // 创建初始化向量规范
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(ivBytes);
-            
-            // 创建密码器
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
-            
-            // 解密
-            byte[] decryptedBytes = cipher.doFinal(ciphertextBytes);
-            
-            return new String(decryptedBytes, StandardCharsets.UTF_8);
-            
-        } catch (Exception e) {
-            logger.error("解密身份证号码失败: {}", e.getMessage(), e);
-            throw new RuntimeException("解密失败", e);
-        }
+        String userSpecificKey = generateUserSpecificKey(userId, key);
+        return doDecrypt(ciphertext, iv, userSpecificKey);
     }
-    
+
     /**
      * 解密身份证号码（使用默认密钥）
      * @param ciphertext 密文（十六进制字符串）
@@ -108,7 +81,7 @@ public class AESUtil {
     public static String decryptIdCard(String ciphertext, String iv, String userId) {
         return decryptIdCard(ciphertext, iv, userId, SECRET_KEY);
     }
-    
+
     /**
      * 解密身份证号码（新版本，包含时间戳）
      * @param ciphertext 密文（十六进制字符串）
@@ -119,36 +92,10 @@ public class AESUtil {
      * @return 解密后的身份证号码
      */
     public static String decryptIdCardWithTimestamp(String ciphertext, String iv, String userId, String timestamp, String key) {
-        try {
-            // 生成用户特定密钥（包含时间戳）
-            String userSpecificKey = generateUserSpecificKeyWithTimestamp(userId, timestamp, key);
-            
-            // 将十六进制字符串转换为字节数组
-            byte[] ciphertextBytes = Hex.decodeHex(ciphertext);
-            byte[] ivBytes = Hex.decodeHex(iv);
-            byte[] keyBytes = userSpecificKey.getBytes(StandardCharsets.UTF_8);
-            
-            // 创建密钥规范
-            SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, ALGORITHM);
-            
-            // 创建初始化向量规范
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(ivBytes);
-            
-            // 创建密码器
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
-            
-            // 解密
-            byte[] decryptedBytes = cipher.doFinal(ciphertextBytes);
-            
-            return new String(decryptedBytes, StandardCharsets.UTF_8);
-            
-        } catch (Exception e) {
-            logger.error("解密身份证号码失败: {}", e.getMessage(), e);
-            throw new RuntimeException("解密失败", e);
-        }
+        String userSpecificKey = generateUserSpecificKeyWithTimestamp(userId, timestamp, key);
+        return doDecrypt(ciphertext, iv, userSpecificKey);
     }
-    
+
     /**
      * 解密身份证号码（新版本，包含时间戳，使用默认密钥）
      * @param ciphertext 密文（十六进制字符串）
@@ -159,6 +106,39 @@ public class AESUtil {
      */
     public static String decryptIdCardWithTimestamp(String ciphertext, String iv, String userId, String timestamp) {
         return decryptIdCardWithTimestamp(ciphertext, iv, userId, timestamp, SECRET_KEY);
+    }
+
+    /**
+     * 实际的 AES/CBC/PKCS5Padding 解密逻辑。
+     * <p>
+     * 抽取自原 decryptIdCard 与 decryptIdCardWithTimestamp 中完全一致的 30 行代码，
+     * 消除重复，后续如需切换为 AES-GCM 或更换 KDF 只需改这一处。
+     * </p>
+     *
+     * @param ciphertext      密文（十六进制字符串）
+     * @param iv              初始化向量（十六进制字符串）
+     * @param userSpecificKey 已派生的 32 字节用户密钥
+     * @return 解密后的明文
+     */
+    private static String doDecrypt(String ciphertext, String iv, String userSpecificKey) {
+        try {
+            byte[] ciphertextBytes = Hex.decodeHex(ciphertext);
+            byte[] ivBytes = Hex.decodeHex(iv);
+            byte[] keyBytes = userSpecificKey.getBytes(StandardCharsets.UTF_8);
+
+            SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, ALGORITHM);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(ivBytes);
+
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec);
+
+            byte[] decryptedBytes = cipher.doFinal(ciphertextBytes);
+            return new String(decryptedBytes, StandardCharsets.UTF_8);
+
+        } catch (Exception e) {
+            logger.error("解密身份证号码失败: {}", e.getMessage(), e);
+            throw new RuntimeException("解密失败", e);
+        }
     }
     
     /**

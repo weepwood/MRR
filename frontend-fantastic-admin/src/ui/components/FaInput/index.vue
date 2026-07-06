@@ -16,7 +16,7 @@ const value = defineModel<T>()
 </script>
 
 <template>
-  <Input v-model="value" :disabled autocomplete="off" :class="cn('w-[200px]', props.class)" />
+  <Input v-model="value" :disabled :class="cn('w-[200px]', props.class)" />
 </template>
 
 <style scoped>

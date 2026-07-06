@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -229,10 +231,11 @@ class MigrationServiceImplTest {
         @Test
         @DisplayName("统计计数与百分比计算正确")
         void statisticsValues() {
-            when(scanMapper.countTotalUploadedScans()).thenReturn(100L);
-            when(scanMapper.countByMigrationStatus("migrated")).thenReturn(60L);
-            when(scanMapper.countByMigrationStatus("verified")).thenReturn(10L);
-            when(scanMapper.countByMigrationStatus("not_migrated")).thenReturn(30L);
+            Map<String, Object> statsMap = new HashMap<>();
+            statsMap.put("total", 100L);
+            statsMap.put("migrated", 60L);
+            statsMap.put("verified", 10L);
+            when(scanMapper.countMigrationStats()).thenReturn(statsMap);
             when(migrationLogMapper.countWithFilter("failed")).thenReturn(5L);
 
             MigrationStatisticsDTO dto = migrationService.getStatistics();
@@ -247,8 +250,11 @@ class MigrationServiceImplTest {
         @Test
         @DisplayName("total=0 时百分比为 0（不除零）")
         void statistics_zeroTotal() {
-            when(scanMapper.countTotalUploadedScans()).thenReturn(0L);
-            when(scanMapper.countByMigrationStatus(anyString())).thenReturn(0L);
+            Map<String, Object> statsMap = new HashMap<>();
+            statsMap.put("total", 0L);
+            statsMap.put("migrated", 0L);
+            statsMap.put("verified", 0L);
+            when(scanMapper.countMigrationStats()).thenReturn(statsMap);
             when(migrationLogMapper.countWithFilter("failed")).thenReturn(0L);
 
             MigrationStatisticsDTO dto = migrationService.getStatistics();

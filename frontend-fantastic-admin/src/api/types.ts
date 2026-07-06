@@ -147,39 +147,6 @@ export interface LogRecord {
   auditDescription?: string
 }
 
-/** 压测请求 */
-export interface PressureTestRequest {
-  name?: string
-  targetUrl: string
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  concurrency?: number
-  totalRequests?: number
-  timeoutMillis?: number
-  body?: string
-  headers?: Record<string, string>
-}
-
-/** 压测报告 */
-export interface PressureTestReport {
-  runId?: string
-  name?: string
-  targetUrl?: string
-  method?: string
-  concurrency?: number
-  totalRequests?: number
-  successCount?: number
-  failureCount?: number
-  successRate?: number
-  minLatencyMs?: number
-  avgLatencyMs?: number
-  p95LatencyMs?: number
-  maxLatencyMs?: number
-  requestsPerSecond?: number
-  durationMillis?: number
-  startedAt?: string
-  finishedAt?: string
-}
-
 /** 加密ID搜索参数 */
 export interface EncryptIDSearchParams {
   EncryptID: string
@@ -249,40 +216,6 @@ export interface RegisterResponse {
   user?: AuthUser
 }
 
-/** 测试中心 — 冒烟测试单项结果 */
-export interface SmokeTestItem {
-  name?: string
-  status?: string
-  detail?: string
-}
-
-/** 测试中心 — API 测试请求 */
-export interface ApiTestRequest {
-  url: string
-  method?: string
-  headers?: Record<string, string>
-  body?: string
-  timeoutMillis?: number
-}
-
-/** 测试中心 — API 测试响应 */
-export interface ApiTestResponse {
-  statusCode?: number
-  responseHeaders?: Record<string, string>
-  body?: string
-  latencyMs?: number
-  error?: string
-}
-
-/** 测试中心 — 数据检查单项结果 */
-export interface DataCheckItem {
-  checkName?: string
-  status?: string
-  issueCount?: number
-  summary?: string
-  details?: string[]
-}
-
 /** OSS 上传结果 */
 export interface OssUploadResult {
   scanId?: number
@@ -316,4 +249,185 @@ export interface MigrationLogRecord {
   verifiedAt?: string
   createdAt?: string
   updatedAt?: string
+}
+
+// ===================================================================
+// 系统监控类型
+// ===================================================================
+
+/** JVM 基本信息 */
+export interface JvmInfo {
+  javaVersion?: string
+  javaVendor?: string
+  javaHome?: string
+  availableProcessors?: number
+  maxMemory?: string
+  totalMemory?: string
+  freeMemory?: string
+  usedMemory?: string
+}
+
+/** 应用基本信息 */
+export interface AppInfo {
+  name?: string
+  startTime?: string
+  runTime?: string
+}
+
+/** OS 信息 */
+export interface OsInfo {
+  name?: string
+  version?: string
+  arch?: string
+  availableProcessors?: string
+  systemLoadAverage?: string
+}
+
+/** 系统信息（GET /system/info） */
+export interface SystemInfo {
+  application?: AppInfo
+  jvm?: JvmInfo
+  operatingSystem?: OsInfo
+}
+
+/** 内存使用数据 */
+export interface MemoryUsage {
+  init?: string
+  used?: string
+  committed?: string
+  max?: string
+}
+
+/** 内存信息（GET /system/memory） */
+export interface MemoryInfo {
+  heap?: MemoryUsage
+  nonHeap?: MemoryUsage
+  usagePercent?: string
+}
+
+/** 运行时信息（GET /system/runtime） */
+export interface RuntimeInfo {
+  name?: string
+  startTime?: number
+  uptimeMillis?: number
+  uptimeFormatted?: string
+  classPath?: string
+  inputArguments?: string[]
+}
+
+/** 组件健康状态 */
+export interface ComponentHealth {
+  status?: string
+  usagePercent?: string
+  error?: string
+}
+
+/** 健康检查（GET /system/health） */
+export interface HealthInfo {
+  status?: string
+  timestamp?: string
+  port?: string
+  application?: string
+  components?: Record<string, ComponentHealth>
+}
+
+/** GC 统计单项 */
+export interface GcStatItem {
+  name?: string
+  count?: number
+  timeMs?: number
+}
+
+/** GC 统计 */
+export interface GcStats extends Record<string, GcStatItem | number | undefined> {
+  totalCollections?: number
+  totalTimeMs?: number
+}
+
+/** 线程统计 */
+export interface ThreadStats {
+  currentCount?: number
+  daemonCount?: number
+  peakCount?: number
+  totalStarted?: number
+}
+
+/** 系统监控总览（GET /system/overview） */
+export interface SystemOverview {
+  info?: SystemInfo
+  memory?: MemoryInfo
+  runtime?: RuntimeInfo
+  health?: HealthInfo
+  properties?: Record<string, string>
+  gc?: GcStats
+  threads?: ThreadStats
+}
+
+// ===================================================================
+// 统计报表类型
+// ===================================================================
+
+/** 统计明细查询参数 */
+export interface StatisticsDetailQuery {
+  startDate?: string
+  endDate?: string
+  type?: string
+  keyword?: string
+  date?: string
+  page?: number
+  size?: number
+}
+
+/** 统计明细记录 */
+export interface StatisticsDetailRecord {
+  id?: number
+  bah?: string
+  name?: string
+  department?: string
+  admissionTime?: string
+  date?: string
+  type?: string
+  pages?: number
+  sjh?: string
+  openerNo?: string
+  cid?: string
+}
+
+/** 病案统计查询参数 */
+export interface RecordsStatisticsQuery {
+  page?: number
+  size?: number
+  startDate?: string
+  endDate?: string
+  type?: string
+  date?: string
+  keyword?: string
+}
+
+/** 病案统计记录 */
+export interface RecordsStatistic {
+  bah?: string
+  cid?: string
+  openerNo?: string
+  date?: string
+  type?: string
+  pages?: number
+  sjh?: string
+  recordCount?: number
+  totalPages?: number
+  totalRecords?: number
+}
+
+/** Actuator 指标测量值 */
+export interface ActuatorMeasurement {
+  statistic?: string
+  value?: number
+}
+
+/** Actuator 指标（GET /actuator/metrics/{name}） */
+export interface ActuatorMetric {
+  name?: string
+  description?: string
+  baseUnit?: string
+  measurements?: ActuatorMeasurement[]
 }

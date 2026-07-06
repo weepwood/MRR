@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.entity.*;
 import com.zjcxph.imgapi.dto.req.*;
 import com.zjcxph.imgapi.dto.resp.*;
 import com.zjcxph.imgapi.common.*;
+import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -47,13 +48,16 @@ public class ImageController {
     private final ScanService scanService;
     private final PdfService pdfService;
     private final OssService ossService;
+    private final ImageUrlService imageUrlService;
 
     public ImageController(ImageProperties imageProperties, ScanService scanService,
-                           PdfService pdfService, OssService ossService) {
+                           PdfService pdfService, OssService ossService,
+                           ImageUrlService imageUrlService) {
         this.imageProperties = imageProperties;
         this.scanService = scanService;
         this.pdfService = pdfService;
         this.ossService = ossService;
+        this.imageUrlService = imageUrlService;
     }
 
     @Operation(summary = "服务器心跳")
@@ -72,13 +76,14 @@ public class ImageController {
                                                        @Parameter(description = "病案号", example = "00789508")
                                                        String BAH) throws IOException {
         File zipFile = scanService.createZipForBAH(BAH);
+        zipFile.deleteOnExit();
         String fileNameZip = BAH + ".zip";
         FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
 
         logger.info("生成压缩包:{}", fileNameZip);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileNameZip);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileNameZip + "\"");
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -91,38 +96,13 @@ public class ImageController {
     @GetMapping("/{bah}")
     public Result<List<BAHDataResponseDTO>> getDataByBAH(
             @PathVariable
-            @Pattern(regexp = "\\d{8}", message = "请输入正确的 8 位病案号")
+            @Pattern(regexp = "\\d{6,8}", message = "请输入正确的 6-8 位病案号")
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
-        List<Scan> imageListByBAH = scanService.getImageListByBAH(bah);
-        String imgUrl = imageProperties.getUrl();
-
-        List<BAHDataResponseDTO> items = new ArrayList<>();
-
-        for (Scan scan : imageListByBAH) {
-            String folder = scan.getFolder();
-            String brxh = scan.getBrxh();
-            if (folder == null || brxh == null) {
-                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
-                continue;
-            }
-            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                    brxh + "-" + scan.getBah() + "/" + scan.getFilename();
-            BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(img_url);
-
-            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
-                try {
-                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-                    dto.setOssUrl(signedUrl);
-                } catch (Exception e) {
-                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
-                }
-            }
-
-            items.add(dto);
-        }
+        String paddedBah = ImageUrlService.normalizeCode(bah);
+        List<Scan> imageListByBAH = scanService.getImageListByBAH(paddedBah, bah);
+        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(imageListByBAH);
         return Result.success(items).message(bah + " 数据获取成功");
     }
 
@@ -133,36 +113,14 @@ public class ImageController {
             @RequestParam(required = false) String bah,
             @Parameter(description = "上架号")
             @RequestParam(required = false) String sjh) {
-        String normalizedBah = bah != null ? normalizeCode(bah) : "";
+        String normalizedBah = bah != null ? ImageUrlService.normalizeCode(bah) : "";
         String normalizedSjh = sjh != null ? sjh.trim() : "";
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
         }
         List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
-        String imgUrl = imageProperties.getUrl();
-        List<BAHDataResponseDTO> items = new ArrayList<>();
-        for (Scan scan : list) {
-            String folder = scan.getFolder();
-            String brxh = scan.getBrxh();
-            if (folder == null || brxh == null) {
-                logger.warn("跳过扫描记录 id={}, 文件夹或序号为空", scan.getId());
-                continue;
-            }
-            String img_url = imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                    brxh + "-" + scan.getBah() + "/" + scan.getFilename();
-            BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
-            dto.setImg_url(img_url);
-            if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
-                try {
-                    String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-                    dto.setOssUrl(signedUrl);
-                } catch (Exception e) {
-                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
-                }
-            }
-            items.add(dto);
-        }
+        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(list);
         return Result.success(items);
     }
 
@@ -258,6 +216,23 @@ public class ImageController {
         return Result.success("修改图片类型成功");
     }
 
+    @Operation(summary = "获取图片URL")
+    @GetMapping("/url/{id}")
+    public Result<String> getImageUrl(
+            @PathVariable
+            @Parameter(description = "扫描记录 ID", example = "1")
+            Integer id) {
+        Scan scan = scanService.findById(id);
+        if (scan == null) {
+            return Result.fail("扫描记录不存在");
+        }
+        String url = imageUrlService.buildImageUrl(scan);
+        if (url == null) {
+            return Result.fail("无法构造图片URL，缺少必要字段");
+        }
+        return Result.<String>successWithData(url);
+    }
+
     @Operation(summary = "通过后端代理获取 OSS 图片")
     @GetMapping("/oss-image/{id}")
     public ResponseEntity<?> getOssImage(
@@ -286,25 +261,5 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
-    }
-
-    public static String extractYearMonth(String dateStr) {
-        if (dateStr == null) {
-            throw new IllegalArgumentException("dateStr must not be null");
-        }
-        String[] parts = dateStr.split("\\.");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid date format: " + dateStr);
-        }
-        return parts[0] + "." + parts[1];
-    }
-
-    private static String normalizeCode(String code) {
-        if (code == null) return "";
-        String trimmed = code.trim();
-        if (trimmed.length() > 0 && trimmed.length() < 8 && trimmed.matches("\\d+")) {
-            return "0".repeat(8 - trimmed.length()) + trimmed;
-        }
-        return trimmed;
     }
 }

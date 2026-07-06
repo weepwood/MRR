@@ -199,76 +199,98 @@ const emit = defineEmits<{ close: []; saved: [id: number] }>()
 
 ### 4.1 模块文件结构
 
-每个 `api/modules/*.ts` 文件遵循统一模式：
+每个 `api/modules/*.ts` 文件遵循统一模式——使用类型安全封装函数：
 
 ```typescript
-import api from '@/api'
-import type { ScanRecord, ScanRequest } from '@/api/types'
+import type { PaginatedResult, ScanRecord, ScanRequest } from '../types'
+import { deleteRequest, getRequest, postRequest, putRequest } from '../index'
 
-// 1. 基础 URL 常量 (可选, 用于简化路径)
-const BASE = '/api/v1/scan'
-
-// 2. 导出函数 (每个 API 端点一个函数)
-export async function getRecords(page: number, size: number) {
-  const { data } = await api.get(`${BASE}/page`, { params: { page, size } })
-  return data.data  // 解包 Result<T>
+/** GET /api/v1/scan/page — 分页获取扫描记录 */
+export function getScanList(params: { page: number, size: number }) {
+  return getRequest<PaginatedResult<ScanRecord>>('/api/v1/scan/page', { params })
 }
 
-export async function getRecordById(id: number) {
-  const { data } = await api.get(`${BASE}/${id}`)
-  return data.data
+/** POST /api/v1/scan — 创建新的扫描记录 */
+export function createScan(data: ScanRequest) {
+  return postRequest<ScanRecord>('/api/v1/scan', data)
 }
 
-export async function createRecord(req: ScanRequest) {
-  const { data } = await api.post(BASE, req)
-  return data.data
+/** PUT /api/v1/scan/{id} — 更新扫描记录 */
+export function updateScan(id: string | number, data: Partial<ScanRequest>) {
+  return putRequest<ScanRecord>(`/api/v1/scan/${id}`, data)
 }
 
-export async function deleteRecord(id: number) {
-  const { data } = await api.delete(`${BASE}/${id}`)
-  return data
+/** DELETE /api/v1/scan/{id} — 删除扫描记录 */
+export function deleteScan(id: string | number) {
+  return deleteRequest(`/api/v1/scan/${id}`)
+}
+
+/** POST /api/v1/scan/batch-download — blob 下载（不走 JSON 解包） */
+export function batchDownloadRecords(ids: (string | number)[]) {
+  return api.post('/api/v1/scan/batch-download', { ids }, { responseType: 'blob' })
 }
 ```
 
 ### 4.2 响应解包约定
 
-Axios 拦截器已统一处理 `Result<T>` 的 `code/msg/data` 结构。API 函数中：
+Axios 拦截器已统一处理 `Result<T>` 的 `code/msg/data` 结构：
+
+- **`getRequest<T>`/`postRequest<T>`/`putRequest<T>`/`deleteRequest<T>`**: 自动解包 `Result.data`，返回 `Promise<ApiResult<T>>`
+- **`api.get`/`api.post` (raw)**: 仅用于 blob 二进制下载（设置 `responseType: 'blob'`）或需要 `skipGlobalError` 的特殊场景（如 auth 端点）
 
 ```typescript
-// API 层: 返回 data.data (即 Result 中的 data 字段)
-export async function getRecords() {
-  const { data } = await api.get('/api/v1/scan/page')
-  return data.data  // 注意: 外层 data 是 Axios 响应, 内层 data 是 Result.data
-}
+// ✅ 标准 JSON API：用类型安全封装 (自动解包 Result.data)
+const res = await getRequest<MyData>('/api/v1/resource')
+console.log(res.data)  // 这里已经是 MyData
 
-// 视图层: 直接使用返回值
-const res = await getRecords()
-tableData.value = res.list
+// ✅ Blob 下载：用原始 api.get (避免 JSON 解包损坏二进制)
+const res = await api.get<Blob>('/api/v1/export', { responseType: 'blob' })
+
+// ✅ Auth 端点：用 postRequest + skipGlobalError
+postRequest<LoginResponse>('/api/v1/auth/login', payload, { skipGlobalError: true })
 ```
 
 ### 4.3 错误处理
 
 ```typescript
-// API 层: 不捕获异常, 让调用方处理
-export async function getRecordById(id: number) {
-  const { data } = await api.get(`/api/v1/scan/${id}`)
-  return data.data
+// API 层: 不捕获异常，让调用方处理
+export function getScanList(params: { page: number, size: number }) {
+  return getRequest<PaginatedResult<ScanRecord>>('/api/v1/scan/page', { params })
 }
 
 // 视图层: try/catch/finally
 async function loadData() {
   loading.value = true
   try {
-    const res = await getRecords(page.value, pageSize.value)
-    tableData.value = res.list
-    total.value = res.total
-  } catch (e) {
-    ElMessage.error('加载数据失败')
-  } finally {
+    const res = await getScanList({ page: page.value, size: pageSize.value })
+    tableData.value = res.data?.list ?? []
+    total.value = res.data?.total ?? 0
+  }
+  catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '加载失败'
+    ElMessage.error(msg)
+  }
+  finally {
     loading.value = false
   }
 }
 ```
+
+### 4.4 skipGlobalError 配置
+
+Axios 实例请求配置支持 `skipGlobalError: true`，跳过全局 toast 错误提示：
+
+```typescript
+interface AxiosRequestConfig {
+  retry?: boolean         // 启用重试 (最大 3 次)
+  retryCount?: number     // 当前重试次数 (内部使用)
+  skipGlobalError?: boolean  // 跳过全局错误提示 (auth 端点使用)
+}
+```
+
+### 4.5 401 防抖
+
+并发 401 响应时通过 `isLoggingOut` 标志防止多次登出重定向。
 
 ---
 

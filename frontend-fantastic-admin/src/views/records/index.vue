@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
+import { useCrudList } from '@/composables/useCrudList'
+import type { PaginatedResult, ScanRecord } from '@/api/types'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -12,23 +17,13 @@ const migrationStatusMap: Record<string, { label: string, type: string }> = {
   verified: { label: '已验证', type: 'success' },
 }
 
-const loading = ref(false)
+// 业务状态（非 CRUD 通用部分）
 const downloading = ref(false)
-const tableData = ref<any[]>([])
-const total = ref(0)
-const page = ref(1)
-const size = ref(20)
 const detailVisible = ref(false)
-const currentRecord = ref<any>(null)
-const selectedRows = ref<any[]>([])
+const currentRecord = ref<ScanRecord | null>(null)
+const selectedRows = ref<ScanRecord[]>([])
 
-const filters = reactive({
-  bah: '',
-  brxh: '',
-  sjh: '',
-  openerNo: '',
-  btype: '',
-})
+const error = ref('')
 
 const typeOptions = [
   { label: '全部类型', value: '' },
@@ -40,63 +35,58 @@ const typeOptions = [
   { label: '医嘱', value: '9' },
 ]
 
+// CRUD 列表逻辑：复用 useCrudList composable，消除重复的分页/查询/重置代码
+interface RecordsQuery {
+  bah: string
+  brxh: string
+  sjh: string
+  openerNo: string
+  btype: string
+}
+
+const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, loadData } = useCrudList<
+  ScanRecord,
+  RecordsQuery
+>({
+  fetchApi: async (params) => {
+    const { page, size, ...rest } = params
+    // 构造后端请求体：空字符串转 undefined，btype 字符串转 number
+    const request = {
+      bah: rest.bah?.trim() || undefined,
+      brxh: rest.brxh?.trim() || undefined,
+      sjh: rest.sjh?.trim() || undefined,
+      openerNo: rest.openerNo?.trim() || undefined,
+      btype: rest.btype ? Number(rest.btype) : undefined,
+    }
+    const hasConditions = Object.values(request).some(v => v !== undefined)
+    try {
+      error.value = ''
+      const res = hasConditions
+        ? await getScanByCondition(request, page, size)
+        : await getScanList({ page, size }) as unknown as Promise<import('@/api/types').ApiResult<PaginatedResult<ScanRecord>>>
+      return res
+    }
+    catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '加载扫描记录失败'
+      error.value = msg
+      return { list: [], total: 0, page: 1, size: 20 } as unknown as PaginatedResult<ScanRecord>
+    }
+  },
+  defaultQuery: { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' },
+})
+
 const summaryCards = computed(() => [
-  { label: '当前页记录数', value: tableData.value.length, note: '当前筛选结果中已加载的数据条数' },
+  { label: '当前页记录数', value: list.value.length, note: '当前筛选结果中已加载的数据条数' },
   { label: '总记录数', value: total.value, note: '符合当前筛选条件的扫描记录总量' },
   { label: '已选记录', value: selectedRows.value.length, note: '可用于批量打包下载' },
-  { label: '当前页码', value: page.value, note: `每页 ${size.value} 条` },
+  { label: '当前页码', value: pageNum.value, note: `每页 ${pageSize.value} 条` },
 ])
 
-function buildRequest() {
-  return {
-    bah: filters.bah.trim() || undefined,
-    brxh: filters.brxh.trim() || undefined,
-    sjh: filters.sjh.trim() || undefined,
-    openerNo: filters.openerNo.trim() || undefined,
-    btype: filters.btype ? Number(filters.btype) : undefined,
-  }
-}
-
-async function loadData() {
-  loading.value = true
-  try {
-    const hasConditions = Object.values(buildRequest()).some(Boolean)
-    const { data: pageResult } = hasConditions
-      ? await getScanByCondition(buildRequest(), page.value, size.value)
-      : await getScanList({ page: page.value, size: size.value })
-
-    tableData.value = Array.isArray(pageResult?.list) ? pageResult!.list : []
-    total.value = Number(pageResult?.total ?? tableData.value.length)
-  }
-  catch (error: any) {
-    tableData.value = []
-    total.value = 0
-    ElMessage.error(error?.message || '记录加载失败')
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-function handleSearch() {
-  page.value = 1
-  loadData()
-}
-
-function resetFilters() {
-  filters.bah = ''
-  filters.brxh = ''
-  filters.sjh = ''
-  filters.openerNo = ''
-  filters.btype = ''
-  handleSearch()
-}
-
-function handleSelectionChange(rows: any[]) {
+function handleSelectionChange(rows: ScanRecord[]) {
   selectedRows.value = rows
 }
 
-function openDetail(row: any) {
+function openDetail(row: ScanRecord) {
   currentRecord.value = row
   detailVisible.value = true
 }
@@ -109,7 +99,7 @@ async function handleBatchDownload() {
 
   downloading.value = true
   try {
-    const result = await batchDownloadRecords(selectedRows.value.map(row => row.id))
+    const result = await batchDownloadRecords(selectedRows.value.map(row => row.id!))
     const blob = result instanceof Blob ? result : result?.data
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -131,8 +121,6 @@ function typeLabel(value: unknown) {
   const option = typeOptions.find(item => item.value === String(value))
   return option?.label || (value ? `类型 ${value}` : '-')
 }
-
-onMounted(loadData)
 </script>
 
 <template>
@@ -170,19 +158,19 @@ onMounted(loadData)
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="病案号">
-          <el-input v-model="filters.bah" clearable placeholder="输入病案号" @keyup.enter="handleSearch" />
+          <el-input v-model="query.bah" clearable placeholder="输入病案号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="病人序号">
-          <el-input v-model="filters.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
+          <el-input v-model="query.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="上架号">
-          <el-input v-model="filters.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
+          <el-input v-model="query.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="扫描人员">
-          <el-input v-model="filters.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
+          <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="filters.btype" clearable placeholder="全部类型" style="width: 140px;">
+          <el-select v-model="query.btype" clearable placeholder="全部类型" style="width: 140px;">
             <el-option v-for="item in typeOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -197,9 +185,12 @@ onMounted(loadData)
         </el-form-item>
       </el-form>
 
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
       <el-table
-        v-loading="loading"
-        :data="tableData"
+        v-else
+        :data="list"
         stripe
         style="margin-top: 12px;"
         @selection-change="handleSelectionChange"
@@ -226,7 +217,7 @@ onMounted(loadData)
             >
               {{ migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus }}
             </el-tag>
-            <span v-else style="color: #94a3b8;">-</span>
+            <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
@@ -240,8 +231,8 @@ onMounted(loadData)
 
       <div class="pager">
         <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="size"
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -361,5 +352,9 @@ h2 {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+.text-muted {
+  color: var(--text-secondary);
 }
 </style>

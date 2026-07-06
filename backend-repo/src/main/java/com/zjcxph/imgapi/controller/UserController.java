@@ -14,6 +14,7 @@ import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
+import com.zjcxph.imgapi.utils.IpUtil;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,12 +61,12 @@ public class UserController {
         
         // 验证 Token 是否有效，无效则返回认证失败
         if (response.getToken() == null || response.getToken().isBlank()) {
-            return Result.<LoginResponseDTO>fail("Invalid username or password");
+            return Result.<LoginResponseDTO>fail("用户名或密码错误");
         }
         
         // 记录成功登录日志并返回响应
         logger.info("User {} logged in successfully", req.getUsername());
-        return Result.<LoginResponseDTO>success("Login success").data(response);
+        return Result.success("登录成功", response);
     }
 
     /**
@@ -81,12 +82,12 @@ public class UserController {
     @Operation(summary = "用户注册")
     @PostMapping("/register")
     public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req, HttpServletRequest httpRequest) {
-        LoginResponseDTO response = authService.register(req, getClientIp(httpRequest));
+        LoginResponseDTO response = authService.register(req, IpUtil.getClientIp(httpRequest));
         if (response.getToken() == null || response.getToken().isBlank()) {
-            return Result.<LoginResponseDTO>fail("Registration failed");
+            return Result.<LoginResponseDTO>fail("注册失败");
         }
         logger.info("User {} registered successfully", req.getUsername());
-        return Result.<LoginResponseDTO>success("Registration success").data(response);
+        return Result.success("注册成功", response);
     }
 
     /**
@@ -105,7 +106,7 @@ public class UserController {
     public Result<AuthSession> currentUser() {
         AuthSession session = authService.currentUser();
         if (session == null) {
-            return Result.<AuthSession>fail("Not logged in or token expired");
+            return Result.<AuthSession>fail("未登录或 Token 已过期");
         }
         return Result.<AuthSession>success("success").data(session);
     }
@@ -186,9 +187,9 @@ public class UserController {
         }
         AuthUserProfileDTO updated = authService.updateUser(id, request);
         if (updated == null) {
-            return Result.<AuthUserProfileDTO>fail("User not found");
+            return Result.<AuthUserProfileDTO>fail("用户不存在");
         }
-        return Result.<AuthUserProfileDTO>success("Update success").data(updated);
+        return Result.<AuthUserProfileDTO>success("更新成功").data(updated);
     }
 
     /**
@@ -213,9 +214,9 @@ public class UserController {
         }
         int updated = authService.disableUser(id);
         if (updated == 0) {
-            return Result.<Void>fail("User not found");
+            return Result.<Void>fail("用户不存在");
         }
-        return Result.<Void>success("Disable success");
+        return Result.<Void>success("禁用成功");
     }
 
     @Operation(summary = "用户登出")
@@ -249,6 +250,12 @@ public class UserController {
         if (oldPassword == null || newPassword == null) {
             return Result.fail("password 和 newPassword 不能为空");
         }
+        if (oldPassword.length() < 6 || oldPassword.length() > 100) {
+            return Result.fail("密码长度应在 6-100 之间");
+        }
+        if (newPassword.length() < 6 || newPassword.length() > 100) {
+            return Result.fail("新密码长度应在 6-100 之间");
+        }
         try {
             authService.changePassword(session.getId(), oldPassword, newPassword);
             return Result.success("密码修改成功");
@@ -257,14 +264,4 @@ public class UserController {
         }
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
-    }
 }

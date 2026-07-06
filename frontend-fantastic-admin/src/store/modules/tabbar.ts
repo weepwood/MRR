@@ -44,102 +44,44 @@ export const useTabbarStore = defineStore(
         }
       }
     }
-    // 删除指定标签页
+    function computeRemoveNames(predicate: (item: Tabbar.recordRaw, index: number) => boolean) {
+      const keepName: string[] = []
+      const removeName: string[] = []
+      list.value.forEach((v, i) => {
+        if (predicate(v, i)) {
+          removeName.push(...v.name)
+        }
+        else {
+          keepName.push(...v.name)
+        }
+      })
+      return removeName.filter(v => !keepName.includes(v))
+    }
+
     function remove(tabId: Tabbar.recordRaw['tabId']) {
-      const keepName: string[] = []
-      const removeName: string[] = []
-      list.value.forEach((v) => {
-        if (v.tabId === tabId) {
-          removeName.push(...v.name)
-        }
-        else {
-          keepName.push(...v.name)
-        }
-      })
-      const name: string[] = []
-      removeName.forEach((v) => {
-        if (!keepName.includes(v)) {
-          name.push(v)
-        }
-      })
-      // 如果是手动点击关闭 tab 标签页，则删除页面缓存
+      const name = computeRemoveNames(item => item.tabId === tabId)
       keepAliveStore.remove(name)
-      list.value = list.value.filter((item) => {
-        return item.tabId !== tabId
-      })
+      list.value = list.value.filter(item => item.tabId !== tabId)
     }
-    // 删除两侧标签页
+
     function removeOtherSide(tabId: Tabbar.recordRaw['tabId']) {
-      const keepName: string[] = []
-      const removeName: string[] = []
-      list.value.forEach((v) => {
-        if (v.tabId !== tabId) {
-          removeName.push(...v.name)
-        }
-        else {
-          keepName.push(...v.name)
-        }
-      })
-      const name: string[] = []
-      removeName.forEach((v) => {
-        if (!keepName.includes(v)) {
-          name.push(v)
-        }
-      })
+      const name = computeRemoveNames(item => item.tabId !== tabId)
       keepAliveStore.remove(name)
-      list.value = list.value.filter((item) => {
-        return item.tabId === tabId
-      })
+      list.value = list.value.filter(item => item.tabId === tabId)
     }
-    // 删除左侧标签页
+
     function removeLeftSide(tabId: Tabbar.recordRaw['tabId']) {
-      // 查找指定路由对应在标签页列表里的下标
       const index = list.value.findIndex(item => item.tabId === tabId)
-      const keepName: string[] = []
-      const removeName: string[] = []
-      list.value.forEach((v, i) => {
-        if (i < index) {
-          removeName.push(...v.name)
-        }
-        else {
-          keepName.push(...v.name)
-        }
-      })
-      const name: string[] = []
-      removeName.forEach((v) => {
-        if (!keepName.includes(v)) {
-          name.push(v)
-        }
-      })
+      const name = computeRemoveNames((_item, i) => i < index)
       keepAliveStore.remove(name)
-      list.value = list.value.filter((_item, i) => {
-        return i >= index
-      })
+      list.value = list.value.filter((_item, i) => i >= index)
     }
-    // 删除右侧标签页
+
     function removeRightSide(tabId: Tabbar.recordRaw['tabId']) {
-      // 查找指定路由对应在标签页列表里的下标
       const index = list.value.findIndex(item => item.tabId === tabId)
-      const keepName: string[] = []
-      const removeName: string[] = []
-      list.value.forEach((v, i) => {
-        if (i > index) {
-          removeName.push(...v.name)
-        }
-        else {
-          keepName.push(...v.name)
-        }
-      })
-      const name: string[] = []
-      removeName.forEach((v) => {
-        if (!keepName.includes(v)) {
-          name.push(v)
-        }
-      })
+      const name = computeRemoveNames((_item, i) => i > index)
       keepAliveStore.remove(name)
-      list.value = list.value.filter((_item, i) => {
-        return i <= index
-      })
+      list.value = list.value.filter((_item, i) => i <= index)
     }
     // 清空所有标签页，登出的时候需要清空
     function clean() {

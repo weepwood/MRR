@@ -5,7 +5,6 @@ import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
-@Mapper
 public interface MigrationJobMapper {
 
     @Select("select * from migration_job order by created_at desc limit #{size} offset #{offset}")

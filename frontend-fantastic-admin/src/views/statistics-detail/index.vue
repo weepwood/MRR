@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StatisticsRecord } from '@/api/types'
+import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 
@@ -7,6 +7,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
@@ -20,11 +23,25 @@ interface ListData {
   list: ArchiveItem[]
 }
 
+/** 统计明细查询参数 */
+interface DetailQueryParams {
+  page: number
+  size: number
+  sortBy: string
+  sortOrder: string
+  keyword?: string
+  bah?: string
+  sjh?: string
+  type?: string
+  startDate?: string
+  endDate?: string
+}
+
 const router = useRouter()
 const loading = ref(false)
 
 const error = ref('')
-const summaryData = ref<any>({ byType: [], total: {} })
+const summaryData = ref<StatisticsSummary>({ byType: [], total: {} })
 const listData = ref<ListData>({
   total: 0,
   size: 18,
@@ -55,9 +72,9 @@ const sortOptions = [
 ]
 
 const typeOptions = computed(() => {
-  const source: any[] = summaryData.value?.byType || []
+  const source: TypeStatistics[] = summaryData.value?.byType ?? []
   return source
-    .map(item => String(item?.type || '').trim())
+    .map(item => String(item?.type ?? '').trim())
     .filter(item => item && item.toUpperCase() !== 'NULL')
 })
 
@@ -114,42 +131,45 @@ function toneClass(item: ArchiveItem, index = 0) {
 async function loadSummary() {
   try {
     const res = await getStatisticsSummary()
-    summaryData.value = (res as any).data || {}
+    summaryData.value = res.data ?? { byType: [], total: {} }
   }
   catch (err) {
     console.error('加载统计摘要失败:', err)
   }
 }
 
+function buildQueryParams(): DetailQueryParams {
+  const params: DetailQueryParams = {
+    page: currentPage.value,
+    size: pageSize.value,
+    sortBy: currentSort.value.prop,
+    sortOrder: currentSort.value.order,
+  }
+  if (filters.keyword.trim()) {
+    params.keyword = filters.keyword.trim()
+  }
+  if (filters.bah.trim()) {
+    params.bah = filters.bah.trim()
+  }
+  if (filters.sjh.trim()) {
+    params.sjh = filters.sjh.trim()
+  }
+  if (filters.type) {
+    params.type = filters.type
+  }
+  if (filters.dateRange.length === 2) {
+    params.startDate = filters.dateRange[0]
+    params.endDate = filters.dateRange[1]
+  }
+  return params
+}
+
 async function loadArchiveList() {
   loading.value = true
   error.value = ''
   try {
-    const params: any = {
-      page: currentPage.value,
-      size: pageSize.value,
-      sortBy: currentSort.value.prop,
-      sortOrder: currentSort.value.order,
-    }
-    if (filters.keyword.trim()) {
-      params.keyword = filters.keyword.trim()
-    }
-    if (filters.bah.trim()) {
-      params.bah = filters.bah.trim()
-    }
-    if (filters.sjh.trim()) {
-      params.sjh = filters.sjh.trim()
-    }
-    if (filters.type) {
-      params.type = filters.type
-    }
-    if (filters.dateRange.length === 2) {
-      params.startDate = filters.dateRange[0]
-      params.endDate = filters.dateRange[1]
-    }
-
-    const res = await getStatisticsList(params)
-    const payload = (res as any).data || {}
+    const res = await getStatisticsList(buildQueryParams())
+    const payload = res.data ?? {}
     const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
     listData.value = {
       total: Number(payload.total || 0),
@@ -161,8 +181,9 @@ async function loadArchiveList() {
     selectedArchive.value = list[0] || null
     selectedArchiveKey.value = selectedArchive.value ? archiveKey(selectedArchive.value, 0) : ''
   }
-  catch (err: any) {
-    error.value = err?.message || '病案明细加载失败'
+  catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '病案明细加载失败'
+    error.value = msg
     ElMessage.error(error.value)
     listData.value = { total: 0, size: pageSize.value, totalPages: 0, page: 1, list: [] }
   }
@@ -226,7 +247,7 @@ function goBackToStatistics() {
 }
 
 async function handleExportCsv() {
-  const params: any = {}
+  const params: Record<string, string> = {}
   if (filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
   if (filters.bah.trim()) { params.bah = filters.bah.trim() }
   if (filters.sjh.trim()) { params.sjh = filters.sjh.trim() }
@@ -237,7 +258,7 @@ async function handleExportCsv() {
   }
   try {
     const res = await exportStatisticsCsv(params)
-    const blob = new Blob([(res as any).data], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob([res.data as BlobPart], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -292,8 +313,6 @@ onMounted(refreshAll)
         </div>
       </el-card>
     </section>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon />
 
     <el-card shadow="never">
       <template #header>
@@ -358,9 +377,9 @@ onMounted(refreshAll)
 
     <section class="content-layout">
       <div class="archive-shelf">
-        <div v-if="loading && !listData.list.length" class="archive-loading">
-          <el-skeleton :rows="8" animated />
-        </div>
+        <AppLoading v-if="loading" type="table" :rows="8" />
+        <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
+        <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
         <div v-else class="archive-grid">
           <article
             v-for="(item, index) in listData.list"
@@ -414,10 +433,6 @@ onMounted(refreshAll)
               </el-button>
             </div>
           </article>
-        </div>
-
-        <div v-if="!loading && listData.list.length === 0" class="empty-wrap">
-          <el-empty description="暂无档案袋数据" />
         </div>
 
         <div class="pagination-wrapper">
@@ -585,8 +600,8 @@ h2 {
   padding: 18px;
   overflow: hidden;
   cursor: pointer;
-  background: linear-gradient(180deg, var(--folder-bg), #fff 58%);
-  border: 1px solid rgb(15 23 42 / 14%);
+  background: linear-gradient(180deg, var(--folder-bg), var(--surface) 58%);
+  border: 1px solid var(--divider);
   border-top: 6px solid var(--folder-accent);
   border-radius: 7px;
   box-shadow: 0 12px 28px rgb(15 23 42 / 7%);
@@ -608,6 +623,11 @@ h2 {
 .tone-amber { --folder-accent: #c97b18; --folder-bg: #fff6e8; }
 .tone-rose { --folder-accent: #be185d; --folder-bg: #fff0f5; }
 .tone-slate { --folder-accent: var(--text-secondary); --folder-bg: var(--surface-alt); }
+
+:global(.dark) .tone-blue { --folder-bg: color-mix(in srgb, #2563eb 18%, var(--surface)); }
+:global(.dark) .tone-green { --folder-bg: color-mix(in srgb, #0f766e 18%, var(--surface)); }
+:global(.dark) .tone-amber { --folder-bg: color-mix(in srgb, #c97b18 18%, var(--surface)); }
+:global(.dark) .tone-rose { --folder-bg: color-mix(in srgb, #be185d 18%, var(--surface)); }
 
 .folder-tab {
   position: absolute;
@@ -663,14 +683,14 @@ h2 {
 .folder-meta-grid dt {
   font-size: 11px;
   font-weight: 700;
-  color: #80879a;
+  color: var(--text-secondary);
 }
 
 .folder-meta-grid dd {
   margin: 4px 0 0;
   font-size: 13px;
   font-weight: 600;
-  color: #24324b;
+  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
@@ -679,7 +699,7 @@ h2 {
   font-size: 12px;
   font-weight: 700;
   color: var(--folder-accent);
-  border-top: 1px dashed rgb(100 116 139 / 28%);
+  border-top: 1px dashed var(--divider);
 }
 
 .pagination-wrapper {

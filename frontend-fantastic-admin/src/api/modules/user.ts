@@ -1,23 +1,29 @@
-import type { AuthRole, AuthRoleUpdatePayload, AuthUser, AuthUserUpdatePayload, PaginatedResult } from '../types'
-import api, { deleteRequest, getRequest, putRequest } from '../index'
+import type { AuthRole, AuthRoleUpdatePayload, AuthUser, AuthUserUpdatePayload, LoginResponse, PaginatedResult } from '../types'
+import { deleteRequest, getRequest, postRequest, putRequest } from '../index'
+
+const AUTH_SKIP_GLOBAL_ERROR = { skipGlobalError: true }
 
 export default {
-  login: (data: { account: string, password: string }) => api.post('/api/v1/auth/login', {
-    username: data.account,
-    password: data.password,
-  }, { skipGlobalError: true }),
+  login: (data: { account: string, password: string }) => postRequest<LoginResponse>(
+    '/api/v1/auth/login',
+    { username: data.account, password: data.password },
+    AUTH_SKIP_GLOBAL_ERROR,
+  ),
 
-  register: (data: { account: string, password: string, displayName?: string }) => api.post('/api/v1/auth/register', {
-    username: data.account,
-    password: data.password,
-    displayName: data.displayName,
-  }, { skipGlobalError: true }),
+  register: (data: { account: string, password: string, displayName?: string }) => postRequest<LoginResponse>(
+    '/api/v1/auth/register',
+    { username: data.account, password: data.password, displayName: data.displayName },
+    AUTH_SKIP_GLOBAL_ERROR,
+  ),
 
-  permission: () => api.get('/api/v1/auth/me', { skipGlobalError: true }),
+  permission: () => getRequest<AuthUser>('/api/v1/auth/me', AUTH_SKIP_GLOBAL_ERROR),
 
-  passwordEdit: (data: { password: string, newPassword: string }) => api.post('/api/v1/auth/password/edit', data),
+  passwordEdit: (data: { password: string, newPassword: string }) => postRequest<void>(
+    '/api/v1/auth/password/edit',
+    data,
+  ),
 
-  logout: () => api.post('/api/v1/auth/logout'),
+  logout: () => postRequest<void>('/api/v1/auth/logout'),
 
   getUsers: (params: { page?: number, size?: number, keyword?: string, roleCode?: string, status?: string } = {}) =>
     getRequest<PaginatedResult<AuthUser>>('/api/v1/auth/users', {

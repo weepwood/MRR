@@ -7,7 +7,6 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
-@Mapper
 public interface SearchMapper {
     /*
     *   通过身份证号查询病案号

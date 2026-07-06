@@ -7,15 +7,20 @@ import com.zjcxph.imgapi.common.AuthSession;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public final class JwtUtil {
 
-    private static final String SECRET = Optional.ofNullable(System.getenv("JWT_SECRET_KEY"))
-            .filter(value -> !value.isBlank())
-            .orElse("sbkedbkvuirkhkpwzetralhtaenrqlhio");
+    private static final String SECRET;
     private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
+
+    static {
+        String env = System.getenv("JWT_SECRET_KEY");
+        if (env == null || env.isBlank()) {
+            throw new ExceptionInInitializerError("JWT_SECRET_KEY environment variable must be set");
+        }
+        SECRET = env;
+    }
 
     private JwtUtil() {
     }

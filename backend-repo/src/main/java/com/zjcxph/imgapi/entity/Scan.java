@@ -29,11 +29,12 @@ public class Scan {
 
     public Scan() {}
 
-    public Scan(Integer id, String brxh, String bah, String filename, Integer btype, Integer pages,
+    public Scan(Integer id, String brxh, String bah, String sjh, String filename, Integer btype, Integer pages,
                 String openerNo, Date uploadDate, Integer uploadFlag, String folder) {
         this.id = id;
         this.brxh = brxh;
         this.bah = bah;
+        this.sjh = sjh;
         this.filename = filename;
         this.btype = btype;
         this.pages = pages;

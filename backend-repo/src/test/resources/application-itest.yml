@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  sql:
+    init:
+      mode: embedded
+      schema-locations: classpath:schema-itest.sql
+  jdbc:
+    template:
+      query-timeout: 5
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:mapper/**/*.xml
+app:
+  jwt:
+    secret-key: test-secret-key-for-integration-tests-only
+  aes:
+    secret-key: test-32-byte-secret-key-for-test
+  image:
+    base-path: /tmp/test-images
+  oss:
+    endpoint: http://localhost:9000
+    bucket: test-bucket
+    access-key: test-access-key
+    secret-key: test-secret-key
+  log:
+    retention:
+      enabled: false

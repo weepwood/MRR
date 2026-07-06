@@ -1,28 +1,19 @@
 <script setup lang="ts">
 import { Refresh, Search, View } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
+import { useCrudList } from '@/composables/useCrudList'
+import type { LogRecord, PaginatedResult } from '@/api/types'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'LogsPage' })
 
-const loading = ref(false)
-const tableData = ref<any[]>([])
-const page = ref(1)
-const size = ref(20)
-const total = ref(0)
+// 业务状态（非 CRUD 通用部分）
 const detailVisible = ref(false)
-const currentLog = ref<any>(null)
-
-const filters = reactive({
-  keyword: '',
-  username: '',
-  clientIp: '',
-  requestUri: '',
-  method: '',
-  responseStatus: '',
-  timeRange: [] as string[],
-})
+const currentLog = ref<LogRecord | null>(null)
+const error = ref('')
 
 const methodOptions = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 const statusOptions = [
@@ -37,80 +28,51 @@ const statusOptions = [
   { label: '500', value: '500' },
 ]
 
-function buildParams() {
-  const params: Record<string, any> = { page: page.value, size: size.value }
-  if (filters.keyword.trim()) {
-    params.keyword = filters.keyword.trim()
-  }
-  if (filters.username.trim()) {
-    params.username = filters.username.trim()
-  }
-  if (filters.clientIp.trim()) {
-    params.clientIp = filters.clientIp.trim()
-  }
-  if (filters.requestUri.trim()) {
-    params.requestUri = filters.requestUri.trim()
-  }
-  if (filters.method) {
-    params.method = filters.method
-  }
-  if (filters.responseStatus) {
-    params.responseStatus = filters.responseStatus
-  }
-  if (filters.timeRange.length === 2) {
-    params.startTime = filters.timeRange[0]
-    params.endTime = filters.timeRange[1]
-  }
-  return params
+// CRUD 列表逻辑：复用 useCrudList composable
+interface LogsQuery {
+  keyword: string
+  username: string
+  clientIp: string
+  requestUri: string
+  method: string
+  responseStatus: string
+  timeRange: string[]
 }
 
-async function loadData() {
-  loading.value = true
+const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, loadData } = useCrudList<
+  LogRecord,
+  LogsQuery
+>({
+  fetchApi: async (params) => {
+    // 构造后端请求参数：空值不传，timeRange 拆为 startTime/endTime
+    const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
+    const apiParams: Record<string, any> = { page, size }
+    if (keyword?.trim()) apiParams.keyword = keyword.trim()
+    if (username?.trim()) apiParams.username = username.trim()
+    if (clientIp?.trim()) apiParams.clientIp = clientIp.trim()
+    if (requestUri?.trim()) apiParams.requestUri = requestUri.trim()
+    if (method) apiParams.method = method
+    if (responseStatus) apiParams.responseStatus = responseStatus
+    if (timeRange?.length === 2) {
+      apiParams.startTime = timeRange[0]
+      apiParams.endTime = timeRange[1]
+    }
+    try {
+      error.value = ''
+      return searchSystemLogs(apiParams)
+    }
+    catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '加载日志记录失败'
+      error.value = msg
+      return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
+    }
+  },
+  defaultQuery: { keyword: '', username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+})
+
+async function openDetail(row: LogRecord) {
   try {
-    const response = await searchSystemLogs(buildParams() as {
-      page: number
-      size: number
-      keyword?: string
-      clientIp?: string
-      requestUri?: string
-      method?: string
-      responseStatus?: string
-      startTime?: string
-      endTime?: string
-    })
-    const payload = response.data || {}
-    tableData.value = Array.isArray(payload.list) ? payload.list : []
-    total.value = Number(payload.total || 0)
-  }
-  catch (error: any) {
-    tableData.value = []
-    total.value = 0
-    ElMessage.error(error?.message || '日志查询失败')
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-function handleSearch() {
-  page.value = 1
-  loadData()
-}
-
-function resetFilters() {
-  filters.keyword = ''
-  filters.username = ''
-  filters.clientIp = ''
-  filters.requestUri = ''
-  filters.method = ''
-  filters.responseStatus = ''
-  filters.timeRange = []
-  handleSearch()
-}
-
-async function openDetail(row: any) {
-  try {
-    const response = await getLogById(row.id)
+    const response = await getLogById(row.id!)
     currentLog.value = response.data || row
   }
   catch {
@@ -168,8 +130,6 @@ function statusTagType(status: string | number) {
   }
   return 'info'
 }
-
-onMounted(loadData)
 </script>
 
 <template>
@@ -193,30 +153,30 @@ onMounted(loadData)
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="关键字">
-          <el-input v-model="filters.keyword" clearable placeholder="URI / Body / UA / 用户名" @keyup.enter="handleSearch" />
+          <el-input v-model="query.keyword" clearable placeholder="URI / Body / UA / 用户名" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="用户">
-          <el-input v-model="filters.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
+          <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="客户端 IP">
-          <el-input v-model="filters.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
+          <el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="请求 URI">
-          <el-input v-model="filters.requestUri" clearable placeholder="/v1/scan-api/page" @keyup.enter="handleSearch" />
+          <el-input v-model="query.requestUri" clearable placeholder="/v1/scan-api/page" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="方法">
-          <el-select v-model="filters.method" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.method" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="filters.responseStatus" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 140px;">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="访问时间">
           <el-date-picker
-            v-model="filters.timeRange"
+            v-model="query.timeRange"
             type="datetimerange"
             range-separator="至"
             start-placeholder="开始时间"
@@ -236,7 +196,10 @@ onMounted(loadData)
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="loading" :data="tableData" stripe style="margin-top: 12px;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
+      <el-table v-else :data="list" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.accessTime) }}
@@ -280,8 +243,8 @@ onMounted(loadData)
 
       <div class="pager">
         <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="size"
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"

@@ -5,3 +5,11 @@ python-test-tools
 .qoder
 backend-repo/test-out.txt
 nul
+static
+.agents
+.claude
+.opencode
+.trae
+.qoder
+.workbuddy
+code-review/

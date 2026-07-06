@@ -13,10 +13,9 @@ import org.apache.ibatis.annotations.Update;
 import java.util.List;
 import java.util.Map;
 
-@Mapper
 public interface ScanMapper {
-    @Select("select * from mr_scan where BAH = #{bah} OR SJH = #{bah} ORDER BY pages")
-    List<Scan> findBAH(@Param("bah") String bah);
+    @Select("select * from mr_scan where BAH = #{bah} OR BAH = #{bahRaw} OR SJH = #{bah} OR SJH = #{bahRaw} ORDER BY pages")
+    List<Scan> findBAH(@Param("bah") String bah, @Param("bahRaw") String bahRaw);
 
     @Select("<script>"
             + "SELECT * FROM mr_scan WHERE "

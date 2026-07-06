@@ -22,20 +22,6 @@ public final class PaginationUtils {
     }
 
     /**
-     * 计算总页数
-     *
-     * @param total 总记录数
-     * @param size  每页大小
-     * @return 总页数
-     */
-    public static int calculateTotalPages(long total, int size) {
-        if (size <= 0) {
-            return 0;
-        }
-        return (int) Math.ceil((double) total / size);
-    }
-
-    /**
      * 验证分页参数的合法性
      *
      * @param page 页码

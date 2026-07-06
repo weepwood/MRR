@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.entity.Log;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LogService {
@@ -17,4 +18,10 @@ public interface LogService {
     int countSearchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime);
     List<Log> searchImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime, int page, int size);
     int countImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime);
+
+    /** 统计早于 cutoff 时间点的日志数量（保留清理导出用） */
+    int countOlderThan(LocalDateTime cutoff);
+
+    /** 分批获取早于 cutoff 时间点的日志（保留清理导出用） */
+    List<Log> findOlderThan(LocalDateTime cutoff, int batchSize, int offset);
 }

@@ -32,10 +32,48 @@
   --surface-alt: hsl(var(--secondary));
   --divider: hsl(var(--border));
 
+  /* ===== MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） ===== */
+  /* 品牌主色 */
+  --color-primary: #0075de;          /* Notion Blue — CTA、链接、交互强调 */
+  --color-primary-active: #005bab;   /* Active Blue — 按下态 */
+  --color-primary-deep: #213183;     /* Deep Navy — 次级品牌色 */
+
+  /* 文本 */
+  --color-text: rgba(0, 0, 0, 0.95); /* Near-black — 主文本 */
+  --color-text-muted: #615d59;       /* Warm Gray 500 — 次级文本 */
+  --color-text-placeholder: #a39e98; /* Warm Gray 300 — 占位/禁用 */
+
+  /* 表面 */
+  --color-bg: #ffffff;               /* Pure White — 页面背景 */
+  --color-bg-warm: #f6f5f4;          /* Warm White — 区块交替/卡片填充 */
+  --color-bg-dark: #31302e;          /* Warm Dark — 暗色区域 */
+
+  /* 语义色 */
+  --color-success: #1aae39;          /* Green — 完成确认 */
+  --color-info: #2a9d99;             /* Teal — 正向指标 */
+  --color-warning: #dd5b00;          /* Orange — 警告 */
+  --color-danger: #e03e3e;           /* Red — 错误/危险（补充） */
+
+  /* 边框 — Notion 风格的 whisper-weight 分割线 */
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
   &.dark {
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;
+
+    /* 暗色模式下调色板映射 */
+    --color-text: rgba(255, 255, 255, 0.95);
+    --color-text-muted: #a39e98;
+    --color-text-placeholder: #615d59;
+
+    --color-bg: #31302e;
+    --color-bg-warm: #3d3a37;
+    --color-bg-dark: #252321;
+
+    --color-border: rgba(255, 255, 255, 0.1);
+    --color-border-strong: rgba(255, 255, 255, 0.16);
   }
 }
 

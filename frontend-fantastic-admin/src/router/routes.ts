@@ -177,6 +177,15 @@ const asyncRoutes: Route.recordMainRaw[] = [
           auth: ['record:read'],
         },
       },
+      {
+        path: '/archive-search/:keyword?',
+        component: () => import('@/views/archive-search/index.vue'),
+        meta: {
+          title: '档案搜索',
+          icon: 'i-ant-design:search-outlined',
+          auth: ['record:read'],
+        },
+      },
     ],
   },
   {
@@ -212,15 +221,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           auth: ['system:read'],
         },
       },
-      {
-        path: '/testing',
-        component: () => import('@/views/testing/index.vue'),
-        meta: {
-          title: '测试中心',
-          icon: 'i-ant-design:experiment-twotone',
-          auth: ['test:read'],
-        },
-      },
+
     ],
   },
 ]

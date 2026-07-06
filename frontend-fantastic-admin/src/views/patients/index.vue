@@ -3,12 +3,16 @@ import type { PatientRecord } from '@/api/modules/patients'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
-import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
+import { getPatients } from '@/api/modules/patients'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
 const loading = ref(false)
 const tableData = ref<PatientRecord[]>([])
+const error = ref('')
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
@@ -18,16 +22,17 @@ const filters = reactive({ keyword: '' })
 async function loadData() {
   loading.value = true
   try {
+    error.value = ''
     const params = { page: page.value, size: size.value, ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }) }
     const res = await getPatients(params)
-    const payload = res.data || {} as any
+    const payload = res.data ?? { list: [], total: 0 }
     tableData.value = Array.isArray(payload.list) ? payload.list : []
     total.value = Number(payload.total || 0)
   }
-  catch (error: any) {
+  catch (err: unknown) {
     tableData.value = []
     total.value = 0
-    ElMessage.error(error?.message || '患者列表加载失败')
+    error.value = err instanceof Error ? err.message : '患者列表加载失败'
   }
   finally { loading.value = false }
 }
@@ -36,25 +41,6 @@ function handleSearch() { page.value = 1; loadData() }
 function resetFilters() { filters.keyword = ''; handleSearch() }
 function handlePageChange(p: number) { page.value = p; loadData() }
 function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData() }
-
-async function exportExcel() {
-  try {
-    const params = filters.keyword.trim() ? { keyword: filters.keyword.trim() } : undefined
-    const response = await exportPatientsExcel(params)
-    const blob = new Blob([response.data as BlobPart], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `patients-${new Date().toISOString().slice(0, 10)}.xlsx`
-    link.click()
-    URL.revokeObjectURL(link.href)
-    ElMessage.success('导出成功')
-  }
-  catch (error: any) {
-    ElMessage.error(error?.message || '导出失败')
-  }
-}
 
 onMounted(loadData)
 </script>
@@ -74,9 +60,7 @@ onMounted(loadData)
       <el-button :loading="loading" :icon="Refresh" @click="loadData">
         刷新
       </el-button>
-      <el-button type="success" @click="exportExcel">
-        导出 Excel
-      </el-button>
+
     </div>
 
     <el-card shadow="never">
@@ -102,7 +86,10 @@ onMounted(loadData)
     </el-card>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="tableData" stripe style="width: 100%;">
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="loadData" />
+      <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
+      <el-table v-else :data="tableData" stripe style="width: 100%;">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />

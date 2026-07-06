@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
+import com.zjcxph.imgapi.utils.IpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,7 +38,7 @@ public class SearchController {
     @Operation(summary = "健康检查")
     @GetMapping("/hello")
     public String hello(HttpServletRequest request) {
-        return "hello world search, your IP is: " + getClientIP(request);
+        return "hello world search, your IP is: " + IpUtil.getClientIp(request);
     }
 
     @Operation(summary = "通过加密身份证号查询病案号（带时间戳）")
@@ -55,7 +56,7 @@ public class SearchController {
             return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt id-card failed: {}", e.getMessage(), e);
-            return Result.fail("decrypt failed: " + e.getMessage());
+            return Result.fail("解密失败：" + e.getMessage());
         }
     }
 
@@ -73,7 +74,7 @@ public class SearchController {
             return Result.success(patients);
         } catch (Exception e) {
             logger.error("Decrypt legacy id-card failed: {}", e.getMessage(), e);
-            return Result.fail("decrypt failed: " + e.getMessage());
+            return Result.fail("解密失败：" + e.getMessage());
         }
     }
 
@@ -105,16 +106,5 @@ public class SearchController {
         logger.info("Found {} records for idCard={}***", patients.size(),
                 request.getIdCard().substring(0, 4));
         return Result.success(patients);
-    }
-
-    private String getClientIP(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 }

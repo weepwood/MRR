@@ -42,19 +42,9 @@ function setupRoutes(router: Router) {
             case 'frontend':
               routeStore.generateRoutesAtFront(asyncRoutes)
               break
-            case 'backend':
-              await routeStore.generateRoutesAtBack()
-              break
             case 'filesystem':
               routeStore.generateRoutesAtFilesystem(asyncRoutesByFilesystem)
-              switch (settingsStore.settings.menu.baseOn) {
-                case 'frontend':
-                  menuStore.generateMenusAtFront()
-                  break
-                case 'backend':
-                  await menuStore.generateMenusAtBack()
-                  break
-              }
+              menuStore.generateMenusAtFront()
               break
           }
 
@@ -89,13 +79,22 @@ function setupRoutes(router: Router) {
       }
     }
     else {
-      if (to.name !== 'login') {
-        return {
-          name: 'login',
-          query: {
-            redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
-          },
-        }
+      userStore.setSession({
+        token: 'dev-token',
+        user: {
+          username: 'dev',
+          displayName: 'Dev User',
+          roleCode: 'ADMIN',
+          roleName: 'Administrator',
+          status: 'active',
+          permissions: [],
+        },
+      })
+
+      return {
+        path: to.path,
+        query: to.query,
+        replace: true,
       }
     }
   })

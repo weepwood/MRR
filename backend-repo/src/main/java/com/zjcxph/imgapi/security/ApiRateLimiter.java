@@ -47,6 +47,10 @@ public class ApiRateLimiter {
 
     /**
      * 记录一次请求。如果超出限制则拒绝记录并返回 false。
+     * <p>
+     * 检查与计数在同一 synchronized 块内完成，保证原子性，
+     * 避免高并发下多线程同时通过检查导致实际通过数超过 MAX_REQUESTS。
+     * </p>
      *
      * @param clientIp 客户端 IP
      * @return true 表示允许通过，false 表示已被限流
@@ -55,19 +59,23 @@ public class ApiRateLimiter {
         if (clientIp == null || clientIp.isEmpty()) {
             return true;
         }
-        if (isBlocked(clientIp)) {
-            logger.warn("API rate limit exceeded for IP: {}", clientIp);
-            return false;
+        long now = System.currentTimeMillis();
+        long cutoff = now - WINDOW_MS;
+
+        // computeIfAbsent 保证 LinkedList 只创建一次，后续 synchronized 基于同一对象
+        LinkedList<Long> timestamps = requestTimestamps.computeIfAbsent(clientIp, k -> new LinkedList<>());
+
+        synchronized (timestamps) {
+            // 清理过期时间戳
+            timestamps.removeIf(ts -> ts < cutoff);
+            // 原子检查：超限则拒绝
+            if (timestamps.size() >= MAX_REQUESTS) {
+                logger.warn("API rate limit exceeded for IP: {}", clientIp);
+                return false;
+            }
+            // 记录本次请求
+            timestamps.add(now);
+            return true;
         }
-        requestTimestamps.compute(clientIp, (k, v) -> {
-            if (v == null) {
-                v = new LinkedList<>();
-            }
-            synchronized (v) {
-                v.add(System.currentTimeMillis());
-            }
-            return v;
-        });
-        return true;
     }
 }

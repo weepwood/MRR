@@ -4,6 +4,9 @@ import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
+import AppLoading from '@/components/AppLoading/index.vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -20,6 +23,7 @@ interface FolderNode {
 // ==================== State ====================
 const stats = ref<MigrationStatistics>({})
 const pendingList = ref<ScanRecord[]>([])
+const error = ref('')
 const logList = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
 const logPage = ref(1)
@@ -144,9 +148,7 @@ async function loadFolders() {
   loading.folders = true
   try {
     const res = await getPendingFolders()
-    const data = res.data || res || []
-    const list = Array.isArray(data) ? data : []
-    folderTree.value = buildFolderTree(list)
+    folderTree.value = buildFolderTree(res.data ?? [])
   }
   catch (err: any) {
     console.error('[OSS] load folders error:', err)
@@ -171,8 +173,7 @@ async function loadPendingByFolder(folder: string) {
   loading.pending = true
   try {
     const res = await getPendingMigrations({ folder })
-    const data = res.data || res || {}
-    pendingList.value = Array.isArray(data.list) ? data.list : []
+    pendingList.value = res.data?.list ?? []
     selectedPending.value = []
   }
   catch (err: any) {
@@ -187,13 +188,14 @@ async function loadPendingByFolder(folder: string) {
 async function loadPending() {
   selectedFolder.value = ''
   loading.pending = true
+  error.value = ''
   try {
     const res = await getPendingMigrations({ limit: 50 })
-    const data = res.data || res || {}
-    pendingList.value = Array.isArray(data.list) ? data.list : []
+    pendingList.value = res.data?.list ?? []
   }
   catch (err: any) {
     console.error('[OSS] load pending error:', err)
+    error.value = err?.message || '加载待迁移列表失败'
     ElMessage.error(err?.message || '加载待迁移列表失败')
   }
   finally {
@@ -206,7 +208,7 @@ async function loadStats() {
   loading.stats = true
   try {
     const res = await getMigrationStatistics()
-    stats.value = res.data || res || {}
+    stats.value = res.data ?? {}
   }
   catch {
     // silent
@@ -224,9 +226,9 @@ async function loadLogs() {
       page: logPage.value,
       size: logSize.value,
     })
-    const data = res.data || res || {}
-    logList.value = Array.isArray(data.list) ? data.list : []
-    logTotal.value = Number(data.total || 0)
+    const data = res.data ?? { list: [], total: 0 }
+    logList.value = data.list
+    logTotal.value = data.total
   }
   catch {
     // silent
@@ -542,8 +544,10 @@ onMounted(refreshAll)
             </div>
           </div>
         </template>
-        <el-table
-          v-loading="loading.pending"
+        <AppLoading v-if="loading.pending" type="table" :rows="6" />
+        <AppError v-else-if="error" :message="error" @retry="loadPending" />
+        <AppEmpty v-else-if="!pendingList.length" description="暂无待迁移记录" />
+        <el-table v-else
           :data="pendingList"
           stripe
           size="small"

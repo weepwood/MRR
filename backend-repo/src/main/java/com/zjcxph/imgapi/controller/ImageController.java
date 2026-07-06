@@ -230,7 +230,7 @@ public class ImageController {
         if (url == null) {
             return Result.fail("无法构造图片URL，缺少必要字段");
         }
-        return Result.success(url);
+        return Result.<String>successWithData(url);
     }
 
     @Operation(summary = "通过后端代理获取 OSS 图片")

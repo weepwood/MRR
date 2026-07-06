@@ -3,10 +3,10 @@ package com.zjcxph.imgapi.unit.controller;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.SystemSettingController;
 import com.zjcxph.imgapi.service.SystemSettingService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -26,8 +26,12 @@ class SystemSettingControllerTest {
     @Mock
     private SystemSettingService systemSettingService;
 
-    @InjectMocks
     private SystemSettingController systemSettingController;
+
+    @BeforeEach
+    void setUp() {
+        systemSettingController = new SystemSettingController(systemSettingService);
+    }
 
     @Test
     @DisplayName("GET /api/v1/settings — 返回全部设置")

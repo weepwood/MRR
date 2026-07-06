@@ -44,18 +44,27 @@ public class Result<T> {
     }
     
     /**
-     * 成功响应(带自定义消息)
+     * 成功响应(带消息) - 使用前注意：当 T 为 String 类型时请用 {@link #successWithData(Object)} 避免重载歧义
      * 使用示例: Result.success("操作成功")
      */
     public static <T> Result<T> success(String message) {
         return new Result<>(ResultCode.SUCCESS.getCode(), message, null);
     }
-    
+
     /**
      * 成功响应(带数据) - 自动推断泛型类型
      * 使用示例: Result.success(user) -> Result<User>
+     * 当 T 为 String 时请改用 {@link #successWithData(Object)}
      */
     public static <T> Result<T> success(T data) {
+        return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
+    }
+
+    /**
+     * 成功响应(带字符串数据) - 避开 {@link #success(String)} 的重载歧义
+     * 使用示例: Result.successWithData("info")
+     */
+    public static <T> Result<T> successWithData(T data) {
         return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
     }
     

@@ -47,7 +47,7 @@ public class SystemSettingController {
         if (value == null) {
             return Result.fail(404, "设置项不存在: " + key);
         }
-        return Result.success(value);
+        return Result.<String>successWithData(value);
     }
 
     @Operation(summary = "批量保存系统设置")

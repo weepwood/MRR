@@ -1,0 +1,4 @@
+shamefullyHoist: true
+strictPeerDependencies: false
+engineStrict: true
+verifyDepsBeforeRun: prompt

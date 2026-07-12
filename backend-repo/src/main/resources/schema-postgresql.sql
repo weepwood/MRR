@@ -195,15 +195,17 @@ COMMENT ON COLUMN app.mr_system_settings.updated_by   IS '最后修改用户';
 CREATE INDEX IF NOT EXISTS idx_mr_scan_bah               ON app.mr_scan (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_brxh              ON app.mr_scan (brxh);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_sjh               ON app.mr_scan (sjh);
-CREATE INDEX IF NOT EXISTS idx_mr_scan_folder_bah         ON app.mr_scan (folder, bah);
+CREATE INDEX IF NOT EXISTS idx_mr_scan_folder_id          ON app.mr_scan (folder, id);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_migration_status   ON app.mr_scan (migration_status);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_oss_url            ON app.mr_scan (oss_url) WHERE oss_url IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_migration  ON app.mr_scan (id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
+CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_id         ON app.mr_scan (id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
+CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_folder_id  ON app.mr_scan (folder, id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
 CREATE INDEX IF NOT EXISTS idx_mr_scan_bah_cover          ON app.mr_scan (bah) INCLUDE (filename, pages, btype);
 
 -- 4.2 mr_statistics 索引
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah  ON app.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_date_normalized ON app.mr_statistics ((replace(date, '/', '-')));
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 
@@ -211,8 +213,7 @@ CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON app.mr_patient (idcard);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_bah     ON app.mr_patient (bah);
 
--- 4.4 mr_auth_user 索引
-CREATE INDEX IF NOT EXISTS idx_mr_auth_user_username  ON app.mr_auth_user (username);
+-- 4.4 mr_auth_user 索引（username 的 UNIQUE 约束已自动创建索引）
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_role_code ON app.mr_auth_user (role_code);
 
 -- 4.5 access_log 索引（BRIN 适用于大容量追加型日志表）
@@ -229,6 +230,7 @@ CREATE INDEX IF NOT EXISTS idx_migration_status         ON app.image_migration_l
 CREATE INDEX IF NOT EXISTS idx_migration_scan_id        ON app.image_migration_log (scan_id);
 CREATE INDEX IF NOT EXISTS idx_migration_created_at     ON app.image_migration_log (created_at);
 CREATE INDEX IF NOT EXISTS idx_migration_status_created ON app.image_migration_log (migration_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_migration_scan_created   ON app.image_migration_log (scan_id, created_at DESC);
 
 -- 4.7 migration_job 索引
 CREATE INDEX IF NOT EXISTS idx_migration_job_status     ON app.migration_job (status);

@@ -8,8 +8,8 @@ const props = defineProps<{
   data: ResponseMetricTrendPoint[]
 }>()
 
-const chartWidth = 720
-const chartHeight = 240
+const chartWidth = 600
+const chartHeight = 220
 const padding = { top: 24, right: 24, bottom: 42, left: 48 }
 const plotWidth = chartWidth - padding.left - padding.right
 const plotHeight = chartHeight - padding.top - padding.bottom
@@ -108,7 +108,9 @@ function shortBucket(bucket: string) {
 .response-trend-chart {
   display: block;
   width: 100%;
+  height: auto;
   min-width: 620px;
+  aspect-ratio: 600 / 220;
 }
 
 .grid-lines line {

@@ -7,9 +7,6 @@ import ResponseTrendChart from './components/ResponseTrendChart.vue'
 
 defineOptions({ name: 'ResponseAnalysisPage' })
 
-type AnalysisDays = 1 | 7 | 30
-
-const days = ref<AnalysisDays>(7)
 const loading = ref(false)
 const error = ref('')
 const analysis = ref<ResponseMetricAnalysis | null>(null)
@@ -44,7 +41,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getResponseMetricAnalysis(days.value)
+    const response = await getResponseMetricAnalysis(7)
     analysis.value = response.data ?? null
   }
   catch {
@@ -68,15 +65,10 @@ onMounted(loadData)
         </p>
         <h2>接口响应分析</h2>
         <p class="subtitle">
-          对比浏览器端到端耗时与服务端处理耗时，定位慢接口和异常趋势。
+          近 7 天浏览器端到端耗时与服务端处理耗时对比，定位慢接口和异常趋势。
         </p>
       </div>
       <div class="page-actions">
-        <el-select v-model="days" class="range-select" aria-label="统计时间范围" @change="loadData">
-          <el-option :value="1" label="近 1 天" />
-          <el-option :value="7" label="近 7 天" />
-          <el-option :value="30" label="近 30 天" />
-        </el-select>
         <el-button :loading="loading" @click="loadData">
           <el-icon><Refresh /></el-icon>
           刷新
@@ -247,10 +239,6 @@ h2 {
   align-items: center;
 }
 
-.range-select {
-  width: 120px;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -345,10 +333,6 @@ h2 {
 
   .page-actions {
     width: 100%;
-  }
-
-  .range-select {
-    flex: 1;
   }
 
   .summary-grid {

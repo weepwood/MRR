@@ -46,11 +46,6 @@ function mountPage() {
         'el-empty': { props: ['description'], template: '<div class="el-empty">{{ description }}</div>' },
         'el-icon': { template: '<i><slot /></i>' },
         'el-option': true,
-        'el-select': {
-          props: ['modelValue'],
-          emits: ['update:modelValue', 'change'],
-          template: '<select class="range-select" :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\')"><option value="1">1</option><option value="7">7</option><option value="30">30</option></select>',
-        },
         'el-table': { props: ['data'], template: '<div class="el-table"><div v-for="row in data" :key="row.routePattern" class="slow-row">{{ row.method }} {{ row.routePattern }}</div><slot /></div>' },
         'el-table-column': true,
         'ResponseTrendChart': { props: ['data'], template: '<div class="response-trend-chart">{{ data.length }}</div>' },
@@ -76,17 +71,6 @@ describe('responseAnalysisPage', () => {
     expect(wrapper.text()).toContain('88.2 ms')
     expect(wrapper.find('.response-trend-chart').text()).toBe('2')
     expect(wrapper.text()).toContain('GET /api/v1/statistics/summary')
-  })
-
-  it('reloads data when the time range changes', async () => {
-    getResponseMetricAnalysis.mockResolvedValue({ code: 200, data: analysisData })
-    const wrapper = mountPage()
-    await flushPromises()
-
-    await wrapper.find('.range-select').setValue('30')
-    await flushPromises()
-
-    expect(getResponseMetricAnalysis).toHaveBeenLastCalledWith(30)
   })
 
   it('shows an empty state when no response metrics exist', async () => {

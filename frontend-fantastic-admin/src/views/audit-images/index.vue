@@ -58,7 +58,7 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
         apiParams.startTime = timeRange[0]
         apiParams.endTime = timeRange[1]
       }
-      return searchImageAuditLogs(apiParams)
+      return searchImageAuditLogs(apiParams as Parameters<typeof searchImageAuditLogs>[0])
     }
     catch (err: any) {
       error.value = err?.message || '加载失败'
@@ -82,7 +82,7 @@ async function openDetail(row: LogRecord) {
 }
 function formatDateTime(value: unknown) { if (!value) { return '-' }; const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false }) }
 function statusTagType(status: string | number) { const code = Number(status); if (Number.isNaN(code)) { return 'info' }; if (code >= 500) { return 'danger' }; if (code >= 400) { return 'warning' }; if (code >= 200 && code < 400) { return 'success' }; return 'info' }
-function actionLabel(value: string) { return actionOptions.find(item => item.value === value)?.label || value || '-' }
+function actionLabel(value?: string) { return actionOptions.find(item => item.value === value)?.label || value || '-' }
 </script>
 
 <template>

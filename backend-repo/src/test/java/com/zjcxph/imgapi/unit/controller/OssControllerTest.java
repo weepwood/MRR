@@ -119,14 +119,14 @@ class OssControllerTest {
         @Test
         @DisplayName("getPendingMigrations — 透传")
         void getPendingMigrations() {
-            when(migrationService.getPendingMigrations(50)).thenReturn(List.of());
+            when(migrationService.getPendingMigrations(50, null)).thenReturn(List.of());
             Result<Map<String, Object>> r = controller.getPendingMigrations(50, null);
             assertThat(r.getCode()).isEqualTo(200);
         }
 
         @Test
-        @DisplayName("getMigrationLogs — 成功记录预签名 URL")
-        void getMigrationLogs_withPresignedUrl() {
+        @DisplayName("getMigrationLogs — 保留存储键")
+        void getMigrationLogs_keepsStorageKey() {
             ImageMigrationLog log = new ImageMigrationLog();
             log.setId(1L);
             log.setMigrationStatus("success");
@@ -134,12 +134,11 @@ class OssControllerTest {
             when(migrationService.getMigrationLogs(eq("success"), anyInt(), anyInt()))
                     .thenReturn(List.of(log));
             when(migrationService.countMigrationLogs("success")).thenReturn(1L);
-            when(ossService.generatePresignedUrl("oss-key-123")).thenReturn("https://signed");
-
             Result<PageResult<ImageMigrationLog>> r = controller.getMigrationLogs("success", 1, 20);
 
             assertThat(r.getCode()).isEqualTo(200);
-            assertThat(r.getData().getList().get(0).getOssUrl()).isEqualTo("https://signed");
+            assertThat(r.getData().getList().get(0).getOssUrl()).isEqualTo("oss-key-123");
+            verifyNoInteractions(ossService);
         }
     }
 

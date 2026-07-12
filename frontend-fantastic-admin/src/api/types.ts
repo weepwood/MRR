@@ -98,7 +98,7 @@ export interface BAHStatistics {
 
 /** 日期统计汇总 */
 export interface DateStatistics {
-  date?: string
+  date: string
   recordCount?: number
   totalPages?: number
 }
@@ -200,7 +200,11 @@ export interface LoginRequest {
 /** 登录响应 */
 export interface LoginResponse {
   token?: string
+  accessToken?: string
+  jwt?: string
   user?: AuthUser
+  profile?: AuthUser
+  data?: LoginResponse
 }
 
 /** 注册请求 */

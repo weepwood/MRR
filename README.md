@@ -33,7 +33,7 @@ MRR 是一套面向医疗机构的影像记录管理系统，核心功能包括�
 
 ### 环境要求
 - JDK 21+
-- Node.js 18+
+- Node.js 22 (see `frontend-fantastic-admin/.node-version`)
 - PostgreSQL 16+
 - Maven 3.9+
 
@@ -53,18 +53,26 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 
 # 4. 启动前端
 cd frontend-fantastic-admin
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
 ### 访问系统
 ```
-前端地址: http://localhost:5173
+前端地址: http://localhost:9000
 后端接口: http://localhost:18045
 默认账号: br_admin / br_password
 ```
 
 > 首次使用请参考 [完整安装指南](vitepress-doc/getting-started/installation.md)。
+
+### 启动完整容器环境
+
+```bash
+cp .env.example .env # Windows PowerShell: Copy-Item .env.example .env
+# Set strong values for POSTGRES_PASSWORD, AES_SECRET_KEY, and JWT_SECRET_KEY in .env.
+docker compose up --build
+```
 
 ## 📚 文档
 

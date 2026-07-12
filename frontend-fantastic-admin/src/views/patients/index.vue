@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { getPatients } from '@/api/modules/patients'
 import AppLoading from '@/components/AppLoading/index.vue'

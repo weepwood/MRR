@@ -12,9 +12,11 @@ declare module 'axios' {
 
 const MAX_RETRY_COUNT = 3
 const RETRY_DELAY = 1000
+const ERROR_TOAST_DEDUPE_MS = 2000
 
 // 401 登出防抖标志：并发多个 401 时只触发一次登出，避免多次 router.push('login')
 let isLoggingOut = false
+const recentErrorToasts = new Map<string, number>()
 
 const api = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
@@ -38,6 +40,23 @@ function getErrorMessage(error: AxiosError | any) {
     return `接口${message.slice(-3)}异常`
   }
   return message || '请求失败'
+}
+
+function showGlobalError(error: AxiosError | any) {
+  const message = getErrorMessage(error)
+  const key = `${error?.response?.status ?? 'network'}:${message}`
+  const now = Date.now()
+  const lastShownAt = recentErrorToasts.get(key) ?? 0
+
+  if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {
+    return
+  }
+
+  recentErrorToasts.set(key, now)
+  toast.error('请求失败', {
+    id: `api-error-${key}`,
+    description: message,
+  })
 }
 
 async function handleError(error: AxiosError | any) {
@@ -66,9 +85,7 @@ async function handleError(error: AxiosError | any) {
   }
 
   if (!config?.skipGlobalError) {
-    toast.error('Error', {
-      description: getErrorMessage(error),
-    })
+    showGlobalError(error)
   }
 
   return Promise.reject(error)
@@ -96,7 +113,8 @@ api.interceptors.response.use(
           // 防抖：并发请求收到 status=0 时只触发一次登出
           if (!isLoggingOut) {
             isLoggingOut = true
-            useUserStore().requestLogout().finally(() => { isLoggingOut = false })
+            void Promise.resolve(useUserStore().requestLogout())
+              .finally(() => { isLoggingOut = false })
           }
         }
         if (typeof statusValue === 'string') {

@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: imgapi
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: weepwood
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:
@@ -26,19 +26,28 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imgapi?currentSchema=app
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: weepwood
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      AES_SECRET_KEY: ${AES_SECRET_KEY:?Set AES_SECRET_KEY in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
       APP_LOG_RETENTION_ENABLED: "false"
       APP_LOG_RETENTION_RETENTION_DAYS: "1095"
       SERVER_PORT: "18045"
     ports:
       - "18045:18045"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:18045/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
   frontend:
     build:
       context: ./frontend-fantastic-admin
     container_name: mrr-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "8080:80"
 

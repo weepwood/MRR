@@ -90,11 +90,11 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     }),
 
     // https://github.com/condorheroblog/vite-plugin-fake-server
-    vitePluginFakeServer({
+    viteEnv.VITE_BUILD_MOCK && vitePluginFakeServer({
       logger: !isBuild,
       include: 'src/mock',
       infixName: false,
-      enableProd: isBuild && viteEnv.VITE_BUILD_MOCK,
+      enableProd: isBuild,
     }),
 
     // https://github.com/dishait/vite-plugin-vue-meta-layouts

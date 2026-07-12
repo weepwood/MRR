@@ -1,4 +1,6 @@
 .DS_Store
+.env
+.env.local
 frontend-repo
 image-migration-tool
 python-test-tools

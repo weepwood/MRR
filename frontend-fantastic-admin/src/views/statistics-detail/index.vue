@@ -169,7 +169,7 @@ async function loadArchiveList() {
   error.value = ''
   try {
     const res = await getStatisticsList(buildQueryParams())
-    const payload = res.data ?? {}
+    const payload = res.data ?? { list: [], total: 0, size: pageSize.value, totalPages: 0, page: currentPage.value }
     const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
     listData.value = {
       total: Number(payload.total || 0),

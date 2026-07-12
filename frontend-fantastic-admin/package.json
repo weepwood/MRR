@@ -14,7 +14,7 @@
     "svgo": "svgo -f src/assets/icons",
     "new": "plop",
     "generate:icons": "tsx ./scripts/generate.icons.ts",
-    "lint": "npm-run-all -s lint:tsc lint:eslint lint:stylelint",
+    "lint": "npm-run-all -s lint:tsc lint:eslint:fix lint:stylelint:fix",
     "lint:tsc": "vue-tsc -b",
     "lint:eslint": "eslint . --cache --fix",
     "lint:stylelint": "stylelint \"src/**/*.{css,scss,vue}\" --cache --fix",

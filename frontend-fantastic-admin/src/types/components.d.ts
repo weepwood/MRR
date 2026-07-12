@@ -13,6 +13,9 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+    AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
+    AppError: typeof import('./../components/AppError/index.vue')['default']
+    AppLoading: typeof import('./../components/AppLoading/index.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -36,7 +39,6 @@ declare module 'vue' {
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSegmented: typeof import('element-plus/es')['ElSegmented']
     ElSelect: typeof import('element-plus/es')['ElSelect']
-    ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
@@ -97,6 +99,9 @@ declare module 'vue' {
 // For TSX support
 declare global {
   const AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+  const AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
+  const AppError: typeof import('./../components/AppError/index.vue')['default']
+  const AppLoading: typeof import('./../components/AppLoading/index.vue')['default']
   const ElAlert: typeof import('element-plus/es')['ElAlert']
   const ElButton: typeof import('element-plus/es')['ElButton']
   const ElCard: typeof import('element-plus/es')['ElCard']
@@ -120,7 +125,6 @@ declare global {
   const ElRow: typeof import('element-plus/es')['ElRow']
   const ElSegmented: typeof import('element-plus/es')['ElSegmented']
   const ElSelect: typeof import('element-plus/es')['ElSelect']
-  const ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
   const ElSwitch: typeof import('element-plus/es')['ElSwitch']
   const ElTable: typeof import('element-plus/es')['ElTable']
   const ElTableColumn: typeof import('element-plus/es')['ElTableColumn']

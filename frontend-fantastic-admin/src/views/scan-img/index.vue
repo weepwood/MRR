@@ -444,7 +444,7 @@ async function onPickType(newType: number) {
   img.btype = newType
   try {
     const res = await updateImageType(img.id, { btype: newType })
-    const ok = res && (res.status === 200 || res.status === 204 || (res.data && res.data.code === 200))
+    const ok = res?.code === 200
     if (!ok) { throw new Error('更新失败') }
     hideTypePicker()
     ElMessage({

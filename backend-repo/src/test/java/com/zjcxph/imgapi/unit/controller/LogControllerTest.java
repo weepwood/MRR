@@ -64,7 +64,7 @@ class LogControllerTest {
             Result<Log> r = controller.getLogById(999L);
 
             assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).contains("not found");
+            assertThat(r.getMessage()).contains("日志不存在");
         }
     }
 

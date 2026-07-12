@@ -78,7 +78,7 @@ class UserControllerTest {
         Result<LoginResponseDTO> result = userController.login(validRequest);
 
         assertThat(result.getCode()).isEqualTo(400);
-        assertThat(result.getMessage()).contains("Invalid");
+        assertThat(result.getMessage()).contains("用户名或密码错误");
     }
 
     @Test
@@ -115,7 +115,7 @@ class UserControllerTest {
         Result<AuthSession> result = userController.currentUser();
 
         assertThat(result.getCode()).isEqualTo(400);
-        assertThat(result.getMessage()).contains("Not logged in");
+        assertThat(result.getMessage()).contains("未登录");
     }
 
     @Test
@@ -171,7 +171,7 @@ class UserControllerTest {
         var result = userController.updateUser(999L, null);
 
         assertThat(result.getCode()).isEqualTo(400);
-        assertThat(result.getMessage()).contains("not found");
+        assertThat(result.getMessage()).contains("用户不存在");
     }
 
     @Test
@@ -182,7 +182,7 @@ class UserControllerTest {
         Result<Void> result = userController.disableUser(1L);
 
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getMessage()).contains("Disable success");
+        assertThat(result.getMessage()).contains("禁用成功");
     }
 
     @Test
@@ -193,6 +193,6 @@ class UserControllerTest {
         Result<Void> result = userController.disableUser(999L);
 
         assertThat(result.getCode()).isEqualTo(400);
-        assertThat(result.getMessage()).contains("not found");
+        assertThat(result.getMessage()).contains("用户不存在");
     }
 }

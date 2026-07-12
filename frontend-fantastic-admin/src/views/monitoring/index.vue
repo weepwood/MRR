@@ -5,7 +5,6 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getMetric } from '@/api/modules/actuator'
 import type {
   ActuatorMetric,
-  ComponentHealth,
   GcStatItem,
   GcStats,
   HealthInfo,

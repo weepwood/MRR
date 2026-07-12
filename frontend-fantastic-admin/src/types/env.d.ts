@@ -9,6 +9,10 @@ interface ImportMetaEnv {
    */
   readonly VITE_APP_DEBUG_TOOL: string
   /**
+   * 展示模式跳过认证接口，便于仅启动前端时浏览页面
+   */
+  readonly VITE_APP_DEMO_MODE: boolean
+  /**
    * 是否禁用开发者工具，可防止被调试
    */
   readonly VITE_APP_DISABLE_DEVTOOL: boolean

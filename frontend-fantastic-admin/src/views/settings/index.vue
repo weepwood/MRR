@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { nextTick, onMounted, reactive, ref } from 'vue'
-import type { SystemSettingService } from '@/api/modules/settings'
 import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
 import AppConfigPanel from './components/AppConfigPanel.vue'
 

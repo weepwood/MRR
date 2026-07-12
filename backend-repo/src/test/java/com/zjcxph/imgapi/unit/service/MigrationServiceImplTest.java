@@ -73,7 +73,7 @@ class MigrationServiceImplTest {
             OssUploadResult r = migrationService.uploadSingleScan(99);
 
             assertThat(r.getStatus()).isEqualTo("failed");
-            assertThat(r.getErrorMessage()).contains("not found");
+            assertThat(r.getErrorMessage()).contains("扫描记录不存在");
         }
 
         @Test
@@ -100,7 +100,7 @@ class MigrationServiceImplTest {
             OssUploadResult r = migrationService.uploadSingleScan(1);
 
             assertThat(r.getStatus()).isEqualTo("failed");
-            assertThat(r.getErrorMessage()).contains("Cannot build local path");
+            assertThat(r.getErrorMessage()).contains("无法构建本地路径");
         }
 
         @Test
@@ -113,7 +113,7 @@ class MigrationServiceImplTest {
             OssUploadResult r = migrationService.uploadSingleScan(1);
 
             assertThat(r.getStatus()).isEqualTo("failed");
-            assertThat(r.getErrorMessage()).contains("Local file not found");
+            assertThat(r.getErrorMessage()).contains("本地文件不存在");
             verify(migrationLogMapper).insert(argThat(log -> "failed".equals(log.getMigrationStatus())));
         }
 

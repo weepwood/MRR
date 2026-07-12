@@ -59,7 +59,7 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
     }
     try {
       error.value = ''
-      return searchSystemLogs(apiParams)
+    return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
     }
     catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载日志记录失败'

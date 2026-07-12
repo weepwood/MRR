@@ -18,6 +18,8 @@ interface Profile {
   lastLoginAt?: string
 }
 
+const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
+
 export const useUserStore = defineStore('user', () => {
   const settingsStore = useSettingsStore()
   const routeStore = useRouteStore()
@@ -68,7 +70,9 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('token')
     token.value = ''
     // 通知后端撤销 token（fire-and-forget，失败不影响登出）
-    apiUser.logout().catch(() => {})
+    if (!isDemoMode) {
+      apiUser.logout().catch(() => {})
+    }
     router.push({
       name: 'login',
       query: {

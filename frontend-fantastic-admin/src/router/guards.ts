@@ -3,6 +3,8 @@ import { useNProgress } from '@vueuse/integrations/useNProgress'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 
+const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
+
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
     const settingsStore = useSettingsStore()
@@ -34,7 +36,7 @@ function setupRoutes(router: Router) {
       }
       else {
         try {
-          if (settingsStore.settings.app.enablePermission) {
+          if (settingsStore.settings.app.enablePermission && !isDemoMode) {
             await userStore.getPermissions()
           }
 
@@ -78,7 +80,7 @@ function setupRoutes(router: Router) {
         }
       }
     }
-    else {
+    else if (isDemoMode) {
       userStore.setSession({
         token: 'dev-token',
         user: {
@@ -95,6 +97,14 @@ function setupRoutes(router: Router) {
         path: to.path,
         query: to.query,
         replace: true,
+      }
+    }
+    else {
+      return {
+        name: 'login',
+        query: {
+          redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
+        },
       }
     }
   })

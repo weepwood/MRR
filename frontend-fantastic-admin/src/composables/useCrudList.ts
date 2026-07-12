@@ -26,7 +26,7 @@ import type { ApiResult, PaginatedResult } from '@/api/types'
  * ```
  */
 interface CrudListOptions<T, Q extends Record<string, any>> {
-  fetchApi: (params: Q & { page: number; size: number }) => Promise<ApiResult<PaginatedResult<T>>>
+  fetchApi: (params: Q & { page: number; size: number }) => Promise<ApiResult<PaginatedResult<T>> | PaginatedResult<T>>
   defaultQuery: Q
   immediate?: boolean
   defaultPageSize?: number
@@ -49,8 +49,9 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
         size: pageSize.value,
       } as Q & { page: number; size: number }
       const res = await opts.fetchApi(params)
-      list.value = res.data?.list ?? []
-      total.value = res.data?.total ?? 0
+      const pageData = ('data' in res ? res.data : res) as PaginatedResult<T> | undefined
+      list.value = pageData?.list ?? []
+      total.value = pageData?.total ?? 0
     }
     finally {
       loading.value = false

@@ -257,7 +257,7 @@ async function loadStatisticsList() {
       startDate?: string; endDate?: string; sortBy?: string; sortOrder?: string
     })
     const raw = res.data ?? { list: [], total: 0, page: 1, size: 20 }
-    statisticsListData.value = raw
+    statisticsListData.value = { ...raw, totalPages: raw.totalPages ?? 0 }
     if (statisticsListData.value.list) {
       statisticsListData.value.list = statisticsListData.value.list.filter((i) => i !== null)
     }

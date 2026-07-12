@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,48 +46,17 @@ jobs:
       - name: Type Check
         run: pnpm lint:tsc
 
-      - name: ESLint
-        id: eslint
-        continue-on-error: true
-        run: pnpm exec eslint . --format json --output-file eslint-report.json
-
-      - name: Upload ESLint report
-        if: steps.eslint.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: eslint-report
-          path: frontend-fantastic-admin/eslint-report.json
-          if-no-files-found: error
-
-      - name: Stylelint
-        id: stylelint
-        continue-on-error: true
-        run: pnpm exec stylelint "src/**/*.{css,scss,vue}" --formatter json > stylelint-report.json
-
-      - name: Upload Stylelint report
-        if: steps.stylelint.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: stylelint-report
-          path: frontend-fantastic-admin/stylelint-report.json
-          if-no-files-found: error
+      - name: Lint Changed Files
+        env:
+          LINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LINT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/lint-changed.mjs
 
       - name: Build
         run: pnpm build
 
       - name: Test
         run: pnpm test:run
-
-      - name: Enforce lint results
-        if: always()
-        env:
-          ESLINT_OUTCOME: ${{ steps.eslint.outcome }}
-          STYLELINT_OUTCOME: ${{ steps.stylelint.outcome }}
-        run: |
-          if [ "$ESLINT_OUTCOME" != "success" ] || [ "$STYLELINT_OUTCOME" != "success" ]; then
-            echo "Lint checks failed. Download the uploaded reports for details."
-            exit 1
-          fi
 
   backend-gate:
     runs-on: ubuntu-latest

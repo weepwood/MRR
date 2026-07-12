@@ -4,11 +4,25 @@ import { cloneDeep } from 'es-toolkit'
 import settingsDefault from '@/settings'
 import { merge } from '@/utils/object'
 
+const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
+
+function getInitialSettings() {
+  const defaults = cloneDeep(settingsDefault)
+
+  try {
+    const savedSettings = localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
+    return savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
+  }
+  catch {
+    return defaults
+  }
+}
+
 export const useSettingsStore = defineStore(
   // 唯一ID
   'settings',
   () => {
-    const settings = ref(settingsDefault)
+    const settings = ref(getInitialSettings())
 
     const prefersColorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     watch(() => settings.value.app.colorScheme, (val) => {
@@ -158,7 +172,16 @@ export const useSettingsStore = defineStore(
 
     // 更新应用配置
     function updateSettings(data: Settings.all, fromBase = false) {
-      settings.value = merge(data, fromBase ? cloneDeep(settingsDefault) : settings.value)
+      settings.value = merge(data, fromBase ? getInitialSettings() : settings.value)
+    }
+
+    function saveAppSettings() {
+      localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(settings.value))
+    }
+
+    function resetAppSettings() {
+      localStorage.removeItem(APP_SETTINGS_STORAGE_KEY)
+      settings.value = cloneDeep(settingsDefault)
     }
 
     return {
@@ -175,6 +198,8 @@ export const useSettingsStore = defineStore(
       toggleSidebarCollapse,
       setColorScheme,
       updateSettings,
+      saveAppSettings,
+      resetAppSettings,
     }
   },
 )

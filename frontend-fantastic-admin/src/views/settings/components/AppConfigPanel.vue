@@ -30,15 +30,38 @@ watch(copied, (val) => {
 function handleCopy() {
   copy(JSON.stringify(diffTwoObj(settingsDefault, settingsStore.settings), null, 2))
 }
+
+function handleSave() {
+  settingsStore.saveAppSettings()
+  toast.success('应用配置已保存到本地浏览器')
+}
+
+function handleReset() {
+  settingsStore.resetAppSettings()
+  toast.success('已恢复默认应用配置')
+}
 </script>
 
 <template>
-  <div>
-    <div class="rounded-2 bg-rose/20 px-4 py-2 text-sm/6 c-rose mb-4">
-      应用配置可实时预览效果，但只是临时生效，要想真正应用于项目，可以点击下方的「复制配置」按钮，并将配置粘贴到 src/settings.ts 文件中。
+  <div class="app-config-panel">
+    <div class="config-notice">
+      应用配置仅保存到当前浏览器，不会提交到系统数据库。
     </div>
 
-    <div>
+    <div class="app-config-toolbar">
+      <el-button type="primary" @click="handleSave">
+        保存到本地
+      </el-button>
+      <el-button @click="handleReset">
+        恢复默认
+      </el-button>
+      <el-button @click="handleCopy">
+        复制配置
+      </el-button>
+    </div>
+
+    <div class="settings-grid">
+      <div>
       <FaDivider>颜色主题风格</FaDivider>
       <div class="flex items-center justify-center pb-4">
         <FaTabs
@@ -340,16 +363,44 @@ function handleCopy() {
       </div>
     </div>
 
-    <div class="mt-4">
-      <FaButton class="w-full" @click="handleCopy">
-        <FaIcon name="i-ep:document-copy" />
-        复制配置
-      </FaButton>
     </div>
   </div>
 </template>
 
 <style scoped>
+.app-config-panel {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.config-notice {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 4px;
+}
+
+.app-config-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 28px;
+}
+
+@media (max-width: 1100px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .menu-mode {
   --uno: flex items-center justify-center gap-4 pb-4;
 

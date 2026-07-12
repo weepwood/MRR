@@ -134,10 +134,10 @@ onMounted(async () => {
         </p>
         <h2>系统设置</h2>
         <p class="subtitle">
-          管理系统与应用的全局配置 · 设置将持久化到服务器
+          管理系统配置与浏览器本地应用偏好
         </p>
       </div>
-      <div class="header-actions">
+      <div v-if="activeTab === 'system'" class="header-actions">
         <el-button type="primary" :loading="saving" @click="handleSave">
           保存设置
         </el-button>

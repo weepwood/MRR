@@ -26,27 +26,26 @@ gitGraph
     branch feature/my-feature
     commit
     commit
-    checkout main
+    checkout dev-no-login
     merge feature/my-feature
     commit
 ```
 
-1. 从 `main` 分支创建特性分支
+1. 从 `dev-no-login` 分支创建特性分支
 2. 在特性分支上开发
 3. 提交前运行测试和 lint
-4. 创建 Pull Request 到 `main` 分支
+4. 创建 Pull Request 到 `dev-no-login` 分支
 5. 等待 Code Review
 
 ## 分支规范
 
 | 分支名 | 用途 | 来源 |
 |--------|------|------|
-| `main` | 稳定发布版本 | - |
-| `develop` | 开发主分支 | `main` |
-| `feature/*` | 新功能开发 | `develop` |
-| `fix/*` | Bug 修复 | `develop` |
-| `hotfix/*` | 紧急修复 | `main` |
-| `release/*` | 发布准备 | `develop` |
+| `dev-no-login` | 默认集成分支 | - |
+| `feature/*` | 新功能开发 | `dev-no-login` |
+| `fix/*` | Bug 修复 | `dev-no-login` |
+| `hotfix/*` | 紧急修复 | `dev-no-login` |
+| `release/*` | 发布准备 | `dev-no-login` |
 
 命名示例：
 - `feature/user-export`
@@ -109,11 +108,12 @@ refactor(mapper): 抽取公共查询方法
 ```bash
 # 后端
 cd backend-repo
-mvn checkstyle:check
+mvn test
 
 # 前端
 cd frontend-fantastic-admin
-npm run lint
+pnpm lint:tsc
+pnpm test:run
 ```
 
 ## Pull Request 流程

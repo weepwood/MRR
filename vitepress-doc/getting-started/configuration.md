@@ -53,22 +53,14 @@ server.ssl.key-store-password=changeit
 server.ssl.key-store-type=PKCS12
 ```
 
-### JWT 认证配置
+### 认证与 AES 密钥
 
-```properties
-# JWT 密钥 (生产环境必须修改!)
-jwt.secret=your-jwt-secret-key-at-least-256-bits
+```powershell
+# JwtUtil 从 JWT_SECRET_KEY 读取签名密钥。
+$env:JWT_SECRET_KEY = 'your-jwt-signing-key'
 
-# Token 有效期 (毫秒)
-jwt.expiration=86400000  # 24小时
-jwt.refresh-expiration=604800000  # 7天
-```
-
-### AES 加密配置
-
-```properties
-# AES 加密密钥 (必须是 32 字节)
-aes.secret.key=change-this-in-production-32-bytes
+# AES 搜索功能使用 AES_SECRET_KEY。
+$env:AES_SECRET_KEY = 'your-32-byte-aes-key'
 ```
 
 ### 影像存储配置
@@ -142,16 +134,10 @@ springdoc.swagger-ui.path=/v1/swagger-ui.html
 VITE_APP_TITLE=MRR 医疗影像管理系统
 
 # API 基础地址
-VITE_API_URL=http://localhost:18045
+VITE_APP_API_BASEURL=http://localhost:18045
 
-# 上传文件大小限制 (MB)
-VITE_MAX_FILE_SIZE=100
-
-# Token 存储方式 (localStorage | sessionStorage)
-VITE_TOKEN_STORAGE=localStorage
-
-# 是否启用 Mock 数据
-VITE_USE_MOCK=false
+# 开发展示模式：跳过认证接口，仅用于浏览界面
+VITE_APP_DEMO_MODE=true
 ```
 
 ### 构建配置
@@ -161,12 +147,12 @@ VITE_USE_MOCK=false
 ```typescript
 export default defineConfig({
   server: {
-    port: 5173,
+    port: 9000,
     proxy: {
-      '/api': {
+      '/proxy': {
         target: 'http://localhost:18045',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: path => path.replace(/\/proxy/, '')
       }
     }
   },
@@ -203,7 +189,7 @@ private static final String PASSWORD_PATTERN =
 @Override
 public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**")
-        .allowedOrigins("http://localhost:5173", "https://your-domain.com")
+        .allowedOrigins("http://localhost:9000", "https://your-domain.com")
         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
         .allowedHeaders("*")
         .allowCredentials(true)
@@ -306,9 +292,9 @@ management.metrics.tags.application=mrr-backend
 
 ```properties
 # 使用环境变量
-spring.datasource.password=${DB_PASSWORD}
-jwt.secret=${JWT_SECRET}
-aes.secret.key=${AES_SECRET_KEY}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+aes.secret.key=${AES_SECRET_KEY:}
+# JWT 签名密钥由 JWT_SECRET_KEY 环境变量提供。
 ```
 
 ## 配置验证

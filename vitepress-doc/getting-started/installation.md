@@ -15,11 +15,11 @@
 **后端服务**
 - JDK 21 或更高版本
 - Maven 3.9+
-- PostgreSQL 15+
+- PostgreSQL 16+
 
 **前端应用**
-- Node.js 18+ (推荐 20+)
-- npm 或 pnpm
+- Node.js 22
+- pnpm 10.33.0
 
 **可选组件**
 - Docker & Docker Compose (容器化部署)
@@ -88,11 +88,8 @@ spring.datasource.password=your_password
 # 服务端口
 server.port=18045
 
-# JWT 密钥 (生产环境请修改)
-jwt.secret=your-jwt-secret-key-change-in-production
-
 # AES 加密密钥 (32 字节)
-aes.secret.key=change-this-in-production-32-bytes
+aes.secret.key=your-32-byte-aes-key
 ```
 
 #### 构建项目
@@ -128,11 +125,7 @@ java -jar target/imgapi-*.jar
 ```bash
 cd frontend-fantastic-admin
 
-# 使用 npm
-npm install
-
-# 或使用 pnpm (推荐)
-pnpm install
+corepack pnpm@10.33.0 install --frozen-lockfile
 ```
 
 #### 配置环境变量
@@ -140,29 +133,21 @@ pnpm install
 创建 `.env.local` 文件:
 
 ```env
-# API 地址
-VITE_API_URL=http://localhost:18045
-
-# 其他配置
-VITE_APP_TITLE=MRR 医疗影像管理系统
+VITE_APP_API_BASEURL=http://localhost:18045
 ```
 
 #### 运行开发服务器
 
 ```bash
-# 开发模式
-npm run dev
-
-# 或
 pnpm dev
 ```
 
-访问 http://localhost:5173
+访问 http://localhost:9000
 
 #### 构建生产版本
 
 ```bash
-npm run build
+pnpm build
 ```
 
 构建产物位于 `dist/` 目录。
@@ -232,7 +217,7 @@ curl http://localhost:18045/actuator/health
 
 ### 2. 检查前端应用
 
-访问 http://localhost:5173，应该能看到登录页面。
+访问 http://localhost:9000。开发环境默认启用展示模式，不会请求认证接口；业务数据仍需要后端服务。
 
 ### 3. 测试登录
 
@@ -253,9 +238,9 @@ curl http://localhost:18045/actuator/health
 server.port=18046
 ```
 
-修改前端端口 (默认 5173):
+修改前端端口 (默认 9000):
 ```bash
-npm run dev -- --port 5174
+pnpm dev -- --port 9001
 ```
 
 ### 数据库连接失败

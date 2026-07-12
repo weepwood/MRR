@@ -61,6 +61,7 @@ export default defineConfig({
           text: '开发环境',
           items: [
             { text: '环境设置', link: '/development/setup' },
+            { text: '应用配置', link: '/development/app-settings' },
           ]
         }
       ],

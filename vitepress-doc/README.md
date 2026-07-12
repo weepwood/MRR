@@ -37,6 +37,8 @@ vitepress-doc/
 
 ### 方式一：使用启动脚本（推荐）
 
+在仓库根目录运行。
+
 **Windows:**
 ```bash
 start-docs.bat
@@ -88,8 +90,9 @@ http://localhost:5173
 
 ### 快速开始指南
 
-- [安装指南](vitepress-doc/getting-started/installation.md) - 系统安装和部署
-- [配置说明](vitepress-doc/getting-started/configuration.md) - 详细配置参数
+- [安装指南](getting-started/installation.md) - 系统安装和部署
+- [配置说明](getting-started/configuration.md) - 详细配置参数
+- [开发环境](development/setup.md) - 本地启动、密钥与验证流程
 
 ## 🛠️ 开发命令
 

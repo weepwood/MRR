@@ -47,13 +47,18 @@ cd MRR
 # 2. 启动数据库
 docker compose up -d postgres
 
-# 3. 启动后端
+# 3. 配置本地后端参数
+cp backend-repo/src/main/resources/application-local.template.properties backend-repo/src/main/resources/application-local.properties
+# Windows PowerShell: Copy-Item backend-repo/src/main/resources/application-local.template.properties backend-repo/src/main/resources/application-local.properties
+# Set spring.datasource.password and aes.secret.key in application-local.properties.
+
+# 4. 启动后端
 cd backend-repo
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 
-# 4. 启动前端
+# 5. 启动前端
 cd frontend-fantastic-admin
-pnpm install --frozen-lockfile
+corepack pnpm@10.33.0 install --frozen-lockfile
 pnpm dev
 ```
 
@@ -86,6 +91,8 @@ npm run docs:dev
 
 - **在线文档**: 启动后访问 http://localhost:5173
 - **文档目录**: `vitepress-doc/`
+
+开发环境、密钥配置与应用配置本地持久化请参考 [开发环境说明](vitepress-doc/development/setup.md)。
 
 | 文档模块 | 说明 |
 |----------|------|

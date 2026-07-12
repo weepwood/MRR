@@ -164,7 +164,7 @@ features:
 ### 环境要求
 
 - JDK 21+
-- Node.js 18+
+- Node.js 22
 - PostgreSQL 16+
 - Maven 3.9+
 
@@ -180,12 +180,13 @@ docker compose up -d postgres
 
 # 3. 启动后端
 cd backend-repo
+# Copy application-local.template.properties to application-local.properties and set the database password.
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 
 # 4. 启动前端
 cd frontend-fantastic-admin
-npm install
-npm run dev
+corepack pnpm@10.33.0 install --frozen-lockfile
+pnpm dev
 ```
 
 ### 访问系统

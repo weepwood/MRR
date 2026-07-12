@@ -70,7 +70,7 @@
 
 3. 检查构建产物
    ```bash
-   npm run build
+   pnpm build
    # 检查 dist/ 目录是否正确生成
    ```
 

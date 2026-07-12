@@ -28,7 +28,9 @@ export default function createVitePlugins(mode: string, isBuild = false) {
   const vitePlugins: (PluginOption | PluginOption[])[] = [
     vue(),
     vueJsx(),
-    vueLegacy({
+    // 当前 Vite 构建目标已覆盖项目使用的现代浏览器。只有在明确需要旧版
+    // 浏览器兼容时才注入额外 polyfill，避免默认首屏下载无用兼容代码。
+    viteEnv.VITE_BUILD_LEGACY && vueLegacy({
       renderLegacyChunks: false,
       modernPolyfills: [
         'es.array.at',

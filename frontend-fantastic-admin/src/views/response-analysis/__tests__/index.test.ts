@@ -1,35 +1,35 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import ResponseAnalysisPage from '../index.vue'
 
-const getResponseMetricAnalysis = vi.fn()
+const { getResponseMetricAnalysis } = vi.hoisted(() => ({
+  getResponseMetricAnalysis: vi.fn(),
+}))
 
 vi.mock('@/api/modules/response-metrics', () => ({
   getResponseMetricAnalysis,
 }))
 
-import ResponseAnalysisPage from '../index.vue'
-
 const analysisData = {
   overview: {
     totalRequests: 120,
     successRate: 98.5,
-    clientP95DurationMs: 320.4,
-    serverAverageDurationMs: 88.2,
+    p95ClientDurationMs: 320.4,
+    avgServerDurationMs: 88.2,
   },
   trend: [
-    { bucket: '2026-07-12', requestCount: 50, clientAverageDurationMs: 180, serverAverageDurationMs: 70 },
-    { bucket: '2026-07-13', requestCount: 70, clientAverageDurationMs: 220, serverAverageDurationMs: 92 },
+    { bucket: '2026-07-12', requestCount: 50, errorCount: 1, avgClientDurationMs: 180, avgServerDurationMs: 70 },
+    { bucket: '2026-07-13', requestCount: 70, errorCount: 1, avgClientDurationMs: 220, avgServerDurationMs: 92 },
   ],
   slowEndpoints: [
     {
-      endpointTemplate: '/api/v1/statistics/summary',
+      routePattern: '/api/v1/statistics/summary',
       method: 'GET',
       requestCount: 20,
-      errorRate: 1.5,
-      clientAverageDurationMs: 250,
-      clientP95DurationMs: 420,
-      serverAverageDurationMs: 80,
-      maxDurationMs: 560,
+      errorCount: 1,
+      avgClientDurationMs: 250,
+      p95ClientDurationMs: 420,
+      avgServerDurationMs: 80,
     },
   ],
 }
@@ -37,6 +37,9 @@ const analysisData = {
 function mountPage() {
   return mount(ResponseAnalysisPage, {
     global: {
+      directives: {
+        loading: {},
+      },
       stubs: {
         'el-button': { template: '<button @click="$emit(\'click\')"><slot /></button>' },
         'el-card': { template: '<section class="el-card"><slot name="header" /><slot /></section>' },
@@ -48,15 +51,15 @@ function mountPage() {
           emits: ['update:modelValue', 'change'],
           template: '<select class="range-select" :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\')"><option value="1">1</option><option value="7">7</option><option value="30">30</option></select>',
         },
-        'el-table': { props: ['data'], template: '<div class="el-table"><div v-for="row in data" :key="row.endpointTemplate" class="slow-row">{{ row.method }} {{ row.endpointTemplate }}</div><slot /></div>' },
+        'el-table': { props: ['data'], template: '<div class="el-table"><div v-for="row in data" :key="row.routePattern" class="slow-row">{{ row.method }} {{ row.routePattern }}</div><slot /></div>' },
         'el-table-column': true,
-        ResponseTrendChart: { props: ['data'], template: '<div class="response-trend-chart">{{ data.length }}</div>' },
+        'ResponseTrendChart': { props: ['data'], template: '<div class="response-trend-chart">{{ data.length }}</div>' },
       },
     },
   })
 }
 
-describe('ResponseAnalysisPage', () => {
+describe('responseAnalysisPage', () => {
   beforeEach(() => {
     getResponseMetricAnalysis.mockReset()
   })
@@ -95,6 +98,22 @@ describe('ResponseAnalysisPage', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('暂无响应指标数据')
+  })
+
+  it('keeps frontend-only metrics visible while server logs are still flushing', async () => {
+    getResponseMetricAnalysis.mockResolvedValue({
+      code: 200,
+      data: {
+        overview: { totalRequests: 0, frontendSampleCount: 1 },
+        trend: [],
+        slowEndpoints: [{ ...analysisData.slowEndpoints[0], requestCount: 1 }],
+      },
+    })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('暂无响应指标数据')
+    expect(wrapper.text()).toContain('GET /api/v1/statistics/summary')
   })
 
   it('shows an error state when loading fails', async () => {

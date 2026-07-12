@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.unit.controller;
 
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.ResponseMetricController;
+import com.zjcxph.imgapi.dto.req.FrontendResponseMetricBatchRequest;
 import com.zjcxph.imgapi.dto.req.FrontendResponseMetricRequest;
 import com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO;
 import com.zjcxph.imgapi.service.ResponseMetricService;
@@ -29,8 +30,10 @@ class ResponseMetricControllerTest {
     @Test
     void recordsFrontendBatch() {
         List<FrontendResponseMetricRequest> metrics = List.of(new FrontendResponseMetricRequest());
+        FrontendResponseMetricBatchRequest batch = new FrontendResponseMetricBatchRequest();
+        batch.setMetrics(metrics);
 
-        Result<Void> result = controller.saveFrontendMetrics(metrics);
+        Result<Void> result = controller.saveFrontendMetrics(batch);
 
         assertThat(result.getCode()).isEqualTo(200);
         verify(service).saveFrontendMetrics(metrics);

@@ -15,18 +15,28 @@ import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.HexFormat;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class LogInterceptor implements HandlerInterceptor {
 
     private static final String AUTH_SESSION_ATTR = "AUTH_SESSION";
+    private static final String START_TIME_ATTR = "startTime";
+    private static final String REQUEST_ID_ATTR = "requestId";
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String ENDPOINT_TEMPLATE_HEADER = "X-Endpoint-Template";
 
     private final AsyncLogService asyncLogService;
     private final MeterRegistry meterRegistry;
@@ -57,14 +67,18 @@ public class LogInterceptor implements HandlerInterceptor {
             MDC.put("userRole", userRole);
         }
 
-        request.setAttribute("startTime", System.currentTimeMillis());
-        request.setAttribute("requestId", requestId);
+        request.setAttribute(START_TIME_ATTR, System.currentTimeMillis());
+        request.setAttribute(REQUEST_ID_ATTR, requestId);
+        response.setHeader(REQUEST_ID_HEADER, requestId);
+        response.setHeader(ENDPOINT_TEMPLATE_HEADER, endpointTemplate(request));
         return true;
     }
 
     @Override
     public void postHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler, ModelAndView modelAndView) {
-        // no-op
+        Long startTime = (Long) request.getAttribute(START_TIME_ATTR);
+        long duration = startTime == null ? 0 : Math.max(0, System.currentTimeMillis() - startTime);
+        response.setHeader("Server-Timing", "app;dur=" + duration);
     }
 
     @Override
@@ -73,7 +87,7 @@ public class LogInterceptor implements HandlerInterceptor {
             return;
         }
 
-        Long startTime = (Long) request.getAttribute("startTime");
+        Long startTime = (Long) request.getAttribute(START_TIME_ATTR);
         long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
 
         Log log = new Log();
@@ -88,17 +102,18 @@ public class LogInterceptor implements HandlerInterceptor {
         }
 
         log.setClientIp(IpUtil.getClientIp(request));
-        log.setRequestUri(request.getRequestURI());
+        log.setRequestUri(endpointTemplate(request));
         log.setMethod(request.getMethod());
         log.setUserAgent(request.getHeader("User-Agent"));
         log.setAccessTime(new Date());
-        log.setQueryString(request.getQueryString());
+        log.setQueryString(redactQueryString(request.getQueryString()));
         log.setRequestBody(getRequestBody(request));
         log.setResponseStatus(String.valueOf(response.getStatus()));
         log.setExecuteTime(executeTime);
-        log.setReferer(request.getHeader("Referer"));
+        log.setReferer(request.getHeader("Referer") == null ? null : "[REDACTED]");
 
         enrichAuditFields(log, request);
+        log.setAuditTarget(pseudonymizeAuditTarget(log.getAuditTarget()));
 
         // 异步保存日志,不阻塞请求响应
         asyncLogService.saveLogAsync(log);
@@ -112,13 +127,18 @@ public class LogInterceptor implements HandlerInterceptor {
                 .increment();
         Timer.builder("http.requests.duration")
                 .tag("method", request.getMethod())
-                .tag("uri", log.getRequestUri().length() > 80 ? log.getRequestUri().substring(0, 80) : log.getRequestUri())
+                .tag("uri", endpointTemplate(request))
                 .description("HTTP 请求耗时分布")
                 .register(meterRegistry)
                 .record(executeTime, java.util.concurrent.TimeUnit.MILLISECONDS);
         
         // 清理 MDC 上下文，防止内存泄漏
         MDC.clear();
+    }
+
+    private String endpointTemplate(HttpServletRequest request) {
+        Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        return pattern == null ? "UNKNOWN" : pattern.toString();
     }
 
     private boolean shouldSkipLogging(HttpServletRequest request, Object handler) {
@@ -249,20 +269,32 @@ public class LogInterceptor implements HandlerInterceptor {
             return "";
         }
 
+        return "[OMITTED " + content.length + " bytes]";
+    }
+
+    private String redactQueryString(String queryString) {
+        if (queryString == null || queryString.isBlank()) {
+            return queryString;
+        }
+        return Stream.of(queryString.split("&", -1))
+                .map(parameter -> {
+                    int separator = parameter.indexOf('=');
+                    String name = separator < 0 ? parameter : parameter.substring(0, separator);
+                    return name + "=[REDACTED]";
+                })
+                .collect(Collectors.joining("&"));
+    }
+
+    private String pseudonymizeAuditTarget(String target) {
+        if (target == null || target.isBlank()) {
+            return target;
+        }
         try {
-            // 限制请求体大小,避免日志过大 (最大 10KB)
-            int maxLength = 10240;
-            String body = new String(content, 0, Math.min(content.length, maxLength), 
-                    wrapper.getCharacterEncoding());
-            
-            // 如果内容被截断,添加提示
-            if (content.length > maxLength) {
-                body += "... [请求体过大,已截断]";
-            }
-            
-            return body;
-        } catch (UnsupportedEncodingException e) {
-            return "[无法解码请求体]";
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(target.getBytes(StandardCharsets.UTF_8));
+            return "sha256:" + HexFormat.of().formatHex(digest, 0, 16);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
         }
     }
 }

@@ -1,12 +1,15 @@
-import type { AxiosError } from 'axios'
+import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { toast } from 'vue-sonner'
+import { createResponseMetric, createResponseMetricQueue } from '@/utils/response-metrics'
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
     retry?: boolean
     retryCount?: number
     skipGlobalError?: boolean
+    skipResponseMetrics?: boolean
+    metricStartedAt?: number
   }
 }
 
@@ -23,6 +26,60 @@ const api = axios.create({
   timeout: 1000 * 60,
   responseType: 'json',
 })
+
+const responseMetricQueue = createResponseMetricQueue(async (metrics) => {
+  const { reportFrontendResponseMetrics } = await import('./modules/response-metrics')
+  await reportFrontendResponseMetrics(metrics)
+})
+
+function parseServerDuration(response: AxiosResponse) {
+  const explicitDuration = Number(
+    response.headers['x-server-duration-ms'] ?? response.headers['x-response-time-ms'],
+  )
+  if (Number.isFinite(explicitDuration)) {
+    return explicitDuration
+  }
+
+  const serverTiming = String(response.headers['server-timing'] ?? '')
+  const durationMatch = serverTiming.match(/(?:^|,)\s*app;dur=([\d.]+)/i)
+  return durationMatch ? Number(durationMatch[1]) : undefined
+}
+
+function extractBusinessCode(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return undefined
+  }
+  if ('code' in payload && typeof payload.code === 'number') {
+    return payload.code
+  }
+  if ('status' in payload && typeof payload.status === 'number') {
+    return payload.status
+  }
+  return undefined
+}
+
+function enqueueResponseMetric(
+  config: InternalAxiosRequestConfig | undefined,
+  response: AxiosResponse | undefined,
+  payload: unknown,
+) {
+  if (!config || config.skipResponseMetrics || !response) {
+    return
+  }
+
+  const metric = createResponseMetric({
+    requestId: String(response.headers['x-request-id'] ?? ''),
+    endpointTemplate: String(response.headers['x-endpoint-template'] ?? ''),
+    method: config.method,
+    status: response.status,
+    businessCode: extractBusinessCode(payload),
+    startedAt: config.metricStartedAt,
+    serverDurationMs: parseServerDuration(response),
+  })
+  if (metric) {
+    responseMetricQueue.enqueue(metric)
+  }
+}
 
 function getErrorMessage(error: AxiosError | any) {
   if (error?.response?.data?.message) {
@@ -62,6 +119,7 @@ function showGlobalError(error: AxiosError | any) {
 async function handleError(error: AxiosError | any) {
   const config = error?.config
   if (error?.response?.status === 401) {
+    enqueueResponseMetric(config, error.response, error.response.data)
     // 防抖：并发 401 时只触发一次登出
     if (!isLoggingOut) {
       isLoggingOut = true
@@ -84,6 +142,8 @@ async function handleError(error: AxiosError | any) {
     }
   }
 
+  enqueueResponseMetric(config, error?.response, error?.response?.data)
+
   if (!config?.skipGlobalError) {
     showGlobalError(error)
   }
@@ -92,6 +152,9 @@ async function handleError(error: AxiosError | any) {
 }
 
 api.interceptors.request.use((request) => {
+  if (request.metricStartedAt === undefined) {
+    request.metricStartedAt = performance.now()
+  }
   const userStore = useUserStore()
   if (request.headers && userStore.isLogin) {
     request.headers.Authorization = `Bearer ${userStore.token}`
@@ -102,6 +165,8 @@ api.interceptors.request.use((request) => {
 api.interceptors.response.use(
   (response) => {
     const payload = response.data
+
+    enqueueResponseMetric(response.config, response, payload)
 
     if (payload && typeof payload === 'object') {
       if ('status' in payload && !('code' in payload)) {

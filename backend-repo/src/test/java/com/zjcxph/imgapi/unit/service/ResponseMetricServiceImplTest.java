@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.unit.service;
 
 import com.zjcxph.imgapi.dto.req.FrontendResponseMetricRequest;
 import com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO;
+import com.zjcxph.imgapi.entity.FrontendResponseMetric;
 import com.zjcxph.imgapi.mapper.ResponseMetricMapper;
 import com.zjcxph.imgapi.service.impl.ResponseMetricServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,13 +35,20 @@ class ResponseMetricServiceImplTest {
     @Test
     void batchPersistsOnlyBusinessApiMetrics() {
         FrontendResponseMetricRequest businessMetric = metric("req-1", "/api/v1/scans/{id}");
+        businessMetric.setSuccess(false);
         FrontendResponseMetricRequest ingestionMetric = metric("req-2", "/api/v1/response-metrics/frontend/batch");
+        Instant beforeSave = Instant.now();
 
         service.saveFrontendMetrics(List.of(businessMetric, ingestionMetric));
+        Instant afterSave = Instant.now();
 
-        ArgumentCaptor<List<?>> captor = ArgumentCaptor.forClass(List.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<FrontendResponseMetric>> captor = ArgumentCaptor.forClass(List.class);
         verify(mapper).batchInsert(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().getFirst().getSuccess()).isTrue();
+        assertThat(captor.getValue().getFirst().getOccurredAt())
+                .isBetween(Timestamp.from(beforeSave), Timestamp.from(afterSave));
     }
 
     @Test
@@ -101,7 +111,7 @@ class ResponseMetricServiceImplTest {
         request.setSuccess(true);
         request.setClientDurationMs(42L);
         request.setServerDurationMs(30L);
-        request.setOccurredAt(LocalDateTime.of(2026, 7, 13, 10, 0));
+        request.setOccurredAt(Instant.parse("2026-07-13T02:00:00Z"));
         return request;
     }
 }

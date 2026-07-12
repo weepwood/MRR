@@ -22,7 +22,7 @@ export interface ResponseMetricQueue {
 }
 
 function roundDuration(value: number) {
-  return Math.round(Math.max(0, value) * 100) / 100
+  return Math.round(Math.max(0, value))
 }
 
 export function createResponseMetric(input: ResponseMetricInput): FrontendResponseMetric | null {
@@ -38,9 +38,9 @@ export function createResponseMetric(input: ResponseMetricInput): FrontendRespon
 
   return {
     requestId,
-    endpointTemplate,
+    routePattern: endpointTemplate,
     method: (input.method || 'GET').toUpperCase(),
-    status,
+    httpStatus: status,
     businessCode: input.businessCode,
     success: status >= 200 && status < 300 && businessSucceeded,
     clientDurationMs: roundDuration(now - input.startedAt),
@@ -75,18 +75,21 @@ export function createResponseMetricQueue(
     }
 
     clearFlushTimer()
-    const batch = metrics.splice(0, metrics.length)
+    const batch = metrics.splice(0, BATCH_SIZE)
     if (!batch.length) {
       return
     }
 
-    pendingFlush = Promise.resolve(sender(batch))
-      .then(() => undefined)
-      .catch(() => undefined)
-      .finally(() => {
-        pendingFlush = undefined
-        scheduleFlush()
-      })
+    pendingFlush = (async () => {
+      let currentBatch = batch
+      while (currentBatch.length > 0) {
+        await Promise.resolve(sender(currentBatch)).catch(() => undefined)
+        currentBatch = metrics.length >= BATCH_SIZE ? metrics.splice(0, BATCH_SIZE) : []
+      }
+    })().finally(() => {
+      pendingFlush = undefined
+      scheduleFlush()
+    })
     return pendingFlush
   }
 

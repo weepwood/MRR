@@ -18,7 +18,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MybatisTest
-@TestPropertySource(properties = "mybatis.configuration.map-underscore-to-camel-case=true")
+@TestPropertySource(properties = {
+        "mybatis.configuration.map-underscore-to-camel-case=true",
+        "spring.flyway.enabled=false"
+})
 @Sql("classpath:schema-itest.sql")
 @DisplayName("ScanMapper 集成测试 (H2)")
 class ScanMapperIntegrationTest {

@@ -8,6 +8,8 @@ import com.zjcxph.imgapi.service.ResponseMetricService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,11 +75,19 @@ public class ResponseMetricServiceImpl implements ResponseMetricService {
         metric.setMethod(request.getMethod() == null ? null : request.getMethod().toUpperCase());
         metric.setHttpStatus(request.getHttpStatus());
         metric.setBusinessCode(request.getBusinessCode());
-        metric.setSuccess(request.getSuccess());
+        metric.setSuccess(isSuccessful(request));
         metric.setClientDurationMs(request.getClientDurationMs());
         metric.setServerDurationMs(request.getServerDurationMs());
-        metric.setOccurredAt(request.getOccurredAt());
+        metric.setOccurredAt(Timestamp.from(Instant.now()));
         return metric;
+    }
+
+    private boolean isSuccessful(FrontendResponseMetricRequest request) {
+        Integer httpStatus = request.getHttpStatus();
+        Integer businessCode = request.getBusinessCode();
+        boolean httpSucceeded = httpStatus != null && httpStatus >= 200 && httpStatus < 300;
+        boolean businessSucceeded = businessCode == null || businessCode == 200 || businessCode == 1;
+        return httpSucceeded && businessSucceeded;
     }
 
     private ResponseMetricAnalysisDTO.Overview mergeOverview(

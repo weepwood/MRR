@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.config.LogRetentionProperties;
+import com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
 import com.zjcxph.imgapi.common.Result;
@@ -244,14 +245,19 @@ public class LogController {
         PaginationUtils.validatePageParams(page, size);
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
 
+        String normalizedKeyword = normalize(keyword);
+        String normalizedUsername = normalize(username);
+        String normalizedClientIp = normalize(clientIp);
+        String normalizedAuditAction = normalize(auditAction);
+        String normalizedResponseStatus = normalize(responseStatus);
         String startTimeText = formatDateTime(startTime);
         String endTimeText = formatDateTime(endTime);
         List<Log> list = logService.searchImageAuditLogs(
-                normalize(keyword),
-                normalize(username),
-                normalize(clientIp),
-                normalize(auditAction),
-                normalize(responseStatus),
+                normalizedKeyword,
+                normalizedUsername,
+                normalizedClientIp,
+                normalizedAuditAction,
+                normalizedResponseStatus,
                 startTimeText,
                 endTimeText,
                 page,
@@ -259,15 +265,38 @@ public class LogController {
         );
         list.forEach(this::decorateAuditLog);
         int total = logService.countImageAuditLogs(
+                normalizedKeyword,
+                normalizedUsername,
+                normalizedClientIp,
+                normalizedAuditAction,
+                normalizedResponseStatus,
+                startTimeText,
+                endTimeText
+        );
+        return Result.<PageResult<Log>>success().data(PageResult.of(list, total, page, safeSize));
+    }
+
+    @Operation(summary = "获取图片访问审计分析数据")
+    @GetMapping("/audit/images/analytics")
+    public Result<ImageAuditAnalyticsDTO> getImageAuditAnalytics(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String clientIp,
+            @RequestParam(required = false) String auditAction,
+            @RequestParam(required = false) String responseStatus,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
+    ) {
+        ImageAuditAnalyticsDTO analytics = logService.getImageAuditAnalytics(
                 normalize(keyword),
                 normalize(username),
                 normalize(clientIp),
                 normalize(auditAction),
                 normalize(responseStatus),
-                startTimeText,
-                endTimeText
+                formatDateTime(startTime),
+                formatDateTime(endTime)
         );
-        return Result.<PageResult<Log>>success().data(PageResult.of(list, total, page, safeSize));
+        return Result.<ImageAuditAnalyticsDTO>success().data(analytics);
     }
 
     private String normalize(String value) {
@@ -297,29 +326,46 @@ public class LogController {
     }
 
     private void decorateAuditLog(Log log) {
-        String uri = log.getRequestUri() == null ? "" : log.getRequestUri();
-        if (uri.matches("^/api/v1/img/download/\\d{8}$")) {
-            log.setAuditAction("DOWNLOAD");
-            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
-            log.setAuditDescription("下载病案图片压缩包");
-        } else if (uri.startsWith("/api/v1/img/image/")) {
-            log.setAuditAction("VIEW_IMAGE");
-            String[] parts = uri.split("/");
-            log.setAuditTarget(parts.length > 5 ? parts[5] : uri);
-            log.setAuditDescription("查看本地病案图片");
-        } else if (uri.startsWith("/api/v1/img/oss-image/")) {
-            log.setAuditAction("VIEW_OSS_IMAGE");
-            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
-            log.setAuditDescription("查看 OSS 病案图片");
-        } else if (uri.matches("^/api/v1/img/\\d{8}$")) {
-            log.setAuditAction("LIST");
-            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
-            log.setAuditDescription("查询病案图片列表");
-        } else {
-            log.setAuditAction("UNKNOWN");
-            log.setAuditTarget(uri);
-            log.setAuditDescription("敏感病案图片访问");
+        String uri = log.getRequestUri();
+        if (uri == null || !uri.startsWith("/api/v1/img/") || uri.contains("/hello")) {
+            return;
         }
+
+        String action;
+        String target;
+        String description;
+        if (uri.contains("/download/")) {
+            action = "DOWNLOAD";
+            target = uri.substring(uri.lastIndexOf('/') + 1);
+            description = "下载病案图片压缩包";
+        } else if (uri.contains("/oss-image/")) {
+            action = "VIEW_OSS_IMAGE";
+            target = uri.substring(uri.lastIndexOf('/') + 1);
+            description = "查看 OSS 病案图片";
+        } else if (uri.startsWith("/api/v1/img/image/")) {
+            action = "VIEW_IMAGE";
+            String[] parts = uri.split("/");
+            target = parts.length > 5 ? parts[5] : uri;
+            description = "查看本地病案图片";
+        } else {
+            action = "LIST";
+            target = uri.substring(uri.lastIndexOf('/') + 1);
+            description = "查询病案图片列表";
+        }
+
+        if (isBlank(log.getAuditAction())) {
+            log.setAuditAction(action);
+        }
+        if (isBlank(log.getAuditTarget())) {
+            log.setAuditTarget(target);
+        }
+        if (isBlank(log.getAuditDescription())) {
+            log.setAuditDescription(description);
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String toCsvRow(Log log) {

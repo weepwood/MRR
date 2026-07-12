@@ -2,7 +2,7 @@ package com.zjcxph.imgapi.entity;
 
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 @Data
 public class FrontendResponseMetric {
@@ -14,5 +14,5 @@ public class FrontendResponseMetric {
     private Boolean success;
     private Long clientDurationMs;
     private Long serverDurationMs;
-    private LocalDateTime occurredAt;
+    private Timestamp occurredAt;
 }

@@ -25,6 +25,31 @@
         AND <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
     </sql>
 
+    <sql id="imageAuditFilters">
+        audit_action IN ('LIST', 'DOWNLOAD', 'VIEW_IMAGE', 'VIEW_OSS_IMAGE')
+        <if test="keyword != null and keyword != ''">
+            <include refid="logKeywordCommonPredicate"/>
+        </if>
+        <if test="username != null and username != ''">
+            AND username LIKE '%' || #{username} || '%'
+        </if>
+        <if test="clientIp != null and clientIp != ''">
+            AND client_ip LIKE '%' || #{clientIp} || '%'
+        </if>
+        <if test="auditAction != null and auditAction != ''">
+            AND audit_action = #{auditAction}
+        </if>
+        <if test="responseStatus != null and responseStatus != ''">
+            AND response_status LIKE #{responseStatus} || '%'
+        </if>
+        <if test="startTime != null and startTime != ''">
+            AND access_time &gt;= CAST(#{startTime} AS timestamp)
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND access_time &lt;= CAST(#{endTime} AS timestamp)
+        </if>
+    </sql>
+
     <!-- 删除指定时间之前的日志（分批删除） -->
     <delete id="deleteOlderThan">
         WITH target AS (SELECT id
@@ -181,27 +206,7 @@
             audit_description AS auditDescription
         FROM access_log
         <where>
-            <if test="auditAction != null and auditAction != ''">
-                AND audit_action = #{auditAction}
-            </if>
-            <if test="keyword != null and keyword != ''">
-                <include refid="logKeywordCommonPredicate"/>
-            </if>
-            <if test="username != null and username != ''">
-                AND username LIKE '%' || #{username} || '%'
-            </if>
-            <if test="clientIp != null and clientIp != ''">
-                AND client_ip LIKE '%' || #{clientIp} || '%'
-            </if>
-            <if test="responseStatus != null and responseStatus != ''">
-                AND response_status LIKE #{responseStatus} || '%'
-            </if>
-            <if test="startTime != null and startTime != ''">
-                AND access_time &gt;= CAST(#{startTime} AS timestamp)
-            </if>
-            <if test="endTime != null and endTime != ''">
-                AND access_time &lt;= CAST(#{endTime} AS timestamp)
-            </if>
+            <include refid="imageAuditFilters"/>
         </where>
         ORDER BY access_time DESC
         LIMIT #{limit} OFFSET #{offset}
@@ -211,18 +216,71 @@
     <select id="countImageAudit" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM access_log
         <where>
-            <if test="auditAction != null and auditAction != ''">
-                AND audit_action = #{auditAction}
-            </if>
-            <if test="keyword != null and keyword != ''">
-                <include refid="logKeywordCommonPredicate"/>
-            </if>
-            <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
-            <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
-            <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
-            <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
-            <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
+            <include refid="imageAuditFilters"/>
         </where>
+    </select>
+
+    <select id="getImageAuditOverview" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO">
+        SELECT
+            COUNT(*) AS "totalAccesses",
+            COUNT(DISTINCT NULLIF(TRIM(username), '')) AS "uniqueUsers",
+            COUNT(DISTINCT NULLIF(TRIM(audit_target), '')) AS "uniqueTargets",
+            COALESCE(SUM(CASE
+                WHEN response_status LIKE '4%' OR response_status LIKE '5%' THEN 1
+                ELSE 0
+            END), 0) AS "abnormalAccesses",
+            ROUND(COALESCE(AVG(execute_time), 0), 1) AS "averageDurationMs"
+        FROM access_log
+        <where>
+            <include refid="imageAuditFilters"/>
+        </where>
+    </select>
+
+    <select id="getImageAuditTrend" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditTrendDTO">
+        SELECT recent.audit_date AS "date", recent.access_count AS "count"
+        FROM (
+            SELECT CAST(access_time AS DATE) AS audit_date, COUNT(*) AS access_count
+            FROM access_log
+            <where>
+                <include refid="imageAuditFilters"/>
+                AND access_time IS NOT NULL
+            </where>
+            GROUP BY CAST(access_time AS DATE)
+            ORDER BY audit_date DESC
+            LIMIT 14
+        ) recent
+        ORDER BY recent.audit_date ASC
+    </select>
+
+    <select id="getImageAuditActionDistribution" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">
+        SELECT actions.label AS "label", COUNT(filtered.audit_action) AS "count"
+        FROM (
+            SELECT 'LIST' AS label
+            UNION ALL SELECT 'DOWNLOAD'
+            UNION ALL SELECT 'VIEW_IMAGE'
+            UNION ALL SELECT 'VIEW_OSS_IMAGE'
+        ) actions
+        LEFT JOIN (
+            SELECT audit_action
+            FROM access_log
+            <where>
+                <include refid="imageAuditFilters"/>
+            </where>
+        ) filtered ON filtered.audit_action = actions.label
+        GROUP BY actions.label
+        ORDER BY COUNT(filtered.audit_action) DESC, actions.label ASC
+    </select>
+
+    <select id="getTopImageAuditUsers" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">
+        SELECT username AS "label", COUNT(*) AS "count"
+        FROM access_log
+        <where>
+            <include refid="imageAuditFilters"/>
+            AND NULLIF(TRIM(username), '') IS NOT NULL
+        </where>
+        GROUP BY username
+        ORDER BY COUNT(*) DESC, username ASC
+        LIMIT 5
     </select>
 
 </mapper>

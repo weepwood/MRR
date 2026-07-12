@@ -3,13 +3,14 @@ import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
@@ -45,17 +46,22 @@ const error = ref('')
 const summaryData = ref<StatisticsSummary>({ byType: [], total: {} })
 const listData = ref<ListData>({
   total: 0,
-  size: 18,
+  size: ARCHIVE_DEFAULT_PAGE_SIZE,
   totalPages: 0,
   page: 1,
   list: [],
 })
 
 const currentPage = ref(1)
-const pageSize = ref(18)
+const pageSize = ref(ARCHIVE_DEFAULT_PAGE_SIZE)
+const archiveShelfRef = ref<HTMLElement | null>(null)
 const archiveDisplayMode = ref<ArchiveDisplayMode>('folder')
 const selectedArchive = ref<ArchiveItem | null>(null)
 const selectedArchiveKey = ref('')
+
+let resizeObserver: ResizeObserver | null = null
+let archiveListRequestId = 0
+let isPageActive = false
 
 const filters = reactive({
   keyword: '',
@@ -165,10 +171,14 @@ function buildQueryParams(): DetailQueryParams {
 }
 
 async function loadArchiveList() {
+  const requestId = ++archiveListRequestId
   loading.value = true
   error.value = ''
   try {
     const res = await getStatisticsList(buildQueryParams())
+    if (requestId !== archiveListRequestId) {
+      return
+    }
     const payload = res.data ?? { list: [], total: 0, size: pageSize.value, totalPages: 0, page: currentPage.value }
     const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
     listData.value = {
@@ -182,13 +192,18 @@ async function loadArchiveList() {
     selectedArchiveKey.value = selectedArchive.value ? archiveKey(selectedArchive.value, 0) : ''
   }
   catch (err: unknown) {
+    if (requestId !== archiveListRequestId) {
+      return
+    }
     const msg = err instanceof Error ? err.message : '病案明细加载失败'
     error.value = msg
     ElMessage.error(error.value)
     listData.value = { total: 0, size: pageSize.value, totalPages: 0, page: 1, list: [] }
   }
   finally {
-    loading.value = false
+    if (requestId === archiveListRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -212,10 +227,35 @@ function resetSearch() {
   loadArchiveList()
 }
 
-function handlePageSizeChange(value: number) {
-  pageSize.value = value
+function updateArchivePageSize(containerWidth: number, reload = true) {
+  const nextPageSize = getArchivePageSize(containerWidth)
+  if (nextPageSize === pageSize.value) {
+    return
+  }
+
+  pageSize.value = nextPageSize
   currentPage.value = 1
-  loadArchiveList()
+  if (reload) {
+    loadArchiveList()
+  }
+}
+
+function handleArchiveShelfResize() {
+  updateArchivePageSize(archiveShelfRef.value?.clientWidth ?? 0)
+}
+
+function startArchiveResizeObserver() {
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(handleArchiveShelfResize)
+    if (archiveShelfRef.value) {
+      resizeObserver.observe(archiveShelfRef.value)
+    }
+  }
+  else {
+    window.addEventListener('resize', handleArchiveShelfResize)
+  }
+
+  handleArchiveShelfResize()
 }
 
 function selectArchive(item: ArchiveItem, index = 0) {
@@ -280,7 +320,22 @@ async function handleExportCsv() {
   }
 }
 
-onMounted(refreshAll)
+onMounted(async () => {
+  isPageActive = true
+  updateArchivePageSize(archiveShelfRef.value?.clientWidth ?? 0, false)
+  await refreshAll()
+  if (isPageActive) {
+    startArchiveResizeObserver()
+  }
+})
+
+onBeforeUnmount(() => {
+  isPageActive = false
+  archiveListRequestId += 1
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  window.removeEventListener('resize', handleArchiveShelfResize)
+})
 </script>
 
 <template>
@@ -384,7 +439,7 @@ onMounted(refreshAll)
     </el-card>
 
     <section class="content-layout">
-      <div class="archive-shelf">
+      <div ref="archiveShelfRef" class="archive-shelf">
         <div class="archive-toolbar">
           <span class="archive-toolbar-title">档案列表</span>
           <el-radio-group v-model="archiveDisplayMode" aria-label="档案展示方式">
@@ -517,11 +572,9 @@ onMounted(refreshAll)
         <div class="pagination-wrapper">
           <el-pagination
             v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[18, 50, 100, 200]"
+            :page-size="pageSize"
             :total="listData.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handlePageSizeChange"
+            layout="total, prev, pager, next, jumper"
             @current-change="loadArchiveList"
           />
         </div>
@@ -847,8 +900,8 @@ h2 {
   }
 
   .archive-toolbar {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

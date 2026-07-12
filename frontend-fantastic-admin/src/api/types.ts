@@ -131,9 +131,9 @@ export interface DashboardData {
 /** 浏览器观测到的单次 API 响应指标（不包含请求参数或响应内容） */
 export interface FrontendResponseMetric {
   requestId: string
-  endpointTemplate: string
+  routePattern: string
   method: string
-  status: number
+  httpStatus: number
   businessCode?: number
   success: boolean
   clientDurationMs: number
@@ -144,29 +144,31 @@ export interface FrontendResponseMetric {
 /** 接口响应分析总览 */
 export interface ResponseMetricOverview {
   totalRequests: number
+  frontendSampleCount?: number
   successRate: number
-  clientP95DurationMs: number
-  serverAverageDurationMs: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
+  p95ClientDurationMs: number
 }
 
 /** 接口响应趋势点 */
 export interface ResponseMetricTrendPoint {
   bucket: string
   requestCount: number
-  clientAverageDurationMs: number
-  serverAverageDurationMs: number
+  errorCount: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
 }
 
 /** 慢接口排行项 */
 export interface SlowEndpointMetric {
-  endpointTemplate: string
+  routePattern: string
   method: string
   requestCount: number
-  errorRate: number
-  clientAverageDurationMs: number
-  clientP95DurationMs: number
-  serverAverageDurationMs: number
-  maxDurationMs: number
+  errorCount: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
+  p95ClientDurationMs: number
 }
 
 /** 接口响应分析聚合结果 */
@@ -193,6 +195,30 @@ export interface LogRecord {
   auditAction?: string
   auditTarget?: string
   auditDescription?: string
+}
+
+/** 图片访问审计聚合项 */
+export interface ImageAuditCountItem {
+  label: string
+  count: number
+}
+
+/** 图片访问审计每日趋势 */
+export interface ImageAuditTrendItem {
+  date: string
+  count: number
+}
+
+/** 图片访问审计分析汇总 */
+export interface ImageAuditAnalytics {
+  totalAccesses: number
+  uniqueUsers: number
+  uniqueTargets: number
+  abnormalAccesses: number
+  averageDurationMs: number
+  trend: ImageAuditTrendItem[]
+  actionDistribution: ImageAuditCountItem[]
+  topUsers: ImageAuditCountItem[]
 }
 
 /** 加密ID搜索参数 */

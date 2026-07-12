@@ -221,6 +221,15 @@ const asyncRoutes: Route.recordMainRaw[] = [
           auth: ['system:read'],
         },
       },
+      {
+        path: '/response-analysis',
+        component: () => import('@/views/response-analysis/index.vue'),
+        meta: {
+          title: '接口响应分析',
+          icon: 'i-ant-design:fund-projection-screen-outlined',
+          auth: ['system:read'],
+        },
+      },
 
     ],
   },

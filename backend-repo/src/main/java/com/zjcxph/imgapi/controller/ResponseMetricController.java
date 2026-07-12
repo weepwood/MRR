@@ -2,7 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
-import com.zjcxph.imgapi.dto.req.FrontendResponseMetricRequest;
+import com.zjcxph.imgapi.dto.req.FrontendResponseMetricBatchRequest;
 import com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO;
 import com.zjcxph.imgapi.service.ResponseMetricService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,12 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @Validated
 @RestController
 @RequestMapping("/api/v1/response-metrics")
-@RequirePermissions({"system:read"})
 @Tag(name = "Response Metrics", description = "前后端响应性能指标")
 public class ResponseMetricController {
 
@@ -36,13 +33,14 @@ public class ResponseMetricController {
     @PostMapping("/frontend/batch")
     @Operation(summary = "批量记录前端响应指标")
     public Result<Void> saveFrontendMetrics(
-            @RequestBody List<@Valid FrontendResponseMetricRequest> metrics
+            @RequestBody @Valid FrontendResponseMetricBatchRequest batch
     ) {
-        responseMetricService.saveFrontendMetrics(metrics);
+        responseMetricService.saveFrontendMetrics(batch.getMetrics());
         return Result.success();
     }
 
     @GetMapping("/analysis")
+    @RequirePermissions({"system:read"})
     @Operation(summary = "获取前后端响应分析")
     public Result<ResponseMetricAnalysisDTO> getAnalysis(
             @RequestParam(defaultValue = "7") @Min(1) @Max(90) int days

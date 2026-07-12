@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,14 +27,17 @@ class LogInterceptorTest {
     void exposesRequestIdEndpointTemplateAndServerTiming() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
         MockHttpServletResponse response = new MockHttpServletResponse();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/scans/{id}");
 
         interceptor.preHandle(request, response, new Object());
-        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/scans/{id}");
-        request.setAttribute("startTime", System.currentTimeMillis() - 25);
-        interceptor.postHandle(request, response, new Object(), null);
 
         assertThat(response.getHeader("X-Request-Id")).isNotBlank();
         assertThat(response.getHeader("X-Endpoint-Template")).isEqualTo("/api/v1/scans/{id}");
+        assertThat(response.getHeader("Server-Timing")).isNull();
+
+        request.setAttribute("startTime", System.currentTimeMillis() - 25);
+        interceptor.postHandle(request, response, new Object(), null);
+
         assertThat(response.getHeader("Server-Timing")).matches("app;dur=\\d+");
     }
 
@@ -52,4 +58,39 @@ class LogInterceptorTest {
                 .timer()).isNull();
         verify(asyncLogService).saveLogAsync(any(Log.class));
     }
+
+    @Test
+    void omitsRequestPayloadValuesAndUsesEndpointTemplateInAuditLog() throws Exception {
+        MockHttpServletRequest rawRequest = new MockHttpServletRequest(
+                "POST", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
+        rawRequest.setQueryString("bah=00123456&page=2");
+        rawRequest.addHeader("Referer", "http://localhost/records?token=secret-token");
+        rawRequest.setContentType("application/json");
+        rawRequest.setContent("{\"password\":\"secret-password\",\"idCard\":\"330123456789012345\"}"
+                .getBytes(StandardCharsets.UTF_8));
+        ContentCachingRequestWrapper request = new ContentCachingRequestWrapper(rawRequest, 10240);
+        request.getInputStream().readAllBytes();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
+                "/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        interceptor.preHandle(request, response, new Object());
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        var logCaptor = org.mockito.ArgumentCaptor.forClass(Log.class);
+        verify(asyncLogService).saveLogAsync(logCaptor.capture());
+        Log savedLog = logCaptor.getValue();
+
+        assertThat(savedLog.getRequestUri())
+                .isEqualTo("/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
+        assertThat(savedLog.getQueryString()).isEqualTo("bah=[REDACTED]&page=[REDACTED]");
+        assertThat(savedLog.getRequestBody()).matches("\\[OMITTED \\d+ bytes]");
+        assertThat(savedLog.getReferer()).isEqualTo("[REDACTED]");
+        assertThat(savedLog.getAuditAction()).isEqualTo("VIEW_IMAGE");
+        assertThat(savedLog.getAuditTarget()).matches("sha256:[0-9a-f]{32}");
+        assertThat(savedLog.toString())
+                .doesNotContain("00789508", "605746", "0072.jpg", "secret-password",
+                        "330123456789012345", "secret-token");
+    }
+
 }

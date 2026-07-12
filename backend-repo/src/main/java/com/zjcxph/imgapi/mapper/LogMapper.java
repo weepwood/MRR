@@ -1,5 +1,8 @@
 package com.zjcxph.imgapi.mapper;
 
+import com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO;
+import com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO;
+import com.zjcxph.imgapi.dto.resp.ImageAuditTrendDTO;
 import com.zjcxph.imgapi.entity.Log;
 import org.apache.ibatis.annotations.*;
 
@@ -97,6 +100,46 @@ public interface LogMapper {
 
     // 敏感病案图片访问审计总数 - XML 实现
     int countImageAudit(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime
+    );
+
+    ImageAuditAnalyticsDTO getImageAuditOverview(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime
+    );
+
+    List<ImageAuditTrendDTO> getImageAuditTrend(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime
+    );
+
+    List<ImageAuditCountDTO> getImageAuditActionDistribution(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("auditAction") String auditAction,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime
+    );
+
+    List<ImageAuditCountDTO> getTopImageAuditUsers(
             @Param("keyword") String keyword,
             @Param("username") String username,
             @Param("clientIp") String clientIp,

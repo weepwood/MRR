@@ -59,6 +59,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
+                .exposedHeaders("X-Request-Id", "X-Endpoint-Template", "Server-Timing")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
@@ -82,6 +83,11 @@ public class WebConfig implements WebMvcConfigurer {
                 "/actuator/**"
         };
 
+        registry.addInterceptor(logInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(baseExcludes)
+                .excludePathPatterns(staticExcludes);
+
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(baseExcludes)
@@ -101,9 +107,5 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(staticExcludes);
 
-        registry.addInterceptor(logInterceptor)
-                .addPathPatterns("/**")
-                .excludePathPatterns(baseExcludes)
-                .excludePathPatterns(staticExcludes);
     }
 }

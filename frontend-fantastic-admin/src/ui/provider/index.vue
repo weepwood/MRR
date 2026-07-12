@@ -63,7 +63,7 @@ const semanticColors = {
   info: 'var(--info)',
 }
 
-function syncElementColorScale(colorScheme: 'light' | 'dark') {
+function syncElementColorScale(colorScheme: string) {
   if (!supportsColorMix) {
     return
   }
@@ -74,8 +74,8 @@ function syncElementColorScale(colorScheme: 'light' | 'dark') {
   for (const [name, source] of Object.entries(semanticColors)) {
     for (let index = 1; index < 10; index += 1) {
       rootStyle.setProperty(`--el-color-${name}-light-${index}`, `color-mix(in hsl, hsl(${source}), ${mixTarget} ${index * 10}%)`)
-      rootStyle.setProperty(`--el-color-${name}-dark-2`, `color-mix(in hsl, hsl(${source}), ${darkTarget} 20%)`)
     }
+    rootStyle.setProperty(`--el-color-${name}-dark-2`, `color-mix(in hsl, hsl(${source}), ${darkTarget} 20%)`)
   }
 }
 

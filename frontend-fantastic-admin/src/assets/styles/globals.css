@@ -169,8 +169,8 @@ body {
   line-height: var(--line-height-normal);
   color: var(--text-primary);
   overflow-wrap: anywhere;
-  text-rendering: optimizelegibility;
   background: var(--surface-page);
+  text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
@@ -294,8 +294,8 @@ svg {
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    animation-duration: 1ms !important;
     transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
   }
 }

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import type { TypeStatItem } from '../types'
 
+interface DirectoryNode {
+  id: number | 'all'
+  label: string
+  count: number
+  disabled?: boolean
+  children?: DirectoryNode[]
+}
+
 defineOptions({ name: 'TypeFilterBar' })
 
 const props = defineProps<{
@@ -17,21 +25,54 @@ const emit = defineEmits<{
 }>()
 
 const selectedType = defineModel<number | 'all'>('selectedType', { default: 'all' })
+const displayMode = ref<'buttons' | 'tree'>('buttons')
+
+const directoryTree = computed<DirectoryNode[]>(() => [
+  {
+    id: 'all',
+    label: '全部影像',
+    count: props.totalCount,
+    children: props.typeStats.map(item => ({
+      id: item.value,
+      label: item.label,
+      count: item.count,
+      disabled: item.count === 0,
+    })),
+  },
+])
 
 function onSelect(value: number | 'all') {
   selectedType.value = value
   emit('selectType', value)
 }
+
+function onNodeClick(data: DirectoryNode) {
+  if (!data.disabled) {
+    onSelect(data.id)
+  }
+}
 </script>
 
 <template>
   <div class="type-bar">
-    <div class="type-tabs">
-      <button
-        class="type-tab"
-        :class="{ active: selectedType === 'all' }"
-        @click="onSelect('all')"
-      >
+    <div class="type-bar-actions">
+      <span class="select-count">已选 {{ props.selectedCount }}/{{ props.filteredCount }}</span>
+      <div class="type-actions">
+        <el-button size="small" link @click="emit('selectAll')">
+          {{ props.allVisibleSelected ? '取消全选' : '全选' }}
+        </el-button>
+        <el-segmented
+          v-model="displayMode"
+          size="small"
+          :options="[
+            { label: '按钮', value: 'buttons' },
+            { label: '目录', value: 'tree' },
+          ]"
+        />
+      </div>
+    </div>
+    <div v-if="displayMode === 'buttons'" class="type-tabs">
+      <button class="type-tab" :class="{ active: selectedType === 'all' }" @click="onSelect('all')">
         全部
         <span class="type-count">{{ props.totalCount }}</span>
       </button>
@@ -44,43 +85,45 @@ function onSelect(value: number | 'all') {
         @click="onSelect(item.value)"
       >
         {{ item.label }}
-        <span v-if="item.count" class="type-count" :class="{ active: selectedType === item.value }">{{ item.count }}</span>
+        <span v-if="item.count" class="type-count">{{ item.count }}</span>
       </button>
     </div>
-    <div class="type-bar-actions">
-      <span class="select-count">已选 {{ props.selectedCount }}/{{ props.filteredCount }}</span>
-      <el-button size="small" link @click="emit('selectAll')">
-        {{ props.allVisibleSelected ? '取消全选' : '全选' }}
-      </el-button>
-    </div>
+    <el-tree
+      v-else
+      class="type-tree"
+      :data="directoryTree"
+      :props="{ children: 'children', label: 'label', disabled: 'disabled' }"
+      node-key="id"
+      :current-node-key="selectedType"
+      :default-expanded-keys="['all']"
+      :expand-on-click-node="false"
+      highlight-current
+      @node-click="onNodeClick"
+    >
+      <template #default="{ data }">
+        <span class="tree-node">
+          <span class="tree-label">{{ data.label }}</span>
+          <span class="tree-count">{{ data.count }}</span>
+        </span>
+      </template>
+    </el-tree>
   </div>
 </template>
 
 <style scoped>
 .type-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 10px;
-}
-
-.type-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
+  border-radius: 12px;
 }
 
 .type-bar-actions {
   display: flex;
-  flex-shrink: 0;
   gap: 8px;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
 }
 
 .select-count {
@@ -89,10 +132,24 @@ function onSelect(value: number | 'all') {
   white-space: nowrap;
 }
 
+.type-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.type-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
 .type-tab {
   display: inline-flex;
   gap: 6px;
   align-items: center;
+  justify-content: space-between;
+  min-width: 0;
   padding: 4px 10px;
   font-size: 13px;
   color: var(--text-secondary);
@@ -133,8 +190,38 @@ function onSelect(value: number | 'all') {
   border-radius: 9999px;
 }
 
-.type-count.active {
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 15%);
+.type-tree {
+  max-height: 300px;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.type-tree :deep(.el-tree-node__content) {
+  height: 32px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+}
+
+.tree-node {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tree-label {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-count {
+  margin-left: auto;
+  padding-right: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 </style>

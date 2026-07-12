@@ -145,6 +145,7 @@ watch(filteredImages, () => {
 })
 
 onMounted(() => {
+  document.body.classList.add('archive-immersive')
   searchBah.value = sanitizeParam(route.params.bah || route.query.bah)
   searchSjh.value = sanitizeParam(route.query.sjh)
   if (searchBah.value || searchSjh.value) {
@@ -154,50 +155,60 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  document.body.classList.remove('archive-immersive')
   window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
 <template>
   <div class="archive-page">
-    <ArchiveHeader
-      :loading="loading"
-      :downloading="downloading"
-      :printing="printing"
-      :selected-count="selectedCount"
-      @back="goBack"
-      @refresh="loadImages"
-      @download="handleDownload"
-      @print="handlePrint"
-    />
+    <div class="archive-workspace" :class="{ 'has-images': images.length > 0, 'is-empty': images.length === 0 }">
+      <section class="archive-sidebar">
+        <ArchiveHeader
+          :loading="loading"
+          :downloading="downloading"
+          :printing="printing"
+          :selected-count="selectedCount"
+          @back="goBack"
+          @refresh="loadImages"
+          @download="handleDownload"
+          @print="handlePrint"
+        />
 
-    <ArchiveSearchBar
-      v-model:search-bah="searchBah"
-      v-model:search-sjh="searchSjh"
-      v-model:view-mode="viewMode"
-      :route-meta="routeArchive"
-      :has-images="images.length > 0"
-      :loading="loading"
-      @search="loadImages"
-    />
+        <ArchiveSearchBar
+          v-model:search-bah="searchBah"
+          v-model:search-sjh="searchSjh"
+          v-model:view-mode="viewMode"
+          :route-meta="routeArchive"
+          :has-images="images.length > 0"
+          :loading="loading"
+          @search="loadImages"
+        />
 
-    <PatientCard :patient="patient" :loading="patientLoading" />
+        <PatientCard :patient="patient" :loading="patientLoading" />
 
-    <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
+        <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
 
-    <template v-if="images.length > 0">
-      <TypeFilterBar
-        v-model:selected-type="selectedType"
-        :type-stats="typeStats"
-        :total-count="images.length"
-        :selected-count="selectedCount"
-        :filtered-count="filteredImages.length"
-        :all-visible-selected="allVisibleSelected"
-        @select-type="selectType"
-        @select-all="selectAllVisible"
-      />
+        <template v-if="images.length > 0">
+          <TypeFilterBar
+            v-model:selected-type="selectedType"
+            :type-stats="typeStats"
+            :total-count="images.length"
+            :selected-count="selectedCount"
+            :filtered-count="filteredImages.length"
+            :all-visible-selected="allVisibleSelected"
+            @select-type="selectType"
+            @select-all="selectAllVisible"
+          />
 
-      <div class="viewer-layout">
+        </template>
+
+        <div v-else-if="!loading && !errorMsg" class="empty-state">
+      <el-empty description="输入病案号或上架号查询影像" />
+        </div>
+      </section>
+
+      <div v-if="images.length > 0" class="viewer-layout">
         <ThumbStrip
           ref="thumbStripRef"
           :images="filteredImages"
@@ -207,54 +218,137 @@ onUnmounted(() => {
           @select="selectImage"
           @toggle="toggleSelect"
         />
-        <PreviewPanel
-          :image="currentImage"
-          :preview-list="previewList"
-          :index="selectedImageIndex"
-          :total="filteredImages.length"
-          :is-selected="currentImage ? isSelected(currentImage) : false"
-          :saving-type="savingType"
-          :loading="loading"
-          @toggle="toggleCurrent"
-          @save-type="handleSaveType"
-          @navigate="navigate"
-        />
       </div>
-    </template>
 
-    <div v-else-if="!loading && !errorMsg" class="empty-state">
-      <el-empty description="输入病案号或上架号查询影像" />
+      <PreviewPanel
+        v-if="images.length > 0"
+        :image="currentImage"
+        :preview-list="previewList"
+        :index="selectedImageIndex"
+        :total="filteredImages.length"
+        :is-selected="currentImage ? isSelected(currentImage) : false"
+        :saving-type="savingType"
+        :loading="loading"
+        @toggle="toggleCurrent"
+        @save-type="handleSaveType"
+        @navigate="navigate"
+        @select="selectImage"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
 .archive-page {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+  background: var(--surface-muted);
+}
+
+.archive-workspace {
+  height: 100%;
+  min-width: 0;
+}
+
+.archive-workspace.has-images {
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(300px, 340px) 132px minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.archive-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.has-images .archive-sidebar {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+:global(body.archive-immersive .toolbar-container) {
+  display: none !important;
+}
+
+:global(body.archive-immersive .layout .wrapper .main-container) {
+  height: 100%;
+  min-height: 0;
+}
+
+:global(body.archive-immersive .layout .wrapper .main-container .main) {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  padding: 0 !important;
+  margin-top: var(--g-tabbar-actual-height) !important;
+  overflow: hidden;
+}
+
+.archive-workspace.is-empty {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.is-empty .archive-sidebar {
+  width: min(100%, 560px);
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
+}
+
+.is-empty .search-card {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.is-empty .empty-state {
+  min-height: 120px;
 }
 
 .viewer-layout {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0;
-  height: calc(100vh - 280px);
-  min-height: 450px;
+  display: flex;
+  min-height: 0;
   overflow: hidden;
+  padding: 4px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .empty-state {
-  padding: 60px 0;
+  display: grid;
+  place-items: center;
+  min-height: 240px;
 }
 
 @media (width <= 1100px) {
-  .viewer-layout {
+  .archive-workspace.has-images {
     grid-template-columns: 1fr;
     height: auto;
-    min-height: 0;
+    min-height: initial;
+  }
+
+  .archive-workspace.is-empty {
+    padding: 16px;
+  }
+
+  .has-images .archive-sidebar {
+    overflow: visible;
+  }
+
+  .archive-workspace.has-images .preview-panel {
+    height: min(68vh, 640px);
+    min-height: 420px;
   }
 }
 </style>

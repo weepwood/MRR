@@ -5,9 +5,13 @@ import { ref } from 'vue'
 export function useArchivePrint() {
   const printing = ref(false)
 
+  function escapeAttribute(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+  }
+
   function buildPrintHtml(images: GalleryImage[]): string {
     const imagesHtml = images.map((img) => {
-      const src = img.imageUrl || ''
+      const src = escapeAttribute(img.imageUrl || '')
       return `
         <div class="print-page">
           <img src="${src}" alt="" />
@@ -19,10 +23,22 @@ export function useArchivePrint() {
         @page { margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; }
-        .print-page { page-break-after: always; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .print-page:last-child { page-break-after: auto; }
+        .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .print-page:last-child { break-after: auto; page-break-after: auto; }
         .print-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
       </style></head><body>${imagesHtml}</body></html>`
+  }
+
+  function waitForImages(doc: Document): Promise<void> {
+    return Promise.all(Array.from(doc.images).map((image) => {
+      if (image.complete) {
+        return Promise.resolve()
+      }
+      return new Promise<void>((resolve) => {
+        image.addEventListener('load', () => resolve(), { once: true })
+        image.addEventListener('error', () => resolve(), { once: true })
+      })
+    })).then(() => undefined)
   }
 
   async function printSelected(images: GalleryImage[]): Promise<void> {
@@ -45,6 +61,7 @@ export function useArchivePrint() {
       doc.write(buildPrintHtml(images))
       doc.close()
 
+      let printed = false
       const cleanup = () => {
         setTimeout(() => {
           if (iframe.parentNode) {
@@ -52,18 +69,22 @@ export function useArchivePrint() {
           }
         }, 2000)
       }
-      iframe.onload = () => {
+
+      const print = () => {
+        if (printed) {
+          return
+        }
+        printed = true
         win.focus()
         win.print()
         cleanup()
       }
-      setTimeout(() => {
-        if (iframe.parentNode) {
-          win.focus()
-          win.print()
-          cleanup()
-        }
-      }, 1500)
+
+      await Promise.race([
+        waitForImages(doc),
+        new Promise<void>(resolve => setTimeout(resolve, 5000)),
+      ])
+      print()
     }
     catch (err: unknown) {
       ElMessage.error((err as { message?: string })?.message || '打印失败')

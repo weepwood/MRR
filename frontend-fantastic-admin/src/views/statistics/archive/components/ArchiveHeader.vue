@@ -32,13 +32,13 @@ const emit = defineEmits<{
       </p>
     </div>
     <div class="archive-actions">
-      <el-button :icon="ArrowLeft" @click="emit('back')">
+      <el-button text :icon="ArrowLeft" @click="emit('back')">
         返回明细
       </el-button>
-      <el-button :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
+      <el-button text :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
         刷新
       </el-button>
-      <el-button type="primary" :icon="Download" :loading="props.downloading" @click="emit('download')">
+      <el-button :icon="Download" :loading="props.downloading" @click="emit('download')">
         下载档案袋
       </el-button>
       <el-button type="primary" :icon="Printer" :loading="props.printing" :disabled="!props.selectedCount" @click="emit('print')">
@@ -52,39 +52,40 @@ const emit = defineEmits<{
 
 <style scoped>
 .archive-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding-bottom: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 2px 2px 12px;
   border-bottom: 1px solid var(--divider);
 }
 
 .archive-title h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
 }
 
 .archive-subtitle {
-  margin: 4px 0 0;
-  font-size: 13px;
+  margin: 2px 0 0;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
 .archive-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.archive-actions :deep(.el-button) {
+  width: 100%;
+  margin: 0;
 }
 
 @media (width <= 720px) {
   .archive-header {
-    flex-direction: column;
-    align-items: stretch;
+    padding-bottom: 8px;
   }
 }
 </style>

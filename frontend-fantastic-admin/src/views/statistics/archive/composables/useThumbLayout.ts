@@ -3,8 +3,8 @@ import type { ViewMode } from '../types'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const GAP = 6
-const MIN_ITEM_WIDTH = 80
-const MAX_ITEM_WIDTH = 130
+const MIN_ITEM_WIDTH = 64
+const MAX_ITEM_WIDTH = 110
 const SCROLL_LOAD_THRESHOLD = 80
 
 export function useThumbLayout(
@@ -39,12 +39,9 @@ export function useThumbLayout(
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 
-    const viewportHeight = window.innerHeight
-    const stripTop = container.getBoundingClientRect().top
-    const availableHeight = viewportHeight - stripTop - 24
-    const itemHeight = actualItemWidth * 4 / 3 + 36
-    const rows = Math.max(1, Math.floor(availableHeight / itemHeight))
-    pageSize.value = thumbColumns.value * rows
+    const itemHeight = Math.max(actualItemWidth, 88) + 50
+    const visibleRows = Math.ceil(container.clientHeight / itemHeight)
+    pageSize.value = thumbColumns.value * Math.max(2, visibleRows + 1)
   }
 
   function resetVisible(): void {

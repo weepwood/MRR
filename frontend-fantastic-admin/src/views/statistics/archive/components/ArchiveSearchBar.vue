@@ -57,38 +57,37 @@ const metaItems = computed(() => [
 
 <style scoped>
 .search-card {
-  padding: 16px;
+  padding: 14px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  gap: 10px;
 }
 
 .search-fields {
-  display: flex;
-  flex: 1 1 360px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 8px;
-  align-items: center;
 }
 
 .search-fields .el-input {
-  flex: 1 1 160px;
-  max-width: 240px;
+  min-width: 0;
+}
+
+.search-bar :deep(.el-segmented) {
+  justify-self: start;
 }
 
 .route-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
-  padding-top: 14px;
-  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding-top: 12px;
+  margin-top: 12px;
   border-top: 1px solid var(--divider);
 }
 
@@ -107,19 +106,21 @@ const metaItems = computed(() => [
 }
 
 .meta-item span {
+  overflow: hidden;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (width <= 720px) {
   .search-fields {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
   }
 
-  .search-fields .el-input {
-    max-width: none;
+  .route-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

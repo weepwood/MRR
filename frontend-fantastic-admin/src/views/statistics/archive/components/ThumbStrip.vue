@@ -120,25 +120,22 @@ defineExpose({ resetVisible, scrollToIndex })
 
 <style scoped>
 .thumb-strip {
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-content: flex-start;
-  width: 240px;
-  min-width: 180px;
-  max-width: 320px;
+  width: 100%;
+  min-width: 0;
   padding: 8px;
   overflow-y: auto;
-  resize: horizontal;
   background: var(--surface-muted);
-  border-right: 1px solid var(--divider);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
 }
 
 .thumb-strip.list {
   flex-flow: column nowrap;
-  width: 220px;
-  min-width: 160px;
-  max-width: 300px;
 }
 
 .thumb-strip.list .thumb-item {
@@ -203,7 +200,7 @@ defineExpose({ resetVisible, scrollToIndex })
 
 .thumb-item img {
   width: 100%;
-  height: 120px;
+  height: 88px;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: var(--surface-alt);
@@ -235,11 +232,7 @@ defineExpose({ resetVisible, scrollToIndex })
 
 @media (width <= 1100px) {
   .thumb-strip {
-    width: 100% !important;
-    max-width: none !important;
     max-height: 220px;
-    border-right: 0;
-    border-bottom: 1px solid var(--divider);
   }
 
   .thumb-strip.list {

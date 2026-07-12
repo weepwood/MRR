@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
-import { ElMessage } from 'element-plus'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
@@ -81,8 +81,6 @@ const typeOptions = computed(() => {
 })
 
 const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
-
-
 
 const summaryCards = computed(() => [
   { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
@@ -464,7 +462,7 @@ onMounted(refreshAll)
             row-key="id"
             @row-click="selectArchiveFromList"
           >
-            <el-table-column label="#" width="72" align="center">
+            <el-table-column label="#" width="92" align="center">
               <template #default="{ $index }">
                 {{ tableIndex($index) }}
               </template>
@@ -528,8 +526,6 @@ onMounted(refreshAll)
           />
         </div>
       </div>
-
-
     </section>
   </div>
 </template>

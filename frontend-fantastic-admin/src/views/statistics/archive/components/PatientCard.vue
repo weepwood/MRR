@@ -34,17 +34,17 @@ const fields = computed(() => [
 
 <style scoped>
 .patient-card {
-  padding: 16px;
+  padding: 14px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .patient-card-header {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
@@ -52,8 +52,8 @@ const fields = computed(() => [
 
 .patient-card-body {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
 }
 
 .patient-field {
@@ -71,8 +71,11 @@ const fields = computed(() => [
 }
 
 .field-value {
+  overflow: hidden;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

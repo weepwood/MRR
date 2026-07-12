@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { GalleryImage } from '../types'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
-import { ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
+import 'element-plus/es/components/message-box/style/css'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { normalizeText, TYPE_OPTIONS } from '../constants'
 
 defineOptions({ name: 'PreviewPanel' })
@@ -20,16 +22,15 @@ const emit = defineEmits<{
   toggle: []
   saveType: [type: number]
   navigate: [delta: number]
+  select: [index: number]
 }>()
 
-const imageLoading = ref(false)
-const imageFailed = ref(false)
+const previewScroller = ref<HTMLElement | null>(null)
+const pageRefs = ref<(HTMLElement | null)[]>([])
+const displayMode = ref<'single' | 'scroll'>('single')
+const pendingType = ref(0)
 let touchStartX = 0
-
-watch(() => props.image?.imageUrl, () => {
-  imageLoading.value = Boolean(props.image?.imageUrl)
-  imageFailed.value = false
-}, { immediate: true })
+let pageObserver: IntersectionObserver | null = null
 
 const currentType = computed({
   get: () => Number(props.image?.btype || 0),
@@ -47,58 +48,151 @@ function handleTouchEnd(event: TouchEvent) {
   }
   emit('navigate', endX < touchStartX ? 1 : -1)
 }
+
+function syncCurrentPage(index: number) {
+  const target = pageRefs.value[index]
+  if (!target) {
+    return
+  }
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function onImageError(event: Event) {
+  const target = event.target as HTMLImageElement
+  target.style.opacity = '0.35'
+}
+
+function observePages() {
+  pageObserver?.disconnect()
+  pageObserver = null
+  nextTick(() => {
+    if (displayMode.value !== 'scroll' || !previewScroller.value || typeof IntersectionObserver === 'undefined') {
+      return
+    }
+    pageObserver = new IntersectionObserver((entries) => {
+      const visiblePage = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((first, second) => second.intersectionRatio - first.intersectionRatio)[0]
+      const index = Number((visiblePage?.target as HTMLElement | undefined)?.dataset.index)
+      if (Number.isInteger(index) && index !== props.index) {
+        emit('select', index)
+      }
+    }, { root: previewScroller.value, threshold: 0.6 })
+    pageRefs.value.forEach((page) => {
+      if (page) {
+        pageObserver?.observe(page)
+      }
+    })
+    syncCurrentPage(props.index)
+  })
+}
+
+async function confirmType() {
+  if (pendingType.value === currentType.value) {
+    return
+  }
+  const label = TYPE_OPTIONS.find(item => item.value === pendingType.value)?.label || '所选分类'
+  try {
+    await ElMessageBox.confirm(
+      `确认将当前影像分类切换为“${label}”吗？`,
+      '确认分类变更',
+      { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' },
+    )
+    currentType.value = pendingType.value
+  }
+  catch {
+    pendingType.value = currentType.value
+  }
+}
+
+watch(() => props.index, (index) => {
+  if (displayMode.value === 'scroll') {
+    nextTick(() => syncCurrentPage(index))
+  }
+})
+
+watch(() => props.image?.btype, () => {
+  pendingType.value = currentType.value
+}, { immediate: true })
+
+watch(displayMode, () => {
+  observePages()
+})
+
+onMounted(observePages)
+
+onUnmounted(() => {
+  pageObserver?.disconnect()
+  pageObserver = null
+})
 </script>
 
 <template>
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
-      <div class="preview-stage">
-        <el-image
-          v-if="!imageFailed"
-          class="preview-image"
-          :src="props.image.imageUrl"
-          fit="contain"
-          :preview-src-list="props.previewList"
-          :initial-index="props.index"
-          :preview-teleported="true"
-          :hide-on-click-modal="false"
-          @load="imageLoading = false"
-          @error="imageFailed = true; imageLoading = false"
-        />
-        <el-empty v-else description="图片无法加载" />
-        <div v-if="imageLoading" class="image-loading">
-          正在加载影像
-        </div>
+      <el-segmented
+        v-model="displayMode"
+        class="display-mode"
+        size="small"
+        :options="[
+          { label: '单页', value: 'single' },
+          { label: '滚动', value: 'scroll' },
+        ]"
+      />
+
+      <div v-if="displayMode === 'single'" class="preview-stage single-stage">
+        <img class="preview-image" :src="props.image.imageUrl" :alt="`第 ${props.index + 1} 张影像`" @error="onImageError">
       </div>
-      <div class="preview-bar">
-        <div class="preview-info">
-          <strong>P{{ props.image.pages ?? '-' }}</strong>
-          <span>{{ normalizeText(props.image.filename) }}</span>
-          <span class="image-position">{{ props.index + 1 }} / {{ props.total }}</span>
-        </div>
-        <div class="preview-actions">
-          <el-button circle :icon="ArrowLeft" :disabled="props.index === 0" aria-label="上一张影像" @click="emit('navigate', -1)" />
-          <el-button circle :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
-          <el-button size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
-            {{ props.isSelected ? '已选' : '选中' }}
-          </el-button>
-          <div class="type-editor">
-            <span>分类</span>
-            <el-select
-              v-model="currentType"
-              :loading="props.savingType"
-              size="small"
-              style="width: 180px;"
-            >
-              <el-option
-                v-for="item in TYPE_OPTIONS"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
-        </div>
+
+      <div v-else ref="previewScroller" class="preview-stage">
+        <article
+          v-for="(imageUrl, pageIndex) in props.previewList"
+          :key="imageUrl || pageIndex"
+          :ref="(element: any) => { pageRefs[pageIndex] = element }"
+          class="continuous-page"
+          :class="{ active: pageIndex === props.index }"
+          :data-index="pageIndex"
+        >
+          <img class="preview-image" :src="imageUrl" :alt="`第 ${pageIndex + 1} 张影像`" loading="lazy" @error="onImageError">
+        </article>
+      </div>
+
+      <el-button
+        class="image-nav image-nav-prev"
+        circle
+        :icon="ArrowLeft"
+        :disabled="props.index === 0"
+        aria-label="上一张影像"
+        @click="emit('navigate', -1)"
+      />
+      <el-button
+        class="image-nav image-nav-next"
+        circle
+        :icon="ArrowRight"
+        :disabled="props.index >= props.total - 1"
+        aria-label="下一张影像"
+        @click="emit('navigate', 1)"
+      />
+
+      <div class="preview-info">
+        <strong>P{{ props.image.pages ?? '-' }}</strong>
+        <span>{{ normalizeText(props.image.filename) }}</span>
+        <span class="image-position">{{ props.index + 1 }} / {{ props.total }}</span>
+      </div>
+
+      <el-button class="selection-fab" size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
+        {{ props.isSelected ? '已选' : '选中' }}
+      </el-button>
+
+      <div class="type-fab">
+        <el-select v-model="pendingType" :loading="props.savingType" size="small" @change="confirmType">
+          <el-option
+            v-for="item in TYPE_OPTIONS"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
       </div>
     </template>
     <el-empty v-else description="请选择影像" />
@@ -108,71 +202,128 @@ function handleTouchEnd(event: TouchEvent) {
 <style scoped>
 .preview-panel {
   position: relative;
-  display: grid;
-  place-items: center;
   height: 100%;
   min-height: 0;
-  padding: 16px;
-  background: var(--surface-alt);
+  overflow: hidden;
 }
 
 .preview-image {
-  width: 100%;
-  height: 100%;
-  max-height: calc(100vh - 410px);
+  display: block;
+  width: min(100%, 980px);
+  height: auto;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .preview-stage {
-  display: grid;
-  place-items: center;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-height: 0;
-}
-
-.image-loading {
-  position: absolute;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--surface);
+  padding: 16px 68px 72px;
+  overflow-y: auto;
+  background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
-.preview-bar {
+.single-stage {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.single-stage .preview-image {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.continuous-page {
+  position: relative;
+  padding: 8px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.continuous-page.active {
+  border-color: hsl(var(--primary) / 45%);
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 12%);
+}
+
+.image-nav,
+.selection-fab,
+.type-fab,
+.preview-info,
+.display-mode {
   position: absolute;
+}
+
+.image-nav {
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+}
+
+.image-nav-prev {
+  left: 16px;
+}
+
+.image-nav-next {
   right: 16px;
+}
+
+.preview-info {
   bottom: 16px;
   left: 16px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
+  max-width: calc(100% - 280px);
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
   background: hsl(var(--card) / 95%);
   border: 1px solid var(--divider);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 4%);
 }
 
-@supports (backdrop-filter: blur(8px)) {
-  .preview-bar {
-    backdrop-filter: blur(8px);
-  }
+.selection-fab {
+  top: 16px;
+  right: 16px;
 }
 
-.preview-info {
+.display-mode {
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+}
+
+.type-fab {
+  right: 16px;
+  bottom: 16px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  font-size: 13px;
-  color: var(--text-primary);
+  width: 180px;
+}
+
+.type-fab :deep(.el-select) {
+  flex: 1;
 }
 
 .preview-info strong {
-  margin-right: 2px;
+  margin-right: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
   color: var(--text-primary);
+  background: var(--surface-alt);
+  border-radius: 4px;
 }
 
 .image-position {
@@ -181,24 +332,26 @@ function handleTouchEnd(event: TouchEvent) {
   border-left: 1px solid var(--divider);
 }
 
-.preview-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.type-editor {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  color: var(--text-secondary);
+.preview-info > span:not(.image-position) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (width <= 720px) {
-  .preview-bar {
-    flex-direction: column;
-    align-items: stretch;
+  .preview-stage {
+    padding-right: 52px;
+    padding-left: 52px;
+  }
+
+  .preview-info {
+    max-width: calc(100% - 32px);
+  }
+
+  .selection-fab {
+    right: 16px;
+    bottom: 62px;
+    top: auto;
   }
 }
 </style>

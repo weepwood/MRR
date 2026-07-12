@@ -17,6 +17,7 @@ export function useThumbLayout(
   const visibleCount = ref(20)
 
   let resizeObserver: ResizeObserver | null = null
+  let usesWindowResize = false
 
   function calc(): void {
     const container = thumbsContainer.value
@@ -65,9 +66,17 @@ export function useThumbLayout(
   }
 
   onMounted(() => {
-    resizeObserver = new ResizeObserver(() => calc())
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => calc())
+      if (thumbsContainer.value) {
+        resizeObserver.observe(thumbsContainer.value)
+      }
+    }
+    else {
+      usesWindowResize = true
+      window.addEventListener('resize', calc)
+    }
     if (thumbsContainer.value) {
-      resizeObserver.observe(thumbsContainer.value)
       thumbsContainer.value.addEventListener('scroll', onScroll, { passive: true })
     }
     calc()
@@ -77,6 +86,9 @@ export function useThumbLayout(
   onUnmounted(() => {
     resizeObserver?.disconnect()
     resizeObserver = null
+    if (usesWindowResize) {
+      window.removeEventListener('resize', calc)
+    }
     if (thumbsContainer.value) {
       thumbsContainer.value.removeEventListener('scroll', onScroll)
     }

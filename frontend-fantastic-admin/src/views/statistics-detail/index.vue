@@ -14,6 +14,7 @@ import AppError from '@/components/AppError/index.vue'
 defineOptions({ name: 'StatisticsDetailPage' })
 
 interface ArchiveItem extends StatisticsRecord {}
+type ArchiveDisplayMode = 'folder' | 'list'
 
 interface ListData {
   total: number
@@ -52,6 +53,7 @@ const listData = ref<ListData>({
 
 const currentPage = ref(1)
 const pageSize = ref(18)
+const archiveDisplayMode = ref<ArchiveDisplayMode>('folder')
 const selectedArchive = ref<ArchiveItem | null>(null)
 const selectedArchiveKey = ref('')
 
@@ -223,6 +225,14 @@ function selectArchive(item: ArchiveItem, index = 0) {
   selectedArchiveKey.value = archiveKey(item, index)
 }
 
+function selectArchiveFromList(item: ArchiveItem) {
+  selectArchive(item, listData.value.list.indexOf(item))
+}
+
+function archiveRowClassName({ row, rowIndex }: { row: ArchiveItem, rowIndex: number }) {
+  return selectedArchiveKey.value === archiveKey(row, rowIndex) ? 'archive-list-row-selected' : ''
+}
+
 function openArchive(item = selectedArchive.value) {
   if (!item?.bah) {
     ElMessage.warning('当前档案袋缺少病案号，无法打开影像')
@@ -377,10 +387,22 @@ onMounted(refreshAll)
 
     <section class="content-layout">
       <div class="archive-shelf">
+        <div class="archive-toolbar">
+          <span class="archive-toolbar-title">档案列表</span>
+          <el-radio-group v-model="archiveDisplayMode" aria-label="档案展示方式">
+            <el-radio-button value="folder">
+              档案袋
+            </el-radio-button>
+            <el-radio-button value="list">
+              列表
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+
         <AppLoading v-if="loading" type="table" :rows="8" />
         <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
         <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
-        <div v-else class="archive-grid">
+        <div v-else-if="archiveDisplayMode === 'folder'" class="archive-grid">
           <article
             v-for="(item, index) in listData.list"
             :key="archiveKey(item, index)"
@@ -433,6 +455,65 @@ onMounted(refreshAll)
               </el-button>
             </div>
           </article>
+        </div>
+        <div v-else class="archive-list-wrap">
+          <el-table
+            :data="listData.list"
+            :row-class-name="archiveRowClassName"
+            class="archive-list"
+            row-key="id"
+            @row-click="selectArchiveFromList"
+          >
+            <el-table-column label="#" width="72" align="center">
+              <template #default="{ $index }">
+                {{ tableIndex($index) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="病案号" min-width="120">
+              <template #default="{ row }">
+                <strong class="archive-bah">{{ normalizeText(row.bah) }}</strong>
+              </template>
+            </el-table-column>
+            <el-table-column label="档案类型" min-width="110">
+              <template #default="{ row }">
+                <el-tag size="small" :type="typeTone(row.type)">
+                  {{ normalizeText(row.type) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="归档日期" min-width="110">
+              <template #default="{ row }">
+                {{ formatDate(row.date) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="扫描设备" min-width="100">
+              <template #default="{ row }">
+                {{ normalizeText(row.cid) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="上架号" min-width="100">
+              <template #default="{ row }">
+                {{ normalizeText(row.sjh) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="页数" width="80" align="right">
+              <template #default="{ row }">
+                {{ Number(row.pages || 0).toLocaleString('zh-CN') }} 页
+              </template>
+            </el-table-column>
+            <el-table-column label="负责人" min-width="100">
+              <template #default="{ row }">
+                {{ normalizeText(row.openerNo) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="96" fixed="right" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click.stop="openArchive(row)">
+                  查看影像
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
 
         <div class="pagination-wrapper">
@@ -578,6 +659,19 @@ h2 {
   gap: 16px;
 }
 
+.archive-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.archive-toolbar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .archive-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -587,6 +681,28 @@ h2 {
 .archive-loading,
 .empty-wrap {
   padding: 40px 0;
+}
+
+.archive-list-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+
+.archive-list {
+  min-width: 940px;
+}
+
+.archive-bah {
+  color: var(--text-primary);
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+:deep(.el-table__row.archive-list-row-selected > td.el-table__cell) {
+  background: hsl(var(--primary) / 8%);
 }
 
 .archive-folder-card {
@@ -732,6 +848,11 @@ h2 {
   .filter-actions {
     flex: 1 1 100%;
     margin-left: 0;
+  }
+
+  .archive-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

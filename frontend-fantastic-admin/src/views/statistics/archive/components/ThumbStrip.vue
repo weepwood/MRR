@@ -38,6 +38,22 @@ function toggleItem(img: GalleryImage, event: Event) {
 function onImageError(event: Event) {
   const target = event.target as HTMLImageElement
   target.style.opacity = '0.35'
+  target.alt = '图片加载失败'
+}
+
+function onItemKeydown(index: number, event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    selectItem(index)
+  }
+}
+
+function onToggleKeydown(img: GalleryImage, event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('toggle', img)
+  }
 }
 
 function scrollToIndex(index: number, smooth = true) {
@@ -51,7 +67,13 @@ function scrollToIndex(index: number, smooth = true) {
       return
     }
     const top = target.offsetTop - (container.clientHeight - target.clientHeight) / 2
-    container.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' })
+    const scrollTop = Math.max(0, top)
+    if (smooth && 'scrollBehavior' in document.documentElement.style) {
+      container.scrollTo({ top: scrollTop, behavior: 'smooth' })
+    }
+    else {
+      container.scrollTop = scrollTop
+    }
   })
 }
 
@@ -67,9 +89,14 @@ defineExpose({ resetVisible, scrollToIndex })
       class="thumb-item"
       :class="{ active: index === props.selectedIndex, checked: props.isSelected(img) }"
       :style="props.viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
+      role="button"
+      :aria-current="index === props.selectedIndex ? 'true' : undefined"
+      :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
+      tabindex="0"
       @click="selectItem(index)"
+      @keydown="onItemKeydown(index, $event)"
     >
-      <span class="thumb-check" :class="{ checked: props.isSelected(img) }" @click="toggleItem(img, $event)">
+      <span class="thumb-check" :class="{ checked: props.isSelected(img) }" role="checkbox" :aria-checked="props.isSelected(img)" tabindex="0" @click="toggleItem(img, $event)" @keydown="onToggleKeydown(img, $event)">
         <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="12" height="12"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
       </span>
       <img
@@ -131,6 +158,12 @@ defineExpose({ resetVisible, scrollToIndex })
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.thumb-item:focus-visible,
+.thumb-check:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
 .thumb-item:hover {
   border-color: hsl(var(--primary) / 50%);
 }
@@ -170,6 +203,7 @@ defineExpose({ resetVisible, scrollToIndex })
 
 .thumb-item img {
   width: 100%;
+  height: 120px;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: var(--surface-alt);

@@ -126,6 +126,14 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     navigate(1)
   }
+  else if (e.key === 'Home') {
+    e.preventDefault()
+    selectImage(0)
+  }
+  else if (e.key === 'End') {
+    e.preventDefault()
+    selectImage(filteredImages.value.length - 1)
+  }
 }
 
 watch(filteredImages, () => {
@@ -203,11 +211,13 @@ onUnmounted(() => {
           :image="currentImage"
           :preview-list="previewList"
           :index="selectedImageIndex"
+          :total="filteredImages.length"
           :is-selected="currentImage ? isSelected(currentImage) : false"
           :saving-type="savingType"
           :loading="loading"
           @toggle="toggleCurrent"
           @save-type="handleSaveType"
+          @navigate="navigate"
         />
       </div>
     </template>

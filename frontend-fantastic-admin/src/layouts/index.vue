@@ -7,12 +7,12 @@ import MainSidebar from './components/MainSidebar/index.vue'
 import SubSidebar from './components/SubSidebar/index.vue'
 import Topbar from './components/Topbar/index.vue'
 
-const HotkeysIntro = defineAsyncComponent(() => import('./components/HotkeysIntro/index.vue'))
-const LinkView = defineAsyncComponent(() => import('./components/views/link.vue'))
-
 defineOptions({
   name: 'Layout',
 })
+
+const HotkeysIntro = defineAsyncComponent(() => import('./components/HotkeysIntro/index.vue'))
+const LinkView = defineAsyncComponent(() => import('./components/views/link.vue'))
 
 const routeInfo = useRoute()
 const settingsStore = useSettingsStore()

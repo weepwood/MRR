@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { RouteArchiveMeta, ViewMode } from '../types'
-import { Grid, List, Search } from '@element-plus/icons-vue'
+import type { RouteArchiveMeta } from '../types'
+import { Search } from '@element-plus/icons-vue'
 import { formatDate, normalizeText } from '../constants'
 
 defineOptions({ name: 'ArchiveSearchBar' })
@@ -16,7 +16,6 @@ const emit = defineEmits<{
 }>()
 const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
-const viewMode = defineModel<ViewMode>('viewMode', { default: 'thumb' })
 
 const metaItems = computed(() => [
   { label: '病案号', value: normalizeText(props.routeMeta.bah) },
@@ -32,19 +31,12 @@ const metaItems = computed(() => [
   <section class="search-card">
     <div class="search-bar">
       <div class="search-fields">
-        <el-input v-model="searchBah" clearable placeholder="病案号" @keyup.enter="emit('search')" />
-        <el-input v-model="searchSjh" clearable placeholder="上架号" @keyup.enter="emit('search')" />
+        <el-input v-model="searchBah" name="archive-bah" autocomplete="off" aria-label="病案号" clearable placeholder="病案号" @keyup.enter="emit('search')" />
+        <el-input v-model="searchSjh" name="archive-sjh" autocomplete="off" aria-label="上架号" clearable placeholder="上架号" @keyup.enter="emit('search')" />
         <el-button type="primary" :icon="Search" :loading="loading" @click="emit('search')">
           查询
         </el-button>
       </div>
-      <el-segmented
-        v-model="viewMode"
-        :options="[
-          { label: '缩略图', value: 'thumb', icon: Grid },
-          { label: '列表', value: 'list', icon: List },
-        ]"
-      />
     </div>
     <div v-if="hasImages" class="route-meta">
       <span v-for="item in metaItems" :key="item.label" class="meta-item">
@@ -78,10 +70,6 @@ const metaItems = computed(() => [
   min-width: 0;
 }
 
-.search-bar :deep(.el-segmented) {
-  justify-self: start;
-}
-
 .route-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -107,10 +95,10 @@ const metaItems = computed(() => [
 
 .meta-item span {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

@@ -130,18 +130,67 @@ onUnmounted(() => {
 <template>
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
-      <el-segmented
-        v-model="displayMode"
-        class="display-mode"
-        size="small"
-        :options="[
-          { label: '单页', value: 'single' },
-          { label: '滚动', value: 'scroll' },
-        ]"
-      />
+      <div class="preview-toolbar">
+        <el-segmented
+          v-model="displayMode"
+          size="small"
+          aria-label="预览模式"
+          :options="[
+            { label: '单页', value: 'single' },
+            { label: '滚动', value: 'scroll' },
+          ]"
+        />
+
+        <div class="preview-file">
+          <strong>P{{ props.image.pages ?? '-' }}</strong>
+          <span>{{ normalizeText(props.image.filename) }}</span>
+          <span class="image-position">{{ props.index + 1 }} / {{ props.total }}</span>
+        </div>
+
+        <div class="preview-controls">
+          <div class="page-navigation" aria-label="影像翻页">
+            <el-button
+              circle
+              size="small"
+              :icon="ArrowLeft"
+              :disabled="props.index === 0"
+              aria-label="上一张影像"
+              @click="emit('navigate', -1)"
+            />
+            <el-button
+              circle
+              size="small"
+              :icon="ArrowRight"
+              :disabled="props.index >= props.total - 1"
+              aria-label="下一张影像"
+              @click="emit('navigate', 1)"
+            />
+          </div>
+          <el-button size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
+            {{ props.isSelected ? '已选' : '选中' }}
+          </el-button>
+          <el-select v-model="pendingType" aria-label="影像分类" :loading="props.savingType" size="small" @change="confirmType">
+            <el-option
+              v-for="item in TYPE_OPTIONS"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </div>
+      </div>
 
       <div v-if="displayMode === 'single'" class="preview-stage single-stage">
-        <img class="preview-image" :src="props.image.imageUrl" :alt="`第 ${props.index + 1} 张影像`" @error="onImageError">
+        <el-image
+          class="preview-image"
+          :src="props.image.imageUrl"
+          :alt="`第 ${props.index + 1} 张影像`"
+          fit="contain"
+          :preview-src-list="props.image.imageUrl ? [props.image.imageUrl] : []"
+          :preview-teleported="true"
+          :hide-on-click-modal="false"
+          @error="onImageError"
+        />
       </div>
 
       <div v-else ref="previewScroller" class="preview-stage">
@@ -155,44 +204,6 @@ onUnmounted(() => {
         >
           <img class="preview-image" :src="imageUrl" :alt="`第 ${pageIndex + 1} 张影像`" loading="lazy" @error="onImageError">
         </article>
-      </div>
-
-      <el-button
-        class="image-nav image-nav-prev"
-        circle
-        :icon="ArrowLeft"
-        :disabled="props.index === 0"
-        aria-label="上一张影像"
-        @click="emit('navigate', -1)"
-      />
-      <el-button
-        class="image-nav image-nav-next"
-        circle
-        :icon="ArrowRight"
-        :disabled="props.index >= props.total - 1"
-        aria-label="下一张影像"
-        @click="emit('navigate', 1)"
-      />
-
-      <div class="preview-info">
-        <strong>P{{ props.image.pages ?? '-' }}</strong>
-        <span>{{ normalizeText(props.image.filename) }}</span>
-        <span class="image-position">{{ props.index + 1 }} / {{ props.total }}</span>
-      </div>
-
-      <el-button class="selection-fab" size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
-        {{ props.isSelected ? '已选' : '选中' }}
-      </el-button>
-
-      <div class="type-fab">
-        <el-select v-model="pendingType" :loading="props.savingType" size="small" @change="confirmType">
-          <el-option
-            v-for="item in TYPE_OPTIONS"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
       </div>
     </template>
     <el-empty v-else description="请选择影像" />
@@ -221,7 +232,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 16px 68px 72px;
+  padding: 68px 24px 24px;
   overflow-y: auto;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
@@ -231,15 +242,21 @@ onUnmounted(() => {
 .single-stage {
   display: grid;
   place-items: center;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
 .single-stage .preview-image {
-  width: auto;
-  height: auto;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  height: 100%;
+  min-height: 0;
   max-height: 100%;
-  object-fit: contain;
+  cursor: zoom-in;
+  background: transparent;
+  box-shadow: none;
 }
 
 .continuous-page {
@@ -255,103 +272,97 @@ onUnmounted(() => {
   box-shadow: 0 0 0 2px hsl(var(--primary) / 12%);
 }
 
-.image-nav,
-.selection-fab,
-.type-fab,
-.preview-info,
-.display-mode {
+.preview-toolbar {
   position: absolute;
-}
-
-.image-nav {
-  top: 50%;
+  top: 12px;
+  right: 12px;
+  left: 12px;
   z-index: 2;
-  transform: translateY(-50%);
-}
-
-.image-nav-prev {
-  left: 16px;
-}
-
-.image-nav-next {
-  right: 16px;
-}
-
-.preview-info {
-  bottom: 16px;
-  left: 16px;
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  max-width: calc(100% - 280px);
-  padding: 7px 10px;
+  min-width: 0;
+  padding: 8px;
+  background: hsl(var(--card) / 92%);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
+}
+
+.preview-file,
+.preview-controls,
+.page-navigation {
+  display: flex;
+  align-items: center;
+}
+
+.preview-file {
+  gap: 8px;
+  min-width: 0;
   font-size: 13px;
   color: var(--text-primary);
-  background: hsl(var(--card) / 95%);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 4%);
 }
 
-.selection-fab {
-  top: 16px;
-  right: 16px;
-}
-
-.display-mode {
-  top: 16px;
-  left: 16px;
-  z-index: 2;
-}
-
-.type-fab {
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  width: 180px;
-}
-
-.type-fab :deep(.el-select) {
-  flex: 1;
-}
-
-.preview-info strong {
-  margin-right: 4px;
+.preview-file strong {
+  flex: none;
   padding: 2px 6px;
   font-size: 12px;
-  color: var(--text-primary);
   background: var(--surface-alt);
   border-radius: 4px;
 }
 
-.image-position {
-  padding-left: 8px;
-  color: var(--text-secondary);
-  border-left: 1px solid var(--divider);
-}
-
-.preview-info > span:not(.image-position) {
+.preview-file > span:not(.image-position) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.preview-controls {
+  flex: none;
+  gap: 6px;
+}
+
+.page-navigation {
+  gap: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--divider);
+}
+
+.preview-controls :deep(.el-select) {
+  width: 148px;
+}
+
+.image-position {
+  flex: none;
+  padding-left: 8px;
+  color: var(--text-secondary);
+  border-left: 1px solid var(--divider);
+}
+
 @media (width <= 720px) {
   .preview-stage {
-    padding-right: 52px;
-    padding-left: 52px;
+    padding: 136px 16px 16px;
   }
 
-  .preview-info {
-    max-width: calc(100% - 32px);
+  .preview-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .selection-fab {
-    right: 16px;
-    bottom: 62px;
-    top: auto;
+  .preview-file {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+
+  .preview-controls {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .preview-controls :deep(.el-select) {
+    width: 92px;
   }
 }
 </style>

@@ -25,19 +25,23 @@ const emit = defineEmits<{
 
 <template>
   <header class="archive-header">
-    <div class="archive-title">
-      <h2>影像档案袋</h2>
-      <p class="archive-subtitle">
-        病案影像检索、预览与归档
-      </p>
+    <div class="archive-heading">
+      <div class="archive-title">
+        <h2>影像档案袋</h2>
+        <p class="archive-subtitle">
+          病案影像检索、预览与归档
+        </p>
+      </div>
+      <div class="heading-actions">
+        <el-button text size="small" :icon="ArrowLeft" @click="emit('back')">
+          返回
+        </el-button>
+        <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
+          刷新
+        </el-button>
+      </div>
     </div>
     <div class="archive-actions">
-      <el-button text :icon="ArrowLeft" @click="emit('back')">
-        返回明细
-      </el-button>
-      <el-button text :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
-        刷新
-      </el-button>
       <el-button :icon="Download" :loading="props.downloading" @click="emit('download')">
         下载档案袋
       </el-button>
@@ -58,6 +62,23 @@ const emit = defineEmits<{
   border-bottom: 1px solid var(--divider);
 }
 
+.archive-heading,
+.heading-actions,
+.archive-actions {
+  display: flex;
+  align-items: center;
+}
+
+.archive-heading {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.heading-actions {
+  flex: none;
+  gap: 2px;
+}
+
 .archive-title h2 {
   margin: 0;
   font-size: 18px;
@@ -73,13 +94,11 @@ const emit = defineEmits<{
 }
 
 .archive-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 8px;
 }
 
 .archive-actions :deep(.el-button) {
-  width: 100%;
+  flex: 1;
   margin: 0;
 }
 

@@ -168,28 +168,33 @@ onUnmounted(() => {
 <template>
   <div class="page-shell">
     <div class="page-header">
-      <div>
+      <div class="header-copy">
         <p class="eyebrow">
           System Monitor
         </p>
         <h2>系统监控</h2>
-        <p class="subtitle">
-          自动每 10 秒刷新 · 上次刷新: {{ lastRefresh || '--' }}
-          <span v-if="!autoRefresh" style="color: #d97706;">（已暂停）</span>
+        <p class="subtitle" aria-live="polite">
+          {{ autoRefresh ? '每 10 秒自动刷新' : '自动刷新已暂停' }} · 上次刷新: {{ lastRefresh || '--' }}
         </p>
       </div>
-      <div class="flex gap-2">
-        <el-button size="small" :type="autoRefresh ? 'primary' : 'default'" @click="autoRefresh = !autoRefresh">
-          {{ autoRefresh ? '暂停刷新' : '恢复刷新' }}
-        </el-button>
-        <el-button size="small" type="primary" :loading="loading" @click="loadAll()">
-          手动刷新
-        </el-button>
+      <div class="monitor-actions">
+        <span class="health-pill" :class="healthTone">
+          <i class="status-dot" aria-hidden="true" />
+          {{ healthStatus.status || 'UNKNOWN' }}
+        </span>
+        <div class="refresh-actions">
+          <el-button size="small" :type="autoRefresh ? 'primary' : 'default'" @click="autoRefresh = !autoRefresh">
+            {{ autoRefresh ? '暂停刷新' : '恢复刷新' }}
+          </el-button>
+          <el-button size="small" type="primary" :loading="loading" @click="loadAll()">
+            立即刷新
+          </el-button>
+        </div>
       </div>
     </div>
 
     <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
+      <el-card v-for="item in summaryCards" :key="item.label" class="summary-card" shadow="never">
         <div class="summary-label">
           {{ item.label }}
         </div>
@@ -202,11 +207,11 @@ onUnmounted(() => {
       </el-card>
     </section>
 
-    <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card shadow="never">
+    <el-row :gutter="20" class="metric-row">
+      <el-col :xs="24" :md="12">
+        <el-card class="monitor-card" shadow="never">
           <template #header>
-            JVM 与应用信息
+            <div class="card-title">JVM 与应用信息</div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="应用名称">
@@ -233,10 +238,10 @@ onUnmounted(() => {
           </el-descriptions>
         </el-card>
       </el-col>
-      <el-col :span="12">
-        <el-card shadow="never">
+      <el-col :xs="24" :md="12">
+        <el-card class="monitor-card" shadow="never">
           <template #header>
-            内存概览
+            <div class="card-title">内存概览</div>
           </template>
           <div class="metric">
             <div class="metric-top">
@@ -245,7 +250,7 @@ onUnmounted(() => {
             </div>
             <el-progress :percentage="memoryPercent" :stroke-width="12" :status="memoryPercent > 90 ? 'exception' : memoryPercent > 70 ? 'warning' : 'success'" />
           </div>
-          <el-descriptions :column="1" border style="margin-top: 16px;">
+          <el-descriptions :column="1" border class="details-list memory-details">
             <el-descriptions-item label="Heap Used">
               {{ memoryInfo.heap?.used || '-' }}
             </el-descriptions-item>
@@ -266,11 +271,11 @@ onUnmounted(() => {
       </el-col>
     </el-row>
 
-    <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card shadow="never">
+    <el-row :gutter="20" class="metric-row">
+      <el-col :xs="24" :md="12">
+        <el-card class="monitor-card" shadow="never">
           <template #header>
-            GC 统计
+            <div class="card-title">GC 统计</div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="累计收集次数">
@@ -285,10 +290,10 @@ onUnmounted(() => {
           </el-descriptions>
         </el-card>
       </el-col>
-      <el-col :span="12">
-        <el-card shadow="never">
+      <el-col :xs="24" :md="12">
+        <el-card class="monitor-card" shadow="never">
           <template #header>
-            线程 &amp; 连接池
+            <div class="card-title">线程 &amp; 连接池</div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="当前线程数">
@@ -304,7 +309,7 @@ onUnmounted(() => {
               {{ threadStats.totalStarted || '-' }}
             </el-descriptions-item>
           </el-descriptions>
-          <el-descriptions :column="1" border style="margin-top: 12px;">
+          <el-descriptions :column="1" border class="details-list connection-details">
             <el-descriptions-item label="DB 活跃连接">
               {{ hikariActive !== null ? `${hikariActive}/${hikariMax}` : '-' }}
             </el-descriptions-item>
@@ -319,9 +324,9 @@ onUnmounted(() => {
       </el-col>
     </el-row>
 
-    <el-card shadow="never">
+    <el-card class="monitor-card properties-card" shadow="never">
       <template #header>
-        系统属性
+        <div class="card-title">系统属性</div>
       </template>
       <div class="properties-grid">
         <article v-for="(value, key) in properties" :key="key" class="property-item">
@@ -338,24 +343,248 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.page-shell { display: grid; gap: 20px; }
-.page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.12em; }
-h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; font-size: 13px; color: var(--text-secondary); }
-.summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
-.summary-label { font-size: 12px; color: var(--text-secondary); }
-.summary-value { margin-top: 8px; font-size: 22px; font-weight: 800; color: var(--text-primary); }
-.summary-note { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
-.summary-value.success { color: #16a34a; }
-.summary-value.warning { color: #d97706; }
-.summary-value.danger { color: #dc2626; }
-.metric { display: grid; gap: 8px; }
-.metric-top { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
-.properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.property-item { padding: 14px; background: var(--surface); border: 1px solid rgb(148 163 184 / 16%); border-radius: 14px; }
-.property-key { font-size: 12px; color: var(--text-secondary); }
-.property-value { margin-top: 6px; color: var(--text-primary); word-break: break-all; }
-.flex { display: flex; }
-.gap-2 { gap: 8px; }
+.page-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+}
+
+.header-copy {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 30px);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.monitor-actions,
+.refresh-actions,
+.health-pill,
+.metric-top {
+  display: flex;
+  align-items: center;
+}
+
+.monitor-actions {
+  flex: none;
+  gap: 12px;
+}
+
+.refresh-actions {
+  gap: 8px;
+}
+
+.health-pill {
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+}
+
+.health-pill.success,
+.summary-value.success {
+  color: #16a34a;
+}
+
+.health-pill.warning,
+.summary-value.warning {
+  color: #d97706;
+}
+
+.health-pill.danger,
+.summary-value.danger {
+  color: #dc2626;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-card {
+  height: 100%;
+  border-color: var(--divider);
+  border-radius: 14px;
+}
+
+.summary-card :deep(.el-card__body) {
+  display: grid;
+  align-content: start;
+  min-height: 112px;
+  padding: 18px;
+}
+
+.summary-label,
+.summary-note,
+.property-key {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.summary-note {
+  align-self: end;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.metric-row {
+  row-gap: 20px;
+}
+
+.monitor-card {
+  height: 100%;
+  border-color: var(--divider);
+  border-radius: 14px;
+}
+
+.monitor-card :deep(.el-card__header) {
+  padding: 14px 18px;
+  background: var(--surface-alt);
+  border-bottom-color: var(--divider);
+}
+
+.monitor-card :deep(.el-card__body) {
+  padding: 18px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.metric {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface-alt);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+}
+
+.metric-top {
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.metric-top strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.details-list {
+  margin-top: 14px;
+}
+
+.connection-details {
+  margin-top: 12px;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.property-item {
+  padding: 14px;
+  content-visibility: auto;
+  overflow: hidden;
+  background: var(--surface-alt);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+}
+
+.property-value {
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+@media (width <= 1100px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 720px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .monitor-actions,
+  .refresh-actions {
+    width: 100%;
+  }
+
+  .monitor-actions {
+    justify-content: space-between;
+  }
+
+  .refresh-actions :deep(.el-button) {
+    flex: 1;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-card :deep(.el-card__body),
+  .monitor-card :deep(.el-card__body) {
+    padding: 14px;
+  }
+
+  .properties-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

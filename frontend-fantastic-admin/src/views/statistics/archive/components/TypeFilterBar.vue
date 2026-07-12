@@ -64,6 +64,7 @@ function onNodeClick(data: DirectoryNode) {
         <el-segmented
           v-model="displayMode"
           size="small"
+          aria-label="分类展示方式"
           :options="[
             { label: '按钮', value: 'buttons' },
             { label: '目录', value: 'tree' },
@@ -72,15 +73,17 @@ function onNodeClick(data: DirectoryNode) {
       </div>
     </div>
     <div v-if="displayMode === 'buttons'" class="type-tabs">
-      <button class="type-tab" :class="{ active: selectedType === 'all' }" @click="onSelect('all')">
+      <button type="button" class="type-tab" :class="{ active: selectedType === 'all' }" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
         全部
         <span class="type-count">{{ props.totalCount }}</span>
       </button>
       <button
         v-for="item in props.typeStats"
         :key="item.value"
+        type="button"
         class="type-tab"
         :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
+        :aria-pressed="selectedType === item.value"
         :disabled="item.count === 0"
         @click="onSelect(item.value)"
       >
@@ -165,6 +168,11 @@ function onNodeClick(data: DirectoryNode) {
   color: hsl(var(--primary));
   background: hsl(var(--primary) / 10%);
   border-color: hsl(var(--primary) / 30%);
+}
+
+.type-tab:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
 .type-tab:hover:not(.disabled, .active) {

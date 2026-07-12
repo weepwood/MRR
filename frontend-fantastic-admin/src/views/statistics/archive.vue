@@ -178,7 +178,6 @@ onUnmounted(() => {
         <ArchiveSearchBar
           v-model:search-bah="searchBah"
           v-model:search-sjh="searchSjh"
-          v-model:view-mode="viewMode"
           :route-meta="routeArchive"
           :has-images="images.length > 0"
           :loading="loading"
@@ -211,8 +210,8 @@ onUnmounted(() => {
       <div v-if="images.length > 0" class="viewer-layout">
         <ThumbStrip
           ref="thumbStripRef"
+          v-model:view-mode="viewMode"
           :images="filteredImages"
-          :view-mode="viewMode"
           :selected-index="selectedImageIndex"
           :is-selected="isSelected"
           @select="selectImage"
@@ -254,7 +253,7 @@ onUnmounted(() => {
 
 .archive-workspace.has-images {
   display: grid;
-  grid-template-columns: minmax(300px, 340px) 132px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) 116px minmax(0, 1fr);
   gap: 12px;
   height: 100%;
   min-height: 0;
@@ -319,10 +318,6 @@ onUnmounted(() => {
   display: flex;
   min-height: 0;
   overflow: hidden;
-  padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 12px;
 }
 
 .empty-state {

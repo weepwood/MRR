@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GalleryImage, ViewMode } from '../types'
-import { toRef } from 'vue'
+import { Grid, List } from '@element-plus/icons-vue'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
 
@@ -8,7 +8,6 @@ defineOptions({ name: 'ThumbStrip' })
 
 const props = defineProps<{
   images: GalleryImage[]
-  viewMode: ViewMode
   selectedIndex: number
   isSelected: (img: GalleryImage) => boolean
 }>()
@@ -20,9 +19,9 @@ const emit = defineEmits<{
 
 const thumbsContainer = ref<HTMLElement | null>(null)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
+const viewMode = defineModel<ViewMode>('viewMode', { default: 'thumb' })
 
-const viewModeRef = toRef(props, 'viewMode')
-const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(thumbsContainer, viewModeRef)
+const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(thumbsContainer, viewMode)
 
 const displayed = computed(() => props.images.slice(0, visibleCount.value))
 
@@ -81,47 +80,76 @@ defineExpose({ resetVisible, scrollToIndex })
 </script>
 
 <template>
-  <div ref="thumbsContainer" class="thumb-strip" :class="props.viewMode">
-    <div
-      v-for="(img, index) in displayed"
-      :key="img.id || img.filename || index"
-      :ref="(el: any) => { thumbRefs[index] = el }"
-      class="thumb-item"
-      :class="{ active: index === props.selectedIndex, checked: props.isSelected(img) }"
-      :style="props.viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
-      role="button"
-      :aria-current="index === props.selectedIndex ? 'true' : undefined"
-      :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
-      tabindex="0"
-      @click="selectItem(index)"
-      @keydown="onItemKeydown(index, $event)"
-    >
-      <span class="thumb-check" :class="{ checked: props.isSelected(img) }" role="checkbox" :aria-checked="props.isSelected(img)" tabindex="0" @click="toggleItem(img, $event)" @keydown="onToggleKeydown(img, $event)">
-        <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="12" height="12"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
-      </span>
-      <img
-        v-if="props.viewMode === 'thumb'"
-        :src="img.imageUrl"
-        alt=""
-        loading="lazy"
-        @error="onImageError"
+  <section class="thumb-panel" :class="viewMode">
+    <div class="thumb-toolbar">
+      <el-segmented
+        v-model="viewMode"
+        size="small"
+        aria-label="缩略图展示方式"
+        :options="[
+          { label: '缩略图', value: 'thumb', icon: Grid },
+          { label: '列表', value: 'list', icon: List },
+        ]"
+      />
+    </div>
+    <div ref="thumbsContainer" class="thumb-strip" :class="viewMode">
+      <div
+        v-for="(img, index) in displayed"
+        :key="img.id || img.filename || index"
+        :ref="(el: any) => { thumbRefs[index] = el }"
+        class="thumb-item"
+        :class="{ active: index === props.selectedIndex, checked: props.isSelected(img) }"
+        :style="viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
+        role="button"
+        :aria-current="index === props.selectedIndex ? 'true' : undefined"
+        :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
+        tabindex="0"
+        @click="selectItem(index)"
+        @keydown="onItemKeydown(index, $event)"
       >
-      <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
-      <small>{{ getTypeLabel(img.btype) }}</small>
+        <span class="thumb-check" :class="{ checked: props.isSelected(img) }" role="checkbox" :aria-checked="props.isSelected(img)" tabindex="0" @click="toggleItem(img, $event)" @keydown="onToggleKeydown(img, $event)">
+          <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="12" height="12"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
+        </span>
+        <img
+          v-if="viewMode === 'thumb'"
+          :src="img.imageUrl"
+          alt=""
+          loading="lazy"
+          @error="onImageError"
+        >
+        <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
+        <small>{{ getTypeLabel(img.btype) }}</small>
+      </div>
+      <div v-if="!props.images.length" class="empty-list">
+        暂无影像
+      </div>
+      <div v-else-if="visibleCount < props.images.length" class="load-hint">
+        滚动加载更多（{{ visibleCount }}/{{ props.images.length }}）
+      </div>
     </div>
-    <div v-if="!props.images.length" class="empty-list">
-      暂无影像
-    </div>
-    <div v-else-if="visibleCount < props.images.length" class="load-hint">
-      滚动加载更多（{{ visibleCount }}/{{ props.images.length }}）
-    </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
+.thumb-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.thumb-toolbar {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
 .thumb-strip {
   box-sizing: border-box;
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   gap: 6px;
   align-content: flex-start;
@@ -189,7 +217,7 @@ defineExpose({ resetVisible, scrollToIndex })
   background: rgb(255 255 255 / 80%);
   border: 1.5px solid var(--divider);
   border-radius: 4px;
-  transition: all 0.15s;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 
 .thumb-check.checked {
@@ -231,11 +259,11 @@ defineExpose({ resetVisible, scrollToIndex })
 }
 
 @media (width <= 1100px) {
-  .thumb-strip {
+  .thumb-panel {
     max-height: 220px;
   }
 
-  .thumb-strip.list {
+  .thumb-panel.list {
     max-height: 200px;
   }
 }

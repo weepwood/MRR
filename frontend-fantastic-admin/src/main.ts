@@ -1,6 +1,4 @@
-// 加载 iconify 图标
-import { downloadAndInstall } from '@/iconify'
-import icons from '@/iconify/index.json'
+import iconConfig from '@/iconify/index.json'
 // 自定义指令
 import directive from '@/utils/directive'
 
@@ -23,10 +21,17 @@ app.use(pinia)
 app.use(router)
 app.use(uiProvider)
 directive(app)
-if (icons.isOfflineUse) {
-  for (const info of icons.collections) {
-    downloadAndInstall(info)
-  }
+app.mount('#app')
+
+async function installOfflineIcons() {
+  const { downloadAndInstall } = await import('@/iconify')
+  await Promise.allSettled(
+    iconConfig.collections.map(collection => downloadAndInstall(collection)),
+  )
 }
 
-app.mount('#app')
+// 离线 Iconify 集合体积较大，仅在配置启用时才加载运行时与图标数据，
+// 避免默认在线模式阻塞应用首屏启动。
+if (iconConfig.isOfflineUse) {
+  void installOfflineIcons()
+}

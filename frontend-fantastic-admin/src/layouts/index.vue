@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import { useSlots } from '@/slots'
+import eventBus from '@/utils/eventBus'
 
 import Header from './components/Header/index.vue'
-import HotkeysIntro from './components/HotkeysIntro/index.vue'
 import MainSidebar from './components/MainSidebar/index.vue'
 import SubSidebar from './components/SubSidebar/index.vue'
 import Topbar from './components/Topbar/index.vue'
-import LinkView from './components/views/link.vue'
 
 defineOptions({
   name: 'Layout',
 })
 
-const routeInfo = useRoute()
+const HotkeysIntro = defineAsyncComponent(() => import('./components/HotkeysIntro/index.vue'))
+const LinkView = defineAsyncComponent(() => import('./components/views/link.vue'))
 
+const routeInfo = useRoute()
 const settingsStore = useSettingsStore()
 const keepAliveStore = useKeepAliveStore()
 const menuStore = useMenuStore()
+const hotkeysIntroVisible = ref(false)
 
 // 头部是否隐藏
 const isHeaderHide = computed(() => {
@@ -52,6 +54,10 @@ const isToolbarHide = computed(() => {
 
 const isLink = computed(() => !!routeInfo.meta.link)
 
+function toggleHotkeysIntro() {
+  hotkeysIntroVisible.value = !hotkeysIntroVisible.value
+}
+
 watch(() => settingsStore.settings.menu.subMenuCollapse, (val) => {
   if (settingsStore.mode === 'mobile') {
     if (!val) {
@@ -71,6 +77,13 @@ watch(() => routeInfo.path, () => {
   }
 })
 
+onMounted(() => {
+  eventBus.on('global-hotkeys-intro-toggle', toggleHotkeysIntro)
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('global-hotkeys-intro-toggle', toggleHotkeysIntro)
+})
 </script>
 
 <template>
@@ -107,7 +120,7 @@ watch(() => routeInfo.path, () => {
         </div>
       </div>
     </div>
-    <HotkeysIntro />
+    <HotkeysIntro v-if="hotkeysIntroVisible" v-model="hotkeysIntroVisible" />
     <component :is="useSlots('free-position')" />
   </div>
 </template>

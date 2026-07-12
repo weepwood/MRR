@@ -2,10 +2,12 @@
 import { ua } from '@/utils/ua'
 import Provider from './ui/provider/index.vue'
 
+const SystemInfo = defineAsyncComponent(() => import('@/ui/components/FaSystemInfo/index.vue'))
 const route = useRoute()
-
 const settingsStore = useSettingsStore()
 const { auth } = useAuth()
+const systemInfoVisible = ref(false)
+let resizeFrame: number | undefined
 
 document.body.setAttribute('data-os', ua.getOS().name || '')
 
@@ -29,14 +31,44 @@ watch([
   }
 }, {
   immediate: true,
-  deep: true,
 })
 
-onMounted(() => {
+function syncViewportMode() {
   settingsStore.setMode(document.documentElement.clientWidth)
-  window.addEventListener('resize', () => {
-    settingsStore.setMode(document.documentElement.clientWidth)
+}
+
+function handleResize() {
+  if (resizeFrame !== undefined) {
+    return
+  }
+  resizeFrame = window.requestAnimationFrame(() => {
+    resizeFrame = undefined
+    syncViewportMode()
   })
+}
+
+function handleSystemInfoShortcut(event: KeyboardEvent) {
+  if (event.repeat || event.altKey || event.shiftKey) {
+    return
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'i') {
+    event.preventDefault()
+    systemInfoVisible.value = true
+  }
+}
+
+onMounted(() => {
+  syncViewportMode()
+  window.addEventListener('resize', handleResize, { passive: true })
+  window.addEventListener('keydown', handleSystemInfoShortcut)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('keydown', handleSystemInfoShortcut)
+  if (resizeFrame !== undefined) {
+    window.cancelAnimationFrame(resizeFrame)
+  }
 })
 </script>
 
@@ -49,6 +81,6 @@ onMounted(() => {
     <FaBackToTop />
     <FaToast />
     <FaNotification />
-    <FaSystemInfo />
+    <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
   </Provider>
 </template>

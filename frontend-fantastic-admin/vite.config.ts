@@ -34,6 +34,37 @@ export default defineConfig(({ mode, command }) => {
     build: {
       outDir: mode === 'production' ? 'dist' : `dist-${mode}`,
       sourcemap: env.VITE_BUILD_SOURCEMAP === 'true',
+      rolldownOptions: {
+        output: {
+          // 将稳定框架依赖与高频 UI 依赖拆成可长期缓存的独立分组，
+          // 避免业务页面改动导致整个 vendor 文件缓存失效。
+          codeSplitting: {
+            minSize: 20_000,
+            groups: [
+              {
+                name: 'vendor-vue',
+                test: /node_modules[\\/](?:@vue[\\/]|vue[\\/]|vue-router[\\/]|pinia[\\/])/,
+                priority: 40,
+              },
+              {
+                name: 'vendor-element-plus',
+                test: /node_modules[\\/](?:@element-plus[\\/]|element-plus[\\/])/,
+                priority: 35,
+              },
+              {
+                name: 'vendor-ui',
+                test: /node_modules[\\/](?:@vueuse[\\/]|lucide-vue-next[\\/]|reka-ui[\\/]|vue-sonner[\\/])/,
+                priority: 30,
+              },
+              {
+                name: 'vendor-data',
+                test: /node_modules[\\/](?:@vee-validate[\\/]|axios[\\/]|dayjs[\\/]|es-toolkit[\\/]|qs[\\/]|vee-validate[\\/]|zod[\\/])/,
+                priority: 25,
+              },
+            ],
+          },
+        },
+      },
     },
     define: {
       __SYSTEM_INFO__: JSON.stringify({

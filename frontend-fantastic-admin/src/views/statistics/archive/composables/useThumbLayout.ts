@@ -19,6 +19,14 @@ export function useThumbLayout(
   let resizeObserver: ResizeObserver | null = null
   let usesWindowResize = false
 
+  function updatePageSize(nextPageSize: number): void {
+    pageSize.value = Math.max(1, nextPageSize)
+    // When the panel grows, keep enough items rendered to fill the new viewport.
+    // Never shrink visibleCount here, otherwise a resize could hide items the user
+    // has already loaded.
+    visibleCount.value = Math.max(visibleCount.value, pageSize.value)
+  }
+
   function calc(): void {
     const container = thumbsContainer.value
     if (!container) {
@@ -28,7 +36,7 @@ export function useThumbLayout(
     const containerWidth = container.clientWidth
     if (viewMode.value === 'list') {
       thumbColumns.value = 1
-      pageSize.value = 40
+      updatePageSize(40)
       return
     }
     const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (MIN_ITEM_WIDTH + GAP)))
@@ -41,7 +49,7 @@ export function useThumbLayout(
 
     const itemHeight = Math.max(actualItemWidth, 88) + 50
     const visibleRows = Math.ceil(container.clientHeight / itemHeight)
-    pageSize.value = thumbColumns.value * Math.max(2, visibleRows + 1)
+    updatePageSize(thumbColumns.value * Math.max(2, visibleRows + 1))
   }
 
   function resetVisible(): void {

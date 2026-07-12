@@ -23,12 +23,15 @@ app.use(uiProvider)
 directive(app)
 app.mount('#app')
 
+async function installOfflineIcons() {
+  const { downloadAndInstall } = await import('@/iconify')
+  await Promise.allSettled(
+    iconConfig.collections.map(collection => downloadAndInstall(collection)),
+  )
+}
+
 // 离线 Iconify 集合体积较大，仅在配置启用时才加载运行时与图标数据，
 // 避免默认在线模式阻塞应用首屏启动。
 if (iconConfig.isOfflineUse) {
-  void import('@/iconify').then(async ({ downloadAndInstall }) => {
-    await Promise.allSettled(
-      iconConfig.collections.map(collection => downloadAndInstall(collection)),
-    )
-  })
+  void installOfflineIcons()
 }

@@ -4,12 +4,21 @@ on:
   pull_request:
   push:
     branches:
+      - dev-no-login
       - main
       - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend-fantastic-admin
@@ -17,22 +26,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type Check
-        run: pnpm lint:tsc
+      - name: Lint and Type Check
+        run: pnpm lint
 
       - name: Build
         run: pnpm build
@@ -42,6 +52,7 @@ jobs:
 
   backend-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend-repo

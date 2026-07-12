@@ -99,6 +99,7 @@ npm run docs:dev
 | [项目概览](vitepress-doc/ai-generation/项目概览/项目概览.md) | 系统目标、特性、技术架构 |
 | [安装指南](vitepress-doc/getting-started/installation.md) | 环境搭建与部署 |
 | [配置说明](vitepress-doc/getting-started/configuration.md) | 后端/前端配置参数 |
+| [前端设计规范](frontend-fantastic-admin/DESIGN.md) | 设计令牌、组件、影像工作区与可访问性规范 |
 | [系统架构](vitepress-doc/ai-generation/系统架构/系统架构.md) | 前后端架构、数据架构 |
 | [API 文档](vitepress-doc/ai-generation/后端API文档/后端API文档.md) | RESTful API 接口说明 |
 | [数据库设计](vitepress-doc/ai-generation/数据库设计/数据库设计.md) | 表结构、索引优化 |

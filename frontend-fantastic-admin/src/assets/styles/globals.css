@@ -1,83 +1,125 @@
-/* 页面布局 CSS 变量 */
+/* MRR 医疗影像管理系统全局设计令牌 */
 :root {
   color-scheme: light;
 
-  /* 头部高度 */
+  /* Application shell */
   --g-header-height: 60px;
-
-  /* 侧边栏宽度 */
   --g-main-sidebar-width: 80px;
   --g-sub-sidebar-width: 220px;
   --g-sub-sidebar-collapse-width: 64px;
-
-  /* 侧边栏 Logo 区域高度 */
   --g-sidebar-logo-height: 50px;
-
-  /* 标签栏高度 */
   --g-tabbar-height: 50px;
-
-  /* 工具栏高度 */
   --g-toolbar-height: 50px;
 
-  /* 滚动条颜色 */
-  --scrollbar-color: 240 5.9% 90%;
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
-  /* 语义化文本/表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
+  /* Spacing: 4px base grid */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Shape */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 5%);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 8%), 0 1px 2px rgb(15 23 42 / 4%);
+  --shadow-md: 0 8px 24px rgb(15 23 42 / 10%), 0 2px 6px rgb(15 23 42 / 5%);
+  --shadow-lg: 0 18px 48px rgb(15 23 42 / 16%), 0 6px 18px rgb(15 23 42 / 8%);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 260ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Layering */
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-overlay: 2000;
+  --z-toast: 3000;
+
+  /* Semantic text and surfaces */
   --text-primary: hsl(var(--foreground));
   --text-secondary: hsl(var(--muted-foreground));
-  --text-tertiary: hsl(var(--muted-foreground) / 70%);
-  --text-hint: hsl(var(--muted-foreground) / 50%);
+  --text-tertiary: hsl(var(--muted-foreground) / 78%);
+  --text-hint: hsl(var(--muted-foreground) / 58%);
+  --surface-page: hsl(var(--background));
   --surface: hsl(var(--card));
+  --surface-raised: hsl(var(--popover));
   --surface-muted: hsl(var(--muted));
   --surface-alt: hsl(var(--secondary));
+  --surface-accent: hsl(var(--accent));
   --divider: hsl(var(--border));
+  --border-subtle: hsl(var(--border) / 72%);
+  --border-strong: hsl(var(--foreground) / 18%);
 
-  /* ===== MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） ===== */
-  /* 品牌主色 */
-  --color-primary: #0075de;          /* Notion Blue — CTA、链接、交互强调 */
-  --color-primary-active: #005bab;   /* Active Blue — 按下态 */
-  --color-primary-deep: #213183;     /* Deep Navy — 次级品牌色 */
+  /* Interaction and status */
+  --interactive-primary: hsl(var(--primary));
+  --interactive-primary-hover: color-mix(in srgb, hsl(var(--primary)) 88%, black);
+  --interactive-primary-soft: hsl(var(--primary) / 10%);
+  --focus-ring: hsl(var(--ring) / 42%);
+  --status-success: hsl(var(--success));
+  --status-success-soft: hsl(var(--success) / 12%);
+  --status-warning: hsl(var(--warning));
+  --status-warning-soft: hsl(var(--warning) / 14%);
+  --status-danger: hsl(var(--destructive));
+  --status-danger-soft: hsl(var(--destructive) / 12%);
+  --status-info: hsl(var(--info));
+  --status-info-soft: hsl(var(--info) / 12%);
 
-  /* 文本 */
-  --color-text: rgba(0, 0, 0, 0.95); /* Near-black — 主文本 */
-  --color-text-muted: #615d59;       /* Warm Gray 500 — 次级文本 */
-  --color-text-placeholder: #a39e98; /* Warm Gray 300 — 占位/禁用 */
+  /* Data visualization */
+  --chart-1: #0b7dbb;
+  --chart-2: #0f8f78;
+  --chart-3: #d97706;
+  --chart-4: #7c5ce7;
+  --chart-5: #d94682;
+  --chart-6: #64748b;
 
-  /* 表面 */
-  --color-bg: #ffffff;               /* Pure White — 页面背景 */
-  --color-bg-warm: #f6f5f4;          /* Warm White — 区块交替/卡片填充 */
-  --color-bg-dark: #31302e;          /* Warm Dark — 暗色区域 */
-
-  /* 语义色 */
-  --color-success: #1aae39;          /* Green — 完成确认 */
-  --color-info: #2a9d99;             /* Teal — 正向指标 */
-  --color-warning: #dd5b00;          /* Orange — 警告 */
-  --color-danger: #e03e3e;           /* Red — 错误/危险（补充） */
-
-  /* 边框 — Notion 风格的 whisper-weight 分割线 */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-strong: rgba(0, 0, 0, 0.16);
-
-  &.dark {
-    color-scheme: dark;
-
-    --scrollbar-color: 240 3.7% 15.9%;
-
-    /* 暗色模式下调色板映射 */
-    --color-text: rgba(255, 255, 255, 0.95);
-    --color-text-muted: #a39e98;
-    --color-text-placeholder: #615d59;
-
-    --color-bg: #31302e;
-    --color-bg-warm: #3d3a37;
-    --color-bg-dark: #252321;
-
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-strong: rgba(255, 255, 255, 0.16);
-  }
+  --scrollbar-color: 214 20% 84%;
 }
 
-/* 明暗模式 CSS 变量 */
+html.dark {
+  color-scheme: dark;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 24%);
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 28%);
+  --shadow-md: 0 10px 28px rgb(0 0 0 / 36%);
+  --shadow-lg: 0 22px 56px rgb(0 0 0 / 48%);
+  --interactive-primary-hover: color-mix(in srgb, hsl(var(--primary)) 88%, white);
+  --scrollbar-color: 217 18% 28%;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   mix-blend-mode: normal;
@@ -92,19 +134,76 @@
   z-index: 1;
 }
 
-.dark {
-  &::view-transition-old(root) {
-    z-index: 1;
-  }
-
-  &::view-transition-new(root) {
-    z-index: 0;
-  }
+.dark::view-transition-old(root) {
+  z-index: 1;
 }
 
-* {
+.dark::view-transition-new(root) {
+  z-index: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   scrollbar-color: hsl(var(--scrollbar-color)) transparent;
   scrollbar-width: thin;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-synthesis: none;
+  line-height: var(--line-height-normal);
+  color: var(--text-primary);
+  text-rendering: optimizeLegibility;
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  color: var(--text-primary);
+  background: hsl(var(--primary) / 20%);
+}
+
+:where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+img,
+svg {
+  max-width: 100%;
 }
 
 .disable-color-scheme-transition-duration *,
@@ -113,22 +212,91 @@
   transition-duration: 0ms !important;
 }
 
-html,
-body {
-  height: 100%;
+/* Shared application primitives. Prefer these over page-specific duplicates. */
+.mrr-page {
+  display: grid;
+  gap: var(--space-5);
+  width: 100%;
+  padding: clamp(var(--space-4), 2vw, var(--space-6));
 }
 
-body {
-  box-sizing: border-box;
+.mrr-page-header {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mrr-page-title {
   margin: 0;
-  -webkit-tap-highlight-color: transparent;
+  font-size: clamp(var(--font-size-2xl), 2vw, var(--font-size-3xl));
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
 }
 
-#app {
-  height: 100%;
+.mrr-page-description {
+  max-width: 72ch;
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
 }
 
-/* textarea 字体跟随系统 */
-textarea {
-  font-family: inherit;
+.mrr-panel {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.mrr-section-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.mrr-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.mrr-data-id {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.mrr-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (width <= 720px) {
+  .mrr-page {
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  .mrr-page-header {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

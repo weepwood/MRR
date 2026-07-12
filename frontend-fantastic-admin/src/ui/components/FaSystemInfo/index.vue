@@ -1,23 +1,14 @@
 <script setup lang="ts">
-import hotkeys from 'hotkeys-js'
-
 defineOptions({
   name: 'FaSystemInfo',
 })
 
-const isShow = ref(false)
-
+const visible = defineModel<boolean>({ default: false })
 const { pkg, lastBuildTime } = __SYSTEM_INFO__
-
-onMounted(() => {
-  hotkeys('command+i, ctrl+i', () => {
-    isShow.value = true
-  })
-})
 </script>
 
 <template>
-  <FaDrawer v-model="isShow" title="系统信息" :footer="false">
+  <FaDrawer v-model="visible" title="系统信息" :footer="false">
     <div v-if="pkg.version">
       <FaDivider>
         系统信息

@@ -45,16 +45,47 @@ jobs:
         run: pnpm lint:tsc
 
       - name: ESLint
-        run: pnpm lint:eslint
+        id: eslint
+        continue-on-error: true
+        run: pnpm exec eslint . --format json --output-file eslint-report.json
+
+      - name: Upload ESLint report
+        if: steps.eslint.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report
+          path: frontend-fantastic-admin/eslint-report.json
+          if-no-files-found: error
 
       - name: Stylelint
-        run: pnpm lint:stylelint
+        id: stylelint
+        continue-on-error: true
+        run: pnpm exec stylelint "src/**/*.{css,scss,vue}" --formatter json > stylelint-report.json
+
+      - name: Upload Stylelint report
+        if: steps.stylelint.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stylelint-report
+          path: frontend-fantastic-admin/stylelint-report.json
+          if-no-files-found: error
 
       - name: Build
         run: pnpm build
 
       - name: Test
         run: pnpm test:run
+
+      - name: Enforce lint results
+        if: always()
+        env:
+          ESLINT_OUTCOME: ${{ steps.eslint.outcome }}
+          STYLELINT_OUTCOME: ${{ steps.stylelint.outcome }}
+        run: |
+          if [ "$ESLINT_OUTCOME" != "success" ] || [ "$STYLELINT_OUTCOME" != "success" ]; then
+            echo "Lint checks failed. Download the uploaded reports for details."
+            exit 1
+          fi
 
   backend-gate:
     runs-on: ubuntu-latest

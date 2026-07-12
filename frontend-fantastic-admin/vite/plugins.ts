@@ -107,8 +107,14 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     // https://github.com/hannoeru/vite-plugin-pages
     Pages({
       dirs: 'src/views',
+      // 顶层 index 默认会被同步导入；统一设为异步，避免与手写首页路由
+      // 重复引用时破坏动态分包。
+      importMode: 'async',
       exclude: [
         '**/components/**/*.vue',
+        '**/__tests__/**',
+        '**/*.test.*',
+        '**/*.spec.*',
       ],
     }),
 

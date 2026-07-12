@@ -63,13 +63,13 @@ const semanticColors = {
   info: 'var(--info)',
 }
 
-function syncElementColorScale(colorScheme: string) {
+function syncElementColorScale(colorScheme: string | undefined) {
   if (!supportsColorMix) {
     return
   }
 
-  const mixTarget = colorScheme === 'light' ? '#fff' : '#000'
-  const darkTarget = colorScheme === 'light' ? '#000' : '#fff'
+  const mixTarget = colorScheme === 'dark' ? '#000' : '#fff'
+  const darkTarget = colorScheme === 'dark' ? '#fff' : '#000'
 
   for (const [name, source] of Object.entries(semanticColors)) {
     for (let index = 1; index < 10; index += 1) {

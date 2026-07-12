@@ -41,8 +41,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint and Type Check
-        run: pnpm lint
+      - name: Type Check
+        run: pnpm lint:tsc
+
+      - name: ESLint
+        run: pnpm lint:eslint
+
+      - name: Stylelint
+        run: pnpm lint:stylelint
 
       - name: Build
         run: pnpm build

@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -174,9 +175,12 @@ public class LogController {
             @RequestParam(required = false) String method,
             @RequestParam(required = false) String responseStatus,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorAccessTime,
+            @RequestParam(required = false) Long cursorId
     ) {
         PaginationUtils.validatePageParams(page, size);
+        validateCursor(cursorAccessTime, cursorId);
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
 
         String normalizedKeyword = normalize(keyword);
@@ -188,18 +192,15 @@ public class LogController {
         String startTimeText = formatDateTime(startTime);
         String endTimeText = formatDateTime(endTime);
 
-        List<Log> list = logService.searchLogs(
-                normalizedKeyword,
-                normalizedUsername,
-                normalizedClientIp,
-                normalizedRequestUri,
-                normalizedMethod,
-                normalizedResponseStatus,
-                startTimeText,
-                endTimeText,
-                page,
-                safeSize
-        );
+        boolean cursorMode = cursorAccessTime != null;
+        List<Log> fetched = cursorMode
+                ? logService.searchLogs(normalizedKeyword, normalizedUsername, normalizedClientIp, normalizedRequestUri,
+                        normalizedMethod, normalizedResponseStatus, startTimeText, endTimeText, page, safeSize + 1,
+                        cursorAccessTime, cursorId)
+                : logService.searchLogs(normalizedKeyword, normalizedUsername, normalizedClientIp, normalizedRequestUri,
+                        normalizedMethod, normalizedResponseStatus, startTimeText, endTimeText, page, safeSize);
+        boolean hasMore = cursorMode && fetched.size() > safeSize;
+        List<Log> list = hasMore ? new ArrayList<>(fetched.subList(0, safeSize)) : fetched;
         int total = logService.countSearchLogs(
                 normalizedKeyword,
                 normalizedUsername,
@@ -212,7 +213,18 @@ public class LogController {
         );
 
         PageResult<Log> pageResult = PageResult.of(list, total, page, safeSize);
+        if (!list.isEmpty() && (hasMore || (!cursorMode && (long) page * safeSize < total))) {
+            Log last = list.getLast();
+            pageResult.withNextCursor(formatCursorAccessTime(last), last.getId());
+        }
         return Result.<PageResult<Log>>success().data(pageResult);
+    }
+
+    public Result<PageResult<Log>> searchLogs(
+            int page, int size, String keyword, String username, String clientIp, String requestUri,
+            String method, String responseStatus, LocalDateTime startTime, LocalDateTime endTime) {
+        return searchLogs(page, size, keyword, username, clientIp, requestUri, method, responseStatus,
+                startTime, endTime, null, null);
     }
 
 
@@ -268,6 +280,20 @@ public class LogController {
 
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime == null ? null : dateTime.format(DATETIME_FORMATTER);
+    }
+
+    private void validateCursor(LocalDateTime cursorAccessTime, Long cursorId) {
+        if ((cursorAccessTime == null) != (cursorId == null)) {
+            throw new IllegalArgumentException("游标时间与游标 ID 必须成对传入");
+        }
+        if (cursorId != null && cursorId <= 0) {
+            throw new IllegalArgumentException("游标 ID 必须大于 0");
+        }
+    }
+
+    private String formatCursorAccessTime(Log log) {
+        return LocalDateTime.ofInstant(log.getAccessTime().toInstant(), ZoneId.systemDefault())
+                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 
     private void decorateAuditLog(Log log) {

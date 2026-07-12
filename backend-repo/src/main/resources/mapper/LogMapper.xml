@@ -4,6 +4,27 @@
 
 <mapper namespace="com.zjcxph.imgapi.mapper.LogMapper">
 
+    <sql id="logKeywordCommonExpression">
+        (
+            COALESCE(username, '')
+            || CHR(1) || COALESCE(client_ip, '')
+            || CHR(1) || COALESCE(request_uri, '')
+            || CHR(1) || COALESCE(query_string, '')
+            || CHR(1) || COALESCE(user_agent, '')
+        )
+    </sql>
+
+    <sql id="logKeywordWithRefererPredicate">
+        AND (
+            <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+            OR referer LIKE '%' || #{keyword} || '%'
+        )
+    </sql>
+
+    <sql id="logKeywordCommonPredicate">
+        AND <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+    </sql>
+
     <!-- 删除指定时间之前的日志（分批删除） -->
     <delete id="deleteOlderThan">
         WITH target AS (SELECT id
@@ -65,12 +86,7 @@
         FROM access_log
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR referer LIKE '%' || #{keyword} || '%')
+                <include refid="logKeywordWithRefererPredicate"/>
             </if>
             <if test="username != null and username != ''">
                 AND username LIKE '%' || #{username} || '%'
@@ -94,8 +110,34 @@
                 AND access_time &lt;= CAST(#{endTime} AS timestamp)
             </if>
         </where>
-        ORDER BY access_time DESC
+        ORDER BY access_time DESC, id DESC
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 游标搜索日志：稳定按 (access_time, id) 降序获取下一页 -->
+    <select id="searchAfter" resultType="com.zjcxph.imgapi.entity.Log">
+        SELECT
+            id, username, client_ip AS clientIp, request_uri AS requestUri, method,
+            user_agent AS userAgent, access_time AS accessTime, query_string AS queryString,
+            request_body AS requestBody, response_status AS responseStatus, execute_time AS executeTime,
+            referer, audit_action AS auditAction, audit_target AS auditTarget,
+            audit_description AS auditDescription
+        FROM access_log
+        <where>
+            AND (access_time, id) &lt; (#{cursorAccessTime}, #{cursorId})
+            <if test="keyword != null and keyword != ''">
+                <include refid="logKeywordWithRefererPredicate"/>
+            </if>
+            <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
+            <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
+            <if test="requestUri != null and requestUri != ''">AND request_uri LIKE '%' || #{requestUri} || '%'</if>
+            <if test="method != null and method != ''">AND method = #{method}</if>
+            <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
+            <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
+            <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
+        </where>
+        ORDER BY access_time DESC, id DESC
+        LIMIT #{limit}
     </select>
 
     <!-- 动态搜索日志总数 -->
@@ -103,12 +145,7 @@
         SELECT COUNT(*) FROM access_log
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR referer LIKE '%' || #{keyword} || '%')
+                <include refid="logKeywordWithRefererPredicate"/>
             </if>
             <if test="username != null and username != ''">
                 AND username LIKE '%' || #{username} || '%'
@@ -148,11 +185,7 @@
                 AND audit_action = #{auditAction}
             </if>
             <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%')
+                <include refid="logKeywordCommonPredicate"/>
             </if>
             <if test="username != null and username != ''">
                 AND username LIKE '%' || #{username} || '%'
@@ -182,11 +215,7 @@
                 AND audit_action = #{auditAction}
             </if>
             <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%')
+                <include refid="logKeywordCommonPredicate"/>
             </if>
             <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
             <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>

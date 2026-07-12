@@ -12,6 +12,8 @@ public interface LogService {
     List<Log> getLogsByClientIp(String clientIp, int page, int size);
     List<Log> getLogsByRequestUri(String requestUri, int page, int size);
     List<Log> searchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus, String startTime, String endTime, int page, int size);
+    List<Log> searchLogs(String keyword, String username, String clientIp, String requestUri, String method, String responseStatus,
+                         String startTime, String endTime, int page, int size, LocalDateTime cursorAccessTime, Long cursorId);
     int getTotalLogCount();
     int getLogCountByClientIp(String clientIp);
     int getLogCountByRequestUri(String requestUri);

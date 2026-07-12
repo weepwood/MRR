@@ -46,9 +46,7 @@ public class MigrationServiceImpl implements MigrationService {
     private final Executor taskAsyncExecutor;
 
     /**
-     * 自身代理引用：用于规避 Spring AOP 自调用失效问题。
-     * uploadSingleScan 标注了 @Transactional，若通过 this. 直接调用事务不生效，
-     * 必须通过代理对象调用。@Lazy 避免启动期循环依赖。
+     * 批量迁移通过自身代理调用 uploadLoadedScan，保留每条扫描的事务边界。
      */
     @Lazy
     @Autowired
@@ -75,6 +73,16 @@ public class MigrationServiceImpl implements MigrationService {
             return new OssUploadResult(scanId, "failed", "扫描记录不存在: " + scanId);
         }
 
+        return uploadLoadedScan(scanId, scan);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OssUploadResult uploadLoadedScan(Scan scan) {
+        return uploadLoadedScan(scan.getId(), scan);
+    }
+
+    private OssUploadResult uploadLoadedScan(Integer scanId, Scan scan) {
         if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
             OssUploadResult result = new OssUploadResult();
             result.setScanId(scanId);
@@ -142,8 +150,7 @@ public class MigrationServiceImpl implements MigrationService {
             if (scan.getUploadFlag() == null || scan.getUploadFlag() == 0) {
                 continue;
             }
-            // 通过代理调用，确保 @Transactional 生效（避免自调用事务失效）
-            results.add(self.uploadSingleScan(scan.getId()));
+            results.add(self.uploadLoadedScan(scan));
         }
 
         long successCount = results.stream().filter(r -> "success".equals(r.getStatus())).count();
@@ -289,8 +296,7 @@ public class MigrationServiceImpl implements MigrationService {
 
                     for (Scan scan : batch) {
                         try {
-                            // 通过代理调用，确保 @Transactional 生效（避免自调用事务失效）
-                            OssUploadResult result = self.uploadSingleScan(scan.getId());
+                            OssUploadResult result = self.uploadLoadedScan(scan);
                             if ("success".equals(result.getStatus()) || "skipped".equals(result.getStatus())) {
                                 processed++;
                             } else {

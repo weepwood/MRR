@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ua } from '@/utils/ua'
 import Provider from './ui/provider/index.vue'
 
 const SystemInfo = defineAsyncComponent(() => import('@/ui/components/FaSystemInfo/index.vue'))
@@ -8,8 +7,6 @@ const settingsStore = useSettingsStore()
 const { auth } = useAuth()
 const systemInfoVisible = ref(false)
 let resizeFrame: number | undefined
-
-document.body.setAttribute('data-os', ua.getOS().name || '')
 
 const isAuth = computed(() => {
   return route.matched.every((item) => {

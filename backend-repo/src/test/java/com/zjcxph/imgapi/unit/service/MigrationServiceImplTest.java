@@ -3,9 +3,12 @@ package com.zjcxph.imgapi.unit.service;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
+import com.zjcxph.imgapi.entity.MigrationJob;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.ImageMigrationLogMapper;
+import com.zjcxph.imgapi.mapper.MigrationJobMapper;
 import com.zjcxph.imgapi.mapper.ScanMapper;
+import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.impl.MigrationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,11 +20,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,13 +45,24 @@ class MigrationServiceImplTest {
     @Mock
     private ImageMigrationLogMapper migrationLogMapper;
     @Mock
+    private MigrationJobMapper migrationJobMapper;
+    @Mock
     private ImageProperties imageProperties;
+    @Mock
+    private Executor taskAsyncExecutor;
+    @Mock
+    private MigrationService self;
 
     @InjectMocks
     private MigrationServiceImpl migrationService;
 
     @TempDir
     Path tempDir;
+
+    @BeforeEach
+    void injectSelfProxy() {
+        ReflectionTestUtils.setField(migrationService, "self", self);
+    }
 
     /** 构造一个 folder=25.03.15, brxh=605746, bah=00789508, filename=test.jpg 的扫描记录。
      *  buildLocalPath 会用 basePath/25.03/25.03.15/605746-00789508/test.jpg。
@@ -59,6 +76,56 @@ class MigrationServiceImplTest {
         s.setFolder("25.03.15");
         s.setUploadFlag(1);
         return s;
+    }
+
+    @Test
+    @DisplayName("已加载 Scan 入口保留逐条事务边界")
+    void loadedScanEntryIsTransactional() throws NoSuchMethodException {
+        var method = MigrationServiceImpl.class.getMethod("uploadLoadedScan", Scan.class);
+
+        assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
+    }
+
+    @Nested
+    @DisplayName("异步迁移任务")
+    class MigrationJobExecution {
+
+        @Test
+        @DisplayName("待迁移批次已加载 Scan — 处理时不再按 ID 重复查询")
+        void usesLoadedPendingScansWithoutFindById() {
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("total", 1L);
+            stats.put("migrated", 0L);
+            stats.put("verified", 0L);
+            when(scanMapper.countMigrationStats()).thenReturn(stats);
+            when(migrationLogMapper.countWithFilter("failed")).thenReturn(0L);
+
+            MigrationJob persistedJob = new MigrationJob();
+            persistedJob.setId(7L);
+            when(migrationJobMapper.insert(any(MigrationJob.class))).thenAnswer(invocation -> {
+                invocation.<MigrationJob>getArgument(0).setId(7L);
+                return 1;
+            });
+            when(migrationJobMapper.findById(7L)).thenReturn(persistedJob);
+
+            Scan pending = fullScan();
+            pending.setOssUrl("medical-records/existing.jpg");
+            OssUploadResult skipped = new OssUploadResult(1, "skipped", "已迁移过");
+            when(self.uploadLoadedScan(pending)).thenReturn(skipped);
+            when(scanMapper.findPendingMigration(1000))
+                    .thenReturn(java.util.List.of(pending))
+                    .thenReturn(java.util.Collections.emptyList());
+            doAnswer(invocation -> {
+                invocation.<Runnable>getArgument(0).run();
+                return null;
+            }).when(taskAsyncExecutor).execute(any(Runnable.class));
+
+            migrationService.createMigrationJob();
+
+            verify(scanMapper, never()).findById(any());
+            verify(self).uploadLoadedScan(same(pending));
+            verify(migrationJobMapper, atLeastOnce()).update(any(MigrationJob.class));
+        }
     }
 
     @Nested
@@ -221,6 +288,23 @@ class MigrationServiceImplTest {
             // 被跳过，结果为空
             assertThat(results).isEmpty();
             verify(scanMapper, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("批量查询已加载 Scan — 迁移时不再按 ID 重复查询")
+        void usesLoadedScansWithoutFindById() {
+            Scan migrated = fullScan();
+            migrated.setOssUrl("medical-records/existing.jpg");
+            when(scanMapper.findByBah("00789508")).thenReturn(java.util.List.of(migrated));
+            when(self.uploadLoadedScan(migrated))
+                    .thenReturn(new OssUploadResult(1, "skipped", "已迁移过"));
+
+            var results = migrationService.uploadByBah("00789508");
+
+            assertThat(results).singleElement()
+                    .satisfies(result -> assertThat(result.getStatus()).isEqualTo("skipped"));
+            verify(scanMapper, never()).findById(any());
+            verify(self).uploadLoadedScan(same(migrated));
         }
     }
 

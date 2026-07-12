@@ -40,6 +40,24 @@ class AsyncLogServiceImplTest {
     class SaveLogAsyncBuffer {
 
         @Test
+        @DisplayName("定时刷新未达到批次阈值的日志")
+        void scheduledFlush_flushesRemainingLogs() {
+            asyncLogService.saveLogAsync(newLog(1));
+
+            asyncLogService.flushPendingLogs();
+
+            verify(logMapper).batchInsert(argThat(logs -> logs.size() == 1));
+        }
+
+        @Test
+        @DisplayName("定时刷新在缓冲区为空时不写库")
+        void scheduledFlush_emptyBuffer_noop() {
+            asyncLogService.flushPendingLogs();
+
+            verifyNoInteractions(logMapper);
+        }
+
+        @Test
         @DisplayName("未达批次阈值(50)时不写库")
         void saveLogAsync_underBatchSize_noFlush() {
             for (int i = 0; i < 49; i++) {

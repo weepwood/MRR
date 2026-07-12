@@ -2,6 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: mrr-postgres
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - track_io_timing=on
     environment:
       POSTGRES_DB: imgapi
       POSTGRES_USER: postgres

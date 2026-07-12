@@ -36,8 +36,9 @@ export default defineConfig(({ mode, command }) => {
       sourcemap: env.VITE_BUILD_SOURCEMAP === 'true',
       rolldownOptions: {
         output: {
-          // 将稳定框架依赖与高频 UI 依赖拆成可长期缓存的独立分组，
-          // 避免业务页面改动导致整个 vendor 文件缓存失效。
+          // Vue 核心是所有页面的稳定公共依赖，单独分组便于长期缓存。
+          // 其余依赖交给 Rolldown 按实际引用关系拆分，避免把仅在懒加载
+          // 页面使用的 Element Plus、表单和 UI 模块合并进首屏 vendor。
           codeSplitting: {
             minSize: 20_000,
             groups: [
@@ -45,21 +46,6 @@ export default defineConfig(({ mode, command }) => {
                 name: 'vendor-vue',
                 test: /node_modules[\\/](?:@vue[\\/]|vue[\\/]|vue-router[\\/]|pinia[\\/])/,
                 priority: 40,
-              },
-              {
-                name: 'vendor-element-plus',
-                test: /node_modules[\\/](?:@element-plus[\\/]|element-plus[\\/])/,
-                priority: 35,
-              },
-              {
-                name: 'vendor-ui',
-                test: /node_modules[\\/](?:@vueuse[\\/]|lucide-vue-next[\\/]|reka-ui[\\/]|vue-sonner[\\/])/,
-                priority: 30,
-              },
-              {
-                name: 'vendor-data',
-                test: /node_modules[\\/](?:@vee-validate[\\/]|axios[\\/]|dayjs[\\/]|es-toolkit[\\/]|qs[\\/]|vee-validate[\\/]|zod[\\/])/,
-                priority: 25,
               },
             ],
           },

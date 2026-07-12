@@ -5,6 +5,9 @@
 
 CREATE SCHEMA IF NOT EXISTS app;
 
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
 -- ============================================
 -- 1. 核心业务表
 -- ============================================
@@ -206,6 +209,7 @@ CREATE INDEX IF NOT EXISTS idx_mr_scan_bah_cover          ON app.mr_scan (bah) I
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah  ON app.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date_normalized ON app.mr_statistics ((replace(date, '/', '-')));
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_keyword_trgm ON app.mr_statistics USING gin ((coalesce(cid, '') || chr(1) || coalesce(openerno, '') || chr(1) || coalesce(date, '') || chr(1) || coalesce(type, '')) public.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 
@@ -224,6 +228,8 @@ CREATE INDEX IF NOT EXISTS idx_access_log_request_uri      ON app.access_log (re
 CREATE INDEX IF NOT EXISTS idx_access_log_method           ON app.access_log (method);
 CREATE INDEX IF NOT EXISTS idx_access_log_response_status  ON app.access_log (response_status);
 CREATE INDEX IF NOT EXISTS idx_access_log_method_status    ON app.access_log (method, response_status);
+CREATE INDEX IF NOT EXISTS idx_access_log_keyword_common_trgm ON app.access_log USING gin ((coalesce(username, '') || chr(1) || coalesce(client_ip, '') || chr(1) || coalesce(request_uri, '') || chr(1) || coalesce(query_string, '') || chr(1) || coalesce(user_agent, '')) public.gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_access_log_referer_trgm     ON app.access_log USING gin (referer public.gin_trgm_ops);
 
 -- 4.6 image_migration_log 索引
 CREATE INDEX IF NOT EXISTS idx_migration_status         ON app.image_migration_log (migration_status);

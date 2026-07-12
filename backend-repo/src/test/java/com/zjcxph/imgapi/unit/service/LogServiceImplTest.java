@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,6 +121,20 @@ class LogServiceImplTest {
             assertThatThrownBy(() -> logService.searchLogs(null, null, null, null, null, null, null, null, 0, 5))
                     .isInstanceOf(IllegalArgumentException.class);
             verifyNoInteractions(logMapper);
+        }
+
+        @Test
+        @DisplayName("searchLogs — 游标查询透传 accessTime 与 id 且不计算 OFFSET")
+        void searchLogs_cursorDelegatesWithoutOffset() {
+            LocalDateTime cursorAccessTime = LocalDateTime.of(2026, 7, 13, 10, 20, 30);
+            when(logMapper.searchAfter(any(), any(), any(), any(), any(), any(), any(), any(),
+                    any(), any(), anyInt())).thenReturn(List.of());
+
+            logService.searchLogs("kw", null, null, null, null, null, null, null,
+                    99, 21, cursorAccessTime, 42L);
+
+            verify(logMapper).searchAfter("kw", null, null, null, null, null, null, null,
+                    cursorAccessTime, 42L, 21);
         }
     }
 

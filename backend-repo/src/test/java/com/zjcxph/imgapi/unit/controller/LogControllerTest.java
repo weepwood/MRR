@@ -17,6 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -124,6 +127,46 @@ class LogControllerTest {
 
             assertThat(r.getCode()).isEqualTo(200);
             verify(logService).searchLogs(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(1), eq(20));
+        }
+
+        @Test
+        @DisplayName("游标查询按 size+1 获取并返回下一页游标")
+        void cursorPagingReturnsNextCursor() {
+            LocalDateTime cursorAccessTime = LocalDateTime.of(2026, 7, 13, 10, 20, 30);
+            Log first = log(30L, LocalDateTime.of(2026, 7, 13, 10, 19, 0));
+            Log second = log(29L, LocalDateTime.of(2026, 7, 13, 10, 18, 0));
+            Log lookahead = log(28L, LocalDateTime.of(2026, 7, 13, 10, 17, 0));
+            when(logService.searchLogs(any(), any(), any(), any(), any(), any(), any(), any(),
+                    eq(1), eq(3), eq(cursorAccessTime), eq(31L)))
+                    .thenReturn(List.of(first, second, lookahead));
+            when(logService.countSearchLogs(any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(100);
+
+            Result<PageResult<Log>> result = controller.searchLogs(
+                    1, 2, null, null, null, null, null, null, null, null,
+                    cursorAccessTime, 31L);
+
+            assertThat(result.getData().getList()).containsExactly(first, second);
+            assertThat(result.getData().getNextCursorAccessTime()).isEqualTo("2026-07-13T10:18:00");
+            assertThat(result.getData().getNextCursorId()).isEqualTo(29L);
+        }
+
+        @Test
+        @DisplayName("游标时间与 id 必须成对传入")
+        void cursorPartsMustBePaired() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.searchLogs(
+                            1, 20, null, null, null, null, null, null, null, null,
+                            LocalDateTime.of(2026, 7, 13, 10, 20), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("游标");
+            verifyNoInteractions(logService);
+        }
+
+        private Log log(long id, LocalDateTime accessTime) {
+            Log log = new Log();
+            log.setId(id);
+            log.setAccessTime(Date.from(accessTime.atZone(ZoneId.systemDefault()).toInstant()));
+            return log;
         }
     }
 

@@ -59,6 +59,18 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
+    public List<Log> searchLogs(String keyword, String username, String clientIp, String requestUri, String method,
+                                String responseStatus, String startTime, String endTime, int page, int size,
+                                LocalDateTime cursorAccessTime, Long cursorId) {
+        PaginationUtils.validatePageParams(page, size);
+        if (cursorAccessTime == null || cursorId == null) {
+            throw new IllegalArgumentException("游标时间与游标 ID 必须成对传入");
+        }
+        return logMapper.searchAfter(keyword, username, clientIp, requestUri, method, responseStatus,
+                startTime, endTime, cursorAccessTime, cursorId, size);
+    }
+
+    @Override
     public int getTotalLogCount() {
         return logMapper.countAll();
     }

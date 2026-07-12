@@ -3,8 +3,8 @@ package com.zjcxph.imgapi.mapper;
 import com.zjcxph.imgapi.entity.Log;
 import org.apache.ibatis.annotations.*;
 
-import java.util.List;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface LogMapper {
 
@@ -66,6 +66,20 @@ public interface LogMapper {
             @Param("endTime") String endTime,
             @Param("limit") int limit,
             @Param("offset") int offset
+    );
+
+    List<Log> searchAfter(
+            @Param("keyword") String keyword,
+            @Param("username") String username,
+            @Param("clientIp") String clientIp,
+            @Param("requestUri") String requestUri,
+            @Param("method") String method,
+            @Param("responseStatus") String responseStatus,
+            @Param("startTime") String startTime,
+            @Param("endTime") String endTime,
+            @Param("cursorAccessTime") LocalDateTime cursorAccessTime,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit
     );
 
     // 敏感病案图片访问审计搜索 - XML 实现

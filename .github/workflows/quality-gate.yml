@@ -67,7 +67,36 @@ jobs:
         run: exit 1
 
       - name: Build
-        run: pnpm build
+        id: build
+        continue-on-error: true
+        run: pnpm build 2>&1 | tee build-output.txt
+
+      - name: Collect build size report
+        if: always()
+        run: |
+          {
+            echo
+            echo "=== dist total ==="
+            du -sh dist 2>/dev/null || true
+            echo
+            echo "=== largest uncompressed assets ==="
+            find dist/assets -maxdepth 1 -type f ! -name '*.gz' ! -name '*.br' -printf '%s %f\n' 2>/dev/null | sort -nr | head -30 || true
+          } >> build-output.txt
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-build-output
+          path: frontend-fantastic-admin/build-output.txt
+          if-no-files-found: ignore
+
+      - name: Fail on build errors
+        if: steps.build.outcome == 'failure'
+        run: exit 1
+
+      - name: Validate Nginx configuration
+        run: docker run --rm --add-host backend:127.0.0.1 -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t
 
       - name: Test
         run: pnpm test:run

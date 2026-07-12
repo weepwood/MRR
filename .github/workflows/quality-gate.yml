@@ -3,10 +3,9 @@ name: quality-gate
 on:
   pull_request:
   push:
-    branches:
-      - dev-no-login
-      - main
-      - master
+    tags:
+      - 'v*'
+      - '*.*.*'
 
 permissions:
   contents: read

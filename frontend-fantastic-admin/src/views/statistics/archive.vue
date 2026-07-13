@@ -406,4 +406,42 @@ onUnmounted(() => {
   background: transparent;
   border: 0;
 }
+
+.is-empty .empty-state {
+  min-height: 120px;
+}
+
+.viewer-layout {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+}
+
+@media (width <= 1100px) {
+  .archive-workspace.has-images,
+  .archive-workspace.has-images.is-list-mode {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: initial;
+  }
+
+  .archive-workspace.is-empty {
+    padding: 16px;
+  }
+
+  .has-images .archive-sidebar {
+    overflow: visible;
+  }
+
+  .archive-workspace.has-images .preview-panel {
+    height: min(68vh, 640px);
+    min-height: 420px;
+  }
+}
 </style>

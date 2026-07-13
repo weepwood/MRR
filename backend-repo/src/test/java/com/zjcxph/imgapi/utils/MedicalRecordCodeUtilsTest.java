@@ -34,6 +34,16 @@ class MedicalRecordCodeUtilsTest {
     }
 
     @Test
+    void shouldRequireSjhAtBahUniquenessBoundary() {
+        assertFalse(MedicalRecordCodeUtils.requiresSjhForBah("9999999"));
+        assertFalse(MedicalRecordCodeUtils.requiresSjhForBah("09999999"));
+        assertTrue(MedicalRecordCodeUtils.requiresSjhForBah("10000000"));
+        assertTrue(MedicalRecordCodeUtils.requiresSjhForBah("10000001"));
+        assertFalse(MedicalRecordCodeUtils.requiresSjhForBah("SJH001"));
+        assertFalse(MedicalRecordCodeUtils.requiresSjhForBah(null));
+    }
+
+    @Test
     void shouldValidateSupportedNumericCodes() {
         assertTrue(MedicalRecordCodeUtils.isSupportedNumericCode("1"));
         assertTrue(MedicalRecordCodeUtils.isSupportedNumericCode("00000123"));

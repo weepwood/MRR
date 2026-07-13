@@ -89,7 +89,7 @@ onMounted(loadData)
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
       <el-table v-else :data="tableData" stripe style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="120" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="idCard" label="身份证号" min-width="180" show-overflow-tooltip />

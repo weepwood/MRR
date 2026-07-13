@@ -138,8 +138,10 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   let byteLength = 0
 
   const appendBytes = (bytes: Uint8Array) => {
-    parts.push(bytes)
-    byteLength += bytes.byteLength
+    const copy = new Uint8Array(bytes.byteLength)
+    copy.set(bytes)
+    parts.push(copy.buffer)
+    byteLength += copy.byteLength
   }
   const appendText = (text: string) => appendBytes(encodeText(text))
   const appendBlob = (blob: Blob) => {

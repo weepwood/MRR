@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
 
@@ -62,7 +63,10 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public List<Statistics> findByBah(String bah) {
-        return statisticsMapper.findByBah(bah);
+        return statisticsMapper.findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
     }
 
     @Override

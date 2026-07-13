@@ -69,7 +69,7 @@ class StatisticsServiceImplTest {
         @Test
         @DisplayName("findByBah — 按病案号查询")
         void findByBah() {
-            when(statisticsMapper.findByBah("00789508")).thenReturn(List.of(mockStat));
+            when(statisticsMapper.findByBah("00789508", "789508")).thenReturn(List.of(mockStat));
             assertThat(statisticsService.findByBah("00789508")).hasSize(1);
         }
 
@@ -148,7 +148,7 @@ class StatisticsServiceImplTest {
         @Test
         @DisplayName("findWithConditionAndPagination — 含 bah/sjh 条件")
         void findWithConditionAndPagination_withBahAndSjh() {
-            when(statisticsMapper.findWithConditionAndPagination(0, 10, null, "0078", "SJH001", null, null, null, "date", "desc"))
+            when(statisticsMapper.findWithConditionAndPagination(0, 10, null, "78", "SJH001", null, null, null, "date", "desc"))
                 .thenReturn(List.of(mockStat));
             var result = statisticsService.findWithConditionAndPagination(1, 10, null, "0078", "SJH001", null, null, null, "date", "desc");
             assertThat(result).hasSize(1);

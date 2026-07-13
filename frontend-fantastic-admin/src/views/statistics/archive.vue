@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { GalleryImage, RouteArchiveMeta, ViewMode } from './archive/types'
+import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import PatientCard from './archive/components/PatientCard.vue'
@@ -56,11 +58,11 @@ const patient = computed(() => patientList.value[0])
 
 const routeArchive = computed<RouteArchiveMeta>(() => ({
   bah: searchBah.value || sanitizeParam(route.query.bah),
-  cid: String(route.query.cid || ''),
-  type: String(route.query.type || ''),
-  date: String(route.query.date || ''),
-  pages: String(route.query.pages || ''),
-  openerNo: String(route.query.openerNo || ''),
+  cid: sanitizeParam(route.query.cid),
+  type: sanitizeParam(route.query.type),
+  date: sanitizeParam(route.query.date),
+  pages: sanitizeParam(route.query.pages),
+  openerNo: sanitizeParam(route.query.openerNo),
   sjh: searchSjh.value || sanitizeParam(route.query.sjh),
 }))
 
@@ -75,22 +77,36 @@ function normalizeSearchParam(value: unknown): string {
   return text ? padCode(text) : ''
 }
 
-function clearArchiveState() {
+function clearArchiveState(message = '') {
   images.value = []
   patientList.value = []
-  errorMsg.value = ''
+  errorMsg.value = message
   selectedImageIndex.value = 0
 }
 
-function syncSearchFromRoute() {
-  const bah = normalizeSearchParam(route.params.bah || route.query.bah)
+async function syncSearchFromRoute() {
+  const legacyBah = normalizeSearchParam(route.params.bah)
+  const bah = normalizeSearchParam(route.query.bah || legacyBah)
   const sjh = normalizeSearchParam(route.query.sjh)
 
   searchBah.value = bah
   searchSjh.value = sjh
 
+  // 旧链接 /archive/:bah 自动转换为具名查询参数，避免病案号和上架号语义混淆。
+  if (legacyBah) {
+    await router.replace({
+      path: '/archive',
+      query: {
+        ...route.query,
+        bah,
+        ...(sjh ? { sjh } : {}),
+      },
+    })
+    return
+  }
+
   if (bah || sjh) {
-    loadImages()
+    await loadImages()
   }
   else {
     clearArchiveState()
@@ -100,21 +116,32 @@ function syncSearchFromRoute() {
 async function handleSearch() {
   const bah = normalizeSearchParam(searchBah.value)
   const sjh = normalizeSearchParam(searchSjh.value)
-  const location = {
-    path: bah ? `/archive/${encodeURIComponent(bah)}` : '/archive',
-    query: sjh ? { sjh } : {},
-  }
+  const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
   searchBah.value = bah
   searchSjh.value = sjh
 
+  if (validationMessage) {
+    clearArchiveState(validationMessage)
+    ElMessage.warning(validationMessage)
+    return
+  }
+
+  const query: Record<string, string> = {}
+  if (bah) {
+    query.bah = bah
+  }
+  if (sjh) {
+    query.sjh = sjh
+  }
+
+  const location = {
+    path: '/archive',
+    query,
+  }
+
   if (router.resolve(location).fullPath === route.fullPath) {
-    if (bah || sjh) {
-      await loadImages()
-    }
-    else {
-      clearArchiveState()
-    }
+    await loadImages()
     return
   }
 

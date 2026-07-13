@@ -1,4 +1,66 @@
-# Design System Inspired by Notion
+# MRR Design System
+
+
+## 0. 业务指标卡片（Metric Card）
+
+病案扫描数据统计页的顶部卡片是 MRR 的标准业务指标卡。凡是用于展示“总量、比例、耗时、状态、趋势周期”等单一核心指标的卡片，都应复用这一结构，不再在页面内重新设计。
+
+### 0.1 适用范围
+
+- 页面首屏的 3–6 个核心指标。
+- 统计总览、系统监控、审计分析、迁移任务等数字摘要。
+- 需要通过颜色区分业务语义，但不需要承载复杂交互的卡片。
+- 普通表单面板、图表容器、筛选区和档案袋卡片不使用本规范。
+
+### 0.2 标准结构
+
+1. **顶部语义色条**：3px，高度固定，用于快速区分指标类别。
+2. **图标容器**：52×52px，14px 圆角；使用语义色的 10% 淡色背景。
+3. **标签**：11px、600–650 字重、大写或短标签，单行省略。
+4. **数值**：26px、700–750 字重，使用等宽数字特性，避免数据刷新时跳动。
+5. **说明**：12px 次级文本，可选；只解释指标口径，不重复标签。
+
+### 0.3 布局与尺寸
+
+- 标准网格：`repeat(auto-fit, minmax(220px, 1fr))`，间距 16px。
+- 紧凑网格：最小宽度 180px，适用于 5 个以上并列指标。
+- 卡片内容区：水平布局，间距 18px，内边距 20px 22px。
+- 标准圆角：14px；边框使用语义色与 `--divider` 混合后的低对比边框。
+- 阴影必须克制：默认仅用于区分表面，悬停时轻微增强并上移 2px。
+- 600px 以下统一单列，不压缩字号来勉强维持多列。
+
+### 0.4 语义色规则
+
+| Tone | 用途 | 类名 |
+| --- | --- | --- |
+| Blue | 默认总量、请求量、运行信息 | `mrr-metric-card--blue` 或默认类 |
+| Green | 成功、健康、已完成 | `mrr-metric-card--green` |
+| Rose / Danger | 异常、失败、风险 | `mrr-metric-card--rose` / `--danger` |
+| Amber | 待处理、时间范围、警告 | `mrr-metric-card--amber` |
+| Violet | 页数、性能分位、容量指标 | `mrr-metric-card--violet` |
+| Teal | 用户、线程、并发等运行指标 | `mrr-metric-card--teal` |
+| Slate | 中性耗时、辅助统计 | `mrr-metric-card--slate` |
+
+颜色只表达语义，不按页面随机分配。正文数值保持 `--text-primary`，语义色主要用于顶部色条和图标，避免大面积高饱和文字降低可读性。
+
+### 0.5 实现方式
+
+全局实现位于 `src/assets/styles/globals.css`，页面只组合以下类：
+
+```vue
+<section class="mrr-metric-grid">
+  <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+    <div class="mrr-metric-card__icon">...</div>
+    <div class="mrr-metric-card__body">
+      <span class="mrr-metric-card__label">已完成</span>
+      <strong class="mrr-metric-card__value">1,280</strong>
+      <p class="mrr-metric-card__note">已完成归档的病案数量</p>
+    </div>
+  </el-card>
+</section>
+```
+
+禁止在业务页面复制 `.stat-card`、`.summary-card`、`.metric-card` 等同类局部样式。出现新需求时应优先扩展 `mrr-metric-card` 的修饰类，并同步更新本规范。
 
 ## 1. Visual Theme & Atmosphere
 
@@ -127,6 +189,8 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 - Use: Status badges, feature labels, "New" tags
 
 ### Cards & Containers
+
+> 单一核心指标必须使用上文的 MRR Metric Card；本节仅描述普通内容容器。
 - Background: `#ffffff`
 - Border: `1px solid rgba(0,0,0,0.1)` (whisper border)
 - Radius: 12px (standard cards), 16px (featured/hero cards)

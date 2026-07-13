@@ -110,50 +110,54 @@ watch(selectedDays, loadData)
     <el-empty v-else-if="isEmpty" description="暂无响应指标数据" />
 
     <template v-else>
-      <section class="summary-grid" aria-label="响应指标总览">
-        <el-card shadow="never">
-          <p class="metric-label">
-            总请求数
-          </p>
-          <p class="metric-value">
-            {{ formatNumber(analysis?.overview.totalRequests) }}
-          </p>
-          <p class="metric-note">
-            所选时间范围内完成的请求
-          </p>
+      <section class="mrr-metric-grid" aria-label="响应指标总览">
+        <el-card shadow="never" class="mrr-metric-card">
+          <div class="mrr-metric-card__icon">
+            <i class="i-ant-design:api-twotone" />
+          </div>
+          <div class="mrr-metric-card__body">
+            <span class="mrr-metric-card__label">总请求数</span>
+            <strong class="mrr-metric-card__value">{{ formatNumber(analysis?.overview.totalRequests) }}</strong>
+            <p class="mrr-metric-card__note">
+              所选时间范围内完成的请求
+            </p>
+          </div>
         </el-card>
-        <el-card shadow="never">
-          <p class="metric-label">
-            HTTP 成功率
-          </p>
-          <p class="metric-value">
-            {{ formatPercent(analysis?.overview.successRate) }}
-          </p>
-          <p class="metric-note">
-            HTTP 2xx 响应占全部请求的比例
-          </p>
+        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+          <div class="mrr-metric-card__icon">
+            <i class="i-ant-design:check-circle-twotone" />
+          </div>
+          <div class="mrr-metric-card__body">
+            <span class="mrr-metric-card__label">HTTP 成功率</span>
+            <strong class="mrr-metric-card__value">{{ formatPercent(analysis?.overview.successRate) }}</strong>
+            <p class="mrr-metric-card__note">
+              HTTP 2xx 响应占全部请求的比例
+            </p>
+          </div>
         </el-card>
-        <el-card shadow="never">
-          <p class="metric-label">
-            客户端 P95
-          </p>
-          <p class="metric-value">
-            {{ formatDuration(analysis?.overview.p95ClientDurationMs) }}
-          </p>
-          <p class="metric-note">
-            包含网络与浏览器处理耗时
-          </p>
+        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+          <div class="mrr-metric-card__icon">
+            <i class="i-ant-design:field-time-outlined" />
+          </div>
+          <div class="mrr-metric-card__body">
+            <span class="mrr-metric-card__label">客户端 P95</span>
+            <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.p95ClientDurationMs) }}</strong>
+            <p class="mrr-metric-card__note">
+              包含网络与浏览器处理耗时
+            </p>
+          </div>
         </el-card>
-        <el-card shadow="never">
-          <p class="metric-label">
-            服务端平均耗时
-          </p>
-          <p class="metric-value">
-            {{ formatDuration(analysis?.overview.avgServerDurationMs) }}
-          </p>
-          <p class="metric-note">
-            服务端请求处理平均值
-          </p>
+        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
+          <div class="mrr-metric-card__icon">
+            <i class="i-ant-design:dashboard-twotone" />
+          </div>
+          <div class="mrr-metric-card__body">
+            <span class="mrr-metric-card__label">服务端平均耗时</span>
+            <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.avgServerDurationMs) }}</strong>
+            <p class="mrr-metric-card__note">
+              服务端请求处理平均值
+            </p>
+          </div>
         </el-card>
       </section>
 
@@ -264,45 +268,6 @@ h2 {
   align-items: center;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-grid :deep(.el-card) {
-  border: 1px solid rgb(0 0 0 / 10%);
-  border-radius: 12px;
-}
-
-.metric-label,
-.metric-note,
-.metric-value {
-  margin: 0;
-}
-
-.metric-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #615d59;
-  letter-spacing: 0.125px;
-}
-
-.metric-value {
-  margin-top: 10px;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.23;
-  color: rgb(0 0 0 / 95%);
-  letter-spacing: -0.625px;
-}
-
-.metric-note {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #a39e98;
-}
-
 .analysis-card {
   border: 1px solid rgb(0 0 0 / 10%);
   border-radius: 12px;
@@ -358,12 +323,6 @@ h2 {
   color: #dd5b00;
 }
 
-@media (width <= 1000px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (width <= 600px) {
   .page-header {
     flex-direction: column;
@@ -371,10 +330,6 @@ h2 {
 
   .page-actions {
     width: 100%;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

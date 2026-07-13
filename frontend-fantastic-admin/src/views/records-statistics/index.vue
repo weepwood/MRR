@@ -253,13 +253,19 @@ async function loadStatisticsList() {
       params.endDate = listSearchDateRange.value[1]
     }
     const res = await getStatisticsList(params as unknown as {
-      page: number; size: number; keyword?: string; type?: string
-      startDate?: string; endDate?: string; sortBy?: string; sortOrder?: string
+      page: number
+      size: number
+      keyword?: string
+      type?: string
+      startDate?: string
+      endDate?: string
+      sortBy?: string
+      sortOrder?: string
     })
     const raw = res.data ?? { list: [], total: 0, page: 1, size: 20 }
     statisticsListData.value = { ...raw, totalPages: raw.totalPages ?? 0 }
     if (statisticsListData.value.list) {
-      statisticsListData.value.list = statisticsListData.value.list.filter((i) => i !== null)
+      statisticsListData.value.list = statisticsListData.value.list.filter(i => i !== null)
     }
   }
   catch (e: unknown) {
@@ -323,55 +329,55 @@ watch(sortedDateData, (v) => {
     </div>
 
     <!-- 顶部统计卡片 -->
-    <section class="summary-grid">
-      <el-card shadow="never" class="stat-card total-records">
-        <div class="stat-icon">
+    <section class="mrr-metric-grid">
+      <el-card shadow="never" class="mrr-metric-card">
+        <div class="mrr-metric-card__icon">
           <el-icon><Grid /></el-icon>
         </div>
-        <div class="stat-body">
-          <div class="stat-label">
+        <div class="mrr-metric-card__body">
+          <div class="mrr-metric-card__label">
             总记录数
           </div>
-          <div class="stat-value">
+          <div class="mrr-metric-card__value">
             {{ (summaryData.total?.totalRecords ?? 0).toLocaleString('zh-CN') }}
           </div>
         </div>
       </el-card>
-      <el-card shadow="never" class="stat-card total-pages">
-        <div class="stat-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--rose">
+        <div class="mrr-metric-card__icon">
           <el-icon><Tickets /></el-icon>
         </div>
-        <div class="stat-body">
-          <div class="stat-label">
+        <div class="mrr-metric-card__body">
+          <div class="mrr-metric-card__label">
             项目期间总页数
           </div>
-          <div class="stat-value">
+          <div class="mrr-metric-card__value">
             {{ (summaryData.total?.totalPages ?? 0).toLocaleString('zh-CN') }}
           </div>
         </div>
       </el-card>
-      <el-card shadow="never" class="stat-card unique-bah">
-        <div class="stat-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+        <div class="mrr-metric-card__icon">
           <el-icon><Document /></el-icon>
         </div>
-        <div class="stat-body">
-          <div class="stat-label">
+        <div class="mrr-metric-card__body">
+          <div class="mrr-metric-card__label">
             项目期间扫描病案数
           </div>
-          <div class="stat-value">
+          <div class="mrr-metric-card__value">
             {{ (summaryData.uniqueBAHCount ?? 0).toLocaleString('zh-CN') }}
           </div>
         </div>
       </el-card>
-      <el-card shadow="never" class="stat-card overview">
-        <div class="stat-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
+        <div class="mrr-metric-card__icon">
           <el-icon><TrendCharts /></el-icon>
         </div>
-        <div class="stat-body">
-          <div class="stat-label">
+        <div class="mrr-metric-card__body">
+          <div class="mrr-metric-card__label">
             统计时间范围
           </div>
-          <div class="stat-value range-text">
+          <div class="mrr-metric-card__value mrr-metric-card__value--compact">
             {{ dateRange.start }} — {{ dateRange.end }}
           </div>
         </div>
@@ -518,8 +524,12 @@ watch(sortedDateData, (v) => {
           value-format="YYYY-MM-DD"
           @change="handleListSearch"
         />
-        <el-button type="primary" @click="handleListSearch">查询</el-button>
-        <el-button @click="resetListSearch">重置</el-button>
+        <el-button type="primary" @click="handleListSearch">
+          查询
+        </el-button>
+        <el-button @click="resetListSearch">
+          重置
+        </el-button>
       </div>
 
       <el-table
@@ -590,78 +600,6 @@ watch(sortedDateData, (v) => {
   margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
-}
-
-/* ===== 统计卡片 ===== */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-/* el-card 本身只承载顶部彩条，内容由 __body 控制 */
-.stat-card {
-  position: relative;
-  overflow: hidden;
-  border-top: 3px solid transparent;
-}
-
-.stat-card.total-records { border-top-color: #0071e3; }
-.stat-card.total-pages { border-top-color: #ff2d55; }
-.stat-card.unique-bah { border-top-color: #34c759; }
-.stat-card.overview { border-top-color: #ff9500; }
-
-/* 穿透 el-card__body，实现 icon + body 横排 */
-.stat-card :deep(.el-card__body) {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-  padding: 20px 22px;
-}
-
-.stat-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  font-size: 26px;
-  border-radius: 14px;
-}
-
-.stat-card.total-records .stat-icon { color: #0071e3; background: rgb(0 113 227 / 9%); }
-.stat-card.total-pages .stat-icon { color: #ff2d55; background: rgb(255 45 85 / 9%); }
-.stat-card.unique-bah .stat-icon { color: #34c759; background: rgb(52 199 89 / 9%); }
-.stat-card.overview .stat-icon { color: #ff9500; background: rgb(255 149 0 / 9%); }
-
-.stat-body { flex: 1; min-width: 0; }
-
-.stat-label {
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-
-.stat-value {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text-primary);
-  word-break: break-all;
-}
-
-.stat-value.range-text {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.5;
-  word-break: break-all;
 }
 
 /* ===== 区块卡片 ===== */
@@ -811,17 +749,8 @@ watch(sortedDateData, (v) => {
 }
 
 /* ===== 响应式 ===== */
-@media (width <= 900px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
 @media (width <= 600px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
   .search-keyword,
   .search-type,
   .search-date {

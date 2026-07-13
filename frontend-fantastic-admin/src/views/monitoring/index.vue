@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useIntervalFn } from '@vueuse/core'
-import { ElMessage } from 'element-plus'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { getMetric } from '@/api/modules/actuator'
 import type {
   ActuatorMetric,
   GcStatItem,
@@ -13,6 +9,10 @@ import type {
   SystemInfo,
   ThreadStats,
 } from '@/api/types'
+import { useIntervalFn } from '@vueuse/core'
+import { ElMessage } from 'element-plus'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { getMetric } from '@/api/modules/actuator'
 import {
   getSystemHealth,
   getSystemInfo,
@@ -43,7 +43,7 @@ const hikariPending = ref<number | null>(null)
 const gcItems = computed<GcStatItem[]>(() => {
   const items: GcStatItem[] = []
   for (const [key, value] of Object.entries(gcStats.value)) {
-    if (key.startsWith('total')) continue
+    if (key.startsWith('total')) { continue }
     if (typeof value === 'object' && value !== null) {
       items.push(value as GcStatItem)
     }
@@ -70,11 +70,11 @@ const totalGcTime = computed(() => {
 const hikariMax = 20
 
 const summaryCards = computed(() => [
-  { label: '健康状态', value: healthStatus.value.status || 'UNKNOWN', note: '系统健康检查接口返回' },
-  { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今' },
-  { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标' },
-  { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}` },
-  { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值' },
+  { label: '健康状态', value: healthStatus.value.status || 'UNKNOWN', note: '系统健康检查接口返回', tone: healthTone.value === 'success' ? 'green' : healthTone.value === 'warning' ? 'amber' : 'danger', icon: 'i-ant-design:heart-twotone' },
+  { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今', tone: 'blue', icon: 'i-ant-design:clock-circle-twotone' },
+  { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标', tone: 'violet', icon: 'i-ant-design:database-twotone' },
+  { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}`, tone: 'amber', icon: 'i-ant-design:sync-outlined' },
+  { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值', tone: 'teal', icon: 'i-ant-design:apartment-outlined' },
 ])
 
 // ---- data loading ----
@@ -193,16 +193,28 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" class="summary-card" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
+    <section class="mrr-metric-grid mrr-metric-grid--compact">
+      <el-card
+        v-for="item in summaryCards"
+        :key="item.label"
+        shadow="never"
+        class="mrr-metric-card"
+        :class="`mrr-metric-card--${item.tone}`"
+      >
+        <div class="mrr-metric-card__icon">
+          <i :class="item.icon" />
         </div>
-        <div class="summary-value" :class="item.label === '健康状态' ? healthTone : ''">
-          {{ item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">{{ item.label }}</span>
+          <strong
+            class="mrr-metric-card__value"
+            :class="item.label === '健康状态' ? healthTone : ''"
+          >
+            {{ item.value }}
+          </strong>
+          <p class="mrr-metric-card__note">
+            {{ item.note }}
+          </p>
         </div>
       </el-card>
     </section>
@@ -211,7 +223,9 @@ onUnmounted(() => {
       <el-col :xs="24" :md="12">
         <el-card class="monitor-card" shadow="never">
           <template #header>
-            <div class="card-title">JVM 与应用信息</div>
+            <div class="card-title">
+              JVM 与应用信息
+            </div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="应用名称">
@@ -241,7 +255,9 @@ onUnmounted(() => {
       <el-col :xs="24" :md="12">
         <el-card class="monitor-card" shadow="never">
           <template #header>
-            <div class="card-title">内存概览</div>
+            <div class="card-title">
+              内存概览
+            </div>
           </template>
           <div class="metric">
             <div class="metric-top">
@@ -275,7 +291,9 @@ onUnmounted(() => {
       <el-col :xs="24" :md="12">
         <el-card class="monitor-card" shadow="never">
           <template #header>
-            <div class="card-title">GC 统计</div>
+            <div class="card-title">
+              GC 统计
+            </div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="累计收集次数">
@@ -293,7 +311,9 @@ onUnmounted(() => {
       <el-col :xs="24" :md="12">
         <el-card class="monitor-card" shadow="never">
           <template #header>
-            <div class="card-title">线程 &amp; 连接池</div>
+            <div class="card-title">
+              线程 &amp; 连接池
+            </div>
           </template>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="当前线程数">
@@ -326,7 +346,9 @@ onUnmounted(() => {
 
     <el-card class="monitor-card properties-card" shadow="never">
       <template #header>
-        <div class="card-title">系统属性</div>
+        <div class="card-title">
+          系统属性
+        </div>
       </template>
       <div class="properties-grid">
         <article v-for="(value, key) in properties" :key="key" class="property-item">
@@ -409,17 +431,17 @@ h2 {
 }
 
 .health-pill.success,
-.summary-value.success {
+.mrr-metric-card__value.success {
   color: #16a34a;
 }
 
 .health-pill.warning,
-.summary-value.warning {
+.mrr-metric-card__value.warning {
   color: #d97706;
 }
 
 .health-pill.danger,
-.summary-value.danger {
+.mrr-metric-card__value.danger {
   color: #dc2626;
 }
 
@@ -428,46 +450,6 @@ h2 {
   height: 7px;
   background: currentcolor;
   border-radius: 50%;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.summary-card {
-  height: 100%;
-  border-color: var(--divider);
-  border-radius: 14px;
-}
-
-.summary-card :deep(.el-card__body) {
-  display: grid;
-  align-content: start;
-  min-height: 112px;
-  padding: 18px;
-}
-
-.summary-label,
-.summary-note,
-.property-key {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-
-.summary-note {
-  align-self: end;
-  margin-top: 8px;
-  line-height: 1.45;
 }
 
 .metric-row {
@@ -549,12 +531,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-@media (width <= 1100px) {
-  .summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 @media (width <= 720px) {
   .page-header {
     flex-direction: column;
@@ -574,11 +550,6 @@ h2 {
     flex: 1;
   }
 
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .summary-card :deep(.el-card__body),
   .monitor-card :deep(.el-card__body) {
     padding: 14px;
   }

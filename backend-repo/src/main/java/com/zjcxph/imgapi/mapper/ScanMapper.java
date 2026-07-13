@@ -14,10 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 public interface ScanMapper {
+    String BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
+    String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
+
     @Select("SELECT * FROM mr_scan WHERE " +
             "BAH = #{normalizedCode} OR SJH = #{normalizedCode} " +
-            "OR COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') = #{searchCode} " +
-            "OR COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') = #{searchCode} " +
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} " +
+            "OR " + SJH_SEARCH_EXPRESSION + " = #{searchCode} " +
             "ORDER BY pages")
     List<Scan> findBAH(
             @Param("normalizedCode") String normalizedCode,
@@ -29,14 +34,14 @@ public interface ScanMapper {
             + "<where>"
             + "<choose>"
             + "<when test='normalizedBah != null and normalizedBah != \"\" and normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "(BAH = #{normalizedBah} OR COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') = #{bahSearchCode}) "
-            + "OR (SJH = #{normalizedSjh} OR COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') = #{sjhSearchCode})"
+            + "(BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
+            + "OR (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
             + "<when test='normalizedBah != null and normalizedBah != \"\"'>"
-            + "BAH = #{normalizedBah} OR COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') = #{bahSearchCode}"
+            + "BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"
             + "</when>"
             + "<when test='normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "SJH = #{normalizedSjh} OR COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') = #{sjhSearchCode}"
+            + "SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode}"
             + "</when>"
             + "</choose>"
             + "</where>"
@@ -78,7 +83,7 @@ public interface ScanMapper {
 
     // 根据病案号查询（不分页），兼容历史短值
     @Select("SELECT * FROM mr_scan WHERE BAH = #{normalizedBah} " +
-            "OR COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') = #{searchCode} ORDER BY pages")
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY pages")
     List<Scan> findByBah(
             @Param("normalizedBah") String normalizedBah,
             @Param("searchCode") String searchCode

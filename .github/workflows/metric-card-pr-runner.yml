@@ -52,7 +52,7 @@ jobs:
 
               response_start = script.index('# 7. Response analysis')
               response_end = script.index('# 8. Audit analytics', response_start)
-              response_patch = r'''# 7. Response analysis
+              response_patch = r"""# 7. Response analysis
           path, text = load('src/views/response-analysis/index.vue')
           new = '''      <section class="mrr-metric-grid" aria-label="响应指标总览">
                 <el-card shadow="never" class="mrr-metric-card">
@@ -98,7 +98,7 @@ jobs:
           text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
           save(path, text)
 
-          '''
+          """
               script = script[:response_start] + response_patch + script[response_end:]
               exec(compile(script, 'metric-card-migration.py', 'exec'))
           except Exception:

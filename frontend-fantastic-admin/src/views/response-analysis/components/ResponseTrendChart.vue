@@ -10,12 +10,16 @@ const props = defineProps<{
 
 const chartHeight = 304
 const minimumChartWidth = 720
+const maximumChartWidth = 1200
 const padding = { top: 30, right: 58, bottom: 52, left: 58 }
 const plotHeight = chartHeight - padding.top - padding.bottom
 
-const chartWidth = computed(() => Math.max(
-  minimumChartWidth,
-  padding.left + padding.right + props.data.length * 68,
+const chartWidth = computed(() => Math.min(
+  maximumChartWidth,
+  Math.max(
+    minimumChartWidth,
+    padding.left + padding.right + props.data.length * 68,
+  ),
 ))
 const plotWidth = computed(() => chartWidth.value - padding.left - padding.right)
 const slotWidth = computed(() => plotWidth.value / Math.max(1, props.data.length))

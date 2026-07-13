@@ -29,6 +29,7 @@ const previewScroller = ref<HTMLElement | null>(null)
 const pageRefs = ref<(HTMLElement | null)[]>([])
 const displayMode = ref<'single' | 'scroll'>('single')
 const pendingType = ref(0)
+const failedImageUrls = ref<Set<string>>(new Set())
 let touchStartX = 0
 let pageObserver: IntersectionObserver | null = null
 
@@ -57,9 +58,17 @@ function syncCurrentPage(index: number) {
   target.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
-function onImageError(event: Event) {
-  const target = event.target as HTMLImageElement
-  target.style.opacity = '0.35'
+function imageUnavailable(imageUrl: string | undefined) {
+  return !imageUrl || failedImageUrls.value.has(imageUrl)
+}
+
+function markImageFailed(imageUrl: string | undefined) {
+  if (!imageUrl) {
+    return
+  }
+  const next = new Set(failedImageUrls.value)
+  next.add(imageUrl)
+  failedImageUrls.value = next
 }
 
 function observePages() {
@@ -181,7 +190,20 @@ onUnmounted(() => {
       </div>
 
       <div v-if="displayMode === 'single'" class="preview-stage single-stage">
+        <div
+          v-if="imageUnavailable(props.image.imageUrl)"
+          class="preview-image-placeholder"
+          role="img"
+          :aria-label="`第 ${props.index + 1} 张影像加载失败`"
+        >
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
+          </svg>
+          <strong>影像加载失败</strong>
+          <span>当前图片暂不可用，请检查影像服务或文件地址</span>
+        </div>
         <el-image
+          v-else
           class="preview-image"
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
@@ -189,7 +211,7 @@ onUnmounted(() => {
           :preview-src-list="props.image.imageUrl ? [props.image.imageUrl] : []"
           :preview-teleported="true"
           :hide-on-click-modal="false"
-          @error="onImageError"
+          @error="markImageFailed(props.image.imageUrl)"
         />
       </div>
 
@@ -202,7 +224,26 @@ onUnmounted(() => {
           :class="{ active: pageIndex === props.index }"
           :data-index="pageIndex"
         >
-          <img class="preview-image" :src="imageUrl" :alt="`第 ${pageIndex + 1} 张影像`" loading="lazy" @error="onImageError">
+          <div
+            v-if="imageUnavailable(imageUrl)"
+            class="preview-image-placeholder continuous-placeholder"
+            role="img"
+            :aria-label="`第 ${pageIndex + 1} 张影像加载失败`"
+          >
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
+            </svg>
+            <strong>P{{ pageIndex + 1 }} 加载失败</strong>
+            <span>当前图片暂不可用</span>
+          </div>
+          <img
+            v-else
+            class="preview-image"
+            :src="imageUrl"
+            :alt="`第 ${pageIndex + 1} 张影像`"
+            loading="lazy"
+            @error="markImageFailed(imageUrl)"
+          >
         </article>
       </div>
     </template>
@@ -257,6 +298,49 @@ onUnmounted(() => {
   cursor: zoom-in;
   background: transparent;
   box-shadow: none;
+}
+
+.preview-image-placeholder {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 720px);
+  min-height: min(56vh, 560px);
+  padding: 32px;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  text-align: center;
+  background:
+    radial-gradient(circle at top, hsl(var(--primary) / 8%), transparent 48%),
+    var(--surface);
+  border: 1px dashed var(--divider);
+  border-radius: 12px;
+}
+
+.preview-image-placeholder svg {
+  width: 52px;
+  height: 52px;
+  color: var(--text-tertiary);
+  opacity: 0.72;
+}
+
+.preview-image-placeholder strong {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.preview-image-placeholder span {
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.continuous-placeholder {
+  width: min(100%, 980px);
+  min-height: 420px;
 }
 
 .continuous-page {
@@ -363,6 +447,11 @@ onUnmounted(() => {
 
   .preview-controls :deep(.el-select) {
     width: 92px;
+  }
+
+  .preview-image-placeholder {
+    min-height: 320px;
+    padding: 20px;
   }
 }
 </style>

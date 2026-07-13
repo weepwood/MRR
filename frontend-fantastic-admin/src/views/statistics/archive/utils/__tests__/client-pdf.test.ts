@@ -8,6 +8,15 @@ vi.mock('@/api', () => ({
 
 import { buildPdfBlob } from '../client-pdf'
 
+function readBlob(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.addEventListener('load', () => resolve(reader.result as ArrayBuffer), { once: true })
+    reader.addEventListener('error', () => reject(reader.error || new Error('Blob 读取失败')), { once: true })
+    reader.readAsArrayBuffer(blob)
+  })
+}
+
 describe('client PDF writer', () => {
   it('writes selected images as valid PDF pages', async () => {
     const jpeg = new Blob([new Uint8Array([0xFF, 0xD8, 0xFF, 0xD9])], { type: 'image/jpeg' })
@@ -17,7 +26,7 @@ describe('client PDF writer', () => {
     ])
 
     expect(pdf.type).toBe('application/pdf')
-    const bytes = new Uint8Array(await pdf.arrayBuffer())
+    const bytes = new Uint8Array(await readBlob(pdf))
     const text = new TextDecoder('latin1').decode(bytes)
 
     expect(text.startsWith('%PDF-1.4')).toBe(true)

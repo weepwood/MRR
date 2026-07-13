@@ -1,0 +1,43 @@
+/* 病案明细档案袋排版层级 */
+.department-themed-archive .archive-folder-card {
+  --folder-meta-font-size: 11px;
+  --folder-value-font-size: 14px;
+  --folder-patient-name-font-size: 17px;
+}
+
+/* 辅助标签统一字号 */
+.department-themed-archive .archive-folder-card .folder-index,
+.department-themed-archive .archive-folder-card .folder-selected-label,
+.department-themed-archive .archive-folder-card .folder-code-label,
+.department-themed-archive .archive-folder-card .folder-page-count span {
+  font-size: var(--folder-meta-font-size);
+}
+
+.department-themed-archive .archive-folder-card .folder-top .el-tag {
+  --el-tag-font-size: var(--folder-meta-font-size);
+
+  font-size: var(--folder-meta-font-size);
+}
+
+/* 科室、日期、病案号和上架号使用一致的正文层级 */
+.department-themed-archive .archive-folder-card .folder-code-grid .folder-code-block .folder-code-value {
+  font-size: var(--folder-value-font-size);
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+/* 病人姓名仅比普通字段高一个层级 */
+.department-themed-archive .archive-folder-card .folder-code-block-full .folder-code-value {
+  font-size: var(--folder-patient-name-font-size);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+/* 页数和操作文字回归普通字段字号，避免出现额外视觉焦点 */
+.department-themed-archive .archive-folder-card .folder-page-count strong,
+.department-themed-archive .archive-folder-card .folder-action {
+  font-size: var(--folder-value-font-size);
+  font-weight: 800;
+}

@@ -1,0 +1,466 @@
+name: archive-card-style-autofix
+
+on:
+  push:
+    branches:
+      - feat/improve-archive-folder-cards-20260713
+
+permissions:
+  contents: write
+
+jobs:
+  update-archive-card:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/improve-archive-folder-cards-20260713
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Update archive folder cards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('frontend-fantastic-admin/src/views/statistics-detail/index.vue')
+          text = path.read_text(encoding='utf-8')
+
+          folder_section = text.index("        <div v-else-if=\"archiveDisplayMode === 'folder'\" class=\"archive-grid\">")
+          template_start = text.index('          <article\n', folder_section)
+          template_end = text.index('          </article>', template_start) + len('          </article>')
+
+          new_template = '''          <article
+            v-for="(item, index) in listData.list"
+            :key="archiveKey(item, index)"
+            class="archive-folder-card"
+            :class="[toneClass(item, index), { 'is-selected': selectedArchiveKey === archiveKey(item, index) }]"
+            role="button"
+            tabindex="0"
+            :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
+            :aria-label="`病案 ${normalizeText(item.bah)}，${Number(item.pages || 0)} 页`"
+            @click="selectArchive(item, index)"
+            @keyup.enter="selectArchive(item, index)"
+            @keyup.space.prevent="selectArchive(item, index)"
+          >
+            <div class="folder-layer folder-layer-back" />
+            <div class="folder-layer folder-layer-middle" />
+            <div class="folder-tab">
+              <span>Medical Record</span>
+            </div>
+
+            <div class="folder-card-body">
+              <div class="folder-top">
+                <div class="folder-identity">
+                  <span class="folder-index">NO. A{{ tableIndex(index) }}</span>
+                  <span
+                    v-if="selectedArchiveKey === archiveKey(item, index)"
+                    class="folder-selected-label"
+                  >
+                    <i />已选中
+                  </span>
+                </div>
+                <el-tag size="small" :type="typeTone(item.type)" effect="plain">
+                  {{ normalizeText(item.type) }}
+                </el-tag>
+              </div>
+
+              <div class="folder-primary">
+                <span class="folder-primary-label">病案号</span>
+                <h4 class="folder-title">
+                  {{ normalizeText(item.bah) }}
+                </h4>
+                <div class="folder-subtitle">
+                  <span>{{ formatDate(item.date) }}</span>
+                  <i />
+                  <span>设备 {{ normalizeText(item.cid) }}</span>
+                </div>
+              </div>
+
+              <dl class="folder-meta-grid">
+                <div>
+                  <dt>负责人</dt>
+                  <dd>{{ normalizeText(item.openerNo) }}</dd>
+                </div>
+                <div>
+                  <dt>上架号</dt>
+                  <dd>{{ normalizeText(item.sjh) }}</dd>
+                </div>
+                <div>
+                  <dt>归档日期</dt>
+                  <dd>{{ formatDate(item.date) }}</dd>
+                </div>
+                <div>
+                  <dt>扫描设备</dt>
+                  <dd>{{ normalizeText(item.cid) }}</dd>
+                </div>
+              </dl>
+
+              <div class="folder-footer">
+                <div class="folder-page-count">
+                  <strong>{{ Number(item.pages || 0).toLocaleString('zh-CN') }}</strong>
+                  <span>扫描页</span>
+                </div>
+                <el-button class="folder-action" text type="primary" @click.stop="openArchive(item)">
+                  查看影像
+                  <span aria-hidden="true">→</span>
+                </el-button>
+              </div>
+            </div>
+          </article>'''
+
+          text = text[:template_start] + new_template + text[template_end:]
+          text = text.replace(
+              '  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));',
+              '  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));',
+              1,
+          )
+
+          style_start = text.index('.archive-folder-card {')
+          style_end = text.index('.pagination-wrapper {', style_start)
+
+          new_styles = '''.archive-folder-card {
+  --folder-accent: #1d4ed8;
+  --folder-tint: #eef4ff;
+
+  position: relative;
+  min-height: 318px;
+  padding: 16px 8px 8px;
+  cursor: pointer;
+  outline: none;
+  isolation: isolate;
+}
+
+.folder-layer {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
+  border-radius: 14px;
+  transition: transform 0.22s ease, border-color 0.22s ease;
+}
+
+.folder-layer-back {
+  inset: 6px 24px 18px 20px;
+  z-index: -2;
+  background: color-mix(in srgb, var(--folder-tint) 72%, var(--surface));
+  transform: rotate(-1.4deg);
+}
+
+.folder-layer-middle {
+  inset: 11px 12px 11px 14px;
+  z-index: -1;
+  background: color-mix(in srgb, var(--folder-tint) 48%, var(--surface));
+  transform: rotate(0.8deg);
+}
+
+.folder-tab {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  width: 124px;
+  height: 34px;
+  padding: 0 16px;
+  color: color-mix(in srgb, var(--folder-accent) 82%, black);
+  background: color-mix(in srgb, var(--folder-tint) 84%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 28%, var(--divider));
+  border-bottom: 0;
+  border-radius: 11px 11px 0 0;
+}
+
+.folder-tab span {
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  opacity: 0.78;
+}
+
+.folder-card-body {
+  position: relative;
+  display: grid;
+  gap: 15px;
+  min-height: 294px;
+  padding: 23px 20px 18px;
+  overflow: hidden;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
+  border: 1px solid var(--divider);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 7%);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.folder-card-body::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  content: '';
+  background: linear-gradient(90deg, var(--folder-accent), color-mix(in srgb, var(--folder-accent) 36%, transparent));
+}
+
+.folder-card-body::after {
+  position: absolute;
+  right: -42px;
+  bottom: -58px;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+  content: '';
+  background: radial-gradient(circle, color-mix(in srgb, var(--folder-accent) 8%, transparent), transparent 68%);
+}
+
+.archive-folder-card:hover .folder-card-body,
+.archive-folder-card.is-selected .folder-card-body,
+.archive-folder-card:focus-visible .folder-card-body {
+  border-color: color-mix(in srgb, var(--folder-accent) 58%, var(--divider));
+  box-shadow: 0 14px 34px rgb(15 23 42 / 12%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 9%, transparent);
+  transform: translateY(-2px);
+}
+
+.archive-folder-card:hover .folder-layer-back,
+.archive-folder-card.is-selected .folder-layer-back {
+  transform: translate(-2px, -2px) rotate(-2deg);
+}
+
+.archive-folder-card:hover .folder-layer-middle,
+.archive-folder-card.is-selected .folder-layer-middle {
+  transform: translate(2px, -1px) rotate(1.2deg);
+}
+
+.archive-folder-card.is-selected .folder-card-body {
+  border-color: var(--folder-accent);
+}
+
+.tone-blue { --folder-accent: #2563eb; --folder-tint: #eef4ff; }
+.tone-green { --folder-accent: #0f766e; --folder-tint: #ecfdf7; }
+.tone-amber { --folder-accent: #b86b0b; --folder-tint: #fff6e8; }
+.tone-rose { --folder-accent: #be185d; --folder-tint: #fff0f5; }
+.tone-slate { --folder-accent: #64748b; --folder-tint: var(--surface-alt); }
+
+:global(.dark) .tone-blue { --folder-tint: color-mix(in srgb, #2563eb 16%, var(--surface)); }
+:global(.dark) .tone-green { --folder-tint: color-mix(in srgb, #0f766e 16%, var(--surface)); }
+:global(.dark) .tone-amber { --folder-tint: color-mix(in srgb, #b86b0b 16%, var(--surface)); }
+:global(.dark) .tone-rose { --folder-tint: color-mix(in srgb, #be185d 16%, var(--surface)); }
+
+.folder-top,
+.folder-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.folder-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.folder-index {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.11em;
+}
+
+.folder-selected-label {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--folder-accent);
+  background: color-mix(in srgb, var(--folder-accent) 9%, transparent);
+  border-radius: 999px;
+}
+
+.folder-selected-label i {
+  width: 5px;
+  height: 5px;
+  background: var(--folder-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
+}
+
+.folder-primary {
+  position: relative;
+  z-index: 1;
+  padding: 14px 15px;
+  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 12%, var(--divider));
+  border-radius: 11px;
+}
+
+.folder-primary-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.folder-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.folder-subtitle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.folder-subtitle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-subtitle i {
+  flex: 0 0 3px;
+  width: 3px;
+  height: 3px;
+  background: var(--folder-accent);
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.folder-meta-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.folder-meta-grid > div {
+  min-width: 0;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--surface-alt) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--divider) 72%, transparent);
+  border-radius: 9px;
+}
+
+.folder-meta-grid dt {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.folder-meta-grid dd {
+  margin: 4px 0 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-footer {
+  z-index: 1;
+  padding-top: 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
+}
+
+.folder-page-count {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  color: var(--folder-accent);
+}
+
+.folder-page-count strong {
+  font-size: 22px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.folder-page-count span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.folder-action {
+  font-weight: 700;
+}
+
+.folder-action span {
+  margin-left: 5px;
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+
+.archive-folder-card:hover .folder-action span {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-layer,
+  .folder-card-body,
+  .folder-action span {
+    transition: none;
+  }
+}
+
+'''
+
+          text = text[:style_start] + new_styles + text[style_end:]
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Apply repository lint fixes
+        working-directory: frontend-fantastic-admin
+        run: |
+          pnpm exec eslint src/views/statistics-detail/index.vue --fix
+          pnpm exec stylelint src/views/statistics-detail/index.vue --fix
+
+      - name: Commit update and remove temporary workflow
+        run: |
+          rm .github/workflows/archive-card-style-autofix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add frontend-fantastic-admin/src/views/statistics-detail/index.vue .github/workflows/archive-card-style-autofix.yml
+          git commit -m "style(statistics): redesign archive folder cards"
+          git push origin feat/improve-archive-folder-cards-20260713

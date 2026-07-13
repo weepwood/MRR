@@ -1,0 +1,769 @@
+name: metric-card-system-autofix
+
+on:
+  push:
+    branches:
+      - style/unify-metric-cards-20260713
+
+permissions:
+  contents: write
+
+jobs:
+  apply-metric-card-system:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: style/unify-metric-cards-20260713
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply shared metric card design
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          ROOT = Path('frontend-fantastic-admin')
+
+          def load(relative: str) -> tuple[Path, str]:
+              path = ROOT / relative
+              return path, path.read_text(encoding='utf-8')
+
+          def save(path: Path, text: str) -> None:
+              path.write_text(text, encoding='utf-8')
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise RuntimeError(f'{label}: target text not found')
+              return text.replace(old, new, 1)
+
+          def regex_once(text: str, pattern: str, replacement: str, label: str) -> str:
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise RuntimeError(f'{label}: expected 1 replacement, got {count}')
+              return updated
+
+          # 1. Shared implementation in globals.css
+          path, text = load('src/assets/styles/globals.css')
+          metric_css = r'''
+          /* ===== MRR 业务指标卡片 ===== */
+          .mrr-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+          }
+
+          .mrr-metric-grid--compact {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+          }
+
+          .mrr-metric-card {
+            --mrr-metric-accent: #0071e3;
+            --mrr-metric-tint: #eff6ff;
+
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(
+              145deg,
+              color-mix(in srgb, var(--mrr-metric-tint) 36%, var(--surface)) 0%,
+              var(--surface) 72%
+            );
+            border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, var(--divider));
+            border-top: 3px solid var(--mrr-metric-accent);
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgb(15 23 42 / 5%);
+            transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+          }
+
+          .mrr-metric-card:hover,
+          .mrr-metric-card:focus-within {
+            border-color: color-mix(in srgb, var(--mrr-metric-accent) 34%, var(--divider));
+            border-top-color: var(--mrr-metric-accent);
+            box-shadow: 0 12px 28px rgb(15 23 42 / 9%);
+            transform: translateY(-2px);
+          }
+
+          .mrr-metric-card .el-card__body {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            min-height: 96px;
+            padding: 20px 22px;
+          }
+
+          .mrr-metric-card__icon {
+            display: grid;
+            flex: 0 0 52px;
+            place-items: center;
+            height: 52px;
+            font-size: 26px;
+            color: var(--mrr-metric-accent);
+            background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--surface));
+            border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, transparent);
+            border-radius: 14px;
+          }
+
+          .mrr-metric-card__icon .el-icon {
+            font-size: inherit;
+          }
+
+          .mrr-metric-card__body {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .mrr-metric-card__label {
+            display: block;
+            margin: 0 0 6px;
+            overflow: hidden;
+            font-size: 11px;
+            font-weight: 650;
+            color: var(--text-secondary);
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+          }
+
+          .mrr-metric-card__value {
+            display: block;
+            margin: 0;
+            overflow-wrap: anywhere;
+            font-size: 26px;
+            font-weight: 750;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+          }
+
+          .mrr-metric-card__value--compact {
+            font-size: 14px;
+            font-weight: 650;
+            line-height: 1.5;
+            letter-spacing: 0;
+          }
+
+          .mrr-metric-card__value-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: baseline;
+          }
+
+          .mrr-metric-card__suffix {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+          }
+
+          .mrr-metric-card__note {
+            margin: 7px 0 0;
+            overflow: hidden;
+            font-size: 12px;
+            line-height: 1.45;
+            color: var(--text-tertiary);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .mrr-metric-card--rose {
+            --mrr-metric-accent: #e11d48;
+            --mrr-metric-tint: #fff1f2;
+          }
+
+          .mrr-metric-card--green {
+            --mrr-metric-accent: #16a34a;
+            --mrr-metric-tint: #f0fdf4;
+          }
+
+          .mrr-metric-card--amber {
+            --mrr-metric-accent: #d97706;
+            --mrr-metric-tint: #fffbeb;
+          }
+
+          .mrr-metric-card--violet {
+            --mrr-metric-accent: #7c3aed;
+            --mrr-metric-tint: #f5f3ff;
+          }
+
+          .mrr-metric-card--teal {
+            --mrr-metric-accent: #0f766e;
+            --mrr-metric-tint: #f0fdfa;
+          }
+
+          .mrr-metric-card--slate {
+            --mrr-metric-accent: #64748b;
+            --mrr-metric-tint: #f8fafc;
+          }
+
+          .mrr-metric-card--danger {
+            --mrr-metric-accent: #dc2626;
+            --mrr-metric-tint: #fef2f2;
+          }
+
+          @media (width <= 600px) {
+            .mrr-metric-grid,
+            .mrr-metric-grid--compact {
+              grid-template-columns: 1fr;
+            }
+
+            .mrr-metric-card .el-card__body {
+              min-height: 88px;
+              padding: 18px;
+            }
+
+            .mrr-metric-card__icon {
+              flex-basis: 46px;
+              height: 46px;
+              font-size: 23px;
+              border-radius: 12px;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .mrr-metric-card {
+              transition: none;
+            }
+
+            .mrr-metric-card:hover,
+            .mrr-metric-card:focus-within {
+              transform: none;
+            }
+          }
+
+          '''
+          if '/* ===== MRR 业务指标卡片 ===== */' not in text:
+              text = replace_once(text, '/* 明暗模式 CSS 变量 */', metric_css + '/* 明暗模式 CSS 变量 */', 'globals metric card insertion')
+          save(path, text)
+
+          # 2. Canonical records-statistics page
+          path, text = load('src/views/records-statistics/index.vue')
+          replacements = {
+              '<section class="summary-grid">': '<section class="mrr-metric-grid">',
+              'class="stat-card total-records"': 'class="mrr-metric-card"',
+              'class="stat-card total-pages"': 'class="mrr-metric-card mrr-metric-card--rose"',
+              'class="stat-card unique-bah"': 'class="mrr-metric-card mrr-metric-card--green"',
+              'class="stat-card overview"': 'class="mrr-metric-card mrr-metric-card--amber"',
+              'class="stat-icon"': 'class="mrr-metric-card__icon"',
+              'class="stat-body"': 'class="mrr-metric-card__body"',
+              'class="stat-label"': 'class="mrr-metric-card__label"',
+              'class="stat-value"': 'class="mrr-metric-card__value"',
+              'class="stat-value range-text"': 'class="mrr-metric-card__value mrr-metric-card__value--compact"',
+          }
+          for old, new in replacements.items():
+              if old in text:
+                  text = text.replace(old, new)
+          text = regex_once(text, r'\n/\* ===== 统计卡片 ===== \*/.*?(?=\n/\* ===== 区块卡片 ===== \*/)', '\n', 'records-statistics local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          # 3. Statistics overview
+          path, text = load('src/views/statistics/index.vue')
+          old = '''    <section class="summary-grid" aria-label="核心统计指标">
+                <article
+                  v-for="item in summaryCards"
+                  :key="item.label"
+                  class="summary-card"
+                  :class="`summary-card--${item.tone}`"
+                >
+                  <div class="summary-card__header">
+                    <div class="summary-icon">
+                      <el-icon><component :is="item.icon" /></el-icon>
+                    </div>
+                    <span class="summary-label">{{ item.label }}</span>
+                  </div>
+                  <strong class="summary-value">{{ formatNumber(item.value) }}</strong>
+                  <p class="summary-note">
+                    {{ item.note }}
+                  </p>
+                  <div class="summary-decoration" />
+                </article>
+              </section>'''
+          new = '''    <section class="mrr-metric-grid" aria-label="核心统计指标">
+                <el-card
+                  v-for="item in summaryCards"
+                  :key="item.label"
+                  shadow="never"
+                  class="mrr-metric-card"
+                  :class="`mrr-metric-card--${item.tone}`"
+                >
+                  <div class="mrr-metric-card__icon">
+                    <el-icon><component :is="item.icon" /></el-icon>
+                  </div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">{{ item.label }}</span>
+                    <strong class="mrr-metric-card__value">{{ formatNumber(item.value) }}</strong>
+                    <p class="mrr-metric-card__note">{{ item.note }}</p>
+                  </div>
+                </el-card>
+              </section>'''
+          text = replace_once(text, old, new, 'statistics summary template')
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.analytics-grid \{)', '\n', 'statistics local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          # 4. Statistics detail
+          path, text = load('src/views/statistics-detail/index.vue')
+          old = '''const summaryCards = computed(() => [
+            { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
+            { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量' },
+            { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数' },
+            { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图' },
+          ])'''
+          new = '''const summaryCards = computed(() => [
+            { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
+            { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
+            { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
+            { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图', tone: 'amber', icon: 'i-ant-design:select-outlined' },
+          ])'''
+          text = replace_once(text, old, new, 'statistics-detail summary data')
+          old = '''    <section class="summary-grid">
+                <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
+                  <div class="summary-label">
+                    {{ item.label }}
+                  </div>
+                  <div class="summary-value">
+                    {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
+                  </div>
+                  <div class="summary-note">
+                    {{ item.note }}
+                  </div>
+                </el-card>
+              </section>'''
+          new = '''    <section class="mrr-metric-grid">
+                <el-card
+                  v-for="item in summaryCards"
+                  :key="item.label"
+                  shadow="never"
+                  class="mrr-metric-card"
+                  :class="`mrr-metric-card--${item.tone}`"
+                >
+                  <div class="mrr-metric-card__icon"><i :class="item.icon" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">{{ item.label }}</span>
+                    <strong class="mrr-metric-card__value">
+                      {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
+                    </strong>
+                    <p class="mrr-metric-card__note">{{ item.note }}</p>
+                  </div>
+                </el-card>
+              </section>'''
+          text = replace_once(text, old, new, 'statistics-detail summary template')
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.panel-header \{)', '\n', 'statistics-detail local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{[^{}]*\}\n', '\n', text)
+          save(path, text)
+
+          # 5. OSS migration
+          path, text = load('src/views/oss-migration/index.vue')
+          old = '''const summaryCards = computed(() => [
+            { label: '总记录数', value: stats.value?.totalCount ?? 0, color: '#409eff', icon: 'i-ant-design:database-twotone' },
+            { label: '已迁移', value: stats.value?.migratedCount ?? 0, color: '#67c23a', icon: 'i-ant-design:check-circle-twotone' },
+            { label: '待迁移', value: stats.value?.pendingCount ?? 0, color: '#e6a23c', icon: 'i-ant-design:clock-circle-twotone' },
+            { label: '失败', value: stats.value?.failedCount ?? 0, color: '#f56c6c', icon: 'i-ant-design:close-circle-twotone' },
+          ])'''
+          new = '''const summaryCards = computed(() => [
+            { label: '总记录数', value: stats.value?.totalCount ?? 0, note: '迁移任务涉及的扫描记录总量', tone: 'blue', icon: 'i-ant-design:database-twotone' },
+            { label: '已迁移', value: stats.value?.migratedCount ?? 0, note: '已完成 OSS 上传与记录更新', tone: 'green', icon: 'i-ant-design:check-circle-twotone' },
+            { label: '待迁移', value: stats.value?.pendingCount ?? 0, note: '等待处理的扫描记录', tone: 'amber', icon: 'i-ant-design:clock-circle-twotone' },
+            { label: '失败', value: stats.value?.failedCount ?? 0, note: '需要检查并重新处理', tone: 'danger', icon: 'i-ant-design:close-circle-twotone' },
+          ])'''
+          text = replace_once(text, old, new, 'oss summary data')
+          text = regex_once(
+              text,
+              r'    <!-- Statistics Cards -->\n    <section class="summary-grid">.*?</section>',
+              '''    <!-- Statistics Cards -->
+              <section class="mrr-metric-grid">
+                <el-card
+                  v-for="item in summaryCards"
+                  :key="item.label"
+                  shadow="never"
+                  class="mrr-metric-card"
+                  :class="`mrr-metric-card--${item.tone}`"
+                >
+                  <div class="mrr-metric-card__icon"><i :class="item.icon" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">{{ item.label }}</span>
+                    <strong class="mrr-metric-card__value">{{ item.value.toLocaleString('zh-CN') }}</strong>
+                    <p class="mrr-metric-card__note">{{ item.note }}</p>
+                  </div>
+                </el-card>
+              </section>''',
+              'oss summary template',
+          )
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.progress-section \{)', '\n', 'oss local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          # 6. System monitoring
+          path, text = load('src/views/monitoring/index.vue')
+          old = '''const summaryCards = computed(() => [
+            { label: '健康状态', value: healthStatus.value.status || 'UNKNOWN', note: '系统健康检查接口返回' },
+            { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今' },
+            { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标' },
+            { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}` },
+            { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值' },
+          ])'''
+          new = '''const summaryCards = computed(() => [
+            { label: '健康状态', value: healthStatus.value.status || 'UNKNOWN', note: '系统健康检查接口返回', tone: healthTone.value === 'success' ? 'green' : healthTone.value === 'warning' ? 'amber' : 'danger', icon: 'i-ant-design:heart-twotone' },
+            { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今', tone: 'blue', icon: 'i-ant-design:clock-circle-twotone' },
+            { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标', tone: 'violet', icon: 'i-ant-design:database-twotone' },
+            { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}`, tone: 'amber', icon: 'i-ant-design:sync-outlined' },
+            { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值', tone: 'teal', icon: 'i-ant-design:apartment-outlined' },
+          ])'''
+          text = replace_once(text, old, new, 'monitoring summary data')
+          old = '''    <section class="summary-grid">
+                <el-card v-for="item in summaryCards" :key="item.label" class="summary-card" shadow="never">
+                  <div class="summary-label">
+                    {{ item.label }}
+                  </div>
+                  <div class="summary-value" :class="item.label === '健康状态' ? healthTone : ''">
+                    {{ item.value }}
+                  </div>
+                  <div class="summary-note">
+                    {{ item.note }}
+                  </div>
+                </el-card>
+              </section>'''
+          new = '''    <section class="mrr-metric-grid mrr-metric-grid--compact">
+                <el-card
+                  v-for="item in summaryCards"
+                  :key="item.label"
+                  shadow="never"
+                  class="mrr-metric-card"
+                  :class="`mrr-metric-card--${item.tone}`"
+                >
+                  <div class="mrr-metric-card__icon"><i :class="item.icon" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">{{ item.label }}</span>
+                    <strong
+                      class="mrr-metric-card__value"
+                      :class="item.label === '健康状态' ? healthTone : ''"
+                    >
+                      {{ item.value }}
+                    </strong>
+                    <p class="mrr-metric-card__note">{{ item.note }}</p>
+                  </div>
+                </el-card>
+              </section>'''
+          text = replace_once(text, old, new, 'monitoring summary template')
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.metric-row \{)', '\n', 'monitoring local metric styles')
+          text = text.replace('.summary-value.success', '.mrr-metric-card__value.success')
+          text = text.replace('.summary-value.warning', '.mrr-metric-card__value.warning')
+          text = text.replace('.summary-value.danger', '.mrr-metric-card__value.danger')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          text = text.replace('  .summary-card :deep(.el-card__body),\n  .monitor-card :deep(.el-card__body) {', '  .monitor-card :deep(.el-card__body) {')
+          save(path, text)
+
+          # 7. Response analysis
+          path, text = load('src/views/response-analysis/index.vue')
+          old = '''      <section class="summary-grid" aria-label="响应指标总览">
+                <el-card shadow="never">
+                  <p class="metric-label">
+                    总请求数
+                  </p>
+                  <p class="metric-value">
+                    {{ formatNumber(analysis?.overview.totalRequests) }}
+                  </p>
+                  <p class="metric-note">
+                    所选时间范围内完成的请求
+                  </p>
+                </el-card>
+                <el-card shadow="never">
+                  <p class="metric-label">
+                    HTTP 成功率
+                  </p>
+                  <p class="metric-value">
+                    {{ formatPercent(analysis?.overview.successRate) }}
+                  </p>
+                  <p class="metric-note">
+                    HTTP 2xx 响应占全部请求的比例
+                  </p>
+                </el-card>
+                <el-card shadow="never">
+                  <p class="metric-label">
+                    客户端 P95
+                  </p>
+                  <p class="metric-value">
+                    {{ formatDuration(analysis?.overview.p95ClientDurationMs) }}
+                  </p>
+                  <p class="metric-note">
+                    包含网络与浏览器处理耗时
+                  </p>
+                </el-card>
+                <el-card shadow="never">
+                  <p class="metric-label">
+                    服务端平均耗时
+                  </p>
+                  <p class="metric-value">
+                    {{ formatDuration(analysis?.overview.avgServerDurationMs) }}
+                  </p>
+                  <p class="metric-note">
+                    服务端请求处理平均值
+                  </p>
+                </el-card>
+              </section>'''
+          new = '''      <section class="mrr-metric-grid" aria-label="响应指标总览">
+                <el-card shadow="never" class="mrr-metric-card">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:api-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">总请求数</span>
+                    <strong class="mrr-metric-card__value">{{ formatNumber(analysis?.overview.totalRequests) }}</strong>
+                    <p class="mrr-metric-card__note">所选时间范围内完成的请求</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:check-circle-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">HTTP 成功率</span>
+                    <strong class="mrr-metric-card__value">{{ formatPercent(analysis?.overview.successRate) }}</strong>
+                    <p class="mrr-metric-card__note">HTTP 2xx 响应占全部请求的比例</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:field-time-outlined" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">客户端 P95</span>
+                    <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.p95ClientDurationMs) }}</strong>
+                    <p class="mrr-metric-card__note">包含网络与浏览器处理耗时</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:dashboard-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">服务端平均耗时</span>
+                    <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.avgServerDurationMs) }}</strong>
+                    <p class="mrr-metric-card__note">服务端请求处理平均值</p>
+                  </div>
+                </el-card>
+              </section>'''
+          text = replace_once(text, old, new, 'response analysis summary template')
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.analysis-card \{)', '\n', 'response analysis local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          # 8. Audit analytics
+          path, text = load('src/views/audit-images/components/AuditAnalytics.vue')
+          old = '''    <div class="summary-grid">
+                <el-card shadow="never" class="metric-card metric-primary">
+                  <div class="metric-icon">
+                    <el-icon><DataAnalysis /></el-icon>
+                  </div>
+                  <div><p>访问总量</p><strong>{{ loading ? '—' : formatNumber(analytics.totalAccesses) }}</strong></div>
+                </el-card>
+                <el-card shadow="never" class="metric-card metric-teal">
+                  <div class="metric-icon">
+                    <el-icon><User /></el-icon>
+                  </div>
+                  <div><p>独立用户</p><strong>{{ loading ? '—' : formatNumber(analytics.uniqueUsers) }}</strong></div>
+                </el-card>
+                <el-card shadow="never" class="metric-card metric-purple">
+                  <div class="metric-icon">
+                    <el-icon><Files /></el-icon>
+                  </div>
+                  <div><p>独立访问对象</p><strong>{{ loading ? '—' : formatNumber(analytics.uniqueTargets) }}</strong></div>
+                </el-card>
+                <el-card shadow="never" class="metric-card metric-warning">
+                  <div class="metric-icon">
+                    <el-icon><Warning /></el-icon>
+                  </div>
+                  <div>
+                    <p>异常请求</p><strong>{{ loading ? '—' : formatNumber(analytics.abnormalAccesses) }}</strong>
+                    <span v-if="!loading">{{ abnormalRate.toFixed(1) }}%</span>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="metric-card metric-neutral">
+                  <div class="metric-icon">
+                    <el-icon><Timer /></el-icon>
+                  </div>
+                  <div><p>平均响应耗时</p><strong>{{ loading ? '—' : analytics.averageDurationMs.toFixed(1) }}</strong><span v-if="!loading">ms</span></div>
+                </el-card>
+              </div>'''
+          new = '''    <div class="mrr-metric-grid mrr-metric-grid--compact">
+                <el-card shadow="never" class="mrr-metric-card">
+                  <div class="mrr-metric-card__icon"><el-icon><DataAnalysis /></el-icon></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">访问总量</span>
+                    <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.totalAccesses) }}</strong>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--teal">
+                  <div class="mrr-metric-card__icon"><el-icon><User /></el-icon></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">独立用户</span>
+                    <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.uniqueUsers) }}</strong>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+                  <div class="mrr-metric-card__icon"><el-icon><Files /></el-icon></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">独立访问对象</span>
+                    <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.uniqueTargets) }}</strong>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--danger">
+                  <div class="mrr-metric-card__icon"><el-icon><Warning /></el-icon></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">异常请求</span>
+                    <div class="mrr-metric-card__value-row">
+                      <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.abnormalAccesses) }}</strong>
+                      <span v-if="!loading" class="mrr-metric-card__suffix">{{ abnormalRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--slate">
+                  <div class="mrr-metric-card__icon"><el-icon><Timer /></el-icon></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">平均响应耗时</span>
+                    <div class="mrr-metric-card__value-row">
+                      <strong class="mrr-metric-card__value">{{ loading ? '—' : analytics.averageDurationMs.toFixed(1) }}</strong>
+                      <span v-if="!loading" class="mrr-metric-card__suffix">ms</span>
+                    </div>
+                  </div>
+                </el-card>
+              </div>'''
+          text = replace_once(text, old, new, 'audit analytics summary template')
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.chart-grid \{)', '\n', 'audit analytics local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          # 9. Design specification
+          path, text = load('DESIGN.md')
+          if text.startswith('# Design System Inspired by Notion'):
+              text = text.replace('# Design System Inspired by Notion', '# MRR Design System', 1)
+          design_section = r'''
+
+          ## 0. 业务指标卡片（Metric Card）
+
+          病案扫描数据统计页的顶部卡片是 MRR 的标准业务指标卡。凡是用于展示“总量、比例、耗时、状态、趋势周期”等单一核心指标的卡片，都应复用这一结构，不再在页面内重新设计。
+
+          ### 0.1 适用范围
+
+          - 页面首屏的 3–6 个核心指标。
+          - 统计总览、系统监控、审计分析、迁移任务等数字摘要。
+          - 需要通过颜色区分业务语义，但不需要承载复杂交互的卡片。
+          - 普通表单面板、图表容器、筛选区和档案袋卡片不使用本规范。
+
+          ### 0.2 标准结构
+
+          1. **顶部语义色条**：3px，高度固定，用于快速区分指标类别。
+          2. **图标容器**：52×52px，14px 圆角；使用语义色的 10% 淡色背景。
+          3. **标签**：11px、600–650 字重、大写或短标签，单行省略。
+          4. **数值**：26px、700–750 字重，使用等宽数字特性，避免数据刷新时跳动。
+          5. **说明**：12px 次级文本，可选；只解释指标口径，不重复标签。
+
+          ### 0.3 布局与尺寸
+
+          - 标准网格：`repeat(auto-fit, minmax(220px, 1fr))`，间距 16px。
+          - 紧凑网格：最小宽度 180px，适用于 5 个以上并列指标。
+          - 卡片内容区：水平布局，间距 18px，内边距 20px 22px。
+          - 标准圆角：14px；边框使用语义色与 `--divider` 混合后的低对比边框。
+          - 阴影必须克制：默认仅用于区分表面，悬停时轻微增强并上移 2px。
+          - 600px 以下统一单列，不压缩字号来勉强维持多列。
+
+          ### 0.4 语义色规则
+
+          | Tone | 用途 | 类名 |
+          | --- | --- | --- |
+          | Blue | 默认总量、请求量、运行信息 | `mrr-metric-card--blue` 或默认类 |
+          | Green | 成功、健康、已完成 | `mrr-metric-card--green` |
+          | Rose / Danger | 异常、失败、风险 | `mrr-metric-card--rose` / `--danger` |
+          | Amber | 待处理、时间范围、警告 | `mrr-metric-card--amber` |
+          | Violet | 页数、性能分位、容量指标 | `mrr-metric-card--violet` |
+          | Teal | 用户、线程、并发等运行指标 | `mrr-metric-card--teal` |
+          | Slate | 中性耗时、辅助统计 | `mrr-metric-card--slate` |
+
+          颜色只表达语义，不按页面随机分配。正文数值保持 `--text-primary`，语义色主要用于顶部色条和图标，避免大面积高饱和文字降低可读性。
+
+          ### 0.5 实现方式
+
+          全局实现位于 `src/assets/styles/globals.css`，页面只组合以下类：
+
+          ```vue
+          <section class="mrr-metric-grid">
+            <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+              <div class="mrr-metric-card__icon">...</div>
+              <div class="mrr-metric-card__body">
+                <span class="mrr-metric-card__label">已完成</span>
+                <strong class="mrr-metric-card__value">1,280</strong>
+                <p class="mrr-metric-card__note">已完成归档的病案数量</p>
+              </div>
+            </el-card>
+          </section>
+          ```
+
+          禁止在业务页面复制 `.stat-card`、`.summary-card`、`.metric-card` 等同类局部样式。出现新需求时应优先扩展 `mrr-metric-card` 的修饰类，并同步更新本规范。
+          '''
+          if '## 0. 业务指标卡片（Metric Card）' not in text:
+              first_break = text.find('\n')
+              text = text[:first_break + 1] + design_section + text[first_break + 1:]
+          text = text.replace(
+              '### Cards & Containers\n',
+              '### Cards & Containers\n\n> 单一核心指标必须使用上文的 MRR Metric Card；本节仅描述普通内容容器。\n',
+              1,
+          )
+          save(path, text)
+          PY
+
+      - name: Apply repository lint rules
+        working-directory: frontend-fantastic-admin
+        run: |
+          pnpm exec eslint \
+            src/views/records-statistics/index.vue \
+            src/views/statistics/index.vue \
+            src/views/statistics-detail/index.vue \
+            src/views/oss-migration/index.vue \
+            src/views/monitoring/index.vue \
+            src/views/response-analysis/index.vue \
+            src/views/audit-images/components/AuditAnalytics.vue \
+            --fix
+          pnpm exec stylelint \
+            src/assets/styles/globals.css \
+            src/views/records-statistics/index.vue \
+            src/views/statistics/index.vue \
+            src/views/statistics-detail/index.vue \
+            src/views/oss-migration/index.vue \
+            src/views/monitoring/index.vue \
+            src/views/response-analysis/index.vue \
+            src/views/audit-images/components/AuditAnalytics.vue \
+            --fix
+          pnpm exec vue-tsc -b
+
+      - name: Commit design system migration
+        run: |
+          rm .github/workflows/metric-card-system-autofix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            frontend-fantastic-admin/DESIGN.md \
+            frontend-fantastic-admin/src/assets/styles/globals.css \
+            frontend-fantastic-admin/src/views/records-statistics/index.vue \
+            frontend-fantastic-admin/src/views/statistics/index.vue \
+            frontend-fantastic-admin/src/views/statistics-detail/index.vue \
+            frontend-fantastic-admin/src/views/oss-migration/index.vue \
+            frontend-fantastic-admin/src/views/monitoring/index.vue \
+            frontend-fantastic-admin/src/views/response-analysis/index.vue \
+            frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue \
+            .github/workflows/metric-card-system-autofix.yml
+          git commit -m "style(design): unify business metric cards"
+          git push origin style/unify-metric-cards-20260713

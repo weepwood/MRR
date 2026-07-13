@@ -50,6 +50,12 @@ function handleTouchEnd(event: TouchEvent) {
   emit('navigate', endX < touchStartX ? 1 : -1)
 }
 
+function handlePreviewSwitch(index: number) {
+  if (index !== props.index) {
+    emit('select', index)
+  }
+}
+
 function syncCurrentPage(index: number) {
   const target = pageRefs.value[index]
   if (!target) {
@@ -208,9 +214,13 @@ onUnmounted(() => {
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
           fit="contain"
-          :preview-src-list="props.image.imageUrl ? [props.image.imageUrl] : []"
+          :preview-src-list="props.previewList"
+          :initial-index="props.index"
           :preview-teleported="true"
           :hide-on-click-modal="false"
+          :infinite="false"
+          show-progress
+          @switch="handlePreviewSwitch"
           @error="markImageFailed(props.image.imageUrl)"
         />
       </div>

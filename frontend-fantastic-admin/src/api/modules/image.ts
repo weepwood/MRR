@@ -21,6 +21,14 @@ export function downloadBah(bah: string, sjh?: string) {
   })
 }
 
+/** GET /api/v1/img/export-image/{id} — 通过当前系统后端获取 PDF 合成所需原始影像 */
+export function getImageForPdf(imageId: number | string) {
+  return api.get<Blob>(`/api/v1/img/export-image/${imageId}`, {
+    responseType: 'blob',
+    skipGlobalError: true,
+  })
+}
+
 /** GET /api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME} — 获取单张图片（blob 流） */
 export function getImage(bah: string, brxh: string, folder: string, filename: string) {
   return api.get<Blob>(`/api/v1/img/image/${bah}/${brxh}/${folder}/${filename}`, {

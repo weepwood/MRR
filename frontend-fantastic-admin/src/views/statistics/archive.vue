@@ -49,7 +49,7 @@ const filteredImages = computed<GalleryImage[]>(() =>
 const selection = useSelection<GalleryImage>(filteredImages)
 const { selectedCount, allVisibleSelected, selectedItems, isSelected, toggleSelect, selectAllVisible } = selection
 
-const { printing, printSelected } = useArchivePrint()
+const { printing, exportingPdf, printSelected, exportSelectedPdf } = useArchivePrint()
 
 const currentImage = computed(() => filteredImages.value[selectedImageIndex.value] || null)
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
@@ -174,6 +174,10 @@ function handlePrint() {
   printSelected(selectedItems.value)
 }
 
+function handleExportPdf() {
+  exportSelectedPdf(selectedItems.value)
+}
+
 function goBack() {
   router.push('/statistics-detail')
 }
@@ -256,11 +260,14 @@ onUnmounted(() => {
           :loading="loading"
           :downloading="downloading"
           :printing="printing"
+          :exporting-pdf="exportingPdf"
+          :show-actions="images.length > 0"
           :selected-count="selectedCount"
           @back="goBack"
           @refresh="handleSearch"
           @download="handleDownload"
           @print="handlePrint"
+          @export-pdf="handleExportPdf"
         />
 
         <ArchiveSearchBar
@@ -398,43 +405,5 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   border: 0;
-}
-
-.is-empty .empty-state {
-  min-height: 120px;
-}
-
-.viewer-layout {
-  display: flex;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.empty-state {
-  display: grid;
-  place-items: center;
-  min-height: 240px;
-}
-
-@media (width <= 1100px) {
-  .archive-workspace.has-images,
-  .archive-workspace.has-images.is-list-mode {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: initial;
-  }
-
-  .archive-workspace.is-empty {
-    padding: 16px;
-  }
-
-  .has-images .archive-sidebar {
-    overflow: visible;
-  }
-
-  .archive-workspace.has-images .preview-panel {
-    height: min(68vh, 640px);
-    min-height: 420px;
-  }
 }
 </style>

@@ -1,7 +1,7 @@
 import type { BAHImageData, ImageTypeRequest } from '../types'
 import api, { getRequest, putRequest } from '../index'
 
-/** GET /api/v1/img/{bah} — 获取病案号下的图片数据 */
+/** GET /api/v1/img/{bah} — 获取唯一病案号下的图片数据 */
 export function getImgApiByBah(bah: string) {
   return getRequest<BAHImageData[]>(`/api/v1/img/${bah}`)
 }
@@ -13,9 +13,10 @@ export function getImgByCode(bah?: string, sjh?: string) {
   })
 }
 
-/** GET /api/v1/img/download/{bah} — 下载病案压缩包（blob 下载，不走 Result 包装） */
-export function downloadBah(bah: string) {
+/** GET /api/v1/img/download/{bah} — 下载精确匹配的病案压缩包 */
+export function downloadBah(bah: string, sjh?: string) {
   return api.get<Blob>(`/api/v1/img/download/${bah}`, {
+    params: { sjh },
     responseType: 'blob',
   })
 }

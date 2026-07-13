@@ -152,7 +152,7 @@ function formatShortDate(value: string) {
 
 function getTypePercentage(records: number) {
   const total = typeRecordTotal.value || totalRecords.value
-  if (!total) return 0
+  if (!total) { return 0 }
   return Math.min(100, Math.round((records / total) * 100))
 }
 
@@ -394,8 +394,7 @@ onMounted(loadData)
   padding: 34px 38px;
   overflow: hidden;
   color: var(--text-primary);
-  background:
-    linear-gradient(120deg, color-mix(in srgb, #2563eb 10%, var(--surface)) 0%, var(--surface) 48%, color-mix(in srgb, #7c3aed 8%, var(--surface)) 100%);
+  background: linear-gradient(120deg, color-mix(in srgb, #2563eb 10%, var(--surface)) 0%, var(--surface) 48%, color-mix(in srgb, #7c3aed 8%, var(--surface)) 100%);
   border: 1px solid color-mix(in srgb, #2563eb 15%, var(--divider));
   border-radius: 22px;
   box-shadow: 0 16px 42px rgb(15 23 42 / 7%);
@@ -405,7 +404,7 @@ onMounted(loadData)
   position: absolute;
   inset: 0;
   pointer-events: none;
-  content: '';
+  content: "";
   background-image:
     linear-gradient(rgb(37 99 235 / 4%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(37 99 235 / 4%) 1px, transparent 1px);
@@ -571,13 +570,13 @@ h2 {
 
 .summary-icon {
   display: grid;
+  place-items: center;
   width: 36px;
   height: 36px;
   color: var(--card-accent);
   background: color-mix(in srgb, var(--card-accent) 11%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--card-accent) 15%, transparent);
   border-radius: 11px;
-  place-items: center;
 }
 
 .summary-icon :deep(.el-icon) {
@@ -594,10 +593,10 @@ h2 {
   display: block;
   margin-top: 18px;
   font-size: 28px;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
   color: var(--text-primary);
   letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
 }
 
 .summary-note {
@@ -700,8 +699,8 @@ h2 {
 
 .type-item__top > strong {
   font-size: 13px;
-  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 .type-name {
@@ -713,16 +712,16 @@ h2 {
 
 .type-name strong {
   overflow: hidden;
-  font-size: 13px;
   text-overflow: ellipsis;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .type-index {
   font-size: 10px;
   font-weight: 800;
-  color: #2563eb;
   font-variant-numeric: tabular-nums;
+  color: #2563eb;
 }
 
 .progress-track {
@@ -758,8 +757,7 @@ h2 {
   align-items: end;
   min-height: 218px;
   padding: 16px 8px 10px;
-  background:
-    repeating-linear-gradient(to top, transparent 0, transparent 43px, color-mix(in srgb, var(--divider) 55%, transparent) 44px);
+  background: repeating-linear-gradient(to top, transparent 0, transparent 43px, color-mix(in srgb, var(--divider) 55%, transparent) 44px);
   border-bottom: 1px solid var(--divider);
 }
 
@@ -773,12 +771,12 @@ h2 {
 
 .trend-value {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-secondary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .trend-bar-track {
@@ -802,7 +800,7 @@ h2 {
 .trend-bar::after {
   position: absolute;
   inset: 0;
-  content: '';
+  content: "";
   background: linear-gradient(90deg, rgb(255 255 255 / 18%), transparent 60%);
 }
 
@@ -813,11 +811,11 @@ h2 {
 
 .trend-date {
   overflow: hidden;
-  font-size: 10px;
-  color: var(--text-secondary);
   text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .trend-summary {
@@ -888,16 +886,16 @@ h2 {
 
 .rank-badge {
   display: inline-grid;
+  place-items: center;
   width: 30px;
   height: 30px;
   font-size: 11px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   background: var(--surface-alt);
   border: 1px solid var(--divider);
   border-radius: 9px;
-  place-items: center;
-  font-variant-numeric: tabular-nums;
 }
 
 .rank-badge--top {
@@ -915,16 +913,16 @@ h2 {
 .record-avatar {
   display: grid;
   flex: 0 0 auto;
+  place-items: center;
   width: 36px;
   height: 36px;
   font-size: 10px;
   font-weight: 800;
   color: #2563eb;
+  letter-spacing: 0.06em;
   background: rgb(37 99 235 / 9%);
   border: 1px solid rgb(37 99 235 / 13%);
   border-radius: 11px;
-  place-items: center;
-  letter-spacing: 0.06em;
 }
 
 .record-identity strong,
@@ -947,8 +945,8 @@ h2 {
 
 .table-number {
   font-size: 14px;
-  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 .table-unit {
@@ -968,7 +966,7 @@ h2 {
   border-color: rgb(96 165 250 / 24%);
 }
 
-@media (max-width: 1180px) {
+@media (width <= 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -978,7 +976,7 @@ h2 {
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .hero-panel {
     padding: 26px 22px;
   }
@@ -1010,7 +1008,7 @@ h2 {
   }
 }
 
-@media (max-width: 560px) {
+@media (width <= 560px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }

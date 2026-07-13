@@ -518,6 +518,7 @@ h2 { margin: 0; font-size: 28px; }
 .role-name { font-size: 16px; }
 .role-perm-count { font-size: 12px; color: var(--text-tertiary); }
 .role-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+
 .admin-note {
   margin: 0;
   font-size: 12px;

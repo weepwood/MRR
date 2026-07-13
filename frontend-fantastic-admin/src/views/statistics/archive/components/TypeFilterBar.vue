@@ -220,15 +220,15 @@ function onNodeClick(data: DirectoryNode) {
 
 .tree-label {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   color: var(--text-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tree-count {
-  margin-left: auto;
   padding-right: 8px;
+  margin-left: auto;
   font-size: 12px;
   color: var(--text-tertiary);
 }

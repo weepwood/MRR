@@ -72,10 +72,10 @@ const fields = computed(() => [
 
 .field-value {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 </style>

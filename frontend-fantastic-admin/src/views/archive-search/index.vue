@@ -167,8 +167,8 @@ watch(() => route.query.q, (val) => {
 
 <style scoped>
 .page-shell {
-  padding: 20px;
   max-width: 1200px;
+  padding: 20px;
   margin: 0 auto;
 }
 
@@ -177,16 +177,16 @@ watch(() => route.query.q, (val) => {
 }
 
 .page-header h2 {
+  margin: 0;
   font-size: 22px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0;
 }
 
 .subtitle {
+  margin: 6px 0 0;
   font-size: 14px;
   color: #64748b;
-  margin: 6px 0 0;
 }
 
 .search-section {
@@ -203,21 +203,21 @@ watch(() => route.query.q, (val) => {
   display: flex;
   flex: 1;
   max-width: 520px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
   overflow: hidden;
   background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
 }
 
 .search-input {
   flex: 1;
   padding: 10px 14px;
-  border: none;
-  outline: none;
-  font-size: 14px;
   font-family: inherit;
+  font-size: 14px;
   color: #1e293b;
+  outline: none;
   background: transparent;
+  border: none;
 }
 
 .search-input::placeholder {
@@ -226,19 +226,19 @@ watch(() => route.query.q, (val) => {
 
 .mode-toggle {
   display: flex;
-  align-items: center;
   gap: 4px;
+  align-items: center;
   padding: 8px 14px;
-  border: none;
-  border-left: 1px solid #e2e8f0;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .5px;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
   cursor: pointer;
   background: #f8fafc;
-  color: #64748b;
-  transition: all .15s;
-  white-space: nowrap;
+  border: none;
+  border-left: 1px solid #e2e8f0;
+  transition: all 0.15s;
 }
 
 .mode-toggle:hover {
@@ -254,34 +254,34 @@ watch(() => route.query.q, (val) => {
 }
 
 .mode-hint {
+  margin: 8px 0 0;
   font-size: 13px;
   color: #64748b;
-  margin: 8px 0 0;
 }
 
 .link-btn {
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: #0ea5e9;
+  text-decoration: underline;
+  cursor: pointer;
   background: none;
   border: none;
-  color: #0ea5e9;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  text-decoration: underline;
-  padding: 0;
 }
 
 .btn-primary {
   padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  background: #0ea5e9;
-  color: #fff;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background .15s;
-  font-family: inherit;
+  color: #fff;
   white-space: nowrap;
+  cursor: pointer;
+  background: #0ea5e9;
+  border: none;
+  border-radius: 8px;
+  transition: background 0.15s;
 }
 
 .btn-primary:hover {
@@ -289,8 +289,8 @@ watch(() => route.query.q, (val) => {
 }
 
 .btn-primary:disabled {
-  opacity: .5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .loading-section {
@@ -304,11 +304,11 @@ watch(() => route.query.q, (val) => {
 .spinner {
   width: 32px;
   height: 32px;
+  margin-bottom: 12px;
   border: 3px solid #e2e8f0;
   border-top-color: #0ea5e9;
   border-radius: 50%;
-  animation: spin .6s linear infinite;
-  margin-bottom: 12px;
+  animation: spin 0.6s linear infinite;
 }
 
 @keyframes spin {
@@ -326,21 +326,21 @@ watch(() => route.query.q, (val) => {
 }
 
 .empty-icon {
-  font-size: 40px;
   margin-bottom: 12px;
-  opacity: .5;
+  font-size: 40px;
+  opacity: 0.5;
 }
 
 .empty-title {
+  margin: 0 0 4px;
   font-size: 16px;
   font-weight: 600;
   color: #94a3b8;
-  margin: 0 0 4px;
 }
 
 .empty-desc {
-  font-size: 14px;
   margin: 0;
+  font-size: 14px;
 }
 
 .results-section {
@@ -348,9 +348,9 @@ watch(() => route.query.q, (val) => {
 }
 
 .results-meta {
+  margin-bottom: 16px;
   font-size: 14px;
   color: #64748b;
-  margin-bottom: 16px;
 }
 
 .results-grid {
@@ -360,66 +360,66 @@ watch(() => route.query.q, (val) => {
 }
 
 .result-card {
+  overflow: hidden;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
-  transition: box-shadow .2s, border-color .2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .result-card:hover {
   border-color: #0ea5e9;
-  box-shadow: 0 4px 16px rgba(14, 165, 233, .1);
+  box-shadow: 0 4px 16px rgb(14 165 233 / 10%);
 }
 
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 12px 16px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .card-bah {
+  font-family: "Cascadia Code", "Fira Code", monospace;
   font-size: 15px;
   font-weight: 700;
   color: #0ea5e9;
-  font-family: 'Cascadia Code', 'Fira Code', monospace;
 }
 
 .card-id {
+  font-family: "Cascadia Code", "Fira Code", monospace;
   font-size: 11px;
   color: #94a3b8;
-  font-family: 'Cascadia Code', 'Fira Code', monospace;
 }
 
 .card-body {
-  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px 16px;
 }
 
 .card-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .card-label {
+  flex-shrink: 0;
   font-size: 12px;
   color: #64748b;
-  flex-shrink: 0;
 }
 
 .card-value {
+  max-width: 60%;
+  font-family: "Cascadia Code", "Fira Code", monospace;
   font-size: 13px;
   color: #1e293b;
-  font-family: 'Cascadia Code', 'Fira Code', monospace;
   text-align: right;
   word-break: break-all;
-  max-width: 60%;
 }
 
 .card-filename {
@@ -427,17 +427,17 @@ watch(() => route.query.q, (val) => {
 }
 
 .card-footer {
-  padding: 10px 16px;
-  border-top: 1px solid #e2e8f0;
   display: flex;
   gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .card-link {
   font-size: 13px;
+  font-weight: 500;
   color: #0ea5e9;
   text-decoration: none;
-  font-weight: 500;
 }
 
 .card-link:hover {

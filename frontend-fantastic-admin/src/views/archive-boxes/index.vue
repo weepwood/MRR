@@ -693,24 +693,24 @@ onMounted(refreshAll)
 
 .eyebrow {
   margin: 0 0 6px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  color: var(--el-text-color-secondary);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 h1 {
   margin: 0;
-  color: var(--el-text-color-primary);
   font-size: 28px;
+  color: var(--el-text-color-primary);
 }
 
 .subtitle {
   max-width: 760px;
   margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
   line-height: 1.6;
+  color: var(--el-text-color-secondary);
 }
 
 .header-actions,
@@ -733,8 +733,8 @@ h1 {
 }
 
 .view-hint {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .filter-grid {
@@ -764,8 +764,8 @@ h1 {
 }
 
 .empty-value {
-  color: var(--el-color-danger);
   font-size: 13px;
+  color: var(--el-color-danger);
 }
 
 .box-link {
@@ -778,18 +778,18 @@ h1 {
   gap: 8px;
   align-items: center;
   padding: 0;
-  color: var(--el-color-primary);
   font: inherit;
   font-weight: 700;
+  color: var(--el-color-primary);
+  cursor: pointer;
   background: transparent;
   border: 0;
-  cursor: pointer;
 }
 
 .box-number-button:focus-visible {
-  border-radius: 4px;
   outline: 2px solid var(--el-color-primary);
   outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .pagination-bar {
@@ -823,8 +823,8 @@ h1 {
   .view-switcher,
   .header-actions,
   .box-filter {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .filter-grid,
@@ -838,14 +838,14 @@ h1 {
 
   .box-filter,
   .box-filter :deep(.el-input) {
-    max-width: none;
-    min-width: 0;
     width: 100%;
+    min-width: 0;
+    max-width: none;
   }
 
   .pagination-bar {
-    overflow-x: auto;
     justify-content: flex-start;
+    overflow-x: auto;
   }
 }
 </style>

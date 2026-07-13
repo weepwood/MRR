@@ -39,11 +39,13 @@ function handleAction() {
   padding: 64px 16px;
   text-align: center;
 }
+
 .app-empty-icon {
+  margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-text-color-placeholder, #c0c4cc);
-  margin-bottom: 16px;
 }
+
 .app-empty-text {
   margin: 0 0 20px;
   font-size: 14px;

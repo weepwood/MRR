@@ -374,8 +374,8 @@ function handleReset() {
 }
 
 .config-notice {
-  margin-bottom: 16px;
   padding: 10px 16px;
+  margin-bottom: 16px;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-7);
@@ -384,8 +384,8 @@ function handleReset() {
 
 .app-config-toolbar {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+  justify-content: flex-end;
   margin-bottom: 16px;
 }
 
@@ -395,7 +395,7 @@ function handleReset() {
   gap: 20px 28px;
 }
 
-@media (max-width: 1100px) {
+@media (width <= 1100px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }

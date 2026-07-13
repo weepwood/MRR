@@ -78,7 +78,7 @@
     "@pinia/testing": "^1.0.3",
     "@playwright/test": "^1.61.1",
     "@stylistic/stylelint-config": "^5.0.0",
-    "@types/nprogress": "^2.0.3",
+    "@types/nprogress": "^0.2.3",
     "@types/path-browserify": "^1.0.3",
     "@types/qs": "^6.15.0",
     "@unocss/eslint-plugin": "^66.6.7",

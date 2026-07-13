@@ -515,20 +515,6 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <ul class="folder-compact-meta" aria-label="档案辅助信息">
-                <li>
-                  <span>负责人</span>
-                  <strong>{{ normalizeText(item.openerNo) }}</strong>
-                </li>
-                <li>
-                  <span>归档日期</span>
-                  <strong>{{ formatDate(item.date) }}</strong>
-                </li>
-                <li>
-                  <span>扫描设备</span>
-                  <strong>{{ normalizeText(item.cid) }}</strong>
-                </li>
-              </ul>
 
               <div class="folder-footer">
                 <div class="folder-page-count">
@@ -951,8 +937,8 @@ h2 {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .folder-code-block {
@@ -998,48 +984,6 @@ h2 {
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.folder-compact-meta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.folder-compact-meta li {
-  display: inline-flex;
-  gap: 4px;
-  align-items: baseline;
-  min-width: 0;
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--text-tertiary);
-}
-
-.folder-compact-meta li:not(:last-child)::after {
-  margin-left: 8px;
-  color: color-mix(in srgb, var(--folder-accent) 40%, var(--divider));
-  content: "·";
-}
-
-.folder-compact-meta span {
-  flex: none;
-}
-
-.folder-compact-meta strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -1124,20 +1068,6 @@ h2 {
   .archive-toolbar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .folder-code-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .folder-compact-meta {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 3px;
-  }
-
-  .folder-compact-meta li::after {
-    display: none;
   }
 }
 </style>

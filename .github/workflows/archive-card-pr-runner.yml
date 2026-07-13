@@ -1,0 +1,68 @@
+name: archive-card-pr-runner
+
+on:
+  pull_request:
+    branches:
+      - dev-no-login
+
+permissions:
+  contents: write
+
+jobs:
+  run-archive-card-update:
+    if: github.head_ref == 'feat/improve-archive-folder-cards-20260713'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/improve-archive-folder-cards-20260713
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Execute archive card patch block
+        run: |
+          python - <<'PYRUNNER'
+          from pathlib import Path
+          import subprocess
+          import textwrap
+
+          source = Path('.github/workflows/archive-card-style-autofix.yml').read_text(encoding='utf-8')
+          marker = '      - name: Update archive folder cards\n        run: |\n'
+          start = source.index(marker) + len(marker)
+          end = source.index('\n      - name: Apply repository lint fixes', start)
+          command = textwrap.dedent(source[start:end])
+          subprocess.run(['bash', '-euo', 'pipefail', '-c', command], check=True)
+          PYRUNNER
+
+      - name: Apply repository lint fixes
+        working-directory: frontend-fantastic-admin
+        run: |
+          pnpm exec eslint src/views/statistics-detail/index.vue --fix
+          pnpm exec stylelint src/views/statistics-detail/index.vue --fix
+
+      - name: Commit archive card redesign
+        run: |
+          rm .github/workflows/archive-card-style-autofix.yml
+          rm .github/workflows/archive-card-pr-runner.yml
+          rm .github/archive-card-style-trigger
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add frontend-fantastic-admin/src/views/statistics-detail/index.vue .github/workflows/archive-card-style-autofix.yml .github/workflows/archive-card-pr-runner.yml .github/archive-card-style-trigger
+          git commit -m "style(statistics): redesign archive folder cards"
+          git push origin feat/improve-archive-folder-cards-20260713

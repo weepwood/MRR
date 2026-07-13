@@ -1,14 +1,7 @@
-import { getImageForPdf } from '@/api/modules/image'
-
 export interface ClientPdfImage {
   blob: Blob
   width: number
   height: number
-}
-
-export interface ClientPdfSource {
-  id?: number | string
-  filename?: string
 }
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
@@ -25,33 +18,23 @@ function formatNumber(value: number): string {
   return Number(value.toFixed(2)).toString()
 }
 
-function getBlobFromAxiosResult(result: unknown): Blob | null {
-  if (result instanceof Blob) {
-    return result
-  }
-  if (result && typeof result === 'object' && 'data' in result && result.data instanceof Blob) {
-    return result.data
-  }
-  return null
-}
+async function fetchImageBlob(imageUrl: string): Promise<Blob> {
+  const resolvedUrl = new URL(imageUrl, window.location.href)
+  const response = await fetch(resolvedUrl.toString(), {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+  })
 
-async function fetchImageBlob(source: ClientPdfSource): Promise<Blob> {
-  if (source.id === undefined || source.id === null || source.id === '') {
-    throw new Error(`影像 ${source.filename || ''} 缺少记录 ID`)
+  if (!response.ok) {
+    throw new Error(`影像获取失败（HTTP ${response.status}）`)
   }
 
-  try {
-    const result = await getImageForPdf(source.id)
-    const blob = getBlobFromAxiosResult(result)
-    if (!blob) {
-      throw new TypeError(`影像 ${source.filename || source.id} 响应不是有效文件`)
-    }
-    return blob
+  const blob = await response.blob()
+  if (!blob.size) {
+    throw new Error('影像文件为空')
   }
-  catch (error: unknown) {
-    const message = (error as { message?: string })?.message
-    throw new Error(message || `影像 ${source.filename || source.id} 获取失败`)
-  }
+  return blob
 }
 
 async function loadImageSource(blob: Blob): Promise<{
@@ -212,15 +195,15 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   return new Blob(parts, { type: 'application/pdf' })
 }
 
-export async function createPdfFromImages(
-  sources: ClientPdfSource[],
+export async function createPdfFromImageUrls(
+  imageUrls: string[],
   onProgress?: (completed: number, total: number) => void,
 ): Promise<Blob> {
   const preparedImages: ClientPdfImage[] = []
-  for (let index = 0; index < sources.length; index += 1) {
-    const imageBlob = await fetchImageBlob(sources[index])
+  for (let index = 0; index < imageUrls.length; index += 1) {
+    const imageBlob = await fetchImageBlob(imageUrls[index])
     preparedImages.push(await convertToJpeg(imageBlob))
-    onProgress?.(index + 1, sources.length)
+    onProgress?.(index + 1, imageUrls.length)
   }
   return buildPdfBlob(preparedImages)
 }

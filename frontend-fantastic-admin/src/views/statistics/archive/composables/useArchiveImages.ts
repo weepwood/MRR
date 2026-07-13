@@ -81,15 +81,22 @@ export function useArchiveImages() {
   }
 
   async function handleDownload(): Promise<void> {
-    const bah = padCode(searchBah.value)
-    if (!bah) {
-      ElMessage.warning('请输入病案号')
+    const firstImage = images.value[0]
+    const bah = padCode(searchBah.value || firstImage?.bah || '')
+    const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
+    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
+    if (validationMessage) {
+      ElMessage.warning(validationMessage)
       return
     }
-    searchBah.value = bah
+    if (!bah) {
+      ElMessage.warning('当前档案缺少病案号，无法下载')
+      return
+    }
+
     downloading.value = true
     try {
-      const result = await downloadBah(bah) as unknown as Blob | { data?: Blob }
+      const result = await downloadBah(bah, sjh || undefined) as unknown as Blob | { data?: Blob }
       const blob = result instanceof Blob ? result : result?.data
       if (!(blob instanceof Blob)) {
         throw new TypeError('下载响应不是文件')
@@ -97,7 +104,7 @@ export function useArchiveImages() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${bah}.zip`
+      link.download = `${bah}${sjh ? `-${sjh}` : ''}.zip`
       link.click()
       URL.revokeObjectURL(url)
       ElMessage.success('档案袋下载已开始')

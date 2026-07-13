@@ -21,9 +21,8 @@ public interface ScanMapper {
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
 
     @Select("SELECT * FROM mr_scan WHERE " +
-            "BAH = #{normalizedCode} OR SJH = #{normalizedCode} " +
+            "BAH = #{normalizedCode} " +
             "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} " +
-            "OR " + SJH_SEARCH_EXPRESSION + " = #{searchCode} " +
             "ORDER BY pages")
     List<Scan> findBAH(
             @Param("normalizedCode") String normalizedCode,
@@ -36,7 +35,7 @@ public interface ScanMapper {
             + "<choose>"
             + "<when test='normalizedBah != null and normalizedBah != \"\" and normalizedSjh != null and normalizedSjh != \"\"'>"
             + "(BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
-            + "OR (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
+            + "AND (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
             + "<when test='normalizedBah != null and normalizedBah != \"\"'>"
             + "BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"

@@ -1,9 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
-
-vi.mock('@/api/modules/image', () => ({
-  getImageForPdf: vi.fn(),
-}))
-
+import { describe, expect, it } from 'vitest'
 import { buildPdfBlob } from '../client-pdf'
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {

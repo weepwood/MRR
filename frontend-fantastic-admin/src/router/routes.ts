@@ -168,6 +168,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/archive-boxes',
+        component: () => import('@/views/archive-boxes/index.vue'),
+        meta: {
+          title: '档案装箱',
+          icon: 'i-ant-design:inbox-outlined',
+          auth: ['record:read'],
+          cache: true,
+        },
+      },
+      {
         path: '/oss-migration',
         component: () => import('@/views/oss-migration/index.vue'),
         meta: {

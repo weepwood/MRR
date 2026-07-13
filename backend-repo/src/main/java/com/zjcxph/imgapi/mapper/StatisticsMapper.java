@@ -12,6 +12,11 @@ import java.util.Map;
 
 public interface StatisticsMapper {
 
+    String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
+    String CANONICAL_BAH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]{1,8}$' " +
+            "THEN LPAD(bah, 8, '0') ELSE bah END";
+
     // 查询所有统计数据
     @Select("SELECT * FROM mr_statistics ORDER BY date")
     List<Statistics> findAll();
@@ -50,7 +55,7 @@ public interface StatisticsMapper {
 
     // 根据病案号查询，兼容历史短值
     @Select("SELECT * FROM mr_statistics WHERE bah = #{normalizedBah} " +
-            "OR COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') = #{searchCode} ORDER BY date")
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY date")
     List<Statistics> findByBah(
             @Param("normalizedBah") String normalizedBah,
             @Param("searchCode") String searchCode
@@ -61,10 +66,10 @@ public interface StatisticsMapper {
     List<Statistics> findByDate(@Param("date") String date);
 
     // 统计每个病案号的记录数和总页数，合并短值与补零值
-    @Select("SELECT LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0') AS bah, " +
+    @Select("SELECT " + CANONICAL_BAH_EXPRESSION + " AS bah, " +
             "COUNT(*) AS recordCount, SUM(pages) AS totalPages " +
             "FROM mr_statistics " +
-            "GROUP BY LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0') " +
+            "GROUP BY " + CANONICAL_BAH_EXPRESSION + " " +
             "ORDER BY bah")
     List<BAHStatisticsDTO> getBAHStatistics();
 
@@ -86,7 +91,7 @@ public interface StatisticsMapper {
     Map<String, Object> getTotalStatistics();
 
     // 获取规范化后不同病案号的数量
-    @Select("SELECT COUNT(DISTINCT LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0')) " +
+    @Select("SELECT COUNT(DISTINCT " + CANONICAL_BAH_EXPRESSION + ") " +
             "AS uniqueBAHCount FROM mr_statistics")
     Long getUniqueBAHCount();
 

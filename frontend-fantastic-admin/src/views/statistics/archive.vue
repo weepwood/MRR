@@ -11,7 +11,7 @@ import TypeFilterBar from './archive/components/TypeFilterBar.vue'
 import { useArchiveImages } from './archive/composables/useArchiveImages'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
-import { buildTypeStats } from './archive/constants'
+import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
@@ -55,18 +55,70 @@ const typeStats = computed(() => buildTypeStats(images.value))
 const patient = computed(() => patientList.value[0])
 
 const routeArchive = computed<RouteArchiveMeta>(() => ({
-  bah: String(route.query.bah || searchBah.value || ''),
+  bah: searchBah.value || sanitizeParam(route.query.bah),
   cid: String(route.query.cid || ''),
   type: String(route.query.type || ''),
   date: String(route.query.date || ''),
   pages: String(route.query.pages || ''),
   openerNo: String(route.query.openerNo || ''),
-  sjh: String(route.query.sjh || ''),
+  sjh: searchSjh.value || sanitizeParam(route.query.sjh),
 }))
 
 function sanitizeParam(val: unknown): string {
-  const s = String(val ?? '').trim()
-  return s.startsWith(':') ? '' : s
+  const value = Array.isArray(val) ? val[0] : val
+  const text = String(value ?? '').trim()
+  return text.startsWith(':') ? '' : text
+}
+
+function normalizeSearchParam(value: unknown): string {
+  const text = sanitizeParam(value)
+  return text ? padCode(text) : ''
+}
+
+function clearArchiveState() {
+  images.value = []
+  patientList.value = []
+  errorMsg.value = ''
+  selectedImageIndex.value = 0
+}
+
+function syncSearchFromRoute() {
+  const bah = normalizeSearchParam(route.params.bah || route.query.bah)
+  const sjh = normalizeSearchParam(route.query.sjh)
+
+  searchBah.value = bah
+  searchSjh.value = sjh
+
+  if (bah || sjh) {
+    loadImages()
+  }
+  else {
+    clearArchiveState()
+  }
+}
+
+async function handleSearch() {
+  const bah = normalizeSearchParam(searchBah.value)
+  const sjh = normalizeSearchParam(searchSjh.value)
+  const location = {
+    path: bah ? `/archive/${encodeURIComponent(bah)}` : '/archive',
+    query: sjh ? { sjh } : {},
+  }
+
+  searchBah.value = bah
+  searchSjh.value = sjh
+
+  if (router.resolve(location).fullPath === route.fullPath) {
+    if (bah || sjh) {
+      await loadImages()
+    }
+    else {
+      clearArchiveState()
+    }
+    return
+  }
+
+  await router.push(location)
 }
 
 function selectImage(index: number) {
@@ -144,21 +196,15 @@ watch(filteredImages, () => {
   nextTick(() => thumbStripRef.value?.scrollToIndex(selectedImageIndex.value, false))
 })
 
-// 缓存模式下，路由参数变化时重新加载数据
-watch(() => route.params.bah, (bah) => {
-  searchBah.value = sanitizeParam(bah)
-  if (searchBah.value || searchSjh.value) {
-    loadImages()
-  }
-})
+// 缓存模式、浏览器前进后退或直接打开链接时，同步 URL 中的搜索条件并重新加载。
+watch(
+  () => [route.params.bah, route.query.bah, route.query.sjh],
+  syncSearchFromRoute,
+  { immediate: true },
+)
 
 onMounted(() => {
   document.body.classList.add('archive-immersive')
-  searchBah.value = sanitizeParam(route.params.bah || route.query.bah)
-  searchSjh.value = sanitizeParam(route.query.sjh)
-  if (searchBah.value || searchSjh.value) {
-    loadImages()
-  }
   window.addEventListener('keydown', onKeydown)
 })
 
@@ -185,7 +231,7 @@ onUnmounted(() => {
           :printing="printing"
           :selected-count="selectedCount"
           @back="goBack"
-          @refresh="loadImages"
+          @refresh="handleSearch"
           @download="handleDownload"
           @print="handlePrint"
         />
@@ -196,7 +242,7 @@ onUnmounted(() => {
           :route-meta="routeArchive"
           :has-images="images.length > 0"
           :loading="loading"
-          @search="loadImages"
+          @search="handleSearch"
         />
 
         <PatientCard :patient="patient" :loading="patientLoading" />

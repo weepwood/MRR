@@ -10,6 +10,10 @@
             || CHR(1) || COALESCE(openerno, '')
             || CHR(1) || COALESCE(date, '')
             || CHR(1) || COALESCE(type, '')
+            || CHR(1) || COALESCE(patientname, '')
+            || CHR(1) || COALESCE(inpatientdepartment, '')
+            || CHR(1) || COALESCE(patientid, '')
+            || CHR(1) || COALESCE(dischargedate, '')
         ) LIKE '%' || #{keyword} || '%'
     </sql>
 
@@ -45,6 +49,10 @@
             <when test="sortBy == 'type'">type</when>
             <when test="sortBy == 'pages'">pages</when>
             <when test="sortBy == 'sjh'">sjh</when>
+            <when test="sortBy == 'patientName'">patientname</when>
+            <when test="sortBy == 'inpatientDepartment'">inpatientdepartment</when>
+            <when test="sortBy == 'patientId'">patientid</when>
+            <when test="sortBy == 'dischargeDate'">REPLACE(dischargedate, '/', '-')</when>
             <otherwise>REPLACE(date, '/', '-')</otherwise>
         </choose>
         <choose>

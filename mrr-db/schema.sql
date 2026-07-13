@@ -36,14 +36,18 @@ CREATE TABLE IF NOT EXISTS main.mr_patient (
 
 -- 3. 核心业务表：统计
 CREATE TABLE IF NOT EXISTS main.mr_statistics (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    bah      TEXT,
-    cid      TEXT,
-    openerno TEXT,
-    date     TEXT,
-    type     TEXT,
-    pages    INTEGER,
-    sjh      TEXT
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    bah                   TEXT,
+    cid                   TEXT,
+    openerno              TEXT,
+    date                  TEXT,
+    type                  TEXT,
+    pages                 INTEGER,
+    sjh                   TEXT,
+    patientname           TEXT,
+    inpatientdepartment   TEXT,
+    patientid             TEXT,
+    dischargedate         TEXT
 );
 
 -- 4. 认证授权表：角色
@@ -146,6 +150,10 @@ CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah ON main.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON main.mr_statistics (date);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON main.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh ON main.mr_statistics (sjh);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_patientname ON main.mr_statistics (patientname);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_inpatientdepartment ON main.mr_statistics (inpatientdepartment);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_patientid ON main.mr_statistics (patientid);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_dischargedate ON main.mr_statistics (dischargedate);
 
 -- mr_patient 索引
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON main.mr_patient (idcard);

@@ -8,14 +8,21 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 public interface SearchMapper {
+    String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
+
     /*
-    *   通过身份证号查询病案号
-    * */
+     * 通过身份证号查询病案号
+     */
     @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where idcard = #{idCard}")
     List<Patient> findBAHByIDCard(String idCard);
 
-    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where bah = #{bah}")
-    List<Patient> findPatientByBah(String bah);
+    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient " +
+            "where bah = #{normalizedBah} or " + BAH_SEARCH_EXPRESSION + " = #{searchCode}")
+    List<Patient> findPatientByBah(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("searchCode") String searchCode
+    );
 
     @Select("<script>" +
             "select id, idcard, bah, name, admissiontime, department from mr_patient" +

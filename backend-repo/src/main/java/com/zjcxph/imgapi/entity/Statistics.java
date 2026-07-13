@@ -13,6 +13,10 @@ public class Statistics {
     private String type;
     private Integer pages;
     private String sjh;
+    private String patientName;
+    private String inpatientDepartment;
+    private String patientId;
+    private String dischargeDate;
 
     public Statistics() {
     }

@@ -31,13 +31,6 @@ interface TrendDisplayItem {
   pages: number
 }
 
-interface TopBahDisplayItem {
-  bah: string
-  recordCount: number
-  totalPages: number
-  rank: number
-}
-
 const router = useRouter()
 const loading = ref(false)
 const summaryData = ref<any>({ total: {}, byType: [] })
@@ -76,16 +69,6 @@ const recentPageTotal = computed(() => trendDates.value.reduce((total, item) => 
 const averageDailyPages = computed(() => trendDates.value.length
   ? Math.round(recentPageTotal.value / trendDates.value.length)
   : 0)
-
-const topBahList = computed<TopBahDisplayItem[]>(() => {
-  const source = Array.isArray(dashboardData.value.topBAH) ? dashboardData.value.topBAH.slice(0, 8) : []
-  return source.map((item: any, index: number) => ({
-    bah: String(item?.bah || '-'),
-    recordCount: Number(item?.recordCount || 0),
-    totalPages: Number(item?.totalPages || 0),
-    rank: index + 1,
-  }))
-})
 
 const summaryCards = computed(() => [
   {
@@ -164,14 +147,6 @@ function goToDetail() {
   router.push('/statistics-detail')
 }
 
-function openArchive(bah: string) {
-  if (!bah || bah === '-') {
-    ElMessage.warning('该记录缺少病案号，无法打开归档影像')
-    return
-  }
-  router.push(`/archive/${bah}`)
-}
-
 onMounted(loadData)
 </script>
 
@@ -189,12 +164,11 @@ onMounted(loadData)
           </div>
           <h2>病案扫描数据统计</h2>
           <p class="subtitle">
-            汇总病案扫描规模、类型分布与近期变化，快速定位高频病案和异常数据波动。
+            汇总病案扫描规模、类型分布与近期变化，快速定位异常数据波动。
           </p>
           <div class="hero-meta">
             <span>最新统计日期：{{ latestStatisticsDate }}</span>
             <span>{{ typeList.length }} 个病案类型</span>
-            <span>{{ topBahList.length }} 个高频病案</span>
           </div>
         </div>
 
@@ -315,68 +289,6 @@ onMounted(loadData)
           <el-empty v-else-if="!loading" description="暂无趋势数据" :image-size="72" />
         </div>
       </article>
-    </section>
-
-    <section class="data-panel ranking-panel">
-      <header class="panel-header ranking-header">
-        <div>
-          <p class="panel-kicker">
-            Frequent Records
-          </p>
-          <h3>高频病案号</h3>
-          <p>按扫描记录数排序，快速进入对应病案的归档影像。</p>
-        </div>
-        <el-button text type="primary" @click="goToDetail">
-          查看全部明细
-          <el-icon><ArrowRight /></el-icon>
-        </el-button>
-      </header>
-
-      <el-table
-        v-loading="loading"
-        :data="topBahList"
-        class="rank-table"
-        empty-text="暂无高频病案数据"
-      >
-        <el-table-column label="排名" width="88" align="center">
-          <template #default="{ row }">
-            <span class="rank-badge" :class="{ 'rank-badge--top': row.rank <= 3 }">
-              {{ String(row.rank).padStart(2, '0') }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="病案号" min-width="220">
-          <template #default="{ row }">
-            <div class="record-identity">
-              <span class="record-avatar">MR</span>
-              <div>
-                <strong>{{ row.bah }}</strong>
-                <span>Medical Record</span>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="记录数" min-width="140">
-          <template #default="{ row }">
-            <strong class="table-number">{{ formatNumber(row.recordCount) }}</strong>
-            <span class="table-unit">条</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="扫描页数" min-width="150">
-          <template #default="{ row }">
-            <strong class="table-number">{{ formatNumber(row.totalPages) }}</strong>
-            <span class="table-unit">页</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" align="right">
-          <template #default="{ row }">
-            <el-button class="archive-button" size="small" @click="openArchive(row.bah)">
-              查看影像
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
     </section>
   </div>
 </template>
@@ -846,124 +758,6 @@ h2 {
   margin-top: 6px;
   font-size: 17px;
   font-variant-numeric: tabular-nums;
-}
-
-.ranking-header {
-  align-items: center;
-}
-
-.ranking-header :deep(.el-button) {
-  flex-shrink: 0;
-}
-
-.rank-table {
-  width: 100%;
-}
-
-.rank-table :deep(.el-table__inner-wrapper::before) {
-  display: none;
-}
-
-.rank-table :deep(th.el-table__cell) {
-  height: 46px;
-  color: var(--text-secondary);
-  background: color-mix(in srgb, var(--surface-alt) 65%, var(--surface));
-  border-bottom-color: var(--divider);
-}
-
-.rank-table :deep(td.el-table__cell) {
-  height: 64px;
-  border-bottom-color: var(--divider);
-}
-
-.rank-table :deep(.el-table__row:last-child td.el-table__cell) {
-  border-bottom: 0;
-}
-
-.rank-table :deep(.el-table__row:hover > td.el-table__cell) {
-  background: color-mix(in srgb, #2563eb 4%, var(--surface));
-}
-
-.rank-badge {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  background: var(--surface-alt);
-  border: 1px solid var(--divider);
-  border-radius: 9px;
-}
-
-.rank-badge--top {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #bfdbfe;
-}
-
-.record-identity {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.record-avatar {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  font-size: 10px;
-  font-weight: 800;
-  color: #2563eb;
-  letter-spacing: 0.06em;
-  background: rgb(37 99 235 / 9%);
-  border: 1px solid rgb(37 99 235 / 13%);
-  border-radius: 11px;
-}
-
-.record-identity strong,
-.record-identity span {
-  display: block;
-}
-
-.record-identity strong {
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-.record-identity div > span {
-  margin-top: 3px;
-  font-size: 10px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.table-number {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-
-.table-unit {
-  margin-left: 4px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.archive-button {
-  border-color: color-mix(in srgb, #2563eb 18%, var(--divider));
-  border-radius: 9px;
-}
-
-:global(.dark) .rank-badge--top {
-  color: #93c5fd;
-  background: rgb(37 99 235 / 14%);
-  border-color: rgb(96 165 250 / 24%);
 }
 
 @media (width <= 1180px) {

@@ -1,9 +1,11 @@
 import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
+import { exportSelectedImagesPdf } from '@/api/modules/image'
 
 export function useArchivePrint() {
   const printing = ref(false)
+  const exportingPdf = ref(false)
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -94,5 +96,47 @@ export function useArchivePrint() {
     }
   }
 
-  return { printing, printSelected }
+  async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
+    if (!images.length) {
+      ElMessage.warning('请先选择要导出的影像')
+      return
+    }
+
+    const ids = images
+      .map(image => image.id)
+      .filter((id): id is number => Number.isInteger(id))
+    if (ids.length !== images.length) {
+      ElMessage.warning('部分影像缺少记录 ID，无法导出 PDF')
+      return
+    }
+
+    exportingPdf.value = true
+    try {
+      const result = await exportSelectedImagesPdf(ids) as unknown as Blob | { data?: Blob }
+      const blob = result instanceof Blob ? result : result?.data
+      if (!(blob instanceof Blob)) {
+        throw new TypeError('PDF 导出响应不是文件')
+      }
+
+      const firstImage = images[0]
+      const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
+      const sjh = String(firstImage?.sjh || '').trim()
+      const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.click()
+      URL.revokeObjectURL(url)
+      ElMessage.success('选中影像 PDF 导出已开始')
+    }
+    catch (err: unknown) {
+      ElMessage.error((err as { message?: string })?.message || 'PDF 导出失败')
+    }
+    finally {
+      exportingPdf.value = false
+    }
+  }
+
+  return { printing, exportingPdf, printSelected, exportSelectedPdf }
 }

@@ -40,7 +40,6 @@ jobs:
           python - <<'PYRUNNER'
           from pathlib import Path
           import subprocess
-          import textwrap
           import traceback
 
           try:
@@ -48,7 +47,8 @@ jobs:
               marker = "          python - <<'PY'\n"
               start = source.index(marker) + len(marker)
               end = source.index('\n          PY', start)
-              script = textwrap.dedent(source[start:end])
+              lines = source[start:end].splitlines()
+              script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
               exec(compile(script, 'archive-card-patch.py', 'exec'))
           except Exception:
               Path('.github/archive-card-patch-error.log').write_text(traceback.format_exc(), encoding='utf-8')

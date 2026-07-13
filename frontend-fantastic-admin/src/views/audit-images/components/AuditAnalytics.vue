@@ -495,11 +495,12 @@ function showTrendLabel(index: number) {
 .trend-chart {
   min-height: 300px;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, #2563eb 4%, var(--el-bg-color)) 0%,
-    var(--el-bg-color) 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #2563eb 4%, var(--el-bg-color)) 0%,
+      var(--el-bg-color) 100%
+    );
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 13px;
 }
@@ -544,12 +545,12 @@ function showTrendLabel(index: number) {
 }
 
 .trend-area {
-  fill: url(#auditTrendArea);
+  fill: url("#auditTrendArea");
 }
 
 .trend-line {
   fill: none;
-  stroke: url(#auditTrendLine);
+  stroke: url("#auditTrendLine");
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -557,16 +558,16 @@ function showTrendLabel(index: number) {
 }
 
 .trend-point-halo {
-  fill: color-mix(in srgb, #2563eb 18%, transparent);
   opacity: 0;
+  fill: color-mix(in srgb, #2563eb 18%, transparent);
   transition: opacity 160ms ease;
 }
 
 .trend-point {
+  cursor: help;
   fill: var(--el-bg-color);
   stroke: #2563eb;
   stroke-width: 3;
-  cursor: help;
   vector-effect: non-scaling-stroke;
 }
 

@@ -387,14 +387,15 @@ function showLabel(index: number) {
 .chart-scroll {
   width: 100%;
   overflow-x: auto;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--el-color-primary) 4%, var(--el-bg-color)) 0%,
-    var(--el-bg-color) 100%
-  );
+  scrollbar-width: thin;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--el-color-primary) 4%, var(--el-bg-color)) 0%,
+      var(--el-bg-color) 100%
+    );
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 14px;
-  scrollbar-width: thin;
 }
 
 .response-trend-chart {
@@ -422,8 +423,8 @@ function showLabel(index: number) {
 .axis-labels .axis-caption {
   font-size: 10px;
   font-weight: 600;
-  fill: var(--text-secondary);
   letter-spacing: 0.04em;
+  fill: var(--text-secondary);
 }
 
 .x-axis line {
@@ -432,8 +433,8 @@ function showLabel(index: number) {
 }
 
 .request-bar {
-  fill: url(#responseRequestGradient);
   opacity: 0.76;
+  fill: url("#responseRequestGradient");
   transition: opacity 160ms ease;
   vector-effect: non-scaling-stroke;
 }
@@ -444,17 +445,17 @@ function showLabel(index: number) {
 }
 
 .client-area {
-  fill: url(#responseClientArea);
   pointer-events: none;
+  fill: url("#responseClientArea");
 }
 
 .client-line,
 .server-line {
+  pointer-events: none;
   fill: none;
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
 
@@ -470,9 +471,9 @@ function showLabel(index: number) {
 .server-halo { fill: color-mix(in srgb, var(--server-color) 18%, transparent); }
 
 .data-point {
+  cursor: help;
   fill: var(--el-bg-color);
   stroke-width: 2.5;
-  cursor: help;
   vector-effect: non-scaling-stroke;
 }
 

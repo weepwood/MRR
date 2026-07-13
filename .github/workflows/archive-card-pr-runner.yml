@@ -35,19 +35,18 @@ jobs:
         working-directory: frontend-fantastic-admin
         run: pnpm install --frozen-lockfile
 
-      - name: Execute archive card patch block
+      - name: Execute archive card patch
         run: |
           python - <<'PYRUNNER'
           from pathlib import Path
-          import subprocess
           import textwrap
 
           source = Path('.github/workflows/archive-card-style-autofix.yml').read_text(encoding='utf-8')
-          marker = '      - name: Update archive folder cards\n        run: |\n'
+          marker = "          python - <<'PY'\n"
           start = source.index(marker) + len(marker)
-          end = source.index('\n      - name: Apply repository lint fixes', start)
-          command = textwrap.dedent(source[start:end])
-          subprocess.run(['bash', '-euo', 'pipefail', '-c', command], check=True)
+          end = source.index('\n          PY', start)
+          script = textwrap.dedent(source[start:end])
+          exec(compile(script, 'archive-card-patch.py', 'exec'))
           PYRUNNER
 
       - name: Apply repository lint fixes

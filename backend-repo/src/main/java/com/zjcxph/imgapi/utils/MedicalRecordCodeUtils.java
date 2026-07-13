@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.utils;
 
+import java.math.BigInteger;
+
 /**
  * 病案号（BAH）和上架号（SJH）的统一格式化工具。
  *
@@ -9,6 +11,7 @@ package com.zjcxph.imgapi.utils;
 public final class MedicalRecordCodeUtils {
 
     public static final int CODE_LENGTH = 8;
+    public static final BigInteger ARCHIVE_BAH_UNIQUE_LIMIT = BigInteger.valueOf(10_000_000L);
 
     private MedicalRecordCodeUtils() {
     }
@@ -51,6 +54,17 @@ public final class MedicalRecordCodeUtils {
         }
         String withoutLeadingZeros = trimmed.replaceFirst("^0+", "");
         return withoutLeadingZeros.isEmpty() ? "0" : withoutLeadingZeros;
+    }
+
+    /**
+     * 病案号从 10000000 开始不再保证唯一，查询时必须同时提供唯一上架号。
+     */
+    public static boolean requiresSjhForBah(String bah) {
+        String searchTerm = toSearchTerm(bah);
+        if (searchTerm.isBlank() || !searchTerm.matches("\\d+")) {
+            return false;
+        }
+        return new BigInteger(searchTerm).compareTo(ARCHIVE_BAH_UNIQUE_LIMIT) >= 0;
     }
 
     /**

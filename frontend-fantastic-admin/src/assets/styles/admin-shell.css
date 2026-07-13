@@ -296,17 +296,7 @@ textarea {
   --el-card-border-radius: var(--mrr-shell-radius-md);
 }
 
-#app-main .el-card:not(.mrr-metric-card) {
-  box-shadow: var(--mrr-shell-shadow-sm);
-}
-
-#app-main .el-card:not(.mrr-metric-card) > .el-card__header {
-  padding: 14px 18px;
-  border-bottom-color: var(--mrr-shell-border);
-}
-
 #app-main .el-button {
-  min-height: var(--mrr-shell-control-height);
   font-weight: 600;
   border-radius: var(--mrr-shell-radius-sm);
   transition:
@@ -315,6 +305,10 @@ textarea {
     border-color var(--mrr-shell-duration-fast) ease,
     box-shadow var(--mrr-shell-duration-fast) ease,
     transform var(--mrr-shell-duration-fast) var(--mrr-shell-ease);
+}
+
+#app-main .el-button:not(.el-button--small) {
+  min-height: var(--mrr-shell-control-height);
 }
 
 #app-main .el-button:not(.is-disabled):hover {
@@ -361,14 +355,14 @@ textarea {
   color: var(--text-primary);
 }
 
-#app-main .el-table th.el-table__cell {
+#app-main .el-table:not(.el-table--small) th.el-table__cell {
   height: 44px;
   font-size: 12px;
   font-weight: 680;
   color: var(--text-secondary);
 }
 
-#app-main .el-table td.el-table__cell {
+#app-main .el-table:not(.el-table--small) td.el-table__cell {
   height: 48px;
 }
 

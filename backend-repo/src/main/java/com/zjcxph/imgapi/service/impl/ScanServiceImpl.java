@@ -50,32 +50,31 @@ public class ScanServiceImpl implements ScanService {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String searchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
         List<Scan> baData = scanMapper.findBAH(normalizedBah, searchCode);
-        if (baData.isEmpty()) {
-            return null;
-        }
-        Scan scan = baData.get(0);
-        String folderPath = scan.getFolder();
-        String brxh = scan.getBrxh();
-        String storedBah = scan.getBah();
-        if (folderPath == null || folderPath.length() < 5 || brxh == null || storedBah == null) {
-            return null;
-        }
-        String parentFolder = folderPath.substring(0, 5);
-        String folderName = brxh + "-" + storedBah;
-        return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
+        return baData.isEmpty() ? null : resolveImagePath(baData.get(0));
     }
 
     @Override
     public java.io.File createZipForBAH(String bah) throws java.io.IOException {
-        Path imagePath = getImagePath(bah);
+        return createZipForCode(bah, "");
+    }
+
+    @Override
+    public java.io.File createZipForCode(String bah, String sjh) throws java.io.IOException {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        List<Scan> matches = scanMapper.findByCode(
+                normalizedBah,
+                MedicalRecordCodeUtils.toSearchTerm(bah),
+                normalizedSjh,
+                MedicalRecordCodeUtils.toSearchTerm(sjh)
+        );
+        Path imagePath = matches.isEmpty() ? null : resolveImagePath(matches.get(0));
         if (imagePath == null) {
-            throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到该病案号的图片路径");
+            throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到匹配档案的图片路径");
         }
 
-        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
-        String fileNameTemp = normalizedBah + ".temp";
-        String zipPath = "./temp/" + fileNameTemp;
-
+        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
+        String zipPath = "./temp/" + archiveCode + ".temp";
         com.zjcxph.imgapi.utils.ZipUtil.zipJpgFiles(imagePath.toString(), zipPath);
         return new java.io.File(zipPath);
     }
@@ -179,6 +178,21 @@ public class ScanServiceImpl implements ScanService {
     public long countByCondition(ScanRequest request) {
         normalizeSearchCodes(request);
         return scanMapper.countByCondition(request);
+    }
+
+    private Path resolveImagePath(Scan scan) {
+        if (scan == null) {
+            return null;
+        }
+        String folderPath = scan.getFolder();
+        String brxh = scan.getBrxh();
+        String storedBah = scan.getBah();
+        if (folderPath == null || folderPath.length() < 5 || brxh == null || storedBah == null) {
+            return null;
+        }
+        String parentFolder = folderPath.substring(0, 5);
+        String folderName = brxh + "-" + storedBah;
+        return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
     }
 
     private void normalizeStoredCodes(Scan scan) {

@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import type { ResponseMetricAnalysis } from '@/api/types'
 import { Refresh } from '@element-plus/icons-vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
 
 defineOptions({ name: 'ResponseAnalysisPage' })
 
+const rangeOptions = [
+  { label: '7 天', value: 7 },
+  { label: '30 天', value: 30 },
+  { label: '全部', value: 90 },
+] as const
+
 const loading = ref(false)
 const error = ref('')
 const analysis = ref<ResponseMetricAnalysis | null>(null)
+const selectedDays = ref(7)
+
+const rangeLabel = computed(() => rangeOptions.find(o => o.value === selectedDays.value)?.label ?? '7 天')
 
 const isEmpty = computed(() => {
   if (loading.value || error.value || !analysis.value) {
@@ -41,7 +50,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getResponseMetricAnalysis(7)
+    const response = await getResponseMetricAnalysis(selectedDays.value)
     analysis.value = response.data ?? null
   }
   catch {
@@ -54,6 +63,7 @@ async function loadData() {
 }
 
 onMounted(loadData)
+watch(selectedDays, loadData)
 </script>
 
 <template>
@@ -65,10 +75,23 @@ onMounted(loadData)
         </p>
         <h2>接口响应分析</h2>
         <p class="subtitle">
-          近 7 天浏览器端到端耗时与服务端处理耗时对比，定位慢接口和异常趋势。
+          近 {{ rangeLabel }} 浏览器端到端耗时与服务端处理耗时对比，定位慢接口和异常趋势。
         </p>
       </div>
       <div class="page-actions">
+        <el-radio-group
+          v-model="selectedDays"
+          :disabled="loading"
+          size="small"
+        >
+          <el-radio-button
+            v-for="opt in rangeOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </el-radio-button>
+        </el-radio-group>
         <el-button :loading="loading" @click="loadData">
           <el-icon><Refresh /></el-icon>
           刷新
@@ -134,60 +157,62 @@ onMounted(loadData)
         </el-card>
       </section>
 
-      <el-card v-loading="loading" shadow="never" class="analysis-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>响应趋势</strong>
-              <span>请求量及客户端、服务端平均耗时</span>
+      <div class="analysis-columns">
+        <el-card v-loading="loading" shadow="never" class="analysis-card">
+          <template #header>
+            <div class="card-header">
+              <div>
+                <strong>响应趋势</strong>
+                <span>请求量及客户端、服务端平均耗时</span>
+              </div>
             </div>
-          </div>
-        </template>
-        <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
-        <el-empty v-else description="暂无趋势数据" :image-size="64" />
-      </el-card>
+          </template>
+          <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
+          <el-empty v-else description="暂无趋势数据" :image-size="64" />
+        </el-card>
 
-      <el-card v-loading="loading" shadow="never" class="analysis-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>慢接口排行</strong>
-              <span>按客户端 P95 响应耗时排序</span>
+        <el-card v-loading="loading" shadow="never" class="analysis-card">
+          <template #header>
+            <div class="card-header">
+              <div>
+                <strong>慢接口排行</strong>
+                <span>按客户端 P95 响应耗时排序</span>
+              </div>
             </div>
-          </div>
-        </template>
-        <el-table
-          v-if="analysis?.slowEndpoints.length"
-          :data="analysis.slowEndpoints"
-          stripe
-          empty-text="暂无慢接口数据"
-        >
-          <el-table-column prop="method" label="方法" width="90" />
-          <el-table-column prop="routePattern" label="接口模板" min-width="260" show-overflow-tooltip />
-          <el-table-column prop="requestCount" label="请求数" width="100" />
-          <el-table-column label="错误率" width="110">
-            <template #default="{ row }">
-              {{ formatPercent(errorRate(row.errorCount, row.requestCount)) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="客户端平均" width="130">
-            <template #default="{ row }">
-              {{ formatDuration(row.avgClientDurationMs) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="客户端 P95" width="130">
-            <template #default="{ row }">
-              {{ formatDuration(row.p95ClientDurationMs) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="服务端平均" width="130">
-            <template #default="{ row }">
-              {{ formatDuration(row.avgServerDurationMs) }}
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-else description="暂无慢接口数据" :image-size="64" />
-      </el-card>
+          </template>
+          <el-table
+            v-if="analysis?.slowEndpoints.length"
+            :data="analysis.slowEndpoints"
+            stripe
+            empty-text="暂无慢接口数据"
+          >
+            <el-table-column prop="method" label="方法" width="90" />
+            <el-table-column prop="routePattern" label="接口模板" min-width="220" show-overflow-tooltip />
+            <el-table-column prop="requestCount" label="请求数" width="100" />
+            <el-table-column label="错误率" width="110">
+              <template #default="{ row }">
+                {{ formatPercent(errorRate(row.errorCount, row.requestCount)) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="客户端平均" width="130">
+              <template #default="{ row }">
+                {{ formatDuration(row.avgClientDurationMs) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="客户端 P95" width="130">
+              <template #default="{ row }">
+                {{ formatDuration(row.p95ClientDurationMs) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="服务端平均" width="130">
+              <template #default="{ row }">
+                {{ formatDuration(row.avgServerDurationMs) }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无慢接口数据" :image-size="64" />
+        </el-card>
+      </div>
     </template>
   </div>
 </template>
@@ -235,7 +260,7 @@ h2 {
 .page-actions {
   display: flex;
   flex: none;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -281,6 +306,19 @@ h2 {
 .analysis-card {
   border: 1px solid rgb(0 0 0 / 10%);
   border-radius: 12px;
+}
+
+.analysis-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (width < 1024px) {
+  .analysis-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card-header {

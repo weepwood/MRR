@@ -380,8 +380,7 @@ function showLabel(index: number) {
 
 .chart-scroll {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
   overscroll-behavior-inline: contain;
   scrollbar-width: thin;
 }

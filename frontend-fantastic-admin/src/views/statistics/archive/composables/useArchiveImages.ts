@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
 import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
-import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
+import { getArchiveLookupValidationMessage, normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 import { padCode, resolveImageUrl } from '../constants'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -43,13 +43,19 @@ export function useArchiveImages() {
   async function loadImages(): Promise<void> {
     const bah = padCode(searchBah.value)
     const sjh = padCode(searchSjh.value)
-    if (!bah && !sjh) {
-      ElMessage.warning('请输入病案号或上架号')
-      return
-    }
+    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
     searchBah.value = bah
     searchSjh.value = sjh
+
+    if (validationMessage) {
+      images.value = []
+      patientList.value = []
+      errorMsg.value = validationMessage
+      ElMessage.warning(validationMessage)
+      return
+    }
+
     loading.value = true
     errorMsg.value = ''
     try {
@@ -67,6 +73,7 @@ export function useArchiveImages() {
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
       images.value = []
+      patientList.value = []
     }
     finally {
       loading.value = false

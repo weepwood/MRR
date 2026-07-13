@@ -92,12 +92,20 @@ const summaryCards = computed(() => [
   { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
   { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量' },
   { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数' },
-  { label: '当前选中', value: selectedArchive.value?.bah || '未选择', note: '可进入影像档案袋查看原图' },
+  { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图' },
 ])
 
 function normalizeText(value: unknown) {
   const text = String(value ?? '').trim()
   return text && text.toUpperCase() !== 'NULL' ? text : '-'
+}
+
+function padTo8Digits(value: unknown) {
+  const text = normalizeText(value)
+  if (text === '-') return '-'
+  const num = parseInt(text, 10)
+  if (Number.isNaN(num)) return text
+  return String(num).padStart(8, '0')
 }
 
 function formatDate(value: string | undefined) {
@@ -464,17 +472,13 @@ onBeforeUnmount(() => {
             role="button"
             tabindex="0"
             :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
-            :aria-label="`病案 ${normalizeText(item.bah)}，${Number(item.pages || 0)} 页`"
+            :aria-label="`病案 ${padTo8Digits(item.bah)}，${Number(item.pages || 0)} 页`"
             @click="selectArchive(item, index)"
             @keyup.enter="selectArchive(item, index)"
             @keyup.space.prevent="selectArchive(item, index)"
           >
             <div class="folder-layer folder-layer-back" />
             <div class="folder-layer folder-layer-middle" />
-            <div class="folder-tab">
-              <span>Medical Record</span>
-            </div>
-
             <div class="folder-card-body">
               <div class="folder-top">
                 <div class="folder-identity">
@@ -494,7 +498,7 @@ onBeforeUnmount(() => {
               <div class="folder-primary">
                 <span class="folder-primary-label">病案号</span>
                 <h4 class="folder-title">
-                  {{ normalizeText(item.bah) }}
+                  {{ padTo8Digits(item.bah) }}
                 </h4>
                 <div class="folder-subtitle">
                   <span>{{ formatDate(item.date) }}</span>
@@ -510,7 +514,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div>
                   <dt>上架号</dt>
-                  <dd>{{ normalizeText(item.sjh) }}</dd>
+                  <dd>{{ padTo8Digits(item.sjh) }}</dd>
                 </div>
                 <div>
                   <dt>归档日期</dt>
@@ -550,7 +554,7 @@ onBeforeUnmount(() => {
             </el-table-column>
             <el-table-column label="病案号" min-width="120">
               <template #default="{ row }">
-                <strong class="archive-bah">{{ normalizeText(row.bah) }}</strong>
+                <strong class="archive-bah">{{ padTo8Digits(row.bah) }}</strong>
               </template>
             </el-table-column>
             <el-table-column label="档案类型" min-width="110">
@@ -572,7 +576,7 @@ onBeforeUnmount(() => {
             </el-table-column>
             <el-table-column label="上架号" min-width="100">
               <template #default="{ row }">
-                {{ normalizeText(row.sjh) }}
+                {{ padTo8Digits(row.sjh) }}
               </template>
             </el-table-column>
             <el-table-column label="页数" width="80" align="right">
@@ -814,33 +818,6 @@ h2 {
   transform: rotate(0.8deg);
 }
 
-.folder-tab {
-  position: absolute;
-  top: 0;
-  left: 28px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  width: 124px;
-  height: 34px;
-  padding: 0 16px;
-  color: color-mix(in srgb, var(--folder-accent) 82%, black);
-  background: color-mix(in srgb, var(--folder-tint) 84%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 28%, var(--divider));
-  border-bottom: 0;
-  border-radius: 11px 11px 0 0;
-}
-
-.folder-tab span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  white-space: nowrap;
-  opacity: 0.78;
-}
 
 .folder-card-body {
   position: relative;
@@ -854,14 +831,6 @@ h2 {
   border-radius: 14px;
   box-shadow: 0 8px 24px rgb(15 23 42 / 7%);
   transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
-}
-
-.folder-card-body::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  content: "";
-  background: linear-gradient(90deg, var(--folder-accent), color-mix(in srgb, var(--folder-accent) 36%, transparent));
 }
 
 .folder-card-body::after {

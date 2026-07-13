@@ -39,6 +39,7 @@ jobs:
         run: |
           python - <<'PYRUNNER'
           from pathlib import Path
+          import re
           import subprocess
           import traceback
 
@@ -101,6 +102,21 @@ jobs:
           """
               script = script[:response_start] + response_patch + script[response_end:]
               exec(compile(script, 'metric-card-migration.py', 'exec'))
+
+              target_files = (
+                  'frontend-fantastic-admin/src/views/records-statistics/index.vue',
+                  'frontend-fantastic-admin/src/views/statistics/index.vue',
+                  'frontend-fantastic-admin/src/views/statistics-detail/index.vue',
+                  'frontend-fantastic-admin/src/views/oss-migration/index.vue',
+                  'frontend-fantastic-admin/src/views/monitoring/index.vue',
+                  'frontend-fantastic-admin/src/views/response-analysis/index.vue',
+                  'frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue',
+              )
+              for relative in target_files:
+                  path = Path(relative)
+                  text = path.read_text(encoding='utf-8')
+                  text = re.sub(r'\n@media\s*\([^)]*\)\s*\{\s*\}\n', '\n', text)
+                  path.write_text(text, encoding='utf-8')
           except Exception:
               Path('.github/metric-card-error.log').write_text(traceback.format_exc(), encoding='utf-8')
               subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)

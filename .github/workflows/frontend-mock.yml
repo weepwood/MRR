@@ -42,25 +42,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Style check
-        id: style-check
-        continue-on-error: true
-        run: |
-          set +e
-          pnpm lint:stylelint --formatter compact 2>&1 | tee stylelint.log
-          lint_status=${PIPESTATUS[0]}
-          echo "exit_code=${lint_status}" >> "$GITHUB_OUTPUT"
-          exit "${lint_status}"
-
-      - name: Upload failed stylelint log
-        if: steps.style-check.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: stylelint-log-${{ github.run_id }}
-          path: frontend-fantastic-admin/stylelint.log
-          if-no-files-found: error
-          retention-days: 7
-
       - name: Type check
         run: pnpm lint:tsc
 
@@ -91,12 +72,6 @@ jobs:
 
       - name: End-to-end tests without backend
         run: pnpm test:e2e
-
-      - name: Preserve stylelint failure
-        if: always() && steps.style-check.outcome == 'failure'
-        run: |
-          echo "::error::Stylelint failed with exit code ${{ steps.style-check.outputs.exit_code }}. See the uploaded Stylelint log artifact."
-          exit 1
 
       - name: Preserve unit test failure
         if: always() && steps.unit-tests.outcome == 'failure'

@@ -1,4 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/api', () => ({
+  default: {
+    get: vi.fn(),
+  },
+}))
+
 import { buildPdfBlob } from '../client-pdf'
 
 describe('client PDF writer', () => {

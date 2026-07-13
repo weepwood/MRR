@@ -1,9 +1,14 @@
-import api from '@/api'
+import { getImageForPdf } from '@/api/modules/image'
 
 export interface ClientPdfImage {
   blob: Blob
   width: number
   height: number
+}
+
+export interface ClientPdfSource {
+  id?: number | string
+  filename?: string
 }
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 }
@@ -30,28 +35,17 @@ function getBlobFromAxiosResult(result: unknown): Blob | null {
   return null
 }
 
-async function fetchImageBlob(imageUrl: string): Promise<Blob> {
-  const resolvedUrl = new URL(imageUrl, window.location.href)
-  if (resolvedUrl.origin === window.location.origin) {
-    const result = await api.get<Blob>(resolvedUrl.toString(), {
-      responseType: 'blob',
-      skipGlobalError: true,
-    })
-    const blob = getBlobFromAxiosResult(result)
-    if (!blob) {
-      throw new TypeError('影像响应不是有效文件')
-    }
-    return blob
+async function fetchImageBlob(source: ClientPdfSource): Promise<Blob> {
+  if (source.id === undefined || source.id === null || source.id === '') {
+    throw new Error(`影像 ${source.filename || ''} 缺少记录 ID`)
   }
 
-  const response = await fetch(resolvedUrl.toString(), {
-    mode: 'cors',
-    credentials: 'omit',
-  })
-  if (!response.ok) {
-    throw new Error(`影像获取失败（HTTP ${response.status}）`)
+  const result = await getImageForPdf(source.id)
+  const blob = getBlobFromAxiosResult(result)
+  if (!blob) {
+    throw new TypeError(`影像 ${source.filename || source.id} 响应不是有效文件`)
   }
-  return response.blob()
+  return blob
 }
 
 async function loadImageSource(blob: Blob): Promise<{
@@ -212,15 +206,15 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   return new Blob(parts, { type: 'application/pdf' })
 }
 
-export async function createPdfFromImageUrls(
-  imageUrls: string[],
+export async function createPdfFromImages(
+  sources: ClientPdfSource[],
   onProgress?: (completed: number, total: number) => void,
 ): Promise<Blob> {
   const preparedImages: ClientPdfImage[] = []
-  for (let index = 0; index < imageUrls.length; index += 1) {
-    const imageBlob = await fetchImageBlob(imageUrls[index])
+  for (let index = 0; index < sources.length; index += 1) {
+    const imageBlob = await fetchImageBlob(sources[index])
     preparedImages.push(await convertToJpeg(imageBlob))
-    onProgress?.(index + 1, imageUrls.length)
+    onProgress?.(index + 1, sources.length)
   }
   return buildPdfBlob(preparedImages)
 }

@@ -31,7 +31,35 @@ jobs:
           cache-dependency-path: backend-repo/pom.xml
 
       - name: Compile backend
-        run: mvn -B -DskipTests compile
+        shell: bash
+        run: |
+          set +e
+          mvn -q -DskipTests compile > ../backend-compile.log 2>&1
+          status=$?
+          tail -n 160 ../backend-compile.log
+          exit $status
+
+      - name: Upload compile failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-compile-log
+          path: backend-compile.log
+          if-no-files-found: ignore
 
       - name: Compile tests and run normalization tests
-        run: mvn -B -Dtest=MedicalRecordCodeUtilsTest test
+        shell: bash
+        run: |
+          set +e
+          mvn -q -Dtest=MedicalRecordCodeUtilsTest test > ../backend-test.log 2>&1
+          status=$?
+          tail -n 160 ../backend-test.log
+          exit $status
+
+      - name: Upload test failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-log
+          path: backend-test.log
+          if-no-files-found: ignore

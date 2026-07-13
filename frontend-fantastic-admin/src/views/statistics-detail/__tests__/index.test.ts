@@ -107,30 +107,29 @@ describe('statistics detail responsive pagination', () => {
     await flushPromises()
 
     expect(api.getStatisticsList).toHaveBeenCalledOnce()
-    expect(api.getStatisticsList).toHaveBeenCalledWith(expect.objectContaining({ page: 1, size: 20 }))
+    expect(api.getStatisticsList).toHaveBeenCalledWith(expect.objectContaining({ page: 1, size: 18 }))
     expect(observe).toHaveBeenCalledWith(wrapper.find('.archive-shelf').element)
-    expect(wrapper.find('.pagination-stub').attributes('data-page-size')).toBe('20')
+    expect(wrapper.find('.pagination-stub').attributes('data-page-size')).toBe('18')
     expect(wrapper.find('.pagination-stub').attributes('data-layout')).not.toContain('sizes')
 
     wrapper.unmount()
     expect(disconnect).toHaveBeenCalledOnce()
   })
 
-  it('reloads only when a resize changes the column count', async () => {
-    containerWidth = 872
+  it('reloads only when a resize changes the complete-row page size', async () => {
     const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
     await flushPromises()
 
     expect(api.getStatisticsList).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, size: 18 }))
 
-    triggerResize(1168)
+    triggerResize(1440)
     await flushPromises()
 
     expect(api.getStatisticsList).toHaveBeenCalledTimes(2)
     expect(api.getStatisticsList).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, size: 20 }))
     expect(api.getStatisticsSummary).toHaveBeenCalledOnce()
 
-    triggerResize(1200)
+    triggerResize(1500)
     await flushPromises()
 
     expect(api.getStatisticsList).toHaveBeenCalledTimes(2)
@@ -138,7 +137,6 @@ describe('statistics detail responsive pagination', () => {
   })
 
   it('ignores an older resize response that finishes last', async () => {
-    containerWidth = 872
     const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
     await flushPromises()
 
@@ -149,8 +147,8 @@ describe('statistics detail responsive pagination', () => {
       }))
       .mockResolvedValueOnce(createArchiveResponse(21, 21))
 
-    triggerResize(1168)
-    triggerResize(2056)
+    triggerResize(1440)
+    triggerResize(2500)
     await flushPromises()
 
     expect(wrapper.findAll('.archive-folder-card')).toHaveLength(21)
@@ -172,7 +170,7 @@ describe('statistics detail responsive pagination', () => {
     expect(api.getStatisticsList).toHaveBeenCalledOnce()
 
     wrapper.unmount()
-    resolveInitialRequest?.(createArchiveResponse(20, 20))
+    resolveInitialRequest?.(createArchiveResponse(18, 18))
     await flushPromises()
 
     expect(api.getStatisticsList).toHaveBeenCalledOnce()

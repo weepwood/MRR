@@ -40,12 +40,18 @@ async function fetchImageBlob(source: ClientPdfSource): Promise<Blob> {
     throw new Error(`影像 ${source.filename || ''} 缺少记录 ID`)
   }
 
-  const result = await getImageForPdf(source.id)
-  const blob = getBlobFromAxiosResult(result)
-  if (!blob) {
-    throw new TypeError(`影像 ${source.filename || source.id} 响应不是有效文件`)
+  try {
+    const result = await getImageForPdf(source.id)
+    const blob = getBlobFromAxiosResult(result)
+    if (!blob) {
+      throw new TypeError(`影像 ${source.filename || source.id} 响应不是有效文件`)
+    }
+    return blob
   }
-  return blob
+  catch (error: unknown) {
+    const message = (error as { message?: string })?.message
+    throw new Error(message || `影像 ${source.filename || source.id} 获取失败`)
+  }
 }
 
 async function loadImageSource(blob: Blob): Promise<{

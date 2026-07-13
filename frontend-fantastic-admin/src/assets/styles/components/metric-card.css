@@ -83,13 +83,13 @@
 .mrr-metric-card__value {
   display: block;
   margin: 0;
-  overflow-wrap: anywhere;
   font-size: 26px;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   color: var(--text-primary);
   letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
 }
 
 .mrr-metric-card__value--compact {

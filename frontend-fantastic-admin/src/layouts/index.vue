@@ -110,7 +110,7 @@ onBeforeUnmount(() => {
             <RouterView v-slot="{ Component, route }">
               <Transition :name="!settingsStore.isReloading ? 'slide-right' : ''" mode="out-in">
                 <KeepAlive :include="keepAliveStore.list">
-                  <component :is="Component" v-show="!isLink" :key="route.fullPath" />
+                  <component :is="Component" v-show="!isLink" :key="route.name ?? route.path" />
                 </KeepAlive>
               </Transition>
             </RouterView>

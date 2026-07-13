@@ -144,6 +144,14 @@ watch(filteredImages, () => {
   nextTick(() => thumbStripRef.value?.scrollToIndex(selectedImageIndex.value, false))
 })
 
+// 缓存模式下，路由参数变化时重新加载数据
+watch(() => route.params.bah, (bah) => {
+  searchBah.value = sanitizeParam(bah)
+  if (searchBah.value || searchSjh.value) {
+    loadImages()
+  }
+})
+
 onMounted(() => {
   document.body.classList.add('archive-immersive')
   searchBah.value = sanitizeParam(route.params.bah || route.query.bah)

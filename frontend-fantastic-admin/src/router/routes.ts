@@ -86,6 +86,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '用户管理',
           icon: 'i-ant-design:user-outlined',
           auth: ['user:manage'],
+          cache: true,
         },
       },
       {
@@ -95,6 +96,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '权限管理',
           icon: 'i-ant-design:lock-twotone',
           auth: ['role:read'],
+          cache: true,
         },
       },
       {
@@ -104,6 +106,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '系统设置',
           icon: 'i-ant-design:tool-twotone',
           auth: ['system:read'],
+          cache: true,
         },
       },
     ],
@@ -121,6 +124,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '记录管理',
           icon: 'i-ant-design:database-twotone',
           auth: ['record:read'],
+          cache: true,
         },
       },
       {
@@ -130,6 +134,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '患者管理',
           icon: 'i-ant-design:team-outlined',
           auth: ['record:read'],
+          cache: true,
         },
       },
       {
@@ -139,6 +144,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '统计分析',
           icon: 'i-ant-design:area-chart-outlined',
           auth: ['statistics:read'],
+          cache: true,
         },
       },
       {
@@ -148,6 +154,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '统计明细',
           icon: 'i-ant-design:profile-twotone',
           auth: ['statistics:read'],
+          cache: true,
         },
       },
       {
@@ -157,6 +164,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '病案统计',
           icon: 'i-ant-design:bar-chart-outlined',
           auth: ['statistics:read'],
+          cache: true,
         },
       },
       {
@@ -166,6 +174,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: 'OSS 迁移管理',
           icon: 'i-ant-design:cloud-upload-outlined',
           auth: ['record:read'],
+          cache: true,
         },
       },
       {
@@ -175,6 +184,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '影像档案袋',
           icon: 'i-ant-design:folder-open-twotone',
           auth: ['record:read'],
+          cache: true,
         },
       },
       {
@@ -184,6 +194,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '档案搜索',
           icon: 'i-ant-design:search-outlined',
           auth: ['record:read'],
+          cache: true,
         },
       },
     ],
@@ -201,6 +212,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '日志管理',
           icon: 'i-ant-design:file-search-outlined',
           auth: ['log:read'],
+          cache: true,
         },
       },
       {
@@ -210,6 +222,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '病案图片访问审计',
           icon: 'i-ant-design:security-scan-outlined',
           auth: ['log:read'],
+          cache: true,
         },
       },
       {
@@ -219,6 +232,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '系统监控',
           icon: 'i-ant-design:dashboard-twotone',
           auth: ['system:read'],
+          cache: true,
         },
       },
       {
@@ -228,6 +242,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '接口响应分析',
           icon: 'i-ant-design:fund-projection-screen-outlined',
           auth: ['system:read'],
+          cache: true,
         },
       },
 

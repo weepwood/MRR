@@ -50,13 +50,14 @@ withDefaults(defineProps<{
   padding: 12px 0;
   border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
 }
+
 .skeleton-cell {
   flex: 1;
   height: 16px;
   background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
+  animation: shimmer 1.5s infinite;
 }
 
 .skeleton-cards {
@@ -64,27 +65,31 @@ withDefaults(defineProps<{
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
+
 .skeleton-card {
   padding: 16px;
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px;
 }
+
 .skeleton-card-img {
   height: 120px;
+  margin-bottom: 12px;
   background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
-  margin-bottom: 12px;
+  animation: shimmer 1.5s infinite;
 }
+
 .skeleton-card-line {
   height: 14px;
+  margin-bottom: 8px;
   background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
-  margin-bottom: 8px;
+  animation: shimmer 1.5s infinite;
 }
+
 .skeleton-card-line--short {
   width: 60%;
 }
@@ -94,27 +99,30 @@ withDefaults(defineProps<{
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
 }
+
 .skeleton-stat {
   padding: 16px;
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px;
 }
+
 .skeleton-stat-label {
   width: 50%;
   height: 12px;
+  margin-bottom: 8px;
   background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
-  margin-bottom: 8px;
+  animation: shimmer 1.5s infinite;
 }
+
 .skeleton-stat-value {
   width: 70%;
   height: 24px;
   background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
+  animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {

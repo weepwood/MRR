@@ -1076,9 +1076,9 @@ h2 {
 
 .folder-code-block-full {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
 .folder-code-block-full .folder-code-label {
@@ -1088,9 +1088,9 @@ h2 {
 .folder-code-block-full .folder-code-value {
   flex: 1;
   min-width: 0;
-  text-align: right;
   font-size: clamp(24px, 2.6vw, 30px);
   color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
+  text-align: right;
 }
 
 .folder-code-block:nth-child(-n+2) .folder-code-value {
@@ -1195,6 +1195,5 @@ h2 {
   .folder-code-grid {
     grid-template-columns: 1fr;
   }
-
 }
 </style>

@@ -39,11 +39,13 @@ function handleRetry() {
   padding: 64px 16px;
   text-align: center;
 }
+
 .app-error-icon {
+  margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-color-warning, #e6a23c);
-  margin-bottom: 16px;
 }
+
 .app-error-text {
   margin: 0 0 20px;
   font-size: 14px;

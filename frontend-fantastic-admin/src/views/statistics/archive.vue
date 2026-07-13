@@ -261,8 +261,8 @@ onUnmounted(() => {
 }
 
 .archive-workspace {
-  height: 100%;
   min-width: 0;
+  height: 100%;
 }
 
 .archive-workspace.has-images {
@@ -285,8 +285,7 @@ onUnmounted(() => {
 }
 
 .has-images .archive-sidebar {
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
 }
 
 :global(body.archive-immersive .toolbar-container) {

@@ -1,7 +1,7 @@
 import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import { createPdfFromImageUrls } from '../utils/client-pdf'
+import { createPdfFromImages } from '../utils/client-pdf'
 
 export function useArchivePrint() {
   const printing = ref(false)
@@ -112,15 +112,14 @@ export function useArchivePrint() {
       return
     }
 
-    const imageUrls = images.map(image => String(image.imageUrl || '').trim())
-    if (imageUrls.some(url => !url)) {
-      ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
+    if (images.some(image => image.id === undefined || image.id === null)) {
+      ElMessage.warning('部分影像缺少记录 ID，无法导出 PDF')
       return
     }
 
     exportingPdf.value = true
     try {
-      const pdfBlob = await createPdfFromImageUrls(imageUrls)
+      const pdfBlob = await createPdfFromImages(images)
       const firstImage = images[0]
       const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
       const sjh = String(firstImage?.sjh || '').trim()
@@ -137,7 +136,7 @@ export function useArchivePrint() {
     }
     catch (err: unknown) {
       const message = (err as { message?: string })?.message || 'PDF 导出失败'
-      ElMessage.error(message.includes('Failed to fetch') ? '影像获取失败，请检查图片服务跨域配置' : message)
+      ElMessage.error(message)
     }
     finally {
       exportingPdf.value = false

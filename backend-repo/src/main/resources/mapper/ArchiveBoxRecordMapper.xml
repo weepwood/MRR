@@ -5,15 +5,7 @@
 <mapper namespace="com.zjcxph.imgapi.mapper.ArchiveBoxRecordMapper">
 
     <sql id="StatisticsSjhMatchesRecord">
-        (
-            s.sjh = abr.sjh
-            OR (
-                s.sjh ~ '^[0-9]+$'
-                AND abr.sjh ~ '^[0-9]+$'
-                AND COALESCE(NULLIF(LTRIM(s.sjh, '0'), ''), '0')
-                    = COALESCE(NULLIF(LTRIM(abr.sjh, '0'), ''), '0')
-            )
-        )
+        s.sjh = abr.sjh
     </sql>
 
     <sql id="RecordColumns">

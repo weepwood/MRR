@@ -7,8 +7,10 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "build": "vue-tsc -b && vite build",
     "build:test": "vue-tsc -b && vite build --mode test",
+    "build:mock": "vue-tsc -b && vite build --mode mock",
     "serve": "http-server ./dist -o",
     "serve:test": "http-server ./dist-test -o",
     "svgo": "svgo -f src/assets/icons",

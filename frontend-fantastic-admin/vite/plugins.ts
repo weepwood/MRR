@@ -96,6 +96,8 @@ export default function createVitePlugins(mode: string, isBuild = false) {
       logger: !isBuild,
       include: 'src/mock',
       infixName: false,
+      basename: '/proxy',
+      timeout: 120,
       enableProd: isBuild,
     }),
 

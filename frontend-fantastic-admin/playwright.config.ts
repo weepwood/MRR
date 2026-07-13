@@ -19,7 +19,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm exec vite --mode development --host 127.0.0.1 --port 9000',
+    // E2E 默认使用内置 Mock 服务，CI 和本地测试均不依赖 Java 后端。
+    command: 'pnpm exec vite --mode mock --host 127.0.0.1 --port 9000',
     url: 'http://127.0.0.1:9000',
     reuseExistingServer: !process.env.CI,
   },

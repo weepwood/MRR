@@ -481,7 +481,7 @@ onBeforeUnmount(() => {
             role="button"
             tabindex="0"
             :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
-            :aria-label="`病案 ${padTo8Digits(item.bah)}，${Number(item.pages || 0)} 页`"
+            :aria-label="`病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
             @click="selectArchive(item, index)"
             @keyup.enter="selectArchive(item, index)"
             @keyup.space.prevent="selectArchive(item, index)"
@@ -504,36 +504,31 @@ onBeforeUnmount(() => {
                 </el-tag>
               </div>
 
-              <div class="folder-primary">
-                <span class="folder-primary-label">病案号</span>
-                <h4 class="folder-title">
-                  {{ padTo8Digits(item.bah) }}
-                </h4>
-                <div class="folder-subtitle">
-                  <span>{{ formatDate(item.date) }}</span>
-                  <i />
-                  <span>设备 {{ normalizeText(item.cid) }}</span>
+              <div class="folder-code-grid">
+                <div class="folder-code-block">
+                  <span class="folder-code-label">病案号</span>
+                  <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
+                </div>
+                <div class="folder-code-block">
+                  <span class="folder-code-label">上架号</span>
+                  <strong class="folder-code-value">{{ padTo8Digits(item.sjh) }}</strong>
                 </div>
               </div>
 
-              <dl class="folder-meta-grid">
-                <div>
-                  <dt>负责人</dt>
-                  <dd>{{ normalizeText(item.openerNo) }}</dd>
-                </div>
-                <div>
-                  <dt>上架号</dt>
-                  <dd>{{ padTo8Digits(item.sjh) }}</dd>
-                </div>
-                <div>
-                  <dt>归档日期</dt>
-                  <dd>{{ formatDate(item.date) }}</dd>
-                </div>
-                <div>
-                  <dt>扫描设备</dt>
-                  <dd>{{ normalizeText(item.cid) }}</dd>
-                </div>
-              </dl>
+              <ul class="folder-compact-meta" aria-label="档案辅助信息">
+                <li>
+                  <span>负责人</span>
+                  <strong>{{ normalizeText(item.openerNo) }}</strong>
+                </li>
+                <li>
+                  <span>归档日期</span>
+                  <strong>{{ formatDate(item.date) }}</strong>
+                </li>
+                <li>
+                  <span>扫描设备</span>
+                  <strong>{{ normalizeText(item.cid) }}</strong>
+                </li>
+              </ul>
 
               <div class="folder-footer">
                 <div class="folder-page-count">
@@ -772,11 +767,18 @@ h2 {
   --folder-tint: #eef4ff;
 
   position: relative;
-  min-height: 318px;
+  min-height: 294px;
   padding: 16px 8px 8px;
   cursor: pointer;
   outline: none;
   isolation: isolate;
+  transition: z-index 0s linear 0.24s;
+}
+
+.archive-folder-card:hover,
+.archive-folder-card:focus-visible {
+  z-index: 2;
+  transition-delay: 0s;
 }
 
 .folder-layer {
@@ -784,7 +786,7 @@ h2 {
   pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
   border-radius: 14px;
-  transition: transform 0.22s ease, border-color 0.22s ease;
+  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
 .folder-layer-back {
@@ -804,15 +806,30 @@ h2 {
 .folder-card-body {
   position: relative;
   display: grid;
-  gap: 15px;
-  min-height: 294px;
-  padding: 23px 20px 18px;
+  gap: 13px;
+  min-height: 270px;
+  padding: 21px 20px 17px;
   overflow: hidden;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
   border: 1px solid var(--divider);
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 7%);
-  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
+  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
+}
+
+.folder-card-body::before {
+  position: absolute;
+  top: 0;
+  right: 22px;
+  left: 22px;
+  height: 3px;
+  content: "";
+  background: var(--folder-accent);
+  border-radius: 0 0 999px 999px;
+  opacity: 0.34;
+  transform: scaleX(0.42);
+  transform-origin: center;
+  transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
 .folder-card-body::after {
@@ -823,29 +840,55 @@ h2 {
   height: 150px;
   pointer-events: none;
   content: "";
-  background: radial-gradient(circle, color-mix(in srgb, var(--folder-accent) 8%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--folder-accent) 9%, transparent), transparent 68%);
+  transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
 .archive-folder-card:hover .folder-card-body,
-.archive-folder-card.is-selected .folder-card-body,
 .archive-folder-card:focus-visible .folder-card-body {
-  border-color: color-mix(in srgb, var(--folder-accent) 58%, var(--divider));
-  box-shadow: 0 14px 34px rgb(15 23 42 / 12%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 9%, transparent);
-  transform: translateY(-2px);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
+  border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
+  box-shadow: 0 18px 42px rgb(15 23 42 / 14%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 11%, transparent);
+  transform: translateY(-4px);
+}
+
+.archive-folder-card:hover .folder-card-body::before,
+.archive-folder-card:focus-visible .folder-card-body::before,
+.archive-folder-card.is-selected .folder-card-body::before {
+  opacity: 0.9;
+  transform: scaleX(1);
+}
+
+.archive-folder-card:hover .folder-card-body::after,
+.archive-folder-card:focus-visible .folder-card-body::after {
+  opacity: 1;
+  transform: translate(-8px, -8px) scale(1.08);
 }
 
 .archive-folder-card:hover .folder-layer-back,
-.archive-folder-card.is-selected .folder-layer-back {
-  transform: translate(-2px, -2px) rotate(-2deg);
+.archive-folder-card:focus-visible .folder-layer-back {
+  border-color: color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--folder-accent) 10%, transparent);
+  transform: translate(-5px, -4px) rotate(-2.6deg);
 }
 
 .archive-folder-card:hover .folder-layer-middle,
-.archive-folder-card.is-selected .folder-layer-middle {
-  transform: translate(2px, -1px) rotate(1.2deg);
+.archive-folder-card:focus-visible .folder-layer-middle {
+  border-color: color-mix(in srgb, var(--folder-accent) 34%, var(--divider));
+  transform: translate(5px, -2px) rotate(1.6deg);
 }
 
 .archive-folder-card.is-selected .folder-card-body {
   border-color: var(--folder-accent);
+  box-shadow: 0 12px 30px rgb(15 23 42 / 11%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 13%, transparent);
+}
+
+.archive-folder-card.is-selected .folder-layer-back {
+  transform: translate(-2px, -2px) rotate(-2deg);
+}
+
+.archive-folder-card.is-selected .folder-layer-middle {
+  transform: translate(2px, -1px) rotate(1.2deg);
 }
 
 .tone-blue { --folder-accent: #2563eb; --folder-tint: #eef4ff; }
@@ -904,16 +947,40 @@ h2 {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
 }
 
-.folder-primary {
+.folder-code-grid {
   position: relative;
   z-index: 1;
-  padding: 14px 15px;
-  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 12%, var(--divider));
-  border-radius: 11px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
 }
 
-.folder-primary-label {
+.folder-code-block {
+  min-width: 0;
+  padding: 12px 13px;
+  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
+  border-radius: 11px;
+  transition: background-color 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
+}
+
+.archive-folder-card:hover .folder-code-block,
+.archive-folder-card:focus-visible .folder-code-block {
+  background: color-mix(in srgb, var(--folder-accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--folder-accent) 24%, var(--divider));
+}
+
+.archive-folder-card:hover .folder-code-block:first-child,
+.archive-folder-card:focus-visible .folder-code-block:first-child {
+  transform: translateX(-1px);
+}
+
+.archive-folder-card:hover .folder-code-block:last-child,
+.archive-folder-card:focus-visible .folder-code-block:last-child {
+  transform: translateX(1px);
+}
+
+.folder-code-label {
   display: block;
   margin-bottom: 5px;
   font-size: 10px;
@@ -922,11 +989,11 @@ h2 {
   letter-spacing: 0.08em;
 }
 
-.folder-title {
-  margin: 0;
+.folder-code-value {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: clamp(20px, 2vw, 24px);
+  font-size: clamp(17px, 1.6vw, 21px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -934,67 +1001,51 @@ h2 {
   white-space: nowrap;
 }
 
-.folder-subtitle {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-  overflow: hidden;
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.folder-subtitle span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.folder-subtitle i {
-  flex: 0 0 3px;
-  width: 3px;
-  height: 3px;
-  background: var(--folder-accent);
-  border-radius: 50%;
-  opacity: 0.7;
-}
-
-.folder-meta-grid {
+.folder-compact-meta {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 0;
   margin: 0;
+  list-style: none;
 }
 
-.folder-meta-grid > div {
+.folder-compact-meta li {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
   min-width: 0;
-  padding: 9px 10px;
-  background: color-mix(in srgb, var(--surface-alt) 76%, transparent);
-  border: 1px solid color-mix(in srgb, var(--divider) 72%, transparent);
-  border-radius: 9px;
-}
-
-.folder-meta-grid dt {
   font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  line-height: 1.5;
+  color: var(--text-tertiary);
 }
 
-.folder-meta-grid dd {
-  margin: 4px 0 0;
+.folder-compact-meta li:not(:last-child)::after {
+  margin-left: 8px;
+  color: color-mix(in srgb, var(--folder-accent) 40%, var(--divider));
+  content: "·";
+}
+
+.folder-compact-meta span {
+  flex: none;
+}
+
+.folder-compact-meta strong {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .folder-footer {
   z-index: 1;
-  padding-top: 12px;
+  padding-top: 11px;
   border-top: 1px dashed color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
 }
 
@@ -1027,16 +1078,9 @@ h2 {
   transition: transform 0.2s ease;
 }
 
-.archive-folder-card:hover .folder-action span {
-  transform: translateX(3px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .folder-layer,
-  .folder-card-body,
-  .folder-action span {
-    transition: none;
-  }
+.archive-folder-card:hover .folder-action span,
+.archive-folder-card:focus-visible .folder-action span {
+  transform: translateX(4px);
 }
 
 .pagination-wrapper {
@@ -1044,14 +1088,26 @@ h2 {
   justify-content: flex-end;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .archive-folder-card,
+  .folder-layer,
+  .folder-card-body,
+  .folder-card-body::before,
+  .folder-card-body::after,
+  .folder-code-block,
+  .folder-action span {
+    transition: none;
+  }
+
+  .archive-folder-card:hover .folder-card-body,
+  .archive-folder-card:focus-visible .folder-card-body {
+    transform: none;
+  }
+}
+
 @media (width <= 720px) {
   .page-header {
     flex-direction: column;
-  }
-
-  .summary-grid,
-  .folder-meta-grid {
-    grid-template-columns: 1fr;
   }
 
   .filter-bah,
@@ -1068,6 +1124,20 @@ h2 {
   .archive-toolbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .folder-code-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .folder-compact-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .folder-compact-meta li::after {
+    display: none;
   }
 }
 </style>

@@ -14,7 +14,13 @@ import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
 
-interface ArchiveItem extends StatisticsRecord {}
+interface ArchiveItem extends StatisticsRecord {
+  patientName?: string
+  inpatientDepartment?: string
+  patientId?: string
+  dischargeDate?: string
+}
+
 type ArchiveDisplayMode = 'folder' | 'list'
 
 interface ListData {
@@ -25,7 +31,6 @@ interface ListData {
   list: ArchiveItem[]
 }
 
-/** 统计明细查询参数 */
 interface DetailQueryParams {
   page: number
   size: number
@@ -41,7 +46,6 @@ interface DetailQueryParams {
 
 const router = useRouter()
 const loading = ref(false)
-
 const error = ref('')
 const summaryData = ref<StatisticsSummary>({ byType: [], total: {} })
 const listData = ref<ListData>({
@@ -73,8 +77,8 @@ const filters = reactive({
 
 const sortKey = ref('date-desc')
 const sortOptions = [
-  { key: 'date-desc', label: '按日期倒序', prop: 'date', order: 'desc' },
-  { key: 'date-asc', label: '按日期升序', prop: 'date', order: 'asc' },
+  { key: 'date-desc', label: '按归档日期倒序', prop: 'date', order: 'desc' },
+  { key: 'date-asc', label: '按归档日期升序', prop: 'date', order: 'asc' },
   { key: 'bah-asc', label: '按病案号升序', prop: 'bah', order: 'asc' },
   { key: 'pages-desc', label: '按页数倒序', prop: 'pages', order: 'desc' },
 ]
@@ -92,7 +96,7 @@ const summaryCards = computed(() => [
   { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
   { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
   { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
-  { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图', tone: 'amber', icon: 'i-ant-design:select-outlined' },
+  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-ant-design:user-outlined' },
 ])
 
 function normalizeText(value: unknown) {
@@ -102,21 +106,36 @@ function normalizeText(value: unknown) {
 
 function padTo8Digits(value: unknown) {
   const text = normalizeText(value)
-  if (text === '-') { return '-' }
+  if (text === '-') {
+    return '-'
+  }
   const num = Number.parseInt(text, 10)
-  if (Number.isNaN(num)) { return text }
+  if (Number.isNaN(num)) {
+    return text
+  }
   return String(num).padStart(8, '0')
 }
 
-function formatDate(value: string | undefined) {
-  if (!value || value.toUpperCase?.() === 'NULL') {
+function formatDate(value: unknown) {
+  const text = normalizeText(value)
+  if (text === '-') {
     return '-'
   }
-  return String(value).replace(/\//g, '-')
+  return text.replace(/\//g, '-').split(/[ T]/)[0]
 }
 
 function archiveKey(item: ArchiveItem, index = 0) {
-  return [item.bah, item.cid, item.date, item.type, item.pages, item.openerNo, item.sjh, index].join('|')
+  return [
+    item.bah,
+    item.patientId,
+    item.cid,
+    item.date,
+    item.type,
+    item.pages,
+    item.openerNo,
+    item.sjh,
+    index,
+  ].join('|')
 }
 
 function tableIndex(index: number) {
@@ -125,10 +144,15 @@ function tableIndex(index: number) {
 
 function typeTone(type: string | undefined) {
   const value = String(type || '')
-  if (value.includes('首页')) { return 'success' }
-  if (value.includes('手术')) { return 'warning' }
-  if (value.includes('护理')) { return 'primary' }
-  if (value.includes('其它') || value.includes('其他')) { return 'info' }
+  if (value.includes('首页')) {
+    return 'success'
+  }
+  if (value.includes('手术')) {
+    return 'warning'
+  }
+  if (value.includes('护理')) {
+    return 'primary'
+  }
   return 'info'
 }
 
@@ -187,8 +211,14 @@ async function loadArchiveList() {
     if (requestId !== archiveListRequestId) {
       return
     }
-    const payload = res.data ?? { list: [], total: 0, size: pageSize.value, totalPages: 0, page: currentPage.value }
-    const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
+    const payload = res.data ?? {
+      list: [],
+      total: 0,
+      size: pageSize.value,
+      totalPages: 0,
+      page: currentPage.value,
+    }
+    const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) as ArchiveItem[] : []
     listData.value = {
       total: Number(payload.total || 0),
       size: Number(payload.size || pageSize.value),
@@ -304,10 +334,18 @@ function goBackToStatistics() {
 
 async function handleExportCsv() {
   const params: Record<string, string> = {}
-  if (filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
-  if (filters.bah.trim()) { params.bah = filters.bah.trim() }
-  if (filters.sjh.trim()) { params.sjh = filters.sjh.trim() }
-  if (filters.type) { params.type = filters.type }
+  if (filters.keyword.trim()) {
+    params.keyword = filters.keyword.trim()
+  }
+  if (filters.bah.trim()) {
+    params.bah = filters.bah.trim()
+  }
+  if (filters.sjh.trim()) {
+    params.sjh = filters.sjh.trim()
+  }
+  if (filters.type) {
+    params.type = filters.type
+  }
   if (filters.dateRange.length === 2) {
     params.startDate = filters.dateRange[0]
     params.endDate = filters.dateRange[1]
@@ -355,7 +393,7 @@ onBeforeUnmount(() => {
         </p>
         <h2>病案明细档案袋</h2>
         <p class="subtitle">
-          以档案袋方式查看病案统计明细，支持筛选、排序、影像查看和整袋下载。
+          统一查看患者、住院、归档与扫描信息，支持筛选、排序、影像查看和整袋下载。
         </p>
       </div>
       <div class="header-actions">
@@ -399,7 +437,7 @@ onBeforeUnmount(() => {
         <div class="panel-header">
           <div>
             <span class="panel-title">档案筛选</span>
-            <span class="panel-subtitle">按病案号、设备、类型和日期范围定位档案袋</span>
+            <span class="panel-subtitle">可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋</span>
           </div>
           <el-tag type="info">
             {{ listData.total || 0 }} 条
@@ -426,7 +464,7 @@ onBeforeUnmount(() => {
           v-model="filters.keyword"
           class="filter-keyword"
           clearable
-          placeholder="搜索设备、人员或日期"
+          placeholder="患者姓名、病人 ID、科室、设备或负责人"
           @keyup.enter="handleSearch"
         />
         <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
@@ -437,8 +475,8 @@ onBeforeUnmount(() => {
           class="filter-date"
           type="daterange"
           range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
+          start-placeholder="归档开始日期"
+          end-placeholder="归档结束日期"
           value-format="YYYY-MM-DD"
         />
         <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
@@ -481,7 +519,7 @@ onBeforeUnmount(() => {
             role="button"
             tabindex="0"
             :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
-            :aria-label="`病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
+            :aria-label="`患者 ${normalizeText(item.patientName)}，病人 ID ${normalizeText(item.patientId)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
             @click="selectArchive(item, index)"
             @keyup.enter="selectArchive(item, index)"
             @keyup.space.prevent="selectArchive(item, index)"
@@ -504,6 +542,27 @@ onBeforeUnmount(() => {
                 </el-tag>
               </div>
 
+              <section class="folder-patient" aria-label="患者住院信息">
+                <div class="folder-patient-heading">
+                  <span>病人姓名</span>
+                  <strong>{{ normalizeText(item.patientName) }}</strong>
+                </div>
+                <dl class="folder-patient-meta">
+                  <div>
+                    <dt>病人 ID</dt>
+                    <dd>{{ normalizeText(item.patientId) }}</dd>
+                  </div>
+                  <div>
+                    <dt>住院科室</dt>
+                    <dd>{{ normalizeText(item.inpatientDepartment) }}</dd>
+                  </div>
+                  <div>
+                    <dt>出院日期</dt>
+                    <dd>{{ formatDate(item.dischargeDate) }}</dd>
+                  </div>
+                </dl>
+              </section>
+
               <div class="folder-code-grid">
                 <div class="folder-code-block">
                   <span class="folder-code-label">病案号</span>
@@ -515,6 +574,20 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
+              <ul class="folder-compact-meta" aria-label="归档辅助信息">
+                <li>
+                  <span>负责人</span>
+                  <strong>{{ normalizeText(item.openerNo) }}</strong>
+                </li>
+                <li>
+                  <span>归档日期</span>
+                  <strong>{{ formatDate(item.date) }}</strong>
+                </li>
+                <li>
+                  <span>扫描设备</span>
+                  <strong>{{ normalizeText(item.cid) }}</strong>
+                </li>
+              </ul>
 
               <div class="folder-footer">
                 <div class="folder-page-count">
@@ -537,14 +610,32 @@ onBeforeUnmount(() => {
             row-key="id"
             @row-click="selectArchiveFromList"
           >
-            <el-table-column label="#" width="92" align="center">
+            <el-table-column label="#" width="72" align="center">
               <template #default="{ $index }">
                 {{ tableIndex($index) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="患者" min-width="150">
+              <template #default="{ row }">
+                <div class="archive-patient-cell">
+                  <strong>{{ normalizeText(row.patientName) }}</strong>
+                  <span>ID {{ normalizeText(row.patientId) }}</span>
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="病案号" min-width="120">
               <template #default="{ row }">
                 <strong class="archive-bah">{{ padTo8Digits(row.bah) }}</strong>
+              </template>
+            </el-table-column>
+            <el-table-column label="住院科室" min-width="110">
+              <template #default="{ row }">
+                {{ normalizeText(row.inpatientDepartment) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="出院日期" min-width="110">
+              <template #default="{ row }">
+                {{ formatDate(row.dischargeDate) }}
               </template>
             </el-table-column>
             <el-table-column label="档案类型" min-width="110">
@@ -564,12 +655,12 @@ onBeforeUnmount(() => {
                 {{ normalizeText(row.cid) }}
               </template>
             </el-table-column>
-            <el-table-column label="上架号" min-width="100">
+            <el-table-column label="上架号" min-width="110">
               <template #default="{ row }">
                 {{ padTo8Digits(row.sjh) }}
               </template>
             </el-table-column>
-            <el-table-column label="页数" width="80" align="right">
+            <el-table-column label="页数" width="84" align="right">
               <template #default="{ row }">
                 {{ Number(row.pages || 0).toLocaleString('zh-CN') }} 页
               </template>
@@ -619,7 +710,9 @@ onBeforeUnmount(() => {
 .header-actions {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
 }
 
 .eyebrow {
@@ -671,18 +764,18 @@ h2 {
 }
 
 .filter-keyword {
-  flex: 1 1 220px;
-  min-width: 180px;
+  flex: 1 1 300px;
+  min-width: 240px;
 }
 
 .filter-type,
 .filter-sort {
-  flex: 0 0 160px;
+  flex: 0 0 170px;
 }
 
 .filter-date {
-  flex: 1 1 280px;
-  min-width: 240px;
+  flex: 1 1 290px;
+  min-width: 260px;
 }
 
 .filter-actions {
@@ -692,11 +785,7 @@ h2 {
   margin-left: auto;
 }
 
-.content-layout {
-  display: grid;
-  gap: 16px;
-}
-
+.content-layout,
 .archive-shelf {
   display: grid;
   gap: 16px;
@@ -717,13 +806,8 @@ h2 {
 
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.archive-loading,
-.empty-wrap {
-  padding: 40px 0;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
 }
 
 .archive-list-wrap {
@@ -733,11 +817,33 @@ h2 {
 }
 
 .archive-list {
-  min-width: 940px;
+  min-width: 1320px;
 }
 
 .archive-bah {
   color: var(--text-primary);
+}
+
+.archive-patient-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.archive-patient-cell strong,
+.archive-patient-cell span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-patient-cell strong {
+  color: var(--text-primary);
+}
+
+.archive-patient-cell span {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 :deep(.el-table__row) {
@@ -753,7 +859,7 @@ h2 {
   --folder-tint: #eef4ff;
 
   position: relative;
-  min-height: 294px;
+  min-height: 412px;
   padding: 16px 8px 8px;
   cursor: pointer;
   outline: none;
@@ -793,7 +899,7 @@ h2 {
   position: relative;
   display: grid;
   gap: 13px;
-  min-height: 270px;
+  min-height: 388px;
   padding: 21px 20px 17px;
   overflow: hidden;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
@@ -933,20 +1039,85 @@ h2 {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
 }
 
+.folder-patient {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  padding: 14px 15px;
+  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 14%, var(--divider));
+  border-radius: 11px;
+}
+
+.folder-patient-heading {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.folder-patient-heading span {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.folder-patient-heading strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.folder-patient-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.folder-patient-meta > div {
+  min-width: 0;
+}
+
+.folder-patient-meta dt {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.folder-patient-meta dd {
+  margin: 3px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
 .folder-code-grid {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .folder-code-block {
   min-width: 0;
-  padding: 12px 13px;
-  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
-  border-radius: 11px;
+  border-radius: 10px;
   transition: background-color 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
 }
 
@@ -979,7 +1150,7 @@ h2 {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: clamp(17px, 1.6vw, 21px);
+  font-size: clamp(16px, 1.5vw, 20px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -987,8 +1158,49 @@ h2 {
   white-space: nowrap;
 }
 
-.folder-footer {
+.folder-compact-meta {
+  position: relative;
   z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 11px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.folder-compact-meta li {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.folder-compact-meta li:not(:last-child)::after {
+  margin-left: 7px;
+  color: color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
+  content: "·";
+}
+
+.folder-compact-meta span {
+  flex: none;
+}
+
+.folder-compact-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.folder-footer {
   padding-top: 11px;
   border-top: 1px dashed color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
 }
@@ -1054,6 +1266,10 @@ h2 {
     flex-direction: column;
   }
 
+  .header-actions {
+    justify-content: flex-start;
+  }
+
   .filter-bah,
   .filter-sjh,
   .filter-keyword,
@@ -1062,12 +1278,29 @@ h2 {
   .filter-sort,
   .filter-actions {
     flex: 1 1 100%;
+    min-width: 0;
     margin-left: 0;
   }
 
   .archive-toolbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (width <= 480px) {
+  .archive-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .folder-patient-meta,
+  .folder-code-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .folder-patient-heading {
+    display: grid;
+    gap: 5px;
   }
 }
 </style>

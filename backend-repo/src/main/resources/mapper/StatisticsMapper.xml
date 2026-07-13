@@ -10,6 +10,10 @@
             || CHR(1) || COALESCE(openerno, '')
             || CHR(1) || COALESCE(date, '')
             || CHR(1) || COALESCE(type, '')
+            || CHR(1) || COALESCE(patientname, '')
+            || CHR(1) || COALESCE(inpatientdepartment, '')
+            || CHR(1) || COALESCE(patientid, '')
+            || CHR(1) || COALESCE(dischargedate, '')
         ) LIKE '%' || #{keyword} || '%'
     </sql>
 

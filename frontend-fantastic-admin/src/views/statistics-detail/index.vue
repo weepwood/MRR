@@ -30,7 +30,7 @@ function findDepartment(card: HTMLElement) {
 
 function applyDepartmentThemes() {
   animationFrame = 0
-  const cards = rootRef.value?.querySelectorAll<HTMLElement>('.archive-folder-card') ?? []
+  const cards = Array.from(rootRef.value?.querySelectorAll<HTMLElement>('.archive-folder-card') ?? [])
   cards.forEach((card) => {
     const theme = resolveArchiveDepartmentTheme(findDepartment(card), departmentThemes)
     const variables = archiveDepartmentThemeCssVariables(theme)

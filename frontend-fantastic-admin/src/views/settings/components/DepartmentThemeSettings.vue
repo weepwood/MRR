@@ -82,7 +82,11 @@ function validateRows() {
 }
 
 function normalizedRows() {
-  return normalizeArchiveDepartmentThemes(rows.value.map(({ id: _id, ...item }) => item))
+  return normalizeArchiveDepartmentThemes(rows.value.map(row => ({
+    department: row.department,
+    folderColor: row.folderColor,
+    stripColor: row.stripColor,
+  })))
 }
 
 async function loadThemes() {

@@ -114,6 +114,10 @@ jobs:
       - name: Apply repository lint rules
         working-directory: frontend-fantastic-admin
         run: |
+          status=0
+          log="../.github/metric-card-lint.log"
+          : > "$log"
+          echo "=== ESLint ===" >> "$log"
           pnpm exec eslint \
             src/views/records-statistics/index.vue \
             src/views/statistics/index.vue \
@@ -122,7 +126,8 @@ jobs:
             src/views/monitoring/index.vue \
             src/views/response-analysis/index.vue \
             src/views/audit-images/components/AuditAnalytics.vue \
-            --fix
+            --fix >> "$log" 2>&1 || status=1
+          echo "=== Stylelint ===" >> "$log"
           pnpm exec stylelint \
             src/assets/styles/globals.css \
             src/views/records-statistics/index.vue \
@@ -132,14 +137,24 @@ jobs:
             src/views/monitoring/index.vue \
             src/views/response-analysis/index.vue \
             src/views/audit-images/components/AuditAnalytics.vue \
-            --fix
-          pnpm exec vue-tsc -b
+            --fix >> "$log" 2>&1 || status=1
+          echo "=== Vue Type Check ===" >> "$log"
+          pnpm exec vue-tsc -b >> "$log" 2>&1 || status=1
+          if [ "$status" -ne 0 ]; then
+            cd ..
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add .github/metric-card-lint.log
+            git commit -m "chore: capture metric card lint diagnostics"
+            git push origin style/unify-metric-cards-20260713
+            exit 1
+          fi
 
       - name: Commit design system migration
         run: |
           rm .github/workflows/metric-card-system-autofix.yml
           rm .github/workflows/metric-card-pr-runner.yml
-          rm -f .github/metric-card-error.log
+          rm -f .github/metric-card-error.log .github/metric-card-lint.log
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add \
@@ -154,6 +169,7 @@ jobs:
             frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue \
             .github/workflows/metric-card-system-autofix.yml \
             .github/workflows/metric-card-pr-runner.yml \
-            .github/metric-card-error.log
+            .github/metric-card-error.log \
+            .github/metric-card-lint.log
           git commit -m "style(design): unify business metric cards"
           git push origin style/unify-metric-cards-20260713

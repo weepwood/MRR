@@ -48,8 +48,10 @@ export function useThumbLayout(
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 
-    const itemHeight = actualItemWidth * 4 / 3 + 42
-    const visibleRows = Math.ceil(container.clientHeight / itemHeight)
+    // Source images may have different aspect ratios, so this is only a neutral
+    // estimate used to decide how many lazy items to render initially.
+    const estimatedItemHeight = actualItemWidth + 52
+    const visibleRows = Math.ceil(container.clientHeight / estimatedItemHeight)
     updatePageSize(thumbColumns.value * Math.max(2, visibleRows + 1))
   }
 

@@ -128,39 +128,57 @@ function showTrendLabel(index: number) {
 
 <template>
   <section class="analytics-shell" :aria-busy="loading">
-    <div class="summary-grid">
-      <el-card shadow="never" class="metric-card metric-primary">
-        <div class="metric-icon">
+    <div class="mrr-metric-grid mrr-metric-grid--compact">
+      <el-card shadow="never" class="mrr-metric-card">
+        <div class="mrr-metric-card__icon">
           <el-icon><DataAnalysis /></el-icon>
         </div>
-        <div><p>访问总量</p><strong>{{ loading ? '—' : formatNumber(analytics.totalAccesses) }}</strong></div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">访问总量</span>
+          <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.totalAccesses) }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="never" class="metric-card metric-teal">
-        <div class="metric-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--teal">
+        <div class="mrr-metric-card__icon">
           <el-icon><User /></el-icon>
         </div>
-        <div><p>独立用户</p><strong>{{ loading ? '—' : formatNumber(analytics.uniqueUsers) }}</strong></div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">独立用户</span>
+          <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.uniqueUsers) }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="never" class="metric-card metric-purple">
-        <div class="metric-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+        <div class="mrr-metric-card__icon">
           <el-icon><Files /></el-icon>
         </div>
-        <div><p>独立访问对象</p><strong>{{ loading ? '—' : formatNumber(analytics.uniqueTargets) }}</strong></div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">独立访问对象</span>
+          <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.uniqueTargets) }}</strong>
+        </div>
       </el-card>
-      <el-card shadow="never" class="metric-card metric-warning">
-        <div class="metric-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--danger">
+        <div class="mrr-metric-card__icon">
           <el-icon><Warning /></el-icon>
         </div>
-        <div>
-          <p>异常请求</p><strong>{{ loading ? '—' : formatNumber(analytics.abnormalAccesses) }}</strong>
-          <span v-if="!loading">{{ abnormalRate.toFixed(1) }}%</span>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">异常请求</span>
+          <div class="mrr-metric-card__value-row">
+            <strong class="mrr-metric-card__value">{{ loading ? '—' : formatNumber(analytics.abnormalAccesses) }}</strong>
+            <span v-if="!loading" class="mrr-metric-card__suffix">{{ abnormalRate.toFixed(1) }}%</span>
+          </div>
         </div>
       </el-card>
-      <el-card shadow="never" class="metric-card metric-neutral">
-        <div class="metric-icon">
+      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--slate">
+        <div class="mrr-metric-card__icon">
           <el-icon><Timer /></el-icon>
         </div>
-        <div><p>平均响应耗时</p><strong>{{ loading ? '—' : analytics.averageDurationMs.toFixed(1) }}</strong><span v-if="!loading">ms</span></div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">平均响应耗时</span>
+          <div class="mrr-metric-card__value-row">
+            <strong class="mrr-metric-card__value">{{ loading ? '—' : analytics.averageDurationMs.toFixed(1) }}</strong>
+            <span v-if="!loading" class="mrr-metric-card__suffix">ms</span>
+          </div>
+        </div>
       </el-card>
     </div>
 
@@ -338,69 +356,6 @@ function showTrendLabel(index: number) {
   display: grid;
   gap: 16px;
 }
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.metric-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
-}
-
-.metric-card::after {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  content: "";
-  background: var(--metric-color);
-}
-
-.metric-card :deep(.el-card__body) {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 18px;
-}
-
-.metric-icon {
-  display: grid;
-  flex: 0 0 42px;
-  place-items: center;
-  height: 42px;
-  font-size: 21px;
-  color: var(--metric-color);
-  background: color-mix(in srgb, var(--metric-color) 10%, var(--el-bg-color));
-  border-radius: 11px;
-}
-
-.metric-card p {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.metric-card strong {
-  font-size: 24px;
-  line-height: 1;
-  color: var(--text-primary);
-}
-
-.metric-card span {
-  margin-left: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.metric-primary { --metric-color: #4f46e5; }
-.metric-teal { --metric-color: #0f9f8f; }
-.metric-purple { --metric-color: #8b5cf6; }
-.metric-warning { --metric-color: #f97316; }
-.metric-neutral { --metric-color: #64748b; }
 
 .chart-grid {
   display: grid;
@@ -790,10 +745,6 @@ function showTrendLabel(index: number) {
 }
 
 @media (width <= 560px) {
-  .summary-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .trend-insights {
     grid-template-columns: 1fr;
   }
@@ -809,12 +760,6 @@ function showTrendLabel(index: number) {
 
   .date-count {
     display: none;
-  }
-}
-
-@media (width <= 380px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 

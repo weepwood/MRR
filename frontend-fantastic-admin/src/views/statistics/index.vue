@@ -184,25 +184,25 @@ onMounted(loadData)
       </div>
     </section>
 
-    <section class="summary-grid" aria-label="核心统计指标">
-      <article
+    <section class="mrr-metric-grid" aria-label="核心统计指标">
+      <el-card
         v-for="item in summaryCards"
         :key="item.label"
-        class="summary-card"
-        :class="`summary-card--${item.tone}`"
+        shadow="never"
+        class="mrr-metric-card"
+        :class="`mrr-metric-card--${item.tone}`"
       >
-        <div class="summary-card__header">
-          <div class="summary-icon">
-            <el-icon><component :is="item.icon" /></el-icon>
-          </div>
-          <span class="summary-label">{{ item.label }}</span>
+        <div class="mrr-metric-card__icon">
+          <el-icon><component :is="item.icon" /></el-icon>
         </div>
-        <strong class="summary-value">{{ formatNumber(item.value) }}</strong>
-        <p class="summary-note">
-          {{ item.note }}
-        </p>
-        <div class="summary-decoration" />
-      </article>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">{{ item.label }}</span>
+          <strong class="mrr-metric-card__value">{{ formatNumber(item.value) }}</strong>
+          <p class="mrr-metric-card__note">
+            {{ item.note }}
+          </p>
+        </div>
+      </el-card>
     </section>
 
     <section class="analytics-grid">
@@ -430,102 +430,6 @@ h2 {
   min-height: 40px;
   padding-inline: 17px;
   border-radius: 10px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.summary-card {
-  --card-accent: #2563eb;
-  --card-tint: #eff6ff;
-
-  position: relative;
-  min-height: 160px;
-  padding: 20px;
-  overflow: hidden;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--card-tint) 42%, var(--surface)), var(--surface) 66%);
-  border: 1px solid color-mix(in srgb, var(--card-accent) 14%, var(--divider));
-  border-radius: 18px;
-  box-shadow: 0 8px 26px rgb(15 23 42 / 5%);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.summary-card:hover {
-  border-color: color-mix(in srgb, var(--card-accent) 34%, var(--divider));
-  box-shadow: 0 14px 32px rgb(15 23 42 / 9%);
-  transform: translateY(-2px);
-}
-
-.summary-card--violet {
-  --card-accent: #7c3aed;
-  --card-tint: #f5f3ff;
-}
-
-.summary-card--green {
-  --card-accent: #059669;
-  --card-tint: #ecfdf5;
-}
-
-.summary-card--amber {
-  --card-accent: #d97706;
-  --card-tint: #fffbeb;
-}
-
-.summary-card__header {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.summary-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  color: var(--card-accent);
-  background: color-mix(in srgb, var(--card-accent) 11%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--card-accent) 15%, transparent);
-  border-radius: 11px;
-}
-
-.summary-icon :deep(.el-icon) {
-  font-size: 18px;
-}
-
-.summary-label {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  display: block;
-  margin-top: 18px;
-  font-size: 28px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  color: var(--text-primary);
-  letter-spacing: -0.04em;
-}
-
-.summary-note {
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-decoration {
-  position: absolute;
-  right: -22px;
-  bottom: -32px;
-  width: 110px;
-  height: 110px;
-  pointer-events: none;
-  background: radial-gradient(circle, color-mix(in srgb, var(--card-accent) 13%, transparent), transparent 68%);
-  border-radius: 50%;
 }
 
 .analytics-grid {
@@ -761,10 +665,6 @@ h2 {
 }
 
 @media (width <= 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .analytics-grid {
     grid-template-columns: 1fr;
   }
@@ -803,10 +703,6 @@ h2 {
 }
 
 @media (width <= 560px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
   .hero-actions :deep(.el-button) {
     flex: 1;
   }

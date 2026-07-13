@@ -89,10 +89,10 @@ const typeOptions = computed(() => {
 const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
 
 const summaryCards = computed(() => [
-  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
-  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量' },
-  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数' },
-  { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图' },
+  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
+  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
+  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
+  { label: '当前选中', value: selectedArchive.value?.bah ? padTo8Digits(selectedArchive.value.bah) : '未选择', note: '可进入影像档案袋查看原图', tone: 'amber', icon: 'i-ant-design:select-outlined' },
 ])
 
 function normalizeText(value: unknown) {
@@ -102,9 +102,9 @@ function normalizeText(value: unknown) {
 
 function padTo8Digits(value: unknown) {
   const text = normalizeText(value)
-  if (text === '-') return '-'
-  const num = parseInt(text, 10)
-  if (Number.isNaN(num)) return text
+  if (text === '-') { return '-' }
+  const num = Number.parseInt(text, 10)
+  if (Number.isNaN(num)) { return text }
   return String(num).padStart(8, '0')
 }
 
@@ -371,16 +371,25 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
+    <section class="mrr-metric-grid">
+      <el-card
+        v-for="item in summaryCards"
+        :key="item.label"
+        shadow="never"
+        class="mrr-metric-card"
+        :class="`mrr-metric-card--${item.tone}`"
+      >
+        <div class="mrr-metric-card__icon">
+          <i :class="item.icon" />
         </div>
-        <div class="summary-value">
-          {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">{{ item.label }}</span>
+          <strong class="mrr-metric-card__value">
+            {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
+          </strong>
+          <p class="mrr-metric-card__note">
+            {{ item.note }}
+          </p>
         </div>
       </el-card>
     </section>
@@ -651,32 +660,6 @@ h2 {
   color: var(--text-secondary);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
 .panel-header {
   display: flex;
   gap: 12px;
@@ -817,7 +800,6 @@ h2 {
   background: color-mix(in srgb, var(--folder-tint) 48%, var(--surface));
   transform: rotate(0.8deg);
 }
-
 
 .folder-card-body {
   position: relative;
@@ -1060,12 +1042,6 @@ h2 {
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
-}
-
-@media (width <= 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (width <= 720px) {

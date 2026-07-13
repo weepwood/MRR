@@ -33,18 +33,19 @@
   --divider: hsl(var(--border));
 
   /* ===== MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） ===== */
+
   /* 品牌主色 */
   --color-primary: #0075de;          /* Notion Blue — CTA、链接、交互强调 */
   --color-primary-active: #005bab;   /* Active Blue — 按下态 */
   --color-primary-deep: #213183;     /* Deep Navy — 次级品牌色 */
 
   /* 文本 */
-  --color-text: rgba(0, 0, 0, 0.95); /* Near-black — 主文本 */
+  --color-text: rgb(0 0 0 / 95%); /* Near-black — 主文本 */
   --color-text-muted: #615d59;       /* Warm Gray 500 — 次级文本 */
   --color-text-placeholder: #a39e98; /* Warm Gray 300 — 占位/禁用 */
 
   /* 表面 */
-  --color-bg: #ffffff;               /* Pure White — 页面背景 */
+  --color-bg: #fff;               /* Pure White — 页面背景 */
   --color-bg-warm: #f6f5f4;          /* Warm White — 区块交替/卡片填充 */
   --color-bg-dark: #31302e;          /* Warm Dark — 暗色区域 */
 
@@ -55,8 +56,8 @@
   --color-danger: #e03e3e;           /* Red — 错误/危险（补充） */
 
   /* 边框 — Notion 风格的 whisper-weight 分割线 */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-strong: rgba(0, 0, 0, 0.16);
+  --color-border: rgb(0 0 0 / 10%);
+  --color-border-strong: rgb(0 0 0 / 16%);
 
   &.dark {
     color-scheme: dark;
@@ -64,16 +65,203 @@
     --scrollbar-color: 240 3.7% 15.9%;
 
     /* 暗色模式下调色板映射 */
-    --color-text: rgba(255, 255, 255, 0.95);
+    --color-text: rgb(255 255 255 / 95%);
     --color-text-muted: #a39e98;
     --color-text-placeholder: #615d59;
-
     --color-bg: #31302e;
     --color-bg-warm: #3d3a37;
     --color-bg-dark: #252321;
+    --color-border: rgb(255 255 255 / 10%);
+    --color-border-strong: rgb(255 255 255 / 16%);
+  }
+}
 
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-strong: rgba(255, 255, 255, 0.16);
+/* ===== MRR 业务指标卡片 ===== */
+.mrr-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.mrr-metric-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.mrr-metric-card {
+  --mrr-metric-accent: #0071e3;
+  --mrr-metric-tint: #eff6ff;
+
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--mrr-metric-tint) 36%, var(--surface)) 0%,
+      var(--surface) 72%
+    );
+  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, var(--divider));
+  border-top: 3px solid var(--mrr-metric-accent);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgb(15 23 42 / 5%);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.mrr-metric-card:hover,
+.mrr-metric-card:focus-within {
+  border-color: color-mix(in srgb, var(--mrr-metric-accent) 34%, var(--divider));
+  border-top-color: var(--mrr-metric-accent);
+  box-shadow: 0 12px 28px rgb(15 23 42 / 9%);
+  transform: translateY(-2px);
+}
+
+.mrr-metric-card .el-card__body {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-height: 96px;
+  padding: 20px 22px;
+}
+
+.mrr-metric-card__icon {
+  display: grid;
+  flex: 0 0 52px;
+  place-items: center;
+  height: 52px;
+  font-size: 26px;
+  color: var(--mrr-metric-accent);
+  background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, transparent);
+  border-radius: 14px;
+}
+
+.mrr-metric-card__icon .el-icon {
+  font-size: inherit;
+}
+
+.mrr-metric-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mrr-metric-card__label {
+  display: block;
+  margin: 0 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.mrr-metric-card__value {
+  display: block;
+  margin: 0;
+  font-size: 26px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.mrr-metric-card__value--compact {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.mrr-metric-card__value-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.mrr-metric-card__suffix {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mrr-metric-card__note {
+  margin: 7px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.mrr-metric-card--rose {
+  --mrr-metric-accent: #e11d48;
+  --mrr-metric-tint: #fff1f2;
+}
+
+.mrr-metric-card--green {
+  --mrr-metric-accent: #16a34a;
+  --mrr-metric-tint: #f0fdf4;
+}
+
+.mrr-metric-card--amber {
+  --mrr-metric-accent: #d97706;
+  --mrr-metric-tint: #fffbeb;
+}
+
+.mrr-metric-card--violet {
+  --mrr-metric-accent: #7c3aed;
+  --mrr-metric-tint: #f5f3ff;
+}
+
+.mrr-metric-card--teal {
+  --mrr-metric-accent: #0f766e;
+  --mrr-metric-tint: #f0fdfa;
+}
+
+.mrr-metric-card--slate {
+  --mrr-metric-accent: #64748b;
+  --mrr-metric-tint: #f8fafc;
+}
+
+.mrr-metric-card--danger {
+  --mrr-metric-accent: #dc2626;
+  --mrr-metric-tint: #fef2f2;
+}
+
+@media (width <= 600px) {
+  .mrr-metric-grid,
+  .mrr-metric-grid--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .mrr-metric-card .el-card__body {
+    min-height: 88px;
+    padding: 18px;
+  }
+
+  .mrr-metric-card__icon {
+    flex-basis: 46px;
+    height: 46px;
+    font-size: 23px;
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mrr-metric-card {
+    transition: none;
+  }
+
+  .mrr-metric-card:hover,
+  .mrr-metric-card:focus-within {
+    transform: none;
   }
 }
 

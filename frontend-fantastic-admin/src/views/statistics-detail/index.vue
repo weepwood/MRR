@@ -519,7 +519,7 @@ onBeforeUnmount(() => {
             role="button"
             tabindex="0"
             :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
-            :aria-label="`患者 ${normalizeText(item.patientName)}，病人 ID ${normalizeText(item.patientId)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
+            :aria-label="`患者 ${normalizeText(item.patientName)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
             @click="selectArchive(item, index)"
             @keyup.enter="selectArchive(item, index)"
             @keyup.space.prevent="selectArchive(item, index)"
@@ -542,28 +542,20 @@ onBeforeUnmount(() => {
                 </el-tag>
               </div>
 
-              <section class="folder-patient" aria-label="患者住院信息">
-                <div class="folder-patient-heading">
-                  <span>病人姓名</span>
-                  <strong>{{ normalizeText(item.patientName) }}</strong>
-                </div>
-                <dl class="folder-patient-meta">
-                  <div>
-                    <dt>病人 ID</dt>
-                    <dd>{{ normalizeText(item.patientId) }}</dd>
-                  </div>
-                  <div>
-                    <dt>住院科室</dt>
-                    <dd>{{ normalizeText(item.inpatientDepartment) }}</dd>
-                  </div>
-                  <div>
-                    <dt>出院日期</dt>
-                    <dd>{{ formatDate(item.dischargeDate) }}</dd>
-                  </div>
-                </dl>
-              </section>
+              <div class="folder-patient-heading">
+                <span>病人姓名</span>
+                <strong>{{ normalizeText(item.patientName) }}</strong>
+              </div>
 
               <div class="folder-code-grid">
+                <div class="folder-code-block">
+                  <span class="folder-code-label">住院科室</span>
+                  <strong class="folder-code-value">{{ normalizeText(item.inpatientDepartment) }}</strong>
+                </div>
+                <div class="folder-code-block">
+                  <span class="folder-code-label">出院日期</span>
+                  <strong class="folder-code-value">{{ formatDate(item.dischargeDate) }}</strong>
+                </div>
                 <div class="folder-code-block">
                   <span class="folder-code-label">病案号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
@@ -574,20 +566,6 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <ul class="folder-compact-meta" aria-label="归档辅助信息">
-                <li>
-                  <span>负责人</span>
-                  <strong>{{ normalizeText(item.openerNo) }}</strong>
-                </li>
-                <li>
-                  <span>归档日期</span>
-                  <strong>{{ formatDate(item.date) }}</strong>
-                </li>
-                <li>
-                  <span>扫描设备</span>
-                  <strong>{{ normalizeText(item.cid) }}</strong>
-                </li>
-              </ul>
 
               <div class="folder-footer">
                 <div class="folder-page-count">
@@ -1039,17 +1017,6 @@ h2 {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
 }
 
-.folder-patient {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 12px;
-  padding: 14px 15px;
-  background: color-mix(in srgb, var(--folder-accent) 5%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 14%, var(--divider));
-  border-radius: 11px;
-}
-
 .folder-patient-heading {
   display: flex;
   gap: 10px;
@@ -1076,34 +1043,6 @@ h2 {
   white-space: nowrap;
 }
 
-.folder-patient-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.folder-patient-meta > div {
-  min-width: 0;
-}
-
-.folder-patient-meta dt {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.folder-patient-meta dd {
-  margin: 3px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
 .folder-code-grid {
   position: relative;
   z-index: 1;
@@ -1118,23 +1057,6 @@ h2 {
   background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
   border-radius: 10px;
-  transition: background-color 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
-}
-
-.archive-folder-card:hover .folder-code-block,
-.archive-folder-card:focus-visible .folder-code-block {
-  background: color-mix(in srgb, var(--folder-accent) 8%, var(--surface));
-  border-color: color-mix(in srgb, var(--folder-accent) 24%, var(--divider));
-}
-
-.archive-folder-card:hover .folder-code-block:first-child,
-.archive-folder-card:focus-visible .folder-code-block:first-child {
-  transform: translateX(-1px);
-}
-
-.archive-folder-card:hover .folder-code-block:last-child,
-.archive-folder-card:focus-visible .folder-code-block:last-child {
-  transform: translateX(1px);
 }
 
 .folder-code-label {
@@ -1158,46 +1080,9 @@ h2 {
   white-space: nowrap;
 }
 
-.folder-compact-meta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 11px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.folder-compact-meta li {
-  display: inline-flex;
-  gap: 4px;
-  align-items: baseline;
-  min-width: 0;
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.folder-compact-meta li:not(:last-child)::after {
-  margin-left: 7px;
-  color: color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
-  content: "·";
-}
-
-.folder-compact-meta span {
-  flex: none;
-}
-
-.folder-compact-meta strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-  white-space: nowrap;
+.folder-code-block:nth-child(-n+2) .folder-code-value {
+  font-size: clamp(13px, 1.2vw, 15px);
+  font-weight: 700;
 }
 
 .folder-footer {
@@ -1293,7 +1178,6 @@ h2 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folder-patient-meta,
   .folder-code-grid {
     grid-template-columns: 1fr;
   }

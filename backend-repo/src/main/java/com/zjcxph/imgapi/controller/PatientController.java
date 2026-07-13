@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.mapper.SearchMapper;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -67,7 +68,10 @@ public class PatientController {
     @Operation(summary = "根据病案号查询患者信息")
     @GetMapping("/bah/{bah}")
     public Result<List<Patient>> getByBah(@PathVariable String bah) {
-        List<Patient> patients = searchMapper.findPatientByBah(bah);
+        List<Patient> patients = searchMapper.findPatientByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
         return Result.<List<Patient>>success().data(patients);
     }
 

@@ -262,14 +262,13 @@ defineExpose({ resetVisible, scrollToIndex })
 .thumb-image-placeholder {
   box-sizing: border-box;
   width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
   border-radius: 5px;
 }
 
 .thumb-item img {
   display: block;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   background: var(--surface-alt);
 }
 
@@ -279,6 +278,7 @@ defineExpose({ resetVisible, scrollToIndex })
   gap: 6px;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 3 / 4;
   padding: 10px;
   font-size: 11px;
   color: var(--text-tertiary);

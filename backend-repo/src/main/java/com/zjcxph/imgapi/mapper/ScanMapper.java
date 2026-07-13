@@ -1,8 +1,9 @@
 package com.zjcxph.imgapi.mapper;
 
+import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
-import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -88,6 +89,16 @@ public interface ScanMapper {
             @Param("normalizedBah") String normalizedBah,
             @Param("searchCode") String searchCode
     );
+
+    /**
+     * 保留旧的一参数调用方式，内部自动转换为规范值与去前导零搜索词。
+     */
+    default List<Scan> findByBah(String bah) {
+        return findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
+    }
 
     // 根据文件夹查询
     @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id")

@@ -5,6 +5,7 @@ import { getSystemSettings } from '@/api/modules/settings'
 import {
   ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY,
   ARCHIVE_DEPARTMENT_THEME_SETTING_KEY,
+  ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT,
   archiveDepartmentThemeCssVariables,
   loadArchiveDepartmentThemesFromLocal,
   normalizeArchiveDepartmentThemes,
@@ -65,6 +66,12 @@ async function loadDepartmentThemes() {
   scheduleDepartmentThemeApply()
 }
 
+function handleThemeUpdate(event: Event) {
+  const detail = event instanceof CustomEvent ? event.detail : null
+  departmentThemes = detail ? normalizeArchiveDepartmentThemes(detail) : loadArchiveDepartmentThemesFromLocal()
+  scheduleDepartmentThemeApply()
+}
+
 function handleStorage(event: StorageEvent) {
   if (event.key !== ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY) {
     return
@@ -78,6 +85,7 @@ onMounted(() => {
   if (rootRef.value) {
     observer.observe(rootRef.value, { childList: true, subtree: true, characterData: true })
   }
+  window.addEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleThemeUpdate)
   window.addEventListener('storage', handleStorage)
   scheduleDepartmentThemeApply()
   loadDepartmentThemes()
@@ -89,6 +97,7 @@ onBeforeUnmount(() => {
   if (animationFrame) {
     window.cancelAnimationFrame(animationFrame)
   }
+  window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleThemeUpdate)
   window.removeEventListener('storage', handleStorage)
 })
 </script>

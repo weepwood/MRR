@@ -6,6 +6,7 @@ export interface ArchiveDepartmentTheme {
 
 export const ARCHIVE_DEPARTMENT_THEME_SETTING_KEY = 'archiveDepartmentThemes'
 export const ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY = 'MRR-ADMIN:archive-department-themes'
+export const ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT = 'mrr:archive-department-themes-updated'
 
 export const ARCHIVE_DEPARTMENT_THEME_PRESETS = [
   { folderColor: '#2563EB', stripColor: '#1D4ED8' },
@@ -127,7 +128,9 @@ export function saveArchiveDepartmentThemesToLocal(themes: ArchiveDepartmentThem
   }
 
   try {
-    localStorage.setItem(ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY, JSON.stringify(normalizeArchiveDepartmentThemes(themes)))
+    const normalizedThemes = normalizeArchiveDepartmentThemes(themes)
+    localStorage.setItem(ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY, JSON.stringify(normalizedThemes))
+    window.dispatchEvent(new CustomEvent(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, { detail: normalizedThemes }))
   }
   catch {
     // 浏览器禁用本地存储时忽略，服务端配置仍可正常使用。

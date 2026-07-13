@@ -46,6 +46,8 @@ jobs:
         run: pnpm lint:tsc
 
       - name: Unit tests
+        id: unit-tests
+        continue-on-error: true
         run: pnpm test:run
 
       - name: Build mock application
@@ -56,3 +58,9 @@ jobs:
 
       - name: End-to-end tests without backend
         run: pnpm test:e2e
+
+      - name: Preserve unit test failure
+        if: always() && steps.unit-tests.outcome == 'failure'
+        run: |
+          echo "::error::Unit tests failed. Build and E2E were still executed for independent diagnostics."
+          exit 1

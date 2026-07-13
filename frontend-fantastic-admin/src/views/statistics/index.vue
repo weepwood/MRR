@@ -1,11 +1,42 @@
 <script setup lang="ts">
-import { ArrowRight } from '@element-plus/icons-vue'
+import {
+  ArrowRight,
+  Calendar,
+  DataAnalysis,
+  Document,
+  Files,
+  Refresh,
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getDashboardData, getStatisticsDateSummary, getStatisticsSummary } from '@/api/modules/statistics'
+
+import {
+  getDashboardData,
+  getStatisticsDateSummary,
+  getStatisticsSummary,
+} from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsPage' })
+
+interface TypeDisplayItem {
+  type: string
+  records: number
+  pages: number
+}
+
+interface TrendDisplayItem {
+  date: string
+  records: number
+  pages: number
+}
+
+interface TopBahDisplayItem {
+  bah: string
+  recordCount: number
+  totalPages: number
+  rank: number
+}
 
 const router = useRouter()
 const loading = ref(false)
@@ -13,16 +44,81 @@ const summaryData = ref<any>({ total: {}, byType: [] })
 const dashboardData = ref<any>({ recentTrend: [], topBAH: [] })
 const dateSummaryData = ref<any[]>([])
 
+const totalRecords = computed(() => Number(summaryData.value.total?.totalRecords || 0))
+const totalPages = computed(() => Number(summaryData.value.total?.totalPages || 0))
+const uniqueBahCount = computed(() => Number(summaryData.value.uniqueBAHCount || 0))
+
+const typeList = computed<TypeDisplayItem[]>(() => {
+  const source = Array.isArray(summaryData.value.byType) ? summaryData.value.byType : []
+  return source
+    .map((item: any) => ({
+      type: String(item?.type || '未分类'),
+      records: Number(item?.recordCount || item?.totalRecords || 0),
+      pages: Number(item?.totalPages || item?.pageCount || 0),
+    }))
+    .sort((a: TypeDisplayItem, b: TypeDisplayItem) => b.records - a.records)
+})
+
+const typeRecordTotal = computed(() => typeList.value.reduce((total, item) => total + item.records, 0))
+
+const trendDates = computed<TrendDisplayItem[]>(() => {
+  const source = Array.isArray(dateSummaryData.value) ? dateSummaryData.value.slice(-10) : []
+  return source.map((item: any) => ({
+    date: String(item?.date || '-'),
+    records: Number(item?.recordCount || 0),
+    pages: Number(item?.totalPages || 0),
+  }))
+})
+
+const maxTrendPages = computed(() => Math.max(1, ...trendDates.value.map(item => item.pages)))
+const recentRecordTotal = computed(() => trendDates.value.reduce((total, item) => total + item.records, 0))
+const recentPageTotal = computed(() => trendDates.value.reduce((total, item) => total + item.pages, 0))
+const averageDailyPages = computed(() => trendDates.value.length
+  ? Math.round(recentPageTotal.value / trendDates.value.length)
+  : 0)
+
+const topBahList = computed<TopBahDisplayItem[]>(() => {
+  const source = Array.isArray(dashboardData.value.topBAH) ? dashboardData.value.topBAH.slice(0, 8) : []
+  return source.map((item: any, index: number) => ({
+    bah: String(item?.bah || '-'),
+    recordCount: Number(item?.recordCount || 0),
+    totalPages: Number(item?.totalPages || 0),
+    rank: index + 1,
+  }))
+})
+
 const summaryCards = computed(() => [
-  { label: '总记录数', value: summaryData.value.total?.totalRecords || 0, note: '统计表内累计记录' },
-  { label: '总页数', value: summaryData.value.total?.totalPages || 0, note: '累计扫描页数' },
-  { label: '唯一病案号', value: summaryData.value.uniqueBAHCount || 0, note: '病案维度的归档数量' },
-  { label: '近 30 天趋势点', value: dashboardData.value.recentTrend?.length || 0, note: '仪表盘趋势数据量' },
+  {
+    label: '总记录数',
+    value: totalRecords.value,
+    note: '统计表内累计扫描记录',
+    icon: Document,
+    tone: 'blue',
+  },
+  {
+    label: '总扫描页数',
+    value: totalPages.value,
+    note: '所有病案影像累计页数',
+    icon: Files,
+    tone: 'violet',
+  },
+  {
+    label: '唯一病案号',
+    value: uniqueBahCount.value,
+    note: '已完成归档的病案数量',
+    icon: DataAnalysis,
+    tone: 'green',
+  },
+  {
+    label: '趋势统计天数',
+    value: trendDates.value.length,
+    note: '当前展示的近期扫描周期',
+    icon: Calendar,
+    tone: 'amber',
+  },
 ])
 
-const topBahList = computed(() => Array.isArray(dashboardData.value.topBAH) ? dashboardData.value.topBAH.slice(0, 8) : [])
-const typeList = computed(() => Array.isArray(summaryData.value.byType) ? summaryData.value.byType : [])
-const recentDates = computed(() => Array.isArray(dateSummaryData.value) ? dateSummaryData.value.slice(-10).reverse() : [])
+const latestStatisticsDate = computed(() => trendDates.value.at(-1)?.date || '暂无数据')
 
 async function loadData() {
   loading.value = true
@@ -44,11 +140,35 @@ async function loadData() {
   }
 }
 
+function formatNumber(value: number) {
+  return Number(value || 0).toLocaleString('zh-CN')
+}
+
+function formatShortDate(value: string) {
+  const normalized = String(value || '').replace(/\//g, '-')
+  const parts = normalized.split('-')
+  return parts.length >= 3 ? `${parts.at(-2)}-${parts.at(-1)}` : normalized
+}
+
+function getTypePercentage(records: number) {
+  const total = typeRecordTotal.value || totalRecords.value
+  if (!total) { return 0 }
+  return Math.min(100, Math.round((records / total) * 100))
+}
+
+function getTrendHeight(pages: number) {
+  return `${Math.max(8, Math.round((pages / maxTrendPages.value) * 100))}%`
+}
+
 function goToDetail() {
   router.push('/statistics-detail')
 }
 
 function openArchive(bah: string) {
+  if (!bah || bah === '-') {
+    ElMessage.warning('该记录缺少病案号，无法打开归档影像')
+    return
+  }
   router.push(`/archive/${bah}`)
 }
 
@@ -57,96 +177,207 @@ onMounted(loadData)
 
 <template>
   <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Statistics Center
-        </p>
-        <h2>统计分析</h2>
-        <p class="subtitle">
-          聚合查看病案统计概览、类型分布、趋势变化与高频病案归档情况。
-        </p>
-      </div>
-      <el-button type="primary" @click="goToDetail">
-        查看统计明细
-        <el-icon><ArrowRight /></el-icon>
-      </el-button>
-    </div>
+    <section class="hero-panel">
+      <div class="hero-orb hero-orb--one" />
+      <div class="hero-orb hero-orb--two" />
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
+      <div class="hero-content">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="status-dot" />
+            Records Statistics
+          </div>
+          <h2>病案扫描数据统计</h2>
+          <p class="subtitle">
+            汇总病案扫描规模、类型分布与近期变化，快速定位高频病案和异常数据波动。
+          </p>
+          <div class="hero-meta">
+            <span>最新统计日期：{{ latestStatisticsDate }}</span>
+            <span>{{ typeList.length }} 个病案类型</span>
+            <span>{{ topBahList.length }} 个高频病案</span>
+          </div>
         </div>
-        <div class="summary-value">
-          {{ item.value }}
+
+        <div class="hero-actions">
+          <el-button :icon="Refresh" :loading="loading" @click="loadData">
+            刷新数据
+          </el-button>
+          <el-button type="primary" @click="goToDetail">
+            查看统计明细
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
         </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
+      </div>
     </section>
 
-    <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card shadow="never">
-          <template #header>
-            类型分布
-          </template>
-          <div v-loading="loading" class="stack-list">
-            <template v-if="typeList.length">
-              <article v-for="item in typeList" :key="item.type" class="stack-item">
-                <div>
-                  <strong>{{ item.type || '未分类' }}</strong>
-                  <p>记录数 {{ item.recordCount || item.totalRecords || 0 }}</p>
-                </div>
-                <el-tag>{{ item.totalPages || item.pageCount || 0 }} 页</el-tag>
-              </article>
-            </template>
-            <el-empty v-else-if="!loading" description="暂无类型分布数据" :image-size="60" />
+    <section class="summary-grid" aria-label="核心统计指标">
+      <article
+        v-for="item in summaryCards"
+        :key="item.label"
+        class="summary-card"
+        :class="`summary-card--${item.tone}`"
+      >
+        <div class="summary-card__header">
+          <div class="summary-icon">
+            <el-icon><component :is="item.icon" /></el-icon>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card shadow="never">
-          <template #header>
-            近 10 日趋势
-          </template>
-          <div v-loading="loading" class="stack-list">
-            <template v-if="recentDates.length">
-              <article v-for="item in recentDates" :key="item.date" class="stack-item">
-                <div>
-                  <strong>{{ item.date || '-' }}</strong>
-                  <p>记录数 {{ item.recordCount || 0 }}</p>
-                </div>
-                <el-tag type="success">
-                  {{ item.totalPages || 0 }} 页
-                </el-tag>
-              </article>
-            </template>
-            <el-empty v-else-if="!loading" description="暂无趋势数据" :image-size="60" />
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+          <span class="summary-label">{{ item.label }}</span>
+        </div>
+        <strong class="summary-value">{{ formatNumber(item.value) }}</strong>
+        <p class="summary-note">
+          {{ item.note }}
+        </p>
+        <div class="summary-decoration" />
+      </article>
+    </section>
 
-    <el-card shadow="never">
-      <template #header>
-        高频病案号
-      </template>
-      <el-table v-loading="loading" :data="topBahList" stripe empty-text="暂无高频病案数据">
-        <el-table-column prop="bah" label="病案号" min-width="140" />
-        <el-table-column prop="recordCount" label="记录数" width="120" />
-        <el-table-column prop="totalPages" label="总页数" width="120" />
-        <el-table-column label="操作" width="140" fixed="right">
+    <section class="analytics-grid">
+      <article class="data-panel type-panel">
+        <header class="panel-header">
+          <div>
+            <p class="panel-kicker">
+              Category Overview
+            </p>
+            <h3>病案类型分布</h3>
+            <p>按记录数量统计各扫描类型的占比与页数。</p>
+          </div>
+          <span class="panel-badge">{{ typeList.length }} 类</span>
+        </header>
+
+        <div v-loading="loading" class="type-list">
+          <template v-if="typeList.length">
+            <article v-for="(item, index) in typeList" :key="`${item.type}-${index}`" class="type-item">
+              <div class="type-item__top">
+                <div class="type-name">
+                  <span class="type-index">{{ String(index + 1).padStart(2, '0') }}</span>
+                  <strong>{{ item.type }}</strong>
+                </div>
+                <strong>{{ formatNumber(item.records) }} 条</strong>
+              </div>
+              <div class="progress-track" aria-hidden="true">
+                <div class="progress-fill" :style="{ width: `${getTypePercentage(item.records)}%` }" />
+              </div>
+              <div class="type-item__footer">
+                <span>{{ formatNumber(item.pages) }} 扫描页</span>
+                <span>{{ getTypePercentage(item.records) }}%</span>
+              </div>
+            </article>
+          </template>
+          <el-empty v-else-if="!loading" description="暂无类型分布数据" :image-size="72" />
+        </div>
+      </article>
+
+      <article class="data-panel trend-panel">
+        <header class="panel-header">
+          <div>
+            <p class="panel-kicker">
+              Recent Activity
+            </p>
+            <h3>近 10 日扫描趋势</h3>
+            <p>以扫描页数展示每日工作量变化，辅助观察处理节奏。</p>
+          </div>
+          <span class="panel-badge panel-badge--success">按页数</span>
+        </header>
+
+        <div v-loading="loading" class="trend-content">
+          <template v-if="trendDates.length">
+            <div class="trend-chart" role="img" aria-label="近十日扫描页数柱状趋势图">
+              <div v-for="item in trendDates" :key="item.date" class="trend-column">
+                <span class="trend-value">{{ formatNumber(item.pages) }}</span>
+                <div class="trend-bar-track">
+                  <div
+                    class="trend-bar"
+                    :style="{ height: getTrendHeight(item.pages) }"
+                    :title="`${item.date}：${formatNumber(item.pages)} 页，${formatNumber(item.records)} 条记录`"
+                  >
+                    <span />
+                  </div>
+                </div>
+                <span class="trend-date">{{ formatShortDate(item.date) }}</span>
+              </div>
+            </div>
+
+            <div class="trend-summary">
+              <div>
+                <span>近期记录</span>
+                <strong>{{ formatNumber(recentRecordTotal) }}</strong>
+              </div>
+              <div>
+                <span>近期页数</span>
+                <strong>{{ formatNumber(recentPageTotal) }}</strong>
+              </div>
+              <div>
+                <span>日均页数</span>
+                <strong>{{ formatNumber(averageDailyPages) }}</strong>
+              </div>
+            </div>
+          </template>
+          <el-empty v-else-if="!loading" description="暂无趋势数据" :image-size="72" />
+        </div>
+      </article>
+    </section>
+
+    <section class="data-panel ranking-panel">
+      <header class="panel-header ranking-header">
+        <div>
+          <p class="panel-kicker">
+            Frequent Records
+          </p>
+          <h3>高频病案号</h3>
+          <p>按扫描记录数排序，快速进入对应病案的归档影像。</p>
+        </div>
+        <el-button text type="primary" @click="goToDetail">
+          查看全部明细
+          <el-icon><ArrowRight /></el-icon>
+        </el-button>
+      </header>
+
+      <el-table
+        v-loading="loading"
+        :data="topBahList"
+        class="rank-table"
+        empty-text="暂无高频病案数据"
+      >
+        <el-table-column label="排名" width="88" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openArchive(row.bah)">
-              归档图像
+            <span class="rank-badge" :class="{ 'rank-badge--top': row.rank <= 3 }">
+              {{ String(row.rank).padStart(2, '0') }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="病案号" min-width="220">
+          <template #default="{ row }">
+            <div class="record-identity">
+              <span class="record-avatar">MR</span>
+              <div>
+                <strong>{{ row.bah }}</strong>
+                <span>Medical Record</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="记录数" min-width="140">
+          <template #default="{ row }">
+            <strong class="table-number">{{ formatNumber(row.recordCount) }}</strong>
+            <span class="table-unit">条</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="扫描页数" min-width="150">
+          <template #default="{ row }">
+            <strong class="table-number">{{ formatNumber(row.totalPages) }}</strong>
+            <span class="table-unit">页</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150" align="right">
+          <template #default="{ row }">
+            <el-button class="archive-button" size="small" @click="openArchive(row.bah)">
+              查看影像
+              <el-icon><ArrowRight /></el-icon>
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </section>
   </div>
 </template>
 
@@ -154,79 +385,648 @@ onMounted(loadData)
 .page-shell {
   display: grid;
   gap: 20px;
+  padding-bottom: 20px;
 }
 
-.page-header {
+.hero-panel {
+  position: relative;
+  min-height: 220px;
+  padding: 34px 38px;
+  overflow: hidden;
+  color: var(--text-primary);
+  background: linear-gradient(120deg, color-mix(in srgb, #2563eb 10%, var(--surface)) 0%, var(--surface) 48%, color-mix(in srgb, #7c3aed 8%, var(--surface)) 100%);
+  border: 1px solid color-mix(in srgb, #2563eb 15%, var(--divider));
+  border-radius: 22px;
+  box-shadow: 0 16px 42px rgb(15 23 42 / 7%);
+}
+
+.hero-panel::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgb(37 99 235 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(37 99 235 / 4%) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(90deg, black, transparent 78%);
+}
+
+.hero-orb {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(4px);
+}
+
+.hero-orb--one {
+  top: -78px;
+  right: 10%;
+  width: 220px;
+  height: 220px;
+  background: rgb(37 99 235 / 11%);
+}
+
+.hero-orb--two {
+  right: -55px;
+  bottom: -115px;
+  width: 260px;
+  height: 260px;
+  background: rgb(124 58 237 / 9%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
+  gap: 32px;
+  align-items: center;
   justify-content: space-between;
+  min-height: 150px;
+}
+
+.hero-copy {
+  max-width: 720px;
+}
+
+.eyebrow,
+.panel-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
 }
 
 .eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgb(37 99 235 / 8%);
+  border: 1px solid rgb(37 99 235 / 12%);
+  border-radius: 999px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 12%);
 }
 
 h2 {
-  margin: 0;
-  font-size: 28px;
+  margin: 18px 0 0;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
 }
 
 .subtitle {
-  margin: 8px 0 0;
+  max-width: 660px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.8;
   color: var(--text-secondary);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.hero-meta span {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.hero-actions :deep(.el-button) {
+  min-height: 40px;
+  padding-inline: 17px;
+  border-radius: 10px;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
+}
+
+.summary-card {
+  --card-accent: #2563eb;
+  --card-tint: #eff6ff;
+
+  position: relative;
+  min-height: 160px;
+  padding: 20px;
+  overflow: hidden;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card-tint) 42%, var(--surface)), var(--surface) 66%);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 14%, var(--divider));
+  border-radius: 18px;
+  box-shadow: 0 8px 26px rgb(15 23 42 / 5%);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+  border-color: color-mix(in srgb, var(--card-accent) 34%, var(--divider));
+  box-shadow: 0 14px 32px rgb(15 23 42 / 9%);
+  transform: translateY(-2px);
+}
+
+.summary-card--violet {
+  --card-accent: #7c3aed;
+  --card-tint: #f5f3ff;
+}
+
+.summary-card--green {
+  --card-accent: #059669;
+  --card-tint: #ecfdf5;
+}
+
+.summary-card--amber {
+  --card-accent: #d97706;
+  --card-tint: #fffbeb;
+}
+
+.summary-card__header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.summary-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--card-accent);
+  background: color-mix(in srgb, var(--card-accent) 11%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--card-accent) 15%, transparent);
+  border-radius: 11px;
+}
+
+.summary-icon :deep(.el-icon) {
+  font-size: 18px;
 }
 
 .summary-label {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 650;
   color: var(--text-secondary);
 }
 
 .summary-value {
-  margin-top: 8px;
-  font-size: 24px;
-  font-weight: 800;
+  display: block;
+  margin-top: 18px;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   color: var(--text-primary);
+  letter-spacing: -0.04em;
 }
 
 .summary-note {
-  margin-top: 8px;
+  margin: 10px 0 0;
   font-size: 12px;
   color: var(--text-secondary);
 }
 
-.stack-list {
-  display: grid;
-  gap: 12px;
+.summary-decoration {
+  position: absolute;
+  right: -22px;
+  bottom: -32px;
+  width: 110px;
+  height: 110px;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--card-accent) 13%, transparent), transparent 68%);
+  border-radius: 50%;
 }
 
-.stack-item {
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 20px;
+}
+
+.data-panel {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  box-shadow: 0 10px 32px rgb(15 23 42 / 5%);
+}
+
+.panel-header {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.panel-header h3 {
+  margin: 7px 0 0;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.panel-header p:not(.panel-kicker) {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.panel-badge {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  background: rgb(37 99 235 / 8%);
+  border: 1px solid rgb(37 99 235 / 12%);
+  border-radius: 999px;
+}
+
+.panel-badge--success {
+  color: #047857;
+  background: rgb(5 150 105 / 8%);
+  border-color: rgb(5 150 105 / 12%);
+}
+
+.type-list {
+  display: grid;
+  gap: 10px;
+  min-height: 310px;
+  padding: 18px 20px 22px;
+}
+
+.type-item {
+  padding: 14px 15px;
+  background: color-mix(in srgb, var(--surface-alt) 62%, var(--surface));
+  border: 1px solid transparent;
+  border-radius: 13px;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.type-item:hover {
+  border-color: color-mix(in srgb, #2563eb 16%, var(--divider));
+  transform: translateX(2px);
+}
+
+.type-item__top,
+.type-item__footer {
   display: flex;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
-  background: rgb(15 23 42 / 3%);
-  border-radius: 14px;
 }
 
-.stack-item strong {
+.type-item__top > strong {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.type-name {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.type-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.type-index {
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #2563eb;
+}
+
+.progress-track {
+  height: 6px;
+  margin-top: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--divider) 62%, transparent);
+  border-radius: 999px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: inherit;
+  transition: width 0.45s ease;
+}
+
+.type-item__footer {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.trend-content {
+  min-height: 310px;
+  padding: 20px 22px 22px;
+}
+
+.trend-chart {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(28px, 1fr));
+  gap: 9px;
+  align-items: end;
+  min-height: 218px;
+  padding: 16px 8px 10px;
+  background: repeating-linear-gradient(to top, transparent 0, transparent 43px, color-mix(in srgb, var(--divider) 55%, transparent) 44px);
+  border-bottom: 1px solid var(--divider);
+}
+
+.trend-column {
+  display: grid;
+  grid-template-rows: 22px 150px 22px;
+  gap: 7px;
+  min-width: 0;
+  text-align: center;
+}
+
+.trend-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.trend-bar-track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 150px;
+}
+
+.trend-bar {
+  position: relative;
+  width: min(28px, 74%);
+  min-height: 8px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  border-radius: 7px 7px 3px 3px;
+  box-shadow: 0 7px 14px rgb(37 99 235 / 16%);
+  transition: height 0.35s ease, transform 0.18s ease, filter 0.18s ease;
+}
+
+.trend-bar::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(90deg, rgb(255 255 255 / 18%), transparent 60%);
+}
+
+.trend-bar:hover {
+  filter: saturate(1.15);
+  transform: translateY(-3px);
+}
+
+.trend-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.trend-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.trend-summary > div {
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+}
+
+.trend-summary span,
+.trend-summary strong {
   display: block;
 }
 
-.stack-item p {
-  margin: 6px 0 0;
+.trend-summary span {
+  font-size: 10px;
   color: var(--text-secondary);
+}
+
+.trend-summary strong {
+  margin-top: 6px;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-header {
+  align-items: center;
+}
+
+.ranking-header :deep(.el-button) {
+  flex-shrink: 0;
+}
+
+.rank-table {
+  width: 100%;
+}
+
+.rank-table :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+.rank-table :deep(th.el-table__cell) {
+  height: 46px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-alt) 65%, var(--surface));
+  border-bottom-color: var(--divider);
+}
+
+.rank-table :deep(td.el-table__cell) {
+  height: 64px;
+  border-bottom-color: var(--divider);
+}
+
+.rank-table :deep(.el-table__row:last-child td.el-table__cell) {
+  border-bottom: 0;
+}
+
+.rank-table :deep(.el-table__row:hover > td.el-table__cell) {
+  background: color-mix(in srgb, #2563eb 4%, var(--surface));
+}
+
+.rank-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
+  border: 1px solid var(--divider);
+  border-radius: 9px;
+}
+
+.rank-badge--top {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.record-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.record-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #2563eb;
+  letter-spacing: 0.06em;
+  background: rgb(37 99 235 / 9%);
+  border: 1px solid rgb(37 99 235 / 13%);
+  border-radius: 11px;
+}
+
+.record-identity strong,
+.record-identity span {
+  display: block;
+}
+
+.record-identity strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.record-identity div > span {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.table-number {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.table-unit {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.archive-button {
+  border-color: color-mix(in srgb, #2563eb 18%, var(--divider));
+  border-radius: 9px;
+}
+
+:global(.dark) .rank-badge--top {
+  color: #93c5fd;
+  background: rgb(37 99 235 / 14%);
+  border-color: rgb(96 165 250 / 24%);
+}
+
+@media (width <= 1180px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width <= 760px) {
+  .hero-panel {
+    padding: 26px 22px;
+  }
+
+  .hero-content {
+    display: grid;
+  }
+
+  .hero-actions {
+    flex-wrap: wrap;
+  }
+
+  .panel-header {
+    padding-inline: 18px;
+  }
+
+  .type-list,
+  .trend-content {
+    padding-inline: 16px;
+  }
+
+  .trend-chart {
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .trend-column {
+    min-width: 34px;
+  }
+}
+
+@media (width <= 560px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions :deep(.el-button) {
+    flex: 1;
+  }
+
+  .hero-meta {
+    display: grid;
+  }
+
+  .trend-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-header {
+    align-items: flex-start;
+  }
 }
 </style>

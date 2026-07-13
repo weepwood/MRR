@@ -3,10 +3,11 @@ import { ElMessage } from 'element-plus'
 import { nextTick, onMounted, reactive, ref } from 'vue'
 import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
 import AppConfigPanel from './components/AppConfigPanel.vue'
+import DepartmentThemeSettings from './components/DepartmentThemeSettings.vue'
 
 defineOptions({ name: 'SettingsPage' })
 
-const activeTab = ref<'system' | 'app'>('system')
+const activeTab = ref<'system' | 'department' | 'app'>('system')
 const loading = ref(false)
 const saving = ref(false)
 
@@ -134,7 +135,7 @@ onMounted(async () => {
         </p>
         <h2>系统设置</h2>
         <p class="subtitle">
-          管理系统配置与浏览器本地应用偏好
+          管理系统配置、科室档案袋配色与浏览器本地应用偏好
         </p>
       </div>
       <div v-if="activeTab === 'system'" class="header-actions">
@@ -216,6 +217,10 @@ onMounted(async () => {
             </el-card>
           </el-col>
         </el-row>
+      </el-tab-pane>
+
+      <el-tab-pane label="科室档案袋配色" name="department">
+        <DepartmentThemeSettings />
       </el-tab-pane>
 
       <el-tab-pane label="应用配置" name="app">

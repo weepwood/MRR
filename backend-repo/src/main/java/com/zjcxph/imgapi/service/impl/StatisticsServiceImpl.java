@@ -48,7 +48,18 @@ public class StatisticsServiceImpl implements StatisticsService {
     ) {
         PaginationUtils.validatePageParams(page, size);
         int offset = PaginationUtils.calculateOffset(page, size);
-        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, bah, sjh, type, startDate, endDate, sortBy, sortOrder);
+        return statisticsMapper.findWithConditionAndPagination(
+                offset,
+                size,
+                keyword,
+                normalizeSearchCode(bah),
+                normalizeSearchCode(sjh),
+                type,
+                startDate,
+                endDate,
+                sortBy,
+                sortOrder
+        );
     }
 
     @Override
@@ -58,7 +69,14 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate) {
-        return statisticsMapper.getTotalCountByCondition(keyword, bah, sjh, type, startDate, endDate);
+        return statisticsMapper.getTotalCountByCondition(
+                keyword,
+                normalizeSearchCode(bah),
+                normalizeSearchCode(sjh),
+                type,
+                startDate,
+                endDate
+        );
     }
 
     @Override
@@ -102,5 +120,13 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public List<Map<String, Object>> getTypeStatistics() {
         return statisticsMapper.getTypeStatistics();
+    }
+
+    private String normalizeSearchCode(String value) {
+        if (value == null) {
+            return null;
+        }
+        String searchTerm = MedicalRecordCodeUtils.toSearchTerm(value);
+        return searchTerm.isEmpty() ? null : searchTerm;
     }
 }

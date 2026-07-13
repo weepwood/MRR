@@ -1,0 +1,67 @@
+/* 页面布局与设计系统变量 */
+:root {
+  color-scheme: light;
+
+  /* 页面布局 */
+  --g-header-height: 60px;
+  --g-main-sidebar-width: 80px;
+  --g-sub-sidebar-width: 220px;
+  --g-sub-sidebar-collapse-width: 64px;
+  --g-sidebar-logo-height: 50px;
+  --g-tabbar-height: 50px;
+  --g-toolbar-height: 50px;
+
+  /* 滚动条 */
+  --scrollbar-color: 240 5.9% 90%;
+
+  /* 语义化文本与表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(var(--muted-foreground) / 70%);
+  --text-hint: hsl(var(--muted-foreground) / 50%);
+  --surface: hsl(var(--card));
+  --surface-muted: hsl(var(--muted));
+  --surface-alt: hsl(var(--secondary));
+  --divider: hsl(var(--border));
+
+  /* MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） */
+
+  /* 品牌主色 */
+  --color-primary: #0075de;
+  --color-primary-active: #005bab;
+  --color-primary-deep: #213183;
+
+  /* 文本 */
+  --color-text: rgb(0 0 0 / 95%);
+  --color-text-muted: #615d59;
+  --color-text-placeholder: #a39e98;
+
+  /* 表面 */
+  --color-bg: #fff;
+  --color-bg-warm: #f6f5f4;
+  --color-bg-dark: #31302e;
+
+  /* 语义色 */
+  --color-success: #1aae39;
+  --color-info: #2a9d99;
+  --color-warning: #dd5b00;
+  --color-danger: #e03e3e;
+
+  /* 边框 */
+  --color-border: rgb(0 0 0 / 10%);
+  --color-border-strong: rgb(0 0 0 / 16%);
+
+  &.dark {
+    color-scheme: dark;
+
+    --scrollbar-color: 240 3.7% 15.9%;
+    --color-text: rgb(255 255 255 / 95%);
+    --color-text-muted: #a39e98;
+    --color-text-placeholder: #615d59;
+    --color-bg: #31302e;
+    --color-bg-warm: #3d3a37;
+    --color-bg-dark: #252321;
+    --color-border: rgb(255 255 255 / 10%);
+    --color-border-strong: rgb(255 255 255 / 16%);
+  }
+}

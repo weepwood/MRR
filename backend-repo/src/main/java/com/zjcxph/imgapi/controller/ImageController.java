@@ -33,7 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -49,7 +48,6 @@ import java.util.Map;
 public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
-    private static final BigInteger BAH_UNIQUE_LIMIT = BigInteger.valueOf(10_000_000L);
     private static final String BAH_REQUIRES_SJH_MESSAGE =
             "病案号大于等于 10000000 时必须同时提供上架号";
 
@@ -110,7 +108,7 @@ public class ImageController {
             @Parameter(description = "小于 10000000 的唯一病案号，可省略前导零", example = "789508")
             String bah) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
-        if (requiresSjhForBah(normalizedBah)) {
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)) {
             return Result.fail(BAH_REQUIRES_SJH_MESSAGE + "，请使用 /search 接口");
         }
         String bahSearchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
@@ -131,7 +129,7 @@ public class ImageController {
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
         }
-        if (requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
             return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
         }
         List<Scan> list = scanService.getImageListByCode(
@@ -279,12 +277,5 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
         }
-    }
-
-    private static boolean requiresSjhForBah(String bah) {
-        if (bah == null || bah.isBlank() || !bah.matches("\\d+")) {
-            return false;
-        }
-        return new BigInteger(bah).compareTo(BAH_UNIQUE_LIMIT) >= 0;
     }
 }

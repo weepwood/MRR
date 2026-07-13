@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.req.ImageRequest;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
@@ -78,14 +79,24 @@ public class ImageController {
 
     @Operation(summary = "下载病案压缩包")
     @GetMapping("/download/{BAH}")
-    public ResponseEntity<FileSystemResource> download(@PathVariable
-                                                       @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
-                                                       @Parameter(description = "病案号，可省略前导零", example = "789508")
-                                                       String BAH) throws IOException {
+    public ResponseEntity<FileSystemResource> download(
+            @PathVariable
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
+            @Parameter(description = "病案号，可省略前导零", example = "789508")
+            String BAH,
+            @RequestParam(required = false)
+            @Parameter(description = "唯一上架号；病案号大于等于 10000000 时必填")
+            String sjh) throws IOException {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(BAH);
-        File zipFile = scanService.createZipForBAH(normalizedBah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+            throw new BusinessException(400, BAH_REQUIRES_SJH_MESSAGE);
+        }
+
+        File zipFile = scanService.createZipForCode(normalizedBah, normalizedSjh);
         zipFile.deleteOnExit();
-        String fileNameZip = normalizedBah + ".zip";
+        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
+        String fileNameZip = archiveCode + ".zip";
         FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
 
         logger.info("生成压缩包:{}", fileNameZip);

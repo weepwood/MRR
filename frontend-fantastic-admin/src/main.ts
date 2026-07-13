@@ -16,6 +16,7 @@ import '@unocss/reset/tailwind-compat.css'
 import 'virtual:uno.css'
 // 全局样式
 import '@/assets/styles/globals.css'
+import '@/assets/styles/pages/statistics-detail-typography.css'
 
 installMedicalRecordCodeInterceptors()
 

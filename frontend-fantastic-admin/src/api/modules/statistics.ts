@@ -73,3 +73,8 @@ export function exportStatisticsCsv(params: {
     responseType: 'blob',
   })
 }
+
+/** GET /api/v1/statistics/departments — 获取所有住院科室列表 */
+export function getDepartments() {
+  return getRequest<string[]>('/api/v1/statistics/departments')
+}

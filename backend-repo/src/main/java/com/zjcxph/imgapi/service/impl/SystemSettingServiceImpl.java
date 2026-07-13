@@ -36,6 +36,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     public Map<String, String> getAllSettings() {
         List<SystemSetting> settings = systemSettingMapper.findAll();
         return settings.stream()
+                .filter(s -> s.getSettingKey() != null && !s.getSettingKey().isEmpty())
                 .collect(Collectors.toMap(
                         SystemSetting::getSettingKey,
                         s -> s.getSettingValue() != null ? s.getSettingValue() : "",

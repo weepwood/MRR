@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ArchiveDepartmentTheme } from '@/utils/archive-department-theme'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
+import { getDepartments } from '@/api/modules/statistics'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
 import {
   ARCHIVE_DEPARTMENT_THEME_PRESETS,
@@ -22,10 +23,13 @@ interface EditableDepartmentTheme extends ArchiveDepartmentTheme {
 const loading = ref(false)
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
+const departments = ref<string[]>([])
 let nextId = 1
 
 const colorPresets = ARCHIVE_DEPARTMENT_THEME_PRESETS.flatMap(item => [item.folderColor, item.stripColor])
 const hasRows = computed(() => rows.value.length > 0)
+const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
+const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
 
 function toEditable(theme: ArchiveDepartmentTheme): EditableDepartmentTheme {
   return { ...theme, id: nextId++ }
@@ -49,8 +53,14 @@ function removeDepartmentTheme(id: number) {
 }
 
 function resetToAutomaticThemes() {
-  rows.value = []
-  ElMessage.info('已切换为自动配色，点击“保存科室配色”后生效')
+  ElMessageBox.confirm(
+    '恢复自动配色将清空所有已配置的科室颜色，确定继续？',
+    '确认恢复',
+    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' },
+  ).then(() => {
+    rows.value = []
+    ElMessage.success('已切换为自动配色')
+  }).catch(() => {})
 }
 
 function previewStyle(row: EditableDepartmentTheme) {
@@ -109,6 +119,16 @@ async function loadThemes() {
   }
 }
 
+async function loadDepartments() {
+  try {
+    const res = await getDepartments()
+    departments.value = res.data ?? []
+  }
+  catch {
+    // 后端接口不可用时不影响手动输入
+  }
+}
+
 async function saveThemes() {
   if (!validateRows()) {
     return
@@ -123,14 +143,17 @@ async function saveThemes() {
     ElMessage.success('科室档案袋配色已保存到服务器')
   }
   catch {
-    ElMessage.warning('服务端保存失败，已保存到当前浏览器')
+    ElMessage.error('服务端保存失败，配色已保存到当前浏览器')
   }
   finally {
     saving.value = false
   }
 }
 
-onMounted(loadThemes)
+onMounted(() => {
+  loadThemes()
+  loadDepartments()
+})
 </script>
 
 <template>
@@ -169,7 +192,9 @@ onMounted(loadThemes)
       </div>
 
       <div v-for="row in rows" :key="row.id" class="theme-editor-row">
-        <el-input v-model="row.department" clearable placeholder="例如：心内科" maxlength="50" />
+        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" style="width:100%">
+          <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
+        </el-select>
 
         <div class="color-field">
           <el-color-picker v-model="row.folderColor" :predefine="colorPresets" />

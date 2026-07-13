@@ -112,4 +112,12 @@ public interface StatisticsMapper {
             "GROUP BY type " +
             "ORDER BY type")
     List<Map<String, Object>> getTypeStatistics();
+
+    // 获取所有住院科室（去重、非空、非 NULL）
+    @Select("SELECT DISTINCT inpatientDepartment FROM mr_statistics " +
+            "WHERE inpatientDepartment IS NOT NULL " +
+            "AND TRIM(inpatientDepartment) != '' " +
+            "AND inpatientDepartment <> 'NULL' " +
+            "ORDER BY inpatientDepartment")
+    List<String> findDistinctDepartments();
 }

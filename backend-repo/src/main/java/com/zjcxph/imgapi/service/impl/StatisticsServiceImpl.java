@@ -122,6 +122,11 @@ public class StatisticsServiceImpl implements StatisticsService {
         return statisticsMapper.getTypeStatistics();
     }
 
+    @Override
+    public List<String> getDistinctDepartments() {
+        return statisticsMapper.findDistinctDepartments();
+    }
+
     private String normalizeSearchCode(String value) {
         if (value == null) {
             return null;

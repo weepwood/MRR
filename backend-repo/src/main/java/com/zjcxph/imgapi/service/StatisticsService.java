@@ -54,4 +54,7 @@ public interface StatisticsService {
 
     // 按类型统计
     List<Map<String, Object>> getTypeStatistics();
+
+    // 获取所有住院科室（去重、排序）
+    List<String> getDistinctDepartments();
 }

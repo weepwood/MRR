@@ -316,6 +316,14 @@ public class StatisticsController {
         }
     }
 
+    /** GET /api/v1/statistics/departments — 获取所有住院科室列表 */
+    @GetMapping("/departments")
+    @Operation(summary = "获取所有住院科室列表（去重、排序）")
+    public Result<List<String>> getDepartments() {
+        List<String> departments = statisticsService.getDistinctDepartments();
+        return Result.success(departments);
+    }
+
     private String escapeCsv(String value) {
         if (value == null || value.isEmpty()) {
             return "";

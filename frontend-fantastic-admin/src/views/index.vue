@@ -29,10 +29,34 @@ const canViewHealth = computed(() => hasPermission('system:read'))
 const canViewAudit = computed(() => hasPermission('log:read'))
 
 const statsCards = computed(() => [
-  { label: '总记录数', value: dashboard.value.overview?.totalRecords ?? '-', icon: 'i-ant-design:file-text-twotone', color: '#409eff' },
-  { label: '总页数', value: dashboard.value.overview?.totalPages ?? '-', icon: 'i-ant-design:book-twotone', color: '#67c23a' },
-  { label: '病案数', value: dashboard.value.uniqueBAHCount ?? '-', icon: 'i-ant-design:team-twotone', color: '#e6a23c' },
-  { label: '影像类型', value: dashboard.value.overview?.byType?.length ?? '-', icon: 'i-ant-design:appstore-twotone', color: '#909399' },
+  {
+    label: '总记录数',
+    value: dashboard.value.overview?.totalRecords ?? '-',
+    icon: 'i-ant-design:file-text-twotone',
+    tone: '',
+    note: '当前已纳入系统的影像记录',
+  },
+  {
+    label: '总页数',
+    value: dashboard.value.overview?.totalPages ?? '-',
+    icon: 'i-ant-design:book-twotone',
+    tone: 'mrr-metric-card--violet',
+    note: '全部病案影像累计页数',
+  },
+  {
+    label: '病案数',
+    value: dashboard.value.uniqueBAHCount ?? '-',
+    icon: 'i-ant-design:team-twotone',
+    tone: 'mrr-metric-card--green',
+    note: '按病案号去重后的数量',
+  },
+  {
+    label: '影像类型',
+    value: dashboard.value.overview?.byType?.length ?? '-',
+    icon: 'i-ant-design:appstore-twotone',
+    tone: 'mrr-metric-card--amber',
+    note: '当前统计口径中的类型数量',
+  },
 ])
 
 const quickActions = [
@@ -41,7 +65,6 @@ const quickActions = [
   { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
   { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive', color: '#909399', perm: 'record:read' },
   { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
-
 ]
 
 const visibleQuickActions = computed(() => quickActions.filter(a => hasPermission(a.perm)))
@@ -87,7 +110,8 @@ async function loadData() {
         auditLogs.value = payload?.data?.list ?? payload?.list ?? payload?.data ?? []
       }
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -116,44 +140,64 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-page">
-    <div class="home-header">
-      <div>
-        <p class="eyebrow">Medical Record Repository</p>
-        <h2>欢迎回来{{ userStore.profile?.displayName ? `，${userStore.profile.displayName}` : '' }}</h2>
-        <p class="subtitle">病案影像系统运行状况总览</p>
+  <div class="home-page mrr-page">
+    <header class="home-header mrr-page-header">
+      <div class="mrr-page-heading">
+        <p class="eyebrow">
+          Medical Record Repository
+        </p>
+        <h2 class="mrr-page-title">
+          欢迎回来{{ userStore.profile?.displayName ? `，${userStore.profile.displayName}` : '' }}
+        </h2>
+        <p class="mrr-page-description">
+          病案影像系统运行状况、核心数据和最近访问活动总览。
+        </p>
       </div>
-      <el-button type="primary" :loading="loading" @click="loadData">
-        <template #icon><i class="i-ant-design:reload-twotone" /></template>
-        刷新数据
-      </el-button>
-    </div>
+      <div class="mrr-page-actions">
+        <el-button type="primary" :loading="loading" @click="loadData">
+          <template #icon>
+            <i class="i-ant-design:reload-twotone" />
+          </template>
+          刷新数据
+        </el-button>
+      </div>
+    </header>
 
     <!-- 统计卡片 -->
-    <el-row v-if="canViewStats" :gutter="16">
-      <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6">
-        <el-card shadow="never" class="stat-card">
-          <div class="stat-inner">
-            <div class="stat-icon" :style="{ background: card.color + '18', color: card.color }">
-              <i :class="card.icon" />
-            </div>
-            <div class="stat-info">
-              <p class="stat-value">{{ card.value }}</p>
-              <p class="stat-label">{{ card.label }}</p>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <section v-if="canViewStats" class="mrr-metric-grid">
+      <el-card
+        v-for="card in statsCards"
+        :key="card.label"
+        shadow="never"
+        class="mrr-metric-card"
+        :class="card.tone"
+      >
+        <div class="mrr-metric-card__icon">
+          <i :class="card.icon" />
+        </div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">{{ card.label }}</span>
+          <strong class="mrr-metric-card__value">{{ card.value }}</strong>
+          <p class="mrr-metric-card__note">
+            {{ card.note }}
+          </p>
+        </div>
+      </el-card>
+    </section>
 
-    <el-row v-if="canViewStats || canViewHealth" :gutter="16">
+    <el-row v-if="canViewStats || canViewHealth" :gutter="16" class="dashboard-grid">
       <!-- 近 30 天趋势 -->
-      <el-col v-if="canViewStats" :span="canViewHealth ? 16 : 24">
-        <el-card shadow="never">
+      <el-col v-if="canViewStats" :xs="24" :lg="canViewHealth ? 16 : 24">
+        <el-card shadow="never" class="dashboard-panel mrr-panel mrr-panel--flat">
           <template #header>
             <div class="card-header">
-              <span>近 30 天记录趋势</span>
-              <el-button text size="small" @click="goStatistics">查看详情</el-button>
+              <div>
+                <strong class="panel-title">近 30 天记录趋势</strong>
+                <p class="panel-description">每日新增影像记录数量</p>
+              </div>
+              <el-button text size="small" @click="goStatistics">
+                查看详情
+              </el-button>
             </div>
           </template>
           <div v-if="dashboard.recentTrend?.length" class="trend-chart">
@@ -161,7 +205,7 @@ onMounted(() => {
               v-for="(d, i) in dashboard.recentTrend"
               :key="i"
               class="trend-bar"
-              :style="{ height: Math.max(4, (d.recordCount ?? 0) / trendMax * 160) + 'px' }"
+              :style="{ height: `${Math.max(4, (d.recordCount ?? 0) / trendMax * 160)}px` }"
               :title="`${d.date}: ${d.recordCount} 条`"
             >
               <span class="trend-val">{{ d.recordCount }}</span>
@@ -172,48 +216,66 @@ onMounted(() => {
       </el-col>
 
       <!-- 系统状态 + 快捷入口 -->
-      <el-col v-if="canViewHealth" :span="canViewStats ? 8 : 24">
-        <el-card shadow="never" class="mb-4">
-          <template #header>
-            <span>系统状态</span>
-          </template>
-          <div class="health-items">
-            <div class="health-item">
-              <span class="health-label">数据库</span>
-              <el-tag :type="dbOk ? 'success' : 'danger'" size="small">{{ dbStatus }}</el-tag>
+      <el-col v-if="canViewHealth" :xs="24" :lg="canViewStats ? 8 : 24">
+        <div class="side-panels">
+          <el-card shadow="never" class="mrr-panel mrr-panel--flat">
+            <template #header>
+              <div>
+                <strong class="panel-title">系统状态</strong>
+                <p class="panel-description">关键依赖实时健康状态</p>
+              </div>
+            </template>
+            <div class="health-items">
+              <div class="health-item">
+                <span class="health-label"><i class="mrr-status-dot" :class="dbOk ? 'status-success' : 'status-danger'" />数据库</span>
+                <el-tag :type="dbOk ? 'success' : 'danger'" size="small">
+                  {{ dbStatus }}
+                </el-tag>
+              </div>
+              <div class="health-item">
+                <span class="health-label"><i class="mrr-status-dot" :class="memOk ? 'status-success' : 'status-warning'" />内存</span>
+                <el-tag :type="memOk ? 'success' : 'warning'" size="small">
+                  {{ memUsage }}
+                </el-tag>
+              </div>
             </div>
-            <div class="health-item">
-              <span class="health-label">内存</span>
-              <el-tag :type="memOk ? 'success' : 'warning'" size="small">{{ memUsage }}</el-tag>
-            </div>
-          </div>
-        </el-card>
+          </el-card>
 
-        <el-card shadow="never">
-          <template #header>
-            <span>快捷入口</span>
-          </template>
-          <div class="quick-grid">
-            <button
-              v-for="action in visibleQuickActions"
-              :key="action.label"
-              class="quick-item"
-              @click="navigate(action.path)"
-            >
-              <i :class="action.icon" :style="{ color: action.color }" />
-              <span>{{ action.label }}</span>
-            </button>
-          </div>
-        </el-card>
+          <el-card shadow="never" class="mrr-panel mrr-panel--flat">
+            <template #header>
+              <div>
+                <strong class="panel-title">快捷入口</strong>
+                <p class="panel-description">常用管理功能</p>
+              </div>
+            </template>
+            <div class="quick-grid">
+              <button
+                v-for="action in visibleQuickActions"
+                :key="action.label"
+                type="button"
+                class="quick-item"
+                @click="navigate(action.path)"
+              >
+                <i :class="action.icon" :style="{ color: action.color }" />
+                <span>{{ action.label }}</span>
+              </button>
+            </div>
+          </el-card>
+        </div>
       </el-col>
     </el-row>
 
     <!-- 用户病案访问情况 -->
-    <el-card v-if="canViewAudit" shadow="never">
+    <el-card v-if="canViewAudit" shadow="never" class="mrr-panel mrr-panel--flat">
       <template #header>
         <div class="card-header">
-          <span>用户病案访问情况</span>
-          <el-button text size="small" @click="router.push('/audit-images')">查看全部</el-button>
+          <div>
+            <strong class="panel-title">用户病案访问情况</strong>
+            <p class="panel-description">最近十条影像访问与下载记录</p>
+          </div>
+          <el-button text size="small" @click="router.push('/audit-images')">
+            查看全部
+          </el-button>
         </div>
       </template>
       <div v-if="auditLogs.length" class="audit-table">
@@ -243,90 +305,72 @@ onMounted(() => {
 
 <style scoped>
 .home-page {
-  display: grid;
-  gap: 16px;
+  min-width: 0;
 }
 
 .home-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
+  padding-block: 4px 8px;
 }
 
 .eyebrow {
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.09em;
 }
 
-h2 {
-  margin: 0;
-  font-size: 24px;
+.dashboard-grid {
+  row-gap: 16px;
 }
 
-.subtitle {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--text-secondary);
+.dashboard-panel {
+  height: 100%;
 }
 
-/* 统计卡片 */
-.stat-card {
-  margin-bottom: 0;
+.side-panels {
+  display: grid;
+  gap: 16px;
 }
 
-.stat-inner {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-
-.stat-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
-  border-radius: 12px;
-}
-
-.stat-info {
-  min-width: 0;
-}
-
-.stat-value {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.stat-label {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* 卡片头部 */
 .card-header {
   display: flex;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-start;
   justify-content: space-between;
+}
+
+.panel-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.panel-description {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-tertiary);
 }
 
 /* 趋势图 */
 .trend-chart {
+  position: relative;
   display: flex;
-  gap: 3px;
+  gap: 4px;
   align-items: flex-end;
-  height: 170px;
-  padding-top: 8px;
+  height: 190px;
+  padding: 20px 8px 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 39px,
+    color-mix(in srgb, var(--divider) 70%, transparent) 40px
+  );
+  border-bottom: 1px solid var(--divider);
 }
 
 .trend-bar {
@@ -334,35 +378,48 @@ h2 {
   flex: 1;
   min-width: 4px;
   cursor: pointer;
-  background: linear-gradient(180deg, #409eff, #79bbff);
-  border-radius: 3px 3px 0 0;
-  transition: opacity 0.2s;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 70%, white), var(--color-primary));
+  border-radius: 4px 4px 1px 1px;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  transition: filter 160ms ease, transform 160ms ease;
 }
 
 .trend-bar:hover {
-  opacity: 0.8;
+  filter: saturate(1.15);
+  transform: translateY(-2px);
 }
 
 .trend-val {
   position: absolute;
-  top: -16px;
+  top: -17px;
   left: 50%;
   font-size: 10px;
   color: var(--text-secondary);
   white-space: nowrap;
+  opacity: 0;
   transform: translateX(-50%);
+  transition: opacity 160ms ease;
+}
+
+.trend-bar:hover .trend-val {
+  opacity: 1;
 }
 
 /* 系统状态 */
 .health-items {
   display: grid;
-  gap: 12px;
+  gap: 4px;
 }
 
 .health-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px;
+  background: var(--mrr-shell-surface-soft);
+  border: 1px solid var(--mrr-shell-border);
+  border-radius: 9px;
 }
 
 .health-label {
@@ -370,31 +427,50 @@ h2 {
   color: var(--text-secondary);
 }
 
+.status-success {
+  color: var(--color-success);
+}
+
+.status-warning {
+  color: var(--color-warning);
+}
+
+.status-danger {
+  color: var(--color-danger);
+}
+
 /* 快捷入口 */
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .quick-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
-  padding: 12px 4px;
+  justify-content: center;
+  min-height: 74px;
+  padding: 10px 4px;
   font-size: 12px;
+  font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
+  background: var(--mrr-shell-surface-soft);
+  border: 1px solid var(--mrr-shell-border);
   border-radius: 10px;
-  transition: all 0.2s;
+  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.quick-item:hover {
-  background: var(--surface-alt);
-  border-color: var(--divider);
+.quick-item:hover,
+.quick-item:focus-visible {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--mrr-shell-border));
+  box-shadow: var(--mrr-shell-shadow-sm);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .quick-item i {
@@ -403,28 +479,33 @@ h2 {
 
 /* 访问记录 */
 .audit-table {
-  display: grid;
-  gap: 0;
+  overflow-x: auto;
 }
 
 .audit-row {
   display: grid;
-  grid-template-columns: 100px 110px 1fr 120px 150px;
+  grid-template-columns: 100px 110px minmax(220px, 1fr) 120px 150px;
   gap: 8px;
   align-items: center;
-  padding: 8px 4px;
+  min-width: 760px;
+  padding: 10px 6px;
   font-size: 13px;
-  border-bottom: 1px solid var(--surface-alt);
+  border-bottom: 1px solid var(--mrr-shell-border);
+}
+
+.audit-row:not(.audit-header):hover {
+  background: color-mix(in srgb, var(--color-primary) 3%, var(--surface));
 }
 
 .audit-row.audit-header {
-  padding: 4px 4px 8px;
+  padding: 6px 6px 10px;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 2px solid var(--divider);
+  background: var(--mrr-shell-surface-soft);
+  border-bottom-color: var(--mrr-shell-border-strong);
 }
 
 .audit-row:last-child {
@@ -435,5 +516,30 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (width <= 600px) {
+  .quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trend-chart {
+    gap: 2px;
+    padding-inline: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-bar,
+  .trend-val,
+  .quick-item {
+    transition: none;
+  }
+
+  .trend-bar:hover,
+  .quick-item:hover,
+  .quick-item:focus-visible {
+    transform: none;
+  }
 }
 </style>

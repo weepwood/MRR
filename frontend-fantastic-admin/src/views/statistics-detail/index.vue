@@ -124,6 +124,16 @@ function formatDate(value: unknown) {
   return text.replace(/\//g, '-').split(/[ T]/)[0]
 }
 
+async function copyCode(text: string, label: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(`${label} 已复制`)
+  }
+  catch {
+    ElMessage.error('复制失败')
+  }
+}
+
 function archiveKey(item: ArchiveItem, index = 0) {
   return [
     item.bah,
@@ -542,9 +552,9 @@ onBeforeUnmount(() => {
                 </el-tag>
               </div>
 
-              <div class="folder-patient-heading">
-                <span>病人姓名</span>
-                <strong>{{ normalizeText(item.patientName) }}</strong>
+              <div class="folder-code-block folder-code-block-full">
+                <span class="folder-code-label">病人姓名</span>
+                <strong class="folder-code-value">{{ normalizeText(item.patientName) }}</strong>
               </div>
 
               <div class="folder-code-grid">
@@ -556,11 +566,11 @@ onBeforeUnmount(() => {
                   <span class="folder-code-label">出院日期</span>
                   <strong class="folder-code-value">{{ formatDate(item.dischargeDate) }}</strong>
                 </div>
-                <div class="folder-code-block">
+                <div class="folder-code-block folder-code-copyable" title="点击复制病案号" @click="copyCode(padTo8Digits(item.bah), '病案号')">
                   <span class="folder-code-label">病案号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
                 </div>
-                <div class="folder-code-block">
+                <div class="folder-code-block folder-code-copyable" title="点击复制上架号" @click="copyCode(padTo8Digits(item.sjh), '上架号')">
                   <span class="folder-code-label">上架号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.sjh) }}</strong>
                 </div>
@@ -1017,32 +1027,6 @@ h2 {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
 }
 
-.folder-patient-heading {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.folder-patient-heading span {
-  flex: none;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  letter-spacing: 0.08em;
-}
-
-.folder-patient-heading strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 20px;
-  line-height: 1.2;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
 .folder-code-grid {
   position: relative;
   z-index: 1;
@@ -1052,11 +1036,21 @@ h2 {
 }
 
 .folder-code-block {
+  position: relative;
   min-width: 0;
   padding: 11px 12px;
   background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
   border-radius: 10px;
+}
+
+.folder-code-copyable {
+  cursor: pointer;
+}
+
+.folder-code-copyable:hover {
+  background: color-mix(in srgb, var(--folder-accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--folder-accent) 24%, var(--divider));
 }
 
 .folder-code-label {
@@ -1072,17 +1066,37 @@ h2 {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: clamp(16px, 1.5vw, 20px);
+  font-size: clamp(15px, 1.4vw, 18px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
-  color: var(--text-primary);
+  color: color-mix(in srgb, var(--text-primary) 90%, var(--bg));
   white-space: nowrap;
 }
 
+.folder-code-block-full {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.folder-code-block-full .folder-code-label {
+  flex: none;
+}
+
+.folder-code-block-full .folder-code-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: clamp(24px, 2.6vw, 30px);
+  color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
+}
+
 .folder-code-block:nth-child(-n+2) .folder-code-value {
-  font-size: clamp(13px, 1.2vw, 15px);
+  font-size: clamp(13px, 1.2vw, 14px);
   font-weight: 700;
+  color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
 }
 
 .folder-footer {
@@ -1182,9 +1196,5 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .folder-patient-heading {
-    display: grid;
-    gap: 5px;
-  }
 }
 </style>

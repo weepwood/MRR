@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api', () => ({
-  default: {
-    get: vi.fn(),
-  },
+vi.mock('@/api/modules/image', () => ({
+  getImageForPdf: vi.fn(),
 }))
 
 import { buildPdfBlob } from '../client-pdf'

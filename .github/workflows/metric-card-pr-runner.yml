@@ -39,14 +39,25 @@ jobs:
         run: |
           python - <<'PYRUNNER'
           from pathlib import Path
+          import subprocess
+          import traceback
 
-          source = Path('.github/workflows/metric-card-system-autofix.yml').read_text(encoding='utf-8')
-          marker = "          python - <<'PY'\n"
-          start = source.index(marker) + len(marker)
-          end = source.index('\n          PY', start)
-          lines = source[start:end].splitlines()
-          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
-          exec(compile(script, 'metric-card-migration.py', 'exec'))
+          try:
+              source = Path('.github/workflows/metric-card-system-autofix.yml').read_text(encoding='utf-8')
+              marker = "          python - <<'PY'\n"
+              start = source.index(marker) + len(marker)
+              end = source.index('\n          PY', start)
+              lines = source[start:end].splitlines()
+              script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+              exec(compile(script, 'metric-card-migration.py', 'exec'))
+          except Exception:
+              Path('.github/metric-card-error.log').write_text(traceback.format_exc(), encoding='utf-8')
+              subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+              subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+              subprocess.run(['git', 'add', '.github/metric-card-error.log'], check=True)
+              subprocess.run(['git', 'commit', '-m', 'chore: capture metric card migration error'], check=True)
+              subprocess.run(['git', 'push', 'origin', 'style/unify-metric-cards-20260713'], check=True)
+              raise
           PYRUNNER
 
       - name: Apply repository lint rules
@@ -77,6 +88,7 @@ jobs:
         run: |
           rm .github/workflows/metric-card-system-autofix.yml
           rm .github/workflows/metric-card-pr-runner.yml
+          rm -f .github/metric-card-error.log
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add \
@@ -90,6 +102,7 @@ jobs:
             frontend-fantastic-admin/src/views/response-analysis/index.vue \
             frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue \
             .github/workflows/metric-card-system-autofix.yml \
-            .github/workflows/metric-card-pr-runner.yml
+            .github/workflows/metric-card-pr-runner.yml \
+            .github/metric-card-error.log
           git commit -m "style(design): unify business metric cards"
           git push origin style/unify-metric-cards-20260713

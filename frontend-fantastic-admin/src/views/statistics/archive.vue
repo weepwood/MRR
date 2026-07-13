@@ -170,7 +170,14 @@ onUnmounted(() => {
 
 <template>
   <div class="archive-page">
-    <div class="archive-workspace" :class="{ 'has-images': images.length > 0, 'is-empty': images.length === 0 }">
+    <div
+      class="archive-workspace"
+      :class="{
+        'has-images': images.length > 0,
+        'is-empty': images.length === 0,
+        'is-list-mode': viewMode === 'list',
+      }"
+    >
       <section class="archive-sidebar">
         <ArchiveHeader
           :loading="loading"
@@ -207,11 +214,10 @@ onUnmounted(() => {
             @select-type="selectType"
             @select-all="selectAllVisible"
           />
-
         </template>
 
         <div v-else-if="!loading && !errorMsg" class="empty-state">
-      <el-empty description="输入病案号或上架号查询影像" />
+          <el-empty description="输入病案号或上架号查询影像" />
         </div>
       </section>
 
@@ -261,10 +267,14 @@ onUnmounted(() => {
 
 .archive-workspace.has-images {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) 116px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
   gap: 12px;
   height: 100%;
   min-height: 0;
+}
+
+.archive-workspace.has-images.is-list-mode {
+  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
 }
 
 .archive-sidebar {
@@ -335,7 +345,8 @@ onUnmounted(() => {
 }
 
 @media (width <= 1100px) {
-  .archive-workspace.has-images {
+  .archive-workspace.has-images,
+  .archive-workspace.has-images.is-list-mode {
     grid-template-columns: 1fr;
     height: auto;
     min-height: initial;

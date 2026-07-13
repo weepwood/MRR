@@ -3,16 +3,17 @@ import type { ViewMode } from '../types'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const GAP = 6
-const MIN_ITEM_WIDTH = 64
-const MAX_ITEM_WIDTH = 110
+const CONTAINER_HORIZONTAL_PADDING = 16
+const MIN_ITEM_WIDTH = 156
+const MAX_ITEM_WIDTH = 220
 const SCROLL_LOAD_THRESHOLD = 80
 
 export function useThumbLayout(
   thumbsContainer: Ref<HTMLElement | null>,
   viewMode: Ref<ViewMode>,
 ) {
-  const thumbColumns = ref(2)
-  const thumbItemWidth = ref(96)
+  const thumbColumns = ref(1)
+  const thumbItemWidth = ref(184)
   const pageSize = ref(20)
   const visibleCount = ref(20)
 
@@ -30,10 +31,10 @@ export function useThumbLayout(
   function calc(): void {
     const container = thumbsContainer.value
     if (!container) {
-      thumbColumns.value = viewMode.value === 'thumb' ? 2 : 1
+      thumbColumns.value = 1
       return
     }
-    const containerWidth = container.clientWidth
+    const containerWidth = Math.max(1, container.clientWidth - CONTAINER_HORIZONTAL_PADDING)
     if (viewMode.value === 'list') {
       thumbColumns.value = 1
       updatePageSize(40)
@@ -47,8 +48,10 @@ export function useThumbLayout(
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 
-    const itemHeight = Math.max(actualItemWidth, 88) + 50
-    const visibleRows = Math.ceil(container.clientHeight / itemHeight)
+    // Source images may have different aspect ratios, so this is only a neutral
+    // estimate used to decide how many lazy items to render initially.
+    const estimatedItemHeight = actualItemWidth + 52
+    const visibleRows = Math.ceil(container.clientHeight / estimatedItemHeight)
     updatePageSize(thumbColumns.value * Math.max(2, visibleRows + 1))
   }
 

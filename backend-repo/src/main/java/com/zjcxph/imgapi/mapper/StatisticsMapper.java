@@ -48,18 +48,23 @@ public interface StatisticsMapper {
             @Param("endDate") String endDate
     );
 
-    // 根据病案号查询
-    @Select("SELECT * FROM mr_statistics WHERE bah = #{bah} ORDER BY date")
-    List<Statistics> findByBah(@Param("bah") String bah);
+    // 根据病案号查询，兼容历史短值
+    @Select("SELECT * FROM mr_statistics WHERE bah = #{normalizedBah} " +
+            "OR COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') = #{searchCode} ORDER BY date")
+    List<Statistics> findByBah(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("searchCode") String searchCode
+    );
 
     // 根据日期查询（使用 LIKE 模糊匹配，支持多种格式）
     @Select("SELECT * FROM mr_statistics WHERE date LIKE '%' || #{date} || '%' ORDER BY bah")
     List<Statistics> findByDate(@Param("date") String date);
 
-    // 统计每个病案号的记录数和总页数
-    @Select("SELECT bah, COUNT(*) as recordCount, SUM(pages) as totalPages " +
+    // 统计每个病案号的记录数和总页数，合并短值与补零值
+    @Select("SELECT LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0') AS bah, " +
+            "COUNT(*) AS recordCount, SUM(pages) AS totalPages " +
             "FROM mr_statistics " +
-            "GROUP BY bah " +
+            "GROUP BY LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0') " +
             "ORDER BY bah")
     List<BAHStatisticsDTO> getBAHStatistics();
 
@@ -80,8 +85,9 @@ public interface StatisticsMapper {
     @Select("SELECT COUNT(*) AS \"totalRecords\", COALESCE(SUM(pages), 0) AS \"totalPages\" FROM mr_statistics")
     Map<String, Object> getTotalStatistics();
 
-    // 获取不同病案号的数量
-    @Select("SELECT COUNT(DISTINCT bah) as uniqueBAHCount FROM mr_statistics")
+    // 获取规范化后不同病案号的数量
+    @Select("SELECT COUNT(DISTINCT LPAD(COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0'), 8, '0')) " +
+            "AS uniqueBAHCount FROM mr_statistics")
     Long getUniqueBAHCount();
 
     // 按类型统计

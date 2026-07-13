@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.req.ImageRequest;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.PdfService;
@@ -48,6 +49,8 @@ import java.util.Map;
 public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
+    private static final String BAH_REQUIRES_SJH_MESSAGE =
+            "病案号大于等于 10000000 时必须同时提供上架号";
 
     private final ImageProperties imageProperties;
     private final ScanService scanService;
@@ -76,14 +79,24 @@ public class ImageController {
 
     @Operation(summary = "下载病案压缩包")
     @GetMapping("/download/{BAH}")
-    public ResponseEntity<FileSystemResource> download(@PathVariable
-                                                       @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
-                                                       @Parameter(description = "病案号，可省略前导零", example = "789508")
-                                                       String BAH) throws IOException {
+    public ResponseEntity<FileSystemResource> download(
+            @PathVariable
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
+            @Parameter(description = "病案号，可省略前导零", example = "789508")
+            String BAH,
+            @RequestParam(required = false)
+            @Parameter(description = "唯一上架号；病案号大于等于 10000000 时必填")
+            String sjh) throws IOException {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(BAH);
-        File zipFile = scanService.createZipForBAH(normalizedBah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+            throw new BusinessException(400, BAH_REQUIRES_SJH_MESSAGE);
+        }
+
+        File zipFile = scanService.createZipForCode(normalizedBah, normalizedSjh);
         zipFile.deleteOnExit();
-        String fileNameZip = normalizedBah + ".zip";
+        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
+        String fileNameZip = archiveCode + ".zip";
         FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
 
         logger.info("生成压缩包:{}", fileNameZip);
@@ -98,31 +111,37 @@ public class ImageController {
                 .body(fileSystemResource);
     }
 
-    @Operation(summary = "获取病案号下的图片数据")
+    @Operation(summary = "获取唯一病案号下的图片数据")
     @GetMapping("/{bah}")
     public Result<List<BAHDataResponseDTO>> getDataByBAH(
             @PathVariable
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
-            @Parameter(description = "病案号，可省略前导零", example = "789508")
+            @Parameter(description = "小于 10000000 的唯一病案号，可省略前导零", example = "789508")
             String bah) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)) {
+            return Result.fail(BAH_REQUIRES_SJH_MESSAGE + "，请使用 /search 接口");
+        }
         String bahSearchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
         List<Scan> imageListByBAH = scanService.getImageListByBAH(normalizedBah, bahSearchCode);
         List<BAHDataResponseDTO> items = imageUrlService.toDtoList(imageListByBAH);
         return Result.success(items).message(normalizedBah + " 数据获取成功");
     }
 
-    @Operation(summary = "按病案号和/或上架号查询图片数据")
+    @Operation(summary = "按病案号和/或唯一上架号查询图片数据")
     @GetMapping("/search")
     public Result<List<BAHDataResponseDTO>> searchByCode(
-            @Parameter(description = "病案号，可省略前导零")
+            @Parameter(description = "病案号，可省略前导零；大于等于 10000000 时必须同时传上架号")
             @RequestParam(required = false) String bah,
-            @Parameter(description = "上架号，可省略前导零")
+            @Parameter(description = "唯一上架号，可省略前导零")
             @RequestParam(required = false) String sjh) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
+        }
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+            return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
         }
         List<Scan> list = scanService.getImageListByCode(
                 normalizedBah,

@@ -4,7 +4,11 @@ import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
 import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
-import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
+import {
+  getArchiveLookupValidationMessage,
+  normalizeMedicalRecordCode,
+  requiresSjhForBah,
+} from '@/utils/medical-record-code'
 import { padCode, resolveImageUrl } from '../constants'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -23,7 +27,8 @@ export function useArchiveImages() {
   const searchSjh = ref('')
 
   async function loadPatient(bah: string): Promise<void> {
-    if (!bah) {
+    if (!bah || requiresSjhForBah(bah)) {
+      // 患者表没有上架号，非唯一病案号无法可靠关联患者，避免显示第一条同号患者。
       patientList.value = []
       return
     }
@@ -43,13 +48,19 @@ export function useArchiveImages() {
   async function loadImages(): Promise<void> {
     const bah = padCode(searchBah.value)
     const sjh = padCode(searchSjh.value)
-    if (!bah && !sjh) {
-      ElMessage.warning('请输入病案号或上架号')
-      return
-    }
+    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
     searchBah.value = bah
     searchSjh.value = sjh
+
+    if (validationMessage) {
+      images.value = []
+      patientList.value = []
+      errorMsg.value = validationMessage
+      ElMessage.warning(validationMessage)
+      return
+    }
+
     loading.value = true
     errorMsg.value = ''
     try {
@@ -67,6 +78,7 @@ export function useArchiveImages() {
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
       images.value = []
+      patientList.value = []
     }
     finally {
       loading.value = false
@@ -74,15 +86,22 @@ export function useArchiveImages() {
   }
 
   async function handleDownload(): Promise<void> {
-    const bah = padCode(searchBah.value)
-    if (!bah) {
-      ElMessage.warning('请输入病案号')
+    const firstImage = images.value[0]
+    const bah = padCode(searchBah.value || firstImage?.bah || '')
+    const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
+    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
+    if (validationMessage) {
+      ElMessage.warning(validationMessage)
       return
     }
-    searchBah.value = bah
+    if (!bah) {
+      ElMessage.warning('当前档案缺少病案号，无法下载')
+      return
+    }
+
     downloading.value = true
     try {
-      const result = await downloadBah(bah) as unknown as Blob | { data?: Blob }
+      const result = await downloadBah(bah, sjh || undefined) as unknown as Blob | { data?: Blob }
       const blob = result instanceof Blob ? result : result?.data
       if (!(blob instanceof Blob)) {
         throw new TypeError('下载响应不是文件')
@@ -90,7 +109,7 @@ export function useArchiveImages() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${bah}.zip`
+      link.download = `${bah}${sjh ? `-${sjh}` : ''}.zip`
       link.click()
       URL.revokeObjectURL(url)
       ElMessage.success('档案袋下载已开始')

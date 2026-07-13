@@ -1,6 +1,8 @@
 export const MEDICAL_RECORD_CODE_LENGTH = 8
+export const ARCHIVE_BAH_UNIQUE_LIMIT = 10_000_000
 
 const MEDICAL_RECORD_CODE_KEYS = new Set(['bah', 'sjh'])
+const ARCHIVE_BAH_UNIQUE_LIMIT_TEXT = String(ARCHIVE_BAH_UNIQUE_LIMIT)
 
 /**
  * 将纯数字病案号或上架号统一格式化为 8 位，不足位数时在左侧补零。
@@ -34,6 +36,34 @@ export function toMedicalRecordCodeSearchTerm(value: unknown): string {
   }
   const withoutLeadingZeros = text.replace(/^0+/, '')
   return withoutLeadingZeros || '0'
+}
+
+/**
+ * 病案号从 10000000 开始不再保证唯一，查询时必须同时提供唯一上架号。
+ */
+export function requiresSjhForBah(value: unknown): boolean {
+  const searchTerm = toMedicalRecordCodeSearchTerm(value)
+  if (!/^\d+$/.test(searchTerm)) {
+    return false
+  }
+  return searchTerm.length > ARCHIVE_BAH_UNIQUE_LIMIT_TEXT.length
+    || (searchTerm.length === ARCHIVE_BAH_UNIQUE_LIMIT_TEXT.length
+      && searchTerm >= ARCHIVE_BAH_UNIQUE_LIMIT_TEXT)
+}
+
+/**
+ * 校验影像档案查询条件。上架号本身唯一，因此允许只使用上架号查询。
+ */
+export function getArchiveLookupValidationMessage(bah: unknown, sjh: unknown): string {
+  const normalizedBah = normalizeMedicalRecordCode(bah)
+  const normalizedSjh = normalizeMedicalRecordCode(sjh)
+  if (!normalizedBah && !normalizedSjh) {
+    return '请输入病案号或上架号'
+  }
+  if (requiresSjhForBah(normalizedBah) && !normalizedSjh) {
+    return `病案号大于等于 ${ARCHIVE_BAH_UNIQUE_LIMIT} 时必须输入上架号`
+  }
+  return ''
 }
 
 /**

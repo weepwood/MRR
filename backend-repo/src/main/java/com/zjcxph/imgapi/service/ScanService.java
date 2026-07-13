@@ -18,8 +18,10 @@ public interface ScanService {
     );
 
     Path getImagePath(String bah);
-    
+
     java.io.File createZipForBAH(String bah) throws java.io.IOException;
+
+    java.io.File createZipForCode(String bah, String sjh) throws java.io.IOException;
 
     List<PathDO> getImagePathList(List<String> ids);
 

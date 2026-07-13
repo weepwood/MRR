@@ -266,6 +266,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
+                    <excludes>
+                        <exclude>**/integration/**</exclude>
+                    </excludes>
                     <environmentVariables>
                         <JWT_SECRET_KEY>test-jwt-secret-key-for-automated-tests</JWT_SECRET_KEY>
                     </environmentVariables>

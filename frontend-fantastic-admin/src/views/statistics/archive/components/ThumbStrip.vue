@@ -203,6 +203,7 @@ defineExpose({ resetVisible, scrollToIndex })
 
 .thumb-item {
   position: relative;
+  box-sizing: border-box;
   display: grid;
   gap: 5px;
   min-width: 0;
@@ -261,12 +262,13 @@ defineExpose({ resetVisible, scrollToIndex })
 .thumb-image-placeholder {
   box-sizing: border-box;
   width: 100%;
-  height: 104px;
+  height: auto;
   aspect-ratio: 3 / 4;
   border-radius: 5px;
 }
 
 .thumb-item img {
+  display: block;
   object-fit: cover;
   background: var(--surface-alt);
 }

@@ -46,7 +46,23 @@ jobs:
         run: pnpm lint:tsc
 
       - name: Unit tests
-        run: pnpm test:run
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          set +e
+          pnpm test:run 2>&1 | tee vitest.log
+          test_status=${PIPESTATUS[0]}
+          echo "exit_code=${test_status}" >> "$GITHUB_OUTPUT"
+          exit "${test_status}"
+
+      - name: Upload failed unit test log
+        if: steps.unit-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-log-${{ github.run_id }}
+          path: frontend-fantastic-admin/vitest.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Build mock application
         run: pnpm build:mock
@@ -56,3 +72,9 @@ jobs:
 
       - name: End-to-end tests without backend
         run: pnpm test:e2e
+
+      - name: Preserve unit test failure
+        if: always() && steps.unit-tests.outcome == 'failure'
+        run: |
+          echo "::error::Unit tests failed with exit code ${{ steps.unit-tests.outputs.exit_code }}. See the uploaded Vitest log artifact."
+          exit 1

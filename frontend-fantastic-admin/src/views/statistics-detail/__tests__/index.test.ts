@@ -9,7 +9,12 @@ const api = vi.hoisted(() => ({
   getStatisticsSummary: vi.fn(),
 }))
 
+const settingsApi = vi.hoisted(() => ({
+  getSystemSettings: vi.fn(),
+}))
+
 vi.mock('@/api/modules/statistics', () => api)
+vi.mock('@/api/modules/settings', () => settingsApi)
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
@@ -90,6 +95,7 @@ describe('statistics detail responsive pagination', () => {
       data: { byType: [], total: {} },
     })
     api.exportStatisticsCsv.mockReset()
+    settingsApi.getSystemSettings.mockReset().mockResolvedValue({ data: {} })
   })
 
   afterEach(() => {

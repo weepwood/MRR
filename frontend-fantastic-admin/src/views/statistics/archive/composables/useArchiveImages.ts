@@ -4,7 +4,11 @@ import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
 import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
-import { getArchiveLookupValidationMessage, normalizeMedicalRecordCode } from '@/utils/medical-record-code'
+import {
+  getArchiveLookupValidationMessage,
+  normalizeMedicalRecordCode,
+  requiresSjhForBah,
+} from '@/utils/medical-record-code'
 import { padCode, resolveImageUrl } from '../constants'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -23,7 +27,8 @@ export function useArchiveImages() {
   const searchSjh = ref('')
 
   async function loadPatient(bah: string): Promise<void> {
-    if (!bah) {
+    if (!bah || requiresSjhForBah(bah)) {
+      // 患者表没有上架号，非唯一病案号无法可靠关联患者，避免显示第一条同号患者。
       patientList.value = []
       return
     }

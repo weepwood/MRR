@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.mapper;
 import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.entity.Statistics;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -11,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 
 public interface StatisticsMapper {
+
+    String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
+    String CANONICAL_BAH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]{1,8}$' " +
+            "THEN LPAD(bah, 8, '0') ELSE bah END";
 
     // 查询所有统计数据
     @Select("SELECT * FROM mr_statistics ORDER BY date")
@@ -48,18 +54,33 @@ public interface StatisticsMapper {
             @Param("endDate") String endDate
     );
 
-    // 根据病案号查询
-    @Select("SELECT * FROM mr_statistics WHERE bah = #{bah} ORDER BY date")
-    List<Statistics> findByBah(@Param("bah") String bah);
+    // 根据病案号查询，兼容历史短值
+    @Select("SELECT * FROM mr_statistics WHERE bah = #{normalizedBah} " +
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY date")
+    List<Statistics> findByBah(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("searchCode") String searchCode
+    );
+
+    /**
+     * 保留旧的一参数调用方式，内部自动兼容有无前导零的病案号。
+     */
+    default List<Statistics> findByBah(String bah) {
+        return findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
+    }
 
     // 根据日期查询（使用 LIKE 模糊匹配，支持多种格式）
     @Select("SELECT * FROM mr_statistics WHERE date LIKE '%' || #{date} || '%' ORDER BY bah")
     List<Statistics> findByDate(@Param("date") String date);
 
-    // 统计每个病案号的记录数和总页数
-    @Select("SELECT bah, COUNT(*) as recordCount, SUM(pages) as totalPages " +
+    // 统计每个病案号的记录数和总页数，合并短值与补零值
+    @Select("SELECT " + CANONICAL_BAH_EXPRESSION + " AS bah, " +
+            "COUNT(*) AS recordCount, SUM(pages) AS totalPages " +
             "FROM mr_statistics " +
-            "GROUP BY bah " +
+            "GROUP BY " + CANONICAL_BAH_EXPRESSION + " " +
             "ORDER BY bah")
     List<BAHStatisticsDTO> getBAHStatistics();
 
@@ -80,8 +101,9 @@ public interface StatisticsMapper {
     @Select("SELECT COUNT(*) AS \"totalRecords\", COALESCE(SUM(pages), 0) AS \"totalPages\" FROM mr_statistics")
     Map<String, Object> getTotalStatistics();
 
-    // 获取不同病案号的数量
-    @Select("SELECT COUNT(DISTINCT bah) as uniqueBAHCount FROM mr_statistics")
+    // 获取规范化后不同病案号的数量
+    @Select("SELECT COUNT(DISTINCT " + CANONICAL_BAH_EXPRESSION + ") " +
+            "AS uniqueBAHCount FROM mr_statistics")
     Long getUniqueBAHCount();
 
     // 按类型统计

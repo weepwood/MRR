@@ -1,4 +1,5 @@
 import type { TypeOption, TypeStatItem } from './types'
+import { MEDICAL_RECORD_CODE_LENGTH, normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 
 export const TYPE_OPTIONS: TypeOption[] = [
   { value: 1, label: '01-病案首页' },
@@ -20,7 +21,7 @@ export const TYPE_OPTION_MAP = new Map<number, TypeOption>(
   TYPE_OPTIONS.map(item => [item.value, item]),
 )
 
-export const MIN_BAH_LENGTH = 8
+export const MIN_BAH_LENGTH = MEDICAL_RECORD_CODE_LENGTH
 
 export function getTypeLabel(type?: number | string | null): string {
   const numericType = Number(type)
@@ -40,11 +41,7 @@ export function formatDate(value: string | undefined): string {
 }
 
 export function padCode(value: string): string {
-  const trimmed = value.trim()
-  if (trimmed.length > 0 && trimmed.length < MIN_BAH_LENGTH && /^\d+$/.test(trimmed)) {
-    return trimmed.padStart(MIN_BAH_LENGTH, '0')
-  }
-  return trimmed
+  return normalizeMedicalRecordCode(value)
 }
 
 export function buildTypeStats(images: { btype?: number | null }[]): TypeStatItem[] {

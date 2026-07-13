@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.entity;
 
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import lombok.Data;
 
 @Data
@@ -14,21 +15,25 @@ public class Patient {
     // 用户名
     private String name;
     // 入院时间
-    private String admissiontime ;
+    private String admissiontime;
     // 住院科室
     private String department;
 
     public Patient(Integer id, String idCard, String bah, String name, String admissiontime,
-                  String department) {
+                   String department) {
         this.id = id;
         this.idCard = idCard;
-        this.bah = bah;
+        setBah(bah);
         this.name = name;
         this.admissiontime = admissiontime;
         this.department = department;
     }
 
     public Patient() {
+    }
+
+    public void setBah(String bah) {
+        this.bah = MedicalRecordCodeUtils.normalize(bah);
     }
     
     @Override

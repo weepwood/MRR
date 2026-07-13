@@ -1,6 +1,7 @@
 import iconConfig from '@/iconify/index.json'
 // 自定义指令
 import directive from '@/utils/directive'
+import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 
 import App from './App.vue'
 import router from './router'
@@ -15,6 +16,8 @@ import '@unocss/reset/tailwind-compat.css'
 import 'virtual:uno.css'
 // 全局样式
 import '@/assets/styles/globals.css'
+
+installMedicalRecordCodeInterceptors()
 
 const app = createApp(App)
 app.use(pinia)

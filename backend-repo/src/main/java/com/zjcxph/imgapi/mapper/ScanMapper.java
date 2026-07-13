@@ -1,8 +1,9 @@
 package com.zjcxph.imgapi.mapper;
 
+import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
-import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -14,25 +15,45 @@ import java.util.List;
 import java.util.Map;
 
 public interface ScanMapper {
-    @Select("select * from mr_scan where BAH = #{bah} OR BAH = #{bahRaw} OR SJH = #{bah} OR SJH = #{bahRaw} ORDER BY pages")
-    List<Scan> findBAH(@Param("bah") String bah, @Param("bahRaw") String bahRaw);
+    String BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
+    String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
+
+    @Select("SELECT * FROM mr_scan WHERE " +
+            "BAH = #{normalizedCode} OR SJH = #{normalizedCode} " +
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} " +
+            "OR " + SJH_SEARCH_EXPRESSION + " = #{searchCode} " +
+            "ORDER BY pages")
+    List<Scan> findBAH(
+            @Param("normalizedCode") String normalizedCode,
+            @Param("searchCode") String searchCode
+    );
 
     @Select("<script>"
-            + "SELECT * FROM mr_scan WHERE "
+            + "SELECT * FROM mr_scan "
+            + "<where>"
             + "<choose>"
-            + "<when test='bah != null and bah != \"\" and sjh != null and sjh != \"\"'>"
-            + "BAH = #{bah} OR SJH = #{sjh}"
+            + "<when test='normalizedBah != null and normalizedBah != \"\" and normalizedSjh != null and normalizedSjh != \"\"'>"
+            + "(BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
+            + "OR (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
-            + "<when test='bah != null and bah != \"\"'>"
-            + "BAH = #{bah}"
+            + "<when test='normalizedBah != null and normalizedBah != \"\"'>"
+            + "BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"
             + "</when>"
-            + "<when test='sjh != null and sjh != \"\"'>"
-            + "SJH = #{sjh}"
+            + "<when test='normalizedSjh != null and normalizedSjh != \"\"'>"
+            + "SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode}"
             + "</when>"
             + "</choose>"
+            + "</where>"
             + " ORDER BY pages"
             + "</script>")
-    List<Scan> findByCode(@Param("bah") String bah, @Param("sjh") String sjh);
+    List<Scan> findByCode(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("bahSearchCode") String bahSearchCode,
+            @Param("normalizedSjh") String normalizedSjh,
+            @Param("sjhSearchCode") String sjhSearchCode
+    );
 
     // 根据 ID 列表查询图片路径 - XML 实现
     List<PathDO> getImagePathList(@Param("ids") List<String> ids);
@@ -61,9 +82,23 @@ public interface ScanMapper {
     @Select("SELECT * FROM mr_scan WHERE id = #{id}")
     Scan findById(Integer id);
 
-    // 根据病案号查询（不分页）
-    @Select("SELECT * FROM mr_scan WHERE BAH = #{bah} ORDER BY pages")
-    List<Scan> findByBah(@Param("bah") String bah);
+    // 根据病案号查询（不分页），兼容历史短值
+    @Select("SELECT * FROM mr_scan WHERE BAH = #{normalizedBah} " +
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY pages")
+    List<Scan> findByBah(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("searchCode") String searchCode
+    );
+
+    /**
+     * 保留旧的一参数调用方式，内部自动转换为规范值与去前导零搜索词。
+     */
+    default List<Scan> findByBah(String bah) {
+        return findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
+    }
 
     // 根据文件夹查询
     @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id")

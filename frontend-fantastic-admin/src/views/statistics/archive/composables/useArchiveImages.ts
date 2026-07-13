@@ -2,8 +2,9 @@ import type { GalleryImage, PatientInfo } from '../types'
 import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
-import { downloadBah, getImgApiByBah, getImgByCode, updateImageType } from '@/api/modules/image'
+import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
 import { getPatientByBah } from '@/api/modules/search'
+import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 import { padCode, resolveImageUrl } from '../constants'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -47,18 +48,21 @@ export function useArchiveImages() {
       return
     }
 
+    searchBah.value = bah
+    searchSjh.value = sjh
     loading.value = true
     errorMsg.value = ''
     try {
-      const res = bah && !sjh
-        ? await asResult<BAHImageData[]>(getImgApiByBah(bah))
-        : await asResult<BAHImageData[]>(getImgByCode(bah, sjh))
+      const res = await asResult<BAHImageData[]>(getImgByCode(bah || undefined, sjh || undefined))
       const rawList = Array.isArray(res?.data) ? res.data : []
       images.value = rawList.map((item: BAHImageData) => ({
         ...item,
+        bah: normalizeMedicalRecordCode(item.bah),
+        sjh: normalizeMedicalRecordCode(item.sjh),
         imageUrl: resolveImageUrl(item),
       }))
-      await loadPatient(bah || sjh)
+      const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
+      await loadPatient(patientBah)
     }
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
@@ -75,6 +79,7 @@ export function useArchiveImages() {
       ElMessage.warning('请输入病案号')
       return
     }
+    searchBah.value = bah
     downloading.value = true
     try {
       const result = await downloadBah(bah) as unknown as Blob | { data?: Blob }

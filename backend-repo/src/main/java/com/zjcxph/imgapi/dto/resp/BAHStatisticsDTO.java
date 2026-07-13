@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.dto.resp;
 
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import lombok.Data;
 
 /**
@@ -15,9 +16,12 @@ public class BAHStatisticsDTO {
     }
 
     public BAHStatisticsDTO(String bah, Long recordCount, Long totalPages) {
-        this.bah = bah;
+        setBah(bah);
         this.recordCount = recordCount;
         this.totalPages = totalPages;
     }
 
+    public void setBah(String bah) {
+        this.bah = MedicalRecordCodeUtils.normalize(bah);
+    }
 }

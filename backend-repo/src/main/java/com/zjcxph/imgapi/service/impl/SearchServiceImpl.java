@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.service.impl;
 import com.zjcxph.imgapi.mapper.SearchMapper;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.service.SearchService;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,9 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public List<Patient> getPatientByBah(String bah) {
-        return searchMapper.findPatientByBah(bah);
+        return searchMapper.findPatientByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
     }
 }

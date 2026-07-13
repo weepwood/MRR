@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.entity;
 
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import lombok.Data;
 
 @Data
@@ -17,13 +18,20 @@ public class Statistics {
     }
 
     public Statistics(String bah, String cid, String openerNo, String date, String type, Integer pages, String sjh) {
-        this.bah = bah;
+        setBah(bah);
         this.cid = cid;
         this.openerNo = openerNo;
         this.date = date;
         this.type = type;
         this.pages = pages;
-        this.sjh = sjh;
+        setSjh(sjh);
     }
 
+    public void setBah(String bah) {
+        this.bah = MedicalRecordCodeUtils.normalize(bah);
+    }
+
+    public void setSjh(String sjh) {
+        this.sjh = MedicalRecordCodeUtils.normalize(sjh);
+    }
 }

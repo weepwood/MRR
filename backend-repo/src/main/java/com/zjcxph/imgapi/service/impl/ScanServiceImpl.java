@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ScanService;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -29,32 +30,39 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    @Cacheable(value = "scanByBah", key = "#bah", unless = "#result == null || #result.isEmpty()")
-    public List<Scan> getImageListByBAH(String bah, String bahRaw) {
-        return scanMapper.findBAH(bah, bahRaw);
+    @Cacheable(value = "scanByBah", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
+    public List<Scan> getImageListByBAH(String normalizedCode, String searchCode) {
+        return scanMapper.findBAH(normalizedCode, searchCode);
     }
 
     @Override
-    public List<Scan> getImageListByCode(String bah, String sjh) {
-        return scanMapper.findByCode(bah, sjh);
+    public List<Scan> getImageListByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    ) {
+        return scanMapper.findByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
     }
 
     @Override
     public Path getImagePath(String bah) {
-        List<Scan> baData = scanMapper.findBAH(bah, bah);
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String searchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
+        List<Scan> baData = scanMapper.findBAH(normalizedBah, searchCode);
         if (baData.isEmpty()) {
             return null;
         }
         Scan scan = baData.get(0);
         String folderPath = scan.getFolder();
         String brxh = scan.getBrxh();
-        if (folderPath == null || folderPath.length() < 5 || brxh == null) {
+        String storedBah = scan.getBah();
+        if (folderPath == null || folderPath.length() < 5 || brxh == null || storedBah == null) {
             return null;
         }
         String parentFolder = folderPath.substring(0, 5);
-        String folderName = brxh + "-" + bah;
+        String folderName = brxh + "-" + storedBah;
         return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
-        
     }
 
     @Override
@@ -63,10 +71,11 @@ public class ScanServiceImpl implements ScanService {
         if (imagePath == null) {
             throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到该病案号的图片路径");
         }
-        
-        String fileNameTemp = bah + ".temp";
+
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String fileNameTemp = normalizedBah + ".temp";
         String zipPath = "./temp/" + fileNameTemp;
-        
+
         com.zjcxph.imgapi.utils.ZipUtil.zipJpgFiles(imagePath.toString(), zipPath);
         return new java.io.File(zipPath);
     }
@@ -90,6 +99,7 @@ public class ScanServiceImpl implements ScanService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "scanByBah", allEntries = true)
     public Scan create(Scan scan) {
+        normalizeStoredCodes(scan);
         if (scanMapper.insert(scan) > 0) {
             return scan;
         }
@@ -113,6 +123,7 @@ public class ScanServiceImpl implements ScanService {
             @CacheEvict(value = "scanById", key = "#scan.id")
     })
     public Scan update(Scan scan) {
+        normalizeStoredCodes(scan);
         if (scanMapper.update(scan) > 0) {
             return scan;
         }
@@ -132,7 +143,10 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findByBah(String bah) {
-        return scanMapper.findByBah(bah);
+        return scanMapper.findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
     }
 
     @Override
@@ -149,18 +163,45 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findByCondition(ScanRequest request) {
+        normalizeSearchCodes(request);
         return scanMapper.findByCondition(request);
     }
 
     @Override
     public List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size) {
         PaginationUtils.validatePageParams(page, size);
+        normalizeSearchCodes(request);
         int offset = PaginationUtils.calculateOffset(page, size);
         return scanMapper.findByConditionWithPagination(request, offset, size);
     }
 
     @Override
     public long countByCondition(ScanRequest request) {
+        normalizeSearchCodes(request);
         return scanMapper.countByCondition(request);
+    }
+
+    private void normalizeStoredCodes(Scan scan) {
+        if (scan == null) {
+            return;
+        }
+        if (scan.getBah() != null) {
+            scan.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
+        }
+        if (scan.getSjh() != null) {
+            scan.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
+        }
+    }
+
+    private void normalizeSearchCodes(ScanRequest request) {
+        if (request == null) {
+            return;
+        }
+        if (request.getBah() != null) {
+            request.setBah(MedicalRecordCodeUtils.toSearchTerm(request.getBah()));
+        }
+        if (request.getSjh() != null) {
+            request.setSjh(MedicalRecordCodeUtils.toSearchTerm(request.getSjh()));
+        }
     }
 }

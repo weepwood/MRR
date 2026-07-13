@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RouteArchiveMeta } from '../types'
 import { Search } from '@element-plus/icons-vue'
+import { formatMedicalRecordCode } from '@/utils/medical-record-code'
 import { formatDate, normalizeText } from '../constants'
 
 defineOptions({ name: 'ArchiveSearchBar' })
@@ -18,12 +19,12 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 
 const metaItems = computed(() => [
-  { label: '病案号', value: normalizeText(props.routeMeta.bah) },
+  { label: '病案号', value: formatMedicalRecordCode(props.routeMeta.bah) },
   { label: '设备', value: normalizeText(props.routeMeta.cid) },
   { label: '类型', value: normalizeText(props.routeMeta.type) },
   { label: '日期', value: formatDate(props.routeMeta.date) },
   { label: '人员', value: normalizeText(props.routeMeta.openerNo) },
-  { label: '上架号', value: normalizeText(props.routeMeta.sjh) },
+  { label: '上架号', value: formatMedicalRecordCode(props.routeMeta.sjh) },
 ])
 </script>
 

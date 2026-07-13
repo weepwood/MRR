@@ -8,9 +8,14 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface ScanService {
-    List<Scan> getImageListByBAH(String bah, String bahRaw);
+    List<Scan> getImageListByBAH(String normalizedCode, String searchCode);
 
-    List<Scan> getImageListByCode(String bah, String sjh);
+    List<Scan> getImageListByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    );
 
     Path getImagePath(String bah);
     

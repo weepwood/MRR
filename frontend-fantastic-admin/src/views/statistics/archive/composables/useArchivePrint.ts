@@ -1,7 +1,7 @@
 import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import { exportSelectedImagesPdf } from '@/api/modules/image'
+import { createPdfFromImageUrls } from '../utils/client-pdf'
 
 export function useArchivePrint() {
   const printing = ref(false)
@@ -96,42 +96,48 @@ export function useArchivePrint() {
     }
   }
 
+  function getArchiveKey(image: GalleryImage): string {
+    return `${String(image.bah || '').trim()}|${String(image.sjh || '').trim()}`
+  }
+
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
     if (!images.length) {
       ElMessage.warning('请先选择要导出的影像')
       return
     }
 
-    const ids = images
-      .map(image => image.id)
-      .filter((id): id is number => Number.isInteger(id))
-    if (ids.length !== images.length) {
-      ElMessage.warning('部分影像缺少记录 ID，无法导出 PDF')
+    const archiveKey = getArchiveKey(images[0])
+    if (images.some(image => getArchiveKey(image) !== archiveKey)) {
+      ElMessage.warning('选中的影像不属于同一个档案袋')
+      return
+    }
+
+    const imageUrls = images.map(image => String(image.imageUrl || '').trim())
+    if (imageUrls.some(url => !url)) {
+      ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
       return
     }
 
     exportingPdf.value = true
     try {
-      const result = await exportSelectedImagesPdf(ids) as unknown as Blob | { data?: Blob }
-      const blob = result instanceof Blob ? result : result?.data
-      if (!(blob instanceof Blob)) {
-        throw new TypeError('PDF 导出响应不是文件')
-      }
-
+      const pdfBlob = await createPdfFromImageUrls(imageUrls)
       const firstImage = images[0]
       const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
       const sjh = String(firstImage?.sjh || '').trim()
       const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(pdfBlob)
       const link = document.createElement('a')
       link.href = url
       link.download = fileName
+      document.body.appendChild(link)
       link.click()
-      URL.revokeObjectURL(url)
-      ElMessage.success('选中影像 PDF 导出已开始')
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
     }
     catch (err: unknown) {
-      ElMessage.error((err as { message?: string })?.message || 'PDF 导出失败')
+      const message = (err as { message?: string })?.message || 'PDF 导出失败'
+      ElMessage.error(message.includes('Failed to fetch') ? '影像获取失败，请检查图片服务跨域配置' : message)
     }
     finally {
       exportingPdf.value = false

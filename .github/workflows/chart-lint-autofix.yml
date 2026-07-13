@@ -1,0 +1,58 @@
+name: chart-lint-autofix
+
+on:
+  pull_request:
+    branches:
+      - dev-no-login
+
+permissions:
+  contents: write
+
+jobs:
+  fix-chart-lint:
+    if: github.head_ref == 'feat/improve-trend-charts-20260713'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply lint fixes
+        run: |
+          pnpm exec eslint --fix \
+            src/views/response-analysis/components/ResponseTrendChart.vue \
+            src/views/audit-images/components/AuditAnalytics.vue
+          pnpm exec stylelint --fix \
+            src/views/response-analysis/components/ResponseTrendChart.vue \
+            src/views/audit-images/components/AuditAnalytics.vue
+
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/views/response-analysis/components/ResponseTrendChart.vue \
+            src/views/audit-images/components/AuditAnalytics.vue
+          if ! git diff --cached --quiet; then
+            git commit -m "style(charts): apply repository lint rules"
+            git push origin HEAD:${{ github.head_ref }}
+          fi

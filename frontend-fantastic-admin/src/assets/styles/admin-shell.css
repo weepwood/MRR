@@ -1,0 +1,458 @@
+/*
+ * MRR 管理壳层
+ *
+ * 参考 art-design-pro 的紧凑导航、边框/阴影双层级与容器化页面思路，
+ * 在 Fantastic Admin 现有布局上做渐进增强，不改变路由、权限和业务组件。
+ */
+
+:root {
+  --mrr-shell-page-padding: clamp(16px, 2vw, 28px);
+  --mrr-shell-content-max-width: 1760px;
+  --mrr-shell-section-gap: 16px;
+  --mrr-shell-control-height: 36px;
+  --mrr-shell-radius-sm: 8px;
+  --mrr-shell-radius-md: 12px;
+  --mrr-shell-radius-lg: 16px;
+  --mrr-shell-surface: color-mix(in srgb, var(--surface) 97%, var(--color-bg-warm));
+  --mrr-shell-surface-raised: var(--surface);
+  --mrr-shell-surface-soft: color-mix(in srgb, var(--surface-muted) 58%, var(--surface));
+  --mrr-shell-border: color-mix(in srgb, var(--divider) 82%, transparent);
+  --mrr-shell-border-strong: color-mix(in srgb, var(--divider) 100%, var(--text-primary) 7%);
+  --mrr-shell-shadow-sm: 0 1px 2px rgb(15 23 42 / 3%), 0 5px 16px rgb(15 23 42 / 3%);
+  --mrr-shell-shadow-md: 0 2px 4px rgb(15 23 42 / 4%), 0 12px 30px rgb(15 23 42 / 7%);
+  --mrr-shell-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --mrr-shell-duration-fast: 150ms;
+  --mrr-shell-duration-normal: 220ms;
+  --mrr-shell-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  --mrr-shell-surface: color-mix(in srgb, var(--surface) 96%, #fff 2%);
+  --mrr-shell-surface-raised: color-mix(in srgb, var(--surface) 98%, #fff 2%);
+  --mrr-shell-surface-soft: color-mix(in srgb, var(--surface-muted) 72%, var(--surface));
+  --mrr-shell-border: color-mix(in srgb, var(--divider) 90%, transparent);
+  --mrr-shell-border-strong: color-mix(in srgb, var(--divider) 100%, #fff 8%);
+  --mrr-shell-shadow-sm: 0 1px 2px rgb(0 0 0 / 12%), 0 6px 18px rgb(0 0 0 / 10%);
+  --mrr-shell-shadow-md: 0 2px 5px rgb(0 0 0 / 16%), 0 16px 36px rgb(0 0 0 / 18%);
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--g-main-area-bg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-feature-settings: "lnum" 1, "locl" 1;
+  text-rendering: optimizelegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* ===== 应用框架 ===== */
+
+#app-main .wrapper .main-container {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--color-primary) 4%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--g-main-area-bg) 96%, var(--surface)) 0%, var(--g-main-area-bg) 240px);
+}
+
+#app-main .wrapper .main-container .main {
+  padding: var(--mrr-shell-page-padding);
+}
+
+#app-main .wrapper .main-container .main > * {
+  width: min(100%, var(--mrr-shell-content-max-width));
+  margin-inline: auto;
+}
+
+#app-main .sidebar-container {
+  border-inline-end: 1px solid var(--mrr-shell-border);
+  box-shadow: 8px 0 28px rgb(15 23 42 / 2%);
+}
+
+#app-main .main-sidebar-container,
+#app-main .sub-sidebar-container {
+  background-color: color-mix(in srgb, var(--g-main-sidebar-bg, var(--surface)) 96%, var(--g-main-area-bg));
+  box-shadow: none;
+}
+
+#app-main .sub-sidebar-container {
+  background-color: color-mix(in srgb, var(--g-sub-sidebar-bg, var(--surface)) 97%, var(--g-main-area-bg));
+}
+
+#app-main > header,
+#app-main .topbar-container {
+  background-color: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-color: var(--mrr-shell-border);
+  box-shadow: none;
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+#app-main .topbar-container.mask {
+  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+}
+
+#app-main .topbar-container::before {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--g-main-area-bg) 90%, transparent), transparent);
+  box-shadow: none;
+}
+
+/* 一级导航使用轻量色块与细强调条，避免整块高饱和背景。 */
+#app-main .main-sidebar-container .menu-item-container,
+#app-main > header .menu-item-container {
+  border: 1px solid transparent;
+  transition:
+    color var(--mrr-shell-duration-fast) ease,
+    background-color var(--mrr-shell-duration-fast) ease,
+    border-color var(--mrr-shell-duration-fast) ease,
+    transform var(--mrr-shell-duration-fast) var(--mrr-shell-ease);
+}
+
+#app-main .main-sidebar-container .menu-item-container:hover,
+#app-main > header .menu-item-container:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 10%, var(--mrr-shell-border));
+  transform: translateY(-1px);
+}
+
+#app-main .main-sidebar-container .menu-item.active .menu-item-container {
+  border-color: color-mix(in srgb, var(--color-primary) 18%, var(--mrr-shell-border));
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+#app-main > header .menu-item.active .menu-item-container {
+  border-color: color-mix(in srgb, var(--color-primary) 18%, var(--mrr-shell-border));
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+}
+
+/* ===== 页面组合类 ===== */
+
+.mrr-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mrr-shell-section-gap);
+  min-width: 0;
+}
+
+.mrr-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 2px 2px 4px;
+}
+
+.mrr-page-heading {
+  min-width: 0;
+}
+
+.mrr-page-title {
+  margin: 0;
+  font-size: clamp(20px, 1.5vw, 26px);
+  font-weight: 720;
+  line-height: 1.25;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+.mrr-page-description {
+  max-width: 72ch;
+  margin: 7px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.mrr-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mrr-panel {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--mrr-shell-surface-raised);
+  border: 1px solid var(--mrr-shell-border);
+  border-radius: var(--mrr-shell-radius-md);
+  box-shadow: var(--mrr-shell-shadow-sm);
+}
+
+.mrr-panel--flat {
+  box-shadow: none;
+}
+
+.mrr-panel--interactive {
+  transition:
+    border-color var(--mrr-shell-duration-normal) ease,
+    box-shadow var(--mrr-shell-duration-normal) ease,
+    transform var(--mrr-shell-duration-normal) var(--mrr-shell-ease);
+}
+
+.mrr-panel--interactive:hover,
+.mrr-panel--interactive:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--mrr-shell-border));
+  box-shadow: var(--mrr-shell-shadow-md);
+  transform: translateY(-1px);
+}
+
+.mrr-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--mrr-shell-border);
+}
+
+.mrr-panel__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 680;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.mrr-panel__description {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.mrr-panel__body {
+  padding: 18px;
+}
+
+.mrr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 10px 12px;
+  background: var(--mrr-shell-surface-soft);
+  border: 1px solid var(--mrr-shell-border);
+  border-radius: var(--mrr-shell-radius-md);
+}
+
+.mrr-toolbar__group {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.mrr-toolbar__group--end {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+.mrr-table-panel {
+  overflow: hidden;
+  background: var(--mrr-shell-surface-raised);
+  border: 1px solid var(--mrr-shell-border);
+  border-radius: var(--mrr-shell-radius-md);
+  box-shadow: var(--mrr-shell-shadow-sm);
+}
+
+.mrr-table-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--mrr-shell-border);
+}
+
+.mrr-status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-inline-end: 6px;
+  vertical-align: 1px;
+  background: currentcolor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 12%, transparent);
+}
+
+/* ===== Element Plus 壳层统一 ===== */
+
+#app-main .el-card {
+  --el-card-border-color: var(--mrr-shell-border);
+  --el-card-border-radius: var(--mrr-shell-radius-md);
+}
+
+#app-main .el-card:not(.mrr-metric-card) {
+  box-shadow: var(--mrr-shell-shadow-sm);
+}
+
+#app-main .el-card:not(.mrr-metric-card) > .el-card__header {
+  padding: 14px 18px;
+  border-bottom-color: var(--mrr-shell-border);
+}
+
+#app-main .el-button {
+  min-height: var(--mrr-shell-control-height);
+  font-weight: 600;
+  border-radius: var(--mrr-shell-radius-sm);
+  transition:
+    color var(--mrr-shell-duration-fast) ease,
+    background-color var(--mrr-shell-duration-fast) ease,
+    border-color var(--mrr-shell-duration-fast) ease,
+    box-shadow var(--mrr-shell-duration-fast) ease,
+    transform var(--mrr-shell-duration-fast) var(--mrr-shell-ease);
+}
+
+#app-main .el-button:not(.is-disabled):hover {
+  transform: translateY(-1px);
+}
+
+#app-main .el-button:focus-visible {
+  box-shadow: var(--mrr-shell-focus-ring);
+}
+
+#app-main .el-input__wrapper,
+#app-main .el-select__wrapper,
+#app-main .el-textarea__inner,
+#app-main .el-date-editor.el-input__wrapper,
+#app-main .el-date-editor.el-range-editor {
+  border-radius: var(--mrr-shell-radius-sm);
+  box-shadow: 0 0 0 1px var(--mrr-shell-border) inset;
+  transition:
+    background-color var(--mrr-shell-duration-fast) ease,
+    box-shadow var(--mrr-shell-duration-fast) ease;
+}
+
+#app-main .el-input__wrapper:hover,
+#app-main .el-select__wrapper:hover,
+#app-main .el-textarea__inner:hover,
+#app-main .el-date-editor.el-input__wrapper:hover,
+#app-main .el-date-editor.el-range-editor:hover {
+  box-shadow: 0 0 0 1px var(--mrr-shell-border-strong) inset;
+}
+
+#app-main .el-input__wrapper.is-focus,
+#app-main .el-select__wrapper.is-focused,
+#app-main .el-textarea__inner:focus,
+#app-main .el-date-editor.el-input__wrapper.is-focus,
+#app-main .el-date-editor.el-range-editor.is-active {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, var(--mrr-shell-focus-ring);
+}
+
+#app-main .el-table {
+  --el-table-border-color: var(--mrr-shell-border);
+  --el-table-header-bg-color: var(--mrr-shell-surface-soft);
+  --el-table-row-hover-bg-color: color-mix(in srgb, var(--color-primary) 4%, var(--surface));
+  --el-table-current-row-bg-color: color-mix(in srgb, var(--color-primary) 7%, var(--surface));
+  color: var(--text-primary);
+}
+
+#app-main .el-table th.el-table__cell {
+  height: 44px;
+  font-size: 12px;
+  font-weight: 680;
+  color: var(--text-secondary);
+}
+
+#app-main .el-table td.el-table__cell {
+  height: 48px;
+}
+
+#app-main .el-dialog,
+#app-main .el-drawer {
+  border: 1px solid var(--mrr-shell-border);
+  box-shadow: var(--mrr-shell-shadow-md);
+}
+
+#app-main .el-dialog {
+  border-radius: var(--mrr-shell-radius-lg);
+}
+
+#app-main .el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: var(--color-primary);
+  gap: 4px;
+}
+
+#app-main .el-pagination button,
+#app-main .el-pagination .el-pager li {
+  border-radius: 7px;
+}
+
+@media (width <= 900px) {
+  :root {
+    --mrr-shell-content-max-width: 100%;
+    --mrr-shell-section-gap: 12px;
+  }
+
+  .mrr-page-header {
+    align-items: stretch;
+  }
+
+  .mrr-page-actions,
+  .mrr-toolbar__group--end {
+    justify-content: flex-start;
+  }
+
+  .mrr-panel__header,
+  .mrr-panel__body {
+    padding-inline: 14px;
+  }
+}
+
+@media (width <= 600px) {
+  :root {
+    --mrr-shell-page-padding: 12px;
+    --mrr-shell-radius-md: 10px;
+  }
+
+  #app-main .wrapper .main-container .main {
+    overflow: visible;
+  }
+
+  .mrr-page-title {
+    font-size: 20px;
+  }
+
+  .mrr-toolbar,
+  .mrr-toolbar__group,
+  .mrr-toolbar__group--end {
+    align-items: stretch;
+  }
+
+  .mrr-toolbar__group,
+  .mrr-toolbar__group--end {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app-main .main-sidebar-container .menu-item-container,
+  #app-main > header .menu-item-container,
+  #app-main .el-button,
+  .mrr-panel--interactive {
+    transition: none;
+  }
+
+  #app-main .main-sidebar-container .menu-item-container:hover,
+  #app-main > header .menu-item-container:hover,
+  #app-main .el-button:not(.is-disabled):hover,
+  .mrr-panel--interactive:hover,
+  .mrr-panel--interactive:focus-within {
+    transform: none;
+  }
+}

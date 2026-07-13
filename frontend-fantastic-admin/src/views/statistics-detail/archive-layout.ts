@@ -1,9 +1,9 @@
 export const ARCHIVE_DEFAULT_PAGE_SIZE = 18
 
-const ARCHIVE_CARD_MIN_WIDTH = 280
-const ARCHIVE_GRID_GAP = 16
+const ARCHIVE_CARD_MIN_WIDTH = 340
+const ARCHIVE_GRID_GAP = 18
 
-/** 与 .archive-grid 的 minmax(280px, 1fr) 和 16px gap 保持一致。 */
+/** 与 .archive-grid 的 minmax(340px, 1fr) 和 18px gap 保持一致。 */
 export function getArchiveColumnCount(containerWidth: number) {
   return Math.max(
     1,

@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.service;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -111,15 +112,10 @@ public class ImageUrlService {
     }
 
     /**
-     * 将病案号规范化为 8 位（左侧补零）。
+     * 将病案号或上架号规范化为 8 位（左侧补零）。
      */
     public static String normalizeCode(String code) {
-        if (code == null) return "";
-        String trimmed = code.trim();
-        if (trimmed.length() > 0 && trimmed.length() < 8 && trimmed.matches("\\d+")) {
-            return "0".repeat(8 - trimmed.length()) + trimmed;
-        }
-        return trimmed;
+        return MedicalRecordCodeUtils.normalizeOrEmpty(code);
     }
 
     /**
@@ -139,6 +135,8 @@ public class ImageUrlService {
         for (Scan scan : scans) {
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             org.springframework.beans.BeanUtils.copyProperties(scan, dto);
+            dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
+            dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
             dto.setImg_url(buildImageUrl(scan));
 
             if (ossUrlResolver != null && scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {

@@ -1,0 +1,54 @@
+name: statistics-style-autofix
+
+on:
+  push:
+    branches:
+      - style/beautify-records-statistics-20260713
+
+permissions:
+  contents: write
+
+jobs:
+  autofix-statistics-page:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: style/beautify-records-statistics-20260713
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply repository lint rules
+        working-directory: frontend-fantastic-admin
+        run: |
+          pnpm exec eslint src/views/statistics/index.vue --fix
+          pnpm exec stylelint src/views/statistics/index.vue --fix
+          pnpm exec vue-tsc -b
+
+      - name: Commit fixes and remove temporary workflow
+        run: |
+          rm .github/workflows/statistics-style-autofix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add frontend-fantastic-admin/src/views/statistics/index.vue .github/workflows/statistics-style-autofix.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "style(statistics): apply repository lint rules"
+            git push origin style/beautify-records-statistics-20260713
+          fi

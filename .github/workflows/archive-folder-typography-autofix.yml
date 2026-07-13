@@ -40,130 +40,89 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('frontend-fantastic-admin/src/views/statistics-detail/ArchiveDetailContent.vue')
           text = path.read_text(encoding='utf-8')
 
           def replace_once(old: str, new: str, label: str) -> None:
               global text
-              if text.count(old) != 1:
-                  raise RuntimeError(f'{label}: expected exactly one match, found {text.count(old)}')
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{label}: expected exactly one match, found {count}')
               text = text.replace(old, new, 1)
 
+          def regex_once(pattern: str, replacement: str, label: str) -> None:
+              global text
+              text, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE)
+              if count != 1:
+                  raise RuntimeError(f'{label}: expected exactly one match, found {count}')
+
           replace_once(
-              '<div class="folder-code-block folder-code-block-full">\n                <span class="folder-code-label">病人姓名</span>',
-              '<div class="folder-code-block folder-code-block-full folder-code-block--patient">\n                <span class="folder-code-label">病人姓名</span>',
+              '<div class="folder-code-block folder-code-block-full">',
+              '<div class="folder-code-block folder-code-block-full folder-code-block--patient">',
               'patient name block class',
           )
 
           replace_once(
-              '''  --folder-accent: #1d4ed8;
-          --folder-tint: #eef4ff;
-
-          position: relative;''',
-              '''  --folder-accent: #1d4ed8;
-          --folder-tint: #eef4ff;
-          --folder-meta-font-size: 11px;
-          --folder-value-font-size: 14px;
-          --folder-patient-name-font-size: 17px;
-
-          position: relative;''',
+              '  --folder-tint: #eef4ff;\n\n  position: relative;',
+              '  --folder-tint: #eef4ff;\n  --folder-meta-font-size: 11px;\n  --folder-value-font-size: 14px;\n  --folder-patient-name-font-size: 17px;\n\n  position: relative;',
               'folder typography variables',
           )
 
-          replace_once('''  font-size: 10px;
-          font-weight: 800;
-          font-variant-numeric: tabular-nums;''', '''  font-size: var(--folder-meta-font-size);
-          font-weight: 800;
-          font-variant-numeric: tabular-nums;''', 'folder index size')
-
-          replace_once('''  padding: 3px 7px;
-          font-size: 10px;
-          font-weight: 700;''', '''  padding: 3px 7px;
-          font-size: var(--folder-meta-font-size);
-          font-weight: 700;''', 'selected label size')
-
-          replace_once(
-              '''.folder-identity {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          align-items: center;
-          }
-
-          .folder-index {''',
-              '''.folder-identity {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          align-items: center;
-          }
-
-          .folder-top :deep(.el-tag) {
-          font-size: var(--folder-meta-font-size);
-          }
-
-          .folder-index {''',
+          regex_once(
+              r'(\.folder-identity \{.*?^\})\n\n(\.folder-index \{)',
+              r'\1\n\n.folder-top :deep(.el-tag) {\n  font-size: var(--folder-meta-font-size);\n}\n\n\2',
               'archive type tag size',
           )
 
-          replace_once('''  font-size: 10px;
-          font-weight: 700;
-          color: var(--text-secondary);
-          letter-spacing: 0.08em;''', '''  font-size: var(--folder-meta-font-size);
-          font-weight: 700;
-          color: var(--text-secondary);
-          letter-spacing: 0.08em;''', 'field label size')
+          regex_once(
+              r'(\.folder-index \{.*?^\s*)font-size: 10px;',
+              r'\1font-size: var(--folder-meta-font-size);',
+              'folder index size',
+          )
 
-          replace_once('''  font-size: clamp(15px, 1.4vw, 18px);
-          font-weight: 800;''', '''  font-size: var(--folder-value-font-size);
-          font-weight: 750;''', 'field value size')
+          regex_once(
+              r'(\.folder-selected-label \{.*?^\s*)font-size: 10px;',
+              r'\1font-size: var(--folder-meta-font-size);',
+              'selected label size',
+          )
 
-          replace_once(
-              '''.folder-code-block-full .folder-code-value {
-          flex: 1;
-          min-width: 0;
-          text-align: right;
-          font-size: clamp(18px, 3.2vw, 20px);
-          line-height: 1.1;
-          color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
-          }
+          regex_once(
+              r'(\.folder-code-label \{.*?^\s*)font-size: 10px;',
+              r'\1font-size: var(--folder-meta-font-size);',
+              'field label size',
+          )
 
-          .folder-code-block:nth-child(-n+2) .folder-code-value {
-          font-size: clamp(13px, 1.2vw, 14px);
-          font-weight: 700;
-          color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
-          }''',
-              '''.folder-code-block--patient .folder-code-value {
-          flex: 1;
-          min-width: 0;
-          font-size: var(--folder-patient-name-font-size);
-          font-weight: 800;
-          line-height: 1.2;
-          color: var(--text-primary);
-          text-align: right;
-          letter-spacing: 0.01em;
-          }''',
+          regex_once(
+              r'(\.folder-code-value \{.*?^\s*)font-size: clamp\(15px, 1\.4vw, 18px\);\n\s*font-weight: 800;',
+              r'\1font-size: var(--folder-value-font-size);\n  font-weight: 750;',
+              'field value size',
+          )
+
+          regex_once(
+              r'\.folder-code-block-full \.folder-code-value \{.*?^\}\n\n\.folder-code-block:nth-child\(-n\+2\) \.folder-code-value \{.*?^\}',
+              '.folder-code-block--patient .folder-code-value {\n  flex: 1;\n  min-width: 0;\n  font-size: var(--folder-patient-name-font-size);\n  font-weight: 800;\n  line-height: 1.2;\n  color: var(--text-primary);\n  text-align: right;\n  letter-spacing: 0.01em;\n}',
               'patient emphasis and legacy size overrides',
           )
 
-          replace_once('''  font-size: 22px;
-          font-variant-numeric: tabular-nums;''', '''  font-size: var(--folder-value-font-size);
-          font-weight: 800;
-          font-variant-numeric: tabular-nums;''', 'page count size')
+          regex_once(
+              r'(\.folder-page-count strong \{.*?^\s*)font-size: 22px;',
+              r'\1font-size: var(--folder-value-font-size);\n  font-weight: 800;',
+              'page count size',
+          )
 
-          replace_once('''  font-size: 11px;
-          font-weight: 700;
-          color: var(--text-secondary);''', '''  font-size: var(--folder-meta-font-size);
-          font-weight: 700;
-          color: var(--text-secondary);''', 'page count label size')
+          regex_once(
+              r'(\.folder-page-count span \{.*?^\s*)font-size: 11px;',
+              r'\1font-size: var(--folder-meta-font-size);',
+              'page count label size',
+          )
 
-          replace_once('''.folder-action {
-          font-weight: 700;
-          }''', '''.folder-action {
-          font-size: var(--folder-value-font-size);
-          font-weight: 700;
-          }''', 'folder action size')
+          replace_once(
+              '.folder-action {\n  font-weight: 700;\n}',
+              '.folder-action {\n  font-size: var(--folder-value-font-size);\n  font-weight: 700;\n}',
+              'folder action size',
+          )
 
           path.write_text(text, encoding='utf-8')
           PY

@@ -22,13 +22,16 @@ export default defineConfig(({ mode, command }) => {
       open: true,
       host: true,
       port: 9000,
-      proxy: {
-        '/proxy': {
-          target: env.VITE_APP_API_BASEURL,
-          changeOrigin: command === 'serve' && env.VITE_OPEN_PROXY === 'true',
-          rewrite: path => path.replace(/\/proxy/, ''),
-        },
-      },
+      // Mock 模式由 vite-plugin-fake-server 直接处理 /proxy 请求，不再创建后端代理。
+      proxy: env.VITE_BUILD_MOCK === 'true'
+        ? undefined
+        : {
+            '/proxy': {
+              target: env.VITE_APP_API_BASEURL,
+              changeOrigin: command === 'serve' && env.VITE_OPEN_PROXY === 'true',
+              rewrite: path => path.replace(/\/proxy/, ''),
+            },
+          },
     },
     // 构建选项 https://cn.vitejs.dev/config/build-options
     build: {

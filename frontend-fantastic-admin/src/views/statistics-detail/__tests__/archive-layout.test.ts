@@ -9,22 +9,22 @@ import {
 describe('statistics detail archive layout', () => {
   it.each([
     { width: 575, columns: 1 },
-    { width: 576, columns: 2 },
-    { width: 871, columns: 2 },
-    { width: 872, columns: 3 },
-    { width: 1167, columns: 3 },
-    { width: 1168, columns: 4 },
-    { width: 1464, columns: 5 },
+    { width: 698, columns: 2 },
+    { width: 1055, columns: 2 },
+    { width: 1056, columns: 3 },
+    { width: 1413, columns: 3 },
+    { width: 1414, columns: 4 },
+    { width: 1772, columns: 5 },
   ])('uses $columns columns at $width px', ({ width, columns }) => {
     expect(getArchiveColumnCount(width)).toBe(columns)
   })
 
   it.each([
     { width: 872, pageSize: 18 },
-    { width: 1168, pageSize: 20 },
-    { width: 1464, pageSize: 20 },
-    { width: 1760, pageSize: 18 },
-    { width: 2056, pageSize: 21 },
+    { width: 1056, pageSize: 18 },
+    { width: 1414, pageSize: 20 },
+    { width: 1768, pageSize: 20 },
+    { width: 2056, pageSize: 20 },
   ])('fills the last row at $width px with $pageSize records', ({ width, pageSize }) => {
     expect(getArchivePageSize(width)).toBe(pageSize)
   })

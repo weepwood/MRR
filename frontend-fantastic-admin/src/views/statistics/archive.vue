@@ -259,14 +259,14 @@ onUnmounted(() => {
 
 .archive-workspace.has-images {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) 148px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
   gap: 12px;
   height: 100%;
   min-height: 0;
 }
 
 .archive-workspace.has-images.is-list-mode {
-  grid-template-columns: minmax(280px, 320px) 236px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
 }
 
 .archive-sidebar {

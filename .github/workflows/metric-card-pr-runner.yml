@@ -49,6 +49,57 @@ jobs:
               end = source.index('\n          PY', start)
               lines = source[start:end].splitlines()
               script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+
+              response_start = script.index('# 7. Response analysis')
+              response_end = script.index('# 8. Audit analytics', response_start)
+              response_patch = r'''# 7. Response analysis
+          path, text = load('src/views/response-analysis/index.vue')
+          new = '''      <section class="mrr-metric-grid" aria-label="响应指标总览">
+                <el-card shadow="never" class="mrr-metric-card">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:api-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">总请求数</span>
+                    <strong class="mrr-metric-card__value">{{ formatNumber(analysis?.overview.totalRequests) }}</strong>
+                    <p class="mrr-metric-card__note">所选时间范围内完成的请求</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:check-circle-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">HTTP 成功率</span>
+                    <strong class="mrr-metric-card__value">{{ formatPercent(analysis?.overview.successRate) }}</strong>
+                    <p class="mrr-metric-card__note">HTTP 2xx 响应占全部请求的比例</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:field-time-outlined" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">客户端 P95</span>
+                    <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.p95ClientDurationMs) }}</strong>
+                    <p class="mrr-metric-card__note">包含网络与浏览器处理耗时</p>
+                  </div>
+                </el-card>
+                <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
+                  <div class="mrr-metric-card__icon"><i class="i-ant-design:dashboard-twotone" /></div>
+                  <div class="mrr-metric-card__body">
+                    <span class="mrr-metric-card__label">服务端平均耗时</span>
+                    <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.avgServerDurationMs) }}</strong>
+                    <p class="mrr-metric-card__note">服务端请求处理平均值</p>
+                  </div>
+                </el-card>
+              </section>'''
+          text = regex_once(
+              text,
+              r'      <section class="summary-grid" aria-label="响应指标总览">.*?      </section>',
+              new,
+              'response analysis summary template',
+          )
+          text = regex_once(text, r'\n\.summary-grid \{.*?(?=\n\.analysis-card \{)', '\n', 'response analysis local metric styles')
+          text = re.sub(r'\n\s*\.summary-grid \{\n\s*grid-template-columns:[^\n]+;\n\s*\}\n', '\n', text)
+          save(path, text)
+
+          '''
+              script = script[:response_start] + response_patch + script[response_end:]
               exec(compile(script, 'metric-card-migration.py', 'exec'))
           except Exception:
               Path('.github/metric-card-error.log').write_text(traceback.format_exc(), encoding='utf-8')

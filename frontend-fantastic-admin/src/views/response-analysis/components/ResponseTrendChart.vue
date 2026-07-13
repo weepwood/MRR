@@ -8,18 +8,18 @@ const props = defineProps<{
   data: ResponseMetricTrendPoint[]
 }>()
 
-const chartHeight = 320
-const minimumChartWidth = 760
-const padding = { top: 34, right: 62, bottom: 58, left: 62 }
+const chartHeight = 304
+const minimumChartWidth = 720
+const padding = { top: 30, right: 58, bottom: 52, left: 58 }
 const plotHeight = chartHeight - padding.top - padding.bottom
 
 const chartWidth = computed(() => Math.max(
   minimumChartWidth,
-  padding.left + padding.right + props.data.length * 72,
+  padding.left + padding.right + props.data.length * 68,
 ))
 const plotWidth = computed(() => chartWidth.value - padding.left - padding.right)
 const slotWidth = computed(() => plotWidth.value / Math.max(1, props.data.length))
-const barWidth = computed(() => Math.min(34, Math.max(10, slotWidth.value * 0.46)))
+const barWidth = computed(() => Math.min(30, Math.max(8, slotWidth.value * 0.4)))
 const labelStep = computed(() => Math.max(1, Math.ceil(props.data.length / 10)))
 
 function niceMaximum(value: number) {
@@ -79,14 +79,6 @@ function linePoints(key: 'avgClientDurationMs' | 'avgServerDurationMs') {
     .join(' ')
 }
 
-function areaPoints(key: 'avgClientDurationMs' | 'avgServerDurationMs') {
-  if (!props.data.length) {
-    return ''
-  }
-  const baseline = padding.top + plotHeight
-  return `${linePoints(key)} ${x(props.data.length - 1)},${baseline} ${x(0)},${baseline}`
-}
-
 const peakRequests = computed(() => Math.max(0, ...props.data.map(item => item.requestCount ?? 0)))
 const averageClientDuration = computed(() => average(props.data.map(item => item.avgClientDurationMs ?? 0)))
 const averageServerDuration = computed(() => average(props.data.map(item => item.avgServerDurationMs ?? 0)))
@@ -122,19 +114,22 @@ function showLabel(index: number) {
 <template>
   <div class="chart-shell">
     <div class="chart-overview" aria-label="趋势摘要">
-      <div class="overview-item request-overview">
-        <span>峰值请求量</span>
-        <strong>{{ formatNumber(peakRequests) }}</strong>
-        <i>次</i>
+      <div class="overview-metrics">
+        <div class="overview-item request-overview">
+          <span>峰值请求量</span>
+          <strong>{{ formatNumber(peakRequests) }}</strong>
+          <i>次</i>
+        </div>
+        <div class="overview-item client-overview">
+          <span>客户端均值</span>
+          <strong>{{ formatDuration(averageClientDuration) }}</strong>
+        </div>
+        <div class="overview-item server-overview">
+          <span>服务端均值</span>
+          <strong>{{ formatDuration(averageServerDuration) }}</strong>
+        </div>
       </div>
-      <div class="overview-item client-overview">
-        <span>客户端均值</span>
-        <strong>{{ formatDuration(averageClientDuration) }}</strong>
-      </div>
-      <div class="overview-item server-overview">
-        <span>服务端均值</span>
-        <strong>{{ formatDuration(averageServerDuration) }}</strong>
-      </div>
+
       <div class="series-legend" aria-label="图例">
         <span class="request-series"><i />请求量</span>
         <span class="client-series"><i />客户端耗时</span>
@@ -150,26 +145,6 @@ function showLabel(index: number) {
         role="img"
         aria-label="接口请求量与客户端、服务端响应耗时趋势"
       >
-        <defs>
-          <linearGradient id="responseRequestGradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#818cf8" />
-            <stop offset="1" stop-color="#4f46e5" />
-          </linearGradient>
-          <linearGradient id="responseClientArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.2" />
-            <stop offset="1" stop-color="#0ea5e9" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-
-        <rect
-          class="plot-background"
-          :x="padding.left"
-          :y="padding.top"
-          :width="plotWidth"
-          :height="plotHeight"
-          rx="12"
-        />
-
         <g class="grid-lines">
           <line
             v-for="tick in requestTicks"
@@ -181,6 +156,14 @@ function showLabel(index: number) {
           />
         </g>
 
+        <line
+          class="axis-baseline"
+          :x1="padding.left"
+          :x2="chartWidth - padding.right"
+          :y1="padding.top + plotHeight"
+          :y2="padding.top + plotHeight"
+        />
+
         <g class="left-axis axis-labels">
           <text
             v-for="tick in requestTicks"
@@ -191,7 +174,7 @@ function showLabel(index: number) {
           >
             {{ formatNumber(tick.value) }}
           </text>
-          <text class="axis-caption" :x="padding.left" :y="18" text-anchor="start">请求量 / 次</text>
+          <text class="axis-caption" :x="padding.left" :y="16" text-anchor="start">请求量 / 次</text>
         </g>
 
         <g class="right-axis axis-labels">
@@ -204,7 +187,7 @@ function showLabel(index: number) {
           >
             {{ formatNumber(tick.value) }}
           </text>
-          <text class="axis-caption" :x="chartWidth - padding.right" :y="18" text-anchor="end">耗时 / ms</text>
+          <text class="axis-caption" :x="chartWidth - padding.right" :y="16" text-anchor="end">耗时 / ms</text>
         </g>
 
         <g class="request-bars">
@@ -222,14 +205,13 @@ function showLabel(index: number) {
               :y="requestY(item.requestCount ?? 0)"
               :width="barWidth"
               :height="Math.max(2, padding.top + plotHeight - requestY(item.requestCount ?? 0))"
-              rx="6"
+              rx="5"
             >
               <title>{{ item.bucket }}：{{ formatNumber(item.requestCount ?? 0) }} 次请求</title>
             </rect>
           </g>
         </g>
 
-        <polygon class="client-area" :points="areaPoints('avgClientDurationMs')" />
         <polyline class="client-line" :points="linePoints('avgClientDurationMs')" />
         <polyline class="server-line" :points="linePoints('avgServerDurationMs')" />
 
@@ -238,13 +220,13 @@ function showLabel(index: number) {
             class="point-halo client-halo"
             :cx="x(index)"
             :cy="durationY(item.avgClientDurationMs ?? 0)"
-            r="8"
+            r="7"
           />
           <circle
             class="data-point client-point"
             :cx="x(index)"
             :cy="durationY(item.avgClientDurationMs ?? 0)"
-            r="4"
+            r="3.5"
           >
             <title>{{ item.bucket }}：客户端 {{ formatDuration(item.avgClientDurationMs ?? 0) }}</title>
           </circle>
@@ -252,13 +234,13 @@ function showLabel(index: number) {
             class="point-halo server-halo"
             :cx="x(index)"
             :cy="durationY(item.avgServerDurationMs ?? 0)"
-            r="7"
+            r="6.5"
           />
           <circle
             class="data-point server-point"
             :cx="x(index)"
             :cy="durationY(item.avgServerDurationMs ?? 0)"
-            r="3.5"
+            r="3"
           >
             <title>{{ item.bucket }}：服务端 {{ formatDuration(item.avgServerDurationMs ?? 0) }}</title>
           </circle>
@@ -271,12 +253,12 @@ function showLabel(index: number) {
               :x1="x(index)"
               :x2="x(index)"
               :y1="padding.top + plotHeight"
-              :y2="padding.top + plotHeight + 6"
+              :y2="padding.top + plotHeight + 5"
             />
             <text
               v-if="showLabel(index)"
               :x="x(index)"
-              :y="chartHeight - 24"
+              :y="chartHeight - 20"
               text-anchor="middle"
             >
               {{ formatBucket(item.bucket) }}
@@ -290,9 +272,9 @@ function showLabel(index: number) {
 
 <style scoped>
 .chart-shell {
-  --request-color: #4f46e5;
-  --client-color: #0284c7;
-  --server-color: #059669;
+  --request-color: #62aef0;
+  --client-color: #0075de;
+  --server-color: #615d59;
 
   display: grid;
   gap: 14px;
@@ -301,49 +283,62 @@ function showLabel(index: number) {
 .chart-overview {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: stretch;
+  gap: 14px 24px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.overview-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: center;
 }
 
 .overview-item {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 2px 6px;
-  align-content: center;
-  min-width: 136px;
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--series-color) 7%, var(--el-bg-color));
-  border: 1px solid color-mix(in srgb, var(--series-color) 18%, transparent);
-  border-radius: 10px;
+  gap: 2px 5px;
+  align-items: baseline;
+  min-width: 132px;
+  padding-right: 18px;
 }
 
-.overview-item::before {
-  grid-row: 1 / span 2;
-  align-self: stretch;
-  width: 3px;
-  min-height: 30px;
-  content: "";
-  background: var(--series-color);
-  border-radius: 999px;
+.overview-item + .overview-item {
+  padding-left: 18px;
+  border-left: 1px solid var(--el-border-color-lighter);
 }
 
 .overview-item span {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 7px;
+  align-items: center;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--el-text-color-secondary);
+}
+
+.overview-item span::before {
+  width: 6px;
+  height: 6px;
+  content: "";
+  background: var(--series-color);
+  border-radius: 2px;
 }
 
 .overview-item strong {
-  font-size: 16px;
-  line-height: 1.2;
-  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--el-text-color-primary);
+  letter-spacing: -0.2px;
 }
 
 .overview-item i {
-  align-self: end;
-  margin-left: -2px;
   font-size: 11px;
   font-style: normal;
-  color: var(--text-secondary);
+  color: var(--el-text-color-placeholder);
 }
 
 .request-overview { --series-color: var(--request-color); }
@@ -354,13 +349,12 @@ function showLabel(index: number) {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: 8px 14px;
+  gap: 8px 16px;
   align-items: center;
   justify-content: flex-end;
   min-width: 260px;
-  padding: 0 4px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--el-text-color-secondary);
 }
 
 .series-legend span {
@@ -373,7 +367,7 @@ function showLabel(index: number) {
 .series-legend i {
   display: inline-block;
   width: 18px;
-  height: 3px;
+  height: 2px;
   background: var(--series-color);
   border-radius: 999px;
 }
@@ -381,21 +375,15 @@ function showLabel(index: number) {
 .series-legend .request-series { --series-color: var(--request-color); }
 .series-legend .client-series { --series-color: var(--client-color); }
 .series-legend .server-series { --series-color: var(--server-color); }
-.series-legend .request-series i { height: 9px; border-radius: 3px; }
+.series-legend .request-series i { height: 8px; border-radius: 3px; opacity: 0.55; }
 .series-legend .server-series i { background: repeating-linear-gradient(90deg, var(--server-color) 0 5px, transparent 5px 8px); }
 
 .chart-scroll {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
   scrollbar-width: thin;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--el-color-primary) 4%, var(--el-bg-color)) 0%,
-      var(--el-bg-color) 100%
-    );
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
 }
 
 .response-trend-chart {
@@ -407,20 +395,26 @@ function showLabel(index: number) {
 .grid-lines line {
   stroke: var(--el-border-color-lighter);
   stroke-width: 1;
-  stroke-dasharray: 4 5;
+  stroke-dasharray: 3 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.axis-baseline {
+  stroke: var(--el-border-color);
+  stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .axis-labels text {
   font-size: 11px;
-  fill: var(--text-secondary);
+  fill: var(--el-text-color-placeholder);
 }
 
 .axis-labels .axis-caption {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
-  fill: var(--text-secondary);
+  fill: var(--el-text-color-secondary);
 }
 
 .x-axis line {
@@ -428,48 +422,54 @@ function showLabel(index: number) {
   vector-effect: non-scaling-stroke;
 }
 
+.request-column:focus {
+  outline: none;
+}
+
 .request-bar {
-  opacity: 0.76;
-  fill: url("#responseRequestGradient");
+  opacity: 0.42;
+  fill: var(--request-color);
   transition: opacity 160ms ease;
   vector-effect: non-scaling-stroke;
 }
 
 .request-column:hover .request-bar,
 .request-column:focus .request-bar {
-  opacity: 1;
-}
-
-.client-area {
-  pointer-events: none;
-  fill: url("#responseClientArea");
+  opacity: 0.72;
 }
 
 .client-line,
 .server-line {
   pointer-events: none;
   fill: none;
-  stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
-.client-line { stroke: var(--client-color); }
-.server-line { stroke: var(--server-color); stroke-dasharray: 7 5; }
+.client-line {
+  stroke: var(--client-color);
+  stroke-width: 2.25;
+}
+
+.server-line {
+  stroke: var(--server-color);
+  stroke-width: 1.8;
+  stroke-dasharray: 6 5;
+}
 
 .point-halo {
   opacity: 0;
   transition: opacity 160ms ease;
 }
 
-.client-halo { fill: color-mix(in srgb, var(--client-color) 18%, transparent); }
-.server-halo { fill: color-mix(in srgb, var(--server-color) 18%, transparent); }
+.client-halo { fill: color-mix(in srgb, var(--client-color) 14%, transparent); }
+.server-halo { fill: color-mix(in srgb, var(--server-color) 12%, transparent); }
 
 .data-point {
   cursor: help;
   fill: var(--el-bg-color);
-  stroke-width: 2.5;
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
@@ -477,15 +477,50 @@ function showLabel(index: number) {
 .server-point { stroke: var(--server-color); }
 .data-point-group:hover .point-halo { opacity: 1; }
 
+:global(.dark) .chart-shell {
+  --request-color: #62aef0;
+  --client-color: #62aef0;
+  --server-color: #a39e98;
+}
+
 @media (width <= 760px) {
+  .chart-overview {
+    align-items: flex-start;
+  }
+
+  .overview-metrics {
+    width: 100%;
+  }
+
+  .overview-item {
+    flex: 1;
+    min-width: 120px;
+  }
+
   .series-legend {
     flex-basis: 100%;
     justify-content: flex-start;
     min-width: 0;
   }
+}
+
+@media (width <= 520px) {
+  .overview-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 
   .overview-item {
-    flex: 1 1 130px;
+    min-width: 0;
+    padding-right: 10px;
+  }
+
+  .overview-item + .overview-item {
+    padding-left: 10px;
+  }
+
+  .overview-item strong {
+    font-size: 15px;
   }
 }
 

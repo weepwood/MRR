@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.mapper;
 import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.entity.Statistics;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -60,6 +61,16 @@ public interface StatisticsMapper {
             @Param("normalizedBah") String normalizedBah,
             @Param("searchCode") String searchCode
     );
+
+    /**
+     * 保留旧的一参数调用方式，内部自动兼容有无前导零的病案号。
+     */
+    default List<Statistics> findByBah(String bah) {
+        return findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
+    }
 
     // 根据日期查询（使用 LIKE 模糊匹配，支持多种格式）
     @Select("SELECT * FROM mr_statistics WHERE date LIKE '%' || #{date} || '%' ORDER BY bah")

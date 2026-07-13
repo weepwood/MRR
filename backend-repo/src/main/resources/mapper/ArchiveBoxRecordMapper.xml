@@ -29,7 +29,6 @@
                 WHERE <include refid="StatisticsSjhMatchesRecord" />
                   AND s.bah IS NOT NULL
                   AND TRIM(s.bah) != ''
-                ORDER BY s.id DESC
                 LIMIT 1
             )
         ) AS bah,

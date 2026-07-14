@@ -1,0 +1,961 @@
+tsc_status=2
+eslint_status=1
+stylelint_status=2
+build_status=2
+
+===== TSC =====
+
+> @5.10.1 lint:tsc /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> vue-tsc -b
+
+src/components/charts/MrrChart.vue(27,7): error TS6133: 'chartRef' is declared but its value is never read.
+ ELIFECYCLE  Command failed with exit code 2.
+
+===== ESLINT =====
+
+> @5.10.1 lint:eslint /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> eslint . --cache
+
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/pnpm-workspace.yaml
+  1:1  error  Setting "shellEmulator" has mismatch value. Expected: true, Actual: undefined                     pnpm/yaml-enforce-settings
+  1:1  error  Setting "trustPolicy" has mismatch value. Expected: "no-downgrade", Actual: undefined             pnpm/yaml-enforce-settings
+  1:1  error  Expected mapping keys to be in specified order. 'shamefullyHoist' should be after 'engineStrict'  yaml/sort-keys
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/scripts/lint-changed.mjs
+   4:22  error  Unexpected use of the global variable 'process'. Use 'require("process")' instead  node/prefer-global/process
+   6:17  error  Unexpected use of the global variable 'process'. Use 'require("process")' instead  node/prefer-global/process
+   7:26  error  Unexpected use of the global variable 'process'. Use 'require("process")' instead  node/prefer-global/process
+  51:5   error  Unexpected use of the global variable 'process'. Use 'require("process")' instead  node/prefer-global/process
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/api/modules/oss.ts
+   1:36  error  Expected "MigrationLogRecord" to come before "MigrationStatistics"  perfectionist/sort-named-imports
+  29:38  error  Expected a comma                                                    style/member-delimiter-style
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/api/modules/patients.ts
+  27:1  error  Too many blank lines at the end of file. Max of 0 allowed  style/no-multiple-empty-lines
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/api/modules/records.ts
+  1:40  error  Expected "PaginatedResult" to come before "ScanRequest"  perfectionist/sort-named-imports
+  2:52  error  Expected "deleteRequest" to come before "putRequest"     perfectionist/sort-named-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/AccountForm/LoginForm.vue
+    4:1   error    Expected "@vee-validate/zod" to come before "lucide-vue-next"  perfectionist/sort-imports
+   29:1   error    Unexpected tab character                                       style/no-tabs
+   29:1   error    Expected indentation of 0 spaces but found 1 tab               style/indent
+   30:1   error    Unexpected tab character                                       style/no-tabs
+   30:1   error    Expected indentation of 0 spaces but found 1 tab               style/indent
+   31:1   error    Unexpected tab character                                       style/no-tabs
+   31:1   error    Expected indentation of 0 spaces but found 1 tab               style/indent
+  172:39  warning  UnoCSS utilities are not ordered                               unocss/order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/AccountForm/RegisterForm.vue
+    7:1   error    Expected "lucide-vue-next" (value-external) to come before "@/api/modules/user" (value-internal)  perfectionist/sort-imports
+  108:43  warning  UnoCSS utilities are not ordered                                                                  unocss/order
+  127:43  warning  UnoCSS utilities are not ordered                                                                  unocss/order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/AppEmpty/index.vue
+  26:31  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found    vue/singleline-html-element-content-newline
+  26:48  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/AppError/index.vue
+  26:31  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found    vue/singleline-html-element-content-newline
+  26:44  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrDataTablePanel/index.vue
+  118:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrFilterBar/index.vue
+  111:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrMetricCard/index.vue
+  6:1  error  defineProps should be placed at the top of `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrPageHeader/index.vue
+  135:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrPageShell/index.vue
+  6:1  error  defineProps should be placed at the top of `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrSectionCard/index.vue
+    6:1   error    defineProps should be placed at the top of `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+   35:38  warning  Expected 1 line break after opening tag (`<h2>`), but no line breaks found                                               vue/singleline-html-element-content-newline
+   35:55  warning  Expected 1 line break before closing tag (`</h2>`), but no line breaks found                                             vue/singleline-html-element-content-newline
+   36:43  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                                                vue/singleline-html-element-content-newline
+   36:66  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found                                              vue/singleline-html-element-content-newline
+  145:9   error    Newline required at end of file but not found                                                                            style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/MrrStatusTag/index.vue
+  6:1  error  defineProps should be placed at the top of `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/__tests__/AppEmpty.test.ts
+  2:1   error  Expected "@vue/test-utils" to come before "vitest"  perfectionist/sort-imports
+  5:10  error  `describe`s should begin with lowercase             test/prefer-lowercase-title
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/__tests__/AppError.test.ts
+  2:1   error  Expected "@vue/test-utils" to come before "vitest"  perfectionist/sort-imports
+  5:10  error  `describe`s should begin with lowercase             test/prefer-lowercase-title
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/components/__tests__/AppLoading.test.ts
+  2:1   error  Expected "@vue/test-utils" to come before "vitest"  perfectionist/sort-imports
+  5:10  error  `describe`s should begin with lowercase             test/prefer-lowercase-title
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/composables/useCrudList.ts
+   3:1   error  Expected "@/api/types" (type-internal) to come before "vue" (value-external)  perfectionist/sort-imports
+  29:41  error  Expected a comma                                                              style/member-delimiter-style
+  50:31  error  Expected a comma                                                              style/member-delimiter-style
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/composables/useMrrChart.ts
+   2:25  error  Expected "EChartsType" to come before "ECOption"  perfectionist/sort-named-imports
+  14:1   error  Expected "@vueuse/core" to come before "vue"      perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Header/index.vue
+  167:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/MainSidebar/index.vue
+  153:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Menu/item.vue
+  124:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Menu/sub.vue
+  234:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Topbar/Tabbar/index.vue
+  423:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Topbar/Toolbar/index.vue
+  58:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/components/Topbar/index.vue
+  90:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/layouts/index.vue
+  232:9  error  Newline required at end of file but not found  style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/main.ts
+  4:1  error  Expected "@/utils/archive-watermark-installer" to come before "@/utils/directive"  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/mock/api.ts
+  259:50   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  259:52   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  260:53   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  260:55   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  261:50   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  261:52   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  262:65   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  262:67   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  263:38   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  263:40   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  264:96   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  264:98   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  265:38   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  265:40   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  266:34   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  266:36   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  388:39   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  388:41   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  398:65   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  398:67   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  399:65   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  399:67   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  400:71   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  400:73   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  401:52   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  401:54   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  402:67   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  402:69   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  403:82   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  403:84   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  427:12   error  Use Array.from(trendMap.entries(), ([date, count]) => ({ date, count })) instead of [...trendMap.entries()].map(([date, count]) => ({ date, count })) to avoid creating an intermediate array        e18e/prefer-array-from-map
+  430:25   error  Use Array.from(actionMap.entries(), ([label, count]) => ({ label, count })) instead of [...actionMap.entries()].map(([label, count]) => ({ label, count })) to avoid creating an intermediate array  e18e/prefer-array-from-map
+  431:15   error  Use Array.from(userMap.entries(), ([label, count]) => ({ label, count })) instead of [...userMap.entries()].map(([label, count]) => ({ label, count })) to avoid creating an intermediate array      e18e/prefer-array-from-map
+  558:92   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  558:94   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  559:62   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  559:64   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  560:56   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  560:58   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  650:21   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  650:23   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  659:21   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  659:23   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  676:109  error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  676:111  error  Expected { after 'if' condition                                                                                                                                                                      curly
+  677:54   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  677:56   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  678:54   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  678:56   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  679:50   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  679:52   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  680:47   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  680:49   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  681:43   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  681:45   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  742:47   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  742:49   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  743:43   error  Expect newline after if                                                                                                                                                                              antfu/if-newline
+  743:45   error  Expected { after 'if' condition                                                                                                                                                                      curly
+  956:17   error  Use Array.from(grouped.entries(), ([folder, cnt]) => ({ folder, cnt })) instead of [...grouped.entries()].map(([folder, cnt]) => ({ folder, cnt })) to avoid creating an intermediate array          e18e/prefer-array-from-map
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/plugins/echarts.ts
+   8:3  error  Expected "DatasetComponentOption" to come before "DataZoomComponentOption"  perfectionist/sort-named-imports
+  18:3  error  Expected "DatasetComponent" to come before "DataZoomComponent"              perfectionist/sort-named-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/store/modules/__tests__/keepAlive.test.ts
+  2:1   error  Expected "pinia" to come before "vitest"                perfectionist/sort-imports
+  2:26  error  Expected "createPinia" to come before "setActivePinia"  perfectionist/sort-named-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/ui/components/FaSearchBar/index.vue
+  40:21  warning  UnoCSS utilities are not ordered  unocss/order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/__tests__/object.test.ts
+  2:45  error  Expected "diffTwoObj" to come before "mergeWithoutUndefinedProps"  perfectionist/sort-named-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/__tests__/permission.test.ts
+  4:3  error  Expected "checkAnyPermission" to come before "PERMISSION_HIERARCHY"  perfectionist/sort-named-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/__tests__/request-error-notification.test.ts
+  2:1  error  Expected "vitest" to come before "vue"  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/archive-watermark-installer.ts
+   9:3  error  Expected "EffectiveSystemSettings" to come before "SYSTEM_SETTINGS_UPDATED_EVENT"  perfectionist/sort-named-imports
+   9:3  error  Prefer using a top-level type-only import instead of inline type specifiers        import/consistent-type-specifier-style
+  11:1  error  Expected "./archive-watermark" to come before "./system-settings"                  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/archive-watermark.ts
+  23:10  error  Unexpected string concatenation  prefer-template
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/composables/__tests__/useAuth.test.ts
+   2:1   error  Expected "pinia" to come before "vitest"                perfectionist/sort-imports
+   2:26  error  Expected "createPinia" to come before "setActivePinia"  perfectionist/sort-named-imports
+  17:1   error  Import in body of module; reorder to top                import/first
+  90:6   error  `it`s should begin with lowercase                       test/prefer-lowercase-title
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/utils/directive.ts
+  1:55  error  'vue' imported multiple times                                                import/no-duplicates
+  2:17  error  Prefer using a top-level type-only import instead of inline type specifiers  import/consistent-type-specifier-style
+  2:45  error  'vue' imported multiple times                                                import/no-duplicates
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/archive-boxes/index.vue
+  399:44  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found    vue/singleline-html-element-content-newline
+  399:59  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/index.vue
+   11:1   error    Expected "@/api/modules/statistics" to come before "@/store/modules/user"                 perfectionist/sort-imports
+   13:1   error    Expected "@/api/modules/logs" to come before "@/api/modules/system"                       perfectionist/sort-imports
+   15:1   error    Expected "@/api/types" (type-internal) to come before "@/utils/session" (value-internal)  perfectionist/sort-imports
+   50:43  error    Expect newline after if                                                                   antfu/if-newline
+   50:45  error    Expected { after 'if' condition                                                           curly
+   90:3   error    Closing curly brace appears on the same line as the subsequent block                      style/brace-style
+  122:28  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                 vue/singleline-html-element-content-newline
+  122:53  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found               vue/singleline-html-element-content-newline
+  124:29  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                 vue/singleline-html-element-content-newline
+  124:41  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found               vue/singleline-html-element-content-newline
+  127:25  warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found          vue/singleline-html-element-content-newline
+  127:66  warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found        vue/singleline-html-element-content-newline
+  137:58  error    Unexpected string concatenation                                                           vue/prefer-template
+  141:37  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                 vue/singleline-html-element-content-newline
+  141:53  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found               vue/singleline-html-element-content-newline
+  142:37  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                 vue/singleline-html-element-content-newline
+  142:53  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found               vue/singleline-html-element-content-newline
+  156:66  warning  Expected 1 line break after opening tag (`<el-button>`), but no line breaks found         vue/singleline-html-element-content-newline
+  156:70  warning  Expected 1 line break before closing tag (`</el-button>`), but no line breaks found       vue/singleline-html-element-content-newline
+  164:33  error    Unexpected string concatenation                                                           vue/prefer-template
+  183:72  warning  Expected 1 line break after opening tag (`<el-tag>`), but no line breaks found            vue/singleline-html-element-content-newline
+  183:86  warning  Expected 1 line break before closing tag (`</el-tag>`), but no line breaks found          vue/singleline-html-element-content-newline
+  187:74  warning  Expected 1 line break after opening tag (`<el-tag>`), but no line breaks found            vue/singleline-html-element-content-newline
+  187:88  warning  Expected 1 line break before closing tag (`</el-tag>`), but no line breaks found          vue/singleline-html-element-content-newline
+  216:78  warning  Expected 1 line break after opening tag (`<el-button>`), but no line breaks found         vue/singleline-html-element-content-newline
+  216:82  warning  Expected 1 line break before closing tag (`</el-button>`), but no line breaks found       vue/singleline-html-element-content-newline
+  234:23  warning  UnoCSS utilities are not ordered                                                          unocss/order
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/logs/index.vue
+   6:1   error  Expected "@/api/types" (type-internal) to come before "@/composables/useCrudList" (value-internal)  perfectionist/sort-imports
+   8:1   error  Expected "@/components/AppEmpty/index.vue" to come before "@/components/AppLoading/index.vue"       perfectionist/sort-imports
+  50:24  error  Expect newline after if                                                                             antfu/if-newline
+  50:26  error  Expected { after 'if' condition                                                                     curly
+  51:25  error  Expect newline after if                                                                             antfu/if-newline
+  51:27  error  Expected { after 'if' condition                                                                     curly
+  52:25  error  Expect newline after if                                                                             antfu/if-newline
+  52:27  error  Expected { after 'if' condition                                                                     curly
+  53:27  error  Expect newline after if                                                                             antfu/if-newline
+  53:29  error  Expected { after 'if' condition                                                                     curly
+  54:15  error  Expect newline after if                                                                             antfu/if-newline
+  54:17  error  Expected { after 'if' condition                                                                     curly
+  55:23  error  Expect newline after if                                                                             antfu/if-newline
+  55:25  error  Expected { after 'if' condition                                                                     curly
+  62:1   error  Expected indentation of 6 spaces but found 4                                                        style/indent
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/monitoring/index.vue
+    3:1    error    Expected "@/api/modules/database-monitoring" to come before "@/api/types"                       perfectionist/sort-imports
+   22:7    error    Top-level functions should be declared with function keyword                                    antfu/top-level-function
+  108:13   error    Expect newline after if                                                                         antfu/if-newline
+  108:15   error    Expected { after 'if' condition                                                                 curly
+  116:15   error    Expect newline after if                                                                         antfu/if-newline
+  116:17   error    Expected { after 'if' condition                                                                 curly
+  124:13   error    Expect newline after if                                                                         antfu/if-newline
+  124:15   error    Expected { after 'if' condition                                                                 curly
+  130:46   error    Expect newline after if                                                                         antfu/if-newline
+  130:48   error    Expected { after 'if' condition                                                                 curly
+  131:27   error    Expect newline after if                                                                         antfu/if-newline
+  131:29   error    Expected { after 'if' condition                                                                 curly
+  132:27   error    Expect newline after if                                                                         antfu/if-newline
+  132:29   error    Expected { after 'if' condition                                                                 curly
+  137:18   error    Expect newline after if                                                                         antfu/if-newline
+  137:20   error    Expected { after 'if' condition                                                                 curly
+  149:41   error    Expect newline after if                                                                         antfu/if-newline
+  149:43   error    Expected { after 'if' condition                                                                 curly
+  150:42   error    Expect newline after if                                                                         antfu/if-newline
+  150:44   error    Expected { after 'if' condition                                                                 curly
+  151:41   error    Expect newline after if                                                                         antfu/if-newline
+  151:43   error    Expected { after 'if' condition                                                                 curly
+  152:39   error    Expect newline after if                                                                         antfu/if-newline
+  152:41   error    Expected { after 'if' condition                                                                 curly
+  153:43   error    Expect newline after if                                                                         antfu/if-newline
+  153:45   error    Expected { after 'if' condition                                                                 curly
+  154:42   error    Expect newline after if                                                                         antfu/if-newline
+  154:44   error    Expected { after 'if' condition                                                                 curly
+  155:41   error    Expect newline after if                                                                         antfu/if-newline
+  155:43   error    Expected { after 'if' condition                                                                 curly
+  189:24   error    Expect newline after if                                                                         antfu/if-newline
+  189:26   error    Expected { after 'if' condition                                                                 curly
+  193:22   error    Expect newline after if                                                                         antfu/if-newline
+  193:24   error    Expected { after 'if' condition                                                                 curly
+  194:29   error    Expect newline after if                                                                         antfu/if-newline
+  194:31   error    Expected { after 'if' condition                                                                 curly
+  213:28   warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                       vue/singleline-html-element-content-newline
+  213:53   warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  246:44   warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found                       vue/singleline-html-element-content-newline
+  246:59   warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  267:47   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  267:91   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  268:46   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  268:93   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  269:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  269:111  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  270:49   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  270:105  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  271:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  271:106  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  272:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  272:108  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  273:47   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  273:99   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  274:47   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  274:104  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  275:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  275:99   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  276:49   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  276:109  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  281:43   warning  Expected 1 line break after opening tag (`<div>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  281:103  warning  Expected 1 line break before closing tag (`</div>`), but no line breaks found                   vue/singleline-html-element-content-newline
+  285:43   warning  Expected 1 line break after opening tag (`<div>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  285:104  warning  Expected 1 line break before closing tag (`</div>`), but no line breaks found                   vue/singleline-html-element-content-newline
+  306:46   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  306:87   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  307:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  307:88   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  308:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  308:88   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  309:50   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  309:86   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  310:47   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  310:95   warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  311:48   warning  Expected 1 line break after opening tag (`<el-descriptions-item>`), but no line breaks found    vue/singleline-html-element-content-newline
+  311:106  warning  Expected 1 line break before closing tag (`</el-descriptions-item>`), but no line breaks found  vue/singleline-html-element-content-newline
+  361:38   warning  Expected 1 line break after opening tag (`<div>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  361:84   warning  Expected 1 line break before closing tag (`</div>`), but no line breaks found                   vue/singleline-html-element-content-newline
+  383:38   warning  Expected 1 line break after opening tag (`<div>`), but no line breaks found                     vue/singleline-html-element-content-newline
+  383:83   warning  Expected 1 line break before closing tag (`</div>`), but no line breaks found                   vue/singleline-html-element-content-newline
+  388:42   warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found                vue/singleline-html-element-content-newline
+  388:82   warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found              vue/singleline-html-element-content-newline
+  393:42   warning  Expected 1 line break after opening tag (`<template>`), but no line breaks found                vue/singleline-html-element-content-newline
+  393:85   warning  Expected 1 line break before closing tag (`</template>`), but no line breaks found              vue/singleline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/patients/index.vue
+   7:1   error    Expected "@/components/AppEmpty/index.vue" to come before "@/components/AppLoading/index.vue"  perfectionist/sort-imports
+  61:19  warning  Expected 1 line break before closing tag (`</div>`), but 2 line breaks found                   vue/multiline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/records/__tests__/index.test.ts
+   1:36  error  Expected "beforeEach" to come before "vi"           perfectionist/sort-named-imports
+   2:1   error  Expected "@vue/test-utils" to come before "vitest"  perfectionist/sort-imports
+  29:1   error  Import in body of module; reorder to top            import/first
+  31:10  error  `describe`s should begin with lowercase             test/prefer-lowercase-title
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/records/index.vue
+  7:1  error  Expected "@/api/types" (type-internal) to come before "@/composables/useCrudList" (value-internal)  perfectionist/sort-imports
+  9:1  error  Expected "@/components/AppEmpty/index.vue" to come before "@/components/AppLoading/index.vue"       perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/scan-img/index.vue
+  52:1  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  ts/ban-ts-comment
+  55:1  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  ts/ban-ts-comment
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/settings/components/AppConfigPanel.vue
+   65:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   66:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   67:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   68:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   69:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   70:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+   71:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+   72:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+   73:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   74:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   75:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   76:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   77:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   78:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   79:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   80:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   81:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   82:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   83:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+   85:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+   86:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   87:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+   88:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   89:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   90:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+   91:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   92:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   93:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   94:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   95:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+   96:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+   97:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   98:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+   99:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  100:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  101:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  102:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  103:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  104:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  106:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  107:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  108:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  109:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  110:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  111:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  112:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  113:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  114:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  115:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  116:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  117:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  118:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  119:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  120:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  121:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  122:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  123:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  124:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  125:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  126:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  127:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  128:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  129:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  130:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  131:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  132:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  133:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  134:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  135:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  136:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  137:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  138:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  139:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  140:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  141:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  142:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  143:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  144:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  145:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  146:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  147:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  148:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  149:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  150:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  151:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  152:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  153:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  154:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  156:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  157:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  158:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  159:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  160:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  161:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  162:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  163:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  164:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  165:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  166:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  167:1   error    Expected indentation of 16 spaces but found 14 spaces                         vue/html-indent
+  168:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  169:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  170:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  171:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  172:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  173:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  174:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  176:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  177:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  178:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  179:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  180:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  181:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  182:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  183:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  184:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  185:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  186:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  187:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  188:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  189:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  190:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  191:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  192:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  193:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  194:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  195:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  196:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  198:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  199:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  200:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  201:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  202:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  203:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  204:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  205:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  206:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  207:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  208:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  209:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  210:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  211:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  212:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  213:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  214:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  215:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  216:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  217:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  218:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  219:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  220:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  221:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  222:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  223:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  224:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  225:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  226:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  227:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  228:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  229:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  230:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  231:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  232:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  233:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  234:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  235:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  236:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  237:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  238:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  239:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  240:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  241:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  242:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  243:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  244:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  245:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  247:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  248:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  249:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  250:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  251:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  252:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  253:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  254:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  255:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  257:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  258:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  259:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  260:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  261:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  262:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  263:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  264:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  265:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  267:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  268:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  269:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  270:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  271:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  272:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  273:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  274:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  275:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  276:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  277:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  278:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  279:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  280:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  281:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  282:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  283:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  284:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  285:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  286:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  287:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  288:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  289:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  290:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  291:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  292:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  293:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  294:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  295:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  296:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  297:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  298:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  299:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  301:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  302:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  303:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  304:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  305:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  306:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  307:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  308:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  309:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  310:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  311:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  312:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  313:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  314:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  315:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  316:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  317:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  318:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  319:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  320:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  321:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  323:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  324:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  325:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  326:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  327:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  328:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  329:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  330:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  331:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  332:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  333:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  334:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  335:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  336:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  337:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  338:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  339:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  340:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  341:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  342:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  343:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  344:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  345:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  346:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  347:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  348:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  349:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  350:1   error    Expected indentation of 14 spaces but found 12 spaces                         vue/html-indent
+  351:1   error    Expected indentation of 12 spaces but found 10 spaces                         vue/html-indent
+  352:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  353:1   error    Expected indentation of 10 spaces but found 8 spaces                          vue/html-indent
+  354:1   error    Expected indentation of 8 spaces but found 6 spaces                           vue/html-indent
+  355:1   error    Expected indentation of 6 spaces but found 4 spaces                           vue/html-indent
+  355:11  warning  Expected 1 line break before closing tag (`</div>`), but 2 line breaks found  vue/multiline-html-element-content-newline
+  478:9   error    Newline required at end of file but not found                                 style/eol-last
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/settings/components/DepartmentThemeSettings.vue
+    6:1  error  Expected "@/api/modules/settings" to come before "@/api/modules/statistics"  perfectionist/sort-imports
+  108:9  error  Use Object.hasOwn() instead of hasOwnProperty                                e18e/prefer-object-has-own
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/settings/index.vue
+    9:3   error    Expected "EffectiveSystemSettings" to come before "serializeSystemSettings"       perfectionist/sort-named-imports
+    9:3   error    Prefer using a top-level type-only import instead of inline type specifiers       import/consistent-type-specifier-style
+   10:3   error    Prefer using a top-level type-only import instead of inline type specifiers       import/consistent-type-specifier-style
+  191:44  warning  Expected 1 line break after opening tag (`<el-tag>`), but no line breaks found    vue/singleline-html-element-content-newline
+  191:48  warning  Expected 1 line break before closing tag (`</el-tag>`), but no line breaks found  vue/singleline-html-element-content-newline
+  203:41  warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found         vue/singleline-html-element-content-newline
+  203:59  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found       vue/singleline-html-element-content-newline
+  216:44  warning  Expected 1 line break after opening tag (`<el-tag>`), but no line breaks found    vue/singleline-html-element-content-newline
+  216:48  warning  Expected 1 line break before closing tag (`</el-tag>`), but no line breaks found  vue/singleline-html-element-content-newline
+  306:44  warning  Expected 1 line break after opening tag (`<el-tag>`), but no line breaks found    vue/singleline-html-element-content-newline
+  306:48  warning  Expected 1 line break before closing tag (`</el-tag>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics-detail/ArchiveDetailContent.vue
+  423:16  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  424:1   error    Expected indentation of 15 spaces but found 8 spaces                    vue/html-indent
+  424:49  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  456:19  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  457:1   error    Expected indentation of 18 spaces but found 10 spaces                   vue/html-indent
+  457:38  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  461:25  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  462:1   error    Expected indentation of 24 spaces but found 10 spaces                   vue/html-indent
+  462:88  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  495:20  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  496:1   error    Expected indentation of 19 spaces but found 12 spaces                   vue/html-indent
+  497:1   error    Expected indentation of 19 spaces but found 12 spaces                   vue/html-indent
+  498:1   error    Expected indentation of 19 spaces but found 12 spaces                   vue/html-indent
+  499:1   error    Expected indentation of 19 spaces but found 12 spaces                   vue/html-indent
+  500:1   error    Expected indentation of 19 spaces but found 12 spaces                   vue/html-indent
+  500:62  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  530:22  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  531:1   error    Expected indentation of 21 spaces but found 18 spaces                   vue/html-indent
+  531:77  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  535:22  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  536:1   error    Expected indentation of 21 spaces but found 18 spaces                   vue/html-indent
+  536:77  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  556:21  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  557:1   error    Expected indentation of 20 spaces but found 12 spaces                   vue/html-indent
+  557:47  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+  629:26  warning  Expected a linebreak before this attribute                              vue/first-attribute-linebreak
+  630:1   error    Expected indentation of 25 spaces but found 12 spaces                   vue/html-indent
+  630:88  warning  Expected 1 line break before closing bracket, but no line breaks found  vue/html-closing-bracket-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics-detail/index.vue
+  55:9  error  Use Object.hasOwn() instead of hasOwnProperty  e18e/prefer-object-has-own
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics/archive.vue
+   3:1   error  Expected "./archive/types" to come before "@/api/modules/search"        perfectionist/sort-imports
+  28:33  error  Capturing group number 1 is defined but never used                      regexp/no-unused-capturing-group
+  28:49  error  The character class(es) '[0-9Xx]' can be simplified using the `i` flag  regexp/use-ignore-case
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics/archive/components/PreviewPanel.vue
+  3:1  error  Expected "../types" to come before "@/utils/system-settings"                                                     perfectionist/sort-imports
+  7:1  error  Expected "vue" (value-external) to come before "element-plus/es/components/message-box/style/css" (side-effect)  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics/archive/composables/useArchiveImages.ts
+  3:1  error  Expected "@/api/modules/search" to come before "@/api/types"  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/src/views/statistics/archive/utils/client-pdf.ts
+  119:19  error  `new Array()` is unclear in intent; use either `[x]` or `Array.from({length: x})`  unicorn/no-new-array
+  141:11  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:17  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:23  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:29  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:35  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:41  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:47  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  141:53  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  142:11  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  142:17  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  142:23  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  142:29  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+  142:35  error  Should have line breaks between items, in node ArrayExpression                     antfu/consistent-list-newline
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/vite/plugins.ts
+  13:1  error  Expected "unplugin-vue-components/resolvers" to come before "unplugin-vue-components/vite"  perfectionist/sort-imports
+
+/home/runner/work/MRR/MRR/frontend-fantastic-admin/vitest.config.ts
+  2:1  error  Expected "@vitejs/plugin-vue" to come before "vitest/config"                                      perfectionist/sort-imports
+  4:1  error  Expected "node:path" (value-builtin) to come before "unplugin-auto-import/vite" (value-external)  perfectionist/sort-imports
+
+✖ 624 problems (517 errors, 107 warnings)
+  505 errors and 107 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+===== STYLELINT =====
+
+> @5.10.1 lint:stylelint /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> stylelint "src/**/*.{css,scss,vue}" --cache
+
+
+src/assets/styles/base.css
+  [2m60:3[22m  [31m[31m✖[39m  Expected "font-synthesis-weight" to come before "background-size"  [2morder/properties-order[22m
+  [2m89:1[22m  [31m[31m✖[39m  Unexpected missing end-of-source newline                           [2m@stylistic/no-missing-end-of-source-newline[22m
+
+src/assets/styles/element-plus-overrides.css
+   [2m82:36[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m82:61[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m82:86[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m82:110[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m82:132[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m82:146[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:36[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:61[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:86[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:110[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:132[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:146[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m88:160[22m  [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m95:34[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+   [2m95:48[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m102:34[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m102:48[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m102:63[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m108:34[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m108:48[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m108:63[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m114:33[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m114:47[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m121:33[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m121:47[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m121:62[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m128:34[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m128:48[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m129:34[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m129:48[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m130:31[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m130:45[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m187:29[22m   [31m[31m✖[39m  Expected complex :not() pseudo-class notation          [2mselector-not-notation[22m
+  [2m290:3[22m    [31m[31m✖[39m  Expected "outline" to come before "background"         [2morder/properties-order[22m
+  [2m332:3[22m    [31m[31m✖[39m  Expected "place-items" to come before "border-radius"  [2morder/properties-order[22m
+  [2m447:3[22m    [31m[31m✖[39m  Expected "font-weight" to come before "color"          [2morder/properties-order[22m
+  [2m558:3[22m    [31m[31m✖[39m  Expected "background" to come before "border-color"    [2morder/properties-order[22m
+
+src/components/MrrFilterBar/index.vue
+  [2m86:5[22m  [31m[31m✖[39m  Expected "flex-direction" to come before "align-items"  [2morder/properties-order[22m
+
+src/components/MrrPageHeader/index.vue
+   [2m65:14[22m  [31m[31m✖[39m  Expected single space after ":" with a single-line declaration  [2m@stylistic/declaration-colon-space-after[22m
+   [2m70:3[22m   [31m[31m✖[39m  Expected "place-items" to come before "box-shadow"              [2morder/properties-order[22m
+  [2m132:5[22m   [31m[31m✖[39m  Expected "justify-content" to come before "width"               [2morder/properties-order[22m
+
+src/components/MrrSectionCard/index.vue
+  [2m103:3[22m  [31m[31m✖[39m  Expected "place-items" to come before "border-radius"   [2morder/properties-order[22m
+  [2m137:5[22m  [31m[31m✖[39m  Expected "flex-direction" to come before "align-items"  [2morder/properties-order[22m
+  [2m142:5[22m  [31m[31m✖[39m  Expected "justify-content" to come before "width"       [2morder/properties-order[22m
+
+src/components/charts/MrrChartCard.vue
+   [2m86:3[22m  [31m[31m✖[39m  Expected "text-overflow" to come before "color"       [2morder/properties-order[22m
+  [2m106:3[22m  [31m[31m✖[39m  Expected "place-content" to come before "min-height"  [2morder/properties-order[22m
+
+src/views/help/index.vue
+  [2m193:3[22m   [31m[31m✖[39m  Expected "gap" to come before "justify-content"       [2morder/properties-order[22m
+  [2m197:3[22m   [31m[31m✖[39m  Expected "background" to come before "border-radius"  [2morder/properties-order[22m
+  [2m203:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m211:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m219:3[22m   [31m[31m✖[39m  Expected "line-height" to come before "color"         [2morder/properties-order[22m
+  [2m226:3[22m   [31m[31m✖[39m  Expected "gap" to come before "align-items"           [2morder/properties-order[22m
+  [2m230:3[22m   [31m[31m✖[39m  Expected "color" to come before "border-radius"       [2morder/properties-order[22m
+  [2m232:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "background"      [2morder/properties-order[22m
+  [2m239:3[22m   [31m[31m✖[39m  Expected "background" to come before "border-radius"  [2morder/properties-order[22m
+  [2m263:3[22m   [31m[31m✖[39m  Expected "background" to come before "border-radius"  [2morder/properties-order[22m
+  [2m272:3[22m   [31m[31m✖[39m  Expected "content" to come before "background"        [2morder/properties-order[22m
+  [2m272:12[22m  [31m[31m✖[39m  Expected double quotes                                [2m@stylistic/string-quotes[22m
+  [2m301:3[22m   [31m[31m✖[39m  Expected "place-items" to come before "height"        [2morder/properties-order[22m
+  [2m303:3[22m   [31m[31m✖[39m  Expected "color" to come before "border-radius"       [2morder/properties-order[22m
+  [2m310:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m316:3[22m   [31m[31m✖[39m  Expected "line-height" to come before "color"         [2morder/properties-order[22m
+  [2m324:3[22m   [31m[31m✖[39m  Expected "gap" to come before "justify-content"       [2morder/properties-order[22m
+  [2m326:3[22m   [31m[31m✖[39m  Expected "padding-top" to come before "margin-top"    [2morder/properties-order[22m
+  [2m332:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m352:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m359:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m365:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"           [2morder/properties-order[22m
+  [2m369:8[22m   [31m[31m✖[39m  Expected "context" media feature range notation       [2mmedia-feature-range-notation[22m
+  [2m380:8[22m   [31m[31m✖[39m  Expected "context" media feature range notation       [2mmedia-feature-range-notation[22m
+
+src/views/monitoring/index.vue
+  [2m415:3[22m   [31m[31m✖[39m  Expected "gap" to come before "justify-content"            [2morder/properties-order[22m
+  [2m429:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"                [2morder/properties-order[22m
+  [2m431:19[22m  [31m[31m✖[39m  Expected a leading zero                                    [2m@stylistic/number-leading-zero[22m
+  [2m432:3[22m   [31m[31m✖[39m  Expected "text-transform" to come before "letter-spacing"  [2morder/properties-order[22m
+  [2m440:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"                [2morder/properties-order[22m
+  [2m481:3[22m   [31m[31m✖[39m  Expected "background" to come before "border-radius"       [2morder/properties-order[22m
+  [2m486:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "color"                [2morder/properties-order[22m
+  [2m501:8[22m   [31m[31m✖[39m  Expected "context" media feature range notation            [2mmedia-feature-range-notation[22m
+  [2m505:5[22m   [31m[31m✖[39m  Expected "flex-direction" to come before "align-items"     [2morder/properties-order[22m
+
+src/views/settings/index.vue
+  [2m409:3[22m  [31m[31m✖[39m  Expected "place-items" to come before "border-radius"  [2morder/properties-order[22m
+  [2m517:3[22m  [31m[31m✖[39m  Expected "place-items" to come before "border-radius"  [2morder/properties-order[22m
+  [2m718:8[22m  [31m[31m✖[39m  Expected "context" media feature range notation        [2mmedia-feature-range-notation[22m
+
+src/views/statistics-detail/ArchiveDetailContent.vue
+  [2m1073:3[22m   [31m[31m✖[39m  Unexpected duplicate "text-align"                 [2mdeclaration-block-no-duplicate-properties[22m
+  [2m1074:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "text-align"  [2morder/properties-order[22m
+  [2m1132:3[22m   [31m[31m✖[39m  Unexpected empty line before rule                 [2mrule-empty-line-before[22m
+  [2m1148:17[22m  [31m[31m✖[39m  Expected single space after range operator        [2m@stylistic/media-feature-range-operator-space-after[22m
+  [2m1175:17[22m  [31m[31m✖[39m  Expected single space after range operator        [2m@stylistic/media-feature-range-operator-space-after[22m
+
+src/views/statistics-detail/index.vue
+  [2m128:3[22m  [31m[31m✖[39m  Expected "flex-direction" to come before "padding"             [2morder/properties-order[22m
+  [2m139:3[22m  [31m[31m✖[39m  Expected "column-gap" to come before "padding"                 [2morder/properties-order[22m
+  [2m147:3[22m  [31m[31m✖[39m  Expected "gap" to come before "margin-bottom"                  [2morder/properties-order[22m
+  [2m157:3[22m  [31m[31m✖[39m  Expected "flex" to come before "height"                        [2morder/properties-order[22m
+  [2m161:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-position"    [2mproperty-no-vendor-prefix[22m
+  [2m163:3[22m  [31m[31m✖[39m  Expected "-webkit-mask-repeat" to come before "mask-position"  [2morder/properties-order[22m
+  [2m163:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-repeat"      [2mproperty-no-vendor-prefix[22m
+  [2m165:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-size"        [2mproperty-no-vendor-prefix[22m
+  [2m170:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-image"       [2mproperty-no-vendor-prefix[22m
+  [2m175:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-image"       [2mproperty-no-vendor-prefix[22m
+  [2m180:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-image"       [2mproperty-no-vendor-prefix[22m
+  [2m185:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-image"       [2mproperty-no-vendor-prefix[22m
+  [2m190:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-image"       [2mproperty-no-vendor-prefix[22m
+  [2m200:3[22m  [31m[31m✖[39m  Expected "line-height" to come before "text-align"             [2morder/properties-order[22m
+
+src/views/users/index.vue
+  [2m470:3[22m  [31m[31m✖[39m  Expected "place-items" to come before "padding"        [2morder/properties-order[22m
+  [2m484:3[22m  [31m[31m✖[39m  Expected "text-overflow" to come before "font-weight"  [2morder/properties-order[22m
+  [2m498:3[22m  [31m[31m✖[39m  Expected "place-items" to come before "border-radius"  [2morder/properties-order[22m
+
+src/assets/styles/components/archive-workspace.css
+  [2m95:15[22m  [31m[31m✖[39m  Expected newline after ":" with a multi-line declaration  [2m@stylistic/declaration-colon-newline-after[22m
+  [2m97:7[22m   [31m[31m✖[39m  Unexpected newline before "-"                             [2mscss/operator-no-newline-before[22m
+  [2m98:7[22m   [31m[31m✖[39m  Unexpected newline before "-"                             [2mscss/operator-no-newline-before[22m
+
+src/assets/styles/components/metric-card.css
+   [2m20:14[22m  [31m[31m✖[39m  Expected single space after ":" with a single-line declaration  [2m@stylistic/declaration-colon-space-after[22m
+   [2m66:3[22m   [31m[31m✖[39m  Expected "place-items" to come before "border-radius"           [2morder/properties-order[22m
+   [2m85:3[22m   [31m[31m✖[39m  Expected "text-overflow" to come before "color"                 [2morder/properties-order[22m
+  [2m100:3[22m   [31m[31m✖[39m  Expected "font-size" to come before "overflow-wrap"             [2morder/properties-order[22m
+  [2m127:3[22m   [31m[31m✖[39m  Expected "text-overflow" to come before "color"                 [2morder/properties-order[22m
+  [2m176:1[22m   [31m[31m✖[39m  Unexpected missing end-of-source newline                        [2m@stylistic/no-missing-end-of-source-newline[22m
+
+src/assets/styles/components/surface-radius.css
+  [2m54:1[22m  [31m[31m✖[39m  Expected indentation of 2 spaces  [2m@stylistic/indentation[22m
+  [2m65:1[22m  [31m[31m✖[39m  Expected indentation of 2 spaces  [2m@stylistic/indentation[22m
+
+src/assets/styles/pages/archive-boxes.css
+  [2m16:3[22m  [31m[31m✖[39m  Expected "box-sizing" to come before "display"           [2morder/properties-order[22m
+  [2m28:3[22m  [31m[31m✖[39m  Expected "-webkit-mask" to come before "mask-size"       [2morder/properties-order[22m
+  [2m28:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask"       [2mproperty-no-vendor-prefix[22m
+  [2m29:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask-size"  [2mproperty-no-vendor-prefix[22m
+  [2m42:3[22m  [31m[31m✖[39m  Expected "pointer-events" to come before "content"       [2morder/properties-order[22m
+  [2m46:3[22m  [31m[31m✖[39m  Expected "-webkit-mask" to come before "transform"       [2morder/properties-order[22m
+  [2m46:3[22m  [31m[31m✖[39m  Unexpected vendor-prefixed property "-webkit-mask"       [2mproperty-no-vendor-prefix[22m
+  [2m79:1[22m  [31m[31m✖[39m  Unexpected missing end-of-source newline                 [2m@stylistic/no-missing-end-of-source-newline[22m
+
+src/views/audit-images/components/AuditAnalytics.vue
+  [2m295:13[22m  [31m[31m✖[39m  Expected newline after ":" with a multi-line declaration  [2m@stylistic/declaration-colon-newline-after[22m
+  [2m310:3[22m   [31m[31m✖[39m  Expected "place-content" to come before "min-height"      [2morder/properties-order[22m
+
+src/layouts/components/Topbar/Tabbar/index.vue
+  [2m246:5[22m   [31m[31m✖[39m  Expected "min-width" to come before "height"     [2morder/properties-order[22m
+  [2m305:15[22m  [31m[31m✖[39m  Expected "min-width" to come before "height"     [2morder/properties-order[22m
+  [2m311:15[22m  [31m[31m✖[39m  Expected "text-overflow" to come before "color"  [2morder/properties-order[22m
+  [2m341:15[22m  [31m[31m✖[39m  Expected "place-items" to come before "opacity"  [2morder/properties-order[22m
+  [2m354:15[22m  [31m[31m✖[39m  Expected "background" to come before "opacity"   [2morder/properties-order[22m
+
+src/layouts/components/Topbar/Toolbar/index.vue
+  [2m37:3[22m  [31m[31m✖[39m  Expected "min-width" to come before "height"  [2morder/properties-order[22m
+
+src/views/statistics/archive/components/ArchiveCaseList.vue
+   [2m81:3[22m  [31m[31m✖[39m  Expected "gap" to come before "justify-content"  [2morder/properties-order[22m
+  [2m135:3[22m  [31m[31m✖[39m  Expected "gap" to come before "min-width"        [2morder/properties-order[22m
+
+[31m✖[39m 135 problems ([31m135 errors[39m, [33m0 warnings[39m)
+  63 errors potentially fixable with the "--fix" option.
+
+ ELIFECYCLE  Command failed with exit code 2.
+
+===== BUILD =====
+
+> @5.10.1 build /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> vue-tsc -b && vite build
+
+src/components/charts/MrrChart.vue(27,7): error TS6133: 'chartRef' is declared but its value is never read.
+ ELIFECYCLE  Command failed with exit code 2.

@@ -1,0 +1,86 @@
+name: Temporary unified charts validation
+
+on:
+  push:
+    branches:
+      - feat/unified-echarts-system-20260714
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/unified-echarts-system-20260714
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Extract unified chart sources
+        run: |
+          base64 --decode scripts/tmp-unified-charts-src.tar.gz.b64 > /tmp/unified-charts-src.tar.gz
+          tar -xzf /tmp/unified-charts-src.tar.gz -C .
+
+      - name: Add ECharts dependency
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises'
+          const path = 'frontend-fantastic-admin/package.json'
+          const pkg = JSON.parse(await readFile(path, 'utf8'))
+          pkg.dependencies = Object.fromEntries(
+            Object.entries({ ...pkg.dependencies, echarts: '^6.0.0' })
+              .sort(([left], [right]) => left.localeCompare(right)),
+          )
+          await writeFile(path, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8')
+          NODE
+
+      - name: Install dependencies and update lockfile
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck and lint
+        working-directory: frontend-fantastic-admin
+        run: pnpm lint
+
+      - name: Build frontend
+        working-directory: frontend-fantastic-admin
+        run: pnpm build
+
+      - name: Verify patch whitespace
+        run: git diff --check
+
+      - name: Commit generated implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend-fantastic-admin/package.json \
+            frontend-fantastic-admin/pnpm-lock.yaml \
+            frontend-fantastic-admin/src/plugins/echarts.ts \
+            frontend-fantastic-admin/src/config/chart-theme.ts \
+            frontend-fantastic-admin/src/composables/useMrrChart.ts \
+            frontend-fantastic-admin/src/types/chart.ts \
+            frontend-fantastic-admin/src/components/charts \
+            frontend-fantastic-admin/src/views/response-analysis/components/ResponseTrendChart.vue \
+            frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git commit -m "feat(charts): unify reusable ECharts visualizations [skip ci]"
+          git push origin HEAD:feat/unified-echarts-system-20260714

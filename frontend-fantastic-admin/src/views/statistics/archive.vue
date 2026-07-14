@@ -49,7 +49,7 @@ const filteredImages = computed<GalleryImage[]>(() =>
 const selection = useSelection<GalleryImage>(filteredImages)
 const { selectedCount, allVisibleSelected, selectedItems, isSelected, toggleSelect, selectAllVisible } = selection
 
-const { printing, printSelected } = useArchivePrint()
+const { printing, exportingPdf, printSelected, exportSelectedPdf } = useArchivePrint()
 
 const currentImage = computed(() => filteredImages.value[selectedImageIndex.value] || null)
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
@@ -174,6 +174,10 @@ function handlePrint() {
   printSelected(selectedItems.value)
 }
 
+function handleExportPdf() {
+  exportSelectedPdf(selectedItems.value)
+}
+
 function goBack() {
   router.push('/statistics-detail')
 }
@@ -256,11 +260,14 @@ onUnmounted(() => {
           :loading="loading"
           :downloading="downloading"
           :printing="printing"
+          :exporting-pdf="exportingPdf"
+          :show-actions="images.length > 0"
           :selected-count="selectedCount"
           @back="goBack"
           @refresh="handleSearch"
           @download="handleDownload"
           @print="handlePrint"
+          @export-pdf="handleExportPdf"
         />
 
         <ArchiveSearchBar

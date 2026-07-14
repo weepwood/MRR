@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Download, Printer, Refresh } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Download, Printer, Refresh } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'ArchiveHeader' })
 
@@ -7,11 +7,15 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   downloading?: boolean
   printing?: boolean
+  exportingPdf?: boolean
+  showActions?: boolean
   selectedCount?: number
 }>(), {
   loading: false,
   downloading: false,
   printing: false,
+  exportingPdf: false,
+  showActions: false,
   selectedCount: 0,
 })
 
@@ -20,6 +24,7 @@ const emit = defineEmits<{
   refresh: []
   download: []
   print: []
+  exportPdf: []
 }>()
 </script>
 
@@ -41,12 +46,17 @@ const emit = defineEmits<{
         </el-button>
       </div>
     </div>
-    <div class="archive-actions">
-      <el-button :icon="Download" :loading="props.downloading" @click="emit('download')">
+    <div v-if="props.showActions" class="archive-actions">
+      <el-button class="download-action" :icon="Download" :loading="props.downloading" @click="emit('download')">
         下载档案袋
       </el-button>
-      <el-button type="primary" :icon="Printer" :loading="props.printing" :disabled="!props.selectedCount" @click="emit('print')">
+      <el-button :icon="Printer" :loading="props.printing" :disabled="!props.selectedCount" @click="emit('print')">
         打印选中<template v-if="props.selectedCount">
+          ({{ props.selectedCount }})
+        </template>
+      </el-button>
+      <el-button type="primary" :icon="Document" :loading="props.exportingPdf" :disabled="!props.selectedCount" @click="emit('exportPdf')">
+        导出 PDF<template v-if="props.selectedCount">
           ({{ props.selectedCount }})
         </template>
       </el-button>
@@ -63,8 +73,7 @@ const emit = defineEmits<{
 }
 
 .archive-heading,
-.heading-actions,
-.archive-actions {
+.heading-actions {
   display: flex;
   align-items: center;
 }
@@ -94,11 +103,17 @@ const emit = defineEmits<{
 }
 
 .archive-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
+.archive-actions .download-action {
+  grid-column: 1 / -1;
+}
+
 .archive-actions :deep(.el-button) {
-  flex: 1;
+  min-width: 0;
   margin: 0;
 }
 

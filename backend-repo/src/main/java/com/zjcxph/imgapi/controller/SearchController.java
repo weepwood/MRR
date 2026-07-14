@@ -1,11 +1,13 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
-import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
-import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
+import com.zjcxph.imgapi.dto.resp.IdCardArchiveSearchResponse;
+import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
+import com.zjcxph.imgapi.utils.IdCardUrlTokenUtil;
 import com.zjcxph.imgapi.utils.IpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/v1/search")
@@ -25,6 +28,7 @@ import java.util.List;
 public class SearchController {
 
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
+    private static final Pattern ID_CARD_PATTERN = Pattern.compile("^\\d{15}(\\d{2}[0-9Xx])?$");
 
     private final SearchService searchService;
 
@@ -75,6 +79,42 @@ public class SearchController {
         } catch (Exception e) {
             logger.error("Decrypt legacy id-card failed: {}", e.getMessage(), e);
             return Result.fail("解密失败：" + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "通过身份证号查询全部影像档案，并生成 URL 安全令牌")
+    @PostMapping("/archive-cases")
+    public Result<IdCardArchiveSearchResponse> getArchiveCasesByIdCard(
+            @Valid @RequestBody IdCardQueryRequest request) {
+        String idCard = request.getIdCard().trim();
+        List<IdCardArchiveSearchResponse.ArchiveCase> cases = searchService.getArchiveCasesByID(idCard);
+        String token = IdCardUrlTokenUtil.encrypt(idCard, secretKey);
+        logger.info("Found {} archive cases by id-card", cases.size());
+        return Result.success(new IdCardArchiveSearchResponse(
+                token,
+                IdCardUrlTokenUtil.mask(idCard),
+                cases
+        ));
+    }
+
+    @Operation(summary = "通过 URL 安全令牌恢复身份证影像档案查询")
+    @GetMapping("/archive-cases")
+    public Result<IdCardArchiveSearchResponse> getArchiveCasesByToken(@RequestParam("id") String token) {
+        try {
+            String idCard = IdCardUrlTokenUtil.decrypt(token, secretKey);
+            if (!ID_CARD_PATTERN.matcher(idCard).matches()) {
+                return Result.fail("身份证查询参数无效");
+            }
+            List<IdCardArchiveSearchResponse.ArchiveCase> cases = searchService.getArchiveCasesByID(idCard);
+            logger.info("Restored {} archive cases from id-card URL token", cases.size());
+            return Result.success(new IdCardArchiveSearchResponse(
+                    token,
+                    IdCardUrlTokenUtil.mask(idCard),
+                    cases
+            ));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid id-card URL token: {}", e.getMessage());
+            return Result.fail("身份证查询链接无效或已被篡改");
         }
     }
 

@@ -13,6 +13,18 @@ const publicStatusRoute: RouteRecordRaw = {
   },
 }
 
+const monitoringFilesystemRoute: RouteRecordRaw = {
+  path: '/monitoring',
+  name: 'monitoring',
+  component: () => import('@/views/monitoring-dashboard/index.vue'),
+  meta: {
+    title: '系统监控',
+    icon: 'i-ant-design:dashboard-twotone',
+    auth: ['system:read'],
+    cache: true,
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -282,12 +294,15 @@ const generatedConstantRoutes = generatedRoutes.filter(
 )
 const constantRoutesByFilesystem = [publicStatusRoute, ...generatedConstantRoutes]
 
+const generatedAsyncRoutes = generatedRoutes.filter(
+  item => !['/status', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+    && item.meta?.enabled !== false
+    && item.meta?.constant !== true
+    && item.meta?.layout !== false,
+)
 const asyncRoutesByFilesystem = [
-  ...setupLayouts(
-    generatedRoutes.filter(
-      item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false,
-    ),
-  ),
+  ...setupLayouts(generatedAsyncRoutes),
+  monitoringFilesystemRoute,
 ]
 
 export {

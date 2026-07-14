@@ -23,6 +23,12 @@ declare namespace Settings {
      */
     radius?: number
     /**
+     * 页面标题布局
+     * @默认值 `'stacked'` 英文标题与中文标题同行，说明文字位于下一行
+     * @可选值 `'compact'` 英文标题、中文标题与说明文字紧凑同行
+     */
+    pageTitleStyle?: 'compact' | 'stacked'
+    /**
      * 是否开启哀悼模式
      * @默认值 `false`
      */

@@ -1,0 +1,60 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "最近检查异常总数",
+      "id": 1,
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 0},
+      "targets": [{"expr": "mrr_data_quality_total_issues", "refId": "A"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 100}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "检查任务状态",
+      "id": 2,
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 0},
+      "targets": [{"expr": "mrr_data_quality_running", "refId": "A"}],
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "空闲"}, "1": {"text": "运行中"}}, "type": "value"}]}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "距离最近成功检查",
+      "id": 3,
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 0},
+      "targets": [{"expr": "time() - mrr_data_quality_last_success_timestamp", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+    },
+    {
+      "type": "barchart",
+      "title": "各检查项异常数量",
+      "id": 4,
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 5},
+      "targets": [{"expr": "mrr_data_quality_issues", "legendFormat": "{{severity}} / {{check_code}}", "refId": "A", "instant": true}],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "异常数量趋势",
+      "id": 5,
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 15},
+      "targets": [
+        {"expr": "sum by (severity) (mrr_data_quality_issues)", "legendFormat": "{{severity}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["mrr", "data-quality"],
+  "templating": {"list": []},
+  "time": {"from": "now-7d", "to": "now"},
+  "timezone": "browser",
+  "title": "MRR 数据质量",
+  "uid": "mrr-data-quality",
+  "version": 1
+}

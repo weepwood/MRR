@@ -52,7 +52,11 @@ body {
   font-size: 14px;
   line-height: 1.5;
   color: var(--mrr-foreground);
-  background: var(--mrr-background);
+  background-color: var(--mrr-app-shell-bg);
+  background-image:
+    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
   font-synthesis-weight: none;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
@@ -69,7 +73,7 @@ textarea {
 
 ::selection {
   color: var(--mrr-primary-foreground);
-  background: var(--mrr-primary);
+  background: color-mix(in srgb, var(--mrr-primary) 82%, transparent);
 }
 
 #app {

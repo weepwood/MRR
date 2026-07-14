@@ -1,204 +1,175 @@
 <style>
-@keyframes rainbow {
-  0% { --rainbow-color: #00a98e; }
-  1.25% { --rainbow-color: #00a996; }
-  2.5% { --rainbow-color: #00a99f; }
-  3.75% { --rainbow-color: #00a9a7; }
-  5% { --rainbow-color: #00a9b0; }
-  6.25% { --rainbow-color: #00a9b8; }
-  7.5% { --rainbow-color: #00a9c0; }
-  8.75% { --rainbow-color: #00a8c7; }
-  10% { --rainbow-color: #00a8cf; }
-  11.25% { --rainbow-color: #00a7d5; }
-  12.5% { --rainbow-color: #00a6dc; }
-  13.75% { --rainbow-color: #00a6e2; }
-  15% { --rainbow-color: #00a4e7; }
-  16.25% { --rainbow-color: #00a3ec; }
-  17.5% { --rainbow-color: #00a2f1; }
-  18.75% { --rainbow-color: #00a0f4; }
-  20% { --rainbow-color: #009ff7; }
-  21.25% { --rainbow-color: #009dfa; }
-  22.5% { --rainbow-color: #009bfc; }
-  23.75% { --rainbow-color: #0098fd; }
-  25% { --rainbow-color: #0096fd; }
-  26.25% { --rainbow-color: #0093fd; }
-  27.5% { --rainbow-color: #2e90fc; }
-  28.75% { --rainbow-color: #4d8dfa; }
-  30% { --rainbow-color: #638af8; }
-  31.25% { --rainbow-color: #7587f5; }
-  32.5% { --rainbow-color: #8583f1; }
-  33.75% { --rainbow-color: #9280ed; }
-  35% { --rainbow-color: #9f7ce9; }
-  36.25% { --rainbow-color: #aa78e3; }
-  37.5% { --rainbow-color: #b574dd; }
-  38.75% { --rainbow-color: #be71d7; }
-  40% { --rainbow-color: #c76dd1; }
-  41.25% { --rainbow-color: #cf69c9; }
-  42.5% { --rainbow-color: #d566c2; }
-  43.75% { --rainbow-color: #dc63ba; }
-  45% { --rainbow-color: #e160b3; }
-  46.25% { --rainbow-color: #e65eab; }
-  47.5% { --rainbow-color: #e95ca2; }
-  48.75% { --rainbow-color: #ed5a9a; }
-  50% { --rainbow-color: #ef5992; }
-  51.25% { --rainbow-color: #f15989; }
-  52.5% { --rainbow-color: #f25981; }
-  53.75% { --rainbow-color: #f25a79; }
-  55% { --rainbow-color: #f25c71; }
-  56.25% { --rainbow-color: #f15e69; }
-  57.5% { --rainbow-color: #ef6061; }
-  58.75% { --rainbow-color: #ed635a; }
-  60% { --rainbow-color: #eb6552; }
-  61.25% { --rainbow-color: #e8694b; }
-  62.5% { --rainbow-color: #e46c44; }
-  63.75% { --rainbow-color: #e06f3d; }
-  65% { --rainbow-color: #db7336; }
-  66.25% { --rainbow-color: #d77630; }
-  67.5% { --rainbow-color: #d17a2a; }
-  68.75% { --rainbow-color: #cc7d24; }
-  70% { --rainbow-color: #c6811e; }
-  71.25% { --rainbow-color: #bf8418; }
-  72.5% { --rainbow-color: #b98713; }
-  73.75% { --rainbow-color: #b28a0f; }
-  75% { --rainbow-color: #ab8d0c; }
-  76.25% { --rainbow-color: #a3900b; }
-  77.5% { --rainbow-color: #9c920d; }
-  78.75% { --rainbow-color: #949510; }
-  80% { --rainbow-color: #8b9715; }
-  81.25% { --rainbow-color: #83991b; }
-  82.5% { --rainbow-color: #7a9b21; }
-  83.75% { --rainbow-color: #719d27; }
-  85% { --rainbow-color: #679e2e; }
-  86.25% { --rainbow-color: #5da035; }
-  87.5% { --rainbow-color: #51a13c; }
-  88.75% { --rainbow-color: #44a244; }
-  90% { --rainbow-color: #34a44b; }
-  91.25% { --rainbow-color: #1ba553; }
-  92.5% { --rainbow-color: #00a65b; }
-  93.75% { --rainbow-color: #00a663; }
-  95% { --rainbow-color: #00a76c; }
-  96.25% { --rainbow-color: #00a874; }
-  97.5% { --rainbow-color: #00a87d; }
-  98.75% { --rainbow-color: #00a985; }
-  100% { --rainbow-color: #00a98e; }
+:root {
+  color-scheme: light;
+  --loading-bg: #f4f8fb;
+  --loading-card: rgb(255 255 255 / 82%);
+  --loading-text: #102a43;
+  --loading-muted: #627d98;
+  --loading-accent: #168aad;
+  --loading-accent-soft: rgb(22 138 173 / 14%);
+  --loading-border: rgb(22 138 173 / 16%);
 }
 
-:root {
-  --rainbow-color: #00a98e;
-  animation: rainbow 20s linear infinite;
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --loading-bg: #0d1b2a;
+    --loading-card: rgb(18 36 54 / 82%);
+    --loading-text: #e6f1f5;
+    --loading-muted: #9fb3c8;
+    --loading-accent: #55c2d8;
+    --loading-accent-soft: rgb(85 194 216 / 16%);
+    --loading-border: rgb(85 194 216 / 18%);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: var(--loading-bg);
 }
 
 .loading-container {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   z-index: 10000;
+  display: grid;
+  overflow: hidden;
+  color: var(--loading-text);
+  background:
+    radial-gradient(circle at 16% 12%, var(--loading-accent-soft), transparent 30%),
+    radial-gradient(circle at 86% 88%, var(--loading-accent-soft), transparent 32%),
+    var(--loading-bg);
+  place-items: center;
+  user-select: none;
+}
+
+.loading-container::before,
+.loading-container::after {
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  content: "";
+  border: 1px solid var(--loading-border);
+  border-radius: 50%;
+  opacity: 0.65;
+}
+
+.loading-container::before { transform: translate(-42vw, -34vh); }
+.loading-container::after { transform: translate(42vw, 34vh) scale(0.72); }
+
+.loading-shell {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: var(--rainbow-color);
-  user-select: none;
-  background-color: hsl(var(--background));
+  width: min(360px, calc(100vw - 40px));
+  padding: 42px 32px 34px;
+  text-align: center;
+  background: var(--loading-card);
+  border: 1px solid var(--loading-border);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgb(16 42 67 / 12%), inset 0 1px rgb(255 255 255 / 70%);
+  backdrop-filter: blur(18px);
 }
 
-.loading-container *::before,
-.loading-container *::after {
-  box-sizing: content-box;
+.loading-mark {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 24px;
+  color: var(--loading-accent);
+  background: var(--loading-accent-soft);
+  border: 1px solid var(--loading-border);
+  border-radius: 22px;
+  box-shadow: 0 10px 28px var(--loading-accent-soft);
+  place-items: center;
 }
 
-.loading-container .loading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-}
-
-.loading-container .loading .square {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-}
-
-.loading-container .loading .square::before {
-  width: 10px;
-  height: 10px;
-  content: "";
-  border: 3px solid var(--rainbow-color);
-  border-radius: 15%;
-  animation: square-to-dot-animation 2s linear infinite;
-}
-
-.loading-container .loading .square:nth-child(1)::before {
-  animation-delay: calc(150ms * 1);
-}
-
-.loading-container .loading .square:nth-child(2)::before {
-  animation-delay: calc(150ms * 2);
-}
-
-.loading-container .loading .square:nth-child(3)::before {
-  animation-delay: calc(150ms * 3);
-}
-
-.loading-container .loading .square:nth-child(4)::before {
-  animation-delay: calc(150ms * 4);
-}
-
-@keyframes square-to-dot-animation {
-  15%,
-  25% {
-    width: 0;
-    height: 0;
-    margin: 5px;
-    border-width: 5px;
-    border-radius: 100%;
-  }
-
-  40% {
-    width: 10px;
-    height: 10px;
-    margin: initial;
-    border-width: 3px;
-    border-radius: 15%;
-  }
-}
-
-.loading-container .name {
+.loading {
   position: relative;
-  margin-top: 20px;
-  font-size: 24px;
-  line-height: 1.5;
+  width: 34px;
+  height: 34px;
+  animation: loading-rotate 1.8s linear infinite;
 }
 
-.loading-container .tips {
-  position: relative;
-  margin-top: 10px;
-  font-size: 16px;
-  opacity: 0.5;
-  line-height: 1.5;
-}
-
-.loading-container .tips::after {
+.loading::before,
+.loading::after,
+.loading .square::before,
+.loading .square::after {
   position: absolute;
-  padding-left: 5px;
+  width: 8px;
+  height: 8px;
+  content: "";
+  background: currentcolor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--loading-accent-soft);
+}
+
+.loading::before { top: 0; left: 13px; }
+.loading::after { top: 13px; right: 0; }
+.loading .square::before { right: 13px; bottom: 0; }
+.loading .square::after { bottom: 13px; left: 0; }
+
+.loading .square {
+  position: absolute;
+  inset: 0;
+}
+
+@keyframes loading-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(20px, 4vw, 24px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tips {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--loading-muted);
+  line-height: 1.5;
+}
+
+.tips::after {
+  width: 1.2em;
+  overflow: hidden;
   content: "…";
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading { animation: none; }
 }
 </style>
 
-<div class="loading-container">
-  <div class="loading">
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
+<div class="loading-container" role="status" aria-live="polite" aria-busy="true">
+  <div class="loading-shell">
+    <div class="loading-mark" aria-hidden="true">
+      <div class="loading">
+        <div class="square"></div>
+      </div>
+    </div>
+    <div class="name">%VITE_APP_TITLE%</div>
+    <div class="tips">正在加载</div>
   </div>
-  <div class="name">%VITE_APP_TITLE%</div>
-  <div class="tips">载入中</div>
 </div>

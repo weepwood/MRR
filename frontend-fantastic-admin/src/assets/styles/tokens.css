@@ -11,6 +11,40 @@
   --g-tabbar-height: 50px;
   --g-toolbar-height: 50px;
 
+  /* MRR Console 页面宽度 */
+  --mrr-content-fluid: 1680px;
+  --mrr-content-standard: 1440px;
+  --mrr-content-narrow: 1120px;
+  --mrr-page-gap: 20px;
+
+  /* 4px 基础间距系统 */
+  --mrr-space-1: 4px;
+  --mrr-space-2: 8px;
+  --mrr-space-3: 12px;
+  --mrr-space-4: 16px;
+  --mrr-space-5: 20px;
+  --mrr-space-6: 24px;
+  --mrr-space-8: 32px;
+
+  /* 圆角 */
+  --mrr-radius-sm: 6px;
+  --mrr-radius-md: 8px;
+  --mrr-radius-lg: 10px;
+  --mrr-radius-card: 12px;
+  --mrr-radius-dialog: 16px;
+  --mrr-radius-pill: 999px;
+
+  /* 控件与表格尺寸 */
+  --mrr-control-height: 36px;
+  --mrr-control-height-compact: 32px;
+  --mrr-table-header-height: 44px;
+  --mrr-table-row-height: 46px;
+
+  /* 克制的后台层级阴影 */
+  --mrr-shadow-card: 0 6px 20px rgb(15 23 42 / 5%);
+  --mrr-shadow-dialog: 0 24px 64px rgb(15 23 42 / 16%);
+  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
+
   /* 滚动条 */
   --scrollbar-color: 240 5.9% 90%;
 
@@ -55,6 +89,8 @@
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;
+    --mrr-shadow-card: 0 8px 24px rgb(0 0 0 / 18%);
+    --mrr-shadow-dialog: 0 24px 72px rgb(0 0 0 / 42%);
     --color-text: rgb(255 255 255 / 95%);
     --color-text-muted: #a39e98;
     --color-text-placeholder: #615d59;

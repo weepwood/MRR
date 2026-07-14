@@ -4,6 +4,7 @@ const globalSettingsDefault: RecursiveRequired<Settings.all> = {
   app: {
     colorScheme: 'light',
     radius: 0.75,
+    pageTitleStyle: 'stacked',
     enableMournMode: false,
     enableColorAmblyopiaMode: false,
     enablePermission: true,

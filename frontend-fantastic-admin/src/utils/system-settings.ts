@@ -1,5 +1,3 @@
-import { getSystemSettings } from '@/api/modules/settings'
-
 export const SYSTEM_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:system-settings'
 export const SYSTEM_SETTINGS_UPDATED_EVENT = 'mrr:system-settings-updated'
 
@@ -118,6 +116,9 @@ export async function loadEffectiveSystemSettings(): Promise<{
   const localSettings = readLocalSystemSettings()
 
   try {
+    // API 模块会继续依赖应用路由，因此仅在真正加载远端配置时按需导入。
+    // 这样纯解析函数可在 Vitest 等无完整 Vite 插件环境中独立测试。
+    const { getSystemSettings } = await import('@/api/modules/settings')
     const response = await getSystemSettings()
     const serverSettings = response.data as Record<string, unknown> | undefined
     if (serverSettings && Object.keys(serverSettings).length > 0) {

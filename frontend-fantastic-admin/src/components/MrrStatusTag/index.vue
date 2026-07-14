@@ -85,22 +85,22 @@ const statusMeta = computed(() => {
   --mrr-status-bg: #fef2f2;
 }
 
-.dark .mrr-status-tag--success {
+:global(.dark) .mrr-status-tag--success {
   --mrr-status-color: #86efac;
   --mrr-status-bg: rgb(22 101 52 / 24%);
 }
 
-.dark .mrr-status-tag--info {
+:global(.dark) .mrr-status-tag--info {
   --mrr-status-color: #7dd3fc;
   --mrr-status-bg: rgb(3 105 161 / 24%);
 }
 
-.dark .mrr-status-tag--warning {
+:global(.dark) .mrr-status-tag--warning {
   --mrr-status-color: #fcd34d;
   --mrr-status-bg: rgb(180 83 9 / 24%);
 }
 
-.dark .mrr-status-tag--danger {
+:global(.dark) .mrr-status-tag--danger {
   --mrr-status-color: #fca5a5;
   --mrr-status-bg: rgb(185 28 28 / 24%);
 }

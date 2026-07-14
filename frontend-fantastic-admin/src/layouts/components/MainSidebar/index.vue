@@ -40,7 +40,7 @@ onUnmounted(() => {
       <component :is="useSlots('main-sidebar-after-logo')" />
       <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="menu flex-1 overscroll-contain">
         <!-- 侧边栏模式（含主导航） -->
-        <div class="w-full flex flex-col of-hidden py-1 transition-all -mt-2">
+        <div class="w-full flex flex-col of-hidden py-1 transition-all">
           <template v-for="(item, index) in menuStore.allMenus" :key="index">
             <div
               class="menu-item relative px-2 py-1 transition-all" :class="{

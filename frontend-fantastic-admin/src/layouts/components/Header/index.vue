@@ -29,7 +29,7 @@ const { switchTo } = useMenu()
                 }"
               >
                 <div
-                  v-if="item.children && item.children.length !== 0" class="menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1" :class="{
+                  v-if="item.children && item.children.length !== 0" class="menu-item-container relative w-full flex cursor-pointer items-center justify-between gap-1" :class="{
                     active: index === menuStore.actived,
                   }" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="switchTo(index)"
                 >

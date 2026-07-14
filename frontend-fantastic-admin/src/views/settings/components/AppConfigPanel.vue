@@ -6,7 +6,15 @@ import { diffTwoObj } from '@/utils/object'
 
 defineOptions({ name: 'AppConfigPanel' })
 
+const props = withDefaults(defineProps<{
+  drawer?: boolean
+}>(), {
+  drawer: false,
+})
+
 const settingsStore = useSettingsStore()
+const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
+let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
 
 const appRadius = computed<number[]>({
   get() {
@@ -27,13 +35,31 @@ watch(copied, (val) => {
   }
 })
 
+watch(() => settingsStore.settings, () => {
+  autoSaveState.value = 'saving'
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer)
+  }
+  autoSaveTimer = setTimeout(() => {
+    settingsStore.saveAppSettings()
+    autoSaveState.value = 'saved'
+  }, 350)
+}, { deep: true })
+
+const autoSaveLabel = computed(() => {
+  if (autoSaveState.value === 'saving') return '正在自动保存…'
+  if (autoSaveState.value === 'saved') return '已自动保存'
+  return '修改后自动保存到当前浏览器'
+})
+
+onBeforeUnmount(() => {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer)
+  }
+})
+
 function handleCopy() {
   copy(JSON.stringify(diffTwoObj(settingsDefault, settingsStore.settings), null, 2))
-}
-
-function handleSave() {
-  settingsStore.saveAppSettings()
-  toast.success('应用配置已保存到本地浏览器')
 }
 
 function handleReset() {
@@ -43,15 +69,13 @@ function handleReset() {
 </script>
 
 <template>
-  <div class="app-config-panel">
+  <div class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer }">
     <div class="config-notice">
-      应用配置仅保存到当前浏览器，不会提交到系统数据库。
+      <span>应用配置仅保存到当前浏览器，不会提交到系统数据库。</span>
+      <strong>{{ autoSaveLabel }}</strong>
     </div>
 
     <div class="app-config-toolbar">
-      <el-button type="primary" @click="handleSave">
-        保存到本地
-      </el-button>
       <el-button @click="handleReset">
         恢复默认
       </el-button>
@@ -61,6 +85,7 @@ function handleReset() {
     </div>
 
     <div class="settings-grid">
+      <div class="settings-column">
       <div>
         <FaDivider>颜色主题风格</FaDivider>
         <div class="flex items-center justify-center pb-4">
@@ -260,6 +285,9 @@ function handleReset() {
         </div>
       </div>
 
+      </div>
+
+      <div class="settings-column">
       <div>
         <FaDivider>主页</FaDivider>
         <div class="setting-item">
@@ -369,36 +397,80 @@ function handleReset() {
           <FaSwitch v-model="settingsStore.settings.app.enableDynamicTitle" />
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .app-config-panel {
-  max-width: 1600px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
+.app-config-panel--drawer {
+  max-width: none;
+}
+
+.app-config-panel--drawer .settings-grid {
+  grid-template-columns: 1fr;
+}
+
 .config-notice {
-  padding: 10px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
   margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-7);
-  border-radius: 4px;
+  border-radius: 10px;
+}
+
+.config-notice strong {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-color-primary);
 }
 
 .app-config-toolbar {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  padding-bottom: 16px;
   margin-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 28px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-column {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+.settings-column > div {
+  min-width: 0;
+  padding: 16px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 14px;
+}
+
+.settings-column:first-child > div:first-child {
+  padding-top: 18px;
 }
 
 .page-title-style-setting {
@@ -406,7 +478,7 @@ function handleReset() {
 }
 
 .page-title-style-tabs {
-  width: min(330px, 62%);
+  width: min(360px, 62%);
 }
 
 @media (width <= 1100px) {
@@ -416,6 +488,21 @@ function handleReset() {
 }
 
 @media (width <= 640px) {
+  .config-notice {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .settings-column > div {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .app-config-toolbar {
+    flex-wrap: wrap;
+  }
+
   .page-title-style-setting {
     flex-direction: column;
   }
@@ -498,7 +585,12 @@ function handleReset() {
 }
 
 .setting-item {
-  --uno: flex items-center justify-between gap-4 px-4 py-2 rounded-lg transition hover-bg-secondary;
+  --uno: flex items-center justify-between gap-4 py-2 rounded-lg transition hover-bg-secondary;
+  min-height: 44px;
+
+  & + .setting-item {
+    border-top: 1px solid var(--el-border-color-extra-light);
+  }
 
   .label {
     --uno: flex items-center flex-shrink-0 gap-2 text-sm;

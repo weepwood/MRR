@@ -39,8 +39,8 @@ defineExpose({
   <div
     ref="itemRef" :class="cn('menu-item relative', {
       'active': isItemActive,
-      'py-1 px-2': (rootMenu.isMenuPopup && rootMenu.props.mode === 'vertical') || (rootMenu.isMenuPopup && level !== 0 && rootMenu.props.mode === 'horizontal') || !rootMenu.isMenuPopup,
-      'px-1 py-2': rootMenu.isMenuPopup && level === 0 && rootMenu.props.mode === 'horizontal',
+      'py-[2px] px-1.5': (rootMenu.isMenuPopup && rootMenu.props.mode === 'vertical') || (rootMenu.isMenuPopup && level !== 0 && rootMenu.props.mode === 'horizontal') || !rootMenu.isMenuPopup,
+      'px-1 py-1.5': rootMenu.isMenuPopup && level === 0 && rootMenu.props.mode === 'horizontal',
     })"
   >
     <router-link v-slot="{ href, navigate }" custom :to="uniqueKey.at(-1) ?? ''">
@@ -52,9 +52,9 @@ defineExpose({
               target: item.meta?.link ? '_blank' : '_self',
               class: 'no-underline',
             }),
-          }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-lg px-4 py-3 text-[var(--g-sub-sidebar-menu-color)] transition-colors hover-(bg-[var(--g-sub-sidebar-menu-hover-bg)] text-[var(--g-sub-sidebar-menu-hover-color)])', {
-            'text-[var(--g-sub-sidebar-menu-active-color)]! bg-[var(--g-sub-sidebar-menu-active-bg)]!': isItemActive,
-            'px-3': rootMenu.isMenuPopup && level === 0,
+          }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
+            'active': isItemActive,
+            'px-2.5': rootMenu.isMenuPopup && level === 0,
           })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" v-on="{
             ...(!subMenu && {
               click: navigate,
@@ -62,7 +62,7 @@ defineExpose({
           }"
         >
           <div
-            :class="cn('inline-flex flex-1 items-center justify-center gap-[12px] pl-[calc(var(--indent-level)*20px)]', {
+            :class="cn('inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {
               'flex-col': rootMenu.isMenuPopup && level === 0 && rootMenu.props.mode === 'vertical',
               'gap-1': rootMenu.isMenuPopup && level === 0 && rootMenu.props.showCollapseName,
               'w-full': rootMenu.isMenuPopup && level === 0 && rootMenu.props.showCollapseName && rootMenu.props.mode === 'vertical',
@@ -70,9 +70,9 @@ defineExpose({
               '--indent-level': !rootMenu.isMenuPopup ? props.level ?? 0 : 0,
             }"
           >
-            <FaIcon v-if="props.item.meta?.icon" :name="props.item.meta.icon" class="menu-item-container-icon size-5 transition-transform group-hover-scale-120" />
+            <FaIcon v-if="props.item.meta?.icon" :name="props.item.meta.icon" class="menu-item-container-icon size-4" />
             <span
-              v-if="!(rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName)" :class="cn('w-0 flex-1 truncate text-sm transition-height transition-opacity transition-width', {
+              v-if="!(rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName)" :class="cn('w-0 flex-1 truncate text-[13px] transition-height transition-opacity transition-width', {
                 'opacity-0 w-0 h-0': rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName,
                 'w-full text-center': rootMenu.isMenuPopup && level === 0 && rootMenu.props.showCollapseName,
               })"
@@ -92,3 +92,33 @@ defineExpose({
     </router-link>
   </div>
 </template>
+
+<style scoped>
+.menu-item-container {
+  min-height: 36px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.menu-item-container:hover {
+  color: var(--text-primary);
+  background: var(--mrr-navigation-hover);
+}
+
+.menu-item-container.active,
+.menu-item.active .menu-item-container {
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--mrr-navigation-active);
+  border-color: var(--mrr-navigation-active-border);
+}
+
+.menu-item-container-icon {
+  flex: 0 0 auto;
+  color: currentcolor;
+  transform: none !important;
+}
+</style>

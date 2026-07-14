@@ -51,15 +51,17 @@ jobs:
                   raise RuntimeError(f'Expected text was not found in {path}')
               file.write_text(content.replace(old, new))
 
+          chart_path = 'frontend-fantastic-admin/src/components/charts/MrrChart.vue'
+          replace(chart_path, '      ref="chartRef"\n', '      :ref="setChartRef"\n')
           replace(
-              'frontend-fantastic-admin/src/components/charts/MrrChart.vue',
-              '      ref="chartRef"\n',
-              '      :ref="chartRef"\n',
+              chart_path,
+              "const { chartRef } = useMrrChart(\n  () => props.option,\n  () => props.loading,\n  { renderer: props.renderer },\n)\n",
+              "const { chartRef } = useMrrChart(\n  () => props.option,\n  () => props.loading,\n  { renderer: props.renderer },\n)\n\nfunction setChartRef(element: unknown) {\n  chartRef.value = element instanceof HTMLElement ? element : null\n}\n",
           )
           replace(
               'frontend-fantastic-admin/src/composables/useMrrChart.ts',
               "import type { MaybeRefOrGetter } from 'vue'\nimport type { ECOption, EChartsType } from '@/plugins/echarts'\nimport type { UseMrrChartOptions } from '@/types/chart'\nimport {\n  nextTick,\n  onActivated,\n  onBeforeUnmount,\n  onDeactivated,\n  onMounted,\n  shallowRef,\n  toValue,\n  watch,\n} from 'vue'\nimport { useDebounceFn, useResizeObserver } from '@vueuse/core'\n",
-              "import { useDebounceFn, useResizeObserver } from '@vueuse/core'\nimport type { MaybeRefOrGetter } from 'vue'\nimport {\n  nextTick,\n  onActivated,\n  onBeforeUnmount,\n  onDeactivated,\n  onMounted,\n  shallowRef,\n  toValue,\n  watch,\n} from 'vue'\nimport type { EChartsType, ECOption } from '@/plugins/echarts'\nimport type { UseMrrChartOptions } from '@/types/chart'\n",
+              "import type { MaybeRefOrGetter } from 'vue'\nimport type { EChartsType, ECOption } from '@/plugins/echarts'\nimport type { UseMrrChartOptions } from '@/types/chart'\nimport { useDebounceFn, useResizeObserver } from '@vueuse/core'\nimport {\n  nextTick,\n  onActivated,\n  onBeforeUnmount,\n  onDeactivated,\n  onMounted,\n  shallowRef,\n  toValue,\n  watch,\n} from 'vue'\n",
           )
           replace(
               'frontend-fantastic-admin/src/plugins/echarts.ts',
@@ -73,23 +75,23 @@ jobs:
           )
           replace(
               'frontend-fantastic-admin/src/components/charts/MrrChartCard.vue',
-              '  font-size: 12px;\n  color: var(--el-text-color-secondary);\n  text-overflow: ellipsis;',
-              '  font-size: 12px;\n  text-overflow: ellipsis;\n  color: var(--el-text-color-secondary);',
+              '  overflow: hidden;\n  font-size: 12px;\n  color: var(--el-text-color-secondary);\n  text-overflow: ellipsis;',
+              '  overflow: hidden;\n  text-overflow: ellipsis;\n  font-size: 12px;\n  color: var(--el-text-color-secondary);',
           )
           replace(
               'frontend-fantastic-admin/src/components/charts/MrrChartCard.vue',
-              '  gap: 8px;\n  min-height: 220px;\n  place-content: center;',
-              '  gap: 8px;\n  place-content: center;\n  min-height: 220px;',
+              '  display: grid;\n  gap: 8px;\n  min-height: 220px;\n  place-content: center;\n  justify-items: center;',
+              '  display: grid;\n  gap: 8px;\n  place-content: center;\n  justify-items: center;\n  min-height: 220px;',
           )
           replace(
               'frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue',
-              '  background: linear-gradient(\n',
-              '  background:\n    linear-gradient(\n',
+              '  background: linear-gradient(\n    90deg,\n    var(--el-fill-color-light) 25%,\n    var(--el-fill-color-lighter) 37%,\n    var(--el-fill-color-light) 63%\n  );',
+              '  background:\n    linear-gradient(\n      90deg,\n      var(--el-fill-color-light) 25%,\n      var(--el-fill-color-lighter) 37%,\n      var(--el-fill-color-light) 63%\n    );',
           )
           replace(
               'frontend-fantastic-admin/src/views/audit-images/components/AuditAnalytics.vue',
-              '  display: grid;\n  gap: 8px;\n  min-height: 280px;\n  place-content: center;',
-              '  display: grid;\n  gap: 8px;\n  place-content: center;\n  min-height: 280px;',
+              '  display: grid;\n  gap: 8px;\n  min-height: 280px;\n  place-content: center;\n  justify-items: center;',
+              '  display: grid;\n  gap: 8px;\n  place-content: center;\n  justify-items: center;\n  min-height: 280px;',
           )
           PY
 

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 
+defineOptions({ name: 'MrrDataTablePanel' })
+
 const props = defineProps<{
   title: string
   description?: string

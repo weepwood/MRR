@@ -1,15 +1,24 @@
 /* 档案装箱指标卡图标修复
  *
- * 该页面把 Iconify 类直接放在 mrr-metric-card__icon 容器上。
- * Iconify 的 mask、宽高和背景规则会覆盖指标卡统一的圆角图标底座，
- * 因此将图标遮罩转移到伪元素中，让容器继续遵循全局指标卡规范。
+ * 该页面将 Iconify 类直接用于指标卡图标容器。这里把卡片主体固定为
+ * “图标 + 文本”两列，并将图形限制在图标容器内部，避免遮挡文字。
  */
+.archive-box-page .mrr-metric-card .el-card__body {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
 .archive-box-page .mrr-metric-card__icon {
-  display: grid !important;
-  flex: 0 0 52px !important;
-  place-items: center !important;
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box;
   width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
   height: 52px !important;
+  overflow: hidden;
   color: var(--mrr-metric-accent) !important;
   background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--surface)) !important;
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, transparent) !important;
@@ -21,12 +30,26 @@
 }
 
 .archive-box-page .mrr-metric-card__icon::before {
-  width: 26px;
-  height: 26px;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  max-width: 26px !important;
+  height: 26px !important;
   content: "";
+  pointer-events: none;
   background-color: currentcolor;
   mask: var(--un-icon) no-repeat center / 100% 100%;
+  transform: translate(-50%, -50%) !important;
   -webkit-mask: var(--un-icon) no-repeat center / 100% 100%;
+}
+
+.archive-box-page .mrr-metric-card__body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
 }
 
 /* Ant Design 没有 file-protect-twotone，提供内置文件保护图标作为回退。 */
@@ -35,15 +58,22 @@
 }
 
 @media (width <= 600px) {
+  .archive-box-page .mrr-metric-card .el-card__body {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
   .archive-box-page .mrr-metric-card__icon {
-    flex-basis: 46px !important;
     width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
     height: 46px !important;
     border-radius: 12px !important;
   }
 
   .archive-box-page .mrr-metric-card__icon::before {
-    width: 23px;
-    height: 23px;
+    width: 23px !important;
+    min-width: 23px !important;
+    max-width: 23px !important;
+    height: 23px !important;
   }
 }

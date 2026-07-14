@@ -1,0 +1,98 @@
+/*
+ * 影像档案袋属于沉浸式工作区，需要显式参与主布局的 Flex 高度计算。
+ * 该文件同时把档案袋内部仍然硬编码的圆角接入全局圆角令牌。
+ */
+
+body.archive-immersive .layout .wrapper .main-container {
+  height: calc(100dvh - var(--g-header-actual-height));
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.archive-immersive .layout .wrapper .main-container .main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 0 !important;
+  margin-top: var(--g-tabbar-actual-height) !important;
+  overflow: hidden;
+}
+
+body.archive-immersive .archive-page {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto !important;
+  min-height: 0;
+}
+
+body.archive-immersive .archive-workspace {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+/* 档案袋主容器统一使用卡片圆角。 */
+.archive-page :is(
+  .search-card,
+  .archive-case-card,
+  .patient-card,
+  .type-bar,
+  .thumb-strip,
+  .preview-stage
+) {
+  border-radius: var(--mrr-radius-card);
+}
+
+body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sidebar {
+  border-radius: var(--mrr-radius-card);
+}
+
+/* 可点击项目和浮动工具条使用中级圆角。 */
+.archive-page :is(
+  .case-item,
+  .preview-toolbar,
+  .continuous-page,
+  .thumb-item
+) {
+  border-radius: var(--mrr-radius-md);
+}
+
+/* 小型状态、图片和树节点使用小圆角。 */
+.archive-page :is(
+  .thumb-check,
+  .thumb-item img,
+  .thumb-image-placeholder,
+  .preview-image-placeholder,
+  .preview-file strong,
+  .type-tab,
+  .type-tree .el-tree-node__content
+) {
+  border-radius: var(--mrr-radius-sm);
+}
+
+.archive-page .type-count {
+  border-radius: var(--mrr-radius-pill);
+}
+
+@media (width <= 1100px) {
+  body.archive-immersive .layout .wrapper .main-container {
+    height: auto;
+    min-height: calc(100dvh - var(--g-header-actual-height));
+    overflow: visible;
+  }
+
+  body.archive-immersive .layout .wrapper .main-container .main {
+    overflow: visible;
+  }
+
+  body.archive-immersive .archive-page {
+    min-height: calc(
+      100dvh
+      - var(--g-header-actual-height)
+      - var(--g-tabbar-actual-height)
+    );
+  }
+}

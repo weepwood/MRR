@@ -130,6 +130,7 @@ onBeforeUnmount(() => {
     transform: translateX(calc((var(--g-main-sidebar-width) + var(--g-sub-sidebar-width)) * -1));
 
     &.show {
+      box-shadow: 20px 0 48px rgb(15 23 42 / 18%);
       transform: translateX(0);
     }
   }
@@ -150,21 +151,22 @@ onBeforeUnmount(() => {
 }
 
 .layout {
-  height: 100%;
+  min-height: 100%;
+  background: var(--mrr-app-shell-bg);
 }
 
 #app-main {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0 auto;
 }
 
 .wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   padding-top: var(--g-header-actual-height);
-  transition: padding-top 0.3s;
+  transition: padding-top 220ms ease;
 
   .sidebar-container {
     position: fixed;
@@ -173,8 +175,11 @@ onBeforeUnmount(() => {
     z-index: 1010;
     display: flex;
     width: calc(var(--g-main-sidebar-actual-width) + var(--g-sub-sidebar-actual-width));
-    box-shadow: -1px 0 0 0 hsl(var(--border)), 1px 0 0 0 hsl(var(--border));
-    transition: width 0.3s, transform 0.3s, box-shadow 0.3s, top 0.3s;
+    overflow: hidden;
+    background: var(--mrr-navigation-bg);
+    border-right: 1px solid var(--mrr-navigation-border);
+    backdrop-filter: blur(18px) saturate(140%);
+    transition: width 220ms ease, transform 220ms ease, top 220ms ease, box-shadow 220ms ease;
 
     &:has(> .main-sidebar-container.main-sidebar-enter-active),
     &:has(> .main-sidebar-container.main-sidebar-leave-active),
@@ -193,18 +198,27 @@ onBeforeUnmount(() => {
     flex-direction: column;
     min-height: 100%;
     margin-left: calc(var(--g-main-sidebar-actual-width) + var(--g-sub-sidebar-actual-width));
-    background-color: var(--g-main-area-bg);
-    box-shadow: -1px 0 0 0 hsl(var(--border)), 1px 0 0 0 hsl(var(--border));
-    transition: margin-left 0.3s, background-color 0.3s, box-shadow 0.3s;
+    background: transparent;
+    transition: margin-left 220ms ease;
 
     .main {
       position: relative;
       flex: auto;
-      height: 100%;
-      padding: 30px;
+      min-width: 0;
+      min-height: calc(100vh - var(--g-header-actual-height));
+      padding: clamp(18px, 2vw, 28px);
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
+      background:
+        radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-primary) 4%, transparent), transparent 26%),
+        var(--mrr-workspace-bg);
     }
+  }
+}
+
+@media (width <= 760px) {
+  .wrapper .main-container .main {
+    padding: 16px;
   }
 }
 

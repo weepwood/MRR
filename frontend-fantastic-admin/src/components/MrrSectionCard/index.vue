@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'MrrSectionCard' })
+
 type BodyPadding = 'none' | 'compact' | 'normal'
 
 const props = withDefaults(defineProps<{

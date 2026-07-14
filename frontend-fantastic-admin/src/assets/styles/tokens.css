@@ -33,17 +33,38 @@
   --mrr-radius-card: 12px;
   --mrr-radius-dialog: 16px;
   --mrr-radius-pill: 999px;
+  --mrr-control-radius: 10px;
 
   /* 控件与表格尺寸 */
-  --mrr-control-height: 36px;
+  --mrr-control-height: 38px;
   --mrr-control-height-compact: 32px;
+  --mrr-control-height-large: 42px;
   --mrr-table-header-height: 44px;
   --mrr-table-row-height: 46px;
+
+  /* 控件表面与边界 */
+  --mrr-control-bg: color-mix(in srgb, var(--surface) 94%, var(--surface-muted));
+  --mrr-control-bg-hover: var(--surface);
+  --mrr-control-bg-disabled: color-mix(in srgb, var(--surface-muted) 82%, var(--surface));
+  --mrr-control-border: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  --mrr-control-border-hover: color-mix(in srgb, var(--color-primary) 42%, var(--divider));
+  --mrr-control-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 1px 1px rgb(15 23 42 / 3%);
+  --mrr-control-shadow-hover: 0 3px 10px rgb(15 23 42 / 7%);
+
+  /* 按钮层级 */
+  --mrr-button-default-bg: color-mix(in srgb, var(--surface) 97%, var(--surface-muted));
+  --mrr-button-default-hover: var(--surface);
+  --mrr-button-default-shadow: 0 1px 2px rgb(15 23 42 / 5%), inset 0 1px 0 rgb(255 255 255 / 70%);
+  --mrr-button-primary-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 24%, transparent), inset 0 1px 0 rgb(255 255 255 / 22%);
+  --mrr-button-primary-shadow-hover: 0 7px 18px color-mix(in srgb, var(--color-primary) 30%, transparent), inset 0 1px 0 rgb(255 255 255 / 26%);
+  --mrr-button-danger-shadow: 0 4px 12px color-mix(in srgb, var(--color-danger) 20%, transparent), inset 0 1px 0 rgb(255 255 255 / 18%);
 
   /* 克制的后台层级阴影 */
   --mrr-shadow-card: 0 6px 20px rgb(15 23 42 / 5%);
   --mrr-shadow-dialog: 0 24px 64px rgb(15 23 42 / 16%);
-  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --mrr-danger-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-danger) 16%, transparent);
+  --mrr-warning-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-warning) 16%, transparent);
 
   /* 滚动条 */
   --scrollbar-color: 240 5.9% 90%;
@@ -58,7 +79,7 @@
   --surface-alt: hsl(var(--secondary));
   --divider: hsl(var(--border));
 
-  /* MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） */
+  /* MRR 设计系统调色板 */
 
   /* 品牌主色 */
   --color-primary: #0075de;
@@ -89,6 +110,19 @@
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;
+    --mrr-control-bg: color-mix(in srgb, var(--surface) 88%, white 3%);
+    --mrr-control-bg-hover: color-mix(in srgb, var(--surface) 82%, white 6%);
+    --mrr-control-bg-disabled: color-mix(in srgb, var(--surface-muted) 80%, black);
+    --mrr-control-border: rgb(255 255 255 / 13%);
+    --mrr-control-border-hover: color-mix(in srgb, var(--color-primary) 58%, rgb(255 255 255 / 18%));
+    --mrr-control-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+    --mrr-control-shadow-hover: 0 5px 16px rgb(0 0 0 / 24%);
+    --mrr-button-default-bg: color-mix(in srgb, var(--surface) 88%, white 4%);
+    --mrr-button-default-hover: color-mix(in srgb, var(--surface) 80%, white 8%);
+    --mrr-button-default-shadow: 0 1px 2px rgb(0 0 0 / 28%), inset 0 1px 0 rgb(255 255 255 / 8%);
+    --mrr-button-primary-shadow: 0 5px 16px color-mix(in srgb, var(--color-primary) 32%, transparent), inset 0 1px 0 rgb(255 255 255 / 18%);
+    --mrr-button-primary-shadow-hover: 0 8px 22px color-mix(in srgb, var(--color-primary) 40%, transparent), inset 0 1px 0 rgb(255 255 255 / 22%);
+    --mrr-button-danger-shadow: 0 5px 16px color-mix(in srgb, var(--color-danger) 28%, transparent), inset 0 1px 0 rgb(255 255 255 / 14%);
     --mrr-shadow-card: 0 8px 24px rgb(0 0 0 / 18%);
     --mrr-shadow-dialog: 0 24px 72px rgb(0 0 0 / 42%);
     --color-text: rgb(255 255 255 / 95%);

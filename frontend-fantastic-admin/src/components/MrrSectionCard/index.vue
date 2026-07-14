@@ -53,12 +53,13 @@ const hasHeader = computed(() => Boolean(
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border-color: var(--mrr-border);
-  border-radius: var(--mrr-radius-card);
-  box-shadow: none;
+  border-radius: var(--mrr-radius-xl);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .mrr-section-card :deep(.el-card__header) {
-  padding: var(--mrr-space-4);
+  padding: 15px 18px;
+  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-bottom-color: var(--mrr-border);
 }
 
@@ -71,7 +72,7 @@ const hasHeader = computed(() => Boolean(
 }
 
 .mrr-section-card--padding-normal :deep(.el-card__body) {
-  padding: var(--mrr-space-4);
+  padding: 18px;
 }
 
 .mrr-section-card__header {
@@ -91,13 +92,13 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__icon {
   display: grid;
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
   font-size: 15px;
   color: var(--mrr-primary);
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
+  background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 16%, var(--mrr-border));
   border-radius: var(--mrr-radius-md);
   place-items: center;
 }
@@ -105,7 +106,7 @@ const hasHeader = computed(() => Boolean(
 .mrr-section-card h2 {
   margin: 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.4;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.01em;

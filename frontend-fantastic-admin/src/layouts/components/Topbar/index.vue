@@ -41,7 +41,7 @@ watch(scrollTop, (val, oldVal) => {
 <template>
   <FaSmartFixedBlock position="top" :class="{ 'absolute!': settingsStore.settings.topbar.mode === 'static' }">
     <div
-      ref="topbarRef" class="topbar-container transition-[transform,box-shadow]-300" :class="{
+      ref="topbarRef" class="topbar-container" :class="{
         [`topbar-${settingsStore.settings.topbar.mode}`]: true,
         mask: scrollTop,
         hide: scrollOnHide,
@@ -58,36 +58,33 @@ watch(scrollTop, (val, oldVal) => {
   display: flex;
   flex-direction: column;
   width: calc(100% - var(--scrollbar-width, 0px));
-  box-shadow: 0 1px 0 0 hsl(var(--border));
-  transition: transform 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+  background: var(--mrr-topbar-bg);
+  border-bottom: 1px solid var(--mrr-shell-divider);
+  backdrop-filter: blur(18px) saturate(140%);
+  transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
 
-  &::before {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    z-index: 1;
-    width: 100%;
-    height: 50px;
-    pointer-events: none;
-    content: "";
-    background-image: linear-gradient(0deg, transparent, var(--g-main-area-bg));
-    box-shadow: 0 -1px 0 0 hsl(var(--border));
-    opacity: 0;
-    transform: translateY(100%);
-    transition: opacity 0.3s;
+  &.mask {
+    box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
   }
 
   &.topbar-fixed,
   &.topbar-sticky {
     position: fixed;
-
-    &.mask::before {
-      opacity: 1;
-    }
   }
 
   &.topbar-sticky.hide {
     transform: translateY(-100%);
+  }
+}
+
+:global(.dark) .topbar-container.mask {
+  box-shadow: 0 10px 30px rgb(0 0 0 / 24%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-container {
+    transition: none;
   }
 }
 </style>

@@ -25,6 +25,7 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   >
     <template v-if="hasActions" #actions>
       <span v-if="props.count !== undefined" class="mrr-data-table-panel__count">
+        <span class="mrr-data-table-panel__count-dot" />
         {{ props.countLabel || '共' }} {{ countText }} 条
       </span>
       <slot name="actions" />
@@ -51,19 +52,28 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 <style scoped>
 .mrr-data-table-panel__count {
   display: inline-flex;
+  gap: 6px;
   align-items: center;
-  min-height: 24px;
-  padding: 2px 8px;
+  min-height: 25px;
+  padding: 3px 9px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 550;
   color: var(--mrr-secondary-foreground);
   background: var(--mrr-secondary);
-  border: 1px solid transparent;
-  border-radius: var(--mrr-radius-sm);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-pill);
+}
+
+.mrr-data-table-panel__count-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--mrr-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrr-primary) 10%, transparent);
 }
 
 .mrr-data-table-panel__filters {
-  padding: var(--mrr-space-3) var(--mrr-space-4) 0;
+  padding: 14px 16px 0;
 }
 
 .mrr-data-table-panel__toolbar {
@@ -72,7 +82,7 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   align-items: center;
   justify-content: space-between;
   padding: var(--mrr-space-3) var(--mrr-space-4);
-  border-bottom: 1px solid var(--mrr-border);
+  border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
 .mrr-data-table-panel__content {
@@ -83,9 +93,9 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 .mrr-data-table-panel__pagination {
   display: flex;
   justify-content: flex-end;
-  padding: var(--mrr-space-3) var(--mrr-space-4);
-  background: color-mix(in srgb, var(--mrr-muted) 28%, var(--mrr-card));
-  border-top: 1px solid var(--mrr-border);
+  padding: 13px 16px;
+  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  border-top: 1px solid var(--mrr-shell-divider);
 }
 
 .mrr-data-table-panel__content :deep(.el-table) {

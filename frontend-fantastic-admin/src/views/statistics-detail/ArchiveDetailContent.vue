@@ -124,10 +124,10 @@ function formatDate(value: unknown) {
   return text.replace(/\//g, '-').split(/[ T]/)[0]
 }
 
-async function copyCode(text: string, label: string, originalText: string) {
+async function copyCode(text: string, label: string, originalText?: string) {
   try {
     await navigator.clipboard.writeText(text)
-    ElMessage.success(`${label} ${originalText} 已复制`)
+    ElMessage.success(`${label} ${originalText || text} 已复制`)
   }
   catch {
     ElMessage.error('复制失败')

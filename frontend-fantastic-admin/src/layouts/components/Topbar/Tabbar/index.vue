@@ -38,7 +38,6 @@ watch(() => route, (val) => {
           const tabLeft = tabEl.offsetLeft
           const tabWidth = tabEl.offsetWidth
           const containerWidth = containerEl.clientWidth
-          // 计算滚动位置，使标签页居中
           const scrollLeft = tabLeft - (containerWidth - tabWidth) / 2
           tabsRef.value?.scrollTo(scrollLeft)
         }
@@ -113,7 +112,6 @@ function getVisibleTabs() {
       const tab = tabRef.value[i]
       const tabLeft = tab.offsetLeft
       const tabRight = tabLeft + tab.offsetWidth
-      // 检查标签页是否在可视区域内
       if (tabLeft < scrollLeft + containerWidth && tabRight > scrollLeft) {
         if (i >= 0 && i < tabbarStore.list.length) {
           visibleTabIndex.value.push(i)
@@ -136,25 +134,21 @@ onMounted(() => {
     if (settingsStore.settings.tabbar.enable && settingsStore.settings.tabbar.enableHotkeys) {
       e.preventDefault()
       switch (handle.key) {
-        // 切换到当前标签页紧邻的上一个标签页
         case 'alt+left':
           if (tabbarStore.list[0].tabId !== activedTabId.value) {
             const index = tabbarStore.list.findIndex(item => item.tabId === activedTabId.value)
             router.push(tabbarStore.list[index - 1].fullPath)
           }
           break
-        // 切换到当前标签页紧邻的下一个标签页
         case 'alt+right':
           if (tabbarStore.list.at(-1)?.tabId !== activedTabId.value) {
             const index = tabbarStore.list.findIndex(item => item.tabId === activedTabId.value)
             router.push(tabbarStore.list[index + 1].fullPath)
           }
           break
-        // 关闭当前标签页
         case 'alt+w':
           tabbar.closeById(activedTabId.value)
           break
-        // 切换到第 n 个标签页
         case 'alt+1':
         case 'alt+2':
         case 'alt+3':
@@ -171,7 +165,6 @@ onMounted(() => {
           }
           break
         }
-        // 切换到最后一个标签页
         case 'alt+0':
           {
             const last = tabbarStore.list.at(-1)
@@ -193,7 +186,7 @@ onUnmounted(() => {
   <div class="tabbar">
     <component :is="useSlots('tabbar-start')" />
     <div class="tabbar-container">
-      <FaScrollArea ref="tabsRef" :scrollbar="false" mask horizontal gradient-color="var(--g-tabbar-bg)" class="tabs">
+      <FaScrollArea ref="tabsRef" :scrollbar="false" mask horizontal gradient-color="var(--mrr-topbar-bg)" class="tabs">
         <TransitionGroup ref="tabContainerRef" name="tabbar" tag="div" class="tab-container">
           <div
             v-for="(element, index) in tabbarStore.list" :key="element.tabId"
@@ -243,136 +236,62 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: var(--g-tabbar-height);
-  background-color: var(--g-tabbar-bg);
-  transition: background-color 0.3s, box-shadow 0.3s;
-
-  .dark & {
-    box-shadow: 0 1px 0 0 hsl(var(--border)), 0 -1px 0 0 hsl(var(--border));
-  }
+  padding: 0 10px;
+  background: transparent;
 
   .tabbar-container {
     position: relative;
     flex: 1;
     height: 100%;
+    min-width: 0;
 
     .tabs {
       position: absolute;
       inset-inline: 0;
+      height: 100%;
       white-space: nowrap;
 
       .tab-container {
-        display: inline-block;
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        height: 100%;
+        padding: 5px 0;
 
         .tab {
           position: relative;
-          display: inline-block;
-          width: 150px;
-          height: var(--g-tabbar-height);
-          font-size: 14px;
-          line-height: calc(var(--g-tabbar-height) - 2px);
+          display: inline-flex;
+          width: 146px;
+          height: 34px;
+          font-size: 12px;
           vertical-align: bottom;
           pointer-events: none;
           cursor: pointer;
-
-          &:not(.actived):hover {
-            z-index: 3;
-
-            &::before,
-            &::after {
-              content: none;
-            }
-
-            & + .tab .tab-dividers::before {
-              opacity: 0;
-            }
-
-            .tab-content {
-              .title,
-              .action-icon {
-                color: var(--g-tabbar-tab-hover-color);
-              }
-            }
-
-            .tab-background {
-              background-color: var(--g-tabbar-tab-hover-bg);
-            }
-          }
 
           * {
             user-select: none;
           }
 
-          & + .tab:hover,
-          & + .tab.actived {
-            .tab-dividers::before {
-              opacity: 0;
-            }
-          }
-
-          &.actived {
-            z-index: 5;
-
-            &::before,
-            &::after {
-              content: none;
-            }
-
-            & + .tab .tab-dividers::before {
-              opacity: 0;
-            }
-
-            .tab-content {
-              .title,
-              .action-icon {
-                color: var(--g-tabbar-tab-active-color);
-              }
-            }
-
-            .tab-background {
-              background-color: var(--g-tabbar-tab-active-bg);
-            }
-          }
-
           .tab-dividers {
-            position: absolute;
-            top: 50%;
-            right: -1px;
-            left: -1px;
-            z-index: 0;
-            height: 14px;
-            transform: translateY(-50%);
-
-            &::before {
-              position: absolute;
-              top: 0;
-              bottom: 0;
-              left: 1px;
-              display: block;
-              width: 1px;
-              content: "";
-              background-color: var(--g-tabbar-dividers-bg);
-              opacity: 1;
-              transition: opacity 0.3s, background-color 0.3s;
-            }
-          }
-
-          &:first-child .tab-dividers::before {
-            opacity: 0;
+            display: none;
           }
 
           .tab-background {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             z-index: 0;
-            width: 100%;
-            height: 100%;
             pointer-events: none;
-            transition: opacity 0.3s, background-color 0.3s;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: var(--mrr-radius-md);
+            transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
           }
 
           .tab-content {
+            position: relative;
+            z-index: 1;
             display: flex;
+            align-items: center;
             width: 100%;
             height: 100%;
             pointer-events: all;
@@ -380,32 +299,91 @@ onUnmounted(() => {
             .title {
               display: flex;
               flex: 1;
-              gap: 5px;
+              gap: 6px;
               align-items: center;
               height: 100%;
+              min-width: 0;
               padding: 0 10px;
-              margin-right: 10px;
+              margin-right: 8px;
               overflow: hidden;
-              color: var(--g-tabbar-tab-color);
+              font-weight: 500;
+              color: var(--text-secondary);
+              text-overflow: ellipsis;
               white-space: nowrap;
-              mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
-              transition: margin-right 0.3s;
+              transition: color 140ms ease, margin-right 140ms ease;
 
               &:has(+ .action-icon) {
-                margin-right: 28px;
+                margin-right: 26px;
               }
 
               .icon {
-                flex-shrink: 0;
+                flex: 0 0 auto;
+                width: 14px;
+                height: 14px;
+                font-size: 14px;
               }
             }
 
-            .action-icon {
-              --uno: transition absolute inset-e-2 top-1/2 -translate-y-1/2 rounded-full z-10 w-5 h-5 flex-center text-xs "text-[var(--g-tabbar-tab-color)]" hover:(border bg-secondary);
+            .action-icon,
+            .hotkey-number {
+              position: absolute;
+              inset-inline-end: 7px;
+              top: 50%;
+              z-index: 2;
+              display: grid;
+              width: 20px;
+              height: 20px;
+              font-size: 11px;
+              color: var(--text-tertiary);
+              background: transparent;
+              border-radius: var(--mrr-radius-sm);
+              opacity: 0;
+              place-items: center;
+              transform: translateY(-50%);
+              transition: color 140ms ease, background-color 140ms ease, opacity 140ms ease;
+            }
+
+            .action-icon:hover {
+              color: var(--text-primary);
+              background: var(--mrr-navigation-hover);
             }
 
             .hotkey-number {
-              --uno: border bg-secondary absolute inset-e-2 top-1/2 -translate-y-1/2 rounded-full z-10 w-5 h-5 flex-center text-xs "text-[var(--g-tabbar-tab-color)]";
+              font-weight: 650;
+              opacity: 1;
+              background: var(--mrr-secondary);
+              border: 1px solid var(--mrr-border);
+            }
+          }
+
+          &:not(.actived):hover {
+            .tab-background {
+              background: color-mix(in srgb, var(--mrr-accent) 78%, transparent);
+            }
+
+            .title {
+              color: var(--text-primary);
+            }
+
+            .action-icon {
+              opacity: 1;
+            }
+          }
+
+          &.actived {
+            .tab-background {
+              background: var(--mrr-card);
+              border-color: var(--mrr-border);
+              box-shadow: var(--mrr-shadow-xs);
+            }
+
+            .title {
+              font-weight: 600;
+              color: var(--text-primary);
+            }
+
+            .action-icon {
+              opacity: 1;
             }
           }
         }
@@ -414,22 +392,32 @@ onUnmounted(() => {
   }
 }
 
-/* 标签栏动画 */
 .tabs {
   .tabbar-move,
   .tabbar-enter-active,
   .tabbar-leave-active {
-    transition: all 0.3s;
+    transition: opacity 160ms ease, transform 160ms ease;
   }
 
   .tabbar-enter-from,
   .tabbar-leave-to {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(6px);
   }
 
   .tabbar-leave-active {
     position: absolute !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabs .tabbar-move,
+  .tabs .tabbar-enter-active,
+  .tabs .tabbar-leave-active,
+  .tab-background,
+  .title,
+  .action-icon {
+    transition: none !important;
   }
 }
 </style>

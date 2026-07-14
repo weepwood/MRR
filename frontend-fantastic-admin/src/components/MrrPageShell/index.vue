@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'MrrPageShell' })
+
 type PageWidth = 'fluid' | 'standard' | 'narrow'
 
 const props = withDefaults(defineProps<{

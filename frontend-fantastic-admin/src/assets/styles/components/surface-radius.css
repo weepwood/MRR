@@ -45,14 +45,13 @@ body .main :is(
   .matrix-dot,
   .section-index,
   .stat-icon,
-  .trend-chart,
-  .chart-container,
   .el-alert,
   .el-descriptions,
   .el-table,
   .el-segmented,
   .el-collapse
-) {
+),
+body .main .analytics-shell > .chart-grid .trend-chart {
   border-radius: var(--mrr-radius-md) !important;
 }
 
@@ -61,9 +60,9 @@ body .main :is(
   .el-card,
   .el-table,
   .el-descriptions,
-  .el-collapse,
-  .trend-chart
-) {
+  .el-collapse
+),
+body .main .analytics-shell > .chart-grid .trend-chart {
   overflow: hidden;
 }
 

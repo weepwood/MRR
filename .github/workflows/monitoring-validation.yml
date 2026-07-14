@@ -34,10 +34,40 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
-      - name: Test and package
+      - name: Compile backend
+        shell: bash
+        run: |
+          set +e
+          mvn -q -DskipTests compile > ../monitoring-backend-compile.log 2>&1
+          status=$?
+          tail -n 160 ../monitoring-backend-compile.log
+          exit $status
+      - name: Upload compile failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-backend-compile-log
+          path: monitoring-backend-compile.log
+          if-no-files-found: ignore
+      - name: Run backend tests
+        shell: bash
         env:
           JWT_SECRET_KEY: test-jwt-secret-key-for-monitoring-validation
-        run: mvn -B -ntp test package
+        run: |
+          set +e
+          mvn -q test > ../monitoring-backend-test.log 2>&1
+          status=$?
+          tail -n 240 ../monitoring-backend-test.log
+          exit $status
+      - name: Upload test failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-backend-test-log
+          path: monitoring-backend-test.log
+          if-no-files-found: ignore
+      - name: Package backend
+        run: mvn -q -DskipTests package
 
   frontend:
     runs-on: ubuntu-latest

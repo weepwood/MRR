@@ -1,5 +1,5 @@
 -- PostgreSQL statement statistics. The deployment user must be allowed to create extensions.
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
 
 CREATE TABLE IF NOT EXISTS mrr_data_quality_run (
     id BIGSERIAL PRIMARY KEY,

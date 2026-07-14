@@ -1,16 +1,18 @@
 import type { Pinia } from 'pinia'
 import type { Router } from 'vue-router'
-import { getSystemSettings } from '@/api/modules/settings'
 import { useUserStore } from '@/store/modules/user'
 import {
+  loadEffectiveSystemSettings,
+  readLocalSystemSettings,
+  SYSTEM_SETTINGS_STORAGE_KEY,
+  SYSTEM_SETTINGS_UPDATED_EVENT,
+  type EffectiveSystemSettings,
+} from './system-settings'
+import {
   ARCHIVE_WATERMARK_BACKGROUND_SIZE,
-  ARCHIVE_WATERMARK_SETTING_KEY,
   createArchiveWatermarkDataUrl,
   formatArchiveWatermarkTime,
-  parseArchiveWatermarkEnabled,
-  readLocalArchiveWatermarkSetting,
   resolveArchiveWatermarkUserId,
-  SYSTEM_SETTINGS_STORAGE_KEY,
 } from './archive-watermark'
 
 const WATERMARK_REFRESH_INTERVAL = 30_000
@@ -25,6 +27,7 @@ export function installArchiveWatermark(router: Router, pinia: Pinia): void {
   let watermarkElement: HTMLDivElement | null = null
   let refreshTimer: number | null = null
   let syncVersion = 0
+  let currentOpacity = 14
 
   function stopRefreshTimer() {
     if (refreshTimer !== null) {
@@ -68,23 +71,21 @@ export function installArchiveWatermark(router: Router, pinia: Pinia): void {
     const userId = resolveArchiveWatermarkUserId(userStore.profile, userStore.account)
     const time = formatArchiveWatermarkTime(new Date())
     const darkMode = document.documentElement.classList.contains('dark')
-    const dataUrl = createArchiveWatermarkDataUrl(userId, time, darkMode)
+    const dataUrl = createArchiveWatermarkDataUrl(userId, time, darkMode, currentOpacity)
     watermarkElement.style.backgroundImage = dataUrl ? `url("${dataUrl}")` : 'none'
   }
 
-  async function getWatermarkEnabled(): Promise<boolean> {
-    const localFallback = readLocalArchiveWatermarkSetting()
-    try {
-      const response = await getSystemSettings()
-      const serverSettings = response.data as Record<string, unknown> | undefined
-      if (!serverSettings || !(ARCHIVE_WATERMARK_SETTING_KEY in serverSettings)) {
-        return localFallback
-      }
-      return parseArchiveWatermarkEnabled(serverSettings[ARCHIVE_WATERMARK_SETTING_KEY], localFallback)
+  function applyWatermarkSettings(path: string, settings: EffectiveSystemSettings) {
+    if (!isArchiveRoute(path) || !settings.archiveWatermarkEnabled) {
+      removeWatermark()
+      return
     }
-    catch {
-      return localFallback
-    }
+
+    currentOpacity = settings.archiveWatermarkOpacity
+    ensureWatermarkElement()
+    refreshWatermark()
+    stopRefreshTimer()
+    refreshTimer = window.setInterval(refreshWatermark, WATERMARK_REFRESH_INTERVAL)
   }
 
   async function syncWatermark(path: string) {
@@ -94,25 +95,29 @@ export function installArchiveWatermark(router: Router, pinia: Pinia): void {
       return
     }
 
-    const enabled = await getWatermarkEnabled()
+    const { settings } = await loadEffectiveSystemSettings()
     if (version !== syncVersion || !isArchiveRoute(router.currentRoute.value.path)) {
       return
     }
-    if (!enabled) {
-      removeWatermark()
-      return
-    }
-
-    ensureWatermarkElement()
-    refreshWatermark()
-    stopRefreshTimer()
-    refreshTimer = window.setInterval(refreshWatermark, WATERMARK_REFRESH_INTERVAL)
+    applyWatermarkSettings(path, settings)
   }
 
   router.afterEach(to => void syncWatermark(to.path))
+
+  window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, (event) => {
+    const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
+    if (settings) {
+      applyWatermarkSettings(router.currentRoute.value.path, settings)
+    }
+  })
+
   window.addEventListener('storage', (event) => {
-    if (event.key === SYSTEM_SETTINGS_STORAGE_KEY) {
-      void syncWatermark(router.currentRoute.value.path)
+    if (event.key !== SYSTEM_SETTINGS_STORAGE_KEY) {
+      return
+    }
+    const settings = readLocalSystemSettings()
+    if (settings) {
+      applyWatermarkSettings(router.currentRoute.value.path, settings)
     }
   })
 

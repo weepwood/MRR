@@ -27,6 +27,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Upload diagnostic source
+        uses: actions/upload-artifact@v4
+        with:
+          name: archive-detail-source-${{ github.run_id }}
+          path: frontend-fantastic-admin/src/views/statistics-detail/ArchiveDetailContent.vue
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:

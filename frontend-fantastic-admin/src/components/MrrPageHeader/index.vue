@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'MrrPageHeader' })
+
 const props = defineProps<{
   title: string
   description?: string

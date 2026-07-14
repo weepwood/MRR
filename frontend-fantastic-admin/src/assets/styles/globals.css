@@ -4,8 +4,10 @@
  * 仅负责按依赖顺序加载样式模块：
  * 1. tokens.css：布局变量、主题与设计令牌
  * 2. base.css：全局基础规则和视图过渡
- * 3. components/：跨页面复用的业务组件样式
+ * 3. element-plus-overrides.css：Element Plus 统一外观
+ * 4. components/：跨页面复用的业务组件样式
  */
 @import "./tokens.css";
 @import "./base.css";
+@import "./element-plus-overrides.css";
 @import "./components/metric-card.css";

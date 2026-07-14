@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/unified-echarts-system-20260714
+  pull_request:
+    branches:
+      - dev-no-login
 
 permissions:
   contents: write

@@ -52,18 +52,18 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 .mrr-data-table-panel__count {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 3px 9px;
+  min-height: 24px;
+  padding: 2px 8px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface-muted);
-  border: 1px solid var(--divider);
-  border-radius: var(--mrr-radius-pill);
+  font-weight: 500;
+  color: var(--mrr-secondary-foreground);
+  background: var(--mrr-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .mrr-data-table-panel__filters {
-  padding: var(--mrr-space-4) var(--mrr-space-5) 0;
+  padding: var(--mrr-space-3) var(--mrr-space-4) 0;
 }
 
 .mrr-data-table-panel__toolbar {
@@ -71,8 +71,8 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
-  padding: var(--mrr-space-3) var(--mrr-space-5);
-  border-bottom: 1px solid var(--divider);
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  border-bottom: 1px solid var(--mrr-border);
 }
 
 .mrr-data-table-panel__content {
@@ -83,24 +83,25 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 .mrr-data-table-panel__pagination {
   display: flex;
   justify-content: flex-end;
-  padding: 14px var(--mrr-space-5);
-  border-top: 1px solid var(--divider);
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  background: color-mix(in srgb, var(--mrr-muted) 28%, var(--mrr-card));
+  border-top: 1px solid var(--mrr-border);
 }
 
 .mrr-data-table-panel__content :deep(.el-table) {
-  --el-table-border-color: var(--divider);
+  --el-table-border-color: var(--mrr-border);
 
   width: 100%;
 }
 
 @media (width <= 760px) {
   .mrr-data-table-panel__filters {
-    padding: var(--mrr-space-3) var(--mrr-space-4) 0;
+    padding: var(--mrr-space-3) var(--mrr-space-3) 0;
   }
 
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
-    padding-inline: var(--mrr-space-4);
+    padding-inline: var(--mrr-space-3);
     overflow-x: auto;
   }
 }

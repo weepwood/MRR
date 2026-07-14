@@ -1,6 +1,7 @@
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
-import { toast } from 'vue-sonner'
+import { ElMessage } from 'element-plus'
+import { scheduleUnhandledRequestError } from '@/utils/request-error-notification'
 import { createResponseMetric, createResponseMetricQueue } from '@/utils/response-metrics'
 
 declare module 'axios' {
@@ -110,9 +111,12 @@ function showGlobalError(error: AxiosError | any) {
   }
 
   recentErrorToasts.set(key, now)
-  toast.error('请求失败', {
-    id: `api-error-${key}`,
-    description: message,
+  scheduleUnhandledRequestError(() => {
+    ElMessage.error({
+      message,
+      grouping: true,
+      showClose: true,
+    })
   })
 }
 

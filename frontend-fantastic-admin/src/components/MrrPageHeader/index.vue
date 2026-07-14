@@ -10,33 +10,18 @@ const props = defineProps<{
 
 const slots = useSlots()
 const hasAside = computed(() => Boolean(slots.actions))
-
-/**
- * 兼容尚未迁移到 eyebrow 属性的业务页。
- * 新页面仍应显式传入 eyebrow；映射仅用于保证旧页面标题结构完整。
- */
-const legacyEyebrows: Record<string, string> = {
-  用户管理: 'User Management',
-}
-
-const resolvedEyebrow = computed(() => props.eyebrow || legacyEyebrows[props.title])
-
-/**
- * 统一的三行页头不再同时展示左侧装饰图标。
- * 没有英文眉题的旧页面暂时保留图标，避免扩大非目标页面的视觉变更。
- */
-const showIcon = computed(() => Boolean(props.icon && !resolvedEyebrow.value))
+const isUsersHeader = computed(() => props.title === '用户管理')
 </script>
 
 <template>
   <header class="mrr-page-header">
     <div class="mrr-page-header__main">
-      <span v-if="showIcon" class="mrr-page-header__icon" aria-hidden="true">
+      <span v-if="props.icon && !isUsersHeader" class="mrr-page-header__icon" aria-hidden="true">
         <FaIcon :name="props.icon" />
       </span>
-      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': resolvedEyebrow }">
-        <p v-if="resolvedEyebrow" class="mrr-page-header__eyebrow">
-          {{ resolvedEyebrow }}
+      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow || isUsersHeader }">
+        <p v-if="props.eyebrow || isUsersHeader" class="mrr-page-header__eyebrow">
+          {{ props.eyebrow || 'User Management' }}
         </p>
         <div class="mrr-page-header__title-row">
           <h1>{{ props.title }}</h1>

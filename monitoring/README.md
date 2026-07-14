@@ -141,11 +141,14 @@ Linux 使用 node_exporter 时，将 `prometheus.yml` 中 `mrr-host` 的目标�
 
 Prometheus datasource 默认指向 `http://127.0.0.1:9090`。Grafana 不在同一服务器时，应修改 datasource 地址。
 
-前端“Grafana 看板”按钮默认打开当前主机的 `3000` 端口，也可以通过前端环境变量设置：
+前端“Grafana 看板”按钮默认直达 `mrr-application-overview` 看板，而不是 Grafana 空首页。默认地址为当前主机的 `3000` 端口，也可以通过前端环境变量设置：
 
 ```dotenv
 VITE_GRAFANA_URL=http://监控服务器地址:3000
+VITE_GRAFANA_DASHBOARD_UID=mrr-application-overview
 ```
+
+如果点击后无法打开页面或页面没有内容，请先确认 Grafana 服务已启动并监听 `3000` 端口，再确认已完成上面的 provisioning 配置。也可以将 `VITE_GRAFANA_DASHBOARD_UID` 改为 `mrr-data-quality` 或 `mrr-postgresql-overview`，分别打开对应看板。
 
 ## 8. 手动数据质量检查
 

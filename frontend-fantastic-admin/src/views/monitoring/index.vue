@@ -181,7 +181,10 @@ async function runQualityCheck() {
 
 function openGrafana() {
   const configuredUrl = String(import.meta.env.VITE_GRAFANA_URL || '').trim()
-  const url = configuredUrl || `${window.location.protocol}//${window.location.hostname}:3000`
+  const dashboardUid = String(import.meta.env.VITE_GRAFANA_DASHBOARD_UID || 'mrr-application-overview').trim()
+  const baseUrl = configuredUrl || `${window.location.protocol}//${window.location.hostname}:3000`
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, '')
+  const url = `${normalizedBaseUrl}/d/${encodeURIComponent(dashboardUid)}`
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
@@ -375,8 +378,6 @@ onUnmounted(() => {
           </el-table>
         </el-card>
       </el-col>
-    </el-row>
-    <el-row :gutter="20" class="monitor-row">
       <el-col :xs="24" :xl="11">
         <el-card shadow="never" class="monitor-card">
           <template #header>

@@ -7,7 +7,7 @@
   "panels": [
     {
       "type": "stat",
-      "title": "最近检查异常总数",
+      "title": "最近手动检查异常总数",
       "id": 1,
       "gridPos": {"h": 5, "w": 8, "x": 0, "y": 0},
       "targets": [{"expr": "mrr_data_quality_total_issues", "refId": "A"}],
@@ -15,7 +15,7 @@
     },
     {
       "type": "stat",
-      "title": "检查任务状态",
+      "title": "手动检查状态",
       "id": 2,
       "gridPos": {"h": 5, "w": 8, "x": 8, "y": 0},
       "targets": [{"expr": "mrr_data_quality_running", "refId": "A"}],
@@ -23,7 +23,7 @@
     },
     {
       "type": "stat",
-      "title": "距离最近成功检查",
+      "title": "距离最近手动检查",
       "id": 3,
       "gridPos": {"h": 5, "w": 8, "x": 16, "y": 0},
       "targets": [{"expr": "time() - mrr_data_quality_last_success_timestamp", "refId": "A"}],
@@ -39,7 +39,7 @@
     },
     {
       "type": "timeseries",
-      "title": "异常数量趋势",
+      "title": "手动检查异常数量趋势",
       "id": 5,
       "gridPos": {"h": 9, "w": 24, "x": 0, "y": 15},
       "targets": [
@@ -56,5 +56,5 @@
   "timezone": "browser",
   "title": "MRR 数据质量",
   "uid": "mrr-data-quality",
-  "version": 1
+  "version": 2
 }

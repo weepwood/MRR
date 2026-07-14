@@ -37,6 +37,13 @@ public class PublicStatusController {
                 .data(systemAvailabilityService.getDaily(days));
     }
 
+    @Operation(summary = "获取最近一天分钟级运行记录")
+    @GetMapping("/minutes")
+    public Result<List<Map<String, Object>>> minutes() {
+        return Result.<List<Map<String, Object>>>success("获取分钟级运行记录成功")
+                .data(systemAvailabilityService.getMinuteAvailability());
+    }
+
     @Operation(summary = "获取异常运行区间")
     @GetMapping("/incidents")
     public Result<List<Map<String, Object>>> incidents(@RequestParam(defaultValue = "90") int days) {

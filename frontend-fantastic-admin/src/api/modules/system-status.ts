@@ -22,6 +22,11 @@ export interface DailySystemAvailability {
   downtimeSeconds: number
 }
 
+export interface MinuteSystemAvailability {
+  startedAt: string
+  status: SystemAvailabilityState
+}
+
 export interface SystemStatusIncident {
   startedAt: string
   endedAt?: string | null
@@ -47,6 +52,10 @@ export function getDailySystemAvailability(days = 90) {
     ...publicRequestConfig,
     params: { days },
   })
+}
+
+export function getMinuteSystemAvailability() {
+  return getRequest<MinuteSystemAvailability[]>('/api/v1/public/status/minutes', publicRequestConfig)
 }
 
 export function getSystemStatusIncidents(days = 90) {

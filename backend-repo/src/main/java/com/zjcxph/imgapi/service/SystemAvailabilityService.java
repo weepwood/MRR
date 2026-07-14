@@ -158,6 +158,25 @@ public class SystemAvailabilityService {
         return result;
     }
 
+    public List<Map<String, Object>> getMinuteAvailability() {
+        Instant currentMinute = Instant.now().truncatedTo(ChronoUnit.MINUTES);
+        Instant rangeStart = currentMinute.minus(1_439, ChronoUnit.MINUTES);
+        Instant rangeEnd = currentMinute.plus(1, ChronoUnit.MINUTES);
+        List<Period> periods = repository.findOverlapping(rangeStart, rangeEnd);
+        List<Map<String, Object>> result = new ArrayList<>(1_440);
+
+        for (int offset = 0; offset < 1_440; offset++) {
+            Instant startedAt = rangeStart.plus(offset, ChronoUnit.MINUTES);
+            Instant endedAt = startedAt.plus(1, ChronoUnit.MINUTES);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("startedAt", startedAt);
+            item.put("status", minuteStatus(periods, startedAt, endedAt));
+            result.add(item);
+        }
+
+        return result;
+    }
+
     public List<Map<String, Object>> getIncidents(int requestedDays) {
         int days = normalizeDays(requestedDays);
         Instant rangeEnd = Instant.now();
@@ -284,6 +303,25 @@ public class SystemAvailabilityService {
                 ? null
                 : roundPercentage((coverageSeconds - downtimeSeconds) * 100.0 / coverageSeconds);
         return new DurationSummary(coverageSeconds, downtimeSeconds, uptimePercentage);
+    }
+
+    private String minuteStatus(List<Period> periods, Instant minuteStart, Instant minuteEnd) {
+        boolean hasUp = false;
+
+        for (Period period : periods) {
+            Instant endedAt = period.endedAt() == null ? minuteEnd : period.endedAt();
+            if (!period.startedAt().isBefore(minuteEnd) || !endedAt.isAfter(minuteStart)) {
+                continue;
+            }
+            if (STATUS_DOWN.equals(period.status())) {
+                return STATUS_DOWN;
+            }
+            if (STATUS_UP.equals(period.status())) {
+                hasUp = true;
+            }
+        }
+
+        return hasUp ? STATUS_UP : STATUS_NO_DATA;
     }
 
     private int normalizeDays(int requestedDays) {

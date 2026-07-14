@@ -1,22 +1,27 @@
 <script setup lang="ts">
 import type {
   DailySystemAvailability,
+  MinuteSystemAvailability,
   SystemStatusIncident,
   SystemStatusSummary,
 } from '@/api/modules/system-status'
+import type { ECOption } from '@/plugins/echarts'
 import dayjs from 'dayjs'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   getDailySystemAvailability,
+  getMinuteSystemAvailability,
   getSystemStatusIncidents,
   getSystemStatusSummary,
 } from '@/api/modules/system-status'
+import MrrChart from '@/components/charts/MrrChart.vue'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
 
 const HISTORY_DAYS = 90
 const summary = ref<SystemStatusSummary | null>(null)
 const daily = ref<DailySystemAvailability[]>([])
+const minutes = ref<MinuteSystemAvailability[]>([])
 const incidents = ref<SystemStatusIncident[]>([])
 const loading = ref(true)
 const refreshing = ref(false)
@@ -24,6 +29,57 @@ const loadError = ref(false)
 let refreshTimer: number | undefined
 
 const currentState = computed(() => summary.value?.currentStatus ?? 'NO_DATA')
+const minuteHourLabels = computed(() => minutes.value.filter((_, index) => index % 60 === 0))
+const hourlyAvailability = computed(() => minuteHourLabels.value.map((item, index) => {
+  const hourMinutes = minutes.value.slice(index * 60, index * 60 + 60)
+  const monitoredMinutes = hourMinutes.filter(minute => minute.status !== 'NO_DATA')
+  const uptimeMinutes = monitoredMinutes.filter(minute => minute.status === 'UP').length
+  return {
+    label: dayjs(item.startedAt).format('HH:mm'),
+    uptimePercentage: monitoredMinutes.length
+      ? Math.round(uptimeMinutes * 100_000 / monitoredMinutes.length) / 1_000
+      : null,
+  }
+}))
+const hasHourlyAvailability = computed(() => hourlyAvailability.value.some(item => item.uptimePercentage !== null))
+const hourlyAvailabilityChart = computed<ECOption>(() => ({
+  tooltip: {
+    trigger: 'axis',
+    valueFormatter: value => value === '-' ? '暂无数据' : `${value}%`,
+  },
+  grid: {
+    top: 24,
+    right: 20,
+    bottom: 28,
+    left: 18,
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    boundaryGap: false,
+    data: hourlyAvailability.value.map(item => item.label),
+    axisLabel: { hideOverlap: true, margin: 12 },
+    splitLine: { show: false },
+  },
+  yAxis: {
+    type: 'value',
+    min: 0,
+    max: 100,
+    axisLabel: { formatter: '{value}%' },
+  },
+  series: [{
+    name: '可用率',
+    type: 'line',
+    data: hourlyAvailability.value.map(item => item.uptimePercentage ?? '-'),
+    smooth: true,
+    showSymbol: true,
+    symbol: 'circle',
+    symbolSize: 6,
+    lineStyle: { width: 2.5, color: '#2563eb' },
+    itemStyle: { color: '#2563eb' },
+    areaStyle: { color: '#2563eb', opacity: 0.12 },
+  }],
+}))
 const statusCopy = computed(() => {
   if (currentState.value === 'UP') {
     return {
@@ -60,13 +116,15 @@ async function loadAll() {
   loading.value = true
   loadError.value = false
   try {
-    const [summaryResponse, dailyResponse, incidentResponse] = await Promise.all([
+    const [summaryResponse, dailyResponse, minuteResponse, incidentResponse] = await Promise.all([
       getSystemStatusSummary(HISTORY_DAYS),
       getDailySystemAvailability(HISTORY_DAYS),
+      getMinuteSystemAvailability(),
       getSystemStatusIncidents(HISTORY_DAYS),
     ])
     summary.value = summaryResponse.data ?? null
     daily.value = dailyResponse.data ?? []
+    minutes.value = minuteResponse.data ?? []
     incidents.value = incidentResponse.data ?? []
   }
   catch {
@@ -83,8 +141,12 @@ async function refreshCurrentStatus() {
   }
   refreshing.value = true
   try {
-    const response = await getSystemStatusSummary(HISTORY_DAYS)
-    summary.value = response.data ?? summary.value
+    const [summaryResponse, minuteResponse] = await Promise.all([
+      getSystemStatusSummary(HISTORY_DAYS),
+      getMinuteSystemAvailability(),
+    ])
+    summary.value = summaryResponse.data ?? summary.value
+    minutes.value = minuteResponse.data ?? minutes.value
     loadError.value = false
   }
   catch {
@@ -124,6 +186,11 @@ function dailyTitle(item: DailySystemAvailability) {
     ? `${item.uptimePercentage.toFixed(3)}%`
     : '暂无数据'
   return `${item.date} · 可用率 ${availability} · 异常 ${formatDuration(item.downtimeSeconds)}`
+}
+
+function minuteTitle(item: MinuteSystemAvailability) {
+  const state = item.status === 'UP' ? '正常' : item.status === 'DOWN' ? '异常' : '暂无数据'
+  return `${dayjs(item.startedAt).format('YYYY-MM-DD HH:mm')} · ${state}`
 }
 
 onMounted(() => {
@@ -207,6 +274,56 @@ onBeforeUnmount(() => {
             <strong>{{ formatDuration(summary?.downtimeSeconds ?? 0) }}</strong>
             <small>包含重启后根据心跳缺口补录的区间</small>
           </article>
+        </section>
+
+        <section class="availability-chart-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Availability trend</span>
+              <h2>最近 24 小时可用率趋势</h2>
+              <p>根据分钟级运行记录按小时汇总；缺少运行记录的小时不计入可用率。</p>
+            </div>
+          </div>
+          <MrrChart
+            :option="hourlyAvailabilityChart"
+            :empty="!hasHourlyAvailability"
+            empty-description="最近一天暂无可用率数据"
+            :height="250"
+            aria-label="最近 24 小时可用率趋势图"
+          />
+        </section>
+
+        <section class="minute-history-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Minute-by-minute history</span>
+              <h2>最近一天运行记录</h2>
+              <p>每个方块代表一分钟；任一分钟内出现异常即标记为异常。</p>
+            </div>
+            <div class="legend" aria-label="分钟运行记录图例">
+              <span><i class="up" />正常</span>
+              <span><i class="down" />异常</span>
+              <span><i class="no-data" />暂无数据</span>
+            </div>
+          </div>
+
+          <div class="minute-track-wrapper">
+            <div class="minute-track">
+              <span
+                v-for="item in minutes"
+                :key="item.startedAt"
+                class="minute-cell"
+                :class="`is-${item.status.toLowerCase().replace('_', '-')}`"
+                :title="minuteTitle(item)"
+                :aria-label="minuteTitle(item)"
+              />
+            </div>
+            <div class="minute-hour-labels" aria-hidden="true">
+              <span v-for="item in minuteHourLabels" :key="item.startedAt">
+                {{ dayjs(item.startedAt).format('HH:mm') }}
+              </span>
+            </div>
+          </div>
         </section>
 
         <section class="history-card">
@@ -378,6 +495,8 @@ onBeforeUnmount(() => {
 
 .state-panel,
 .history-card,
+.availability-chart-card,
+.minute-history-card,
 .incidents-card,
 .summary-card {
   background: rgb(255 255 255 / 92%);
@@ -549,6 +668,8 @@ onBeforeUnmount(() => {
 }
 
 .history-card,
+.availability-chart-card,
+.minute-history-card,
 .incidents-card {
   padding: 24px;
   margin-top: 16px;
@@ -585,17 +706,20 @@ onBeforeUnmount(() => {
 }
 
 .legend .up,
-.day-cell.is-up {
+.day-cell.is-up,
+.minute-cell.is-up {
   background: #20b486;
 }
 
 .legend .down,
-.day-cell.is-down {
+.day-cell.is-down,
+.minute-cell.is-down {
   background: #ef6b62;
 }
 
 .legend .no-data,
-.day-cell.is-no-data {
+.day-cell.is-no-data,
+.minute-cell.is-no-data {
   background: #dce2eb;
 }
 
@@ -604,6 +728,36 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(45, minmax(5px, 1fr));
   gap: 4px;
   margin-top: 25px;
+}
+
+.minute-track-wrapper {
+  margin-top: 22px;
+  overflow-x: auto;
+}
+
+.minute-track,
+.minute-hour-labels {
+  min-width: 720px;
+}
+
+.minute-track {
+  display: grid;
+  grid-template-columns: repeat(60, minmax(8px, 1fr));
+  gap: 2px;
+}
+
+.minute-cell {
+  height: 10px;
+  border-radius: 2px;
+}
+
+.minute-hour-labels {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: 7px;
+  font-size: 10px;
+  color: #7b879d;
 }
 
 .day-cell {
@@ -783,6 +937,8 @@ onBeforeUnmount(() => {
   }
 
   .history-card,
+  .availability-chart-card,
+  .minute-history-card,
   .incidents-card {
     padding: 20px;
   }

@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -97,6 +98,38 @@ class SystemAvailabilityServiceTest {
         verify(repository).close(eq(11L), any());
         verify(repository).insertOpen(eq("UP"), any(), any(), isNull());
         verify(repository).deleteEndedBefore(any());
+    }
+
+    @Test
+    void minuteAvailabilityMarksAnyMinuteWithDowntimeAsDown() {
+        Instant currentMinute = Instant.now().truncatedTo(ChronoUnit.MINUTES);
+        Period up = new Period(
+                1L,
+                "UP",
+                currentMinute.minus(2, ChronoUnit.MINUTES),
+                null,
+                currentMinute,
+                null
+        );
+        Period down = new Period(
+                2L,
+                "DOWN",
+                currentMinute.minus(3, ChronoUnit.MINUTES),
+                currentMinute.minus(2, ChronoUnit.MINUTES),
+                currentMinute.minus(2, ChronoUnit.MINUTES),
+                "服务心跳中断"
+        );
+        when(repository.findOverlapping(any(), any())).thenReturn(List.of(up, down));
+
+        SystemAvailabilityService service = createService();
+        List<Map<String, Object>> minutes = service.getMinuteAvailability();
+
+        assertEquals(1_440, minutes.size());
+        Map<String, Object> downtimeMinute = minutes.stream()
+                .filter(item -> currentMinute.minus(3, ChronoUnit.MINUTES).equals(item.get("startedAt")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("DOWN", downtimeMinute.get("status"));
     }
 
     private SystemAvailabilityService createService() {

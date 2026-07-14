@@ -40,6 +40,10 @@ function handleSearch() { page.value = 1; loadData() }
 function resetFilters() { filters.keyword = ''; handleSearch() }
 function handlePageChange(p: number) { page.value = p; loadData() }
 function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData() }
+function maskIdCard(value?: string) {
+  if (!value || value.length <= 7) { return value || '—' }
+  return `${value.slice(0, 3)}${'*'.repeat(value.length - 7)}${value.slice(-4)}`
+}
 
 onMounted(loadData)
 </script>
@@ -92,7 +96,11 @@ onMounted(loadData)
         <el-table-column prop="id" label="ID" width="120" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="idCard" label="身份证号" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="idCard" label="身份证号" min-width="180">
+          <template #default="{ row }">
+            {{ maskIdCard(row.idCard) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="department" label="科室" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
       </el-table>

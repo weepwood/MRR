@@ -10,6 +10,8 @@ const props = defineProps<{
 }>()
 
 const slots = useSlots()
+const hasActions = computed(() => props.count !== undefined || Boolean(slots.actions))
+const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'))
 </script>
 
 <template>
@@ -19,9 +21,9 @@ const slots = useSlots()
     :icon="props.icon"
     body-padding="none"
   >
-    <template #actions>
+    <template v-if="hasActions" #actions>
       <span v-if="props.count !== undefined" class="mrr-data-table-panel__count">
-        {{ props.countLabel || '共' }} {{ props.count.toLocaleString('zh-CN') }} 条
+        {{ props.countLabel || '共' }} {{ countText }} 条
       </span>
       <slot name="actions" />
     </template>

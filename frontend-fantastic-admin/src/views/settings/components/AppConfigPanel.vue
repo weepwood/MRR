@@ -339,15 +339,6 @@ function handleReset() {
       </div>
       <div class="setting-item">
         <div class="label">
-          哀悼模式
-          <FaTooltip text="该功能开启时，整站会变为灰色">
-            <FaIcon name="i-ri:question-line" />
-          </FaTooltip>
-        </div>
-        <FaSwitch v-model="settingsStore.settings.app.enableMournMode" />
-      </div>
-      <div class="setting-item">
-        <div class="label">
           色弱模式
         </div>
         <FaSwitch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" />

@@ -6,11 +6,16 @@ import { getTypeLabel } from '../constants'
 
 defineOptions({ name: 'ThumbStrip' })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   images: GalleryImage[]
   selectedIndex: number
   isSelected: (img: GalleryImage) => boolean
-}>()
+  thumbnailSize?: number
+  preloadCount?: number
+}>(), {
+  thumbnailSize: 200,
+  preloadCount: 20,
+})
 
 const emit = defineEmits<{
   select: [index: number]
@@ -21,8 +26,15 @@ const thumbsContainer = ref<HTMLElement | null>(null)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 const failedImageKeys = ref<Set<string>>(new Set())
 const viewMode = defineModel<ViewMode>('viewMode', { default: 'thumb' })
+const thumbnailSize = toRef(props, 'thumbnailSize')
+const preloadCount = toRef(props, 'preloadCount')
 
-const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(thumbsContainer, viewMode)
+const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(
+  thumbsContainer,
+  viewMode,
+  thumbnailSize,
+  preloadCount,
+)
 
 const displayed = computed(() => props.images.slice(0, visibleCount.value))
 

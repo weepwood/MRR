@@ -3,6 +3,7 @@ import iconConfig from '@/iconify/index.json'
 import directive from '@/utils/directive'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
+import { installSystemSettingsRuntime } from '@/utils/system-settings'
 
 import App from './App.vue'
 import router from './router'
@@ -20,6 +21,7 @@ import '@/assets/styles/globals.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
 
 installMedicalRecordCodeInterceptors()
+installSystemSettingsRuntime()
 
 const app = createApp(App)
 app.use(pinia)

@@ -194,7 +194,8 @@ const asyncRoutes: Route.recordMainRaw[] = [
           title: '影像档案袋',
           icon: 'i-ant-design:folder-open-twotone',
           auth: ['record:read'],
-          cache: true,
+          // 该页面会切换全局沉浸式布局并持有大量图片，不进入 KeepAlive。
+          cache: false,
         },
       },
       {
@@ -255,7 +256,23 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
-
+    ],
+  },
+  {
+    meta: {
+      title: '帮助',
+      icon: 'i-ant-design:question-circle-twotone',
+    },
+    children: [
+      {
+        path: '/help',
+        component: () => import('@/views/help/index.vue'),
+        meta: {
+          title: '帮助与文档',
+          icon: 'i-ant-design:read-twotone',
+          cache: true,
+        },
+      },
     ],
   },
 ]

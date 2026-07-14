@@ -1,5 +1,11 @@
-export const SYSTEM_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:system-settings'
+import {
+  readLocalSystemSettings,
+  SYSTEM_SETTINGS_STORAGE_KEY,
+} from './system-settings'
+
+export { SYSTEM_SETTINGS_STORAGE_KEY }
 export const ARCHIVE_WATERMARK_SETTING_KEY = 'archiveWatermarkEnabled'
+export const ARCHIVE_WATERMARK_OPACITY_SETTING_KEY = 'archiveWatermarkOpacity'
 
 const WATERMARK_TILE_WIDTH = 360
 const WATERMARK_TILE_HEIGHT = 210
@@ -54,24 +60,27 @@ export function parseArchiveWatermarkEnabled(value: unknown, fallback = true): b
   return fallback
 }
 
+export function parseArchiveWatermarkOpacity(value: unknown, fallback = 14): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return fallback
+  }
+  return Math.min(35, Math.max(5, parsed))
+}
+
 export function readLocalArchiveWatermarkSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(SYSTEM_SETTINGS_STORAGE_KEY)
-    if (!raw) {
-      return true
-    }
-    const settings = JSON.parse(raw) as Record<string, unknown>
-    return parseArchiveWatermarkEnabled(settings[ARCHIVE_WATERMARK_SETTING_KEY], true)
-  }
-  catch {
-    return true
-  }
+  return readLocalSystemSettings()?.archiveWatermarkEnabled ?? true
+}
+
+export function readLocalArchiveWatermarkOpacity(): number {
+  return readLocalSystemSettings()?.archiveWatermarkOpacity ?? 14
 }
 
 export function createArchiveWatermarkDataUrl(
   userId: string,
   time: string,
   darkMode = false,
+  opacityPercent = 14,
 ): string {
   if (typeof document === 'undefined') {
     return ''
@@ -87,12 +96,15 @@ export function createArchiveWatermarkDataUrl(
     return ''
   }
 
+  const opacity = parseArchiveWatermarkOpacity(opacityPercent) / 100
   context.scale(pixelRatio, pixelRatio)
   context.translate(WATERMARK_TILE_WIDTH / 2, WATERMARK_TILE_HEIGHT / 2)
   context.rotate(-Math.PI / 7)
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillStyle = darkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(17, 24, 39, 0.12)'
+  context.fillStyle = darkMode
+    ? `rgba(255, 255, 255, ${opacity})`
+    : `rgba(17, 24, 39, ${Math.min(opacity, 0.3)})`
   context.font = '600 15px Inter, "Microsoft YaHei", sans-serif'
   context.fillText(`用户ID：${userId}`, 0, -12)
   context.font = '500 13px Inter, "Microsoft YaHei", sans-serif'

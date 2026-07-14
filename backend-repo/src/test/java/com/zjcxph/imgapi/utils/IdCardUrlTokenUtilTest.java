@@ -35,8 +35,11 @@ class IdCardUrlTokenUtilTest {
     @Test
     void shouldRejectTamperedToken() {
         String token = IdCardUrlTokenUtil.encrypt("11010519491231002X", SECRET);
-        char replacement = token.endsWith("A") ? 'B' : 'A';
-        String tampered = token.substring(0, token.length() - 1) + replacement;
+        int changedIndex = token.length() / 2;
+        char replacement = token.charAt(changedIndex) == 'A' ? 'B' : 'A';
+        String tampered = token.substring(0, changedIndex)
+                + replacement
+                + token.substring(changedIndex + 1);
 
         assertThrows(IllegalArgumentException.class,
                 () -> IdCardUrlTokenUtil.decrypt(tampered, SECRET));
@@ -45,5 +48,6 @@ class IdCardUrlTokenUtilTest {
     @Test
     void shouldMaskIdCard() {
         assertEquals("1101**********002X", IdCardUrlTokenUtil.mask("11010519491231002X"));
+        assertEquals("1101*******1234", IdCardUrlTokenUtil.mask("110105491231234"));
     }
 }

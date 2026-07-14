@@ -48,6 +48,14 @@ test.describe('无后端 Mock 模式', () => {
   test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(() => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+        app: {
+          enablePermission: false,
+          radius: 0.75,
+        },
+      }))
+    })
     await page.goto('/archive', { waitUntil: 'domcontentloaded' })
 
     await page.waitForFunction(

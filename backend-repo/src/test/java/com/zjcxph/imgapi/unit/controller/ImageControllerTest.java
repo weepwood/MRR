@@ -147,4 +147,58 @@ class ImageControllerTest {
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
+
+    @Test
+    @DisplayName("getImage — null参数被拦截")
+    void getImage_nullParam() {
+        ResponseEntity<?> result = imageController.getImage(null, "605746", "25.03.15", "test.jpg");
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("getImage — folder长度不足5被拦截")
+    void getImage_shortFolder() {
+        ResponseEntity<?> result = imageController.getImage(
+                "00789508", "605746",
+                "12.3", "test.jpg");
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("getImage — 文件不存在返回404")
+    void getImage_notFound() {
+        when(imageProperties.getBasePath()).thenReturn("C:/nonexistent");
+
+        ResponseEntity<?> result = imageController.getImage(
+                "00789508", "605746",
+                "25.03.15", "notexist.jpg");
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("updateImageType — btype为null返回失败")
+    void updateImageType_nullBtype() {
+        com.zjcxph.imgapi.dto.req.ImageRequest req = new com.zjcxph.imgapi.dto.req.ImageRequest();
+        req.setBtype(null);
+
+        Result<Void> result = imageController.updateImageType(1, req);
+
+        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getMessage()).contains("不能为空");
+    }
+
+    @Test
+    @DisplayName("updateImageType — btype越界返回失败")
+    void updateImageType_invalidBtype() {
+        com.zjcxph.imgapi.dto.req.ImageRequest req = new com.zjcxph.imgapi.dto.req.ImageRequest();
+        req.setBtype(99);
+
+        Result<Void> result = imageController.updateImageType(1, req);
+
+        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getMessage()).contains("类型错误");
+    }
 }

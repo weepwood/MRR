@@ -191,14 +191,23 @@ async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase) {
   setPatientFromArchiveCase(archiveCase)
 }
 
-async function syncIdCardSearchFromRoute(token: string, bah: string, sjh: string) {
+async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string) {
   searchIdCard.value = ''
-  if (idCardToken.value !== token || !archiveCases.value.length) {
-    const result = await loadArchiveCasesByToken(token)
+  const isPlainIdCard = ID_CARD_PATTERN.test(idParam)
+  if (idCardToken.value !== idParam || !archiveCases.value.length) {
+    const result = isPlainIdCard
+      ? await loadArchiveCasesByIdCard(idParam)
+      : await loadArchiveCasesByToken(idParam)
     if (!result) {
       clearArchiveState(errorMsg.value || '身份证查询链接无效')
       return
     }
+  }
+
+  const resolvedToken = idCardToken.value || (isPlainIdCard ? '' : idParam)
+  if (!resolvedToken) {
+    clearArchiveState('身份证查询链接生成失败')
+    return
   }
 
   const selectedCase = archiveCases.value.find(item => caseMatches(item, bah, sjh))
@@ -210,11 +219,11 @@ async function syncIdCardSearchFromRoute(token: string, bah: string, sjh: string
 
   const selectedBah = normalizeSearchParam(selectedCase.bah)
   const selectedSjh = normalizeSearchParam(selectedCase.sjh)
-  if (selectedBah !== bah || selectedSjh !== sjh) {
+  if (resolvedToken !== idParam || selectedBah !== bah || selectedSjh !== sjh) {
     await router.replace({
       path: '/archive',
       query: {
-        id: token,
+        id: resolvedToken,
         bah: selectedBah,
         ...(selectedSjh ? { sjh: selectedSjh } : {}),
       },

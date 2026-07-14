@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'MrrStatusTag' })
+
 type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
 
 const props = defineProps<{

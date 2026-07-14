@@ -81,7 +81,9 @@ public final class IdCardUrlTokenUtil {
         if (value.length() <= 8) {
             return "****";
         }
-        return value.substring(0, 4) + "**********" + value.substring(value.length() - 4);
+        return value.substring(0, 4)
+                + "*".repeat(value.length() - 8)
+                + value.substring(value.length() - 4);
     }
 
     private static SecretKeySpec deriveKey(String secret) throws Exception {

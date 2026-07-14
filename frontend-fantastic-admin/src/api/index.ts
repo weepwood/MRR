@@ -103,15 +103,15 @@ function getErrorMessage(error: AxiosError | any) {
 function showGlobalError(error: AxiosError | any) {
   const message = getErrorMessage(error)
   const key = `${error?.response?.status ?? 'network'}:${message}`
-  const now = Date.now()
-  const lastShownAt = recentErrorToasts.get(key) ?? 0
 
-  if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {
-    return
-  }
-
-  recentErrorToasts.set(key, now)
   registerUnhandledRequestError(error, () => {
+    const now = Date.now()
+    const lastShownAt = recentErrorToasts.get(key) ?? 0
+    if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {
+      return
+    }
+
+    recentErrorToasts.set(key, now)
     ElMessage.error({
       message,
       grouping: true,

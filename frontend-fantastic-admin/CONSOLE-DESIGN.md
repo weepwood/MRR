@@ -1,47 +1,62 @@
 # MRR Console Design System
 
-MRR Console 是面向医疗档案管理后台的页面级设计系统。视觉参考 `shadcn-ui/ui`，但不引入 React、TailwindCSS 或 shadcn 组件代码；项目继续使用 Vue 3、Element Plus 和普通 CSS，通过语义令牌复现其设计原则。
+MRR Console 是面向医疗档案业务的现代 SaaS 管理界面设计系统。项目继续使用 Vue 3、Element Plus 和普通 CSS，不引入 TailwindCSS，也不复制特定框架组件。
 
-## 1. 设计原则
+## 1. 设计定位
 
-MRR Console 采用以下 shadcn 风格原则：
+整体界面应具备以下特征：
 
-- 语义令牌优先：页面只消费 background、foreground、card、muted、accent、border、input、ring 和 destructive 等语义变量。
-- 单层表面：普通卡片使用背景和 1px 边框区分层级，不依赖渐变、顶部彩条和大面积阴影。
-- 低噪声控件：按钮、输入框和选择器保持紧凑尺寸，状态通过背景、边框和 ring 表达。
-- 阴影只用于浮层：卡片默认无阴影；Select、Dropdown、Popover 和 Dialog 才使用中等阴影。
-- 一个区域一个主操作：查询、保存或提交可以使用 primary，其余操作降低视觉重量。
-- 品牌色克制使用：MRR 保留医疗蓝，但蓝色只用于主操作、焦点和关键状态。
-- 明暗主题一致：暗色主题不重新设计组件，只替换语义表面、边框和透明度。
+- 产品化：界面像持续运营的 SaaS 产品，而不是传统后台模板。
+- 专业可信：医疗档案场景强调稳定、清晰和可审计，不使用夸张装饰。
+- 信息高效：导航、筛选、表格和操作保持紧凑，但不拥挤。
+- 层级明确：导航层、工作区、内容卡片和浮层具有稳定的视觉深度。
+- 一致可扩展：页面通过公共组件组合，不在业务页面重新发明页头、卡片和筛选区。
 
-## 2. 页面结构
+## 2. 应用壳层
 
-普通业务页面按以下顺序组合：
+### 2.1 主导航
 
-1. `MrrPageShell`：控制页面宽度和纵向区块间距。
-2. `MrrPageHeader`：统一标题、说明和右侧操作。
-3. `MrrMetricCard`：展示 3–6 个核心指标。
-4. `MrrSectionCard` 或 `MrrDataTablePanel`：承载图表、详情、表单和数据表格。
-5. `MrrFilterBar`：统一列表筛选条件和查询操作。
-6. `MrrStatusTag`：统一正常、运行、警告、异常和未知状态。
+- 主导航采用 72px 图标轨道。
+- 主入口使用紧凑图标和短标题。
+- 激活项使用低饱和品牌背景、细边框和品牌文字。
+- Hover 不放大图标，不使用强烈位移。
+- 账号入口固定在导航底部。
 
-影像档案袋属于沉浸式特殊页面，不强制使用普通页面骨架。
+### 2.2 工作区导航
 
-## 3. 页面宽度
+- 二级导航采用 248px 工作区面板。
+- 顶部展示当前业务分区名称。
+- 菜单项高度约 38px，圆角 8px。
+- 折叠模式保留图标，并通过 Tooltip 辅助识别。
+- 悬浮菜单使用 popover 表面、细边框、模糊背景和中等阴影。
 
-```vue
-<MrrPageShell width="fluid">...</MrrPageShell>
-<MrrPageShell width="standard">...</MrrPageShell>
-<MrrPageShell width="narrow">...</MrrPageShell>
-```
+### 2.3 顶部区域
 
-- `fluid`：列表、统计和监控页面，最大宽度 1680px。
-- `standard`：普通详情和双栏页面，最大宽度 1440px。
-- `narrow`：设置和表单页面，最大宽度 1120px。
+顶部区域由页签和工具栏组成：
 
-页面本身不要再增加额外的外层 `padding`。
+- 使用半透明表面和背景模糊。
+- 页签使用紧凑圆角矩形，而不是占满整行的大标签。
+- 激活页签为白色卡片表面，非激活页签保持低视觉重量。
+- 工具栏左右区域用细分隔线区分。
+- 页面滚动后仅增加轻微阴影。
 
-## 4. 标准列表页示例
+### 2.4 主工作区
+
+- 使用柔和中性背景，不让所有内容直接铺在纯白页面上。
+- 页面内容边距为 18–28px，根据视口自动调整。
+- 普通业务内容由白色或深色卡片承载。
+- 特殊沉浸式页面，例如影像档案袋，可以覆盖普通工作区规则。
+
+## 3. 页面结构
+
+普通业务页面依次组合：
+
+1. `MrrPageShell`
+2. `MrrPageHeader`
+3. `MrrMetricCard`
+4. `MrrSectionCard` 或 `MrrDataTablePanel`
+5. `MrrFilterBar`
+6. `MrrStatusTag`
 
 ```vue
 <MrrPageShell width="fluid">
@@ -76,95 +91,105 @@ MRR Console 采用以下 shadcn 风格原则：
     </template>
 
     <el-table :data="rows">...</el-table>
-
-    <template #pagination>
-      <el-pagination :total="128" />
-    </template>
   </MrrDataTablePanel>
 </MrrPageShell>
 ```
 
+## 4. 页面宽度
+
+- `fluid`：列表、统计和监控页面，最大宽度 1720px。
+- `standard`：详情和双栏页面，最大宽度 1440px。
+- `narrow`：设置和表单页面，最大宽度 1120px。
+
+页面自身不再添加额外外层 `padding`。
+
 ## 5. 语义令牌
 
-页面样式优先使用：
+业务页面优先使用：
 
-- `--mrr-background` / `--mrr-foreground`
-- `--mrr-card` / `--mrr-card-foreground`
-- `--mrr-popover` / `--mrr-popover-foreground`
-- `--mrr-muted` / `--mrr-muted-foreground`
-- `--mrr-secondary` / `--mrr-secondary-foreground`
-- `--mrr-accent` / `--mrr-accent-foreground`
-- `--mrr-border` / `--mrr-input` / `--mrr-ring`
-- `--mrr-primary` / `--mrr-primary-foreground`
-- `--mrr-destructive` / `--mrr-destructive-muted`
+- `--mrr-app-shell-bg`
+- `--mrr-navigation-bg`
+- `--mrr-navigation-hover`
+- `--mrr-navigation-active`
+- `--mrr-workspace-bg`
+- `--mrr-card`
+- `--mrr-muted`
+- `--mrr-border`
+- `--mrr-primary`
+- `--mrr-destructive`
+- `--mrr-ring`
 
-禁止页面自行硬编码普通表面、边框、焦点环和主色。
+禁止在业务页面硬编码普通背景、导航背景、边框、阴影和品牌色。
 
 ## 6. 按钮
 
-- 默认按钮对应 shadcn 的 outline：背景为页面表面，使用 1px 边框。
-- primary 使用纯色品牌背景，不使用渐变和高光。
-- danger 使用低饱和危险背景与危险色文字，避免所有危险按钮都成为大面积红块。
-- text 对应 ghost，link 只用于真正的链接式操作。
+- 一个操作区域最多使用一个主按钮。
+- 主按钮用于查询、保存、提交和创建。
+- 普通按钮用于刷新、重置、取消和辅助操作。
+- Text 或 Link 按钮用于表格行内操作。
+- 危险操作使用低饱和危险样式，并必须二次确认。
 - 默认高度 36px，小型 32px，大型 40px。
-- Hover 只调整背景或边框，不执行上浮动画。
-- Active 可以下移 1px，提供按压反馈但不引发布局抖动。
-- Focus 使用 `border-ring + 3px ring`，不能只取消 outline。
-- 一个页面区块最多保留一个 primary。
+- Hover 只改变背景、边框或文字颜色。
+- Active 可以下移 1px，但不能造成布局变化。
 
-## 7. 输入控件
+## 7. 输入与筛选
 
-- 输入框、选择器、日期控件、文本域和数字输入框共享同一 input、border 和 ring。
-- 默认高度 36px，圆角 8px，正文 13px。
-- Hover 强化边框，不增加明显阴影。
-- Focus 使用品牌 ring，错误状态使用 destructive ring。
-- Placeholder 使用 muted foreground，不单独指定固定灰色。
-- 只读使用 muted 表面；禁用在此基础上降低透明度并停止交互。
-- Select、Dropdown、Popover 和日期面板使用 popover 表面、1px ring 和中等浮层阴影。
-- 表单错误必须同时显示边框和错误文字。
+- 输入框、选择器、日期控件和数字输入共享相同高度、边框和聚焦 Ring。
+- 筛选条件放入 `MrrFilterBar`，形成独立命令条。
+- 查询按钮位于操作区首位，重置按钮位于其后。
+- 错误状态必须同时显示错误边框和错误文字。
+- 只读与禁用状态必须在可读性和交互性上明确区分。
 
-## 8. 卡片与数据展示
+## 8. 卡片与指标
 
-- 普通卡片使用 card 背景、1px border、12px 圆角、无阴影。
-- 指标卡不使用顶部彩条、渐变背景和悬浮位移。
-- 图标只作为小尺寸语义提示，不作为大面积装饰。
-- 表格表头使用 muted 表面，行 Hover 使用更浅的 muted 表面。
-- Badge 和状态标签使用小圆角，不默认使用胶囊形。
-- 分页当前页使用 primary，其余按钮保持 ghost 风格。
+### 普通内容卡片
 
-## 9. 语义色
+- 使用 card 表面、1px 边框、14px 圆角和极轻阴影。
+- 卡片头部可使用非常浅的 muted 表面。
+- 图标控制在 30–32px 容器内。
+- 普通卡片不执行悬浮位移。
 
-| 颜色 | 含义 |
-| --- | --- |
-| Blue | 默认总量、请求量、主要运行信息 |
-| Green | 正常、成功、完成、启用 |
-| Amber | 待处理、警告、等待 |
-| Danger / Rose | 失败、禁用、严重异常 |
-| Violet | 容量、页数、性能指标 |
-| Teal | 连接、线程、用户和并发 |
-| Slate | 中性辅助指标 |
+### 指标卡
 
-禁止为了视觉丰富而随机分配颜色。
+- 允许使用非常轻的语义色渐变和右上角柔光。
+- Hover 最多上移 1px。
+- 指标数字使用等宽数字特性。
+- 颜色必须表达业务含义，不用于随机装饰。
 
-## 10. 页面开发约束
+## 9. 数据表格
 
-- 页面标题固定使用 `MrrPageHeader`，不再定义局部 `.page-header`。
-- 核心指标固定使用 `MrrMetricCard`，不再定义 `.summary-card`、`.stat-card`。
+- 表头使用低对比 muted 表面。
+- 行 Hover 使用极浅强调色。
+- 表格操作列固定在右侧。
+- 分页固定在数据面板底部。
+- 结果数量使用带状态点的小型 Badge。
+- 加载、空状态和错误状态保持容器高度稳定。
+
+## 10. 动效
+
+- 普通交互过渡控制在 120–220ms。
+- 导航展开与收起不超过 220ms。
+- 页面切换不保留离场页面，避免新旧页面叠加残影。
+- 菜单浮层使用轻微淡入和 0.98 缩放。
+- 必须支持 `prefers-reduced-motion`。
+
+## 11. 页面开发约束
+
+- 页面标题必须使用 `MrrPageHeader`。
+- 核心指标必须使用 `MrrMetricCard`。
 - 普通内容容器使用 `MrrSectionCard`。
 - 带筛选和分页的表格使用 `MrrDataTablePanel`。
-- 筛选条件使用 `MrrFilterBar`，查询按钮在前，重置按钮在后。
-- 状态使用 `MrrStatusTag`，不在页面自行映射标签颜色。
-- 页面局部 CSS 只处理业务独有布局。
-- 普通卡片默认 `shadow="never"`。
-- 行内编辑和查看使用 link 或 text 按钮；危险操作必须二次确认。
-- 不在业务页面覆盖 `.el-button`、`.el-input`、`.el-select`、`.el-card` 和 `.el-table` 的公共外观。
+- 筛选条件使用 `MrrFilterBar`。
+- 状态使用 `MrrStatusTag`。
+- 页面局部 CSS 只处理业务特有布局。
+- 不在业务页面覆盖公共 `.el-button`、`.el-input`、`.el-select`、`.el-card` 和 `.el-table` 外观。
 
-## 11. 迁移顺序
+## 12. 后续迁移顺序
 
-1. 用户管理：标准列表页面样板。
-2. 病案扫描数据统计：统计分析页面样板。
-3. 系统与数据库监控：高密度监控页面样板。
-4. 权限、记录、患者、日志、审计、档案装箱等普通业务页。
+1. 用户管理：标准列表样板。
+2. 病案扫描数据统计：分析页面样板。
+3. 系统与数据库监控：高密度监控样板。
+4. 权限、记录、患者、日志、审计和档案装箱。
 5. 系统设置、首页和其他特殊页面。
 
-每迁移一个页面，应删除对应的重复页头、摘要卡、筛选栏和普通卡片 CSS。
+每迁移一个页面，应删除对应的重复页头、摘要卡、筛选栏和卡片 CSS。

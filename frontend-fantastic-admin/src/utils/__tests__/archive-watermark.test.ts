@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatArchiveWatermarkTime,
   parseArchiveWatermarkEnabled,
+  parseArchiveWatermarkOpacity,
   resolveArchiveWatermarkUserId,
 } from '../archive-watermark'
 
@@ -23,5 +24,12 @@ describe('archive watermark helpers', () => {
     expect(parseArchiveWatermarkEnabled('false')).toBe(false)
     expect(parseArchiveWatermarkEnabled('1')).toBe(true)
     expect(parseArchiveWatermarkEnabled(undefined, false)).toBe(false)
+  })
+
+  it('clamps configurable opacity to the supported range', () => {
+    expect(parseArchiveWatermarkOpacity('18')).toBe(18)
+    expect(parseArchiveWatermarkOpacity(2)).toBe(5)
+    expect(parseArchiveWatermarkOpacity(90)).toBe(35)
+    expect(parseArchiveWatermarkOpacity('invalid', 12)).toBe(12)
   })
 })

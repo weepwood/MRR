@@ -83,15 +83,15 @@ function handleReset() {
         <div class="setting-item page-title-style-setting">
           <div class="label">
             页面标题风格
-            <FaTooltip text="风格一将英文、中文标题和说明紧凑排列；风格二将说明文字放在标题下一行">
+            <FaTooltip text="风格一直接与页面内容同级；风格二使用带渐变背景和装饰元素的卡片。两种风格均保持英文标题、中文标题和说明三行排版。">
               <FaIcon name="i-ri:question-line" />
             </FaTooltip>
           </div>
           <FaTabs
             v-model="settingsStore.settings.app.pageTitleStyle"
             :list="[
-              { label: '风格一 · 同行', value: 'compact' },
-              { label: '风格二 · 分层', value: 'stacked' },
+              { label: '风格一 · 页面同级', value: 'plain' },
+              { label: '风格二 · 卡片', value: 'card' },
             ]"
             class="page-title-style-tabs"
           />
@@ -406,7 +406,7 @@ function handleReset() {
 }
 
 .page-title-style-tabs {
-  width: min(300px, 58%);
+  width: min(330px, 62%);
 }
 
 @media (width <= 1100px) {

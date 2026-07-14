@@ -4,6 +4,7 @@ defineOptions({ name: 'MrrPageHeader' })
 const props = defineProps<{
   title: string
   description?: string
+  eyebrow?: string
   icon?: string
 }>()
 
@@ -17,7 +18,10 @@ const hasAside = computed(() => Boolean(slots.actions))
       <span v-if="props.icon" class="mrr-page-header__icon" aria-hidden="true">
         <FaIcon :name="props.icon" />
       </span>
-      <div class="mrr-page-header__copy">
+      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow }">
+        <p v-if="props.eyebrow" class="mrr-page-header__eyebrow">
+          {{ props.eyebrow }}
+        </p>
         <div class="mrr-page-header__title-row">
           <h1>{{ props.title }}</h1>
           <slot name="badge" />
@@ -72,6 +76,17 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__copy {
   min-width: 0;
+}
+
+.mrr-page-header__eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--mrr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.82;
 }
 
 .mrr-page-header__title-row {

@@ -4,9 +4,15 @@
   "description": "MRR 医疗影像记录管理系统文档",
   "type": "module",
   "scripts": {
-    "docs:dev": "vitepress dev",
-    "docs:build": "vitepress build",
-    "docs:preview": "vitepress preview"
+    "docs:dev": "npm run docs:dev:user",
+    "docs:dev:user": "node scripts/run-docs.mjs user dev",
+    "docs:dev:internal": "node scripts/run-docs.mjs internal dev",
+    "docs:build": "npm run docs:build:user && npm run docs:build:internal",
+    "docs:build:user": "node scripts/run-docs.mjs user build",
+    "docs:build:internal": "node scripts/run-docs.mjs internal build",
+    "docs:preview": "npm run docs:preview:user",
+    "docs:preview:user": "node scripts/run-docs.mjs user preview",
+    "docs:preview:internal": "node scripts/run-docs.mjs internal preview"
   },
   "dependencies": {
     "mermaid": "^11.14.0",

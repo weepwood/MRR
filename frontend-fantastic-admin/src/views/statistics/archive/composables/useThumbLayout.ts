@@ -4,28 +4,25 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const GAP = 6
 const CONTAINER_HORIZONTAL_PADDING = 16
-const MIN_ITEM_WIDTH = 156
-const MAX_ITEM_WIDTH = 220
 const SCROLL_LOAD_THRESHOLD = 80
 
 export function useThumbLayout(
   thumbsContainer: Ref<HTMLElement | null>,
   viewMode: Ref<ViewMode>,
+  preferredWidth: Ref<number>,
+  preloadCount: Ref<number>,
 ) {
   const thumbColumns = ref(1)
-  const thumbItemWidth = ref(184)
-  const pageSize = ref(20)
-  const visibleCount = ref(20)
+  const thumbItemWidth = ref(preferredWidth.value)
+  const pageSize = ref(preloadCount.value)
+  const visibleCount = ref(preloadCount.value)
 
   let resizeObserver: ResizeObserver | null = null
   let usesWindowResize = false
 
   function updatePageSize(nextPageSize: number): void {
     pageSize.value = Math.max(1, nextPageSize)
-    // When the panel grows, keep enough items rendered to fill the new viewport.
-    // Never shrink visibleCount here, otherwise a resize could hide items the user
-    // has already loaded.
-    visibleCount.value = Math.max(visibleCount.value, pageSize.value)
+    visibleCount.value = Math.max(visibleCount.value, pageSize.value, preloadCount.value)
   }
 
   function calc(): void {
@@ -34,33 +31,32 @@ export function useThumbLayout(
       thumbColumns.value = 1
       return
     }
+
     const containerWidth = Math.max(1, container.clientWidth - CONTAINER_HORIZONTAL_PADDING)
     if (viewMode.value === 'list') {
       thumbColumns.value = 1
-      updatePageSize(40)
+      thumbItemWidth.value = containerWidth
+      updatePageSize(Math.max(40, preloadCount.value))
       return
     }
-    const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (MIN_ITEM_WIDTH + GAP)))
-    const actualItemWidth = Math.min(
-      MAX_ITEM_WIDTH,
-      Math.max(MIN_ITEM_WIDTH, (containerWidth - (idealCols - 1) * GAP) / idealCols),
-    )
+
+    const targetWidth = Math.min(320, Math.max(160, preferredWidth.value))
+    const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (targetWidth + GAP)))
+    const actualItemWidth = Math.max(140, (containerWidth - (idealCols - 1) * GAP) / idealCols)
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 
-    // Source images may have different aspect ratios, so this is only a neutral
-    // estimate used to decide how many lazy items to render initially.
     const estimatedItemHeight = actualItemWidth + 52
     const visibleRows = Math.ceil(container.clientHeight / estimatedItemHeight)
-    updatePageSize(thumbColumns.value * Math.max(2, visibleRows + 1))
+    updatePageSize(Math.max(preloadCount.value, thumbColumns.value * Math.max(2, visibleRows + 1)))
   }
 
   function resetVisible(): void {
-    visibleCount.value = pageSize.value
+    visibleCount.value = Math.max(pageSize.value, preloadCount.value)
   }
 
   function loadMore(): void {
-    visibleCount.value += pageSize.value
+    visibleCount.value += Math.max(pageSize.value, preloadCount.value)
   }
 
   function onScroll(): void {
@@ -102,7 +98,7 @@ export function useThumbLayout(
     }
   })
 
-  watch(viewMode, () => {
+  watch([viewMode, preferredWidth, preloadCount], () => {
     nextTick(() => {
       calc()
       resetVisible()

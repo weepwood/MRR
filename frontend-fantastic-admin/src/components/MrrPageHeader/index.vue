@@ -40,29 +40,33 @@ const hasAside = computed(() => Boolean(slots.actions))
 <style scoped>
 .mrr-page-header {
   display: flex;
-  gap: var(--mrr-space-5);
+  gap: var(--mrr-space-6);
   align-items: flex-start;
   justify-content: space-between;
   min-width: 0;
+  padding: 2px 2px 18px;
+  border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
 .mrr-page-header__main {
   display: flex;
-  gap: var(--mrr-space-3);
+  gap: 14px;
   align-items: flex-start;
   min-width: 0;
 }
 
 .mrr-page-header__icon {
   display: grid;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  font-size: 17px;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  font-size: 19px;
   color: var(--mrr-primary);
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--mrr-primary) 12%, var(--mrr-card)), color-mix(in srgb, var(--mrr-primary) 5%, var(--mrr-card)));
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
   border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-xs);
   place-items: center;
 }
 
@@ -79,18 +83,18 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: clamp(22px, 2vw, 25px);
+  font-weight: 680;
+  line-height: 1.24;
   color: var(--mrr-foreground);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
 }
 
 .mrr-page-header__description {
-  max-width: 760px;
-  margin: 5px 0 0;
+  max-width: 780px;
+  margin: 6px 0 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--mrr-muted-foreground);
 }
 
@@ -110,6 +114,7 @@ const hasAside = computed(() => Boolean(slots.actions))
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
+  padding-top: 2px;
 }
 
 .mrr-page-header__aside :deep(.el-button + .el-button) {
@@ -119,6 +124,7 @@ const hasAside = computed(() => Boolean(slots.actions))
 @media (width <= 760px) {
   .mrr-page-header {
     flex-direction: column;
+    padding-bottom: 16px;
   }
 
   .mrr-page-header__aside {

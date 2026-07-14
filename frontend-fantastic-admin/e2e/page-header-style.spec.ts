@@ -35,7 +35,7 @@ test.describe('页面标题统一风格', () => {
     await expect(settingsTitle).toBeVisible()
     expect(await settingsTitle.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
     expect(await settingsHeader.locator('.header-icon').evaluate(node => window.getComputedStyle(node).display)).toBe('none')
-    const settingsEyebrow = await settingsHeader.locator('.header-title > div').evaluate((node) => {
+    const settingsEyebrow = await settingsHeader.locator('.header-title').evaluate((node) => {
       return window.getComputedStyle(node, '::before').content
     })
     expect(settingsEyebrow).toContain('System Settings')

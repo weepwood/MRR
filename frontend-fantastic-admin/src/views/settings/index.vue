@@ -27,6 +27,7 @@ const settings = reactive({
   maintenanceMessage: '系统维护中，请稍后再试',
   performanceMonitoring: true,
   errorReporting: true,
+  archiveWatermarkEnabled: true,
 })
 
 const LOCAL_KEY = 'MRR-ADMIN:system-settings'
@@ -42,7 +43,7 @@ async function loadSettings() {
       Object.assign(settings, serverSettings)
       // 类型转换：将字符串还原为正确类型
       const intFields = ['maxFileSize', 'sessionTimeout', 'backupInterval', 'smtpPort']
-      const boolFields = ['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting']
+      const boolFields = ['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting', 'archiveWatermarkEnabled']
       for (const f of intFields) {
         const v = Number((settings as any)[f])
         if (!Number.isNaN(v)) (settings as any)[f] = v
@@ -83,7 +84,7 @@ function syncToLocal() {
 function prepareSaveData(): Record<string, string> {
   const data: Record<string, string> = {}
   const intFields = new Set(['maxFileSize', 'sessionTimeout', 'backupInterval', 'smtpPort'])
-  const boolFields = new Set(['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting'])
+  const boolFields = new Set(['autoBackup', 'emailNotification', 'maintenanceMode', 'performanceMonitoring', 'errorReporting', 'archiveWatermarkEnabled'])
   for (const [key, val] of Object.entries(settings)) {
     if (intFields.has(key)) {
       data[key] = String(val)
@@ -212,6 +213,9 @@ onMounted(async () => {
                 </el-form-item>
                 <el-form-item label="错误上报">
                   <el-switch v-model="settings.errorReporting" />
+                </el-form-item>
+                <el-form-item label="影像档案袋水印">
+                  <el-switch v-model="settings.archiveWatermarkEnabled" />
                 </el-form-item>
               </el-form>
             </el-card>

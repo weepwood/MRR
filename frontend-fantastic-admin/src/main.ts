@@ -1,6 +1,7 @@
 import iconConfig from '@/iconify/index.json'
 // 自定义指令
 import directive from '@/utils/directive'
+import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 
 import App from './App.vue'
@@ -24,6 +25,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 app.use(uiProvider)
+installArchiveWatermark(router, pinia)
 directive(app)
 app.mount('#app')
 

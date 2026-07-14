@@ -178,16 +178,212 @@ export interface ResponseMetricAnalysis {
   slowEndpoints: SlowEndpointMetric[]
 }
 
-/** 系统健康信息 */
-export interface HealthInfo {
-  status?: string
-  timestamp?: string
-  port?: string
-  application?: string
-  components?: Record<string, { status?: string, [key: string]: unknown }>
+/** 日志记录 */
+export interface LogRecord {
+  id?: number
+  username?: string
+  clientIp?: string
+  requestUri?: string
+  method?: string
+  userAgent?: string
+  accessTime?: string
+  queryString?: string
+  requestBody?: string
+  responseStatus?: number
+  executeTime?: number | null
+  referer?: string
+  auditAction?: string
+  auditTarget?: string
+  auditDescription?: string
 }
 
-/** JVM 运行时信息 */
+/** 图片访问审计聚合项 */
+export interface ImageAuditCountItem {
+  label: string
+  count: number
+}
+
+/** 图片访问审计每日趋势 */
+export interface ImageAuditTrendItem {
+  date: string
+  count: number
+}
+
+/** 图片访问审计分析汇总 */
+export interface ImageAuditAnalytics {
+  totalAccesses: number
+  uniqueUsers: number
+  uniqueTargets: number
+  abnormalAccesses: number
+  averageDurationMs: number
+  trend: ImageAuditTrendItem[]
+  actionDistribution: ImageAuditCountItem[]
+  topUsers: ImageAuditCountItem[]
+}
+
+/** 加密ID搜索参数 */
+export interface EncryptIDSearchParams {
+  EncryptID: string
+  userId: string
+  iv: string
+  timestamp: string
+}
+
+/** 认证用户（对齐后端 AuthUserProfileDTO） */
+export interface AuthUser {
+  id?: number
+  username?: string
+  displayName?: string
+  roleCode?: string
+  roleName?: string
+  permissions?: string[]
+  status?: string
+  lastLoginAt?: string
+}
+
+/** 认证角色（对齐后端 AuthRole） */
+export interface AuthRole {
+  code?: string
+  name?: string
+  description?: string
+  permissions?: string
+  sortOrder?: number
+}
+
+/** 角色更新请求 */
+export interface AuthRoleUpdatePayload {
+  name?: string
+  description?: string
+  permissions?: string
+  sortOrder?: number
+}
+
+/** 用户更新请求（对齐后端 AuthUserUpdateRequest） */
+export interface AuthUserUpdatePayload {
+  displayName?: string
+  roleCode: string
+  status: string
+}
+
+/** 登录请求 */
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+/** 登录响应 */
+export interface LoginResponse {
+  token?: string
+  accessToken?: string
+  jwt?: string
+  user?: AuthUser
+  profile?: AuthUser
+  data?: LoginResponse
+}
+
+/** 注册请求 */
+export interface RegisterRequest {
+  username: string
+  password: string
+  displayName?: string
+}
+
+/** 注册响应（与登录响应结构一致） */
+export interface RegisterResponse {
+  token?: string
+  user?: AuthUser
+}
+
+/** OSS 上传结果 */
+export interface OssUploadResult {
+  scanId?: number
+  ossUrl?: string
+  fileSize?: number
+  checksumMd5?: string
+  status?: string
+  errorMessage?: string
+}
+
+/** 迁移统计 */
+export interface MigrationStatistics {
+  totalCount?: number
+  migratedCount?: number
+  pendingCount?: number
+  failedCount?: number
+  percentage?: number
+}
+
+/** 迁移日志记录 */
+export interface MigrationLogRecord {
+  id?: number
+  scanId?: number
+  localPath?: string
+  ossUrl?: string
+  migrationStatus?: string
+  errorMessage?: string
+  fileSize?: number
+  checksumMd5?: string
+  migratedAt?: string
+  verifiedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+// ===================================================================
+// 系统监控类型
+// ===================================================================
+
+/** JVM 基本信息 */
+export interface JvmInfo {
+  javaVersion?: string
+  javaVendor?: string
+  javaHome?: string
+  availableProcessors?: number
+  maxMemory?: string
+  totalMemory?: string
+  freeMemory?: string
+  usedMemory?: string
+}
+
+/** 应用基本信息 */
+export interface AppInfo {
+  name?: string
+  startTime?: string
+  runTime?: string
+}
+
+/** OS 信息 */
+export interface OsInfo {
+  name?: string
+  version?: string
+  arch?: string
+  availableProcessors?: string
+  systemLoadAverage?: string
+}
+
+/** 系统信息（GET /system/info） */
+export interface SystemInfo {
+  application?: AppInfo
+  jvm?: JvmInfo
+  operatingSystem?: OsInfo
+}
+
+/** 内存使用数据 */
+export interface MemoryUsage {
+  init?: string
+  used?: string
+  committed?: string
+  max?: string
+}
+
+/** 内存信息（GET /system/memory） */
+export interface MemoryInfo {
+  heap?: MemoryUsage
+  nonHeap?: MemoryUsage
+  usagePercent?: string
+}
+
+/** 运行时信息（GET /system/runtime） */
 export interface RuntimeInfo {
   name?: string
   startTime?: number
@@ -197,58 +393,36 @@ export interface RuntimeInfo {
   inputArguments?: string[]
 }
 
-/** 内存信息 */
-export interface MemorySegment {
-  init?: string
-  used?: string
-  committed?: string
-  max?: string
-}
-
-export interface MemoryInfo {
-  heap?: MemorySegment
-  nonHeap?: MemorySegment
+/** 组件健康状态 */
+export interface ComponentHealth {
+  status?: string
   usagePercent?: string
+  error?: string
 }
 
-/** 系统与 JVM 基本信息 */
-export interface SystemInfo {
-  application?: {
-    name?: string
-    startTime?: string
-    runTime?: string
-  }
-  jvm?: {
-    javaVersion?: string
-    javaVendor?: string
-    javaHome?: string
-    availableProcessors?: number
-    maxMemory?: string
-    totalMemory?: string
-    freeMemory?: string
-    usedMemory?: string
-  }
-  operatingSystem?: {
-    name?: string
-    version?: string
-    arch?: string
-    availableProcessors?: string
-    systemLoadAverage?: string
-  }
+/** 健康检查（GET /system/health） */
+export interface HealthInfo {
+  status?: string
+  timestamp?: string
+  port?: string
+  application?: string
+  components?: Record<string, ComponentHealth>
 }
 
+/** GC 统计单项 */
 export interface GcStatItem {
   name?: string
   count?: number
   timeMs?: number
 }
 
-export interface GcStats {
+/** GC 统计 */
+export interface GcStats extends Record<string, GcStatItem | number | undefined> {
   totalCollections?: number
   totalTimeMs?: number
-  [key: string]: GcStatItem | number | undefined
 }
 
+/** 线程统计 */
 export interface ThreadStats {
   currentCount?: number
   daemonCount?: number
@@ -256,6 +430,7 @@ export interface ThreadStats {
   totalStarted?: number
 }
 
+/** 系统监控总览（GET /system/overview） */
 export interface SystemOverview {
   info?: SystemInfo
   memory?: MemoryInfo
@@ -266,15 +441,71 @@ export interface SystemOverview {
   threads?: ThreadStats
 }
 
+// ===================================================================
+// 统计报表类型
+// ===================================================================
+
+/** 统计明细查询参数 */
+export interface StatisticsDetailQuery {
+  startDate?: string
+  endDate?: string
+  type?: string
+  keyword?: string
+  date?: string
+  page?: number
+  size?: number
+}
+
+/** 统计明细记录 */
+export interface StatisticsDetailRecord {
+  id?: number
+  bah?: string
+  name?: string
+  department?: string
+  admissionTime?: string
+  date?: string
+  type?: string
+  pages?: number
+  sjh?: string
+  openerNo?: string
+  cid?: string
+}
+
+/** 病案统计查询参数 */
+export interface RecordsStatisticsQuery {
+  page?: number
+  size?: number
+  startDate?: string
+  endDate?: string
+  type?: string
+  date?: string
+  keyword?: string
+}
+
+/** 病案统计记录 */
+export interface RecordsStatistic {
+  bah?: string
+  cid?: string
+  openerNo?: string
+  date?: string
+  type?: string
+  pages?: number
+  sjh?: string
+  recordCount?: number
+  totalPages?: number
+  totalRecords?: number
+}
+
+/** Actuator 指标测量值 */
 export interface ActuatorMeasurement {
   statistic?: string
   value?: number
 }
 
+/** Actuator 指标（GET /actuator/metrics/{name}） */
 export interface ActuatorMetric {
   name?: string
   description?: string
   baseUnit?: string
   measurements?: ActuatorMeasurement[]
-  availableTags?: Array<{ tag?: string, values?: string[] }>
 }

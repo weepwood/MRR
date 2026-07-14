@@ -124,10 +124,10 @@ function formatDate(value: unknown) {
   return text.replace(/\//g, '-').split(/[ T]/)[0]
 }
 
-async function copyCode(text: string, label: string) {
+async function copyCode(text: string, label: string, originalText: string) {
   try {
     await navigator.clipboard.writeText(text)
-    ElMessage.success(`${label} 已复制`)
+    ElMessage.success(`${label} ${originalText} 已复制`)
   }
   catch {
     ElMessage.error('复制失败')
@@ -528,12 +528,12 @@ onBeforeUnmount(() => {
                   <strong class="folder-code-value">{{ formatDate(item.dischargeDate) }}</strong>
                 </div>
                 <div class="folder-code-block folder-code-copyable" title="点击复制病案号"
-                  @click="copyCode(padTo8Digits(item.bah), '病案号')">
+                  @click="copyCode(padTo8Digits(item.bah), '病案号', item.bah)">
                   <span class="folder-code-label">病案号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
                 </div>
                 <div class="folder-code-block folder-code-copyable" title="点击复制上架号"
-                  @click="copyCode(padTo8Digits(item.sjh), '上架号')">
+                  @click="copyCode(padTo8Digits(item.sjh), '上架号', item.sjh)">
                   <span class="folder-code-label">上架号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.sjh) }}</strong>
                 </div>

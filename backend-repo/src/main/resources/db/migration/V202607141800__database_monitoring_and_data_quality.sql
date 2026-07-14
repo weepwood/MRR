@@ -1,10 +1,10 @@
--- PostgreSQL statement statistics. The deployment user must be allowed to create extensions.
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+-- Data quality result tables. PostgreSQL monitoring extensions are configured separately
+-- by an administrator through monitoring/postgresql/enable-monitoring.sql.
 
 CREATE TABLE IF NOT EXISTS mrr_data_quality_run (
     id BIGSERIAL PRIMARY KEY,
     status VARCHAR(20) NOT NULL,
-    triggered_by VARCHAR(32) NOT NULL DEFAULT 'scheduled',
+    triggered_by VARCHAR(32) NOT NULL DEFAULT 'manual',
     check_count INTEGER NOT NULL DEFAULT 0,
     total_issues BIGINT NOT NULL DEFAULT 0,
     critical_count BIGINT NOT NULL DEFAULT 0,

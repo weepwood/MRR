@@ -375,7 +375,8 @@ onUnmounted(() => {
           </el-table>
         </el-card>
       </el-col>
-
+    </el-row>
+    <el-row :gutter="20" class="monitor-row">
       <el-col :xs="24" :xl="11">
         <el-card shadow="never" class="monitor-card">
           <template #header>

@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import type { GalleryImage, RouteArchiveMeta, ViewMode } from './archive/types'
+import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
+import {
+  createDefaultSystemSettings,
+  loadEffectiveSystemSettings,
+  SYSTEM_SETTINGS_UPDATED_EVENT,
+} from '@/utils/system-settings'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import PatientCard from './archive/components/PatientCard.vue'
@@ -35,9 +41,11 @@ const {
   saveImageType,
 } = useArchiveImages()
 
+const archiveSettings = reactive<EffectiveSystemSettings>(createDefaultSystemSettings())
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
+const previewMode = ref<ArchivePreviewMode>('single')
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
 
 const filteredImages = computed<GalleryImage[]>(() =>
@@ -47,7 +55,16 @@ const filteredImages = computed<GalleryImage[]>(() =>
 )
 
 const selection = useSelection<GalleryImage>(filteredImages)
-const { selectedCount, allVisibleSelected, selectedItems, isSelected, toggleSelect, selectAllVisible } = selection
+const {
+  selectedIds,
+  selectedCount,
+  allVisibleSelected,
+  selectedItems,
+  isSelected,
+  toggleSelect,
+  selectAllVisible,
+  keyOf,
+} = selection
 
 const { printing, exportingPdf, printSelected, exportSelectedPdf } = useArchivePrint()
 
@@ -55,6 +72,9 @@ const currentImage = computed(() => filteredImages.value[selectedImageIndex.valu
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
 const typeStats = computed(() => buildTypeStats(images.value))
 const patient = computed(() => patientList.value[0])
+const archiveWorkspaceStyle = computed(() => ({
+  '--archive-thumb-column-width': `${archiveSettings.archiveThumbnailSize + 18}px`,
+}))
 
 const routeArchive = computed<RouteArchiveMeta>(() => ({
   bah: searchBah.value || sanitizeParam(route.query.bah),
@@ -65,6 +85,15 @@ const routeArchive = computed<RouteArchiveMeta>(() => ({
   openerNo: sanitizeParam(route.query.openerNo),
   sjh: searchSjh.value || sanitizeParam(route.query.sjh),
 }))
+
+const selectionStorageKey = computed(() => {
+  const bah = normalizeSearchParam(searchBah.value)
+  const sjh = normalizeSearchParam(searchSjh.value)
+  if (!bah && !sjh) {
+    return ''
+  }
+  return `MRR-ADMIN:archive-selection:${bah || 'none'}:${sjh || 'none'}`
+})
 
 function sanitizeParam(val: unknown): string {
   const value = Array.isArray(val) ? val[0] : val
@@ -77,11 +106,61 @@ function normalizeSearchParam(value: unknown): string {
   return text ? padCode(text) : ''
 }
 
+function applyArchiveSettings(settings: EffectiveSystemSettings) {
+  Object.assign(archiveSettings, settings)
+  viewMode.value = settings.archiveDefaultView
+  previewMode.value = settings.archivePreviewMode
+}
+
+async function loadArchiveSettings() {
+  const { settings } = await loadEffectiveSystemSettings()
+  applyArchiveSettings(settings)
+}
+
+function handleRuntimeSettingsUpdated(event: Event) {
+  const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
+  if (settings) {
+    applyArchiveSettings(settings)
+  }
+}
+
+function restoreSelection() {
+  const key = selectionStorageKey.value
+  if (!archiveSettings.archiveRememberSelection || !key || !images.value.length) {
+    selectedIds.value = new Set()
+    return
+  }
+
+  try {
+    const raw = localStorage.getItem(key)
+    const stored = raw ? JSON.parse(raw) as string[] : []
+    const validKeys = new Set(images.value.map(keyOf))
+    selectedIds.value = new Set(stored.filter(item => validKeys.has(item)))
+  }
+  catch {
+    selectedIds.value = new Set()
+  }
+}
+
+function persistSelection() {
+  const key = selectionStorageKey.value
+  if (!archiveSettings.archiveRememberSelection || !key) {
+    return
+  }
+  try {
+    localStorage.setItem(key, JSON.stringify([...selectedIds.value]))
+  }
+  catch {
+    // 存储不可用时不影响当前选择操作。
+  }
+}
+
 function clearArchiveState(message = '') {
   images.value = []
   patientList.value = []
   errorMsg.value = message
   selectedImageIndex.value = 0
+  selectedIds.value = new Set()
 }
 
 async function syncSearchFromRoute() {
@@ -92,7 +171,6 @@ async function syncSearchFromRoute() {
   searchBah.value = bah
   searchSjh.value = sjh
 
-  // 旧链接 /archive/:bah 自动转换为具名查询参数，避免病案号和上架号语义混淆。
   if (legacyBah) {
     await router.replace({
       path: '/archive',
@@ -135,11 +213,7 @@ async function handleSearch() {
     query.sjh = sjh
   }
 
-  const location = {
-    path: '/archive',
-    query,
-  }
-
+  const location = { path: '/archive', query }
   if (router.resolve(location).fullPath === route.fullPath) {
     await loadImages()
     return
@@ -227,21 +301,36 @@ watch(filteredImages, () => {
   nextTick(() => thumbStripRef.value?.scrollToIndex(selectedImageIndex.value, false))
 })
 
-// 缓存模式、浏览器前进后退或直接打开链接时，同步 URL 中的搜索条件并重新加载。
 watch(
   () => [route.params.bah, route.query.bah, route.query.sjh],
   syncSearchFromRoute,
   { immediate: true },
 )
 
+watch(
+  [images, selectionStorageKey, () => archiveSettings.archiveRememberSelection],
+  () => nextTick(restoreSelection),
+)
+
+watch(selectedIds, persistSelection)
+
+watch(() => archiveSettings.archiveRememberSelection, (enabled) => {
+  if (!enabled && selectionStorageKey.value) {
+    localStorage.removeItem(selectionStorageKey.value)
+  }
+})
+
 onMounted(() => {
   document.body.classList.add('archive-immersive')
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, handleRuntimeSettingsUpdated)
+  void loadArchiveSettings()
 })
 
 onUnmounted(() => {
   document.body.classList.remove('archive-immersive')
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, handleRuntimeSettingsUpdated)
 })
 </script>
 
@@ -254,6 +343,7 @@ onUnmounted(() => {
         'is-empty': images.length === 0,
         'is-list-mode': viewMode === 'list',
       }"
+      :style="archiveWorkspaceStyle"
     >
       <section class="archive-sidebar">
         <ArchiveHeader
@@ -308,6 +398,8 @@ onUnmounted(() => {
           :images="filteredImages"
           :selected-index="selectedImageIndex"
           :is-selected="isSelected"
+          :thumbnail-size="archiveSettings.archiveThumbnailSize"
+          :preload-count="archiveSettings.archivePreloadCount"
           @select="selectImage"
           @toggle="toggleSelect"
         />
@@ -315,6 +407,7 @@ onUnmounted(() => {
 
       <PreviewPanel
         v-if="images.length > 0"
+        v-model:display-mode="previewMode"
         :image="currentImage"
         :preview-list="previewList"
         :index="selectedImageIndex"
@@ -322,6 +415,7 @@ onUnmounted(() => {
         :is-selected="currentImage ? isSelected(currentImage) : false"
         :saving-type="savingType"
         :loading="loading"
+        :auto-fit="archiveSettings.archiveAutoFit"
         @toggle="toggleCurrent"
         @save-type="handleSaveType"
         @navigate="navigate"
@@ -347,14 +441,14 @@ onUnmounted(() => {
 
 .archive-workspace.has-images {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
   gap: 12px;
   height: 100%;
   min-height: 0;
 }
 
 .archive-workspace.has-images.is-list-mode {
-  grid-template-columns: minmax(280px, 320px) 200px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
 }
 
 .archive-sidebar {

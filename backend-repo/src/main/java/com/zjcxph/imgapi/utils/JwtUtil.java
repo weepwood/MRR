@@ -11,6 +11,9 @@ import java.util.UUID;
 
 public final class JwtUtil {
 
+    public static final String ACCESS_TOKEN_TYPE = "access";
+    public static final String DOCUMENTATION_TOKEN_TYPE = "documentation";
+
     private static final String SECRET;
     private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
 
@@ -32,12 +35,27 @@ public final class JwtUtil {
     }
 
     public static String getToken(AuthSession session) {
+        return getToken(session, EXPIRE_MILLIS, ACCESS_TOKEN_TYPE);
+    }
+
+    public static String getToken(AuthSession session, long expireMillis) {
+        return getToken(session, expireMillis, ACCESS_TOKEN_TYPE);
+    }
+
+    public static String getToken(AuthSession session, long expireMillis, String tokenType) {
         if (session == null) {
             session = new AuthSession();
         }
+        if (expireMillis <= 0) {
+            throw new IllegalArgumentException("expireMillis must be greater than 0");
+        }
+        if (tokenType == null || tokenType.isBlank()) {
+            throw new IllegalArgumentException("tokenType must not be blank");
+        }
 
         com.auth0.jwt.JWTCreator.Builder builder = JWT.create()
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_MILLIS))
+                .withClaim("tokenType", tokenType)
+                .withExpiresAt(new Date(System.currentTimeMillis() + expireMillis))
                 .withJWTId(UUID.randomUUID().toString()); // 用于登出撤销
 
         if (session.getId() != null) {
@@ -67,7 +85,7 @@ public final class JwtUtil {
     }
 
     public static AuthSession parseToken(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
+        DecodedJWT decodedJWT = verify(token);
         AuthSession session = new AuthSession();
         session.setId(decodedJWT.getClaim("id").isNull() ? null : decodedJWT.getClaim("id").asLong());
         session.setUsername(decodedJWT.getClaim("username").asString());
@@ -82,19 +100,25 @@ public final class JwtUtil {
         return session;
     }
 
+    public static String getTokenType(String token) {
+        return verify(token).getClaim("tokenType").asString();
+    }
+
     /**
      * 从原始 token 字符串中提取 jti，用于黑名单检查。
      */
     public static String getJti(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
-        return decodedJWT.getId();
+        return verify(token).getId();
     }
 
     /**
      * 获取 token 的过期时间戳（毫秒），用于黑名单条目 TTL。
      */
     public static long getExpirationMillis(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
-        return decodedJWT.getExpiresAt().getTime();
+        return verify(token).getExpiresAt().getTime();
+    }
+
+    private static DecodedJWT verify(String token) {
+        return JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
     }
 }

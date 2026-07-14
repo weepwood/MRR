@@ -1,16 +1,29 @@
-FROM node:22-alpine AS build
-WORKDIR /app
+FROM node:22-alpine AS frontend-build
+WORKDIR /app/frontend
 
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY frontend-fantastic-admin/package.json \
+     frontend-fantastic-admin/pnpm-lock.yaml \
+     frontend-fantastic-admin/.npmrc ./
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+COPY frontend-fantastic-admin/ ./
 RUN pnpm build
 
+FROM node:22-alpine AS docs-build
+WORKDIR /app/docs
+
+COPY vitepress-doc/package.json vitepress-doc/package-lock.json ./
+RUN npm ci
+
+COPY vitepress-doc/ ./
+RUN npm run docs:build
+
 FROM nginx:1.27-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
+COPY --from=docs-build /app/docs/.vitepress/dist-user /usr/share/nginx/html/docs
+COPY --from=docs-build /app/docs/.vitepress/dist-internal /usr/share/nginx/html/docs/internal
+COPY frontend-fantastic-admin/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

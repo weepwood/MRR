@@ -256,7 +256,23 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
-
+    ],
+  },
+  {
+    meta: {
+      title: '帮助',
+      icon: 'i-ant-design:question-circle-twotone',
+    },
+    children: [
+      {
+        path: '/help',
+        component: () => import('@/views/help/index.vue'),
+        meta: {
+          title: '帮助与文档',
+          icon: 'i-ant-design:read-twotone',
+          cache: true,
+        },
+      },
     ],
   },
 ]

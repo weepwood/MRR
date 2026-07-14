@@ -63,7 +63,7 @@ pnpm dev
 ```
 
 ### 访问系统
-```
+```text
 前端地址: http://localhost:9000
 后端接口: http://localhost:18045
 默认账号: br_admin / br_password
@@ -79,23 +79,47 @@ cp .env.example .env # Windows PowerShell: Copy-Item .env.example .env
 docker compose up --build
 ```
 
+容器环境统一由前端 Nginx 对外提供服务：
+
+```text
+管理系统:       http://localhost:8080/
+帮助中心:       http://localhost:8080/help
+用户手册:       http://localhost:8080/docs/
+内部文档:       http://localhost:8080/docs/internal/
+实时 API 文档:  http://localhost:8080/api-docs/
+```
+
 ## 📚 文档
 
-完整文档基于 VitePress 构建，涵盖架构设计、API 接口、部署运维等全部内容。
+文档基于 VitePress 构建，并按访问级别生成两个相互独立的静态站点：
+
+| 站点 | 源文件范围 | 访问权限 |
+|------|------------|----------|
+| 用户手册 `/docs/` | `vitepress-doc/user-guide/` | 已登录账号 |
+| 内部文档 `/docs/internal/` | 完整项目、架构、开发与运维文档 | `system:read` 或管理员 |
+| Springdoc `/api-docs/` | 后端实时 OpenAPI 定义 | `system:read` 或管理员 |
+
+独立构建可以避免用户手册的本地搜索索引包含内部文档内容。浏览器从后台“帮助与文档”页面打开文档时，后端会签发 30 分钟有效的 HttpOnly 文档访问 Cookie，Nginx 使用 `auth_request` 验证页面、静态资源和 OpenAPI 请求。
 
 ```bash
 cd vitepress-doc
 npm install
-npm run docs:dev
-```
 
-- **在线文档**: 启动后访问 http://localhost:5173
-- **文档目录**: `vitepress-doc/`
+# 用户手册
+npm run docs:dev:user
+
+# 完整内部文档
+npm run docs:dev:internal
+
+# 同时构建两个站点
+npm run docs:build
+```
 
 开发环境、密钥配置与应用配置本地持久化请参考 [开发环境说明](vitepress-doc/development/setup.md)。
 
 | 文档模块 | 说明 |
 |----------|------|
+| [用户指南](vitepress-doc/user-guide/index.md) | 日常业务操作说明 |
 | [项目概览](vitepress-doc/ai-generation/项目概览/项目概览.md) | 系统目标、特性、技术架构 |
 | [安装指南](vitepress-doc/getting-started/installation.md) | 环境搭建与部署 |
 | [配置说明](vitepress-doc/getting-started/configuration.md) | 后端/前端配置参数 |
@@ -107,14 +131,14 @@ npm run docs:dev
 
 ## 📁 项目结构
 
-```
+```text
 MRR/
 ├── backend-repo/              # 后端 Spring Boot 项目
 │   ├── src/
 │   ├── Dockerfile
 │   ├── pom.xml
 │   └── ENGINEERING_GUIDE.md
-├── frontend-fantastic-admin/  # 前端 Vue 3 项目
+├── frontend-fantastic-admin/  # 前端 Vue 3 项目与统一 Nginx
 │   ├── src/
 │   ├── Dockerfile
 │   └── package.json
@@ -123,12 +147,16 @@ MRR/
 │   └── migration_*.sql
 ├── vitepress-doc/             # 文档系统
 │   ├── .vitepress/
+│   │   ├── config.mts         # 按环境选择用户/内部配置
+│   │   ├── config.user.mts
+│   │   └── config.internal.mts
+│   ├── user-guide/
 │   ├── getting-started/
 │   ├── ai-generation/
 │   └── package.json
 ├── docker-compose.yml         # Docker 编排
-├── start-docs.bat             # 文档启动脚本 (Windows)
-└── start-docs.sh              # 文档启动脚本 (Linux/macOS)
+├── start-docs.bat             # 用户手册启动脚本 (Windows)
+└── start-docs.sh              # 用户手册启动脚本 (Linux/macOS)
 ```
 
 ## 📊 项目状态

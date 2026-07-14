@@ -49,7 +49,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend-fantastic-admin
+      context: .
+      dockerfile: frontend-fantastic-admin/Dockerfile
     container_name: mrr-frontend
     depends_on:
       backend:

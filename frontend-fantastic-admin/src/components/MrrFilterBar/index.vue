@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ name: 'MrrFilterBar' })
+
 const props = withDefaults(defineProps<{
   compact?: boolean
 }>(), {

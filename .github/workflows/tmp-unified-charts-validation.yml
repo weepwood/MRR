@@ -36,7 +36,7 @@ jobs:
 
       - name: Extract unified chart sources
         run: |
-          base64 --decode scripts/tmp-unified-charts-src.tar.gz.b64 > /tmp/unified-charts-src.tar.gz
+          cat scripts/tmp-unified-charts-src.part-* | base64 --decode > /tmp/unified-charts-src.tar.gz
           tar -xzf /tmp/unified-charts-src.tar.gz -C .
 
       - name: Add ECharts dependency

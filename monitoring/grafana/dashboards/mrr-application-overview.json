@@ -1,0 +1,74 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "后端状态",
+      "id": 1,
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "up{job=\"mrr-backend\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "DOWN"}, "1": {"text": "UP"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "Hikari 活跃连接",
+      "id": 2,
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "hikaricp_connections_active{application=\"imgapi\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "Hikari 等待线程",
+      "id": 3,
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "targets": [{"expr": "hikaricp_connections_pending{application=\"imgapi\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "JVM 堆内存使用率",
+      "id": 4,
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "targets": [{"expr": "100 * sum(jvm_memory_used_bytes{application=\"imgapi\",area=\"heap\"}) / clamp_min(sum(jvm_memory_max_bytes{application=\"imgapi\",area=\"heap\"}), 1)", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP 请求速率",
+      "id": 5,
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5},
+      "targets": [
+        {"expr": "sum(rate(http_server_requests_seconds_count{application=\"imgapi\"}[5m]))", "legendFormat": "全部", "refId": "A"},
+        {"expr": "sum(rate(http_server_requests_seconds_count{application=\"imgapi\",status=~\"5..\"}[5m]))", "legendFormat": "5xx", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari 连接池",
+      "id": 6,
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"expr": "hikaricp_connections_active{application=\"imgapi\"}", "legendFormat": "活跃", "refId": "A"},
+        {"expr": "hikaricp_connections_idle{application=\"imgapi\"}", "legendFormat": "空闲", "refId": "B"},
+        {"expr": "hikaricp_connections_pending{application=\"imgapi\"}", "legendFormat": "等待", "refId": "C"},
+        {"expr": "hikaricp_connections_max{application=\"imgapi\"}", "legendFormat": "上限", "refId": "D"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["mrr", "spring-boot"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "MRR 应用概览",
+  "uid": "mrr-application-overview",
+  "version": 1
+}

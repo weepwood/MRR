@@ -42,68 +42,43 @@ const statusMeta = computed(() => {
 
 <style scoped>
 .mrr-status-tag {
-  --mrr-status-color: var(--text-secondary);
-  --mrr-status-bg: var(--surface-muted);
+  --mrr-status-color: var(--mrr-muted-foreground);
 
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   min-height: 24px;
-  padding: 3px 9px;
+  padding: 2px 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
   color: var(--mrr-status-color);
   white-space: nowrap;
-  background: var(--mrr-status-bg);
+  background: color-mix(in srgb, var(--mrr-status-color) 9%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-status-color) 18%, transparent);
-  border-radius: var(--mrr-radius-pill);
+  border-radius: var(--mrr-radius-sm);
 }
 
 .mrr-status-tag__dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background: currentcolor;
   border-radius: 50%;
 }
 
 .mrr-status-tag--success {
-  --mrr-status-color: #15803d;
-  --mrr-status-bg: #f0fdf4;
+  --mrr-status-color: #16803c;
 }
 
 .mrr-status-tag--info {
-  --mrr-status-color: #0369a1;
-  --mrr-status-bg: #f0f9ff;
+  --mrr-status-color: #087ea4;
 }
 
 .mrr-status-tag--warning {
-  --mrr-status-color: #b45309;
-  --mrr-status-bg: #fffbeb;
+  --mrr-status-color: #b45f06;
 }
 
 .mrr-status-tag--danger {
-  --mrr-status-color: #b91c1c;
-  --mrr-status-bg: #fef2f2;
-}
-
-:global(.dark) .mrr-status-tag--success {
-  --mrr-status-color: #86efac;
-  --mrr-status-bg: rgb(22 101 52 / 24%);
-}
-
-:global(.dark) .mrr-status-tag--info {
-  --mrr-status-color: #7dd3fc;
-  --mrr-status-bg: rgb(3 105 161 / 24%);
-}
-
-:global(.dark) .mrr-status-tag--warning {
-  --mrr-status-color: #fcd34d;
-  --mrr-status-bg: rgb(180 83 9 / 24%);
-}
-
-:global(.dark) .mrr-status-tag--danger {
-  --mrr-status-color: #fca5a5;
-  --mrr-status-bg: rgb(185 28 28 / 24%);
+  --mrr-status-color: var(--mrr-destructive);
 }
 </style>

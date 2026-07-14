@@ -1,67 +1,177 @@
-/* 页面布局与设计系统变量 */
+/* 页面布局与 MRR Console 设计令牌 */
 :root {
   color-scheme: light;
 
   /* 页面布局 */
-  --g-header-height: 60px;
-  --g-main-sidebar-width: 80px;
-  --g-sub-sidebar-width: 220px;
+  --g-header-height: 64px;
+  --g-main-sidebar-width: 72px;
+  --g-sub-sidebar-width: 248px;
   --g-sub-sidebar-collapse-width: 64px;
-  --g-sidebar-logo-height: 50px;
-  --g-tabbar-height: 50px;
-  --g-toolbar-height: 50px;
+  --g-sidebar-logo-height: 56px;
+  --g-tabbar-height: 44px;
+  --g-toolbar-height: 48px;
 
-  /* 滚动条 */
+  /* 页面宽度 */
+  --mrr-content-fluid: 1720px;
+  --mrr-content-standard: 1440px;
+  --mrr-content-narrow: 1120px;
+  --mrr-page-gap: 24px;
+
+  /* 4px 基础间距 */
+  --mrr-space-1: 4px;
+  --mrr-space-2: 8px;
+  --mrr-space-3: 12px;
+  --mrr-space-4: 16px;
+  --mrr-space-5: 20px;
+  --mrr-space-6: 24px;
+  --mrr-space-8: 32px;
+
+  /*
+   * 全局圆角体系。
+   * --radius 由“系统设置 → 应用配置 → 全局界面圆角”实时写入，
+   * MRR 页面、Element Plus 控件和影像档案袋共享同一圆角基准。
+   */
+  --mrr-radius-base: var(--radius, 0.5rem);
+  --mrr-radius-sm: clamp(0px, calc(var(--mrr-radius-base) - 6px), 18px);
+  --mrr-radius-md: clamp(0px, calc(var(--mrr-radius-base) - 4px), 20px);
+  --mrr-radius-lg: clamp(0px, calc(var(--mrr-radius-base) - 2px), 22px);
+  --mrr-radius-xl: clamp(0px, calc(var(--mrr-radius-base) + 2px), 26px);
+  --mrr-radius-2xl: clamp(0px, calc(var(--mrr-radius-base) + 6px), 30px);
+  --mrr-radius-card: var(--mrr-radius-base);
+  --mrr-radius-dialog: clamp(0px, calc(var(--mrr-radius-base) + 4px), 28px);
+  --mrr-radius-pill: 999px;
+  --mrr-control-radius: var(--mrr-radius-md);
+
+  /* 控件尺寸 */
+  --mrr-control-height: 36px;
+  --mrr-control-height-compact: 32px;
+  --mrr-control-height-large: 40px;
+  --mrr-table-header-height: 42px;
+  --mrr-table-row-height: 46px;
+
+  /* MRR 品牌色 */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-deep: #1e3a8a;
+  --color-success: #16803c;
+  --color-info: #087ea4;
+  --color-warning: #b45f06;
+  --color-danger: #d13c3c;
+
+  /* shadcn 语义表面 */
+  --mrr-background: hsl(var(--background));
+  --mrr-foreground: hsl(var(--foreground));
+  --mrr-card: hsl(var(--card));
+  --mrr-card-foreground: hsl(var(--card-foreground));
+  --mrr-popover: hsl(var(--popover));
+  --mrr-popover-foreground: hsl(var(--popover-foreground));
+  --mrr-secondary: hsl(var(--secondary));
+  --mrr-secondary-foreground: hsl(var(--secondary-foreground));
+  --mrr-muted: hsl(var(--muted));
+  --mrr-muted-foreground: hsl(var(--muted-foreground));
+  --mrr-accent: hsl(var(--accent));
+  --mrr-accent-foreground: hsl(var(--accent-foreground));
+  --mrr-border: hsl(var(--border));
+  --mrr-input: hsl(var(--border));
+  --mrr-ring: color-mix(in srgb, var(--color-primary) 72%, hsl(var(--ring)));
+  --mrr-primary: var(--color-primary);
+  --mrr-primary-foreground: #fff;
+  --mrr-destructive: var(--color-danger);
+  --mrr-destructive-foreground: #fff;
+  --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 10%, var(--mrr-card));
+
+  /* 现代 SaaS 应用壳层 */
+  --mrr-app-shell-bg: #f3f6fb;
+  --mrr-app-shell-grid: rgb(37 99 235 / 2.5%);
+  --mrr-navigation-bg: rgb(255 255 255 / 92%);
+  --mrr-navigation-bg-solid: #fff;
+  --mrr-navigation-border: rgb(15 23 42 / 8%);
+  --mrr-navigation-hover: #f3f6fb;
+  --mrr-navigation-active: color-mix(in srgb, var(--color-primary) 10%, #fff);
+  --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --mrr-topbar-bg: rgb(255 255 255 / 88%);
+  --mrr-workspace-bg: #f7f9fc;
+  --mrr-canvas-bg: #fff;
+  --mrr-shell-divider: rgb(15 23 42 / 7%);
+  --mrr-shell-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 10px 32px rgb(15 23 42 / 4%);
+
+  /* 兼容既有页面的语义别名 */
+  --text-primary: var(--mrr-foreground);
+  --text-secondary: var(--mrr-muted-foreground);
+  --text-tertiary: color-mix(in srgb, var(--mrr-muted-foreground) 72%, transparent);
+  --text-hint: color-mix(in srgb, var(--mrr-muted-foreground) 56%, transparent);
+  --surface: var(--mrr-card);
+  --surface-muted: var(--mrr-muted);
+  --surface-alt: var(--mrr-secondary);
+  --divider: var(--mrr-border);
+
+  /* 控件表面与交互 */
+  --mrr-control-bg: var(--mrr-background);
+  --mrr-control-bg-hover: var(--mrr-background);
+  --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 82%, var(--mrr-card));
+  --mrr-control-border: var(--mrr-input);
+  --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 22%, var(--mrr-input));
+
+  /* 阴影 */
+  --mrr-shadow-xs: 0 1px 2px rgb(15 23 42 / 4%);
+  --mrr-shadow-sm: 0 4px 10px rgb(15 23 42 / 7%);
+  --mrr-shadow-md: 0 12px 28px rgb(15 23 42 / 11%);
+  --mrr-shadow-lg: 0 24px 56px rgb(15 23 42 / 16%);
+  --mrr-shadow-card: none;
+  --mrr-shadow-dialog: var(--mrr-shadow-lg);
+
+  /* focus-visible ring */
+  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 30%, transparent);
+  --mrr-danger-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mrr-destructive) 22%, transparent);
+  --mrr-warning-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-warning) 22%, transparent);
+
+  /* 兼容旧变量 */
   --scrollbar-color: 240 5.9% 90%;
-
-  /* 语义化文本与表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
-  --text-primary: hsl(var(--foreground));
-  --text-secondary: hsl(var(--muted-foreground));
-  --text-tertiary: hsl(var(--muted-foreground) / 70%);
-  --text-hint: hsl(var(--muted-foreground) / 50%);
-  --surface: hsl(var(--card));
-  --surface-muted: hsl(var(--muted));
-  --surface-alt: hsl(var(--secondary));
-  --divider: hsl(var(--border));
-
-  /* MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） */
-
-  /* 品牌主色 */
-  --color-primary: #0075de;
-  --color-primary-active: #005bab;
-  --color-primary-deep: #213183;
-
-  /* 文本 */
   --color-text: rgb(0 0 0 / 95%);
-  --color-text-muted: #615d59;
-  --color-text-placeholder: #a39e98;
-
-  /* 表面 */
+  --color-text-muted: #625f5a;
+  --color-text-placeholder: #9b9892;
   --color-bg: #fff;
-  --color-bg-warm: #f6f5f4;
-  --color-bg-dark: #31302e;
-
-  /* 语义色 */
-  --color-success: #1aae39;
-  --color-info: #2a9d99;
-  --color-warning: #dd5b00;
-  --color-danger: #e03e3e;
-
-  /* 边框 */
+  --color-bg-warm: #f7f7f6;
+  --color-bg-dark: #252525;
   --color-border: rgb(0 0 0 / 10%);
-  --color-border-strong: rgb(0 0 0 / 16%);
+  --color-border-strong: rgb(0 0 0 / 18%);
 
   &.dark {
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;
+    --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
+    --mrr-control-bg: color-mix(in srgb, var(--mrr-card) 88%, white 2%);
+    --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-card) 84%, white 4%);
+    --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
+    --mrr-control-border: var(--mrr-input);
+    --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));
+    --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 20%, var(--mrr-card));
+    --mrr-app-shell-bg: #0f1218;
+    --mrr-app-shell-grid: rgb(96 165 250 / 3%);
+    --mrr-navigation-bg: rgb(19 24 33 / 94%);
+    --mrr-navigation-bg-solid: #131821;
+    --mrr-navigation-border: rgb(255 255 255 / 8%);
+    --mrr-navigation-hover: #1c2330;
+    --mrr-navigation-active: color-mix(in srgb, var(--color-primary) 19%, #131821);
+    --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 36%, transparent);
+    --mrr-topbar-bg: rgb(19 24 33 / 90%);
+    --mrr-workspace-bg: #111722;
+    --mrr-canvas-bg: #151b25;
+    --mrr-shell-divider: rgb(255 255 255 / 7%);
+    --mrr-shell-shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 14px 40px rgb(0 0 0 / 18%);
+    --mrr-shadow-xs: 0 1px 2px rgb(0 0 0 / 22%);
+    --mrr-shadow-sm: 0 6px 16px rgb(0 0 0 / 24%);
+    --mrr-shadow-md: 0 16px 36px rgb(0 0 0 / 32%);
+    --mrr-shadow-lg: 0 28px 72px rgb(0 0 0 / 48%);
     --color-text: rgb(255 255 255 / 95%);
-    --color-text-muted: #a39e98;
-    --color-text-placeholder: #615d59;
-    --color-bg: #31302e;
-    --color-bg-warm: #3d3a37;
-    --color-bg-dark: #252321;
+    --color-text-muted: #aaa7a2;
+    --color-text-placeholder: #706d69;
+    --color-bg: #252525;
+    --color-bg-warm: #2d2c2a;
+    --color-bg-dark: #1d1c1b;
     --color-border: rgb(255 255 255 / 10%);
-    --color-border-strong: rgb(255 255 255 / 16%);
+    --color-border-strong: rgb(255 255 255 / 18%);
   }
 }

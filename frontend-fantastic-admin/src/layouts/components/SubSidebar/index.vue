@@ -19,6 +19,11 @@ const enableSidebar = computed(() => {
   )
 })
 
+const activeSectionTitle = computed(() => {
+  const title = menuStore.allMenus[menuStore.actived]?.meta?.title
+  return typeof title === 'function' ? title() : title || '业务导航'
+})
+
 const transitionName = ref('')
 watch(() => menuStore.actived, (val, oldVal) => {
   if (settingsStore.mode === 'mobile' || settingsStore.settings.menu.mode === 'side') {
@@ -54,7 +59,11 @@ watch(() => menuStore.actived, (val, oldVal) => {
         }"
       />
       <component :is="useSlots('sub-sidebar-after-logo')" />
-      <FaScrollArea :scrollbar="false" mask gradient-color="var(--g-sub-sidebar-bg)" class="flex-1 overscroll-contain">
+      <div v-if="!(settingsStore.mode === 'pc' && settingsStore.settings.menu.subMenuCollapse)" class="sidebar-section-header">
+        <span>Workspace</span>
+        <strong>{{ activeSectionTitle }}</strong>
+      </div>
+      <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="flex-1 overscroll-contain">
         <TransitionGroup :name="transitionName">
           <template v-for="(mainItem, mainIndex) in menuStore.allMenus" :key="mainIndex">
             <div v-show="mainIndex === menuStore.actived">
@@ -67,13 +76,13 @@ watch(() => menuStore.actived, (val, oldVal) => {
           </template>
         </TransitionGroup>
       </FaScrollArea>
-      <div v-if="settingsStore.mode === 'pc'" class="relative flex items-center px-4 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
-        <FaButton v-show="settingsStore.settings.menu.enableSubMenuCollapseButton" variant="secondary" size="icon" class="h-8 w-8 transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
+      <div v-if="settingsStore.mode === 'pc'" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
+        <FaButton v-show="settingsStore.settings.menu.enableSubMenuCollapseButton" variant="ghost" size="icon" class="h-8 w-8 transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
           <FaIcon name="toolbar-collapse" class="size-4" />
         </FaButton>
       </div>
       <component :is="useSlots('sub-sidebar-after-menu')" />
-      <div v-if="settingsStore.settings.menu.mode === 'single'" class="flex-center px-4 pb-3">
+      <div v-if="settingsStore.settings.menu.mode === 'single'" class="account-area flex-center px-3 pb-3">
         <AccountButton :only-avatar="settingsStore.settings.menu.subMenuCollapse" dropdown-align="center" :dropdown-side="settingsStore.settings.menu.subMenuCollapse ? 'right' : 'top'" button-variant="secondary" :class="{ 'w-full': !settingsStore.settings.menu.subMenuCollapse }" />
       </div>
       <component :is="useSlots('sub-sidebar-bottom')" />
@@ -90,9 +99,9 @@ watch(() => menuStore.actived, (val, oldVal) => {
   display: flex;
   flex-direction: column;
   width: var(--g-sub-sidebar-width);
-  background-color: var(--g-sub-sidebar-bg);
-  box-shadow: -1px 0 0 0 hsl(var(--border)), 1px 0 0 0 hsl(var(--border));
-  transition: background-color 0.3s, inset-inline-start 0.3s, width 0.3s, box-shadow 0.3s;
+  color: var(--text-primary);
+  background: var(--mrr-navigation-bg-solid);
+  transition: background-color 220ms ease, inset-inline-start 220ms ease, width 220ms ease;
 
   &.is-collapse {
     width: var(--g-sub-sidebar-collapse-width);
@@ -106,43 +115,118 @@ watch(() => menuStore.actived, (val, oldVal) => {
         display: none;
       }
     }
+
+    .menu {
+      padding-inline: 4px;
+    }
+  }
+
+  .sidebar-logo {
+    min-height: var(--g-sidebar-logo-height);
+    background: transparent;
+    border-bottom: 1px solid var(--mrr-navigation-border);
+  }
+
+  .sidebar-section-header {
+    display: grid;
+    gap: 3px;
+    padding: 18px 18px 10px;
+
+    span {
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    strong {
+      overflow: hidden;
+      font-size: 15px;
+      font-weight: 650;
+      line-height: 1.35;
+      color: var(--text-primary);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   .menu {
     width: 100%;
+    padding: 4px 8px 16px;
+
+    :deep(.menu-item) {
+      padding: 2px 4px;
+
+      .menu-item-container {
+        min-height: 38px;
+        padding: 8px 10px !important;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary) !important;
+        border: 1px solid transparent;
+        border-radius: var(--mrr-radius-md);
+        transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+
+        &:hover {
+          color: var(--text-primary) !important;
+          background: var(--mrr-navigation-hover);
+        }
+
+        .menu-item-container-icon {
+          width: 17px;
+          height: 17px;
+          font-size: 17px !important;
+          transform: none !important;
+        }
+      }
+
+      &.active .menu-item-container {
+        font-weight: 600;
+        color: var(--color-primary) !important;
+        background: var(--mrr-navigation-active) !important;
+        border-color: var(--mrr-navigation-active-border);
+      }
+    }
+  }
+
+  .collapse-area,
+  .account-area {
+    border-top: 1px solid var(--mrr-navigation-border);
   }
 }
 
-/* 次侧边栏动画 */
+/* 次导航内容切换 */
 .sub-sidebar-x-start-enter-active,
 .sub-sidebar-x-end-enter-active,
 .sub-sidebar-y-start-enter-active,
 .sub-sidebar-y-end-enter-active {
-  transition: 0.2s;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .sub-sidebar-x-start-enter-from,
 .sub-sidebar-x-start-leave-active {
   opacity: 0;
-  transform: translateX(30px);
+  transform: translateX(8px);
 }
 
 .sub-sidebar-x-end-enter-from,
 .sub-sidebar-x-end-leave-active {
   opacity: 0;
-  transform: translateX(-30px);
+  transform: translateX(-8px);
 }
 
 .sub-sidebar-y-start-enter-from,
 .sub-sidebar-y-start-leave-active {
   opacity: 0;
-  transform: translateY(30px);
+  transform: translateY(8px);
 }
 
 .sub-sidebar-y-end-enter-from,
 .sub-sidebar-y-end-leave-active {
   opacity: 0;
-  transform: translateY(-30px);
+  transform: translateY(-8px);
 }
 
 .sub-sidebar-x-start-leave-active,
@@ -152,14 +236,14 @@ watch(() => menuStore.actived, (val, oldVal) => {
   position: absolute;
 }
 
-/* 次侧边栏动画 */
 .sub-sidebar-enter-active,
 .sub-sidebar-leave-active {
-  transition: 0.3s;
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
 .sub-sidebar-enter-from,
 .sub-sidebar-leave-to {
+  opacity: 0;
   transform: translateX(calc(var(--g-sub-sidebar-width) * -1));
 }
 </style>

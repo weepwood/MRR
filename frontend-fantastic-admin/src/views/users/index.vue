@@ -1,14 +1,29 @@
 <script setup lang="ts">
 import type { AuthRole, AuthUser, AuthUserUpdatePayload } from '@/api/types'
-import { Edit, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 
 defineOptions({ name: 'UsersPage' })
+
+type MetricTone = 'blue' | 'green' | 'danger' | 'violet'
+
+interface SummaryCard {
+  label: string
+  value: number
+  note: string
+  tone: MetricTone
+  icon: string
+}
 
 const { auth } = useAuth()
 const userStore = useUserStore()
@@ -48,14 +63,38 @@ const statusOptions = [
   { label: '禁用', value: 'disabled' },
 ]
 
-const summaryCards = computed(() => {
+const summaryCards = computed<SummaryCard[]>(() => {
   const activeCount = users.value.filter(user => normalizeStatus(user.status) === 'active').length
   const disabledCount = users.value.filter(user => normalizeStatus(user.status) === 'disabled').length
   return [
-    { label: '当前页用户', value: users.value.length, note: `共 ${total.value} 个账号` },
-    { label: '已启用', value: activeCount, note: '当前页可登录账号' },
-    { label: '已禁用', value: disabledCount, note: '当前页停用账号' },
-    { label: '角色数', value: roles.value.length, note: '可分配角色配置' },
+    {
+      label: '当前页用户',
+      value: users.value.length,
+      note: `系统共 ${total.value.toLocaleString('zh-CN')} 个账号`,
+      tone: 'blue',
+      icon: 'i-ant-design:user-outlined',
+    },
+    {
+      label: '已启用',
+      value: activeCount,
+      note: '当前页可正常登录账号',
+      tone: 'green',
+      icon: 'i-ant-design:check-circle-outlined',
+    },
+    {
+      label: '已禁用',
+      value: disabledCount,
+      note: '当前页已停止登录账号',
+      tone: 'danger',
+      icon: 'i-ant-design:stop-outlined',
+    },
+    {
+      label: '可分配角色',
+      value: roles.value.length,
+      note: '当前系统角色配置数量',
+      tone: 'violet',
+      icon: 'i-ant-design:safety-certificate-outlined',
+    },
   ]
 })
 
@@ -81,8 +120,8 @@ async function loadData() {
   catch (err: unknown) {
     users.value = []
     total.value = 0
-    const msg = err instanceof Error ? err.message : '用户列表加载失败'
-    error.value = msg
+    const message = err instanceof Error ? err.message : '用户列表加载失败'
+    error.value = message
   }
   finally {
     loading.value = false
@@ -95,7 +134,7 @@ function normalizeStatus(status: string | undefined) {
 
 function handleSearch() {
   page.value = 1
-  loadData()
+  void loadData()
 }
 
 function resetFilters() {
@@ -131,15 +170,15 @@ async function handleSaveEdit() {
       status: editForm.status,
     })
     const updated: AuthUser = res.data || {}
-    const idx = users.value.findIndex(user => user.id === editTarget.value!.id)
-    if (idx !== -1) {
-      users.value[idx] = { ...users.value[idx], ...updated }
+    const index = users.value.findIndex(user => user.id === editTarget.value!.id)
+    if (index !== -1) {
+      users.value[index] = { ...users.value[index], ...updated }
     }
     ElMessage.success('用户信息已更新')
     editVisible.value = false
   }
-  catch (error: any) {
-    ElMessage.error(error?.message || '更新失败')
+  catch (err: any) {
+    ElMessage.error(err?.message || '更新失败')
   }
   finally {
     editSaving.value = false
@@ -166,81 +205,80 @@ async function handleDisable(row: AuthUser) {
       { confirmButtonText: '确认禁用', cancelButtonText: '取消', type: 'warning' },
     )
     await apiUser.disableUser(row.id)
-    const idx = users.value.findIndex(user => user.id === row.id)
-    if (idx !== -1) {
-      users.value[idx] = { ...users.value[idx], status: 'disabled' }
+    const index = users.value.findIndex(user => user.id === row.id)
+    if (index !== -1) {
+      users.value[index] = { ...users.value[index], status: 'disabled' }
     }
     ElMessage.success('已禁用用户')
   }
-  catch (error: any) {
-    if (error === 'cancel' || error === 'close') { return }
-    ElMessage.error(error?.message || '禁用操作失败')
+  catch (err: any) {
+    if (err === 'cancel' || err === 'close') { return }
+    ElMessage.error(err?.message || '禁用操作失败')
   }
 }
 
-function statusTagType(status: string | undefined) {
-  const value = normalizeStatus(status)
-  if (value === 'active') { return 'success' }
-  if (value === 'disabled') { return 'danger' }
-  return 'info'
-}
-
-function statusLabel(status: string | undefined) {
-  const option = statusOptions.find(item => item.value === normalizeStatus(status))
-  return option?.label || status || '-'
-}
-
 function formatDateTime(value: string | undefined) {
-  return value ? new Date(value).toLocaleString('zh-CN') : '-'
+  if (!value) { return '-' }
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 onMounted(loadData)
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          User Management
-        </p>
-        <h2>用户管理</h2>
-        <p class="subtitle">
-          管理系统账号、角色分配、启停状态与最近登录信息。
-        </p>
-      </div>
-      <el-button :loading="loading" @click="loadData">
-        <el-icon><Refresh /></el-icon>
-        刷新
-      </el-button>
-    </div>
+  <MrrPageShell width="fluid">
+    <MrrPageHeader
+      title="用户管理"
+      description="管理系统账号、角色分配、启停状态与最近登录信息。"
+      icon="i-ant-design:team-outlined"
+    >
+      <template #actions>
+        <el-button :loading="loading" @click="loadData">
+          <FaIcon name="i-ri:refresh-line" />
+          刷新数据
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
-        </div>
-        <div class="summary-value">
-          {{ item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
+    <section class="mrr-metric-grid">
+      <MrrMetricCard
+        v-for="item in summaryCards"
+        :key="item.label"
+        :label="item.label"
+        :value="item.value"
+        :note="item.note"
+        :tone="item.tone"
+        :icon="item.icon"
+      />
     </section>
 
-    <el-card shadow="never">
-      <el-form class="filter-form" inline @submit.prevent>
-        <el-form-item label="关键字">
+    <MrrDataTablePanel
+      title="账号列表"
+      description="按账号、角色和启停状态筛选用户，操作结果会立即更新当前列表。"
+      icon="i-ant-design:unordered-list-outlined"
+      :count="total"
+    >
+      <template #filters>
+        <MrrFilterBar>
           <el-input
             v-model="filters.keyword"
+            class="users-filter__keyword"
             clearable
-            placeholder="用户名 / 显示名 / 角色"
+            placeholder="搜索用户名、显示名或角色"
             @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="filters.roleCode" clearable placeholder="全部角色" style="width: 160px;">
+          >
+            <template #prefix>
+              <FaIcon name="i-ri:search-line" />
+            </template>
+          </el-input>
+
+          <el-select
+            v-model="filters.roleCode"
+            class="users-filter__select"
+            clearable
+            placeholder="全部角色"
+          >
             <el-option
               v-for="role in roles"
               :key="role.code"
@@ -248,79 +286,97 @@ onMounted(loadData)
               :value="role.code!"
             />
           </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" clearable placeholder="全部状态" style="width: 140px;">
+
+          <el-select
+            v-model="filters.status"
+            class="users-filter__select users-filter__select--status"
+            clearable
+            placeholder="全部状态"
+          >
             <el-option
-              v-for="opt in statusOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
+              v-for="option in statusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
             />
           </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            查询
-          </el-button>
-          <el-button @click="resetFilters">
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
-      <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!users.length" description="暂无用户记录" />
-      <el-table v-else :data="users" stripe style="margin-top: 12px;">
-        <el-table-column prop="username" label="用户名" min-width="130" />
-        <el-table-column prop="displayName" label="显示名称" min-width="130">
+          <template #actions>
+            <el-button type="primary" @click="handleSearch">
+              <FaIcon name="i-ri:search-line" />
+              查询
+            </el-button>
+            <el-button @click="resetFilters">
+              <FaIcon name="i-ri:restart-line" />
+              重置
+            </el-button>
+          </template>
+        </MrrFilterBar>
+      </template>
+
+      <div v-if="loading" class="users-state">
+        <AppLoading type="table" :rows="8" />
+      </div>
+      <div v-else-if="error" class="users-state">
+        <AppError :message="error" @retry="loadData" />
+      </div>
+      <div v-else-if="!users.length" class="users-state">
+        <AppEmpty description="暂无符合条件的用户记录" />
+      </div>
+
+      <el-table v-else :data="users" row-key="id">
+        <el-table-column prop="username" label="用户名" min-width="140">
+          <template #default="{ row }">
+            <div class="user-identity">
+              <span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span>
+              <strong>{{ row.username || '-' }}</strong>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="displayName" label="显示名称" min-width="140">
           <template #default="{ row }">
             {{ row.displayName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="roleName" label="角色" min-width="120">
+        <el-table-column prop="roleName" label="角色" min-width="140">
           <template #default="{ row }">
-            <el-tag size="small" effect="plain">
+            <el-tag size="small" effect="plain" round>
               {{ row.roleName || row.roleCode || '-' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small">
-              {{ statusLabel(row.status) }}
-            </el-tag>
+            <MrrStatusTag :status="row.status" />
           </template>
         </el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" min-width="180">
+        <el-table-column prop="lastLoginAt" label="最后登录" min-width="190">
           <template #default="{ row }">
-            {{ formatDateTime(row.lastLoginAt) }}
+            <span class="mrr-tabular-number">{{ formatDateTime(row.lastLoginAt) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right" align="right">
           <template #default="{ row }">
-            <template v-if="canManage">
-              <el-button size="small" type="primary" @click="openEdit(row)">
-                <el-icon><Edit /></el-icon>
+            <div v-if="canManage" class="row-actions">
+              <el-button link type="primary" @click="openEdit(row)">
+                <FaIcon name="i-ri:edit-line" />
                 编辑
               </el-button>
               <el-button
-                size="small"
+                link
                 type="danger"
                 :disabled="normalizeStatus(row.status) === 'disabled' || isSelf(row.id)"
                 @click="handleDisable(row)"
               >
                 禁用
               </el-button>
-            </template>
-            <span v-else class="no-perm">无权限</span>
+            </div>
+            <span v-else class="no-perm">无操作权限</span>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pager">
+      <template #pagination>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="size"
@@ -330,24 +386,34 @@ onMounted(loadData)
           @size-change="handleSearch"
           @current-change="loadData"
         />
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
 
-    <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="editVisible"
+      title="编辑用户"
+      width="480px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
       <el-form
         ref="editFormRef"
+        class="user-edit-form"
         :model="editForm"
         :rules="editRules"
-        label-width="100px"
+        label-position="top"
       >
         <el-form-item label="用户名">
-          <span class="readonly-field">{{ editTarget?.username }}</span>
+          <div class="readonly-field">
+            <FaIcon name="i-ri:user-3-line" />
+            <span>{{ editTarget?.username }}</span>
+          </div>
         </el-form-item>
         <el-form-item label="显示名称">
           <el-input v-model="editForm.displayName" placeholder="默认使用用户名" clearable />
         </el-form-item>
         <el-form-item label="角色" prop="roleCode">
-          <el-select v-model="editForm.roleCode" placeholder="请选择角色" style="width: 100%;">
+          <el-select v-model="editForm.roleCode" placeholder="请选择角色" class="full-width">
             <el-option
               v-for="role in roles"
               :key="role.code"
@@ -357,12 +423,12 @@ onMounted(loadData)
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="editForm.status" placeholder="请选择状态" style="width: 100%;">
+          <el-select v-model="editForm.status" placeholder="请选择状态" class="full-width">
             <el-option
-              v-for="opt in statusOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
+              v-for="option in statusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
             />
           </el-select>
         </el-form-item>
@@ -372,82 +438,75 @@ onMounted(loadData)
           取消
         </el-button>
         <el-button type="primary" :loading="editSaving" @click="handleSaveEdit">
-          保存
+          <FaIcon name="i-ri:save-3-line" />
+          保存修改
         </el-button>
       </template>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
+.users-filter__keyword {
+  flex: 1 1 280px;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.users-filter__select {
+  flex: 0 0 170px;
+  width: 170px;
+}
+
+.users-filter__select--status {
+  flex-basis: 140px;
+  width: 140px;
+}
+
+.users-state {
   display: grid;
-  gap: 20px;
+  min-height: 280px;
+  padding: var(--mrr-space-5);
+  place-items: center;
 }
 
-.page-header {
+.user-identity {
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
 }
 
-.eyebrow {
-  margin: 0 0 6px;
+.user-identity strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+
+.user-avatar {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--divider));
+  border-radius: 50%;
+  place-items: center;
 }
 
-h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 8px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.filter-form {
-  row-gap: 8px;
-}
-
-.pager {
+.row-actions {
   display: flex;
-  justify-content: center;
-  margin-top: 16px;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.readonly-field {
-  font-size: 14px;
-  color: var(--text-secondary);
+.row-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .no-perm {
@@ -455,19 +514,35 @@ h2 {
   color: var(--text-tertiary);
 }
 
-@media (width <= 960px) {
-  .page-header {
-    flex-direction: column;
-  }
+.user-edit-form {
+  display: grid;
+  gap: 2px;
+}
 
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.readonly-field {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  width: 100%;
+  min-height: var(--mrr-control-height);
+  padding: 0 12px;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--divider);
+  border-radius: var(--mrr-radius-md);
+}
+
+.full-width {
+  width: 100%;
 }
 
 @media (width <= 640px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .users-filter__keyword,
+  .users-filter__select,
+  .users-filter__select--status {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
   }
 }
 </style>

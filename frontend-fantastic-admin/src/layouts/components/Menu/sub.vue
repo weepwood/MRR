@@ -88,21 +88,21 @@ const transitionEvent = computed(() => {
 const transitionClass = computed(() => {
   if (rootMenu.isMenuPopup) {
     return {
-      enterActiveClass: 'ease-in-out duration-300',
-      enterFromClass: 'opacity-0 translate-x-4',
-      enterToClass: 'opacity-100',
-      leaveActiveClass: 'ease-in-out duration-300',
-      leaveFromClass: 'opacity-100',
-      leaveToClass: 'opacity-0',
+      enterActiveClass: 'ease-out duration-150',
+      enterFromClass: 'opacity-0 scale-98 translate-y-1',
+      enterToClass: 'opacity-100 scale-100 translate-y-0',
+      leaveActiveClass: 'ease-in duration-120',
+      leaveFromClass: 'opacity-100 scale-100 translate-y-0',
+      leaveToClass: 'opacity-0 scale-98 translate-y-1',
     }
   }
   return {
-    enterActiveClass: 'ease-in-out duration-300',
-    enterFromClass: cn('opacity-0 translate-y-4 scale-95 blur-4', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
-    enterToClass: 'opacity-100 translate-y-0 scale-100 blur-0',
-    leaveActiveClass: 'ease-in-out duration-300',
-    leaveFromClass: 'opacity-100 translate-y-0 scale-100 blur-0',
-    leaveToClass: cn('opacity-0 translate-y-4 scale-95 blur-4', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
+    enterActiveClass: 'ease-out duration-160',
+    enterFromClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
+    enterToClass: 'opacity-100 translate-y-0',
+    leaveActiveClass: 'ease-in duration-140',
+    leaveFromClass: 'opacity-100 translate-y-0',
+    leaveToClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
   }
 })
 
@@ -150,7 +150,6 @@ function handleMouseenter() {
           if (rootMenu.props.mode === 'vertical' || props.level !== 0) {
             menuTop = top + el.scrollTop
             menuLeft = left + width
-            // 处理边界情况
             if (menuTop + subMenuEl.offsetHeight > window.innerHeight) {
               menuTop = Math.max(0, window.innerHeight - subMenuEl.offsetHeight)
             }
@@ -158,16 +157,13 @@ function handleMouseenter() {
           else {
             menuTop = top + height
             menuLeft = left
-            // 处理边界情况
             if (menuTop + subMenuEl.offsetHeight > window.innerHeight) {
               subMenuEl.style.height = `${window.innerHeight - menuTop}px`
             }
           }
-          // 处理边界情况
           if (menuLeft + subMenuEl.offsetWidth > document.documentElement.clientWidth) {
             menuLeft = left - width
           }
-          // 设置样式
           Object.assign(subMenuEl.style, {
             top: `${menuTop}px`,
             insetInlineStart: `${menuLeft}px`,
@@ -181,7 +177,7 @@ function handleMouseenter() {
       const path = props.menu.children ? rootMenu.subMenus[index].indexPath.at(-1)! : rootMenu.items[index].indexPath.at(-1)!
       rootMenu.openMenu(path, rootMenu.subMenus[path].indexPath)
     }
-  }, 300))
+  }, 240))
 }
 
 function handleMouseleave() {
@@ -195,13 +191,11 @@ function handleMouseleave() {
       if (rootMenu.mouseInMenu.length === 0) {
         rootMenu.closeMenu(props.uniqueKey)
       }
-      else {
-        if (hasChildren.value) {
-          !rootMenu.mouseInMenu.includes(props.uniqueKey.at(-1)!) && rootMenu.closeMenu(props.uniqueKey.at(-1)!)
-        }
+      else if (hasChildren.value) {
+        !rootMenu.mouseInMenu.includes(props.uniqueKey.at(-1)!) && rootMenu.closeMenu(props.uniqueKey.at(-1)!)
       }
     })
-  }, 300))
+  }, 240))
 }
 </script>
 
@@ -211,10 +205,8 @@ function handleMouseleave() {
     <Transition v-bind="transitionClass" v-on="transitionEvent">
       <FaScrollArea
         v-if="opened" ref="subMenuRef" :scrollbar="false" :mask="rootMenu.isMenuPopup" :class="cn('sub-menu static h-[calc-size(auto,size)] rounded-lg will-change-transform', {
-          'bg-[var(--g-sub-sidebar-bg)]': rootMenu.isMenuPopup,
-          'border shadow-xl fixed z-3000 w-[200px]': rootMenu.isMenuPopup,
+          'saas-popup-menu fixed z-3000 w-[220px] p-1 overscroll-contain': rootMenu.isMenuPopup,
           'mx-1': rootMenu.isMenuPopup && (rootMenu.props.mode === 'vertical' || level !== 0),
-          'py-1 overscroll-contain': rootMenu.isMenuPopup,
         })"
       >
         <template v-for="item in menu.children" :key="item.path ?? rootMenu.getUseId(item)">
@@ -224,3 +216,19 @@ function handleMouseleave() {
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.saas-popup-menu {
+  color: var(--mrr-popover-foreground);
+  background: color-mix(in srgb, var(--mrr-popover) 96%, transparent);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-md);
+  backdrop-filter: blur(16px) saturate(135%);
+}
+
+.saas-popup-menu :deep(.menu-item-container) {
+  min-height: 34px;
+  border-radius: var(--mrr-radius-md);
+}
+</style>

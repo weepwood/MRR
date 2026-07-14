@@ -46,8 +46,6 @@ public class SystemAvailabilityService {
     private final ZoneId zoneId;
     private final HttpClient httpClient;
 
-    private volatile boolean initialized;
-
     public SystemAvailabilityService(
             SystemAvailabilityRepository repository,
             JdbcTemplate jdbcTemplate,
@@ -76,16 +74,11 @@ public class SystemAvailabilityService {
     public synchronized void initialize() {
         if (!enabled) {
             logger.info("System availability history is disabled");
-            initialized = true;
             return;
         }
 
         try {
-            Instant now = Instant.now();
-            reconcileHeartbeatGap(now);
-            recordCurrentStatus(now, checkCurrentStatus());
-            repository.deleteEndedBefore(now.minus(retentionDays, ChronoUnit.DAYS));
-            initialized = true;
+            runHeartbeatCycle(true);
             logger.info("System availability history initialized");
         } catch (Exception exception) {
             logger.warn("Unable to initialize system availability history: {}", exception.getMessage());
@@ -98,14 +91,14 @@ public class SystemAvailabilityService {
     )
     @Transactional
     public synchronized void heartbeat() {
-        if (!enabled || !initialized) {
+        if (!enabled) {
             return;
         }
 
         try {
-            recordCurrentStatus(Instant.now(), checkCurrentStatus());
+            runHeartbeatCycle(false);
         } catch (Exception exception) {
-            // 数据库不可用时无法写入 DOWN；恢复后会根据最后心跳缺口补录停机区间。
+            // 数据库不可用时无法即时写入 DOWN；恢复后会根据最后心跳缺口补录停机区间。
             logger.warn("Unable to persist system availability heartbeat: {}", exception.getMessage());
         }
     }
@@ -196,6 +189,15 @@ public class SystemAvailabilityService {
                 "status", STATUS_UP,
                 "timestamp", Instant.now()
         );
+    }
+
+    private void runHeartbeatCycle(boolean cleanupOldPeriods) {
+        Instant now = Instant.now();
+        reconcileHeartbeatGap(now);
+        recordCurrentStatus(now, checkCurrentStatus());
+        if (cleanupOldPeriods) {
+            repository.deleteEndedBefore(now.minus(retentionDays, ChronoUnit.DAYS));
+        }
     }
 
     private void reconcileHeartbeatGap(Instant now) {

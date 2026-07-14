@@ -44,4 +44,22 @@ test.describe('无后端 Mock 模式', () => {
     const setting = await settingResponse.json()
     expect(setting.data).toBe('enabled')
   })
+
+  test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {
+    await page.goto('/archive')
+
+    await expect(page.getByRole('heading', { name: '影像档案袋' })).toBeVisible()
+
+    const archivePage = page.locator('.archive-page')
+    await expect(archivePage).toBeVisible()
+    const archiveBox = await archivePage.boundingBox()
+    expect(archiveBox?.height ?? 0).toBeGreaterThan(300)
+
+    const searchCard = page.locator('.search-card')
+    await expect(searchCard).toBeVisible()
+    const borderRadius = await searchCard.evaluate((element) => {
+      return Number.parseFloat(window.getComputedStyle(element).borderRadius)
+    })
+    expect(borderRadius).toBeGreaterThan(0)
+  })
 })

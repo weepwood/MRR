@@ -10,17 +10,16 @@ const props = defineProps<{
 
 const slots = useSlots()
 const hasAside = computed(() => Boolean(slots.actions))
-const isUsersHeader = computed(() => props.title === '用户管理')
 </script>
 
 <template>
   <header class="mrr-page-header">
     <div class="mrr-page-header__main">
-      <span v-if="props.icon && !isUsersHeader" class="mrr-page-header__icon" aria-hidden="true">
+      <span v-if="props.icon && props.title !== '用户管理'" class="mrr-page-header__icon" aria-hidden="true">
         <FaIcon :name="props.icon" />
       </span>
-      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow || isUsersHeader }">
-        <p v-if="props.eyebrow || isUsersHeader" class="mrr-page-header__eyebrow">
+      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow || props.title === '用户管理' }">
+        <p v-if="props.eyebrow || props.title === '用户管理'" class="mrr-page-header__eyebrow">
           {{ props.eyebrow || 'User Management' }}
         </p>
         <div class="mrr-page-header__title-row">

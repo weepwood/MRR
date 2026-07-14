@@ -253,67 +253,70 @@ onMounted(loadData)
       />
     </section>
 
+    <MrrFilterBar class="users-filter-bar">
+      <el-input
+        v-model="filters.keyword"
+        class="users-filter__keyword"
+        clearable
+        name="user-keyword"
+        autocomplete="off"
+        aria-label="搜索用户名、显示名或角色"
+        placeholder="搜索用户名、显示名或角色…"
+        @keyup.enter="handleSearch"
+      >
+        <template #prefix>
+          <FaIcon name="i-ri:search-line" />
+        </template>
+      </el-input>
+
+      <el-select
+        v-model="filters.roleCode"
+        class="users-filter__select"
+        clearable
+        aria-label="按角色筛选"
+        placeholder="全部角色"
+      >
+        <el-option
+          v-for="role in roles"
+          :key="role.code"
+          :label="role.name || role.code"
+          :value="role.code!"
+        />
+      </el-select>
+
+      <el-select
+        v-model="filters.status"
+        class="users-filter__select users-filter__select--status"
+        clearable
+        aria-label="按状态筛选"
+        placeholder="全部状态"
+      >
+        <el-option
+          v-for="option in statusOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </el-select>
+
+      <template #actions>
+        <el-button type="primary" :loading="loading" @click="handleSearch">
+          <FaIcon name="i-ri:search-line" />
+          查询
+        </el-button>
+        <el-button @click="resetFilters">
+          <FaIcon name="i-ri:restart-line" />
+          重置
+        </el-button>
+      </template>
+    </MrrFilterBar>
+
     <MrrDataTablePanel
       title="账号列表"
-      description="按账号、角色和启停状态筛选用户，操作结果会立即更新当前列表。"
+      description="展示用户账号、角色、启停状态与最近登录信息。"
       icon="i-ant-design:unordered-list-outlined"
       :count="total"
     >
-      <template #filters>
-        <MrrFilterBar>
-          <el-input
-            v-model="filters.keyword"
-            class="users-filter__keyword"
-            clearable
-            placeholder="搜索用户名、显示名或角色"
-            @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <FaIcon name="i-ri:search-line" />
-            </template>
-          </el-input>
-
-          <el-select
-            v-model="filters.roleCode"
-            class="users-filter__select"
-            clearable
-            placeholder="全部角色"
-          >
-            <el-option
-              v-for="role in roles"
-              :key="role.code"
-              :label="role.name || role.code"
-              :value="role.code!"
-            />
-          </el-select>
-
-          <el-select
-            v-model="filters.status"
-            class="users-filter__select users-filter__select--status"
-            clearable
-            placeholder="全部状态"
-          >
-            <el-option
-              v-for="option in statusOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-
-          <template #actions>
-            <el-button type="primary" @click="handleSearch">
-              <FaIcon name="i-ri:search-line" />
-              查询
-            </el-button>
-            <el-button @click="resetFilters">
-              <FaIcon name="i-ri:restart-line" />
-              重置
-            </el-button>
-          </template>
-        </MrrFilterBar>
-      </template>
-
       <div v-if="loading" class="users-state">
         <AppLoading type="table" :rows="8" />
       </div>
@@ -448,19 +451,18 @@ onMounted(loadData)
 
 <style scoped>
 .users-filter__keyword {
-  flex: 1 1 280px;
-  min-width: 220px;
-  max-width: 420px;
+  flex: 1 1 320px;
+  min-width: 260px;
 }
 
 .users-filter__select {
-  flex: 0 0 170px;
-  width: 170px;
+  flex: 0 1 190px;
+  width: 190px;
 }
 
 .users-filter__select--status {
-  flex-basis: 140px;
-  width: 140px;
+  flex-basis: 160px;
+  width: 160px;
 }
 
 .users-state {
@@ -534,6 +536,19 @@ onMounted(loadData)
 
 .full-width {
   width: 100%;
+}
+
+@media (width <= 1100px) {
+  .users-filter__keyword {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .users-filter__select,
+  .users-filter__select--status {
+    flex: 1 1 180px;
+    width: auto;
+  }
 }
 
 @media (width <= 640px) {

@@ -53,10 +53,10 @@ const summary = ref<ArchiveBoxSummary>({
 })
 
 const page = ref(1)
-const size = ref(20)
+const size = ref(100)
 const total = ref(0)
 const boxPage = ref(1)
-const boxSize = ref(20)
+const boxSize = ref(100)
 const boxTotal = ref(0)
 const boxKeyword = ref('')
 

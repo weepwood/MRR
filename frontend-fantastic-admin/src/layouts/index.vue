@@ -108,8 +108,8 @@ onBeforeUnmount(() => {
           <Topbar />
           <div class="main">
             <RouterView v-slot="{ Component, route }">
-              <Transition :name="!settingsStore.isReloading ? 'slide-right' : ''" mode="out-in">
-                <KeepAlive :include="keepAliveStore.list">
+              <Transition :name="!settingsStore.isReloading ? 'slide-right' : ''">
+                <KeepAlive :include="keepAliveStore.list" :max="10">
                   <component :is="Component" v-show="!isLink" :key="route.name ?? route.path" />
                 </KeepAlive>
               </Transition>
@@ -209,23 +209,27 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 主内容区动画 */
-.slide-right-enter-active {
-  transition: 0.2s;
+/* 主内容区动画：新旧页面同时过渡，避免 out-in 先清空内容造成白屏。 */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
 .slide-right-leave-active {
-  transition: 0.15s;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  pointer-events: none;
 }
 
 .slide-right-enter-from {
-  margin-left: -20px;
   opacity: 0;
+  transform: translateX(-8px);
 }
 
 .slide-right-leave-to {
-  margin-left: 20px;
   opacity: 0;
+  transform: translateX(8px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -237,6 +241,7 @@ onBeforeUnmount(() => {
   .slide-right-enter-from,
   .slide-right-leave-to {
     opacity: 1;
+    transform: none;
   }
 
   .wrapper,

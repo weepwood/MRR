@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { MrrBarSeries, MrrChartCountItem, MrrLineSeries } from '@/types/chart'
 import {
   ArrowRight,
   Calendar,
@@ -10,9 +11,8 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
+import { MrrChartCard, MrrDonutChart, MrrDualAxisChart } from '@/components/charts'
 import {
-  getDashboardData,
   getStatisticsDateSummary,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
@@ -34,7 +34,6 @@ interface TrendDisplayItem {
 const router = useRouter()
 const loading = ref(false)
 const summaryData = ref<any>({ total: {}, byType: [] })
-const dashboardData = ref<any>({ recentTrend: [], topBAH: [] })
 const dateSummaryData = ref<any[]>([])
 
 const totalRecords = computed(() => Number(summaryData.value.total?.totalRecords || 0))
@@ -52,18 +51,31 @@ const typeList = computed<TypeDisplayItem[]>(() => {
     .sort((a: TypeDisplayItem, b: TypeDisplayItem) => b.records - a.records)
 })
 
-const typeRecordTotal = computed(() => typeList.value.reduce((total, item) => total + item.records, 0))
-
 const trendDates = computed<TrendDisplayItem[]>(() => {
   const source = Array.isArray(dateSummaryData.value) ? dateSummaryData.value.slice(-10) : []
   return source.map((item: any) => ({
     date: String(item?.date || '-'),
     records: Number(item?.recordCount || 0),
-    pages: Number(item?.totalPages || 0),
+    pages: Number(item?.totalPages || item?.pages || 0),
   }))
 })
 
-const maxTrendPages = computed(() => Math.max(1, ...trendDates.value.map(item => item.pages)))
+const typeChartData = computed<MrrChartCountItem[]>(() => typeList.value.map(item => ({
+  label: item.type,
+  count: item.records,
+})))
+
+const trendCategories = computed(() => trendDates.value.map(item => formatShortDate(item.date)))
+const trendBars = computed<MrrBarSeries[]>(() => [{
+  name: '扫描页数',
+  data: trendDates.value.map(item => item.pages),
+}])
+const trendLines = computed<MrrLineSeries[]>(() => [{
+  name: '扫描记录数',
+  data: trendDates.value.map(item => item.records),
+  smooth: true,
+}])
+
 const recentRecordTotal = computed(() => trendDates.value.reduce((total, item) => total + item.records, 0))
 const recentPageTotal = computed(() => trendDates.value.reduce((total, item) => total + item.pages, 0))
 const averageDailyPages = computed(() => trendDates.value.length
@@ -106,13 +118,11 @@ const latestStatisticsDate = computed(() => trendDates.value.at(-1)?.date || '�
 async function loadData() {
   loading.value = true
   try {
-    const [summaryRes, dashboardRes, dateRes] = await Promise.all([
+    const [summaryRes, dateRes] = await Promise.all([
       getStatisticsSummary(),
-      getDashboardData(),
       getStatisticsDateSummary(),
     ])
     summaryData.value = summaryRes.data || { total: {}, byType: [] }
-    dashboardData.value = dashboardRes.data || { recentTrend: [], topBAH: [] }
     dateSummaryData.value = Array.isArray(dateRes.data) ? dateRes.data : []
   }
   catch (error: any) {
@@ -131,16 +141,6 @@ function formatShortDate(value: string) {
   const normalized = String(value || '').replace(/\//g, '-')
   const parts = normalized.split('-')
   return parts.length >= 3 ? `${parts.at(-2)}-${parts.at(-1)}` : normalized
-}
-
-function getTypePercentage(records: number) {
-  const total = typeRecordTotal.value || totalRecords.value
-  if (!total) { return 0 }
-  return Math.min(100, Math.round((records / total) * 100))
-}
-
-function getTrendHeight(pages: number) {
-  return `${Math.max(8, Math.round((pages / maxTrendPages.value) * 100))}%`
 }
 
 function goToDetail() {
@@ -206,89 +206,64 @@ onMounted(loadData)
     </section>
 
     <section class="analytics-grid">
-      <article class="data-panel type-panel">
-        <header class="panel-header">
-          <div>
-            <p class="panel-kicker">
-              Category Overview
-            </p>
-            <h3>病案类型分布</h3>
-            <p>按记录数量统计各扫描类型的占比与页数。</p>
-          </div>
+      <MrrChartCard
+        title="病案类型分布"
+        description="按记录数量统计各扫描类型占比"
+        :loading="loading"
+        :empty="!typeChartData.length"
+        empty-description="暂无类型分布数据"
+      >
+        <template #actions>
           <span class="panel-badge">{{ typeList.length }} 类</span>
-        </header>
+        </template>
+        <MrrDonutChart
+          :data="typeChartData"
+          :loading="loading"
+          center-label="扫描记录"
+          unit="条"
+          legend-position="right"
+          :height="310"
+        />
+      </MrrChartCard>
 
-        <div v-loading="loading" class="type-list">
-          <template v-if="typeList.length">
-            <article v-for="(item, index) in typeList" :key="`${item.type}-${index}`" class="type-item">
-              <div class="type-item__top">
-                <div class="type-name">
-                  <span class="type-index">{{ String(index + 1).padStart(2, '0') }}</span>
-                  <strong>{{ item.type }}</strong>
-                </div>
-                <strong>{{ formatNumber(item.records) }} 条</strong>
-              </div>
-              <div class="progress-track" aria-hidden="true">
-                <div class="progress-fill" :style="{ width: `${getTypePercentage(item.records)}%` }" />
-              </div>
-              <div class="type-item__footer">
-                <span>{{ formatNumber(item.pages) }} 扫描页</span>
-                <span>{{ getTypePercentage(item.records) }}%</span>
-              </div>
-            </article>
-          </template>
-          <el-empty v-else-if="!loading" description="暂无类型分布数据" :image-size="72" />
-        </div>
-      </article>
-
-      <article class="data-panel trend-panel">
-        <header class="panel-header">
-          <div>
-            <p class="panel-kicker">
-              Recent Activity
-            </p>
-            <h3>近 10 日扫描趋势</h3>
-            <p>以扫描页数展示每日工作量变化，辅助观察处理节奏。</p>
+      <MrrChartCard
+        title="近 10 日扫描趋势"
+        description="同时观察每日扫描页数与扫描记录数"
+        :loading="loading"
+        :empty="!trendDates.length"
+        empty-description="暂无趋势数据"
+      >
+        <template #actions>
+          <span class="panel-badge panel-badge--success">{{ trendDates.length }} 天</span>
+        </template>
+        <template #summary>
+          <div class="trend-summary">
+            <div>
+              <span>近期记录</span>
+              <strong>{{ formatNumber(recentRecordTotal) }}</strong>
+            </div>
+            <div>
+              <span>近期页数</span>
+              <strong>{{ formatNumber(recentPageTotal) }}</strong>
+            </div>
+            <div>
+              <span>日均页数</span>
+              <strong>{{ formatNumber(averageDailyPages) }}</strong>
+            </div>
           </div>
-          <span class="panel-badge panel-badge--success">按页数</span>
-        </header>
-
-        <div v-loading="loading" class="trend-content">
-          <template v-if="trendDates.length">
-            <div class="trend-chart" role="img" aria-label="近十日扫描页数柱状趋势图">
-              <div v-for="item in trendDates" :key="item.date" class="trend-column">
-                <span class="trend-value">{{ formatNumber(item.pages) }}</span>
-                <div class="trend-bar-track">
-                  <div
-                    class="trend-bar"
-                    :style="{ height: getTrendHeight(item.pages) }"
-                    :title="`${item.date}：${formatNumber(item.pages)} 页，${formatNumber(item.records)} 条记录`"
-                  >
-                    <span />
-                  </div>
-                </div>
-                <span class="trend-date">{{ formatShortDate(item.date) }}</span>
-              </div>
-            </div>
-
-            <div class="trend-summary">
-              <div>
-                <span>近期记录</span>
-                <strong>{{ formatNumber(recentRecordTotal) }}</strong>
-              </div>
-              <div>
-                <span>近期页数</span>
-                <strong>{{ formatNumber(recentPageTotal) }}</strong>
-              </div>
-              <div>
-                <span>日均页数</span>
-                <strong>{{ formatNumber(averageDailyPages) }}</strong>
-              </div>
-            </div>
-          </template>
-          <el-empty v-else-if="!loading" description="暂无趋势数据" :image-size="72" />
-        </div>
-      </article>
+        </template>
+        <MrrDualAxisChart
+          :categories="trendCategories"
+          :bars="trendBars"
+          :lines="trendLines"
+          :loading="loading"
+          left-axis-name="扫描页数"
+          right-axis-name="记录数"
+          left-unit="页"
+          right-unit="条"
+          :height="310"
+        />
+      </MrrChartCard>
     </section>
   </div>
 </template>
@@ -344,7 +319,7 @@ onMounted(loadData)
   bottom: -115px;
   width: 260px;
   height: 260px;
-  background: rgb(124 58 237 / 9%);
+  background: rgb(124 58 237 / 10%);
 }
 
 .hero-content {
@@ -361,21 +336,17 @@ onMounted(loadData)
   max-width: 720px;
 }
 
-.eyebrow,
-.panel-kicker {
+.eyebrow {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  padding: 6px 10px;
   margin: 0;
   font-size: 11px;
   font-weight: 800;
   color: #2563eb;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-}
-
-.eyebrow {
-  display: inline-flex;
-  gap: 9px;
-  align-items: center;
-  padding: 6px 10px;
   background: rgb(37 99 235 / 8%);
   border: 1px solid rgb(37 99 235 / 12%);
   border-radius: 999px;
@@ -438,38 +409,8 @@ h2 {
   gap: 20px;
 }
 
-.data-panel {
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 20px;
-  box-shadow: 0 10px 32px rgb(15 23 42 / 5%);
-}
-
-.panel-header {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 22px 24px 18px;
-  border-bottom: 1px solid var(--divider);
-}
-
-.panel-header h3 {
-  margin: 7px 0 0;
-  font-size: 18px;
-  letter-spacing: -0.02em;
-}
-
-.panel-header p:not(.panel-kicker) {
-  margin: 7px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
 .panel-badge {
-  flex-shrink: 0;
+  display: inline-flex;
   padding: 6px 10px;
   font-size: 11px;
   font-weight: 700;
@@ -485,160 +426,10 @@ h2 {
   border-color: rgb(5 150 105 / 12%);
 }
 
-.type-list {
-  display: grid;
-  gap: 10px;
-  min-height: 310px;
-  padding: 18px 20px 22px;
-}
-
-.type-item {
-  padding: 14px 15px;
-  background: color-mix(in srgb, var(--surface-alt) 62%, var(--surface));
-  border: 1px solid transparent;
-  border-radius: 13px;
-  transition: border-color 0.18s ease, transform 0.18s ease;
-}
-
-.type-item:hover {
-  border-color: color-mix(in srgb, #2563eb 16%, var(--divider));
-  transform: translateX(2px);
-}
-
-.type-item__top,
-.type-item__footer {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.type-item__top > strong {
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-
-.type-name {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-}
-
-.type-name strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.type-index {
-  font-size: 10px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #2563eb;
-}
-
-.progress-track {
-  height: 6px;
-  margin-top: 12px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--divider) 62%, transparent);
-  border-radius: 999px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #2563eb, #60a5fa);
-  border-radius: inherit;
-  transition: width 0.45s ease;
-}
-
-.type-item__footer {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.trend-content {
-  min-height: 310px;
-  padding: 20px 22px 22px;
-}
-
-.trend-chart {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(28px, 1fr));
-  gap: 9px;
-  align-items: end;
-  min-height: 218px;
-  padding: 16px 8px 10px;
-  background: repeating-linear-gradient(to top, transparent 0, transparent 43px, color-mix(in srgb, var(--divider) 55%, transparent) 44px);
-  border-bottom: 1px solid var(--divider);
-}
-
-.trend-column {
-  display: grid;
-  grid-template-rows: 22px 150px 22px;
-  gap: 7px;
-  min-width: 0;
-  text-align: center;
-}
-
-.trend-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 10px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.trend-bar-track {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 150px;
-}
-
-.trend-bar {
-  position: relative;
-  width: min(28px, 74%);
-  min-height: 8px;
-  overflow: hidden;
-  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
-  border-radius: 7px 7px 3px 3px;
-  box-shadow: 0 7px 14px rgb(37 99 235 / 16%);
-  transition: height 0.35s ease, transform 0.18s ease, filter 0.18s ease;
-}
-
-.trend-bar::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background: linear-gradient(90deg, rgb(255 255 255 / 18%), transparent 60%);
-}
-
-.trend-bar:hover {
-  filter: saturate(1.15);
-  transform: translateY(-3px);
-}
-
-.trend-date {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 .trend-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
 }
 
 .trend-summary > div {
@@ -682,24 +473,6 @@ h2 {
   .hero-actions {
     flex-wrap: wrap;
   }
-
-  .panel-header {
-    padding-inline: 18px;
-  }
-
-  .type-list,
-  .trend-content {
-    padding-inline: 16px;
-  }
-
-  .trend-chart {
-    gap: 5px;
-    overflow-x: auto;
-  }
-
-  .trend-column {
-    min-width: 34px;
-  }
 }
 
 @media (width <= 560px) {
@@ -707,16 +480,13 @@ h2 {
     flex: 1;
   }
 
-  .hero-meta {
-    display: grid;
-  }
-
+  .hero-meta,
   .trend-summary {
     grid-template-columns: 1fr;
   }
 
-  .ranking-header {
-    align-items: flex-start;
+  .hero-meta {
+    display: grid;
   }
 }
 </style>

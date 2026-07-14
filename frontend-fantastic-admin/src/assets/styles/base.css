@@ -51,8 +51,10 @@ body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--text-primary);
-  background: var(--surface-muted);
+  color: var(--mrr-foreground);
+  background: var(--mrr-background);
+  font-synthesis-weight: none;
+  text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
@@ -63,6 +65,11 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+::selection {
+  color: var(--mrr-primary-foreground);
+  background: var(--mrr-primary);
 }
 
 #app {

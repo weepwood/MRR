@@ -218,7 +218,7 @@ onUnmounted(() => {
           :key="imageUrl || pageIndex"
           :ref="(element: any) => { pageRefs[pageIndex] = element }"
           class="continuous-page"
-          :class="{ active: pageIndex === props.index }"
+          :class="{ 'active': pageIndex === props.index, 'is-auto-fit': props.autoFit }"
           :data-index="pageIndex"
         >
           <div v-if="imageUnavailable(imageUrl)" class="preview-image-placeholder continuous-placeholder" role="img" :aria-label="`第 ${pageIndex + 1} 张影像加载失败`">
@@ -349,6 +349,12 @@ onUnmounted(() => {
   margin-bottom: 16px;
   border: 1px solid transparent;
   border-radius: 8px;
+}
+
+.continuous-page.is-auto-fit {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .continuous-page.active {

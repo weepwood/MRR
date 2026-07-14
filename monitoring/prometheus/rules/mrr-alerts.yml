@@ -78,6 +78,12 @@ groups:
       - alert: MrrHostDiskSpaceLow
         expr: |
           (
+            windows_logical_disk_free_bytes{volume!~"HarddiskVolume.*"}
+            /
+            clamp_min(windows_logical_disk_size_bytes{volume!~"HarddiskVolume.*"}, 1)
+          ) < 0.15
+          or
+          (
             node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
             /
             clamp_min(node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}, 1)
@@ -87,10 +93,16 @@ groups:
           severity: warning
         annotations:
           summary: 主机磁盘可用空间低于 15%
-          description: 挂载点 {{ $labels.mountpoint }} 可用空间持续低于 15%。
+          description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 可用空间持续低于 15%。
 
       - alert: MrrHostDiskSpaceCritical
         expr: |
+          (
+            windows_logical_disk_free_bytes{volume!~"HarddiskVolume.*"}
+            /
+            clamp_min(windows_logical_disk_size_bytes{volume!~"HarddiskVolume.*"}, 1)
+          ) < 0.08
+          or
           (
             node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
             /
@@ -101,7 +113,7 @@ groups:
           severity: critical
         annotations:
           summary: 主机磁盘可用空间低于 8%
-          description: 挂载点 {{ $labels.mountpoint }} 即将耗尽。
+          description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 即将耗尽。
 
   - name: mrr-data-quality
     rules:
@@ -112,7 +124,7 @@ groups:
           severity: warning
         annotations:
           summary: MRR 数据质量检查发现严重问题
-          description: 检查 {{ $labels.check_code }} 当前发现 {{ $value }} 条严重异常。
+          description: 最近一次手动检查中，{{ $labels.check_code }} 发现 {{ $value }} 条严重异常。
 
       - alert: MrrDataQualityRunStuck
         expr: mrr_data_quality_running == 1
@@ -121,13 +133,4 @@ groups:
           severity: critical
         annotations:
           summary: 数据质量检查运行超过 30 分钟
-          description: 检查任务可能卡住，请检查数据库锁和后端日志。
-
-      - alert: MrrDataQualityCheckStale
-        expr: time() - mrr_data_quality_last_success_timestamp > 93600
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: 超过 26 小时没有成功的数据质量检查
-          description: 定时检查可能未执行或执行失败。
+          description: 手动检查可能卡住，请检查数据库锁和后端日志。

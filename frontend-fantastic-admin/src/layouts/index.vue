@@ -108,11 +108,10 @@ onBeforeUnmount(() => {
           <Topbar />
           <div class="main">
             <RouterView v-slot="{ Component, route }">
-              <Transition :name="!settingsStore.isReloading ? 'slide-right' : ''">
-                <KeepAlive :include="keepAliveStore.list" :max="10">
-                  <component :is="Component" v-show="!isLink" :key="route.name ?? route.path" />
-                </KeepAlive>
-              </Transition>
+              <!-- 主内容不使用离场过渡，避免新旧页面在重页面切换时叠加闪烁。 -->
+              <KeepAlive :include="keepAliveStore.list" :max="10">
+                <component :is="Component" v-show="!isLink" :key="route.name ?? route.path" />
+              </KeepAlive>
             </RouterView>
             <LinkView v-if="isLink" />
           </div>
@@ -209,41 +208,7 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 主内容区动画：新旧页面同时过渡，避免 out-in 先清空内容造成白屏。 */
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: opacity 0.12s ease, transform 0.12s ease;
-}
-
-.slide-right-leave-active {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  pointer-events: none;
-}
-
-.slide-right-enter-from {
-  opacity: 0;
-  transform: translateX(-8px);
-}
-
-.slide-right-leave-to {
-  opacity: 0;
-  transform: translateX(8px);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .slide-right-enter-active,
-  .slide-right-leave-active {
-    transition: none;
-  }
-
-  .slide-right-enter-from,
-  .slide-right-leave-to {
-    opacity: 1;
-    transform: none;
-  }
-
   .wrapper,
   .sidebar-container,
   .main-container {

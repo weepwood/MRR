@@ -1,0 +1,145 @@
+/*
+ * 页面标题统一样式
+ *
+ * compact：英文标题、中文标题和说明文字紧凑同行，空间不足时自然换行。
+ * stacked：英文标题与中文标题同行，说明文字独占下一行。
+ */
+
+html[data-page-title-style] .page-header:has(> :first-child > .eyebrow),
+html[data-page-title-style] body .mrr-page-header {
+  gap: var(--mrr-space-6);
+  align-items: flex-start;
+  min-width: 0;
+  padding: 2px 2px 18px;
+  border-bottom: 1px solid var(--mrr-shell-divider);
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > .eyebrow) > :first-child,
+html[data-page-title-style] .mrr-page-header__copy {
+  min-width: 0;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > .eyebrow) .eyebrow,
+html[data-page-title-style] .mrr-page-header__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--mrr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.82;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > .eyebrow) h2,
+html[data-page-title-style] .mrr-page-header h1 {
+  margin: 0;
+  font-size: clamp(22px, 2vw, 25px);
+  font-weight: 680;
+  line-height: 1.24;
+  color: var(--mrr-foreground);
+  letter-spacing: -0.035em;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > .eyebrow) .subtitle,
+html[data-page-title-style] .mrr-page-header__description {
+  max-width: 780px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mrr-muted-foreground);
+}
+
+html[data-page-title-style="compact"] .page-header:has(> :first-child > .eyebrow) > :first-child,
+html[data-page-title-style="compact"] .mrr-page-header__copy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+html[data-page-title-style="compact"] .mrr-page-header__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+html[data-page-title-style="compact"] .mrr-page-header__description {
+  flex: 1 1 280px;
+}
+
+html[data-page-title-style="compact"] .mrr-page-header__meta {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+
+html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) > :first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: baseline;
+}
+
+html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) .eyebrow {
+  grid-column: 1;
+}
+
+html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) h2 {
+  grid-column: 2;
+}
+
+html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) .subtitle {
+  grid-column: 1 / -1;
+}
+
+html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: baseline;
+}
+
+html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow .mrr-page-header__eyebrow {
+  grid-column: 1;
+}
+
+html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow .mrr-page-header__title-row {
+  grid-column: 2;
+}
+
+html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow .mrr-page-header__description,
+html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow .mrr-page-header__meta {
+  grid-column: 1 / -1;
+}
+
+html[data-page-title-style="stacked"] .mrr-page-header__description {
+  margin-top: 6px;
+}
+
+@media (width <= 760px) {
+  html[data-page-title-style] .page-header:has(> :first-child > .eyebrow),
+  html[data-page-title-style] body .mrr-page-header {
+    flex-direction: column;
+    padding-bottom: 16px;
+  }
+
+  html[data-page-title-style] .page-header:has(> :first-child > .eyebrow) > :last-child,
+  html[data-page-title-style] .mrr-page-header__aside {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (width <= 560px) {
+  html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) > :first-child,
+  html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  html[data-page-title-style="stacked"] .page-header:has(> :first-child > .eyebrow) :is(.eyebrow, h2, .subtitle),
+  html[data-page-title-style="stacked"] .mrr-page-header__copy.has-eyebrow > * {
+    grid-column: 1;
+  }
+}

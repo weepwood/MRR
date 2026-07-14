@@ -7,6 +7,10 @@
 
 > 基于 Spring Boot 4 + Vue 3 的现代化医疗影像管理系统，提供病案管理、影像浏览、统计分析、权限控制等完整功能。
 
+> **项目部署说明**：本项目正式部署不使用 Docker。仓库中的 Dockerfile 和 Docker Compose 仅用于本地开发、测试或演示环境，不代表生产部署方式。
+>
+> **CI 状态说明**：GitHub Actions 当前免费额度已用尽，因此现有 CI 流程可能因额度限制报错。CI 失败时请先确认是否为额度问题，并结合本地 lint、test 和 build 结果判断代码状态。
+
 ## 📋 项目概览
 
 MRR 是一套面向医疗机构的影像记录管理系统，核心功能包括：
@@ -27,7 +31,7 @@ MRR 是一套面向医疗机构的影像记录管理系统，核心功能包括�
 | **后端** | Java 21 + Spring Boot 4 + MyBatis |
 | **数据库** | PostgreSQL 16 |
 | **认证** | JWT + AES |
-| **部署** | Docker + Docker Compose |
+| **部署** | 非 Docker 部署（Docker 仅供本地开发/演示） |
 
 ## 🚀 快速开始
 
@@ -71,7 +75,9 @@ pnpm dev
 
 > 首次使用请参考 [完整安装指南](vitepress-doc/getting-started/installation.md)。
 
-### 启动完整容器环境
+### 启动本地容器演示环境（可选）
+
+> 此方式仅用于本地开发、测试或演示，不是项目正式部署方式。
 
 ```bash
 cp .env.example .env # Windows PowerShell: Copy-Item .env.example .env
@@ -127,7 +133,7 @@ npm run docs:build
 | [API 文档](vitepress-doc/ai-generation/后端API文档/后端API文档.md) | RESTful API 接口说明 |
 | [数据库设计](vitepress-doc/ai-generation/数据库设计/数据库设计.md) | 表结构、索引优化 |
 | [开发指南](vitepress-doc/ai-generation/开发指南/开发指南.md) | 代码规范、测试策略 |
-| [部署运维](vitepress-doc/ai-generation/部署运维/部署运维.md) | Docker 部署、CI/CD、监控 |
+| [部署运维](vitepress-doc/ai-generation/部署运维/部署运维.md) | 部署说明、CI/CD、监控 |
 
 ## 📁 项目结构
 
@@ -154,7 +160,7 @@ MRR/
 │   ├── getting-started/
 │   ├── ai-generation/
 │   └── package.json
-├── docker-compose.yml         # Docker 编排
+├── docker-compose.yml         # 本地开发/演示用 Docker 编排（非正式部署方式）
 ├── start-docs.bat             # 用户手册启动脚本 (Windows)
 └── start-docs.sh              # 用户手册启动脚本 (Linux/macOS)
 ```

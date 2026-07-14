@@ -21,7 +21,7 @@ MRR/
 │   └── package.json
 ├── mrr-db/                    # PostgreSQL/SQLite 数据库脚本
 ├── vitepress-doc/             # VitePress 文档系统
-└── docker-compose.yml         # 全栈容器化编排
+└── docker-compose.yml         # 本地开发/演示用容器编排（非正式部署方式）
 ```
 
 ## Frontend (frontend-fantastic-admin)
@@ -124,23 +124,25 @@ com.zjcxph.imgapi/
 
 ## Database
 
-- PostgreSQL 16 (生产): `docker compose up -d postgres`
+- PostgreSQL 16 (本地开发可选): `docker compose up -d postgres`
 - SQLite (开发/测试): `schema.sql` 中 `main.` 前缀表
 - 关键表: `mr_scan` (扫描记录), `mr_patient` (患者信息), `mr_auth_user` (用户), `mr_auth_role` (角色), `access_log` (访问日志), `mr_statistics` (统计)
 
-## Docker
+## 部署与 Docker 约束
+
+- 本项目正式部署不使用 Docker；Dockerfile 和 `docker-compose.yml` 仅用于本地开发、测试或演示。
+- 不要将 Docker Compose 启动方式视为生产部署流程。
 
 ```bash
-docker compose up -d           # 启动全部服务
-docker compose up -d postgres  # 仅启动数据库 (开发模式)
+docker compose up -d postgres  # 仅用于本地开发模式
 ```
-- PostgreSQL: port 5432
-- Backend: port 18045
-- Frontend: port 8080 (生产构建), 开发使用 pnpm dev → port 9000
+- PostgreSQL: port 5432（本地开发）
+- Backend: port 18045（本地开发）
+- Frontend: 开发使用 pnpm dev → port 9000
 
 ## Infrastructure
 
-- **CI**: GitHub Actions (`.github/workflows/ci.yml`) — push/PR 触发: install → lint:tsc → lint:eslint → lint:stylelint → test:run → build
+- **CI**: GitHub Actions 当前免费额度已用尽，现有流程可能因额度限制报错；本地验证仍应执行 install → lint:tsc → lint:eslint → lint:stylelint → test:run → build
 - **Git Hooks**: simple-git-hooks (pre-commit: lint-staged, commit-msg: commitlint)
 - **Commit**: Conventional Commits (cz-git), 类型: feat/fix/docs/style/refactor/perf/test/chore/ci
 - **Mock**: `vite-plugin-fake-server` (开发环境)

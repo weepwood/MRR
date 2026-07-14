@@ -91,6 +91,7 @@ public class WebConfig implements WebMvcConfigurer {
                 "/v3/api-docs/**",
                 "/docs/**",
                 "/api/v1/documentation/access",
+                "/api/v1/public/status/**",
                 "/error",
                 "/actuator/**"
         };
@@ -130,6 +131,5 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(authorizationInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(staticExcludes);
-
     }
 }

@@ -11,16 +11,30 @@ import java.util.List;
 public interface SearchMapper {
     String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
+    String SCAN_BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
 
     /*
      * 通过身份证号查询病案号
      */
-    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where idcard = #{idCard}")
+    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where idcard = #{idCard} " +
+            "order by admissiontime desc nulls last, id desc")
     List<Patient> findBAHByIDCard(String idCard);
 
     @Select("select id, idcard, bah, name, admissiontime, department from mr_patient " +
             "where bah = #{normalizedBah} or " + BAH_SEARCH_EXPRESSION + " = #{searchCode}")
     List<Patient> findPatientByBah(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("searchCode") String searchCode
+    );
+
+    /**
+     * 查询病案号在实际影像记录中出现过的全部上架号，用于身份证搜索结果唯一定位档案袋。
+     */
+    @Select("select distinct SJH from mr_scan where " +
+            "(BAH = #{normalizedBah} or " + SCAN_BAH_SEARCH_EXPRESSION + " = #{searchCode}) " +
+            "and SJH is not null and trim(SJH) <> '' order by SJH")
+    List<String> findSjhByBah(
             @Param("normalizedBah") String normalizedBah,
             @Param("searchCode") String searchCode
     );

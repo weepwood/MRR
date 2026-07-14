@@ -1,9 +1,14 @@
 import type { GalleryImage, PatientInfo } from '../types'
 import type { ApiResult, BAHImageData } from '@/api/types'
+import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
 import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
-import { getPatientByBah } from '@/api/modules/search'
+import {
+  getArchiveCasesByIdCard,
+  getArchiveCasesByToken,
+  getPatientByBah,
+} from '@/api/modules/search'
 import {
   getArchiveLookupValidationMessage,
   normalizeMedicalRecordCode,
@@ -18,13 +23,18 @@ function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
 export function useArchiveImages() {
   const images = shallowRef<GalleryImage[]>([])
   const patientList = shallowRef<PatientInfo[]>([])
+  const archiveCases = shallowRef<IdCardArchiveCase[]>([])
   const loading = ref(false)
   const patientLoading = ref(false)
+  const idCardLoading = ref(false)
   const downloading = ref(false)
   const savingType = ref(false)
   const errorMsg = ref('')
   const searchBah = ref('')
   const searchSjh = ref('')
+  const searchIdCard = ref('')
+  const idCardToken = ref('')
+  const maskedIdCard = ref('')
 
   async function loadPatient(bah: string): Promise<void> {
     if (!bah || requiresSjhForBah(bah)) {
@@ -83,6 +93,75 @@ export function useArchiveImages() {
     finally {
       loading.value = false
     }
+  }
+
+  function applyArchiveCaseResponse(data: IdCardArchiveSearchResponse | undefined) {
+    idCardToken.value = data?.token || ''
+    maskedIdCard.value = data?.maskedIdCard || ''
+    archiveCases.value = Array.isArray(data?.cases) ? data.cases : []
+  }
+
+  async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null> {
+    idCardLoading.value = true
+    errorMsg.value = ''
+    try {
+      const res = await asResult<IdCardArchiveSearchResponse>(getArchiveCasesByIdCard(idCard))
+      const data = res?.data
+      applyArchiveCaseResponse(data)
+      if (!archiveCases.value.length) {
+        errorMsg.value = '未查询到该患者的影像病案'
+      }
+      return data || null
+    }
+    catch (err: unknown) {
+      applyArchiveCaseResponse(undefined)
+      errorMsg.value = (err as { message?: string })?.message || '身份证查询失败'
+      return null
+    }
+    finally {
+      idCardLoading.value = false
+    }
+  }
+
+  async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null> {
+    idCardLoading.value = true
+    errorMsg.value = ''
+    try {
+      const res = await asResult<IdCardArchiveSearchResponse>(getArchiveCasesByToken(token))
+      const data = res?.data
+      applyArchiveCaseResponse(data)
+      if (!archiveCases.value.length) {
+        errorMsg.value = '未查询到该患者的影像病案'
+      }
+      return data || null
+    }
+    catch (err: unknown) {
+      applyArchiveCaseResponse(undefined)
+      errorMsg.value = (err as { message?: string })?.message || '身份证查询链接无效'
+      return null
+    }
+    finally {
+      idCardLoading.value = false
+    }
+  }
+
+  function setPatientFromArchiveCase(archiveCase: IdCardArchiveCase | undefined) {
+    if (!archiveCase) {
+      return
+    }
+    patientList.value = [{
+      id: archiveCase.patientRecordId,
+      bah: archiveCase.bah,
+      name: archiveCase.name,
+      department: archiveCase.department,
+      admissionTime: archiveCase.admissionTime,
+    }]
+  }
+
+  function clearIdCardSearch() {
+    archiveCases.value = []
+    idCardToken.value = ''
+    maskedIdCard.value = ''
   }
 
   async function handleDownload(): Promise<void> {
@@ -155,14 +234,23 @@ export function useArchiveImages() {
   return {
     images,
     patientList,
+    archiveCases,
     loading,
     patientLoading,
+    idCardLoading,
     downloading,
     savingType,
     errorMsg,
     searchBah,
     searchSjh,
+    searchIdCard,
+    idCardToken,
+    maskedIdCard,
     loadImages,
+    loadArchiveCasesByIdCard,
+    loadArchiveCasesByToken,
+    setPatientFromArchiveCase,
+    clearIdCardSearch,
     handleDownload,
     saveImageType,
   }

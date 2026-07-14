@@ -18,8 +18,9 @@ const emit = defineEmits<{
 }>()
 const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
+const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
-const sjhRequired = computed(() => requiresSjhForBah(searchBah.value))
+const sjhRequired = computed(() => !searchIdCard.value.trim() && requiresSjhForBah(searchBah.value))
 const metaItems = computed(() => [
   { label: '病案号', value: formatMedicalRecordCode(props.routeMeta.bah) },
   { label: '设备', value: normalizeText(props.routeMeta.cid) },
@@ -34,6 +35,16 @@ const metaItems = computed(() => [
   <section class="search-card">
     <div class="search-bar">
       <div class="search-fields">
+        <el-input
+          v-model="searchIdCard"
+          name="archive-id-card"
+          autocomplete="off"
+          aria-label="身份证号"
+          clearable
+          maxlength="18"
+          placeholder="身份证号（优先查询）"
+          @keyup.enter="emit('search')"
+        />
         <el-input v-model="searchBah" name="archive-bah" autocomplete="off" aria-label="病案号" clearable placeholder="病案号" @keyup.enter="emit('search')" />
         <el-input
           v-model="searchSjh"
@@ -49,7 +60,10 @@ const metaItems = computed(() => [
           查询
         </el-button>
       </div>
-      <p v-if="sjhRequired" class="search-rule-hint">
+      <p v-if="searchIdCard.trim()" class="search-rule-hint is-info">
+        将按身份证查询该患者全部病案；地址栏仅保存加密令牌，不保存身份证原文。
+      </p>
+      <p v-else-if="sjhRequired" class="search-rule-hint">
         病案号大于等于 10000000 时不再唯一，必须同时输入唯一上架号。
       </p>
     </div>
@@ -77,7 +91,7 @@ const metaItems = computed(() => [
 
 .search-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 0.8fr) auto;
   gap: 8px;
 }
 
@@ -90,6 +104,10 @@ const metaItems = computed(() => [
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-color-warning-dark-2);
+}
+
+.search-rule-hint.is-info {
+  color: var(--el-color-primary-dark-2);
 }
 
 .route-meta {
@@ -122,6 +140,12 @@ const metaItems = computed(() => [
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
+}
+
+@media (width <= 960px) {
+  .search-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (width <= 720px) {

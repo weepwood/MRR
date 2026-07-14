@@ -92,15 +92,14 @@ jobs:
             exit 1
           fi
 
-      - name: Persist validation diagnostics
-        if: failure() && steps.validation.outcome == 'failure'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/tmp-unified-charts-validation.log
-          git commit -m "ci: capture chart validation diagnostics [skip ci]"
-          git push origin HEAD:feat/unified-echarts-system-20260714
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-charts-validation
+          path: scripts/tmp-unified-charts-validation.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Verify patch whitespace
         if: success()

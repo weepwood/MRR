@@ -3,6 +3,7 @@ import iconConfig from '@/iconify/index.json'
 import directive from '@/utils/directive'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
+import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
 
 import App from './App.vue'
@@ -29,6 +30,7 @@ app.use(router)
 app.use(uiProvider)
 installArchiveWatermark(router, pinia)
 directive(app)
+installRequestErrorFallback(app)
 app.mount('#app')
 
 async function installOfflineIcons() {

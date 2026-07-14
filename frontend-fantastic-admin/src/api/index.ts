@@ -1,6 +1,7 @@
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
-import { toast } from 'vue-sonner'
+import { ElMessage } from 'element-plus'
+import { registerRequestErrorFallback } from '@/utils/request-error-notification'
 import { createResponseMetric, createResponseMetricQueue } from '@/utils/response-metrics'
 
 declare module 'axios' {
@@ -102,17 +103,20 @@ function getErrorMessage(error: AxiosError | any) {
 function showGlobalError(error: AxiosError | any) {
   const message = getErrorMessage(error)
   const key = `${error?.response?.status ?? 'network'}:${message}`
-  const now = Date.now()
-  const lastShownAt = recentErrorToasts.get(key) ?? 0
 
-  if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {
-    return
-  }
+  registerRequestErrorFallback(error, () => {
+    const now = Date.now()
+    const lastShownAt = recentErrorToasts.get(key) ?? 0
+    if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {
+      return
+    }
 
-  recentErrorToasts.set(key, now)
-  toast.error('请求失败', {
-    id: `api-error-${key}`,
-    description: message,
+    recentErrorToasts.set(key, now)
+    ElMessage.error({
+      message,
+      grouping: true,
+      showClose: true,
+    })
   })
 }
 

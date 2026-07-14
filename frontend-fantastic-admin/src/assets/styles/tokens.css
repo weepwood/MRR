@@ -1,4 +1,4 @@
-/* 页面布局与设计系统变量 */
+/* 页面布局与 MRR Console 设计令牌 */
 :root {
   color-scheme: light;
 
@@ -11,13 +11,13 @@
   --g-tabbar-height: 50px;
   --g-toolbar-height: 50px;
 
-  /* MRR Console 页面宽度 */
+  /* 页面宽度 */
   --mrr-content-fluid: 1680px;
   --mrr-content-standard: 1440px;
   --mrr-content-narrow: 1120px;
   --mrr-page-gap: 20px;
 
-  /* 4px 基础间距系统 */
+  /* 4px 基础间距 */
   --mrr-space-1: 4px;
   --mrr-space-2: 8px;
   --mrr-space-3: 12px;
@@ -26,112 +26,118 @@
   --mrr-space-6: 24px;
   --mrr-space-8: 32px;
 
-  /* 圆角 */
+  /* shadcn 风格圆角层级，基准为 10px */
   --mrr-radius-sm: 6px;
   --mrr-radius-md: 8px;
   --mrr-radius-lg: 10px;
+  --mrr-radius-xl: 14px;
   --mrr-radius-card: 12px;
-  --mrr-radius-dialog: 16px;
+  --mrr-radius-dialog: 14px;
   --mrr-radius-pill: 999px;
-  --mrr-control-radius: 10px;
+  --mrr-control-radius: var(--mrr-radius-md);
 
-  /* 控件与表格尺寸 */
-  --mrr-control-height: 38px;
+  /* 控件尺寸 */
+  --mrr-control-height: 36px;
   --mrr-control-height-compact: 32px;
-  --mrr-control-height-large: 42px;
-  --mrr-table-header-height: 44px;
+  --mrr-control-height-large: 40px;
+  --mrr-table-header-height: 42px;
   --mrr-table-row-height: 46px;
 
-  /* 控件表面与边界 */
-  --mrr-control-bg: color-mix(in srgb, var(--surface) 94%, var(--surface-muted));
-  --mrr-control-bg-hover: var(--surface);
-  --mrr-control-bg-disabled: color-mix(in srgb, var(--surface-muted) 82%, var(--surface));
-  --mrr-control-border: color-mix(in srgb, var(--text-primary) 12%, transparent);
-  --mrr-control-border-hover: color-mix(in srgb, var(--color-primary) 42%, var(--divider));
-  --mrr-control-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 1px 1px rgb(15 23 42 / 3%);
-  --mrr-control-shadow-hover: 0 3px 10px rgb(15 23 42 / 7%);
+  /* MRR 品牌色：保留医疗蓝，用 shadcn 的语义方式消费 */
+  --color-primary: #0878d1;
+  --color-primary-hover: #0969b7;
+  --color-primary-active: #075a9d;
+  --color-primary-deep: #174f83;
+  --color-success: #16803c;
+  --color-info: #087ea4;
+  --color-warning: #b45f06;
+  --color-danger: #d13c3c;
 
-  /* 按钮层级 */
-  --mrr-button-default-bg: color-mix(in srgb, var(--surface) 97%, var(--surface-muted));
-  --mrr-button-default-hover: var(--surface);
-  --mrr-button-default-shadow: 0 1px 2px rgb(15 23 42 / 5%), inset 0 1px 0 rgb(255 255 255 / 70%);
-  --mrr-button-primary-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 24%, transparent), inset 0 1px 0 rgb(255 255 255 / 22%);
-  --mrr-button-primary-shadow-hover: 0 7px 18px color-mix(in srgb, var(--color-primary) 30%, transparent), inset 0 1px 0 rgb(255 255 255 / 26%);
-  --mrr-button-danger-shadow: 0 4px 12px color-mix(in srgb, var(--color-danger) 20%, transparent), inset 0 1px 0 rgb(255 255 255 / 18%);
+  /* shadcn 语义表面 */
+  --mrr-background: hsl(var(--background));
+  --mrr-foreground: hsl(var(--foreground));
+  --mrr-card: hsl(var(--card));
+  --mrr-card-foreground: hsl(var(--card-foreground));
+  --mrr-popover: hsl(var(--popover));
+  --mrr-popover-foreground: hsl(var(--popover-foreground));
+  --mrr-secondary: hsl(var(--secondary));
+  --mrr-secondary-foreground: hsl(var(--secondary-foreground));
+  --mrr-muted: hsl(var(--muted));
+  --mrr-muted-foreground: hsl(var(--muted-foreground));
+  --mrr-accent: hsl(var(--accent));
+  --mrr-accent-foreground: hsl(var(--accent-foreground));
+  --mrr-border: hsl(var(--border));
+  --mrr-input: hsl(var(--border));
+  --mrr-ring: color-mix(in srgb, var(--color-primary) 72%, hsl(var(--ring)));
+  --mrr-primary: var(--color-primary);
+  --mrr-primary-foreground: #fff;
+  --mrr-destructive: var(--color-danger);
+  --mrr-destructive-foreground: #fff;
+  --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 10%, var(--mrr-card));
 
-  /* 克制的后台层级阴影 */
-  --mrr-shadow-card: 0 6px 20px rgb(15 23 42 / 5%);
-  --mrr-shadow-dialog: 0 24px 64px rgb(15 23 42 / 16%);
-  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
-  --mrr-danger-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-danger) 16%, transparent);
-  --mrr-warning-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-warning) 16%, transparent);
+  /* 兼容既有页面的语义别名 */
+  --text-primary: var(--mrr-foreground);
+  --text-secondary: var(--mrr-muted-foreground);
+  --text-tertiary: color-mix(in srgb, var(--mrr-muted-foreground) 72%, transparent);
+  --text-hint: color-mix(in srgb, var(--mrr-muted-foreground) 56%, transparent);
+  --surface: var(--mrr-card);
+  --surface-muted: var(--mrr-muted);
+  --surface-alt: var(--mrr-secondary);
+  --divider: var(--mrr-border);
 
-  /* 滚动条 */
+  /* 控件表面与交互 */
+  --mrr-control-bg: var(--mrr-background);
+  --mrr-control-bg-hover: var(--mrr-background);
+  --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 82%, var(--mrr-card));
+  --mrr-control-border: var(--mrr-input);
+  --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 22%, var(--mrr-input));
+
+  /* shadcn 风格阴影：组件以 ring 为主，阴影只用于浮层 */
+  --mrr-shadow-xs: 0 1px 2px rgb(15 23 42 / 4%);
+  --mrr-shadow-sm: 0 4px 10px rgb(15 23 42 / 7%);
+  --mrr-shadow-md: 0 12px 28px rgb(15 23 42 / 11%);
+  --mrr-shadow-lg: 0 24px 56px rgb(15 23 42 / 16%);
+  --mrr-shadow-card: none;
+  --mrr-shadow-dialog: var(--mrr-shadow-lg);
+
+  /* 3px focus-visible ring，与 shadcn v4 的 ring-3 对齐 */
+  --mrr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 30%, transparent);
+  --mrr-danger-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mrr-destructive) 22%, transparent);
+  --mrr-warning-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-warning) 22%, transparent);
+
+  /* 兼容旧变量 */
   --scrollbar-color: 240 5.9% 90%;
-
-  /* 语义化文本与表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
-  --text-primary: hsl(var(--foreground));
-  --text-secondary: hsl(var(--muted-foreground));
-  --text-tertiary: hsl(var(--muted-foreground) / 70%);
-  --text-hint: hsl(var(--muted-foreground) / 50%);
-  --surface: hsl(var(--card));
-  --surface-muted: hsl(var(--muted));
-  --surface-alt: hsl(var(--secondary));
-  --divider: hsl(var(--border));
-
-  /* MRR 设计系统调色板 */
-
-  /* 品牌主色 */
-  --color-primary: #0075de;
-  --color-primary-active: #005bab;
-  --color-primary-deep: #213183;
-
-  /* 文本 */
   --color-text: rgb(0 0 0 / 95%);
-  --color-text-muted: #615d59;
-  --color-text-placeholder: #a39e98;
-
-  /* 表面 */
+  --color-text-muted: #625f5a;
+  --color-text-placeholder: #9b9892;
   --color-bg: #fff;
-  --color-bg-warm: #f6f5f4;
-  --color-bg-dark: #31302e;
-
-  /* 语义色 */
-  --color-success: #1aae39;
-  --color-info: #2a9d99;
-  --color-warning: #dd5b00;
-  --color-danger: #e03e3e;
-
-  /* 边框 */
+  --color-bg-warm: #f7f7f6;
+  --color-bg-dark: #252525;
   --color-border: rgb(0 0 0 / 10%);
-  --color-border-strong: rgb(0 0 0 / 16%);
+  --color-border-strong: rgb(0 0 0 / 18%);
 
   &.dark {
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;
-    --mrr-control-bg: color-mix(in srgb, var(--surface) 88%, white 3%);
-    --mrr-control-bg-hover: color-mix(in srgb, var(--surface) 82%, white 6%);
-    --mrr-control-bg-disabled: color-mix(in srgb, var(--surface-muted) 80%, black);
-    --mrr-control-border: rgb(255 255 255 / 13%);
-    --mrr-control-border-hover: color-mix(in srgb, var(--color-primary) 58%, rgb(255 255 255 / 18%));
-    --mrr-control-shadow: 0 1px 2px rgb(0 0 0 / 20%);
-    --mrr-control-shadow-hover: 0 5px 16px rgb(0 0 0 / 24%);
-    --mrr-button-default-bg: color-mix(in srgb, var(--surface) 88%, white 4%);
-    --mrr-button-default-hover: color-mix(in srgb, var(--surface) 80%, white 8%);
-    --mrr-button-default-shadow: 0 1px 2px rgb(0 0 0 / 28%), inset 0 1px 0 rgb(255 255 255 / 8%);
-    --mrr-button-primary-shadow: 0 5px 16px color-mix(in srgb, var(--color-primary) 32%, transparent), inset 0 1px 0 rgb(255 255 255 / 18%);
-    --mrr-button-primary-shadow-hover: 0 8px 22px color-mix(in srgb, var(--color-primary) 40%, transparent), inset 0 1px 0 rgb(255 255 255 / 22%);
-    --mrr-button-danger-shadow: 0 5px 16px color-mix(in srgb, var(--color-danger) 28%, transparent), inset 0 1px 0 rgb(255 255 255 / 14%);
-    --mrr-shadow-card: 0 8px 24px rgb(0 0 0 / 18%);
-    --mrr-shadow-dialog: 0 24px 72px rgb(0 0 0 / 42%);
+    --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
+    --mrr-control-bg: color-mix(in srgb, var(--mrr-card) 88%, white 2%);
+    --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-card) 84%, white 4%);
+    --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
+    --mrr-control-border: var(--mrr-input);
+    --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));
+    --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 20%, var(--mrr-card));
+    --mrr-shadow-xs: 0 1px 2px rgb(0 0 0 / 22%);
+    --mrr-shadow-sm: 0 6px 16px rgb(0 0 0 / 24%);
+    --mrr-shadow-md: 0 16px 36px rgb(0 0 0 / 32%);
+    --mrr-shadow-lg: 0 28px 72px rgb(0 0 0 / 48%);
     --color-text: rgb(255 255 255 / 95%);
-    --color-text-muted: #a39e98;
-    --color-text-placeholder: #615d59;
-    --color-bg: #31302e;
-    --color-bg-warm: #3d3a37;
-    --color-bg-dark: #252321;
+    --color-text-muted: #aaa7a2;
+    --color-text-placeholder: #706d69;
+    --color-bg: #252525;
+    --color-bg-warm: #2d2c2a;
+    --color-bg-dark: #1d1c1b;
     --color-border: rgb(255 255 255 / 10%);
-    --color-border-strong: rgb(255 255 255 / 16%);
+    --color-border-strong: rgb(255 255 255 / 18%);
   }
 }

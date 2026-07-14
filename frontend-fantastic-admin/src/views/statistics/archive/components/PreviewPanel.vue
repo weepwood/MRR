@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ArchivePreviewMode } from '@/utils/system-settings'
 import type { GalleryImage } from '../types'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
@@ -8,7 +9,7 @@ import { normalizeText, TYPE_OPTIONS } from '../constants'
 
 defineOptions({ name: 'PreviewPanel' })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   image: GalleryImage | null
   previewList: string[]
   index: number
@@ -16,7 +17,12 @@ const props = defineProps<{
   isSelected: boolean
   savingType?: boolean
   loading?: boolean
-}>()
+  autoFit?: boolean
+}>(), {
+  savingType: false,
+  loading: false,
+  autoFit: true,
+})
 
 const emit = defineEmits<{
   toggle: []
@@ -25,9 +31,9 @@ const emit = defineEmits<{
   select: [index: number]
 }>()
 
+const displayMode = defineModel<ArchivePreviewMode>('displayMode', { default: 'single' })
 const previewScroller = ref<HTMLElement | null>(null)
 const pageRefs = ref<(HTMLElement | null)[]>([])
-const displayMode = ref<'single' | 'scroll'>('single')
 const pendingType = ref(0)
 const failedImageUrls = ref<Set<string>>(new Set())
 let touchStartX = 0
@@ -130,9 +136,7 @@ watch(() => props.image?.btype, () => {
   pendingType.value = currentType.value
 }, { immediate: true })
 
-watch(displayMode, () => {
-  observePages()
-})
+watch(displayMode, observePages)
 
 onMounted(observePages)
 
@@ -164,44 +168,20 @@ onUnmounted(() => {
 
         <div class="preview-controls">
           <div class="page-navigation" aria-label="影像翻页">
-            <el-button
-              circle
-              size="small"
-              :icon="ArrowLeft"
-              :disabled="props.index === 0"
-              aria-label="上一张影像"
-              @click="emit('navigate', -1)"
-            />
-            <el-button
-              circle
-              size="small"
-              :icon="ArrowRight"
-              :disabled="props.index >= props.total - 1"
-              aria-label="下一张影像"
-              @click="emit('navigate', 1)"
-            />
+            <el-button circle size="small" :icon="ArrowLeft" :disabled="props.index === 0" aria-label="上一张影像" @click="emit('navigate', -1)" />
+            <el-button circle size="small" :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
           </div>
           <el-button size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
             {{ props.isSelected ? '已选' : '选中' }}
           </el-button>
           <el-select v-model="pendingType" aria-label="影像分类" :loading="props.savingType" size="small" @change="confirmType">
-            <el-option
-              v-for="item in TYPE_OPTIONS"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
+            <el-option v-for="item in TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </div>
       </div>
 
-      <div v-if="displayMode === 'single'" class="preview-stage single-stage">
-        <div
-          v-if="imageUnavailable(props.image.imageUrl)"
-          class="preview-image-placeholder"
-          role="img"
-          :aria-label="`第 ${props.index + 1} 张影像加载失败`"
-        >
+      <div v-if="displayMode === 'single'" class="preview-stage single-stage" :class="{ 'is-auto-fit': props.autoFit }">
+        <div v-if="imageUnavailable(props.image.imageUrl)" class="preview-image-placeholder" role="img" :aria-label="`第 ${props.index + 1} 张影像加载失败`">
           <svg viewBox="0 0 48 48" aria-hidden="true">
             <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
           </svg>
@@ -209,8 +189,8 @@ onUnmounted(() => {
           <span>当前图片暂不可用，请检查影像服务或文件地址</span>
         </div>
         <el-image
-          v-else
-          class="preview-image"
+          v-else-if="props.autoFit"
+          class="preview-image fit-image"
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
           fit="contain"
@@ -223,6 +203,13 @@ onUnmounted(() => {
           @switch="handlePreviewSwitch"
           @error="markImageFailed(props.image.imageUrl)"
         />
+        <img
+          v-else
+          class="preview-image original-image"
+          :src="props.image.imageUrl"
+          :alt="`第 ${props.index + 1} 张影像`"
+          @error="markImageFailed(props.image.imageUrl)"
+        >
       </div>
 
       <div v-else ref="previewScroller" class="preview-stage">
@@ -234,12 +221,7 @@ onUnmounted(() => {
           :class="{ active: pageIndex === props.index }"
           :data-index="pageIndex"
         >
-          <div
-            v-if="imageUnavailable(imageUrl)"
-            class="preview-image-placeholder continuous-placeholder"
-            role="img"
-            :aria-label="`第 ${pageIndex + 1} 张影像加载失败`"
-          >
+          <div v-if="imageUnavailable(imageUrl)" class="preview-image-placeholder continuous-placeholder" role="img" :aria-label="`第 ${pageIndex + 1} 张影像加载失败`">
             <svg viewBox="0 0 48 48" aria-hidden="true">
               <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
             </svg>
@@ -249,6 +231,7 @@ onUnmounted(() => {
           <img
             v-else
             class="preview-image"
+            :class="props.autoFit ? 'fit-scroll-image' : 'original-scroll-image'"
             :src="imageUrl"
             :alt="`第 ${pageIndex + 1} 张影像`"
             loading="lazy"
@@ -269,36 +252,33 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.preview-image {
-  display: block;
-  width: min(100%, 980px);
-  height: auto;
-  margin: 0 auto;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
-}
-
 .preview-stage {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-height: 0;
   padding: 68px 24px 24px;
-  overflow-y: auto;
+  overflow: auto;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
   border-radius: 12px;
 }
 
-.single-stage {
+.single-stage.is-auto-fit {
   display: grid;
   place-items: center;
-  min-width: 0;
-  min-height: 0;
   overflow: hidden;
 }
 
-.single-stage .preview-image {
+.preview-image {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+}
+
+.single-stage .fit-image {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -308,6 +288,16 @@ onUnmounted(() => {
   cursor: zoom-in;
   background: transparent;
   box-shadow: none;
+}
+
+.original-image,
+.original-scroll-image {
+  width: auto;
+  max-width: none;
+}
+
+.fit-scroll-image {
+  width: min(100%, 980px);
 }
 
 .preview-image-placeholder {
@@ -323,9 +313,7 @@ onUnmounted(() => {
   margin: 0 auto;
   color: var(--text-secondary);
   text-align: center;
-  background:
-    radial-gradient(circle at top, hsl(var(--primary) / 8%), transparent 48%),
-    var(--surface);
+  background: radial-gradient(circle at top, hsl(var(--primary) / 8%), transparent 48%), var(--surface);
   border: 1px dashed var(--divider);
   border-radius: 12px;
 }
@@ -343,7 +331,7 @@ onUnmounted(() => {
 }
 
 .preview-image-placeholder span {
-  max-width: 360px;
+  max-width: 420px;
   font-size: 13px;
   line-height: 1.6;
 }
@@ -355,6 +343,8 @@ onUnmounted(() => {
 
 .continuous-page {
   position: relative;
+  width: max-content;
+  min-width: 100%;
   padding: 8px;
   margin-bottom: 16px;
   border: 1px solid transparent;

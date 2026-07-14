@@ -68,6 +68,13 @@ export const useSettingsStore = defineStore(
     }, {
       immediate: true,
     })
+
+    watch(() => settings.value.app.pageTitleStyle, (val) => {
+      document.documentElement.setAttribute('data-page-title-style', val)
+    }, {
+      immediate: true,
+    })
+
     watch([
       () => settings.value.app.enableMournMode,
       () => settings.value.app.enableColorAmblyopiaMode,

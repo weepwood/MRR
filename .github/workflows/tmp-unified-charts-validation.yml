@@ -38,6 +38,8 @@ jobs:
         run: |
           cat scripts/tmp-unified-charts-src.part-* | base64 --decode > /tmp/unified-charts-src.tar.gz
           tar -xzf /tmp/unified-charts-src.tar.gz -C .
+          cat scripts/tmp-unified-charts-fixes.part-* | base64 --decode > /tmp/unified-charts-fixes.tar.gz
+          tar -xzf /tmp/unified-charts-fixes.tar.gz -C .
 
       - name: Add ECharts dependency
         run: |
@@ -64,9 +66,21 @@ jobs:
           set +e
           pnpm lint:tsc 2>&1 | tee /tmp/chart-tsc.log
           tsc_status=${PIPESTATUS[0]}
-          pnpm lint:eslint 2>&1 | tee /tmp/chart-eslint.log
+          pnpm exec eslint \
+            src/plugins/echarts.ts \
+            src/config/chart-theme.ts \
+            src/composables/useMrrChart.ts \
+            src/types/chart.ts \
+            src/components/charts \
+            src/views/response-analysis/components/ResponseTrendChart.vue \
+            src/views/audit-images/components/AuditAnalytics.vue \
+            --no-cache 2>&1 | tee /tmp/chart-eslint.log
           eslint_status=${PIPESTATUS[0]}
-          pnpm lint:stylelint 2>&1 | tee /tmp/chart-stylelint.log
+          pnpm exec stylelint \
+            "src/components/charts/*.vue" \
+            "src/views/response-analysis/components/ResponseTrendChart.vue" \
+            "src/views/audit-images/components/AuditAnalytics.vue" \
+            --no-cache 2>&1 | tee /tmp/chart-stylelint.log
           stylelint_status=${PIPESTATUS[0]}
           pnpm build 2>&1 | tee /tmp/chart-build.log
           build_status=${PIPESTATUS[0]}

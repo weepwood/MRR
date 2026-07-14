@@ -72,7 +72,7 @@ class ImageControllerTest {
     @Test
     @DisplayName("getDataByBAH — 返回图片列表")
     void getDataByBAH() {
-        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "789508")).thenReturn(List.of(mockScan));
         BAHDataResponseDTO dto = new BAHDataResponseDTO();
         dto.setBah("00789508");
         doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
@@ -87,7 +87,7 @@ class ImageControllerTest {
     @DisplayName("getDataByBAH — folder为null时返回ba-img-00的img_url")
     void getDataByBAH_nullFolder() {
         mockScan.setFolder(null);
-        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "789508")).thenReturn(List.of(mockScan));
         BAHDataResponseDTO dto = new BAHDataResponseDTO();
         dto.setBah("00789508");
         dto.setImg_url("http://192.2.1.182:8001/ba-img-00/605746-00789508/test.jpg");
@@ -105,7 +105,7 @@ class ImageControllerTest {
     void getDataByBAH_nullBrxh() {
         mockScan.setBrxh(null);
         mockScan.setFolder("25.03.15");
-        when(scanService.getImageListByBAH("00789508", "00789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageListByBAH("00789508", "789508")).thenReturn(List.of(mockScan));
         BAHDataResponseDTO dto = new BAHDataResponseDTO();
         dto.setBah("00789508");
         dto.setImg_url(null);

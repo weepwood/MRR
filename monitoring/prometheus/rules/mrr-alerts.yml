@@ -1,0 +1,136 @@
+groups:
+  - name: mrr-availability
+    rules:
+      - alert: MrrBackendDown
+        expr: up{job="mrr-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 后端监控端点不可用
+          description: Prometheus 连续 1 分钟无法抓取 MRR Actuator 指标。
+
+      - alert: MrrPostgreSQLDown
+        expr: up{job="mrr-postgresql"} == 0 OR pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL 不可用
+          description: postgres_exporter 连续 1 分钟无法连接数据库。
+
+  - name: mrr-database
+    rules:
+      - alert: MrrDatabaseConnectionsHigh
+        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: PostgreSQL 连接使用率超过 80%
+          description: 数据库连接连续 5 分钟高于最大连接数的 80%。
+
+      - alert: MrrDatabaseConnectionsCritical
+        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL 连接使用率超过 90%
+          description: 数据库连接接近耗尽，可能导致新请求失败。
+
+      - alert: MrrDatabaseDeadlockDetected
+        expr: increase(pg_stat_database_deadlocks{datname="imgapi"}[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: PostgreSQL 检测到死锁
+          description: 最近 5 分钟数据库出现死锁，请检查事务与锁等待。
+
+      - alert: MrrHikariPoolPending
+        expr: hikaricp_connections_pending{application="imgapi"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: HikariCP 出现连接等待
+          description: 后端线程连续 2 分钟等待数据库连接。
+
+      - alert: MrrHikariPoolNearExhaustion
+        expr: hikaricp_connections_active{application="imgapi"} / clamp_min(hikaricp_connections_max{application="imgapi"}, 1) > 0.90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: HikariCP 连接池接近耗尽
+          description: 活跃连接连续 2 分钟超过连接池上限的 90%。
+
+      - alert: MrrHikariConnectionTimeout
+        expr: increase(hikaricp_connections_timeout_total{application="imgapi"}[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: HikariCP 获取连接超时
+          description: 最近 5 分钟发生数据库连接获取超时。
+
+  - name: mrr-capacity
+    rules:
+      - alert: MrrHostDiskSpaceLow
+        expr: |
+          (
+            windows_logical_disk_free_bytes{volume!~"HarddiskVolume.*"}
+            /
+            clamp_min(windows_logical_disk_size_bytes{volume!~"HarddiskVolume.*"}, 1)
+          ) < 0.15
+          or
+          (
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+            /
+            clamp_min(node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}, 1)
+          ) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 主机磁盘可用空间低于 15%
+          description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 可用空间持续低于 15%。
+
+      - alert: MrrHostDiskSpaceCritical
+        expr: |
+          (
+            windows_logical_disk_free_bytes{volume!~"HarddiskVolume.*"}
+            /
+            clamp_min(windows_logical_disk_size_bytes{volume!~"HarddiskVolume.*"}, 1)
+          ) < 0.08
+          or
+          (
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+            /
+            clamp_min(node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}, 1)
+          ) < 0.08
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 主机磁盘可用空间低于 8%
+          description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 即将耗尽。
+
+  - name: mrr-data-quality
+    rules:
+      - alert: MrrDataQualityCriticalIssues
+        expr: mrr_data_quality_issues{severity="CRITICAL"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 数据质量检查发现严重问题
+          description: 最近一次手动检查中，{{ $labels.check_code }} 发现 {{ $value }} 条严重异常。
+
+      - alert: MrrDataQualityRunStuck
+        expr: mrr_data_quality_running == 1
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: 数据质量检查运行超过 30 分钟
+          description: 手动检查可能卡住，请检查数据库锁和后端日志。

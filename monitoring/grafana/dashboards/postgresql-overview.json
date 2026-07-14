@@ -1,0 +1,87 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "PostgreSQL 状态",
+      "id": 1,
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "pg_up", "refId": "A"}],
+      "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"text": "DOWN"}, "1": {"text": "UP"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "连接使用率",
+      "id": 2,
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "100 * sum(pg_stat_activity_count{datname=\"imgapi\"}) / clamp_min(max(pg_settings_max_connections), 1)", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 80}, {"color": "red", "value": 90}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "缓存命中率",
+      "id": 3,
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "targets": [{"expr": "100 * sum(pg_stat_database_blks_hit{datname=\"imgapi\"}) / clamp_min(sum(pg_stat_database_blks_hit{datname=\"imgapi\"} + pg_stat_database_blks_read{datname=\"imgapi\"}), 1)", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "数据库大小",
+      "id": 4,
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "targets": [{"expr": "pg_database_size_bytes{datname=\"imgapi\"}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "连接状态趋势",
+      "id": 5,
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 5},
+      "targets": [
+        {"expr": "sum by (state) (pg_stat_activity_count{datname=\"imgapi\"})", "legendFormat": "{{state}}", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "事务速率",
+      "id": 6,
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"expr": "rate(pg_stat_database_xact_commit{datname=\"imgapi\"}[5m])", "legendFormat": "提交", "refId": "A"},
+        {"expr": "rate(pg_stat_database_xact_rollback{datname=\"imgapi\"}[5m])", "legendFormat": "回滚", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "死锁增量",
+      "id": 7,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "targets": [{"expr": "increase(pg_stat_database_deadlocks{datname=\"imgapi\"}[5m])", "legendFormat": "死锁", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "临时文件写入",
+      "id": 8,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "targets": [{"expr": "rate(pg_stat_database_temp_bytes{datname=\"imgapi\"}[5m])", "legendFormat": "临时写入", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["mrr", "postgresql"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "MRR PostgreSQL 概览",
+  "uid": "mrr-postgresql-overview",
+  "version": 1
+}

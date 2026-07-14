@@ -1,160 +1,201 @@
 <script setup lang="ts">
-import type {
-  ActuatorMetric,
-  GcStatItem,
-  GcStats,
-  HealthInfo,
-  MemoryInfo,
-  RuntimeInfo,
-  SystemInfo,
-  ThreadStats,
-} from '@/api/types'
+import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo } from '@/api/types'
+import type { DatabaseOverview, DataQualityIssue, DataQualitySummary } from '@/api/modules/database-monitoring'
 import { useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { getMetric } from '@/api/modules/actuator'
+import {
+  getDatabaseOverview,
+  getDataQualityIssues,
+  getDataQualitySummary,
+  runDataQualityChecks,
+} from '@/api/modules/database-monitoring'
 import {
   getSystemHealth,
   getSystemInfo,
   getSystemMemory,
-  getSystemOverview,
-  getSystemProperties,
   getSystemRuntime,
 } from '@/api/modules/system'
 
 defineOptions({ name: 'MonitoringPage' })
 
+const emptyDatabase = (): DatabaseOverview => ({
+  database: {},
+  connections: {},
+  transactions: {},
+  contention: {},
+  hikari: {},
+  tables: [],
+})
+
 const loading = ref(false)
-const autoRefreshing = ref(false)
+const qualityRunning = ref(false)
 const autoRefresh = ref(true)
 const lastRefresh = ref('')
 const healthStatus = ref<HealthInfo>({})
 const runtimeInfo = ref<RuntimeInfo>({})
 const memoryInfo = ref<MemoryInfo>({ heap: {}, nonHeap: {} })
 const systemInfo = ref<SystemInfo>({ application: {}, jvm: {}, operatingSystem: {} })
-const properties = ref<Record<string, string>>({})
-const gcStats = ref<GcStats>({})
-const threadStats = ref<ThreadStats>({})
-const hikariActive = ref<number | null>(null)
-const hikariIdle = ref<number | null>(null)
-const hikariPending = ref<number | null>(null)
+const databaseOverview = ref<DatabaseOverview>(emptyDatabase())
+const qualitySummary = ref<DataQualitySummary>({ enabled: true, running: false, latestRun: null, checks: [] })
+const qualityIssues = ref<DataQualityIssue[]>([])
 
-// 过滤 GC 统计中的非聚合条目（排除 totalCollections、totalTimeMs）
-const gcItems = computed<GcStatItem[]>(() => {
-  const items: GcStatItem[] = []
-  for (const [key, value] of Object.entries(gcStats.value)) {
-    if (key.startsWith('total')) { continue }
-    if (typeof value === 'object' && value !== null) {
-      items.push(value as GcStatItem)
-    }
-  }
-  return items
+const databaseStatus = computed(() => {
+  const component = healthStatus.value.components?.database as { status?: string } | undefined
+  return String(component?.status || healthStatus.value.status || 'UNKNOWN').toUpperCase()
 })
 
-// ---- computed ----
-const healthTone = computed(() => {
-  const value = String(healthStatus.value.status || '').toUpperCase()
-  if (value === 'UP') { return 'success' }
-  if (value === 'WARNING') { return 'warning' }
-  return 'danger'
+const connectionUsage = computed(() => {
+  const total = Number(databaseOverview.value.connections?.total || 0)
+  const max = Number(databaseOverview.value.database?.max_connections || 0)
+  return max > 0 ? Math.min(100, Number(((total / max) * 100).toFixed(1))) : 0
 })
 
-const memoryPercent = computed(() => Number.parseFloat(String(memoryInfo.value.usagePercent || '0').replace('%', '')) || 0)
-
-const totalGcCount = computed(() => Number(gcStats.value.totalCollections || 0))
-const totalGcTime = computed(() => {
-  const ms = Number(gcStats.value.totalTimeMs || 0)
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`
+const hikariUsage = computed(() => {
+  const active = Number(databaseOverview.value.hikari?.active || 0)
+  const max = Number(databaseOverview.value.hikari?.maximum_pool_size || 0)
+  return max > 0 ? Math.min(100, Number(((active / max) * 100).toFixed(1))) : 0
 })
 
-const hikariMax = 20
+const latestRun = computed(() => qualitySummary.value.latestRun)
+const criticalIssues = computed(() => Number(latestRun.value?.critical_count || 0))
+const warningIssues = computed(() => Number(latestRun.value?.warning_count || 0))
 
 const summaryCards = computed(() => [
-  { label: '健康状态', value: healthStatus.value.status || 'UNKNOWN', note: '系统健康检查接口返回', tone: healthTone.value === 'success' ? 'green' : healthTone.value === 'warning' ? 'amber' : 'danger', icon: 'i-ant-design:heart-twotone' },
-  { label: '运行时长', value: runtimeInfo.value.uptimeFormatted || '-', note: 'JVM 进程启动至今', tone: 'blue', icon: 'i-ant-design:clock-circle-twotone' },
-  { label: '堆内存使用率', value: memoryInfo.value.usagePercent || '-', note: '来自系统内存指标', tone: 'violet', icon: 'i-ant-design:database-twotone' },
-  { label: 'GC 累计', value: `${totalGcCount.value} 次`, note: `累计耗时 ${totalGcTime.value}`, tone: 'amber', icon: 'i-ant-design:sync-outlined' },
-  { label: '线程', value: `${threadStats.value.currentCount ?? 0}/${threadStats.value.peakCount ?? 0}`, note: '当前 / 历史峰值', tone: 'teal', icon: 'i-ant-design:apartment-outlined' },
+  {
+    label: '数据库状态',
+    value: databaseStatus.value,
+    note: databaseOverview.value.database?.name || 'PostgreSQL',
+    tone: databaseStatus.value === 'UP' ? 'green' : 'danger',
+    icon: 'i-ant-design:database-twotone',
+  },
+  {
+    label: '数据库连接',
+    value: `${databaseOverview.value.connections?.total ?? 0}/${databaseOverview.value.database?.max_connections ?? '-'}`,
+    note: `活跃 ${databaseOverview.value.connections?.active ?? 0} · 等待 ${databaseOverview.value.connections?.waiting ?? 0}`,
+    tone: connectionUsage.value >= 90 ? 'danger' : connectionUsage.value >= 80 ? 'amber' : 'blue',
+    icon: 'i-ant-design:link-outlined',
+  },
+  {
+    label: 'Hikari 连接池',
+    value: `${databaseOverview.value.hikari?.active ?? 0}/${databaseOverview.value.hikari?.maximum_pool_size ?? '-'}`,
+    note: `空闲 ${databaseOverview.value.hikari?.idle ?? 0} · 等待 ${databaseOverview.value.hikari?.pending ?? 0}`,
+    tone: hikariUsage.value >= 90 ? 'danger' : hikariUsage.value >= 80 ? 'amber' : 'teal',
+    icon: 'i-ant-design:cluster-outlined',
+  },
+  {
+    label: '严重数据异常',
+    value: formatNumber(criticalIssues.value),
+    note: latestRun.value?.completed_at ? `最近检查 ${formatDate(latestRun.value.completed_at)}` : '尚未执行检查',
+    tone: criticalIssues.value > 0 ? 'danger' : 'green',
+    icon: 'i-ant-design:warning-twotone',
+  },
+  {
+    label: '数据库大小',
+    value: formatBytes(databaseOverview.value.database?.size_bytes),
+    note: `缓存命中率 ${databaseOverview.value.transactions?.cache_hit_ratio ?? '-'}%`,
+    tone: 'violet',
+    icon: 'i-ant-design:hdd-twotone',
+  },
 ])
 
-// ---- data loading ----
-async function loadOverview() {
+function formatNumber(value: unknown) {
+  return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
+}
+
+function formatBytes(value: unknown) {
+  const bytes = Number(value || 0)
+  if (!bytes) return '-'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+  return `${(bytes / 1024 ** index).toFixed(index > 1 ? 2 : 0)} ${units[index]}`
+}
+
+function formatDuration(value: unknown) {
+  const seconds = Number(value || 0)
+  if (!seconds) return '-'
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return days > 0 ? `${days} 天 ${hours} 小时` : `${hours} 小时 ${minutes} 分钟`
+}
+
+function formatDate(value: unknown) {
+  if (!value) return '-'
+  const date = new Date(String(value))
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
+}
+
+function statusType(status?: string) {
+  if (status === 'SUCCESS' || status === 'UP') return 'success'
+  if (status === 'RUNNING') return 'primary'
+  if (status === 'WARNING') return 'warning'
+  return 'danger'
+}
+
+async function loadAll(showLoading = true) {
+  if (showLoading) loading.value = true
   try {
-    const [overviewRes, healthRes, runtimeRes, memoryRes, infoRes, propertiesRes] = await Promise.all([
-      getSystemOverview(),
+    const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = await Promise.allSettled([
       getSystemHealth(),
       getSystemRuntime(),
       getSystemMemory(),
       getSystemInfo(),
-      getSystemProperties(),
+      getDatabaseOverview(),
+      getDataQualitySummary(),
+      getDataQualityIssues(100),
     ])
-    const overview = overviewRes.data ?? {}
-    healthStatus.value = healthRes.data ?? (overview.health as HealthInfo) ?? {}
-    runtimeInfo.value = runtimeRes.data ?? (overview.runtime as RuntimeInfo) ?? {}
-    memoryInfo.value = memoryRes.data ?? (overview.memory as MemoryInfo) ?? {}
-    systemInfo.value = infoRes.data ?? (overview.info as SystemInfo) ?? ({ application: {}, jvm: {}, operatingSystem: {} })
-    properties.value = propertiesRes.data ?? (overview.properties as Record<string, string>) ?? {}
-    gcStats.value = (overview.gc ?? {}) as GcStats
-    threadStats.value = (overview.threads ?? {}) as ThreadStats
+
+    if (healthRes.status === 'fulfilled') healthStatus.value = healthRes.value.data ?? {}
+    if (runtimeRes.status === 'fulfilled') runtimeInfo.value = runtimeRes.value.data ?? {}
+    if (memoryRes.status === 'fulfilled') memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
+    if (infoRes.status === 'fulfilled') systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
+    if (databaseRes.status === 'fulfilled') databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
+    if (qualityRes.status === 'fulfilled') qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
+    if (issuesRes.status === 'fulfilled') qualityIssues.value = issuesRes.value.data ?? []
+
+    lastRefresh.value = new Date().toLocaleTimeString()
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+async function runQualityCheck() {
+  qualityRunning.value = true
+  try {
+    const response = await runDataQualityChecks()
+    qualitySummary.value = response.data ?? qualitySummary.value
+    const issues = await getDataQualityIssues(100)
+    qualityIssues.value = issues.data ?? []
+    ElMessage.success('数据质量检查已完成')
   }
   catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : '监控信息加载失败'
-    ElMessage.error(msg)
+    const message = error instanceof Error ? error.message : '数据质量检查失败'
+    ElMessage.error(message)
+  }
+  finally {
+    qualityRunning.value = false
   }
 }
 
-function extractMetricValue(metric: ActuatorMetric): number | null {
-  return metric?.measurements?.[0]?.value ?? null
+function openGrafana() {
+  const configuredUrl = String(import.meta.env.VITE_GRAFANA_URL || '').trim()
+  const url = configuredUrl || `${window.location.protocol}//${window.location.hostname}:3000`
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-async function loadActuatorMetrics() {
-  try {
-    const [activeRes, idleRes, pendingRes] = await Promise.allSettled([
-      getMetric('hikaricp.connections.active'),
-      getMetric('hikaricp.connections.idle'),
-      getMetric('hikaricp.connections.pending'),
-    ])
-    if (activeRes.status === 'fulfilled') {
-      hikariActive.value = extractMetricValue(activeRes.value.data ?? {})
-    }
-    if (idleRes.status === 'fulfilled') {
-      hikariIdle.value = extractMetricValue(idleRes.value.data ?? {})
-    }
-    if (pendingRes.status === 'fulfilled') {
-      hikariPending.value = extractMetricValue(pendingRes.value.data ?? {})
-    }
-  }
-  catch { /* actuator 不可用时静默 */ }
-}
-
-async function loadAll(showLoading = true) {
-  if (showLoading) { loading.value = true }
-  else { autoRefreshing.value = true }
-  await Promise.all([loadOverview(), loadActuatorMetrics()])
-  lastRefresh.value = new Date().toLocaleTimeString()
-  loading.value = false
-  autoRefreshing.value = false
-}
-
-// ---- auto-refresh ----
 const { pause, resume } = useIntervalFn(() => {
-  if (autoRefresh.value) {
-    loadAll(false)
-  }
-}, 10000)
+  if (autoRefresh.value) void loadAll(false)
+}, 15000)
 
-// 页面可见性门控：隐藏时暂停轮询，可见时恢复，避免后台标签页浪费资源
 function handleVisibilityChange() {
-  if (document.hidden) {
-    pause()
-  }
-  else if (autoRefresh.value) {
-    resume()
-  }
+  if (document.hidden) pause()
+  else if (autoRefresh.value) resume()
 }
 
 onMounted(() => {
-  loadAll()
+  void loadAll()
   resume()
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
@@ -168,28 +209,23 @@ onUnmounted(() => {
 <template>
   <div class="page-shell">
     <div class="page-header">
-      <div class="header-copy">
-        <p class="eyebrow">
-          System Monitor
-        </p>
-        <h2>系统监控</h2>
-        <p class="subtitle" aria-live="polite">
-          {{ autoRefresh ? '每 10 秒自动刷新' : '自动刷新已暂停' }} · 上次刷新: {{ lastRefresh || '--' }}
+      <div>
+        <p class="eyebrow">System & Database Monitor</p>
+        <h2>系统与数据库监控</h2>
+        <p class="subtitle">
+          {{ autoRefresh ? '每 15 秒自动刷新' : '自动刷新已暂停' }} · 上次刷新 {{ lastRefresh || '--' }}
         </p>
       </div>
-      <div class="monitor-actions">
-        <span class="health-pill" :class="healthTone">
-          <i class="status-dot" aria-hidden="true" />
-          {{ healthStatus.status || 'UNKNOWN' }}
-        </span>
-        <div class="refresh-actions">
-          <el-button size="small" :type="autoRefresh ? 'primary' : 'default'" @click="autoRefresh = !autoRefresh">
-            {{ autoRefresh ? '暂停刷新' : '恢复刷新' }}
-          </el-button>
-          <el-button size="small" type="primary" :loading="loading" @click="loadAll()">
-            立即刷新
-          </el-button>
-        </div>
+      <div class="header-actions">
+        <el-button @click="openGrafana">
+          Grafana 看板
+        </el-button>
+        <el-button :type="autoRefresh ? 'primary' : 'default'" @click="autoRefresh = !autoRefresh">
+          {{ autoRefresh ? '暂停刷新' : '恢复刷新' }}
+        </el-button>
+        <el-button type="primary" :loading="loading" @click="loadAll()">
+          立即刷新
+        </el-button>
       </div>
     </div>
 
@@ -206,356 +242,275 @@ onUnmounted(() => {
         </div>
         <div class="mrr-metric-card__body">
           <span class="mrr-metric-card__label">{{ item.label }}</span>
-          <strong
-            class="mrr-metric-card__value"
-            :class="item.label === '健康状态' ? healthTone : ''"
-          >
-            {{ item.value }}
-          </strong>
-          <p class="mrr-metric-card__note">
-            {{ item.note }}
-          </p>
+          <strong class="mrr-metric-card__value">{{ item.value }}</strong>
+          <p class="mrr-metric-card__note">{{ item.note }}</p>
         </div>
       </el-card>
     </section>
 
-    <el-row :gutter="20" class="metric-row">
-      <el-col :xs="24" :md="12">
-        <el-card class="monitor-card" shadow="never">
+    <el-row :gutter="20" class="monitor-row">
+      <el-col :xs="24" :lg="14">
+        <el-card shadow="never" class="monitor-card">
           <template #header>
-            <div class="card-title">
-              JVM 与应用信息
+            <div class="card-header">
+              <div>
+                <strong>PostgreSQL 运行状态</strong>
+                <p>实时连接、事务、锁等待和缓存情况</p>
+              </div>
+              <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
+                {{ databaseStatus }}
+              </el-tag>
             </div>
           </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="应用名称">
-              {{ systemInfo.application?.name || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="启动时间">
-              {{ systemInfo.application?.startTime || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="运行时长">
-              {{ systemInfo.application?.runTime || runtimeInfo.uptimeFormatted || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Java 版本">
-              {{ systemInfo.jvm?.javaVersion || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Java Vendor">
-              {{ systemInfo.jvm?.javaVendor || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="可用处理器">
-              {{ systemInfo.jvm?.availableProcessors || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="系统负载">
-              {{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}
-            </el-descriptions-item>
+
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="数据库">{{ databaseOverview.database?.name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="版本">{{ databaseOverview.database?.version || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="运行时长">{{ formatDuration(databaseOverview.database?.uptime_seconds) }}</el-descriptions-item>
+            <el-descriptions-item label="数据库大小">{{ formatBytes(databaseOverview.database?.size_bytes) }}</el-descriptions-item>
+            <el-descriptions-item label="事务提交">{{ formatNumber(databaseOverview.transactions?.commits) }}</el-descriptions-item>
+            <el-descriptions-item label="事务回滚">{{ formatNumber(databaseOverview.transactions?.rollbacks) }}</el-descriptions-item>
+            <el-descriptions-item label="锁等待">{{ databaseOverview.contention?.lock_waiters ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="长事务">{{ databaseOverview.contention?.long_transactions ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="死锁累计">{{ databaseOverview.transactions?.deadlocks ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="缓存命中率">{{ databaseOverview.transactions?.cache_hit_ratio ?? '-' }}%</el-descriptions-item>
           </el-descriptions>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="12">
-        <el-card class="monitor-card" shadow="never">
-          <template #header>
-            <div class="card-title">
-              内存概览
+
+          <div class="progress-grid">
+            <div>
+              <div class="progress-label"><span>数据库连接使用率</span><strong>{{ connectionUsage }}%</strong></div>
+              <el-progress :percentage="connectionUsage" :status="connectionUsage >= 90 ? 'exception' : connectionUsage >= 80 ? 'warning' : 'success'" />
             </div>
-          </template>
-          <div class="metric">
-            <div class="metric-top">
-              <span>堆内存使用率</span>
-              <strong>{{ memoryInfo.usagePercent || '0%' }}</strong>
+            <div>
+              <div class="progress-label"><span>Hikari 连接池使用率</span><strong>{{ hikariUsage }}%</strong></div>
+              <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
             </div>
-            <el-progress :percentage="memoryPercent" :stroke-width="12" :status="memoryPercent > 90 ? 'exception' : memoryPercent > 70 ? 'warning' : 'success'" />
           </div>
-          <el-descriptions :column="1" border class="details-list memory-details">
-            <el-descriptions-item label="Heap Used">
-              {{ memoryInfo.heap?.used || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Heap Committed">
-              {{ memoryInfo.heap?.committed || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Heap Max">
-              {{ memoryInfo.heap?.max || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Non-Heap Used">
-              {{ memoryInfo.nonHeap?.used || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="Non-Heap Committed">
-              {{ memoryInfo.nonHeap?.committed || '-' }}
-            </el-descriptions-item>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :lg="10">
+        <el-card shadow="never" class="monitor-card">
+          <template #header>
+            <div class="card-header">
+              <div>
+                <strong>应用运行状态</strong>
+                <p>JVM、内存与运行环境摘要</p>
+              </div>
+              <el-tag :type="statusType(String(healthStatus.status || 'UNKNOWN'))">
+                {{ healthStatus.status || 'UNKNOWN' }}
+              </el-tag>
+            </div>
+          </template>
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="应用">{{ systemInfo.application?.name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="运行时长">{{ runtimeInfo.uptimeFormatted || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="Java">{{ systemInfo.jvm?.javaVersion || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="堆内存使用率">{{ memoryInfo.usagePercent || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="处理器">{{ systemInfo.jvm?.availableProcessors || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="系统负载">{{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="metric-row">
-      <el-col :xs="24" :md="12">
-        <el-card class="monitor-card" shadow="never">
-          <template #header>
-            <div class="card-title">
-              GC 统计
-            </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="累计收集次数">
-              {{ totalGcCount }}
-            </el-descriptions-item>
-            <el-descriptions-item label="累计耗时">
-              {{ totalGcTime }}
-            </el-descriptions-item>
-            <el-descriptions-item v-for="(item, idx) in gcItems" :key="idx" :label="item.name || String(idx)">
-              {{ item.count ?? 0 }} 次 / {{ item.timeMs ?? 0 }}ms
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="12">
-        <el-card class="monitor-card" shadow="never">
-          <template #header>
-            <div class="card-title">
-              线程 &amp; 连接池
-            </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="当前线程数">
-              {{ threadStats.currentCount || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="守护线程">
-              {{ threadStats.daemonCount || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="历史峰值">
-              {{ threadStats.peakCount || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="累计创建">
-              {{ threadStats.totalStarted || '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <el-descriptions :column="1" border class="details-list connection-details">
-            <el-descriptions-item label="DB 活跃连接">
-              {{ hikariActive !== null ? `${hikariActive}/${hikariMax}` : '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="DB 空闲连接">
-              {{ hikariIdle !== null ? hikariIdle : '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="DB 等待连接">
-              {{ hikariPending !== null ? hikariPending : '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card class="monitor-card properties-card" shadow="never">
+    <el-card shadow="never" class="monitor-card monitor-row">
       <template #header>
-        <div class="card-title">
-          系统属性
+        <div class="card-header">
+          <div>
+            <strong>数据质量监控</strong>
+            <p>检查结果按批次落库，Prometheus 仅采集聚合数量</p>
+          </div>
+          <div class="quality-actions">
+            <el-tag :type="statusType(latestRun?.status)">
+              {{ qualitySummary.running ? 'RUNNING' : latestRun?.status || 'NOT_RUN' }}
+            </el-tag>
+            <el-button type="primary" :loading="qualityRunning || qualitySummary.running" @click="runQualityCheck">
+              立即检查
+            </el-button>
+          </div>
         </div>
       </template>
-      <div class="properties-grid">
-        <article v-for="(value, key) in properties" :key="key" class="property-item">
-          <div class="property-key">
-            {{ key }}
-          </div>
-          <div class="property-value" :title="value">
-            {{ value }}
-          </div>
-        </article>
+
+      <div class="quality-summary">
+        <div><span>严重异常</span><strong class="danger-text">{{ formatNumber(criticalIssues) }}</strong></div>
+        <div><span>警告</span><strong class="warning-text">{{ formatNumber(warningIssues) }}</strong></div>
+        <div><span>检查项</span><strong>{{ latestRun?.check_count ?? 0 }}</strong></div>
+        <div><span>完成时间</span><strong>{{ formatDate(latestRun?.completed_at) }}</strong></div>
       </div>
+
+      <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
+        <el-table-column prop="check_name" label="检查项" min-width="220" />
+        <el-table-column prop="check_code" label="代码" min-width="210" />
+        <el-table-column label="级别" width="110">
+          <template #default="scope">
+            <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'">
+              {{ scope.row.severity }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="issue_count" label="异常数" width="110" sortable />
+        <el-table-column prop="sampled_count" label="已保存样本" width="120" />
+      </el-table>
     </el-card>
+
+    <el-row :gutter="20" class="monitor-row">
+      <el-col :xs="24" :xl="13">
+        <el-card shadow="never" class="monitor-card">
+          <template #header>
+            <div class="card-header"><strong>异常样本</strong><span>最多显示最近 100 条</span></div>
+          </template>
+          <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
+            <el-table-column prop="severity" label="级别" width="100">
+              <template #default="scope">
+                <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'" size="small">
+                  {{ scope.row.severity }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="check_name" label="检查项" min-width="180" />
+            <el-table-column prop="bah" label="病案号" width="120" />
+            <el-table-column prop="sjh" label="上架号" width="120" />
+            <el-table-column prop="detail" label="说明" min-width="260" show-overflow-tooltip />
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :xl="11">
+        <el-card shadow="never" class="monitor-card">
+          <template #header>
+            <div class="card-header"><strong>数据库占用最大的表</strong><span>包含表与索引</span></div>
+          </template>
+          <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
+            <el-table-column prop="table_name" label="表" min-width="180" />
+            <el-table-column label="总大小" width="120">
+              <template #default="scope">{{ formatBytes(scope.row.total_bytes) }}</template>
+            </el-table-column>
+            <el-table-column prop="live_rows" label="有效行" width="110" />
+            <el-table-column prop="dead_rows" label="死元组" width="110" />
+            <el-table-column label="最近自动清理" min-width="180">
+              <template #default="scope">{{ formatDate(scope.row.last_autovacuum) }}</template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <style scoped>
 .page-shell {
-  display: grid;
-  gap: 20px;
+  padding: 20px;
 }
 
-.page-header {
+.page-header,
+.card-header,
+.header-actions,
+.quality-actions,
+.progress-label {
   display: flex;
-  gap: 24px;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 2px;
-}
-
-.header-copy {
-  min-width: 0;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h2 {
-  margin: 0;
-  font-size: clamp(24px, 3vw, 30px);
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.monitor-actions,
-.refresh-actions,
-.health-pill,
-.metric-top {
-  display: flex;
-  align-items: center;
-}
-
-.monitor-actions {
-  flex: none;
   gap: 12px;
 }
 
-.refresh-actions {
-  gap: 8px;
+.page-header {
+  margin-bottom: 18px;
 }
 
-.health-pill {
-  gap: 6px;
-  padding: 6px 10px;
+.page-header h2 {
+  margin: 4px 0;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 700;
-  border: 1px solid currentcolor;
-  border-radius: 999px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 
-.health-pill.success,
-.mrr-metric-card__value.success {
-  color: #16a34a;
+.subtitle,
+.card-header p,
+.card-header span {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
-.health-pill.warning,
-.mrr-metric-card__value.warning {
-  color: #d97706;
-}
-
-.health-pill.danger,
-.mrr-metric-card__value.danger {
-  color: #dc2626;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  background: currentcolor;
-  border-radius: 50%;
-}
-
-.metric-row {
-  row-gap: 20px;
+.monitor-row {
+  margin-top: 20px;
 }
 
 .monitor-card {
   height: 100%;
-  border-color: var(--divider);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
-.monitor-card :deep(.el-card__header) {
-  padding: 14px 18px;
-  background: var(--surface-alt);
-  border-bottom-color: var(--divider);
-}
-
-.monitor-card :deep(.el-card__body) {
-  padding: 18px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.metric {
+.card-header > div:first-child {
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: var(--surface-alt);
-  border: 1px solid var(--divider);
-  border-radius: 10px;
+  gap: 4px;
 }
 
-.metric-top {
-  gap: 12px;
-  justify-content: space-between;
+.progress-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.progress-label {
+  margin-bottom: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
 }
 
-.metric-top strong {
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-
-.details-list {
-  margin-top: 14px;
-}
-
-.connection-details {
-  margin-top: 12px;
-}
-
-.properties-grid {
+.quality-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+  margin-bottom: 18px;
 }
 
-.property-item {
-  padding: 14px;
-  content-visibility: auto;
-  overflow: hidden;
-  background: var(--surface-alt);
-  border: 1px solid var(--divider);
+.quality-summary > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
+  background: var(--el-fill-color-lighter);
 }
 
-.property-value {
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
+.quality-summary span {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 
-@media (width <= 720px) {
-  .page-header {
-    flex-direction: column;
+.quality-summary strong {
+  font-size: 20px;
+}
+
+.danger-text {
+  color: var(--el-color-danger);
+}
+
+.warning-text {
+  color: var(--el-color-warning);
+}
+
+@media (max-width: 900px) {
+  .page-header,
+  .card-header {
     align-items: flex-start;
+    flex-direction: column;
   }
 
-  .monitor-actions,
-  .refresh-actions {
-    width: 100%;
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
-  .monitor-actions {
-    justify-content: space-between;
-  }
-
-  .refresh-actions :deep(.el-button) {
-    flex: 1;
-  }
-
-  .monitor-card :deep(.el-card__body) {
-    padding: 14px;
-  }
-
-  .properties-grid {
-    grid-template-columns: 1fr;
+  .quality-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

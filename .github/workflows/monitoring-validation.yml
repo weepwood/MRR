@@ -1,0 +1,112 @@
+name: monitoring-validation
+
+on:
+  pull_request:
+    branches:
+      - dev-no-login
+    paths:
+      - 'backend-repo/**'
+      - 'frontend-fantastic-admin/**'
+      - 'monitoring/**'
+      - '.github/workflows/monitoring-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoring-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend-repo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Compile backend
+        shell: bash
+        run: |
+          set +e
+          mvn -q -DskipTests compile > ../monitoring-backend-compile.log 2>&1
+          status=$?
+          tail -n 160 ../monitoring-backend-compile.log
+          exit $status
+      - name: Upload compile failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-backend-compile-log
+          path: monitoring-backend-compile.log
+          if-no-files-found: ignore
+      - name: Run backend tests
+        shell: bash
+        env:
+          JWT_SECRET_KEY: test-jwt-secret-key-for-monitoring-validation
+        run: |
+          set +e
+          mvn -q test > ../monitoring-backend-test.log 2>&1
+          status=$?
+          tail -n 240 ../monitoring-backend-test.log
+          exit $status
+      - name: Upload test failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-backend-test-log
+          path: monitoring-backend-test.log
+          if-no-files-found: ignore
+      - name: Package backend
+        run: mvn -q -DskipTests package
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint:tsc
+      - run: pnpm build
+
+  monitoring-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Prometheus configuration
+        run: |
+          docker run --rm \
+            -v "$PWD/monitoring/prometheus:/etc/prometheus:ro" \
+            --entrypoint promtool \
+            prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
+      - name: Validate Alertmanager configuration
+        run: |
+          docker run --rm \
+            -v "$PWD/monitoring/alertmanager:/etc/alertmanager:ro" \
+            --entrypoint amtool \
+            prom/alertmanager:v0.28.1 \
+            check-config /etc/alertmanager/alertmanager.yml
+      - name: Validate Grafana dashboard JSON
+        run: |
+          for dashboard in monitoring/grafana/dashboards/*.json; do
+            python -m json.tool "$dashboard" >/dev/null
+          done

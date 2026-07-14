@@ -26,14 +26,19 @@
   --mrr-space-6: 24px;
   --mrr-space-8: 32px;
 
-  /* 现代 SaaS 圆角层级 */
-  --mrr-radius-sm: 6px;
-  --mrr-radius-md: 8px;
-  --mrr-radius-lg: 10px;
-  --mrr-radius-xl: 14px;
-  --mrr-radius-2xl: 18px;
-  --mrr-radius-card: 12px;
-  --mrr-radius-dialog: 16px;
+  /*
+   * 全局圆角体系。
+   * --radius 由“系统设置 → 应用配置 → 全局界面圆角”实时写入，
+   * MRR 页面、Element Plus 控件和影像档案袋共享同一圆角基准。
+   */
+  --mrr-radius-base: var(--radius, 0.5rem);
+  --mrr-radius-sm: clamp(0px, calc(var(--mrr-radius-base) - 6px), 18px);
+  --mrr-radius-md: clamp(0px, calc(var(--mrr-radius-base) - 4px), 20px);
+  --mrr-radius-lg: clamp(0px, calc(var(--mrr-radius-base) - 2px), 22px);
+  --mrr-radius-xl: clamp(0px, calc(var(--mrr-radius-base) + 2px), 26px);
+  --mrr-radius-2xl: clamp(0px, calc(var(--mrr-radius-base) + 6px), 30px);
+  --mrr-radius-card: var(--mrr-radius-base);
+  --mrr-radius-dialog: clamp(0px, calc(var(--mrr-radius-base) + 4px), 28px);
   --mrr-radius-pill: 999px;
   --mrr-control-radius: var(--mrr-radius-md);
 

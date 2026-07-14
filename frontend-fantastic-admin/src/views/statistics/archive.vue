@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { GalleryImage, RouteArchiveMeta, ViewMode } from './archive/types'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
@@ -10,6 +11,7 @@ import {
   loadEffectiveSystemSettings,
   SYSTEM_SETTINGS_UPDATED_EVENT,
 } from '@/utils/system-settings'
+import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import PatientCard from './archive/components/PatientCard.vue'
@@ -23,20 +25,30 @@ import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
+const ID_CARD_PATTERN = /^\d{15}(\d{2}[0-9Xx])?$/
 const route = useRoute()
 const router = useRouter()
 
 const {
   images,
   patientList,
+  archiveCases,
   loading,
   patientLoading,
+  idCardLoading,
   downloading,
   savingType,
   errorMsg,
   searchBah,
   searchSjh,
+  searchIdCard,
+  idCardToken,
+  maskedIdCard,
   loadImages,
+  loadArchiveCasesByIdCard,
+  loadArchiveCasesByToken,
+  setPatientFromArchiveCase,
+  clearIdCardSearch,
   handleDownload,
   saveImageType,
 } = useArchiveImages()
@@ -106,6 +118,11 @@ function normalizeSearchParam(value: unknown): string {
   return text ? padCode(text) : ''
 }
 
+function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
+  return normalizeSearchParam(item.bah) === bah
+    && normalizeSearchParam(item.sjh) === sjh
+}
+
 function applyArchiveSettings(settings: EffectiveSystemSettings) {
   Object.assign(archiveSettings, settings)
   viewMode.value = settings.archiveDefaultView
@@ -159,14 +176,60 @@ function clearArchiveState(message = '') {
   images.value = []
   patientList.value = []
   errorMsg.value = message
+  selectedType.value = 'all'
   selectedImageIndex.value = 0
   selectedIds.value = new Set()
+}
+
+async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase) {
+  searchBah.value = normalizeSearchParam(archiveCase.bah)
+  searchSjh.value = normalizeSearchParam(archiveCase.sjh)
+  selectedType.value = 'all'
+  selectedImageIndex.value = 0
+  selectedIds.value = new Set()
+  await loadImages()
+  setPatientFromArchiveCase(archiveCase)
+}
+
+async function syncIdCardSearchFromRoute(token: string, bah: string, sjh: string) {
+  searchIdCard.value = ''
+  if (idCardToken.value !== token || !archiveCases.value.length) {
+    const result = await loadArchiveCasesByToken(token)
+    if (!result) {
+      clearArchiveState(errorMsg.value || '身份证查询链接无效')
+      return
+    }
+  }
+
+  const selectedCase = archiveCases.value.find(item => caseMatches(item, bah, sjh))
+    || archiveCases.value[0]
+  if (!selectedCase) {
+    clearArchiveState(errorMsg.value || '未查询到该患者的影像病案')
+    return
+  }
+
+  const selectedBah = normalizeSearchParam(selectedCase.bah)
+  const selectedSjh = normalizeSearchParam(selectedCase.sjh)
+  if (selectedBah !== bah || selectedSjh !== sjh) {
+    await router.replace({
+      path: '/archive',
+      query: {
+        id: token,
+        bah: selectedBah,
+        ...(selectedSjh ? { sjh: selectedSjh } : {}),
+      },
+    })
+    return
+  }
+
+  await loadSelectedArchiveCase(selectedCase)
 }
 
 async function syncSearchFromRoute() {
   const legacyBah = normalizeSearchParam(route.params.bah)
   const bah = normalizeSearchParam(route.query.bah || legacyBah)
   const sjh = normalizeSearchParam(route.query.sjh)
+  const idToken = sanitizeParam(route.query.id)
 
   searchBah.value = bah
   searchSjh.value = sjh
@@ -183,6 +246,12 @@ async function syncSearchFromRoute() {
     return
   }
 
+  if (idToken) {
+    await syncIdCardSearchFromRoute(idToken, bah, sjh)
+    return
+  }
+
+  clearIdCardSearch()
   if (bah || sjh) {
     await loadImages()
   }
@@ -191,7 +260,41 @@ async function syncSearchFromRoute() {
   }
 }
 
+async function handleIdCardSearch() {
+  const idCard = searchIdCard.value.trim()
+  if (!ID_CARD_PATTERN.test(idCard)) {
+    const message = '请输入正确的 15 位或 18 位身份证号'
+    clearArchiveState(message)
+    ElMessage.warning(message)
+    return
+  }
+
+  const result = await loadArchiveCasesByIdCard(idCard)
+  const firstCase = result?.cases?.[0]
+  if (!result?.token || !firstCase) {
+    clearArchiveState(errorMsg.value || '未查询到该患者的影像病案')
+    return
+  }
+
+  const bah = normalizeSearchParam(firstCase.bah)
+  const sjh = normalizeSearchParam(firstCase.sjh)
+  await router.push({
+    path: '/archive',
+    query: {
+      id: result.token,
+      bah,
+      ...(sjh ? { sjh } : {}),
+    },
+  })
+}
+
 async function handleSearch() {
+  if (searchIdCard.value.trim()) {
+    await handleIdCardSearch()
+    return
+  }
+
+  clearIdCardSearch()
   const bah = normalizeSearchParam(searchBah.value)
   const sjh = normalizeSearchParam(searchSjh.value)
   const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
@@ -219,6 +322,37 @@ async function handleSearch() {
     return
   }
 
+  await router.push(location)
+}
+
+async function handleRefresh() {
+  if (sanitizeParam(route.query.id)) {
+    await syncSearchFromRoute()
+  }
+  else {
+    await handleSearch()
+  }
+}
+
+async function selectArchiveCase(archiveCase: IdCardArchiveCase) {
+  const token = idCardToken.value || sanitizeParam(route.query.id)
+  if (!token) {
+    return
+  }
+  const bah = normalizeSearchParam(archiveCase.bah)
+  const sjh = normalizeSearchParam(archiveCase.sjh)
+  const location = {
+    path: '/archive',
+    query: {
+      id: token,
+      bah,
+      ...(sjh ? { sjh } : {}),
+    },
+  }
+  if (router.resolve(location).fullPath === route.fullPath) {
+    await loadSelectedArchiveCase(archiveCase)
+    return
+  }
   await router.push(location)
 }
 
@@ -302,7 +436,7 @@ watch(filteredImages, () => {
 })
 
 watch(
-  () => [route.params.bah, route.query.bah, route.query.sjh],
+  () => [route.params.bah, route.query.bah, route.query.sjh, route.query.id],
   syncSearchFromRoute,
   { immediate: true },
 )
@@ -347,26 +481,36 @@ onUnmounted(() => {
     >
       <section class="archive-sidebar">
         <ArchiveHeader
-          :loading="loading"
+          :loading="loading || idCardLoading"
           :downloading="downloading"
           :printing="printing"
           :exporting-pdf="exportingPdf"
           :show-actions="images.length > 0"
           :selected-count="selectedCount"
           @back="goBack"
-          @refresh="handleSearch"
+          @refresh="handleRefresh"
           @download="handleDownload"
           @print="handlePrint"
           @export-pdf="handleExportPdf"
         />
 
         <ArchiveSearchBar
+          v-model:search-id-card="searchIdCard"
           v-model:search-bah="searchBah"
           v-model:search-sjh="searchSjh"
           :route-meta="routeArchive"
           :has-images="images.length > 0"
-          :loading="loading"
+          :loading="loading || idCardLoading"
           @search="handleSearch"
+        />
+
+        <ArchiveCaseList
+          :cases="archiveCases"
+          :active-bah="searchBah"
+          :active-sjh="searchSjh"
+          :masked-id-card="maskedIdCard"
+          :loading="idCardLoading"
+          @select="selectArchiveCase"
         />
 
         <PatientCard :patient="patient" :loading="patientLoading" />
@@ -386,8 +530,8 @@ onUnmounted(() => {
           />
         </template>
 
-        <div v-else-if="!loading && !errorMsg" class="empty-state">
-          <el-empty description="输入病案号或上架号查询影像" />
+        <div v-else-if="!loading && !idCardLoading && !errorMsg" class="empty-state">
+          <el-empty description="输入身份证号、病案号或上架号查询影像" />
         </div>
       </section>
 

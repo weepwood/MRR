@@ -56,22 +56,63 @@ jobs:
         working-directory: frontend-fantastic-admin
         run: pnpm install --no-frozen-lockfile
 
-      - name: Typecheck and lint
+      - name: Validate source and build
+        id: validation
+        shell: bash
         working-directory: frontend-fantastic-admin
-        run: pnpm lint
+        run: |
+          set +e
+          pnpm lint:tsc 2>&1 | tee /tmp/chart-tsc.log
+          tsc_status=${PIPESTATUS[0]}
+          pnpm lint:eslint 2>&1 | tee /tmp/chart-eslint.log
+          eslint_status=${PIPESTATUS[0]}
+          pnpm lint:stylelint 2>&1 | tee /tmp/chart-stylelint.log
+          stylelint_status=${PIPESTATUS[0]}
+          pnpm build 2>&1 | tee /tmp/chart-build.log
+          build_status=${PIPESTATUS[0]}
+          {
+            echo "tsc_status=${tsc_status}"
+            echo "eslint_status=${eslint_status}"
+            echo "stylelint_status=${stylelint_status}"
+            echo "build_status=${build_status}"
+            echo
+            echo "===== TSC ====="
+            cat /tmp/chart-tsc.log
+            echo
+            echo "===== ESLINT ====="
+            cat /tmp/chart-eslint.log
+            echo
+            echo "===== STYLELINT ====="
+            cat /tmp/chart-stylelint.log
+            echo
+            echo "===== BUILD ====="
+            cat /tmp/chart-build.log
+          } > ../scripts/tmp-unified-charts-validation.log
+          if (( tsc_status || eslint_status || stylelint_status || build_status )); then
+            exit 1
+          fi
 
-      - name: Build frontend
-        working-directory: frontend-fantastic-admin
-        run: pnpm build
-
-      - name: Verify patch whitespace
-        run: git diff --check
-
-      - name: Commit generated implementation
+      - name: Persist validation diagnostics
+        if: failure() && steps.validation.outcome == 'failure'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/tmp-unified-charts-validation.log
+          git commit -m "ci: capture chart validation diagnostics [skip ci]"
+          git push origin HEAD:feat/unified-echarts-system-20260714
+
+      - name: Verify patch whitespace
+        if: success()
+        run: git diff --check
+
+      - name: Commit generated implementation
+        if: success()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/tmp-unified-charts-validation.log
           git add frontend-fantastic-admin/package.json \
             frontend-fantastic-admin/pnpm-lock.yaml \
             frontend-fantastic-admin/src/plugins/echarts.ts \

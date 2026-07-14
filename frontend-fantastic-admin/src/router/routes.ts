@@ -238,7 +238,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
       },
       {
         path: '/monitoring',
-        component: () => import('@/views/monitoring/index.vue'),
+        component: () => import('@/views/monitoring-dashboard/index.vue'),
         meta: {
           title: '系统监控',
           icon: 'i-ant-design:dashboard-twotone',

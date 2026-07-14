@@ -79,4 +79,35 @@ test.describe('无后端 Mock 模式', () => {
     })
     expect(borderRadius).toBeGreaterThan(0)
   })
+
+  test('主要业务页面卡片跟随统一圆角设置', async ({ page }) => {
+    test.setTimeout(90_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(() => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+        app: {
+          enablePermission: false,
+          radius: 1,
+        },
+      }))
+    })
+
+    const surfaces = [
+      { path: '/', selector: '.stat-card' },
+      { path: '/statistics', selector: '.hero-panel' },
+      { path: '/monitoring', selector: '.monitor-card' },
+      { path: '/settings', selector: '.setting-section' },
+      { path: '/response-analysis', selector: '.analysis-card' },
+    ]
+
+    for (const surface of surfaces) {
+      await page.goto(surface.path, { waitUntil: 'domcontentloaded' })
+      const element = page.locator(surface.selector).first()
+      await expect(element).toBeVisible({ timeout: 20_000 })
+      const radius = await element.evaluate((node) => {
+        return Number.parseFloat(window.getComputedStyle(node).borderRadius)
+      })
+      expect(radius).toBe(16)
+    }
+  })
 })

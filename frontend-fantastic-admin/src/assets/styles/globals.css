@@ -10,6 +10,7 @@
 @import "./tokens.css";
 @import "./base.css";
 @import "./element-plus-overrides.css";
+@import "./components/page-header.css";
 @import "./components/metric-card.css";
 @import "./components/archive-workspace.css";
 @import "./components/surface-radius.css";

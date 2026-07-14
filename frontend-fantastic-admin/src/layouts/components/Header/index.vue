@@ -19,23 +19,23 @@ const { switchTo } = useMenu()
         <component :is="useSlots('header-start')" />
         <Logo class="title" />
         <component :is="useSlots('header-after-logo')" />
-        <FaScrollArea :scrollbar="false" mask horizontal gradient-color="var(--g-header-bg)" class="menu-container h-full flex-1 overscroll-contain">
+        <FaScrollArea :scrollbar="false" mask horizontal gradient-color="var(--mrr-navigation-bg-solid)" class="menu-container h-full flex-1 overscroll-contain">
           <!-- 顶部模式 -->
           <div class="menu h-full flex of-hidden transition-all">
             <template v-for="(item, index) in menuStore.allMenus" :key="index">
               <div
-                class="menu-item relative mx-1 py-2 transition-all" :class="{
+                class="menu-item relative transition-all" :class="{
                   active: index === menuStore.actived,
                 }"
               >
                 <div
-                  v-if="item.children && item.children.length !== 0" class="group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-lg px-3 text-[var(--g-header-menu-color)] transition-colors hover-(bg-[var(--g-header-menu-hover-bg)] text-[var(--g-header-menu-hover-color)])" :class="{
-                    'text-[var(--g-header-menu-active-color)]! bg-[var(--g-header-menu-active-bg)]!': index === menuStore.actived,
+                  v-if="item.children && item.children.length !== 0" class="menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1" :class="{
+                    active: index === menuStore.actived,
                   }" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="switchTo(index)"
                 >
-                  <div class="inline-flex flex-1 items-center justify-center gap-1">
-                    <FaIcon v-if="item.meta?.icon" :name="item.meta?.icon" class="menu-item-container-icon transition-transform group-hover-scale-120" />
-                    <span class="w-full flex-1 truncate text-sm transition-height transition-opacity transition-width">
+                  <div class="inline-flex flex-1 items-center justify-center gap-2">
+                    <FaIcon v-if="item.meta?.icon" :name="item.meta?.icon" class="menu-item-container-icon" />
+                    <span class="w-full flex-1 truncate">
                       {{ typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title }}
                     </span>
                   </div>
@@ -45,8 +45,8 @@ const { switchTo } = useMenu()
           </div>
         </FaScrollArea>
         <component :is="useSlots('header-after-menu')" />
-        <div class="flex-center">
-          <AccountButton only-avatar dropdown-side="bottom" class="size-12 p-2" />
+        <div class="account-slot flex-center">
+          <AccountButton only-avatar dropdown-side="bottom" class="size-10 p-1.5" />
         </div>
         <component :is="useSlots('header-end')" />
       </div>
@@ -66,19 +66,20 @@ header {
   width: calc(100% - var(--scrollbar-width, 0px));
   height: var(--g-header-height);
   margin: 0 auto;
-  color: var(--g-header-color);
-  background-color: var(--g-header-bg);
-  box-shadow: -1px 0 0 0 hsl(var(--border)), 1px 0 0 0 hsl(var(--border)), 0 1px 0 0 hsl(var(--border));
-  transition: background-color 0.3s;
+  color: var(--text-primary);
+  background: var(--mrr-navigation-bg);
+  border-bottom: 1px solid var(--mrr-navigation-border);
+  backdrop-filter: blur(18px) saturate(140%);
+  transition: background-color 220ms ease, border-color 220ms ease;
 
   .header-container {
     display: flex;
-    gap: 30px;
+    gap: 18px;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     height: 100%;
-    padding: 0 12px;
+    padding: 0 18px;
     margin: 0 auto;
 
     :deep(a.title) {
@@ -87,58 +88,80 @@ header {
       width: inherit;
       height: inherit;
       padding: 0;
-      background-color: inherit;
+      background: transparent;
 
       .logo {
         width: initial;
         max-width: initial;
-        height: min(70%, 50px);
+        height: min(62%, 42px);
       }
 
       span {
-        font-size: 20px;
-        color: var(--g-header-color);
-        letter-spacing: 1px;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
       }
     }
 
     .menu-container {
       .menu {
         display: inline-flex;
+        gap: 4px;
+        align-items: center;
         height: 100%;
 
         :deep(.menu-item) {
+          display: flex;
+          align-items: center;
+          height: 100%;
+
           .menu-item-container {
-            color: var(--g-header-menu-color);
+            min-height: 36px;
+            padding: 0 12px;
+            font-size: 13px;
+            font-weight: 550;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: var(--mrr-radius-md);
+            transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
 
             &:hover {
-              color: var(--g-header-menu-hover-color);
-              background-color: var(--g-header-menu-hover-bg);
+              color: var(--text-primary);
+              background: var(--mrr-navigation-hover);
             }
 
             .menu-item-container-icon {
-              font-size: 20px !important;
+              width: 16px;
+              height: 16px;
+              font-size: 16px !important;
             }
-          }
 
-          &.active .menu-item-container {
-            color: var(--g-header-menu-active-color);
-            background-color: var(--g-header-menu-active-bg);
+            &.active {
+              color: var(--color-primary);
+              background: var(--mrr-navigation-active);
+              border-color: var(--mrr-navigation-active-border);
+            }
           }
         }
       }
     }
+
+    .account-slot {
+      padding-left: 12px;
+      border-left: 1px solid var(--mrr-navigation-border);
+    }
   }
 }
 
-/* 头部动画 */
 .header-enter-active,
 .header-leave-active {
-  transition: transform 0.3s;
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
 .header-enter-from,
 .header-leave-to {
+  opacity: 0;
   transform: translateY(calc(var(--g-header-height) * -1));
 }
 </style>

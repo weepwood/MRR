@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import imgLogo from '@/assets/images/mrr-logo.png'
+import imgLogo from '@/assets/images/mrr-logo.svg'
 
 defineOptions({
   name: 'Logo',

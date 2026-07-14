@@ -1,43 +1,50 @@
+import type { App } from 'vue'
+
 type ErrorNotifier = () => void
 
 const pendingErrorNotifiers = new WeakMap<object, ErrorNotifier>()
-let listenerInstalled = false
+let rejectionListenerInstalled = false
+let vueErrorHandlerInstalled = false
 
 function isReference(value: unknown): value is object {
   return (typeof value === 'object' && value !== null) || typeof value === 'function'
 }
 
-function handleUnhandledRejection(event: PromiseRejectionEvent) {
-  if (!isReference(event.reason)) {
-    return
+function notifyRegisteredRequestError(error: unknown): boolean {
+  if (!isReference(error)) {
+    return false
   }
 
-  const notify = pendingErrorNotifiers.get(event.reason)
+  const notify = pendingErrorNotifiers.get(error)
   if (!notify) {
-    return
+    return false
   }
 
-  pendingErrorNotifiers.delete(event.reason)
+  pendingErrorNotifiers.delete(error)
   notify()
+  return true
+}
+
+function handleUnhandledRejection(event: PromiseRejectionEvent) {
+  notifyRegisteredRequestError(event.reason)
 }
 
 function installUnhandledRejectionListener() {
-  if (listenerInstalled || typeof window === 'undefined') {
+  if (rejectionListenerInstalled || typeof window === 'undefined') {
     return
   }
 
   window.addEventListener('unhandledrejection', handleUnhandledRejection)
-  listenerInstalled = true
+  rejectionListenerInstalled = true
 }
 
 /**
- * 为请求错误注册全局兜底提示。
+ * 登记一个请求错误的兜底提示。
  *
- * Axios 拦截器先登记错误并继续 reject。若页面通过 try/catch 或 Promise.catch
- * 处理了该错误，浏览器不会触发 unhandledrejection，因此只保留页面自己的业务提示；
- * 只有错误最终无人处理时，才显示请求层兜底，避免同一错误出现两套弹窗。
+ * 页面通过 try/catch 或 Promise.catch 正常处理时不会触发兜底；错误进入 Vue
+ * 全局错误处理器或浏览器 unhandledrejection 时，才显示统一请求错误。
  */
-export function registerUnhandledRequestError(
+export function registerRequestErrorFallback(
   error: unknown,
   notify: ErrorNotifier,
 ): void {
@@ -47,4 +54,26 @@ export function registerUnhandledRequestError(
 
   installUnhandledRejectionListener()
   pendingErrorNotifiers.set(error, notify)
+}
+
+/**
+ * 将 Vue 捕获到的异步错误接入请求错误兜底，同时保留已有错误处理器和控制台诊断。
+ */
+export function installRequestErrorFallback(app: App): void {
+  if (vueErrorHandlerInstalled) {
+    return
+  }
+
+  const previousErrorHandler = app.config.errorHandler
+  app.config.errorHandler = (error, instance, info) => {
+    notifyRegisteredRequestError(error)
+
+    if (previousErrorHandler) {
+      previousErrorHandler(error, instance, info)
+      return
+    }
+
+    console.error(`[Vue error] ${info}`, error)
+  }
+  vueErrorHandlerInstalled = true
 }

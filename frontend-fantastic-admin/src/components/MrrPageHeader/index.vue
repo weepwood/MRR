@@ -44,7 +44,6 @@ const hasAside = computed(() => Boolean(slots.actions))
   align-items: flex-start;
   justify-content: space-between;
   min-width: 0;
-  padding: 2px 0;
 }
 
 .mrr-page-header__main {
@@ -56,13 +55,13 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__icon {
   display: grid;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 10%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--divider));
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  font-size: 17px;
+  color: var(--mrr-primary);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
   place-items: center;
 }
@@ -80,19 +79,19 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--mrr-foreground);
   letter-spacing: -0.02em;
 }
 
 .mrr-page-header__description {
   max-width: 760px;
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-secondary);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
 }
 
 .mrr-page-header__meta {
@@ -102,7 +101,7 @@ const hasAside = computed(() => Boolean(slots.actions))
   align-items: center;
   margin-top: var(--mrr-space-2);
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
 }
 
 .mrr-page-header__aside {

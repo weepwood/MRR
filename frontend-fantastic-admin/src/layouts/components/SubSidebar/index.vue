@@ -19,11 +19,6 @@ const enableSidebar = computed(() => {
   )
 })
 
-const activeSectionTitle = computed(() => {
-  const title = menuStore.allMenus[menuStore.actived]?.meta?.title
-  return typeof title === 'function' ? title() : title || '业务导航'
-})
-
 const transitionName = ref('')
 watch(() => menuStore.actived, (val, oldVal) => {
   if (settingsStore.mode === 'mobile' || settingsStore.settings.menu.mode === 'side') {
@@ -59,10 +54,6 @@ watch(() => menuStore.actived, (val, oldVal) => {
         }"
       />
       <component :is="useSlots('sub-sidebar-after-logo')" />
-      <div v-if="!(settingsStore.mode === 'pc' && settingsStore.settings.menu.subMenuCollapse)" class="sidebar-section-header">
-        <span>Workspace</span>
-        <strong>{{ activeSectionTitle }}</strong>
-      </div>
       <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="flex-1 overscroll-contain">
         <TransitionGroup :name="transitionName">
           <template v-for="(mainItem, mainIndex) in menuStore.allMenus" :key="mainIndex">
@@ -125,31 +116,6 @@ watch(() => menuStore.actived, (val, oldVal) => {
     min-height: var(--g-sidebar-logo-height);
     background: transparent;
     border-bottom: 1px solid var(--mrr-navigation-border);
-  }
-
-  .sidebar-section-header {
-    display: grid;
-    gap: 3px;
-    padding: 18px 18px 10px;
-
-    span {
-      font-size: 10px;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    strong {
-      overflow: hidden;
-      font-size: 15px;
-      font-weight: 650;
-      line-height: 1.35;
-      color: var(--text-primary);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
   }
 
   .menu {

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addArchiveDepartmentThemeHistoryToLocal,
+  loadArchiveDepartmentThemeHistoryFromLocal,
   normalizeArchiveDepartmentThemes,
   resolveArchiveDepartmentTheme,
 } from './archive-department-theme'
@@ -36,5 +38,20 @@ describe('archive department theme', () => {
     expect(themes[0].department).toBe('外科')
     expect(themes[0].folderColor).toMatch(/^#[\dA-F]{6}$/)
     expect(themes[0].stripColor).toBe('#112233')
+  })
+
+  it('keeps the most recent distinct color scheme snapshots in local history', () => {
+    localStorage.clear()
+    const first = [{ department: '内科', folderColor: '#123456', stripColor: '#654321' }]
+    const second = [{ department: '外科', folderColor: '#112233', stripColor: '#445566' }]
+
+    addArchiveDepartmentThemeHistoryToLocal(first)
+    addArchiveDepartmentThemeHistoryToLocal(second)
+    addArchiveDepartmentThemeHistoryToLocal(first)
+
+    const history = loadArchiveDepartmentThemeHistoryFromLocal()
+    expect(history).toHaveLength(2)
+    expect(history[0].themes).toEqual(first)
+    expect(history[1].themes).toEqual(second)
   })
 })

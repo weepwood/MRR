@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import type { ArchiveDepartmentTheme } from '@/utils/archive-department-theme'
+import type { ArchiveDepartmentTheme, ArchiveDepartmentThemeHistory } from '@/utils/archive-department-theme'
+import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { getDepartments } from '@/api/modules/statistics'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
+import { getDepartments } from '@/api/modules/statistics'
 import {
+  addArchiveDepartmentThemeHistoryToLocal,
   ARCHIVE_DEPARTMENT_THEME_PRESETS,
   ARCHIVE_DEPARTMENT_THEME_SETTING_KEY,
   archiveDepartmentThemeCssVariables,
   isArchiveThemeColor,
+  loadArchiveDepartmentThemeHistoryFromLocal,
   loadArchiveDepartmentThemesFromLocal,
   normalizeArchiveDepartmentThemes,
   saveArchiveDepartmentThemesToLocal,
@@ -24,10 +27,14 @@ const loading = ref(false)
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
 const departments = ref<string[]>([])
+const historyVisible = ref(false)
+const history = ref<ArchiveDepartmentThemeHistory[]>([])
+const persistedThemes = ref<ArchiveDepartmentTheme[]>([])
 let nextId = 1
 
 const colorPresets = ARCHIVE_DEPARTMENT_THEME_PRESETS.flatMap(item => [item.folderColor, item.stripColor])
 const hasRows = computed(() => rows.value.length > 0)
+const hasHistory = computed(() => history.value.length > 0)
 const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
 const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
 
@@ -99,13 +106,27 @@ function normalizedRows() {
   })))
 }
 
+function refreshHistory() {
+  history.value = loadArchiveDepartmentThemeHistoryFromLocal()
+}
+
+function formatHistoryTime(value: string) {
+  return dayjs(value).format('YYYY-MM-DD HH:mm')
+}
+
+function restoreHistory(item: ArchiveDepartmentThemeHistory) {
+  setRows(item.themes)
+  historyVisible.value = false
+  ElMessage.success('历史配色已恢复，请保存后生效')
+}
+
 async function loadThemes() {
   loading.value = true
   let themes = loadArchiveDepartmentThemesFromLocal()
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.prototype.hasOwnProperty.call(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       themes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(themes)
     }
@@ -115,6 +136,8 @@ async function loadThemes() {
   }
   finally {
     setRows(themes)
+    persistedThemes.value = themes
+    refreshHistory()
     loading.value = false
   }
 }
@@ -136,7 +159,11 @@ async function saveThemes() {
 
   const themes = normalizedRows()
   saving.value = true
+  if (JSON.stringify(themes) !== JSON.stringify(persistedThemes.value)) {
+    history.value = addArchiveDepartmentThemeHistoryToLocal(persistedThemes.value)
+  }
   saveArchiveDepartmentThemesToLocal(themes)
+  persistedThemes.value = themes
   try {
     await setSetting(ARCHIVE_DEPARTMENT_THEME_SETTING_KEY, JSON.stringify(themes))
     setRows(themes)
@@ -165,6 +192,9 @@ onMounted(() => {
           <p>同一科室始终使用相同配色，可分别设置档案袋主色与顶部色条颜色。</p>
         </div>
         <div class="department-theme-actions">
+          <el-button :disabled="!hasHistory" @click="historyVisible = true">
+            历史配色
+          </el-button>
           <el-button @click="resetToAutomaticThemes">
             恢复自动配色
           </el-button>
@@ -225,6 +255,33 @@ onMounted(() => {
       </el-button>
     </div>
   </el-card>
+
+  <el-dialog v-model="historyVisible" title="历史配色" width="min(680px, calc(100% - 32px))">
+    <div v-if="hasHistory" class="theme-history-list">
+      <article v-for="item in history" :key="item.savedAt" class="theme-history-item">
+        <div class="theme-history-summary">
+          <strong>{{ formatHistoryTime(item.savedAt) }}</strong>
+          <span>{{ item.themes.length ? `${item.themes.length} 个科室配色` : '自动配色' }}</span>
+        </div>
+        <div v-if="item.themes.length" class="theme-history-swatches" aria-label="历史配色预览">
+          <i
+            v-for="theme in item.themes.slice(0, 6)"
+            :key="`${theme.department}-${theme.folderColor}-${theme.stripColor}`"
+            :style="{ background: theme.folderColor, borderColor: theme.stripColor }"
+          />
+        </div>
+        <el-button plain size="small" @click="restoreHistory(item)">
+          恢复
+        </el-button>
+      </article>
+    </div>
+    <el-empty v-else :image-size="72" description="暂无历史配色" />
+    <template #footer>
+      <el-button @click="historyVisible = false">
+        关闭
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -332,6 +389,50 @@ onMounted(() => {
   margin-top: 18px;
 }
 
+.theme-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.theme-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+}
+
+.theme-history-summary {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.theme-history-summary strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.theme-history-summary span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.theme-history-swatches {
+  display: flex;
+  gap: 5px;
+}
+
+.theme-history-swatches i {
+  width: 16px;
+  height: 16px;
+  border: 3px solid;
+  border-radius: 50%;
+}
+
 @media (width <= 980px) {
   .theme-editor-head {
     display: none;
@@ -357,6 +458,14 @@ onMounted(() => {
 
   .theme-editor-row {
     grid-template-columns: 1fr;
+  }
+
+  .theme-history-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .theme-history-swatches {
+    grid-column: 1 / -1;
   }
 
   .archive-theme-preview {

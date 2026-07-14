@@ -4,9 +4,16 @@ export interface ArchiveDepartmentTheme {
   stripColor: string
 }
 
+export interface ArchiveDepartmentThemeHistory {
+  savedAt: string
+  themes: ArchiveDepartmentTheme[]
+}
+
 export const ARCHIVE_DEPARTMENT_THEME_SETTING_KEY = 'archiveDepartmentThemes'
 export const ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY = 'MRR-ADMIN:archive-department-themes'
+export const ARCHIVE_DEPARTMENT_THEME_HISTORY_LOCAL_KEY = 'MRR-ADMIN:archive-department-theme-history'
 export const ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT = 'mrr:archive-department-themes-updated'
+const ARCHIVE_DEPARTMENT_THEME_HISTORY_LIMIT = 10
 
 export const ARCHIVE_DEPARTMENT_THEME_PRESETS = [
   { folderColor: '#2563EB', stripColor: '#1D4ED8' },
@@ -76,6 +83,47 @@ export function normalizeArchiveDepartmentThemes(value: unknown): ArchiveDepartm
   return normalized
 }
 
+function themeSignature(themes: ArchiveDepartmentTheme[]) {
+  return JSON.stringify(themes)
+}
+
+function normalizeArchiveDepartmentThemeHistory(value: unknown): ArchiveDepartmentThemeHistory[] {
+  let source = value
+  if (typeof source === 'string') {
+    try {
+      source = JSON.parse(source)
+    }
+    catch {
+      return []
+    }
+  }
+
+  if (!Array.isArray(source)) {
+    return []
+  }
+
+  const signatures = new Set<string>()
+  const history: ArchiveDepartmentThemeHistory[] = []
+  for (const item of source) {
+    if (!item || typeof item !== 'object') {
+      continue
+    }
+    const candidate = item as Partial<ArchiveDepartmentThemeHistory>
+    const savedAt = String(candidate.savedAt ?? '').trim()
+    const themes = normalizeArchiveDepartmentThemes(candidate.themes)
+    const signature = themeSignature(themes)
+    if (!savedAt || Number.isNaN(Date.parse(savedAt)) || signatures.has(signature)) {
+      continue
+    }
+    history.push({ savedAt, themes })
+    signatures.add(signature)
+    if (history.length === ARCHIVE_DEPARTMENT_THEME_HISTORY_LIMIT) {
+      break
+    }
+  }
+  return history
+}
+
 function hashText(value: string) {
   let hash = 2166136261
   for (let index = 0; index < value.length; index += 1) {
@@ -120,6 +168,40 @@ export function loadArchiveDepartmentThemesFromLocal() {
   catch {
     return []
   }
+}
+
+export function loadArchiveDepartmentThemeHistoryFromLocal() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    return normalizeArchiveDepartmentThemeHistory(localStorage.getItem(ARCHIVE_DEPARTMENT_THEME_HISTORY_LOCAL_KEY))
+  }
+  catch {
+    return []
+  }
+}
+
+export function addArchiveDepartmentThemeHistoryToLocal(themes: ArchiveDepartmentTheme[]) {
+  const normalizedThemes = normalizeArchiveDepartmentThemes(themes)
+  const signature = themeSignature(normalizedThemes)
+  const history = loadArchiveDepartmentThemeHistoryFromLocal()
+  const next = [{ savedAt: new Date().toISOString(), themes: normalizedThemes }]
+    .concat(history.filter(item => themeSignature(item.themes) !== signature))
+    .slice(0, ARCHIVE_DEPARTMENT_THEME_HISTORY_LIMIT)
+
+  if (typeof window === 'undefined') {
+    return next
+  }
+
+  try {
+    localStorage.setItem(ARCHIVE_DEPARTMENT_THEME_HISTORY_LOCAL_KEY, JSON.stringify(next))
+  }
+  catch {
+    // 浏览器禁用本地存储时忽略，当前配色保存不受影响。
+  }
+  return next
 }
 
 export function saveArchiveDepartmentThemesToLocal(themes: ArchiveDepartmentTheme[]) {

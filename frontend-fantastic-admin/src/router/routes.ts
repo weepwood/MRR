@@ -4,6 +4,15 @@ import generatedRoutes from 'virtual:generated-pages'
 import { setupLayouts } from 'virtual:meta-layouts'
 import { useSettingsStore } from '@/store/modules/settings'
 
+const publicStatusRoute: RouteRecordRaw = {
+  path: '/status',
+  name: 'publicStatus',
+  component: () => import('@/views/status/index.vue'),
+  meta: {
+    title: '系统状态',
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -29,6 +38,7 @@ const constantRoutes: RouteRecordRaw[] = [
       title: '病案图像查询',
     },
   },
+  publicStatusRoute,
   {
     path: '/:all(.*)*',
     name: 'notFound',
@@ -267,11 +277,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
 ]
 
-const constantRoutesByFilesystem = generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant === true)
+const generatedConstantRoutes = generatedRoutes.filter(
+  item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant === true,
+)
+const constantRoutesByFilesystem = [publicStatusRoute, ...generatedConstantRoutes]
 
 const asyncRoutesByFilesystem = [
   ...setupLayouts(
-    generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false),
+    generatedRoutes.filter(
+      item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false,
+    ),
   ),
 ]
 

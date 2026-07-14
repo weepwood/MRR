@@ -43,7 +43,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Type check
-        run: pnpm lint:tsc
+        id: type-check
+        continue-on-error: true
+        run: |
+          set +e
+          pnpm lint:tsc 2>&1 | tee tsc.log
+          type_status=${PIPESTATUS[0]}
+          echo "exit_code=${type_status}" >> "$GITHUB_OUTPUT"
+          exit "${type_status}"
+
+      - name: Upload failed type-check log
+        if: steps.type-check.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsc-log-${{ github.run_id }}
+          path: frontend-fantastic-admin/tsc.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Unit tests
         id: unit-tests
@@ -65,13 +81,22 @@ jobs:
           retention-days: 7
 
       - name: Build mock application
+        if: steps.type-check.outcome == 'success'
         run: pnpm build:mock
 
       - name: Install Playwright Chromium
+        if: steps.type-check.outcome == 'success'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: End-to-end tests without backend
+        if: steps.type-check.outcome == 'success'
         run: pnpm test:e2e
+
+      - name: Preserve type-check failure
+        if: always() && steps.type-check.outcome == 'failure'
+        run: |
+          echo "::error::Type check failed with exit code ${{ steps.type-check.outputs.exit_code }}. See the uploaded tsc log artifact."
+          exit 1
 
       - name: Preserve unit test failure
         if: always() && steps.unit-tests.outcome == 'failure'

@@ -50,13 +50,16 @@ const hasHeader = computed(() => Boolean(
 .mrr-section-card {
   min-width: 0;
   overflow: hidden;
-  border-color: var(--divider);
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border-color: var(--mrr-border);
   border-radius: var(--mrr-radius-card);
+  box-shadow: none;
 }
 
 .mrr-section-card :deep(.el-card__header) {
-  padding: 15px 20px;
-  border-bottom-color: var(--divider);
+  padding: var(--mrr-space-4);
+  border-bottom-color: var(--mrr-border);
 }
 
 .mrr-section-card--padding-none :deep(.el-card__body) {
@@ -64,11 +67,11 @@ const hasHeader = computed(() => Boolean(
 }
 
 .mrr-section-card--padding-compact :deep(.el-card__body) {
-  padding: var(--mrr-space-4);
+  padding: var(--mrr-space-3);
 }
 
 .mrr-section-card--padding-normal :deep(.el-card__body) {
-  padding: var(--mrr-space-5);
+  padding: var(--mrr-space-4);
 }
 
 .mrr-section-card__header {
@@ -88,29 +91,31 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__icon {
   display: grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  font-size: 17px;
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 9%, var(--surface));
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  color: var(--mrr-primary);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
   place-items: center;
 }
 
 .mrr-section-card h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1.35;
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--mrr-card-foreground);
+  letter-spacing: -0.01em;
 }
 
 .mrr-section-card p {
   margin: 3px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--text-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .mrr-section-card__actions {
@@ -134,11 +139,6 @@ const hasHeader = computed(() => Boolean(
   .mrr-section-card__actions {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .mrr-section-card--padding-normal :deep(.el-card__body),
-  .mrr-section-card--padding-compact :deep(.el-card__body) {
-    padding: var(--mrr-space-4);
   }
 }
 </style>

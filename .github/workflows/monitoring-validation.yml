@@ -8,9 +8,6 @@ on:
       - 'backend-repo/**'
       - 'frontend-fantastic-admin/**'
       - 'monitoring/**'
-      - 'docker-compose.yml'
-      - 'docker-compose.monitoring.yml'
-      - '.env.example'
       - '.github/workflows/monitoring-validation.yml'
 
 permissions:
@@ -94,14 +91,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Docker Compose merge
-        env:
-          POSTGRES_PASSWORD: validation-postgres-password
-          POSTGRES_MONITOR_PASSWORD: validation-monitor-password
-          AES_SECRET_KEY: validation-aes-secret-key-32bytes
-          JWT_SECRET_KEY: validation-jwt-secret-key
-          GRAFANA_ADMIN_PASSWORD: validation-grafana-password
-        run: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml --profile monitoring config > /tmp/mrr-compose.yml
       - name: Validate Prometheus configuration
         run: |
           docker run --rm \

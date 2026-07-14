@@ -71,10 +71,27 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: End-to-end tests without backend
+        id: e2e-tests
+        continue-on-error: true
         run: pnpm test:e2e
+
+      - name: Upload failed Playwright diagnostics
+        if: steps.e2e-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-${{ github.run_id }}
+          path: frontend-fantastic-admin/test-results
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Preserve unit test failure
         if: always() && steps.unit-tests.outcome == 'failure'
         run: |
           echo "::error::Unit tests failed with exit code ${{ steps.unit-tests.outputs.exit_code }}. See the uploaded Vitest log artifact."
+          exit 1
+
+      - name: Preserve E2E failure
+        if: always() && steps.e2e-tests.outcome == 'failure'
+        run: |
+          echo "::error::End-to-end tests failed. See the uploaded Playwright diagnostics artifact."
           exit 1

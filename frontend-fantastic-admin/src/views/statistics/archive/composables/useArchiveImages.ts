@@ -3,7 +3,7 @@ import type { ApiResult, BAHImageData } from '@/api/types'
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
-import { downloadBah, getImgByCode, updateImageType } from '@/api/modules/image'
+import { getImgByCode, updateImageType } from '@/api/modules/image'
 import {
   getArchiveCasesByIdCard,
   getArchiveCasesByToken,
@@ -15,6 +15,7 @@ import {
   requiresSjhForBah,
 } from '@/utils/medical-record-code'
 import { padCode, resolveImageUrl } from '../constants'
+import { createArchiveZip } from '../utils/client-zip'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
@@ -168,29 +169,22 @@ export function useArchiveImages() {
     const firstImage = images.value[0]
     const bah = padCode(searchBah.value || firstImage?.bah || '')
     const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
-    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
-    if (validationMessage) {
-      ElMessage.warning(validationMessage)
-      return
-    }
-    if (!bah) {
-      ElMessage.warning('当前档案缺少病案号，无法下载')
+    if (!images.value.length) {
+      ElMessage.warning('当前档案没有可下载的影像')
       return
     }
 
     downloading.value = true
     try {
-      const result = await downloadBah(bah, sjh || undefined) as unknown as Blob | { data?: Blob }
-      const blob = result instanceof Blob ? result : result?.data
-      if (!(blob instanceof Blob)) {
-        throw new TypeError('下载响应不是文件')
-      }
-      const url = URL.createObjectURL(blob)
+      const archiveBlob = await createArchiveZip(images.value)
+      const url = URL.createObjectURL(archiveBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${bah}${sjh ? `-${sjh}` : ''}.zip`
+      link.download = `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`
+      document.body.appendChild(link)
       link.click()
-      URL.revokeObjectURL(url)
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
       ElMessage.success('档案袋下载已开始')
     }
     catch (err: unknown) {

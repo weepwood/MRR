@@ -36,7 +36,7 @@ onUnmounted(() => {
   <Transition name="main-sidebar">
     <div v-if="settingsStore.settings.menu.mode === 'side' || (settingsStore.mode === 'mobile' && settingsStore.settings.menu.mode !== 'single')" class="main-sidebar-container">
       <component :is="useSlots('main-sidebar-top')" />
-      <Logo :show-title="false" class="sidebar-logo" />
+      <Logo :show-title="false" class="sidebar-logo" :class="{ 'side-mode-logo': settingsStore.settings.menu.mode === 'side' }" />
       <component :is="useSlots('main-sidebar-after-logo')" />
       <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="menu flex-1 overscroll-contain">
         <!-- 侧边栏模式（含主导航） -->
@@ -88,6 +88,10 @@ onUnmounted(() => {
     min-height: var(--g-sidebar-logo-height);
     background: transparent;
     border-bottom: 1px solid var(--mrr-navigation-border);
+
+    &.side-mode-logo {
+      --g-sidebar-logo-height: var(--g-toolbar-height);
+    }
   }
 
   .menu {

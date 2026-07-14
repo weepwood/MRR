@@ -50,7 +50,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
       <component :is="useSlots('sub-sidebar-top')" />
       <Logo
         v-if="['side', 'single'].includes(settingsStore.settings.menu.mode)" :show-logo="settingsStore.settings.menu.mode === 'single'" class="sidebar-logo" :class="{
-          single: settingsStore.settings.menu.mode === 'single',
+          'single': settingsStore.settings.menu.mode === 'single',
+          'side-mode-logo': settingsStore.settings.menu.mode === 'side',
         }"
       />
       <component :is="useSlots('sub-sidebar-after-logo')" />
@@ -114,6 +115,11 @@ watch(() => menuStore.actived, (val, oldVal) => {
     min-height: var(--g-sidebar-logo-height);
     background: transparent;
     border-bottom: 1px solid var(--mrr-navigation-border);
+
+    &.side-mode-logo,
+    &.single {
+      --g-sidebar-logo-height: var(--g-toolbar-height);
+    }
   }
 
   .menu {

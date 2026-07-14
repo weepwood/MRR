@@ -13,14 +13,6 @@ export function getImgByCode(bah?: string, sjh?: string) {
   })
 }
 
-/** GET /api/v1/img/download/{bah} — 下载精确匹配的病案压缩包 */
-export function downloadBah(bah: string, sjh?: string) {
-  return api.get<Blob>(`/api/v1/img/download/${bah}`, {
-    params: { sjh },
-    responseType: 'blob',
-  })
-}
-
 /** GET /api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME} — 获取单张图片（blob 流） */
 export function getImage(bah: string, brxh: string, folder: string, filename: string) {
   return api.get<Blob>(`/api/v1/img/image/${bah}/${brxh}/${folder}/${filename}`, {

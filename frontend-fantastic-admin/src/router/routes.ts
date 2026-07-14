@@ -4,6 +4,27 @@ import generatedRoutes from 'virtual:generated-pages'
 import { setupLayouts } from 'virtual:meta-layouts'
 import { useSettingsStore } from '@/store/modules/settings'
 
+const publicStatusRoute: RouteRecordRaw = {
+  path: '/status',
+  name: 'publicStatus',
+  component: () => import('@/views/status/index.vue'),
+  meta: {
+    title: '系统状态',
+  },
+}
+
+const monitoringFilesystemRoute: RouteRecordRaw = {
+  path: '/monitoring',
+  name: 'monitoring',
+  component: () => import('@/views/monitoring-dashboard/index.vue'),
+  meta: {
+    title: '系统监控',
+    icon: 'i-ant-design:dashboard-twotone',
+    auth: ['system:read'],
+    cache: true,
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -29,6 +50,7 @@ const constantRoutes: RouteRecordRaw[] = [
       title: '病案图像查询',
     },
   },
+  publicStatusRoute,
   {
     path: '/:all(.*)*',
     name: 'notFound',
@@ -228,12 +250,23 @@ const asyncRoutes: Route.recordMainRaw[] = [
       },
       {
         path: '/monitoring',
-        component: () => import('@/views/monitoring/index.vue'),
+        component: () => import('@/views/monitoring-dashboard/index.vue'),
         meta: {
           title: '系统监控',
           icon: 'i-ant-design:dashboard-twotone',
           auth: ['system:read'],
           cache: true,
+        },
+      },
+      {
+        path: '/system-status',
+        name: 'systemStatusMenu',
+        redirect: '/status',
+        meta: {
+          title: '服务状态',
+          icon: 'i-ant-design:check-circle-twotone',
+          auth: ['system:read'],
+          cache: false,
         },
       },
       {
@@ -267,12 +300,20 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
 ]
 
-const constantRoutesByFilesystem = generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant === true)
+const generatedConstantRoutes = generatedRoutes.filter(
+  item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant === true,
+)
+const constantRoutesByFilesystem = [publicStatusRoute, ...generatedConstantRoutes]
 
+const generatedAsyncRoutes = generatedRoutes.filter(
+  item => !['/status', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+    && item.meta?.enabled !== false
+    && item.meta?.constant !== true
+    && item.meta?.layout !== false,
+)
 const asyncRoutesByFilesystem = [
-  ...setupLayouts(
-    generatedRoutes.filter(item => item.meta?.enabled !== false && item.meta?.constant !== true && item.meta?.layout !== false),
-  ),
+  ...setupLayouts(generatedAsyncRoutes),
+  monitoringFilesystemRoute,
 ]
 
 export {

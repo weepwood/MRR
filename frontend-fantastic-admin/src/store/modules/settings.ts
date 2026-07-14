@@ -6,12 +6,21 @@ import { merge } from '@/utils/object'
 
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
 
+function normalizePageTitleStyle(value: unknown): 'plain' | 'card' {
+  if (value === 'plain' || value === 'compact') {
+    return 'plain'
+  }
+  return 'card'
+}
+
 function getInitialSettings() {
   const defaults = cloneDeep(settingsDefault)
 
   try {
     const savedSettings = localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
-    return savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
+    const initialSettings = savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
+    initialSettings.app.pageTitleStyle = normalizePageTitleStyle(initialSettings.app.pageTitleStyle)
+    return initialSettings
   }
   catch {
     return defaults
@@ -68,6 +77,13 @@ export const useSettingsStore = defineStore(
     }, {
       immediate: true,
     })
+
+    watch(() => settings.value.app.pageTitleStyle, (val) => {
+      document.documentElement.setAttribute('data-page-title-style', normalizePageTitleStyle(val))
+    }, {
+      immediate: true,
+    })
+
     watch([
       () => settings.value.app.enableMournMode,
       () => settings.value.app.enableColorAmblyopiaMode,

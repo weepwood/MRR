@@ -80,6 +80,93 @@ test.describe('无后端 Mock 模式', () => {
     expect(borderRadius).toBeGreaterThan(0)
   })
 
+  test('页面标题可在页面同级与卡片风格之间切换', async ({ page }) => {
+    test.setTimeout(90_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(() => {
+      const storageKey = 'MRR-ADMIN:app-settings'
+      if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          app: {
+            enablePermission: false,
+            pageTitleStyle: 'plain',
+            radius: 0.75,
+          },
+        }))
+      }
+    })
+
+    await page.goto('/records', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'plain')
+
+    const recordsHeader = page.locator('.page-header').first()
+    const plainStyle = await recordsHeader.evaluate((node) => {
+      const style = window.getComputedStyle(node)
+      return {
+        backgroundImage: style.backgroundImage,
+        borderTopWidth: style.borderTopWidth,
+        boxShadow: style.boxShadow,
+      }
+    })
+    expect(plainStyle.backgroundImage).toBe('none')
+    expect(plainStyle.borderTopWidth).toBe('0px')
+    expect(plainStyle.boxShadow).toBe('none')
+
+    const plainLineTops = await recordsHeader.locator('.eyebrow, h2, .subtitle').evaluateAll((nodes) => {
+      return nodes.map(node => node.getBoundingClientRect().top)
+    })
+    expect(plainLineTops).toHaveLength(3)
+    expect(plainLineTops[0]).toBeLessThan(plainLineTops[1])
+    expect(plainLineTops[1]).toBeLessThan(plainLineTops[2])
+
+    await page.goto('/statistics', { waitUntil: 'domcontentloaded' })
+    const statisticsHero = page.locator('.hero-panel')
+    await expect(statisticsHero).toBeVisible({ timeout: 20_000 })
+    const plainHeroStyle = await statisticsHero.evaluate((node) => {
+      const style = window.getComputedStyle(node)
+      return {
+        backgroundImage: style.backgroundImage,
+        borderTopWidth: style.borderTopWidth,
+        boxShadow: style.boxShadow,
+      }
+    })
+    expect(plainHeroStyle.backgroundImage).toBe('none')
+    expect(plainHeroStyle.borderTopWidth).toBe('0px')
+    expect(plainHeroStyle.boxShadow).toBe('none')
+
+    await page.evaluate(() => {
+      const rawSettings = localStorage.getItem('MRR-ADMIN:app-settings')
+      const savedSettings = rawSettings ? JSON.parse(rawSettings) : { app: {} }
+      savedSettings.app = { ...savedSettings.app, pageTitleStyle: 'card' }
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify(savedSettings))
+    })
+
+    await page.goto('/records', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
+    await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
+
+    const cardHeader = page.locator('.page-header').first()
+    const cardStyle = await cardHeader.evaluate((node) => {
+      const style = window.getComputedStyle(node)
+      return {
+        backgroundImage: style.backgroundImage,
+        borderRadius: Number.parseFloat(style.borderRadius),
+        boxShadow: style.boxShadow,
+      }
+    })
+    expect(cardStyle.backgroundImage).not.toBe('none')
+    expect(cardStyle.borderRadius).toBeGreaterThan(0)
+    expect(cardStyle.boxShadow).not.toBe('none')
+
+    const cardLineTops = await cardHeader.locator('.eyebrow, h2, .subtitle').evaluateAll((nodes) => {
+      return nodes.map(node => node.getBoundingClientRect().top)
+    })
+    expect(cardLineTops).toHaveLength(3)
+    expect(cardLineTops[0]).toBeLessThan(cardLineTops[1])
+    expect(cardLineTops[1]).toBeLessThan(cardLineTops[2])
+  })
+
   test('主要业务页面卡片跟随统一圆角设置', async ({ page }) => {
     test.setTimeout(90_000)
     await page.setViewportSize({ width: 1440, height: 900 })

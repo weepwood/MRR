@@ -1,0 +1,326 @@
+/*
+ * 页面标题统一样式
+ *
+ * plain：标题直接位于页面内容层级，不使用独立卡片容器。
+ * card：标题使用带渐变、网格和装饰光斑的 Hero 卡片容器。
+ * 两种模式均保持“英文标题 / 中文标题 / 描述”三行排版。
+ */
+
+/* 标准业务页头，同时兼容历史 h1 / h2 写法。 */
+html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+html[data-page-title-style] .settings-page > .page-header,
+html[data-page-title-style] .help-center > .help-header,
+html[data-page-title-style] body .mrr-page-header {
+  display: flex;
+  gap: var(--mrr-space-6);
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) > :first-child,
+html[data-page-title-style] .settings-page > .page-header .header-title,
+html[data-page-title-style] .settings-page > .page-header .header-title > div,
+html[data-page-title-style] .help-center > .help-header > :first-child,
+html[data-page-title-style] .mrr-page-header__copy,
+html[data-page-title-style] .hero-copy {
+  display: block;
+  min-width: 0;
+}
+
+/* 系统设置原页头的图标不属于统一三行信息结构。 */
+html[data-page-title-style] .settings-page > .page-header .header-icon {
+  display: none;
+}
+
+/* 系统设置旧模板没有英文标题，通过兼容层补齐。 */
+html[data-page-title-style] .settings-page > .page-header .header-title::before {
+  display: block;
+  width: fit-content;
+  margin: 0 0 18px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--mrr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  content: "System Settings";
+}
+
+/* 三行标题的统一字体层级。卡片模式保持更强的 Hero 视觉。 */
+html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .eyebrow,
+html[data-page-title-style] .help-center > .help-header .help-kicker,
+html[data-page-title-style] .mrr-page-header__eyebrow,
+html[data-page-title-style] .hero-panel .eyebrow {
+  margin: 0 0 18px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--mrr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) :is(h1, h2),
+html[data-page-title-style] .settings-page > .page-header h2,
+html[data-page-title-style] .help-center > .help-header h1,
+html[data-page-title-style] .mrr-page-header h1,
+html[data-page-title-style] .hero-panel h2 {
+  margin: 0;
+  font-size: clamp(30px, 3vw, 40px);
+  font-weight: 650;
+  line-height: 1.18;
+  color: var(--mrr-foreground);
+  letter-spacing: -0.045em;
+}
+
+html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .subtitle,
+html[data-page-title-style] .settings-page > .page-header .header-title p,
+html[data-page-title-style] .help-center > .help-header .help-description,
+html[data-page-title-style] .mrr-page-header__description,
+html[data-page-title-style] .hero-panel .subtitle {
+  max-width: 780px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--mrr-muted-foreground);
+}
+
+html[data-page-title-style] .mrr-page-header__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+/* 风格一：页面同级。字号与“档案装箱管理”原设计保持一致。 */
+html[data-page-title-style="plain"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+html[data-page-title-style="plain"] .settings-page > .page-header,
+html[data-page-title-style="plain"] .help-center > .help-header,
+html[data-page-title-style="plain"] body .mrr-page-header {
+  min-height: 0;
+  padding: 8px 2px 22px;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html[data-page-title-style="plain"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .eyebrow,
+html[data-page-title-style="plain"] .settings-page > .page-header .header-title::before,
+html[data-page-title-style="plain"] .help-center > .help-header .help-kicker,
+html[data-page-title-style="plain"] .mrr-page-header__eyebrow,
+html[data-page-title-style="plain"] .hero-panel .eyebrow {
+  display: block;
+  width: fit-content;
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  opacity: 0.82;
+}
+
+html[data-page-title-style="plain"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) :is(h1, h2),
+html[data-page-title-style="plain"] .settings-page > .page-header h2,
+html[data-page-title-style="plain"] .help-center > .help-header h1,
+html[data-page-title-style="plain"] .mrr-page-header h1,
+html[data-page-title-style="plain"] .hero-panel h2 {
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+html[data-page-title-style="plain"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .subtitle,
+html[data-page-title-style="plain"] .settings-page > .page-header .header-title p,
+html[data-page-title-style="plain"] .help-center > .help-header .help-description,
+html[data-page-title-style="plain"] .mrr-page-header__description,
+html[data-page-title-style="plain"] .hero-panel .subtitle {
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+html[data-page-title-style="plain"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .eyebrow::before,
+html[data-page-title-style="plain"] .mrr-page-header__eyebrow::before {
+  display: none;
+}
+
+/* 将现有统计 Hero 在简洁模式下还原为页面内容层级。 */
+html[data-page-title-style="plain"] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle) {
+  min-height: 0;
+  padding: 8px 2px 22px;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html[data-page-title-style="plain"] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle)::before,
+html[data-page-title-style="plain"] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle) .hero-orb {
+  display: none;
+}
+
+html[data-page-title-style="plain"] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle) .hero-content {
+  min-height: 0;
+  align-items: flex-start;
+}
+
+html[data-page-title-style="plain"] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle) .hero-meta {
+  margin-top: 18px;
+}
+
+/* 风格二：卡片 Hero。 */
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+html[data-page-title-style="card"] .settings-page > .page-header,
+html[data-page-title-style="card"] .help-center > .help-header,
+html[data-page-title-style="card"] body .mrr-page-header {
+  position: relative;
+  isolation: isolate;
+  min-height: 220px;
+  padding: 34px 38px;
+  overflow: hidden;
+  align-items: center;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--mrr-primary) 10%, var(--mrr-card)) 0%,
+    var(--mrr-card) 48%,
+    color-mix(in srgb, #7c3aed 8%, var(--mrr-card)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 15%, var(--mrr-border));
+  border-radius: var(--mrr-radius-xl);
+  box-shadow: 0 16px 42px rgb(15 23 42 / 7%);
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle)::before,
+html[data-page-title-style="card"] .settings-page > .page-header::before,
+html[data-page-title-style="card"] .help-center > .help-header::before,
+html[data-page-title-style="card"] body .mrr-page-header::before {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--mrr-primary) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--mrr-primary) 4%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(90deg, black, transparent 78%);
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle)::after,
+html[data-page-title-style="card"] .settings-page > .page-header::after,
+html[data-page-title-style="card"] .help-center > .help-header::after,
+html[data-page-title-style="card"] body .mrr-page-header::after {
+  position: absolute;
+  inset: -45% -8% -55% 54%;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background:
+    radial-gradient(circle at 42% 22%, color-mix(in srgb, var(--mrr-primary) 13%, transparent) 0 18%, transparent 38%),
+    radial-gradient(circle at 78% 76%, rgb(124 58 237 / 10%) 0 20%, transparent 42%);
+  filter: blur(3px);
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) > *,
+html[data-page-title-style="card"] .settings-page > .page-header > *,
+html[data-page-title-style="card"] .help-center > .help-header > *,
+html[data-page-title-style="card"] .mrr-page-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .eyebrow,
+html[data-page-title-style="card"] .settings-page > .page-header .header-title::before,
+html[data-page-title-style="card"] .help-center > .help-header .help-kicker,
+html[data-page-title-style="card"] .mrr-page-header__eyebrow {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--mrr-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 14%, transparent);
+  border-radius: 999px;
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) .eyebrow::before,
+html[data-page-title-style="card"] .mrr-page-header__eyebrow::before {
+  width: 7px;
+  height: 7px;
+  content: "";
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 12%);
+}
+
+html[data-page-title-style="card"] .mrr-page-header__meta,
+html[data-page-title-style="card"] .hero-panel .hero-meta {
+  margin-top: 22px;
+}
+
+html[data-page-title-style="card"] .mrr-page-header__meta > * {
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--mrr-card) 75%, transparent);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) > :last-child,
+html[data-page-title-style="card"] .settings-page > .page-header .header-actions,
+html[data-page-title-style="card"] .help-center > .help-header .help-status,
+html[data-page-title-style="card"] .mrr-page-header__aside,
+html[data-page-title-style="card"] .hero-actions {
+  align-self: center;
+}
+
+@media (width <= 760px) {
+  html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+  html[data-page-title-style] .settings-page > .page-header,
+  html[data-page-title-style] .help-center > .help-header,
+  html[data-page-title-style] body .mrr-page-header,
+  html[data-page-title-style] .hero-panel:has(.hero-copy > h2):has(.hero-copy > .subtitle) .hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+  html[data-page-title-style="card"] .settings-page > .page-header,
+  html[data-page-title-style="card"] .help-center > .help-header,
+  html[data-page-title-style="card"] body .mrr-page-header {
+    min-height: 0;
+    padding: 26px 22px;
+  }
+
+  html[data-page-title-style] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) > :last-child,
+  html[data-page-title-style] .settings-page > .page-header .header-actions,
+  html[data-page-title-style] .help-center > .help-header .help-status,
+  html[data-page-title-style] .mrr-page-header__aside,
+  html[data-page-title-style] .hero-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (width <= 560px) {
+  html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle) :is(h1, h2),
+  html[data-page-title-style="card"] .settings-page > .page-header h2,
+  html[data-page-title-style="card"] .help-center > .help-header h1,
+  html[data-page-title-style="card"] .mrr-page-header h1,
+  html[data-page-title-style="card"] .hero-panel h2 {
+    font-size: 28px;
+  }
+
+  html[data-page-title-style="card"] .page-header:has(> :first-child > :is(h1, h2)):has(> :first-child > .subtitle),
+  html[data-page-title-style="card"] .settings-page > .page-header,
+  html[data-page-title-style="card"] .help-center > .help-header,
+  html[data-page-title-style="card"] body .mrr-page-header {
+    padding: 22px 18px;
+  }
+}

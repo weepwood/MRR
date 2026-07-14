@@ -7,6 +7,10 @@ const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
+    if (to.name === 'publicStatus') {
+      return true
+    }
+
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
     const routeStore = useRouteStore()

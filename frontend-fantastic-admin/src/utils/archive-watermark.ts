@@ -92,7 +92,7 @@ export function createArchiveWatermarkDataUrl(
   context.rotate(-Math.PI / 7)
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillStyle = darkMode ? 'rgb(255 255 255 / 14%)' : 'rgb(17 24 39 / 12%)'
+  context.fillStyle = darkMode ? 'rgba(255, 255, 255, 0.14)' : 'rgba(17, 24, 39, 0.12)'
   context.font = '600 15px Inter, "Microsoft YaHei", sans-serif'
   context.fillText(`用户ID：${userId}`, 0, -12)
   context.font = '500 13px Inter, "Microsoft YaHei", sans-serif'

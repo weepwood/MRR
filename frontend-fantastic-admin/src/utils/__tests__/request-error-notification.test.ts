@@ -1,56 +1,59 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { scheduleUnhandledRequestError } from '../request-error-notification'
+import { describe, expect, it, vi } from 'vitest'
+import { registerUnhandledRequestError } from '../request-error-notification'
 
-afterEach(() => {
-  vi.useRealTimers()
-  document.body.innerHTML = ''
-})
+function dispatchUnhandledRejection(reason: unknown) {
+  const event = new Event('unhandledrejection') as PromiseRejectionEvent
+  Object.defineProperty(event, 'reason', { value: reason })
+  window.dispatchEvent(event)
+}
 
 describe('request error notification fallback', () => {
-  it('shows the global fallback when the page does not display a message', async () => {
-    vi.useFakeTimers()
+  it('does not notify while the request error is handled normally', () => {
+    const error = new Error('handled')
     const notify = vi.fn()
 
-    scheduleUnhandledRequestError(notify, 80)
-    await vi.advanceTimersByTimeAsync(80)
-
-    expect(notify).toHaveBeenCalledOnce()
-  })
-
-  it('suppresses the global fallback when the page displays an Element Plus message', async () => {
-    vi.useFakeTimers()
-    const notify = vi.fn()
-
-    scheduleUnhandledRequestError(notify, 80)
-    const message = document.createElement('div')
-    message.className = 'el-message el-message--error'
-    document.body.appendChild(message)
-    await Promise.resolve()
-    await vi.advanceTimersByTimeAsync(80)
+    registerUnhandledRequestError(error, notify)
 
     expect(notify).not.toHaveBeenCalled()
   })
 
-  it('does not treat an existing message as handling the new request error', async () => {
-    vi.useFakeTimers()
+  it('notifies when the registered request error becomes unhandled', () => {
+    const error = new Error('unhandled')
     const notify = vi.fn()
-    const existingMessage = document.createElement('div')
-    existingMessage.className = 'el-message el-message--warning'
-    document.body.appendChild(existingMessage)
 
-    scheduleUnhandledRequestError(notify, 80)
-    await vi.advanceTimersByTimeAsync(80)
+    registerUnhandledRequestError(error, notify)
+    dispatchUnhandledRejection(error)
 
     expect(notify).toHaveBeenCalledOnce()
   })
 
-  it('can cancel a pending fallback', async () => {
-    vi.useFakeTimers()
+  it('ignores unhandled rejections that were not registered by the request layer', () => {
+    const registeredError = new Error('registered')
+    const unrelatedError = new Error('unrelated')
     const notify = vi.fn()
 
-    const cancel = scheduleUnhandledRequestError(notify, 80)
-    cancel()
-    await vi.advanceTimersByTimeAsync(80)
+    registerUnhandledRequestError(registeredError, notify)
+    dispatchUnhandledRejection(unrelatedError)
+
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('notifies only once for the same request error', () => {
+    const error = new Error('duplicate event')
+    const notify = vi.fn()
+
+    registerUnhandledRequestError(error, notify)
+    dispatchUnhandledRejection(error)
+    dispatchUnhandledRejection(error)
+
+    expect(notify).toHaveBeenCalledOnce()
+  })
+
+  it('ignores primitive rejection reasons that cannot be tracked safely', () => {
+    const notify = vi.fn()
+
+    registerUnhandledRequestError('request failed', notify)
+    dispatchUnhandledRejection('request failed')
 
     expect(notify).not.toHaveBeenCalled()
   })

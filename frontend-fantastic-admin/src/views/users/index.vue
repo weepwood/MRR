@@ -229,9 +229,9 @@ onMounted(loadData)
 <template>
   <MrrPageShell width="fluid">
     <MrrPageHeader
+      eyebrow="User Management"
       title="用户管理"
       description="管理系统账号、角色分配、启停状态与最近登录信息。"
-      icon="i-ant-design:team-outlined"
     >
       <template #actions>
         <el-button :loading="loading" @click="loadData">

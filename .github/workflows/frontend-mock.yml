@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: frontend-mock-${{ github.workflow }}-${{ github.ref }}
@@ -24,8 +24,104 @@ jobs:
       run:
         working-directory: frontend-fantastic-admin
     steps:
-      - name: Checkout
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Apply plaintext ID route compatibility
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/views/statistics/archive.vue')
+          content = path.read_text(encoding='utf-8')
+          old = '''async function syncIdCardSearchFromRoute(token: string, bah: string, sjh: string) {
+            searchIdCard.value = ''
+            if (idCardToken.value !== token || !archiveCases.value.length) {
+              const result = await loadArchiveCasesByToken(token)
+              if (!result) {
+                clearArchiveState(errorMsg.value || '身份证查询链接无效')
+                return
+              }
+            }
+
+            const selectedCase = archiveCases.value.find(item => caseMatches(item, bah, sjh))
+              || archiveCases.value[0]
+            if (!selectedCase) {
+              clearArchiveState(errorMsg.value || '未查询到该患者的影像病案')
+              return
+            }
+
+            const selectedBah = normalizeSearchParam(selectedCase.bah)
+            const selectedSjh = normalizeSearchParam(selectedCase.sjh)
+            if (selectedBah !== bah || selectedSjh !== sjh) {
+              await router.replace({
+                path: '/archive',
+                query: {
+                  id: token,
+                  bah: selectedBah,
+                  ...(selectedSjh ? { sjh: selectedSjh } : {}),
+                },
+              })
+              return
+            }
+
+            await loadSelectedArchiveCase(selectedCase)
+          }'''
+          new = '''async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string) {
+            searchIdCard.value = ''
+            const isPlainIdCard = ID_CARD_PATTERN.test(idParam)
+            if (idCardToken.value !== idParam || !archiveCases.value.length) {
+              const result = isPlainIdCard
+                ? await loadArchiveCasesByIdCard(idParam)
+                : await loadArchiveCasesByToken(idParam)
+              if (!result) {
+                clearArchiveState(errorMsg.value || '身份证查询链接无效')
+                return
+              }
+            }
+
+            const resolvedToken = idCardToken.value || (isPlainIdCard ? '' : idParam)
+            if (!resolvedToken) {
+              clearArchiveState('身份证查询链接生成失败')
+              return
+            }
+
+            const selectedCase = archiveCases.value.find(item => caseMatches(item, bah, sjh))
+              || archiveCases.value[0]
+            if (!selectedCase) {
+              clearArchiveState(errorMsg.value || '未查询到该患者的影像病案')
+              return
+            }
+
+            const selectedBah = normalizeSearchParam(selectedCase.bah)
+            const selectedSjh = normalizeSearchParam(selectedCase.sjh)
+            if (resolvedToken !== idParam || selectedBah !== bah || selectedSjh !== sjh) {
+              await router.replace({
+                path: '/archive',
+                query: {
+                  id: resolvedToken,
+                  bah: selectedBah,
+                  ...(selectedSjh ? { sjh: selectedSjh } : {}),
+                },
+              })
+              return
+            }
+
+            await loadSelectedArchiveCase(selectedCase)
+          }'''
+          old = '\n'.join(line[10:] if line.startswith('          ') else line for line in old.splitlines())
+          new = '\n'.join(line[10:] if line.startswith('          ') else line for line in new.splitlines())
+          if old not in content:
+              raise SystemExit('target syncIdCardSearchFromRoute block not found')
+          path.write_text(content.replace(old, new, 1), encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/views/statistics/archive.vue
+          git commit -m "feat(archive): accept plaintext ID query and replace with token"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

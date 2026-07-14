@@ -3,7 +3,7 @@ import type { RecursiveRequired, Settings } from '#/global'
 const globalSettingsDefault: RecursiveRequired<Settings.all> = {
   app: {
     colorScheme: 'light',
-    radius: 0.5,
+    radius: 0.75,
     enableMournMode: false,
     enableColorAmblyopiaMode: false,
     enablePermission: true,

@@ -1,7 +1,7 @@
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { registerUnhandledRequestError } from '@/utils/request-error-notification'
+import { registerRequestErrorFallback } from '@/utils/request-error-notification'
 import { createResponseMetric, createResponseMetricQueue } from '@/utils/response-metrics'
 
 declare module 'axios' {
@@ -104,7 +104,7 @@ function showGlobalError(error: AxiosError | any) {
   const message = getErrorMessage(error)
   const key = `${error?.response?.status ?? 'network'}:${message}`
 
-  registerUnhandledRequestError(error, () => {
+  registerRequestErrorFallback(error, () => {
     const now = Date.now()
     const lastShownAt = recentErrorToasts.get(key) ?? 0
     if (now - lastShownAt < ERROR_TOAST_DEDUPE_MS) {

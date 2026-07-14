@@ -198,16 +198,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: false,
         },
       },
-      {
-        path: '/archive-search/:keyword?',
-        component: () => import('@/views/archive-search/index.vue'),
-        meta: {
-          title: '档案搜索',
-          icon: 'i-ant-design:search-outlined',
-          auth: ['record:read'],
-          cache: true,
-        },
-      },
     ],
   },
   {

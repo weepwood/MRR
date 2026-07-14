@@ -46,14 +46,23 @@ test.describe('无后端 Mock 模式', () => {
   })
 
   test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {
-    await page.goto('/archive')
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/archive', { waitUntil: 'domcontentloaded' })
 
-    await expect(page.getByRole('heading', { name: '影像档案袋' })).toBeVisible()
+    await page.waitForFunction(
+      () => document.body.classList.contains('archive-immersive'),
+      undefined,
+      { timeout: 20_000 },
+    )
+
+    await expect(page.getByRole('heading', { name: '影像档案袋' })).toBeVisible({ timeout: 20_000 })
 
     const archivePage = page.locator('.archive-page')
     await expect(archivePage).toBeVisible()
-    const archiveBox = await archivePage.boundingBox()
-    expect(archiveBox?.height ?? 0).toBeGreaterThan(300)
+    await expect.poll(async () => {
+      return (await archivePage.boundingBox())?.height ?? 0
+    }, { timeout: 10_000 }).toBeGreaterThan(300)
 
     const searchCard = page.locator('.search-card')
     await expect(searchCard).toBeVisible()

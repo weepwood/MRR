@@ -3,8 +3,8 @@ import type { App } from 'vue'
 type ErrorNotifier = () => void
 
 const pendingErrorNotifiers = new WeakMap<object, ErrorNotifier>()
+const installedVueApps = new WeakSet<App>()
 let rejectionListenerInstalled = false
-let vueErrorHandlerInstalled = false
 
 function isReference(value: unknown): value is object {
   return (typeof value === 'object' && value !== null) || typeof value === 'function'
@@ -57,16 +57,20 @@ export function registerRequestErrorFallback(
 }
 
 /**
- * 将 Vue 捕获到的异步错误接入请求错误兜底，同时保留已有错误处理器和控制台诊断。
+ * 将 Vue 捕获到的异步错误接入请求错误兜底。
+ * 请求错误由本模块消费，避免继续进入框架通用错误提示；其他错误仍交给原处理器。
  */
 export function installRequestErrorFallback(app: App): void {
-  if (vueErrorHandlerInstalled) {
+  if (installedVueApps.has(app)) {
     return
   }
 
   const previousErrorHandler = app.config.errorHandler
   app.config.errorHandler = (error, instance, info) => {
-    notifyRegisteredRequestError(error)
+    if (notifyRegisteredRequestError(error)) {
+      console.error(`[Request error] ${info}`, error)
+      return
+    }
 
     if (previousErrorHandler) {
       previousErrorHandler(error, instance, info)
@@ -75,5 +79,5 @@ export function installRequestErrorFallback(app: App): void {
 
     console.error(`[Vue error] ${info}`, error)
   }
-  vueErrorHandlerInstalled = true
+  installedVueApps.add(app)
 }

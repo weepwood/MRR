@@ -269,7 +269,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/help/index.vue'),
         meta: {
           title: '帮助与文档',
-          icon: 'i-ant-design:read-twotone',
+          icon: 'i-ant-design:read-outlined',
           cache: true,
         },
       },

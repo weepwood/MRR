@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ public class SystemAvailabilityRepository {
                 WHERE started_at < ?
                   AND COALESCE(ended_at, CURRENT_TIMESTAMP) > ?
                 ORDER BY started_at ASC
-                """, PERIOD_ROW_MAPPER, rangeEnd, rangeStart);
+                """, PERIOD_ROW_MAPPER, toDatabaseTime(rangeEnd), toDatabaseTime(rangeStart));
     }
 
     public void insertOpen(String status, Instant startedAt, Instant heartbeatAt, String reason) {
@@ -47,7 +48,7 @@ public class SystemAvailabilityRepository {
                 INSERT INTO app.system_availability_period
                     (status, started_at, ended_at, last_heartbeat_at, reason)
                 VALUES (?, ?, NULL, ?, ?)
-                """, status, startedAt, heartbeatAt, reason);
+                """, status, toDatabaseTime(startedAt), toDatabaseTime(heartbeatAt), reason);
     }
 
     public void close(long id, Instant endedAt) {
@@ -55,7 +56,7 @@ public class SystemAvailabilityRepository {
                 UPDATE app.system_availability_period
                 SET ended_at = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND ended_at IS NULL
-                """, endedAt, id);
+                """, toDatabaseTime(endedAt), id);
     }
 
     public void updateHeartbeat(long id, Instant heartbeatAt, String reason) {
@@ -63,14 +64,14 @@ public class SystemAvailabilityRepository {
                 UPDATE app.system_availability_period
                 SET last_heartbeat_at = ?, reason = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND ended_at IS NULL
-                """, heartbeatAt, reason, id);
+                """, toDatabaseTime(heartbeatAt), reason, id);
     }
 
     public void deleteEndedBefore(Instant cutoff) {
         jdbcTemplate.update("""
                 DELETE FROM app.system_availability_period
                 WHERE ended_at IS NOT NULL AND ended_at < ?
-                """, cutoff);
+                """, toDatabaseTime(cutoff));
     }
 
     private static Period mapPeriod(ResultSet resultSet, int rowNumber) throws SQLException {
@@ -82,6 +83,10 @@ public class SystemAvailabilityRepository {
                 toInstant(resultSet.getObject("last_heartbeat_at", OffsetDateTime.class)),
                 resultSet.getString("reason")
         );
+    }
+
+    private static OffsetDateTime toDatabaseTime(Instant value) {
+        return value.atOffset(ZoneOffset.UTC);
     }
 
     private static Instant toInstant(OffsetDateTime value) {

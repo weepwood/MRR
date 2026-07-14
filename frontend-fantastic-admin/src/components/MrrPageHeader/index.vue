@@ -6,7 +6,7 @@ const props = defineProps<{
 }>()
 
 const slots = useSlots()
-const hasAside = computed(() => Boolean(slots.meta || slots.actions))
+const hasAside = computed(() => Boolean(slots.actions))
 </script>
 
 <template>

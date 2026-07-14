@@ -15,12 +15,12 @@ const hasAside = computed(() => Boolean(slots.actions))
 <template>
   <header class="mrr-page-header">
     <div class="mrr-page-header__main">
-      <span v-if="props.icon && props.title !== '用户管理'" class="mrr-page-header__icon" aria-hidden="true">
+      <span v-if="props.icon" class="mrr-page-header__icon" aria-hidden="true">
         <FaIcon :name="props.icon" />
       </span>
-      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow || props.title === '用户管理' }">
-        <p v-if="props.eyebrow || props.title === '用户管理'" class="mrr-page-header__eyebrow">
-          {{ props.eyebrow || 'User Management' }}
+      <div class="mrr-page-header__copy" :class="{ 'has-eyebrow': props.eyebrow }">
+        <p v-if="props.eyebrow" class="mrr-page-header__eyebrow">
+          {{ props.eyebrow }}
         </p>
         <div class="mrr-page-header__title-row">
           <h1>{{ props.title }}</h1>

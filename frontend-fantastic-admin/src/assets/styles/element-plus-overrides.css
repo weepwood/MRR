@@ -7,6 +7,16 @@
   transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
+.el-button.el-button--small {
+  min-height: var(--mrr-control-height-compact);
+  padding-inline: 11px;
+}
+
+.el-button.el-button--large {
+  min-height: 40px;
+  padding-inline: 18px;
+}
+
 .el-button + .el-button {
   margin-left: var(--mrr-space-2);
 }
@@ -33,6 +43,16 @@
   min-height: var(--mrr-control-height);
   box-shadow: 0 0 0 1px var(--divider) inset;
   transition: box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.el-input--small .el-input__wrapper,
+.el-select--small .el-select__wrapper {
+  min-height: var(--mrr-control-height-compact);
+}
+
+.el-input--large .el-input__wrapper,
+.el-select--large .el-select__wrapper {
+  min-height: 40px;
 }
 
 .el-input__wrapper:hover,

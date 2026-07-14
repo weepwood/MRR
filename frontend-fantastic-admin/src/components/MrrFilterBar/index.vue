@@ -28,33 +28,30 @@ const slots = useSlots()
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  padding: 13px 14px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--surface) 74%, var(--surface-muted)) 0%,
-    color-mix(in srgb, var(--surface-muted) 72%, var(--surface)) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--mrr-control-border) 82%, var(--divider));
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 3%), inset 0 1px 0 rgb(255 255 255 / 55%);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  padding: 12px;
+  color: var(--mrr-card-foreground);
+  background: color-mix(in srgb, var(--mrr-muted) 46%, var(--mrr-card));
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .mrr-filter-bar:focus-within {
-  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--divider));
-  box-shadow: 0 4px 18px rgb(15 23 42 / 5%), inset 0 1px 0 rgb(255 255 255 / 62%);
+  border-color: color-mix(in srgb, var(--mrr-ring) 52%, var(--mrr-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mrr-ring) 12%, transparent);
 }
 
 .mrr-filter-bar--compact {
-  padding: 10px 12px;
-  border-radius: var(--mrr-radius-card);
+  padding: 9px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .mrr-filter-bar__fields {
   display: flex;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
 }
@@ -66,7 +63,7 @@ const slots = useSlots()
   gap: var(--mrr-space-2);
   align-items: center;
   padding-left: var(--mrr-space-3);
-  border-left: 1px solid var(--divider);
+  border-left: 1px solid var(--mrr-border);
 }
 
 .mrr-filter-bar__actions :deep(.el-button + .el-button) {
@@ -75,12 +72,11 @@ const slots = useSlots()
 
 .mrr-filter-bar :deep(.el-input__wrapper),
 .mrr-filter-bar :deep(.el-select__wrapper) {
-  background: var(--surface);
+  background: var(--mrr-card);
 }
 
 @media (width <= 760px) {
   .mrr-filter-bar {
-    gap: var(--mrr-space-3);
     align-items: stretch;
     flex-direction: column;
   }
@@ -93,7 +89,7 @@ const slots = useSlots()
   .mrr-filter-bar__actions {
     padding-top: var(--mrr-space-3);
     padding-left: 0;
-    border-top: 1px solid var(--divider);
+    border-top: 1px solid var(--mrr-border);
     border-left: 0;
   }
 

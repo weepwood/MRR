@@ -1,0 +1,145 @@
+/* MRR Console 对 Element Plus 的统一视觉覆盖 */
+.el-button {
+  min-height: var(--mrr-control-height);
+  padding-inline: 14px;
+  font-weight: 600;
+  border-radius: var(--mrr-radius-md);
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.el-button + .el-button {
+  margin-left: var(--mrr-space-2);
+}
+
+.el-button.is-link {
+  min-height: auto;
+  padding: 4px;
+}
+
+.el-button:focus-visible {
+  outline: none;
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-input-number {
+  border-radius: var(--mrr-radius-md);
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  min-height: var(--mrr-control-height);
+  box-shadow: 0 0 0 1px var(--divider) inset;
+  transition: box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-border-strong) inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, var(--mrr-focus-ring);
+}
+
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--color-primary) inset, var(--mrr-focus-ring);
+}
+
+.el-card {
+  border-color: var(--divider);
+  border-radius: var(--mrr-radius-card);
+}
+
+.el-card__header {
+  border-bottom-color: var(--divider);
+}
+
+.el-table {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.el-table th.el-table__cell {
+  height: var(--mrr-table-header-height);
+  padding-block: 8px;
+  font-weight: 650;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-muted) 72%, var(--surface));
+}
+
+.el-table td.el-table__cell {
+  height: var(--mrr-table-row-height);
+  padding-block: 8px;
+}
+
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--surface));
+}
+
+.el-table__empty-block {
+  min-height: 220px;
+}
+
+.el-pagination {
+  --el-pagination-button-height: 32px;
+  --el-pagination-button-width: 32px;
+
+  font-size: 13px;
+}
+
+.el-pagination button,
+.el-pagination .el-pager li {
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-tag {
+  font-weight: 600;
+  border-radius: var(--mrr-radius-pill);
+}
+
+.el-dialog {
+  overflow: hidden;
+  border-radius: var(--mrr-radius-dialog);
+  box-shadow: var(--mrr-shadow-dialog);
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px;
+  margin-right: 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.el-dialog__title {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--divider);
+}
+
+.el-form-item__label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.el-tabs__item {
+  font-weight: 600;
+}
+
+@media (width <= 640px) {
+  .el-dialog {
+    max-width: calc(100vw - 24px);
+    margin-inline: 12px;
+  }
+}

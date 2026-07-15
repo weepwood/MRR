@@ -33,7 +33,7 @@ public class ArchiveRecordServiceImpl implements ArchiveRecordService {
     public ArchiveRecord findByCode(String bah, String sjh) {
         String normalizedBah = normalizeNullable(bah);
         String normalizedSjh = normalizeNullable(sjh);
-        if (normalizedBah == null && normalizedSjh == null) {
+        if (!isResolvable(normalizedBah, normalizedSjh)) {
             return null;
         }
         return archiveRecordMapper.findByCode(normalizedBah, normalizedSjh);
@@ -44,7 +44,7 @@ public class ArchiveRecordServiceImpl implements ArchiveRecordService {
     public Long resolveArchiveId(String bah, String sjh, boolean createWhenSjhPresent) {
         String normalizedBah = normalizeNullable(bah);
         String normalizedSjh = normalizeNullable(sjh);
-        if (normalizedBah == null && normalizedSjh == null) {
+        if (!isResolvable(normalizedBah, normalizedSjh)) {
             return null;
         }
         return archiveRecordMapper.resolveArchiveId(
@@ -61,6 +61,13 @@ public class ArchiveRecordServiceImpl implements ArchiveRecordService {
             return List.of();
         }
         return archiveRecordMapper.findScans(archiveId);
+    }
+
+    private boolean isResolvable(String normalizedBah, String normalizedSjh) {
+        if (normalizedBah == null && normalizedSjh == null) {
+            return false;
+        }
+        return normalizedSjh != null || !MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah);
     }
 
     private String normalizeNullable(String value) {

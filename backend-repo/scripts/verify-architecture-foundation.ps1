@@ -13,7 +13,7 @@ try {
     }
 
     Write-Host '==> Run architecture foundation unit tests'
-    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,LocalImageStorageTest,ArchiveExportServiceImplTest' test
+    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,ImageControllerTest,LocalImageStorageTest,ArchiveExportServiceImplTest' test
     if ($LASTEXITCODE -ne 0) {
         throw "Architecture foundation tests failed with exit code $LASTEXITCODE"
     }

@@ -13,7 +13,7 @@
 
     <groupId>com.zjcxph</groupId>
     <artifactId>imgapi</artifactId>
-    <version>0.0.8-SNAPSHOT</version>
+    <version>0.1.1</version>
     <name>imageAPI</name>
     <description>Image API backend</description>
 
@@ -22,7 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>${java.version}</maven.compiler.release>
-        
+
         <!-- Dependency versions -->
         <mybatis.version>4.0.1</mybatis.version>
         <java-jwt.version>4.5.1</java-jwt.version>
@@ -31,7 +31,7 @@
         <itextpdf.version>9.5.0</itextpdf.version>
         <commons-codec.version>1.21.0</commons-codec.version>
         <aws-sdk.version>1.12.500</aws-sdk.version>
-        
+
         <!-- Plugin versions -->
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <mockito.version>5.23.0</mockito.version>
@@ -60,7 +60,7 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
-        
+
         <!-- Database -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -79,35 +79,35 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
-        
+
         <!-- AWS -->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>${aws-sdk.version}</version>
         </dependency>
-        
+
         <!-- Security -->
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
             <version>${java-jwt.version}</version>
         </dependency>
-        
+
         <!-- API Documentation -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
-        
+
         <!-- Resilience -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-ratelimiter</artifactId>
             <version>${resilience4j.version}</version>
         </dependency>
-        
+
         <!-- PDF Processing -->
         <dependency>
             <groupId>com.itextpdf</groupId>
@@ -126,20 +126,20 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.3.0</version>
         </dependency>
-        
+
         <!-- Utilities -->
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <version>${commons-codec.version}</version>
         </dependency>
-        
+
         <!-- HTTP Client with Connection Pooling -->
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
         </dependency>
-        
+
         <!-- Caching -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -155,7 +155,7 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
-        
+
         <!-- Structured Logging (JSON format) -->
         <dependency>
             <groupId>net.logstash.logback</groupId>
@@ -167,7 +167,7 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- Development Tools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -175,7 +175,7 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -238,7 +238,7 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            
+
             <!-- Spring Boot Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -259,7 +259,7 @@
                     </excludes>
                 </configuration>
             </plugin>
-            
+
             <!-- Surefire Plugin for Unit Tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -274,7 +274,7 @@
                     </environmentVariables>
                 </configuration>
             </plugin>
-            
+
             <!-- Failsafe Plugin for Integration Tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -288,7 +288,7 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- JaCoCo Plugin for Code Coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>

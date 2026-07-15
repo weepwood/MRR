@@ -47,10 +47,28 @@ BEGIN
 END;
 $$;
 
--- PostgreSQL 外键允许引用非主键列，但该列必须具有非部分唯一约束/索引。
--- 当前基线创建的 id 已经是主键；旧库补列时由此索引提供相同唯一性保证。
-CREATE UNIQUE INDEX IF NOT EXISTS ux_mr_statistics_id
-    ON app.mr_statistics (id);
+-- 外键引用列必须由非部分唯一索引或唯一/主键约束保证唯一。
+-- 新库的 V0 已经为 id 创建主键；旧库补列时才额外创建唯一索引。
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_index i
+        JOIN pg_attribute a
+          ON a.attrelid = i.indrelid
+         AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = 'app.mr_statistics'::regclass
+          AND i.indisunique
+          AND i.indpred IS NULL
+          AND i.indexprs IS NULL
+          AND i.indnkeyatts = 1
+          AND a.attname = 'id'
+    ) THEN
+        CREATE UNIQUE INDEX ux_mr_statistics_id
+            ON app.mr_statistics (id);
+    END IF;
+END;
+$$;
 
 COMMENT ON COLUMN app.mr_statistics.id
     IS '统计记录数据库行标识；旧数据库由 V0_0_1 兼容迁移补齐';

@@ -10,8 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,7 +40,15 @@ class ArchiveRecordServiceImplTest {
         ArchiveRecord result = archiveRecordService.findByCode(" ", null);
 
         assertNull(result);
-        verify(archiveRecordMapper, never()).findByCode(null, null);
+        verifyNoInteractions(archiveRecordMapper);
+    }
+
+    @Test
+    void findByCodeRequiresSjhForNonUniqueBahRange() {
+        ArchiveRecord result = archiveRecordService.findByCode("10000000", null);
+
+        assertNull(result);
+        verifyNoInteractions(archiveRecordMapper);
     }
 
     @Test

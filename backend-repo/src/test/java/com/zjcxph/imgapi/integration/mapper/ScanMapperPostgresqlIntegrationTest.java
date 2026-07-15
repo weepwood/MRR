@@ -71,7 +71,7 @@ class ScanMapperPostgresqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("通过真实 PostgreSQL 执行 ScanMapper 模糊查询")
+    @DisplayName("通过真实 PostgreSQL 执行有限 ScanMapper 模糊查询")
     void queriesScanWithPostgresqlConcatenationOperator() {
         jdbcTemplate.update("""
                 INSERT INTO app.mr_scan
@@ -84,11 +84,31 @@ class ScanMapperPostgresqlIntegrationTest {
         ScanRequest request = new ScanRequest();
         request.setBah("7895");
 
-        List<Scan> results = scanMapper.findByCondition(request);
+        List<Scan> results = scanMapper.findByCondition(request, 100);
 
         assertThat(results).singleElement().satisfies(scan -> {
             assertThat(scan.getBah()).isEqualTo("00789508");
             assertThat(scan.getFilename()).isEqualTo("test.jpg");
         });
+    }
+
+    @Test
+    @DisplayName("游标查询仅返回 afterId 之后的记录")
+    void queriesScanAfterId() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (brxh, bah, filename, pages, uploadflag, folder)
+                VALUES
+                    ('1', '00000001', '1.jpg', 1, 1, '25.03.15'),
+                    ('2', '00000002', '2.jpg', 2, 1, '25.03.15')
+                """);
+        Integer firstId = jdbcTemplate.queryForObject(
+                "SELECT MIN(id) FROM app.mr_scan WHERE bah IN ('00000001', '00000002')",
+                Integer.class
+        );
+
+        List<Scan> results = scanMapper.findAfterId(firstId, 10);
+
+        assertThat(results).extracting(Scan::getBah).contains("00000002").doesNotContain("00000001");
     }
 }

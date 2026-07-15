@@ -25,6 +25,12 @@ export interface MrrChartCountItem {
   color?: string
 }
 
+export interface MrrSquareStackTrendItem {
+  category: string
+  total: number
+  error?: number
+}
+
 export interface MrrChartThemeTokens {
   dark: boolean
   background: string

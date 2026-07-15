@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,6 +65,7 @@ class ArchiveExportServiceImplTest {
         ArchiveExportService.BatchZipExport export = service.prepareBatch(List.of("1"));
 
         assertThat(export.itemCount()).isEqualTo(1);
-        assertThat(export.items()).isUnmodifiable();
+        assertThatThrownBy(() -> export.items().add(item))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

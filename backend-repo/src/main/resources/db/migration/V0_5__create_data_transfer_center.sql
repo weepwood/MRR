@@ -158,13 +158,7 @@ ALTER TABLE app.mr_scan
     ON DELETE SET NULL
     NOT VALID;
 
--- 历史数据保持 NULL；只保证经数据交换中心写入的新记录不重复。
-CREATE UNIQUE INDEX IF NOT EXISTS ux_mr_scan_source_record_key
-    ON app.mr_scan (source_record_key)
-    WHERE source_record_key IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_mr_scan_import_job
-    ON app.mr_scan (import_job_id)
-    WHERE import_job_id IS NOT NULL;
+-- mr_scan 可能已有 3000 万行，相关索引在 V0_9 中使用 CONCURRENTLY 创建。
 
 -- job_id/file_id 由执行 COPY 的数据库会话参数提供。
 CREATE UNLOGGED TABLE app.stg_mr_statistics_import (

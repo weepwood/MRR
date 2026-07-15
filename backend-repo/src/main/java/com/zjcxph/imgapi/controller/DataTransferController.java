@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -44,7 +45,7 @@ public class DataTransferController {
     private static final String STATISTICS_TEMPLATE =
             "bah,cid,openerno,date,type,pages,sjh,patientname,inpatientdepartment,patientid,dischargedate\r\n";
     private static final String SCAN_TEMPLATE =
-            "brxh,bah,sjh,filename,btype,pages,openerno,uploaddate,uploadflag,folder\r\n";
+            "brxh,bah,sjh,filename,btype,pages,openerno,uploaddate,uploadflag,folder,file_size\r\n";
 
     private final DataTransferService dataTransferService;
     private final DataTransferRepository repository;
@@ -90,13 +91,13 @@ public class DataTransferController {
 
     @PostMapping("/imports/inbox")
     @Operation(summary = "使用服务器 inbox 文件创建导入任务")
-    public Result<DataTransferJob> createInboxImport(@Valid @org.springframework.web.bind.annotation.RequestBody DataTransferInboxRequest request) {
+    public Result<DataTransferJob> createInboxImport(@Valid @RequestBody DataTransferInboxRequest request) {
         return Result.success(dataTransferService.createInboxImportJob(request));
     }
 
     @PostMapping("/exports")
     @Operation(summary = "创建异步 CSV 分卷导出任务")
-    public Result<DataTransferJob> createExport(@Valid @org.springframework.web.bind.annotation.RequestBody DataTransferExportRequest request) {
+    public Result<DataTransferJob> createExport(@Valid @RequestBody DataTransferExportRequest request) {
         return Result.success(dataTransferService.createExportJob(request));
     }
 

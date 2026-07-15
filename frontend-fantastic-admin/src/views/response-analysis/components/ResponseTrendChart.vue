@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ResponseMetricTrendPoint } from '@/api/types'
-import type { MrrLineSeries, MrrSquareStackTrendItem } from '@/types/chart'
+import type { MrrLineSeries, MrrRequestHeatmapItem } from '@/types/chart'
 import { computed } from 'vue'
-import { MrrLineChart, MrrSquareStackTrendChart } from '@/components/charts'
+import { MrrLineChart, MrrRequestHeatmap } from '@/components/charts'
 
 defineOptions({ name: 'ResponseTrendChart' })
 
@@ -11,10 +11,12 @@ const props = defineProps<{
 }>()
 
 const categories = computed(() => props.data.map(item => formatBucket(item.bucket)))
-const requestTrend = computed<MrrSquareStackTrendItem[]>(() => props.data.map(item => ({
-  category: formatBucket(item.bucket),
+const requestHeatmap = computed<MrrRequestHeatmapItem[]>(() => props.data.map(item => ({
+  date: formatDateKey(item.bucket),
   total: item.requestCount ?? 0,
   error: item.errorCount ?? 0,
+  avgClientDurationMs: item.avgClientDurationMs ?? 0,
+  avgServerDurationMs: item.avgServerDurationMs ?? 0,
 })))
 const durationSeries = computed<MrrLineSeries[]>(() => [
   {
@@ -55,54 +57,54 @@ function formatDuration(value: number) {
   return `${formatNumber(value)} ms`
 }
 
+function formatDateKey(bucket: string) {
+  const match = bucket.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : bucket.slice(0, 10)
+}
+
 function formatBucket(bucket: string) {
-  const dateTimeMatch = bucket.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2})/)
-  if (dateTimeMatch) {
-    return `${dateTimeMatch[2]}/${dateTimeMatch[3]} ${dateTimeMatch[4]}:00`
-  }
   const dateMatch = bucket.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (dateMatch) {
     return `${dateMatch[2]}/${dateMatch[3]}`
   }
-  return bucket.length > 16 ? bucket.slice(-16) : bucket
+  return bucket.length > 10 ? bucket.slice(-10) : bucket
 }
 </script>
 
 <template>
   <div class="chart-shell">
-    <div class="chart-overview" aria-label="趋势摘要">
+    <div class="chart-overview" aria-label="近一年趋势摘要">
       <div class="overview-item request-overview">
-        <span>峰值请求量</span>
+        <span>单日峰值请求</span>
         <strong>{{ formatNumber(peakRequests) }}</strong>
         <i>次</i>
       </div>
       <div class="overview-item error-overview">
-        <span>区间错误请求</span>
+        <span>近一年错误请求</span>
         <strong>{{ formatNumber(totalErrors) }}</strong>
         <i>{{ overallErrorRate.toFixed(2) }}%</i>
       </div>
       <div class="overview-item client-overview">
-        <span>客户端均值</span>
+        <span>客户端日均耗时</span>
         <strong>{{ formatDuration(averageClientDuration) }}</strong>
       </div>
       <div class="overview-item server-overview">
-        <span>服务端均值</span>
+        <span>服务端日均耗时</span>
         <strong>{{ formatDuration(averageServerDuration) }}</strong>
       </div>
     </div>
 
-    <section class="trend-section" aria-labelledby="request-trend-heading">
+    <section class="trend-section" aria-labelledby="request-heatmap-heading">
       <div class="section-heading">
         <div>
-          <strong id="request-trend-heading">请求量方块趋势</strong>
-          <span>每列对应一个时间桶，成功与错误请求按方块从底部向上堆叠</span>
+          <strong id="request-heatmap-heading">每日请求热力图</strong>
+          <span>一个方块代表一天，颜色越深表示当天请求数量越多</span>
         </div>
-        <small>{{ requestTrend.length }} 个时间点</small>
+        <small>最近 365 天</small>
       </div>
-      <MrrSquareStackTrendChart
-        :data="requestTrend"
-        :height="224"
-        unit="次请求"
+      <MrrRequestHeatmap
+        :data="requestHeatmap"
+        :days="365"
       />
     </section>
 

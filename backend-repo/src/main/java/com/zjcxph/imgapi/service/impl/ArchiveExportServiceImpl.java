@@ -11,9 +11,9 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -48,16 +48,12 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
             throw new IllegalArgumentException("输出流不能为空");
         }
 
-        Map<String, Integer> entryNameCounts = new HashMap<>();
+        Set<String> usedEntryNames = new HashSet<>();
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
 
         try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
             for (PathDO item : export.items()) {
-                if (item == null) {
-                    continue;
-                }
-
-                String entryName = uniqueEntryName(item, entryNameCounts);
+                String entryName = uniqueEntryName(item, usedEntryNames);
                 InputStream opened;
                 try {
                     opened = imageStorage.open(item);
@@ -79,24 +75,23 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         }
     }
 
-    private String uniqueEntryName(PathDO item, Map<String, Integer> entryNameCounts) {
+    private String uniqueEntryName(PathDO item, Set<String> usedEntryNames) {
         String archiveCode = sanitizeSegment(item.getBah(), "unknown");
         String filename = sanitizeSegment(item.getFilename(), "image");
-        String baseName = archiveCode + "/" + filename;
-
-        int occurrence = entryNameCounts.merge(baseName, 1, Integer::sum);
-        if (occurrence == 1) {
-            return baseName;
+        String candidate = archiveCode + "/" + filename;
+        if (usedEntryNames.add(candidate)) {
+            return candidate;
         }
 
         int extensionIndex = filename.lastIndexOf('.');
-        if (extensionIndex <= 0) {
-            return archiveCode + "/" + filename + "-" + occurrence;
-        }
-        return archiveCode + "/"
-                + filename.substring(0, extensionIndex)
-                + "-" + occurrence
-                + filename.substring(extensionIndex);
+        String stem = extensionIndex <= 0 ? filename : filename.substring(0, extensionIndex);
+        String extension = extensionIndex <= 0 ? "" : filename.substring(extensionIndex);
+        int suffix = 2;
+        do {
+            candidate = archiveCode + "/" + stem + "-" + suffix + extension;
+            suffix++;
+        } while (!usedEntryNames.add(candidate));
+        return candidate;
     }
 
     private String sanitizeSegment(String value, String fallback) {

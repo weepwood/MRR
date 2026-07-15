@@ -1,9 +1,11 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.storage.ImageStorage;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,27 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
             return new BatchZipExport(List.of());
         }
         return new BatchZipExport(scanService.getImagePathList(scanIds));
+    }
+
+    @Override
+    public BatchZipExport prepareArchive(String bah, String sjh) {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        List<Scan> scans = scanService.getImageListByCode(
+                normalizedBah,
+                MedicalRecordCodeUtils.toSearchTerm(normalizedBah),
+                normalizedSjh,
+                MedicalRecordCodeUtils.toSearchTerm(normalizedSjh)
+        );
+        List<PathDO> items = scans.stream()
+                .map(scan -> new PathDO(
+                        scan.getFolder(),
+                        scan.getFilename(),
+                        scan.getBrxh(),
+                        scan.getBah()
+                ))
+                .toList();
+        return new BatchZipExport(items);
     }
 
     @Override

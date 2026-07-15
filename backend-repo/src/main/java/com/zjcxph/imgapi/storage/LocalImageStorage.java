@@ -25,11 +25,12 @@ public class LocalImageStorage implements ImageStorage {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        Path resolved = resolve(image);
-        if (!Files.isRegularFile(resolved) || !Files.isReadable(resolved)) {
-            throw new FileNotFoundException("影像文件不存在或不可读: " + resolved);
-        }
-        return Files.newInputStream(resolved);
+        return Files.newInputStream(requireReadableFile(image));
+    }
+
+    @Override
+    public long size(PathDO image) throws IOException {
+        return Files.size(requireReadableFile(image));
     }
 
     /**
@@ -63,6 +64,14 @@ public class LocalImageStorage implements ImageStorage {
 
         if (!resolved.startsWith(root)) {
             throw new IOException("影像路径越过配置根目录");
+        }
+        return resolved;
+    }
+
+    private Path requireReadableFile(PathDO image) throws IOException {
+        Path resolved = resolve(image);
+        if (!Files.isRegularFile(resolved) || !Files.isReadable(resolved)) {
+            throw new FileNotFoundException("影像文件不存在或不可读: " + resolved);
         }
         return resolved;
     }

@@ -11,24 +11,30 @@ import java.util.List;
 @Mapper
 public interface ArchiveRecordMapper {
 
-    String SUMMARY_COLUMNS = "id, sjh, bah, "
-            + "patient_id AS \"patientId\", "
-            + "patient_name AS \"patientName\", "
-            + "inpatient_department AS \"inpatientDepartment\", "
-            + "archive_date AS \"archiveDate\", "
-            + "discharge_date AS \"dischargeDate\", "
-            + "archive_type AS \"archiveType\", "
-            + "page_count AS \"pageCount\", "
-            + "scan_count AS \"scanCount\", "
-            + "scan_page_count AS \"scanPageCount\", "
-            + "created_at AS \"createdAt\", "
-            + "updated_at AS \"updatedAt\"";
+    String DETAIL_SELECT = "SELECT a.id, a.sjh, a.bah, "
+            + "a.patient_id AS \"patientId\", "
+            + "a.patient_name AS \"patientName\", "
+            + "a.inpatient_department AS \"inpatientDepartment\", "
+            + "a.device_id AS \"deviceId\", "
+            + "a.operator_no AS \"operatorNo\", "
+            + "a.archive_date AS \"archiveDate\", "
+            + "a.discharge_date AS \"dischargeDate\", "
+            + "a.archive_type AS \"archiveType\", "
+            + "a.page_count AS \"pageCount\", "
+            + "a.source_statistics_id AS \"sourceStatisticsId\", "
+            + "(SELECT COUNT(*) FROM mr_scan s "
+            + "  WHERE s.archive_id = a.id AND s.uploadflag <> 0) AS \"scanCount\", "
+            + "(SELECT COALESCE(SUM(s.pages), 0) FROM mr_scan s "
+            + "  WHERE s.archive_id = a.id AND s.uploadflag <> 0) AS \"scanPageCount\", "
+            + "a.created_at AS \"createdAt\", "
+            + "a.updated_at AS \"updatedAt\" "
+            + "FROM mr_archive a ";
 
-    @Select("SELECT " + SUMMARY_COLUMNS + " FROM v_archive_summary WHERE id = #{id}")
+    @Select(DETAIL_SELECT + "WHERE a.id = #{id}")
     ArchiveRecord findById(@Param("id") Long id);
 
-    @Select("SELECT " + SUMMARY_COLUMNS + " FROM v_archive_summary "
-            + "WHERE id = app.resolve_archive_id(#{bah}, #{sjh}, FALSE)")
+    @Select(DETAIL_SELECT
+            + "WHERE a.id = app.resolve_archive_id(#{bah}, #{sjh}, FALSE)")
     ArchiveRecord findByCode(@Param("bah") String bah, @Param("sjh") String sjh);
 
     @Select("SELECT app.resolve_archive_id(#{bah}, #{sjh}, #{createWhenSjhPresent})")

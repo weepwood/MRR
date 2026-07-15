@@ -307,7 +307,7 @@ h2 {
 
 @media (width >= 1440px) {
   .analysis-stack {
-    grid-template-columns: minmax(0, 1.45fr) minmax(520px, 1fr);
+    grid-template-columns: max-content minmax(520px, 1fr);
     align-items: start;
   }
 }

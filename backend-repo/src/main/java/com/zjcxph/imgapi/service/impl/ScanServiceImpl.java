@@ -141,22 +141,21 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findByCondition(ScanRequest request, int limit) {
-        normalizeSearchCodes(request);
-        return scanMapper.findByCondition(request, normalizeLegacyLimit(limit));
+        ScanRequest prepared = prepareSearchRequest(request);
+        return scanMapper.findByCondition(prepared, normalizeLegacyLimit(limit));
     }
 
     @Override
     public List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size) {
         PaginationUtils.validatePageParams(page, size);
-        normalizeSearchCodes(request);
+        ScanRequest prepared = prepareSearchRequest(request);
         int offset = PaginationUtils.calculateOffset(page, size);
-        return scanMapper.findByConditionWithPagination(request, offset, size);
+        return scanMapper.findByConditionWithPagination(prepared, offset, size);
     }
 
     @Override
     public long countByCondition(ScanRequest request) {
-        normalizeSearchCodes(request);
-        return scanMapper.countByCondition(request);
+        return scanMapper.countByCondition(prepareSearchRequest(request));
     }
 
     private int normalizeLegacyLimit(int limit) {
@@ -178,15 +177,14 @@ public class ScanServiceImpl implements ScanService {
         }
     }
 
-    private void normalizeSearchCodes(ScanRequest request) {
-        if (request == null) {
-            return;
+    private ScanRequest prepareSearchRequest(ScanRequest request) {
+        ScanRequest prepared = request == null ? new ScanRequest() : request;
+        if (prepared.getBah() != null) {
+            prepared.setBah(MedicalRecordCodeUtils.toSearchTerm(prepared.getBah()));
         }
-        if (request.getBah() != null) {
-            request.setBah(MedicalRecordCodeUtils.toSearchTerm(request.getBah()));
+        if (prepared.getSjh() != null) {
+            prepared.setSjh(MedicalRecordCodeUtils.toSearchTerm(prepared.getSjh()));
         }
-        if (request.getSjh() != null) {
-            request.setSjh(MedicalRecordCodeUtils.toSearchTerm(request.getSjh()));
-        }
+        return prepared;
     }
 }

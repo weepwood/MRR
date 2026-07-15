@@ -76,9 +76,20 @@ public class LocalImageStorage implements ImageStorage {
                 || normalized.equals("..")
                 || normalized.contains("/")
                 || normalized.contains("\\")
-                || normalized.indexOf('\0') >= 0) {
+                || normalized.indexOf('\0') >= 0
+                || containsWindowsReservedCharacter(normalized)) {
             throw new IOException(field + " 包含非法路径字符");
         }
         return normalized;
+    }
+
+    private boolean containsWindowsReservedCharacter(String value) {
+        return value.indexOf(':') >= 0
+                || value.indexOf('*') >= 0
+                || value.indexOf('?') >= 0
+                || value.indexOf('"') >= 0
+                || value.indexOf('<') >= 0
+                || value.indexOf('>') >= 0
+                || value.indexOf('|') >= 0;
     }
 }

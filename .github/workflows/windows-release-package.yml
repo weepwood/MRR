@@ -1,6 +1,15 @@
 name: Windows release package
 
 on:
+  pull_request:
+    branches:
+      - dev-no-login
+    paths:
+      - 'deploy/windows/**'
+      - '.github/workflows/windows-release-package.yml'
+      - 'backend-repo/src/main/resources/application.properties'
+      - 'vitepress-doc/.vitepress/config.full.mts'
+      - 'vitepress-doc/internal/windows-deployment.md'
   workflow_dispatch:
     inputs:
       version:
@@ -95,10 +104,17 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_SCHEMA_VERSION: ${{ inputs.database_schema_version }}
           INPUT_DB_COMPATIBLE: ${{ inputs.database_backward_compatible }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
 
-          VERSION="${INPUT_VERSION:-${GITHUB_REF_NAME}}"
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            VERSION="${INPUT_VERSION}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="pr-${PR_NUMBER:-manual}-${GITHUB_SHA:0:8}"
+          fi
           SCHEMA_VERSION="${INPUT_SCHEMA_VERSION:-V0}"
           DB_COMPATIBLE="${INPUT_DB_COMPATIBLE:-true}"
           COMMIT="${GITHUB_SHA}"

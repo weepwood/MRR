@@ -89,6 +89,7 @@ public class ImageController {
             @Parameter(description = "病案号，可省略前导零", example = "789508")
             String BAH,
             @RequestParam(required = false)
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
             @Parameter(description = "唯一上架号；病案号大于等于 10000000 时必填")
             String sjh) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(BAH);
@@ -107,9 +108,13 @@ public class ImageController {
                 archiveExportService.writeBatchZip(export, outputStream);
         String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
         String fileName = archiveCode + ".zip";
+        String contentDisposition = ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+                .toString();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(body);
     }
@@ -135,8 +140,10 @@ public class ImageController {
     @GetMapping("/search")
     public Result<List<BAHDataResponseDTO>> searchByCode(
             @Parameter(description = "病案号，可省略前导零；大于等于 10000000 时必须同时传上架号")
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
             @RequestParam(required = false) String bah,
             @Parameter(description = "唯一上架号，可省略前导零")
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
             @RequestParam(required = false) String sjh) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);

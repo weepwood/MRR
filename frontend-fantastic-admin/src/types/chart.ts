@@ -25,10 +25,12 @@ export interface MrrChartCountItem {
   color?: string
 }
 
-export interface MrrSquareStackTrendItem {
-  category: string
+export interface MrrRequestHeatmapItem {
+  date: string
   total: number
   error?: number
+  avgClientDurationMs?: number
+  avgServerDurationMs?: number
 }
 
 export interface MrrChartThemeTokens {

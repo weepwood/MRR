@@ -153,7 +153,16 @@ onUnmounted(() => {
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
       <div class="preview-toolbar">
-        <span class="image-position">P{{ props.image.pages ?? '-' }}</span>
+        <el-select
+          v-model="pendingType"
+          class="preview-type-select"
+          aria-label="影像分类"
+          :loading="props.savingType"
+          size="small"
+          @change="confirmType"
+        >
+          <el-option v-for="item in TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
 
         <div class="preview-controls">
           <div class="page-navigation" aria-label="影像翻页">
@@ -161,11 +170,8 @@ onUnmounted(() => {
             <el-button circle size="small" :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
           </div>
           <el-button size="small" type="primary" :plain="!props.isSelected" @click="emit('toggle')">
-            {{ props.isSelected ? '已选' : '选中' }}
+            P{{ props.image.pages ?? '-' }} {{ props.isSelected ? '已选' : '选中' }}
           </el-button>
-          <el-select v-model="pendingType" aria-label="影像分类" :loading="props.savingType" size="small" @change="confirmType">
-            <el-option v-for="item in TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
         </div>
       </div>
 
@@ -349,17 +355,14 @@ onUnmounted(() => {
 }
 
 .preview-toolbar {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  left: auto;
-  z-index: 2;
-  display: flex;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 3001;
+  display: grid;
   gap: 6px;
-  align-items: center;
-  width: max-content;
+  width: min(180px, calc(100vw - 32px));
   min-width: 0;
-  max-width: calc(100% - 24px);
   padding: 8px;
   background: hsl(var(--card) / 92%);
   border: 1px solid var(--divider);
@@ -374,27 +377,22 @@ onUnmounted(() => {
 }
 
 .preview-controls {
-  flex: none;
   gap: 6px;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .page-navigation {
-  gap: 2px;
-  padding-right: 6px;
-  border-right: 1px solid var(--divider);
-}
-
-.preview-controls :deep(.el-select) {
-  width: 148px;
-}
-
-.image-position {
   flex: none;
-  padding: 0 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--surface-alt);
-  border-radius: 4px;
+  gap: 2px;
+}
+
+.preview-type-select {
+  width: 100%;
+}
+
+.preview-type-select :deep(.el-select__wrapper) {
+  min-height: 24px;
 }
 
 @media (width <= 720px) {
@@ -405,17 +403,11 @@ onUnmounted(() => {
   .preview-toolbar {
     right: 8px;
     bottom: 8px;
-    left: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    width: min(180px, calc(100vw - 16px));
   }
 
   .preview-controls {
     gap: 4px;
-  }
-
-  .preview-controls :deep(.el-select) {
-    width: 92px;
   }
 
   .preview-image-placeholder {

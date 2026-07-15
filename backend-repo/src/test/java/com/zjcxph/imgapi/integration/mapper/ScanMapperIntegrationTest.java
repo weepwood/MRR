@@ -87,8 +87,8 @@ class ScanMapperIntegrationTest {
     void countByCondition() {
         ScanRequest param = new ScanRequest();
         param.setBah("00789508");
-        int count = scanMapper.countByCondition(param);
-        assertThat(count).isEqualTo(1);
+        long count = scanMapper.countByCondition(param);
+        assertThat(count).isEqualTo(1L);
     }
 
     @Test

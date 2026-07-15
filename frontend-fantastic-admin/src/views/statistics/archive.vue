@@ -67,15 +67,14 @@ const filteredImages = computed<GalleryImage[]>(() =>
     : images.value.filter(item => Number(item.btype) === selectedType.value),
 )
 
-const selection = useSelection<GalleryImage>(filteredImages)
+const selection = useSelection<GalleryImage>(computed(() => images.value))
 const {
   selectedIds,
   selectedCount,
-  allVisibleSelected,
   selectedItems,
   isSelected,
   toggleSelect,
-  selectAllVisible,
+  toggleItems,
   keyOf,
 } = selection
 
@@ -85,6 +84,8 @@ const currentImage = computed(() => filteredImages.value[selectedImageIndex.valu
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
 const typeStats = computed(() => buildTypeStats(images.value))
 const patient = computed(() => patientList.value[0])
+const allImagesSelected = computed(() => images.value.length > 0 && images.value.every(isSelected))
+const allImagesIndeterminate = computed(() => images.value.some(isSelected) && !allImagesSelected.value)
 const showViewer = computed(() => images.value.length > 0 || Boolean(
   sanitizeParam(route.query.id) || sanitizeParam(route.query.bah) || sanitizeParam(route.query.sjh),
 ))
@@ -356,6 +357,28 @@ function selectType(value: number | 'all') {
   selectedImageIndex.value = 0
 }
 
+function imagesOfType(type: number) {
+  return images.value.filter(image => Number(image.btype) === type)
+}
+
+function isTypeSelected(type: number) {
+  const typeImages = imagesOfType(type)
+  return typeImages.length > 0 && typeImages.every(isSelected)
+}
+
+function isTypeIndeterminate(type: number) {
+  const typeImages = imagesOfType(type)
+  return typeImages.some(isSelected) && !isTypeSelected(type)
+}
+
+function toggleTypeSelection(type: number) {
+  toggleItems(imagesOfType(type))
+}
+
+function toggleAllSelection() {
+  toggleItems(images.value)
+}
+
 function toggleCurrent() {
   if (currentImage.value) {
     toggleSelect(currentImage.value)
@@ -503,10 +526,13 @@ onUnmounted(() => {
             :type-stats="typeStats"
             :total-count="images.length"
             :selected-count="selectedCount"
-            :filtered-count="filteredImages.length"
-            :all-visible-selected="allVisibleSelected"
+            :all-selected="allImagesSelected"
+            :all-indeterminate="allImagesIndeterminate"
+            :is-type-selected="isTypeSelected"
+            :is-type-indeterminate="isTypeIndeterminate"
             @select-type="selectType"
-            @select-all="selectAllVisible"
+            @toggle-all-selection="toggleAllSelection"
+            @toggle-type-selection="toggleTypeSelection"
           />
         </template>
 

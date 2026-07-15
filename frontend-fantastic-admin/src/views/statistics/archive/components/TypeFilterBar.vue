@@ -15,13 +15,16 @@ const props = defineProps<{
   typeStats: TypeStatItem[]
   totalCount: number
   selectedCount: number
-  filteredCount: number
-  allVisibleSelected: boolean
+  allSelected: boolean
+  allIndeterminate: boolean
+  isTypeSelected: (type: number) => boolean
+  isTypeIndeterminate: (type: number) => boolean
 }>()
 
 const emit = defineEmits<{
   selectType: [value: number | 'all']
-  selectAll: []
+  toggleAllSelection: []
+  toggleTypeSelection: [type: number]
 }>()
 
 const selectedType = defineModel<number | 'all'>('selectedType', { default: 'all' })
@@ -51,16 +54,22 @@ function onNodeClick(data: DirectoryNode) {
     onSelect(data.id)
   }
 }
+
+function onSelection(value: number | 'all') {
+  if (value === 'all') {
+    emit('toggleAllSelection')
+  }
+  else {
+    emit('toggleTypeSelection', value)
+  }
+}
 </script>
 
 <template>
   <div class="type-bar">
     <div class="type-bar-actions">
-      <span class="select-count">已选 {{ props.selectedCount }}/{{ props.filteredCount }}</span>
+      <span class="select-count">已选 {{ props.selectedCount }}</span>
       <div class="type-actions">
-        <el-button size="small" link @click="emit('selectAll')">
-          {{ props.allVisibleSelected ? '取消全选' : '全选' }}
-        </el-button>
         <el-segmented
           v-model="displayMode"
           size="small"
@@ -73,23 +82,45 @@ function onNodeClick(data: DirectoryNode) {
       </div>
     </div>
     <div v-if="displayMode === 'buttons'" class="type-tabs">
-      <button type="button" class="type-tab" :class="{ active: selectedType === 'all' }" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
-        全部
-        <span class="type-count">{{ props.totalCount }}</span>
-      </button>
-      <button
+      <div class="type-tab-entry">
+        <el-checkbox
+          :model-value="props.allSelected"
+          :indeterminate="props.allIndeterminate"
+          :disabled="props.totalCount === 0"
+          aria-label="选择全部病案"
+          @click.stop
+          @change="onSelection('all')"
+        />
+        <button type="button" class="type-tab" :class="{ active: selectedType === 'all' }" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
+          全部
+          <span class="type-count">{{ props.totalCount }}</span>
+        </button>
+      </div>
+      <div
         v-for="item in props.typeStats"
         :key="item.value"
-        type="button"
-        class="type-tab"
-        :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
-        :aria-pressed="selectedType === item.value"
-        :disabled="item.count === 0"
-        @click="onSelect(item.value)"
+        class="type-tab-entry"
       >
-        {{ item.label }}
-        <span v-if="item.count" class="type-count">{{ item.count }}</span>
-      </button>
+        <el-checkbox
+          :model-value="props.isTypeSelected(item.value)"
+          :indeterminate="props.isTypeIndeterminate(item.value)"
+          :disabled="item.count === 0"
+          :aria-label="`选择${item.label}病案`"
+          @click.stop
+          @change="onSelection(item.value)"
+        />
+        <button
+          type="button"
+          class="type-tab"
+          :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
+          :aria-pressed="selectedType === item.value"
+          :disabled="item.count === 0"
+          @click="onSelect(item.value)"
+        >
+          {{ item.label }}
+          <span v-if="item.count" class="type-count">{{ item.count }}</span>
+        </button>
+      </div>
     </div>
     <el-tree
       v-else
@@ -105,6 +136,14 @@ function onNodeClick(data: DirectoryNode) {
     >
       <template #default="{ data }">
         <span class="tree-node">
+          <el-checkbox
+            :model-value="data.id === 'all' ? props.allSelected : props.isTypeSelected(data.id)"
+            :indeterminate="data.id === 'all' ? props.allIndeterminate : props.isTypeIndeterminate(data.id)"
+            :disabled="data.id === 'all' ? props.totalCount === 0 : data.disabled"
+            :aria-label="`选择${data.label}病案`"
+            @click.stop
+            @change="onSelection(data.id)"
+          />
           <span class="tree-label">{{ data.label }}</span>
           <span class="tree-count">{{ data.count }}</span>
         </span>
@@ -149,6 +188,7 @@ function onNodeClick(data: DirectoryNode) {
 
 .type-tab {
   display: inline-flex;
+  flex: 1;
   gap: 6px;
   align-items: center;
   justify-content: space-between;
@@ -161,6 +201,13 @@ function onNodeClick(data: DirectoryNode) {
   border: 1px solid transparent;
   border-radius: 6px;
   transition: background 0.15s, color 0.15s;
+}
+
+.type-tab-entry {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
 }
 
 .type-tab.active {
@@ -216,6 +263,10 @@ function onNodeClick(data: DirectoryNode) {
   gap: 8px;
   align-items: center;
   min-width: 0;
+}
+
+.tree-node :deep(.el-checkbox) {
+  flex: none;
 }
 
 .tree-label {

@@ -33,6 +33,22 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
     selectedIds.value = next
   }
 
+  function toggleItems(items: T[]): void {
+    const keys = items.map(keyOf).filter(Boolean)
+    if (!keys.length) {
+      return
+    }
+
+    const next = new Set(selectedIds.value)
+    if (keys.every(key => next.has(key))) {
+      keys.forEach(key => next.delete(key))
+    }
+    else {
+      keys.forEach(key => next.add(key))
+    }
+    selectedIds.value = next
+  }
+
   function selectAllVisible(): void {
     if (selectedIds.value.size === validItems.value.length && validItems.value.length > 0) {
       selectedIds.value = new Set()
@@ -64,6 +80,7 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
     keyOf,
     isSelected,
     toggleSelect,
+    toggleItems,
     selectAllVisible,
     clear,
   }

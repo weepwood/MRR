@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'MRR 用户手册',
-  description: 'MRR 医疗影像记录管理系统用户操作手册',
+  description: 'MRR 医疗病案文件记录管理系统用户操作手册',
   lang: 'zh-CN',
   base: '/docs/',
   srcDir: 'user-guide',
@@ -20,6 +20,7 @@ export default defineConfig({
     siteTitle: 'MRR 用户手册',
     nav: [
       { text: '用户手册', link: '/' },
+      { text: '更新说明', link: '/release-notes' },
     ],
     sidebar: [
       {
@@ -28,11 +29,12 @@ export default defineConfig({
         items: [
           { text: '用户指南', link: '/' },
           { text: '快速上手', link: '/getting-started' },
-          { text: '病案管理', link: '/patients' },
-          { text: '影像浏览', link: '/images' },
+          { text: '病案与记录', link: '/patients' },
+          { text: '影像档案袋', link: '/images' },
           { text: '统计分析', link: '/statistics' },
           { text: '系统管理', link: '/admin' },
-          { text: '日志查看', link: '/logs' },
+          { text: '日志、审计与监控', link: '/logs' },
+          { text: '更新说明', link: '/release-notes' },
         ],
       },
     ],

@@ -38,13 +38,13 @@ if (-not $psql) {
 }
 
 $connection = $DatabaseUrl -replace '^jdbc:', ''
-$args = @('--set', 'ON_ERROR_STOP=1', '--file', $sqlFile, '--dbname', $connection)
+$psqlArgs = @('--set', 'ON_ERROR_STOP=1', '--file', $sqlFile, '--dbname', $connection)
 if (-not [string]::IsNullOrWhiteSpace($DatabaseUser)) {
-    $args += @('--username', $DatabaseUser)
+    $psqlArgs += @('--username', $DatabaseUser)
 }
 
 Write-Host '==> Verify migrated PostgreSQL schema'
-& $psql.Source @args
+& $psql.Source @psqlArgs
 if ($LASTEXITCODE -ne 0) {
     throw "PostgreSQL verification failed with exit code $LASTEXITCODE"
 }

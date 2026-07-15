@@ -1,7 +1,7 @@
 {
   "name": "mrr-docs",
   "version": "1.0.0",
-  "description": "MRR 医疗影像记录管理系统文档",
+  "description": "MRR 医疗病案文件记录管理系统文档",
   "type": "module",
   "scripts": {
     "docs:dev": "npm run docs:dev:user",

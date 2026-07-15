@@ -1,187 +1,186 @@
-# MRR 医疗影像记录管理系统
+# MRR 医疗病案文件记录管理系统
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-brightgreen)](https://spring.io/projects/spring-boot)
-[![Vue 3](https://img.shields.io/badge/Vue-3.4-4FC08D)](https://vuejs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
+[![VitePress](https://img.shields.io/badge/VitePress-1.5-646CFF)](https://vitepress.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-> 基于 Spring Boot 4 + Vue 3 的现代化医疗影像管理系统，提供病案管理、影像浏览、统计分析、权限控制等完整功能。
+MRR 是面向医疗机构病案扫描、归档、查询与审计场景的管理系统。项目以病案号、上架号和患者信息为核心，管理病案扫描记录及图片文件，并提供统计分析、档案装箱、访问审计、系统监控和权限控制能力。
 
-> **项目部署说明**：本项目正式部署不使用 Docker。仓库中的 Dockerfile 和 Docker Compose 仅用于本地开发、测试或演示环境，不代表生产部署方式。
->
-> **CI 状态说明**：GitHub Actions 当前免费额度已用尽，因此现有 CI 流程可能因额度限制报错。CI 失败时请先确认是否为额度问题，并结合本地 lint、test 和 build 结果判断代码状态。
+> 当前产品版本：`v0.1.1`。正式环境采用 PostgreSQL、Spring Boot、Vue 与 Nginx 的原生部署方式，不依赖 Docker；仓库容器配置仅用于开发、测试或演示。
 
-## 📋 项目概览
+## 核心功能
 
-MRR 是一套面向医疗机构的影像记录管理系统，核心功能包括：
+| 模块 | 当前能力 |
+|------|----------|
+| 记录与患者 | 查询扫描记录、患者和关联病案，查看明细并批量打包下载 |
+| 影像档案袋 | 按病案号、上架号或身份证查询，浏览、选择、打印和前端导出 PDF |
+| 统计分析 | 扫描规模、类型分布、趋势、统计明细和病案统计，图表统一使用 ECharts |
+| 档案装箱 | 管理箱号、箱内病案、预期位置和异常状态 |
+| OSS 迁移 | 管理图片迁移任务、进度、校验和对象地址 |
+| 权限与审计 | 用户、角色权限、操作日志、图片访问审计和响应分析 |
+| 系统监控 | PostgreSQL、HikariCP、数据质量、Actuator 和原生监控组件 |
+| 服务状态 | `/status` 展示当前状态、近 90 天可用率和异常区间 |
+| 文档中心 | 用户手册、内部工程文档和受保护的 Springdoc 实时 API |
 
-| 模块 | 说明 |
-|------|------|
-| 病案管理 | 患者信息与扫描记录全生命周期管理 |
-| 影像浏览 | 在线浏览 DICOM 等医学影像格式 |
-| 统计分析 | 多维度数据统计与趋势分析 |
-| 权限控制 | 基于 RBAC 的细粒度权限管理 |
-| 日志审计 | 操作日志记录与审计追踪 |
-
-## 🏗️ 技术栈
+## 技术基线
 
 | 层次 | 技术 |
 |------|------|
-| **前端** | Vue 3 + TypeScript + Vite + Element Plus + Pinia |
-| **后端** | Java 21 + Spring Boot 4 + MyBatis |
-| **数据库** | PostgreSQL 16 |
-| **认证** | JWT + AES |
-| **部署** | 非 Docker 部署（Docker 仅供本地开发/演示） |
+| 后端 | Java 21、Spring Boot 4.0.5、MyBatis 4、Flyway、Springdoc、Micrometer |
+| 前端 | Vue 3.5、TypeScript 5.9、Vite 8、Element Plus 2.13、Pinia 3、ECharts 6 |
+| 数据库 | PostgreSQL 16，业务 Schema 为 `app` |
+| 文档 | VitePress 1.5、Mermaid |
+| 认证 | JWT、AES-GCM；文档访问使用短期 HttpOnly Cookie |
+| 监控 | Actuator、Prometheus、Grafana、Alertmanager、postgres_exporter |
 
-## 🚀 快速开始
+## 本地开发
 
 ### 环境要求
-- JDK 21+
-- Node.js 22 (see `frontend-fantastic-admin/.node-version`)
-- PostgreSQL 16+
-- Maven 3.9+
 
-### 启动（开发模式）
+- JDK 21+
+- Maven 3.9+
+- PostgreSQL 16+
+- Node.js `^20.19.0` 或 `>=22.12.0`
+- pnpm 10.33.0
+
+### 获取代码
 
 ```bash
-# 1. 克隆项目
-git clone <repo-url>
+git clone https://github.com/weepwood/MRR.git
 cd MRR
+git checkout dev-no-login
+```
 
-# 2. 启动数据库
+### 数据库
+
+新数据库由 Flyway 的 `V0__baseline_schema.sql` 初始化：
+
+```properties
+spring.flyway.locations=classpath:db/migration
+spring.flyway.baseline-on-migrate=false
+```
+
+旧增量迁移保存在 `db/migration-legacy`，只用于审计和历史追溯。已经部署旧迁移链的数据库不能直接切换到 V0，必须制定独立迁移方案。
+
+本地可以只启动仓库提供的 PostgreSQL 容器：
+
+```bash
 docker compose up -d postgres
+```
 
-# 3. 配置本地后端参数
-cp backend-repo/src/main/resources/application-local.template.properties backend-repo/src/main/resources/application-local.properties
-# Windows PowerShell: Copy-Item backend-repo/src/main/resources/application-local.template.properties backend-repo/src/main/resources/application-local.properties
-# Set spring.datasource.password and aes.secret.key in application-local.properties.
+### 后端
 
-# 4. 启动后端
+```powershell
+Copy-Item backend-repo/src/main/resources/application-local.template.properties `
+  backend-repo/src/main/resources/application-local.properties
+
+$env:JWT_SECRET_KEY = '本地签名密钥'
+$env:AES_SECRET_KEY = '本地 AES 密钥'
+
 cd backend-repo
 mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
 
-# 5. 启动前端
+默认业务端口为 `18045`，Actuator 管理端口为仅本机监听的 `18046`。
+
+### 前端
+
+```bash
 cd frontend-fantastic-admin
 corepack pnpm@10.33.0 install --frozen-lockfile
 pnpm dev
 ```
 
-### 访问系统
-```text
-前端地址: http://localhost:9000
-后端接口: http://localhost:18045
-默认账号: br_admin / br_password
-```
+默认访问：`http://localhost:9000`。
 
-> 首次使用请参考 [完整安装指南](vitepress-doc/getting-started/installation.md)。
-
-### 启动本地容器演示环境（可选）
-
-> 此方式仅用于本地开发、测试或演示，不是项目正式部署方式。
-
-```bash
-cp .env.example .env # Windows PowerShell: Copy-Item .env.example .env
-# Set strong values for POSTGRES_PASSWORD, AES_SECRET_KEY, and JWT_SECRET_KEY in .env.
-docker compose up --build
-```
-
-容器环境统一由前端 Nginx 对外提供服务：
-
-```text
-管理系统:       http://localhost:8080/
-帮助中心:       http://localhost:8080/help
-用户手册:       http://localhost:8080/docs/
-内部文档:       http://localhost:8080/docs/internal/
-实时 API 文档:  http://localhost:8080/api-docs/
-```
-
-## 📚 文档
-
-文档基于 VitePress 构建，并按访问级别生成两个相互独立的静态站点：
-
-| 站点 | 源文件范围 | 访问权限 |
-|------|------------|----------|
-| 用户手册 `/docs/` | `vitepress-doc/user-guide/` | 已登录账号 |
-| 内部文档 `/docs/internal/` | 完整项目、架构、开发与运维文档 | `system:read` 或管理员 |
-| Springdoc `/api-docs/` | 后端实时 OpenAPI 定义 | `system:read` 或管理员 |
-
-独立构建可以避免用户手册的本地搜索索引包含内部文档内容。浏览器从后台“帮助与文档”页面打开文档时，后端会签发 30 分钟有效的 HttpOnly 文档访问 Cookie，Nginx 使用 `auth_request` 验证页面、静态资源和 OpenAPI 请求。
+### 文档
 
 ```bash
 cd vitepress-doc
 npm install
-
-# 用户手册
 npm run docs:dev:user
-
-# 完整内部文档
 npm run docs:dev:internal
-
-# 同时构建两个站点
 npm run docs:build
 ```
 
-开发环境、密钥配置与应用配置本地持久化请参考 [开发环境说明](vitepress-doc/development/setup.md)。
+Windows 请求端口处于系统排除范围时，文档启动脚本会自动跳过 `EACCES` 或 `EADDRINUSE` 端口并打印实际地址。
 
-| 文档模块 | 说明 |
-|----------|------|
-| [用户指南](vitepress-doc/user-guide/index.md) | 日常业务操作说明 |
-| [项目概览](vitepress-doc/ai-generation/项目概览/项目概览.md) | 系统目标、特性、技术架构 |
-| [安装指南](vitepress-doc/getting-started/installation.md) | 环境搭建与部署 |
-| [配置说明](vitepress-doc/getting-started/configuration.md) | 后端/前端配置参数 |
-| [系统架构](vitepress-doc/ai-generation/系统架构/系统架构.md) | 前后端架构、数据架构 |
-| [API 文档](vitepress-doc/ai-generation/后端API文档/后端API文档.md) | RESTful API 接口说明 |
-| [数据库设计](vitepress-doc/ai-generation/数据库设计/数据库设计.md) | 表结构、索引优化 |
-| [开发指南](vitepress-doc/ai-generation/开发指南/开发指南.md) | 代码规范、测试策略 |
-| [部署运维](vitepress-doc/ai-generation/部署运维/部署运维.md) | 部署说明、CI/CD、监控 |
+## 查询规则
 
-## 📁 项目结构
+影像档案袋使用具名参数：
+
+```text
+/archive?bah=09999999
+/archive?sjh=00000456
+/archive?bah=10000000&sjh=00000456
+```
+
+- 病案号和上架号统一为八位数字字符串。
+- 病案号小于 `10000000` 时可单独查询。
+- 病案号大于或等于 `10000000` 时必须同时提供上架号。
+- 上架号可单独查询。
+- 首次可使用 `/archive?id=<身份证号>`；查询成功后 URL 中的明文会替换为服务端不透明令牌。
+
+## 访问入口
+
+| 入口 | 路由 | 权限 |
+|------|------|------|
+| 管理端 | `/` | 登录与业务权限 |
+| 服务状态 | `/status` | 公开脱敏信息 |
+| 系统监控 | `/monitoring` | `system:read` |
+| 帮助中心 | `/help` | 登录用户 |
+| 用户手册 | `/docs/` | 已登录账号 |
+| 内部文档 | `/docs/internal/` | 管理员或 `system:read` |
+| 实时 API | `/api-docs/` | 管理员或 `system:read` |
+
+## 生产部署要点
+
+1. 使用 PostgreSQL 16，并从 V0 基线初始化新数据库。
+2. 通过环境变量提供数据库密码、JWT、AES 和 OSS 密钥。
+3. 以 JAR 运行后端，限制 `18046` 只允许本机或监控网络访问。
+4. 使用 Nginx 托管前端和两个文档站点，并反向代理 API 与 Springdoc。
+5. 图片服务需要为浏览器端 PDF 配置精确的 CORS 来源。
+6. 原生监控配置见 [`monitoring/README.md`](monitoring/README.md)。
+
+## 项目结构
 
 ```text
 MRR/
-├── backend-repo/              # 后端 Spring Boot 项目
-│   ├── src/
-│   ├── Dockerfile
-│   ├── pom.xml
-│   └── ENGINEERING_GUIDE.md
-├── frontend-fantastic-admin/  # 前端 Vue 3 项目与统一 Nginx
-│   ├── src/
-│   ├── Dockerfile
-│   └── package.json
-├── mrr-db/                    # 数据库脚本
-│   ├── schema.sql
-│   └── migration_*.sql
-├── vitepress-doc/             # 文档系统
-│   ├── .vitepress/
-│   │   ├── config.mts         # 按环境选择用户/内部配置
-│   │   ├── config.user.mts
-│   │   └── config.internal.mts
-│   ├── user-guide/
-│   ├── getting-started/
-│   ├── ai-generation/
-│   └── package.json
-├── docker-compose.yml         # 本地开发/演示用 Docker 编排（非正式部署方式）
-├── start-docs.bat             # 用户手册启动脚本 (Windows)
-└── start-docs.sh              # 用户手册启动脚本 (Linux/macOS)
+├── backend-repo/              # Spring Boot 后端和 Flyway V0 基线
+├── frontend-fantastic-admin/  # Vue 管理端与生产 Nginx 配置
+├── mrr-db/                    # 数据库辅助脚本与开发参考
+├── monitoring/                # Prometheus、Grafana、Alertmanager 配置
+├── vitepress-doc/             # 用户手册与正式内部工程文档
+├── docker-compose.yml         # 本地开发/演示环境
+├── CHANGELOG.md
+└── README.md
 ```
 
-## 📊 项目状态
+## 文档
 
-当前版本: `v0.1.1` (开发阶段)
+- [内部文档首页](vitepress-doc/internal/index.md)
+- [系统架构](vitepress-doc/internal/architecture.md)
+- [开发流程](vitepress-doc/internal/development.md)
+- [部署指南](vitepress-doc/internal/deployment.md)
+- [运维与监控](vitepress-doc/internal/operations.md)
+- [安装指南](vitepress-doc/getting-started/installation.md)
+- [配置说明](vitepress-doc/getting-started/configuration.md)
+- [用户手册](vitepress-doc/user-guide/index.md)
+- [用户更新说明](vitepress-doc/user-guide/release-notes.md)
+- [更新日志](CHANGELOG.md)
 
-- [x] 用户认证与权限管理
-- [x] 病案 CRUD
-- [x] 影像上传与浏览
-- [x] 统计分析
-- [x] 日志审计
-- [ ] 分布式部署
-- [ ] 国际化支持
-- [ ] 移动端适配
+## 验证
 
-## 🤝 贡献
+```bash
+cd backend-repo && mvn test && mvn package
+cd ../frontend-fantastic-admin && pnpm lint:tsc && pnpm test:run && pnpm build
+cd ../vitepress-doc && npm run docs:build
+```
 
-欢迎贡献代码！请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
+GitHub Actions 可能因账户额度不足在执行步骤前失败，需结合本地检查结果判断。
 
-## 📄 许可证
+## 贡献与许可
 
-本项目基于 MIT 许可证开源。详见 [LICENSE](LICENSE) 文件。
+提交变更前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。项目基于 [MIT License](LICENSE) 发布。

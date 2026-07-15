@@ -20,6 +20,7 @@ import java.util.TreeMap;
 public class ResponseMetricServiceImpl implements ResponseMetricService {
 
     static final int MAX_BATCH_SIZE = 200;
+    private static final int MAX_ANALYSIS_DAYS = 365;
     private static final int SLOW_ENDPOINT_LIMIT = 10;
     private static final String INGESTION_ROUTE = "/api/v1/response-metrics/frontend/batch";
 
@@ -50,8 +51,8 @@ public class ResponseMetricServiceImpl implements ResponseMetricService {
 
     @Override
     public ResponseMetricAnalysisDTO getAnalysis(int days) {
-        if (days < 1 || days > 90) {
-            throw new IllegalArgumentException("days 必须在 1 到 90 之间");
+        if (days < 1 || days > MAX_ANALYSIS_DAYS) {
+            throw new IllegalArgumentException("days 必须在 1 到 " + MAX_ANALYSIS_DAYS + " 之间");
         }
 
         ResponseMetricAnalysisDTO.Overview serverOverview = responseMetricMapper.getServerOverview(days);

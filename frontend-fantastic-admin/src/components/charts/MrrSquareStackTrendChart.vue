@@ -62,6 +62,7 @@ const labelStep = computed(() => Math.max(1, Math.ceil(points.value.length / 12)
 const chartStyle = computed(() => ({
   '--stack-height': `${props.height}px`,
   '--rows': props.rows,
+  '--point-count': Math.max(1, points.value.length),
   '--chart-min-width': `${Math.max(560, points.value.length * 34)}px`,
 }))
 const guideStyle = computed(() => ({ left: `${guideX.value}px` }))
@@ -330,7 +331,7 @@ function clearActivePoint() {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(26px, 1fr));
+  grid-template-columns: repeat(var(--point-count), minmax(26px, 1fr));
   gap: 4px;
   align-items: end;
 }

@@ -14,6 +14,7 @@ import org.apache.ibatis.annotations.Update;
 import java.util.List;
 import java.util.Map;
 
+@Mapper
 public interface ScanMapper {
     String BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
@@ -54,34 +55,27 @@ public interface ScanMapper {
             @Param("sjhSearchCode") String sjhSearchCode
     );
 
-    // 根据 ID 列表查询图片路径 - XML 实现
     List<PathDO> getImagePathList(@Param("ids") List<String> ids);
 
     @Update("UPDATE mr_scan SET btype = #{type} WHERE id = #{id}")
     int updateImageType(@Param("id") Integer id, @Param("type") Integer type);
 
-    // 新增
     @Insert("INSERT INTO mr_scan (BRXH, BAH, sjh, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
             "VALUES (#{brxh}, #{bah}, #{sjh}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Scan scan);
 
-    // 删除
     @Update("UPDATE mr_scan SET uploadflag = 0 WHERE id = #{id} AND uploadflag <> 0")
     int softDeleteById(Integer id);
 
-    // 动态更新 - XML 实现
     int update(Scan scan);
 
-    // 查询所有
     @Select("SELECT * FROM mr_scan ORDER BY id")
     List<Scan> findAll();
 
-    // 根据 ID 查询
     @Select("SELECT * FROM mr_scan WHERE id = #{id}")
     Scan findById(Integer id);
 
-    // 根据病案号查询（不分页），兼容历史短值
     @Select("SELECT * FROM mr_scan WHERE BAH = #{normalizedBah} " +
             "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY pages")
     List<Scan> findByBah(
@@ -89,9 +83,6 @@ public interface ScanMapper {
             @Param("searchCode") String searchCode
     );
 
-    /**
-     * 保留旧的一参数调用方式，内部自动转换为规范值与去前导零搜索词。
-     */
     default List<Scan> findByBah(String bah) {
         return findByBah(
                 MedicalRecordCodeUtils.normalizeOrEmpty(bah),
@@ -99,37 +90,40 @@ public interface ScanMapper {
         );
     }
 
-    // 根据文件夹查询
     @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id")
     List<Scan> findByFolder(@Param("folder") String folder);
 
-    // 根据病人序号查询
     @Select("SELECT * FROM mr_scan WHERE BRXH = #{brxh} ORDER BY id")
     List<Scan> findByBrxh(@Param("brxh") String brxh);
 
-    // 分页查询
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit} OFFSET #{offset}")
     List<Scan> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
 
-    // 根据条件动态查询 - XML 实现
     List<Scan> findByCondition(ScanRequest request);
 
-    // 根据条件动态查询（带分页）- XML 实现
-    List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request, @Param("offset") int offset, @Param("limit") int limit);
+    List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request,
+                                             @Param("offset") int offset,
+                                             @Param("limit") int limit);
 
-    // 根据条件统计数量 - XML 实现
     int countByCondition(@Param("request") ScanRequest request);
 
-    // OSS migration methods
+    // ==================== OSS migration ====================
+
     @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +
             "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +
-            "migrated_at = NOW() WHERE id = #{id}")
-    int updateOssInfo(@Param("id") Integer id, @Param("ossUrl") String ossUrl,
-                      @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
+            "migrated_at = NOW(), migration_next_retry = NULL, migration_lease_owner = NULL, " +
+            "migration_lease_until = NULL, migration_last_error = NULL " +
+            "WHERE id = #{id}")
+    int updateOssInfo(@Param("id") Integer id,
+                      @Param("ossUrl") String ossUrl,
+                      @Param("fileSize") Long fileSize,
+                      @Param("checksumMd5") String checksumMd5,
                       @Param("migrationStatus") String migrationStatus);
 
-    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND " +
-            "(oss_url IS NULL OR oss_url = '') ORDER BY id LIMIT #{limit}")
+    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') " +
+            "AND migration_status IS DISTINCT FROM 'failed_permanent' " +
+            "ORDER BY id LIMIT #{limit}")
     List<Scan> findPendingMigration(@Param("limit") int limit);
 
     @Select("SELECT COUNT(*) FROM mr_scan WHERE migration_status = #{status}")
@@ -142,17 +136,108 @@ public interface ScanMapper {
             + "SUM(CASE WHEN uploadflag != 0 THEN 1 ELSE 0 END) AS total, "
             + "SUM(CASE WHEN migration_status = 'migrated' THEN 1 ELSE 0 END) AS migrated, "
             + "SUM(CASE WHEN migration_status = 'verified' THEN 1 ELSE 0 END) AS verified, "
-            + "SUM(CASE WHEN migration_status = 'not_migrated' THEN 1 ELSE 0 END) AS not_migrated "
+            + "SUM(CASE WHEN migration_status = 'failed_permanent' THEN 1 ELSE 0 END) AS failed "
             + "FROM mr_scan")
     Map<String, Object> countMigrationStats();
 
-    @Select("SELECT folder, COUNT(*) AS cnt FROM mr_scan "
-            + "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
-            + "GROUP BY folder ORDER BY folder")
+    @Select("SELECT folder, COUNT(*) AS cnt FROM mr_scan " +
+            "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') " +
+            "AND migration_status IS DISTINCT FROM 'failed_permanent' " +
+            "GROUP BY folder ORDER BY folder")
     List<Map<String, Object>> findPendingFolders();
 
-    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} "
-            + "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
-            + "ORDER BY id")
-    List<Scan> findPendingByFolder(@Param("folder") String folder);
+    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} " +
+            "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') " +
+            "AND migration_status IS DISTINCT FROM 'failed_permanent' " +
+            "ORDER BY id LIMIT #{limit}")
+    List<Scan> findPendingByFolder(@Param("folder") String folder, @Param("limit") int limit);
+
+    @Select("SELECT MAX(id) FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') " +
+            "AND migration_status IS DISTINCT FROM 'failed_permanent' " +
+            "AND COALESCE(migration_attempts, 0) < #{maxAttempts}")
+    Long findMaxPendingMigrationId(@Param("maxAttempts") int maxAttempts);
+
+    @Select("SELECT COUNT(*) FROM mr_scan WHERE id <= #{maxScanId} " +
+            "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') " +
+            "AND migration_status IS DISTINCT FROM 'failed_permanent' " +
+            "AND COALESCE(migration_attempts, 0) < #{maxAttempts}")
+    long countPendingMigrationsUpTo(@Param("maxScanId") long maxScanId,
+                                    @Param("maxAttempts") int maxAttempts);
+
+    /**
+     * Atomically claims a batch. SKIP LOCKED prevents duplicate processing
+     * when multiple worker threads or future worker processes are enabled.
+     */
+    @Select("""
+            WITH candidates AS (
+                SELECT id
+                FROM mr_scan
+                WHERE id <= #{maxScanId}
+                  AND uploadflag != 0
+                  AND (oss_url IS NULL OR oss_url = '')
+                  AND COALESCE(migration_attempts, 0) < #{maxAttempts}
+                  AND (migration_next_retry IS NULL OR migration_next_retry <= NOW())
+                  AND (
+                      migration_status IS NULL
+                      OR migration_status IN ('not_migrated', 'pending', 'retry_wait', 'failed')
+                      OR (
+                          migration_status IN ('claimed', 'uploading')
+                          AND (migration_lease_until IS NULL OR migration_lease_until < NOW())
+                      )
+                  )
+                ORDER BY id
+                FOR UPDATE SKIP LOCKED
+                LIMIT #{limit}
+            )
+            UPDATE mr_scan s
+            SET migration_status = 'claimed',
+                migration_job_id = #{jobId},
+                migration_attempts = COALESCE(s.migration_attempts, 0) + 1,
+                migration_lease_owner = #{workerId},
+                migration_lease_until = NOW() + (#{leaseSeconds} * INTERVAL '1 second'),
+                migration_last_error = NULL
+            FROM candidates c
+            WHERE s.id = c.id
+            RETURNING s.*
+            """)
+    List<Scan> claimPendingMigrations(@Param("jobId") long jobId,
+                                      @Param("maxScanId") long maxScanId,
+                                      @Param("workerId") String workerId,
+                                      @Param("limit") int limit,
+                                      @Param("leaseSeconds") int leaseSeconds,
+                                      @Param("maxAttempts") int maxAttempts);
+
+    @Update("UPDATE mr_scan SET migration_status = 'uploading', " +
+            "migration_lease_until = NOW() + (#{leaseSeconds} * INTERVAL '1 second') " +
+            "WHERE id = #{id} AND migration_job_id = #{jobId} " +
+            "AND migration_lease_owner = #{workerId} AND migration_status = 'claimed'")
+    int markMigrationUploading(@Param("id") int id,
+                               @Param("jobId") long jobId,
+                               @Param("workerId") String workerId,
+                               @Param("leaseSeconds") int leaseSeconds);
+
+    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', " +
+            "migration_next_retry = NOW() + (#{retryDelaySeconds} * INTERVAL '1 second'), " +
+            "migration_last_error = #{errorMessage}, migration_lease_owner = NULL, " +
+            "migration_lease_until = NULL " +
+            "WHERE id = #{id} AND migration_job_id = #{jobId}")
+    int markMigrationRetry(@Param("id") int id,
+                           @Param("jobId") long jobId,
+                           @Param("retryDelaySeconds") int retryDelaySeconds,
+                           @Param("errorMessage") String errorMessage);
+
+    @Update("UPDATE mr_scan SET migration_status = 'failed_permanent', " +
+            "migration_last_error = #{errorMessage}, migration_next_retry = NULL, " +
+            "migration_lease_owner = NULL, migration_lease_until = NULL " +
+            "WHERE id = #{id} AND migration_job_id = #{jobId}")
+    int markMigrationPermanentFailure(@Param("id") int id,
+                                      @Param("jobId") long jobId,
+                                      @Param("errorMessage") String errorMessage);
+
+    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_next_retry = NOW(), " +
+            "migration_job_id = NULL, migration_lease_owner = NULL, migration_lease_until = NULL, " +
+            "migration_last_error = COALESCE(migration_last_error, '服务重启，已释放迁移租约') " +
+            "WHERE migration_status IN ('claimed', 'uploading') AND (oss_url IS NULL OR oss_url = '')")
+    int releaseInterruptedMigrationLeases();
 }

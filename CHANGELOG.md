@@ -1,98 +1,62 @@
 # 更新日志
 
-项目版本遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 规范。
+本文档记录 MRR 产品层面的重要变更，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。依赖升级、格式化和仅影响开发过程的提交不逐条列出。
 
 ## [Unreleased]
 
+### 文档
+
+- 重写项目 README、VitePress 用户手册、安装与配置说明。
+- 新建正式内部工程文档体系，覆盖架构、前端、后端、数据库、API、开发、部署、运维、安全、故障排查和发布流程。
+- 从内部站点构建和搜索索引中排除旧 `ai-generation`、旧架构、旧 API、旧开发和旧运维文档。
+- 文档启动脚本支持 Windows 端口排除范围检测并自动选择可用端口。
+
+## [0.1.1] - 2026-07-15
+
 ### 新增
 
-#### 功能
-- 用户认证与权限管理（JWT + RBAC）
-- 病案 CRUD 功能（患者信息、扫描记录）
-- 影像上传与在线浏览
-- 多维度统计分析
-- 操作日志审计
-- 系统监控（Spring Actuator + Prometheus）
-- 压力测试工具
-- 结构化日志（JSON 格式，支持 ELK）
-- CI/CD 流水线（GitHub Actions）
-- Docker 容器化部署
+- **受控文档中心**：集成 VitePress 用户手册、内部文档和 Springdoc 实时 API 文档，通过短期 HttpOnly Cookie 和 Nginx `auth_request` 控制访问权限。（#33）
+- **数据库监控与数据质量检查**：增加 PostgreSQL、HikariCP、表空间、锁等待和长事务监控；数据质量检查仅由管理员手动触发。（#34）
+- **影像档案袋身份证查询**：支持用 15/18 位身份证号查询患者全部病案，查询成功后将 URL 明文替换为 AES-GCM 不透明令牌。（#40）
+- **前端选中导出 PDF**：浏览器直接读取图片、转换并生成 A4 PDF，不依赖后端 PDF 合成或图片代理。（#30）
+- **档案袋访问水印**：支持显示用户标识和当前时间，可在系统设置中关闭并实时生效。（#31、#32）
+- **内置服务状态页**：新增 `/status`、近 90 天可用率、运行区间和异常时段。（#50）
+- **统一 ECharts 图表体系**：增加通用图表容器、图表卡片和六类业务图表，并迁移统计与审计页面。（#49、#51）
+- **页面标题风格切换**：统一英文标题、中文标题和说明三行结构，可切换页面同级或 Hero 卡片。（#48）
+- **现代 SaaS 壳层与全局圆角**：统一导航、工作区、公共页面组件和 Element Plus 控件。（#42）
 
-#### 项目文档
-- 根目录 `README.md` — 项目总览、快速启动、技术栈
-- `CONTRIBUTING.md` — 贡献指南（分支规范、Conventional Commits、PR 流程）
-- `CHANGELOG.md` — 版本更新记录
-- `PRD.md` — 产品需求文档（含功能全景图、数据模型、API 清单、路线图）
-- 用户指南 7 篇 — 快速上手、病案管理、影像浏览、统计分析、系统管理、日志查看
-- 运维指南 7 篇 — 日志管理、数据备份、性能监控、故障处理、定期维护、安全维护
+### 变更
 
-#### 后端单元测试
-- 新增 10 个测试文件、109 个测试方法，总计 **116 个测试全部通过**：
-
-| 测试类 | 测试数 | 覆盖范围 |
-|--------|--------|----------|
-| `PasswordUtilTest` | 10 | 哈希、匹配、null 边界、空串 |
-| `PaginationUtilsTest` | 15 | 偏移量、总页数、参数校验异常 |
-| `JwtUtilTest` | 5 | Token 生成/解析、权限、null Session 往返 |
-| `AESUtilTest` | 7 | JSON/下划线解析、异常路径 |
-| `AuthSessionTest` | 7 | isAdmin、hasPermission、null 权限 |
-| `AuthServiceImplTest` | 11 | 登录全路径、用户列表、禁用、角色列表 |
-| `ScanServiceImplTest` | 15 | CRUD、条件查询、分页、异常参数 |
-| `StatisticsServiceImplTest` | 14 | 全量/条件查询、BAH/日期/类型聚合 |
-| `SearchServiceImplTest` | 2 | 身份证搜索、空结果 |
-| `UserControllerTest` | 11 | 登录、当前用户、用户/角色列表、更新/禁用 |
-| `ScanControllerTest` | 17 | CRUD、分页、条件查询、空值异常 |
+- 影像档案袋查询统一使用 `/archive?bah=...&sjh=...`，病案号和上架号统一为八位；高位重复病案号必须同时提供上架号。（#28）
+- 全屏预览支持上一张、下一张切换，并同步当前图片。（#29）
+- 系统设置只保留已经接入实际消费逻辑的设置项。（#32、#52）
+- 档案袋显示设置和本地浏览偏好进一步精简，刷新图片时持久化版本参数。
+- 删除独立“档案搜索”页面，查询能力统一收敛到影像档案袋。（#46）
+- 删除“哀悼模式”设置入口和侧边栏重复描述。（#44、#45）
+- PostgreSQL Flyway 迁移重整为 `V0__baseline_schema.sql`；旧增量迁移移入 `db/migration-legacy`，只用于审计和历史追溯。
+- `spring.flyway.baseline-on-migrate` 调整为 `false`，新数据库必须从 V0 基线初始化。
 
 ### 修复
 
-#### 🛡️ 安全修复
-- **路径遍历漏洞** (`ImageController.getImage`) — 新增 `Path.normalize()` + `startsWith(basePath)` 双重校验，拦截 `../` 目录穿越攻击；添加路径参数长度和 null 校验
-- **JSON 注入** (`AuthorizationInterceptor`, `LoginInterceptor`) — 使用 `ObjectMapper.writeValue()` 替代字符串拼接构造 JSON 响应，防止特殊字符注入
-- **身份证号日志泄露** (`SearchController.getBAHByiDCard`) — 废弃 API 日志输出改为掩码格式 `1101***`
+- 修复页面切换白屏、内容区 Padding 残留和旧页面内容叠加闪烁。（#35、#41）
+- 修复同一次请求错误出现两次提示的问题。（#36）
+- 修复帮助菜单与档案装箱图标缺失、遮挡问题。（#38、#43、#47）
+- 修复 Element Plus 浮层打开时滚动条重复补偿造成的横向抖动。（#53）
+- 修复病案明细卡片分页数量与网格列数不一致。（#27）
 
-#### 🐛 Bug 修复
-- **日志缓冲区竞态导致数据丢失** (`AsyncLogServiceImpl`) — 以 `synchronized` + `LinkedList` 替换 `CopyOnWriteArrayList`，保证 `snapshot → clear → insert` 的原子性，杜绝并发丢失和重复写入
-- **`/api/v1/auth/me` 返回 500** (`AuthServiceImpl`) — 移除无参数 `@Cacheable(key = "#username")` 注解，该 SpEL 引用不存在的方法参数导致 Cache 切面异常
-- **`PasswordUtil.encode()` NPE** — 添加 null 守卫，防止 null 入参导致 `NullPointerException`
-- **`ScanServiceImpl.getImagePath()` NPE** — 添加 `folder`/`brxh` 为 null 时的防御性返回
-- **`ImageController.extractYearMonth()` NPE** — 添加参数 null 校验
+### 已知限制
 
-#### 🔧 代码质量
-- **Swagger 注解乱码** (`ScanController`) — 修复 UTF-8 编码问题导致的中文乱码
-- **包声明前导空格** (`RestTemplateConfig`) — 删除 `package` 行首多余空格
-- **`ImageController` 未使用导入** — 清理 `RestTemplate` 等无用 import
-
-### 优化
-
-#### 后端
-- 后端分层架构（Controller → Service → Mapper）
-- 统一异常处理和响应格式
-- **密码加密存储**（SHA-256，待升级 bcrypt）
-- **敏感数据加密**（AES/CBC）
-- `AsyncLogServiceImpl` 缓冲队列重写：`CopyOnWriteArrayList` → `LinkedList` + `synchronized` 块，消除 GC 压力和竞态条件
-- `ImageController.getImage` 路径构建增加 `normalize()` 防止路径穿越
-
-#### 前端
-- 前端组件化设计（Element Plus + Fantastic Admin）
-- 数据库索引与查询优化
-
-### 文档
-- VitePress 文档系统搭建
-- 项目概览、架构设计文档
-- API 接口文档
-- 数据库设计文档
-- 部署运维指南
-- 开发指南与代码规范
-- 新增用户指南模块
-- 新增运维指南模块
-- 新增产品需求文档 (PRD)
-- 新增贡献指南 (CONTRIBUTING.md)
-- 完善根目录 README
+- 正式部署不依赖 Docker；仓库容器配置只用于开发、测试和演示。
+- 图片导出 PDF 依赖图片服务正确配置 CORS。
+- `/status` 与业务应用同部署，服务完全停止时状态页也不可访问。
+- V0 Flyway 基线面向新数据库；已部署旧数据库不能直接切换迁移链，必须制定独立迁移方案。
+- GitHub Actions 可能因账户额度不足在执行步骤前失败，需要结合本地检查结果判断。
 
 ## [0.1.0] - 2026-04-01
 
-### 新增
-- 项目初始化
-- 基础框架搭建（Spring Boot 4 + Vue 3）
-- 数据库 Schema 设计
-- 文档系统初始化
+- 初始化 Spring Boot、Vue、PostgreSQL 和 VitePress 项目结构。
+- 建立基础认证、病案记录、统计、日志和文档能力。
+
+[Unreleased]: https://github.com/weepwood/MRR/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/weepwood/MRR/releases/tag/v0.1.1
+[0.1.0]: https://github.com/weepwood/MRR/releases/tag/v0.1.0

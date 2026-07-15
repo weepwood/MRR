@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { ArchiveFitMode, ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
+import type { ViewMode } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { MoreFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{
+  viewMode: ViewMode
   previewMode: ArchivePreviewMode
   typeDisplayMode: ArchiveTypeDisplayMode
   thumbnailSize: number
@@ -13,6 +15,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  'update:viewMode': [mode: ViewMode]
   'update:previewMode': [mode: ArchivePreviewMode]
   'update:typeDisplayMode': [mode: ArchiveTypeDisplayMode]
   'update:thumbnailSize': [size: number]
@@ -41,6 +44,19 @@ function updateHideScrollbars(value: unknown) {
         <div class="settings-heading">
           <strong>显示设置</strong>
           <span>仅保存到当前浏览器</span>
+        </div>
+
+        <div class="settings-row">
+          <span>缩略图展示</span>
+          <el-segmented
+            :model-value="props.viewMode"
+            size="small"
+            :options="[
+              { label: '缩略图', value: 'thumb' },
+              { label: '列表', value: 'list' },
+            ]"
+            @update:model-value="emit('update:viewMode', $event as ViewMode)"
+          />
         </div>
 
         <div class="settings-row">

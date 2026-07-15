@@ -1,6 +1,6 @@
 import type { GalleryImage, PatientInfo } from '../types'
-import type { ApiResult, BAHImageData } from '@/api/types'
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
+import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
@@ -14,7 +14,7 @@ import {
   normalizeMedicalRecordCode,
   requiresSjhForBah,
 } from '@/utils/medical-record-code'
-import { padCode, resolveImageUrl } from '../constants'
+import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { createArchiveZip } from '../utils/client-zip'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -56,7 +56,7 @@ export function useArchiveImages() {
     }
   }
 
-  async function loadImages(): Promise<void> {
+  async function loadImages(forceRefresh = false): Promise<void> {
     const bah = padCode(searchBah.value)
     const sjh = padCode(searchSjh.value)
     const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
@@ -75,13 +75,18 @@ export function useArchiveImages() {
     loading.value = true
     errorMsg.value = ''
     try {
-      const res = await asResult<BAHImageData[]>(getImgByCode(bah || undefined, sjh || undefined))
+      const res = await asResult<BAHImageData[]>(getImgByCode(bah || undefined, sjh || undefined, forceRefresh))
       const rawList = Array.isArray(res?.data) ? res.data : []
+      let cacheBuster = readArchiveImageVersion(bah, sjh)
+      if (forceRefresh) {
+        cacheBuster = Date.now()
+        writeArchiveImageVersion(bah, sjh, cacheBuster)
+      }
       images.value = rawList.map((item: BAHImageData) => ({
         ...item,
         bah: normalizeMedicalRecordCode(item.bah),
         sjh: normalizeMedicalRecordCode(item.sjh),
-        imageUrl: resolveImageUrl(item),
+        imageUrl: resolveImageUrl(item, cacheBuster),
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah)

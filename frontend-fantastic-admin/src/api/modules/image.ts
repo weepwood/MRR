@@ -7,9 +7,19 @@ export function getImgApiByBah(bah: string) {
 }
 
 /** GET /api/v1/img/search — 按病案号和/或上架号查询图片数据 */
-export function getImgByCode(bah?: string, sjh?: string) {
+export function getImgByCode(bah?: string, sjh?: string, forceRefresh = false) {
   return getRequest<BAHImageData[]>('/api/v1/img/search', {
-    params: { bah, sjh },
+    params: {
+      bah,
+      sjh,
+      ...(forceRefresh ? { _: Date.now() } : {}),
+    },
+    headers: forceRefresh
+      ? {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        }
+      : undefined,
   })
 }
 

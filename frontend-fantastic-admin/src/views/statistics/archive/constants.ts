@@ -22,6 +22,7 @@ export const TYPE_OPTION_MAP = new Map<number, TypeOption>(
 )
 
 export const MIN_BAH_LENGTH = MEDICAL_RECORD_CODE_LENGTH
+const ARCHIVE_IMAGE_VERSION_STORAGE_KEY = 'MRR-ADMIN:archive-image-versions'
 
 export function getTypeLabel(type?: number | string | null): string {
   const numericType = Number(type)
@@ -53,6 +54,51 @@ export function buildTypeStats(images: { btype?: number | null }[]): TypeStatIte
   return TYPE_OPTIONS.map(item => ({ ...item, count: counts.get(item.value) || 0 }))
 }
 
-export function resolveImageUrl(item: { ossUrl?: string, img_url?: string }): string {
-  return item.ossUrl || item.img_url || ''
+export function resolveImageUrl(item: { ossUrl?: string, img_url?: string }, cacheBuster?: number): string {
+  const url = item.ossUrl || item.img_url || ''
+  if (!url || !cacheBuster) {
+    return url
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}_=${cacheBuster}`
+}
+
+function imageVersionKey(bah: string, sjh: string): string {
+  return `${bah || 'none'}:${sjh || 'none'}`
+}
+
+function readImageVersions(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_IMAGE_VERSION_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+    const versions: Record<string, number> = {}
+    Object.entries(parsed).forEach(([key, value]) => {
+      const version = Number(value)
+      if (Number.isSafeInteger(version) && version > 0) {
+        versions[key] = version
+      }
+    })
+    return versions
+  }
+  catch {
+    return {}
+  }
+}
+
+export function readArchiveImageVersion(bah: string, sjh: string): number | undefined {
+  return readImageVersions()[imageVersionKey(bah, sjh)]
+}
+
+export function writeArchiveImageVersion(bah: string, sjh: string, version: number): void {
+  try {
+    localStorage.setItem(ARCHIVE_IMAGE_VERSION_STORAGE_KEY, JSON.stringify({
+      ...readImageVersions(),
+      [imageVersionKey(bah, sjh)]: version,
+    }))
+  }
+  catch {
+    // 本地存储不可用时，当前页面仍会使用新图片版本。
+  }
 }

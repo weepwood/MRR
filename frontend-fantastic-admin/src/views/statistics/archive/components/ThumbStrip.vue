@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { GalleryImage, ViewMode } from '../types'
-import { Grid, List } from '@element-plus/icons-vue'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
 
@@ -102,17 +101,6 @@ defineExpose({ resetVisible, scrollToIndex })
 
 <template>
   <section class="thumb-panel" :class="viewMode">
-    <div class="thumb-toolbar">
-      <el-segmented
-        v-model="viewMode"
-        size="small"
-        aria-label="缩略图展示方式"
-        :options="[
-          { label: '缩略图', value: 'thumb', icon: Grid },
-          { label: '列表', value: 'list', icon: List },
-        ]"
-      />
-    </div>
     <div ref="thumbsContainer" class="thumb-strip" :class="viewMode">
       <div
         v-for="(img, index) in displayed"
@@ -171,13 +159,6 @@ defineExpose({ resetVisible, scrollToIndex })
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-}
-
-.thumb-toolbar {
-  display: flex;
-  flex: none;
-  justify-content: center;
-  padding: 4px 0 8px;
 }
 
 .thumb-strip {

@@ -207,19 +207,19 @@ function clearArchiveState(message = '') {
   selectedIds.value = new Set()
 }
 
-async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase) {
+async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase, forceRefresh = false) {
   searchBah.value = normalizeSearchParam(archiveCase.bah)
   searchSjh.value = normalizeSearchParam(archiveCase.sjh)
   selectedType.value = 'all'
   selectedImageIndex.value = 0
   selectedIds.value = new Set()
-  await loadImages()
+  await loadImages(forceRefresh)
   setPatientFromArchiveCase(archiveCase)
 }
 
-async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string) {
+async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string, forceRefresh = false) {
   const isPlainIdCard = ID_CARD_PATTERN.test(idParam)
-  if (idCardToken.value !== idParam || !archiveCases.value.length) {
+  if (forceRefresh || idCardToken.value !== idParam || !archiveCases.value.length) {
     const result = isPlainIdCard
       ? await loadArchiveCasesByIdCard(idParam)
       : await loadArchiveCasesByToken(idParam)
@@ -256,10 +256,10 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
     return
   }
 
-  await loadSelectedArchiveCase(selectedCase)
+  await loadSelectedArchiveCase(selectedCase, forceRefresh)
 }
 
-async function syncSearchFromRoute() {
+async function syncSearchFromRoute(forceRefresh = false) {
   const bah = normalizeSearchParam(route.query.bah)
   const sjh = normalizeSearchParam(route.query.sjh)
   const idToken = sanitizeParam(route.query.id)
@@ -268,13 +268,13 @@ async function syncSearchFromRoute() {
   searchSjh.value = sjh
 
   if (idToken) {
-    await syncIdCardSearchFromRoute(idToken, bah, sjh)
+    await syncIdCardSearchFromRoute(idToken, bah, sjh, forceRefresh)
     return
   }
 
   clearIdCardSearch()
   if (bah || sjh) {
-    await loadImages()
+    await loadImages(forceRefresh)
   }
   else {
     clearArchiveState()
@@ -347,12 +347,13 @@ async function handleSearch() {
 }
 
 async function handleRefresh() {
-  if (sanitizeParam(route.query.id)) {
-    await syncSearchFromRoute()
+  const selectionKey = selectionStorageKey.value
+  if (selectionKey) {
+    localStorage.removeItem(selectionKey)
   }
-  else {
-    await handleSearch()
-  }
+  selectedIds.value = new Set()
+  clearIdCardSearch()
+  await syncSearchFromRoute(true)
 }
 
 async function selectArchiveCase(archiveCase: IdCardArchiveCase) {
@@ -498,7 +499,7 @@ watch(filteredImages, () => {
 
 watch(
   () => [route.query.bah, route.query.sjh, route.query.id],
-  syncSearchFromRoute,
+  () => void syncSearchFromRoute(),
   { immediate: true },
 )
 
@@ -533,12 +534,14 @@ onUnmounted(() => {
   <div class="archive-page" :class="{ 'hide-scrollbars': archiveDisplaySettings.archiveHideScrollbars }">
     <ArchiveMoreSettings
       class="archive-more-settings-float"
+      :view-mode="viewMode"
       :preview-mode="previewMode"
       :type-display-mode="typeDisplayMode"
       :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
       :fit-mode="archiveDisplaySettings.archiveFitMode"
       :hide-scrollbars="archiveDisplaySettings.archiveHideScrollbars"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
+      @update:view-mode="viewMode = $event"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
       @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
       @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"

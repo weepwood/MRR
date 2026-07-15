@@ -352,7 +352,6 @@ async function handleRefresh() {
     localStorage.removeItem(selectionKey)
   }
   selectedIds.value = new Set()
-  clearIdCardSearch()
   await syncSearchFromRoute(true)
 }
 
@@ -540,12 +539,14 @@ onUnmounted(() => {
       :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
       :fit-mode="archiveDisplaySettings.archiveFitMode"
       :hide-scrollbars="archiveDisplaySettings.archiveHideScrollbars"
+      :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
       @update:view-mode="viewMode = $event"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
       @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
       @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"
       @update:hide-scrollbars="updateArchiveLocalPreferences({ archiveHideScrollbars: $event })"
+      @update:department-colors-enabled="updateArchiveLocalPreferences({ archiveDepartmentColorsEnabled: $event })"
       @update:thumbnail-size="updateArchiveLocalPreferences({ archiveThumbnailSize: $event })"
       @reset="resetArchiveLocalPreferences"
     />
@@ -579,6 +580,7 @@ onUnmounted(() => {
           :active-bah="searchBah"
           :active-sjh="searchSjh"
           :masked-id-card="maskedIdCard"
+          :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
           :loading="idCardLoading"
           @select="selectArchiveCase"
         />
@@ -593,7 +595,6 @@ onUnmounted(() => {
             v-model:display-mode="typeDisplayMode"
             :type-stats="typeStats"
             :total-count="images.length"
-            :selected-count="selectedCount"
             :all-selected="allImagesSelected"
             :all-indeterminate="allImagesIndeterminate"
             :is-type-selected="isTypeSelected"

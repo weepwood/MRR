@@ -14,7 +14,6 @@ defineOptions({ name: 'TypeFilterBar' })
 const props = defineProps<{
   typeStats: TypeStatItem[]
   totalCount: number
-  selectedCount: number
   allSelected: boolean
   allIndeterminate: boolean
   isTypeSelected: (type: number) => boolean
@@ -67,9 +66,6 @@ function onSelection(value: number | 'all') {
 
 <template>
   <div class="type-bar">
-    <div class="type-bar-actions">
-      <span v-if="props.selectedCount" class="select-count">已选 {{ props.selectedCount }}</span>
-    </div>
     <div v-if="displayMode === 'buttons'" class="type-tabs">
       <div class="type-tab-entry">
         <el-checkbox
@@ -146,20 +142,6 @@ function onSelection(value: number | 'all') {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 12px;
-}
-
-.type-bar-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.select-count {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
 }
 
 .type-tabs {

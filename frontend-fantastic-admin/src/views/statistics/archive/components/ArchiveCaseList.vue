@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import type { IdCardArchiveCase } from '@/api/modules/search'
-import { computed } from 'vue'
+import type { ArchiveDepartmentTheme } from '@/utils/archive-department-theme'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { getSystemSettings } from '@/api/modules/settings'
+import {
+  ARCHIVE_DEPARTMENT_THEME_SETTING_KEY,
+  ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT,
+  archiveDepartmentThemeCssVariables,
+  loadArchiveDepartmentThemesFromLocal,
+  normalizeArchiveDepartmentThemes,
+  resolveArchiveDepartmentTheme,
+  saveArchiveDepartmentThemesToLocal,
+} from '@/utils/archive-department-theme'
 import { padCode } from '../constants'
 
 const props = defineProps<{
@@ -9,6 +20,7 @@ const props = defineProps<{
   activeSjh?: string
   maskedIdCard?: string
   loading?: boolean
+  departmentColorsEnabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +28,7 @@ const emit = defineEmits<{
 }>()
 
 const caseCountLabel = computed(() => `${props.cases.length} 份病案`)
+const departmentThemes = ref<ArchiveDepartmentTheme[]>(loadArchiveDepartmentThemesFromLocal())
 
 function normalizeDate(value: unknown) {
   const text = String(value ?? '').trim()
@@ -26,21 +39,50 @@ function isActive(item: IdCardArchiveCase) {
   return padCode(item.bah || '') === padCode(props.activeBah || '')
     && padCode(item.sjh || '') === padCode(props.activeSjh || '')
 }
+
+function departmentStyle(department: string | undefined) {
+  if (!props.departmentColorsEnabled) {
+    return undefined
+  }
+  return archiveDepartmentThemeCssVariables(resolveArchiveDepartmentTheme(department, departmentThemes.value)) as Record<string, string>
+}
+
+function handleDepartmentThemeUpdate(event: Event) {
+  const detail = event instanceof CustomEvent ? event.detail : null
+  departmentThemes.value = detail ? normalizeArchiveDepartmentThemes(detail) : loadArchiveDepartmentThemesFromLocal()
+}
+
+async function loadDepartmentThemes() {
+  try {
+    const response = await getSystemSettings()
+    const settings = response.data ?? {}
+    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+      departmentThemes.value = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
+      saveArchiveDepartmentThemesToLocal(departmentThemes.value)
+    }
+  }
+  catch {
+    // 服务端设置不可用时继续使用本地配色。
+  }
+}
+
+onMounted(() => {
+  window.addEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleDepartmentThemeUpdate)
+  void loadDepartmentThemes()
+})
+onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleDepartmentThemeUpdate))
 </script>
 
 <template>
   <section v-if="loading || cases.length" class="archive-case-card" aria-label="身份证关联病案">
     <header class="case-header">
-      <div>
-        <strong>患者全部病案</strong>
-        <small v-if="maskedIdCard">{{ maskedIdCard }}</small>
-      </div>
+      <small v-if="maskedIdCard">{{ maskedIdCard }}</small>
       <el-tag size="small" effect="plain">
         {{ caseCountLabel }}
       </el-tag>
     </header>
 
-    <el-skeleton v-if="loading" :rows="3" animated />
+    <el-skeleton v-if="loading && !cases.length" :rows="3" animated />
     <div v-else class="case-list">
       <button
         v-for="item in cases"
@@ -48,6 +90,7 @@ function isActive(item: IdCardArchiveCase) {
         type="button"
         class="case-item"
         :class="{ active: isActive(item) }"
+        :style="departmentStyle(item.department)"
         :aria-current="isActive(item) ? 'true' : undefined"
         @click="emit('select', item)"
       >
@@ -81,7 +124,6 @@ function isActive(item: IdCardArchiveCase) {
   gap: 10px;
 }
 
-.case-header > div,
 .case-main,
 .case-codes span {
   display: flex;
@@ -115,7 +157,7 @@ function isActive(item: IdCardArchiveCase) {
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
-  background: var(--surface-muted);
+  background: var(--folder-tint, var(--surface-muted));
   border: 1px solid transparent;
   border-radius: 10px;
   transition: border-color 120ms ease, background-color 120ms ease;

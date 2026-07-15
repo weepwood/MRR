@@ -11,6 +11,7 @@ export interface ArchiveLocalPreferences {
   archiveThumbnailSize?: number
   archiveFitMode?: ArchiveFitMode
   archiveHideScrollbars?: boolean
+  archiveDepartmentColorsEnabled?: boolean
 }
 
 export interface ArchiveDisplayPreferences {
@@ -19,6 +20,7 @@ export interface ArchiveDisplayPreferences {
   archiveThumbnailSize: number
   archiveFitMode: ArchiveFitMode
   archiveHideScrollbars: boolean
+  archiveDepartmentColorsEnabled: boolean
 }
 
 function parsePreferences(value: unknown): ArchiveLocalPreferences {
@@ -44,6 +46,9 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
       : legacyAutoFit === undefined ? undefined : legacyAutoFit ? 'height' : 'width',
     archiveHideScrollbars: typeof source.archiveHideScrollbars === 'boolean'
       ? source.archiveHideScrollbars
+      : undefined,
+    archiveDepartmentColorsEnabled: typeof source.archiveDepartmentColorsEnabled === 'boolean'
+      ? source.archiveDepartmentColorsEnabled
       : undefined,
   }
 }
@@ -86,6 +91,7 @@ export function resolveArchiveDisplayPreferences(
     archiveTypeDisplayMode: preferences.archiveTypeDisplayMode ?? 'buttons',
     archiveThumbnailSize: preferences.archiveThumbnailSize ?? settings.archiveThumbnailSize,
     archiveFitMode: preferences.archiveFitMode ?? (settings.archiveAutoFit ? 'height' : 'width'),
-    archiveHideScrollbars: preferences.archiveHideScrollbars ?? false,
+    archiveHideScrollbars: preferences.archiveHideScrollbars ?? true,
+    archiveDepartmentColorsEnabled: preferences.archiveDepartmentColorsEnabled ?? false,
   }
 }

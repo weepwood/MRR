@@ -11,6 +11,7 @@ const props = defineProps<{
   thumbnailSize: number
   fitMode: ArchiveFitMode
   hideScrollbars: boolean
+  departmentColorsEnabled: boolean
   hasLocalPreferences: boolean
 }>()
 
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   'update:thumbnailSize': [size: number]
   'update:fitMode': [mode: ArchiveFitMode]
   'update:hideScrollbars': [enabled: boolean]
+  'update:departmentColorsEnabled': [enabled: boolean]
   'reset': []
 }>()
 
@@ -30,6 +32,10 @@ function updateThumbnailSize(value: number | number[]) {
 
 function updateHideScrollbars(value: unknown) {
   emit('update:hideScrollbars', value === true)
+}
+
+function updateDepartmentColorsEnabled(value: unknown) {
+  emit('update:departmentColorsEnabled', value === true)
 }
 </script>
 
@@ -95,6 +101,15 @@ function updateHideScrollbars(value: unknown) {
               { label: '宽度', value: 'width' },
             ]"
             @update:model-value="emit('update:fitMode', $event as ArchiveFitMode)"
+          />
+        </div>
+
+        <div class="settings-row">
+          <span>科室颜色</span>
+          <el-switch
+            :model-value="props.departmentColorsEnabled"
+            aria-label="按科室显示病案背景色"
+            @update:model-value="updateDepartmentColorsEnabled($event)"
           />
         </div>
 

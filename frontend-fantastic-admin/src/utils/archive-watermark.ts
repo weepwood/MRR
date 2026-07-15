@@ -24,7 +24,7 @@ export function formatArchiveWatermarkTime(date: Date): string {
     date.getFullYear(),
     pad(date.getMonth() + 1),
     pad(date.getDate()),
-  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function resolveArchiveWatermarkUserId(
@@ -106,9 +106,9 @@ export function createArchiveWatermarkDataUrl(
     ? `rgba(255, 255, 255, ${opacity})`
     : `rgba(17, 24, 39, ${Math.min(opacity, 0.3)})`
   context.font = '600 15px Inter, "Microsoft YaHei", sans-serif'
-  context.fillText(`用户ID：${userId}`, 0, -12)
+  context.fillText(userId, 0, -12)
   context.font = '500 13px Inter, "Microsoft YaHei", sans-serif'
-  context.fillText(`时间：${time}`, 0, 14)
+  context.fillText(time, 0, 14)
 
   return canvas.toDataURL('image/png')
 }

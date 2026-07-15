@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { PatientInfo } from '../types'
-import { User } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'PatientCard' })
 
@@ -19,14 +18,10 @@ const fields = computed(() => [
 
 <template>
   <section v-if="props.patient || loading" v-loading="loading" class="patient-card">
-    <div class="patient-card-header">
-      <el-icon><User /></el-icon>
-      <span>患者信息</span>
-    </div>
     <div class="patient-card-body">
       <div v-for="field in fields" :key="field.label" class="patient-field">
         <span class="field-label">{{ field.label }}</span>
-        <span class="field-value">{{ field.value }}</span>
+        <span class="field-value" :title="field.value">{{ field.value }}</span>
       </div>
     </div>
   </section>
@@ -40,16 +35,6 @@ const fields = computed(() => [
   border-radius: 12px;
 }
 
-.patient-card-header {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .patient-card-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -60,6 +45,7 @@ const fields = computed(() => [
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .field-label {

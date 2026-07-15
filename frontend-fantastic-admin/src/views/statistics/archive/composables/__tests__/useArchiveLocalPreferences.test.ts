@@ -26,6 +26,7 @@ describe('archive local preferences', () => {
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
       archiveHideScrollbars: true,
+      archiveDepartmentColorsEnabled: false,
     })
   })
 

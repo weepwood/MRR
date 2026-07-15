@@ -33,7 +33,11 @@ interface MonthLabel {
   weekIndex: number
 }
 
-const viewportRef = ref<HTMLElement | null>(null)
+const TOOLTIP_WIDTH = 236
+const TOOLTIP_HEIGHT = 190
+const TOOLTIP_OFFSET = 10
+const VIEWPORT_PADDING = 8
+
 const activeDay = ref<HeatmapDay | null>(null)
 const tooltipPosition = ref({ x: 0, y: 0 })
 
@@ -212,33 +216,40 @@ function monthLabelStyle(label: MonthLabel) {
   return { gridColumnStart: label.weekIndex + 1 }
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), maximum)
+}
+
 function showTooltip(day: HeatmapDay, event: PointerEvent | FocusEvent) {
-  const viewport = viewportRef.value
-  if (!viewport || !day.inRange) {
+  if (!day.inRange) {
     return
   }
 
-  const viewportRect = viewport.getBoundingClientRect()
   const target = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
-  const targetRect = target?.getBoundingClientRect()
-  const anchorX = targetRect
-    ? targetRect.left - viewportRect.left + targetRect.width / 2
-    : 0
-  const anchorY = targetRect
-    ? targetRect.top - viewportRect.top
-    : 0
-  const tooltipWidth = 236
-  const tooltipHeight = 190
+  if (!target) {
+    return
+  }
+
+  const targetRect = target.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const maxX = Math.max(VIEWPORT_PADDING, viewportWidth - TOOLTIP_WIDTH - VIEWPORT_PADDING)
+  const maxY = Math.max(VIEWPORT_PADDING, viewportHeight - TOOLTIP_HEIGHT - VIEWPORT_PADDING)
+  const preferredTop = targetRect.top - TOOLTIP_HEIGHT - TOOLTIP_OFFSET
+  const fallbackTop = targetRect.bottom + TOOLTIP_OFFSET
 
   activeDay.value = day
   tooltipPosition.value = {
-    x: Math.min(
-      Math.max(8, anchorX - tooltipWidth / 2),
-      Math.max(8, viewportRect.width - tooltipWidth - 8),
+    x: clamp(
+      targetRect.left + targetRect.width / 2 - TOOLTIP_WIDTH / 2,
+      VIEWPORT_PADDING,
+      maxX,
     ),
-    y: anchorY > tooltipHeight + 14
-      ? anchorY - tooltipHeight - 10
-      : anchorY + props.cellSize + 10,
+    y: clamp(
+      preferredTop >= VIEWPORT_PADDING ? preferredTop : fallbackTop,
+      VIEWPORT_PADDING,
+      maxY,
+    ),
   }
 }
 
@@ -265,12 +276,8 @@ function hideTooltip() {
       </div>
     </header>
 
-    <div
-      ref="viewportRef"
-      class="heatmap-viewport"
-      @pointerleave="hideTooltip"
-    >
-      <div class="heatmap-scroll">
+    <div class="heatmap-viewport" @pointerleave="hideTooltip">
+      <div class="heatmap-scroll" @scroll.passive="hideTooltip" @wheel.passive="hideTooltip">
         <div class="heatmap-content">
           <div class="month-labels" aria-hidden="true">
             <span
@@ -311,7 +318,13 @@ function hideTooltip() {
           </div>
         </div>
       </div>
+    </div>
 
+    <div v-if="!hasData" class="empty-hint">
+      {{ emptyDescription }}，灰色方块仍表示对应日期。
+    </div>
+
+    <Teleport to="body">
       <div v-if="activeDay" class="heatmap-tooltip" :style="tooltipStyle">
         <span>{{ formatDate(activeDay.date) }}</span>
         <strong>{{ formatNumber(activeDay.total) }} 次请求</strong>
@@ -332,11 +345,7 @@ function hideTooltip() {
           </div>
         </dl>
       </div>
-    </div>
-
-    <div v-if="!hasData" class="empty-hint">
-      {{ emptyDescription }}，灰色方块仍表示对应日期。
-    </div>
+    </Teleport>
   </section>
 </template>
 
@@ -390,7 +399,6 @@ function hideTooltip() {
 }
 
 .heatmap-viewport {
-  position: relative;
   min-width: 0;
 }
 
@@ -398,6 +406,7 @@ function hideTooltip() {
   padding: 3px 0 8px;
   overflow-x: auto;
   overflow-y: hidden;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
 
@@ -501,8 +510,9 @@ function hideTooltip() {
 }
 
 .heatmap-tooltip {
-  position: absolute;
-  z-index: 10;
+  position: fixed;
+  z-index: 4000;
+  box-sizing: border-box;
   width: 236px;
   padding: 13px 14px;
   pointer-events: none;
@@ -512,6 +522,7 @@ function hideTooltip() {
   border-radius: 10px;
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
   backdrop-filter: blur(12px);
+  will-change: left, top;
 }
 
 .heatmap-tooltip > span {

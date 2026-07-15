@@ -100,7 +100,8 @@ public class ScanServiceImpl implements ScanService {
     public Scan create(Scan scan) {
         normalizeStoredCodes(scan);
         if (scanMapper.insert(scan) > 0) {
-            return scan;
+            // archive_id 由数据库触发器解析，重新读取以返回数据库最终状态。
+            return scanMapper.findById(scan.getId());
         }
         return null;
     }
@@ -124,7 +125,8 @@ public class ScanServiceImpl implements ScanService {
     public Scan update(Scan scan) {
         normalizeStoredCodes(scan);
         if (scanMapper.update(scan) > 0) {
-            return scan;
+            // 数据库可能根据新的 BAH/SJH 更新 archive_id，返回持久化后的完整记录。
+            return scanMapper.findById(scan.getId());
         }
         return null;
     }

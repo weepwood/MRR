@@ -8,6 +8,24 @@ $ErrorActionPreference = 'Stop'
 $backendRoot = Split-Path -Parent $PSScriptRoot
 $sqlFile = Join-Path $PSScriptRoot 'verify-archive-refactor.sql'
 
+function Convert-ToPsqlConnectionString {
+    param([Parameter(Mandatory)][string]$JdbcUrl)
+
+    $url = $JdbcUrl -replace '^jdbc:', ''
+    $segments = $url.Split('?', 2)
+    if ($segments.Count -eq 1) {
+        return $url
+    }
+
+    $parameters = @($segments[1].Split('&') | Where-Object {
+        $_ -and -not $_.StartsWith('currentSchema=', [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    if ($parameters.Count -eq 0) {
+        return $segments[0]
+    }
+    return $segments[0] + '?' + ($parameters -join '&')
+}
+
 Push-Location $backendRoot
 try {
     Write-Host '==> Compile backend'
@@ -37,7 +55,7 @@ if (-not $psql) {
     exit 0
 }
 
-$connection = $DatabaseUrl -replace '^jdbc:', ''
+$connection = Convert-ToPsqlConnectionString -JdbcUrl $DatabaseUrl
 $psqlArgs = @('--set', 'ON_ERROR_STOP=1', '--file', $sqlFile, '--dbname', $connection)
 if (-not [string]::IsNullOrWhiteSpace($DatabaseUser)) {
     $psqlArgs += @('--username', $DatabaseUser)

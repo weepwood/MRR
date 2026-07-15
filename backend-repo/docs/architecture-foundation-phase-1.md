@@ -54,15 +54,26 @@ LIMIT :sizePlusOne;
 ```text
 storage/ImageStorage
 storage/LocalImageStorage
+storage/InvalidImagePathException
 ```
 
-Controller 和 ZIP 导出不再读取 `image.basePath` 或拼接 Windows 路径。`LocalImageStorage` 负责：
+`ScanController`、`ImageController` 和 ZIP 导出不再读取 `image.basePath` 或拼接 Windows 路径。`LocalImageStorage` 统一负责：
 
 - 读取外置 `image.basePath`；
 - 按历史目录规则定位文件；
-- 拒绝绝对路径、目录分隔符和 `..`；
+- 查询文件大小和打开输入流；
+- 拒绝绝对路径、目录分隔符、`..`、NUL 和 Windows 保留字符；
 - 验证结果始终位于配置根目录内；
-- 检查文件存在且可读。
+- 检查文件存在且可读；
+- 区分非法路径、文件缺失和存储读取故障。
+
+单图接口对应返回：
+
+```text
+非法路径       400
+文件不存在     404
+存储读取故障   500
+```
 
 未来接入 NAS 或对象存储时，应增加新的 `ImageStorage` 实现，不在 Controller 中增加存储判断。
 
@@ -75,21 +86,24 @@ ArchiveExportService
 ArchiveExportServiceImpl
 ```
 
-`ScanController` 只负责：
+以下两个入口复用同一导出服务：
 
-- 校验请求数量不超过 200；
-- 创建导出计划；
-- 设置 HTTP 下载响应。
+```text
+POST /api/v1/scan/batch-download
+GET  /api/v1/img/download/{BAH}
+```
 
-导出服务负责：
+Controller 只负责参数校验、创建导出计划和设置 HTTP 下载响应。导出服务负责：
 
-- 读取扫描文件元数据；
+- 按扫描记录 ID 或病案号读取影像元数据；
 - 通过 `ImageStorage` 打开文件；
-- 流式写入 ZIP；
+- 64KB 缓冲流式写入 ZIP；
 - 清理 ZIP 条目名称；
-- 对重复文件名增加序号；
+- 全局避免重复 ZIP Entry；
 - 跳过无法打开的源文件；
 - ZIP 响应写入失败时立即终止，避免返回损坏文件。
+
+旧的整病案下载不再先生成 `./temp/*.temp` 文件，也不再依赖 `deleteOnExit()`。
 
 ### 4. 数据类型与测试
 
@@ -99,8 +113,10 @@ ArchiveExportServiceImpl
 
 - 旧查询 SQL 限流；
 - 游标分页的下一页判断；
-- PostgreSQL 游标 SQL；
-- 本地影像目录穿越防护；
+- H2 与 PostgreSQL 游标 SQL；
+- 本地影像大小、目录穿越和 Windows 非法字符；
+- 单图接口的 400、404 和成功响应；
+- 整病案流式下载；
 - ZIP 重名处理与不可变导出计划；
 - Controller 新依赖和兼容接口。
 
@@ -110,7 +126,12 @@ ArchiveExportServiceImpl
 ./backend-repo/scripts/verify-architecture-foundation.ps1
 ```
 
-脚本执行 Maven 编译、定向单元测试，并在 Docker 可用时执行 PostgreSQL 16 Mapper 集成测试。
+脚本执行：
+
+1. Maven 编译；
+2. 扫描、图片、存储和导出定向单元测试；
+3. H2 Mapper 集成测试；
+4. Docker 可用时执行 PostgreSQL 16 Mapper 集成测试。
 
 ## 兼容性
 
@@ -119,6 +140,7 @@ ArchiveExportServiceImpl
 - 不修改病案主数据 `mr_archive/archive_id` 规则。
 - 不修改 OSS 迁移队列、CSV 数据交换中心和 Windows 部署脚本。
 - 旧无分页接口保留，但明确标记为废弃并限制为 1000 条。
+- 单图和 ZIP 下载 URL 保持不变。
 
 ## 后续阶段
 

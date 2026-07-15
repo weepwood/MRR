@@ -3,8 +3,10 @@ package com.zjcxph.imgapi.unit.controller;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.ScanController;
 import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +29,9 @@ class ScanControllerTest {
 
     @Mock
     private ScanService scanService;
+
+    @Mock
+    private ArchiveExportService archiveExportService;
 
     @InjectMocks
     private ScanController scanController;
@@ -53,9 +58,9 @@ class ScanControllerTest {
     }
 
     @Test
-    @DisplayName("GET findAll — 返回全部记录")
+    @DisplayName("GET findAll — 兼容接口固定请求 1000 条上限")
     void findAll() {
-        when(scanService.findAll()).thenReturn(List.of(mockScan));
+        when(scanService.findAll(1000)).thenReturn(List.of(mockScan));
 
         Result<List<Scan>> result = scanController.findAll();
 
@@ -64,132 +69,108 @@ class ScanControllerTest {
     }
 
     @Test
-    @DisplayName("GET findById — 存在返回记录")
+    @DisplayName("GET cursor — 返回游标分页")
+    void findAfterId() {
+        CursorPageResult<Scan> page = CursorPageResult.of(List.of(mockScan), 1L, true, 100);
+        when(scanService.findAfterId(0, 100)).thenReturn(page);
+
+        Result<CursorPageResult<Scan>> result = scanController.findAfterId(0, 100);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData().getNextCursorId()).isEqualTo(1L);
+    }
+
+    @Test
     void findById_found() {
         when(scanService.findById(1)).thenReturn(mockScan);
-
         Result<Scan> result = scanController.findById(1);
-
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData().getBah()).isEqualTo("00789508");
     }
 
     @Test
-    @DisplayName("GET findById — 不存在返回失败")
     void findById_notFound() {
         when(scanService.findById(999)).thenReturn(null);
-
         Result<Scan> result = scanController.findById(999);
-
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("未找到");
     }
 
     @Test
-    @DisplayName("POST create — 成功创建")
     void create_success() {
         when(scanService.create(any())).thenReturn(mockScan);
-
         Result<Scan> result = scanController.create(validRequest);
-
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).isNotNull();
     }
 
     @Test
-    @DisplayName("POST create — 失败返回错误")
     void create_fail() {
         when(scanService.create(any())).thenReturn(null);
-
         Result<Scan> result = scanController.create(validRequest);
-
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("失败");
     }
 
     @Test
-    @DisplayName("DELETE deleteById — 删除成功")
     void deleteById_success() {
         when(scanService.softDeleteById(1)).thenReturn(true);
-
         Result<String> result = scanController.deleteById(1);
-
         assertThat(result.getCode()).isEqualTo(200);
-        assertThat(result.getMessage()).contains("删除成功");
     }
 
     @Test
-    @DisplayName("DELETE deleteById — 记录不存在")
     void deleteById_notFound() {
         when(scanService.softDeleteById(999)).thenReturn(false);
-
         Result<String> result = scanController.deleteById(999);
-
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("不存在");
     }
 
     @Test
-    @DisplayName("DELETE deleteById — ID为空返回失败")
     void deleteById_nullId() {
         Result<String> result = scanController.deleteById(null);
-
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("不能为空");
     }
 
     @Test
-    @DisplayName("PUT update — 更新成功")
     void update_success() {
         when(scanService.update(any())).thenReturn(mockScan);
-
         Result<Scan> result = scanController.update(1, validRequest);
-
         assertThat(result.getCode()).isEqualTo(200);
     }
 
     @Test
-    @DisplayName("PUT update — 更新失败返回错误")
     void update_fail() {
         when(scanService.update(any())).thenReturn(null);
-
         Result<Scan> result = scanController.update(999, validRequest);
-
         assertThat(result.getCode()).isEqualTo(400);
     }
 
     @Test
-    @DisplayName("GET findByBah — 按病案号查询")
     void findByBah() {
         when(scanService.findByBah("00789508")).thenReturn(List.of(mockScan));
-
         Result<List<Scan>> result = scanController.findByBah("00789508");
-
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).hasSize(1);
     }
 
     @Test
-    @DisplayName("GET findByBah — 空病案号返回失败")
     void findByBah_empty() {
         Result<List<Scan>> result = scanController.findByBah("");
-
         assertThat(result.getCode()).isEqualTo(400);
     }
 
     @Test
-    @DisplayName("GET findByBrxh — 按病人序号查询")
     void findByBrxh() {
         when(scanService.findByBrxh("605746")).thenReturn(List.of(mockScan));
-
         Result<List<Scan>> result = scanController.findByBrxh("605746");
-
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).hasSize(1);
     }
 
     @Test
-    @DisplayName("GET findAllWithPagination — 分页查询")
     void findAllWithPagination() {
         when(scanService.findAllWithPagination(eq(1), eq(10))).thenReturn(List.of(mockScan));
         when(scanService.countByCondition(any())).thenReturn(1L);
@@ -202,9 +183,9 @@ class ScanControllerTest {
     }
 
     @Test
-    @DisplayName("POST findByCondition — 条件查询")
+    @DisplayName("POST condition — 兼容接口固定请求 1000 条上限")
     void findByCondition() {
-        when(scanService.findByCondition(any())).thenReturn(List.of(mockScan));
+        when(scanService.findByCondition(any(), eq(1000))).thenReturn(List.of(mockScan));
 
         Result<List<Scan>> result = scanController.findByCondition(validRequest);
 

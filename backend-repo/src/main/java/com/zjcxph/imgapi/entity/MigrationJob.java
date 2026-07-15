@@ -15,6 +15,7 @@ public class MigrationJob {
     private BigDecimal rate;
     private String errorMessage;
     private String createdBy;
+    private Long maxScanId;
     private Date startedAt;
     private Date completedAt;
     private Date createdAt;

@@ -30,16 +30,20 @@ class ArchiveExportServiceImplTest {
     private ImageStorage imageStorage;
 
     @Test
-    void streamsZipAndRenamesDuplicateEntries() throws Exception {
+    void streamsZipAndAvoidsAllEntryNameCollisions() throws Exception {
         PathDO first = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
-        PathDO second = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
-        when(scanService.getImagePathList(List.of("1", "2"))).thenReturn(List.of(first, second));
+        PathDO duplicate = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        PathDO realSuffixed = new PathDO("25.03.15", "page-2.jpg", "605746", "00789508");
+        List<String> ids = List.of("1", "2", "3");
+        when(scanService.getImagePathList(ids)).thenReturn(List.of(first, duplicate, realSuffixed));
         when(imageStorage.open(first))
                 .thenReturn(new ByteArrayInputStream("one".getBytes(StandardCharsets.UTF_8)))
                 .thenReturn(new ByteArrayInputStream("two".getBytes(StandardCharsets.UTF_8)));
+        when(imageStorage.open(realSuffixed))
+                .thenReturn(new ByteArrayInputStream("three".getBytes(StandardCharsets.UTF_8)));
 
         ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
-        ArchiveExportService.BatchZipExport export = service.prepareBatch(List.of("1", "2"));
+        ArchiveExportService.BatchZipExport export = service.prepareBatch(ids);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
         service.writeBatchZip(export, output);
@@ -52,7 +56,8 @@ class ArchiveExportServiceImplTest {
         }
         assertThat(names).containsExactly(
                 "00789508/page.jpg",
-                "00789508/page-2.jpg"
+                "00789508/page-2.jpg",
+                "00789508/page-2-2.jpg"
         );
     }
 

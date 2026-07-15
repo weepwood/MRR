@@ -316,6 +316,11 @@ h2 {
     max-width: 100%;
     justify-self: start;
   }
+
+  .response-trend-card :deep(.el-card__body) {
+    width: max-content;
+    max-width: calc(100vw - 620px);
+  }
 }
 
 @media (width <= 600px) {

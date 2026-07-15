@@ -155,6 +155,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
+      {
+        path: '/data-transfer',
+        component: () => import('@/views/data-transfer/index.vue'),
+        meta: {
+          title: '数据交换中心',
+          icon: 'i-ant-design:swap-outlined',
+          auth: ['record:manage'],
+          cache: true,
+        },
+      },
     ],
   },
   {

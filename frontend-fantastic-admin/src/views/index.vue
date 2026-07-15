@@ -86,7 +86,7 @@ async function loadData() {
   loading.value = true
   try {
     const tasks: Promise<any>[] = []
-    const keys: ('dash' | 'health' | 'audit')[] = []
+    const keys: ('dash' | 'health' | 'audit' | 'topUsers')[] = []
     if (canViewStats.value) {
       tasks.push(getDashboardData())
       keys.push('dash')

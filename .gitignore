@@ -16,3 +16,4 @@ static
 .workbuddy
 code-review/
 .vitepress
+*.log

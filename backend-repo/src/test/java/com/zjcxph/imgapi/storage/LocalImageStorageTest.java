@@ -19,7 +19,7 @@ class LocalImageStorageTest {
     Path tempDir;
 
     @Test
-    void opensFileInsideConfiguredRoot() throws Exception {
+    void opensFileAndReturnsSizeInsideConfiguredRoot() throws Exception {
         ImageProperties properties = new ImageProperties();
         properties.setBasePath(tempDir.toString());
         LocalImageStorage storage = new LocalImageStorage(properties);
@@ -29,6 +29,7 @@ class LocalImageStorageTest {
         Files.createDirectories(file.getParent());
         Files.writeString(file, "image", StandardCharsets.UTF_8);
 
+        assertThat(storage.size(image)).isEqualTo(5L);
         try (var input = storage.open(image)) {
             assertThat(new String(input.readAllBytes(), StandardCharsets.UTF_8)).isEqualTo("image");
         }
@@ -42,8 +43,19 @@ class LocalImageStorageTest {
         PathDO image = image("25.03.15", "605746", "00789508", "../secret.txt");
 
         assertThatThrownBy(() -> storage.resolve(image))
-                .isInstanceOf(IOException.class)
+                .isInstanceOf(InvalidImagePathException.class)
                 .hasMessageContaining("非法路径字符");
+    }
+
+    @Test
+    void rejectsWindowsReservedCharacters() {
+        ImageProperties properties = new ImageProperties();
+        properties.setBasePath(tempDir.toString());
+        LocalImageStorage storage = new LocalImageStorage(properties);
+
+        assertThatThrownBy(() -> storage.resolve(
+                image("25.03.15", "605746", "00789508", "page:1.jpg")))
+                .isInstanceOf(InvalidImagePathException.class);
     }
 
     @Test

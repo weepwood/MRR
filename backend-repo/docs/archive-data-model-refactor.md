@@ -28,7 +28,7 @@ mr_archive
 
 ### 1. 备份并执行迁移
 
-应用启动后 Flyway 会依次执行：
+应用启动后 Flyway 会执行：
 
 ```text
 V0_1  建立病案主表、关联列、触发器与回填函数
@@ -37,7 +37,19 @@ V0_3  编号修改后刷新 archive_id
 V0_4  优化数千万扫描记录的分批回填
 ```
 
-这些版本均低于 `V1`，不会占用 OSS 迁移 PR 的版本号。
+这些版本不占用 OSS 迁移 PR 使用的 `V1`。部分已有数据库已经先执行了 `V1`，项目因此默认允许 Flyway 补执行尚未应用的低版本迁移：
+
+```properties
+spring.flyway.out-of-order=${SPRING_FLYWAY_OUT_OF_ORDER:true}
+```
+
+`validate-on-migrate` 仍保持开启，不应删除或手工修改 `app.flyway_schema_history`。所有环境完成 `V0_1`～`V0_4` 后，可设置：
+
+```powershell
+$env:SPRING_FLYWAY_OUT_OF_ORDER = 'false'
+```
+
+恢复严格的版本顺序检查。
 
 ### 2. 分批回填扫描记录
 

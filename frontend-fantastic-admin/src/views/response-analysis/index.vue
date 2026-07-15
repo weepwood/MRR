@@ -310,6 +310,12 @@ h2 {
     grid-template-columns: max-content minmax(520px, 1fr);
     align-items: start;
   }
+
+  .response-trend-card {
+    width: max-content;
+    max-width: 100%;
+    justify-self: start;
+  }
 }
 
 @media (width <= 600px) {

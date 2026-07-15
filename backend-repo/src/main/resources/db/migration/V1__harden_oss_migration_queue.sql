@@ -13,6 +13,10 @@ ALTER TABLE app.mr_scan
 ALTER TABLE app.migration_job
     ADD COLUMN IF NOT EXISTS max_scan_id BIGINT;
 
+-- "completed_with_errors" is longer than the original VARCHAR(20).
+ALTER TABLE app.migration_job
+    ALTER COLUMN status TYPE VARCHAR(32);
+
 DO $$
 BEGIN
     IF NOT EXISTS (

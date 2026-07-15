@@ -53,7 +53,7 @@ $env:SPRING_FLYWAY_OUT_OF_ORDER = 'false'
 
 恢复严格的版本顺序检查。
 
-如果此前 `V0_1` 因 `mr_statistics.id` 不存在而失败，PostgreSQL 事务已经回滚；拉取最新分支后直接重新启动即可，不需要删除表或修改 Flyway 历史记录。
+如果此前 `V0_1` 因 `mr_statistics.id` 不存在而失败，PostgreSQL 日志显示 `Changes successfully rolled back` 时，不需要删除表、执行 `flyway repair` 或修改 Flyway 历史记录。拉取最新分支，执行一次 `mvn clean` 后重新启动即可。
 
 ### 2. 分批回填扫描记录
 

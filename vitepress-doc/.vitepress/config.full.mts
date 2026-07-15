@@ -43,6 +43,7 @@ export default defineConfig({
         text: '部署与运维',
         items: [
           { text: '部署', link: '/internal/deployment' },
+          { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
           { text: '运维与监控', link: '/internal/operations' },
           { text: '安全', link: '/internal/security' },
           { text: '故障排查', link: '/internal/troubleshooting' },
@@ -79,6 +80,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: '部署', link: '/internal/deployment' },
+            { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
             { text: '运维与监控', link: '/internal/operations' },
             { text: '安全', link: '/internal/security' },
             { text: '故障排查', link: '/internal/troubleshooting' },

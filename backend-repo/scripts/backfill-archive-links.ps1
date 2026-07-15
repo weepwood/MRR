@@ -12,6 +12,24 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Convert-ToPsqlConnectionString {
+    param([Parameter(Mandatory)][string]$JdbcUrl)
+
+    $url = $JdbcUrl -replace '^jdbc:', ''
+    $segments = $url.Split('?', 2)
+    if ($segments.Count -eq 1) {
+        return $url
+    }
+
+    $parameters = @($segments[1].Split('&') | Where-Object {
+        $_ -and -not $_.StartsWith('currentSchema=', [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    if ($parameters.Count -eq 0) {
+        return $segments[0]
+    }
+    return $segments[0] + '?' + ($parameters -join '&')
+}
+
 if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
     throw 'DatabaseUrl is required. Set SPRING_DATASOURCE_URL or pass -DatabaseUrl.'
 }
@@ -21,7 +39,7 @@ if (-not $psql) {
     throw 'psql was not found in PATH.'
 }
 
-$connection = $DatabaseUrl -replace '^jdbc:', ''
+$connection = Convert-ToPsqlConnectionString -JdbcUrl $DatabaseUrl
 $baseArgs = @('--no-align', '--tuples-only', '--set', 'ON_ERROR_STOP=1', '--dbname', $connection)
 if (-not [string]::IsNullOrWhiteSpace($DatabaseUser)) {
     $baseArgs += @('--username', $DatabaseUser)
@@ -39,7 +57,8 @@ while ($true) {
     }
 
     $query = "SELECT last_id || ',' || scanned_count || ',' || updated_count FROM app.backfill_scan_archive_ids($lastId, $BatchSize);"
-    $output = & $psql.Source @baseArgs --command $query
+    $psqlArgs = $baseArgs + @('--command', $query)
+    $output = & $psql.Source @psqlArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Backfill query failed with exit code $LASTEXITCODE. Resume with -StartAfterId $lastId."
     }

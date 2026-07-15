@@ -38,7 +38,7 @@ public class LocalImageStorage implements ImageStorage {
      */
     public Path resolve(PathDO image) throws IOException {
         if (image == null) {
-            throw new IOException("影像路径信息不能为空");
+            throw new InvalidImagePathException("影像路径信息不能为空");
         }
 
         String configuredBasePath = imageProperties.getBasePath();
@@ -48,7 +48,7 @@ public class LocalImageStorage implements ImageStorage {
 
         String folder = requireSegment(image.getFolder(), "folder");
         if (folder.length() < 5) {
-            throw new IOException("folder 长度不足 5 位");
+            throw new InvalidImagePathException("folder 长度不足 5 位");
         }
         String brxh = requireSegment(image.getBrxh(), "brxh");
         String bah = requireSegment(image.getBah(), "bah");
@@ -63,7 +63,7 @@ public class LocalImageStorage implements ImageStorage {
                 .normalize();
 
         if (!resolved.startsWith(root)) {
-            throw new IOException("影像路径越过配置根目录");
+            throw new InvalidImagePathException("影像路径越过配置根目录");
         }
         return resolved;
     }
@@ -76,9 +76,9 @@ public class LocalImageStorage implements ImageStorage {
         return resolved;
     }
 
-    private String requireSegment(String value, String field) throws IOException {
+    private String requireSegment(String value, String field) throws InvalidImagePathException {
         if (value == null || value.isBlank()) {
-            throw new IOException(field + " 不能为空");
+            throw new InvalidImagePathException(field + " 不能为空");
         }
         String normalized = value.trim();
         if (normalized.equals(".")
@@ -87,7 +87,7 @@ public class LocalImageStorage implements ImageStorage {
                 || normalized.contains("\\")
                 || normalized.indexOf('\0') >= 0
                 || containsWindowsReservedCharacter(normalized)) {
-            throw new IOException(field + " 包含非法路径字符");
+            throw new InvalidImagePathException(field + " 包含非法路径字符");
         }
         return normalized;
     }

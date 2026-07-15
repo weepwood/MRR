@@ -18,11 +18,12 @@ mr_archive
 
 ## 兼容策略
 
-1. 旧 XLSX/SQL 仍可写入 `mr_statistics`，触发器会创建或更新病案主记录并写回 `archive_id`。
-2. 旧扫描写入不要求显式传入 `archive_id`；有效上架号会由触发器解析或创建主记录。
-3. 缺失上架号统一使用 `NULL`，不会生成占位编号。
-4. 仅病案号匹配时，数据库只接受唯一匹配；大于等于 `10000000` 的病案号缺少上架号时拒绝自动关联。
-5. `mr_scan` 可能达到数千万行，Flyway 不在启动事务中全量更新，而是通过游标批次渐进回填。
+1. 部分历史 PostgreSQL 数据库中的 `mr_statistics` 没有 `id`；`V0_0_1` 会先补齐序列、现有行 ID、非空约束和唯一索引。
+2. 旧 XLSX/SQL 仍可写入 `mr_statistics`，触发器会创建或更新病案主记录并写回 `archive_id`。
+3. 旧扫描写入不要求显式传入 `archive_id`；有效上架号会由触发器解析或创建主记录。
+4. 缺失上架号统一使用 `NULL`，不会生成占位编号。
+5. 仅病案号匹配时，数据库只接受唯一匹配；大于等于 `10000000` 的病案号缺少上架号时拒绝自动关联。
+6. `mr_scan` 可能达到数千万行，Flyway 不在启动事务中全量更新，而是通过游标批次渐进回填。
 
 ## 上线步骤
 
@@ -31,10 +32,11 @@ mr_archive
 应用启动后 Flyway 会执行：
 
 ```text
-V0_1  建立病案主表、关联列、触发器与回填函数
-V0_2  强制大病案号查询规则
-V0_3  编号修改后刷新 archive_id
-V0_4  优化数千万扫描记录的分批回填
+V0_0_1  兼容旧库，为 mr_statistics 补齐稳定行 ID
+V0_1    建立病案主表、关联列、触发器与回填函数
+V0_2    强制大病案号查询规则
+V0_3    编号修改后刷新 archive_id
+V0_4    优化数千万扫描记录的分批回填
 ```
 
 这些版本不占用 OSS 迁移 PR 使用的 `V1`。部分已有数据库已经先执行了 `V1`，项目因此默认允许 Flyway 补执行尚未应用的低版本迁移：
@@ -43,13 +45,15 @@ V0_4  优化数千万扫描记录的分批回填
 spring.flyway.out-of-order=${SPRING_FLYWAY_OUT_OF_ORDER:true}
 ```
 
-`validate-on-migrate` 仍保持开启，不应删除或手工修改 `app.flyway_schema_history`。所有环境完成 `V0_1`～`V0_4` 后，可设置：
+`validate-on-migrate` 仍保持开启，不应删除或手工修改 `app.flyway_schema_history`。所有环境完成 `V0_0_1`～`V0_4` 后，可设置：
 
 ```powershell
 $env:SPRING_FLYWAY_OUT_OF_ORDER = 'false'
 ```
 
 恢复严格的版本顺序检查。
+
+如果此前 `V0_1` 因 `mr_statistics.id` 不存在而失败，PostgreSQL 事务已经回滚；拉取最新分支后直接重新启动即可，不需要删除表或修改 Flyway 历史记录。
 
 ### 2. 分批回填扫描记录
 

@@ -34,8 +34,8 @@ interface MonthLabel {
 }
 
 const TOOLTIP_WIDTH = 236
-const TOOLTIP_HEIGHT = 190
-const TOOLTIP_OFFSET = 10
+const TOOLTIP_HEIGHT = 140
+const TOOLTIP_OFFSET = 4
 const VIEWPORT_PADDING = 8
 
 const activeDay = ref<HeatmapDay | null>(null)

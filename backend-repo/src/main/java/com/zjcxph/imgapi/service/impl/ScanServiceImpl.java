@@ -1,10 +1,10 @@
 package com.zjcxph.imgapi.service.impl;
 
-import com.zjcxph.imgapi.config.ImageProperties;
-import com.zjcxph.imgapi.mapper.ScanMapper;
-import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.CursorPageResult;
+import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
@@ -14,19 +14,17 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @Service
 public class ScanServiceImpl implements ScanService {
 
-    private final ScanMapper scanMapper;
-    private final ImageProperties imageProperties;
+    private static final int MAX_LEGACY_QUERY_LIMIT = 1000;
 
-    public ScanServiceImpl(ScanMapper scanMapper, ImageProperties imageProperties) {
+    private final ScanMapper scanMapper;
+
+    public ScanServiceImpl(ScanMapper scanMapper) {
         this.scanMapper = scanMapper;
-        this.imageProperties = imageProperties;
     }
 
     @Override
@@ -43,40 +41,6 @@ public class ScanServiceImpl implements ScanService {
             String sjhSearchCode
     ) {
         return scanMapper.findByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
-    }
-
-    @Override
-    public Path getImagePath(String bah) {
-        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
-        String searchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
-        List<Scan> baData = scanMapper.findBAH(normalizedBah, searchCode);
-        return baData.isEmpty() ? null : resolveImagePath(baData.get(0));
-    }
-
-    @Override
-    public java.io.File createZipForBAH(String bah) throws java.io.IOException {
-        return createZipForCode(bah, "");
-    }
-
-    @Override
-    public java.io.File createZipForCode(String bah, String sjh) throws java.io.IOException {
-        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
-        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
-        List<Scan> matches = scanMapper.findByCode(
-                normalizedBah,
-                MedicalRecordCodeUtils.toSearchTerm(bah),
-                normalizedSjh,
-                MedicalRecordCodeUtils.toSearchTerm(sjh)
-        );
-        Path imagePath = matches.isEmpty() ? null : resolveImagePath(matches.get(0));
-        if (imagePath == null) {
-            throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到匹配档案的图片路径");
-        }
-
-        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
-        String zipPath = "./temp/" + archiveCode + ".temp";
-        com.zjcxph.imgapi.utils.ZipUtil.zipJpgFiles(imagePath.toString(), zipPath);
-        return new java.io.File(zipPath);
     }
 
     @Override
@@ -132,8 +96,21 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    public List<Scan> findAll() {
-        return scanMapper.findAll();
+    public List<Scan> findAll(int limit) {
+        return scanMapper.findAll(normalizeLegacyLimit(limit));
+    }
+
+    @Override
+    public CursorPageResult<Scan> findAfterId(Integer afterId, int size) {
+        PaginationUtils.validatePageParams(1, size);
+        int safeAfterId = afterId == null ? 0 : Math.max(0, afterId);
+        List<Scan> fetched = scanMapper.findAfterId(safeAfterId, size + 1);
+        boolean hasMore = fetched.size() > size;
+        List<Scan> page = hasMore ? List.copyOf(fetched.subList(0, size)) : fetched;
+        Long nextCursorId = hasMore && !page.isEmpty()
+                ? page.get(page.size() - 1).getId().longValue()
+                : null;
+        return CursorPageResult.of(page, nextCursorId, hasMore, size);
     }
 
     @Override
@@ -163,9 +140,9 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    public List<Scan> findByCondition(ScanRequest request) {
+    public List<Scan> findByCondition(ScanRequest request, int limit) {
         normalizeSearchCodes(request);
-        return scanMapper.findByCondition(request);
+        return scanMapper.findByCondition(request, normalizeLegacyLimit(limit));
     }
 
     @Override
@@ -182,19 +159,11 @@ public class ScanServiceImpl implements ScanService {
         return scanMapper.countByCondition(request);
     }
 
-    private Path resolveImagePath(Scan scan) {
-        if (scan == null) {
-            return null;
+    private int normalizeLegacyLimit(int limit) {
+        if (limit < 1) {
+            return 1;
         }
-        String folderPath = scan.getFolder();
-        String brxh = scan.getBrxh();
-        String storedBah = scan.getBah();
-        if (folderPath == null || folderPath.length() < 5 || brxh == null || storedBah == null) {
-            return null;
-        }
-        String parentFolder = folderPath.substring(0, 5);
-        String folderName = brxh + "-" + storedBah;
-        return Paths.get(imageProperties.getBasePath(), parentFolder, folderPath, folderName);
+        return Math.min(limit, MAX_LEGACY_QUERY_LIMIT);
     }
 
     private void normalizeStoredCodes(Scan scan) {

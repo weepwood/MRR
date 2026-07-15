@@ -12,8 +12,8 @@ try {
         throw "Maven compile failed with exit code $LASTEXITCODE"
     }
 
-    Write-Host '==> Run architecture foundation unit tests'
-    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,ImageControllerTest,LocalImageStorageTest,ArchiveExportServiceImplTest' test
+    Write-Host '==> Run architecture foundation unit and H2 mapper tests'
+    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,ImageControllerTest,LocalImageStorageTest,ArchiveExportServiceImplTest,ScanMapperIntegrationTest' test
     if ($LASTEXITCODE -ne 0) {
         throw "Architecture foundation tests failed with exit code $LASTEXITCODE"
     }

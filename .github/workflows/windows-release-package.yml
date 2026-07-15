@@ -159,7 +159,9 @@ jobs:
 
           (
             cd "${PACKAGE_DIR}"
-            find backend frontend docs deploy -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+            find backend frontend docs deploy manifest.json release-notes.md -type f -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS
             zip -qr "../${ARCHIVE}" .
           )
 

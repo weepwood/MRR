@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArchiveLocalPreferences } from './archive/composables/useArchiveLocalPreferences'
+import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
 import type { GalleryImage, ViewMode } from './archive/types'
 import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
@@ -67,6 +67,7 @@ const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
 const previewMode = ref<ArchivePreviewMode>('single')
+const typeDisplayMode = ref<ArchiveTypeDisplayMode>('buttons')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
 
@@ -136,12 +137,14 @@ function applyArchiveSettings(settings: EffectiveSystemSettings) {
   Object.assign(archiveSettings, settings)
   viewMode.value = settings.archiveDefaultView
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
+  typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
 
 function updateArchiveLocalPreferences(preferences: ArchiveLocalPreferences) {
   archiveLocalPreferences.value = { ...archiveLocalPreferences.value, ...preferences }
   writeArchiveLocalPreferences(archiveLocalPreferences.value)
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
+  typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
 
 function resetArchiveLocalPreferences() {
@@ -149,6 +152,7 @@ function resetArchiveLocalPreferences() {
   archiveLocalPreferences.value = {}
   viewMode.value = archiveSettings.archiveDefaultView
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
+  typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
 
 async function loadArchiveSettings() {
@@ -526,15 +530,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="archive-page">
+  <div class="archive-page" :class="{ 'hide-scrollbars': archiveDisplaySettings.archiveHideScrollbars }">
     <ArchiveMoreSettings
       class="archive-more-settings-float"
       :preview-mode="previewMode"
+      :type-display-mode="typeDisplayMode"
       :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
-      :auto-fit="archiveDisplaySettings.archiveAutoFit"
+      :fit-mode="archiveDisplaySettings.archiveFitMode"
+      :hide-scrollbars="archiveDisplaySettings.archiveHideScrollbars"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
-      @update:auto-fit="updateArchiveLocalPreferences({ archiveAutoFit: $event })"
+      @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
+      @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"
+      @update:hide-scrollbars="updateArchiveLocalPreferences({ archiveHideScrollbars: $event })"
       @update:thumbnail-size="updateArchiveLocalPreferences({ archiveThumbnailSize: $event })"
       @reset="resetArchiveLocalPreferences"
     />
@@ -579,6 +587,7 @@ onUnmounted(() => {
         <template v-if="images.length > 0">
           <TypeFilterBar
             v-model:selected-type="selectedType"
+            v-model:display-mode="typeDisplayMode"
             :type-stats="typeStats"
             :total-count="images.length"
             :selected-count="selectedCount"
@@ -637,7 +646,7 @@ onUnmounted(() => {
         :is-selected="currentImage ? isSelected(currentImage) : false"
         :saving-type="savingType"
         :loading="loading"
-        :auto-fit="archiveDisplaySettings.archiveAutoFit"
+        :fit-mode="archiveDisplaySettings.archiveFitMode"
         :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
         @toggle="toggleCurrent"
         @save-type="handleSaveType"
@@ -656,6 +665,14 @@ onUnmounted(() => {
   min-height: 0;
   padding: 8px;
   background: var(--surface-muted);
+}
+
+.archive-page.hide-scrollbars :deep(*) {
+  scrollbar-width: none;
+}
+
+.archive-page.hide-scrollbars :deep(*::-webkit-scrollbar) {
+  display: none;
 }
 
 .archive-more-settings-float {

@@ -14,23 +14,29 @@ describe('archive local preferences', () => {
     const settings = createDefaultSystemSettings()
     const result = resolveArchiveDisplayPreferences(settings, {
       archivePreviewMode: 'scroll',
+      archiveTypeDisplayMode: 'tree',
       archiveThumbnailSize: 260,
-      archiveAutoFit: false,
+      archiveFitMode: 'width',
+      archiveHideScrollbars: true,
     })
 
     expect(result).toEqual({
       archivePreviewMode: 'scroll',
+      archiveTypeDisplayMode: 'tree',
       archiveThumbnailSize: 260,
-      archiveAutoFit: false,
+      archiveFitMode: 'width',
+      archiveHideScrollbars: true,
     })
   })
 
   it('persists only valid local preferences', () => {
-    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveThumbnailSize: 999 })
+    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'tree', archiveThumbnailSize: 999, archiveHideScrollbars: true })
 
     expect(readArchiveLocalPreferences()).toEqual({
       archivePreviewMode: 'scroll',
+      archiveTypeDisplayMode: 'tree',
       archiveThumbnailSize: 320,
+      archiveHideScrollbars: true,
     })
     expect(localStorage.getItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY)).toContain('scroll')
   })

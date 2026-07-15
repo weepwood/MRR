@@ -1,27 +1,32 @@
 <script setup lang="ts">
+import type { ArchiveFitMode, ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { MoreFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   previewMode: ArchivePreviewMode
+  typeDisplayMode: ArchiveTypeDisplayMode
   thumbnailSize: number
-  autoFit: boolean
+  fitMode: ArchiveFitMode
+  hideScrollbars: boolean
   hasLocalPreferences: boolean
 }>()
 
 const emit = defineEmits<{
   'update:previewMode': [mode: ArchivePreviewMode]
+  'update:typeDisplayMode': [mode: ArchiveTypeDisplayMode]
   'update:thumbnailSize': [size: number]
-  'update:autoFit': [enabled: boolean]
+  'update:fitMode': [mode: ArchiveFitMode]
+  'update:hideScrollbars': [enabled: boolean]
   'reset': []
 }>()
 
-function updateAutoFit(value: unknown) {
-  emit('update:autoFit', value === true)
-}
-
 function updateThumbnailSize(value: number | number[]) {
   emit('update:thumbnailSize', Array.isArray(value) ? value[0] ?? props.thumbnailSize : value)
+}
+
+function updateHideScrollbars(value: unknown) {
+  emit('update:hideScrollbars', value === true)
 }
 </script>
 
@@ -35,7 +40,7 @@ function updateThumbnailSize(value: number | number[]) {
       <section class="archive-more-settings" aria-label="本地显示设置">
         <div class="settings-heading">
           <strong>显示设置</strong>
-          <span>仅当前浏览器</span>
+          <span>仅保存到当前浏览器</span>
         </div>
 
         <div class="settings-row">
@@ -52,11 +57,37 @@ function updateThumbnailSize(value: number | number[]) {
         </div>
 
         <div class="settings-row">
-          <span>自动适应</span>
+          <span>分类展示</span>
+          <el-segmented
+            :model-value="props.typeDisplayMode"
+            size="small"
+            :options="[
+              { label: '按钮', value: 'buttons' },
+              { label: '目录', value: 'tree' },
+            ]"
+            @update:model-value="emit('update:typeDisplayMode', $event as ArchiveTypeDisplayMode)"
+          />
+        </div>
+
+        <div class="settings-row">
+          <span>适应方向</span>
+          <el-segmented
+            :model-value="props.fitMode"
+            size="small"
+            :options="[
+              { label: '高度', value: 'height' },
+              { label: '宽度', value: 'width' },
+            ]"
+            @update:model-value="emit('update:fitMode', $event as ArchiveFitMode)"
+          />
+        </div>
+
+        <div class="settings-row">
+          <span>隐藏滚动条</span>
           <el-switch
-            :model-value="props.autoFit"
-            aria-label="自动适应预览区域"
-            @update:model-value="updateAutoFit($event)"
+            :model-value="props.hideScrollbars"
+            aria-label="隐藏档案袋滚动条"
+            @update:model-value="updateHideScrollbars($event)"
           />
         </div>
 

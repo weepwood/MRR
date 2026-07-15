@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ArchiveFitMode } from '../composables/useArchiveLocalPreferences'
 import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
@@ -17,12 +18,12 @@ const props = withDefaults(defineProps<{
   isSelected: boolean
   savingType?: boolean
   loading?: boolean
-  autoFit?: boolean
+  fitMode?: ArchiveFitMode
   emptyDescription?: string
 }>(), {
   savingType: false,
   loading: false,
-  autoFit: true,
+  fitMode: 'height',
   emptyDescription: '请选择影像',
 })
 
@@ -168,7 +169,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="displayMode === 'single'" class="preview-stage single-stage" :class="{ 'is-auto-fit': props.autoFit }">
+      <div v-if="displayMode === 'single'" class="preview-stage single-stage" :class="`is-fit-${props.fitMode}`">
         <div v-if="imageUnavailable(props.image.imageUrl)" class="preview-image-placeholder" role="img" :aria-label="`第 ${props.index + 1} 张影像加载失败`">
           <svg viewBox="0 0 48 48" aria-hidden="true">
             <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
@@ -177,8 +178,9 @@ onUnmounted(() => {
           <span>当前图片暂不可用，请检查影像服务或文件地址</span>
         </div>
         <el-image
-          v-else-if="props.autoFit"
+          v-else
           class="preview-image fit-image"
+          :class="`fit-${props.fitMode}`"
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
           fit="contain"
@@ -191,13 +193,6 @@ onUnmounted(() => {
           @switch="handlePreviewSwitch"
           @error="markImageFailed(props.image.imageUrl)"
         />
-        <img
-          v-else
-          class="preview-image original-image"
-          :src="props.image.imageUrl"
-          :alt="`第 ${props.index + 1} 张影像`"
-          @error="markImageFailed(props.image.imageUrl)"
-        >
       </div>
 
       <div v-else ref="previewScroller" class="preview-stage">
@@ -206,7 +201,7 @@ onUnmounted(() => {
           :key="imageUrl || pageIndex"
           :ref="(element: any) => { pageRefs[pageIndex] = element }"
           class="continuous-page"
-          :class="{ 'is-auto-fit': props.autoFit }"
+          :class="`is-fit-${props.fitMode}`"
           :data-index="pageIndex"
         >
           <div v-if="imageUnavailable(imageUrl)" class="preview-image-placeholder continuous-placeholder" role="img" :aria-label="`第 ${pageIndex + 1} 张影像加载失败`">
@@ -218,8 +213,8 @@ onUnmounted(() => {
           </div>
           <img
             v-else
-            class="preview-image"
-            :class="props.autoFit ? 'fit-scroll-image' : 'original-scroll-image'"
+            class="preview-image fit-scroll-image"
+            :class="`fit-${props.fitMode}`"
             :src="imageUrl"
             :alt="`第 ${pageIndex + 1} 张影像`"
             loading="lazy"
@@ -252,7 +247,7 @@ onUnmounted(() => {
   border-radius: 12px;
 }
 
-.single-stage.is-auto-fit {
+.single-stage {
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -267,25 +262,35 @@ onUnmounted(() => {
 }
 
 .single-stage .fit-image {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
   cursor: zoom-in;
   background: transparent;
   box-shadow: none;
 }
 
-.original-image,
-.original-scroll-image {
-  width: auto;
-  max-width: none;
+.single-stage .fit-image.fit-width {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
 }
 
-.fit-scroll-image {
+.single-stage .fit-image.fit-height {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.fit-scroll-image.fit-width {
   width: min(100%, 980px);
+}
+
+.fit-scroll-image.fit-height {
+  width: auto;
+  max-width: none;
+  height: min(64vh, 720px);
 }
 
 .preview-image-placeholder {
@@ -337,7 +342,7 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
-.continuous-page.is-auto-fit {
+.continuous-page.is-fit-width {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;

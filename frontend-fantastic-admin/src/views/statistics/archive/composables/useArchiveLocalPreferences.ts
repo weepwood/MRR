@@ -2,16 +2,23 @@ import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system
 
 export const ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY = 'MRR-ADMIN:archive-local-preferences'
 
+export type ArchiveTypeDisplayMode = 'buttons' | 'tree'
+export type ArchiveFitMode = 'height' | 'width'
+
 export interface ArchiveLocalPreferences {
   archivePreviewMode?: ArchivePreviewMode
+  archiveTypeDisplayMode?: ArchiveTypeDisplayMode
   archiveThumbnailSize?: number
-  archiveAutoFit?: boolean
+  archiveFitMode?: ArchiveFitMode
+  archiveHideScrollbars?: boolean
 }
 
 export interface ArchiveDisplayPreferences {
   archivePreviewMode: ArchivePreviewMode
+  archiveTypeDisplayMode: ArchiveTypeDisplayMode
   archiveThumbnailSize: number
-  archiveAutoFit: boolean
+  archiveFitMode: ArchiveFitMode
+  archiveHideScrollbars: boolean
 }
 
 function parsePreferences(value: unknown): ArchiveLocalPreferences {
@@ -21,14 +28,23 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
 
   const source = value as Record<string, unknown>
   const thumbnailSize = Number(source.archiveThumbnailSize)
+  const legacyAutoFit = typeof source.archiveAutoFit === 'boolean' ? source.archiveAutoFit : undefined
   return {
     archivePreviewMode: source.archivePreviewMode === 'scroll' || source.archivePreviewMode === 'single'
       ? source.archivePreviewMode
       : undefined,
+    archiveTypeDisplayMode: source.archiveTypeDisplayMode === 'tree' || source.archiveTypeDisplayMode === 'buttons'
+      ? source.archiveTypeDisplayMode
+      : undefined,
     archiveThumbnailSize: Number.isFinite(thumbnailSize)
       ? Math.min(320, Math.max(160, thumbnailSize))
       : undefined,
-    archiveAutoFit: typeof source.archiveAutoFit === 'boolean' ? source.archiveAutoFit : undefined,
+    archiveFitMode: source.archiveFitMode === 'width' || source.archiveFitMode === 'height'
+      ? source.archiveFitMode
+      : legacyAutoFit === undefined ? undefined : legacyAutoFit ? 'height' : 'width',
+    archiveHideScrollbars: typeof source.archiveHideScrollbars === 'boolean'
+      ? source.archiveHideScrollbars
+      : undefined,
   }
 }
 
@@ -67,7 +83,9 @@ export function resolveArchiveDisplayPreferences(
   const preferences = parsePreferences(local)
   return {
     archivePreviewMode: preferences.archivePreviewMode ?? settings.archivePreviewMode,
+    archiveTypeDisplayMode: preferences.archiveTypeDisplayMode ?? 'buttons',
     archiveThumbnailSize: preferences.archiveThumbnailSize ?? settings.archiveThumbnailSize,
-    archiveAutoFit: preferences.archiveAutoFit ?? settings.archiveAutoFit,
+    archiveFitMode: preferences.archiveFitMode ?? (settings.archiveAutoFit ? 'height' : 'width'),
+    archiveHideScrollbars: preferences.archiveHideScrollbars ?? false,
   }
 }

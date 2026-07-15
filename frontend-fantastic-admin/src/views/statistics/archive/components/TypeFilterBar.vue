@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
 import type { TypeStatItem } from '../types'
 
 interface DirectoryNode {
@@ -6,7 +7,6 @@ interface DirectoryNode {
   label: string
   count: number
   disabled?: boolean
-  children?: DirectoryNode[]
 }
 
 defineOptions({ name: 'TypeFilterBar' })
@@ -28,20 +28,20 @@ const emit = defineEmits<{
 }>()
 
 const selectedType = defineModel<number | 'all'>('selectedType', { default: 'all' })
-const displayMode = ref<'buttons' | 'tree'>('buttons')
+const displayMode = defineModel<ArchiveTypeDisplayMode>('displayMode', { default: 'buttons' })
 
 const directoryTree = computed<DirectoryNode[]>(() => [
   {
     id: 'all',
     label: '全部影像',
     count: props.totalCount,
-    children: props.typeStats.map(item => ({
-      id: item.value,
-      label: item.label,
-      count: item.count,
-      disabled: item.count === 0,
-    })),
   },
+  ...props.typeStats.map(item => ({
+    id: item.value,
+    label: item.label,
+    count: item.count,
+    disabled: item.count === 0,
+  })),
 ])
 
 function onSelect(value: number | 'all') {
@@ -68,18 +68,7 @@ function onSelection(value: number | 'all') {
 <template>
   <div class="type-bar">
     <div class="type-bar-actions">
-      <span class="select-count">已选 {{ props.selectedCount }}</span>
-      <div class="type-actions">
-        <el-segmented
-          v-model="displayMode"
-          size="small"
-          aria-label="分类展示方式"
-          :options="[
-            { label: '按钮', value: 'buttons' },
-            { label: '目录', value: 'tree' },
-          ]"
-        />
-      </div>
+      <span v-if="props.selectedCount" class="select-count">已选 {{ props.selectedCount }}</span>
     </div>
     <div v-if="displayMode === 'buttons'" class="type-tabs">
       <div class="type-tab-entry">
@@ -129,7 +118,6 @@ function onSelection(value: number | 'all') {
       :props="{ children: 'children', label: 'label', disabled: 'disabled' }"
       node-key="id"
       :current-node-key="selectedType"
-      :default-expanded-keys="['all']"
       :expand-on-click-node="false"
       highlight-current
       @node-click="onNodeClick"
@@ -172,12 +160,6 @@ function onSelection(value: number | 'all') {
   font-size: 12px;
   color: var(--text-tertiary);
   white-space: nowrap;
-}
-
-.type-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 .type-tabs {

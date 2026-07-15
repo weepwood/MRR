@@ -26,6 +26,9 @@ interface DisplayPoint extends MrrSquareStackTrendItem {
   successBlocks: number
 }
 
+const CELL_SIZE = 10
+const CELL_GAP = 3
+
 const viewportRef = ref<HTMLElement | null>(null)
 const activeIndex = ref<number | null>(null)
 const guideX = ref(0)
@@ -59,11 +62,17 @@ const points = computed<DisplayPoint[]>(() => props.data.map((item) => {
 
 const activePoint = computed(() => activeIndex.value === null ? null : points.value[activeIndex.value] ?? null)
 const labelStep = computed(() => Math.max(1, Math.ceil(points.value.length / 12)))
+const matrixWidth = computed(() => Math.max(
+  CELL_SIZE,
+  points.value.length * CELL_SIZE + Math.max(0, points.value.length - 1) * CELL_GAP,
+))
 const chartStyle = computed(() => ({
   '--stack-height': `${props.height}px`,
   '--rows': props.rows,
   '--point-count': Math.max(1, points.value.length),
-  '--chart-min-width': `${Math.max(560, points.value.length * 34)}px`,
+  '--cell-size': `${CELL_SIZE}px`,
+  '--cell-gap': `${CELL_GAP}px`,
+  '--matrix-width': `${matrixWidth.value}px`,
 }))
 const guideStyle = computed(() => ({ left: `${guideX.value}px` }))
 const tooltipStyle = computed(() => ({
@@ -310,7 +319,8 @@ function clearActivePoint() {
 
 .plot-content {
   position: relative;
-  min-width: var(--chart-min-width);
+  width: max(100%, var(--matrix-width));
+  min-width: 560px;
 }
 
 .grid-lines {
@@ -331,32 +341,35 @@ function clearActivePoint() {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(var(--point-count), minmax(26px, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(var(--point-count), var(--cell-size));
+  column-gap: var(--cell-gap);
   align-items: end;
+  justify-content: start;
+  width: max-content;
 }
 
 .column-wrap {
   display: grid;
   gap: 8px;
   justify-items: center;
-  min-width: 26px;
+  width: var(--cell-size);
+  min-width: var(--cell-size);
   cursor: crosshair;
 }
 
 .column-stack {
   display: grid;
   grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
-  gap: 3px;
-  width: 100%;
+  row-gap: var(--cell-gap);
+  width: var(--cell-size);
   height: var(--stack-height);
   align-items: stretch;
 }
 
 .block {
-  width: min(10px, 72%);
+  box-sizing: border-box;
+  width: var(--cell-size);
   min-height: 4px;
-  margin: 0 auto;
   border-radius: 2px;
   transition: opacity 140ms ease, transform 140ms ease, filter 140ms ease;
 }
@@ -377,6 +390,8 @@ function clearActivePoint() {
 }
 
 .column-wrap.is-active .block {
+  position: relative;
+  z-index: 2;
   filter: saturate(1.08);
   transform: scale(1.08);
 }
@@ -386,12 +401,17 @@ function clearActivePoint() {
 }
 
 .category-label {
+  position: relative;
+  left: 50%;
+  width: 64px;
   min-height: 14px;
   overflow: hidden;
   font-size: 10px;
   color: var(--el-text-color-secondary);
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transform: translateX(-50%);
 }
 
 .category-label.is-hidden {
@@ -506,6 +526,10 @@ function clearActivePoint() {
 
   .plot-scroll {
     margin-left: 40px;
+  }
+
+  .plot-content {
+    min-width: max(480px, var(--matrix-width));
   }
 }
 </style>

@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class Statistics {
     private Long id;
+    private Long archiveId;
     private String bah;
     private String cid;
     private String openerNo;

@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.entity.ArchiveRecord;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ArchiveRecordService;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +37,7 @@ public class ArchiveRecordController {
             Long id
     ) {
         ArchiveRecord archive = archiveRecordService.findById(id);
-        return archive == null ? Result.fail("未找到病案") : Result.success(archive);
+        return archive == null ? Result.notFound("未找到病案") : Result.success(archive);
     }
 
     @GetMapping("/resolve")
@@ -48,9 +49,12 @@ public class ArchiveRecordController {
         if ((bah == null || bah.isBlank()) && (sjh == null || sjh.isBlank())) {
             return Result.fail("病案号和上架号不能同时为空");
         }
+        if ((sjh == null || sjh.isBlank()) && MedicalRecordCodeUtils.requiresSjhForBah(bah)) {
+            return Result.fail("病案号达到 10000000 时必须同时提供上架号");
+        }
 
         ArchiveRecord archive = archiveRecordService.findByCode(bah, sjh);
-        return archive == null ? Result.fail("未找到唯一匹配的病案") : Result.success(archive);
+        return archive == null ? Result.notFound("未找到唯一匹配的病案") : Result.success(archive);
     }
 
     @GetMapping("/{id}/scans")
@@ -62,7 +66,7 @@ public class ArchiveRecordController {
     ) {
         ArchiveRecord archive = archiveRecordService.findById(id);
         if (archive == null) {
-            return Result.fail("未找到病案");
+            return Result.notFound("未找到病案");
         }
         return Result.success(archiveRecordService.findScans(id));
     }

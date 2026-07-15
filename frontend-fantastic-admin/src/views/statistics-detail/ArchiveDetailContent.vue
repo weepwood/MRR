@@ -325,7 +325,7 @@ function openArchive(item = selectedArchive.value) {
     return
   }
   router.push({
-    path: `/archive/${item.bah}`,
+    path: '/archive/embed',
     query: {
       bah: item.bah,
       cid: item.cid || '',

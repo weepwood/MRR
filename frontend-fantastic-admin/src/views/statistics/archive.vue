@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import type { GalleryImage, ViewMode } from './archive/types'
 import type { IdCardArchiveCase } from '@/api/modules/search'
-import type { GalleryImage, RouteArchiveMeta, ViewMode } from './archive/types'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
+import { Document, Download, Printer } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,7 +26,7 @@ import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
-const ID_CARD_PATTERN = /^\d{15}(\d{2}[0-9Xx])?$/
+const ID_CARD_PATTERN = /^\d{15}(?:\d{2}[\dX])?$/i
 const route = useRoute()
 const router = useRouter()
 
@@ -84,19 +85,13 @@ const currentImage = computed(() => filteredImages.value[selectedImageIndex.valu
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
 const typeStats = computed(() => buildTypeStats(images.value))
 const patient = computed(() => patientList.value[0])
+const showViewer = computed(() => images.value.length > 0 || Boolean(
+  sanitizeParam(route.query.id) || sanitizeParam(route.query.bah) || sanitizeParam(route.query.sjh),
+))
 const archiveWorkspaceStyle = computed(() => ({
   '--archive-thumb-column-width': `${archiveSettings.archiveThumbnailSize + 18}px`,
 }))
-
-const routeArchive = computed<RouteArchiveMeta>(() => ({
-  bah: searchBah.value || sanitizeParam(route.query.bah),
-  cid: sanitizeParam(route.query.cid),
-  type: sanitizeParam(route.query.type),
-  date: sanitizeParam(route.query.date),
-  pages: sanitizeParam(route.query.pages),
-  openerNo: sanitizeParam(route.query.openerNo),
-  sjh: searchSjh.value || sanitizeParam(route.query.sjh),
-}))
+const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/embed' : '/archive')
 
 const selectionStorageKey = computed(() => {
   const bah = normalizeSearchParam(searchBah.value)
@@ -192,7 +187,6 @@ async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase) {
 }
 
 async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string) {
-  searchIdCard.value = ''
   const isPlainIdCard = ID_CARD_PATTERN.test(idParam)
   if (idCardToken.value !== idParam || !archiveCases.value.length) {
     const result = isPlainIdCard
@@ -221,7 +215,7 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
   const selectedSjh = normalizeSearchParam(selectedCase.sjh)
   if (resolvedToken !== idParam || selectedBah !== bah || selectedSjh !== sjh) {
     await router.replace({
-      path: '/archive',
+      path: archivePath.value,
       query: {
         id: resolvedToken,
         bah: selectedBah,
@@ -235,25 +229,12 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
 }
 
 async function syncSearchFromRoute() {
-  const legacyBah = normalizeSearchParam(route.params.bah)
-  const bah = normalizeSearchParam(route.query.bah || legacyBah)
+  const bah = normalizeSearchParam(route.query.bah)
   const sjh = normalizeSearchParam(route.query.sjh)
   const idToken = sanitizeParam(route.query.id)
 
   searchBah.value = bah
   searchSjh.value = sjh
-
-  if (legacyBah) {
-    await router.replace({
-      path: '/archive',
-      query: {
-        ...route.query,
-        bah,
-        ...(sjh ? { sjh } : {}),
-      },
-    })
-    return
-  }
 
   if (idToken) {
     await syncIdCardSearchFromRoute(idToken, bah, sjh)
@@ -288,7 +269,7 @@ async function handleIdCardSearch() {
   const bah = normalizeSearchParam(firstCase.bah)
   const sjh = normalizeSearchParam(firstCase.sjh)
   await router.push({
-    path: '/archive',
+    path: archivePath.value,
     query: {
       id: result.token,
       bah,
@@ -325,7 +306,7 @@ async function handleSearch() {
     query.sjh = sjh
   }
 
-  const location = { path: '/archive', query }
+  const location = { path: archivePath.value, query }
   if (router.resolve(location).fullPath === route.fullPath) {
     await loadImages()
     return
@@ -351,7 +332,7 @@ async function selectArchiveCase(archiveCase: IdCardArchiveCase) {
   const bah = normalizeSearchParam(archiveCase.bah)
   const sjh = normalizeSearchParam(archiveCase.sjh)
   const location = {
-    path: '/archive',
+    path: archivePath.value,
     query: {
       id: token,
       bah,
@@ -445,7 +426,7 @@ watch(filteredImages, () => {
 })
 
 watch(
-  () => [route.params.bah, route.query.bah, route.query.sjh, route.query.id],
+  () => [route.query.bah, route.query.sjh, route.query.id],
   syncSearchFromRoute,
   { immediate: true },
 )
@@ -482,8 +463,8 @@ onUnmounted(() => {
     <div
       class="archive-workspace"
       :class="{
-        'has-images': images.length > 0,
-        'is-empty': images.length === 0,
+        'has-viewer': showViewer,
+        'is-empty': !showViewer,
         'is-list-mode': viewMode === 'list',
       }"
       :style="archiveWorkspaceStyle"
@@ -491,24 +472,14 @@ onUnmounted(() => {
       <section class="archive-sidebar">
         <ArchiveHeader
           :loading="loading || idCardLoading"
-          :downloading="downloading"
-          :printing="printing"
-          :exporting-pdf="exportingPdf"
-          :show-actions="images.length > 0"
-          :selected-count="selectedCount"
           @back="goBack"
           @refresh="handleRefresh"
-          @download="handleDownload"
-          @print="handlePrint"
-          @export-pdf="handleExportPdf"
         />
 
         <ArchiveSearchBar
           v-model:search-id-card="searchIdCard"
           v-model:search-bah="searchBah"
           v-model:search-sjh="searchSjh"
-          :route-meta="routeArchive"
-          :has-images="images.length > 0"
           :loading="loading || idCardLoading"
           @search="handleSearch"
         />
@@ -539,12 +510,28 @@ onUnmounted(() => {
           />
         </template>
 
-        <div v-else-if="!loading && !idCardLoading && !errorMsg" class="empty-state">
+        <div v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg" class="empty-state">
           <el-empty description="输入身份证号、病案号或上架号查询影像" />
+        </div>
+
+        <div v-if="images.length > 0" class="archive-bottom-actions">
+          <el-button class="download-action" :icon="Download" :loading="downloading" @click="handleDownload">
+            下载档案袋
+          </el-button>
+          <el-button :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
+            打印选中<template v-if="selectedCount">
+              ({{ selectedCount }})
+            </template>
+          </el-button>
+          <el-button type="primary" :icon="Document" :loading="exportingPdf" :disabled="!selectedCount" @click="handleExportPdf">
+            导出 PDF<template v-if="selectedCount">
+              ({{ selectedCount }})
+            </template>
+          </el-button>
         </div>
       </section>
 
-      <div v-if="images.length > 0" class="viewer-layout">
+      <div v-if="showViewer" class="viewer-layout">
         <ThumbStrip
           ref="thumbStripRef"
           v-model:view-mode="viewMode"
@@ -559,7 +546,7 @@ onUnmounted(() => {
       </div>
 
       <PreviewPanel
-        v-if="images.length > 0"
+        v-if="showViewer"
         v-model:display-mode="previewMode"
         :image="currentImage"
         :preview-list="previewList"
@@ -569,6 +556,7 @@ onUnmounted(() => {
         :saving-type="savingType"
         :loading="loading"
         :auto-fit="archiveSettings.archiveAutoFit"
+        :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
         @toggle="toggleCurrent"
         @save-type="handleSaveType"
         @navigate="navigate"
@@ -592,7 +580,7 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.archive-workspace.has-images {
+.archive-workspace.has-viewer {
   display: grid;
   grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
   gap: 12px;
@@ -600,7 +588,7 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-.archive-workspace.has-images.is-list-mode {
+.archive-workspace.has-viewer.is-list-mode {
   grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
 }
 
@@ -611,8 +599,27 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.has-images .archive-sidebar {
+.has-viewer .archive-sidebar {
   overflow: hidden auto;
+}
+
+.archive-bottom-actions {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+  margin-top: auto;
+  border-top: 1px solid var(--divider);
+}
+
+.archive-bottom-actions .download-action {
+  grid-column: 1 / -1;
+}
+
+.archive-bottom-actions :deep(.el-button) {
+  min-width: 0;
+  margin: 0;
 }
 
 :global(body.archive-immersive .toolbar-container) {
@@ -671,8 +678,8 @@ onUnmounted(() => {
 }
 
 @media (width <= 1100px) {
-  .archive-workspace.has-images,
-  .archive-workspace.has-images.is-list-mode {
+  .archive-workspace.has-viewer,
+  .archive-workspace.has-viewer.is-list-mode {
     grid-template-columns: 1fr;
     height: auto;
     min-height: initial;
@@ -682,11 +689,11 @@ onUnmounted(() => {
     padding: 16px;
   }
 
-  .has-images .archive-sidebar {
+  .has-viewer .archive-sidebar {
     overflow: visible;
   }
 
-  .archive-workspace.has-images .preview-panel {
+  .archive-workspace.has-viewer .preview-panel {
     height: min(68vh, 640px);
     min-height: 420px;
   }

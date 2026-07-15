@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ArchivePreviewMode } from '@/utils/system-settings'
 import type { GalleryImage } from '../types'
+import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
-import 'element-plus/es/components/message-box/style/css'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { normalizeText, TYPE_OPTIONS } from '../constants'
+import 'element-plus/es/components/message-box/style/css'
 
 defineOptions({ name: 'PreviewPanel' })
 
@@ -18,10 +18,12 @@ const props = withDefaults(defineProps<{
   savingType?: boolean
   loading?: boolean
   autoFit?: boolean
+  emptyDescription?: string
 }>(), {
   savingType: false,
   loading: false,
   autoFit: true,
+  emptyDescription: '请选择影像',
 })
 
 const emit = defineEmits<{
@@ -240,7 +242,7 @@ onUnmounted(() => {
         </article>
       </div>
     </template>
-    <el-empty v-else description="请选择影像" />
+    <el-empty v-else :description="props.emptyDescription" />
   </div>
 </template>
 

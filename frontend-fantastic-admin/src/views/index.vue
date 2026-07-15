@@ -45,7 +45,7 @@ const quickActions = [
   { label: '记录管理', icon: 'i-ant-design:database-twotone', path: '/records', color: '#409eff', perm: 'record:read' },
   { label: '统计分析', icon: 'i-ant-design:bar-chart-twotone', path: '/statistics', color: '#67c23a', perm: 'statistics:read' },
   { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
-  { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive', color: '#909399', perm: 'record:read' },
+  { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive/embed', color: '#909399', perm: 'record:read' },
   { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
 
 ]

@@ -191,6 +191,7 @@ defineExpose({ resetVisible, scrollToIndex })
   min-width: 0;
   padding: 8px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   background: var(--surface-muted);
   border: 1px solid var(--divider);
   border-radius: 10px;

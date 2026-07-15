@@ -13,6 +13,29 @@ const publicStatusRoute: RouteRecordRaw = {
   },
 }
 
+const archiveStandaloneRoute: RouteRecordRaw = {
+  path: '/archive',
+  name: 'archive',
+  component: () => import('@/views/statistics/archive.vue'),
+  meta: {
+    title: '影像档案袋',
+    auth: ['record:read'],
+    cache: false,
+  },
+}
+
+const archiveEmbeddedRoute: RouteRecordRaw = {
+  path: '/archive/embed',
+  name: 'archiveEmbedded',
+  component: () => import('@/views/statistics/archive.vue'),
+  meta: {
+    title: '影像档案袋',
+    icon: 'i-ant-design:folder-open-twotone',
+    auth: ['record:read'],
+    cache: false,
+  },
+}
+
 const monitoringFilesystemRoute: RouteRecordRaw = {
   path: '/monitoring',
   name: 'monitoring',
@@ -51,6 +74,7 @@ const constantRoutes: RouteRecordRaw[] = [
     },
   },
   publicStatusRoute,
+  archiveStandaloneRoute,
   {
     path: '/:all(.*)*',
     name: 'notFound',
@@ -209,17 +233,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
-      {
-        path: '/archive/:bah?',
-        component: () => import('@/views/statistics/archive.vue'),
-        meta: {
-          title: '影像档案袋',
-          icon: 'i-ant-design:folder-open-twotone',
-          auth: ['record:read'],
-          // 该页面会切换全局沉浸式布局并持有大量图片，不进入 KeepAlive。
-          cache: false,
-        },
-      },
+      archiveEmbeddedRoute,
     ],
   },
   {
@@ -303,16 +317,17 @@ const asyncRoutes: Route.recordMainRaw[] = [
 const generatedConstantRoutes = generatedRoutes.filter(
   item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant === true,
 )
-const constantRoutesByFilesystem = [publicStatusRoute, ...generatedConstantRoutes]
+const constantRoutesByFilesystem = [publicStatusRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
 
 const generatedAsyncRoutes = generatedRoutes.filter(
-  item => !['/status', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+  item => !['/status', '/statistics/archive', '/monitoring', '/monitoring-dashboard'].includes(item.path)
     && item.meta?.enabled !== false
     && item.meta?.constant !== true
     && item.meta?.layout !== false,
 )
 const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),
+  archiveEmbeddedRoute,
   monitoringFilesystemRoute,
 ]
 

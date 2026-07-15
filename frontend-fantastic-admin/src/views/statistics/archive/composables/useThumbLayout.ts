@@ -42,7 +42,7 @@ export function useThumbLayout(
 
     const targetWidth = Math.min(320, Math.max(160, preferredWidth.value))
     const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (targetWidth + GAP)))
-    const actualItemWidth = Math.max(140, (containerWidth - (idealCols - 1) * GAP) / idealCols)
+    const actualItemWidth = Math.max(140, Math.floor((containerWidth - (idealCols - 1) * GAP) / idealCols))
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 

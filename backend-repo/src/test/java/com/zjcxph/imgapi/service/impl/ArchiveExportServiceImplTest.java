@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.storage.ImageStorage;
@@ -28,6 +29,27 @@ class ArchiveExportServiceImplTest {
 
     @Mock
     private ImageStorage imageStorage;
+
+    @Test
+    void prepareArchiveConvertsScansToStorageLocations() {
+        Scan scan = new Scan();
+        scan.setBah("00789508");
+        scan.setBrxh("605746");
+        scan.setFolder("25.03.15");
+        scan.setFilename("page.jpg");
+        when(scanService.getImageListByCode("00789508", "789508", "", ""))
+                .thenReturn(List.of(scan));
+        ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
+
+        ArchiveExportService.BatchZipExport export = service.prepareArchive("00789508", "");
+
+        assertThat(export.items()).singleElement().satisfies(item -> {
+            assertThat(item.getBah()).isEqualTo("00789508");
+            assertThat(item.getBrxh()).isEqualTo("605746");
+            assertThat(item.getFolder()).isEqualTo("25.03.15");
+            assertThat(item.getFilename()).isEqualTo("page.jpg");
+        });
+    }
 
     @Test
     void streamsZipAndAvoidsAllEntryNameCollisions() throws Exception {

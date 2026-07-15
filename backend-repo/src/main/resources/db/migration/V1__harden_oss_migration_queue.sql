@@ -30,6 +30,26 @@ BEGIN
 END
 $$;
 
+-- Applying Flyway requires a backend restart. Any old in-memory task is no
+-- longer running, so normalize its persisted state before adding the unique
+-- active-job index. The records remain retryable and are not counted as lost.
+UPDATE app.migration_job
+SET status = 'failed',
+    error_message = COALESCE(error_message, '数据库升级期间服务重启，原迁移任务已中断'),
+    completed_at = COALESCE(completed_at, NOW()),
+    updated_at = NOW()
+WHERE status IN ('pending', 'running');
+
+UPDATE app.mr_scan
+SET migration_status = 'retry_wait',
+    migration_next_retry = NOW(),
+    migration_job_id = NULL,
+    migration_lease_owner = NULL,
+    migration_lease_until = NULL,
+    migration_last_error = COALESCE(migration_last_error, '数据库升级期间已释放迁移租约')
+WHERE migration_status IN ('claimed', 'uploading')
+  AND (oss_url IS NULL OR oss_url = '');
+
 -- At most one full migration job may be pending or running. This protects
 -- against double-clicks and races between API requests.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_migration_job_single_active

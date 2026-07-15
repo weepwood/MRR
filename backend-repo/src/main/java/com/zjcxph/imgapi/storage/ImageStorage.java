@@ -14,4 +14,6 @@ import java.io.InputStream;
 public interface ImageStorage {
 
     InputStream open(PathDO image) throws IOException;
+
+    long size(PathDO image) throws IOException;
 }

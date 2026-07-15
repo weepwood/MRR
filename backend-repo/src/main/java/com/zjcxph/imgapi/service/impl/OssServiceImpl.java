@@ -6,6 +6,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -27,12 +28,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Base64;
 import java.util.Date;
+import java.util.HexFormat;
+import java.util.Map;
 
 @Service
 public class OssServiceImpl implements OssService {
 
     private static final Logger logger = LoggerFactory.getLogger(OssServiceImpl.class);
+    private static final String SOURCE_MD5_METADATA = "source-md5";
 
     private final OssProperties ossProperties;
     private AmazonS3 s3Client;
@@ -43,56 +48,50 @@ public class OssServiceImpl implements OssService {
 
     @PostConstruct
     public void init() {
-        if (ossProperties.getAccessKeyId() == null || ossProperties.getAccessKeyId().isBlank()) {
-            logger.warn("OSS accessKeyId is not configured. OSS operations will fail until configured.");
+        String accessKeyId = ossProperties.getAccessKeyId();
+        String accessKeySecret = ossProperties.getAccessKeySecret();
+        if (accessKeyId == null || accessKeyId.isBlank()
+                || accessKeySecret == null || accessKeySecret.isBlank()) {
+            logger.warn("OSS credentials are not configured. OSS operations will fail until configured.");
             return;
         }
 
-        // 验证配置是否正确（检查是否包含引号）
-        String accessKeyId = ossProperties.getAccessKeyId();
-        String accessKeySecret = ossProperties.getAccessKeySecret();
-        
         if (accessKeyId.startsWith("\"") || accessKeyId.endsWith("\"")) {
-            logger.error("OSS Access Key ID contains quotes! This will cause authentication failures. " +
-                        "Please remove quotes from application.properties or environment variables.");
             throw new IllegalStateException("Invalid OSS Access Key ID format: contains quotes");
         }
-        
         if (accessKeySecret.startsWith("\"") || accessKeySecret.endsWith("\"")) {
-            logger.error("OSS Access Key Secret contains quotes! This will cause authentication failures. " +
-                        "Please remove quotes from application.properties or environment variables.");
             throw new IllegalStateException("Invalid OSS Access Key Secret format: contains quotes");
         }
 
-        try {
-            BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
+        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
+        ClientConfiguration clientConfig = new ClientConfiguration();
+        clientConfig.setConnectionTimeout(ossProperties.getConnectionTimeoutMs());
+        clientConfig.setSocketTimeout(ossProperties.getSocketTimeoutMs());
+        clientConfig.setMaxConnections(Math.max(1, ossProperties.getMaxConnections()));
+        clientConfig.setMaxErrorRetry(Math.max(0, ossProperties.getMaxErrorRetry()));
 
-            ClientConfiguration clientConfig = new ClientConfiguration();
-            clientConfig.setConnectionTimeout(30000);
-            clientConfig.setSocketTimeout(60000);
-            clientConfig.setMaxConnections(50);
-
-            String endpoint = ossProperties.getEndpoint();
-            if (!endpoint.startsWith("http://") && !endpoint.startsWith("https://")) {
-                endpoint = "https://" + endpoint;
-            }
-
-            s3Client = AmazonS3ClientBuilder.standard()
-                    .withEndpointConfiguration(
-                            new AwsClientBuilder.EndpointConfiguration(endpoint, ossProperties.getRegion()))
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withClientConfiguration(clientConfig)
-                    .withPathStyleAccessEnabled(false)
-                    .build();
-
-            // 隐藏敏感信息，只显示前4位和后4位
-            String maskedKeyId = accessKeyId.length() > 8 ? 
-                accessKeyId.substring(0, 4) + "****" + accessKeyId.substring(accessKeyId.length() - 4) : "****";
-            logger.info("OSS client initialized successfully: endpoint={}, bucket={}, accessKeyId={}", 
-                       ossProperties.getEndpoint(), ossProperties.getBucket(), maskedKeyId);
-        } catch (Exception e) {
-            logger.error("Failed to initialize OSS client", e);
+        String endpoint = ossProperties.getEndpoint();
+        if (endpoint == null || endpoint.isBlank()) {
+            throw new IllegalStateException("OSS endpoint is not configured");
         }
+        if (!endpoint.startsWith("http://") && !endpoint.startsWith("https://")) {
+            endpoint = "https://" + endpoint;
+        }
+
+        s3Client = AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(
+                        new AwsClientBuilder.EndpointConfiguration(endpoint, ossProperties.getRegion()))
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withClientConfiguration(clientConfig)
+                .withPathStyleAccessEnabled(false)
+                .build();
+
+        String maskedKeyId = accessKeyId.length() > 8
+                ? accessKeyId.substring(0, 4) + "****" + accessKeyId.substring(accessKeyId.length() - 4)
+                : "****";
+        logger.info("OSS client initialized: endpoint={}, bucket={}, maxConnections={}, accessKeyId={}",
+                ossProperties.getEndpoint(), ossProperties.getBucket(),
+                ossProperties.getMaxConnections(), maskedKeyId);
     }
 
     @PreDestroy
@@ -114,66 +113,37 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
-    public String uploadFile(String localFilePath, String ossKey) {
+    public String uploadFile(String localFilePath, String ossKey, String checksumMd5) {
         ensureClient();
         File file = new File(localFilePath);
         if (!file.exists() || !file.isFile()) {
             throw new IllegalArgumentException("Local file does not exist: " + localFilePath);
         }
 
-        try {
-            // 1. 计算本地文件 MD5（用于后续校验）
-            String localMd5 = calculateMd5(localFilePath);
-            logger.debug("Local file MD5: {} for {}", localMd5, localFilePath);
+        String localMd5 = checksumMd5;
+        if (localMd5 == null || localMd5.isBlank()) {
+            localMd5 = calculateMd5(localFilePath);
+        }
+        localMd5 = localMd5.toLowerCase();
 
+        try {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.length());
-
-            // Determine content type from filename
-            String filename = file.getName().toLowerCase();
-            if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
-                metadata.setContentType("image/jpeg");
-            } else if (filename.endsWith(".png")) {
-                metadata.setContentType("image/png");
-            } else if (filename.endsWith(".gif")) {
-                metadata.setContentType("image/gif");
-            } else if (filename.endsWith(".bmp")) {
-                metadata.setContentType("image/bmp");
-            } else {
-                metadata.setContentType("application/octet-stream");
-            }
+            metadata.setContentType(resolveContentType(file.getName()));
+            metadata.setContentMD5(Base64.getEncoder().encodeToString(HexFormat.of().parseHex(localMd5)));
+            metadata.addUserMetadata(SOURCE_MD5_METADATA, localMd5);
 
             PutObjectRequest putRequest = new PutObjectRequest(
-                    ossProperties.getBucket(), ossKey, file)
-                    .withMetadata(metadata);
-
-            // 2. 上传文件并获取结果
+                    ossProperties.getBucket(), ossKey, file).withMetadata(metadata);
             PutObjectResult result = s3Client.putObject(putRequest);
-            
-            // 3. 上传后校验：对比 ETag 和 MD5
-            String etag = result.getETag();
-            if (etag != null) {
-                // ETag 通常带引号，需要去除
-                etag = etag.replace("\"", "").trim();
-                
-                // 对于单部分上传，ETag 就是 MD5；对于多部分上传则不同
-                // 这里我们进行对比并记录日志
-                if (etag.equalsIgnoreCase(localMd5)) {
-                    logger.info("Upload verified: MD5 match for {} -> {} (MD5: {})", 
-                               localFilePath, ossKey, localMd5);
-                } else {
-                    logger.warn("ETag differs from local MD5 for {} -> {}. " +
-                               "Local MD5: {}, OSS ETag: {}. " +
-                               "This is normal for multi-part uploads.", 
-                               localFilePath, ossKey, localMd5, etag);
-                    // 注意：多部分上传时 ETag 不是简单的 MD5，所以不视为错误
-                    // 如果需要严格校验，可以下载文件重新计算 MD5
-                }
-            } else {
-                logger.warn("No ETag returned from OSS for {} -> {}", localFilePath, ossKey);
+
+            String etag = normalizeEtag(result.getETag());
+            if (etag != null && !etag.contains("-") && !etag.equalsIgnoreCase(localMd5)) {
+                logger.warn("OSS ETag differs from source MD5 for key={}: source={}, etag={}",
+                        ossKey, localMd5, etag);
             }
-            
-            logger.info("Uploaded to OSS: {} -> {}", localFilePath, ossKey);
+
+            logger.debug("Uploaded file to OSS: {} -> {}", localFilePath, ossKey);
             return ossKey;
         } catch (Exception e) {
             logger.error("Failed to upload file to OSS: {} -> {}", localFilePath, ossKey, e);
@@ -188,11 +158,8 @@ public class OssServiceImpl implements OssService {
         try {
             Date expiration = new Date(System.currentTimeMillis()
                     + (long) ossProperties.getUrlExpireSeconds() * 1000);
-
             GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
-                    ossProperties.getBucket(), ossKey)
-                    .withExpiration(expiration);
-
+                    ossProperties.getBucket(), ossKey).withExpiration(expiration);
             URL url = s3Client.generatePresignedUrl(request);
             return url.toString();
         } catch (Exception e) {
@@ -223,6 +190,34 @@ public class OssServiceImpl implements OssService {
     }
 
     @Override
+    public boolean isObjectEquivalent(String ossKey, long expectedSize, String expectedMd5) {
+        ensureClient();
+        try {
+            ObjectMetadata metadata = s3Client.getObjectMetadata(ossProperties.getBucket(), ossKey);
+            if (metadata.getContentLength() != expectedSize) {
+                return false;
+            }
+
+            Map<String, String> userMetadata = metadata.getUserMetadata();
+            String storedSourceMd5 = userMetadata == null ? null : userMetadata.get(SOURCE_MD5_METADATA);
+            if (storedSourceMd5 != null && expectedMd5 != null) {
+                return storedSourceMd5.equalsIgnoreCase(expectedMd5);
+            }
+
+            String etag = normalizeEtag(metadata.getETag());
+            return etag != null && !etag.contains("-")
+                    && expectedMd5 != null && etag.equalsIgnoreCase(expectedMd5);
+        } catch (AmazonS3Exception e) {
+            if (e.getStatusCode() == 404) {
+                return false;
+            }
+            throw new RuntimeException("Failed to inspect OSS object: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to inspect OSS object: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     @CacheEvict(value = "ossSignedUrl", key = "#ossKey")
     public void deleteObject(String ossKey) {
         ensureClient();
@@ -247,33 +242,46 @@ public class OssServiceImpl implements OssService {
     @Override
     public boolean verifyUploadIntegrity(String ossKey, String expectedMd5) {
         ensureClient();
-        
         if (expectedMd5 == null || expectedMd5.isBlank()) {
             logger.warn("Cannot verify integrity: expected MD5 is empty for {}", ossKey);
             return false;
         }
-        
+
         try {
-            // 从 OSS 下载文件到临时流并计算 MD5
             S3Object s3Object = s3Client.getObject(ossProperties.getBucket(), ossKey);
-            
             try (InputStream inputStream = s3Object.getObjectContent()) {
                 String actualMd5 = DigestUtils.md5Hex(inputStream);
-                
                 boolean match = actualMd5.equalsIgnoreCase(expectedMd5);
-                
-                if (match) {
-                    logger.info("Integrity verification passed for {}: MD5={}", ossKey, actualMd5);
-                } else {
-                    logger.error("Integrity verification FAILED for {}! Expected: {}, Actual: {}", 
-                                ossKey, expectedMd5, actualMd5);
+                if (!match) {
+                    logger.error("Integrity verification failed for {}: expected={}, actual={}",
+                            ossKey, expectedMd5, actualMd5);
                 }
-                
                 return match;
             }
         } catch (Exception e) {
             logger.error("Failed to verify upload integrity for {}", ossKey, e);
             return false;
         }
+    }
+
+    private String resolveContentType(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        if (lower.endsWith(".bmp")) {
+            return "image/bmp";
+        }
+        return "application/octet-stream";
+    }
+
+    private String normalizeEtag(String etag) {
+        return etag == null ? null : etag.replace("\"", "").trim();
     }
 }

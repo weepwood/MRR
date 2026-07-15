@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.util.Date;
 
-
 @Data
 public class Scan {
     private Integer id;
@@ -19,15 +18,21 @@ public class Scan {
     private Integer uploadFlag;
     private String folder;
 
-    // OSS field accessors
     // OSS migration fields
     private String ossUrl;
     private Long fileSize;
     private String checksumMd5;
     private String migrationStatus;
     private Date migratedAt;
+    private Long migrationJobId;
+    private Integer migrationAttempts;
+    private Date migrationNextRetry;
+    private String migrationLeaseOwner;
+    private Date migrationLeaseUntil;
+    private String migrationLastError;
 
-    public Scan() {}
+    public Scan() {
+    }
 
     public Scan(Integer id, String brxh, String bah, String sjh, String filename, Integer btype, Integer pages,
                 String openerNo, Date uploadDate, Integer uploadFlag, String folder) {
@@ -43,5 +48,4 @@ public class Scan {
         this.uploadFlag = uploadFlag;
         this.folder = folder;
     }
-
 }

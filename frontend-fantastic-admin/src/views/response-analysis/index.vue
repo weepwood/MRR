@@ -154,7 +154,7 @@ onMounted(loadData)
           <el-empty v-else description="近一年暂无趋势数据" :image-size="64" />
         </el-card>
 
-        <el-card v-loading="loading" shadow="never" class="analysis-card">
+        <el-card v-loading="loading" shadow="never" class="analysis-card slow-endpoint-card">
           <template #header>
             <div class="card-header">
               <div>
@@ -264,6 +264,10 @@ h2 {
   overflow: visible;
 }
 
+.slow-endpoint-card {
+  overflow: hidden;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -299,6 +303,13 @@ h2 {
 
 .error-panel strong {
   color: #dd5b00;
+}
+
+@media (width >= 1440px) {
+  .analysis-stack {
+    grid-template-columns: minmax(0, 1.45fr) minmax(520px, 1fr);
+    align-items: start;
+  }
 }
 
 @media (width <= 600px) {

@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Response Metrics", description = "前后端响应性能指标")
 public class ResponseMetricController {
 
+    private static final int MAX_ANALYSIS_DAYS = 365;
+
     private final ResponseMetricService responseMetricService;
 
     public ResponseMetricController(ResponseMetricService responseMetricService) {
@@ -43,7 +45,10 @@ public class ResponseMetricController {
     @RequirePermissions({"system:read"})
     @Operation(summary = "获取前后端响应分析")
     public Result<ResponseMetricAnalysisDTO> getAnalysis(
-            @RequestParam(defaultValue = "7") @Min(1) @Max(90) int days
+            @RequestParam(defaultValue = "365")
+            @Min(1)
+            @Max(MAX_ANALYSIS_DAYS)
+            int days
     ) {
         return Result.success(responseMetricService.getAnalysis(days));
     }

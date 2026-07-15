@@ -104,6 +104,12 @@ function setupRoutes(router: Router) {
       }
     }
     else {
+      // 登录页必须允许匿名访问，否则生产环境会在此处重定向回自身，
+      // 导致 router.isReady() 永远无法完成，首屏加载遮罩也不会关闭。
+      if (to.name === 'login') {
+        return true
+      }
+
       return {
         name: 'login',
         query: {

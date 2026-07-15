@@ -10,8 +10,8 @@ export function reportFrontendResponseMetrics(metrics: FrontendResponseMetric[])
   )
 }
 
-/** GET /api/v1/response-metrics/analysis — 获取指定天数的响应分析 */
-export function getResponseMetricAnalysis(days: number) {
+/** GET /api/v1/response-metrics/analysis — 默认获取最近 365 天响应分析 */
+export function getResponseMetricAnalysis(days = 365) {
   return getRequest<ResponseMetricAnalysis>('/api/v1/response-metrics/analysis', {
     params: { days },
   })

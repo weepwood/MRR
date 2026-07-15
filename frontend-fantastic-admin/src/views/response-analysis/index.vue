@@ -1,24 +1,17 @@
 <script setup lang="ts">
 import type { ResponseMetricAnalysis } from '@/api/types'
 import { Refresh } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
 
 defineOptions({ name: 'ResponseAnalysisPage' })
 
-const rangeOptions = [
-  { label: '7 天', value: 7 },
-  { label: '30 天', value: 30 },
-  { label: '全部', value: 90 },
-] as const
+const ANALYSIS_DAYS = 365
 
 const loading = ref(false)
 const error = ref('')
 const analysis = ref<ResponseMetricAnalysis | null>(null)
-const selectedDays = ref(7)
-
-const rangeLabel = computed(() => rangeOptions.find(o => o.value === selectedDays.value)?.label ?? '7 天')
 
 const isEmpty = computed(() => {
   if (loading.value || error.value || !analysis.value) {
@@ -50,7 +43,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getResponseMetricAnalysis(selectedDays.value)
+    const response = await getResponseMetricAnalysis(ANALYSIS_DAYS)
     analysis.value = response.data ?? null
   }
   catch {
@@ -63,7 +56,6 @@ async function loadData() {
 }
 
 onMounted(loadData)
-watch(selectedDays, loadData)
 </script>
 
 <template>
@@ -75,23 +67,10 @@ watch(selectedDays, loadData)
         </p>
         <h2>接口响应分析</h2>
         <p class="subtitle">
-          近 {{ rangeLabel }} 浏览器端到端耗时与服务端处理耗时对比，定位慢接口和异常趋势。
+          默认汇总最近 365 天每日请求量、错误情况及前后端响应耗时，定位长期波动与异常日期。
         </p>
       </div>
       <div class="page-actions">
-        <el-radio-group
-          v-model="selectedDays"
-          :disabled="loading"
-          size="small"
-        >
-          <el-radio-button
-            v-for="opt in rangeOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </el-radio-button>
-        </el-radio-group>
         <el-button :loading="loading" @click="loadData">
           <el-icon><Refresh /></el-icon>
           刷新
@@ -107,10 +86,10 @@ watch(selectedDays, loadData)
       </el-button>
     </div>
 
-    <el-empty v-else-if="isEmpty" description="暂无响应指标数据" />
+    <el-empty v-else-if="isEmpty" description="近一年暂无响应指标数据" />
 
     <template v-else>
-      <section class="mrr-metric-grid" aria-label="响应指标总览">
+      <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
         <el-card shadow="never" class="mrr-metric-card">
           <div class="mrr-metric-card__icon">
             <i class="i-ant-design:api-twotone" />
@@ -119,7 +98,7 @@ watch(selectedDays, loadData)
             <span class="mrr-metric-card__label">总请求数</span>
             <strong class="mrr-metric-card__value">{{ formatNumber(analysis?.overview.totalRequests) }}</strong>
             <p class="mrr-metric-card__note">
-              所选时间范围内完成的请求
+              最近 365 天完成的请求总量
             </p>
           </div>
         </el-card>
@@ -131,7 +110,7 @@ watch(selectedDays, loadData)
             <span class="mrr-metric-card__label">HTTP 成功率</span>
             <strong class="mrr-metric-card__value">{{ formatPercent(analysis?.overview.successRate) }}</strong>
             <p class="mrr-metric-card__note">
-              HTTP 2xx 响应占全部请求的比例
+              HTTP 2xx 响应占近一年请求的比例
             </p>
           </div>
         </el-card>
@@ -155,32 +134,32 @@ watch(selectedDays, loadData)
             <span class="mrr-metric-card__label">服务端平均耗时</span>
             <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.avgServerDurationMs) }}</strong>
             <p class="mrr-metric-card__note">
-              服务端请求处理平均值
+              最近一年服务端请求处理平均值
             </p>
           </div>
         </el-card>
       </section>
 
-      <div class="analysis-columns">
-        <el-card v-loading="loading" shadow="never" class="analysis-card">
+      <div class="analysis-stack">
+        <el-card v-loading="loading" shadow="never" class="analysis-card response-trend-card">
           <template #header>
             <div class="card-header">
               <div>
-                <strong>响应趋势</strong>
-                <span>请求量及客户端、服务端平均耗时</span>
+                <strong>近一年响应趋势</strong>
+                <span>每日请求热力图及客户端、服务端平均耗时</span>
               </div>
             </div>
           </template>
           <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
-          <el-empty v-else description="暂无趋势数据" :image-size="64" />
+          <el-empty v-else description="近一年暂无趋势数据" :image-size="64" />
         </el-card>
 
-        <el-card v-loading="loading" shadow="never" class="analysis-card">
+        <el-card v-loading="loading" shadow="never" class="analysis-card slow-endpoint-card">
           <template #header>
             <div class="card-header">
               <div>
                 <strong>慢接口排行</strong>
-                <span>按客户端 P95 响应耗时排序</span>
+                <span>按最近一年客户端 P95 响应耗时排序</span>
               </div>
             </div>
           </template>
@@ -257,6 +236,7 @@ h2 {
 }
 
 .subtitle {
+  max-width: 760px;
   margin: 8px 0 0;
   color: #615d59;
 }
@@ -269,21 +249,23 @@ h2 {
 }
 
 .analysis-card {
+  min-width: 0;
   border: 1px solid rgb(0 0 0 / 10%);
   border-radius: 12px;
 }
 
-.analysis-columns {
+.analysis-stack {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 20px;
-  align-items: start;
+  min-width: 0;
 }
 
-@media (width < 1024px) {
-  .analysis-columns {
-    grid-template-columns: 1fr;
-  }
+.response-trend-card {
+  overflow: visible;
+}
+
+.slow-endpoint-card {
+  overflow: hidden;
 }
 
 .card-header {
@@ -321,6 +303,24 @@ h2 {
 
 .error-panel strong {
   color: #dd5b00;
+}
+
+@media (width >= 1440px) {
+  .analysis-stack {
+    grid-template-columns: max-content minmax(520px, 1fr);
+    align-items: start;
+  }
+
+  .response-trend-card {
+    width: max-content;
+    max-width: 100%;
+    justify-self: start;
+  }
+
+  .response-trend-card :deep(.el-card__body) {
+    width: max-content;
+    max-width: calc(100vw - 620px);
+  }
 }
 
 @media (width <= 600px) {

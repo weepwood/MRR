@@ -12,8 +12,8 @@ import com.zjcxph.imgapi.repository.DataTransferRepository;
 import com.zjcxph.imgapi.service.DataTransferService;
 import com.zjcxph.imgapi.service.DataTransferStorageService;
 import com.zjcxph.imgapi.service.DataTransferWorker;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
@@ -186,7 +186,14 @@ public class DataTransferServiceImpl implements DataTransferService {
         if (claimed == 0) {
             throw new BusinessException(409, "任务状态已发生变化，请刷新后重试");
         }
-        worker.executeAsync(jobId);
+
+        try {
+            worker.executeAsync(jobId);
+        }
+        catch (TaskRejectedException exception) {
+            repository.updateJobStatus(jobId, "FAILED", "任务排队失败", "数据交换队列已满，请稍后重试");
+            throw new BusinessException(503, "数据交换队列已满，请稍后重试");
+        }
     }
 
     @Override
@@ -236,21 +243,40 @@ public class DataTransferServiceImpl implements DataTransferService {
     }
 
     @Override
-    @Transactional
     public void retry(long jobId) {
         DataTransferJob job = requireJob(jobId);
         if (!List.of("FAILED", "COMPLETED_WITH_ERRORS").contains(job.getStatus())) {
             throw new BusinessException(409, "当前任务没有可重试的失败文件");
         }
-        repository.jdbcTemplate().update(
-                """
-                UPDATE app.data_transfer_file
-                SET status = 'UPLOADED', error_message = NULL, completed_at = NULL,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE job_id = ? AND status = 'FAILED'
-                """,
+
+        Long failedFiles = repository.jdbcTemplate().queryForObject(
+                "SELECT COUNT(*) FROM app.data_transfer_file WHERE job_id = ? AND status = 'FAILED'",
+                Long.class,
                 jobId
         );
+        if (failedFiles == null || failedFiles == 0) {
+            throw new BusinessException(409, "任务只有数据校验错误，没有可自动重试的失败文件");
+        }
+
+        if ("EXPORT".equals(job.getDirection())) {
+            // 导出工作器会从最后一个已完成分卷继续；失败的临时分卷记录先删除，避免序号冲突。
+            repository.jdbcTemplate().update(
+                    "DELETE FROM app.data_transfer_file WHERE job_id = ? AND status = 'FAILED'",
+                    jobId
+            );
+        }
+        else {
+            repository.jdbcTemplate().update(
+                    """
+                    UPDATE app.data_transfer_file
+                    SET status = 'UPLOADED', error_message = NULL, completed_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE job_id = ? AND status = 'FAILED'
+                    """,
+                    jobId
+            );
+        }
+
         repository.jdbcTemplate().update(
                 """
                 UPDATE app.data_transfer_job

@@ -9,56 +9,62 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 异步任务配置类
- * 配置线程池用于异步日志写入和其他后台任务
+ * Asynchronous executor configuration.
+ *
+ * Migration uploads intentionally use a dedicated bounded pool. They must not
+ * occupy the request/log executor or create an unbounded number of upload
+ * tasks when tens of millions of files are queued.
  */
 @Configuration
 @EnableAsync
 public class AsyncConfig {
 
-    /**
-     * 日志异步写入线程池
-     * 专门用于处理日志批量写入,避免阻塞主请求线程
-     */
     @Bean("logAsyncExecutor")
     public Executor logAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        
-        // 核心线程数
         executor.setCorePoolSize(2);
-        // 最大线程数
         executor.setMaxPoolSize(5);
-        // 队列容量
         executor.setQueueCapacity(500);
-        // 线程名前缀
         executor.setThreadNamePrefix("log-async-");
-        // 拒绝策略: 由调用线程处理
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        // 等待所有任务结束后再关闭线程池
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        // 等待时间
         executor.setAwaitTerminationSeconds(60);
-        
         executor.initialize();
         return executor;
     }
 
     /**
-     * 通用异步任务线程池
-     * 用于其他异步业务逻辑
+     * Coordinator pool for long-running background jobs. The actual file
+     * transfers are delegated to {@code migrationExecutor}.
      */
     @Bean("taskAsyncExecutor")
     public Executor taskAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(20);
         executor.setThreadNamePrefix("task-async-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
-        
+        executor.initialize();
+        return executor;
+    }
+
+    /** Dedicated bounded pool for OSS file transfer workers. */
+    @Bean("migrationExecutor")
+    public Executor migrationExecutor(MigrationProperties properties) {
+        int workers = Math.max(1, properties.getWorkerCount());
+        int queueCapacity = Math.max(workers, properties.getClaimBatchSize() * 2);
+
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(workers);
+        executor.setMaxPoolSize(workers);
+        executor.setQueueCapacity(queueCapacity);
+        executor.setThreadNamePrefix("oss-migration-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(300);
         executor.initialize();
         return executor;
     }

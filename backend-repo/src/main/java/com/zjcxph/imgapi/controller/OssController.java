@@ -17,7 +17,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +38,8 @@ import java.util.Map;
 public class OssController {
 
     private static final Logger logger = LoggerFactory.getLogger(OssController.class);
+    private static final int MAX_MANUAL_BATCH_SIZE = 1000;
+    private static final int MAX_PENDING_PAGE_SIZE = 1000;
 
     private final MigrationService migrationService;
     private final OssService ossService;
@@ -42,19 +51,28 @@ public class OssController {
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
     @PostMapping("/upload")
+    @RequirePermissions({"record:manage"})
     public Result<Map<String, Object>> upload(@RequestBody OssUploadRequest request) {
         if (request == null || request.getScanIds() == null || request.getScanIds().isEmpty()) {
             return Result.fail("scanIds 不能为空");
         }
-
-        logger.info("开始 OSS 上传，共 {} 条记录", request.getScanIds().size());
-
-        List<OssUploadResult> results = new ArrayList<>();
-        for (Integer scanId : request.getScanIds()) {
-            results.add(migrationService.uploadSingleScan(scanId));
+        if (request.getScanIds().size() > MAX_MANUAL_BATCH_SIZE) {
+            return Result.fail("单次手工上传最多 " + MAX_MANUAL_BATCH_SIZE + " 条记录");
         }
 
-        long successCount = results.stream().filter(r -> "success".equals(r.getStatus())).count();
+        logger.info("开始 OSS 手工上传，共 {} 条记录", request.getScanIds().size());
+        List<OssUploadResult> results = new ArrayList<>();
+        try {
+            for (Integer scanId : request.getScanIds()) {
+                results.add(migrationService.uploadSingleScan(scanId));
+            }
+        } catch (IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        }
+
+        long successCount = results.stream()
+                .filter(r -> "success".equals(r.getStatus()) || "skipped".equals(r.getStatus()))
+                .count();
         long failedCount = results.stream().filter(r -> "failed".equals(r.getStatus())).count();
 
         Map<String, Object> response = new HashMap<>();
@@ -62,13 +80,12 @@ public class OssController {
         response.put("total", results.size());
         response.put("success", successCount);
         response.put("failed", failedCount);
-
-        logger.info("OSS 上传完成：成功 {}/{}", successCount, results.size());
         return Result.success(response).message("上传完成");
     }
 
     @Operation(summary = "按病案号批量上传图片到 OSS")
     @PostMapping("/upload/bah/{bah}")
+    @RequirePermissions({"record:manage"})
     public Result<Map<String, Object>> uploadByBah(
             @PathVariable
             @Parameter(description = "病案号", example = "00789508")
@@ -77,17 +94,21 @@ public class OssController {
             return Result.fail("病案号不能为空");
         }
 
-        logger.info("按病案号上传到 OSS：BAH={}", bah);
-        List<OssUploadResult> results = migrationService.uploadByBah(bah);
+        List<OssUploadResult> results;
+        try {
+            results = migrationService.uploadByBah(bah);
+        } catch (IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        }
 
-        long successCount = results.stream().filter(r -> "success".equals(r.getStatus())).count();
-
+        long successCount = results.stream()
+                .filter(r -> "success".equals(r.getStatus()) || "skipped".equals(r.getStatus()))
+                .count();
         Map<String, Object> response = new HashMap<>();
         response.put("results", results);
         response.put("total", results.size());
         response.put("success", successCount);
         response.put("bah", bah);
-
         return Result.success(response).message("上传完成");
     }
 
@@ -115,9 +136,7 @@ public class OssController {
     @Operation(summary = "获取迁移统计信息")
     @GetMapping("/migration/statistics")
     public Result<MigrationStatisticsDTO> getMigrationStatistics() {
-        logger.info("获取迁移统计信息");
-        MigrationStatisticsDTO stats = migrationService.getStatistics();
-        return Result.success(stats);
+        return Result.success(migrationService.getStatistics());
     }
 
     @Operation(summary = "获取待迁移记录列表")
@@ -125,19 +144,19 @@ public class OssController {
     public Result<Map<String, Object>> getPendingMigrations(
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(required = false) String folder) {
-        logger.info("获取待迁移记录列表：limit={}, folder={}", limit, folder);
-        List<Scan> pending = migrationService.getPendingMigrations(limit, folder);
+        int safeLimit = Math.max(1, Math.min(limit, MAX_PENDING_PAGE_SIZE));
+        List<Scan> pending = migrationService.getPendingMigrations(safeLimit, folder);
         Map<String, Object> response = new HashMap<>();
         response.put("list", pending);
         response.put("total", pending.size());
+        response.put("limit", safeLimit);
         return Result.success(response);
     }
 
     @Operation(summary = "获取待迁移文件夹列表")
     @GetMapping("/migration/pending-folders")
     public Result<List<Map<String, Object>>> getPendingFolders() {
-        List<Map<String, Object>> folders = migrationService.getPendingFolders();
-        return Result.success(folders);
+        return Result.success(migrationService.getPendingFolders());
     }
 
     @Operation(summary = "获取迁移日志列表")
@@ -146,22 +165,18 @@ public class OssController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        logger.info("获取迁移日志：status={}, page={}, size={}", status, page, size);
-
         PaginationUtils.validatePageParams(page, size);
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
-
         for (ImageMigrationLog log : logs) {
             migrationService.enrichWithPresignedUrl(log);
         }
-
-        PageResult<ImageMigrationLog> pageResult = PageResult.of(logs, total, page, size);
-        return Result.success(pageResult);
+        return Result.success(PageResult.of(logs, total, page, size));
     }
 
     @Operation(summary = "删除 OSS 文件")
     @DeleteMapping("/{ossKey}")
+    @RequirePermissions({"record:manage"})
     public Result<String> deleteOssFile(
             @PathVariable
             @Parameter(description = "OSS 对象 Key")
@@ -177,13 +192,19 @@ public class OssController {
 
     @Operation(summary = "创建迁移任务（异步执行）")
     @PostMapping("/migration/jobs")
+    @RequirePermissions({"record:manage"})
     public Result<MigrationJob> createMigrationJob() {
-        MigrationJob job = migrationService.createMigrationJob();
-        if (job == null) {
-            return Result.fail("没有待迁移的文件");
+        try {
+            MigrationJob job = migrationService.createMigrationJob();
+            if (job == null) {
+                return Result.fail("没有可迁移的文件");
+            }
+            logger.info("Migration job created: id={}, total={}, maxScanId={}",
+                    job.getId(), job.getTotalCount(), job.getMaxScanId());
+            return Result.<MigrationJob>success("迁移任务已创建").data(job);
+        } catch (IllegalStateException e) {
+            return Result.fail(e.getMessage());
         }
-        logger.info("Migration job created: id={}, total={}", job.getId(), job.getTotalCount());
-        return Result.<MigrationJob>success("迁移任务已创建").data(job);
     }
 
     @Operation(summary = "获取迁移任务详情")
@@ -200,8 +221,7 @@ public class OssController {
     @GetMapping("/migration/jobs")
     public Result<PageResult<MigrationJob>> listMigrationJobs(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
+            @RequestParam(defaultValue = "20") int size) {
         PaginationUtils.validatePageParams(page, size);
         return Result.success(migrationService.listMigrationJobs(page, size));
     }

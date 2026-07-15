@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ArchiveLocalPreferences } from './archive/composables/useArchiveLocalPreferences'
 import type { GalleryImage, ViewMode } from './archive/types'
 import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
@@ -14,12 +15,19 @@ import {
 } from '@/utils/system-settings'
 import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
+import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import PatientCard from './archive/components/PatientCard.vue'
 import PreviewPanel from './archive/components/PreviewPanel.vue'
 import ThumbStrip from './archive/components/ThumbStrip.vue'
 import TypeFilterBar from './archive/components/TypeFilterBar.vue'
 import { useArchiveImages } from './archive/composables/useArchiveImages'
+import {
+  clearArchiveLocalPreferences,
+  readArchiveLocalPreferences,
+  resolveArchiveDisplayPreferences,
+  writeArchiveLocalPreferences,
+} from './archive/composables/useArchiveLocalPreferences'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
 import { buildTypeStats, padCode } from './archive/constants'
@@ -59,6 +67,7 @@ const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
 const previewMode = ref<ArchivePreviewMode>('single')
+const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
 
 const filteredImages = computed<GalleryImage[]>(() =>
@@ -89,8 +98,12 @@ const allImagesIndeterminate = computed(() => images.value.some(isSelected) && !
 const showViewer = computed(() => images.value.length > 0 || Boolean(
   sanitizeParam(route.query.id) || sanitizeParam(route.query.bah) || sanitizeParam(route.query.sjh),
 ))
+const archiveDisplaySettings = computed(() => resolveArchiveDisplayPreferences(
+  archiveSettings,
+  archiveLocalPreferences.value,
+))
 const archiveWorkspaceStyle = computed(() => ({
-  '--archive-thumb-column-width': `${archiveSettings.archiveThumbnailSize + 18}px`,
+  '--archive-thumb-column-width': `${archiveDisplaySettings.value.archiveThumbnailSize + 18}px`,
 }))
 const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/embed' : '/archive')
 
@@ -122,7 +135,20 @@ function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
 function applyArchiveSettings(settings: EffectiveSystemSettings) {
   Object.assign(archiveSettings, settings)
   viewMode.value = settings.archiveDefaultView
-  previewMode.value = settings.archivePreviewMode
+  previewMode.value = archiveDisplaySettings.value.archivePreviewMode
+}
+
+function updateArchiveLocalPreferences(preferences: ArchiveLocalPreferences) {
+  archiveLocalPreferences.value = { ...archiveLocalPreferences.value, ...preferences }
+  writeArchiveLocalPreferences(archiveLocalPreferences.value)
+  previewMode.value = archiveDisplaySettings.value.archivePreviewMode
+}
+
+function resetArchiveLocalPreferences() {
+  clearArchiveLocalPreferences()
+  archiveLocalPreferences.value = {}
+  viewMode.value = archiveSettings.archiveDefaultView
+  previewMode.value = archiveDisplaySettings.value.archivePreviewMode
 }
 
 async function loadArchiveSettings() {
@@ -414,6 +440,13 @@ function navigate(delta: number) {
   selectImage(next)
 }
 
+function isImagePreviewOpen() {
+  return [...document.querySelectorAll<HTMLElement>('.el-image-viewer__wrapper')].some((viewer) => {
+    const style = window.getComputedStyle(viewer)
+    return style.display !== 'none' && style.visibility !== 'hidden'
+  })
+}
+
 function onKeydown(e: KeyboardEvent) {
   const target = e.target as HTMLElement | null
   if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
@@ -422,11 +455,22 @@ function onKeydown(e: KeyboardEvent) {
   if (!filteredImages.value.length) {
     return
   }
+  if (isImagePreviewOpen() && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    return
+  }
   if (e.key === 'ArrowLeft') {
     e.preventDefault()
     navigate(-1)
   }
   else if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    navigate(1)
+  }
+  else if (previewMode.value === 'single' && e.key === 'ArrowUp') {
+    e.preventDefault()
+    navigate(-1)
+  }
+  else if (previewMode.value === 'single' && e.key === 'ArrowDown') {
     e.preventDefault()
     navigate(1)
   }
@@ -483,6 +527,18 @@ onUnmounted(() => {
 
 <template>
   <div class="archive-page">
+    <ArchiveMoreSettings
+      class="archive-more-settings-float"
+      :preview-mode="previewMode"
+      :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
+      :auto-fit="archiveDisplaySettings.archiveAutoFit"
+      :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
+      @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
+      @update:auto-fit="updateArchiveLocalPreferences({ archiveAutoFit: $event })"
+      @update:thumbnail-size="updateArchiveLocalPreferences({ archiveThumbnailSize: $event })"
+      @reset="resetArchiveLocalPreferences"
+    />
+
     <div
       class="archive-workspace"
       :class="{
@@ -564,7 +620,7 @@ onUnmounted(() => {
           :images="filteredImages"
           :selected-index="selectedImageIndex"
           :is-selected="isSelected"
-          :thumbnail-size="archiveSettings.archiveThumbnailSize"
+          :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
           :preload-count="archiveSettings.archivePreloadCount"
           @select="selectImage"
           @toggle="toggleSelect"
@@ -581,7 +637,7 @@ onUnmounted(() => {
         :is-selected="currentImage ? isSelected(currentImage) : false"
         :saving-type="savingType"
         :loading="loading"
-        :auto-fit="archiveSettings.archiveAutoFit"
+        :auto-fit="archiveDisplaySettings.archiveAutoFit"
         :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
         @toggle="toggleCurrent"
         @save-type="handleSaveType"
@@ -594,11 +650,19 @@ onUnmounted(() => {
 
 <style scoped>
 .archive-page {
+  position: relative;
   box-sizing: border-box;
   height: 100%;
   min-height: 0;
   padding: 8px;
   background: var(--surface-muted);
+}
+
+.archive-more-settings-float {
+  position: fixed;
+  top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 16px);
+  right: 16px;
+  z-index: 2010;
 }
 
 .archive-workspace {
@@ -704,6 +768,11 @@ onUnmounted(() => {
 }
 
 @media (width <= 1100px) {
+  .archive-more-settings-float {
+    top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 12px);
+    right: 12px;
+  }
+
   .archive-workspace.has-viewer,
   .archive-workspace.has-viewer.is-list-mode {
     grid-template-columns: 1fr;

@@ -4,7 +4,7 @@ import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { normalizeText, TYPE_OPTIONS } from '../constants'
+import { TYPE_OPTIONS } from '../constants'
 import 'element-plus/es/components/message-box/style/css'
 
 defineOptions({ name: 'PreviewPanel' })
@@ -152,28 +152,14 @@ onUnmounted(() => {
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
       <div class="preview-toolbar">
-        <el-segmented
-          v-model="displayMode"
-          size="small"
-          aria-label="预览模式"
-          :options="[
-            { label: '单页', value: 'single' },
-            { label: '滚动', value: 'scroll' },
-          ]"
-        />
-
-        <div class="preview-file">
-          <strong>P{{ props.image.pages ?? '-' }}</strong>
-          <span>{{ normalizeText(props.image.filename) }}</span>
-          <span class="image-position">{{ props.index + 1 }} / {{ props.total }}</span>
-        </div>
+        <span class="image-position">P{{ props.image.pages ?? '-' }}</span>
 
         <div class="preview-controls">
           <div class="page-navigation" aria-label="影像翻页">
             <el-button circle size="small" :icon="ArrowLeft" :disabled="props.index === 0" aria-label="上一张影像" @click="emit('navigate', -1)" />
             <el-button circle size="small" :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
           </div>
-          <el-button size="small" :type="props.isSelected ? 'success' : 'default'" @click="emit('toggle')">
+          <el-button size="small" type="primary" :plain="!props.isSelected" @click="emit('toggle')">
             {{ props.isSelected ? '已选' : '选中' }}
           </el-button>
           <el-select v-model="pendingType" aria-label="影像分类" :loading="props.savingType" size="small" @change="confirmType">
@@ -220,7 +206,7 @@ onUnmounted(() => {
           :key="imageUrl || pageIndex"
           :ref="(element: any) => { pageRefs[pageIndex] = element }"
           class="continuous-page"
-          :class="{ 'active': pageIndex === props.index, 'is-auto-fit': props.autoFit }"
+          :class="{ 'is-auto-fit': props.autoFit }"
           :data-index="pageIndex"
         >
           <div v-if="imageUnavailable(imageUrl)" class="preview-image-placeholder continuous-placeholder" role="img" :aria-label="`第 ${pageIndex + 1} 张影像加载失败`">
@@ -259,7 +245,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 68px 24px 24px;
+  padding: 24px;
   overflow: auto;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
@@ -349,8 +335,6 @@ onUnmounted(() => {
   min-width: 100%;
   padding: 8px;
   margin-bottom: 16px;
-  border: 1px solid transparent;
-  border-radius: 8px;
 }
 
 .continuous-page.is-auto-fit {
@@ -359,22 +343,18 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.continuous-page.active {
-  border-color: hsl(var(--primary) / 45%);
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 12%);
-}
-
 .preview-toolbar {
   position: absolute;
-  top: 12px;
   right: 12px;
-  left: 12px;
+  bottom: 12px;
+  left: auto;
   z-index: 2;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  gap: 6px;
   align-items: center;
+  width: max-content;
   min-width: 0;
+  max-width: calc(100% - 24px);
   padding: 8px;
   background: hsl(var(--card) / 92%);
   border: 1px solid var(--divider);
@@ -382,32 +362,10 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
 }
 
-.preview-file,
 .preview-controls,
 .page-navigation {
   display: flex;
   align-items: center;
-}
-
-.preview-file {
-  gap: 8px;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-.preview-file strong {
-  flex: none;
-  padding: 2px 6px;
-  font-size: 12px;
-  background: var(--surface-alt);
-  border-radius: 4px;
-}
-
-.preview-file > span:not(.image-position) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .preview-controls {
@@ -427,30 +385,28 @@ onUnmounted(() => {
 
 .image-position {
   flex: none;
-  padding-left: 8px;
+  padding: 0 6px;
+  font-size: 12px;
   color: var(--text-secondary);
-  border-left: 1px solid var(--divider);
+  background: var(--surface-alt);
+  border-radius: 4px;
 }
 
 @media (width <= 720px) {
   .preview-stage {
-    padding: 136px 16px 16px;
+    padding: 16px;
   }
 
   .preview-toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .preview-file {
-    grid-row: 3;
-    grid-column: 1 / -1;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .preview-controls {
-    grid-row: 2;
-    grid-column: 1 / -1;
-    justify-content: space-between;
-    width: 100%;
+    gap: 4px;
   }
 
   .preview-controls :deep(.el-select) {

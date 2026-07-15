@@ -50,6 +50,15 @@ html {
   scrollbar-gutter: stable;
 }
 
+/*
+ * 根节点已经通过 scrollbar-gutter 预留滚动条空间。
+ * Element Plus 打开 Dialog/Drawer 时还会向 body 写入减去滚动条宽度的内联样式，
+ * 形成重复补偿并导致页面横向抖动；保留滚动锁定，仅忽略这段宽度补偿。
+ */
+body.el-popup-parent--hidden {
+  width: auto !important;
+}
+
 body {
   margin: 0;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;

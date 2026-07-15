@@ -48,7 +48,10 @@ public class DataTransferWorker {
         }
         catch (Exception exception) {
             log.error("Data transfer job failed: jobId={}", jobId, exception);
-            repository.updateJobStatus(jobId, "FAILED", "任务失败", safeMessage(exception));
+            String currentStatus = repository.findJobStatus(jobId);
+            if (!"PAUSED".equals(currentStatus) && !"CANCELLED".equals(currentStatus)) {
+                repository.updateJobStatus(jobId, "FAILED", "任务失败", safeMessage(exception));
+            }
         }
     }
 

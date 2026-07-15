@@ -58,15 +58,21 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 }
 
                 String entryName = uniqueEntryName(item, entryNameCounts);
-                try (InputStream input = imageStorage.open(item)) {
+                InputStream opened;
+                try {
+                    opened = imageStorage.open(item);
+                } catch (IOException exception) {
+                    logger.warn("跳过无法打开的导出影像: entry={}, reason={}", entryName, exception.getMessage());
+                    continue;
+                }
+
+                try (InputStream input = opened) {
                     zip.putNextEntry(new ZipEntry(entryName));
                     int read;
                     while ((read = input.read(buffer)) != -1) {
                         zip.write(buffer, 0, read);
                     }
                     zip.closeEntry();
-                } catch (IOException exception) {
-                    logger.warn("跳过无法读取的导出影像: entry={}, reason={}", entryName, exception.getMessage());
                 }
             }
             zip.finish();

@@ -73,19 +73,42 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'app'
-          AND indexname = 'ux_mr_statistics_source_row_hash'
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_index i ON i.indexrelid = c.oid
+        WHERE n.nspname = 'app'
+          AND c.relname = 'ux_mr_statistics_source_row_hash'
+          AND i.indisvalid
+          AND i.indisready
     ) THEN
-        RAISE EXCEPTION 'statistics deduplication index is missing';
+        RAISE EXCEPTION 'statistics deduplication index is missing or invalid';
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'app'
-          AND indexname = 'ux_mr_scan_source_record_key'
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_index i ON i.indexrelid = c.oid
+        WHERE n.nspname = 'app'
+          AND c.relname = 'ux_mr_scan_source_record_key'
+          AND i.indisvalid
+          AND i.indisready
     ) THEN
-        RAISE EXCEPTION 'scan deduplication index is missing';
+        RAISE EXCEPTION 'scan deduplication index is missing or invalid';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_index i ON i.indexrelid = c.oid
+        WHERE n.nspname = 'app'
+          AND c.relname = 'idx_mr_scan_import_job'
+          AND i.indisvalid
+          AND i.indisready
+    ) THEN
+        RAISE EXCEPTION 'scan import job index is missing or invalid';
     END IF;
 END;
 $$;

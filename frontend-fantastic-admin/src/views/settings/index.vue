@@ -129,7 +129,7 @@ onMounted(() => loadSettings())
         </span>
         <div>
           <h2>系统设置</h2>
-          <p>集中管理系统标识、档案浏览与访问水印。</p>
+          <p>集中管理系统标识、图片来源、档案浏览与访问水印。</p>
         </div>
       </div>
       <div v-if="activeTab === 'system'" class="header-actions">
@@ -173,11 +173,37 @@ onMounted(() => loadSettings())
                   </span>
                   <div>
                     <h3>影像档案袋</h3>
-                    <p>设置默认浏览方式、加载数量和选择行为。</p>
+                    <p>设置图片来源、默认浏览方式、加载数量和选择行为。</p>
                   </div>
                 </header>
 
                 <div class="card-body">
+                  <div class="settings-block">
+                    <div class="block-title">
+                      <strong>图片来源</strong>
+                      <span>控制档案预览默认读取位置</span>
+                    </div>
+                    <el-form-item label="默认读取源">
+                      <el-segmented
+                        v-model="settings.imageSource"
+                        :options="[
+                          { label: '本地图片', value: 'local' },
+                          { label: 'OSS 图片', value: 'oss' },
+                        ]"
+                        class="full-width"
+                      />
+                    </el-form-item>
+                    <el-alert
+                      class="image-source-alert"
+                      type="info"
+                      :closable="false"
+                      show-icon
+                      :title="settings.imageSource === 'local'
+                        ? '默认从本地图片服务器读取，不会为每张图片生成 OSS 签名地址。'
+                        : '优先从 OSS 读取；记录尚未迁移或签名失败时会自动回退本地图片。'"
+                    />
+                  </div>
+
                   <div class="settings-block">
                     <div class="block-title">
                       <strong>浏览方式</strong>
@@ -544,6 +570,10 @@ onMounted(() => loadSettings())
 .block-title span {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.image-source-alert {
+  margin-top: 12px;
 }
 
 .form-grid {

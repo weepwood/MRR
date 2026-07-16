@@ -18,7 +18,7 @@ mr_archive
 
 ## 兼容策略
 
-1. 部分历史 PostgreSQL 数据库中的 `mr_statistics` 没有 `id`；`V0_0_1` 会先补齐序列、现有行 ID、非空约束和唯一索引。
+1. 部分历史 PostgreSQL 数据库中的 `mr_statistics` 没有 `id`；`V20260715232200` 会先补齐序列、现有行 ID、非空约束和唯一索引。
 2. 旧 XLSX/SQL 仍可写入 `mr_statistics`，触发器会创建或更新病案主记录并写回 `archive_id`。
 3. 旧扫描写入不要求显式传入 `archive_id`；有效上架号会由触发器解析或创建主记录。
 4. 缺失上架号统一使用 `NULL`，不会生成占位编号。
@@ -29,31 +29,41 @@ mr_archive
 
 ### 1. 备份并执行迁移
 
-应用启动后 Flyway 会执行：
+应用启动后 Flyway 会按日期时间顺序执行：
 
 ```text
-V0_0_1  兼容旧库，为 mr_statistics 补齐稳定行 ID
-V0_1    建立病案主表、关联列、触发器与回填函数
-V0_2    强制大病案号查询规则
-V0_3    编号修改后刷新 archive_id
-V0_4    优化数千万扫描记录的分批回填
+V20260715232200  兼容旧库，为 mr_statistics 补齐稳定行 ID
+V20260715232228  建立病案主表、关联列、触发器与回填函数
+V20260715232620  强制大病案号查询规则
+V20260715232837  编号修改后刷新 archive_id
+V20260715233205  优化数千万扫描记录的分批回填
 ```
 
-这些版本不占用 OSS 迁移 PR 使用的 `V1`。部分已有数据库已经先执行了 `V1`，项目因此默认允许 Flyway 补执行尚未应用的低版本迁移：
+迁移文件统一使用：
+
+```text
+VyyyyMMddHHmmss__description.sql
+```
+
+旧数据库启动时，`db/callback/beforeValidate__normalize_legacy_versions.sql` 会在校验前把历史 `V0`、`V0_0_1`、`V0_1`～`V0_4` 记录映射为对应日期时间版本。映射只修改 `app.flyway_schema_history` 的版本和脚本名称，不会重复执行迁移 SQL。
+
+日期时间版本已经保持严格递增，默认配置为：
 
 ```properties
-spring.flyway.out-of-order=${SPRING_FLYWAY_OUT_OF_ORDER:true}
+spring.flyway.out-of-order=${SPRING_FLYWAY_OUT_OF_ORDER:false}
+spring.flyway.validate-on-migrate=true
+spring.flyway.validate-migration-naming=true
 ```
 
-`validate-on-migrate` 仍保持开启，不应删除或手工修改 `app.flyway_schema_history`。所有环境完成 `V0_0_1`～`V0_4` 后，可设置：
+不要手工删除或修改 `app.flyway_schema_history`。如果新旧版本记录同时存在，兼容回调会主动终止启动，要求先检查历史表，避免覆盖异常记录。
 
-```powershell
-$env:SPRING_FLYWAY_OUT_OF_ORDER = 'false'
+如果病案主数据迁移此前因 `mr_statistics.id` 不存在而失败，PostgreSQL 日志显示 `Changes successfully rolled back` 时，不需要删除业务表。拉取最新分支，执行一次 `mvn clean` 后重新启动即可。
+
+详细版本规范见：
+
+```text
+backend-repo/docs/flyway-versioning.md
 ```
-
-恢复严格的版本顺序检查。
-
-如果此前 `V0_1` 因 `mr_statistics.id` 不存在而失败，PostgreSQL 日志显示 `Changes successfully rolled back` 时，不需要删除表、执行 `flyway repair` 或修改 Flyway 历史记录。拉取最新分支，执行一次 `mvn clean` 后重新启动即可。
 
 ### 2. 分批回填扫描记录
 
@@ -81,7 +91,7 @@ GitHub Actions 不可用时执行：
 ./backend-repo/scripts/verify-archive-refactor.ps1
 ```
 
-脚本会执行 Maven 编译、病案服务单元测试；配置数据库连接且本机存在 `psql` 时，还会运行数据库验收 SQL。
+脚本会先检查 Flyway 日期时间命名，再执行 Maven 编译、病案服务单元测试；配置数据库连接且本机存在 `psql` 时，还会运行数据库验收 SQL。
 
 ### 4. 验证并启用外键全量校验
 

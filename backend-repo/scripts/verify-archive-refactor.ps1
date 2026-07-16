@@ -26,6 +26,12 @@ function Convert-ToPsqlConnectionString {
     return $segments[0] + '?' + ($parameters -join '&')
 }
 
+Write-Host '==> Verify Flyway migration naming'
+& (Join-Path $PSScriptRoot 'verify-flyway-migrations.ps1')
+if ($LASTEXITCODE -ne 0) {
+    throw "Flyway migration naming verification failed with exit code $LASTEXITCODE"
+}
+
 Push-Location $backendRoot
 try {
     Write-Host '==> Compile backend'

@@ -52,6 +52,7 @@ export default defineConfig({
       },
       { text: '安装配置', link: '/getting-started/installation' },
       { text: '用户手册', link: '/user-guide/' },
+      { text: '更新记录', link: '/user-guide/changelog' },
     ],
 
     sidebar: {
@@ -111,6 +112,7 @@ export default defineConfig({
             { text: '系统管理', link: '/user-guide/admin' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
             { text: '更新说明', link: '/user-guide/release-notes' },
+            { text: 'Git 更新记录', link: '/user-guide/changelog' },
           ],
         },
       ],

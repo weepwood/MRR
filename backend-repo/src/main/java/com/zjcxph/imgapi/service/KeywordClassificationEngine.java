@@ -20,11 +20,7 @@ public class KeywordClassificationEngine {
     private static final int TITLE_LINE_LIMIT = 6;
     private static final int TITLE_CHAR_LIMIT = 360;
 
-    private final ObjectMapper objectMapper;
-
-    public KeywordClassificationEngine(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public Decision classify(String ocrText, List<RecordTypeDefinition> definitions) {
         String normalized = normalize(ocrText);

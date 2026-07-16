@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import type { StatisticsRecord } from '@/api/types'
 import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
-import {
-  Document,
-  Grid,
-  Refresh,
-  Tickets,
-  TrendCharts,
-} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import {
   getStatisticsDateSummary,
   getStatisticsList,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
+import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 
 defineOptions({ name: 'StatisticsPage' })
+
+type MetricTone = 'blue' | 'green' | 'violet' | 'slate' | 'teal'
 
 interface SummaryData {
   total?: { totalRecords?: number, totalPages?: number }
@@ -38,6 +38,14 @@ interface StatisticsListResult {
   totalPages: number
   page: number
   list: StatisticsRecord[]
+}
+
+interface MetricItem {
+  label: string
+  value: string | number
+  note: string
+  tone: MetricTone
+  icon: string
 }
 
 const overviewLoading = ref(false)
@@ -111,6 +119,37 @@ const typeOptions = computed(() => Array.from(new Set(
     .map(item => String(item.type || '').trim())
     .filter(Boolean),
 )))
+
+const summaryCards = computed<MetricItem[]>(() => [
+  {
+    label: '扫描记录总数',
+    value: formatNumber(summaryData.value.total?.totalRecords ?? 0),
+    note: '系统累计登记的扫描记录',
+    tone: 'blue',
+    icon: 'i-ant-design:database-outlined',
+  },
+  {
+    label: '扫描总页数',
+    value: formatNumber(summaryData.value.total?.totalPages ?? 0),
+    note: '全部扫描记录包含的影像页数',
+    tone: 'violet',
+    icon: 'i-ant-design:file-image-outlined',
+  },
+  {
+    label: '扫描病案数',
+    value: formatNumber(summaryData.value.uniqueBAHCount ?? 0),
+    note: '按病案号去重后的病案数量',
+    tone: 'teal',
+    icon: 'i-ant-design:folder-open-outlined',
+  },
+  {
+    label: '日均扫描页数',
+    value: formatNumber(averageDailyPages.value),
+    note: `基于 ${sortedDateData.value.length} 个有效统计日`,
+    tone: 'slate',
+    icon: 'i-ant-design:rise-outlined',
+  },
+])
 
 function formatDate(dateStr?: string) {
   if (!dateStr) {
@@ -210,7 +249,7 @@ async function refreshAll() {
 
 function handleListSearch() {
   currentPage.value = 1
-  loadStatisticsList()
+  void loadStatisticsList()
 }
 
 function resetListSearch() {
@@ -218,109 +257,60 @@ function resetListSearch() {
   listSearchType.value = ''
   listSearchDateRange.value = []
   currentPage.value = 1
-  loadStatisticsList()
+  void loadStatisticsList()
 }
 
 function handleListSizeChange() {
   currentPage.value = 1
-  loadStatisticsList()
+  void loadStatisticsList()
 }
 
 function handleSortChange({ prop, order }: { prop: string, order: string | null }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
-  loadStatisticsList()
+  void loadStatisticsList()
 }
 
 onMounted(refreshAll)
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Records Statistics
-        </p>
-        <h2>病案扫描数据统计</h2>
-        <p class="subtitle">
-          汇总病案扫描规模、每日变化与病案明细，在一个页面完成统计查看和数据检索。
-        </p>
-      </div>
-      <el-button
-        :icon="Refresh"
-        :loading="overviewLoading || listLoading"
-        @click="refreshAll"
-      >
-        刷新数据
-      </el-button>
-    </div>
+  <MrrPageShell width="fluid">
+    <MrrPageHeader
+      title="病案扫描数据统计"
+      description="汇总扫描规模、每日变化与病案明细，在同一页面完成趋势分析和数据检索。"
+      icon="i-ant-design:area-chart-outlined"
+    >
+      <template #actions>
+        <el-button :loading="overviewLoading || listLoading" @click="refreshAll">
+          <FaIcon name="i-ri:refresh-line" />
+          刷新数据
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
     <section class="mrr-metric-grid" aria-label="核心统计指标">
-      <el-card shadow="never" class="mrr-metric-card">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Grid /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            总记录数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.total?.totalRecords ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--rose">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Tickets /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            总扫描页数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.total?.totalPages ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Document /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            扫描病案数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.uniqueBAHCount ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
-        <div class="mrr-metric-card__icon">
-          <el-icon><TrendCharts /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            统计时间范围
-          </div>
-          <div class="mrr-metric-card__value mrr-metric-card__value--compact">
-            {{ dateRange.start }} — {{ dateRange.end }}
-          </div>
-        </div>
-      </el-card>
+      <MrrMetricCard
+        v-for="item in summaryCards"
+        :key="item.label"
+        :label="item.label"
+        :value="item.value"
+        :note="item.note"
+        :tone="item.tone"
+        :icon="item.icon"
+      />
     </section>
 
     <MrrChartCard
       title="扫描趋势"
-      description="柱形展示扫描页数，折线展示扫描记录数；默认展示近 90 日，可在图表内滚动鼠标滚轮调整时间范围"
+      description="柱形展示扫描页数，折线展示扫描记录数；默认展示近 90 日，可在图表内滚动鼠标滚轮调整时间范围。"
       :loading="overviewLoading"
       :empty="!sortedDateData.length"
       empty-description="暂无扫描趋势数据"
     >
       <template #actions>
-        <el-tag size="small" type="success">
-          共 {{ sortedDateData.length }} 个统计日
-        </el-tag>
+        <span class="trend-range">
+          {{ dateRange.start }} 至 {{ dateRange.end }}
+        </span>
       </template>
       <template #summary>
         <div class="trend-summary" aria-label="扫描趋势摘要">
@@ -333,8 +323,8 @@ onMounted(refreshAll)
             <strong>{{ formatNumber(trendPageTotal) }}</strong>
           </div>
           <div>
-            <span>日均页数</span>
-            <strong>{{ formatNumber(averageDailyPages) }}</strong>
+            <span>有效统计日</span>
+            <strong>{{ formatNumber(sortedDateData.length) }}</strong>
           </div>
         </div>
       </template>
@@ -352,75 +342,76 @@ onMounted(refreshAll)
       />
     </MrrChartCard>
 
-    <el-card shadow="never" class="list-card">
-      <template #header>
-        <div class="section-header">
-          <el-icon><Document /></el-icon>
-          <span>病案明细列表</span>
-          <el-tag size="small" type="info">
-            共 {{ statisticsListData.total ?? 0 }} 条
-          </el-tag>
-        </div>
-      </template>
-
-      <div class="list-search-bar">
-        <el-input
-          v-model="listSearchKeyword"
-          placeholder="搜索病案号 / 上架号 / 操作员"
-          clearable
-          class="search-keyword"
-          @keyup.enter="handleListSearch"
-        />
-        <el-select
-          v-model="listSearchType"
-          placeholder="类型筛选"
-          clearable
-          class="search-type"
-          @change="handleListSearch"
-        >
-          <el-option label="全部" value="" />
-          <el-option
-            v-for="item in typeOptions"
-            :key="item"
-            :label="item"
-            :value="item"
+    <MrrDataTablePanel
+      title="病案统计明细"
+      description="按病案号、上架号、操作员、类型和日期范围检索统计记录。"
+      icon="i-ant-design:profile-outlined"
+      :count="statisticsListData.total"
+    >
+      <template #filters>
+        <MrrFilterBar variant="embedded">
+          <el-input
+            v-model="listSearchKeyword"
+            class="statistics-filter statistics-filter--keyword"
+            clearable
+            aria-label="搜索病案号、上架号或操作员"
+            placeholder="病案号 / 上架号 / 操作员"
+            @keyup.enter="handleListSearch"
           />
-        </el-select>
-        <el-date-picker
-          v-model="listSearchDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-          class="search-date"
-          @change="handleListSearch"
-        />
-        <el-button type="primary" @click="handleListSearch">
-          查询
-        </el-button>
-        <el-button @click="resetListSearch">
-          重置
-        </el-button>
-      </div>
+          <el-select
+            v-model="listSearchType"
+            class="statistics-filter statistics-filter--type"
+            clearable
+            aria-label="按病案类型筛选"
+            placeholder="全部类型"
+          >
+            <el-option label="全部" value="" />
+            <el-option
+              v-for="item in typeOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </el-select>
+          <el-date-picker
+            v-model="listSearchDateRange"
+            class="statistics-filter statistics-filter--date"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+          />
+
+          <template #actions>
+            <el-button type="primary" :loading="listLoading" @click="handleListSearch">
+              <FaIcon name="i-ri:search-line" />
+              查询
+            </el-button>
+            <el-button @click="resetListSearch">
+              <FaIcon name="i-ri:restart-line" />
+              重置
+            </el-button>
+          </template>
+        </MrrFilterBar>
+      </template>
 
       <el-table
         v-loading="listLoading"
         :data="statisticsListData.list"
-        stripe
         empty-text="暂无病案明细数据"
         @sort-change="handleSortChange"
       >
         <el-table-column prop="bah" label="病案号" min-width="130" sortable="custom" show-overflow-tooltip />
         <el-table-column prop="sjh" label="上架号" min-width="130" show-overflow-tooltip />
         <el-table-column prop="date" label="日期" width="120" sortable="custom" />
-        <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="pages" label="页数" width="80" sortable="custom" />
-        <el-table-column prop="openerNo" label="操作员" width="100" />
-        <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" min-width="120" />
+        <el-table-column prop="pages" label="页数" width="80" align="right" sortable="custom" />
+        <el-table-column prop="openerNo" label="操作员" width="110" />
+        <el-table-column prop="cid" label="CID" min-width="140" show-overflow-tooltip />
       </el-table>
 
-      <div class="pagination-wrapper">
+      <template #pagination>
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -430,79 +421,36 @@ onMounted(refreshAll)
           @current-change="loadStatisticsList"
           @size-change="handleListSizeChange"
         />
-      </div>
-    </el-card>
-  </div>
+      </template>
+    </MrrDataTablePanel>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-bottom: 20px;
-}
-
-.page-header {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding-bottom: 4px;
-}
-
-.page-header > div {
-  min-width: 0;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.7;
-}
-
-.page-header h2 {
-  margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
-
-.section-header {
-  display: flex;
-  gap: 10px;
+.trend-range {
+  display: inline-flex;
   align-items: center;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.section-header .el-icon {
-  font-size: 18px;
-  color: var(--el-color-primary);
+  min-height: 26px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-secondary);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-pill);
 }
 
 .trend-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .trend-summary > div {
   padding: 12px 14px;
-  background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
-  border: 1px solid var(--divider);
-  border-radius: 12px;
+  background: color-mix(in srgb, var(--mrr-muted) 32%, var(--mrr-card));
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
 }
 
 .trend-summary span,
@@ -512,7 +460,7 @@ onMounted(refreshAll)
 
 .trend-summary span {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .trend-summary strong {
@@ -521,49 +469,18 @@ onMounted(refreshAll)
   font-variant-numeric: tabular-nums;
 }
 
-.list-search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: var(--surface-muted);
-  border: 1px solid rgb(0 0 0 / 4%);
-  border-radius: 12px;
+.statistics-filter--keyword {
+  flex: 1 1 240px;
+  min-width: 200px;
 }
 
-.search-keyword {
-  flex: 1 1 200px;
-  min-width: 160px;
+.statistics-filter--type {
+  width: 168px;
 }
 
-.search-type {
-  flex: 0 0 150px;
-}
-
-.search-date {
-  flex: 1 1 260px;
-  min-width: 220px;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding-top: 20px;
-  margin-top: 12px;
-  overflow-x: auto;
-  border-top: 1px solid rgb(0 0 0 / 5%);
-}
-
-@media (width <= 768px) {
-  .page-header {
-    flex-direction: column;
-  }
-
-  .page-header :deep(.el-button) {
-    align-self: flex-start;
-  }
+.statistics-filter--date {
+  flex: 1 1 300px;
+  min-width: 260px;
 }
 
 @media (width <= 600px) {
@@ -571,10 +488,10 @@ onMounted(refreshAll)
     grid-template-columns: 1fr;
   }
 
-  .search-keyword,
-  .search-type,
-  .search-date {
+  .statistics-filter {
     flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

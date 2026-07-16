@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.entity;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
@@ -25,6 +26,14 @@ public class Scan {
     private String checksumMd5;
     private String migrationStatus;
     private Date migratedAt;
+
+    // OCR classification suggestion fields. They never replace btype automatically.
+    private Integer predictedBtype;
+    private BigDecimal classificationConfidence;
+    private String classificationState;
+    private String classificationSource;
+    private String classificationModelVersion;
+    private String classificationOcrTitle;
 
     public Scan() {
     }

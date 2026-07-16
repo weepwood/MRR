@@ -6,8 +6,11 @@ export interface IdCardArchiveCase {
   bah?: string
   sjh?: string
   name?: string
+  ruyuan?: string
   admissionTime?: string
   department?: string
+  binqu?: string
+  chuangwei?: string
 }
 
 export interface IdCardArchiveSearchResponse {

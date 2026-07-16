@@ -232,8 +232,8 @@ public class ImageController {
         if (id == null) {
             return Result.fail("图片id不能为空");
         }
-        if (imageType < 0 || imageType > 14) {
-            return Result.fail("图片类型错误");
+        if (imageType < 1 || imageType > 15) {
+            return Result.fail("图片类型错误，仅支持 1-15");
         }
         int result = scanService.updateImageType(id, imageType);
         if (result != 1) {

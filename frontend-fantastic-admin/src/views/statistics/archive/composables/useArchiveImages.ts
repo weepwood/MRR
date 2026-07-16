@@ -16,6 +16,7 @@ import {
 } from '@/utils/medical-record-code'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { createArchiveZip } from '../utils/client-zip'
+import { addArchiveSearchHistory } from './useArchiveSearchHistory'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
@@ -97,6 +98,15 @@ export function useArchiveImages() {
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah)
+
+      const firstImage = images.value[0]
+      if (firstImage) {
+        addArchiveSearchHistory({
+          bah: firstImage.bah || bah,
+          sjh: firstImage.sjh || sjh,
+          imageCount: images.value.length,
+        })
+      }
     }
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'

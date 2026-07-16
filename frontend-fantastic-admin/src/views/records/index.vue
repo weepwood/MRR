@@ -1,29 +1,53 @@
 <script setup lang="ts">
-import { Download, Search } from '@element-plus/icons-vue'
+import type { PaginatedResult, ScanRecord } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
-import type { PaginatedResult, ScanRecord } from '@/api/types'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSelectionBar from '@/components/MrrSelectionBar/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { useCrudList } from '@/composables/useCrudList'
 
 defineOptions({ name: 'RecordsPage' })
 
-const migrationStatusMap: Record<string, { label: string, type: string }> = {
-  not_migrated: { label: '未迁移', type: 'info' },
-  migrated: { label: '已迁移', type: 'success' },
-  verified: { label: '已验证', type: 'success' },
+type MetricTone = 'blue' | 'green' | 'amber' | 'slate'
+type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
+
+interface RecordsQuery {
+  bah: string
+  brxh: string
+  sjh: string
+  openerNo: string
+  btype: string
 }
 
-// 业务状态（非 CRUD 通用部分）
+interface MetricItem {
+  label: string
+  value: number
+  note: string
+  tone: MetricTone
+  icon: string
+}
+
+const migrationStatusMap: Record<string, { label: string, tone: StatusTone }> = {
+  not_migrated: { label: '未迁移', tone: 'warning' },
+  migrated: { label: '已迁移', tone: 'success' },
+  verified: { label: '已验证', tone: 'success' },
+}
+
 const downloading = ref(false)
 const detailVisible = ref(false)
 const currentRecord = ref<ScanRecord | null>(null)
 const selectedRows = ref<ScanRecord[]>([])
-
+const tableRef = ref<{ clearSelection: () => void } | null>(null)
 const error = ref('')
 
 const typeOptions = [
@@ -34,22 +58,12 @@ const typeOptions = [
   })),
 ]
 
-// CRUD 列表逻辑：复用 useCrudList composable，消除重复的分页/查询/重置代码
-interface RecordsQuery {
-  bah: string
-  brxh: string
-  sjh: string
-  openerNo: string
-  btype: string
-}
-
 const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, loadData } = useCrudList<
   ScanRecord,
   RecordsQuery
 >({
   fetchApi: async (params) => {
     const { page, size, ...rest } = params
-    // 构造后端请求体：空字符串转 undefined，btype 字符串转 number
     const request = {
       bah: rest.bah?.trim() || undefined,
       brxh: rest.brxh?.trim() || undefined,
@@ -57,32 +71,78 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       openerNo: rest.openerNo?.trim() || undefined,
       btype: rest.btype ? Number(rest.btype) : undefined,
     }
-    const hasConditions = Object.values(request).some(v => v !== undefined)
+    const hasConditions = Object.values(request).some(value => value !== undefined)
+
     try {
       error.value = ''
-      const res = hasConditions
+      return hasConditions
         ? await getScanByCondition(request, page, size)
         : await getScanList({ page, size }) as unknown as Promise<import('@/api/types').ApiResult<PaginatedResult<ScanRecord>>>
-      return res
     }
-    catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '加载扫描记录失败'
-      error.value = msg
+    catch (cause: unknown) {
+      error.value = cause instanceof Error ? cause.message : '加载扫描记录失败'
       return { list: [], total: 0, page: 1, size: 20 } as unknown as PaginatedResult<ScanRecord>
     }
   },
   defaultQuery: { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' },
 })
 
-const summaryCards = computed(() => [
-  { label: '当前页记录数', value: list.value.length, note: '当前筛选结果中已加载的数据条数' },
-  { label: '总记录数', value: total.value, note: '符合当前筛选条件的扫描记录总量' },
-  { label: '已选记录', value: selectedRows.value.length, note: '可用于批量打包下载' },
-  { label: '当前页码', value: pageNum.value, note: `每页 ${pageSize.value} 条` },
+const migratedCount = computed(() => list.value.filter(item => ['migrated', 'verified'].includes(String(item.migrationStatus || ''))).length)
+const pendingMigrationCount = computed(() => list.value.filter(item => item.migrationStatus === 'not_migrated').length)
+
+const summaryCards = computed<MetricItem[]>(() => [
+  {
+    label: '扫描记录总数',
+    value: total.value,
+    note: '符合当前筛选条件的全部记录',
+    tone: 'blue',
+    icon: 'i-ant-design:database-outlined',
+  },
+  {
+    label: '当前页记录',
+    value: list.value.length,
+    note: `第 ${pageNum.value} 页，每页 ${pageSize.value} 条`,
+    tone: 'slate',
+    icon: 'i-ant-design:file-search-outlined',
+  },
+  {
+    label: '已迁移或验证',
+    value: migratedCount.value,
+    note: '当前页已进入迁移完成状态',
+    tone: 'green',
+    icon: 'i-ant-design:cloud-done-outlined',
+  },
+  {
+    label: '待迁移',
+    value: pendingMigrationCount.value,
+    note: '当前页尚未完成迁移的记录',
+    tone: 'amber',
+    icon: 'i-ant-design:clock-circle-outlined',
+  },
 ])
 
 function handleSelectionChange(rows: ScanRecord[]) {
   selectedRows.value = rows
+}
+
+function clearSelection() {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+function runSearch() {
+  clearSelection()
+  handleSearch()
+}
+
+function runReset() {
+  clearSelection()
+  resetFilters()
+}
+
+async function refreshData() {
+  clearSelection()
+  await loadData()
 }
 
 function openDetail(row: ScanRecord) {
@@ -108,8 +168,8 @@ async function handleBatchDownload() {
     URL.revokeObjectURL(url)
     ElMessage.success('批量下载已开始')
   }
-  catch (error: any) {
-    ElMessage.error(error?.message || '批量下载失败')
+  catch (cause: any) {
+    ElMessage.error(cause?.message || '批量下载失败')
   }
   finally {
     downloading.value = false
@@ -119,128 +179,177 @@ async function handleBatchDownload() {
 function typeLabel(value: unknown) {
   return value ? getMedicalRecordTypeLabel(value as number | string) : '-'
 }
+
+function migrationMeta(status: unknown) {
+  const value = String(status || '')
+  return migrationStatusMap[value] || { label: value || '未知', tone: 'neutral' as const }
+}
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Scan Records
-        </p>
-        <h2>记录管理</h2>
-        <p class="subtitle">
-          管理扫描记录、按条件检索明细，并支持多选后批量打包下载。
-        </p>
-      </div>
-      <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
-        <el-icon><Download /></el-icon>
-        批量下载
-      </el-button>
-    </div>
+  <MrrPageShell width="fluid">
+    <MrrPageHeader
+      title="扫描影像记录"
+      description="按病案、患者、上架号、扫描人员和病案类型检索影像记录，并对选中记录执行批量下载。"
+      icon="i-ant-design:database-outlined"
+    >
+      <template #actions>
+        <el-button :loading="loading" @click="refreshData">
+          <FaIcon name="i-ri:refresh-line" />
+          刷新数据
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
-        </div>
-        <div class="summary-value">
-          {{ item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
+    <section class="mrr-metric-grid" aria-label="扫描记录概览">
+      <MrrMetricCard
+        v-for="item in summaryCards"
+        :key="item.label"
+        :label="item.label"
+        :value="item.value"
+        :note="item.note"
+        :tone="item.tone"
+        :icon="item.icon"
+      />
     </section>
 
-    <el-card shadow="never">
-      <el-form inline @submit.prevent>
-        <el-form-item label="病案号">
-          <el-input v-model="query.bah" clearable placeholder="输入病案号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="病人序号">
-          <el-input v-model="query.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="上架号">
-          <el-input v-model="query.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="扫描人员">
-          <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="query.btype" clearable placeholder="全部类型" style="width: 180px;">
+    <MrrDataTablePanel
+      title="扫描记录列表"
+      description="筛选条件、批量操作、记录结果和分页保持在同一任务区域。"
+      icon="i-ant-design:unordered-list-outlined"
+      :count="total"
+    >
+      <template #filters>
+        <MrrFilterBar variant="embedded">
+          <el-input
+            v-model="query.bah"
+            class="records-filter records-filter--code"
+            clearable
+            aria-label="病案号"
+            placeholder="病案号"
+            @keyup.enter="runSearch"
+          />
+          <el-input
+            v-model="query.brxh"
+            class="records-filter records-filter--code"
+            clearable
+            aria-label="病人序号"
+            placeholder="病人序号"
+            @keyup.enter="runSearch"
+          />
+          <el-input
+            v-model="query.sjh"
+            class="records-filter records-filter--code"
+            clearable
+            aria-label="上架号"
+            placeholder="上架号"
+            @keyup.enter="runSearch"
+          />
+          <el-input
+            v-model="query.openerNo"
+            class="records-filter records-filter--operator"
+            clearable
+            aria-label="扫描人员工号"
+            placeholder="扫描人员工号"
+            @keyup.enter="runSearch"
+          />
+          <el-select
+            v-model="query.btype"
+            class="records-filter records-filter--type"
+            clearable
+            aria-label="病案类型"
+            placeholder="全部类型"
+          >
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            查询
-          </el-button>
-          <el-button @click="resetFilters">
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
-      <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
+          <template #actions>
+            <el-button type="primary" :loading="loading" @click="runSearch">
+              <FaIcon name="i-ri:search-line" />
+              查询
+            </el-button>
+            <el-button @click="runReset">
+              <FaIcon name="i-ri:restart-line" />
+              重置
+            </el-button>
+          </template>
+        </MrrFilterBar>
+      </template>
+
+      <MrrSelectionBar
+        :count="selectedRows.length"
+        :total="list.length"
+        label="当前页已选择"
+        @clear="clearSelection"
+      >
+        <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
+          <FaIcon name="i-ri:download-2-line" />
+          批量下载
+        </el-button>
+      </MrrSelectionBar>
+
+      <div v-if="loading" class="records-state">
+        <AppLoading type="table" :rows="8" />
+      </div>
+      <div v-else-if="error" class="records-state">
+        <AppError :message="error" @retry="refreshData" />
+      </div>
+      <div v-else-if="!list.length" class="records-state">
+        <AppEmpty description="暂无符合条件的扫描记录" />
+      </div>
+
       <el-table
         v-else
+        ref="tableRef"
         :data="list"
-        stripe
-        style="margin-top: 12px;"
+        row-key="id"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="48" />
         <el-table-column prop="bah" label="病案号" min-width="140" />
         <el-table-column prop="brxh" label="病人序号" min-width="120" />
         <el-table-column prop="sjh" label="上架号" min-width="120" />
-        <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="btype" label="类型" width="160">
+        <el-table-column prop="filename" label="文件名" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="btype" label="病案类型" min-width="160">
           <template #default="{ row }">
             {{ typeLabel(row.btype) }}
           </template>
         </el-table-column>
-        <el-table-column prop="pages" label="页数" width="80" />
+        <el-table-column prop="pages" label="页数" width="80" align="right" />
         <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
-        <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="迁移状态" width="100">
+        <el-table-column prop="folder" label="目录" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="迁移状态" width="120">
           <template #default="{ row }">
-            <el-tag
-              v-if="row.migrationStatus"
-              :type="(migrationStatusMap[row.migrationStatus]?.type || 'info') as any"
-              size="small"
-            >
-              {{ migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus }}
-            </el-tag>
-            <span v-else class="text-muted">-</span>
+            <MrrStatusTag
+              :status="row.migrationStatus"
+              :label="migrationMeta(row.migrationStatus).label"
+              :tone="migrationMeta(row.migrationStatus).tone"
+            />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="92" fixed="right" align="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openDetail(row)">
-              详情
+            <el-button link type="primary" @click="openDetail(row)">
+              查看详情
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pager">
+      <template #pagination>
         <el-pagination
           v-model:current-page="pageNum"
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="loadData"
+          @size-change="runSearch"
+          @current-change="refreshData"
         />
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="记录详情" width="720px" :close-on-click-modal="false">
+    <el-dialog v-model="detailVisible" title="扫描记录详情" width="min(720px, calc(100vw - 32px))" :close-on-click-modal="false">
       <el-descriptions v-if="currentRecord" :column="2" border>
         <el-descriptions-item label="病案号">
           {{ currentRecord.bah || '-' }}
@@ -254,7 +363,7 @@ function typeLabel(value: unknown) {
         <el-descriptions-item label="文件名">
           {{ currentRecord.filename || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="类型">
+        <el-descriptions-item label="病案类型">
           {{ typeLabel(currentRecord.btype) }}
         </el-descriptions-item>
         <el-descriptions-item label="页数">
@@ -270,14 +379,11 @@ function typeLabel(value: unknown) {
           {{ currentRecord.folder || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="迁移状态">
-          <el-tag
-            v-if="currentRecord.migrationStatus"
-            :type="(migrationStatusMap[currentRecord.migrationStatus]?.type || 'info') as any"
-            size="small"
-          >
-            {{ migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus }}
-          </el-tag>
-          <span v-else>-</span>
+          <MrrStatusTag
+            :status="currentRecord.migrationStatus"
+            :label="migrationMeta(currentRecord.migrationStatus).label"
+            :tone="migrationMeta(currentRecord.migrationStatus).tone"
+          />
         </el-descriptions-item>
         <el-descriptions-item label="文件大小">
           {{ currentRecord.fileSize ? `${(currentRecord.fileSize / 1024).toFixed(1)} KB` : '-' }}
@@ -287,72 +393,30 @@ function typeLabel(value: unknown) {
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 20px;
+.records-filter--code {
+  width: 152px;
 }
 
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
+.records-filter--operator {
+  width: 176px;
 }
 
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+.records-filter--type {
+  width: 190px;
 }
 
-h2 {
-  margin: 0;
-  font-size: 28px;
+.records-state {
+  min-height: 420px;
 }
 
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 8px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.pager {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.text-muted {
-  color: var(--text-secondary);
+@media (width <= 760px) {
+  .records-filter {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 </style>

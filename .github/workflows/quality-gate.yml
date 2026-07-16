@@ -56,8 +56,8 @@ jobs:
       - name: Test
         run: pnpm test:run
 
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: End-to-End Test
         run: pnpm test:e2e

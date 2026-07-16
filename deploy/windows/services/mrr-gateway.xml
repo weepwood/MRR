@@ -1,0 +1,24 @@
+<service>
+  <id>MRR-Gateway</id>
+  <name>MRR Gateway</name>
+  <description>MRR 前端、文档和 API 反向代理服务</description>
+
+  <executable>{{NGINX_EXE}}</executable>
+  <arguments>-p "{{NGINX_HOME}}" -c "{{NGINX_CONFIG}}" -g "daemon off;"</arguments>
+  <workingdirectory>{{NGINX_HOME}}</workingdirectory>
+
+  <stopexecutable>{{NGINX_EXE}}</stopexecutable>
+  <stoparguments>-p "{{NGINX_HOME}}" -c "{{NGINX_CONFIG}}" -s quit</stoparguments>
+  <stoptimeout>30 sec</stoptimeout>
+  <startmode>Automatic</startmode>
+
+  <logpath>{{MRR_ROOT}}\logs\service</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10485760</sizeThreshold>
+    <keepFiles>30</keepFiles>
+  </log>
+
+  <onfailure action="restart" delay="10 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="none" />
+</service>

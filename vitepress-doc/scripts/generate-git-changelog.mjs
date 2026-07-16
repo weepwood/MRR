@@ -8,10 +8,10 @@ const docsRoot = path.resolve(scriptsRoot, '..')
 const repositoryRoot = path.resolve(docsRoot, '..')
 const outputPath = path.join(docsRoot, 'user-guide', 'changelog.md')
 
-const parsedLimit = Number.parseInt(process.env.MRR_CHANGELOG_LIMIT ?? '200', 10)
+const parsedLimit = Number.parseInt(process.env.MRR_CHANGELOG_LIMIT ?? '1000', 10)
 const commitLimit = Number.isInteger(parsedLimit) && parsedLimit > 0
   ? Math.min(parsedLimit, 1000)
-  : 200
+  : 1000
 
 const TYPE_META = {
   feat: { label: '新增', order: 10 },

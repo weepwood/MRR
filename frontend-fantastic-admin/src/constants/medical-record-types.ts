@@ -30,7 +30,7 @@ export const MEDICAL_RECORD_TYPES: MedicalRecordTypeOption[] = [
 export const MEDICAL_RECORD_TYPE_CODES = MEDICAL_RECORD_TYPES.map(item => item.value)
 
 export const MEDICAL_RECORD_TYPE_MAP = new Map<number, string>(
-  MEDICAL_RECORD_TYPES.map(item => [item.value, item.label]),
+  MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const),
 )
 
 export function getMedicalRecordTypeLabel(

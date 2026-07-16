@@ -195,13 +195,13 @@ onUnmounted(() => {
 }
 
 .search-card-heading {
-  justify-content: space-between;
   gap: 10px;
+  justify-content: space-between;
 }
 
 .search-card-heading > div:first-child {
-  min-width: 0;
   gap: 8px;
+  min-width: 0;
 }
 
 .search-card-heading strong {
@@ -212,9 +212,9 @@ onUnmounted(() => {
 
 .search-card-heading > div:first-child span {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   color: var(--text-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -239,8 +239,8 @@ onUnmounted(() => {
 }
 
 .history-header {
-  justify-content: space-between;
   gap: 12px;
+  justify-content: space-between;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--divider);
 }

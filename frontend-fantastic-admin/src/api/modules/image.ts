@@ -1,24 +1,17 @@
 import type { BAHImageData, ImageTypeRequest } from '../types'
 import api, { getRequest, putRequest } from '../index'
 
-let rememberedArchiveUserId = ''
-
 function resolveArchiveUserId(explicitUserId?: string): string | undefined {
   const explicit = String(explicitUserId || '').trim()
   if (explicit) {
-    rememberedArchiveUserId = explicit
     return explicit
   }
 
-  if (typeof window !== 'undefined') {
-    const fromUrl = new URLSearchParams(window.location.search).get('userid')?.trim() || ''
-    if (fromUrl) {
-      rememberedArchiveUserId = fromUrl
-      return fromUrl
-    }
+  if (typeof window === 'undefined') {
+    return undefined
   }
 
-  return rememberedArchiveUserId || undefined
+  return new URLSearchParams(window.location.search).get('userid')?.trim() || undefined
 }
 
 /** GET /api/v1/img/{bah} — 获取唯一病案号下的图片数据 */

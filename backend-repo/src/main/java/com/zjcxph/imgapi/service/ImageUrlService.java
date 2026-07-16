@@ -68,7 +68,7 @@ public class ImageUrlService {
 
     /**
      * 根据系统设置返回当前首选图片 URL。
-     * OSS 模式下，记录未迁移或签名失败时自动回退本地 URL。
+     * OSS 模式下，记录未迁移、签名为空或签名失败时自动回退本地 URL。
      */
     public String buildPreferredImageUrl(Scan scan) {
         String localUrl = buildImageUrl(scan);
@@ -76,7 +76,8 @@ public class ImageUrlService {
             return localUrl;
         }
         try {
-            return ossService.generatePresignedUrl(scan.getOssUrl());
+            String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
+            return signedUrl == null || signedUrl.isBlank() ? localUrl : signedUrl;
         } catch (Exception exception) {
             logger.warn("生成 OSS 签名 URL 失败，回退本地图片: scan={}, reason={}",
                     scan.getId(), exception.getMessage());
@@ -165,9 +166,10 @@ public class ImageUrlService {
             String signedOssUrl = null;
             if (useOss && ossUrlResolver != null && scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
-                    signedOssUrl = ossUrlResolver.apply(scan);
-                    if (signedOssUrl != null && !signedOssUrl.isBlank()) {
-                        selectedUrl = signedOssUrl;
+                    String resolvedOssUrl = ossUrlResolver.apply(scan);
+                    if (resolvedOssUrl != null && !resolvedOssUrl.isBlank()) {
+                        signedOssUrl = resolvedOssUrl;
+                        selectedUrl = resolvedOssUrl;
                     }
                 } catch (Exception exception) {
                     logger.warn("生成 OSS 签名 URL 失败，回退本地图片: scan={}, reason={}",
@@ -190,10 +192,15 @@ public class ImageUrlService {
     }
 
     public String getEffectiveImageSource() {
-        String configured = systemSettingService.getSetting(IMAGE_SOURCE_SETTING_KEY);
-        return IMAGE_SOURCE_OSS.equalsIgnoreCase(configured)
-                ? IMAGE_SOURCE_OSS
-                : IMAGE_SOURCE_LOCAL;
+        try {
+            String configured = systemSettingService.getSetting(IMAGE_SOURCE_SETTING_KEY);
+            return IMAGE_SOURCE_OSS.equalsIgnoreCase(configured)
+                    ? IMAGE_SOURCE_OSS
+                    : IMAGE_SOURCE_LOCAL;
+        } catch (Exception exception) {
+            logger.warn("读取图片来源设置失败，回退本地图片: {}", exception.getMessage());
+            return IMAGE_SOURCE_LOCAL;
+        }
     }
 
     private boolean isOssPreferred() {

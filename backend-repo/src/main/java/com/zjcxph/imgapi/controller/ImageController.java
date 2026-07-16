@@ -232,7 +232,7 @@ public class ImageController {
         return Result.success("修改图片类型成功");
     }
 
-    @Operation(summary = "获取图片URL")
+    @Operation(summary = "获取图片URL（遵循系统图片来源设置）")
     @GetMapping("/url/{id}")
     public Result<String> getImageUrl(
             @PathVariable
@@ -242,7 +242,7 @@ public class ImageController {
         if (scan == null) {
             return Result.fail("扫描记录不存在");
         }
-        String url = imageUrlService.buildImageUrl(scan);
+        String url = imageUrlService.buildPreferredImageUrl(scan);
         if (url == null) {
             return Result.fail("无法构造图片URL，缺少必要字段");
         }

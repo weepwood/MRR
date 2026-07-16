@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 public interface SearchMapper {
+    String PATIENT_SELECT_COLUMNS = "id, idcard, bah, name, ruyuan, admissiontime, department, binqu, chuangwei";
     String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
     String SCAN_BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
@@ -17,11 +18,11 @@ public interface SearchMapper {
     /*
      * 通过身份证号查询病案号
      */
-    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient where idcard = #{idCard} " +
-            "order by admissiontime desc nulls last, id desc")
+    @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient where idcard = #{idCard} " +
+            "order by admissiontime desc nulls last, ruyuan desc nulls last, id desc")
     List<Patient> findBAHByIDCard(String idCard);
 
-    @Select("select id, idcard, bah, name, admissiontime, department from mr_patient " +
+    @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient " +
             "where bah = #{normalizedBah} or " + BAH_SEARCH_EXPRESSION + " = #{searchCode}")
     List<Patient> findPatientByBah(
             @Param("normalizedBah") String normalizedBah,
@@ -50,10 +51,10 @@ public interface SearchMapper {
     }
 
     @Select("<script>" +
-            "select id, idcard, bah, name, admissiontime, department from mr_patient" +
+            "select " + PATIENT_SELECT_COLUMNS + " from mr_patient" +
             " <where>" +
             "   <if test='keyword != null and keyword != \"\"'>" +
-            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%')" +
+            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or binqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
             "   </if>" +
             " </where>" +
             " order by id limit #{size} offset #{offset}" +
@@ -64,7 +65,7 @@ public interface SearchMapper {
             "select count(*) from mr_patient" +
             " <where>" +
             "   <if test='keyword != null and keyword != \"\"'>" +
-            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%')" +
+            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or binqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
             "   </if>" +
             " </where>" +
             "</script>")

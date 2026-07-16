@@ -57,7 +57,7 @@ onMounted(loadData)
         </p>
         <h2>患者管理</h2>
         <p class="subtitle">
-          查询和管理患者基本信息，支持按病案号、姓名、身份证号、科室搜索。
+          查询患者基本信息，支持按病案号、姓名、身份证号、科室、病区和床位搜索。
         </p>
       </div>
       <el-button :loading="loading" :icon="Refresh" @click="loadData">
@@ -70,7 +70,7 @@ onMounted(loadData)
       <div class="filter-bar">
         <el-input
           v-model="filters.keyword"
-          placeholder="搜索病案号 / 姓名 / 身份证号 / 科室"
+          placeholder="搜索病案号 / 姓名 / 身份证号 / 科室 / 病区 / 床位"
           clearable
           class="filter-input"
           @keyup.enter="handleSearch"
@@ -93,7 +93,7 @@ onMounted(loadData)
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
       <el-table v-else :data="tableData" stripe style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="120" />
+        <el-table-column prop="id" label="ID" width="100" />
         <el-table-column prop="bah" label="病案号" width="140" />
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="idCard" label="身份证号" min-width="180">
@@ -101,7 +101,10 @@ onMounted(loadData)
             {{ maskIdCard(row.idCard) }}
           </template>
         </el-table-column>
-        <el-table-column prop="department" label="科室" width="120" />
+        <el-table-column prop="department" label="科室" width="120" show-overflow-tooltip />
+        <el-table-column prop="binqu" label="病区" width="120" show-overflow-tooltip />
+        <el-table-column prop="chuangwei" label="床位" width="100" show-overflow-tooltip />
+        <el-table-column prop="ruyuan" label="入院日期" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
       </el-table>
 
@@ -127,6 +130,6 @@ onMounted(loadData)
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: #64748b; }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
-.filter-input { width: 360px; }
+.filter-input { width: min(560px, 100%); }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
 </style>

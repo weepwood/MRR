@@ -35,6 +35,10 @@ function normalizeDate(value: unknown) {
   return text ? text.replace(/\//g, '-').split(/[ T]/)[0] : '日期未知'
 }
 
+function inpatientLocation(item: IdCardArchiveCase) {
+  return [item.department, item.bingqu, item.chuangwei].filter(Boolean).join(' · ') || '住院位置未知'
+}
+
 function isActive(item: IdCardArchiveCase) {
   return padCode(item.bah || '') === padCode(props.activeBah || '')
     && padCode(item.sjh || '') === padCode(props.activeSjh || '')
@@ -96,7 +100,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
       >
         <span class="case-main">
           <strong>{{ item.name || '未知患者' }}</strong>
-          <small>{{ item.department || '科室未知' }} · {{ normalizeDate(item.admissionTime) }}</small>
+          <small>{{ inpatientLocation(item) }}</small>
+          <small>入院：{{ normalizeDate(item.ruyuan || item.admissionTime) }}</small>
         </span>
         <span class="case-codes">
           <span><small>病案号</small>{{ padCode(item.bah || '') || '--' }}</span>

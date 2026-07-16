@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.dto.resp;
 
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -27,17 +28,24 @@ public class IdCardArchiveSearchResponse {
         private String bah;
         private String sjh;
         private String name;
+        private LocalDate ruyuan;
         private String admissionTime;
         private String department;
+        private String binqu;
+        private String chuangwei;
 
         public ArchiveCase(Integer patientRecordId, String bah, String sjh, String name,
-                           String admissionTime, String department) {
+                           LocalDate ruyuan, String admissionTime, String department,
+                           String binqu, String chuangwei) {
             this.patientRecordId = patientRecordId;
             this.bah = bah;
             this.sjh = sjh;
             this.name = name;
+            this.ruyuan = ruyuan;
             this.admissionTime = admissionTime;
             this.department = department;
+            this.binqu = binqu;
+            this.chuangwei = chuangwei;
         }
     }
 }

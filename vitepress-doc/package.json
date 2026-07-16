@@ -4,6 +4,7 @@
   "description": "MRR 医疗病案文件记录管理系统文档",
   "type": "module",
   "scripts": {
+    "docs:changelog": "node scripts/generate-git-changelog.mjs",
     "docs:dev": "npm run docs:dev:user",
     "docs:dev:user": "node scripts/run-docs.mjs user dev",
     "docs:dev:internal": "node scripts/run-docs.mjs internal dev",

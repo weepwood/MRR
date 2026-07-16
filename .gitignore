@@ -16,4 +16,8 @@ static
 .workbuddy
 code-review/
 .vitepress
+!.vitepress/
+**/.vitepress/*
+!vitepress-doc/.vitepress/theme/
+!vitepress-doc/.vitepress/theme/Layout.vue
 *.log

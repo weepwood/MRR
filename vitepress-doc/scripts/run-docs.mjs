@@ -1,10 +1,11 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:net'
 import { fileURLToPath } from 'node:url'
 
 const MODES = new Set(['user', 'internal'])
 const COMMANDS = new Set(['dev', 'build', 'preview'])
 const NETWORK_COMMANDS = new Set(['dev', 'preview'])
+const CHANGELOG_COMMANDS = new Set(['dev', 'build'])
 const MAX_PORT_ATTEMPTS = 2048
 
 const [mode = 'user', command = 'dev', ...forwardedArgs] = process.argv.slice(2)
@@ -15,6 +16,22 @@ if (!MODES.has(mode) || !COMMANDS.has(command)) {
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
 const vitepressCli = fileURLToPath(new URL('../node_modules/vitepress/bin/vitepress.js', import.meta.url))
+const changelogGenerator = fileURLToPath(new URL('./generate-git-changelog.mjs', import.meta.url))
+
+function refreshChangelog() {
+  const result = spawnSync(process.execPath, [changelogGenerator], {
+    cwd: projectRoot,
+    env: process.env,
+    stdio: 'inherit',
+  })
+
+  if (result.error) {
+    throw result.error
+  }
+  if (result.status !== 0) {
+    throw new Error(`Git changelog generator exited with code ${result.status ?? 'unknown'}`)
+  }
+}
 
 function readOption(args, name) {
   const equalsPrefix = `${name}=`
@@ -122,12 +139,15 @@ async function resolveNetworkArgs(args) {
 
 let vitepressArgs = forwardedArgs
 try {
+  if (CHANGELOG_COMMANDS.has(command)) {
+    refreshChangelog()
+  }
   if (NETWORK_COMMANDS.has(command)) {
     vitepressArgs = await resolveNetworkArgs(forwardedArgs)
   }
 }
 catch (error) {
-  console.error(`Failed to resolve VitePress network options: ${error.message}`)
+  console.error(`Failed to prepare VitePress: ${error.message}`)
   process.exit(1)
 }
 

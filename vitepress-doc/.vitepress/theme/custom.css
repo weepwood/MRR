@@ -26,10 +26,13 @@
 }
 
 .VPHero .image-bg {
-  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 180ms ease-out;
 }
-.VPHero:hover .image-bg {
-  transform: scale(1.08) rotate(-2deg);
+
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .VPHero:hover .image-bg {
+    transform: translate(var(--mrr-hero-bg-x, 0), var(--mrr-hero-bg-y, 0)) scale(1.08) rotate(-2deg);
+  }
 }
 
 .VPHero .name {
@@ -146,6 +149,14 @@
 .vp-doc [class*='language-'] code {
   background: transparent;
   padding: 0;
+}
+
+/* 行号栏与代码内容之间保留稳定间距，避免边线紧贴首列代码。 */
+.vp-doc div[class*='language-'].line-numbers-mode {
+  padding-left: 48px;
+}
+.vp-doc .line-numbers-wrapper {
+  width: 40px;
 }
 
 .custom-block {

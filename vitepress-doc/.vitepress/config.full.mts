@@ -35,6 +35,7 @@ export default defineConfig({
           { text: '前端工程', link: '/internal/frontend' },
           { text: '后端工程', link: '/internal/backend' },
           { text: '数据库', link: '/internal/database' },
+          { text: '数据导入与迁移', link: '/internal/data-migration' },
           { text: 'API 与权限', link: '/internal/api' },
           { text: '开发流程', link: '/internal/development' },
         ],
@@ -45,6 +46,7 @@ export default defineConfig({
           { text: '部署', link: '/internal/deployment' },
           { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
           { text: '运维与监控', link: '/internal/operations' },
+          { text: '生产运行手册', link: '/internal/runbook' },
           { text: '安全', link: '/internal/security' },
           { text: '故障排查', link: '/internal/troubleshooting' },
           { text: '发布流程', link: '/internal/release' },
@@ -58,20 +60,15 @@ export default defineConfig({
     sidebar: {
       '/internal/': [
         {
-          text: '内部文档',
+          text: '架构与工程',
           collapsed: false,
           items: [
             { text: '文档首页', link: '/internal/' },
             { text: '系统架构', link: '/internal/architecture' },
-          ],
-        },
-        {
-          text: '工程实现',
-          collapsed: false,
-          items: [
             { text: '前端工程', link: '/internal/frontend' },
             { text: '后端工程', link: '/internal/backend' },
             { text: '数据库', link: '/internal/database' },
+            { text: '数据导入与迁移', link: '/internal/data-migration' },
             { text: 'API 与权限', link: '/internal/api' },
             { text: '开发流程', link: '/internal/development' },
           ],
@@ -83,6 +80,7 @@ export default defineConfig({
             { text: '部署', link: '/internal/deployment' },
             { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
             { text: '运维与监控', link: '/internal/operations' },
+            { text: '生产运行手册', link: '/internal/runbook' },
             { text: '安全', link: '/internal/security' },
             { text: '故障排查', link: '/internal/troubleshooting' },
             { text: '发布流程', link: '/internal/release' },
@@ -108,9 +106,11 @@ export default defineConfig({
             { text: '快速上手', link: '/user-guide/getting-started' },
             { text: '病案与记录', link: '/user-guide/patients' },
             { text: '影像档案袋', link: '/user-guide/images' },
+            { text: '病案类型', link: '/user-guide/medical-record-types' },
             { text: '统计分析', link: '/user-guide/statistics' },
             { text: '系统管理', link: '/user-guide/admin' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
+            { text: '常见问题', link: '/user-guide/faq' },
             { text: '更新说明', link: '/user-guide/release-notes' },
             { text: 'Git 更新记录', link: '/user-guide/changelog' },
           ],
@@ -122,7 +122,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/weepwood/MRR' },
     ],
     footer: {
-      message: '内部文档以当前代码与 Flyway 迁移为准',
+      message: '内部文档以当前代码、配置与 Flyway 迁移为准',
       copyright: `Copyright © 2024-${new Date().getFullYear()} MRR Team`,
     },
     search: {

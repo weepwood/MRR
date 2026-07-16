@@ -6,7 +6,6 @@ const props = withDefaults(defineProps<{
   total?: number
   label?: string
 }>(), {
-  total: undefined,
   label: '已选择',
 })
 

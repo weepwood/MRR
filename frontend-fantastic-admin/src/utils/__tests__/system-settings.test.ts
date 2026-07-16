@@ -9,6 +9,7 @@ describe('effective system settings', () => {
   it('restores supported value types from server strings', () => {
     const settings = parseSystemSettings({
       systemName: '病案影像中心',
+      imageSource: 'oss',
       archiveDefaultView: 'list',
       archivePreviewMode: 'scroll',
       archiveThumbnailSize: '260',
@@ -21,6 +22,7 @@ describe('effective system settings', () => {
 
     expect(settings).toEqual({
       systemName: '病案影像中心',
+      imageSource: 'oss',
       archiveDefaultView: 'list',
       archivePreviewMode: 'scroll',
       archiveThumbnailSize: 260,
@@ -32,8 +34,9 @@ describe('effective system settings', () => {
     })
   })
 
-  it('clamps invalid numeric settings and rejects unsupported modes', () => {
+  it('uses local images by default and rejects unsupported modes', () => {
     const settings = parseSystemSettings({
+      imageSource: 's3',
       archiveDefaultView: 'single',
       archivePreviewMode: 'grid',
       archiveThumbnailSize: 999,
@@ -41,6 +44,7 @@ describe('effective system settings', () => {
       archiveWatermarkOpacity: -10,
     })
 
+    expect(settings.imageSource).toBe('local')
     expect(settings.archiveDefaultView).toBe('thumb')
     expect(settings.archivePreviewMode).toBe('single')
     expect(settings.archiveThumbnailSize).toBe(320)
@@ -52,6 +56,8 @@ describe('effective system settings', () => {
     const defaults = createDefaultSystemSettings()
     const serialized = serializeSystemSettings(defaults)
 
+    expect(defaults.imageSource).toBe('local')
+    expect(serialized.imageSource).toBe('local')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)

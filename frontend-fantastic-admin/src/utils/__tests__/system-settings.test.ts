@@ -18,6 +18,7 @@ describe('effective system settings', () => {
       archiveRememberSelection: 'true',
       archiveWatermarkEnabled: '0',
       archiveWatermarkOpacity: '22',
+      archiveIpMaxChanges: '5',
     })
 
     expect(settings).toEqual({
@@ -31,6 +32,7 @@ describe('effective system settings', () => {
       archiveRememberSelection: true,
       archiveWatermarkEnabled: false,
       archiveWatermarkOpacity: 22,
+      archiveIpMaxChanges: 5,
     })
   })
 
@@ -42,6 +44,7 @@ describe('effective system settings', () => {
       archiveThumbnailSize: 999,
       archivePreloadCount: 1,
       archiveWatermarkOpacity: -10,
+      archiveIpMaxChanges: 99,
     })
 
     expect(settings.imageSource).toBe('local')
@@ -50,6 +53,7 @@ describe('effective system settings', () => {
     expect(settings.archiveThumbnailSize).toBe(320)
     expect(settings.archivePreloadCount).toBe(10)
     expect(settings.archiveWatermarkOpacity).toBe(5)
+    expect(settings.archiveIpMaxChanges).toBe(20)
   })
 
   it('serializes every effective setting for the key-value API', () => {
@@ -57,9 +61,11 @@ describe('effective system settings', () => {
     const serialized = serializeSystemSettings(defaults)
 
     expect(defaults.imageSource).toBe('local')
+    expect(defaults.archiveIpMaxChanges).toBe(3)
     expect(serialized.imageSource).toBe('local')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
+    expect(serialized.archiveIpMaxChanges).toBe('3')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

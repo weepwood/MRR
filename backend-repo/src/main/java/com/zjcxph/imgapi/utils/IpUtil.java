@@ -8,13 +8,29 @@ public final class IpUtil {
     }
 
     public static String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
+        String ip = firstForwardedIp(request.getHeader("X-Forwarded-For"));
+        if (isMissing(ip)) {
+            ip = normalize(request.getHeader("X-Real-IP"));
         }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
+        if (isMissing(ip)) {
+            ip = normalize(request.getRemoteAddr());
         }
-        return ip;
+        return isMissing(ip) ? "unknown" : ip;
+    }
+
+    private static String firstForwardedIp(String value) {
+        if (isMissing(value)) {
+            return null;
+        }
+        int separator = value.indexOf(',');
+        return normalize(separator >= 0 ? value.substring(0, separator) : value);
+    }
+
+    private static String normalize(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private static boolean isMissing(String value) {
+        return value == null || value.isBlank() || "unknown".equalsIgnoreCase(value);
     }
 }

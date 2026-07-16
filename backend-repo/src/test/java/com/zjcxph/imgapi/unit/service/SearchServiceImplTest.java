@@ -60,7 +60,7 @@ class SearchServiceImplTest {
         patient.setChuangwei("08床");
 
         when(searchMapper.findBAHByIDCard("110101199001011234")).thenReturn(List.of(patient));
-        when(searchMapper.findSjhByBah("789508", "789508")).thenReturn(List.of("10001"));
+        when(searchMapper.findSjhByBah("00789508", "789508")).thenReturn(List.of("10001"));
 
         List<IdCardArchiveSearchResponse.ArchiveCase> result =
                 searchService.getArchiveCasesByID("110101199001011234");

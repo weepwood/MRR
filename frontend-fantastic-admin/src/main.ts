@@ -2,6 +2,7 @@ import iconConfig from '@/iconify/index.json'
 // 自定义指令
 import directive from '@/utils/directive'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
+import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
@@ -24,6 +25,7 @@ import '@/assets/styles/pages/statistics-detail-typography.css'
 
 installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
+installClipboardFallback()
 
 const app = createApp(App)
 app.use(pinia)

@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.service.KeywordClassificationEngine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +29,7 @@ class KeywordClassificationEngineTest {
 
         assertThat(decision.state()).isEqualTo("SUGGESTED");
         assertThat(decision.predictedBtype()).isEqualTo(1);
-        assertThat(decision.confidence()).isGreaterThanOrEqualTo("0.96000");
+        assertThat(decision.confidence()).isGreaterThanOrEqualTo(new BigDecimal("0.96000"));
         assertThat(decision.evidence()).contains("住院病案首页");
     }
 

@@ -3,10 +3,12 @@ export const SYSTEM_SETTINGS_UPDATED_EVENT = 'mrr:system-settings-updated'
 
 export type ArchiveDefaultView = 'thumb' | 'list'
 export type ArchivePreviewMode = 'single' | 'scroll'
+export type ImageSource = 'local' | 'oss'
 export type SettingsSource = 'server' | 'local' | 'default'
 
 export interface EffectiveSystemSettings {
   systemName: string
+  imageSource: ImageSource
   archiveDefaultView: ArchiveDefaultView
   archivePreviewMode: ArchivePreviewMode
   archiveThumbnailSize: number
@@ -20,6 +22,7 @@ export interface EffectiveSystemSettings {
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
   return {
     systemName: 'MRR 后台管理中心',
+    imageSource: 'local',
     archiveDefaultView: 'thumb',
     archivePreviewMode: 'single',
     archiveThumbnailSize: 200,
@@ -61,11 +64,13 @@ function parseNumber(value: unknown, fallback: number, min: number, max: number)
 export function parseSystemSettings(values?: Record<string, unknown> | null): EffectiveSystemSettings {
   const defaults = createDefaultSystemSettings()
   const source = values || {}
+  const imageSource = source.imageSource === 'oss' ? 'oss' : 'local'
   const archiveDefaultView = source.archiveDefaultView === 'list' ? 'list' : 'thumb'
   const archivePreviewMode = source.archivePreviewMode === 'scroll' ? 'scroll' : 'single'
 
   return {
     systemName: String(source.systemName ?? defaults.systemName).trim() || defaults.systemName,
+    imageSource,
     archiveDefaultView,
     archivePreviewMode,
     archiveThumbnailSize: parseNumber(source.archiveThumbnailSize, defaults.archiveThumbnailSize, 160, 320),

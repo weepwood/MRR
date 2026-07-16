@@ -15,7 +15,7 @@ import {
   resolveArchiveWatermarkUserId,
 } from './archive-watermark'
 
-const WATERMARK_REFRESH_INTERVAL = 1_000
+const WATERMARK_REFRESH_INTERVAL = 60_000
 const WATERMARK_Z_INDEX = '4000'
 
 function isArchiveRoute(path: string): boolean {

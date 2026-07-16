@@ -14,6 +14,8 @@ import com.zjcxph.imgapi.mapper.ScanMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 @Service
 public class ArchiveImageClassificationService {
@@ -91,7 +94,12 @@ public class ArchiveImageClassificationService {
             return jobMapper.findById(job.getId());
         }
 
-        taskExecutor.execute(() -> processJob(job.getId()));
+        try {
+            taskExecutor.execute(() -> processJob(job.getId()));
+        } catch (RejectedExecutionException exception) {
+            jobMapper.markFailed(job.getId(), "智能分类任务队列已满");
+            throw new BusinessException("智能分类任务队列已满，请稍后重试");
+        }
         return jobMapper.findById(job.getId());
     }
 
@@ -108,6 +116,10 @@ public class ArchiveImageClassificationService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", key = "#scanId")
+    })
     public ImageClassification confirmSuggestion(Integer scanId, Integer requestedType, String reviewedBy) {
         Scan scan = requireScan(scanId);
         ImageClassification classification = classificationMapper.findByScanId(scanId);
@@ -145,6 +157,10 @@ public class ArchiveImageClassificationService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", allEntries = true)
+    })
     public int confirmHighConfidence(Long archiveId, Double requestedThreshold, String reviewedBy) {
         if (archiveId == null || archiveId <= 0) {
             throw new BusinessException("病案 ID 不能为空");
@@ -152,6 +168,7 @@ public class ArchiveImageClassificationService {
         BigDecimal threshold = normalizeThreshold(requestedThreshold);
         List<ImageClassification> suggestions = classificationMapper.findHighConfidenceSuggestions(archiveId, threshold);
         int confirmed = 0;
+        String operator = normalizeOperator(reviewedBy);
         for (ImageClassification suggestion : suggestions) {
             Scan scan = scanMapper.findById(suggestion.getScanId());
             if (scan == null || suggestion.getPredictedBtype() == null) {
@@ -160,9 +177,8 @@ public class ArchiveImageClassificationService {
             Integer previousType = scan.getBtype();
             Integer finalType = suggestion.getPredictedBtype();
             if (scanMapper.updateImageType(scan.getId(), finalType) != 1) {
-                continue;
+                throw new BusinessException("批量更新图片类型失败，scanId=" + scan.getId());
             }
-            String operator = normalizeOperator(reviewedBy);
             classificationMapper.markReviewed(scan.getId(), finalType, operator, "CONFIRMED");
             classificationMapper.insertAudit(
                     scan.getId(),
@@ -183,23 +199,33 @@ public class ArchiveImageClassificationService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void recordManualTypeChange(Scan scan, Integer previousType, Integer finalType, String operatedBy) {
-        if (scan == null || scan.getId() == null) {
-            return;
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanById", key = "#scanId")
+    })
+    public void changeTypeManually(Integer scanId, Integer finalType, String operatedBy) {
+        if (finalType == null || finalType < 0 || finalType > 14) {
+            throw new BusinessException("图片类型错误");
         }
-        ImageClassification classification = classificationMapper.findByScanId(scan.getId());
+        Scan scan = requireScan(scanId);
+        Integer previousType = scan.getBtype();
+        if (scanMapper.updateImageType(scanId, finalType) != 1) {
+            throw new BusinessException("更新图片类型失败");
+        }
+
+        ImageClassification classification = classificationMapper.findByScanId(scanId);
         String operator = normalizeOperator(operatedBy);
         if (classification != null) {
-            boolean accepted = finalType != null && finalType.equals(classification.getPredictedBtype());
+            boolean accepted = finalType.equals(classification.getPredictedBtype());
             classificationMapper.markReviewed(
-                    scan.getId(),
+                    scanId,
                     finalType,
                     operator,
                     accepted ? "CONFIRMED" : "REJECTED"
             );
         }
         classificationMapper.insertAudit(
-                scan.getId(),
+                scanId,
                 scan.getArchiveId(),
                 previousType,
                 classification == null ? null : classification.getPredictedBtype(),
@@ -248,6 +274,10 @@ public class ArchiveImageClassificationService {
                 }
 
                 for (Scan scan : scans) {
+                    ClassificationJob currentState = jobMapper.findById(jobId);
+                    if (currentState == null || "CANCELLED".equals(currentState.getStatus())) {
+                        return;
+                    }
                     try {
                         String text = ocrService.recognize(scan);
                         KeywordClassificationEngine.Decision decision = classificationEngine.classify(text, definitions);

@@ -180,6 +180,17 @@ class ImageControllerTest {
     }
 
     @Test
+    void getImageUrlUsesPreferredSource() {
+        when(scanService.findById(1)).thenReturn(mockScan);
+        when(imageUrlService.buildPreferredImageUrl(mockScan)).thenReturn("https://oss/signed-image");
+
+        Result<String> result = imageController.getImageUrl(1);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData()).isEqualTo("https://oss/signed-image");
+    }
+
+    @Test
     void updateImageType_nullBtype() {
         ImageRequest req = new ImageRequest();
         req.setBtype(null);

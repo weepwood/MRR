@@ -17,6 +17,8 @@ const props = withDefaults(defineProps<{
   rightAxisName?: string
   leftUnit?: string
   rightUnit?: string
+  zoomable?: boolean
+  initialVisibleCount?: number
 }>(), {
   loading: false,
   height: 320,
@@ -24,12 +26,16 @@ const props = withDefaults(defineProps<{
   rightAxisName: '',
   leftUnit: '',
   rightUnit: '',
+  zoomable: true,
+  initialVisibleCount: 16,
 })
 
 const empty = computed(() => !props.categories.length || ![
   ...props.bars,
   ...props.lines,
 ].some(item => item.data.length))
+
+const visibleCount = computed(() => Math.max(1, Math.floor(props.initialVisibleCount)))
 
 const option = computed<ECOption>(() => ({
   tooltip: {
@@ -72,8 +78,15 @@ const option = computed<ECOption>(() => ({
       },
     },
   ],
-  dataZoom: props.categories.length > 16
-    ? [{ type: 'inside', startValue: Math.max(0, props.categories.length - 16), endValue: props.categories.length - 1 }]
+  dataZoom: props.zoomable && props.categories.length > visibleCount.value
+    ? [{
+        type: 'inside',
+        startValue: Math.max(0, props.categories.length - visibleCount.value),
+        endValue: props.categories.length - 1,
+        zoomOnMouseWheel: true,
+        moveOnMouseWheel: false,
+        moveOnMouseMove: true,
+      }]
     : undefined,
   series: [
     ...props.bars.map((item, index) => ({

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MrrBarSeries, MrrChartCountItem, MrrLineSeries } from '@/types/chart'
+import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
 import {
   ArrowRight,
   Calendar,
@@ -11,19 +11,13 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { MrrChartCard, MrrDonutChart, MrrDualAxisChart } from '@/components/charts'
+import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import {
   getStatisticsDateSummary,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
 
 defineOptions({ name: 'StatisticsPage' })
-
-interface TypeDisplayItem {
-  type: string
-  records: number
-  pages: number
-}
 
 interface TrendDisplayItem {
   date: string
@@ -33,37 +27,23 @@ interface TrendDisplayItem {
 
 const router = useRouter()
 const loading = ref(false)
-const summaryData = ref<any>({ total: {}, byType: [] })
+const summaryData = ref<any>({ total: {} })
 const dateSummaryData = ref<any[]>([])
 
 const totalRecords = computed(() => Number(summaryData.value.total?.totalRecords || 0))
 const totalPages = computed(() => Number(summaryData.value.total?.totalPages || 0))
 const uniqueBahCount = computed(() => Number(summaryData.value.uniqueBAHCount || 0))
 
-const typeList = computed<TypeDisplayItem[]>(() => {
-  const source = Array.isArray(summaryData.value.byType) ? summaryData.value.byType : []
+const trendDates = computed<TrendDisplayItem[]>(() => {
+  const source = Array.isArray(dateSummaryData.value) ? dateSummaryData.value : []
   return source
     .map((item: any) => ({
-      type: String(item?.type || '未分类'),
-      records: Number(item?.recordCount || item?.totalRecords || 0),
-      pages: Number(item?.totalPages || item?.pageCount || 0),
+      date: String(item?.date || '-'),
+      records: Number(item?.recordCount || 0),
+      pages: Number(item?.totalPages || item?.pages || 0),
     }))
-    .sort((a: TypeDisplayItem, b: TypeDisplayItem) => b.records - a.records)
+    .sort((a: TrendDisplayItem, b: TrendDisplayItem) => a.date.localeCompare(b.date))
 })
-
-const trendDates = computed<TrendDisplayItem[]>(() => {
-  const source = Array.isArray(dateSummaryData.value) ? dateSummaryData.value.slice(-10) : []
-  return source.map((item: any) => ({
-    date: String(item?.date || '-'),
-    records: Number(item?.recordCount || 0),
-    pages: Number(item?.totalPages || item?.pages || 0),
-  }))
-})
-
-const typeChartData = computed<MrrChartCountItem[]>(() => typeList.value.map(item => ({
-  label: item.type,
-  count: item.records,
-})))
 
 const trendCategories = computed(() => trendDates.value.map(item => formatShortDate(item.date)))
 const trendBars = computed<MrrBarSeries[]>(() => [{
@@ -76,10 +56,10 @@ const trendLines = computed<MrrLineSeries[]>(() => [{
   smooth: true,
 }])
 
-const recentRecordTotal = computed(() => trendDates.value.reduce((total, item) => total + item.records, 0))
-const recentPageTotal = computed(() => trendDates.value.reduce((total, item) => total + item.pages, 0))
+const trendRecordTotal = computed(() => trendDates.value.reduce((total, item) => total + item.records, 0))
+const trendPageTotal = computed(() => trendDates.value.reduce((total, item) => total + item.pages, 0))
 const averageDailyPages = computed(() => trendDates.value.length
-  ? Math.round(recentPageTotal.value / trendDates.value.length)
+  ? Math.round(trendPageTotal.value / trendDates.value.length)
   : 0)
 
 const summaryCards = computed(() => [
@@ -107,7 +87,7 @@ const summaryCards = computed(() => [
   {
     label: '趋势统计天数',
     value: trendDates.value.length,
-    note: '当前展示的近期扫描周期',
+    note: '可通过滚轮缩放查看统计周期',
     icon: Calendar,
     tone: 'amber',
   },
@@ -122,7 +102,7 @@ async function loadData() {
       getStatisticsSummary(),
       getStatisticsDateSummary(),
     ])
-    summaryData.value = summaryRes.data || { total: {}, byType: [] }
+    summaryData.value = summaryRes.data || { total: {} }
     dateSummaryData.value = Array.isArray(dateRes.data) ? dateRes.data : []
   }
   catch (error: any) {
@@ -164,11 +144,11 @@ onMounted(loadData)
           </div>
           <h2>病案扫描数据统计</h2>
           <p class="subtitle">
-            汇总病案扫描规模、类型分布与近期变化，快速定位异常数据波动。
+            汇总病案扫描规模与每日变化，通过滚轮缩放时间范围，快速定位异常数据波动。
           </p>
           <div class="hero-meta">
             <span>最新统计日期：{{ latestStatisticsDate }}</span>
-            <span>{{ typeList.length }} 个病案类型</span>
+            <span>共 {{ trendDates.length }} 个统计日</span>
           </div>
         </div>
 
@@ -207,44 +187,24 @@ onMounted(loadData)
 
     <section class="analytics-grid">
       <MrrChartCard
-        title="病案类型分布"
-        description="按记录数量统计各扫描类型占比"
-        :loading="loading"
-        :empty="!typeChartData.length"
-        empty-description="暂无类型分布数据"
-      >
-        <template #actions>
-          <span class="panel-badge">{{ typeList.length }} 类</span>
-        </template>
-        <MrrDonutChart
-          :data="typeChartData"
-          :loading="loading"
-          center-label="扫描记录"
-          unit="条"
-          legend-position="right"
-          :height="310"
-        />
-      </MrrChartCard>
-
-      <MrrChartCard
-        title="近 10 日扫描趋势"
-        description="同时观察每日扫描页数与扫描记录数"
+        title="扫描趋势"
+        description="默认展示近 90 日；在图表内滚动鼠标滚轮可放大或缩小时间范围"
         :loading="loading"
         :empty="!trendDates.length"
         empty-description="暂无趋势数据"
       >
         <template #actions>
-          <span class="panel-badge panel-badge--success">{{ trendDates.length }} 天</span>
+          <span class="panel-badge panel-badge--success">{{ trendDates.length }} 天可浏览</span>
         </template>
         <template #summary>
           <div class="trend-summary">
             <div>
-              <span>近期记录</span>
-              <strong>{{ formatNumber(recentRecordTotal) }}</strong>
+              <span>全部记录</span>
+              <strong>{{ formatNumber(trendRecordTotal) }}</strong>
             </div>
             <div>
-              <span>近期页数</span>
-              <strong>{{ formatNumber(recentPageTotal) }}</strong>
+              <span>全部页数</span>
+              <strong>{{ formatNumber(trendPageTotal) }}</strong>
             </div>
             <div>
               <span>日均页数</span>
@@ -261,7 +221,8 @@ onMounted(loadData)
           right-axis-name="记录数"
           left-unit="页"
           right-unit="条"
-          :height="310"
+          :initial-visible-count="90"
+          :height="340"
         />
       </MrrChartCard>
     </section>
@@ -405,7 +366,7 @@ h2 {
 
 .analytics-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -453,12 +414,6 @@ h2 {
   margin-top: 6px;
   font-size: 17px;
   font-variant-numeric: tabular-nums;
-}
-
-@media (width <= 1180px) {
-  .analytics-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (width <= 760px) {

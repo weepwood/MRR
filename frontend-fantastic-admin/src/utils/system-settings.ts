@@ -17,6 +17,7 @@ export interface EffectiveSystemSettings {
   archiveRememberSelection: boolean
   archiveWatermarkEnabled: boolean
   archiveWatermarkOpacity: number
+  archiveIpMaxChanges: number
 }
 
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
@@ -31,6 +32,7 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     archiveRememberSelection: true,
     archiveWatermarkEnabled: true,
     archiveWatermarkOpacity: 14,
+    archiveIpMaxChanges: 3,
   }
 }
 
@@ -79,6 +81,7 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     archiveRememberSelection: parseBoolean(source.archiveRememberSelection, defaults.archiveRememberSelection),
     archiveWatermarkEnabled: parseBoolean(source.archiveWatermarkEnabled, defaults.archiveWatermarkEnabled),
     archiveWatermarkOpacity: parseNumber(source.archiveWatermarkOpacity, defaults.archiveWatermarkOpacity, 5, 35),
+    archiveIpMaxChanges: Math.round(parseNumber(source.archiveIpMaxChanges, defaults.archiveIpMaxChanges, 0, 20)),
   }
 }
 

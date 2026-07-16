@@ -1,4 +1,5 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
+import { MEDICAL_RECORD_TYPE_CODES, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 
 type QueryValue = string | string[] | undefined
 
@@ -32,14 +33,9 @@ interface MockUser {
   lastLoginAt: string
 }
 
-const typeNames: Record<number, string> = {
-  1: '病案首页',
-  2: '病程记录',
-  3: '手术记录',
-  5: '护理记录',
-  8: '检验单',
-  9: '医嘱',
-}
+const typeNames: Record<number, string> = Object.fromEntries(
+  MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const),
+)
 
 const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸科', '消化内科']
 const operators = ['scanner-01', 'scanner-02', 'scanner-03', 'scanner-04']
@@ -47,7 +43,7 @@ const mockTimestamp = '2026-07-13T08:00:00.000Z'
 
 const scans: MockScanRecord[] = Array.from({ length: 64 }, (_, index) => {
   const id = index + 1
-  const btypeValues = [1, 2, 3, 5, 8, 9]
+  const btypeValues = MEDICAL_RECORD_TYPE_CODES
   const btype = btypeValues[index % btypeValues.length]
   const day = String((index % 28) + 1).padStart(2, '0')
   const month = String(6 + Math.floor(index / 28)).padStart(2, '0')

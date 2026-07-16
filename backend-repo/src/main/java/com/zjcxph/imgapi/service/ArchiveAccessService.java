@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 @Service
 public class ArchiveAccessService {
@@ -21,7 +20,7 @@ public class ArchiveAccessService {
     public static final String MAX_IP_CHANGES_SETTING = "archiveIpMaxChanges";
     public static final int DEFAULT_MAX_IP_CHANGES = 3;
     private static final int MAX_CONFIGURABLE_IP_CHANGES = 20;
-    private static final Pattern USER_ID_PATTERN = Pattern.compile("[\\p{L}\\p{N}_.@-]{1,128}");
+    private static final int MAX_USER_ID_LENGTH = 128;
     private static final Logger logger = LoggerFactory.getLogger(ArchiveAccessService.class);
 
     private final ArchiveIpBindingMapper archiveIpBindingMapper;
@@ -38,6 +37,9 @@ public class ArchiveAccessService {
     /**
      * 对 archive URL 中的明文 userid 执行每日 IP 绑定。
      * userid 为空时保持现有内部访问兼容性，不启用绑定。
+     *
+     * 明确的参数错误和 IP 切换超限会拒绝访问；数据库或设置读取异常只记录错误并临时放行，
+     * 避免辅助审计功能故障导致原有病案图片完全不可用。
      */
     @Transactional
     public void verifyAndRecord(
@@ -53,7 +55,6 @@ public class ArchiveAccessService {
 
         String clientIp = IpUtil.getClientIp(request);
         LocalDate accessDate = LocalDate.now();
-        int maxChanges = resolveMaxIpChanges();
 
         request.setAttribute(ArchiveAccessAttributes.USER_ID, userid);
         request.setAttribute(
@@ -61,6 +62,27 @@ public class ArchiveAccessService {
                 buildAuditTarget(normalizedBah, normalizedSjh)
         );
 
+        try {
+            verifyIpBinding(userid, clientIp, accessDate, request);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            String note = "IP 绑定记录异常，已临时放行";
+            request.setAttribute(ArchiveAccessAttributes.IP_AUDIT_NOTE, note);
+            logger.error(
+                    "病案访问 IP 绑定失败，已临时放行: userid={}, ip={}, date={}",
+                    userid, clientIp, accessDate, exception
+            );
+        }
+    }
+
+    private void verifyIpBinding(
+            String userid,
+            String clientIp,
+            LocalDate accessDate,
+            HttpServletRequest request
+    ) {
+        int maxChanges = resolveMaxIpChanges();
         int inserted = archiveIpBindingMapper.insertIfAbsent(accessDate, userid, clientIp);
         if (inserted > 0) {
             String note = "首次绑定 IP " + clientIp + "（每日允许切换 " + maxChanges + " 次）";
@@ -71,7 +93,7 @@ public class ArchiveAccessService {
 
         ArchiveIpBinding binding = archiveIpBindingMapper.findForUpdate(accessDate, userid);
         if (binding == null) {
-            throw new BusinessException(500, "无法读取病案访问 IP 绑定状态");
+            throw new IllegalStateException("无法读取病案访问 IP 绑定状态");
         }
 
         if (Objects.equals(binding.getBoundIp(), clientIp)) {
@@ -112,8 +134,8 @@ public class ArchiveAccessService {
             return null;
         }
         String userid = rawUserId.trim();
-        if (!USER_ID_PATTERN.matcher(userid).matches()) {
-            throw new BusinessException(400, "userid 格式不正确，仅支持字母、数字、中文及 _-.@，长度不超过 128");
+        if (userid.length() > MAX_USER_ID_LENGTH || userid.chars().anyMatch(Character::isISOControl)) {
+            throw new BusinessException(400, "userid 格式不正确，长度不能超过 128 且不能包含控制字符");
         }
         return userid;
     }

@@ -33,6 +33,7 @@ export function useArchiveImages() {
   const errorMsg = ref('')
   const searchBah = ref('')
   const searchSjh = ref('')
+  const searchUserId = ref('')
   const searchIdCard = ref('')
   const idCardToken = ref('')
   const maskedIdCard = ref('')
@@ -59,6 +60,7 @@ export function useArchiveImages() {
   async function loadImages(forceRefresh = false): Promise<void> {
     const bah = padCode(searchBah.value)
     const sjh = padCode(searchSjh.value)
+    const userid = searchUserId.value.trim()
     const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
     searchBah.value = bah
@@ -75,7 +77,12 @@ export function useArchiveImages() {
     loading.value = true
     errorMsg.value = ''
     try {
-      const res = await asResult<BAHImageData[]>(getImgByCode(bah || undefined, sjh || undefined, forceRefresh))
+      const res = await asResult<BAHImageData[]>(getImgByCode(
+        bah || undefined,
+        sjh || undefined,
+        forceRefresh,
+        userid || undefined,
+      ))
       const rawList = Array.isArray(res?.data) ? res.data : []
       let cacheBuster = readArchiveImageVersion(bah, sjh)
       if (forceRefresh) {
@@ -242,6 +249,7 @@ export function useArchiveImages() {
     errorMsg,
     searchBah,
     searchSjh,
+    searchUserId,
     searchIdCard,
     idCardToken,
     maskedIdCard,

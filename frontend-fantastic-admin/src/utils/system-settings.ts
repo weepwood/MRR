@@ -64,7 +64,7 @@ function parseNumber(value: unknown, fallback: number, min: number, max: number)
 export function parseSystemSettings(values?: Record<string, unknown> | null): EffectiveSystemSettings {
   const defaults = createDefaultSystemSettings()
   const source = values || {}
-  const imageSource = source.imageSource === 'oss' ? 'oss' : 'local'
+  const imageSource = String(source.imageSource ?? '').trim().toLowerCase() === 'oss' ? 'oss' : 'local'
   const archiveDefaultView = source.archiveDefaultView === 'list' ? 'list' : 'thumb'
   const archivePreviewMode = source.archivePreviewMode === 'scroll' ? 'scroll' : 'single'
 

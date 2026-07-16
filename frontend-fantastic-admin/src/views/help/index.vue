@@ -26,7 +26,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '用户使用手册',
     description: '查看病案管理、影像浏览、统计分析和系统操作说明。',
-    target: '/docs/',
+    target: 'http://192.2.1.135:8002/docs',
     icon: Reading,
     permission: '登录用户',
     tone: 'primary',
@@ -34,7 +34,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '开发文档',
     description: '查看前后端架构、开发流程、接口约定和数据库设计。',
-    target: '/docs/internal/',
+    target: 'http://192.2.1.135:8002/docs/internal/',
     icon: Document,
     permission: '需要 system:read',
     tone: 'success',
@@ -42,7 +42,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '运维指南',
     description: '查看部署、日志、备份恢复、监控和故障处理说明。',
-    target: '/docs/internal/internal/deployment.html',
+    target: 'http://192.2.1.135:8002/docs/internal/internal/deployment.html',
     icon: Setting,
     permission: '需要 system:read',
     tone: 'warning',
@@ -50,7 +50,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '实时 API 文档',
     description: '打开由 Springdoc OpenAPI 实时生成的 Swagger UI。',
-    target: '/api-docs/',
+    target: 'http://192.2.1.135:18045/swagger-ui/index.html#/',
     icon: Connection,
     permission: '需要 system:read',
     tone: 'info',
@@ -67,6 +67,13 @@ function getErrorMessage(error: unknown) {
   return '无法创建文档访问会话'
 }
 
+function getSessionTarget(target: string) {
+  if (target.startsWith('/')) {
+    return target
+  }
+  return new URL(target).pathname
+}
+
 async function openDocumentation(entry: DocumentationEntry) {
   if (openingTarget.value) {
     return
@@ -74,9 +81,8 @@ async function openDocumentation(entry: DocumentationEntry) {
 
   openingTarget.value = entry.target
   try {
-    const result = await createDocumentationSession(entry.target)
-    const target = result.data?.target || entry.target
-    window.location.assign(target)
+    await createDocumentationSession(getSessionTarget(entry.target))
+    window.location.assign(entry.target)
   }
   catch (error: unknown) {
     ElMessage.error(getErrorMessage(error))

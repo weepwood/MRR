@@ -4,6 +4,7 @@ import { Clock, Delete, Search } from '@element-plus/icons-vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { requiresSjhForBah } from '@/utils/medical-record-code'
 import {
+  ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
   ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT,
   clearArchiveSearchHistory,
   readArchiveSearchHistory,
@@ -43,6 +44,12 @@ function handleHistoryUpdated(event: Event) {
   searchHistory.value = Array.isArray(detail) ? detail : readArchiveSearchHistory()
 }
 
+function handleStorage(event: StorageEvent) {
+  if (event.key === ARCHIVE_SEARCH_HISTORY_STORAGE_KEY || event.key === null) {
+    searchHistory.value = readArchiveSearchHistory()
+  }
+}
+
 function selectHistory(item: ArchiveSearchHistoryItem) {
   historyVisible.value = false
   searchIdCard.value = ''
@@ -60,8 +67,15 @@ function clearHistory() {
   searchHistory.value = []
 }
 
-onMounted(() => window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated))
-onUnmounted(() => window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated))
+onMounted(() => {
+  window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
+  window.addEventListener('storage', handleStorage)
+})
+
+onUnmounted(() => {
+  window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
+  window.removeEventListener('storage', handleStorage)
+})
 </script>
 
 <template>
@@ -77,7 +91,6 @@ onUnmounted(() => window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVEN
         placement="bottom-end"
         trigger="click"
         :width="340"
-        :teleported="false"
       >
         <template #reference>
           <el-button text size="small" :icon="Clock">

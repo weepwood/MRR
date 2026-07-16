@@ -240,17 +240,7 @@ public class ImageController {
             return Result.fail("图片类型错误");
         }
 
-        Scan existing = scanService.findById(id);
-        if (existing == null) {
-            return Result.notFound("扫描记录不存在");
-        }
-        Integer previousType = existing.getBtype();
-        int result = scanService.updateImageType(id, imageType);
-        if (result != 1) {
-            logger.error("修改图片 {} 的类型为 {} 失败", id, imageType);
-            return Result.fail("修改图片类型失败");
-        }
-        classificationService.recordManualTypeChange(existing, previousType, imageType, null);
+        classificationService.changeTypeManually(id, imageType, null);
         return Result.success("修改图片类型成功");
     }
 

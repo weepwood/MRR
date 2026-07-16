@@ -21,6 +21,7 @@ export default defineConfig({
     nav: [
       { text: '用户手册', link: '/' },
       { text: '更新说明', link: '/release-notes' },
+      { text: '更新记录', link: '/changelog' },
     ],
     sidebar: [
       {
@@ -35,6 +36,7 @@ export default defineConfig({
           { text: '系统管理', link: '/admin' },
           { text: '日志、审计与监控', link: '/logs' },
           { text: '更新说明', link: '/release-notes' },
+          { text: 'Git 更新记录', link: '/changelog' },
         ],
       },
     ],

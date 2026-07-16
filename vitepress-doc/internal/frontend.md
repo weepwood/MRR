@@ -17,6 +17,30 @@
 
 Node.js 必须满足 `^20.19.0 || >=22.12.0`，仓库推荐 Node.js 22。
 
+## 浏览器兼容
+
+正式支持的最低浏览器版本：
+
+| 浏览器 | 最低版本 |
+|--------|----------|
+| Microsoft Edge | 111 |
+| Google Chrome | 111 |
+| Firefox | 114 |
+| Safari | 16.4 |
+
+不支持 Internet Explorer、Edge IE 模式和旧版 EdgeHTML。生产环境优先使用医院统一维护的最新稳定版 Edge 或 Chrome。
+
+兼容目标同时声明在：
+
+- `package.json` 的 `browserslist`，用于 Autoprefixer 等 CSS 工具。
+- `vite.config.ts` 的 `build.target`，用于固定 JavaScript 构建目标。
+
+`index.html` 中的浏览器检测通知独立于 Vue 应用启动。检测到版本过低、IE、旧版 Edge，或未知浏览器缺少必要功能时，会显示置顶通知。通知不会自动消失，只能由用户手动关闭；关闭状态仅保留在当前浏览器会话中，下次重新打开浏览器仍会提示。
+
+普通内网 HTTP 页面无法使用原生 Clipboard API 时，应用启动阶段会安装仅包含 `writeText` 的降级实现。HTTPS 或安全上下文仍使用浏览器原生 Clipboard API。
+
+Playwright 默认同时运行 Chromium、Firefox 和 WebKit。它用于验证三类浏览器引擎，不代表已经验证每个最低版本；调整最低版本时还应使用固定版本浏览器执行人工回归。
+
 ## 目录职责
 
 | 目录 | 职责 |

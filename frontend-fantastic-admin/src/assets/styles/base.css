@@ -46,17 +46,19 @@ body {
   height: 100%;
 }
 
-html {
-  scrollbar-gutter: stable;
-}
-
 /*
- * 根节点已经通过 scrollbar-gutter 预留滚动条空间。
- * Element Plus 打开 Dialog/Drawer 时还会向 body 写入减去滚动条宽度的内联样式，
- * 形成重复补偿并导致页面横向抖动；保留滚动锁定，仅忽略这段宽度补偿。
+ * 仅在浏览器支持 scrollbar-gutter 时启用稳定滚动条槽位，并同步关闭
+ * Element Plus 的重复宽度补偿。不支持该属性的 Safari 等浏览器继续使用
+ * Element Plus 原有补偿逻辑，避免 Dialog/Drawer 打开时页面横向抖动。
  */
-body.el-popup-parent--hidden {
-  width: auto !important;
+@supports (scrollbar-gutter: stable) {
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body.el-popup-parent--hidden {
+    width: auto !important;
+  }
 }
 
 body {

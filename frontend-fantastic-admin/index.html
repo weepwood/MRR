@@ -12,25 +12,159 @@
     <title>%VITE_APP_TITLE%</title>
   </head>
   <body>
-    <div id="app">
-      <div id="browser-upgrade">
-        <div class="title">为了您的体验，推荐使用以下浏览器</div>
-        <div class="browsers">
-          <a href="https://www.microsoft.com/edge" target="_blank" class="browser">
-            <img class="browser-icon" src="/browser_upgrade/edge.png" />
-            <div class="browser-name">Microsoft Edge</div>
-          </a>
-          <a href="https://www.google.cn/chrome/" target="_blank" class="browser">
-            <img class="browser-icon" src="/browser_upgrade/chrome.png" />
-            <div class="browser-name">Google Chrome</div>
-          </a>
+    <div id="browser-compat-notice" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="browser-compat-content">
+        <div class="browser-compat-icon" aria-hidden="true">!</div>
+        <div class="browser-compat-copy">
+          <div class="browser-compat-title">浏览器版本过低</div>
+          <div id="browser-compat-message" class="browser-compat-message">
+            当前浏览器可能无法完整运行本系统，请升级浏览器。
+          </div>
+          <div class="browser-compat-requirement">
+            最低支持：Edge 111、Chrome 111、Firefox 114、Safari 16.4。
+          </div>
         </div>
+        <button id="browser-compat-close" class="browser-compat-close" type="button" aria-label="关闭浏览器兼容性通知">×</button>
       </div>
     </div>
+    <div id="app"></div>
     <script>
-      if (!!window.ActiveXObject || 'ActiveXObject' in window) {
-        document.getElementById('browser-upgrade').style.display = 'block'
-      }
+      (function () {
+        var storageKey = 'mrr-browser-compat-notice-dismissed-v1'
+        var minimumVersions = {
+          Edge: '111',
+          Chrome: '111',
+          Firefox: '114',
+          Safari: '16.4'
+        }
+
+        function hasDismissedNotice() {
+          try {
+            return window.sessionStorage.getItem(storageKey) === '1'
+          }
+          catch (error) {
+            return false
+          }
+        }
+
+        function compareVersions(current, minimum) {
+          var currentParts = String(current || '0').split('.')
+          var minimumParts = String(minimum || '0').split('.')
+          var length = Math.max(currentParts.length, minimumParts.length)
+          var index
+
+          for (index = 0; index < length; index += 1) {
+            var currentPart = parseInt(currentParts[index] || '0', 10)
+            var minimumPart = parseInt(minimumParts[index] || '0', 10)
+            if (currentPart > minimumPart) {
+              return 1
+            }
+            if (currentPart < minimumPart) {
+              return -1
+            }
+          }
+          return 0
+        }
+
+        function detectBrowser() {
+          var userAgent = window.navigator.userAgent || ''
+          var match
+
+          if (document.documentMode || /MSIE|Trident\//.test(userAgent)) {
+            return { name: 'Internet Explorer', version: '', unsupported: true }
+          }
+
+          match = userAgent.match(/Edge\/([\d.]+)/)
+          if (match) {
+            return { name: '旧版 Microsoft Edge', version: match[1], unsupported: true }
+          }
+
+          match = userAgent.match(/Edg\/([\d.]+)/)
+          if (match) {
+            return { name: 'Edge', version: match[1] }
+          }
+
+          match = userAgent.match(/Firefox\/([\d.]+)/)
+          if (match) {
+            return { name: 'Firefox', version: match[1] }
+          }
+
+          match = userAgent.match(/Version\/([\d.]+).*Safari\//)
+          if (match && !/Chrome|Chromium|CriOS|Edg\//.test(userAgent)) {
+            return { name: 'Safari', version: match[1] }
+          }
+
+          match = userAgent.match(/(?:Chrome|CriOS)\/([\d.]+)/)
+          if (match) {
+            return { name: 'Chrome', version: match[1] }
+          }
+
+          return { name: '当前浏览器', version: '' }
+        }
+
+        function lacksRequiredFeatures() {
+          var supportsColorMix = false
+          try {
+            supportsColorMix = !!(window.CSS && CSS.supports && CSS.supports('color', 'color-mix(in srgb, #000 50%, #fff)'))
+          }
+          catch (error) {
+            supportsColorMix = false
+          }
+
+          return typeof window.Promise !== 'function'
+            || typeof window.fetch !== 'function'
+            || typeof window.URL !== 'function'
+            || typeof window.TextEncoder !== 'function'
+            || typeof Array.prototype.at !== 'function'
+            || typeof Array.prototype.findLast !== 'function'
+            || !supportsColorMix
+        }
+
+        function showNotice(browser, reason) {
+          var notice = document.getElementById('browser-compat-notice')
+          var message = document.getElementById('browser-compat-message')
+          var closeButton = document.getElementById('browser-compat-close')
+
+          if (!notice || !message || !closeButton) {
+            return
+          }
+
+          message.textContent = reason
+          notice.style.display = 'block'
+          closeButton.onclick = function () {
+            notice.style.display = 'none'
+            try {
+              window.sessionStorage.setItem(storageKey, '1')
+            }
+            catch (error) {
+              // 隐私模式或存储被禁用时，仅关闭当前页面中的通知。
+            }
+          }
+        }
+
+        if (hasDismissedNotice()) {
+          return
+        }
+
+        var browser = detectBrowser()
+        if (browser.unsupported) {
+          showNotice(browser, '检测到不受支持的 ' + browser.name + '。系统可能无法启动或部分功能不可用，请升级到新版 Edge 或 Chrome。')
+          return
+        }
+
+        var minimumVersion = minimumVersions[browser.name]
+        if (minimumVersion && compareVersions(browser.version, minimumVersion) < 0) {
+          showNotice(
+            browser,
+            '检测到 ' + browser.name + ' ' + browser.version + '，低于最低支持版本 ' + browser.name + ' ' + minimumVersion + '。部分页面、图表或下载功能可能无法正常工作。'
+          )
+          return
+        }
+
+        if (!minimumVersion && lacksRequiredFeatures()) {
+          showNotice(browser, '当前浏览器缺少系统所需的关键功能，部分页面、图表或下载功能可能无法正常工作，请升级浏览器。')
+        }
+      })()
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>

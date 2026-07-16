@@ -15,34 +15,38 @@ import java.util.function.Function;
 
 /**
  * 图片 URL 构建服务。
- * <p>
- * 从原 ImageController 抽取，承担以下职责：
- * 1. 根据病案号、病人序号、文件夹等构建图片访问 URL；
- * 2. 根据文件夹日期段决定使用哪台图片服务器（BAIMG01/02/03/默认）；
- * 3. 批量将 Scan Entity 转换为 BAHDataResponseDTO（含 OSS 签名 URL）。
- * </p>
- * <p>
- * 原 ImageController 的 determineImageUrl 内嵌大量硬编码日期集合，每次新增文件夹都要改代码。
- * 这里保留原逻辑，后续可演进为配置驱动或策略模式（见审查报告 02-规范与修复方案.md 2.1）。
- * </p>
+ *
+ * <p>系统设置 {@code imageSource} 控制影像档案默认从本地或 OSS 获取：
+ * 未设置、设置为空或设置为非法值时均回退为 {@code local}。</p>
  */
 @Service
 public class ImageUrlService {
+
+    public static final String IMAGE_SOURCE_SETTING_KEY = "imageSource";
+    public static final String IMAGE_SOURCE_LOCAL = "local";
+    public static final String IMAGE_SOURCE_OSS = "oss";
 
     private static final Logger logger = LoggerFactory.getLogger(ImageUrlService.class);
 
     private final ImageProperties imageProperties;
     private final OssService ossService;
+    private final SystemSettingService systemSettingService;
 
-    public ImageUrlService(ImageProperties imageProperties, OssService ossService) {
+    public ImageUrlService(ImageProperties imageProperties,
+                           OssService ossService,
+                           SystemSettingService systemSettingService) {
         this.imageProperties = imageProperties;
         this.ossService = ossService;
+        this.systemSettingService = systemSettingService;
     }
 
     /**
      * 根据扫描记录构建本地图片访问 URL。
      */
     public String buildImageUrl(Scan scan) {
+        if (scan == null) {
+            return null;
+        }
         String folder = scan.getFolder();
         String brxh = scan.getBrxh();
         if (brxh == null) {
@@ -63,7 +67,25 @@ public class ImageUrlService {
     }
 
     /**
-     * 根据文件夹名（日期段）决定使用哪台图片服务器。
+     * 根据系统设置返回当前首选图片 URL。
+     * OSS 模式下，记录未迁移或签名失败时自动回退本地 URL。
+     */
+    public String buildPreferredImageUrl(Scan scan) {
+        String localUrl = buildImageUrl(scan);
+        if (!isOssPreferred() || scan == null || scan.getOssUrl() == null || scan.getOssUrl().isBlank()) {
+            return localUrl;
+        }
+        try {
+            return ossService.generatePresignedUrl(scan.getOssUrl());
+        } catch (Exception exception) {
+            logger.warn("生成 OSS 签名 URL 失败，回退本地图片: scan={}, reason={}",
+                    scan.getId(), exception.getMessage());
+            return localUrl;
+        }
+    }
+
+    /**
+     * 根据文件夹名（日期段）决定使用哪台本地图片服务器。
      */
     String determineImageUrl(String folder) {
         if (folder == null || folder.isBlank()) {
@@ -119,42 +141,62 @@ public class ImageUrlService {
     }
 
     /**
-     * 批量将 Scan 列表转换为 BAHDataResponseDTO 列表（含本地图片 URL 与 OSS 签名 URL）。
-     * <p>
-     * 消除原 ImageController.getDataByBAH 与 searchByCode 中重复的 DTO 构建逻辑。
-     * </p>
+     * 批量将 Scan 转换为前端 DTO。
      *
-     * @param scans           扫描记录列表
-     * @param ossUrlResolver  OSS 签名 URL 解析函数（传入 scan，返回签名 URL；若不需要可传 null）
+     * <p>{@code img_url} 始终表示当前系统设置选中的有效 URL：
+     * 本地模式直接返回本地 URL；OSS 模式返回签名 URL，并在缺失或失败时回退本地。
+     * {@code ossUrl} 仅在实际使用 OSS URL 时返回，避免本地模式为每张图片生成签名。</p>
      */
     public List<BAHDataResponseDTO> toDtoList(List<Scan> scans, Function<Scan, String> ossUrlResolver) {
         if (scans == null || scans.isEmpty()) {
             return new ArrayList<>();
         }
+
+        boolean useOss = isOssPreferred();
         List<BAHDataResponseDTO> items = new ArrayList<>(scans.size());
         for (Scan scan : scans) {
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             org.springframework.beans.BeanUtils.copyProperties(scan, dto);
             dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
             dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
-            dto.setImg_url(buildImageUrl(scan));
 
-            if (ossUrlResolver != null && scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
+            String localUrl = buildImageUrl(scan);
+            String selectedUrl = localUrl;
+            String signedOssUrl = null;
+            if (useOss && ossUrlResolver != null && scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
-                    dto.setOssUrl(ossUrlResolver.apply(scan));
-                } catch (Exception e) {
-                    logger.warn("生成 OSS 签名 URL 失败 scan {}: {}", scan.getId(), e.getMessage());
+                    signedOssUrl = ossUrlResolver.apply(scan);
+                    if (signedOssUrl != null && !signedOssUrl.isBlank()) {
+                        selectedUrl = signedOssUrl;
+                    }
+                } catch (Exception exception) {
+                    logger.warn("生成 OSS 签名 URL 失败，回退本地图片: scan={}, reason={}",
+                            scan.getId(), exception.getMessage());
                 }
             }
+
+            dto.setImg_url(selectedUrl);
+            dto.setOssUrl(signedOssUrl);
             items.add(dto);
         }
         return items;
     }
 
     /**
-     * 便捷重载：使用默认的 OssService 生成签名 URL。
+     * 便捷重载：使用默认 OssService 生成签名 URL。
      */
     public List<BAHDataResponseDTO> toDtoList(List<Scan> scans) {
         return toDtoList(scans, scan -> ossService.generatePresignedUrl(scan.getOssUrl()));
+    }
+
+    public String getEffectiveImageSource() {
+        String configured = systemSettingService.getSetting(IMAGE_SOURCE_SETTING_KEY);
+        return IMAGE_SOURCE_OSS.equalsIgnoreCase(configured)
+                ? IMAGE_SOURCE_OSS
+                : IMAGE_SOURCE_LOCAL;
+    }
+
+    private boolean isOssPreferred() {
+        return IMAGE_SOURCE_OSS.equals(getEffectiveImageSource());
     }
 }

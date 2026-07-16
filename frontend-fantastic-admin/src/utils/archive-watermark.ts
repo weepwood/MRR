@@ -24,7 +24,7 @@ export function formatArchiveWatermarkTime(date: Date): string {
     date.getFullYear(),
     pad(date.getMonth() + 1),
     pad(date.getDate()),
-  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export function resolveArchiveWatermarkUserId(

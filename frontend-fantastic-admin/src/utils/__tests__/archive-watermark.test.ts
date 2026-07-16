@@ -7,9 +7,9 @@ import {
 } from '../archive-watermark'
 
 describe('archive watermark helpers', () => {
-  it('formats the current time with zero-padded date, minute, and second', () => {
+  it('formats the current time with zero-padded date and minute', () => {
     expect(formatArchiveWatermarkTime(new Date(2026, 6, 14, 9, 5, 7)))
-      .toBe('2026-07-14 09:05:07')
+      .toBe('2026-07-14 09:05')
   })
 
   it('prefers numeric user id and falls back to username or account', () => {

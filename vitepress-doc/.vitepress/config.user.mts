@@ -20,21 +20,42 @@ export default defineConfig({
     siteTitle: 'MRR 用户手册',
     nav: [
       { text: '用户手册', link: '/' },
+      { text: '常见问题', link: '/faq' },
       { text: '更新说明', link: '/release-notes' },
       { text: '更新记录', link: '/changelog' },
     ],
     sidebar: [
       {
-        text: '用户指南',
+        text: '开始使用',
         collapsed: false,
         items: [
           { text: '用户指南', link: '/' },
           { text: '快速上手', link: '/getting-started' },
+          { text: '常见问题', link: '/faq' },
+        ],
+      },
+      {
+        text: '业务操作',
+        collapsed: false,
+        items: [
           { text: '病案与记录', link: '/patients' },
           { text: '影像档案袋', link: '/images' },
+          { text: '病案类型', link: '/medical-record-types' },
           { text: '统计分析', link: '/statistics' },
+        ],
+      },
+      {
+        text: '管理与运维',
+        collapsed: false,
+        items: [
           { text: '系统管理', link: '/admin' },
           { text: '日志、审计与监控', link: '/logs' },
+        ],
+      },
+      {
+        text: '版本信息',
+        collapsed: false,
+        items: [
           { text: '更新说明', link: '/release-notes' },
           { text: 'Git 更新记录', link: '/changelog' },
         ],

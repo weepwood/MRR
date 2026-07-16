@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -33,7 +33,7 @@ describe('RecordsPage', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders page shell', () => {
+  it('renders the unified MRR page structure', () => {
     const wrapper = mount(RecordsPage, {
       global: {
         stubs: {
@@ -46,18 +46,21 @@ describe('RecordsPage', () => {
           'el-tag': true,
           'el-dialog': true,
           'el-icon': true,
-          'el-form': { template: '<div><slot /></div>' },
-          'el-form-item': { template: '<div><slot /></div>' },
           'el-table-column': true,
           'el-descriptions': true,
           'el-descriptions-item': true,
           'el-option': true,
+          'FaIcon': true,
           'AppLoading': { template: '<div class="app-loading" />' },
           'AppEmpty': { template: '<div class="app-empty" />' },
           'AppError': { template: '<div class="app-error" />' },
         },
       },
     })
-    expect(wrapper.find('.page-shell').exists()).toBe(true)
+
+    expect(wrapper.find('.mrr-page-shell').exists()).toBe(true)
+    expect(wrapper.find('.mrr-page-header').exists()).toBe(true)
+    expect(wrapper.find('.mrr-data-table-panel__filters').exists()).toBe(true)
+    expect(wrapper.find('.page-shell').exists()).toBe(false)
   })
 })

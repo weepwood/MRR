@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.config.ClassificationProperties;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.storage.ImageStorage;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -93,7 +94,10 @@ public class CommandOcrService {
     }
 
     private void copyImage(Scan scan, Path target) throws IOException, InterruptedException {
-        PathDO image = new PathDO(scan.getFolder(), scan.getFilename(), scan.getBrxh(), scan.getBah());
+        String localFolderKey = MedicalRecordCodeUtils.requiresSjhForBah(scan.getBah())
+                ? scan.getSjh()
+                : scan.getBrxh();
+        PathDO image = new PathDO(scan.getFolder(), scan.getFilename(), localFolderKey, scan.getBah());
         IOException localFailure;
         try (InputStream inputStream = imageStorage.open(image)) {
             Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);

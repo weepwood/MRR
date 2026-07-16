@@ -3,11 +3,12 @@ import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
-import { useCrudList } from '@/composables/useCrudList'
 import type { PaginatedResult, ScanRecord } from '@/api/types'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
+import { MEDICAL_RECORD_TYPE_OPTIONS, getMedicalRecordTypeLabel } from '@/constants/medical-record-types'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -27,12 +28,10 @@ const error = ref('')
 
 const typeOptions = [
   { label: '全部类型', value: '' },
-  { label: '病案首页', value: '1' },
-  { label: '病程记录', value: '2' },
-  { label: '手术记录', value: '3' },
-  { label: '护理记录', value: '5' },
-  { label: '检验单', value: '8' },
-  { label: '医嘱', value: '9' },
+  ...MEDICAL_RECORD_TYPE_OPTIONS.map(item => ({
+    label: item.label,
+    value: String(item.value),
+  })),
 ]
 
 // CRUD 列表逻辑：复用 useCrudList composable，消除重复的分页/查询/重置代码
@@ -118,8 +117,7 @@ async function handleBatchDownload() {
 }
 
 function typeLabel(value: unknown) {
-  const option = typeOptions.find(item => item.value === String(value))
-  return option?.label || (value ? `类型 ${value}` : '-')
+  return getMedicalRecordTypeLabel(value as number | string | null | undefined, '-')
 }
 </script>
 

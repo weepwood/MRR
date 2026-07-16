@@ -187,7 +187,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         path: '/statistics',
         component: () => import('@/views/statistics/index.vue'),
         meta: {
-          title: '统计分析',
+          title: '病案扫描统计',
           icon: 'i-ant-design:area-chart-outlined',
           auth: ['statistics:read'],
           cache: true,
@@ -205,12 +205,14 @@ const asyncRoutes: Route.recordMainRaw[] = [
       },
       {
         path: '/records-statistics',
-        component: () => import('@/views/records-statistics/index.vue'),
+        redirect: '/statistics',
         meta: {
-          title: '病案统计',
-          icon: 'i-ant-design:bar-chart-outlined',
+          title: '病案扫描统计',
           auth: ['statistics:read'],
-          cache: true,
+          menu: false,
+          breadcrumb: false,
+          activeMenu: '/statistics',
+          cache: false,
         },
       },
       {

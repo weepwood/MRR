@@ -5,6 +5,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getBAHByIdCard } from '@/api/modules/search'
+import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
 
 defineOptions({ name: 'ScanImgPage' })
 
@@ -68,7 +69,7 @@ const thumbsLayoutMode = ref<'grid-1' | 'grid-2' | 'grid-3'>('grid-1')
 
 // ==================== 类型选择器 ====================
 const showTypePicker = ref(false)
-const typeOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]
+const typeOptions = MEDICAL_RECORD_TYPE_CODES
 
 function hideTypePicker() { showTypePicker.value = false }
 function handleDocumentClick() { hideTypePicker() }
@@ -100,8 +101,7 @@ const typeDisplayList = computed(() => {
     const t = img.btype as number
     counts.set(t, (counts.get(t) || 0) + 1)
   }
-  const allTypes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]
-  return allTypes.map(type => ({ type, count: counts.get(type) || 0 }))
+  return MEDICAL_RECORD_TYPE_CODES.map(type => ({ type, count: counts.get(type) || 0 }))
 })
 
 const currentImage = computed<GalleryImage | null>(() => filteredImages.value[selectedImageIndex.value] || null)
@@ -289,22 +289,7 @@ async function onSelectType(type: number | 'all') {
 
 // ==================== 工具函数 ====================
 function getTypeName(type?: number | null) {
-  const typeNames: Record<number, string> = {
-    1: '01-病案首页',
-    2: '02-病程记录',
-    3: '03-手术记录',
-    4: '04-术后病程录',
-    5: '05-护理记录',
-    6: '06-会诊单',
-    7: '07-特殊检查',
-    8: '08-检验单',
-    9: '09-医嘱',
-    10: '10-体温单',
-    12: '12-出院记录',
-    13: '13-大病历',
-    14: '14-其它',
-  }
-  return type != null ? (typeNames[type] || `类型${type}`) : '-'
+  return type != null ? getMedicalRecordTypeLabel(type) : '-'
 }
 
 function formatDate(dateString?: string) {
@@ -318,7 +303,7 @@ function retryLoad() { loadImages() }
 function onImageLoad(event: Event) { (event.target as HTMLImageElement).style.opacity = '1' }
 function onImageError(event: Event) {
   const target = event.target as HTMLImageElement
-  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNGNUY1RjUiLz48L3N2Zz4='
+  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNGNUY1RjUiLz48L3N2Zz4='
   target.style.opacity = '0.5'
 }
 

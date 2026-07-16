@@ -45,7 +45,9 @@ public interface ImageClassificationMapper {
     List<ImageClassification> findHighConfidenceSuggestions(@Param("archiveId") Long archiveId,
                                                             @Param("threshold") BigDecimal threshold);
 
-    @Update("UPDATE mr_image_classification SET reviewed_btype = #{reviewedBtype}, reviewed_by = #{reviewedBy}, " +
+    @Update("UPDATE mr_image_classification SET reviewed_btype = " +
+            "CASE WHEN EXISTS(SELECT 1 FROM mr_record_type_dict WHERE btype = #{reviewedBtype}) " +
+            "THEN #{reviewedBtype} ELSE NULL END, reviewed_by = #{reviewedBy}, " +
             "reviewed_at = CURRENT_TIMESTAMP, classification_state = #{state}, updated_at = CURRENT_TIMESTAMP " +
             "WHERE scan_id = #{scanId}")
     int markReviewed(@Param("scanId") Integer scanId,

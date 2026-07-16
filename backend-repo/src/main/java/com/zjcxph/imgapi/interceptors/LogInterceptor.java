@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.interceptors;
 
+import com.zjcxph.imgapi.common.ArchiveAccessAttributes;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.Log;
-import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.service.AsyncLogService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.IpUtil;
@@ -52,12 +52,10 @@ public class LogInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 生成请求ID并设置到 MDC 上下文，用于日志追踪
         String requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         MDC.put("requestId", requestId);
         MDC.put("clientIp", IpUtil.getClientIp(request));
-        
-        // 从请求头或 session 中获取用户信息（如果已认证）
+
         String userId = request.getHeader("X-User-Id");
         String userRole = request.getHeader("X-User-Role");
         if (userId != null && !userId.isEmpty()) {
@@ -89,16 +87,19 @@ public class LogInterceptor implements HandlerInterceptor {
 
         Long startTime = (Long) request.getAttribute(START_TIME_ATTR);
         long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
-
         Log log = new Log();
 
-        // 捕获当前登录用户：优先从 request attribute 获取（LoginInterceptor 设置），ThreadLocal 兜底
-        AuthSession currentUser = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
-        if (currentUser == null) {
-            currentUser = AuthContext.getCurrentUser();
-        }
-        if (currentUser != null && currentUser.getUsername() != null) {
-            log.setUsername(currentUser.getUsername());
+        String archiveUserId = stringAttribute(request, ArchiveAccessAttributes.USER_ID);
+        if (archiveUserId != null) {
+            log.setUsername(archiveUserId);
+        } else {
+            AuthSession currentUser = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
+            if (currentUser == null) {
+                currentUser = AuthContext.getCurrentUser();
+            }
+            if (currentUser != null && currentUser.getUsername() != null) {
+                log.setUsername(currentUser.getUsername());
+            }
         }
 
         log.setClientIp(IpUtil.getClientIp(request));
@@ -113,12 +114,12 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setReferer(request.getHeader("Referer") == null ? null : "[REDACTED]");
 
         enrichAuditFields(log, request);
-        log.setAuditTarget(pseudonymizeAuditTarget(log.getAuditTarget()));
+        if (stringAttribute(request, ArchiveAccessAttributes.AUDIT_TARGET) == null) {
+            log.setAuditTarget(pseudonymizeAuditTarget(log.getAuditTarget()));
+        }
 
-        // 异步保存日志,不阻塞请求响应
         asyncLogService.saveLogAsync(log);
 
-        // Micrometer 指标：请求计数 + 耗时分布
         Counter.builder("http.requests.total")
                 .tag("method", request.getMethod())
                 .tag("status", String.valueOf(response.getStatus()))
@@ -131,8 +132,7 @@ public class LogInterceptor implements HandlerInterceptor {
                 .description("HTTP 请求耗时分布")
                 .register(meterRegistry)
                 .record(executeTime, java.util.concurrent.TimeUnit.MILLISECONDS);
-        
-        // 清理 MDC 上下文，防止内存泄漏
+
         MDC.clear();
     }
 
@@ -160,10 +160,6 @@ public class LogInterceptor implements HandlerInterceptor {
         );
     }
 
-    /**
-     * 根据请求 URI 和方法 enrich 审计字段（auditAction/auditTarget/auditDescription）。
-     * 覆盖：用户管理、角色管理、权限变更、图片访问等敏感操作。
-     */
     private void enrichAuditFields(Log log, HttpServletRequest request) {
         String uri = request.getRequestURI();
         String method = request.getMethod();
@@ -172,7 +168,7 @@ public class LogInterceptor implements HandlerInterceptor {
         }
 
         if (uri.startsWith("/api/v1/img/")) {
-            enrichImageAudit(log, uri);
+            enrichImageAudit(log, request, uri);
         } else if (uri.startsWith("/api/v1/auth/users")) {
             enrichUserManagementAudit(log, uri, method);
         } else if (uri.startsWith("/api/v1/auth/roles")) {
@@ -186,12 +182,15 @@ public class LogInterceptor implements HandlerInterceptor {
         }
     }
 
-    private void enrichImageAudit(Log log, String uri) {
+    private void enrichImageAudit(Log log, HttpServletRequest request, String uri) {
         String[] parts = uri.split("/");
+        String archiveTarget = stringAttribute(request, ArchiveAccessAttributes.AUDIT_TARGET);
+        String ipAuditNote = stringAttribute(request, ArchiveAccessAttributes.IP_AUDIT_NOTE);
+
         if (uri.contains("/download/")) {
             log.setAuditAction("DOWNLOAD");
-            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
-            log.setAuditDescription("下载病案图片压缩包");
+            log.setAuditTarget(archiveTarget != null ? archiveTarget : uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription(withIpAuditNote("下载病案图片压缩包", ipAuditNote));
         } else if (uri.contains("/oss-image/")) {
             log.setAuditAction("VIEW_OSS_IMAGE");
             log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
@@ -202,9 +201,22 @@ public class LogInterceptor implements HandlerInterceptor {
             log.setAuditDescription("查看本地病案图片");
         } else if (uri.startsWith("/api/v1/img/") && !uri.contains("/hello")) {
             log.setAuditAction("LIST");
-            log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
-            log.setAuditDescription("查询病案图片列表");
+            log.setAuditTarget(archiveTarget != null ? archiveTarget : uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription(withIpAuditNote("查询病案图片列表", ipAuditNote));
         }
+    }
+
+    private String withIpAuditNote(String description, String note) {
+        return note == null ? description : description + "；" + note;
+    }
+
+    private String stringAttribute(HttpServletRequest request, String name) {
+        Object value = request.getAttribute(name);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? null : text;
     }
 
     private void enrichUserManagementAudit(Log log, String uri, String method) {
@@ -254,9 +266,6 @@ public class LogInterceptor implements HandlerInterceptor {
         return session != null ? session.getUsername() : "unknown";
     }
 
-    /**
-     * 从 ContentCachingRequestWrapper 中读取请求体
-     */
     private String getRequestBody(HttpServletRequest request) {
         if (!(request instanceof ContentCachingRequestWrapper)) {
             return "";
@@ -264,11 +273,9 @@ public class LogInterceptor implements HandlerInterceptor {
 
         ContentCachingRequestWrapper wrapper = (ContentCachingRequestWrapper) request;
         byte[] content = wrapper.getContentAsByteArray();
-
         if (content.length == 0) {
             return "";
         }
-
         return "[OMITTED " + content.length + " bytes]";
     }
 

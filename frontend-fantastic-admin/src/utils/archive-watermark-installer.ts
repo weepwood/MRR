@@ -22,6 +22,12 @@ function isArchiveRoute(path: string): boolean {
   return path === '/archive' || path.startsWith('/archive/')
 }
 
+function routeUserId(router: Router): string {
+  const value = router.currentRoute.value.query.userid
+  const text = Array.isArray(value) ? value[0] : value
+  return String(text ?? '').trim()
+}
+
 export function installArchiveWatermark(router: Router, pinia: Pinia): void {
   const userStore = useUserStore(pinia)
   let watermarkElement: HTMLDivElement | null = null
@@ -68,7 +74,8 @@ export function installArchiveWatermark(router: Router, pinia: Pinia): void {
       return
     }
 
-    const userId = resolveArchiveWatermarkUserId(userStore.profile, userStore.account)
+    const userId = routeUserId(router)
+      || resolveArchiveWatermarkUserId(userStore.profile, userStore.account)
     const time = formatArchiveWatermarkTime(new Date())
     const darkMode = document.documentElement.classList.contains('dark')
     const dataUrl = createArchiveWatermarkDataUrl(userId, time, darkMode, currentOpacity)

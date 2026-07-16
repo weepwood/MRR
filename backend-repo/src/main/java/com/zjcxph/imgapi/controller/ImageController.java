@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
@@ -17,6 +18,7 @@ import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,17 +62,20 @@ public class ImageController {
     private final ImageStorage imageStorage;
     private final OssService ossService;
     private final ImageUrlService imageUrlService;
+    private final ArchiveAccessService archiveAccessService;
 
     public ImageController(ScanService scanService,
                            ArchiveExportService archiveExportService,
                            ImageStorage imageStorage,
                            OssService ossService,
-                           ImageUrlService imageUrlService) {
+                           ImageUrlService imageUrlService,
+                           ArchiveAccessService archiveAccessService) {
         this.scanService = scanService;
         this.archiveExportService = archiveExportService;
         this.imageStorage = imageStorage;
         this.ossService = ossService;
         this.imageUrlService = imageUrlService;
+        this.archiveAccessService = archiveAccessService;
     }
 
     @Operation(summary = "服务器心跳")
@@ -144,7 +149,10 @@ public class ImageController {
             @RequestParam(required = false) String bah,
             @Parameter(description = "唯一上架号，可省略前导零")
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
-            @RequestParam(required = false) String sjh) {
+            @RequestParam(required = false) String sjh,
+            @Parameter(description = "调用方内网系统当前用户 ID")
+            @RequestParam(required = false) String userid,
+            HttpServletRequest request) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
@@ -153,6 +161,9 @@ public class ImageController {
         if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
             return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
         }
+
+        archiveAccessService.verifyAndRecord(userid, normalizedBah, normalizedSjh, request);
+
         List<Scan> list = scanService.getImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(bah),

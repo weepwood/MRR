@@ -65,6 +65,12 @@ function validateSettings() {
     ElMessage.warning('系统名称不能为空')
     return false
   }
+  if (!Number.isInteger(settings.archiveIpMaxChanges)
+    || settings.archiveIpMaxChanges < 0
+    || settings.archiveIpMaxChanges > 20) {
+    ElMessage.warning('每日 IP 切换次数必须是 0 到 20 之间的整数')
+    return false
+  }
   return true
 }
 
@@ -129,7 +135,7 @@ onMounted(() => loadSettings())
         </span>
         <div>
           <h2>系统设置</h2>
-          <p>集中管理系统标识、图片来源、档案浏览与访问水印。</p>
+          <p>集中管理系统标识、图片来源、档案浏览、水印与访问控制。</p>
         </div>
       </div>
       <div v-if="activeTab === 'system'" class="header-actions">
@@ -337,6 +343,40 @@ onMounted(() => loadSettings())
                         <span>{{ settings.archiveWatermarkOpacity }}%</span>
                       </div>
                     </el-form-item>
+                  </div>
+                </section>
+
+                <section class="setting-card">
+                  <header class="card-header">
+                    <span class="card-icon">
+                      <FaIcon name="i-ri:shield-keyhole-line" />
+                    </span>
+                    <div>
+                      <h3>访问 IP 限制</h3>
+                      <p>控制同一 userid 每日可切换的内网 IP 次数。</p>
+                    </div>
+                  </header>
+                  <div class="card-body">
+                    <el-form-item label="每日允许 IP 切换次数">
+                      <div class="number-control">
+                        <el-input-number
+                          v-model="settings.archiveIpMaxChanges"
+                          :min="0"
+                          :max="20"
+                          :step="1"
+                          :precision="0"
+                          controls-position="right"
+                        />
+                        <span>次/日</span>
+                      </div>
+                    </el-form-item>
+                    <el-alert
+                      class="image-source-alert"
+                      type="warning"
+                      :closable="false"
+                      show-icon
+                      title="首次访问只绑定 IP，不计入切换次数；达到上限后更换 IP 将被拒绝。"
+                    />
                   </div>
                 </section>
               </div>

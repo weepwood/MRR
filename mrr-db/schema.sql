@@ -155,6 +155,21 @@ CREATE TABLE IF NOT EXISTS main.mr_system_settings (
     updated_by      TEXT
 );
 
+CREATE TABLE IF NOT EXISTS main.mr_archive_search_history (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id        INTEGER NOT NULL,
+    bah            TEXT,
+    sjh            TEXT,
+    success        INTEGER NOT NULL,
+    image_count    INTEGER NOT NULL DEFAULT 0 CHECK (image_count >= 0),
+    failure_reason TEXT,
+    favorite       INTEGER NOT NULL DEFAULT 0,
+    searched_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(sjh, '')), '') IS NOT NULL)
+);
+
 -- ============================================
 -- 索引
 -- ============================================
@@ -209,6 +224,8 @@ CREATE INDEX IF NOT EXISTS idx_migration_status_created ON image_migration_log (
 -- migration_job 索引
 CREATE INDEX IF NOT EXISTS idx_migration_job_status ON migration_job (status);
 CREATE INDEX IF NOT EXISTS idx_migration_job_created_at ON migration_job (created_at);
+CREATE INDEX IF NOT EXISTS idx_archive_search_history_user_time ON mr_archive_search_history (user_id, searched_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_archive_search_history_user_favorite ON mr_archive_search_history (user_id, favorite, searched_at DESC);
 
 -- ============================================
 -- 首批装箱数据：来源 zx.csv

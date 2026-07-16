@@ -64,6 +64,18 @@ export interface BAHImageData {
   ossUrl?: string
 }
 
+/** 住院病案搜索记录（服务端持久化） */
+export interface ArchiveSearchHistoryRecord {
+  id?: number
+  bah?: string
+  sjh?: string
+  success: boolean
+  imageCount: number
+  failureReason?: string
+  favorite: boolean
+  searchedAt: string
+}
+
 /** 病案记录（身份证查询返回） */
 export interface BAHRecord {
   id?: number

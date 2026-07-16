@@ -107,11 +107,25 @@ export function useArchiveImages() {
           imageCount: images.value.length,
         })
       }
+      else {
+        addArchiveSearchHistory({
+          bah,
+          sjh,
+          status: 'failure',
+          failureReason: '未查询到影像',
+        })
+      }
     }
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
       images.value = []
       patientList.value = []
+      addArchiveSearchHistory({
+        bah,
+        sjh,
+        status: 'failure',
+        failureReason: errorMsg.value,
+      })
     }
     finally {
       loading.value = false

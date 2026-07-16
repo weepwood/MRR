@@ -107,6 +107,7 @@ const archiveWorkspaceStyle = computed(() => ({
   '--archive-thumb-column-width': `${archiveDisplaySettings.value.archiveThumbnailSize + 18}px`,
 }))
 const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/embed' : '/archive')
+const showBackToStatisticsDetail = computed(() => route.query.from === 'statistics-detail')
 
 const selectionStorageKey = computed(() => {
   const bah = normalizeSearchParam(searchBah.value)
@@ -562,9 +563,14 @@ onUnmounted(() => {
     >
       <section class="archive-sidebar">
         <ArchiveHeader
+          v-model:search-id-card="searchIdCard"
+          v-model:search-bah="searchBah"
+          v-model:search-sjh="searchSjh"
           :loading="loading || idCardLoading"
+          :show-back="showBackToStatisticsDetail"
           @back="goBack"
           @refresh="handleRefresh"
+          @search="handleSearch"
         />
 
         <ArchiveSearchBar

@@ -2,7 +2,8 @@ import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 
 export const ARCHIVE_SEARCH_HISTORY_STORAGE_KEY = 'MRR-ADMIN:archive-search-history:v1'
 export const ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT = 'mrr:archive-search-history-updated'
-export const ARCHIVE_SEARCH_HISTORY_LIMIT = 20
+export const ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT = 20
+export type ArchiveSearchHistoryStatus = 'success' | 'failure'
 
 export interface ArchiveSearchHistoryItem {
   key: string
@@ -10,16 +11,21 @@ export interface ArchiveSearchHistoryItem {
   sjh: string
   imageCount: number
   searchedAt: number
+  status: ArchiveSearchHistoryStatus
+  failureReason: string
+  favorite: boolean
 }
 
 export interface AddArchiveSearchHistoryInput {
   bah?: string | null
   sjh?: string | null
   imageCount?: number | null
+  status?: ArchiveSearchHistoryStatus
+  failureReason?: string | null
 }
 
-function createHistoryKey(bah: string, sjh: string): string {
-  return `${bah || 'none'}:${sjh || 'none'}`
+function createHistoryKey(bah: string, sjh: string, status: ArchiveSearchHistoryStatus): string {
+  return `${bah || 'none'}:${sjh || 'none'}:${status}`
 }
 
 function normalizeHistoryItem(value: unknown): ArchiveSearchHistoryItem | null {
@@ -32,17 +38,21 @@ function normalizeHistoryItem(value: unknown): ArchiveSearchHistoryItem | null {
   const sjh = normalizeMedicalRecordCode(source.sjh)
   const searchedAt = Number(source.searchedAt)
   const imageCount = Number(source.imageCount)
+  const status = source.status === 'failure' ? 'failure' : 'success'
 
   if ((!bah && !sjh) || !Number.isSafeInteger(searchedAt) || searchedAt <= 0) {
     return null
   }
 
   return {
-    key: createHistoryKey(bah, sjh),
+    key: createHistoryKey(bah, sjh, status),
     bah,
     sjh,
     imageCount: Number.isFinite(imageCount) ? Math.max(0, Math.floor(imageCount)) : 0,
     searchedAt,
+    status,
+    failureReason: status === 'failure' ? String(source.failureReason || '查询失败') : '',
+    favorite: source.favorite === true,
   }
 }
 
@@ -57,7 +67,6 @@ function writeArchiveSearchHistory(items: ArchiveSearchHistoryItem[]): ArchiveSe
   const normalized = items
     .map(normalizeHistoryItem)
     .filter((item): item is ArchiveSearchHistoryItem => Boolean(item))
-    .slice(0, ARCHIVE_SEARCH_HISTORY_LIMIT)
 
   try {
     localStorage.setItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(normalized))
@@ -68,6 +77,22 @@ function writeArchiveSearchHistory(items: ArchiveSearchHistoryItem[]): ArchiveSe
 
   notifyArchiveSearchHistoryUpdated(normalized)
   return normalized
+}
+
+function persistArchiveSearchHistory(item: ArchiveSearchHistoryItem): void {
+  void import('@/api/modules/archive-search-history')
+    .then(({ createArchiveSearchHistory }) => createArchiveSearchHistory({
+      bah: item.bah,
+      sjh: item.sjh,
+      success: item.status === 'success',
+      imageCount: item.imageCount,
+      failureReason: item.failureReason,
+      favorite: item.favorite,
+      searchedAt: new Date(item.searchedAt).toISOString(),
+    }))
+    .catch(() => {
+      // 服务端暂不可用时保留本地缓存，避免影响病案查询。
+    })
 }
 
 export function readArchiveSearchHistory(): ArchiveSearchHistoryItem[] {
@@ -88,7 +113,6 @@ export function readArchiveSearchHistory(): ArchiveSearchHistoryItem[] {
         seen.add(item.key)
         return true
       })
-      .slice(0, ARCHIVE_SEARCH_HISTORY_LIMIT)
   }
   catch {
     return []
@@ -102,7 +126,8 @@ export function addArchiveSearchHistory(input: AddArchiveSearchHistoryInput): Ar
     return readArchiveSearchHistory()
   }
 
-  const key = createHistoryKey(bah, sjh)
+  const status = input.status === 'failure' ? 'failure' : 'success'
+  const key = createHistoryKey(bah, sjh, status)
   const nextItem: ArchiveSearchHistoryItem = {
     key,
     bah,
@@ -111,16 +136,32 @@ export function addArchiveSearchHistory(input: AddArchiveSearchHistoryInput): Ar
       ? Math.max(0, Math.floor(Number(input.imageCount)))
       : 0,
     searchedAt: Date.now(),
+    status,
+    failureReason: status === 'failure' ? String(input.failureReason || '查询失败') : '',
+    favorite: false,
   }
 
-  return writeArchiveSearchHistory([
+  const history = writeArchiveSearchHistory([
     nextItem,
     ...readArchiveSearchHistory().filter(item => item.key !== key),
   ])
+  persistArchiveSearchHistory(nextItem)
+  return history
 }
 
 export function removeArchiveSearchHistory(key: string): ArchiveSearchHistoryItem[] {
   return writeArchiveSearchHistory(readArchiveSearchHistory().filter(item => item.key !== key))
+}
+
+export function toggleArchiveSearchHistoryFavorite(key: string): ArchiveSearchHistoryItem[] {
+  const history = writeArchiveSearchHistory(readArchiveSearchHistory().map(item => item.key === key
+    ? { ...item, favorite: !item.favorite }
+    : item))
+  const changedItem = history.find(item => item.key === key)
+  if (changedItem) {
+    persistArchiveSearchHistory(changedItem)
+  }
+  return history
 }
 
 export function clearArchiveSearchHistory(): void {

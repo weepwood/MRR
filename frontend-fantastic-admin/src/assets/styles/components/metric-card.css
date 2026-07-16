@@ -1,4 +1,4 @@
-/* MRR 业务指标卡片：现代 SaaS 仪表盘风格 */
+/* MRR 业务指标卡片：颜色表达语义，交互反馈仅对可点击卡片启用。 */
 .mrr-metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -36,8 +36,12 @@
   background: radial-gradient(circle, color-mix(in srgb, var(--mrr-metric-accent) 15%, transparent) 0%, transparent 68%);
 }
 
-.mrr-metric-card:hover,
-.mrr-metric-card:focus-within {
+.mrr-metric-card--interactive {
+  cursor: pointer;
+}
+
+.mrr-metric-card--interactive:hover,
+.mrr-metric-card--interactive:focus-within {
   border-color: color-mix(in srgb, var(--mrr-metric-accent) 24%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-sm);
   transform: translateY(-1px);
@@ -169,8 +173,8 @@
     transition: none;
   }
 
-  .mrr-metric-card:hover,
-  .mrr-metric-card:focus-within {
+  .mrr-metric-card--interactive:hover,
+  .mrr-metric-card--interactive:focus-within {
     transform: none;
   }
 }

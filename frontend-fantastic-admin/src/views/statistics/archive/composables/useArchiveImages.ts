@@ -2,7 +2,7 @@ import type { GalleryImage, PatientInfo } from '../types'
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
-import { ref, shallowRef } from 'vue'
+import { onScopeDispose, ref, shallowRef } from 'vue'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
 import {
   getArchiveCasesByIdCard,
@@ -16,6 +16,8 @@ import {
 } from '@/utils/medical-record-code'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { createArchiveZip } from '../utils/client-zip'
+
+const CLASSIFICATION_UPDATED_EVENT = 'mrr:classification-updated'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
@@ -235,6 +237,17 @@ export function useArchiveImages() {
     finally {
       savingType.value = false
     }
+  }
+
+  function handleClassificationUpdated() {
+    if (searchBah.value || searchSjh.value) {
+      void loadImages(true)
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener(CLASSIFICATION_UPDATED_EVENT, handleClassificationUpdated)
+    onScopeDispose(() => window.removeEventListener(CLASSIFICATION_UPDATED_EVENT, handleClassificationUpdated))
   }
 
   return {

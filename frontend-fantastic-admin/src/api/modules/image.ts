@@ -1,5 +1,25 @@
 import type { BAHImageData, ImageTypeRequest } from '../types'
-import api, { getRequest, putRequest } from '../index'
+import api, { getRequest, postRequest, putRequest } from '../index'
+
+export type ClassificationScope = 'UNCLASSIFIED' | 'LOW_CONFIDENCE' | 'ALL'
+
+export interface ClassificationJob {
+  id: number
+  archiveId: number
+  scopeType: ClassificationScope
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+  totalCount: number
+  processedCount: number
+  suggestedCount: number
+  noMatchCount: number
+  failedCount: number
+  cursorScanId?: number
+  modelVersion?: string
+  errorMessage?: string
+  createdAt?: string
+  startedAt?: string
+  completedAt?: string
+}
 
 function resolveArchiveUserId(explicitUserId?: string): string | undefined {
   const explicit = String(explicitUserId || '').trim()
@@ -47,6 +67,38 @@ export function getImage(bah: string, brxh: string, folder: string, filename: st
 /** PUT /api/v1/img/updateImageType/{id} — 更新图片类型 */
 export function updateImageType(imageId: string | number, data: ImageTypeRequest) {
   return putRequest<void>(`/api/v1/img/updateImageType/${imageId}`, data)
+}
+
+/** POST /api/v1/image-classification/archives/{archiveId}/jobs — 创建 OCR 分类任务 */
+export function startImageClassification(archiveId: number, scope: ClassificationScope = 'UNCLASSIFIED') {
+  return postRequest<ClassificationJob>(`/api/v1/image-classification/archives/${archiveId}/jobs`, {
+    scope,
+    createdBy: resolveArchiveUserId(),
+  })
+}
+
+/** GET /api/v1/image-classification/jobs/{jobId} — 查询 OCR 分类进度 */
+export function getImageClassificationJob(jobId: number) {
+  return getRequest<ClassificationJob>(`/api/v1/image-classification/jobs/${jobId}`)
+}
+
+/** PUT /api/v1/image-classification/scans/{scanId}/confirm — 采用或修改单张建议 */
+export function confirmImageClassification(scanId: number, btype?: number) {
+  return putRequest(`/api/v1/image-classification/scans/${scanId}/confirm`, {
+    btype,
+    reviewedBy: resolveArchiveUserId(),
+  })
+}
+
+/** POST /api/v1/image-classification/archives/{archiveId}/confirm-high-confidence */
+export function confirmHighConfidenceClassifications(archiveId: number, minConfidence = 0.92) {
+  return postRequest<{ confirmedCount: number }>(
+    `/api/v1/image-classification/archives/${archiveId}/confirm-high-confidence`,
+    {
+      minConfidence,
+      reviewedBy: resolveArchiveUserId(),
+    },
+  )
 }
 
 /** GET /api/v1/img/image/{cx} — 获取单张图片（blob 流） */

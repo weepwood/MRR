@@ -1,6 +1,7 @@
 import iconConfig from '@/iconify/index.json'
 // 自定义指令
 import directive from '@/utils/directive'
+import { installArchiveUserIdRouting } from '@/utils/archive-userid-routing'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
@@ -24,6 +25,7 @@ import '@/assets/styles/pages/statistics-detail-typography.css'
 
 installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
+installArchiveUserIdRouting(router)
 
 const app = createApp(App)
 app.use(pinia)

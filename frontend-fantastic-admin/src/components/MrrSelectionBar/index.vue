@@ -23,8 +23,8 @@ const summary = computed(() => {
 </script>
 
 <template>
-  <div v-if="props.count > 0" class="mrr-selection-bar" role="status" aria-live="polite">
-    <div class="mrr-selection-bar__summary">
+  <div v-if="props.count > 0" class="mrr-selection-bar">
+    <div class="mrr-selection-bar__summary" role="status" aria-live="polite">
       <span class="mrr-selection-bar__indicator" aria-hidden="true" />
       <strong>{{ summary }}</strong>
       <slot name="description" />

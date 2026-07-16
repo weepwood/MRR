@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -100,6 +101,22 @@ class ArchiveAccessServiceTest {
                 .hasMessageContaining("最多允许 3 次");
 
         verify(archiveIpBindingMapper, never()).changeIp(any(), any());
+    }
+
+    @Test
+    void allowsArchiveAccessWhenBindingStorageIsUnavailable() {
+        when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("DOMAIN\\u1001"), eq("10.20.30.11")))
+                .thenThrow(new IllegalStateException("table missing"));
+
+        assertThatCode(() -> archiveAccessService.verifyAndRecord(
+                "DOMAIN\\u1001", "00000011", "", request
+        )).doesNotThrowAnyException();
+
+        verify(request).setAttribute(ArchiveAccessAttributes.USER_ID, "DOMAIN\\u1001");
+        verify(request).setAttribute(
+                ArchiveAccessAttributes.IP_AUDIT_NOTE,
+                "IP 绑定记录异常，已临时放行"
+        );
     }
 
     private ArchiveIpBinding binding(String ip, int changes) {

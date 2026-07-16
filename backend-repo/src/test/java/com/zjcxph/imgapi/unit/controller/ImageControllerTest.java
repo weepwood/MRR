@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
+import com.zjcxph.imgapi.service.ArchiveImageClassificationService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -57,6 +58,9 @@ class ImageControllerTest {
 
     @Mock
     private ArchiveAccessService archiveAccessService;
+
+    @Mock
+    private ArchiveImageClassificationService classificationService;
 
     @InjectMocks
     private ImageController imageController;

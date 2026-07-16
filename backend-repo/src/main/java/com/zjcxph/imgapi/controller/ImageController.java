@@ -9,6 +9,7 @@ import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
+import com.zjcxph.imgapi.service.ArchiveImageClassificationService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -63,19 +64,22 @@ public class ImageController {
     private final OssService ossService;
     private final ImageUrlService imageUrlService;
     private final ArchiveAccessService archiveAccessService;
+    private final ArchiveImageClassificationService classificationService;
 
     public ImageController(ScanService scanService,
                            ArchiveExportService archiveExportService,
                            ImageStorage imageStorage,
                            OssService ossService,
                            ImageUrlService imageUrlService,
-                           ArchiveAccessService archiveAccessService) {
+                           ArchiveAccessService archiveAccessService,
+                           ArchiveImageClassificationService classificationService) {
         this.scanService = scanService;
         this.archiveExportService = archiveExportService;
         this.imageStorage = imageStorage;
         this.ossService = ossService;
         this.imageUrlService = imageUrlService;
         this.archiveAccessService = archiveAccessService;
+        this.classificationService = classificationService;
     }
 
     @Operation(summary = "服务器心跳")
@@ -235,11 +239,18 @@ public class ImageController {
         if (imageType < 0 || imageType > 14) {
             return Result.fail("图片类型错误");
         }
+
+        Scan existing = scanService.findById(id);
+        if (existing == null) {
+            return Result.notFound("扫描记录不存在");
+        }
+        Integer previousType = existing.getBtype();
         int result = scanService.updateImageType(id, imageType);
         if (result != 1) {
             logger.error("修改图片 {} 的类型为 {} 失败", id, imageType);
             return Result.fail("修改图片类型失败");
         }
+        classificationService.recordManualTypeChange(existing, previousType, imageType, null);
         return Result.success("修改图片类型成功");
     }
 

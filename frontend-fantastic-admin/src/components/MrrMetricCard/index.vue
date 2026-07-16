@@ -11,16 +11,25 @@ const props = withDefaults(defineProps<{
   icon?: string
   tone?: MetricTone
   compactValue?: boolean
+  interactive?: boolean
 }>(), {
   tone: 'blue',
   compactValue: false,
+  interactive: false,
 })
 
 const toneClass = computed(() => props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`)
 </script>
 
 <template>
-  <el-card shadow="never" class="mrr-metric-card" :class="toneClass">
+  <el-card
+    shadow="never"
+    class="mrr-metric-card"
+    :class="[
+      toneClass,
+      { 'mrr-metric-card--interactive': props.interactive },
+    ]"
+  >
     <div v-if="props.icon" class="mrr-metric-card__icon" aria-hidden="true">
       <FaIcon :name="props.icon" />
     </div>

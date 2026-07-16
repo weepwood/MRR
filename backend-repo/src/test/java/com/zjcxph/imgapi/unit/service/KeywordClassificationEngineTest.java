@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.unit.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.entity.RecordTypeDefinition;
 import com.zjcxph.imgapi.service.KeywordClassificationEngine;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +16,7 @@ class KeywordClassificationEngineTest {
 
     @BeforeEach
     void setUp() {
-        engine = new KeywordClassificationEngine(new ObjectMapper());
+        engine = new KeywordClassificationEngine();
     }
 
     @Test

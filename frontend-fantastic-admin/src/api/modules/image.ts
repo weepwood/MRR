@@ -6,12 +6,13 @@ export function getImgApiByBah(bah: string) {
   return getRequest<BAHImageData[]>(`/api/v1/img/${bah}`)
 }
 
-/** GET /api/v1/img/search — 按病案号和/或上架号查询图片数据 */
-export function getImgByCode(bah?: string, sjh?: string, forceRefresh = false) {
+/** GET /api/v1/img/search — 按病案号、上架号和调用方用户查询图片数据 */
+export function getImgByCode(bah?: string, sjh?: string, forceRefresh = false, userid?: string) {
   return getRequest<BAHImageData[]>('/api/v1/img/search', {
     params: {
       bah,
       sjh,
+      userid,
       ...(forceRefresh ? { _: Date.now() } : {}),
     },
     headers: forceRefresh

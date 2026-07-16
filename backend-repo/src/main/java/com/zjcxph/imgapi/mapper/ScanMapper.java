@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -18,33 +19,43 @@ public interface ScanMapper {
             "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
     String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
+    String QUALIFIED_BAH_SEARCH_EXPRESSION = "CASE WHEN s.BAH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(s.BAH, '0'), ''), '0') ELSE s.BAH END";
+    String QUALIFIED_SJH_SEARCH_EXPRESSION = "CASE WHEN s.SJH ~ '^[0-9]+$' " +
+            "THEN COALESCE(NULLIF(LTRIM(s.SJH, '0'), ''), '0') ELSE s.SJH END";
+    String CLASSIFICATION_SELECT = "SELECT s.*, " +
+            "c.predicted_btype AS \"predictedBtype\", " +
+            "c.confidence AS \"classificationConfidence\", " +
+            "c.classification_state AS \"classificationState\", " +
+            "c.effective_source AS \"classificationSource\", " +
+            "c.model_version AS \"classificationModelVersion\", " +
+            "c.ocr_title AS \"classificationOcrTitle\" " +
+            "FROM mr_scan s LEFT JOIN mr_image_classification c ON c.scan_id = s.id ";
 
-    @Select("SELECT * FROM mr_scan WHERE " +
-            "BAH = #{normalizedCode} " +
-            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} " +
-            "ORDER BY pages")
+    @Select(CLASSIFICATION_SELECT + "WHERE s.BAH = #{normalizedCode} OR " +
+            QUALIFIED_BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY s.pages NULLS LAST, s.id")
     List<Scan> findBAH(
             @Param("normalizedCode") String normalizedCode,
             @Param("searchCode") String searchCode
     );
 
     @Select("<script>"
-            + "SELECT * FROM mr_scan "
+            + CLASSIFICATION_SELECT
             + "<where>"
             + "<choose>"
             + "<when test='normalizedBah != null and normalizedBah != \"\" and normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "(BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
-            + "AND (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
+            + "(s.BAH = #{normalizedBah} OR " + QUALIFIED_BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
+            + "AND (s.SJH = #{normalizedSjh} OR " + QUALIFIED_SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
             + "<when test='normalizedBah != null and normalizedBah != \"\"'>"
-            + "BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"
+            + "s.BAH = #{normalizedBah} OR " + QUALIFIED_BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"
             + "</when>"
             + "<when test='normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode}"
+            + "s.SJH = #{normalizedSjh} OR " + QUALIFIED_SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode}"
             + "</when>"
             + "</choose>"
             + "</where>"
-            + " ORDER BY pages"
+            + " ORDER BY s.pages NULLS LAST, s.id"
             + "</script>")
     List<Scan> findByCode(
             @Param("normalizedBah") String normalizedBah,
@@ -106,10 +117,34 @@ public interface ScanMapper {
     List<Scan> findByCondition(@Param("request") ScanRequest request, @Param("limit") int limit);
 
     List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request,
-                                             @Param("offset") int offset,
-                                             @Param("limit") int limit);
+                                              @Param("offset") int offset,
+                                              @Param("limit") int limit);
 
     long countByCondition(@Param("request") ScanRequest request);
+
+    @Select("<script>SELECT COUNT(*) FROM mr_scan s " +
+            "LEFT JOIN mr_image_classification c ON c.scan_id = s.id " +
+            "WHERE s.archive_id = #{archiveId} AND s.uploadflag &lt;&gt; 0 " +
+            "<choose>" +
+            "<when test='scope == \"UNCLASSIFIED\"'>AND (s.btype IS NULL OR s.btype = 0)</when>" +
+            "<when test='scope == \"LOW_CONFIDENCE\"'>AND (c.scan_id IS NULL OR c.classification_state IN ('FAILED', 'NO_MATCH') OR c.confidence &lt; #{threshold})</when>" +
+            "</choose></script>")
+    long countClassificationTargets(@Param("archiveId") Long archiveId,
+                                    @Param("scope") String scope,
+                                    @Param("threshold") BigDecimal threshold);
+
+    @Select("<script>SELECT s.* FROM mr_scan s " +
+            "LEFT JOIN mr_image_classification c ON c.scan_id = s.id " +
+            "WHERE s.archive_id = #{archiveId} AND s.uploadflag &lt;&gt; 0 AND s.id &gt; #{afterId} " +
+            "<choose>" +
+            "<when test='scope == \"UNCLASSIFIED\"'>AND (s.btype IS NULL OR s.btype = 0)</when>" +
+            "<when test='scope == \"LOW_CONFIDENCE\"'>AND (c.scan_id IS NULL OR c.classification_state IN ('FAILED', 'NO_MATCH') OR c.confidence &lt; #{threshold})</when>" +
+            "</choose> ORDER BY s.id LIMIT #{limit}</script>")
+    List<Scan> findClassificationTargets(@Param("archiveId") Long archiveId,
+                                         @Param("scope") String scope,
+                                         @Param("threshold") BigDecimal threshold,
+                                         @Param("afterId") Integer afterId,
+                                         @Param("limit") int limit);
 
     @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +
             "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +

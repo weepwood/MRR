@@ -188,7 +188,7 @@ onMounted(loadData)
     <section class="analytics-grid">
       <MrrChartCard
         title="扫描趋势"
-        description="默认展示近 10 日；在图表内滚动鼠标滚轮可放大或缩小时间范围"
+        description="默认展示近 90 日；在图表内滚动鼠标滚轮可放大或缩小时间范围"
         :loading="loading"
         :empty="!trendDates.length"
         empty-description="暂无趋势数据"
@@ -221,7 +221,7 @@ onMounted(loadData)
           right-axis-name="记录数"
           left-unit="页"
           right-unit="条"
-          :initial-visible-count="10"
+          :initial-visible-count="90"
           :height="340"
         />
       </MrrChartCard>

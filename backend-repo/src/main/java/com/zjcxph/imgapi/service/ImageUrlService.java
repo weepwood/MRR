@@ -90,14 +90,14 @@ public class ImageUrlService {
      */
     String determineImageUrl(String folder) {
         if (folder == null || folder.isBlank()) {
-            return imageProperties.getServerUrlDefault();
+            return configuredOrFallback(imageProperties.getServerUrlDefault());
         }
 
         Set<String> baImg03Exact = Set.of(
                 "2026.06.05", "2026.06.08", "2026.06.09"
         );
         if (baImg03Exact.contains(folder)) {
-            return imageProperties.getServerUrlBa03();
+            return configuredOrFallback(imageProperties.getServerUrlBa03());
         }
 
         Set<String> baImg02YearMonth = Set.of(
@@ -106,7 +106,7 @@ public class ImageUrlService {
         );
         String yearMonth = extractYearMonth(folder);
         if (baImg02YearMonth.contains(yearMonth)) {
-            return imageProperties.getServerUrlBa02();
+            return configuredOrFallback(imageProperties.getServerUrlBa02());
         }
 
         Set<String> baImg01YearMonth = Set.of(
@@ -114,10 +114,16 @@ public class ImageUrlService {
                 "24.10", "24.11", "25.07", "25.08"
         );
         if (baImg01YearMonth.contains(yearMonth)) {
-            return imageProperties.getServerUrlBa01();
+            return configuredOrFallback(imageProperties.getServerUrlBa01());
         }
 
         return imageProperties.getUrl();
+    }
+
+    private String configuredOrFallback(String configuredUrl) {
+        return configuredUrl == null || configuredUrl.isBlank()
+                ? imageProperties.getUrl()
+                : configuredUrl;
     }
 
     /**

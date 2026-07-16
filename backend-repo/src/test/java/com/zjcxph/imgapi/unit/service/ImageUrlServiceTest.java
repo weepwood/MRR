@@ -32,11 +32,12 @@ class ImageUrlServiceTest {
     private SystemSettingService systemSettingService;
 
     private ImageUrlService service;
+    private ImageProperties props;
     private Method determineImageUrlMethod;
 
     @BeforeEach
     void setUp() throws Exception {
-        ImageProperties props = new ImageProperties();
+        props = new ImageProperties();
         props.setServerUrlDefault("http://default");
         props.setServerUrlBa03("http://ba03");
         props.setServerUrlBa02("http://ba02");
@@ -102,6 +103,14 @@ class ImageUrlServiceTest {
     @DisplayName("determineImageUrl — 按年月匹配 baImg02")
     void determineImageUrl_yearMonthMatchReturnsBa02() throws Exception {
         assertThat(determineImageUrlMethod.invoke(service, "2026.01.15")).isEqualTo("http://ba02");
+    }
+
+    @Test
+    @DisplayName("determineImageUrl — 分段服务器未配置时回退默认地址")
+    void determineImageUrl_blankSegmentServerFallsBackToDefault() throws Exception {
+        props.setServerUrlBa01(" ");
+
+        assertThat(determineImageUrlMethod.invoke(service, "24.04.07")).isEqualTo("http://url-default");
     }
 
     @Test

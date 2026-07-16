@@ -23,7 +23,7 @@ public class Patient {
     // 住院科室
     private String department;
     // 病区
-    private String binqu;
+    private String bingqu;
     // 床位
     private String chuangwei;
 
@@ -33,7 +33,7 @@ public class Patient {
     }
 
     public Patient(Integer id, String idCard, String bah, String name, LocalDate ruyuan,
-                   String admissiontime, String department, String binqu, String chuangwei) {
+                   String admissiontime, String department, String bingqu, String chuangwei) {
         this.id = id;
         this.idCard = idCard;
         setBah(bah);
@@ -41,7 +41,7 @@ public class Patient {
         this.ruyuan = ruyuan;
         this.admissiontime = admissiontime;
         this.department = department;
-        this.binqu = binqu;
+        this.bingqu = bingqu;
         this.chuangwei = chuangwei;
     }
 
@@ -63,7 +63,7 @@ public class Patient {
                 ", ruyuan=" + ruyuan +
                 ", admissionTime=" + admissiontime +
                 ", department='" + department + '\'' +
-                ", binqu='" + binqu + '\'' +
+                ", bingqu='" + bingqu + '\'' +
                 ", chuangwei='" + chuangwei + '\'' +
                 '}';
     }

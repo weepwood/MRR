@@ -56,7 +56,7 @@ class SearchServiceImplTest {
         patient.setRuyuan(LocalDate.of(2026, 7, 16));
         patient.setAdmissiontime("2026-07-16 09:30:00");
         patient.setDepartment("内科");
-        patient.setBinqu("内科一病区");
+        patient.setBingqu("内科一病区");
         patient.setChuangwei("08床");
 
         when(searchMapper.findBAHByIDCard("110101199001011234")).thenReturn(List.of(patient));
@@ -67,7 +67,7 @@ class SearchServiceImplTest {
 
         assertThat(result).singleElement().satisfies(archiveCase -> {
             assertThat(archiveCase.getRuyuan()).isEqualTo(LocalDate.of(2026, 7, 16));
-            assertThat(archiveCase.getBinqu()).isEqualTo("内科一病区");
+            assertThat(archiveCase.getBingqu()).isEqualTo("内科一病区");
             assertThat(archiveCase.getChuangwei()).isEqualTo("08床");
         });
     }

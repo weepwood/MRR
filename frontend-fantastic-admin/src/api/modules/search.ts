@@ -3,7 +3,7 @@ import { getRequest, postRequest } from '../index'
 
 export interface PatientSearchRecord extends BAHRecord {
   ruyuan?: string
-  binqu?: string
+  bingqu?: string
   chuangwei?: string
 }
 
@@ -15,7 +15,7 @@ export interface IdCardArchiveCase {
   ruyuan?: string
   admissionTime?: string
   department?: string
-  binqu?: string
+  bingqu?: string
   chuangwei?: string
 }
 

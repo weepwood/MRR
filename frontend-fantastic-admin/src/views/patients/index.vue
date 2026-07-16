@@ -102,7 +102,7 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column prop="department" label="科室" width="120" show-overflow-tooltip />
-        <el-table-column prop="binqu" label="病区" width="120" show-overflow-tooltip />
+        <el-table-column prop="bingqu" label="病区" width="120" show-overflow-tooltip />
         <el-table-column prop="chuangwei" label="床位" width="100" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />

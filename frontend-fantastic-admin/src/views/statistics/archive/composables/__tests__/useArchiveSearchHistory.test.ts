@@ -10,18 +10,19 @@ import {
 
 afterEach(() => {
   localStorage.clear()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
 describe('archive local search history', () => {
   it('stores successful archive lookups locally and moves repeated items to the front', () => {
-    vi.spyOn(Date, 'now')
-      .mockReturnValueOnce(1000)
-      .mockReturnValueOnce(2000)
-      .mockReturnValueOnce(3000)
+    vi.useFakeTimers()
 
+    vi.setSystemTime(1000)
     addArchiveSearchHistory({ bah: '12345678', sjh: '00000088', imageCount: 12 })
+    vi.setSystemTime(2000)
     addArchiveSearchHistory({ bah: '87654321', sjh: '00000099', imageCount: 8 })
+    vi.setSystemTime(3000)
     addArchiveSearchHistory({ bah: '12345678', sjh: '00000088', imageCount: 15 })
 
     expect(readArchiveSearchHistory()).toEqual([

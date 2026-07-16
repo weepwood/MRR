@@ -13,7 +13,7 @@ try {
     }
 
     Write-Host '==> Run architecture foundation unit and H2 mapper tests'
-    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,ImageControllerTest,LocalImageStorageTest,ArchiveExportServiceImplTest,ScanMapperIntegrationTest' test
+    & mvn '-Dtest=ScanServiceImplTest,ScanControllerTest,ImageControllerTest,ImageUrlServiceTest,LocalImageStorageTest,ArchiveExportServiceImplTest,ScanMapperIntegrationTest' test
     if ($LASTEXITCODE -ne 0) {
         throw "Architecture foundation tests failed with exit code $LASTEXITCODE"
     }

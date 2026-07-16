@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.dto.req.ImageRequest;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
@@ -53,6 +54,9 @@ class ImageControllerTest {
 
     @Mock
     private ImageUrlService imageUrlService;
+
+    @Mock
+    private ArchiveAccessService archiveAccessService;
 
     @InjectMocks
     private ImageController imageController;

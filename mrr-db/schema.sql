@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS main.mr_archive_search_history (
     sjh            TEXT,
     success        INTEGER NOT NULL,
     image_count    INTEGER NOT NULL DEFAULT 0 CHECK (image_count >= 0),
+    query_count    INTEGER NOT NULL DEFAULT 1 CHECK (query_count >= 0),
     failure_reason TEXT,
     favorite       INTEGER NOT NULL DEFAULT 0,
     searched_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

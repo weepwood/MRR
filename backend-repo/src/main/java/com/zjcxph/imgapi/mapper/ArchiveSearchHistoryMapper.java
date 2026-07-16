@@ -15,15 +15,15 @@ public interface ArchiveSearchHistoryMapper {
 
     @Insert("""
             INSERT INTO mr_archive_search_history
-                (user_id, bah, sjh, success, image_count, failure_reason, favorite, searched_at)
+                (user_id, bah, sjh, success, image_count, query_count, failure_reason, favorite, searched_at)
             VALUES
-                (#{userId}, #{bah}, #{sjh}, #{success}, #{imageCount}, #{failureReason}, #{favorite}, #{searchedAt})
+                (#{userId}, #{bah}, #{sjh}, #{success}, #{imageCount}, #{queryCount}, #{failureReason}, #{favorite}, #{searchedAt})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(ArchiveSearchHistory history);
 
     @Select("""
-            SELECT id, user_id AS userId, bah, sjh, success, image_count AS imageCount,
+            SELECT id, user_id AS userId, bah, sjh, success, image_count AS imageCount, query_count AS queryCount,
                    failure_reason AS failureReason, favorite, searched_at AS searchedAt,
                    created_at AS createdAt, updated_at AS updatedAt
             FROM mr_archive_search_history

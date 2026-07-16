@@ -408,6 +408,7 @@ CREATE TABLE IF NOT EXISTS app.mr_archive_search_history (
     sjh VARCHAR(64),
     success BOOLEAN NOT NULL,
     image_count INTEGER NOT NULL DEFAULT 0 CHECK (image_count >= 0),
+    query_count INTEGER NOT NULL DEFAULT 1 CHECK (query_count >= 0),
     failure_reason VARCHAR(1000),
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
     searched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

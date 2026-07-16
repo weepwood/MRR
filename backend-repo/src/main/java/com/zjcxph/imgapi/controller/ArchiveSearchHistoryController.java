@@ -46,6 +46,7 @@ public class ArchiveSearchHistoryController {
         history.setId(null);
         history.setUserId(currentUserId());
         history.setImageCount(Math.max(0, history.getImageCount() == null ? 0 : history.getImageCount()));
+        history.setQueryCount(history.isSuccess() ? Math.max(1, history.getQueryCount() == null ? 1 : history.getQueryCount()) : 0);
         history.setSearchedAt(history.getSearchedAt() == null ? LocalDateTime.now() : history.getSearchedAt());
         mapper.insert(history);
         return Result.success(history);

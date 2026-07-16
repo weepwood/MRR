@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
-import { ArrowLeft, Clock, Delete, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
   ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
   ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT,
-  clearArchiveSearchHistory,
+  loadArchiveSearchHistory,
   readArchiveSearchHistory,
-  removeArchiveSearchHistory,
   toggleArchiveSearchHistoryFavorite,
 } from '../composables/useArchiveSearchHistory'
 
@@ -79,17 +78,8 @@ function selectHistory(item: ArchiveSearchHistoryItem) {
   emit('search')
 }
 
-function removeHistoryItem(key: string) {
-  searchHistory.value = removeArchiveSearchHistory(key)
-}
-
 function toggleHistoryFavorite(key: string) {
   searchHistory.value = toggleArchiveSearchHistoryFavorite(key)
-}
-
-function clearHistory() {
-  clearArchiveSearchHistory()
-  searchHistory.value = []
 }
 
 function openAllHistory() {
@@ -99,6 +89,9 @@ function openAllHistory() {
 }
 
 onMounted(() => {
+  void loadArchiveSearchHistory().then((history) => {
+    searchHistory.value = history
+  })
   window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
   window.addEventListener('storage', handleStorage)
 })
@@ -142,9 +135,6 @@ onUnmounted(() => {
                 <el-button v-if="searchHistory.length" text size="small" @click="openAllHistory">
                   查看全部
                 </el-button>
-                <el-button v-if="searchHistory.length" text size="small" :icon="Delete" @click="clearHistory">
-                  清空
-                </el-button>
               </div>
             </div>
 
@@ -157,7 +147,7 @@ onUnmounted(() => {
                   <div v-for="item in displayedSuccessfulHistory" :key="item.key" class="history-item">
                     <button class="history-main" type="button" @click="selectHistory(item)">
                       <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
-                      <span class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像</span>
+                      <span class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
                       <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
                     </button>
                     <el-button
@@ -169,7 +159,6 @@ onUnmounted(() => {
                       :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
                       @click.stop="toggleHistoryFavorite(item.key)"
                     />
-                    <el-button text circle size="small" :icon="Delete" :aria-label="`删除病案号 ${item.bah || item.sjh} 的搜索记录`" @click.stop="removeHistoryItem(item.key)" />
                   </div>
                 </div>
               </section>
@@ -199,7 +188,7 @@ onUnmounted(() => {
             <div v-for="item in activeHistory" :key="item.key" class="history-item">
               <button class="history-main" type="button" @click="selectHistory(item)">
                 <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
-                <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像</span>
+                <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
                 <span v-else class="history-secondary">{{ item.failureReason }}</span>
                 <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
               </button>
@@ -212,15 +201,9 @@ onUnmounted(() => {
                 :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
                 @click.stop="toggleHistoryFavorite(item.key)"
               />
-              <el-button text circle size="small" :icon="Delete" :aria-label="`删除${item.status === 'success' ? '' : '失败'}病案号 ${item.bah || item.sjh} 的搜索记录`" @click.stop="removeHistoryItem(item.key)" />
             </div>
           </div>
           <el-empty v-else :image-size="54" :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'" />
-          <template #footer>
-            <el-button v-if="searchHistory.length" :icon="Delete" @click="clearHistory">
-              清空记录
-            </el-button>
-          </template>
         </el-dialog>
       </div>
     </div>

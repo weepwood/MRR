@@ -12,6 +12,7 @@ public class ArchiveSearchHistory {
     private String sjh;
     private boolean success;
     private Integer imageCount;
+    private Integer queryCount;
     private String failureReason;
     private boolean favorite;
     private LocalDateTime searchedAt;

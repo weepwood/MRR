@@ -71,6 +71,7 @@ export interface ArchiveSearchHistoryRecord {
   sjh?: string
   success: boolean
   imageCount: number
+  queryCount: number
   failureReason?: string
   favorite: boolean
   searchedAt: string

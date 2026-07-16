@@ -44,6 +44,17 @@ class ImageControllerMedicalRecordTypeTest {
     private ImageController imageController;
 
     @Test
+    void acceptsUncategorizedTypeZero() {
+        ImageRequest request = requestWithType(0);
+        when(scanService.updateImageType(1, 0)).thenReturn(1);
+
+        Result<Void> result = imageController.updateImageType(1, request);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        verify(scanService).updateImageType(1, 0);
+    }
+
+    @Test
     void acceptsNewType15() {
         ImageRequest request = requestWithType(15);
         when(scanService.updateImageType(1, 15)).thenReturn(1);
@@ -55,14 +66,14 @@ class ImageControllerMedicalRecordTypeTest {
     }
 
     @Test
-    void rejectsTypesOutsideOneToFifteen() {
-        Result<Void> zeroResult = imageController.updateImageType(1, requestWithType(0));
+    void rejectsTypesOutsideZeroToFifteen() {
+        Result<Void> negativeResult = imageController.updateImageType(1, requestWithType(-1));
         Result<Void> sixteenResult = imageController.updateImageType(1, requestWithType(16));
 
-        assertThat(zeroResult.getCode()).isEqualTo(400);
+        assertThat(negativeResult.getCode()).isEqualTo(400);
         assertThat(sixteenResult.getCode()).isEqualTo(400);
-        assertThat(zeroResult.getMessage()).contains("1-15");
-        assertThat(sixteenResult.getMessage()).contains("1-15");
+        assertThat(negativeResult.getMessage()).contains("0-15");
+        assertThat(sixteenResult.getMessage()).contains("0-15");
     }
 
     private ImageRequest requestWithType(int type) {

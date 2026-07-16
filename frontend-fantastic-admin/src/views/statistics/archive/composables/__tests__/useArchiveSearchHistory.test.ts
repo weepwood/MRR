@@ -20,22 +20,22 @@ describe('archive local search history', () => {
       .mockReturnValueOnce(2000)
       .mockReturnValueOnce(3000)
 
-    addArchiveSearchHistory({ bah: '1234567', sjh: '88', imageCount: 12 })
-    addArchiveSearchHistory({ bah: '7654321', sjh: '99', imageCount: 8 })
-    addArchiveSearchHistory({ bah: '1234567', sjh: '88', imageCount: 15 })
+    addArchiveSearchHistory({ bah: '12345678', sjh: '00000088', imageCount: 12 })
+    addArchiveSearchHistory({ bah: '87654321', sjh: '00000099', imageCount: 8 })
+    addArchiveSearchHistory({ bah: '12345678', sjh: '00000088', imageCount: 15 })
 
     expect(readArchiveSearchHistory()).toEqual([
       {
-        key: '1234567:88',
-        bah: '1234567',
-        sjh: '88',
+        key: '12345678:00000088',
+        bah: '12345678',
+        sjh: '00000088',
         imageCount: 15,
         searchedAt: 3000,
       },
       {
-        key: '7654321:99',
-        bah: '7654321',
-        sjh: '99',
+        key: '87654321:00000099',
+        bah: '87654321',
+        sjh: '00000099',
         imageCount: 8,
         searchedAt: 2000,
       },
@@ -47,18 +47,18 @@ describe('archive local search history', () => {
 
     for (let index = 0; index < ARCHIVE_SEARCH_HISTORY_LIMIT + 5; index += 1) {
       localStorage.setItem('test-clock', String(index))
-      addArchiveSearchHistory({ bah: String(1000000 + index), imageCount: index })
+      addArchiveSearchHistory({ bah: String(10000000 + index), imageCount: index })
     }
 
     const history = readArchiveSearchHistory()
     expect(history).toHaveLength(ARCHIVE_SEARCH_HISTORY_LIMIT)
-    expect(history[0]?.bah).toBe('1000024')
-    expect(history.at(-1)?.bah).toBe('1000005')
+    expect(history[0]?.bah).toBe('10000024')
+    expect(history.at(-1)?.bah).toBe('10000005')
   })
 
   it('removes one record or clears all records', () => {
-    addArchiveSearchHistory({ bah: '1234567', sjh: '88', imageCount: 12 })
-    addArchiveSearchHistory({ bah: '7654321', sjh: '99', imageCount: 8 })
+    addArchiveSearchHistory({ bah: '12345678', sjh: '00000088', imageCount: 12 })
+    addArchiveSearchHistory({ bah: '87654321', sjh: '00000099', imageCount: 8 })
 
     const [first] = readArchiveSearchHistory()
     removeArchiveSearchHistory(first.key)

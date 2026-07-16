@@ -94,7 +94,9 @@
             return { name: 'Safari', version: match[1] }
           }
 
-          match = userAgent.match(/(?:Chrome|CriOS)\/([\d.]+)/)
+          // Chromium 内核浏览器不一定携带 Chrome 标识，例如 Chromium 本身。
+          // 统一按内核主版本判断，低于 111 时必须显示升级提示。
+          match = userAgent.match(/(?:Chrome|Chromium|CriOS)\/([\d.]+)/)
           if (match) {
             return { name: 'Chrome', version: match[1] }
           }

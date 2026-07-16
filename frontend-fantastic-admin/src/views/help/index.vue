@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { Connection, Document, Reading, Setting } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { createDocumentationSession } from '@/api/modules/documentation'
 
 defineOptions({ name: 'HelpCenter' })
 
@@ -13,14 +9,8 @@ interface DocumentationEntry {
   description: string
   target: string
   icon: Component
-  permission: string
   tone: string
 }
-
-const route = useRoute()
-const openingTarget = ref('')
-
-const redirectedForAuthentication = computed(() => route.query.docsAuth === 'required')
 
 const entries: DocumentationEntry[] = [
   {
@@ -28,7 +18,6 @@ const entries: DocumentationEntry[] = [
     description: '查看病案管理、影像浏览、统计分析和系统操作说明。',
     target: 'http://192.2.1.135:8002/docs',
     icon: Reading,
-    permission: '登录用户',
     tone: 'primary',
   },
   {
@@ -36,7 +25,6 @@ const entries: DocumentationEntry[] = [
     description: '查看前后端架构、开发流程、接口约定和数据库设计。',
     target: 'http://192.2.1.135:8002/docs/internal/',
     icon: Document,
-    permission: '需要 system:read',
     tone: 'success',
   },
   {
@@ -44,7 +32,6 @@ const entries: DocumentationEntry[] = [
     description: '查看部署、日志、备份恢复、监控和故障处理说明。',
     target: 'http://192.2.1.135:8002/docs/internal/internal/deployment.html',
     icon: Setting,
-    permission: '需要 system:read',
     tone: 'warning',
   },
   {
@@ -52,44 +39,12 @@ const entries: DocumentationEntry[] = [
     description: '打开由 Springdoc OpenAPI 实时生成的 Swagger UI。',
     target: 'http://192.2.1.135:18045/swagger-ui/index.html#/',
     icon: Connection,
-    permission: '需要 system:read',
     tone: 'info',
   },
 ]
 
-function getErrorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim()) {
-      return message
-    }
-  }
-  return '无法创建文档访问会话'
-}
-
-function getSessionTarget(target: string) {
-  if (target.startsWith('/')) {
-    return target
-  }
-  return new URL(target).pathname
-}
-
-async function openDocumentation(entry: DocumentationEntry) {
-  if (openingTarget.value) {
-    return
-  }
-
-  openingTarget.value = entry.target
-  try {
-    await createDocumentationSession(getSessionTarget(entry.target))
-    window.location.assign(entry.target)
-  }
-  catch (error: unknown) {
-    ElMessage.error(getErrorMessage(error))
-  }
-  finally {
-    openingTarget.value = ''
-  }
+function openDocumentation(entry: DocumentationEntry) {
+  window.location.assign(entry.target)
 }
 </script>
 
@@ -102,7 +57,7 @@ async function openDocumentation(entry: DocumentationEntry) {
         </p>
         <h1>帮助与文档</h1>
         <p class="help-description">
-          用户手册与内部文档采用独立构建。打开文档前会创建一个 30 分钟有效的 HttpOnly 访问会话。
+          用户手册、内部文档和 API 文档均可直接打开。
         </p>
       </div>
       <div class="help-status">
@@ -110,16 +65,6 @@ async function openDocumentation(entry: DocumentationEntry) {
         VitePress + Springdoc
       </div>
     </header>
-
-    <el-alert
-      v-if="redirectedForAuthentication"
-      class="auth-alert"
-      title="文档访问会话已失效"
-      description="请从下方重新打开文档，系统会根据当前账号权限创建新的访问会话。"
-      type="warning"
-      show-icon
-      :closable="false"
-    />
 
     <section class="documentation-grid" aria-label="文档入口">
       <article
@@ -138,12 +83,9 @@ async function openDocumentation(entry: DocumentationEntry) {
           <p>{{ entry.description }}</p>
         </div>
         <div class="card-footer">
-          <span>{{ entry.permission }}</span>
           <el-button
             type="primary"
             plain
-            :loading="openingTarget === entry.target"
-            :disabled="Boolean(openingTarget) && openingTarget !== entry.target"
             @click="openDocumentation(entry)"
           >
             打开文档
@@ -152,34 +94,6 @@ async function openDocumentation(entry: DocumentationEntry) {
       </article>
     </section>
 
-    <el-card class="access-note" shadow="never">
-      <template #header>
-        <strong>访问控制说明</strong>
-      </template>
-      <div class="access-levels">
-        <div>
-          <span class="level-index">01</span>
-          <div>
-            <h3>用户文档</h3>
-            <p>任何已登录账号均可访问，搜索索引仅包含用户手册。</p>
-          </div>
-        </div>
-        <div>
-          <span class="level-index">02</span>
-          <div>
-            <h3>内部文档</h3>
-            <p>开发、架构和运维内容要求 system:read 权限。</p>
-          </div>
-        </div>
-        <div>
-          <span class="level-index">03</span>
-          <div>
-            <h3>实时 API</h3>
-            <p>Swagger UI 与 OpenAPI JSON 使用相同的内部文档权限。</p>
-          </div>
-        </div>
-      </div>
-    </el-card>
   </div>
 </template>
 
@@ -244,10 +158,6 @@ async function openDocumentation(entry: DocumentationEntry) {
   border-radius: 50%;
   background: var(--el-color-success);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-success) 15%, transparent);
-}
-
-.auth-alert {
-  border-radius: 12px;
 }
 
 .documentation-grid {
@@ -333,52 +243,12 @@ async function openDocumentation(entry: DocumentationEntry) {
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
-.card-footer span {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.access-note {
-  border-radius: 16px;
-}
-
-.access-levels {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.access-levels > div {
-  display: flex;
-  gap: 12px;
-}
-
-.level-index {
-  color: var(--el-color-primary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.access-levels h3 {
-  margin: 0 0 6px;
-  color: var(--el-text-color-primary);
-  font-size: 15px;
-}
-
-.access-levels p {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
 @media (max-width: 820px) {
   .help-header {
     flex-direction: column;
   }
 
-  .documentation-grid,
-  .access-levels {
+  .documentation-grid {
     grid-template-columns: 1fr;
   }
 }

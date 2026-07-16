@@ -19,4 +19,20 @@ test.describe('浏览器兼容性通知', () => {
     await page.reload()
     await expect(notice).toBeHidden()
   })
+
+  test('Chromium 内核版本低于 111 时显示通知', async ({ browser }) => {
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/110.0.0.0 Safari/537.36',
+    })
+    const page = await context.newPage()
+
+    await page.goto('/')
+
+    const notice = page.locator('#browser-compat-notice')
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText('Chrome 110.0.0.0')
+    await expect(notice).toContainText('最低支持版本 Chrome 111')
+
+    await context.close()
+  })
 })

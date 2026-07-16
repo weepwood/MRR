@@ -1,6 +1,7 @@
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { getRequestErrorMessage } from '@/utils/request-error-message'
 import { registerRequestErrorFallback } from '@/utils/request-error-notification'
 import { createResponseMetric, createResponseMetricQueue } from '@/utils/response-metrics'
 
@@ -82,26 +83,15 @@ function enqueueResponseMetric(
   }
 }
 
-function getErrorMessage(error: AxiosError | any) {
-  if (error?.response?.data?.message) {
-    return String(error.response.data.message)
+function normalizeRequestError(error: AxiosError | any) {
+  if (error && typeof error === 'object') {
+    error.message = getRequestErrorMessage(error)
   }
-
-  const message = String(error?.message || '')
-  if (message === 'Network Error') {
-    return '后端网络异常'
-  }
-  if (message.includes('timeout')) {
-    return '接口请求超时'
-  }
-  if (message.includes('Request failed with status code')) {
-    return `接口${message.slice(-3)}异常`
-  }
-  return message || '请求失败'
+  return error
 }
 
 function showGlobalError(error: AxiosError | any) {
-  const message = getErrorMessage(error)
+  const message = getRequestErrorMessage(error)
   const key = `${error?.response?.status ?? 'network'}:${message}`
 
   registerRequestErrorFallback(error, () => {
@@ -121,6 +111,7 @@ function showGlobalError(error: AxiosError | any) {
 }
 
 async function handleError(error: AxiosError | any) {
+  normalizeRequestError(error)
   const config = error?.config
   if (error?.response?.status === 401) {
     enqueueResponseMetric(config, error.response, error.response.data)
@@ -192,14 +183,14 @@ api.interceptors.response.use(
             return payload
           }
         }
-        return Promise.reject(payload)
+        return Promise.reject(normalizeRequestError(payload))
       }
 
       if ('code' in payload) {
         if (payload.code === 200) {
           return payload
         }
-        return Promise.reject(payload)
+        return Promise.reject(normalizeRequestError(payload))
       }
     }
 

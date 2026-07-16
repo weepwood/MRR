@@ -1,10 +1,10 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
-import com.zjcxph.imgapi.dto.req.ScanRequest;
 
-import java.nio.file.Path;
 import java.util.List;
 
 public interface ScanService {
@@ -17,12 +17,6 @@ public interface ScanService {
             String sjhSearchCode
     );
 
-    Path getImagePath(String bah);
-
-    java.io.File createZipForBAH(String bah) throws java.io.IOException;
-
-    java.io.File createZipForCode(String bah, String sjh) throws java.io.IOException;
-
     List<PathDO> getImagePathList(List<String> ids);
 
     int updateImageType(Integer id, Integer type);
@@ -33,7 +27,9 @@ public interface ScanService {
 
     Scan update(Scan scan);
 
-    List<Scan> findAll();
+    List<Scan> findAll(int limit);
+
+    CursorPageResult<Scan> findAfterId(Integer afterId, int size);
 
     Scan findById(Integer id);
 
@@ -43,7 +39,7 @@ public interface ScanService {
 
     List<Scan> findAllWithPagination(int page, int size);
 
-    List<Scan> findByCondition(ScanRequest request);
+    List<Scan> findByCondition(ScanRequest request, int limit);
 
     List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size);
 

@@ -54,8 +54,11 @@ export function buildTypeStats(images: { btype?: number | null }[]): TypeStatIte
   return TYPE_OPTIONS.map(item => ({ ...item, count: counts.get(item.value) || 0 }))
 }
 
+/**
+ * img_url 由后端按照系统 imageSource 设置生成；ossUrl 仅作为旧响应兼容兜底。
+ */
 export function resolveImageUrl(item: { ossUrl?: string, img_url?: string }, cacheBuster?: number): string {
-  const url = item.ossUrl || item.img_url || ''
+  const url = item.img_url || item.ossUrl || ''
   if (!url || !cacheBuster) {
     return url
   }

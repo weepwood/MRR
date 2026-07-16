@@ -327,6 +327,7 @@ function openArchive(item = selectedArchive.value) {
   router.push({
     path: '/archive/embed',
     query: {
+      from: 'statistics-detail',
       bah: item.bah,
       cid: item.cid || '',
       type: item.type || '',

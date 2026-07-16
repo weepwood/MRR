@@ -61,6 +61,8 @@ const sjhRequired = computed(() => !searchIdCard.value.trim() && requiresSjhForB
 
 <style scoped>
 .search-card {
+  display: grid;
+  gap: 10px;
   padding: 14px;
   background: var(--surface);
   border: 1px solid var(--divider);

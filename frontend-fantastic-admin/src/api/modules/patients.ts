@@ -9,7 +9,7 @@ export interface PatientRecord {
   ruyuan?: string
   admissiontime?: string
   department?: string
-  binqu?: string
+  bingqu?: string
   chuangwei?: string
 }
 

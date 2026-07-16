@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FlywayMigrationChecksumTest {
 
     private static final String DATA_QUALITY_MIGRATION =
-            "db/migration/V202607141800__database_monitoring_and_data_quality.sql";
+            "db/migration-legacy/V202607141800__database_monitoring_and_data_quality.sql";
     private static final int EXPECTED_CHECKSUM = -948436209;
 
     @Test

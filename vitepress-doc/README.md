@@ -92,7 +92,7 @@ http://localhost:5173
 
 - [安装指南](getting-started/installation.md) - 系统安装和部署
 - [配置说明](getting-started/configuration.md) - 详细配置参数
-- [开发环境](development/setup.md) - 本地启动、密钥与验证流程
+- [开发环境](./internal/development.md) - 本地启动、密钥与验证流程
 
 ## 🛠️ 开发命令
 
@@ -146,7 +146,7 @@ npm run docs:preview
 代码块
 ```
 
-[链接文本](链接地址)
+[链接文本](https://example.com/link)
 
 ```markdown
 ![图片描述](https://example.com/image.png)
@@ -214,7 +214,7 @@ npm run docs:build
 
 ### 部署选项
 
-详细部署步骤请参考 [DEPLOY.md](vitepress-doc/DEPLOY.md)
+详细部署步骤请参考 [DEPLOY.md](./DEPLOY.md)
 
 - **GitHub Pages** - 免费，适合开源项目
 - **Netlify** - 自动部署，支持自定义域名

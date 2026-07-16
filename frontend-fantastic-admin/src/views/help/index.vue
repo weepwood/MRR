@@ -34,7 +34,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '开发文档',
     description: '查看前后端架构、开发流程、接口约定和数据库设计。',
-    target: '/docs/internal/ai-generation/开发指南/开发指南',
+    target: '/docs/internal/',
     icon: Document,
     permission: '需要 system:read',
     tone: 'success',
@@ -42,7 +42,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '运维指南',
     description: '查看部署、日志、备份恢复、监控和故障处理说明。',
-    target: '/docs/internal/maintenance/',
+    target: '/docs/internal/internal/deployment.html',
     icon: Setting,
     permission: '需要 system:read',
     tone: 'warning',

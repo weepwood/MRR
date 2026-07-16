@@ -62,6 +62,10 @@ export default defineConfig({
     lineNumbers: true,
   },
 
+  vite: {
+    publicDir: '../public',
+  },
+
   lastUpdated: true,
   ignoreDeadLinks: true,
 })

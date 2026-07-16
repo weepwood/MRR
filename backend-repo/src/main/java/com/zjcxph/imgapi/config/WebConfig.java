@@ -1,7 +1,6 @@
 package com.zjcxph.imgapi.config;
 
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
-import com.zjcxph.imgapi.interceptors.DocumentationAccessInterceptor;
 import com.zjcxph.imgapi.interceptors.DocumentationSessionCleanupInterceptor;
 import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
@@ -22,20 +21,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final LoginInterceptor loginInterceptor;
     private final AuthorizationInterceptor authorizationInterceptor;
-    private final DocumentationAccessInterceptor documentationAccessInterceptor;
     private final DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor;
     private final LogInterceptor logInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;
 
     public WebConfig(LoginInterceptor loginInterceptor,
                      AuthorizationInterceptor authorizationInterceptor,
-                     DocumentationAccessInterceptor documentationAccessInterceptor,
                      DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor,
                      LogInterceptor logInterceptor,
                      RateLimitInterceptor rateLimitInterceptor) {
         this.loginInterceptor = loginInterceptor;
         this.authorizationInterceptor = authorizationInterceptor;
-        this.documentationAccessInterceptor = documentationAccessInterceptor;
         this.documentationSessionCleanupInterceptor = documentationSessionCleanupInterceptor;
         this.logInterceptor = logInterceptor;
         this.rateLimitInterceptor = rateLimitInterceptor;
@@ -98,15 +94,6 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addInterceptor(documentationSessionCleanupInterceptor)
                 .addPathPatterns("/api/v1/auth/logout");
-
-        registry.addInterceptor(documentationAccessInterceptor)
-                .addPathPatterns(
-                        "/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/v3/api-docs",
-                        "/v3/api-docs.yaml",
-                        "/v3/api-docs/**"
-                );
 
         registry.addInterceptor(logInterceptor)
                 .addPathPatterns("/**")

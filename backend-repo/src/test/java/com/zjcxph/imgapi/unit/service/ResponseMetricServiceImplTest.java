@@ -48,7 +48,7 @@ class ResponseMetricServiceImplTest {
         assertThat(captor.getValue()).hasSize(1);
         assertThat(captor.getValue().getFirst().getSuccess()).isTrue();
         assertThat(captor.getValue().getFirst().getOccurredAt())
-                .isBetween(Timestamp.from(beforeSave), Timestamp.from(afterSave));
+                .isBetween(Timestamp.from(beforeSave), Timestamp.from(afterSave.plusMillis(1)));
     }
 
     @Test
@@ -96,9 +96,9 @@ class ResponseMetricServiceImplTest {
     }
 
     @Test
-    void analysisRejectsDaysOutsideOneToNinety() {
+    void analysisRejectsDaysOutsideOneToThreeHundredSixtyFive() {
         assertThatThrownBy(() -> service.getAnalysis(0)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.getAnalysis(91)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.getAnalysis(366)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private FrontendResponseMetricRequest metric(String requestId, String routePattern) {

@@ -74,7 +74,7 @@ public class SearchServiceImpl implements SearchService {
                 patient.getRuyuan(),
                 patient.getAdmissiontime(),
                 patient.getDepartment(),
-                patient.getBinqu(),
+                patient.getBingqu(),
                 patient.getChuangwei()
         );
     }

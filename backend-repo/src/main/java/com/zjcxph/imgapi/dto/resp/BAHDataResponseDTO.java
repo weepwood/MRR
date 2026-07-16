@@ -2,11 +2,13 @@ package com.zjcxph.imgapi.dto.resp;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
 public class BAHDataResponseDTO {
     private Integer id;
+    private Long archiveId;
     private String brxh;
     private String bah;
     private String sjh;
@@ -19,6 +21,13 @@ public class BAHDataResponseDTO {
     private String img_url;
     private String ossUrl;
     private String folder;
+
+    private Integer predictedBtype;
+    private BigDecimal classificationConfidence;
+    private String classificationState;
+    private String classificationSource;
+    private String classificationModelVersion;
+    private String classificationOcrTitle;
 
     public BAHDataResponseDTO() {
     }
@@ -38,5 +47,4 @@ public class BAHDataResponseDTO {
         this.img_url = img_url;
         this.folder = folder;
     }
-
 }

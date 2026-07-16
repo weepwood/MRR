@@ -31,12 +31,12 @@ public class IdCardArchiveSearchResponse {
         private LocalDate ruyuan;
         private String admissionTime;
         private String department;
-        private String binqu;
+        private String bingqu;
         private String chuangwei;
 
         public ArchiveCase(Integer patientRecordId, String bah, String sjh, String name,
                            LocalDate ruyuan, String admissionTime, String department,
-                           String binqu, String chuangwei) {
+                           String bingqu, String chuangwei) {
             this.patientRecordId = patientRecordId;
             this.bah = bah;
             this.sjh = sjh;
@@ -44,7 +44,7 @@ public class IdCardArchiveSearchResponse {
             this.ruyuan = ruyuan;
             this.admissionTime = admissionTime;
             this.department = department;
-            this.binqu = binqu;
+            this.bingqu = bingqu;
             this.chuangwei = chuangwei;
         }
     }

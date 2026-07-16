@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 public interface SearchMapper {
-    String PATIENT_SELECT_COLUMNS = "id, idcard, bah, name, ruyuan, admissiontime, department, binqu, chuangwei";
+    String PATIENT_SELECT_COLUMNS = "id, idcard, bah, name, ruyuan, admissiontime, department, bingqu, chuangwei";
     String BAH_SEARCH_EXPRESSION = "CASE WHEN bah ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(bah, '0'), ''), '0') ELSE bah END";
     String SCAN_BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
@@ -54,7 +54,7 @@ public interface SearchMapper {
             "select " + PATIENT_SELECT_COLUMNS + " from mr_patient" +
             " <where>" +
             "   <if test='keyword != null and keyword != \"\"'>" +
-            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or binqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
+            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or bingqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
             "   </if>" +
             " </where>" +
             " order by id limit #{size} offset #{offset}" +
@@ -65,7 +65,7 @@ public interface SearchMapper {
             "select count(*) from mr_patient" +
             " <where>" +
             "   <if test='keyword != null and keyword != \"\"'>" +
-            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or binqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
+            "     and (bah like '%' || #{keyword} || '%' or name like '%' || #{keyword} || '%' or idcard like '%' || #{keyword} || '%' or department like '%' || #{keyword} || '%' or bingqu like '%' || #{keyword} || '%' or chuangwei like '%' || #{keyword} || '%')" +
             "   </if>" +
             " </where>" +
             "</script>")

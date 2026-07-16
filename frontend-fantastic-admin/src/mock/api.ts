@@ -1,4 +1,5 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
+import { MEDICAL_RECORD_TYPE_LABEL_MAP } from '@/constants/medical-record-types'
 
 type QueryValue = string | string[] | undefined
 
@@ -32,14 +33,7 @@ interface MockUser {
   lastLoginAt: string
 }
 
-const typeNames: Record<number, string> = {
-  1: '病案首页',
-  2: '病程记录',
-  3: '手术记录',
-  5: '护理记录',
-  8: '检验单',
-  9: '医嘱',
-}
+const typeNames = MEDICAL_RECORD_TYPE_LABEL_MAP
 
 const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸科', '消化内科']
 const operators = ['scanner-01', 'scanner-02', 'scanner-03', 'scanner-04']

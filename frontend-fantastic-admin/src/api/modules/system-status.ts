@@ -54,8 +54,11 @@ export function getDailySystemAvailability(days = 90) {
   })
 }
 
-export function getMinuteSystemAvailability() {
-  return getRequest<MinuteSystemAvailability[]>('/api/v1/public/status/minutes', publicRequestConfig)
+export function getMinuteSystemAvailability(date?: string) {
+  return getRequest<MinuteSystemAvailability[]>('/api/v1/public/status/minutes', {
+    ...publicRequestConfig,
+    params: date ? { date } : undefined,
+  })
 }
 
 export function getSystemStatusIncidents(days = 90) {

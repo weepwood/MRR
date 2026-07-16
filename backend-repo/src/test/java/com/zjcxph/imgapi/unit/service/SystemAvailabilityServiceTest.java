@@ -10,6 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +132,22 @@ class SystemAvailabilityServiceTest {
                 .findFirst()
                 .orElseThrow();
         assertEquals("DOWN", downtimeMinute.get("status"));
+    }
+
+    @Test
+    void minuteAvailabilityForDateCoversTheSelectedCalendarDay() {
+        LocalDate date = LocalDate.of(2026, 7, 16);
+        Instant expectedStart = date.atStartOfDay(ZoneOffset.UTC).toInstant();
+        when(repository.findOverlapping(eq(expectedStart), eq(expectedStart.plus(1, ChronoUnit.DAYS))))
+                .thenReturn(List.of());
+
+        SystemAvailabilityService service = createService();
+        List<Map<String, Object>> minutes = service.getMinuteAvailability(date);
+
+        assertEquals(1_440, minutes.size());
+        assertEquals(expectedStart, minutes.getFirst().get("startedAt"));
+        assertEquals(expectedStart.plus(1_439, ChronoUnit.MINUTES), minutes.getLast().get("startedAt"));
+        verify(repository).findOverlapping(expectedStart, expectedStart.plus(1, ChronoUnit.DAYS));
     }
 
     private SystemAvailabilityService createService() {

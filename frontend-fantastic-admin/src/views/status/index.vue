@@ -23,12 +23,27 @@ const summary = ref<SystemStatusSummary | null>(null)
 const daily = ref<DailySystemAvailability[]>([])
 const minutes = ref<MinuteSystemAvailability[]>([])
 const incidents = ref<SystemStatusIncident[]>([])
+const selectedDate = ref<string | null>(null)
 const loading = ref(true)
 const refreshing = ref(false)
 const loadError = ref(false)
 let refreshTimer: number | undefined
+let minuteRequestVersion = 0
 
 const currentState = computed(() => summary.value?.currentStatus ?? 'NO_DATA')
+const filteredIncidents = computed(() => {
+  if (!selectedDate.value) {
+    return incidents.value
+  }
+
+  const dayStart = dayjs(selectedDate.value).startOf('day')
+  const dayEnd = dayjs(selectedDate.value).endOf('day')
+  return incidents.value.filter((incident) => {
+    const incidentStart = dayjs(incident.startedAt)
+    const incidentEnd = incident.endedAt ? dayjs(incident.endedAt) : dayjs()
+    return !incidentEnd.isBefore(dayStart) && !incidentStart.isAfter(dayEnd)
+  })
+})
 const minuteHourLabels = computed(() => minutes.value.filter((_, index) => index % 60 === 0))
 const hourlyAvailability = computed(() => minuteHourLabels.value.map((item, index) => {
   const hourMinutes = minutes.value.slice(index * 60, index * 60 + 60)
@@ -140,13 +155,16 @@ async function refreshCurrentStatus() {
     return
   }
   refreshing.value = true
+  const requestVersion = selectedDate.value ? null : ++minuteRequestVersion
   try {
     const [summaryResponse, minuteResponse] = await Promise.all([
       getSystemStatusSummary(HISTORY_DAYS),
-      getMinuteSystemAvailability(),
+      selectedDate.value ? Promise.resolve(null) : getMinuteSystemAvailability(),
     ])
     summary.value = summaryResponse.data ?? summary.value
-    minutes.value = minuteResponse.data ?? minutes.value
+    if (minuteResponse && requestVersion === minuteRequestVersion) {
+      minutes.value = minuteResponse.data ?? minutes.value
+    }
     loadError.value = false
   }
   catch {
@@ -185,12 +203,46 @@ function dailyTitle(item: DailySystemAvailability) {
   const availability = typeof item.uptimePercentage === 'number'
     ? `${item.uptimePercentage.toFixed(3)}%`
     : '暂无数据'
-  return `${item.date} · 可用率 ${availability} · 异常 ${formatDuration(item.downtimeSeconds)}`
+  const downtimePercentage = item.monitoredSeconds
+    ? `${(item.downtimeSeconds * 100 / item.monitoredSeconds).toFixed(3)}%`
+    : '暂无数据'
+  return `${item.date} · 可用率 ${availability} · 异常 ${downtimePercentage} · ${formatDuration(item.downtimeSeconds)}`
+}
+
+function dailyCellStyle(item: DailySystemAvailability) {
+  if (item.status !== 'DOWN' || !item.monitoredSeconds) {
+    return undefined
+  }
+
+  const downtimeRatio = Math.min(1, item.downtimeSeconds / item.monitoredSeconds)
+  return { '--day-down-opacity': `${0.28 + downtimeRatio * 0.72}` }
 }
 
 function minuteTitle(item: MinuteSystemAvailability) {
   const state = item.status === 'UP' ? '正常' : item.status === 'DOWN' ? '异常' : '暂无数据'
   return `${dayjs(item.startedAt).format('YYYY-MM-DD HH:mm')} · ${state}`
+}
+
+async function toggleDateFilter(date: string) {
+  const nextDate = selectedDate.value === date ? null : date
+  selectedDate.value = nextDate
+  const requestVersion = ++minuteRequestVersion
+  try {
+    const response = await getMinuteSystemAvailability(nextDate ?? undefined)
+    if (requestVersion === minuteRequestVersion) {
+      minutes.value = response.data ?? []
+    }
+    loadError.value = false
+  }
+  catch {
+    loadError.value = true
+  }
+}
+
+function clearDateFilter() {
+  if (selectedDate.value) {
+    void toggleDateFilter(selectedDate.value)
+  }
 }
 
 onMounted(() => {
@@ -280,7 +332,7 @@ onBeforeUnmount(() => {
           <div class="section-heading">
             <div>
               <span class="eyebrow">Availability trend</span>
-              <h2>最近 24 小时可用率趋势</h2>
+              <h2>{{ selectedDate ? `${selectedDate} 可用率趋势` : '最近 24 小时可用率趋势' }}</h2>
               <p>根据分钟级运行记录按小时汇总；缺少运行记录的小时不计入可用率。</p>
             </div>
           </div>
@@ -289,15 +341,52 @@ onBeforeUnmount(() => {
             :empty="!hasHourlyAvailability"
             empty-description="最近一天暂无可用率数据"
             :height="250"
-            aria-label="最近 24 小时可用率趋势图"
+            :aria-label="selectedDate ? `${selectedDate} 可用率趋势图` : '最近 24 小时可用率趋势图'"
           />
+        </section>
+
+        <section class="history-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Availability history</span>
+              <h2>最近 {{ HISTORY_DAYS }} 天运行记录</h2>
+              <p>每个方块代表一天，点击可同步查看当天的分钟记录和异常运行区间。</p>
+            </div>
+            <div class="legend" aria-label="状态图例">
+              <span><i class="up" />正常</span>
+              <span><i class="down" />存在异常</span>
+              <span><i class="no-data" />暂无数据</span>
+            </div>
+          </div>
+
+          <div class="daily-track">
+            <button
+              v-for="item in daily"
+              :key="item.date"
+              type="button"
+              class="day-cell"
+              :class="[
+                `is-${item.status.toLowerCase().replace('_', '-')}`,
+                { 'is-selected': selectedDate === item.date },
+              ]"
+              :title="dailyTitle(item)"
+              :aria-label="dailyTitle(item)"
+              :aria-pressed="selectedDate === item.date"
+              :style="dailyCellStyle(item)"
+              @click="toggleDateFilter(item.date)"
+            />
+          </div>
+          <div class="track-labels">
+            <span>{{ daily.at(0)?.date ?? '—' }}</span>
+            <span>{{ daily.at(-1)?.date ?? '—' }}</span>
+          </div>
         </section>
 
         <section class="minute-history-card">
           <div class="section-heading">
             <div>
               <span class="eyebrow">Minute-by-minute history</span>
-              <h2>最近一天运行记录</h2>
+              <h2>{{ selectedDate ? `${selectedDate} 运行记录` : '最近一天运行记录' }}</h2>
               <p>每个方块代表一分钟；任一分钟内出现异常即标记为异常。</p>
             </div>
             <div class="legend" aria-label="分钟运行记录图例">
@@ -326,47 +415,20 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section class="history-card">
-          <div class="section-heading">
-            <div>
-              <span class="eyebrow">Availability history</span>
-              <h2>最近 {{ HISTORY_DAYS }} 天运行记录</h2>
-              <p>每个方块代表一天，悬停可查看当天可用率与异常时长。</p>
-            </div>
-            <div class="legend" aria-label="状态图例">
-              <span><i class="up" />正常</span>
-              <span><i class="down" />存在异常</span>
-              <span><i class="no-data" />暂无数据</span>
-            </div>
-          </div>
-
-          <div class="daily-track">
-            <span
-              v-for="item in daily"
-              :key="item.date"
-              class="day-cell"
-              :class="`is-${item.status.toLowerCase().replace('_', '-')}`"
-              :title="dailyTitle(item)"
-              :aria-label="dailyTitle(item)"
-            />
-          </div>
-          <div class="track-labels">
-            <span>{{ daily.at(0)?.date ?? '—' }}</span>
-            <span>{{ daily.at(-1)?.date ?? '—' }}</span>
-          </div>
-        </section>
-
         <section class="incidents-card">
           <div class="section-heading">
             <div>
               <span class="eyebrow">Incident history</span>
-              <h2>异常运行区间</h2>
-              <p>仅展示系统自动检测或根据心跳中断推断出的异常时间段。</p>
+              <h2>{{ selectedDate ? `${selectedDate} 异常运行区间` : '异常运行区间' }}</h2>
+              <p>{{ selectedDate ? '仅展示与所选日期有时间重叠的异常区间。' : '仅展示系统自动检测或根据心跳中断推断出的异常时间段。' }}</p>
             </div>
+            <button v-if="selectedDate" type="button" class="clear-date-filter" @click="clearDateFilter">
+              查看全部
+            </button>
           </div>
 
-          <div v-if="incidents.length" class="incident-list">
-            <article v-for="incident in incidents" :key="`${incident.startedAt}-${incident.endedAt}`" class="incident-row">
+          <div v-if="filteredIncidents.length" class="incident-list">
+            <article v-for="incident in filteredIncidents" :key="`${incident.startedAt}-${incident.endedAt}`" class="incident-row">
               <span class="incident-marker" aria-hidden="true" />
               <div class="incident-copy">
                 <div>
@@ -384,8 +446,8 @@ onBeforeUnmount(() => {
           </div>
           <div v-else class="empty-incidents">
             <i class="i-ant-design:safety-certificate-outlined" aria-hidden="true" />
-            <strong>查询范围内没有异常记录</strong>
-            <p>系统将在检测到状态变化后自动记录异常区间。</p>
+            <strong>{{ selectedDate ? '当天没有异常记录' : '查询范围内没有异常记录' }}</strong>
+            <p>{{ selectedDate ? '可选择其他日期或查看全部异常记录。' : '系统将在检测到状态变化后自动记录异常区间。' }}</p>
           </div>
         </section>
       </template>
@@ -723,6 +785,10 @@ onBeforeUnmount(() => {
   background: #dce2eb;
 }
 
+.day-cell.is-down {
+  background-color: rgb(239 107 98 / var(--day-down-opacity, 1));
+}
+
 .daily-track {
   display: grid;
   grid-template-columns: repeat(45, minmax(5px, 1fr));
@@ -761,10 +827,18 @@ onBeforeUnmount(() => {
 }
 
 .day-cell {
+  padding: 0;
+  border: 0;
   min-width: 5px;
   height: 34px;
+  cursor: pointer;
   border-radius: 4px;
   transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.day-cell.is-selected {
+  outline: 2px solid #172033;
+  outline-offset: 2px;
 }
 
 .day-cell:hover {
@@ -777,6 +851,18 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
+}
+
+.clear-date-filter {
+  flex: none;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  cursor: pointer;
 }
 
 .incident-list {

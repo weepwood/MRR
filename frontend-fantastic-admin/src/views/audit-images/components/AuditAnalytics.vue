@@ -176,14 +176,14 @@ function actionLabel(value: string) {
             </div>
           </div>
         </template>
-        <div data-testid="audit-trend-chart">
+        <div data-testid="audit-trend-chart" class="trend-chart">
           <MrrLineChart
             :categories="trendCategories"
             :series="trendSeries"
             y-axis-name="访问次数"
             unit="次"
             :show-legend="false"
-            :height="300"
+            height="100%"
           />
         </div>
       </MrrChartCard>
@@ -239,6 +239,23 @@ function actionLabel(value: string) {
 
 .trend-card {
   grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.trend-card :deep(.el-card__body),
+.trend-card :deep(.mrr-chart-card__body),
+.trend-chart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.trend-chart :deep(.mrr-chart) {
+  flex: 1;
+  min-height: 220px;
 }
 
 .date-count {

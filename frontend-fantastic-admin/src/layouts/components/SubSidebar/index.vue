@@ -66,8 +66,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
           </template>
         </TransitionGroup>
       </FaScrollArea>
-      <div v-if="settingsStore.mode === 'pc'" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
-        <FaButton v-show="settingsStore.settings.menu.enableSubMenuCollapseButton" variant="ghost" size="icon" class="h-8 w-8 transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
+      <div v-if="settingsStore.mode === 'pc' && settingsStore.settings.menu.enableSubMenuCollapseButton" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
+        <FaButton variant="ghost" size="icon" class="h-8 w-8 transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
           <FaIcon name="toolbar-collapse" class="size-4" />
         </FaButton>
       </div>
@@ -161,8 +161,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
   }
 
-  .collapse-area,
-  .account-area {
+  .collapse-area {
     border-top: 1px solid var(--mrr-navigation-border);
   }
 }

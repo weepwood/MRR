@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -37,11 +38,11 @@ public class PublicStatusController {
                 .data(systemAvailabilityService.getDaily(days));
     }
 
-    @Operation(summary = "获取最近一天分钟级运行记录")
+    @Operation(summary = "获取分钟级运行记录")
     @GetMapping("/minutes")
-    public Result<List<Map<String, Object>>> minutes() {
+    public Result<List<Map<String, Object>>> minutes(@RequestParam(required = false) LocalDate date) {
         return Result.<List<Map<String, Object>>>success("获取分钟级运行记录成功")
-                .data(systemAvailabilityService.getMinuteAvailability());
+                .data(systemAvailabilityService.getMinuteAvailability(date));
     }
 
     @Operation(summary = "获取异常运行区间")

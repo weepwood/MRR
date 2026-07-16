@@ -162,6 +162,20 @@ public class SystemAvailabilityService {
         Instant currentMinute = Instant.now().truncatedTo(ChronoUnit.MINUTES);
         Instant rangeStart = currentMinute.minus(1_439, ChronoUnit.MINUTES);
         Instant rangeEnd = currentMinute.plus(1, ChronoUnit.MINUTES);
+        return buildMinuteAvailability(rangeStart, rangeEnd);
+    }
+
+    public List<Map<String, Object>> getMinuteAvailability(LocalDate date) {
+        if (date == null) {
+            return getMinuteAvailability();
+        }
+
+        Instant rangeStart = date.atStartOfDay(zoneId).toInstant();
+        Instant rangeEnd = date.plusDays(1).atStartOfDay(zoneId).toInstant();
+        return buildMinuteAvailability(rangeStart, rangeEnd);
+    }
+
+    private List<Map<String, Object>> buildMinuteAvailability(Instant rangeStart, Instant rangeEnd) {
         List<Period> periods = repository.findOverlapping(rangeStart, rangeEnd);
         List<Map<String, Object>> result = new ArrayList<>(1_440);
 

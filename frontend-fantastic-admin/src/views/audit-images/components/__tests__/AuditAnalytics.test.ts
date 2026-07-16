@@ -44,6 +44,20 @@ describe('auditAnalytics', () => {
     expect(wrapper.text()).toContain('doctor-a')
   })
 
+  it('lets the access trend chart fill the available card height', () => {
+    const wrapper = mount(AuditAnalytics, {
+      props: { analytics },
+      global: {
+        stubs: {
+          'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
+          'el-icon': true,
+        },
+      },
+    })
+
+    expect(wrapper.findComponent({ name: 'MrrLineChart' }).props('height')).toBe('100%')
+  })
+
   it('shows a clear empty state when no audit data matches', () => {
     const wrapper = mount(AuditAnalytics, {
       props: {

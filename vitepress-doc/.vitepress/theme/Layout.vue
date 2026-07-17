@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 
 const motionQuery = '(pointer: fine) and (prefers-reduced-motion: no-preference)'
+const screenshotPreview = ref<{ src: string, alt: string } | null>(null)
 
 function updateHeroBackground(event: PointerEvent) {
   const hero = document.querySelector<HTMLElement>('.VPHero')
@@ -20,10 +21,53 @@ function updateHeroBackground(event: PointerEvent) {
   hero.style.setProperty('--mrr-hero-bg-y', `${offsetY.toFixed(2)}px`)
 }
 
-onMounted(() => window.addEventListener('pointermove', updateHeroBackground))
-onBeforeUnmount(() => window.removeEventListener('pointermove', updateHeroBackground))
+function openScreenshotPreview(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement) || !target.matches(".vp-doc img[src*='/screenshots/v1/']")) {
+    return
+  }
+
+  screenshotPreview.value = { src: target.currentSrc || target.src, alt: target.alt }
+}
+
+function closeScreenshotPreview() {
+  screenshotPreview.value = null
+}
+
+function handlePreviewKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closeScreenshotPreview()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('pointermove', updateHeroBackground)
+  document.addEventListener('click', openScreenshotPreview)
+  window.addEventListener('keydown', handlePreviewKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', updateHeroBackground)
+  document.removeEventListener('click', openScreenshotPreview)
+  window.removeEventListener('keydown', handlePreviewKeydown)
+})
 </script>
 
 <template>
   <DefaultTheme.Layout />
+  <Teleport to="body">
+    <div
+      v-if="screenshotPreview"
+      class="screenshot-preview"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="screenshotPreview.alt || '界面截图预览'"
+      @click.self="closeScreenshotPreview"
+    >
+      <button type="button" class="screenshot-preview-close" aria-label="关闭预览" @click="closeScreenshotPreview">
+        <span aria-hidden="true">×</span>
+      </button>
+      <img :src="screenshotPreview.src" :alt="screenshotPreview.alt">
+    </div>
+  </Teleport>
 </template>

@@ -168,6 +168,54 @@
   background: var(--vp-c-brand-soft);
 }
 
+.vp-doc img[src*='/screenshots/v1/'] {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgb(15 23 42 / 8%);
+  cursor: zoom-in;
+}
+
+.screenshot-preview {
+  position: fixed;
+  z-index: 9999;
+  display: grid;
+  inset: 0;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 9vw, 160px);
+  place-items: center;
+  background: rgb(15 23 42 / 88%);
+  cursor: zoom-out;
+}
+
+.screenshot-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+  cursor: default;
+}
+
+.screenshot-preview-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+  background: rgb(255 255 255 / 15%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
+}
+
 @media (max-width: 640px) {
   .doc-nav-grid { grid-template-columns: 1fr; }
   .screenshot-grid { grid-template-columns: 1fr; }

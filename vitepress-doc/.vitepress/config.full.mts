@@ -114,6 +114,7 @@ export default defineConfig({
             { text: '影像档案袋', link: '/user-guide/images' },
             { text: '病案类型', link: '/user-guide/medical-record-types' },
             { text: '统计分析', link: '/user-guide/statistics' },
+            { text: '界面示例', link: '/user-guide/screenshots' },
             { text: '系统管理', link: '/user-guide/admin' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
             { text: '常见问题', link: '/user-guide/faq' },

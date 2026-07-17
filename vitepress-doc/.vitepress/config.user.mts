@@ -42,6 +42,7 @@ export default defineConfig({
           { text: '影像档案袋', link: '/images' },
           { text: '病案类型', link: '/medical-record-types' },
           { text: '统计分析', link: '/statistics' },
+          { text: '界面示例', link: '/screenshots' },
         ],
       },
       {

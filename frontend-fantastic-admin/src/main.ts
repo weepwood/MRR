@@ -6,6 +6,7 @@ import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
+import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
 
 import App from './App.vue'
@@ -22,12 +23,15 @@ import 'virtual:uno.css'
 // 全局样式
 import '@/assets/styles/globals.css'
 import '@/assets/styles/pages/archive-boxes.css'
+import '@/assets/styles/pages/settings-navigation.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
 
 installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
 installArchiveUserIdRouting(router)
 installClipboardFallback()
+// 点击完整高度的设置工作区时，将其对齐到桌面视口顶部。
+installSettingsWorkspaceFocus()
 
 const app = createApp(App)
 app.use(pinia)

@@ -44,7 +44,7 @@ test.describe('系统设置分类布局', () => {
     const initialBox = await sidebar.boundingBox()
     expect(initialBox).not.toBeNull()
 
-    await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'instant' }))
+    await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'auto' }))
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
 
     await expect(sidebar).toBeInViewport()

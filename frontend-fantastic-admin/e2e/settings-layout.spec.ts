@@ -29,14 +29,20 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('导航与顶栏', { exact: true })).toBeVisible()
   })
 
-  test('桌面端仅滚动右侧内容且左侧分类栏位置不变', async ({ page }) => {
+  test('桌面端设置工作区占满一个视口且仅滚动右侧内容', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 720 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
+    const shell = page.locator('.settings-shell')
     const sidebar = page.locator('.settings-sidebar')
     const content = page.locator('.settings-content')
-    await expect(sidebar).toBeVisible({ timeout: 20_000 })
+    await expect(shell).toBeVisible({ timeout: 20_000 })
+    await expect(sidebar).toBeVisible()
     await expect(content).toHaveCSS('overflow-y', 'auto')
+
+    await expect.poll(async () => shell.evaluate(
+      element => Math.abs(element.getBoundingClientRect().height - window.innerHeight),
+    )).toBeLessThanOrEqual(3)
 
     await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
     await page.getByText('工作区组件', { exact: true }).click()

@@ -6,6 +6,7 @@ import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
+import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
 
 import App from './App.vue'
@@ -29,6 +30,7 @@ installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
 installArchiveUserIdRouting(router)
 installClipboardFallback()
+installSettingsWorkspaceFocus()
 
 const app = createApp(App)
 app.use(pinia)

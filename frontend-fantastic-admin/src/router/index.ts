@@ -16,8 +16,13 @@ const router = createRouter({
 setupGuards(router)
 setupExtensions(router)
 
-router.isReady().then(() => {
-  loadingFadeOut()
-})
+router.isReady()
+  .then(() => {
+    loadingFadeOut()
+    window.dispatchEvent(new Event('mrr:app-ready'))
+  })
+  .catch(() => {
+    window.dispatchEvent(new Event('mrr:app-startup-failed'))
+  })
 
 export default router

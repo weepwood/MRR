@@ -12,39 +12,28 @@
     <title>%VITE_APP_TITLE%</title>
   </head>
   <body>
-    <div id="browser-compat-notice" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="browser-compat-blocker" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="browser-compat-content">
         <div class="browser-compat-icon" aria-hidden="true">!</div>
         <div class="browser-compat-copy">
-          <div class="browser-compat-title">浏览器版本过低</div>
+          <div id="browser-compat-title" class="browser-compat-title">浏览器不受支持</div>
           <div id="browser-compat-message" class="browser-compat-message">
-            当前浏览器可能无法完整运行本系统，请升级浏览器。
+            此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
           </div>
           <div class="browser-compat-requirement">
             最低支持：Edge 111、Chrome 111、Firefox 114、Safari 16.4。
           </div>
         </div>
-        <button id="browser-compat-close" class="browser-compat-close" type="button" aria-label="关闭浏览器兼容性通知">×</button>
       </div>
     </div>
     <div id="app"></div>
     <script>
       (function () {
-        var storageKey = 'mrr-browser-compat-notice-dismissed-v1'
         var minimumVersions = {
           Edge: '111',
           Chrome: '111',
           Firefox: '114',
           Safari: '16.4'
-        }
-
-        function hasDismissedNotice() {
-          try {
-            return window.sessionStorage.getItem(storageKey) === '1'
-          }
-          catch (error) {
-            return false
-          }
         }
 
         function compareVersions(current, minimum) {
@@ -122,50 +111,71 @@
             || !supportsColorMix
         }
 
-        function showNotice(browser, reason) {
-          var notice = document.getElementById('browser-compat-notice')
+        function blockApplication(reason, title) {
+          var blocker = document.getElementById('browser-compat-blocker')
           var message = document.getElementById('browser-compat-message')
-          var closeButton = document.getElementById('browser-compat-close')
+          var titleElement = document.getElementById('browser-compat-title')
 
-          if (!notice || !message || !closeButton) {
+          if (!blocker || !message || !titleElement) {
             return
           }
 
+          window.__MRR_APP_STARTUP_BLOCKED__ = true
+          titleElement.textContent = title
           message.textContent = reason
-          notice.style.display = 'block'
-          closeButton.onclick = function () {
-            notice.style.display = 'none'
-            try {
-              window.sessionStorage.setItem(storageKey, '1')
-            }
-            catch (error) {
-              // 隐私模式或存储被禁用时，仅关闭当前页面中的通知。
-            }
-          }
+          blocker.style.display = 'flex'
         }
 
-        if (hasDismissedNotice()) {
-          return
+        function reportStartupFailure(reason) {
+          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          blockApplication(reason, '系统启动失败')
         }
 
         var browser = detectBrowser()
         if (browser.unsupported) {
-          showNotice(browser, '检测到不受支持的 ' + browser.name + '。系统可能无法启动或部分功能不可用，请升级到新版 Edge 或 Chrome。')
+          blockApplication('检测到不受支持的 ' + browser.name + '。请使用受支持版本的浏览器访问系统。', '浏览器不受支持')
           return
         }
 
         var minimumVersion = minimumVersions[browser.name]
         if (minimumVersion && compareVersions(browser.version, minimumVersion) < 0) {
-          showNotice(
-            browser,
-            '检测到 ' + browser.name + ' ' + browser.version + '，低于最低支持版本 ' + browser.name + ' ' + minimumVersion + '。部分页面、图表或下载功能可能无法正常工作。'
+          blockApplication(
+            '检测到 ' + browser.name + ' ' + browser.version + '，低于最低支持版本 ' + browser.name + ' ' + minimumVersion + '。请升级浏览器后重试。',
+            '浏览器不受支持'
           )
           return
         }
 
         if (!minimumVersion && lacksRequiredFeatures()) {
-          showNotice(browser, '当前浏览器缺少系统所需的关键功能，部分页面、图表或下载功能可能无法正常工作，请升级浏览器。')
+          blockApplication('当前浏览器缺少系统运行所需的关键功能，请升级浏览器后重试。', '浏览器不受支持')
+          return
         }
+
+        var startupTimeout = window.setTimeout(function () {
+          reportStartupFailure('系统启动超时。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        }, 15000)
+
+        window.addEventListener('mrr:app-ready', function () {
+          window.__MRR_APP_STARTUP_READY__ = true
+          window.clearTimeout(startupTimeout)
+        }, { once: true })
+
+        window.addEventListener('mrr:app-startup-failed', function () {
+          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        }, { once: true })
+
+        window.addEventListener('error', function (event) {
+          var target = event.target
+          if (event.error || (target && target.tagName === 'SCRIPT')) {
+            reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+          }
+        }, true)
+
+        window.addEventListener('unhandledrejection', function () {
+          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        })
       })()
     </script>
     <script type="module" src="/src/main.ts"></script>

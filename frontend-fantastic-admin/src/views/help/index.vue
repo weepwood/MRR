@@ -44,7 +44,7 @@ const entries: DocumentationEntry[] = [
 ]
 
 function openDocumentation(entry: DocumentationEntry) {
-  window.location.assign(entry.target)
+  window.open(entry.target, '_blank', 'noopener')
 }
 </script>
 

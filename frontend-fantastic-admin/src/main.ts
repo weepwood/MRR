@@ -30,6 +30,7 @@ installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
 installArchiveUserIdRouting(router)
 installClipboardFallback()
+// 点击完整高度的设置工作区时，将其对齐到桌面视口顶部。
 installSettingsWorkspaceFocus()
 
 const app = createApp(App)

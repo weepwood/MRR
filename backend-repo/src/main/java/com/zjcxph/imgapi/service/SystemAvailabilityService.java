@@ -178,13 +178,16 @@ public class SystemAvailabilityService {
     private List<Map<String, Object>> buildMinuteAvailability(Instant rangeStart, Instant rangeEnd) {
         List<Period> periods = repository.findOverlapping(rangeStart, rangeEnd);
         List<Map<String, Object>> result = new ArrayList<>(1_440);
+        Instant now = Instant.now();
 
         for (int offset = 0; offset < 1_440; offset++) {
             Instant startedAt = rangeStart.plus(offset, ChronoUnit.MINUTES);
             Instant endedAt = startedAt.plus(1, ChronoUnit.MINUTES);
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("startedAt", startedAt);
-            item.put("status", minuteStatus(periods, startedAt, endedAt));
+            item.put("status", startedAt.isBefore(now)
+                    ? minuteStatus(periods, startedAt, endedAt)
+                    : STATUS_NO_DATA);
             result.add(item);
         }
 

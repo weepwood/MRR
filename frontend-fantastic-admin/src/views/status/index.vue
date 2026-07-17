@@ -14,6 +14,7 @@ import {
   getSystemStatusIncidents,
   getSystemStatusSummary,
 } from '@/api/modules/system-status'
+import serverLogo from '@/assets/images/server.svg'
 import MrrChart from '@/components/charts/MrrChart.vue'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
@@ -29,6 +30,10 @@ const refreshing = ref(false)
 const loadError = ref(false)
 let refreshTimer: number | undefined
 let minuteRequestVersion = 0
+
+function currentDate() {
+  return dayjs().format('YYYY-MM-DD')
+}
 
 const currentState = computed(() => summary.value?.currentStatus ?? 'NO_DATA')
 const filteredIncidents = computed(() => {
@@ -134,7 +139,7 @@ async function loadAll() {
     const [summaryResponse, dailyResponse, minuteResponse, incidentResponse] = await Promise.all([
       getSystemStatusSummary(HISTORY_DAYS),
       getDailySystemAvailability(HISTORY_DAYS),
-      getMinuteSystemAvailability(),
+      getMinuteSystemAvailability(currentDate()),
       getSystemStatusIncidents(HISTORY_DAYS),
     ])
     summary.value = summaryResponse.data ?? null
@@ -159,7 +164,7 @@ async function refreshCurrentStatus() {
   try {
     const [summaryResponse, minuteResponse] = await Promise.all([
       getSystemStatusSummary(HISTORY_DAYS),
-      selectedDate.value ? Promise.resolve(null) : getMinuteSystemAvailability(),
+      selectedDate.value ? Promise.resolve(null) : getMinuteSystemAvailability(currentDate()),
     ])
     summary.value = summaryResponse.data ?? summary.value
     if (minuteResponse && requestVersion === minuteRequestVersion) {
@@ -228,7 +233,7 @@ async function toggleDateFilter(date: string) {
   selectedDate.value = nextDate
   const requestVersion = ++minuteRequestVersion
   try {
-    const response = await getMinuteSystemAvailability(nextDate ?? undefined)
+    const response = await getMinuteSystemAvailability(nextDate ?? currentDate())
     if (requestVersion === minuteRequestVersion) {
       minutes.value = response.data ?? []
     }
@@ -264,7 +269,7 @@ onBeforeUnmount(() => {
     <div class="status-shell">
       <header class="status-header">
         <a class="brand" href="/" aria-label="返回 MRR">
-          <span class="brand-mark">MRR</span>
+          <span class="brand-mark"><img :src="serverLogo" alt=""></span>
           <span>
             <strong>服务状态</strong>
             <small>Medical Record Repository</small>
@@ -386,7 +391,7 @@ onBeforeUnmount(() => {
           <div class="section-heading">
             <div>
               <span class="eyebrow">Minute-by-minute history</span>
-              <h2>{{ selectedDate ? `${selectedDate} 运行记录` : '最近一天运行记录' }}</h2>
+              <h2>{{ selectedDate ? `${selectedDate} 运行记录` : '当天的运行记录' }}</h2>
               <p>每个方块代表一分钟；任一分钟内出现异常即标记为异常。</p>
             </div>
             <div class="legend" aria-label="分钟运行记录图例">
@@ -397,6 +402,11 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="minute-track-wrapper">
+            <div class="minute-hour-labels" aria-hidden="true">
+              <span v-for="item in minuteHourLabels" :key="item.startedAt">
+                {{ dayjs(item.startedAt).format('HH:mm') }}
+              </span>
+            </div>
             <div class="minute-track">
               <span
                 v-for="item in minutes"
@@ -406,11 +416,6 @@ onBeforeUnmount(() => {
                 :title="minuteTitle(item)"
                 :aria-label="minuteTitle(item)"
               />
-            </div>
-            <div class="minute-hour-labels" aria-hidden="true">
-              <span v-for="item in minuteHourLabels" :key="item.startedAt">
-                {{ dayjs(item.startedAt).format('HH:mm') }}
-              </span>
             </div>
           </div>
         </section>
@@ -500,17 +505,16 @@ onBeforeUnmount(() => {
 }
 
 .brand-mark {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.08em;
-  place-items: center;
-  background: #2563eb;
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgb(37 99 235 / 22%);
+  display: block;
+  flex: none;
+  width: 52px;
+  height: 52px;
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .brand > span:last-child {
@@ -797,33 +801,54 @@ onBeforeUnmount(() => {
 }
 
 .minute-track-wrapper {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+  padding-right: 16px;
   margin-top: 22px;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
-.minute-track,
-.minute-hour-labels {
-  min-width: 720px;
+.minute-history-card {
+  container-name: minute-history;
+  container-type: inline-size;
+}
+
+.minute-track {
+  min-width: 0;
 }
 
 .minute-track {
   display: grid;
-  grid-template-columns: repeat(60, minmax(8px, 1fr));
+  grid-template-rows: repeat(24, minmax(0, 1fr));
+  grid-template-columns: repeat(60, minmax(0, 1fr));
   gap: 2px;
+  aspect-ratio: 2.2;
 }
 
 .minute-cell {
-  height: 10px;
   border-radius: 2px;
 }
 
 .minute-hour-labels {
   display: grid;
-  grid-template-columns: repeat(24, minmax(0, 1fr));
+  grid-template-rows: repeat(24, minmax(0, 1fr));
   gap: 2px;
-  margin-top: 7px;
+  align-items: center;
   font-size: 10px;
   color: #7b879d;
+  text-align: right;
+}
+
+@container minute-history (max-width: 800px) {
+  .minute-track-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 0;
+  }
+
+  .minute-hour-labels {
+    display: none;
+  }
 }
 
 .day-cell {

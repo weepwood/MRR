@@ -150,6 +150,19 @@ class SystemAvailabilityServiceTest {
         verify(repository).findOverlapping(expectedStart, expectedStart.plus(1, ChronoUnit.DAYS));
     }
 
+    @Test
+    void minuteAvailabilityDoesNotProjectAnOpenPeriodIntoFutureMinutes() {
+        LocalDate tomorrow = LocalDate.now(ZoneOffset.UTC).plusDays(1);
+        Instant now = Instant.now();
+        Period ongoingUp = new Period(1L, "UP", now.minus(1, ChronoUnit.HOURS), null, now, null);
+        when(repository.findOverlapping(any(), any())).thenReturn(List.of(ongoingUp));
+
+        SystemAvailabilityService service = createService();
+        List<Map<String, Object>> minutes = service.getMinuteAvailability(tomorrow);
+
+        assertEquals("NO_DATA", minutes.getFirst().get("status"));
+    }
+
     private SystemAvailabilityService createService() {
         return new SystemAvailabilityService(
                 repository,

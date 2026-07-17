@@ -8,36 +8,19 @@ outline: [2, 3]
 
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 从 Git 提交历史自动生成，请勿手工维护提交列表。
 
-- 当前分支：`docs/git-changelog-20260717`
-- 更新至：2026-07-17 · `a710559`
-- 记录范围：最近 362 条第一父级提交（上限 1000 条）
+- 当前分支：`dev-no-login`
+- 更新至：2026-07-17 · `0b7c1d5`
+- 记录范围：最近 345 条第一父级提交（上限 1000 条）
 - 合并提交：优先使用 Pull Request 描述的首行作为更新内容
 
 ## 2026-07-17
 
-- **文档** `user` 补充图片来源与管理设置（[`a710559`](https://github.com/weepwood/MRR/commit/a7105599b4a9918a2b84ce189fe8a474dff6637a)）— weepwood
-- **文档** `install` 校正安装与数据库迁移流程（[`d5971d8`](https://github.com/weepwood/MRR/commit/d5971d83f5e61a92b03619dcb93715d17deb2e48)）— weepwood
-- **文档** `internal` 完善内部文档导航（[`fa972e6`](https://github.com/weepwood/MRR/commit/fa972e62904c2326317f82ca2c83cd070e5b22fd)）— weepwood
-- **文档** `user` 完善用户手册导航（[`ef1825f`](https://github.com/weepwood/MRR/commit/ef1825f67aef0be79fbb44ec1ad3ec59f615ecb9)）— weepwood
-- **文档** `internal` 更新内部文档首页（[`778f07a`](https://github.com/weepwood/MRR/commit/778f07afbaa43c2686595c602f6070ba22f4649d)）— weepwood
-- **文档** `internal` 更新系统架构与存储边界（[`939bb91`](https://github.com/weepwood/MRR/commit/939bb91f5bebd00e05514bd801e9d274a0097d3e)）— weepwood
-- **文档** `internal` 增加生产运行手册（[`a6da267`](https://github.com/weepwood/MRR/commit/a6da267513d434328de039e0a4253c851606f5ad)）— weepwood
-- **文档** `internal` 增加数据导入与迁移指南（[`3a702e9`](https://github.com/weepwood/MRR/commit/3a702e9d8bf13c6dd1351557a242907ebeaea0e2)）— weepwood
-- **文档** `internal` 重写数据库模型与迁移说明（[`0293f2d`](https://github.com/weepwood/MRR/commit/0293f2d422d5c30b6783d591336de1da010d20ef)）— weepwood
-- **文档** `internal` 校正后端、编号与 Flyway 规则（[`af04acf`](https://github.com/weepwood/MRR/commit/af04acfadfe830a929d9333b016ce19ab7675eb5)）— weepwood
-- **文档** `user` 完善患者与记录说明（[`97383f2`](https://github.com/weepwood/MRR/commit/97383f2e9d12b2fa19472f974e74670bb14844ec)）— weepwood
-- **文档** `user` 完善影像档案袋说明（[`6809e64`](https://github.com/weepwood/MRR/commit/6809e643ade9bad71f1bcaf4d1437f5256e086b2)）— weepwood
-- **文档** `user` 校正统计分析页面说明（[`6f9a1ed`](https://github.com/weepwood/MRR/commit/6f9a1ed56eb72db40c373e08e6e6969ad485f4ab)）— weepwood
-- **文档** `user` 增加用户常见问题（[`21d29e6`](https://github.com/weepwood/MRR/commit/21d29e6a497d3315829a495caf2a3ab5b7568571)）— weepwood
-- **文档** `user` 增加病案类型说明（[`aeff54a`](https://github.com/weepwood/MRR/commit/aeff54abc702de3b3a38b33f75cde140dbda2596)）— weepwood
-- **文档** `user` 更新用户手册首页与编号规则（[`74cb2f7`](https://github.com/weepwood/MRR/commit/74cb2f75445b126cc0cada21a8f2946d466a5f9e)）— weepwood
-- **文档** link release notes to git changelog（[`e54b3c2`](https://github.com/weepwood/MRR/commit/e54b3c2ef59d578e61c3b92d82c5b05cfeedc4dc)）— weepwood
-- **文档** add generated changelog snapshot（[`98b2a04`](https://github.com/weepwood/MRR/commit/98b2a0428b5d11d5ea4708bbad121b8c4d50d8dd)）— weepwood
-- **文档** expose changelog in internal docs（[`18b79ee`](https://github.com/weepwood/MRR/commit/18b79ee2d052a626c2ef61ee78baddb05bfdf2c1)）— weepwood
-- **文档** add changelog navigation（[`65c2786`](https://github.com/weepwood/MRR/commit/65c27860f66e859dc3a980cc318ef3ca6a804b41)）— weepwood
-- **文档** expose changelog generation command（[`dfeb17d`](https://github.com/weepwood/MRR/commit/dfeb17d035ce6efb50e40a0a1e707080d374aa62)）— weepwood
-- **文档** refresh git changelog before build（[`c2c1c98`](https://github.com/weepwood/MRR/commit/c2c1c9866640bebc9a576fe78e4e2d79b19149dd)）— weepwood
-- **文档** add git changelog generator（[`df123ed`](https://github.com/weepwood/MRR/commit/df123eddd1942296bd2746b8991de41c5f4ca722)）— weepwood
+- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`0b7c1d5`](https://github.com/weepwood/MRR/commit/0b7c1d53521e49e2cdfabe92e7f258adf4349865)）— weepwood
+- **维护** `pom` 升级项目版本号从0.2.0到0.3.0（[`1f1bb82`](https://github.com/weepwood/MRR/commit/1f1bb82de7deaaf14b18c630b7ccbeda1e100961)）— weepwood
+- **新增** `status` refine current-day availability view（[`7dad9f0`](https://github.com/weepwood/MRR/commit/7dad9f0f538d26c4448108366ba8f67f35a81f68)）— weepwood
+- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`118f594`](https://github.com/weepwood/MRR/commit/118f5940bb971cb2f8d4599baac6f0cdb7139559)）— weepwood
+- **新增** refine system status and settings views（[`0315bbd`](https://github.com/weepwood/MRR/commit/0315bbdd3787828c75b29fa8a5f9d0f336317389)）— weepwood
+- **文档** 完善 VitePress 用户手册与内部文档（[`f33dd5e`](https://github.com/weepwood/MRR/commit/f33dd5e707a430b86e70189eba581e7477f16490) · [#77](https://github.com/weepwood/MRR/pull/77)）— weepwood
 - **合并** Feat/mr patient ward fields 20260716（[`516b205`](https://github.com/weepwood/MRR/commit/516b205e301d55200fadf3976b7e49cf2d0dd51b) · [#76](https://github.com/weepwood/MRR/pull/76)）— weepwood
 - **修复** `patient` 将病区字段 binqu 更正为 bingqu（[`f3782b0`](https://github.com/weepwood/MRR/commit/f3782b051c61be25c5acd0e7fb4130560e23e525) · [#75](https://github.com/weepwood/MRR/pull/75)）— weepwood
 - **修复** `archive` preserve search counts and favorites（[`b3fcc78`](https://github.com/weepwood/MRR/commit/b3fcc78488b0a2fc88901ce0f8bcb18e6490263c)）— weepwood

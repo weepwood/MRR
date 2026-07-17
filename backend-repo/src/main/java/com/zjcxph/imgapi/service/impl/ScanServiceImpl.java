@@ -34,6 +34,11 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Cacheable(
+            value = "scanByCode",
+            key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
+            unless = "#result == null || #result.isEmpty()"
+    )
     public List<Scan> getImageListByCode(
             String normalizedBah,
             String bahSearchCode,
@@ -52,6 +57,7 @@ public class ScanServiceImpl implements ScanService {
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#id")
     })
     public int updateImageType(Integer id, Integer type) {
@@ -60,7 +66,10 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = "scanByBah", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanByCode", allEntries = true)
+    })
     public Scan create(Scan scan) {
         normalizeStoredCodes(scan);
         if (scanMapper.insert(scan) > 0) {
@@ -74,6 +83,7 @@ public class ScanServiceImpl implements ScanService {
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#id")
     })
     public boolean softDeleteById(Integer id) {
@@ -84,6 +94,7 @@ public class ScanServiceImpl implements ScanService {
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
+            @CacheEvict(value = "scanByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#scan.id")
     })
     public Scan update(Scan scan) {

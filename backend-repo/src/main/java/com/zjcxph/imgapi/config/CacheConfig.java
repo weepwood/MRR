@@ -24,21 +24,22 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
-        
+
         // 设置Caffeine配置
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .initialCapacity(100)           // 初始容量
                 .maximumSize(1000)              // 最大缓存条目数
                 .expireAfterWrite(10, TimeUnit.MINUTES)  // 写入后10分钟过期
                 .recordStats());                // 记录统计信息
-        
+
         // 定义缓存名称
         cacheManager.setCacheNames(java.util.List.of(
                 "scanByBah",           // 病案号查询缓存
+                "scanByCode",          // 病案号/上架号组合查询缓存
                 "scanById",            // ID查询缓存
                 "ossSignedUrl"         // OSS签名URL缓存
         ));
-        
+
         return cacheManager;
     }
 }

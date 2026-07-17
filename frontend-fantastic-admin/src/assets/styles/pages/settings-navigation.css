@@ -1,64 +1,82 @@
 /*
- * 设置页分类导航视口吸附
+ * 设置页桌面端双区滚动
  *
- * `.main` 与 `.settings-shell` 原先使用 overflow: hidden，会成为 sticky 的滚动容器，
- * 导致左侧分类导航无法相对浏览器视口吸附。设置页下改用 overflow: clip，
- * 保留内容裁剪和圆角效果，同时不再阻断 sticky 定位。
+ * 左侧分类栏与右侧设置内容处于同一固定高度工作区：
+ * - 左侧分类栏不随右侧内容滚动；
+ * - 右侧内容区独立纵向滚动；
+ * - 不依赖 position: sticky、:has() 或祖先 overflow 行为。
+ *
+ * 这样可以从布局结构上保证桌面端滚动长设置内容时，
+ * 分类导航和配置状态始终保留在当前视口中。
  */
-body .main:has(> .settings-page) {
-  overflow: clip;
-}
-
 body .main .settings-page {
-  --settings-sidebar-sticky-top: calc(
-    var(--g-header-actual-height, 0px)
-    + var(--g-tabbar-actual-height, 0px)
-    + var(--g-toolbar-actual-height, 0px)
-    + 16px
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: calc(
+    100vh
+    - var(--g-header-actual-height, 0px)
+    - var(--g-tabbar-actual-height, 0px)
+    - var(--g-toolbar-actual-height, 0px)
+    - clamp(18px, 2vw, 28px)
+    - clamp(18px, 2vw, 28px)
   );
+  height: calc(
+    100dvh
+    - var(--g-header-actual-height, 0px)
+    - var(--g-tabbar-actual-height, 0px)
+    - var(--g-toolbar-actual-height, 0px)
+    - clamp(18px, 2vw, 28px)
+    - clamp(18px, 2vw, 28px)
+  );
+  overflow: hidden;
 }
 
 body .main .settings-page .settings-shell {
-  align-items: start;
-  overflow: clip;
-  background: linear-gradient(
-    to right,
-    var(--el-fill-color-extra-light) 0,
-    var(--el-fill-color-extra-light) 238px,
-    var(--el-border-color-lighter) 238px,
-    var(--el-border-color-lighter) 239px,
-    var(--el-bg-color) 239px,
-    var(--el-bg-color) 100%
-  );
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 body .main .settings-page .settings-sidebar {
-  position: sticky;
-  top: var(--settings-sidebar-sticky-top);
-  align-self: start;
-  width: 100%;
-  max-height: calc(100vh - var(--settings-sidebar-sticky-top) - 16px);
+  position: static;
+  min-height: 0;
+  height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  background: transparent;
-  border-right: 0;
+}
+
+body .main .settings-page .settings-content {
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 @media (max-width: 980px) {
-  body .main .settings-page .settings-shell {
-    align-items: stretch;
-    background: var(--el-bg-color);
+  body .main .settings-page {
+    grid-template-rows: none;
+    min-height: auto;
+    height: auto;
+    overflow: visible;
   }
 
-  body .main .settings-page .settings-sidebar {
-    position: static;
-    top: auto;
-    align-self: stretch;
-    max-height: none;
+  body .main .settings-page .settings-shell {
+    min-height: 620px;
+    height: auto;
+    overflow: hidden;
+  }
+
+  body .main .settings-page .settings-sidebar,
+  body .main .settings-page .settings-content {
+    min-height: auto;
+    height: auto;
     overflow: visible;
-    background: var(--el-fill-color-extra-light);
-    border-right: 0;
+    scrollbar-gutter: auto;
   }
 }

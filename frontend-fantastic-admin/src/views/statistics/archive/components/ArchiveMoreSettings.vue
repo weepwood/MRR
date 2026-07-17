@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArchiveFitMode, ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
+import type { ArchiveFitMode, ArchiveScrollbarMode, ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
 import type { ViewMode } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { MoreFilled } from '@element-plus/icons-vue'
@@ -10,7 +10,7 @@ const props = defineProps<{
   typeDisplayMode: ArchiveTypeDisplayMode
   thumbnailSize: number
   fitMode: ArchiveFitMode
-  hideScrollbars: boolean
+  scrollbarMode: ArchiveScrollbarMode
   departmentColorsEnabled: boolean
   hasLocalPreferences: boolean
 }>()
@@ -21,17 +21,13 @@ const emit = defineEmits<{
   'update:typeDisplayMode': [mode: ArchiveTypeDisplayMode]
   'update:thumbnailSize': [size: number]
   'update:fitMode': [mode: ArchiveFitMode]
-  'update:hideScrollbars': [enabled: boolean]
+  'update:scrollbarMode': [mode: ArchiveScrollbarMode]
   'update:departmentColorsEnabled': [enabled: boolean]
   'reset': []
 }>()
 
 function updateThumbnailSize(value: number | number[]) {
   emit('update:thumbnailSize', Array.isArray(value) ? value[0] ?? props.thumbnailSize : value)
-}
-
-function updateHideScrollbars(value: unknown) {
-  emit('update:hideScrollbars', value === true)
 }
 
 function updateDepartmentColorsEnabled(value: unknown) {
@@ -114,11 +110,16 @@ function updateDepartmentColorsEnabled(value: unknown) {
         </div>
 
         <div class="settings-row">
-          <span>隐藏滚动条</span>
-          <el-switch
-            :model-value="props.hideScrollbars"
-            aria-label="隐藏档案袋滚动条"
-            @update:model-value="updateHideScrollbars($event)"
+          <span>滚动条</span>
+          <el-segmented
+            :model-value="props.scrollbarMode"
+            size="small"
+            :options="[
+              { label: '隐藏', value: 'hidden' },
+              { label: '半隐藏', value: 'semi-hidden' },
+              { label: '不隐藏', value: 'visible' },
+            ]"
+            @update:model-value="emit('update:scrollbarMode', $event as ArchiveScrollbarMode)"
           />
         </div>
 
@@ -130,8 +131,9 @@ function updateDepartmentColorsEnabled(value: unknown) {
           <el-slider
             :model-value="props.thumbnailSize"
             :min="160"
-            :max="320"
+            :max="480"
             :step="10"
+            tooltip-class="archive-thumbnail-slider-tooltip"
             aria-label="缩略图宽度"
             @update:model-value="updateThumbnailSize($event)"
           />
@@ -148,6 +150,10 @@ function updateDepartmentColorsEnabled(value: unknown) {
 <style scoped>
 :global(.archive-more-settings-popper) {
   z-index: 2020 !important;
+}
+
+:global(.archive-thumbnail-slider-tooltip) {
+  z-index: 2021 !important;
 }
 
 .archive-more-settings {
@@ -180,7 +186,8 @@ function updateDepartmentColorsEnabled(value: unknown) {
 }
 
 .settings-slider-row :deep(.el-slider) {
-  margin: 0 8px;
+  width: calc(100% - 16px);
+  margin: 0 auto;
 }
 
 .archive-more-settings > .el-button {

@@ -531,7 +531,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="archive-page" :class="{ 'hide-scrollbars': archiveDisplaySettings.archiveHideScrollbars }">
+  <div class="archive-page" :class="`scrollbars-${archiveDisplaySettings.archiveScrollbarMode}`">
     <ArchiveMoreSettings
       class="archive-more-settings-float"
       :view-mode="viewMode"
@@ -539,14 +539,14 @@ onUnmounted(() => {
       :type-display-mode="typeDisplayMode"
       :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
       :fit-mode="archiveDisplaySettings.archiveFitMode"
-      :hide-scrollbars="archiveDisplaySettings.archiveHideScrollbars"
+      :scrollbar-mode="archiveDisplaySettings.archiveScrollbarMode"
       :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
       @update:view-mode="viewMode = $event"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
       @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
       @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"
-      @update:hide-scrollbars="updateArchiveLocalPreferences({ archiveHideScrollbars: $event })"
+      @update:scrollbar-mode="updateArchiveLocalPreferences({ archiveScrollbarMode: $event })"
       @update:department-colors-enabled="updateArchiveLocalPreferences({ archiveDepartmentColorsEnabled: $event })"
       @update:thumbnail-size="updateArchiveLocalPreferences({ archiveThumbnailSize: $event })"
       @reset="resetArchiveLocalPreferences"
@@ -677,12 +677,57 @@ onUnmounted(() => {
   background: var(--surface-muted);
 }
 
-.archive-page.hide-scrollbars :deep(*) {
+.archive-page.scrollbars-hidden :deep(.case-list),
+.archive-page.scrollbars-hidden :deep(.archive-sidebar),
+.archive-page.scrollbars-hidden :deep(.thumb-strip),
+.archive-page.scrollbars-hidden :deep(.preview-stage) {
   scrollbar-width: none;
 }
 
-.archive-page.hide-scrollbars :deep(*::-webkit-scrollbar) {
+.archive-page.scrollbars-hidden :deep(.case-list::-webkit-scrollbar),
+.archive-page.scrollbars-hidden :deep(.archive-sidebar::-webkit-scrollbar),
+.archive-page.scrollbars-hidden :deep(.thumb-strip::-webkit-scrollbar),
+.archive-page.scrollbars-hidden :deep(.preview-stage::-webkit-scrollbar) {
   display: none;
+}
+
+.archive-page.scrollbars-semi-hidden :deep(.case-list),
+.archive-page.scrollbars-semi-hidden :deep(.archive-sidebar),
+.archive-page.scrollbars-semi-hidden :deep(.thumb-strip),
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage) {
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar),
+.archive-page.scrollbars-semi-hidden :deep(.archive-sidebar::-webkit-scrollbar),
+.archive-page.scrollbars-semi-hidden :deep(.thumb-strip::-webkit-scrollbar),
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar) {
+  display: block;
+  width: 6px;
+  height: 6px;
+}
+
+.archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.archive-sidebar::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.thumb-strip::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar-thumb) {
+  background: transparent;
+}
+
+.archive-page.scrollbars-semi-hidden :deep(.case-list:hover),
+.archive-page.scrollbars-semi-hidden :deep(.archive-sidebar:hover),
+.archive-page.scrollbars-semi-hidden :deep(.thumb-strip:hover),
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover) {
+  scrollbar-color: hsl(var(--scrollbar-color)) transparent;
+}
+
+.archive-page.scrollbars-semi-hidden :deep(.case-list:hover::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.archive-sidebar:hover::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.thumb-strip:hover::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover::-webkit-scrollbar-thumb) {
+  background: hsl(var(--scrollbar-color));
 }
 
 .archive-more-settings-float {

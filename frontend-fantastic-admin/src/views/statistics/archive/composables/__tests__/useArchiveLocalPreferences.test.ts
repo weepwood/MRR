@@ -17,7 +17,7 @@ describe('archive local preferences', () => {
       archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
-      archiveHideScrollbars: true,
+      archiveScrollbarMode: 'semi-hidden',
     })
 
     expect(result).toEqual({
@@ -25,19 +25,19 @@ describe('archive local preferences', () => {
       archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
-      archiveHideScrollbars: true,
+      archiveScrollbarMode: 'semi-hidden',
       archiveDepartmentColorsEnabled: false,
     })
   })
 
   it('persists only valid local preferences', () => {
-    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'single-column', archiveThumbnailSize: 999, archiveHideScrollbars: true })
+    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'single-column', archiveThumbnailSize: 999, archiveScrollbarMode: 'hidden' })
 
     expect(readArchiveLocalPreferences()).toEqual({
       archivePreviewMode: 'scroll',
       archiveTypeDisplayMode: 'single-column',
-      archiveThumbnailSize: 320,
-      archiveHideScrollbars: true,
+      archiveThumbnailSize: 480,
+      archiveScrollbarMode: 'hidden',
     })
     expect(localStorage.getItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY)).toContain('scroll')
   })
@@ -48,5 +48,13 @@ describe('archive local preferences', () => {
 
     localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveTypeDisplayMode: 'buttons' }))
     expect(readArchiveLocalPreferences().archiveTypeDisplayMode).toBe('double-column')
+  })
+
+  it('migrates the legacy scrollbar toggle to the matching visibility mode', () => {
+    localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveHideScrollbars: true }))
+    expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('semi-hidden')
+
+    localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveHideScrollbars: false }))
+    expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('visible')
   })
 })

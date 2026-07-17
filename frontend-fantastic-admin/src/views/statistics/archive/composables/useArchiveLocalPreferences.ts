@@ -4,13 +4,14 @@ export const ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY = 'MRR-ADMIN:archive-local-pr
 
 export type ArchiveTypeDisplayMode = 'double-column' | 'single-column'
 export type ArchiveFitMode = 'height' | 'width'
+export type ArchiveScrollbarMode = 'hidden' | 'semi-hidden' | 'visible'
 
 export interface ArchiveLocalPreferences {
   archivePreviewMode?: ArchivePreviewMode
   archiveTypeDisplayMode?: ArchiveTypeDisplayMode
   archiveThumbnailSize?: number
   archiveFitMode?: ArchiveFitMode
-  archiveHideScrollbars?: boolean
+  archiveScrollbarMode?: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled?: boolean
 }
 
@@ -19,7 +20,7 @@ export interface ArchiveDisplayPreferences {
   archiveTypeDisplayMode: ArchiveTypeDisplayMode
   archiveThumbnailSize: number
   archiveFitMode: ArchiveFitMode
-  archiveHideScrollbars: boolean
+  archiveScrollbarMode: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled: boolean
 }
 
@@ -41,14 +42,20 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
         ? 'double-column'
         : undefined,
     archiveThumbnailSize: Number.isFinite(thumbnailSize)
-      ? Math.min(320, Math.max(160, thumbnailSize))
+      ? Math.min(480, Math.max(160, thumbnailSize))
       : undefined,
     archiveFitMode: source.archiveFitMode === 'width' || source.archiveFitMode === 'height'
       ? source.archiveFitMode
       : legacyAutoFit === undefined ? undefined : legacyAutoFit ? 'height' : 'width',
-    archiveHideScrollbars: typeof source.archiveHideScrollbars === 'boolean'
-      ? source.archiveHideScrollbars
-      : undefined,
+    archiveScrollbarMode: source.archiveScrollbarMode === 'hidden'
+      || source.archiveScrollbarMode === 'semi-hidden'
+      || source.archiveScrollbarMode === 'visible'
+      ? source.archiveScrollbarMode
+      : source.archiveHideScrollbars === true
+        ? 'semi-hidden'
+        : source.archiveHideScrollbars === false
+          ? 'visible'
+          : undefined,
     archiveDepartmentColorsEnabled: typeof source.archiveDepartmentColorsEnabled === 'boolean'
       ? source.archiveDepartmentColorsEnabled
       : undefined,
@@ -93,7 +100,7 @@ export function resolveArchiveDisplayPreferences(
     archiveTypeDisplayMode: preferences.archiveTypeDisplayMode ?? 'double-column',
     archiveThumbnailSize: preferences.archiveThumbnailSize ?? settings.archiveThumbnailSize,
     archiveFitMode: preferences.archiveFitMode ?? (settings.archiveAutoFit ? 'height' : 'width'),
-    archiveHideScrollbars: preferences.archiveHideScrollbars ?? true,
+    archiveScrollbarMode: preferences.archiveScrollbarMode ?? 'semi-hidden',
     archiveDepartmentColorsEnabled: preferences.archiveDepartmentColorsEnabled ?? false,
   }
 }

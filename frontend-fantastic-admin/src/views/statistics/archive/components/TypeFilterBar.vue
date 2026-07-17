@@ -2,13 +2,6 @@
 import type { ArchiveTypeDisplayMode } from '../composables/useArchiveLocalPreferences'
 import type { TypeStatItem } from '../types'
 
-interface DirectoryNode {
-  id: number | 'all'
-  label: string
-  count: number
-  disabled?: boolean
-}
-
 defineOptions({ name: 'TypeFilterBar' })
 
 const props = defineProps<{
@@ -27,31 +20,11 @@ const emit = defineEmits<{
 }>()
 
 const selectedType = defineModel<number | 'all'>('selectedType', { default: 'all' })
-const displayMode = defineModel<ArchiveTypeDisplayMode>('displayMode', { default: 'buttons' })
-
-const directoryTree = computed<DirectoryNode[]>(() => [
-  {
-    id: 'all',
-    label: '全部影像',
-    count: props.totalCount,
-  },
-  ...props.typeStats.map(item => ({
-    id: item.value,
-    label: item.label,
-    count: item.count,
-    disabled: item.count === 0,
-  })),
-])
+const displayMode = defineModel<ArchiveTypeDisplayMode>('displayMode', { default: 'double-column' })
 
 function onSelect(value: number | 'all') {
   selectedType.value = value
   emit('selectType', value)
-}
-
-function onNodeClick(data: DirectoryNode) {
-  if (!data.disabled) {
-    onSelect(data.id)
-  }
 }
 
 function onSelection(value: number | 'all') {
@@ -66,7 +39,7 @@ function onSelection(value: number | 'all') {
 
 <template>
   <div class="type-bar">
-    <div v-if="displayMode === 'buttons'" class="type-tabs">
+    <div class="type-tabs" :class="{ 'type-tabs--single-column': displayMode === 'single-column' }">
       <div class="type-tab-entry">
         <el-checkbox
           :model-value="props.allSelected"
@@ -107,32 +80,6 @@ function onSelection(value: number | 'all') {
         </button>
       </div>
     </div>
-    <el-tree
-      v-else
-      class="type-tree"
-      :data="directoryTree"
-      :props="{ children: 'children', label: 'label', disabled: 'disabled' }"
-      node-key="id"
-      :current-node-key="selectedType"
-      :expand-on-click-node="false"
-      highlight-current
-      @node-click="onNodeClick"
-    >
-      <template #default="{ data }">
-        <span class="tree-node">
-          <el-checkbox
-            :model-value="data.id === 'all' ? props.allSelected : props.isTypeSelected(data.id)"
-            :indeterminate="data.id === 'all' ? props.allIndeterminate : props.isTypeIndeterminate(data.id)"
-            :disabled="data.id === 'all' ? props.totalCount === 0 : data.disabled"
-            :aria-label="`选择${data.label}病案`"
-            @click.stop
-            @change="onSelection(data.id)"
-          />
-          <span class="tree-label">{{ data.label }}</span>
-          <span class="tree-count">{{ data.count }}</span>
-        </span>
-      </template>
-    </el-tree>
   </div>
 </template>
 
@@ -150,6 +97,10 @@ function onSelection(value: number | 'all') {
   gap: 4px;
 }
 
+.type-tabs--single-column {
+  grid-template-columns: 1fr;
+}
+
 .type-tab {
   display: inline-flex;
   flex: 1;
@@ -164,6 +115,7 @@ function onSelection(value: number | 'all') {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
+  white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -209,42 +161,4 @@ function onSelection(value: number | 'all') {
   border-radius: 9999px;
 }
 
-.type-tree {
-  max-height: 300px;
-  overflow-y: auto;
-  background: transparent;
-}
-
-.type-tree :deep(.el-tree-node__content) {
-  height: 32px;
-  margin-bottom: 2px;
-  border-radius: 6px;
-}
-
-.tree-node {
-  display: flex;
-  flex: 1;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.tree-node :deep(.el-checkbox) {
-  flex: none;
-}
-
-.tree-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.tree-count {
-  padding-right: 8px;
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
 </style>

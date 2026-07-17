@@ -14,7 +14,7 @@ describe('archive local preferences', () => {
     const settings = createDefaultSystemSettings()
     const result = resolveArchiveDisplayPreferences(settings, {
       archivePreviewMode: 'scroll',
-      archiveTypeDisplayMode: 'tree',
+      archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
       archiveHideScrollbars: true,
@@ -22,7 +22,7 @@ describe('archive local preferences', () => {
 
     expect(result).toEqual({
       archivePreviewMode: 'scroll',
-      archiveTypeDisplayMode: 'tree',
+      archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
       archiveHideScrollbars: true,
@@ -31,14 +31,22 @@ describe('archive local preferences', () => {
   })
 
   it('persists only valid local preferences', () => {
-    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'tree', archiveThumbnailSize: 999, archiveHideScrollbars: true })
+    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'single-column', archiveThumbnailSize: 999, archiveHideScrollbars: true })
 
     expect(readArchiveLocalPreferences()).toEqual({
       archivePreviewMode: 'scroll',
-      archiveTypeDisplayMode: 'tree',
+      archiveTypeDisplayMode: 'single-column',
       archiveThumbnailSize: 320,
       archiveHideScrollbars: true,
     })
     expect(localStorage.getItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY)).toContain('scroll')
+  })
+
+  it('migrates legacy button and tree display preferences to column layouts', () => {
+    localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveTypeDisplayMode: 'tree' }))
+    expect(readArchiveLocalPreferences().archiveTypeDisplayMode).toBe('single-column')
+
+    localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveTypeDisplayMode: 'buttons' }))
+    expect(readArchiveLocalPreferences().archiveTypeDisplayMode).toBe('double-column')
   })
 })

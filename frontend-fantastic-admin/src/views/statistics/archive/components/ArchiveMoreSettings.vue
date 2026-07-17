@@ -84,8 +84,8 @@ function updateDepartmentColorsEnabled(value: unknown) {
             :model-value="props.typeDisplayMode"
             size="small"
             :options="[
-              { label: '按钮', value: 'buttons' },
-              { label: '目录', value: 'tree' },
+              { label: '双栏', value: 'double-column' },
+              { label: '单栏', value: 'single-column' },
             ]"
             @update:model-value="emit('update:typeDisplayMode', $event as ArchiveTypeDisplayMode)"
           />

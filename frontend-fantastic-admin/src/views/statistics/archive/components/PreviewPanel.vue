@@ -3,7 +3,7 @@ import type { ArchiveFitMode } from '../composables/useArchiveLocalPreferences'
 import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
+import { ElImageViewer, ElMessageBox } from 'element-plus'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { TYPE_OPTIONS } from '../constants'
 import 'element-plus/es/components/message-box/style/css'
@@ -39,6 +39,9 @@ const previewScroller = ref<HTMLElement | null>(null)
 const pageRefs = ref<(HTMLElement | null)[]>([])
 const pendingType = ref(0)
 const failedImageUrls = ref<Set<string>>(new Set())
+const isImageViewerOpen = ref(false)
+const imageViewerIndex = ref(0)
+const imageViewerRef = ref<{ setActiveItem: (index: number) => void } | null>(null)
 let touchStartX = 0
 let pageObserver: IntersectionObserver | null = null
 
@@ -63,6 +66,20 @@ function handlePreviewSwitch(index: number) {
   if (index !== props.index) {
     emit('select', index)
   }
+}
+
+function openImageViewer() {
+  imageViewerIndex.value = props.index
+  isImageViewerOpen.value = true
+}
+
+function closeImageViewer() {
+  isImageViewerOpen.value = false
+}
+
+function handleImageViewerSwitch(index: number) {
+  imageViewerIndex.value = index
+  handlePreviewSwitch(index)
 }
 
 function syncCurrentPage(index: number) {
@@ -130,6 +147,10 @@ async function confirmType() {
 }
 
 watch(() => props.index, (index) => {
+  if (isImageViewerOpen.value && index !== imageViewerIndex.value) {
+    imageViewerIndex.value = index
+    nextTick(() => imageViewerRef.value?.setActiveItem(index))
+  }
   if (displayMode.value === 'scroll') {
     nextTick(() => syncCurrentPage(index))
   }
@@ -183,23 +204,29 @@ onUnmounted(() => {
           <strong>影像加载失败</strong>
           <span>当前图片暂不可用，请检查影像服务或文件地址</span>
         </div>
-        <el-image
+        <img
           v-else
           class="preview-image fit-image"
           :class="`fit-${props.fitMode}`"
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
-          fit="contain"
-          :preview-src-list="props.previewList"
-          :initial-index="props.index"
-          :preview-teleported="true"
-          :hide-on-click-modal="false"
-          :infinite="false"
-          show-progress
-          @switch="handlePreviewSwitch"
+          @click="openImageViewer"
           @error="markImageFailed(props.image.imageUrl)"
         />
       </div>
+
+      <el-image-viewer
+        v-if="isImageViewerOpen"
+        ref="imageViewerRef"
+        :url-list="props.previewList"
+        :initial-index="imageViewerIndex"
+        :infinite="false"
+        :hide-on-click-modal="true"
+        teleported
+        show-progress
+        @close="closeImageViewer"
+        @switch="handleImageViewerSwitch"
+      />
 
       <div v-else ref="previewScroller" class="preview-stage">
         <article

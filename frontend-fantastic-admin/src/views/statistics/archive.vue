@@ -67,7 +67,7 @@ const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
 const previewMode = ref<ArchivePreviewMode>('single')
-const typeDisplayMode = ref<ArchiveTypeDisplayMode>('buttons')
+const typeDisplayMode = ref<ArchiveTypeDisplayMode>('double-column')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
 
@@ -591,7 +591,7 @@ onUnmounted(() => {
           @select="selectArchiveCase"
         />
 
-        <PatientCard :patient="patient" :loading="patientLoading" />
+        <PatientCard :patient="patient" :sjh="currentImage?.sjh || searchSjh" :loading="patientLoading" />
 
         <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
 

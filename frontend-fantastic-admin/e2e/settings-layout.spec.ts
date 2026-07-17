@@ -29,32 +29,36 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('导航与顶栏', { exact: true })).toBeVisible()
   })
 
-  test('桌面端滚动右侧内容时分类导航保持在视口内', async ({ page }) => {
+  test('桌面端仅滚动右侧内容且左侧分类栏位置不变', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 720 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
     const sidebar = page.locator('.settings-sidebar')
+    const content = page.locator('.settings-content')
     await expect(sidebar).toBeVisible({ timeout: 20_000 })
-    await expect(sidebar).toHaveCSS('position', 'sticky')
+    await expect(content).toHaveCSS('overflow-y', 'auto')
 
     await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
     await page.getByText('工作区组件', { exact: true }).click()
     await page.getByText('主页、版权与其他', { exact: true }).click()
 
-    const initialBox = await sidebar.boundingBox()
-    expect(initialBox).not.toBeNull()
+    await expect.poll(async () => content.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true)
 
-    await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'auto' }))
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
+    const initialSidebarBox = await sidebar.boundingBox()
+    expect(initialSidebarBox).not.toBeNull()
+
+    await content.evaluate((element) => {
+      element.scrollTo({ top: element.scrollHeight, behavior: 'auto' })
+    })
+    await expect.poll(() => content.evaluate(element => element.scrollTop)).toBeGreaterThan(100)
+
+    const finalSidebarBox = await sidebar.boundingBox()
+    expect(finalSidebarBox).not.toBeNull()
+    expect(Math.abs(finalSidebarBox!.top - initialSidebarBox!.top)).toBeLessThanOrEqual(1)
+    expect(Math.abs(finalSidebarBox!.bottom - initialSidebarBox!.bottom)).toBeLessThanOrEqual(1)
 
     await expect(sidebar).toBeInViewport()
     await expect(page.locator('.settings-nav-item').filter({ hasText: '基础设置' })).toBeInViewport()
     await expect(page.locator('.settings-nav-item').filter({ hasText: '界面外观' })).toBeInViewport()
-
-    const stickyBox = await sidebar.boundingBox()
-    expect(stickyBox).not.toBeNull()
-    expect(stickyBox!.top).toBeGreaterThanOrEqual(0)
-    expect(stickyBox!.bottom).toBeLessThanOrEqual(720)
-    expect(stickyBox!.top).toBeLessThan(initialBox!.top)
   })
 })

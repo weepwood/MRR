@@ -221,6 +221,25 @@ onMounted(() => loadSettings())
           </button>
         </nav>
 
+        <div class="sidebar-save-card" :class="{ dirty: isDirty }">
+          <div class="save-status sidebar-save-status" :class="{ dirty: isDirty }">
+            <span class="status-dot" />
+            <div>
+              <strong>{{ isDirty ? `${changedKeys.length} 项修改待保存` : '所有设置已保存' }}</strong>
+              <small>{{ isDirty ? '保存后由对应功能立即读取。' : `当前使用${sourceMeta.label}。` }}</small>
+            </div>
+          </div>
+          <el-button
+            type="primary"
+            :loading="saving"
+            :disabled="loading || !isDirty"
+            @click="handleSave"
+          >
+            <FaIcon name="i-ri:save-3-line" />
+            保存设置
+          </el-button>
+        </div>
+
         <div class="sidebar-status">
           <div class="status-heading">
             <span>配置状态</span>
@@ -425,24 +444,6 @@ onMounted(() => loadSettings())
             </section>
           </el-form>
 
-          <footer class="save-bar" :class="{ dirty: isDirty }">
-            <div class="save-status">
-              <span class="status-dot" />
-              <div>
-                <strong>{{ isDirty ? `${changedKeys.length} 项修改待保存` : '所有设置已保存' }}</strong>
-                <small>{{ isDirty ? '保存后由对应功能立即读取。' : `当前使用${sourceMeta.label}。` }}</small>
-              </div>
-            </div>
-            <el-button
-              type="primary"
-              :loading="saving"
-              :disabled="loading || !isDirty"
-              @click="handleSave"
-            >
-              <FaIcon name="i-ri:save-3-line" />
-              保存设置
-            </el-button>
-          </footer>
         </div>
 
         <DepartmentThemeSettings v-else-if="activeSection === 'department'" />
@@ -528,15 +529,19 @@ onMounted(() => loadSettings())
 
 .settings-shell {
   display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 620px;
-  overflow: hidden;
+  overflow: clip;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 16px;
 }
 
 .settings-sidebar {
+  align-self: start;
+  position: sticky;
+  top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 16px);
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -620,10 +625,34 @@ onMounted(() => loadSettings())
 
 .sidebar-status {
   padding: 12px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+}
+
+.sidebar-save-card {
+  padding: 12px;
   margin-top: auto;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
+}
+
+.sidebar-save-status {
+  margin-bottom: 12px;
+}
+
+.sidebar-save-status.dirty {
+  background: color-mix(in srgb, var(--el-color-warning) 5%, var(--el-bg-color));
+}
+
+.sidebar-save-card.dirty {
+  border-color: color-mix(in srgb, var(--el-color-warning) 35%, var(--el-border-color-lighter));
+}
+
+.sidebar-save-card :deep(.el-button) {
+  width: 100%;
+  gap: 6px;
 }
 
 .status-heading {
@@ -823,27 +852,6 @@ onMounted(() => loadSettings())
   color: var(--el-text-color-secondary);
 }
 
-.save-bar {
-  position: sticky;
-  bottom: 12px;
-  z-index: 2;
-  display: flex;
-  gap: 18px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  background: color-mix(in srgb, var(--el-bg-color) 94%, transparent);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 6%);
-  backdrop-filter: blur(10px);
-}
-
-.save-bar.dirty {
-  background: color-mix(in srgb, var(--el-color-warning) 5%, var(--el-bg-color));
-  border-color: color-mix(in srgb, var(--el-color-warning) 35%, var(--el-border-color-lighter));
-}
-
 .save-status {
   display: flex;
   gap: 10px;
@@ -876,13 +884,9 @@ onMounted(() => loadSettings())
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-success) 13%, transparent);
 }
 
-.save-bar.dirty .status-dot {
+.save-status.dirty .status-dot {
   background: var(--el-color-warning);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-warning) 15%, transparent);
-}
-
-.save-bar :deep(.el-button) {
-  gap: 6px;
 }
 
 @media (max-width: 980px) {
@@ -891,6 +895,7 @@ onMounted(() => loadSettings())
   }
 
   .settings-sidebar {
+    position: static;
     padding: 12px;
     border-right: 0;
     border-bottom: 1px solid var(--el-border-color-lighter);
@@ -915,8 +920,7 @@ onMounted(() => loadSettings())
 
 @media (max-width: 700px) {
   .page-header,
-  .setting-row,
-  .save-bar {
+  .setting-row {
     align-items: stretch;
     flex-direction: column;
   }
@@ -925,8 +929,7 @@ onMounted(() => loadSettings())
     width: 100%;
   }
 
-  .header-actions :deep(.el-button),
-  .save-bar :deep(.el-button) {
+  .header-actions :deep(.el-button) {
     width: 100%;
   }
 
@@ -948,8 +951,5 @@ onMounted(() => loadSettings())
     max-width: none;
   }
 
-  .save-bar {
-    position: static;
-  }
 }
 </style>

@@ -18,6 +18,8 @@ export interface EffectiveSystemSettings {
   archiveWatermarkEnabled: boolean
   archiveWatermarkOpacity: number
   archiveIpMaxChanges: number
+  patientIdCardRevealEnabled: boolean
+  patientIdCardCopyEnabled: boolean
 }
 
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
@@ -33,6 +35,8 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     archiveWatermarkEnabled: true,
     archiveWatermarkOpacity: 14,
     archiveIpMaxChanges: 3,
+    patientIdCardRevealEnabled: false,
+    patientIdCardCopyEnabled: false,
   }
 }
 
@@ -82,6 +86,8 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     archiveWatermarkEnabled: parseBoolean(source.archiveWatermarkEnabled, defaults.archiveWatermarkEnabled),
     archiveWatermarkOpacity: parseNumber(source.archiveWatermarkOpacity, defaults.archiveWatermarkOpacity, 5, 35),
     archiveIpMaxChanges: Math.round(parseNumber(source.archiveIpMaxChanges, defaults.archiveIpMaxChanges, 0, 20)),
+    patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
+    patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
   }
 }
 

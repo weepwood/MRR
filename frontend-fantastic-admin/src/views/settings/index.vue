@@ -349,6 +349,34 @@ onMounted(() => loadSettings())
                 <section class="setting-card">
                   <header class="card-header">
                     <span class="card-icon">
+                      <FaIcon name="i-ri:contacts-line" />
+                    </span>
+                    <div>
+                      <h3>身份证号保护</h3>
+                      <p>控制患者管理表中身份证号的查看与复制操作。</p>
+                    </div>
+                  </header>
+                  <div class="card-body">
+                    <div class="switch-row plain-switch-row">
+                      <div>
+                        <strong>允许显示完整身份证号</strong>
+                        <p>开启后，点击脱敏号码可显示完整身份证号；默认关闭。</p>
+                      </div>
+                      <el-switch v-model="settings.patientIdCardRevealEnabled" />
+                    </div>
+                    <div class="switch-row plain-switch-row">
+                      <div>
+                        <strong>允许复制身份证号</strong>
+                        <p>开启后，点击身份证号会复制完整号码到剪贴板；默认关闭。</p>
+                      </div>
+                      <el-switch v-model="settings.patientIdCardCopyEnabled" />
+                    </div>
+                  </div>
+                </section>
+
+                <section class="setting-card">
+                  <header class="card-header">
+                    <span class="card-icon">
                       <FaIcon name="i-ri:shield-keyhole-line" />
                     </span>
                     <div>

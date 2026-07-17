@@ -19,6 +19,8 @@ describe('effective system settings', () => {
       archiveWatermarkEnabled: '0',
       archiveWatermarkOpacity: '22',
       archiveIpMaxChanges: '5',
+      patientIdCardRevealEnabled: 'true',
+      patientIdCardCopyEnabled: '1',
     })
 
     expect(settings).toEqual({
@@ -33,6 +35,8 @@ describe('effective system settings', () => {
       archiveWatermarkEnabled: false,
       archiveWatermarkOpacity: 22,
       archiveIpMaxChanges: 5,
+      patientIdCardRevealEnabled: true,
+      patientIdCardCopyEnabled: true,
     })
   })
 
@@ -62,10 +66,14 @@ describe('effective system settings', () => {
 
     expect(defaults.imageSource).toBe('local')
     expect(defaults.archiveIpMaxChanges).toBe(3)
+    expect(defaults.patientIdCardRevealEnabled).toBe(false)
+    expect(defaults.patientIdCardCopyEnabled).toBe(false)
     expect(serialized.imageSource).toBe('local')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(serialized.archiveIpMaxChanges).toBe('3')
+    expect(serialized.patientIdCardRevealEnabled).toBe('false')
+    expect(serialized.patientIdCardCopyEnabled).toBe('false')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

@@ -28,4 +28,52 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('主题与页面样式', { exact: true })).toBeVisible()
     await expect(page.getByText('导航与顶栏', { exact: true })).toBeVisible()
   })
+
+  test('桌面端点击设置工作区后自动占满视口且仅滚动右侧内容', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 720 })
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+
+    const shell = page.locator('.settings-shell')
+    const sidebar = page.locator('.settings-sidebar')
+    const content = page.locator('.settings-content')
+    await expect(shell).toBeVisible({ timeout: 20_000 })
+    await expect(sidebar).toBeVisible()
+    await expect(content).toHaveCSS('overflow-y', 'auto')
+
+    await expect.poll(async () => shell.evaluate(
+      element => Math.abs(element.getBoundingClientRect().height - window.innerHeight),
+    )).toBeLessThanOrEqual(3)
+    await expect.poll(async () => shell.evaluate(
+      element => element.getBoundingClientRect().top,
+    )).toBeGreaterThan(10)
+
+    await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
+
+    await expect.poll(async () => shell.evaluate(
+      element => Math.abs(element.getBoundingClientRect().top),
+    )).toBeLessThanOrEqual(2)
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(10)
+
+    await page.getByText('工作区组件', { exact: true }).click()
+    await page.getByText('主页、版权与其他', { exact: true }).click()
+
+    await expect.poll(async () => content.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true)
+
+    const initialSidebarBox = await sidebar.boundingBox()
+    expect(initialSidebarBox).not.toBeNull()
+
+    await content.evaluate((element) => {
+      element.scrollTo({ top: element.scrollHeight, behavior: 'auto' })
+    })
+    await expect.poll(() => content.evaluate(element => element.scrollTop)).toBeGreaterThan(100)
+
+    const finalSidebarBox = await sidebar.boundingBox()
+    expect(finalSidebarBox).not.toBeNull()
+    expect(Math.abs(finalSidebarBox!.top - initialSidebarBox!.top)).toBeLessThanOrEqual(1)
+    expect(Math.abs(finalSidebarBox!.bottom - initialSidebarBox!.bottom)).toBeLessThanOrEqual(1)
+
+    await expect(sidebar).toBeInViewport()
+    await expect(page.locator('.settings-nav-item').filter({ hasText: '基础设置' })).toBeInViewport()
+    await expect(page.locator('.settings-nav-item').filter({ hasText: '界面外观' })).toBeInViewport()
+  })
 })

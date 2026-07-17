@@ -447,6 +447,22 @@ onMounted(() => loadSettings())
 
               <div class="setting-row">
                 <div class="setting-copy">
+                  <strong>允许显示完整身份证号</strong>
+                  <p>开启后，可在患者管理表中点击脱敏号码显示完整身份证号；默认关闭。</p>
+                </div>
+                <el-switch v-model="settings.patientIdCardRevealEnabled" />
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <strong>允许复制身份证号</strong>
+                  <p>开启后，点击患者管理表中的身份证号会复制完整号码到剪贴板；默认关闭。</p>
+                </div>
+                <el-switch v-model="settings.patientIdCardCopyEnabled" />
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-copy">
                   <strong>水印透明度</strong>
                   <p>透明度越低，对影像内容遮挡越少。</p>
                 </div>

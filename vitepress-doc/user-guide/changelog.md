@@ -9,12 +9,28 @@ outline: [2, 3]
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 从 Git 提交历史自动生成，请勿手工维护提交列表。
 
 - 当前分支：`dev-no-login`
-- 更新至：2026-07-17 · `0b7c1d5`
-- 记录范围：最近 345 条第一父级提交（上限 1000 条）
+- 更新至：2026-07-17 · `a85fcbb`
+- 记录范围：最近 361 条第一父级提交（上限 1000 条）
 - 合并提交：优先使用 Pull Request 描述的首行作为更新内容
 
 ## 2026-07-17
 
+- **新增** `archive` add scroll preview scaling（[`a85fcbb`](https://github.com/weepwood/MRR/commit/a85fcbb6e35587bb5d1739a0fdeb9fe6376a7e44)）— weepwood
+- **新增** `archive` refine display preferences（[`43fcb60`](https://github.com/weepwood/MRR/commit/43fcb604fe7a4411b86ed2dc5eea1a6e95e5a016)）— weepwood
+- **合并** sync fullscreen image navigation（[`57b4d52`](https://github.com/weepwood/MRR/commit/57b4d52f5b1f01026475d2ca46f7efcb0fd43d28)）— weepwood
+- **修复** `frontend` add startup fallback and restore image preview（[`32c1595`](https://github.com/weepwood/MRR/commit/32c15953a03211fe817d384fff3a25eac91176c0)）— weepwood
+- **修复** `archive` improve preview and display controls（[`967c093`](https://github.com/weepwood/MRR/commit/967c093b52b87ea1764b943ba3f6be677a1260a7)）— weepwood
+- **其他** `ui` align card and drawer layouts（[`4eccbb6`](https://github.com/weepwood/MRR/commit/4eccbb64f2415b1e8036f21c22eed811686768c8)）— weepwood
+- **修复** `settings` expose id card access controls（[`a329662`](https://github.com/weepwood/MRR/commit/a3296629014b2426dd36704903941b0d803a1c0a)）— weepwood
+- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`fdd1646`](https://github.com/weepwood/MRR/commit/fdd1646608ccfb309aceddd4b89031100e7cc7ae)）— weepwood
+- **新增** `settings` 统一配置保存入口（[`c8cd0a3`](https://github.com/weepwood/MRR/commit/c8cd0a3abcd67e6c9a036fdb0316b120984d2fac)）— weepwood
+- **合并** Merge commit 'e268c09fdee295d1808c595f448e5316e6449003' into dev-no-login（[`674f2e4`](https://github.com/weepwood/MRR/commit/674f2e49f51b27e0ed91164d1fbc8d58247b9cbb)）— weepwood
+- **修复** `settings` 固定设置导航栏（[`eb9aaf5`](https://github.com/weepwood/MRR/commit/eb9aaf5d3875367515f7dc4e1772b2bd6da31ea6)）— weepwood
+- **合并** # Conflicts:（[`84c0be6`](https://github.com/weepwood/MRR/commit/84c0be67b44c0d1782a7bfab2b9349824acb45e2)）— weepwood
+- **新增** `patients` add id card access controls（[`18acba1`](https://github.com/weepwood/MRR/commit/18acba15c097be1779d7e64404217ecf423e0284)）— weepwood
+- **修复** `frontend` 在新标签页打开帮助文档（[`6c21e95`](https://github.com/weepwood/MRR/commit/6c21e9519ccd6e525da4d46991c56c6a9597b7cf)）— weepwood
+- **文档** `internal` 移除架构文档中的非目标章节（[`36005b2`](https://github.com/weepwood/MRR/commit/36005b2e55c05fabaaf3bc163b03f498ce60d597)）— weepwood
+- **文档** add module screenshot gallery（[`1cfc3db`](https://github.com/weepwood/MRR/commit/1cfc3dbea27b9c65647ff27b6d9bde89001c8ca7)）— weepwood
 - **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`0b7c1d5`](https://github.com/weepwood/MRR/commit/0b7c1d53521e49e2cdfabe92e7f258adf4349865)）— weepwood
 - **维护** `pom` 升级项目版本号从0.2.0到0.3.0（[`1f1bb82`](https://github.com/weepwood/MRR/commit/1f1bb82de7deaaf14b18c630b7ccbeda1e100961)）— weepwood
 - **新增** `status` refine current-day availability view（[`7dad9f0`](https://github.com/weepwood/MRR/commit/7dad9f0f538d26c4448108366ba8f67f35a81f68)）— weepwood

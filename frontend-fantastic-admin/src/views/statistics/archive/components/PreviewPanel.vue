@@ -20,11 +20,13 @@ const props = withDefaults(defineProps<{
   savingType?: boolean
   loading?: boolean
   fitMode?: ArchiveFitMode
+  previewScale?: number
   emptyDescription?: string
 }>(), {
   savingType: false,
   loading: false,
   fitMode: 'height',
+  previewScale: 100,
   emptyDescription: '请选择影像',
 })
 
@@ -50,6 +52,10 @@ const currentType = computed({
   get: () => Number(props.image?.btype || 0),
   set: (value: number) => emit('saveType', value),
 })
+
+const scrollPreviewStyle = computed(() => ({
+  '--scroll-preview-scale': String(props.previewScale / 100),
+}))
 
 function handleTouchStart(event: TouchEvent) {
   touchStartX = event.touches[0]?.clientX ?? 0
@@ -230,7 +236,7 @@ onUnmounted(() => {
         @switch="handleImageViewerSwitch"
       />
 
-      <div v-if="displayMode === 'scroll'" ref="previewScroller" class="preview-stage">
+      <div v-if="displayMode === 'scroll'" ref="previewScroller" class="preview-stage" :style="scrollPreviewStyle">
         <article
           v-for="(imageUrl, pageIndex) in props.previewList"
           :key="imageUrl || pageIndex"
@@ -319,13 +325,19 @@ onUnmounted(() => {
 }
 
 .fit-scroll-image.fit-width {
-  width: min(100%, 980px);
+  width: min(
+    calc(100% * var(--scroll-preview-scale)),
+    calc(980px * var(--scroll-preview-scale))
+  );
 }
 
 .fit-scroll-image.fit-height {
   width: auto;
   max-width: none;
-  height: min(64vh, 720px);
+  height: min(
+    calc(64vh * var(--scroll-preview-scale)),
+    calc(720px * var(--scroll-preview-scale))
+  );
 }
 
 .preview-image-placeholder {

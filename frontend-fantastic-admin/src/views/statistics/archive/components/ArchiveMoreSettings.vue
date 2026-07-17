@@ -10,6 +10,7 @@ const props = defineProps<{
   typeDisplayMode: ArchiveTypeDisplayMode
   thumbnailSize: number
   fitMode: ArchiveFitMode
+  previewScale: number
   scrollbarMode: ArchiveScrollbarMode
   departmentColorsEnabled: boolean
   hasLocalPreferences: boolean
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   'update:typeDisplayMode': [mode: ArchiveTypeDisplayMode]
   'update:thumbnailSize': [size: number]
   'update:fitMode': [mode: ArchiveFitMode]
+  'update:previewScale': [scale: number]
   'update:scrollbarMode': [mode: ArchiveScrollbarMode]
   'update:departmentColorsEnabled': [enabled: boolean]
   'reset': []
@@ -87,18 +89,36 @@ function updateDepartmentColorsEnabled(value: unknown) {
           />
         </div>
 
-        <div class="settings-row">
-          <span>适应方向</span>
-          <el-segmented
-            :model-value="props.fitMode"
-            size="small"
-            :options="[
-              { label: '高度', value: 'height' },
-              { label: '宽度', value: 'width' },
-            ]"
-            @update:model-value="emit('update:fitMode', $event as ArchiveFitMode)"
-          />
-        </div>
+        <template v-if="props.previewMode === 'scroll'">
+          <div class="settings-row">
+            <span>适应方向</span>
+            <el-segmented
+              :model-value="props.fitMode"
+              size="small"
+              :options="[
+                { label: '高度', value: 'height' },
+                { label: '宽度', value: 'width' },
+              ]"
+              @update:model-value="emit('update:fitMode', $event as ArchiveFitMode)"
+            />
+          </div>
+
+          <div class="settings-slider-row">
+            <div class="settings-row">
+              <span>缩放大小</span>
+              <span class="settings-value">{{ props.previewScale }}%</span>
+            </div>
+            <el-slider
+              :model-value="props.previewScale"
+              :min="50"
+              :max="150"
+              :step="5"
+              tooltip-class="archive-preview-scale-tooltip"
+              aria-label="滚动预览缩放大小"
+              @update:model-value="emit('update:previewScale', Array.isArray($event) ? $event[0] ?? props.previewScale : $event)"
+            />
+          </div>
+        </template>
 
         <div class="settings-row">
           <span>科室颜色</span>
@@ -153,6 +173,10 @@ function updateDepartmentColorsEnabled(value: unknown) {
 }
 
 :global(.archive-thumbnail-slider-tooltip) {
+  z-index: 2021 !important;
+}
+
+:global(.archive-preview-scale-tooltip) {
   z-index: 2021 !important;
 }
 

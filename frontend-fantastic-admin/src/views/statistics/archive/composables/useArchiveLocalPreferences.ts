@@ -11,6 +11,7 @@ export interface ArchiveLocalPreferences {
   archiveTypeDisplayMode?: ArchiveTypeDisplayMode
   archiveThumbnailSize?: number
   archiveFitMode?: ArchiveFitMode
+  archivePreviewScale?: number
   archiveScrollbarMode?: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled?: boolean
 }
@@ -20,6 +21,7 @@ export interface ArchiveDisplayPreferences {
   archiveTypeDisplayMode: ArchiveTypeDisplayMode
   archiveThumbnailSize: number
   archiveFitMode: ArchiveFitMode
+  archivePreviewScale: number
   archiveScrollbarMode: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled: boolean
 }
@@ -31,6 +33,7 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
 
   const source = value as Record<string, unknown>
   const thumbnailSize = Number(source.archiveThumbnailSize)
+  const previewScale = Number(source.archivePreviewScale)
   const legacyAutoFit = typeof source.archiveAutoFit === 'boolean' ? source.archiveAutoFit : undefined
   return {
     archivePreviewMode: source.archivePreviewMode === 'scroll' || source.archivePreviewMode === 'single'
@@ -47,12 +50,15 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
     archiveFitMode: source.archiveFitMode === 'width' || source.archiveFitMode === 'height'
       ? source.archiveFitMode
       : legacyAutoFit === undefined ? undefined : legacyAutoFit ? 'height' : 'width',
+    archivePreviewScale: Number.isFinite(previewScale)
+      ? Math.min(150, Math.max(50, previewScale))
+      : undefined,
     archiveScrollbarMode: source.archiveScrollbarMode === 'hidden'
       || source.archiveScrollbarMode === 'semi-hidden'
       || source.archiveScrollbarMode === 'visible'
       ? source.archiveScrollbarMode
       : source.archiveHideScrollbars === true
-        ? 'semi-hidden'
+        ? 'hidden'
         : source.archiveHideScrollbars === false
           ? 'visible'
           : undefined,
@@ -100,7 +106,8 @@ export function resolveArchiveDisplayPreferences(
     archiveTypeDisplayMode: preferences.archiveTypeDisplayMode ?? 'double-column',
     archiveThumbnailSize: preferences.archiveThumbnailSize ?? settings.archiveThumbnailSize,
     archiveFitMode: preferences.archiveFitMode ?? (settings.archiveAutoFit ? 'height' : 'width'),
-    archiveScrollbarMode: preferences.archiveScrollbarMode ?? 'semi-hidden',
+    archivePreviewScale: preferences.archivePreviewScale ?? 100,
+    archiveScrollbarMode: preferences.archiveScrollbarMode ?? 'hidden',
     archiveDepartmentColorsEnabled: preferences.archiveDepartmentColorsEnabled ?? false,
   }
 }

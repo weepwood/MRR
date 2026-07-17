@@ -17,6 +17,7 @@ describe('archive local preferences', () => {
       archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
+      archivePreviewScale: 125,
       archiveScrollbarMode: 'semi-hidden',
     })
 
@@ -25,6 +26,7 @@ describe('archive local preferences', () => {
       archiveTypeDisplayMode: 'double-column',
       archiveThumbnailSize: 260,
       archiveFitMode: 'width',
+      archivePreviewScale: 125,
       archiveScrollbarMode: 'semi-hidden',
       archiveDepartmentColorsEnabled: false,
     })
@@ -52,9 +54,18 @@ describe('archive local preferences', () => {
 
   it('migrates the legacy scrollbar toggle to the matching visibility mode', () => {
     localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveHideScrollbars: true }))
-    expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('semi-hidden')
+    expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('hidden')
 
     localStorage.setItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ archiveHideScrollbars: false }))
     expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('visible')
+  })
+
+  it('hides scrollbars by default', () => {
+    expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), {}).archiveScrollbarMode).toBe('hidden')
+  })
+
+  it('clamps the scroll preview scale', () => {
+    expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archivePreviewScale: 999 }).archivePreviewScale).toBe(150)
+    expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archivePreviewScale: 1 }).archivePreviewScale).toBe(50)
   })
 })

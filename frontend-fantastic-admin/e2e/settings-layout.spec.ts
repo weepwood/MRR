@@ -28,4 +28,33 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('主题与页面样式', { exact: true })).toBeVisible()
     await expect(page.getByText('导航与顶栏', { exact: true })).toBeVisible()
   })
+
+  test('桌面端滚动右侧内容时分类导航保持在视口内', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 720 })
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+
+    const sidebar = page.locator('.settings-sidebar')
+    await expect(sidebar).toBeVisible({ timeout: 20_000 })
+    await expect(sidebar).toHaveCSS('position', 'sticky')
+
+    await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
+    await page.getByText('工作区组件', { exact: true }).click()
+    await page.getByText('主页、版权与其他', { exact: true }).click()
+
+    const initialBox = await sidebar.boundingBox()
+    expect(initialBox).not.toBeNull()
+
+    await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'instant' }))
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
+
+    await expect(sidebar).toBeInViewport()
+    await expect(page.locator('.settings-nav-item').filter({ hasText: '基础设置' })).toBeInViewport()
+    await expect(page.locator('.settings-nav-item').filter({ hasText: '界面外观' })).toBeInViewport()
+
+    const stickyBox = await sidebar.boundingBox()
+    expect(stickyBox).not.toBeNull()
+    expect(stickyBox!.top).toBeGreaterThanOrEqual(0)
+    expect(stickyBox!.bottom).toBeLessThanOrEqual(720)
+    expect(stickyBox!.top).toBeLessThan(initialBox!.top)
+  })
 })

@@ -22,8 +22,12 @@ body .main :is(
 /* 未使用 card / panel 命名，但视觉上属于独立卡片表面的容器。 */
 body .main :is(
   .settings-page > .page-header,
+  .settings-shell,
   .settings-tabs,
   .settings-summary,
+  .config-summary,
+  .config-section,
+  .sidebar-status,
   .setting-section,
   .save-bar,
   .list-search-bar,

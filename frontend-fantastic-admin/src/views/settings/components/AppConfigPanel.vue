@@ -470,6 +470,20 @@ function handleReset() {
   max-width: none;
 }
 
+.app-config-panel--drawer .config-summary {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.app-config-panel--drawer .config-summary-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.app-config-panel--drawer .autosave-state {
+  width: 100%;
+}
+
 .config-summary {
   display: flex;
   gap: 18px;

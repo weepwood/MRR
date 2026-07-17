@@ -281,6 +281,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: {
           title: '服务状态',
           icon: 'i-ant-design:check-circle-twotone',
+          link: '/status',
           auth: ['system:read'],
           cache: false,
         },

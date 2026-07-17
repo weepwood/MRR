@@ -47,22 +47,22 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
   min-height: 112px;
   padding: 18px;
 }
 
 .mrr-metric-card__icon {
   display: grid;
-  width: 38px;
-  height: 38px;
-  font-size: 18px;
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
   color: var(--mrr-metric-accent);
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
-  border-radius: var(--mrr-radius-lg);
+  border-radius: 14px;
   place-items: center;
 }
 
@@ -161,6 +161,17 @@
   .mrr-metric-grid,
   .mrr-metric-grid--compact {
     grid-template-columns: 1fr;
+  }
+
+  .mrr-metric-card .el-card__body {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .mrr-metric-card__icon {
+    width: 46px;
+    height: 46px;
+    font-size: 23px;
+    border-radius: 12px;
   }
 }
 

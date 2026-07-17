@@ -67,14 +67,15 @@ function openDocumentation(entry: DocumentationEntry) {
     </header>
 
     <section class="documentation-grid" aria-label="文档入口">
-      <article
+      <el-card
         v-for="entry in entries"
         :key="entry.target"
+        shadow="never"
         class="documentation-card"
         :class="`documentation-card--${entry.tone}`"
       >
         <div class="card-icon">
-          <el-icon :size="25">
+          <el-icon :size="26">
             <component :is="entry.icon" />
           </el-icon>
         </div>
@@ -86,12 +87,14 @@ function openDocumentation(entry: DocumentationEntry) {
           <el-button
             type="primary"
             plain
+            class="documentation-button"
             @click="openDocumentation(entry)"
           >
             打开文档
+            <FaIcon name="i-ri:arrow-right-up-line" />
           </el-button>
         </div>
-      </article>
+      </el-card>
     </section>
 
   </div>
@@ -168,30 +171,26 @@ function openDocumentation(entry: DocumentationEntry) {
 
 .documentation-card {
   position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
-  min-height: 220px;
-  padding: 22px;
   overflow: hidden;
   border: 1px solid var(--el-border-color-light);
   border-radius: 16px;
-  background: var(--el-bg-color);
+  background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
-}
-
-.documentation-card::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--card-accent, var(--el-color-primary));
-  content: '';
 }
 
 .documentation-card:hover {
   border-color: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 40%, var(--el-border-color));
   box-shadow: 0 12px 30px rgb(0 0 0 / 7%);
   transform: translateY(-2px);
+}
+
+.documentation-card :deep(.el-card__body) {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-content: start;
+  min-height: 196px;
+  padding: 18px;
 }
 
 .documentation-card--primary {
@@ -236,11 +235,15 @@ function openDocumentation(entry: DocumentationEntry) {
   display: flex;
   grid-column: 1 / -1;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
-  margin-top: auto;
-  padding-top: 18px;
+  margin-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.documentation-button {
+  min-width: 116px;
 }
 
 @media (max-width: 820px) {
@@ -255,17 +258,21 @@ function openDocumentation(entry: DocumentationEntry) {
 
 @media (max-width: 520px) {
   .help-header,
-  .documentation-card {
+  .documentation-card :deep(.el-card__body) {
     padding: 18px;
   }
 
-  .documentation-card {
+  .documentation-card :deep(.el-card__body) {
     grid-template-columns: 1fr;
   }
 
   .card-footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .documentation-button {
+    width: 100%;
   }
 }
 

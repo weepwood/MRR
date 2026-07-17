@@ -1,40 +1,25 @@
 /*
  * 设置页桌面端双区滚动
  *
- * 左侧分类栏与右侧设置内容处于同一固定高度工作区：
+ * “系统设置”标题保留在主体上方，设置工作区本身使用一个完整视口高度：
  * - 左侧分类栏不随右侧内容滚动；
  * - 右侧内容区独立纵向滚动；
+ * - 不再因为页面标题、顶栏或工作区内边距压缩设置区域高度；
  * - 不依赖 position: sticky、:has() 或祖先 overflow 行为。
- *
- * 这样可以从布局结构上保证桌面端滚动长设置内容时，
- * 分类导航和配置状态始终保留在当前视口中。
  */
 body .main .settings-page {
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
-  height: calc(
-    100vh
-    - var(--g-header-actual-height, 0px)
-    - var(--g-tabbar-actual-height, 0px)
-    - var(--g-toolbar-actual-height, 0px)
-    - clamp(18px, 2vw, 28px)
-    - clamp(18px, 2vw, 28px)
-  );
-  height: calc(
-    100dvh
-    - var(--g-header-actual-height, 0px)
-    - var(--g-tabbar-actual-height, 0px)
-    - var(--g-toolbar-actual-height, 0px)
-    - clamp(18px, 2vw, 28px)
-    - clamp(18px, 2vw, 28px)
-  );
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
 }
 
 body .main .settings-page .settings-shell {
   align-items: stretch;
-  min-height: 0;
-  height: 100%;
+  min-height: 100vh;
+  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
 }
 

@@ -17,6 +17,16 @@ defineOptions({ name: 'SettingsPage' })
 
 type SettingsSection = 'general' | 'archive' | 'security' | 'department' | 'appearance'
 
+interface DepartmentThemeSettingsRef {
+  saving: boolean
+  isDirty: boolean
+  saveThemes: () => Promise<void>
+}
+
+interface AppConfigPanelRef {
+  autoSaveLabel: string
+}
+
 interface SettingsNavItem {
   key: SettingsSection
   title: string
@@ -64,6 +74,8 @@ const settingsSource = ref<SettingsSource>('default')
 const lastSyncedAt = ref('')
 const savedSnapshot = ref<Record<string, string>>({})
 const settings = reactive<EffectiveSystemSettings>(createDefaultSystemSettings())
+const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
+const appConfigRef = ref<AppConfigPanelRef>()
 
 const activeMeta = computed(() => settingsNavItems.find(item => item.key === activeSection.value)!)
 const isServerSettingSection = computed(() => (
@@ -147,6 +159,10 @@ async function handleSave() {
   }
 }
 
+async function handleDepartmentThemeSave() {
+  await departmentThemeRef.value?.saveThemes()
+}
+
 function handleReset() {
   Object.assign(settings, createDefaultSystemSettings())
   ElMessage.info('已恢复默认值，保存后生效')
@@ -221,7 +237,7 @@ onMounted(() => loadSettings())
           </button>
         </nav>
 
-        <div class="sidebar-save-card" :class="{ dirty: isDirty }">
+        <div v-if="isServerSettingSection" class="sidebar-save-card" :class="{ dirty: isDirty }">
           <div class="save-status sidebar-save-status" :class="{ dirty: isDirty }">
             <span class="status-dot" />
             <div>
@@ -238,6 +254,39 @@ onMounted(() => loadSettings())
             <FaIcon name="i-ri:save-3-line" />
             保存设置
           </el-button>
+        </div>
+
+        <div
+          v-else-if="activeSection === 'department'"
+          class="sidebar-save-card"
+          :class="{ dirty: departmentThemeRef?.isDirty }"
+        >
+          <div class="save-status sidebar-save-status" :class="{ dirty: departmentThemeRef?.isDirty }">
+            <span class="status-dot" />
+            <div>
+              <strong>{{ departmentThemeRef?.isDirty ? '科室配色修改待保存' : '科室配色已保存' }}</strong>
+              <small>{{ departmentThemeRef?.isDirty ? '保存后立即应用到档案袋。' : '配色已同步到当前设置。' }}</small>
+            </div>
+          </div>
+          <el-button
+            type="primary"
+            :loading="departmentThemeRef?.saving"
+            :disabled="!departmentThemeRef?.isDirty"
+            @click="handleDepartmentThemeSave"
+          >
+            <FaIcon name="i-ri:save-3-line" />
+            保存科室配色
+          </el-button>
+        </div>
+
+        <div v-else class="sidebar-save-card">
+          <div class="save-status sidebar-save-status">
+            <span class="status-dot" />
+            <div>
+              <strong>{{ appConfigRef?.autoSaveLabel ?? '界面外观自动保存' }}</strong>
+              <small>界面外观仅保存到当前浏览器。</small>
+            </div>
+          </div>
         </div>
 
         <div class="sidebar-status">
@@ -446,8 +495,11 @@ onMounted(() => loadSettings())
 
         </div>
 
-        <DepartmentThemeSettings v-else-if="activeSection === 'department'" />
-        <AppConfigPanel v-else />
+        <DepartmentThemeSettings
+          v-else-if="activeSection === 'department'"
+          ref="departmentThemeRef"
+        />
+        <AppConfigPanel v-else ref="appConfigRef" />
       </main>
     </div>
   </div>

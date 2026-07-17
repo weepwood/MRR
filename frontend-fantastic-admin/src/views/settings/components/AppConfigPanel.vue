@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useClipboard } from '@vueuse/core'
+import type { Settings } from '#/global'
 import { toast } from 'vue-sonner'
 import settingsDefault from '@/settings.default'
 import { diffTwoObj } from '@/utils/object'
@@ -14,7 +14,8 @@ const props = withDefaults(defineProps<{
 
 const settingsStore = useSettingsStore()
 const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
-const activeGroups = ref(['theme', 'navigation'])
+const activeGroup = ref('theme')
+const importInput = ref<HTMLInputElement>()
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
 
 const appRadius = computed<number[]>({
@@ -24,16 +25,6 @@ const appRadius = computed<number[]>({
   set(value) {
     settingsStore.settings.app.radius = value[0]
   },
-})
-
-const { copy, copied } = useClipboard()
-
-watch(copied, (val) => {
-  if (val) {
-    toast.success('复制成功，请粘贴到 src/settings.ts 文件中！', {
-      position: 'top-center',
-    })
-  }
 })
 
 watch(() => settingsStore.settings, () => {
@@ -53,14 +44,50 @@ const autoSaveLabel = computed(() => {
   return '修改后自动保存到当前浏览器'
 })
 
+defineExpose({ autoSaveLabel })
+
 onBeforeUnmount(() => {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
 })
 
-function handleCopy() {
-  copy(JSON.stringify(diffTwoObj(settingsDefault, settingsStore.settings), null, 2))
+function handleExport() {
+  const data = JSON.stringify(diffTwoObj(settingsDefault, settingsStore.settings), null, 2)
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `mrr-interface-config-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+  toast.success('界面外观配置已导出')
+}
+
+function triggerImport() {
+  importInput.value?.click()
+}
+
+async function handleImport(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) {
+    return
+  }
+
+  try {
+    const data: unknown = JSON.parse(await file.text())
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new TypeError('配置文件必须是 JSON 对象')
+    }
+    settingsStore.updateSettings(data as Settings.all)
+    toast.success('界面外观配置已导入，将自动保存到当前浏览器')
+  }
+  catch {
+    toast.error('导入失败，请选择有效的配置 JSON 文件')
+  }
+  finally {
+    input.value = ''
+  }
 }
 
 function handleReset() {
@@ -76,24 +103,28 @@ function handleReset() {
         <strong>浏览器外观配置</strong>
         <p>这些选项只保存在当前浏览器，不会写入系统数据库。</p>
       </div>
-      <span class="autosave-state">
-        <FaIcon name="i-ri:save-3-line" />
-        {{ autoSaveLabel }}
-      </span>
+      <div class="config-summary-actions">
+        <span class="autosave-state">
+          <FaIcon name="i-ri:save-3-line" />
+          {{ autoSaveLabel }}
+        </span>
+        <el-button @click="handleReset">
+          <FaIcon name="i-ri:restart-line" />
+          恢复默认
+        </el-button>
+        <el-button @click="handleExport">
+          <FaIcon name="i-ri:download-2-line" />
+          导出配置
+        </el-button>
+        <el-button @click="triggerImport">
+          <FaIcon name="i-ri:upload-2-line" />
+          导入配置
+        </el-button>
+      </div>
     </div>
+    <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
-    <div class="app-config-toolbar">
-      <el-button @click="handleReset">
-        <FaIcon name="i-ri:restart-line" />
-        恢复默认
-      </el-button>
-      <el-button @click="handleCopy">
-        <FaIcon name="i-ri:file-copy-line" />
-        复制配置
-      </el-button>
-    </div>
-
-    <el-collapse v-model="activeGroups" class="config-groups">
+    <el-collapse v-model="activeGroup" accordion class="config-groups">
       <el-collapse-item name="theme">
         <template #title>
           <div class="collapse-title">
@@ -477,16 +508,20 @@ function handleReset() {
   color: var(--el-color-primary);
 }
 
-.app-config-toolbar {
+.config-summary-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
   justify-content: flex-end;
-  margin-bottom: 14px;
 }
 
-.app-config-toolbar :deep(.el-button) {
+.config-summary-actions :deep(.el-button) {
   gap: 6px;
   margin-left: 0;
+}
+
+.import-input {
+  display: none;
 }
 
 .config-groups {
@@ -744,10 +779,6 @@ function handleReset() {
     flex-direction: column;
   }
 
-  .autosave-state {
-    align-self: flex-start;
-  }
-
   .theme-tabs,
   .title-style-tabs,
   .slider-field {
@@ -759,12 +790,17 @@ function handleReset() {
     justify-content: flex-start;
   }
 
-  .app-config-toolbar {
+  .config-summary-actions {
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
-  .app-config-toolbar :deep(.el-button) {
+  .config-summary-actions :deep(.el-button) {
     flex: 1 1 140px;
+  }
+
+  .autosave-state {
+    width: 100%;
   }
 }
 </style>

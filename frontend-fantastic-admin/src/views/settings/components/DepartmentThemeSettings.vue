@@ -30,11 +30,13 @@ const departments = ref<string[]>([])
 const historyVisible = ref(false)
 const history = ref<ArchiveDepartmentThemeHistory[]>([])
 const persistedThemes = ref<ArchiveDepartmentTheme[]>([])
+const importInput = ref<HTMLInputElement>()
 let nextId = 1
 
 const colorPresets = ARCHIVE_DEPARTMENT_THEME_PRESETS.flatMap(item => [item.folderColor, item.stripColor])
 const hasRows = computed(() => rows.value.length > 0)
 const hasHistory = computed(() => history.value.length > 0)
+const isDirty = computed(() => JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
 const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
 const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
 
@@ -177,6 +179,46 @@ async function saveThemes() {
   }
 }
 
+function handleExport() {
+  const themes = normalizedRows()
+  const url = URL.createObjectURL(new Blob([JSON.stringify(themes, null, 2)], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `mrr-department-themes-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('科室配色已导出')
+}
+
+function triggerImport() {
+  importInput.value?.click()
+}
+
+async function handleImport(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) {
+    return
+  }
+
+  try {
+    const data: unknown = JSON.parse(await file.text())
+    if (!Array.isArray(data)) {
+      throw new TypeError('配色文件必须是 JSON 数组')
+    }
+    setRows(normalizeArchiveDepartmentThemes(data))
+    ElMessage.success('科室配色已导入，请保存后生效')
+  }
+  catch {
+    ElMessage.error('导入失败，请选择有效的科室配色 JSON 文件')
+  }
+  finally {
+    input.value = ''
+  }
+}
+
+defineExpose({ isDirty, saving, saveThemes })
+
 onMounted(() => {
   loadThemes()
   loadDepartments()
@@ -198,12 +240,18 @@ onMounted(() => {
           <el-button @click="resetToAutomaticThemes">
             恢复自动配色
           </el-button>
-          <el-button type="primary" :loading="saving" @click="saveThemes">
-            保存科室配色
+          <el-button @click="handleExport">
+            <FaIcon name="i-ri:download-2-line" />
+            导出配色
+          </el-button>
+          <el-button @click="triggerImport">
+            <FaIcon name="i-ri:upload-2-line" />
+            导入配色
           </el-button>
         </div>
       </div>
     </template>
+    <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
     <el-alert
       type="info"
@@ -311,6 +359,15 @@ onMounted(() => {
   display: flex;
   flex: none;
   gap: 8px;
+}
+
+.department-theme-actions :deep(.el-button) {
+  gap: 6px;
+  margin-left: 0;
+}
+
+.import-input {
+  display: none;
 }
 
 .theme-editor {

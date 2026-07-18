@@ -328,13 +328,27 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
 ]
 
+const externalArchiveGeneratedPaths = [
+  '/archive/external',
+  '/statistics/external-archive',
+  '/statistics/external-archive-viewer',
+]
+
 const generatedConstantRoutes = generatedRoutes.filter(
-  item => !['/status', '/archive/external'].includes(item.path) && item.meta?.enabled !== false && item.meta?.constant === true,
+  item => !['/status', ...externalArchiveGeneratedPaths].includes(item.path)
+    && item.meta?.enabled !== false
+    && item.meta?.constant === true,
 )
 const constantRoutesByFilesystem = [publicStatusRoute, externalArchiveRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
 
 const generatedAsyncRoutes = generatedRoutes.filter(
-  item => !['/status', '/archive/external', '/statistics/archive', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+  item => ![
+    '/status',
+    ...externalArchiveGeneratedPaths,
+    '/statistics/archive',
+    '/monitoring',
+    '/monitoring-dashboard',
+  ].includes(item.path)
     && item.meta?.enabled !== false
     && item.meta?.constant !== true
     && item.meta?.layout !== false,

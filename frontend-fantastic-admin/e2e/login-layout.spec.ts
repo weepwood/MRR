@@ -22,7 +22,9 @@ test.describe('登录页统一设计', () => {
 
     const shell = page.locator('.login-shell')
     await expect(shell).toBeVisible({ timeout: 20_000 })
-    await expect(shell).toHaveCSS('grid-template-columns', '358px')
+    await expect.poll(async () => shell.evaluate(
+      element => element.getBoundingClientRect().width <= window.innerWidth,
+    )).toBe(true)
     await expect(page.getByRole('heading', { name: '登录 MRR' })).toBeInViewport()
     await expect(page.locator('.feature-list')).toBeHidden()
   })

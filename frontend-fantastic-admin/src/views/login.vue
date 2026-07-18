@@ -7,375 +7,426 @@ meta:
 
 <script setup lang="ts">
 import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
-import gsap from 'gsap'
-import { onMounted } from 'vue'
 import LoginForm from '@/components/AccountForm/LoginForm.vue'
-import RegisterForm from '@/components/AccountForm/RegisterForm.vue'
-import ResetPasswordForm from '@/components/AccountForm/ResetPasswordForm.vue'
 import ColorScheme from '@/layouts/components/Topbar/Toolbar/ColorScheme/index.vue'
 
-defineOptions({
-  name: 'Login',
-})
+defineOptions({ name: 'Login' })
 
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
-
 const redirect = ref(route.query.redirect?.toString() ?? settingsStore.settings.home.fullPath)
-const loginAccount = ref<string>()
-const formType = ref<'login' | 'register' | 'resetPassword'>('login')
 
-function handleLogin(account?: string) {
-  loginAccount.value = account
-  const target = redirect.value
-  router.push(target)
+function handleLogin() {
+  router.push(redirect.value)
 }
-
-const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
-
-function onLoginSuccess() {
-  if (prefersReducedMotion) {
-    handleLogin()
-    return
-  }
-  const tl = gsap.timeline({ defaults: { duration: 0.28, ease: 'power1.inOut' } })
-  tl.to('.login-layout', { scale: 1.03, boxShadow: '0 22px 40px rgba(89, 109, 255, 0.3)' })
-    .to('.login-layout', { rotate: 4, filter: 'grayscale(30%)', opacity: 0.75 })
-    .to('.login-layout', { scale: 0.25, opacity: 0, rotate: 8 })
-  gsap.to('.login-page', { filter: 'grayscale(40%)', duration: 0.5, ease: 'power1.out' })
-  gsap.delayedCall(0.85, () => {
-    handleLogin()
-  })
-}
-
-onMounted(() => {
-  if (prefersReducedMotion) {
-    gsap.set('.login-layout', { opacity: 1, y: 0, scale: 1 })
-    return
-  }
-
-  gsap.fromTo(
-    '.login-layout',
-    { opacity: 0, y: 30, scale: 0.96 },
-    { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power1.inOut' },
-  )
-
-  gsap.to('.glow-bg', {
-    scale: 1.08,
-    duration: 0.8,
-    ease: 'sine.inOut',
-    repeat: -1,
-    yoyo: true,
-  })
-
-  gsap.to('.light-orb.orb-a', {
-    x: 80,
-    y: -70,
-    duration: 6,
-    ease: 'sine.inOut',
-    yoyo: true,
-    repeat: -1,
-  })
-
-  gsap.to('.light-orb.orb-b', {
-    x: -80,
-    y: 70,
-    duration: 7,
-    ease: 'sine.inOut',
-    yoyo: true,
-    repeat: -1,
-  })
-})
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="glow-bg" />
-    <div class="light-orb orb-a" />
-    <div class="light-orb orb-b" />
+  <main class="login-page">
+    <header class="login-toolbar">
+      <div class="environment-badge">
+        <span class="status-dot" />
+        MRR Console
+      </div>
+      <div class="theme-control">
+        <ColorScheme v-if="settingsStore.settings.toolbar.colorScheme" />
+      </div>
+    </header>
 
-    <div class="absolute right-4 top-4 z-1 flex-center border rounded-lg bg-background p-1 text-base">
-      <ColorScheme v-if="settingsStore.settings.toolbar.colorScheme" />
-    </div>
-
-    <div class="login-layout">
+    <section class="login-shell" aria-label="MRR 系统登录">
       <aside class="brand-panel">
-        <p class="brand-tag">
-          Medical Record Platform
-        </p>
-        <h1>病案管理系统 v0.0.8-alpha</h1>
-        <p class="brand-subtitle">
-          统一管理病案影像、日志与统计数据，让后台操作更安全、更高效。
-        </p>
-        <ul class="feature-list">
-          <li>
-            <el-icon><DataBoard /></el-icon>
-            可视化统计总览
-          </li>
-          <li>
-            <el-icon><Document /></el-icon>
-            病案资料集中管理
-          </li>
-          <li>
-            <el-icon><Lock /></el-icon>
-            安全登录与权限隔离
-          </li>
-        </ul>
+        <div class="brand-mark">
+          <FaIcon name="i-ri:archive-stack-line" />
+        </div>
+        <div class="brand-heading">
+          <span>Medical Record Repository</span>
+          <h1>病案文件管理系统</h1>
+          <p>面向病案影像、档案记录与运行审计的一体化工作平台。</p>
+        </div>
+
+        <div class="feature-list">
+          <article>
+            <span class="feature-icon"><el-icon><Document /></el-icon></span>
+            <div>
+              <strong>统一档案管理</strong>
+              <p>集中检索病案、影像和装箱记录。</p>
+            </div>
+          </article>
+          <article>
+            <span class="feature-icon"><el-icon><DataBoard /></el-icon></span>
+            <div>
+              <strong>运行数据可视化</strong>
+              <p>查看扫描、访问和服务状态。</p>
+            </div>
+          </article>
+          <article>
+            <span class="feature-icon"><el-icon><Lock /></el-icon></span>
+            <div>
+              <strong>权限与审计</strong>
+              <p>按角色控制功能并保留访问记录。</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="brand-footer">
+          <FaIcon name="i-ri:server-line" />
+          <span>医院内网部署 · 数据由本地服务管理</span>
+        </div>
       </aside>
 
       <section class="form-panel">
-        <Transition name="fade" mode="out-in">
-          <div v-if="formType === 'login'">
-            <h2>欢迎回来</h2>
-            <p class="form-subtitle">
-              请输入账号密码进入后台管理。
-            </p>
-            <LoginForm
-              :account="loginAccount"
-              @on-login="onLoginSuccess"
-            />
-            <div class="mt-4 flex-center gap-2 text-sm">
-              <span class="text-secondary-foreground op-50">还没有帐号?</span>
-              <FaButton variant="link" class="h-auto p-0" type="button" @click="formType = 'register'">
-                注册新帐号
-              </FaButton>
-            </div>
-            <div class="mt-1 text-center">
-              <FaButton variant="link" class="h-auto p-0" type="button" @click="formType = 'resetPassword'">
-                忘记密码了?
-              </FaButton>
-            </div>
-          </div>
-          <div v-else-if="formType === 'register'">
-            <h2>注册新帐号</h2>
-            <p class="form-subtitle">
-              创建你的管理平台帐号
-            </p>
-            <RegisterForm
-              :account="loginAccount"
-              @on-register="onLoginSuccess"
-              @on-login="formType = 'login'"
-            />
-          </div>
-          <div v-else-if="formType === 'resetPassword'">
-            <h2>重置密码</h2>
-            <p class="form-subtitle">
-              请输入用户名以重置密码
-            </p>
-            <ResetPasswordForm
-              :account="loginAccount"
-              @on-reset-password="(val) => { loginAccount = val; formType = 'login' }"
-              @on-login="formType = 'login'"
-            />
-          </div>
-        </Transition>
+        <div class="form-header">
+          <span class="form-eyebrow">Secure sign in</span>
+          <h2>登录 MRR</h2>
+          <p>使用管理员分配的账号进入系统工作区。</p>
+        </div>
+
+        <LoginForm @on-login="handleLogin" />
+
+        <div class="login-help">
+          <FaIcon name="i-ri:information-line" />
+          <p>系统不开放自助注册和在线重置密码。账号创建、角色调整或密码问题请联系系统管理员。</p>
+        </div>
       </section>
-    </div>
+    </section>
 
     <FaCopyright class="copyright" />
-  </div>
+  </main>
 </template>
 
 <style scoped>
 .login-page {
   position: relative;
   display: grid;
-  place-items: center;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 100vh;
-  padding: 24px;
-  overflow: hidden;
-  background-color: #f5f7fb;
+  min-height: 100dvh;
+  padding: var(--mrr-space-5);
+  color: var(--mrr-foreground);
+  background-color: var(--mrr-app-shell-bg);
   background-image:
-    linear-gradient(rgb(156 163 175 / 18%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(156 163 175 / 18%) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
-[data-mode="dark"] .login-page {
-  background-color: hsl(var(--background));
-  background-image:
-    linear-gradient(rgb(156 163 175 / 8%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(156 163 175 / 8%) 1px, transparent 1px);
+.login-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1080px, 100%);
+  margin: 0 auto;
 }
 
-.glow-bg {
-  position: absolute;
-  top: 20%;
-  left: 15%;
-  z-index: 0;
-  width: 740px;
-  height: 740px;
-  pointer-events: none;
-  background: rgb(88 101 242 / 35%);
-  border-radius: 50%;
-  filter: blur(100px);
-}
-
-.light-orb {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50%;
-  filter: blur(2px);
-}
-
-.orb-a {
-  top: -120px;
-  left: -120px;
-  width: 460px;
-  height: 460px;
-  background: radial-gradient(circle at center, rgb(47 111 255 / 30%), transparent 70%);
-}
-
-.orb-b {
-  right: -120px;
-  bottom: -160px;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle at center, rgb(20 184 166 / 30%), transparent 70%);
-}
-
-.login-layout {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  width: min(980px, 100%);
-  overflow: hidden;
-  background: rgb(255 255 255 / 70%);
-  border: 1px solid rgb(255 255 255 / 45%);
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgb(0 0 0 / 12%);
+.environment-badge,
+.theme-control {
+  display: inline-flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--mrr-card) 90%, transparent);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-pill);
+  box-shadow: var(--mrr-shadow-xs);
   backdrop-filter: blur(12px);
 }
 
-[data-mode="dark"] .login-layout {
-  background: hsl(var(--background));
-  border-color: hsl(var(--border));
+.environment-badge {
+  gap: var(--mrr-space-2);
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--mrr-muted-foreground);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--color-success);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 15%, transparent);
+}
+
+.theme-control {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 3px;
+  border-radius: var(--mrr-radius-md);
+}
+
+.login-shell {
+  align-self: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
+  width: min(1080px, 100%);
+  min-height: 610px;
+  margin: var(--mrr-space-6) auto;
+  overflow: hidden;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-2xl);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 .brand-panel {
-  padding: 44px;
-  color: #f8fbff;
-  background: linear-gradient(140deg, #1e54d6 0%, #2f6fff 48%, #0f766e 100%);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 48px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--mrr-primary) 14%, transparent), transparent 36%),
+    var(--mrr-muted);
+  border-right: 1px solid var(--mrr-border);
 }
 
-.brand-tag {
-  margin: 0;
-  font-size: 12px;
+.brand-panel::after {
+  position: absolute;
+  right: -96px;
+  bottom: -96px;
+  width: 280px;
+  height: 280px;
+  pointer-events: none;
+  content: '';
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 14%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 38px color-mix(in srgb, var(--mrr-primary) 4%, transparent),
+    0 0 0 76px color-mix(in srgb, var(--mrr-primary) 3%, transparent);
+}
+
+.brand-mark,
+.feature-icon {
+  display: grid;
+  color: var(--mrr-primary);
+  background: color-mix(in srgb, var(--mrr-primary) 10%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
+  place-items: center;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  font-size: 25px;
+  border-radius: var(--mrr-radius-xl);
+  box-shadow: var(--mrr-shadow-xs);
+}
+
+.brand-heading {
+  max-width: 500px;
+  margin-top: var(--mrr-space-8);
+}
+
+.brand-heading > span,
+.form-eyebrow {
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--mrr-primary);
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  opacity: 0.82;
+  letter-spacing: 0.1em;
 }
 
-.brand-panel h1 {
-  margin: 14px 0 10px;
-  font-size: 36px;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
+.brand-heading h1 {
+  margin: var(--mrr-space-3) 0 0;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1.14;
+  letter-spacing: -0.035em;
 }
 
-.brand-subtitle {
-  max-width: 320px;
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.7;
-  opacity: 0.92;
+.brand-heading p {
+  max-width: 440px;
+  margin: var(--mrr-space-4) 0 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--mrr-muted-foreground);
 }
 
 .feature-list {
   display: grid;
-  gap: 12px;
-  padding: 0;
-  margin: 26px 0 0;
-  list-style: none;
+  gap: var(--mrr-space-3);
+  margin-top: var(--mrr-space-8);
 }
 
-.feature-list li {
+.feature-list article {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  padding: var(--mrr-space-4);
+  background: color-mix(in srgb, var(--mrr-card) 72%, transparent);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.feature-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--mrr-radius-md);
+}
+
+.feature-list strong {
+  display: block;
+  font-size: 13px;
+}
+
+.feature-list p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+}
+
+.brand-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--mrr-space-2);
   align-items: center;
-  padding: 10px 12px;
-  font-size: 14px;
-  background: rgb(255 255 255 / 14%);
-  border: 1px solid rgb(255 255 255 / 28%);
-  border-radius: 12px;
+  margin-top: auto;
+  padding-top: var(--mrr-space-6);
+  font-size: 11px;
+  color: var(--mrr-muted-foreground);
 }
 
 .form-panel {
-  position: relative;
-  padding: 44px 40px;
-  background: rgb(255 255 255 / 92%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 52px 48px;
+  background: var(--mrr-card);
 }
 
-[data-mode="dark"] .form-panel {
-  background: hsl(var(--background));
-}
-
-.form-panel h2 {
-  margin: 0;
+.form-header h2 {
+  margin: var(--mrr-space-2) 0 0;
   font-size: 28px;
-  color: var(--el-text-color-primary);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.025em;
 }
 
-.form-subtitle {
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: var(--el-text-color-secondary, hsl(var(--muted-foreground, #6d7d96)));
+.form-header p {
+  margin: var(--mrr-space-2) 0 0;
+  font-size: 13px;
+  color: var(--mrr-muted-foreground);
+}
+
+.login-help {
+  display: flex;
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  padding: var(--mrr-space-4);
+  margin-top: var(--mrr-space-5);
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border));
+  border-radius: var(--mrr-radius-md);
+}
+
+.login-help p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground);
 }
 
 .copyright {
-  position: absolute;
-  bottom: 0;
   width: 100%;
-  padding: 20px;
+  padding: var(--mrr-space-4) 0 0;
   margin: 0;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
+@media (prefers-reduced-motion: no-preference) {
+  .login-shell {
+    animation: login-enter 0.35s ease-out both;
+  }
+
+  @keyframes login-enter {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media (width <= 900px) {
-  .login-layout {
+@media (max-width: 900px) {
+  .login-shell {
     grid-template-columns: 1fr;
-    max-width: 520px;
+    width: min(560px, 100%);
   }
 
   .brand-panel {
     padding: 28px;
+    border-right: 0;
+    border-bottom: 1px solid var(--mrr-border);
   }
 
-  .brand-panel h1 {
-    font-size: 28px;
+  .brand-heading {
+    margin-top: var(--mrr-space-5);
   }
 
-  .brand-subtitle {
-    max-width: none;
+  .brand-heading h1 {
+    font-size: 30px;
   }
 
-  .form-panel {
-    padding: 28px;
-  }
-}
-
-@media (width <= 640px) {
-  .login-page {
-    padding: 14px;
+  .feature-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: var(--mrr-space-5);
   }
 
-  .brand-panel {
+  .feature-list article {
+    display: block;
+    padding: var(--mrr-space-3);
+  }
+
+  .feature-list article > div:last-child {
+    margin-top: var(--mrr-space-2);
+  }
+
+  .brand-footer {
     display: none;
   }
 
-  .form-panel h2 {
+  .form-panel {
+    padding: 36px 32px;
+  }
+}
+
+@media (max-width: 620px) {
+  .login-page {
+    padding: var(--mrr-space-3);
+  }
+
+  .login-toolbar {
+    padding: 0 var(--mrr-space-1);
+  }
+
+  .login-shell {
+    min-height: 0;
+    margin: var(--mrr-space-4) auto;
+    border-radius: var(--mrr-radius-xl);
+  }
+
+  .brand-panel {
+    padding: var(--mrr-space-5);
+  }
+
+  .brand-heading h1 {
+    font-size: 25px;
+  }
+
+  .brand-heading p,
+  .feature-list,
+  .brand-panel::after {
+    display: none;
+  }
+
+  .form-panel {
+    padding: 30px var(--mrr-space-5);
+  }
+
+  .form-header h2 {
     font-size: 24px;
   }
 }

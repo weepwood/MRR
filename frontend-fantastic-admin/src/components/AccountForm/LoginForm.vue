@@ -112,7 +112,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormItem class="field-item">
         <label for="login-password">密码</label>
         <FormControl>
-          <div class="input-shell" :class="{ invalid: errors.length > 0 }">
+          <div class="input-shell password-shell" :class="{ invalid: errors.length > 0 }">
             <span class="input-icon">
               <el-icon><Key /></el-icon>
             </span>
@@ -121,7 +121,7 @@ const onSubmit = form.handleSubmit(async (values) => {
               :type="showPassword ? 'text' : 'password'"
               placeholder="请输入登录密码"
               autocomplete="current-password"
-              class="w-full password-input"
+              class="w-full"
               v-bind="componentField"
             />
             <button
@@ -215,8 +215,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   box-shadow: none;
 }
 
-.input-shell :deep(.password-input input),
-.input-shell :deep(input[type='password']) {
+.password-shell :deep(input) {
   padding-right: 44px;
 }
 

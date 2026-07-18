@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.SystemSettingService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import org.slf4j.Logger;
@@ -18,7 +19,7 @@ import java.util.stream.Collectors;
  * 系统设置服务实现。
  * <p>
  * 读取时将所有设置项转换为 Map 返回，写入时支持批量 UPSERT。
- * 所有写操作记录设置来源（当前登录用户名或 dev 默认值）。
+ * 所有写操作记录设置来源（当前登录用户名或系统默认值）。
  * </p>
  */
 @Service
@@ -27,9 +28,12 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     private static final Logger logger = LoggerFactory.getLogger(SystemSettingServiceImpl.class);
 
     private final SystemSettingMapper systemSettingMapper;
+    private final DeveloperModeService developerModeService;
 
-    public SystemSettingServiceImpl(SystemSettingMapper systemSettingMapper) {
+    public SystemSettingServiceImpl(SystemSettingMapper systemSettingMapper,
+                                    DeveloperModeService developerModeService) {
         this.systemSettingMapper = systemSettingMapper;
+        this.developerModeService = developerModeService;
     }
 
     @Override
@@ -60,6 +64,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
                 .peek(s -> s.setUpdatedBy(operator))
                 .toList();
         systemSettingMapper.upsertAll(entities);
+        refreshRuntimeSettings(settings);
         logger.info("系统设置已批量保存: {} 项, 操作者: {}", entities.size(), operator);
     }
 
@@ -69,13 +74,25 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         SystemSetting setting = new SystemSetting(key, value, null);
         setting.setUpdatedBy(operator);
         systemSettingMapper.upsert(setting);
+        if (DeveloperModeService.SETTING_KEY.equals(key)) {
+            developerModeService.refreshFromValue(value);
+        }
         logger.info("系统设置已更新: {} = ..., 操作者: {}", key, operator);
     }
 
     @Override
     public void deleteSetting(String key) {
         systemSettingMapper.deleteByKey(key);
+        if (DeveloperModeService.SETTING_KEY.equals(key)) {
+            developerModeService.disableImmediately();
+        }
         logger.info("系统设置已删除: {}", key);
+    }
+
+    private void refreshRuntimeSettings(Map<String, String> settings) {
+        if (settings.containsKey(DeveloperModeService.SETTING_KEY)) {
+            developerModeService.refreshFromValue(settings.get(DeveloperModeService.SETTING_KEY));
+        }
     }
 
     private String resolveOperator(String provided) {

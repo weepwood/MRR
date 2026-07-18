@@ -52,3 +52,16 @@ dotnet run -- DOC-10086 789508 123456
 示例使用 .NET 8、HttpClient、System.Text.Json 和 HMACSHA256。
 
 输出最后一行是一次性 `launchUrl`。正式 HIS 后端应把该 URL 返回当前 HIS 前端，由前端立即使用系统浏览器或新窗口打开。
+
+## 本地验证说明
+
+当前工作环境可用 Python 3.13 和 Java 21，但没有安装 Maven 与 .NET SDK。因此本次只能对 Java、C# 示例做代码审查，不能声称已在本环境完成 Maven 或 `dotnet build`。在医院接入环境中应执行：
+
+```powershell
+cd java
+mvn test
+mvn package
+
+cd ..\csharp
+dotnet build
+```

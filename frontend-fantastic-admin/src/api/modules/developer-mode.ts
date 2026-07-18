@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const developerModeProbeApi = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
-  timeout: 5000,
+  timeout: 1200,
   responseType: 'json',
   withCredentials: true,
   validateStatus: () => true,

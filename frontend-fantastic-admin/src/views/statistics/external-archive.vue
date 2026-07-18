@@ -6,20 +6,21 @@ import {
   exchangeExternalArchiveTicket,
   getExternalArchiveContext,
 } from '@/api/modules/external-archive'
-import ArchivePage from './archive.vue'
+import ExternalArchiveViewer from './external-archive-viewer.vue'
 
 const EXTERNAL_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const errorMessage = ref('')
+const session = ref<ExternalArchiveSession | null>(null)
 
 function firstQueryValue(value: unknown): string {
   return String(Array.isArray(value) ? value[0] : value ?? '').trim()
 }
 
-function persistSession(session: ExternalArchiveSession) {
-  sessionStorage.setItem(EXTERNAL_SESSION_STORAGE_KEY, JSON.stringify(session))
+function persistSession(value: ExternalArchiveSession) {
+  sessionStorage.setItem(EXTERNAL_SESSION_STORAGE_KEY, JSON.stringify(value))
 }
 
 async function initialize() {
@@ -30,16 +31,17 @@ async function initialize() {
     const response = ticket
       ? await exchangeExternalArchiveTicket(ticket)
       : await getExternalArchiveContext()
-    const session = response.data
-    if (!session?.cases?.length) {
+    const nextSession = response.data
+    if (!nextSession?.cases?.length) {
       throw new Error('外部系统未授权任何可访问的影像病案')
     }
-    persistSession(session)
+    session.value = nextSession
+    persistSession(nextSession)
 
     const currentBah = firstQueryValue(route.query.bah)
     const currentSjh = firstQueryValue(route.query.sjh)
-    const selected = session.cases.find(item => item.bah === currentBah && (item.sjh || '') === currentSjh)
-      || session.cases[0]
+    const selected = nextSession.cases.find(item => item.bah === currentBah && (item.sjh || '') === currentSjh)
+      || nextSession.cases[0]
 
     await router.replace({
       path: '/archive/external',
@@ -51,6 +53,7 @@ async function initialize() {
   }
   catch (error: unknown) {
     sessionStorage.removeItem(EXTERNAL_SESSION_STORAGE_KEY)
+    session.value = null
     errorMessage.value = (error as { message?: string })?.message || '外部影像访问链接无效或已过期'
   }
   finally {
@@ -68,7 +71,7 @@ onMounted(initialize)
   <div v-else-if="errorMessage" class="external-archive-state">
     <el-result icon="error" title="无法访问影像档案袋" :sub-title="errorMessage" />
   </div>
-  <ArchivePage v-else />
+  <ExternalArchiveViewer v-else-if="session" :session="session" />
 </template>
 
 <style scoped>

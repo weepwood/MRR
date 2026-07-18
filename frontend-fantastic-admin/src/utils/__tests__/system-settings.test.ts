@@ -21,6 +21,7 @@ describe('effective system settings', () => {
       archiveIpMaxChanges: '5',
       patientIdCardRevealEnabled: 'true',
       patientIdCardCopyEnabled: '1',
+      developerModeEnabled: 'enabled',
     })
 
     expect(settings).toEqual({
@@ -37,10 +38,11 @@ describe('effective system settings', () => {
       archiveIpMaxChanges: 5,
       patientIdCardRevealEnabled: true,
       patientIdCardCopyEnabled: true,
+      developerModeEnabled: true,
     })
   })
 
-  it('uses local images by default and rejects unsupported modes', () => {
+  it('uses secure defaults and rejects unsupported modes', () => {
     const settings = parseSystemSettings({
       imageSource: 's3',
       archiveDefaultView: 'single',
@@ -49,6 +51,7 @@ describe('effective system settings', () => {
       archivePreloadCount: 1,
       archiveWatermarkOpacity: -10,
       archiveIpMaxChanges: 99,
+      developerModeEnabled: 'unexpected',
     })
 
     expect(settings.imageSource).toBe('local')
@@ -58,6 +61,7 @@ describe('effective system settings', () => {
     expect(settings.archivePreloadCount).toBe(10)
     expect(settings.archiveWatermarkOpacity).toBe(5)
     expect(settings.archiveIpMaxChanges).toBe(20)
+    expect(settings.developerModeEnabled).toBe(false)
   })
 
   it('serializes every effective setting for the key-value API', () => {
@@ -68,12 +72,14 @@ describe('effective system settings', () => {
     expect(defaults.archiveIpMaxChanges).toBe(3)
     expect(defaults.patientIdCardRevealEnabled).toBe(false)
     expect(defaults.patientIdCardCopyEnabled).toBe(false)
+    expect(defaults.developerModeEnabled).toBe(false)
     expect(serialized.imageSource).toBe('local')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(serialized.archiveIpMaxChanges).toBe('3')
     expect(serialized.patientIdCardRevealEnabled).toBe('false')
     expect(serialized.patientIdCardCopyEnabled).toBe('false')
+    expect(serialized.developerModeEnabled).toBe('false')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

@@ -1,17 +1,17 @@
 package com.zjcxph.imgapi.interceptors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.utils.PermissionResolver;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -22,19 +22,24 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
     public static final String AUTH_SESSION_ATTRIBUTE = "AUTH_SESSION";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String[] REGISTER_PERMISSIONS = {"user:manage"};
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if (!(handler instanceof HandlerMethod)) {
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
-        HandlerMethod handlerMethod = (HandlerMethod) handler;
 
         RequirePermissions annotation = handlerMethod.getMethodAnnotation(RequirePermissions.class);
         if (annotation == null) {
             annotation = handlerMethod.getBeanType().getAnnotation(RequirePermissions.class);
         }
-        if (annotation == null || annotation.value().length == 0) {
+
+        boolean registerEndpoint = "/api/v1/auth/register".equals(request.getRequestURI());
+        String[] requiredPermissions = registerEndpoint
+                ? REGISTER_PERMISSIONS
+                : annotation == null ? new String[0] : annotation.value();
+        if (requiredPermissions.length == 0) {
             return true;
         }
 
@@ -48,14 +53,17 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        List<String> permissions = session.getPermissions() == null ? java.util.Collections.emptyList() : session.getPermissions();
-        boolean allowed = Arrays.stream(annotation.value()).allMatch(p -> PermissionResolver.hasPermission(permissions, p));
+        List<String> permissions = session.getPermissions() == null
+                ? java.util.Collections.emptyList()
+                : session.getPermissions();
+        boolean allowed = Arrays.stream(requiredPermissions)
+                .allMatch(permission -> PermissionResolver.hasPermission(permissions, permission));
         if (!allowed) {
             writeJsonResponse(response, 403, "No permission");
             return false;
         }
 
-        logger.debug("permission granted for {} -> {}", session.getUsername(), Arrays.toString(annotation.value()));
+        logger.debug("permission granted for {} -> {}", session.getUsername(), Arrays.toString(requiredPermissions));
         return true;
     }
 

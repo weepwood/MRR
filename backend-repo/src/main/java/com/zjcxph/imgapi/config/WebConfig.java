@@ -92,6 +92,13 @@ public class WebConfig implements WebMvcConfigurer {
                 "/actuator/**"
         };
 
+        String[] authenticationExcludes = {
+                "/api/v1/auth/login",
+                "/api/v1/img/hello",
+                "/api/v1/integration/archive/tickets",
+                "/api/v1/external/archive/**"
+        };
+
         registry.addInterceptor(documentationSessionCleanupInterceptor)
                 .addPathPatterns("/api/v1/auth/logout");
 
@@ -101,22 +108,19 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(staticExcludes);
 
         registry.addInterceptor(rateLimitInterceptor)
-                .addPathPatterns("/**")
+                .addPathPatterns("/api/**")
                 .excludePathPatterns(baseExcludes)
                 .excludePathPatterns(staticExcludes);
 
+        // 浏览器页面和静态资源不依赖 Authorization Header；认证边界只作用于后端 API。
         registry.addInterceptor(loginInterceptor)
-                .addPathPatterns("/**")
+                .addPathPatterns("/api/**")
                 .excludePathPatterns(baseExcludes)
-                .excludePathPatterns(staticExcludes)
-                .excludePathPatterns(
-                        "/api/v1/auth/login",
-                        "/api/v1/auth/register",
-                        "/api/v1/img/hello"
-                );
+                .excludePathPatterns(authenticationExcludes);
 
         registry.addInterceptor(authorizationInterceptor)
-                .addPathPatterns("/**")
-                .excludePathPatterns(staticExcludes);
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(baseExcludes)
+                .excludePathPatterns(authenticationExcludes);
     }
 }

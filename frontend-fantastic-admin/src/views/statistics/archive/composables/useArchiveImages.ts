@@ -1,12 +1,8 @@
-import type { ExternalArchiveSession } from '@/api/modules/external-archive'
+import type { GalleryImage, PatientInfo } from '../types'
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import type { ApiResult, BAHImageData } from '@/api/types'
-import type { GalleryImage, PatientInfo } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
-import {
-  getExternalArchiveImages,
-} from '@/api/modules/external-archive'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
 import {
   getArchiveCasesByIdCard,
@@ -22,37 +18,8 @@ import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVer
 import { createArchiveZip } from '../utils/client-zip'
 import { addArchiveSearchHistory } from './useArchiveSearchHistory'
 
-const EXTERNAL_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
-
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
-}
-
-function isExternalArchiveAccess(): boolean {
-  return typeof window !== 'undefined' && window.location.pathname.startsWith('/archive/external')
-}
-
-function readExternalSession(): ExternalArchiveSession | null {
-  if (!isExternalArchiveAccess()) {
-    return null
-  }
-  try {
-    const raw = sessionStorage.getItem(EXTERNAL_SESSION_STORAGE_KEY)
-    return raw ? JSON.parse(raw) as ExternalArchiveSession : null
-  }
-  catch {
-    return null
-  }
-}
-
-function toArchiveCase(item: ExternalArchiveSession['cases'][number]): IdCardArchiveCase {
-  return {
-    bah: item.bah,
-    sjh: item.sjh,
-    name: item.patientName,
-    department: item.department,
-    admissionTime: item.admissionTime,
-  }
 }
 
 export function useArchiveImages() {
@@ -72,32 +39,7 @@ export function useArchiveImages() {
   const idCardToken = ref('')
   const maskedIdCard = ref('')
 
-  function syncExternalArchiveCases(): ExternalArchiveSession | null {
-    const session = readExternalSession()
-    archiveCases.value = session?.cases?.map(toArchiveCase) || []
-    return session
-  }
-
   async function loadPatient(bah: string): Promise<void> {
-    if (isExternalArchiveAccess()) {
-      const session = syncExternalArchiveCases()
-      const normalizedBah = normalizeMedicalRecordCode(bah)
-      const normalizedSjh = normalizeMedicalRecordCode(searchSjh.value)
-      const selected = session?.cases?.find(item =>
-        normalizeMedicalRecordCode(item.bah) === normalizedBah
-        && normalizeMedicalRecordCode(item.sjh || '') === normalizedSjh,
-      ) || session?.cases?.find(item => normalizeMedicalRecordCode(item.bah) === normalizedBah)
-      patientList.value = selected
-        ? [{
-            bah: normalizedBah,
-            name: selected.patientName,
-            department: selected.department,
-            admissionTime: selected.admissionTime,
-          }]
-        : []
-      return
-    }
-
     if (!bah || requiresSjhForBah(bah)) {
       // 患者表没有上架号，非唯一病案号无法可靠关联患者，避免显示第一条同号患者。
       patientList.value = []
@@ -136,10 +78,12 @@ export function useArchiveImages() {
     loading.value = true
     errorMsg.value = ''
     try {
-      const request = isExternalArchiveAccess()
-        ? getExternalArchiveImages(bah, sjh || undefined, forceRefresh)
-        : getImgByCode(bah || undefined, sjh || undefined, forceRefresh, userid || undefined)
-      const res = await asResult<BAHImageData[]>(request)
+      const res = await asResult<BAHImageData[]>(getImgByCode(
+        bah || undefined,
+        sjh || undefined,
+        forceRefresh,
+        userid || undefined,
+      ))
       const rawList = Array.isArray(res?.data) ? res.data : []
       let cacheBuster = readArchiveImageVersion(bah, sjh)
       if (forceRefresh) {
@@ -155,37 +99,33 @@ export function useArchiveImages() {
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah)
 
-      if (!isExternalArchiveAccess()) {
-        const firstImage = images.value[0]
-        if (firstImage) {
-          addArchiveSearchHistory({
-            bah: firstImage.bah || bah,
-            sjh: firstImage.sjh || sjh,
-            imageCount: images.value.length,
-          })
-        }
-        else {
-          addArchiveSearchHistory({
-            bah,
-            sjh,
-            status: 'failure',
-            failureReason: '未查询到影像',
-          })
-        }
+      const firstImage = images.value[0]
+      if (firstImage) {
+        addArchiveSearchHistory({
+          bah: firstImage.bah || bah,
+          sjh: firstImage.sjh || sjh,
+          imageCount: images.value.length,
+        })
+      }
+      else {
+        addArchiveSearchHistory({
+          bah,
+          sjh,
+          status: 'failure',
+          failureReason: '未查询到影像',
+        })
       }
     }
     catch (err: unknown) {
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
       images.value = []
       patientList.value = []
-      if (!isExternalArchiveAccess()) {
-        addArchiveSearchHistory({
-          bah,
-          sjh,
-          status: 'failure',
-          failureReason: errorMsg.value,
-        })
-      }
+      addArchiveSearchHistory({
+        bah,
+        sjh,
+        status: 'failure',
+        failureReason: errorMsg.value,
+      })
     }
     finally {
       loading.value = false
@@ -199,10 +139,6 @@ export function useArchiveImages() {
   }
 
   async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null> {
-    if (isExternalArchiveAccess()) {
-      errorMsg.value = '外部影像会话不允许重新按身份证搜索'
-      return null
-    }
     idCardLoading.value = true
     errorMsg.value = ''
     try {
@@ -225,12 +161,6 @@ export function useArchiveImages() {
   }
 
   async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null> {
-    if (isExternalArchiveAccess()) {
-      const session = syncExternalArchiveCases()
-      return session
-        ? { token: '', maskedIdCard: '', cases: archiveCases.value }
-        : null
-    }
     idCardLoading.value = true
     errorMsg.value = ''
     try {
@@ -266,23 +196,12 @@ export function useArchiveImages() {
   }
 
   function clearIdCardSearch() {
-    if (isExternalArchiveAccess()) {
-      syncExternalArchiveCases()
-      idCardToken.value = ''
-      maskedIdCard.value = ''
-      return
-    }
     archiveCases.value = []
     idCardToken.value = ''
     maskedIdCard.value = ''
   }
 
   async function handleDownload(): Promise<void> {
-    const externalSession = readExternalSession()
-    if (isExternalArchiveAccess() && !externalSession?.allowDownload) {
-      ElMessage.warning('外部系统未授予批量下载权限')
-      return
-    }
     const firstImage = images.value[0]
     const bah = padCode(searchBah.value || firstImage?.bah || '')
     const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
@@ -313,10 +232,6 @@ export function useArchiveImages() {
   }
 
   async function saveImageType(img: GalleryImage, nextType: number): Promise<void> {
-    if (isExternalArchiveAccess()) {
-      ElMessage.warning('外部影像会话为只读模式，不能修改影像类型')
-      return
-    }
     if (!img?.id) {
       ElMessage.warning('当前影像缺少记录 ID，无法修改类型')
       return

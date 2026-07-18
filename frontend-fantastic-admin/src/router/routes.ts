@@ -24,6 +24,16 @@ const archiveStandaloneRoute: RouteRecordRaw = {
   },
 }
 
+const externalArchiveRoute: RouteRecordRaw = {
+  path: '/archive/external',
+  name: 'externalArchive',
+  component: () => import('@/views/statistics/external-archive.vue'),
+  meta: {
+    title: '外部影像档案袋',
+    cache: false,
+  },
+}
+
 const archiveEmbeddedRoute: RouteRecordRaw = {
   path: '/archive/embed',
   name: 'archiveEmbedded',
@@ -74,6 +84,7 @@ const constantRoutes: RouteRecordRaw[] = [
     },
   },
   publicStatusRoute,
+  externalArchiveRoute,
   archiveStandaloneRoute,
   {
     path: '/:all(.*)*',
@@ -318,12 +329,12 @@ const asyncRoutes: Route.recordMainRaw[] = [
 ]
 
 const generatedConstantRoutes = generatedRoutes.filter(
-  item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant === true,
+  item => !['/status', '/archive/external'].includes(item.path) && item.meta?.enabled !== false && item.meta?.constant === true,
 )
-const constantRoutesByFilesystem = [publicStatusRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
+const constantRoutesByFilesystem = [publicStatusRoute, externalArchiveRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
 
 const generatedAsyncRoutes = generatedRoutes.filter(
-  item => !['/status', '/statistics/archive', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+  item => !['/status', '/archive/external', '/statistics/archive', '/monitoring', '/monitoring-dashboard'].includes(item.path)
     && item.meta?.enabled !== false
     && item.meta?.constant !== true
     && item.meta?.layout !== false,

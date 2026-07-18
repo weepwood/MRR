@@ -36,7 +36,7 @@ const activeCase = computed(() => {
   return props.session.cases.find(item => caseKey(item) === `${bah}:${sjh}`)
     || props.session.cases[0]
 })
-
+const activeCaseKey = computed(() => activeCase.value ? caseKey(activeCase.value) : '')
 const currentImage = computed(() => images.value[selectedIndex.value] || null)
 const previewUrls = computed(() => images.value.map(item => item.imageUrl || ''))
 
@@ -87,6 +87,10 @@ function navigate(delta: number) {
     return
   }
   selectedIndex.value = Math.max(0, Math.min(images.value.length - 1, selectedIndex.value + delta))
+}
+
+function printPage() {
+  window.print()
 }
 
 async function downloadArchive() {
@@ -140,7 +144,7 @@ onMounted(() => void loadActiveCase())
         <el-tag type="success" effect="plain">
           只读会话
         </el-tag>
-        <el-button :icon="Printer" @click="window.print()">
+        <el-button :icon="Printer" @click="printPage">
           打印当前页
         </el-button>
         <el-button
@@ -165,7 +169,7 @@ onMounted(() => void loadActiveCase())
           v-for="item in session.cases"
           :key="caseKey(item)"
           class="case-item"
-          :class="{ active: activeCase && caseKey(item) === caseKey(activeCase) }"
+          :class="{ active: caseKey(item) === activeCaseKey }"
           type="button"
           @click="selectCase(item)"
         >
@@ -270,7 +274,7 @@ onMounted(() => void loadActiveCase())
   font-size: 12px;
   font-weight: 700;
   color: var(--el-color-primary);
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -344,7 +348,7 @@ onMounted(() => void loadActiveCase())
   width: 100%;
   height: 128px;
   object-fit: contain;
-  background: #111;
+  background: rgb(17 17 17);
   border-radius: 8px;
 }
 
@@ -379,7 +383,7 @@ onMounted(() => void loadActiveCase())
   width: 100%;
   height: calc(100% - 48px);
   min-height: 0;
-  background: #171717;
+  background: rgb(23 23 23);
   border-radius: 12px;
 }
 

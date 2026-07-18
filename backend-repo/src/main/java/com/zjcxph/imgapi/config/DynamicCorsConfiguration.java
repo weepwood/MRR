@@ -1,10 +1,10 @@
 package com.zjcxph.imgapi.config;
 
 import com.zjcxph.imgapi.service.DeveloperModeService;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -33,16 +33,18 @@ public class DynamicCorsConfiguration {
     );
 
     @Bean
-    public FilterRegistrationBean<CorsFilter> mrrDynamicCorsFilter(
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public CorsFilter mrrDynamicCorsFilter(
             CorsProperties corsProperties,
             DeveloperModeService developerModeService
     ) {
-        CorsConfigurationSource source = request -> createConfiguration(corsProperties, developerModeService);
-        FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(new CorsFilter(source));
-        registration.setName("mrrDynamicCorsFilter");
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        registration.addUrlPatterns("/api/*");
-        return registration;
+        CorsConfigurationSource source = request -> {
+            if (!request.getRequestURI().startsWith("/api/")) {
+                return null;
+            }
+            return createConfiguration(corsProperties, developerModeService);
+        };
+        return new CorsFilter(source);
     }
 
     private CorsConfiguration createConfiguration(CorsProperties corsProperties,

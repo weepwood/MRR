@@ -137,7 +137,45 @@ const canonical = `POST\n/api/v1/integration/archive/tickets\n${timestamp}\n${no
 const signature = crypto.createHmac('sha256', secret).update(canonical, 'utf8').digest('hex')
 ```
 
-## 6. 安全限制
+## 6. 前端认证接口测试台
+
+管理员登录后，从菜单进入：
+
+```text
+运维 → 认证接口测试
+```
+
+页面路径：
+
+```text
+/auth-test
+```
+
+该页面要求 `user:manage` 权限，支持：
+
+- 测试用户名、密码登录并查看完整响应；
+- 本地解析 JWT Header 与 Payload；
+- 测试 `/api/v1/auth/me` 和 `/api/v1/auth/logout`；
+- 自定义受保护 API 的方法、路径、请求头、请求体和 Bearer Token；
+- 编辑身份证、单个或多个病案号、单个或多个上架号以及精确病案组合；
+- 查看原始 JSON、SHA-256、Canonical Text 和 HMAC-SHA256；
+- 在“自动重新签名”和“手工签名”之间切换；
+- 测试错误签名、过期时间戳、重复 nonce、无权限 Token 和已撤销 Token；
+- 创建并打开一次性 `launchUrl`；
+- 查看当前页面生命周期内的请求记录。
+
+测试台使用独立的 Axios 实例，故意测试 `401` 或 `403` 不会触发后台全局自动退出。登录接口返回的测试 Token 只有点击“应用到当前会话”后才会替换当前登录会话。
+
+HMAC Secret 只保存在页面内存，不写入 `localStorage`、`sessionStorage` 或数据库。为了兼容内网 HTTP 部署，浏览器无法使用 `crypto.subtle` 时会自动回退到纯 JavaScript SHA-256/HMAC 实现。
+
+注意：
+
+- 正式 HIS、EMR 接入必须在外部系统服务端完成签名，不能依赖该前端测试页面；
+- 浏览器发起票据请求时，来源 IP 是管理员电脑或反向代理识别到的 IP，需要位于对应客户端 IP 白名单内；
+- 票据 TTL、会话 TTL、客户端密钥和 IP 白名单属于服务端部署配置，不允许从测试页面修改；
+- 不要在共享电脑、录屏或截图环境中输入生产 HMAC 密钥。
+
+## 7. 安全限制
 
 - 票据默认 90 秒有效且只能兑换一次；
 - 外部影像会话默认 30 分钟有效；
@@ -151,7 +189,7 @@ const signature = crypto.createHmac('sha256', secret).update(canonical, 'utf8').
 - 批量下载在前端与后端同时校验 `allowDownload`；
 - 图片响应与 ZIP 导出使用私有缓存策略。
 
-## 7. 数据库存储与审计
+## 8. 数据库存储与审计
 
 Flyway 会创建以下表：
 
@@ -162,7 +200,7 @@ Flyway 会创建以下表：
 
 数据库只保存票据和会话令牌的 SHA-256 摘要，不保存可直接使用的令牌明文。过期 nonce 会及时删除，过期票据和会话保留 7 天后清理；访问审计日志不会随临时凭证一起删除。
 
-## 8. 反向代理
+## 9. 反向代理
 
 为了让返回的 `launchUrl` 使用正确的 HTTPS 域名，Nginx 需要传递：
 
@@ -174,7 +212,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 生产环境必须使用 HTTPS，否则外部会话 Cookie 无法获得完整的传输保护。
 
-## 9. 本地联调模拟器
+## 10. 本地联调模拟器
 
 仓库提供 `scripts/simulate-external-archive.py`，使用 Python 标准库模拟外部系统的完整访问链路：申请票据、兑换会话、读取授权上下文、读取影像列表、校验单张影像重定向、可选下载 ZIP，最后退出会话。
 

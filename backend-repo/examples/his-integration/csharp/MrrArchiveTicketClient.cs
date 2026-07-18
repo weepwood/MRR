@@ -18,6 +18,7 @@ public sealed class MrrArchiveTicketClient
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = false,
     };
@@ -179,7 +180,7 @@ public sealed record MrrApiResponse<T>(
     int Code,
     string? Message,
     T? Data,
-    DateTimeOffset? Timestamp);
+    string? Timestamp);
 
 public sealed class MrrIntegrationException : Exception
 {

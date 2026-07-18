@@ -15,7 +15,7 @@ import DepartmentThemeSettings from './components/DepartmentThemeSettings.vue'
 
 defineOptions({ name: 'SettingsPage' })
 
-type SettingsSection = 'general' | 'archive' | 'security' | 'department' | 'appearance'
+type SettingsSection = 'general' | 'archive' | 'security' | 'developer' | 'department' | 'appearance'
 
 interface DepartmentThemeSettingsRef {
   saving: boolean
@@ -54,6 +54,12 @@ const settingsNavItems: SettingsNavItem[] = [
     icon: 'i-ri:shield-check-line',
   },
   {
+    key: 'developer',
+    title: '开发者模式',
+    description: '接口兼容与跨域调试',
+    icon: 'i-ri:code-box-line',
+  },
+  {
     key: 'department',
     title: '科室配色',
     description: '档案袋颜色规则',
@@ -82,19 +88,20 @@ const isServerSettingSection = computed(() => (
   activeSection.value === 'general'
   || activeSection.value === 'archive'
   || activeSection.value === 'security'
+  || activeSection.value === 'developer'
 ))
-
 const sourceMeta = computed(() => ({
   server: { label: '服务器配置', type: 'success' as const },
   local: { label: '本地配置', type: 'warning' as const },
   default: { label: '默认配置', type: 'info' as const },
 })[settingsSource.value])
-
 const currentSnapshot = computed(() => serializeSystemSettings(settings))
 const changedKeys = computed(() => Object.keys(currentSnapshot.value).filter(
   key => currentSnapshot.value[key] !== savedSnapshot.value[key],
 ))
 const isDirty = computed(() => changedKeys.value.length > 0)
+const developerModeChanged = computed(() => changedKeys.value.includes('developerModeEnabled'))
+const savedDeveloperModeEnabled = computed(() => savedSnapshot.value.developerModeEnabled === 'true')
 
 function markAsSaved() {
   savedSnapshot.value = { ...currentSnapshot.value }
@@ -135,26 +142,63 @@ function validateSettings() {
   return true
 }
 
+async function confirmDeveloperModeEnable() {
+  if (!developerModeChanged.value || !settings.developerModeEnabled || savedDeveloperModeEnabled.value) {
+    return true
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '启用后，无有效 JWT 的受保护 API 将以虚拟管理员身份执行，同时允许任意浏览器 Origin 跨域访问。仅限隔离的开发或联调环境使用。',
+      '确认启用开发者模式',
+      {
+        type: 'error',
+        confirmButtonText: '确认启用',
+        cancelButtonText: '取消',
+        distinguishCancelAndClose: true,
+      },
+    )
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
 async function handleSave() {
-  if (!validateSettings()) {
+  if (!validateSettings() || !await confirmDeveloperModeEnable()) {
     return
   }
 
   saving.value = true
   const payload = serializeSystemSettings(settings)
+  const developerChangeRequested = developerModeChanged.value
   try {
     await saveSystemSettings(payload)
     settingsSource.value = 'server'
-    ElMessage.success('设置已保存，并已通知对应功能更新')
-  }
-  catch {
-    settingsSource.value = 'local'
-    ElMessage.warning('服务端保存失败，已保存到当前浏览器')
-  }
-  finally {
     writeLocalSystemSettings(settings)
     markAsSaved()
     updateSyncTime()
+    ElMessage.success(
+      developerChangeRequested
+        ? `开发者模式已${settings.developerModeEnabled ? '启用' : '关闭'}，后端已即时生效`
+        : '设置已保存，并已通知对应功能更新',
+    )
+  }
+  catch {
+    if (developerChangeRequested) {
+      settings.developerModeEnabled = savedDeveloperModeEnabled.value
+      ElMessage.error('服务端保存失败，开发者模式未发生变化')
+    }
+    else {
+      settingsSource.value = 'local'
+      writeLocalSystemSettings(settings)
+      markAsSaved()
+      updateSyncTime()
+      ElMessage.warning('服务端保存失败，已保存到当前浏览器')
+    }
+  }
+  finally {
     saving.value = false
   }
 }
@@ -199,8 +243,13 @@ onMounted(() => loadSettings())
           <FaIcon name="i-ri:settings-4-line" />
         </span>
         <div>
-          <h2>系统设置</h2>
-          <p>按功能分类管理系统、档案浏览与界面外观。</p>
+          <div class="title-line">
+            <h2>系统设置</h2>
+            <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
+              开发者模式已启用
+            </el-tag>
+          </div>
+          <p>按功能分类管理系统、档案浏览、接口安全与界面外观。</p>
         </div>
       </div>
       <div v-if="isServerSettingSection" class="header-actions">
@@ -223,7 +272,7 @@ onMounted(() => loadSettings())
             :key="item.key"
             type="button"
             class="settings-nav-item"
-            :class="{ active: activeSection === item.key }"
+            :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
             @click="activeSection = item.key"
           >
             <span class="nav-icon">
@@ -242,7 +291,7 @@ onMounted(() => loadSettings())
             <span class="status-dot" />
             <div>
               <strong>{{ isDirty ? `${changedKeys.length} 项修改待保存` : '所有设置已保存' }}</strong>
-              <small>{{ isDirty ? '保存后由对应功能立即读取。' : `当前使用${sourceMeta.label}。` }}</small>
+              <small>{{ isDirty ? '保存后由后端立即读取。' : `当前使用${sourceMeta.label}。` }}</small>
             </div>
           </div>
           <el-button
@@ -302,7 +351,7 @@ onMounted(() => loadSettings())
 
       <main class="settings-content">
         <header class="section-header">
-          <span class="section-icon">
+          <span class="section-icon" :class="{ danger: activeSection === 'developer' && settings.developerModeEnabled }">
             <FaIcon :name="activeMeta.icon" />
           </span>
           <div>
@@ -436,7 +485,7 @@ onMounted(() => loadSettings())
               </div>
             </section>
 
-            <section v-else class="setting-section">
+            <section v-else-if="activeSection === 'security'" class="setting-section">
               <div class="setting-row">
                 <div class="setting-copy">
                   <strong>显示访问水印</strong>
@@ -448,7 +497,7 @@ onMounted(() => loadSettings())
               <div class="setting-row">
                 <div class="setting-copy">
                   <strong>允许显示完整身份证号</strong>
-                  <p>开启后，可在患者管理表中点击脱敏号码显示完整身份证号；默认关闭。</p>
+                  <p>允许在患者管理表中查看完整身份证号；默认关闭。</p>
                 </div>
                 <el-switch v-model="settings.patientIdCardRevealEnabled" />
               </div>
@@ -456,7 +505,7 @@ onMounted(() => loadSettings())
               <div class="setting-row">
                 <div class="setting-copy">
                   <strong>允许复制身份证号</strong>
-                  <p>开启后，点击患者管理表中的身份证号会复制完整号码到剪贴板；默认关闭。</p>
+                  <p>允许点击身份证号后复制完整号码；默认关闭。</p>
                 </div>
                 <el-switch v-model="settings.patientIdCardCopyEnabled" />
               </div>
@@ -507,8 +556,70 @@ onMounted(() => loadSettings())
                 </div>
               </div>
             </section>
-          </el-form>
 
+            <section v-else class="setting-section developer-section" :class="{ enabled: settings.developerModeEnabled }">
+              <div class="developer-hero">
+                <div class="developer-copy">
+                  <span class="developer-badge">
+                    <FaIcon name="i-ri:terminal-box-line" />
+                    Runtime compatibility
+                  </span>
+                  <h4>兼容旧版无登录接口调用</h4>
+                  <p>用于隔离开发环境、接口联调和旧客户端过渡。设置保存后后端立即生效，无需重启。</p>
+                </div>
+                <div class="developer-switch">
+                  <span>{{ settings.developerModeEnabled ? '已启用' : '已关闭' }}</span>
+                  <el-switch
+                    v-model="settings.developerModeEnabled"
+                    size="large"
+                    inline-prompt
+                    active-text="ON"
+                    inactive-text="OFF"
+                  />
+                </div>
+              </div>
+
+              <el-alert
+                :type="settings.developerModeEnabled ? 'error' : 'warning'"
+                :closable="false"
+                show-icon
+                :title="settings.developerModeEnabled
+                  ? '当前受保护 API 可以在没有有效 JWT 的情况下以虚拟管理员身份执行。'
+                  : '默认保持关闭。生产环境不应启用开发者模式。'"
+              />
+
+              <div class="developer-grid">
+                <article class="developer-card">
+                  <span class="developer-card-icon"><FaIcon name="i-ri:shield-keyhole-line" /></span>
+                  <div>
+                    <strong>认证兼容</strong>
+                    <p>无 Token、过期 Token 或无效 Token 会注入旧版 <code>dev / ADMIN</code> 虚拟会话。</p>
+                  </div>
+                </article>
+                <article class="developer-card">
+                  <span class="developer-card-icon"><FaIcon name="i-ri:global-line" /></span>
+                  <div>
+                    <strong>跨域调试</strong>
+                    <p>API 临时允许任意 Origin，并继续支持凭证、常用方法和自定义请求头。</p>
+                  </div>
+                </article>
+                <article class="developer-card">
+                  <span class="developer-card-icon"><FaIcon name="i-ri:file-warning-line" /></span>
+                  <div>
+                    <strong>可识别调用</strong>
+                    <p>兼容请求响应会附带 <code>X-MRR-Developer-Mode: enabled</code>，后端同时记录警告日志。</p>
+                  </div>
+                </article>
+              </div>
+
+              <div class="developer-boundary">
+                <FaIcon name="i-ri:information-line" />
+                <p>
+                  有效 JWT 始终优先使用真实用户。外部影像 Ticket 接口仍执行独立 HMAC、时间戳、nonce 和 IP 白名单校验；开发者模式主要恢复旧客户端直接调用普通业务 API 的能力。
+                </p>
+              </div>
+            </section>
+          </el-form>
         </div>
 
         <DepartmentThemeSettings
@@ -524,34 +635,64 @@ onMounted(() => loadSettings())
 <style scoped>
 .settings-page {
   display: grid;
-  gap: 18px;
+  gap: var(--mrr-space-5);
+}
+
+.page-header,
+.settings-shell,
+.setting-section {
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
 }
 
 .page-header {
   display: flex;
-  gap: 24px;
+  gap: var(--mrr-space-6);
   align-items: center;
   justify-content: space-between;
-  padding: 20px 22px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 16px;
+  padding: var(--mrr-space-5) var(--mrr-space-6);
+}
+
+.header-title,
+.title-line,
+.header-actions,
+.section-header,
+.save-status,
+.status-heading,
+.developer-hero,
+.developer-switch,
+.developer-boundary {
+  display: flex;
+  align-items: center;
 }
 
 .header-title {
-  display: flex;
-  gap: 14px;
-  align-items: center;
+  gap: var(--mrr-space-4);
   min-width: 0;
+}
+
+.title-line {
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
+}
+
+.header-actions {
+  gap: var(--mrr-space-2);
+}
+
+.header-actions :deep(.el-button) {
+  margin-left: 0;
 }
 
 .header-icon,
 .section-icon,
-.nav-icon {
+.nav-icon,
+.developer-card-icon {
   display: grid;
   flex: 0 0 auto;
-  color: var(--el-color-primary);
-  background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
+  color: var(--mrr-primary);
+  background: color-mix(in srgb, var(--mrr-primary) 10%, var(--mrr-card));
   place-items: center;
 }
 
@@ -559,13 +700,14 @@ onMounted(() => loadSettings())
   width: 44px;
   height: 44px;
   font-size: 21px;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .page-header h2,
-.section-header h3 {
+.section-header h3,
+.developer-copy h4 {
   margin: 0;
-  color: var(--el-text-color-primary);
+  color: var(--mrr-foreground);
 }
 
 .page-header h2 {
@@ -576,23 +718,16 @@ onMounted(() => loadSettings())
 .section-header p,
 .setting-copy p,
 .group-heading p,
-.sidebar-status p {
-  color: var(--el-text-color-secondary);
+.sidebar-status p,
+.developer-copy p,
+.developer-card p,
+.developer-boundary p {
+  color: var(--mrr-muted-foreground);
 }
 
 .page-header p {
-  margin: 5px 0 0;
+  margin: var(--mrr-space-1) 0 0;
   font-size: 13px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.header-actions :deep(.el-button) {
-  margin-left: 0;
 }
 
 .settings-shell {
@@ -600,22 +735,16 @@ onMounted(() => loadSettings())
   grid-template-columns: 260px minmax(0, 1fr);
   min-height: 620px;
   overflow: clip;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 16px;
 }
 
 .settings-sidebar {
-  align-self: start;
-  position: sticky;
-  top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 16px);
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 16px;
-  background: var(--el-fill-color-extra-light);
-  border-right: 1px solid var(--el-border-color-lighter);
+  gap: var(--mrr-space-5);
+  min-height: 0;
+  padding: var(--mrr-space-4);
+  background: var(--mrr-muted);
+  border-right: 1px solid var(--mrr-border);
 }
 
 .settings-nav {
@@ -631,35 +760,41 @@ onMounted(() => loadSettings())
   width: 100%;
   padding: 10px;
   font: inherit;
-  color: var(--el-text-color-regular);
+  color: var(--mrr-muted-foreground);
   text-align: left;
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
-.settings-nav-item:hover {
-  background: var(--el-bg-color);
-  border-color: var(--el-border-color-lighter);
+.settings-nav-item:hover,
+.settings-nav-item.active {
+  color: var(--mrr-foreground);
+  background: var(--mrr-card);
+  border-color: var(--mrr-border);
 }
 
 .settings-nav-item.active {
-  color: var(--el-color-primary);
-  background: var(--el-bg-color);
-  border-color: color-mix(in srgb, var(--el-color-primary) 24%, var(--el-border-color-lighter));
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  color: var(--mrr-primary);
+}
+
+.settings-nav-item.danger {
+  color: var(--mrr-destructive);
+  border-color: color-mix(in srgb, var(--mrr-destructive) 28%, var(--mrr-border));
 }
 
 .nav-icon {
   width: 34px;
   height: 34px;
   font-size: 17px;
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-md);
 }
 
-.nav-copy {
+.nav-copy,
+.nav-copy strong,
+.nav-copy small {
   min-width: 0;
 }
 
@@ -677,87 +812,103 @@ onMounted(() => loadSettings())
 .nav-copy small {
   overflow: hidden;
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .nav-arrow {
-  font-size: 16px;
-  color: var(--el-text-color-placeholder);
+  color: var(--mrr-muted-foreground);
 }
 
-.settings-nav-item.active .nav-arrow {
-  color: var(--el-color-primary);
-}
-
+.sidebar-save-card,
 .sidebar-status {
-  padding: 12px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  padding: var(--mrr-space-3);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
 }
 
 .sidebar-save-card {
-  padding: 12px;
   margin-top: auto;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
-}
-
-.sidebar-save-status {
-  margin-bottom: 12px;
-}
-
-.sidebar-save-status.dirty {
-  background: color-mix(in srgb, var(--el-color-warning) 5%, var(--el-bg-color));
 }
 
 .sidebar-save-card.dirty {
-  border-color: color-mix(in srgb, var(--el-color-warning) 35%, var(--el-border-color-lighter));
+  border-color: color-mix(in srgb, var(--color-warning) 36%, var(--mrr-border));
 }
 
 .sidebar-save-card :deep(.el-button) {
   width: 100%;
-  gap: 6px;
+  margin-top: var(--mrr-space-3);
+}
+
+.save-status {
+  gap: 10px;
+  min-width: 0;
+}
+
+.save-status strong,
+.save-status small {
+  display: block;
+}
+
+.save-status strong {
+  margin-bottom: 2px;
+  font-size: 13px;
+  color: var(--mrr-foreground);
+}
+
+.save-status small,
+.sidebar-status p {
+  font-size: 11px;
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  background: var(--color-success);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 13%, transparent);
+}
+
+.save-status.dirty .status-dot {
+  background: var(--color-warning);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 15%, transparent);
 }
 
 .status-heading {
-  display: flex;
-  gap: 8px;
-  align-items: center;
   justify-content: space-between;
   font-size: 12px;
   font-weight: 600;
-  color: var(--el-text-color-regular);
 }
 
 .sidebar-status p {
-  margin: 8px 0 0;
-  font-size: 11px;
-  line-height: 1.5;
+  margin: var(--mrr-space-2) 0 0;
 }
 
 .settings-content {
   min-width: 0;
-  padding: 22px;
+  padding: var(--mrr-space-6);
 }
 
 .section-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding-bottom: 18px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  gap: var(--mrr-space-3);
+  padding-bottom: var(--mrr-space-5);
+  margin-bottom: var(--mrr-space-5);
+  border-bottom: 1px solid var(--mrr-border);
 }
 
 .section-icon {
   width: 38px;
   height: 38px;
   font-size: 18px;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
+}
+
+.section-icon.danger {
+  color: var(--mrr-destructive);
+  background: var(--mrr-destructive-muted);
 }
 
 .section-header h3 {
@@ -765,21 +916,16 @@ onMounted(() => loadSettings())
 }
 
 .section-header p {
-  margin: 4px 0 0;
+  margin: var(--mrr-space-1) 0 0;
   font-size: 12px;
 }
 
 .system-panel {
-  display: grid;
-  gap: 16px;
   min-height: 420px;
 }
 
 .setting-section {
   overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
 }
 
 .setting-row {
@@ -794,7 +940,7 @@ onMounted(() => loadSettings())
 .setting-row + .setting-row,
 .setting-group + .setting-group,
 .setting-group + .switch-list {
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: 1px solid var(--mrr-border);
 }
 
 .setting-row--stack {
@@ -803,13 +949,14 @@ onMounted(() => loadSettings())
 
 .setting-copy {
   min-width: 180px;
-  max-width: 420px;
+  max-width: 440px;
 }
 
 .setting-copy strong,
 .group-heading strong,
-.switch-row strong {
-  color: var(--el-text-color-primary);
+.switch-row strong,
+.developer-card strong {
+  color: var(--mrr-foreground);
 }
 
 .setting-copy strong,
@@ -819,7 +966,7 @@ onMounted(() => loadSettings())
 
 .setting-copy p,
 .group-heading p {
-  margin: 5px 0 0;
+  margin: var(--mrr-space-1) 0 0;
   font-size: 12px;
   line-height: 1.55;
 }
@@ -833,7 +980,7 @@ onMounted(() => loadSettings())
 }
 
 .setting-alert {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .setting-group {
@@ -841,13 +988,15 @@ onMounted(() => loadSettings())
 }
 
 .group-heading {
-  margin-bottom: 16px;
+  margin-bottom: var(--mrr-space-4);
 }
 
-.control-grid {
+.control-grid,
+.switch-list,
+.developer-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--mrr-space-5);
 }
 
 :deep(.el-form-item) {
@@ -856,7 +1005,7 @@ onMounted(() => loadSettings())
 
 :deep(.el-form-item__label) {
   font-weight: 600;
-  color: var(--el-text-color-regular);
+  color: var(--mrr-foreground);
 }
 
 .full-width,
@@ -868,7 +1017,7 @@ onMounted(() => loadSettings())
 .number-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 58px;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   width: 100%;
 }
@@ -880,31 +1029,28 @@ onMounted(() => loadSettings())
 .slider-control > span,
 .number-control > span {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
   text-align: right;
 }
 
 .switch-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--mrr-space-3);
   padding: 18px 20px;
 }
 
 .switch-row {
   display: flex;
-  gap: 14px;
+  gap: var(--mrr-space-4);
   align-items: center;
   justify-content: space-between;
-  min-width: 0;
   padding: 13px 14px;
-  background: var(--el-fill-color-extra-light);
+  background: var(--mrr-muted);
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .switch-row:hover {
-  border-color: var(--el-border-color-lighter);
+  border-color: var(--mrr-border);
 }
 
 .switch-row strong {
@@ -917,44 +1063,126 @@ onMounted(() => loadSettings())
   margin: 0;
   font-size: 11px;
   line-height: 1.5;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
-.save-status {
-  display: flex;
-  gap: 10px;
+.developer-section {
+  display: grid;
+  gap: var(--mrr-space-5);
+  padding: var(--mrr-space-6);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.developer-section.enabled {
+  background: color-mix(in srgb, var(--mrr-destructive) 3%, var(--mrr-card));
+  border-color: color-mix(in srgb, var(--mrr-destructive) 36%, var(--mrr-border));
+}
+
+.developer-hero {
+  gap: var(--mrr-space-6);
+  justify-content: space-between;
+}
+
+.developer-copy {
+  max-width: 680px;
+}
+
+.developer-badge {
+  display: inline-flex;
+  gap: 6px;
   align-items: center;
-  min-width: 0;
-}
-
-.save-status strong,
-.save-status small {
-  display: block;
-}
-
-.save-status strong {
-  margin-bottom: 2px;
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-}
-
-.save-status small {
+  padding: 5px 9px;
+  margin-bottom: var(--mrr-space-3);
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  font-weight: 700;
+  color: var(--mrr-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card));
+  border-radius: var(--mrr-radius-pill);
 }
 
-.status-dot {
+.developer-copy h4 {
+  font-size: 20px;
+}
+
+.developer-copy p {
+  margin: var(--mrr-space-2) 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.developer-switch {
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  background: var(--el-color-success);
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-success) 13%, transparent);
+  gap: var(--mrr-space-3);
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  color: var(--mrr-foreground);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
 }
 
-.save-status.dirty .status-dot {
-  background: var(--el-color-warning);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-warning) 15%, transparent);
+.developer-switch > span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.developer-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mrr-space-3);
+}
+
+.developer-card {
+  display: flex;
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  padding: var(--mrr-space-4);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.developer-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--mrr-radius-md);
+}
+
+.developer-card strong {
+  font-size: 13px;
+}
+
+.developer-card p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.developer-card code,
+.developer-boundary code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.developer-boundary {
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  padding: var(--mrr-space-4);
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--color-info) 22%, var(--mrr-border));
+  border-radius: var(--mrr-radius-md);
+}
+
+.developer-boundary p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+@media (max-width: 1080px) {
+  .developer-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
@@ -963,21 +1191,18 @@ onMounted(() => loadSettings())
   }
 
   .settings-sidebar {
-    position: static;
-    padding: 12px;
     border-right: 0;
-    border-bottom: 1px solid var(--el-border-color-lighter);
+    border-bottom: 1px solid var(--mrr-border);
   }
 
   .settings-nav {
     display: flex;
-    gap: 8px;
+    gap: var(--mrr-space-2);
     overflow-x: auto;
-    scrollbar-width: thin;
   }
 
   .settings-nav-item {
-    flex: 0 0 168px;
+    flex: 0 0 176px;
   }
 
   .nav-arrow,
@@ -988,21 +1213,20 @@ onMounted(() => loadSettings())
 
 @media (max-width: 700px) {
   .page-header,
-  .setting-row {
+  .setting-row,
+  .developer-hero {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .header-actions {
-    width: 100%;
-  }
-
+  .header-actions,
   .header-actions :deep(.el-button) {
     width: 100%;
   }
 
-  .settings-content {
-    padding: 16px;
+  .settings-content,
+  .developer-section {
+    padding: var(--mrr-space-4);
   }
 
   .setting-control,
@@ -1019,5 +1243,8 @@ onMounted(() => loadSettings())
     max-width: none;
   }
 
+  .developer-switch {
+    justify-content: space-between;
+  }
 }
 </style>

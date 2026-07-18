@@ -15,7 +15,6 @@ public class IntegrationProperties {
     private int sessionTtlSeconds = 1800;
     private int timestampToleranceSeconds = 300;
     private int maxArchivesPerTicket = 100;
-    private String launchPath = "/archive/external";
     private List<Client> clients = new ArrayList<>();
 
     @Data

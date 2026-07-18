@@ -40,15 +40,17 @@ import java.util.Map;
 public class ExternalArchiveController {
 
     private static final Logger logger = LoggerFactory.getLogger(ExternalArchiveController.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private final ObjectMapper objectMapper;
     private final ExternalArchiveAccessService externalArchiveAccessService;
     private final ImageUrlService imageUrlService;
 
     public ExternalArchiveController(
+            ObjectMapper objectMapper,
             ExternalArchiveAccessService externalArchiveAccessService,
             ImageUrlService imageUrlService
     ) {
+        this.objectMapper = objectMapper;
         this.externalArchiveAccessService = externalArchiveAccessService;
         this.imageUrlService = imageUrlService;
     }
@@ -64,11 +66,12 @@ public class ExternalArchiveController {
     ) {
         ExternalArchiveTicketRequest request;
         try {
-            request = OBJECT_MAPPER.readValue(rawBody, ExternalArchiveTicketRequest.class);
+            request = objectMapper.readValue(rawBody, ExternalArchiveTicketRequest.class);
         } catch (Exception exception) {
             throw new BusinessException(400, "请求体不是有效的 JSON");
         }
 
+        String clientIp = IpUtil.getClientIp(servletRequest);
         ExternalArchiveAccessService.IssuedTicket issued = externalArchiveAccessService.createTicket(
                 clientId,
                 timestamp,
@@ -77,7 +80,7 @@ public class ExternalArchiveController {
                 servletRequest.getMethod(),
                 servletRequest.getRequestURI(),
                 rawBody,
-                IpUtil.getClientIp(servletRequest),
+                clientIp,
                 request
         );
         String launchUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
@@ -88,7 +91,12 @@ public class ExternalArchiveController {
         logger.info(
                 "External archive ticket issued: clientId={}, externalUserId={}, archives={}, ip={}",
                 issued.grant().clientId(), issued.grant().externalUserId(),
-                issued.grant().cases().size(), IpUtil.getClientIp(servletRequest)
+                issued.grant().cases().size(), clientIp
+        );
+        externalArchiveAccessService.recordAudit(
+                issued.grant(), null, null, "TICKET_CREATE", null,
+                clientIp, servletRequest.getHeader("User-Agent"), requestId(servletRequest),
+                "SUCCESS", "archives=" + issued.grant().cases().size()
         );
         return Result.success(new ExternalArchiveTicketResponse(
                 issued.token(), launchUrl, issued.expiresIn(), issued.grant().cases().size()
@@ -97,12 +105,14 @@ public class ExternalArchiveController {
 
     @PostMapping("/api/v1/external/archive/session")
     public Result<ExternalArchiveSessionResponse> exchangeTicket(
-            @RequestBody Map<String, String> body,
+            @RequestBody(required = false) Map<String, String> body,
             HttpServletRequest request,
             HttpServletResponse response
     ) {
+        String clientIp = IpUtil.getClientIp(request);
+        String ticket = body == null ? null : body.get("ticket");
         ExternalArchiveAccessService.IssuedSession issued =
-                externalArchiveAccessService.consumeTicket(body.get("ticket"));
+                externalArchiveAccessService.consumeTicket(ticket, clientIp);
         ResponseCookie cookie = ResponseCookie.from(
                         ExternalArchiveAccessService.SESSION_COOKIE_NAME,
                         issued.token()
@@ -116,6 +126,11 @@ public class ExternalArchiveController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         response.setHeader("Referrer-Policy", "no-referrer");
         ExternalArchiveGrant grant = issued.grant();
+        externalArchiveAccessService.recordAudit(
+                grant, null, null, "SESSION_CREATE", null,
+                clientIp, request.getHeader("User-Agent"), requestId(request),
+                "SUCCESS", "expiresIn=" + issued.expiresIn()
+        );
         return Result.success(new ExternalArchiveSessionResponse(
                 grant.clientId(),
                 grant.externalUserId(),
@@ -142,9 +157,15 @@ public class ExternalArchiveController {
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
         List<BAHDataResponseDTO> images = externalArchiveAccessService.loadImages(grant, bah, sjh);
+        String clientIp = IpUtil.getClientIp(request);
         logger.info(
                 "External archive viewed: clientId={}, externalUserId={}, bah={}, sjh={}, images={}, ip={}",
-                grant.clientId(), grant.externalUserId(), bah, sjh, images.size(), IpUtil.getClientIp(request)
+                grant.clientId(), grant.externalUserId(), bah, sjh, images.size(), clientIp
+        );
+        externalArchiveAccessService.recordAudit(
+                grant, bah, sjh, "ARCHIVE_VIEW", null,
+                clientIp, request.getHeader("User-Agent"), requestId(request),
+                "SUCCESS", "images=" + images.size()
         );
         return Result.success(images);
     }
@@ -160,6 +181,11 @@ public class ExternalArchiveController {
         if (!StringUtils.hasText(location)) {
             throw new BusinessException(404, "无法构造影像地址");
         }
+        externalArchiveAccessService.recordAudit(
+                grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                IpUtil.getClientIp(request), request.getHeader("User-Agent"), requestId(request),
+                "SUCCESS", null
+        );
         return ResponseEntity.status(302)
                 .location(URI.create(location))
                 .header(HttpHeaders.CACHE_CONTROL, "private, max-age=300")
@@ -169,6 +195,16 @@ public class ExternalArchiveController {
 
     @PostMapping("/api/v1/external/archive/logout")
     public Result<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        String sessionToken = extractSessionToken(request);
+        ExternalArchiveGrant grant = null;
+        if (StringUtils.hasText(sessionToken)) {
+            try {
+                grant = externalArchiveAccessService.requireSession(sessionToken);
+            } catch (BusinessException ignored) {
+                // Cookie 仍需清理。
+            }
+            externalArchiveAccessService.revokeSession(sessionToken);
+        }
         ResponseCookie cookie = ResponseCookie.from(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(isSecureRequest(request))
@@ -177,18 +213,30 @@ public class ExternalArchiveController {
                 .maxAge(Duration.ZERO)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        externalArchiveAccessService.recordAudit(
+                grant, null, null, "SESSION_LOGOUT", null,
+                IpUtil.getClientIp(request), request.getHeader("User-Agent"), requestId(request),
+                "SUCCESS", null
+        );
         return Result.success("外部影像会话已退出");
     }
 
     private ExternalArchiveGrant requireGrant(HttpServletRequest request) {
-        String token = request.getCookies() == null
+        return externalArchiveAccessService.requireSession(extractSessionToken(request));
+    }
+
+    private String extractSessionToken(HttpServletRequest request) {
+        return request.getCookies() == null
                 ? null
                 : Arrays.stream(request.getCookies())
                 .filter(cookie -> ExternalArchiveAccessService.SESSION_COOKIE_NAME.equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .findFirst()
                 .orElse(null);
-        return externalArchiveAccessService.requireSession(token);
+    }
+
+    private String requestId(HttpServletRequest request) {
+        return request.getHeader("X-Request-Id");
     }
 
     private boolean isSecureRequest(HttpServletRequest request) {

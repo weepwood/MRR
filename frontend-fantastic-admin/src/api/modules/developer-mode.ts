@@ -25,27 +25,24 @@ function parseEnabled(value: unknown): boolean {
   return false
 }
 
-function unwrapSettingValue(payload: unknown): unknown {
+function unwrapEnabled(payload: unknown): unknown {
   if (!payload || typeof payload !== 'object') {
     return undefined
   }
   const root = payload as Record<string, unknown>
-  if ('data' in root) {
-    return root.data
+  const data = root.data
+  if (data && typeof data === 'object' && 'enabled' in data) {
+    return (data as Record<string, unknown>).enabled
   }
-  return root.value
+  return root.enabled
 }
 
 async function executeProbe(): Promise<boolean> {
   try {
-    const response = await developerModeProbeApi.get('/api/v1/settings/developerModeEnabled', {
-      headers: {
-        'X-MRR-Developer-Mode-Probe': '1',
-      },
-    })
+    const response = await developerModeProbeApi.get('/api/v1/public/status/developer-mode')
     return response.status >= 200
       && response.status < 300
-      && parseEnabled(unwrapSettingValue(response.data))
+      && parseEnabled(unwrapEnabled(response.data))
   }
   catch {
     return false
@@ -53,8 +50,7 @@ async function executeProbe(): Promise<boolean> {
 }
 
 /**
- * 在匿名路由跳转前探测服务端开发者模式。
- * 关闭状态会得到 401 并按 false 处理；开启状态由后端虚拟管理员会话返回设置值。
+ * 在匿名路由跳转前读取最小化公共状态，只返回开发者模式是否启用。
  */
 export async function isRuntimeDeveloperModeEnabled(force = false): Promise<boolean> {
   const now = Date.now()

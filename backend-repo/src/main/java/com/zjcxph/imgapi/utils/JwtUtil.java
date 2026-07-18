@@ -14,18 +14,27 @@ public final class JwtUtil {
     public static final String ACCESS_TOKEN_TYPE = "access";
     public static final String DOCUMENTATION_TOKEN_TYPE = "documentation";
 
-    private static final String SECRET;
     private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
-
-    static {
-        String env = System.getenv("JWT_SECRET_KEY");
-        if (env == null || env.isBlank()) {
-            throw new ExceptionInInitializerError("JWT_SECRET_KEY environment variable must be set");
-        }
-        SECRET = env;
-    }
+    private static volatile String secret = normalizeSecret(System.getenv("JWT_SECRET_KEY"));
 
     private JwtUtil() {
+    }
+
+    /**
+     * 由 Spring 启动配置注入 JWT 密钥，同时保留操作系统环境变量兼容性。
+     */
+    public static synchronized void configure(String configuredSecret) {
+        String normalized = normalizeSecret(configuredSecret);
+        if (normalized == null) {
+            if (secret == null) {
+                throw new IllegalStateException("JWT_SECRET_KEY must be configured");
+            }
+            return;
+        }
+        if (normalized.length() < 32) {
+            throw new IllegalArgumentException("JWT_SECRET_KEY must contain at least 32 characters");
+        }
+        secret = normalized;
     }
 
     public static String getToken(String username) {
@@ -56,7 +65,7 @@ public final class JwtUtil {
         com.auth0.jwt.JWTCreator.Builder builder = JWT.create()
                 .withClaim("tokenType", tokenType)
                 .withExpiresAt(new Date(System.currentTimeMillis() + expireMillis))
-                .withJWTId(UUID.randomUUID().toString()); // 用于登出撤销
+                .withJWTId(UUID.randomUUID().toString());
 
         if (session.getId() != null) {
             builder.withClaim("id", session.getId());
@@ -81,7 +90,7 @@ public final class JwtUtil {
         if (permissions != null && !permissions.isEmpty()) {
             builder.withArrayClaim("permissions", permissions.toArray(new String[0]));
         }
-        return builder.sign(Algorithm.HMAC256(SECRET));
+        return builder.sign(algorithm());
     }
 
     public static AuthSession parseToken(String token) {
@@ -104,21 +113,30 @@ public final class JwtUtil {
         return verify(token).getClaim("tokenType").asString();
     }
 
-    /**
-     * 从原始 token 字符串中提取 jti，用于黑名单检查。
-     */
     public static String getJti(String token) {
         return verify(token).getId();
     }
 
-    /**
-     * 获取 token 的过期时间戳（毫秒），用于黑名单条目 TTL。
-     */
     public static long getExpirationMillis(String token) {
         return verify(token).getExpiresAt().getTime();
     }
 
     private static DecodedJWT verify(String token) {
-        return JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
+        return JWT.require(algorithm()).build().verify(token);
+    }
+
+    private static Algorithm algorithm() {
+        String currentSecret = secret;
+        if (currentSecret == null) {
+            throw new IllegalStateException("JWT_SECRET_KEY must be configured before issuing or verifying tokens");
+        }
+        return Algorithm.HMAC256(currentSecret);
+    }
+
+    private static String normalizeSecret(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

@@ -20,6 +20,7 @@ export interface EffectiveSystemSettings {
   archiveIpMaxChanges: number
   patientIdCardRevealEnabled: boolean
   patientIdCardCopyEnabled: boolean
+  developerModeEnabled: boolean
 }
 
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
@@ -37,6 +38,7 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     archiveIpMaxChanges: 3,
     patientIdCardRevealEnabled: false,
     patientIdCardCopyEnabled: false,
+    developerModeEnabled: false,
   }
 }
 
@@ -49,10 +51,10 @@ function parseBoolean(value: unknown, fallback: boolean): boolean {
   }
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase()
-    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    if (['true', '1', 'yes', 'on', 'enabled'].includes(normalized)) {
       return true
     }
-    if (['false', '0', 'no', 'off'].includes(normalized)) {
+    if (['false', '0', 'no', 'off', 'disabled'].includes(normalized)) {
       return false
     }
   }
@@ -88,6 +90,7 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     archiveIpMaxChanges: Math.round(parseNumber(source.archiveIpMaxChanges, defaults.archiveIpMaxChanges, 0, 20)),
     patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
     patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
+    developerModeEnabled: parseBoolean(source.developerModeEnabled, defaults.developerModeEnabled),
   }
 }
 

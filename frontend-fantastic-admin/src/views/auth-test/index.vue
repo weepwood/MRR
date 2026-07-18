@@ -31,10 +31,7 @@ const requestHistory = ref<RequestHistoryItem[]>([])
 let historySequence = 0
 
 const loginLoading = ref(false)
-const loginForm = reactive({
-  account: '',
-  password: '',
-})
+const loginForm = reactive({ account: '', password: '' })
 const loginResult = ref<AuthTestResult | null>(null)
 const testedToken = ref(userStore.token || '')
 const testedUser = ref<JsonRecord>({ ...userStore.profile })
@@ -72,17 +69,18 @@ const externalForm = reactive({
   sjhsText: '',
   archivesText: '',
   allowDownload: false,
+  manualSignature: false,
 })
 
 const apiBaseUrl = computed(() => import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL)
 const currentPermissionCount = computed(() => userStore.permissions.length)
 const hasTestToken = computed(() => Boolean(testedToken.value.trim()))
-const loginSucceeded = computed(() => Boolean(extractLoginData(loginResult.value?.data).token))
 const loginTokenIsCurrent = computed(() => Boolean(
   testedToken.value
   && userStore.token
   && testedToken.value.trim() === userStore.token.trim(),
 ))
+const loginSucceeded = computed(() => Boolean(extractLoginData(loginResult.value?.data).token))
 
 const decodedJwt = computed(() => {
   const token = testedToken.value.trim()
@@ -129,7 +127,24 @@ function formatJson(value: unknown): string {
   }
 }
 
-function parseJsonRecord(value: string, label: string): Record<string, string> {
+function unwrapResultData(value: unknown): JsonRecord {
+  if (!value || typeof value !== 'object') {
+    return {}
+  }
+  const root = value as JsonRecord
+  return root.data && typeof root.data === 'object' ? root.data as JsonRecord : root
+}
+
+function extractLoginData(value: unknown): { token: string, user: JsonRecord } {
+  const payload = unwrapResultData(value)
+  const nested = payload.data && typeof payload.data === 'object' ? payload.data as JsonRecord : payload
+  return {
+    token: String(nested.token || nested.accessToken || nested.jwt || ''),
+    user: (nested.user || nested.profile || payload.user || {}) as JsonRecord,
+  }
+}
+
+function parseJsonObject(value: string, label: string): Record<string, string> {
   if (!value.trim()) {
     return {}
   }
@@ -144,8 +159,7 @@ function parseJsonRecord(value: string, label: string): Record<string, string> {
     throw new Error(`${label}必须是 JSON 对象`)
   }
   return Object.fromEntries(
-    Object.entries(parsed as Record<string, unknown>)
-      .map(([key, item]) => [key, String(item)]),
+    Object.entries(parsed as Record<string, unknown>).map(([key, item]) => [key, String(item)]),
   )
 }
 
@@ -161,24 +175,17 @@ function parseJsonBody(value: string): unknown {
   }
 }
 
-function unwrapResultData(value: unknown): JsonRecord {
-  if (!value || typeof value !== 'object') {
-    return {}
+function responseType(result: AuthTestResult | null) {
+  if (!result) {
+    return 'info'
   }
-  const root = value as JsonRecord
-  if (root.data && typeof root.data === 'object') {
-    return root.data as JsonRecord
+  if (result.status >= 200 && result.status < 300) {
+    return 'success'
   }
-  return root
-}
-
-function extractLoginData(value: unknown): { token: string, user: JsonRecord } {
-  const payload = unwrapResultData(value)
-  const nested = payload.data && typeof payload.data === 'object' ? payload.data as JsonRecord : payload
-  return {
-    token: String(nested.token || nested.accessToken || nested.jwt || ''),
-    user: (nested.user || nested.profile || payload.user || {}) as JsonRecord,
+  if (result.status === 401 || result.status === 403) {
+    return 'warning'
   }
+  return 'danger'
 }
 
 function recordHistory(name: string, method: string, path: string, result: AuthTestResult) {
@@ -192,19 +199,6 @@ function recordHistory(name: string, method: string, path: string, result: AuthT
     requestedAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
   })
   requestHistory.value = requestHistory.value.slice(0, 12)
-}
-
-function responseType(result: AuthTestResult | null) {
-  if (!result) {
-    return 'info'
-  }
-  if (result.status >= 200 && result.status < 300) {
-    return 'success'
-  }
-  if (result.status === 401 || result.status === 403) {
-    return 'warning'
-  }
-  return 'danger'
 }
 
 async function sendLogin() {
@@ -225,12 +219,13 @@ async function sendLogin() {
     })
     loginResult.value = result
     recordHistory('登录', 'POST', '/api/v1/auth/login', result)
+
     const loginData = extractLoginData(result.data)
     if (result.status >= 200 && result.status < 300 && loginData.token) {
       testedToken.value = loginData.token
       customRequest.token = loginData.token
       testedUser.value = loginData.user
-      ElMessage.success('登录接口返回了可用 Token，尚未替换当前会话')
+      ElMessage.success('已取得测试 Token，当前后台会话尚未改变')
     }
   }
   catch (error: unknown) {
@@ -290,15 +285,17 @@ async function testLogout() {
     ElMessage.warning('请输入或先获取 JWT Token')
     return
   }
-  if (loginTokenIsCurrent.value) {
-    await ElMessageBox.confirm(
-      '测试 Token 与当前后台会话相同。继续后，当前 Token 会被后端撤销，需要重新登录。',
-      '确认测试注销',
-      { type: 'warning', confirmButtonText: '继续注销', cancelButtonText: '取消' },
-    )
-  }
-  customLoading.value = true
+
   try {
+    if (loginTokenIsCurrent.value) {
+      await ElMessageBox.confirm(
+        '测试 Token 与当前后台会话相同。继续后，当前 Token 会被后端撤销，需要重新登录。',
+        '确认测试注销',
+        { type: 'warning', confirmButtonText: '继续注销', cancelButtonText: '取消' },
+      )
+    }
+
+    customLoading.value = true
     const result = await executeAuthTestRequest({
       method: 'POST',
       path: '/api/v1/auth/logout',
@@ -311,7 +308,7 @@ async function testLogout() {
     }
   }
   catch (error: unknown) {
-    if ((error as string) !== 'cancel') {
+    if (error !== 'cancel' && error !== 'close') {
       ElMessage.error((error as Error).message || '注销接口测试失败')
     }
   }
@@ -323,14 +320,12 @@ async function testLogout() {
 async function sendCustomRequest() {
   customLoading.value = true
   try {
-    const headers = parseJsonRecord(customRequest.headersText, '请求头')
-    const body = parseJsonBody(customRequest.bodyText)
     const result = await executeAuthTestRequest({
       method: customRequest.method,
       path: customRequest.path,
       token: customRequest.useToken ? customRequest.token : '',
-      headers,
-      body,
+      headers: parseJsonObject(customRequest.headersText, '请求头'),
+      body: parseJsonBody(customRequest.bodyText),
     })
     customResult.value = result
     recordHistory('自定义请求', String(customRequest.method), customRequest.path, result)
@@ -373,12 +368,12 @@ function buildExternalPayload(): JsonRecord {
     throw new Error('externalUserId 不能为空')
   }
 
-  const optionalTextFields: Array<[string, string]> = [
+  const optionalFields: Array<[string, string]> = [
     ['idCard', externalForm.idCard],
     ['bah', externalForm.bah],
     ['sjh', externalForm.sjh],
   ]
-  optionalTextFields.forEach(([key, value]) => {
+  optionalFields.forEach(([key, value]) => {
     if (value.trim()) {
       payload[key] = value.trim()
     }
@@ -402,12 +397,16 @@ function buildExternalPayload(): JsonRecord {
   return payload
 }
 
+function resetSignatureResult() {
+  externalBodyHash.value = ''
+  externalCanonicalText.value = ''
+  externalSignature.value = ''
+}
+
 function syncExternalBody() {
   try {
     externalRawBody.value = JSON.stringify(buildExternalPayload())
-    externalBodyHash.value = ''
-    externalCanonicalText.value = ''
-    externalSignature.value = ''
+    resetSignatureResult()
     ElMessage.success('已根据表单生成实际发送的紧凑 JSON')
   }
   catch (error: unknown) {
@@ -418,9 +417,7 @@ function syncExternalBody() {
 function refreshSigningParameters() {
   externalForm.timestamp = String(Math.floor(Date.now() / 1000))
   externalForm.nonce = createRequestNonce()
-  externalBodyHash.value = ''
-  externalCanonicalText.value = ''
-  externalSignature.value = ''
+  resetSignatureResult()
 }
 
 async function generateExternalSignature() {
@@ -460,7 +457,7 @@ async function generateExternalSignature() {
 async function signOnly() {
   try {
     await generateExternalSignature()
-    ElMessage.success('签名已生成，可手动调整后再发送')
+    ElMessage.success('签名已生成，可切换为手工签名后修改')
   }
   catch (error: unknown) {
     ElMessage.error((error as Error).message || '签名生成失败')
@@ -474,7 +471,13 @@ async function sendExternalTicket() {
     if (!externalRawBody.value.trim()) {
       externalRawBody.value = JSON.stringify(buildExternalPayload())
     }
-    const signature = externalSignature.value.trim() || await generateExternalSignature()
+    const signature = externalForm.manualSignature
+      ? externalSignature.value.trim()
+      : await generateExternalSignature()
+    if (!signature) {
+      throw new Error('手工签名模式下 X-MRR-Signature 不能为空')
+    }
+
     const result = await executeAuthTestRequest({
       method: 'POST',
       path: externalForm.path,
@@ -511,6 +514,11 @@ function openExternalLaunchUrl() {
   window.open(externalLaunchUrl.value, '_blank', 'noopener,noreferrer')
 }
 
+function useCurrentToken() {
+  testedToken.value = userStore.token || ''
+  customRequest.token = userStore.token || ''
+}
+
 async function copyText(value: string, label: string) {
   if (!value) {
     ElMessage.warning(`${label}为空`)
@@ -524,13 +532,6 @@ async function copyText(value: string, label: string) {
     ElMessage.error('浏览器未允许写入剪贴板')
   }
 }
-
-function useCurrentToken() {
-  testedToken.value = userStore.token || ''
-  customRequest.token = userStore.token || ''
-}
-
-syncExternalBody()
 </script>
 
 <template>
@@ -542,11 +543,11 @@ syncExternalBody()
         </p>
         <h2>认证与外部访问测试台</h2>
         <p class="subtitle">
-          可视化测试内部 JWT 登录、受保护接口和外部影像票据签名。所有测试请求仅发送到当前 MRR 后端。
+          可视化测试内部 JWT 登录、受保护接口和外部影像票据签名。测试请求只允许发送到当前 MRR 后端。
         </p>
       </div>
       <el-tag type="warning" effect="plain">
-        仅管理员测试使用
+        仅 user:manage 权限可见
       </el-tag>
     </header>
 
@@ -559,7 +560,7 @@ syncExternalBody()
       <el-card shadow="never" class="metric-card">
         <span>当前权限</span>
         <strong>{{ currentPermissionCount }}</strong>
-        <small>实时从数据库加载的权限数量</small>
+        <small>每次请求按数据库当前权限校验</small>
       </el-card>
       <el-card shadow="never" class="metric-card">
         <span>测试 Token</span>
@@ -569,7 +570,7 @@ syncExternalBody()
       <el-card shadow="never" class="metric-card">
         <span>API Base URL</span>
         <strong class="base-url">{{ apiBaseUrl }}</strong>
-        <small>不允许测试台请求外部域名</small>
+        <small>禁止向外部域名发送测试请求</small>
       </el-card>
     </section>
 
@@ -577,7 +578,7 @@ syncExternalBody()
       type="warning"
       show-icon
       :closable="false"
-      title="外部系统 HMAC 密钥只保存在当前页面内存，不会写入 localStorage；请勿在录屏、截图或共享环境中输入生产密钥。"
+      title="HMAC 密钥仅保存在页面内存，不写入浏览器存储。请勿在录屏、截图或共享环境中输入生产密钥。"
     />
 
     <el-tabs v-model="activeTab" class="test-tabs">
@@ -636,7 +637,7 @@ syncExternalBody()
               <div class="card-header">
                 <div>
                   <strong>JWT 查看与验证</strong>
-                  <span>本地解析不代表签名验证通过</span>
+                  <span>本地解析不代表后端签名验证通过</span>
                 </div>
                 <el-button text :icon="Refresh" @click="useCurrentToken">
                   使用当前 Token
@@ -683,7 +684,7 @@ syncExternalBody()
       </el-tab-pane>
 
       <el-tab-pane name="request" label="受保护接口调试">
-        <div class="two-column-grid request-grid">
+        <div class="two-column-grid">
           <el-card shadow="never" class="test-card">
             <template #header>
               <div class="card-header">
@@ -705,7 +706,6 @@ syncExternalBody()
                   <el-input v-model="customRequest.path" placeholder="/api/v1/auth/me" />
                 </el-form-item>
               </div>
-
               <el-form-item>
                 <el-checkbox v-model="customRequest.useToken">
                   添加 Authorization: Bearer Token
@@ -718,12 +718,7 @@ syncExternalBody()
                 <el-input v-model="customRequest.headersText" type="textarea" :rows="4" />
               </el-form-item>
               <el-form-item label="请求体 JSON">
-                <el-input
-                  v-model="customRequest.bodyText"
-                  type="textarea"
-                  :rows="7"
-                  placeholder="GET 请求可以留空"
-                />
+                <el-input v-model="customRequest.bodyText" type="textarea" :rows="7" placeholder="GET 请求可以留空" />
               </el-form-item>
               <el-button type="primary" :icon="Connection" :loading="customLoading" @click="sendCustomRequest">
                 发送请求
@@ -731,7 +726,7 @@ syncExternalBody()
             </el-form>
           </el-card>
 
-          <el-card shadow="never" class="test-card result-card">
+          <el-card shadow="never" class="test-card">
             <template #header>
               <div class="card-header">
                 <div>
@@ -764,7 +759,7 @@ syncExternalBody()
               <div class="card-header">
                 <div>
                   <strong>票据业务参数</strong>
-                  <span>所有定位条件按并集解析；精确配对使用 archives</span>
+                  <span>所有条件按并集解析，精确配对使用 archives</span>
                 </div>
                 <el-switch v-model="externalForm.allowDownload" active-text="允许下载" inactive-text="只读" />
               </div>
@@ -810,8 +805,8 @@ syncExternalBody()
               <template #header>
                 <div class="card-header">
                   <div>
-                    <strong>签名参数</strong>
-                    <span>可手动修改时间戳、nonce 和签名测试异常情况</span>
+                    <strong>签名与请求参数</strong>
+                    <span>时间戳、nonce、原始 JSON 均可调整</span>
                   </div>
                   <el-button text :icon="Refresh" @click="refreshSigningParameters">
                     更新时间与 nonce
@@ -838,7 +833,14 @@ syncExternalBody()
                   </el-form-item>
                 </div>
                 <el-form-item label="实际发送的原始 JSON">
-                  <el-input v-model="externalRawBody" type="textarea" :rows="9" />
+                  <el-input v-model="externalRawBody" type="textarea" :rows="9" placeholder="先填写业务参数并点击“从表单生成实际 JSON”" />
+                </el-form-item>
+                <el-form-item>
+                  <el-switch
+                    v-model="externalForm.manualSignature"
+                    active-text="使用手工签名"
+                    inactive-text="发送前自动重新签名"
+                  />
                 </el-form-item>
                 <div class="button-row">
                   <el-button :loading="externalSigning" @click="signOnly">
@@ -856,7 +858,7 @@ syncExternalBody()
                 <div class="card-header">
                   <div>
                     <strong>签名计算结果</strong>
-                    <span>签名原文与实际请求体必须完全一致</span>
+                    <span>手工签名模式可用于测试错误签名和重放拦截</span>
                   </div>
                 </div>
               </template>
@@ -974,28 +976,52 @@ syncExternalBody()
   text-transform: uppercase;
 }
 
-.subtitle {
-  margin-top: 8px !important;
+.subtitle,
+.metric-card span,
+.metric-card small,
+.card-header span,
+.code-label,
+.response-summary span {
   color: var(--el-text-color-secondary);
 }
 
-.metric-grid {
+.subtitle {
+  margin-top: 8px !important;
+}
+
+.metric-grid,
+.two-column-grid,
+.form-grid,
+.jwt-grid {
   display: grid;
+  gap: 14px;
+}
+
+.metric-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+}
+
+.two-column-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.jwt-grid {
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  margin-top: 14px;
 }
 
 .metric-card :deep(.el-card__body) {
   display: grid;
   gap: 5px;
   min-height: 86px;
-}
-
-.metric-card span,
-.metric-card small,
-.card-header span,
-.code-label {
-  color: var(--el-text-color-secondary);
 }
 
 .metric-card strong {
@@ -1011,24 +1037,6 @@ syncExternalBody()
 
 .test-tabs :deep(.el-tabs__content) {
   overflow: visible;
-}
-
-.two-column-grid,
-.form-grid {
-  display: grid;
-  gap: 14px;
-}
-
-.two-column-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.form-grid.two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.form-grid.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .external-stack {
@@ -1050,9 +1058,10 @@ syncExternalBody()
   min-width: 0;
 }
 
-.button-row {
+.button-row,
+.response-summary {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .method-path-grid {
@@ -1062,20 +1071,7 @@ syncExternalBody()
 }
 
 .response-summary {
-  flex-wrap: wrap;
-  gap: 10px;
   padding: 14px 0 10px;
-}
-
-.response-summary span {
-  color: var(--el-text-color-secondary);
-}
-
-.jwt-grid {
-  display: grid;
-  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
-  gap: 10px;
-  margin-top: 14px;
 }
 
 .code-label {

@@ -34,8 +34,9 @@ public class ExternalArchiveIntegrationStatusController {
     public Result<ExternalArchiveIntegrationStatusResponse> status(HttpServletRequest request) {
         String requestIp = IpUtil.getClientIp(request);
         List<ExternalArchiveIntegrationStatusResponse.ClientStatus> clients = safeClients().stream()
+                .filter(client -> client != null)
                 .map(client -> new ExternalArchiveIntegrationStatusResponse.ClientStatus(
-                        client.getClientId(),
+                        StringUtils.hasText(client.getClientId()) ? client.getClientId().trim() : "",
                         client.isEnabled(),
                         StringUtils.hasText(client.getSecret()),
                         safeAllowedIps(client),

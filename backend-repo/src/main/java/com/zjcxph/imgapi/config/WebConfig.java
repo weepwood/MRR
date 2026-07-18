@@ -15,6 +15,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
 import java.io.IOException;
+import java.util.List;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -24,17 +25,20 @@ public class WebConfig implements WebMvcConfigurer {
     private final DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor;
     private final LogInterceptor logInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final CorsProperties corsProperties;
 
     public WebConfig(LoginInterceptor loginInterceptor,
                      AuthorizationInterceptor authorizationInterceptor,
                      DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor,
                      LogInterceptor logInterceptor,
-                     RateLimitInterceptor rateLimitInterceptor) {
+                     RateLimitInterceptor rateLimitInterceptor,
+                     CorsProperties corsProperties) {
         this.loginInterceptor = loginInterceptor;
         this.authorizationInterceptor = authorizationInterceptor;
         this.documentationSessionCleanupInterceptor = documentationSessionCleanupInterceptor;
         this.logInterceptor = logInterceptor;
         this.rateLimitInterceptor = rateLimitInterceptor;
+        this.corsProperties = corsProperties;
     }
 
     @Override
@@ -59,11 +63,21 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOriginPatterns("*")
+        List<String> allowedOrigins = corsProperties.getAllowedOrigins() == null
+                ? List.of()
+                : corsProperties.getAllowedOrigins().stream()
+                .filter(origin -> origin != null && !origin.isBlank() && !"*".equals(origin.trim()))
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (allowedOrigins.isEmpty()) {
+            return;
+        }
+        registry.addMapping("/api/**")
+                .allowedOrigins(allowedOrigins.toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
-                .exposedHeaders("X-Request-Id", "X-Endpoint-Template", "Server-Timing")
+                .exposedHeaders("X-Request-Id", "X-Endpoint-Template", "Server-Timing", "Content-Disposition")
                 .allowCredentials(true)
                 .maxAge(3600);
     }

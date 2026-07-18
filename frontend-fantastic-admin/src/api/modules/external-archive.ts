@@ -1,3 +1,4 @@
+import type { AxiosResponse } from 'axios'
 import type { ApiResult, BAHImageData } from '../types'
 import axios from 'axios'
 
@@ -25,6 +26,9 @@ const externalApi = axios.create({
 })
 
 externalApi.interceptors.response.use((response) => {
+  if (response.config.responseType === 'blob') {
+    return response
+  }
   const payload = response.data
   if (payload?.code === 200) {
     return payload
@@ -55,5 +59,15 @@ export function getExternalArchiveImages(bah: string, sjh?: string, forceRefresh
           'Pragma': 'no-cache',
         }
       : undefined,
+  })
+}
+
+export function downloadExternalArchive(bah: string, sjh?: string) {
+  return externalApi.get<Blob, AxiosResponse<Blob>>('/api/v1/external/archive/download', {
+    params: {
+      bah,
+      sjh: sjh || undefined,
+    },
+    responseType: 'blob',
   })
 }

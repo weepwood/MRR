@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import com.zjcxph.imgapi.utils.PermissionResolver;
@@ -25,20 +26,28 @@ import java.util.Map;
 /**
  * 登录拦截器。
  *
- * <p>除显式公开接口外，所有请求都必须携带有效的 Bearer access token。</p>
+ * <p>默认要求有效 Bearer access token。系统设置启用开发者模式后，缺少或无效 Token
+ * 的请求会恢复 dev-no-login 分支行为，注入虚拟管理员会话；有效 JWT 始终优先使用真实用户。</p>
  */
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
+
+    public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
+    public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
+    private final DeveloperModeService developerModeService;
 
-    public LoginInterceptor(TokenBlacklist tokenBlacklist, AuthUserMapper authUserMapper) {
+    public LoginInterceptor(TokenBlacklist tokenBlacklist,
+                            AuthUserMapper authUserMapper,
+                            DeveloperModeService developerModeService) {
         this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
+        this.developerModeService = developerModeService;
     }
 
     private String extractToken(String authorization) {
@@ -56,54 +65,87 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         String token = extractToken(request.getHeader("Authorization"));
         if (token == null || token.isBlank()) {
-            writeUnauthorized(response, "请先登录");
-            return false;
+            return allowDeveloperModeOrReject(request, response, "请先登录", "missing_token");
         }
 
         try {
             String tokenType = JwtUtil.getTokenType(token);
             if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
-                writeUnauthorized(response, "Token 类型无效");
-                return false;
+                return allowDeveloperModeOrReject(request, response, "Token 类型无效", "invalid_token_type");
             }
 
             String jti = JwtUtil.getJti(token);
             if (tokenBlacklist.isRevoked(jti)) {
-                writeUnauthorized(response, "Token 已失效，请重新登录");
-                return false;
+                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
             }
 
             AuthSession tokenSession = JwtUtil.parseToken(token);
             if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
-                writeUnauthorized(response, "Token 用户信息无效");
-                return false;
+                return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
             }
 
             AuthUser currentUser = authUserMapper.findById(tokenSession.getId());
             if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
                     || !currentUser.getUsername().equals(tokenSession.getUsername())) {
-                writeUnauthorized(response, "账号不存在或 Token 已失效");
-                return false;
+                return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
             }
             if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
-                writeUnauthorized(response, "账号已被禁用");
-                return false;
+                return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
             }
 
             AuthSession session = toCurrentSession(currentUser);
-            AuthContext.setCurrentUser(session);
-            request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+            installSession(request, session);
             return true;
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
-            writeUnauthorized(response, "Token 无效或已过期");
-            return false;
+            return allowDeveloperModeOrReject(request, response, "Token 无效或已过期", "invalid_or_expired_token");
         }
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         AuthContext.clear();
+    }
+
+    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
+                                               HttpServletResponse response,
+                                               String unauthorizedMessage,
+                                               String reason) throws Exception {
+        if (!developerModeService.isEnabled()) {
+            writeUnauthorized(response, unauthorizedMessage);
+            return false;
+        }
+
+        AuthSession developerSession = createDeveloperSession();
+        installSession(request, developerSession);
+        request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
+        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, reason);
+        response.setHeader("X-MRR-Developer-Mode", "enabled");
+        logger.warn(
+                "Developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                request.getRemoteAddr(),
+                reason
+        );
+        return true;
+    }
+
+    private void installSession(HttpServletRequest request, AuthSession session) {
+        AuthContext.setCurrentUser(session);
+        request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+    }
+
+    private AuthSession createDeveloperSession() {
+        AuthSession session = new AuthSession();
+        session.setId(1L);
+        session.setUsername("dev");
+        session.setDisplayName("Developer Mode");
+        session.setRoleCode("ADMIN");
+        session.setRoleName("Administrator");
+        session.setStatus("active");
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
+        return session;
     }
 
     private AuthSession toCurrentSession(AuthUser user) {

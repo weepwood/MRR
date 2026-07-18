@@ -1,5 +1,6 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
+import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 
@@ -84,12 +85,13 @@ function setupRoutes(router: Router) {
         }
       }
     }
-    else if (isDemoMode) {
+    else if (isDemoMode || await isRuntimeDeveloperModeEnabled()) {
+      const runtimeDeveloperMode = !isDemoMode
       userStore.setSession({
-        token: 'dev-token',
+        token: runtimeDeveloperMode ? 'developer-mode-runtime-token' : 'dev-token',
         user: {
           username: 'dev',
-          displayName: 'Dev User',
+          displayName: runtimeDeveloperMode ? 'Developer Mode' : 'Dev User',
           roleCode: 'ADMIN',
           roleName: 'Administrator',
           status: 'active',

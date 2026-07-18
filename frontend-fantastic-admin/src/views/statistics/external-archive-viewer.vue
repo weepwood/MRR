@@ -6,9 +6,8 @@ import { ArrowLeft, ArrowRight, Download, Printer } from '@element-plus/icons-vu
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getExternalArchiveImages } from '@/api/modules/external-archive'
+import { downloadExternalArchive, getExternalArchiveImages } from '@/api/modules/external-archive'
 import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
-import { createArchiveZip } from './archive/utils/client-zip'
 
 const props = defineProps<{
   session: ExternalArchiveSession
@@ -98,14 +97,14 @@ async function downloadArchive() {
     ElMessage.warning('外部系统未授予批量下载权限')
     return
   }
-  if (!images.value.length || !activeCase.value) {
-    ElMessage.warning('当前没有可下载的影像')
+  if (!activeCase.value) {
+    ElMessage.warning('当前没有可下载的病案')
     return
   }
   downloading.value = true
   try {
-    const blob = await createArchiveZip(images.value)
-    const url = URL.createObjectURL(blob)
+    const response = await downloadExternalArchive(activeCase.value.bah, activeCase.value.sjh)
+    const url = URL.createObjectURL(response.data)
     const link = document.createElement('a')
     link.href = url
     link.download = `${activeCase.value.bah}${activeCase.value.sjh ? `-${activeCase.value.sjh}` : ''}.zip`

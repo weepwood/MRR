@@ -1,16 +1,23 @@
 package com.zjcxph.imgapi.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.config.IntegrationProperties;
 import com.zjcxph.imgapi.dto.req.ExternalArchiveTicketRequest;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO;
 import com.zjcxph.imgapi.dto.resp.IdCardArchiveSearchResponse;
+import com.zjcxph.imgapi.entity.ExternalArchiveStoredGrant;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.mapper.ExternalArchiveAccessMapper;
 import com.zjcxph.imgapi.security.ExternalArchiveGrant;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.Mac;
@@ -19,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
@@ -26,7 +35,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ExternalArchiveAccessService {
@@ -34,24 +42,30 @@ public class ExternalArchiveAccessService {
     public static final String SESSION_COOKIE_NAME = "MRR_ARCHIVE_SESSION";
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final TypeReference<List<ExternalArchiveCaseDTO>> CASE_LIST_TYPE = new TypeReference<>() { };
+    private static final Logger logger = LoggerFactory.getLogger(ExternalArchiveAccessService.class);
 
     private final IntegrationProperties properties;
     private final SearchService searchService;
     private final ScanService scanService;
-    private final ConcurrentHashMap<String, TimedGrant> tickets = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, TimedGrant> sessions = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Long> usedNonces = new ConcurrentHashMap<>();
+    private final ExternalArchiveAccessMapper accessMapper;
+    private final ObjectMapper objectMapper;
 
     public ExternalArchiveAccessService(
             IntegrationProperties properties,
             SearchService searchService,
-            ScanService scanService
+            ScanService scanService,
+            ExternalArchiveAccessMapper accessMapper,
+            ObjectMapper objectMapper
     ) {
         this.properties = properties;
         this.searchService = searchService;
         this.scanService = scanService;
+        this.accessMapper = accessMapper;
+        this.objectMapper = objectMapper;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public IssuedTicket createTicket(
             String clientId,
             String timestamp,
@@ -63,43 +77,68 @@ public class ExternalArchiveAccessService {
             String clientIp,
             ExternalArchiveTicketRequest request
     ) {
+        if (request == null) {
+            throw new BusinessException(400, "请求体不能为空");
+        }
         IntegrationProperties.Client client = authenticateClient(
                 clientId, timestamp, nonce, signature, method, path, rawBody, clientIp
         );
         validateExternalUser(request.getExternalUserId());
 
         List<ExternalArchiveCaseDTO> cases = resolveCases(request);
-        long expiresAt = System.currentTimeMillis() + properties.getTicketTtlSeconds() * 1000L;
+        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getTicketTtlSeconds());
+        long expiresAtMillis = toEpochMillis(expiresAt);
         ExternalArchiveGrant grant = new ExternalArchiveGrant(
                 client.getClientId(),
                 request.getExternalUserId().trim(),
                 request.isAllowDownload(),
-                expiresAt,
+                expiresAtMillis,
                 List.copyOf(cases)
         );
+
         String ticket = randomToken();
-        tickets.put(ticket, new TimedGrant(grant, expiresAt));
-        cleanupExpired();
+        accessMapper.insertTicket(
+                sha256Hex(ticket),
+                grant.clientId(),
+                grant.externalUserId(),
+                grant.allowDownload(),
+                serializeCases(grant.cases()),
+                expiresAt,
+                clientIp
+        );
         return new IssuedTicket(ticket, grant, properties.getTicketTtlSeconds());
     }
 
-    public IssuedSession consumeTicket(String ticket) {
+    @Transactional(rollbackFor = Exception.class)
+    public IssuedSession consumeTicket(String ticket, String clientIp) {
         if (!StringUtils.hasText(ticket)) {
             throw new BusinessException(400, "ticket 不能为空");
         }
-        TimedGrant stored = tickets.remove(ticket.trim());
-        if (stored == null || stored.expiresAt() < System.currentTimeMillis()) {
+        ExternalArchiveStoredGrant stored = accessMapper.consumeTicket(sha256Hex(ticket.trim()));
+        if (stored == null) {
             throw new BusinessException(401, "访问票据无效、已使用或已过期");
         }
 
-        long expiresAt = System.currentTimeMillis() + properties.getSessionTtlSeconds() * 1000L;
-        ExternalArchiveGrant source = stored.grant();
+        List<ExternalArchiveCaseDTO> cases = deserializeCases(stored.getGrantJson());
+        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getSessionTtlSeconds());
         ExternalArchiveGrant sessionGrant = new ExternalArchiveGrant(
-                source.clientId(), source.externalUserId(), source.allowDownload(), expiresAt, source.cases()
+                stored.getClientId(),
+                stored.getExternalUserId(),
+                Boolean.TRUE.equals(stored.getAllowDownload()),
+                toEpochMillis(expiresAt),
+                List.copyOf(cases)
         );
+
         String sessionToken = randomToken();
-        sessions.put(sessionToken, new TimedGrant(sessionGrant, expiresAt));
-        cleanupExpired();
+        accessMapper.insertSession(
+                sha256Hex(sessionToken),
+                sessionGrant.clientId(),
+                sessionGrant.externalUserId(),
+                sessionGrant.allowDownload(),
+                serializeCases(sessionGrant.cases()),
+                expiresAt,
+                clientIp
+        );
         return new IssuedSession(sessionToken, sessionGrant, properties.getSessionTtlSeconds());
     }
 
@@ -107,12 +146,19 @@ public class ExternalArchiveAccessService {
         if (!StringUtils.hasText(sessionToken)) {
             throw new BusinessException(401, "外部影像会话不存在");
         }
-        TimedGrant stored = sessions.get(sessionToken.trim());
-        if (stored == null || stored.expiresAt() < System.currentTimeMillis()) {
-            sessions.remove(sessionToken.trim());
-            throw new BusinessException(401, "外部影像会话已过期");
+        String sessionHash = sha256Hex(sessionToken.trim());
+        ExternalArchiveStoredGrant stored = accessMapper.findSession(sessionHash);
+        if (stored == null) {
+            throw new BusinessException(401, "外部影像会话已过期或已退出");
         }
-        return stored.grant();
+        accessMapper.touchSession(sessionHash);
+        return toGrant(stored);
+    }
+
+    public void revokeSession(String sessionToken) {
+        if (StringUtils.hasText(sessionToken)) {
+            accessMapper.revokeSession(sha256Hex(sessionToken.trim()));
+        }
     }
 
     public List<BAHDataResponseDTO> loadImages(ExternalArchiveGrant grant, String bah, String sjh) {
@@ -156,6 +202,40 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(403, "当前外部会话无权访问该影像");
         }
         return scan;
+    }
+
+    public void recordAudit(
+            ExternalArchiveGrant grant,
+            String bah,
+            String sjh,
+            String action,
+            Integer imageId,
+            String clientIp,
+            String userAgent,
+            String requestId,
+            String result,
+            String detail
+    ) {
+        if (grant == null) {
+            return;
+        }
+        try {
+            accessMapper.insertAccessLog(
+                    grant.clientId(),
+                    grant.externalUserId(),
+                    blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
+                    blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(sjh)),
+                    truncate(action, 64),
+                    imageId,
+                    truncate(clientIp, 64),
+                    truncate(userAgent, 2000),
+                    truncate(result, 20),
+                    truncate(requestId, 128),
+                    truncate(detail, 500)
+            );
+        } catch (RuntimeException exception) {
+            logger.error("Failed to persist external archive audit log: {}", exception.getMessage(), exception);
+        }
     }
 
     private IntegrationProperties.Client authenticateClient(
@@ -202,13 +282,6 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(401, "签名时间戳已过期");
         }
 
-        String nonceKey = client.getClientId() + ":" + nonce.trim();
-        long nonceExpiresAt = System.currentTimeMillis() + properties.getTimestampToleranceSeconds() * 2000L;
-        Long existing = usedNonces.putIfAbsent(nonceKey, nonceExpiresAt);
-        if (existing != null && existing > System.currentTimeMillis()) {
-            throw new BusinessException(409, "签名 nonce 已使用");
-        }
-
         String bodyHash = sha256Hex(rawBody == null ? "" : rawBody);
         String canonical = method.toUpperCase(Locale.ROOT) + "\n"
                 + path + "\n"
@@ -218,8 +291,17 @@ public class ExternalArchiveAccessService {
         String expectedHex = hmacSha256Hex(client.getSecret(), canonical);
         String supplied = signature.trim().replaceFirst("(?i)^sha256=", "").toLowerCase(Locale.ROOT);
         if (!constantTimeEquals(expectedHex, supplied)) {
-            usedNonces.remove(nonceKey);
             throw new BusinessException(401, "外部系统签名无效");
+        }
+
+        accessMapper.deleteExpiredNonces();
+        int inserted = accessMapper.insertNonce(
+                client.getClientId(),
+                sha256Hex(nonce.trim()),
+                LocalDateTime.now().plusSeconds(properties.getTimestampToleranceSeconds() * 2L)
+        );
+        if (inserted == 0) {
+            throw new BusinessException(409, "签名 nonce 已使用");
         }
         return client;
     }
@@ -228,8 +310,11 @@ public class ExternalArchiveAccessService {
         LinkedHashMap<String, ExternalArchiveCaseDTO> resolved = new LinkedHashMap<>();
 
         if (StringUtils.hasText(request.getIdCard())) {
-            List<IdCardArchiveSearchResponse.ArchiveCase> idCases =
-                    searchService.getArchiveCasesByID(request.getIdCard().trim());
+            String idCard = request.getIdCard().trim();
+            if (!idCard.matches("\\d{15}|\\d{17}[0-9Xx]")) {
+                throw new BusinessException(400, "身份证号格式不正确");
+            }
+            List<IdCardArchiveSearchResponse.ArchiveCase> idCases = searchService.getArchiveCasesByID(idCard);
             for (IdCardArchiveSearchResponse.ArchiveCase archiveCase : idCases) {
                 addCase(resolved, new ExternalArchiveCaseDTO(
                         archiveCase.getBah(),
@@ -262,6 +347,8 @@ public class ExternalArchiveAccessService {
     }
 
     private void resolveSelector(Map<String, ExternalArchiveCaseDTO> resolved, String rawBah, String rawSjh) {
+        validateCodeIfPresent(rawBah, "病案号");
+        validateCodeIfPresent(rawSjh, "上架号");
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(rawBah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(rawSjh);
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
@@ -281,9 +368,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(404, "未找到病案：bah=" + normalizedBah + ", sjh=" + normalizedSjh);
         }
         for (Scan scan : scans) {
-            addCase(resolved, new ExternalArchiveCaseDTO(
-                    scan.getBah(), scan.getSjh(), null, null, null
-            ));
+            addCase(resolved, new ExternalArchiveCaseDTO(scan.getBah(), scan.getSjh(), null, null, null));
             if (resolved.size() > properties.getMaxArchivesPerTicket()) {
                 throw new BusinessException(400, "单次票据最多允许访问 " + properties.getMaxArchivesPerTicket() + " 份病案");
             }
@@ -301,6 +386,32 @@ public class ExternalArchiveAccessService {
         resolved.putIfAbsent(ExternalArchiveGrant.keyOf(bah, sjh), item);
     }
 
+    private ExternalArchiveGrant toGrant(ExternalArchiveStoredGrant stored) {
+        return new ExternalArchiveGrant(
+                stored.getClientId(),
+                stored.getExternalUserId(),
+                Boolean.TRUE.equals(stored.getAllowDownload()),
+                toEpochMillis(stored.getExpiresAt()),
+                List.copyOf(deserializeCases(stored.getGrantJson()))
+        );
+    }
+
+    private String serializeCases(List<ExternalArchiveCaseDTO> cases) {
+        try {
+            return objectMapper.writeValueAsString(cases);
+        } catch (Exception exception) {
+            throw new IllegalStateException("无法序列化外部影像授权范围", exception);
+        }
+    }
+
+    private List<ExternalArchiveCaseDTO> deserializeCases(String grantJson) {
+        try {
+            return objectMapper.readValue(grantJson, CASE_LIST_TYPE);
+        } catch (Exception exception) {
+            throw new IllegalStateException("无法读取外部影像授权范围", exception);
+        }
+    }
+
     private void validateExternalUser(String externalUserId) {
         if (!StringUtils.hasText(externalUserId)) {
             throw new BusinessException(400, "externalUserId 不能为空");
@@ -308,6 +419,12 @@ public class ExternalArchiveAccessService {
         String value = externalUserId.trim();
         if (value.length() > 128 || value.chars().anyMatch(Character::isISOControl)) {
             throw new BusinessException(400, "externalUserId 格式无效");
+        }
+    }
+
+    private void validateCodeIfPresent(String code, String label) {
+        if (StringUtils.hasText(code) && !MedicalRecordCodeUtils.isSupportedNumericCode(code)) {
+            throw new BusinessException(400, label + "必须是 1-8 位数字");
         }
     }
 
@@ -320,13 +437,6 @@ public class ExternalArchiveAccessService {
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .anyMatch(value -> "*".equals(value) || value.equals(clientIp));
-    }
-
-    private void cleanupExpired() {
-        long now = System.currentTimeMillis();
-        tickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < now);
-        sessions.entrySet().removeIf(entry -> entry.getValue().expiresAt() < now);
-        usedNonces.entrySet().removeIf(entry -> entry.getValue() < now);
     }
 
     private String randomToken() {
@@ -361,11 +471,23 @@ public class ExternalArchiveAccessService {
         );
     }
 
-    private <T> List<T> safeList(List<T> value) {
-        return value == null ? List.of() : value;
+    private long toEpochMillis(LocalDateTime value) {
+        return value.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    private record TimedGrant(ExternalArchiveGrant grant, long expiresAt) {
+    private String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value : null;
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private <T> List<T> safeList(List<T> value) {
+        return value == null ? List.of() : value;
     }
 
     public record IssuedTicket(String token, ExternalArchiveGrant grant, int expiresIn) {

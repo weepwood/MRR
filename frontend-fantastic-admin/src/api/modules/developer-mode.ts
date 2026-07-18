@@ -78,3 +78,9 @@ export function clearDeveloperModeProbeCache(): void {
   cacheExpiresAt = 0
   pendingProbe = null
 }
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('mrr:system-settings-updated', () => {
+    clearDeveloperModeProbeCache()
+  })
+}

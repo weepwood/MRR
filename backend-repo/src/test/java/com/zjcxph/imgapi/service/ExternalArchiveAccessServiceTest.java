@@ -1,10 +1,13 @@
 package com.zjcxph.imgapi.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.config.IntegrationProperties;
 import com.zjcxph.imgapi.dto.req.ExternalArchiveTicketRequest;
 import com.zjcxph.imgapi.dto.resp.IdCardArchiveSearchResponse;
+import com.zjcxph.imgapi.entity.ExternalArchiveStoredGrant;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.mapper.ExternalArchiveAccessMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,12 +19,15 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +44,10 @@ class ExternalArchiveAccessServiceTest {
     @Mock
     private ScanService scanService;
 
+    @Mock
+    private ExternalArchiveAccessMapper accessMapper;
+
+    private ObjectMapper objectMapper;
     private ExternalArchiveAccessService service;
 
     @BeforeEach
@@ -56,7 +66,19 @@ class ExternalArchiveAccessServiceTest {
         client.setAllowedIps(List.of("127.0.0.1"));
         properties.setClients(List.of(client));
 
-        service = new ExternalArchiveAccessService(properties, searchService, scanService);
+        objectMapper = new ObjectMapper();
+        service = new ExternalArchiveAccessService(
+                properties, searchService, scanService, accessMapper, objectMapper
+        );
+        when(accessMapper.insertNonce(anyString(), anyString(), any(LocalDateTime.class))).thenReturn(1);
+        when(accessMapper.insertTicket(
+                anyString(), anyString(), anyString(), anyBoolean(), anyString(),
+                any(LocalDateTime.class), anyString()
+        )).thenReturn(1);
+        when(accessMapper.insertSession(
+                anyString(), anyString(), anyString(), anyBoolean(), anyString(),
+                any(LocalDateTime.class), anyString()
+        )).thenReturn(1);
     }
 
     @Test
@@ -109,9 +131,16 @@ class ExternalArchiveAccessServiceTest {
         assertThat(ticket.grant().allows("3", "3")).isTrue();
         assertThat(ticket.grant().allows("10000001", "20000001")).isTrue();
 
-        ExternalArchiveAccessService.IssuedSession session = service.consumeTicket(ticket.token());
+        ExternalArchiveStoredGrant storedTicket = storedGrant(ticket.grant().cases());
+        when(accessMapper.consumeTicket(anyString())).thenReturn(storedTicket, null);
+
+        ExternalArchiveAccessService.IssuedSession session = service.consumeTicket(ticket.token(), "127.0.0.1");
+        ExternalArchiveStoredGrant storedSession = storedGrant(session.grant().cases());
+        storedSession.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        when(accessMapper.findSession(anyString())).thenReturn(storedSession);
+
         assertThat(service.requireSession(session.token()).externalUserId()).isEqualTo("HIS-USER-10086");
-        assertThatThrownBy(() -> service.consumeTicket(ticket.token()))
+        assertThatThrownBy(() -> service.consumeTicket(ticket.token(), "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("无效");
     }
@@ -145,6 +174,8 @@ class ExternalArchiveAccessServiceTest {
     void rejectsReplayedNonce() throws Exception {
         when(scanService.getImageListByCode(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(List.of(scan(1, "1", "10")));
+        when(accessMapper.insertNonce(anyString(), anyString(), any(LocalDateTime.class)))
+                .thenReturn(1, 0);
         ExternalArchiveTicketRequest request = new ExternalArchiveTicketRequest();
         request.setExternalUserId("HIS-USER-1");
         request.setBah("1");
@@ -160,6 +191,16 @@ class ExternalArchiveAccessServiceTest {
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("nonce 已使用");
+    }
+
+    private ExternalArchiveStoredGrant storedGrant(List<?> cases) throws Exception {
+        ExternalArchiveStoredGrant stored = new ExternalArchiveStoredGrant();
+        stored.setClientId(CLIENT_ID);
+        stored.setExternalUserId("HIS-USER-10086");
+        stored.setAllowDownload(false);
+        stored.setGrantJson(objectMapper.writeValueAsString(cases));
+        stored.setExpiresAt(LocalDateTime.now().plusMinutes(2));
+        return stored;
     }
 
     private Scan scan(int id, String bah, String sjh) {

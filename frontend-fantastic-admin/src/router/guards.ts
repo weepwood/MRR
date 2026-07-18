@@ -7,7 +7,7 @@ const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
-    if (to.name === 'publicStatus') {
+    if (to.name === 'publicStatus' || to.name === 'externalArchive') {
       return true
     }
 

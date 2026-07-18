@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.unit.utils;
 
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.utils.JwtUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("JwtUtil JWT 工具测试")
 class JwtUtilTest {
+
+    @BeforeAll
+    static void configureSecret() {
+        JwtUtil.configure("unit-test-jwt-secret-key-with-at-least-32-characters");
+    }
 
     @Test
     @DisplayName("getToken — 根据用户名生成非空Token")

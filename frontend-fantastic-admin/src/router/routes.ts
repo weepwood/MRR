@@ -58,6 +58,18 @@ const monitoringFilesystemRoute: RouteRecordRaw = {
   },
 }
 
+const authenticationTestRoute: RouteRecordRaw = {
+  path: '/auth-test',
+  name: 'authenticationApiTest',
+  component: () => import('@/views/auth-test/index.vue'),
+  meta: {
+    title: '认证接口测试',
+    icon: 'i-ant-design:api-twotone',
+    auth: ['user:manage'],
+    cache: false,
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -307,6 +319,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
+      authenticationTestRoute,
     ],
   },
   {
@@ -344,6 +357,7 @@ const constantRoutesByFilesystem = [publicStatusRoute, externalArchiveRoute, arc
 const generatedAsyncRoutes = generatedRoutes.filter(
   item => ![
     '/status',
+    '/auth-test',
     ...externalArchiveGeneratedPaths,
     '/statistics/archive',
     '/monitoring',
@@ -357,6 +371,7 @@ const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),
   archiveEmbeddedRoute,
   monitoringFilesystemRoute,
+  authenticationTestRoute,
 ]
 
 export {

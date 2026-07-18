@@ -9,15 +9,19 @@ import com.zjcxph.imgapi.dto.resp.ExternalArchiveTicketResponse;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.security.ExternalArchiveGrant;
+import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ExternalArchiveAccessService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.utils.IpUtil;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -28,9 +32,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -43,15 +49,18 @@ public class ExternalArchiveController {
 
     private final ObjectMapper objectMapper;
     private final ExternalArchiveAccessService externalArchiveAccessService;
+    private final ArchiveExportService archiveExportService;
     private final ImageUrlService imageUrlService;
 
     public ExternalArchiveController(
             ObjectMapper objectMapper,
             ExternalArchiveAccessService externalArchiveAccessService,
+            ArchiveExportService archiveExportService,
             ImageUrlService imageUrlService
     ) {
         this.objectMapper = objectMapper;
         this.externalArchiveAccessService = externalArchiveAccessService;
+        this.archiveExportService = archiveExportService;
         this.imageUrlService = imageUrlService;
     }
 
@@ -168,6 +177,49 @@ public class ExternalArchiveController {
                 "SUCCESS", "images=" + images.size()
         );
         return Result.success(images);
+    }
+
+    @GetMapping("/api/v1/external/archive/download")
+    public ResponseEntity<StreamingResponseBody> download(
+            @RequestParam String bah,
+            @RequestParam(required = false) String sjh,
+            HttpServletRequest request
+    ) {
+        ExternalArchiveGrant grant = requireGrant(request);
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        if (!grant.allowDownload()) {
+            throw new BusinessException(403, "当前外部会话未授予批量下载权限");
+        }
+        if (!grant.allows(normalizedBah, normalizedSjh)) {
+            throw new BusinessException(403, "当前外部会话无权下载该病案");
+        }
+
+        ArchiveExportService.BatchZipExport export =
+                archiveExportService.prepareArchive(normalizedBah, normalizedSjh);
+        if (export.itemCount() == 0) {
+            throw new BusinessException(404, "未找到匹配档案的图片");
+        }
+
+        StreamingResponseBody body = outputStream ->
+                archiveExportService.writeBatchZip(export, outputStream);
+        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
+        String fileName = archiveCode + ".zip";
+        String contentDisposition = ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+                .toString();
+
+        externalArchiveAccessService.recordAudit(
+                grant, normalizedBah, normalizedSjh, "ARCHIVE_DOWNLOAD", null,
+                IpUtil.getClientIp(request), request.getHeader("User-Agent"), requestId(request),
+                "SUCCESS", "images=" + export.itemCount()
+        );
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(body);
     }
 
     @GetMapping("/api/v1/external/archive/image/{id}")

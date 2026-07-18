@@ -19,7 +19,15 @@ mrr.integration.clients[0].enabled=true
 mrr.integration.clients[0].allowed-ips[0]=10.10.20.15
 ```
 
-`JWT_SECRET_KEY` 和外部系统 HMAC 密钥必须使用两个不同的随机值。
+`JWT_SECRET_KEY` 和外部系统 HMAC 密钥必须使用两个不同的随机值，并且长度不少于 32 个字符。
+
+默认不开放浏览器跨域。只有确实存在跨域前端时才配置精确 Origin：
+
+```properties
+mrr.cors.allowed-origins[0]=https://his.example.internal
+```
+
+服务器到服务器的票据请求不受浏览器 CORS 限制。
 
 ## 2. 支持的访问条件
 
@@ -49,9 +57,9 @@ mrr.integration.clients[0].allowed-ips[0]=10.10.20.15
 - `bahs`：多个病案号；
 - `sjhs`：多个上架号；
 - `archives`：多个精确的病案号、上架号组合；
-- `allowDownload`：是否在外部页面显示批量下载功能，默认 `false`。
+- `allowDownload`：是否允许服务器批量导出 ZIP，默认 `false`。
 
-病案号大于等于 `10000000` 时不保证唯一，必须通过 `archives` 同时提供上架号。
+病案号大于等于 `10000000` 时不保证唯一，必须通过 `archives` 同时提供上架号。`bahs` 与 `sjhs` 是独立的并集条件，不按数组下标自动配对；需要成对指定时使用 `archives`。
 
 ## 3. 申请一次性票据
 
@@ -80,7 +88,7 @@ POST
 HMAC-SHA256(clientSecret, canonicalText)
 ```
 
-注意：签名必须针对实际发送的原始 JSON 字节计算。不要在签名后再次格式化 JSON。
+签名必须针对实际发送的原始 JSON 字节计算。不要在签名后再次格式化 JSON。
 
 成功响应：
 
@@ -139,9 +147,22 @@ const signature = crypto.createHmac('sha256', secret).update(canonical, 'utf8').
 - 外部页面只能访问票据解析出的精确病案集合；
 - 修改影像分类、用户管理、统计、设置和日志等后台接口不会向外部会话开放；
 - 身份证号不会进入浏览器跳转 URL；
-- 单次票据默认最多授权 100 份病案。
+- 单次票据默认最多授权 100 份病案；
+- 批量下载在前端与后端同时校验 `allowDownload`；
+- 图片响应与 ZIP 导出使用私有缓存策略。
 
-## 7. 反向代理
+## 7. 数据库存储与审计
+
+Flyway 会创建以下表：
+
+- `mr_external_archive_nonce`：持久化 nonce 防重放记录；
+- `mr_external_archive_ticket`：一次性票据状态；
+- `mr_external_archive_session`：短期外部会话；
+- `mr_external_archive_access_log`：票据、会话、病案、图片和下载审计。
+
+数据库只保存票据和会话令牌的 SHA-256 摘要，不保存可直接使用的令牌明文。过期 nonce 会及时删除，过期票据和会话保留 7 天后清理；访问审计日志不会随临时凭证一起删除。
+
+## 8. 反向代理
 
 为了让返回的 `launchUrl` 使用正确的 HTTPS 域名，Nginx 需要传递：
 

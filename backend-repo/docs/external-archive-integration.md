@@ -173,3 +173,20 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
 
 生产环境必须使用 HTTPS，否则外部会话 Cookie 无法获得完整的传输保护。
+
+## 9. 本地联调模拟器
+
+仓库提供 `scripts/simulate-external-archive.py`，使用 Python 标准库模拟外部系统的完整访问链路：申请票据、兑换会话、读取授权上下文、读取影像列表、校验单张影像重定向、可选下载 ZIP，最后退出会话。
+
+```powershell
+python scripts/simulate-external-archive.py `
+  --base-url http://localhost:18045 `
+  --client-id his-system `
+  --secret "替换为外部客户端密钥" `
+  --external-user-id HIS-USER-10086 `
+  --archive 789508:123456 `
+  --allow-download `
+  --download .\tmp\789508-123456.zip
+```
+
+也可以使用 `--bah`、`--sjh`、`--id-card` 作为访问条件；同一个参数可重复传入。模拟器会复用会话 Cookie，并在任一步返回非成功响应时以非零退出码结束。`--download` 只应在同时指定 `--allow-download` 时使用。

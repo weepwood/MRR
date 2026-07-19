@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -7,7 +8,6 @@ import LoginSupportSettings from './LoginSupportSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
-import './unified-settings.css'
 
 defineOptions({ name: 'UnifiedSettingsPage' })
 
@@ -164,3 +164,5 @@ const {
     </div>
   </div>
 </template>
+
+<style scoped src="./unified-settings.css"></style>

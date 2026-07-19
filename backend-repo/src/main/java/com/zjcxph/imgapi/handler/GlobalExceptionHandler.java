@@ -29,9 +29,6 @@ public class GlobalExceptionHandler {
 
     /**
      * 参数、凭据等可预期的客户端输入错误统一返回 400，并保留可直接展示的业务消息。
-     *
-     * <p>认证服务历史上会使用 {@link IllegalArgumentException} 表示用户名或密码错误。
-     * 如果没有单独处理，该异常会落入通用 500 处理器，导致前端错误显示为服务器内部错误。</p>
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Result<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
@@ -43,16 +40,6 @@ public class GlobalExceptionHandler {
                 .body(Result.fail(HttpStatus.BAD_REQUEST.value(), message));
     }
 
-    /**
-     * 处理方法参数校验异常。
-     * <p>
-     * 当请求体中的参数校验失败时（如 @Valid 注解校验不通过），Spring 会抛出此异常。
-     * 该方法会提取所有字段错误信息，构建成字段名到错误消息的映射返回给客户端。
-     * </p>
-     *
-     * @param e 方法参数校验异常对象，包含校验失败的字段信息和错误消息
-     * @return Result 中包含字段级错误信息
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Result<Map<String, String>>> handleValidationException(
             MethodArgumentNotValidException e) {
@@ -67,11 +54,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Result<String>> handleException(Exception e) {
+    public ResponseEntity<Result<Void>> handleException(Exception e) {
+        // 完整异常仅写入服务端日志，响应不得回传数据库、JWT、路径或配置等内部细节。
         logger.error("未处理异常", e);
-        String message = e.getMessage() != null ? e.getMessage() : "服务器内部错误，请联系管理员";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.<String>fail(500, "服务器内部错误，请联系管理员").data(message));
+                .body(Result.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "服务器内部错误，请联系管理员"));
     }
 
     /** 将业务错误码映射为 HTTP 状态码。 */
@@ -81,6 +68,7 @@ public class GlobalExceptionHandler {
             case 401 -> HttpStatus.UNAUTHORIZED;
             case 403 -> HttpStatus.FORBIDDEN;
             case 404 -> HttpStatus.NOT_FOUND;
+            case 429 -> HttpStatus.TOO_MANY_REQUESTS;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
     }

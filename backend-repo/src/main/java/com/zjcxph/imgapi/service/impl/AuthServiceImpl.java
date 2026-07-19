@@ -175,6 +175,7 @@ public class AuthServiceImpl implements AuthService {
     public UserCredentialResultDTO createUser(AdminCreateUserRequest request,
                                                Long administratorId,
                                                String clientIp) {
+        requireActiveAdministrator(administratorId);
         String username = Optional.ofNullable(request.getUsername()).map(String::trim).orElse("");
         if (authUserMapper.findByUsername(username) != null) {
             throw new BusinessException("用户名已存在");
@@ -217,11 +218,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("不能通过管理员重置接口修改自己的密码，请使用个人修改密码功能");
         }
 
-        AuthUser administrator = authUserMapper.findById(administratorId);
-        if (administrator == null || !administrator.getRoleCode().equalsIgnoreCase("ADMIN")
-                || !"active".equalsIgnoreCase(administrator.getStatus())) {
-            throw new BusinessException("当前管理员账号不可用");
-        }
+        AuthUser administrator = requireActiveAdministrator(administratorId);
         if (!PasswordUtil.matches(request.getAdministratorPassword(), administrator.getPasswordHash())) {
             securityAudit.warn("event=USER_PASSWORD_RESET actorUserId={} targetUserId={} sourceIp={} result=DENIED reason=ADMIN_PASSWORD_MISMATCH",
                     administratorId, userId, clientIp);
@@ -408,6 +405,19 @@ public class AuthServiceImpl implements AuthService {
         profile.setCreatedAt(user.getCreatedAt());
         profile.setUpdatedAt(user.getUpdatedAt());
         return profile;
+    }
+
+    private AuthUser requireActiveAdministrator(Long administratorId) {
+        if (administratorId == null) {
+            throw new BusinessException("管理员信息无效");
+        }
+        AuthUser administrator = authUserMapper.findById(administratorId);
+        if (administrator == null
+                || !"ADMIN".equalsIgnoreCase(administrator.getRoleCode())
+                || !"active".equalsIgnoreCase(administrator.getStatus())) {
+            throw new BusinessException("当前账号不是有效管理员");
+        }
+        return administrator;
     }
 
     private boolean isLastActiveAdmin(AuthUser user) {

@@ -69,14 +69,162 @@ C:\MRR\secrets\application-secrets.properties
 
 不要把服务器上的敏感配置复制回 Git 仓库。
 
-## 4. 发布包结构
+## 4. 前端代理与正式部署
+
+### 4.1 开发环境
+
+开发时运行：
+
+```powershell
+cd frontend-fantastic-admin
+pnpm dev
+```
+
+浏览器访问：
+
+```text
+http://localhost:9200
+```
+
+前端开发请求使用 `/proxy`：
+
+```text
+POST http://localhost:9200/proxy/api/v1/auth/login
+```
+
+Vite 转发到：
+
+```text
+POST http://localhost:18045/api/v1/auth/login
+```
+
+`/proxy` 只属于开发环境。修改 `vite.config.ts` 后必须停止并重新启动 `pnpm dev`，仅刷新浏览器不会更新代理配置。
+
+### 4.2 正式环境
+
+生产构建使用仓库中的 `.env.production`：
+
+```properties
+VITE_APP_API_BASEURL=/
+VITE_APP_DEMO_MODE=false
+VITE_BUILD_MOCK=false
+```
+
+在构建机执行：
+
+```powershell
+cd frontend-fantastic-admin
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+生成：
+
+```text
+frontend-fantastic-admin\dist\
+├─ index.html
+├─ assets\
+└─ 其他静态文件
+```
+
+将 `dist` 内容放入发布包的 `frontend` 目录。正式服务器不运行 Vite、不监听 `9200`，也不配置 `/proxy/`。
+
+正式请求链路：
+
+```text
+用户浏览器
+    ↓ http://服务器地址/
+Nginx :80
+    ├── /、/assets/ → C:\MRR\current\frontend
+    └── /api/       → Spring Boot 127.0.0.1:18045
+```
+
+登录请求应为：
+
+```text
+POST http://服务器地址/api/v1/auth/login
+```
+
+不是：
+
+```text
+POST http://服务器地址/proxy/api/v1/auth/login
+```
+
+### 4.3 Nginx 核心配置
+
+仓库模板 `deploy/windows/templates/nginx.conf` 已包含同源部署所需路由：
+
+```nginx
+upstream mrr_backend {
+    server 127.0.0.1:18045;
+    keepalive 32;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    root C:/MRR/current/frontend;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://mrr_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+前端页面和 `/api` 使用同一个 Nginx 地址，因此浏览器通常不产生跨域请求。Nginx 到 `127.0.0.1:18045` 的转发发生在服务器内部。
+
+不要在生产 Nginx 中添加：
+
+```nginx
+location /proxy/ {
+    # 不需要
+}
+```
+
+只有确实存在其他域名的浏览器应用直接调用 MRR API 时，才在后端 `mrr.cors.allowed-origins` 中添加精确 Origin。服务器到服务器调用不受浏览器 CORS 限制。
+
+### 4.4 部署后检查
+
+浏览器打开 Network，确认：
+
+```text
+页面地址：http://服务器地址/
+登录接口：/api/v1/auth/login
+```
+
+如果正式环境仍请求 `/proxy/api/...`：
+
+1. 检查是否误用了 `.env.development`。
+2. 检查 `.env.production` 是否为 `VITE_APP_API_BASEURL=/`。
+3. 删除旧 `dist` 后重新执行 `pnpm build`。
+4. 确认发布包中的 `frontend` 来自新构建产物。
+5. 清理浏览器缓存或使用无痕窗口测试。
+
+如果 `/api/v1/auth/login` 返回 502，检查 Spring Boot 是否监听 `127.0.0.1:18045`。如果返回 Nginx 404，检查 `/api/` location 和 `proxy_pass`。如果返回后端 JSON 401，说明代理已正常工作，应继续检查账号或 Token。
+
+## 5. 发布包结构
 
 ```text
 MRR-v0.1.2.zip
 ├─ backend
 │  └─ mrr-backend.jar
 ├─ frontend
-│  └─ index.html
+│  ├─ index.html
+│  └─ assets
 ├─ docs
 │  ├─ user
 │  └─ internal
@@ -99,7 +247,7 @@ MRR-v0.1.2.zip
 
 `databaseBackwardCompatible=false` 时，普通回滚会被阻止，避免旧 JAR 直接读取不兼容数据库。
 
-## 5. 运维命令
+## 6. 运维命令
 
 ```powershell
 $ctl = 'C:\MRR\ops\mrrctl.ps1'
@@ -135,7 +283,7 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 & $ctl logs gateway -Tail 300
 ```
 
-## 6. 部署行为
+## 7. 部署行为
 
 `deploy` 执行：
 
@@ -151,7 +299,7 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 
 默认保留最近 5 个版本，可以通过 `-KeepReleases` 调整。`current` 和 `previous` 指向的版本不会被清理。
 
-## 7. 暂停语义
+## 8. 暂停语义
 
 不要使用系统工具挂起 Java 进程。MRR 将“暂停服务”实现为维护模式：
 
@@ -162,7 +310,7 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 
 具体状态接口路径如果发生变化，应同步更新 `templates/nginx.conf` 中绕过维护模式的 status API location。
 
-## 8. 目录结构
+## 9. 目录结构
 
 ```text
 C:\MRR
@@ -182,7 +330,21 @@ C:\MRR
 └─ ops
 ```
 
-## 9. 故障处理
+## 10. 故障处理
+
+### 登录请求在开发环境返回 403
+
+如果请求地址为：
+
+```text
+http://localhost:9200/proxy/api/v1/auth/login
+```
+
+且响应为 `403 Invalid CORS request`，先确认已拉取最新 `vite.config.ts`，然后完全停止并重新启动 Vite。该问题发生在开发代理层，不代表账号无权限。
+
+### 正式环境请求路径仍包含 `/proxy`
+
+重新使用 `.env.production` 构建前端。正式环境必须请求 `/api/...`，Nginx 不应提供 `/proxy/`。
 
 ### 后端服务运行但健康检查失败
 

@@ -12,46 +12,31 @@ MRR 默认面向一台 Windows Server 部署，不依赖 Docker，也不要求�
 
 系统状态、错误定位、审计、备份和性能诊断均由 MRR 自身与 Windows 工具完成。
 
-## 服务器准备
+## 最简安装方式
 
-必须准备：
+从 GitHub Release 下载 `MRR-vX.Y.Z.zip` 后：
 
-- Windows Server 2019 或更高版本
-- PostgreSQL 16
-- PowerShell 5.1 或 PowerShell 7
+1. 将 ZIP 解压到临时目录；
+2. 进入 `deploy\windows`；
+3. 双击 `install.cmd`；
+4. 编辑安装后生成的两个配置文件；
+5. 双击 `C:\MRR\MRR-Manager.cmd`，选择“部署新版本 ZIP”。
 
-Java 21、Nginx 和 WinSW 有两种提供方式：
+离线发布包已经包含经过校验的：
 
-- 放入发布包的 `deploy/windows/runtime`，安装脚本自动发现；
-- 安装时通过参数指定已有路径。
+- Eclipse Temurin JDK 21；
+- nginx/Windows；
+- WinSW。
 
-推荐运行时目录：
+因此生产服务器只需要预先安装 PostgreSQL 16，不需要安装 Java、Node.js、Maven、pnpm、Nginx、WinSW，也不需要在服务器执行 `git pull`。
 
-```text
-deploy/windows/runtime/
-├─ jre/                 # bin/java.exe，按需 JFR 时建议使用完整 JDK
-├─ nginx/               # nginx.exe
-└─ winsw/WinSW-x64.exe
-```
+## 手工运行时方式
 
-## 一键安装
-
-运行时已放入上述目录时，以管理员身份双击：
-
-```text
-install.cmd
-```
-
-也可以手工执行：
+需要使用服务器已有 Java、Nginx 或 WinSW 时，也可以执行：
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install.ps1 -Root C:\MRR
-```
 
-没有内置运行时时：
-
-```powershell
 .\install.ps1 `
   -Root C:\MRR `
   -WinSWPath C:\Install\WinSW-x64.exe `
@@ -62,6 +47,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 安装脚本会自动完成：
 
 - 创建 `C:\MRR` 目录；
+- 将内置 Java 和 Nginx 复制到持久运行目录；
 - 写入配置模板；
 - 保护 secrets、审计队列和备份目录 ACL；
 - 注册后端和 Nginx Windows 服务；
@@ -75,7 +61,13 @@ C:\MRR\config\application-prod.properties
 C:\MRR\secrets\application-secrets.properties
 ```
 
-至少配置数据库密码、JWT/AES 密钥、审计 HMAC 密钥和图片路径。
+至少配置：
+
+- PostgreSQL 地址、用户名和密码；
+- JWT 和 AES 密钥；
+- `app.audit.hmac-secret`；
+- 图片目录和图片服务地址；
+- OSS 凭据（使用 OSS 时）。
 
 ## 日常管理
 
@@ -107,6 +99,19 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 & $ctl deploy C:\MRR\packages\MRR-v0.4.0.zip
 & $ctl rollback previous
 ```
+
+## 内置运维页面
+
+管理员登录 MRR 后，系统监控页面直接显示：
+
+- 应用和数据库状态；
+- 最近备份时间、大小和失败原因；
+- 可靠审计队列积压；
+- 服务器磁盘与图片磁盘；
+- 应用日志和错误日志大小；
+- JVM、数据库连接、锁等待和数据质量。
+
+网页只提供只读状态。部署、回滚、立即备份、恢复演练和 JFR 等高权限操作只能在服务器上的 `MRR-Manager.cmd` 中执行。
 
 ## 发布与自动回滚
 
@@ -205,7 +210,9 @@ C:\MRR
 ├─ logs
 ├─ backups
 ├─ state
-├─ runtime\nginx
+├─ runtime
+│  ├─ java
+│  └─ nginx
 └─ ops
    ├─ mrrctl.ps1
    ├─ mrr-manager.ps1

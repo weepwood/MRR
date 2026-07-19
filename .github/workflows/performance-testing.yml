@@ -1,0 +1,129 @@
+name: Backend performance baseline
+
+on:
+  pull_request:
+    branches: [dev-no-login]
+    paths:
+      - 'backend-repo/**'
+      - '.github/workflows/performance-testing.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  backend-performance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: imgapi
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d imgapi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Test and package backend
+        working-directory: backend-repo
+        run: mvn -B clean verify
+
+      - name: Start backend
+        working-directory: backend-repo
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/imgapi?currentSchema=app
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: testpassword
+          JWT_SECRET_KEY: test-jwt-secret-key-for-performance-testing
+          AES_SECRET_KEY: test-aes-secret-key-for-performance-testing
+          APP_AUDIT_HMAC_SECRET: test-audit-hmac-key-for-performance-testing
+          MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED: 'false'
+          APP_AUDIT_SPOOL_FILE: /tmp/mrr-audit/audit-events.jsonl
+        run: |
+          nohup java -jar target/*.jar > ../backend-performance.log 2>&1 &
+          echo $! > ../backend.pid
+
+      - name: Wait for readiness
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:18046/actuator/health/readiness | grep -q '"status":"UP"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat backend-performance.log
+          exit 1
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run external k6 baseline
+        run: |
+          cat > performance.js <<'EOF'
+          import http from 'k6/http';
+          import { check } from 'k6';
+
+          export const options = {
+            scenarios: {
+              steady: {
+                executor: 'constant-vus',
+                vus: 20,
+                duration: '30s',
+              },
+            },
+            thresholds: {
+              http_req_failed: ['rate<0.01'],
+              http_req_duration: ['p(95)<1000', 'p(99)<2000'],
+              checks: ['rate>0.99'],
+            },
+          };
+
+          export default function () {
+            const response = http.get('http://127.0.0.1:18045/api/v1/public/status/ping');
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+              'response reports UP': (r) => r.body.includes('UP'),
+              'request id returned': (r) => Boolean(r.headers['X-Request-Id']),
+            });
+          }
+          EOF
+          k6 run --summary-export=performance-summary.json performance.js
+
+      - name: Capture observability endpoints
+        if: always()
+        run: |
+          curl --silent http://127.0.0.1:18046/actuator/health/readiness > readiness.json || true
+          curl --silent http://127.0.0.1:18046/actuator/prometheus > prometheus.txt || true
+          tail -n 500 backend-performance.log > backend-performance-tail.log || true
+
+      - name: Upload performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-performance-${{ github.sha }}
+          retention-days: 30
+          path: |
+            performance-summary.json
+            readiness.json
+            prometheus.txt
+            backend-performance-tail.log
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then kill "$(cat backend.pid)" || true; fi

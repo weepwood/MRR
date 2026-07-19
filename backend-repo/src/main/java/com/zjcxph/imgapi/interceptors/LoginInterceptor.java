@@ -62,42 +62,59 @@ public class LoginInterceptor implements HandlerInterceptor {
             return allowDeveloperModeOrReject(request, response, "请先登录", "missing_token");
         }
 
+        AuthSession tokenSession;
+        String jti;
         try {
             String tokenType = JwtUtil.getTokenType(token);
             if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
                 return allowDeveloperModeOrReject(request, response, "Token 类型无效", "invalid_token_type");
             }
-
-            String jti = JwtUtil.getJti(token);
-            if (tokenBlacklist.isRevoked(jti)) {
-                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
-            }
-
-            AuthSession tokenSession = JwtUtil.parseToken(token);
-            if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
-                return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
-            }
-
-            AuthUser currentUser = authUserMapper.findById(tokenSession.getId());
-            if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
-                    || !currentUser.getUsername().equals(tokenSession.getUsername())) {
-                return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
-            }
-            if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
-                return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
-            }
-            if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
-                writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
-                return false;
-            }
-
-            AuthSession session = toCurrentSession(currentUser);
-            installSession(request, session);
-            return true;
+            jti = JwtUtil.getJti(token);
+            tokenSession = JwtUtil.parseToken(token);
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
             return allowDeveloperModeOrReject(request, response, "Token 无效或已过期", "invalid_or_expired_token");
         }
+
+        try {
+            if (tokenBlacklist.isRevoked(jti)) {
+                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
+            }
+        } catch (Exception exception) {
+            logger.error("Token revocation store unavailable", exception);
+            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
+            return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
+        }
+
+        AuthUser currentUser;
+        try {
+            currentUser = authUserMapper.findById(tokenSession.getId());
+        } catch (Exception exception) {
+            // 数据库故障必须失败关闭。即使开发者模式已启用，也不能降级为虚拟管理员。
+            logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
+            writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
+                || !currentUser.getUsername().equals(tokenSession.getUsername())) {
+            return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
+        }
+        if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
+            return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
+        }
+        if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
+            writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
+            return false;
+        }
+
+        AuthSession session = toCurrentSession(currentUser);
+        installSession(request, session);
+        return true;
     }
 
     @Override
@@ -106,9 +123,9 @@ public class LoginInterceptor implements HandlerInterceptor {
     }
 
     private boolean allowDeveloperModeOrReject(HttpServletRequest request,
-                                               HttpServletResponse response,
-                                               String unauthorizedMessage,
-                                               String reason) throws Exception {
+                                                HttpServletResponse response,
+                                                String unauthorizedMessage,
+                                                String reason) throws Exception {
         if (!developerModeService.isEnabled()) {
             writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
             return false;
@@ -169,7 +186,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
         List<String> configured = Arrays.stream(user.getPermissionsCsv().split(","))
                 .map(String::trim)
-                .filter(StringUtils::hasText)
+                .filter(StringUtils.hasText)
                 .distinct()
                 .toList();
         return new ArrayList<>(PermissionResolver.resolve(configured));
@@ -180,5 +197,14 @@ public class LoginInterceptor implements HandlerInterceptor {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json;charset=UTF-8");
         OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", code, "message", message));
+    }
+
+    private void writeServiceUnavailable(HttpServletResponse response, String message) throws Exception {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json;charset=UTF-8");
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of(
+                "code", "AUTH_SERVICE_UNAVAILABLE",
+                "message", message));
     }
 }

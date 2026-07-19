@@ -42,10 +42,10 @@ class AuthServiceLoginSecurityTest {
 
         UserRequest request = request("disabled.user", "WrongPassword123");
 
-        assertThatThrownBy(() -> service.login(request))
+        assertThatThrownBy(() -> service.login(request, "10.0.0.8"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("用户名或密码错误");
-        verify(loginRateLimiter).recordLoginFailure("disabled.user");
+        verify(loginRateLimiter).recordLoginFailure("disabled.user|10.0.0.8");
     }
 
     @Test
@@ -55,7 +55,7 @@ class AuthServiceLoginSecurityTest {
 
         UserRequest request = request("disabled.user", "CorrectPassword123");
 
-        assertThatThrownBy(() -> service.login(request))
+        assertThatThrownBy(() -> service.login(request, "10.0.0.8"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("账号已被禁用，请联系管理员");
     }

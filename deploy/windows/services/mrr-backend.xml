@@ -4,7 +4,7 @@
   <description>MRR 病案文件记录管理系统后端服务</description>
 
   <executable>{{JAVA_EXE}}</executable>
-  <arguments>-Xms512m -Xmx4g -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="{{MRR_ROOT}}\logs\backend" -XX:StartFlightRecording=filename="{{MRR_ROOT}}\logs\backend\mrr-%p.jfr",settings=profile,disk=true,dumponexit=true,maxage=24h,maxsize=1g -Xlog:gc*,safepoint:file="{{MRR_ROOT}}\logs\backend\gc.log":time,uptime,level,tags:filecount=10,filesize=20M -jar "{{MRR_ROOT}}\current\backend\mrr-backend.jar" --spring.profiles.active=prod --spring.config.additional-location=optional:file:{{MRR_URI_ROOT}}/config/</arguments>
+  <arguments>-Xms512m -Xmx4g -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="{{MRR_ROOT}}\logs\backend" -Xlog:gc*,safepoint:file="{{MRR_ROOT}}\logs\backend\gc.log":time,uptime,level,tags:filecount=10,filesize=20M -jar "{{MRR_ROOT}}\current\backend\mrr-backend.jar" --spring.profiles.active=prod --spring.config.additional-location=optional:file:{{MRR_URI_ROOT}}/config/</arguments>
   <workingdirectory>{{MRR_ROOT}}\current\backend</workingdirectory>
 
   <env name="APP_VERSION" value="managed-release" />

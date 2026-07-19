@@ -17,19 +17,40 @@ function isChineseMessage(value: unknown): value is string {
   return typeof value === 'string' && /[\u4E00-\u9FFF]/.test(value)
 }
 
-/** 将 HTTP 和网络请求失败统一为面向用户的中文提示。 */
+function getCorrelationSuffix(error: any): string {
+  const requestId = error?.response?.data?.requestId
+    ?? error?.response?.headers?.['x-request-id']
+    ?? error?.requestId
+  const errorCode = error?.response?.data?.errorCode
+    ?? error?.response?.headers?.['x-error-code']
+
+  const parts: string[] = []
+  if (typeof errorCode === 'string' && errorCode.trim()) {
+    parts.push(`错误码：${errorCode.trim()}`)
+  }
+  if (typeof requestId === 'string' && requestId.trim()) {
+    parts.push(`请求编号：${requestId.trim()}`)
+  }
+  return parts.length > 0 ? `（${parts.join('；')}）` : ''
+}
+
+function withCorrelation(message: string, error: any): string {
+  return `${message}${getCorrelationSuffix(error)}`
+}
+
+/** 将 HTTP 和网络请求失败统一为面向用户的中文提示，并附带可供运维检索的错误码和请求编号。 */
 export function getRequestErrorMessage(error: any): string {
   const serverMessage = error?.response?.data?.message ?? error?.response?.data?.msg ?? error?.message ?? error?.msg
   if (isChineseMessage(serverMessage)) {
-    return serverMessage
+    return withCorrelation(serverMessage, error)
   }
 
   const status = Number(error?.response?.status ?? error?.status)
   if (HTTP_ERROR_MESSAGES[status]) {
-    return HTTP_ERROR_MESSAGES[status]
+    return withCorrelation(HTTP_ERROR_MESSAGES[status], error)
   }
   if (Number.isFinite(status) && status >= 500) {
-    return '服务器异常，请稍后重试'
+    return withCorrelation('服务器异常，请稍后重试', error)
   }
 
   const message = String(error?.message || '')
@@ -37,10 +58,10 @@ export function getRequestErrorMessage(error: any): string {
     return '网络连接异常，请检查网络后重试'
   }
   if (message.includes('timeout') || error?.code === 'ECONNABORTED') {
-    return '请求超时，请稍后重试'
+    return withCorrelation('请求超时，请稍后重试', error)
   }
   if (error?.code === 'ERR_CANCELED') {
     return '请求已取消'
   }
-  return '请求失败，请稍后重试'
+  return withCorrelation('请求失败，请稍后重试', error)
 }

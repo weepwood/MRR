@@ -116,28 +116,26 @@ PR 验证包会追加短 Commit，例如：
 MRR-v0.4.0-abcdef12.zip
 ```
 
-## 发布包结构
+## 受管理发布包
+
+从本基线开始，`mrrctl.ps1` 只把包含以下文件的 ZIP 视为受管理发布包：
 
 ```text
-MRR-v0.4.0.zip
-├─ backend
-│  └─ mrr-backend.jar
-├─ frontend
-│  ├─ index.html
-│  └─ assets
-├─ docs
-│  ├─ user
-│  └─ internal
-├─ deploy
-│  └─ windows
-├─ VERSION
-├─ release-baseline.json
-├─ manifest.json
-├─ SHA256SUMS
-└─ release-notes.md
+backend/mrr-backend.jar
+frontend/index.html
+docs/user/
+docs/internal/
+deploy/windows/
+VERSION
+release-baseline.json
+manifest.json
+SHA256SUMS
+release-notes.md
 ```
 
-`manifest.json` 由 `scripts/release_baseline.py` 自动生成：
+基线建立前生成的旧格式 ZIP 缺少版本清单和兼容性声明，**不能直接作为 `mrrctl rollback` 的目标**。需要回到旧版本时，应先按数据库备份恢复和人工部署流程处理，不能绕过发布基线冒险切换旧 JAR。
+
+`manifest.json` 示例：
 
 ```json
 {
@@ -207,21 +205,22 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 & $ctl version
 & $ctl versions
 
-# 部署
+# 部署当前受管理发布包
 & $ctl deploy C:\MRR\packages\MRR-v0.4.0.zip
 
-# 回滚
+# 只回滚到 previous 指向的另一份受管理发布包
 & $ctl rollback previous
-& $ctl rollback v0.3.0
 
-# 仅在数据库已经人工恢复或确认兼容时强制回滚
-& $ctl rollback v0.3.0 -Force
+# 仅在数据库已经人工恢复或确认兼容时强制执行受管理包回滚
+& $ctl rollback previous -Force
 
 # 日志
 & $ctl logs backend -Tail 300
 & $ctl logs backend-service -Tail 300
 & $ctl logs gateway -Tail 300
 ```
+
+`-Force` 只跳过当前 manifest 的回滚许可判断，不会让旧格式 ZIP 变成受管理发布包。
 
 ## 部署过程
 
@@ -235,7 +234,7 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 6. 切换 `current`，保留 `previous`；
 7. 启动后端并等待 `/actuator/health`；
 8. 读取 `/actuator/info`，核对运行版本和 Git Commit；
-9. 重新加载 Nginx并关闭维护模式；
+9. 重新加载 Nginx 并关闭维护模式；
 10. 清理超出保留数量且未被 `current/previous` 引用的旧目录。
 
 默认保留最近 5 个版本，可用 `-KeepReleases` 调整。
@@ -244,15 +243,15 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 
 `applicationRollback.allowed` 是是否可以只切换应用文件的最终判断：
 
-- `true`：仍需确认目标旧版本在数据库兼容范围内；
+- `true`：仍需确认目标受管理旧版本在数据库兼容范围内；
 - `false`：普通回滚被拒绝，必须先恢复数据库或完成专项兼容处理；
-- `-Force`：仅用于已经人工完成数据库恢复或明确确认兼容的情况。
+- `-Force`：仅用于已经人工完成数据库恢复或明确确认兼容的受管理发布包。
 
 `database.backwardCompatibleWithPreviousApplication=false` 表示升级后的数据库尚未通过上一应用版本兼容演练，不应直接切回旧 JAR。
 
 如果新版本部署后健康检查失败：
 
-- manifest 允许应用回滚时，脚本可恢复原应用版本；
+- manifest 允许应用回滚时，脚本可恢复原受管理应用版本；
 - manifest 禁止应用回滚时，脚本保持维护模式，不会冒险启动可能不兼容的旧应用。
 
 Flyway 不自动降级。应用回滚从来不等于数据库回滚。
@@ -340,17 +339,8 @@ C:\MRR\ops\mrrctl.ps1 doctor
 
 重点检查数据库连接、Flyway、密钥、图片目录和端口占用。
 
-### Nginx 无法启动
-
-```powershell
-C:\MRR\runtime\nginx\nginx.exe `
-  -p C:\MRR\runtime\nginx `
-  -c C:\MRR\config\nginx\nginx.conf `
-  -t
-```
-
 ### 发布失败且 manifest 禁止自动恢复旧应用
 
-保持维护模式，不要反复切换版本。先判断数据库迁移是否已经执行，按发布前备份或专项兼容方案处理后，再决定是否使用 `-Force`。
+保持维护模式，不要反复切换版本。先判断数据库迁移是否已经执行，按发布前备份或专项兼容方案处理后，再决定是否对受管理包使用 `-Force`。
 
 更多版本治理规则见 `vitepress-doc/internal/release.md`。

@@ -51,7 +51,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 - 写入配置模板；
 - 保护 secrets、审计队列和备份目录 ACL；
 - 注册后端和 Nginx Windows 服务；
-- 创建每天 02:00 的数据库与配置备份任务；
+- 创建每天 02:00 的数据库与脱敏配置备份任务；
 - 安装统一管理入口 `C:\MRR\MRR-Manager.cmd`。
 
 安装后先编辑：
@@ -104,14 +104,18 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 
 管理员登录 MRR 后，系统监控页面直接显示：
 
-- 应用和数据库状态；
-- 最近备份时间、大小和失败原因；
-- 可靠审计队列积压；
+- 应用、JVM 和数据库连通状态；
+- Hikari 连接池和 PostgreSQL 锁等待；
+- 病案主档未关联数量；
+- 最近备份时间、大小、失败代码和是否配置第二副本；
+- 审计队列积压、dead-letter 和兜底可用状态；
 - 服务器磁盘与图片磁盘；
 - 应用日志和错误日志大小；
-- JVM、数据库连接、锁等待和数据质量。
+- 现有数据质量检查结果。
 
 网页只提供只读状态。部署、回滚、立即备份、恢复演练和 JFR 等高权限操作只能在服务器上的 `MRR-Manager.cmd` 中执行。
+
+为减少信息泄露，网页不会返回服务器绝对目录、NAS 路径、原始异常文本或 secrets 内容，只返回逻辑位置、容量、计数和稳定错误码。
 
 ## 发布与自动回滚
 
@@ -139,6 +143,14 @@ http://127.0.0.1:18046/actuator/metrics
 - Liveness：Java 进程是否存活；
 - Readiness：数据库与可靠审计队列是否可用；
 - Metrics：本机诊断时查看 JVM、HTTP 和连接池指标。
+
+审计状态含义：
+
+- `UP`：数据库或可靠兜底可用，没有待重放事件；
+- `DEGRADED`：事件已可靠落入本地队列，等待数据库恢复；
+- `DOWN`：兜底目录不可写、出现损坏记录或检测到审计丢失。
+
+敏感病案和管理请求执行前会检查审计兜底。兜底不可用时返回 `MRR-AUDIT-7001`，不会继续执行业务操作。
 
 管理端口只监听 `127.0.0.1`，不要直接暴露到内网或公网。
 
@@ -171,16 +183,24 @@ C:\MRR\logs\diagnostics
 C:\MRR\ops\backup\backup-database.ps1
 ```
 
-脚本直接读取现有 Spring 数据库配置，不需要创建额外备份账号或 `pgpass.conf`。
+脚本读取现有 Spring 数据库配置用于连接数据库，不需要创建额外备份账号或 `pgpass.conf`。数据库密码仅短暂写入当前 PowerShell 进程的 `PGPASSWORD`，任务结束后清除。
 
-备份内容：
+普通备份内容：
 
 - PostgreSQL custom-format dump；
-- 普通配置；
-- secrets 配置；
-- Nginx 配置；
+- 已脱敏的普通配置；
+- 不包含私钥文件的 Nginx 配置；
 - 当前版本 Manifest；
-- SHA-256 和 JSON 清单。
+- SHA-256 和 JSON 清单；
+- `SECRETS-NOT-INCLUDED.txt` 安全说明。
+
+普通备份**不包含**：
+
+```text
+C:\MRR\secrets\application-secrets.properties
+```
+
+密码、JWT、AES、HMAC、OSS 密钥等敏感属性会从普通配置包中替换为 `[REDACTED]`。`application-secrets.properties` 必须使用医院批准的密码库、加密介质或受控离线方式单独备份，不能以明文形式随普通 ZIP 复制到 NAS。
 
 默认保留：
 
@@ -194,7 +214,23 @@ C:\MRR\ops\backup\backup-database.ps1
 app.backup.secondary-path=\\nas\mrr-backup
 ```
 
-即使只有一台服务器，也建议把备份复制到 NAS、另一块物理磁盘或合规对象存储；备份与数据库放在同一块磁盘无法应对磁盘损坏。
+即使只有一台服务器，也建议把数据库和脱敏配置备份复制到 NAS、另一块物理磁盘或合规对象存储；备份与数据库放在同一块磁盘无法应对磁盘损坏。网页只显示第二副本是否配置，不显示真实路径。
+
+验证备份：
+
+```powershell
+C:\MRR\ops\backup\verify-backup.ps1
+```
+
+验证脚本会拒绝以下备份：
+
+- 清单声明 `secretsIncluded=true`；
+- 配置策略不是 `sanitized-no-secrets`；
+- ZIP 中存在 `secrets/`、`application-secrets.properties`；
+- ZIP 中存在 `.key`、`.pem`、`.pfx`、`.p12` 或 `.jks` 私钥文件；
+- 缺少 `SECRETS-NOT-INCLUDED.txt`。
+
+恢复数据库后，需要通过单独的受控流程恢复 secrets。普通备份 ZIP 不承担 secrets 恢复。
 
 ## 目录结构
 

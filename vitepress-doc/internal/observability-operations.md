@@ -1,10 +1,10 @@
 # 单服务器可观测性与运维
 
-MRR 当前采用一台 Windows Server，生产运行组件只有 PostgreSQL、Spring Boot 后端和 Nginx。本文说明在不部署额外监控平台的情况下如何定位问题、备份数据和完成恢复。
+MRR 当前采用一台 Windows Server，生产运行组件只有 PostgreSQL、Spring Boot 后端和 Nginx。本文说明在不部署额外监控平台的情况下如何定位问题、保护审计、备份数据和完成恢复。
 
 ## 1. 请求编号与错误码
 
-业务响应保留数值 `code`，并增加：
+业务响应保留数值 `code`，并增加稳定错误码与关联编号：
 
 ```json
 {
@@ -55,6 +55,14 @@ http://127.0.0.1:18046/actuator/metrics
 - Readiness 检查数据库与可靠审计队列；
 - Metrics 用于管理员本机诊断，不对外开放。
 
+审计状态含义：
+
+| 状态 | 含义 |
+| --- | --- |
+| `UP` | 数据库或可靠本地兜底可用，且没有待重放记录 |
+| `DEGRADED` | 数据库曾失败，但记录已可靠写入本地队列并等待重放 |
+| `DOWN` | 本地兜底不可写、检测到审计丢失或存在损坏记录 |
+
 部署和回滚脚本以 readiness 结果作为是否切换版本的依据。
 
 ## 4. 可靠审计
@@ -65,14 +73,23 @@ http://127.0.0.1:18046/actuator/metrics
 C:\MRR\state\audit\audit-events.jsonl
 ```
 
-数据库恢复后自动幂等重放。该目录仅允许 Administrators 和 SYSTEM 访问。
+敏感请求进入业务处理前会探测本地审计兜底是否可写。兜底不可用时，请求以 `MRR-AUDIT-7001` 返回 `503`，避免先产生业务副作用、后发现无法审计。
+
+数据库恢复后按流式方式自动幂等重放，不把整个队列一次性读入内存。无法解析的损坏记录会进入：
+
+```text
+C:\MRR\state\audit\audit-events.jsonl.deadletter
+```
+
+出现 dead-letter、审计丢失标记或兜底目录不可写时 readiness 为 `DOWN`，必须由管理员核对后处理。审计目录仅允许 Administrators、SYSTEM 和运行服务账号访问。
 
 检查要点：
 
-- `/actuator/health/readiness` 是否为 `UP`；
-- 审计队列文件是否持续增长；
-- 日志是否出现数据库与本地队列同时写入失败；
-- 磁盘是否已满或 ACL 是否被修改。
+- `/actuator/health/readiness` 是否为 `UP` 或可解释的 `DEGRADED`；
+- 审计队列是否持续增长且无法回落；
+- dead-letter 文件是否非空；
+- 磁盘是否已满或 ACL 是否被修改；
+- 日志是否出现 `MRR-AUDIT-7001`。
 
 ## 5. 统一管理入口
 
@@ -86,14 +103,14 @@ C:\MRR\MRR-Manager.cmd
 
 - 服务状态、启停和重启；
 - 部署、自动健康检查和回滚；
-- 数据库与配置备份；
+- 数据库与脱敏配置备份；
 - 最近备份验证；
 - 错误日志查看；
 - 诊断包导出；
 - 按需 JFR；
 - 手工恢复演练。
 
-远程网页中不直接暴露执行备份、重启或 JFR 的接口，避免管理接口成为新的高权限攻击面。
+远程网页中不直接暴露执行备份、重启或 JFR 的接口，避免管理接口成为新的高权限攻击面。网页状态只返回逻辑位置、计数、容量和稳定错误码，不返回服务器绝对路径、NAS 路径或原始异常文本。
 
 ## 6. 备份
 
@@ -109,14 +126,24 @@ MRR-Daily-Backup
 C:\MRR\ops\backup\backup-database.ps1
 ```
 
-脚本读取现有 Spring 数据库配置，不需要额外的备份数据库角色或 `pgpass.conf`。
+脚本读取现有 Spring 数据库配置以连接 PostgreSQL，不需要额外的备份数据库角色或 `pgpass.conf`。数据库密码只在当前 PowerShell 进程的 `PGPASSWORD` 中短暂使用，并在 `finally` 中清除。
 
-备份包含：
+普通备份包含：
 
 - PostgreSQL custom-format dump；
-- 普通配置、secrets 和 Nginx 配置；
+- 已脱敏的普通配置；
+- 不包含私钥文件的 Nginx 配置；
 - 当前版本 Manifest；
-- SHA-256 与 JSON 清单。
+- SHA-256 与 JSON 清单；
+- `SECRETS-NOT-INCLUDED.txt` 安全说明。
+
+普通备份**明确不包含**：
+
+```text
+C:\MRR\secrets\application-secrets.properties
+```
+
+密码、JWT、AES、HMAC、OSS 密钥等字段即使误写入普通配置，也会替换为 `[REDACTED]`。`secrets` 文件必须通过医院批准的加密介质、密码库或受控离线流程单独备份；不得把明文 secrets 随普通 ZIP 复制到 NAS。
 
 目录：
 
@@ -134,7 +161,7 @@ C:\MRR\backups\postgresql\monthly
 app.backup.secondary-path=\\nas\mrr-backup
 ```
 
-备份与数据库位于同一物理磁盘时，不能应对磁盘损坏。
+网页只显示是否已配置第二备份，不返回真实路径。备份与数据库位于同一物理磁盘时，不能应对磁盘损坏。
 
 ## 7. 验证与恢复演练
 
@@ -149,7 +176,8 @@ C:\MRR\ops\backup\verify-backup.ps1
 - 清单存在；
 - 数据库 dump SHA-256；
 - `pg_restore --list`；
-- 配置 ZIP SHA-256 和可读性。
+- 脱敏配置 ZIP 的 SHA-256 和可读性；
+- 清单中的 `secretsIncluded` 必须为 `false`。
 
 完整恢复演练按需执行：
 
@@ -158,6 +186,8 @@ C:\MRR\ops\backup\restore-drill.ps1
 ```
 
 脚本会交互请求 PostgreSQL 管理员凭据，创建隔离临时数据库，执行恢复与核心表检查，最后生成 JSON 报告并默认删除临时数据库。
+
+数据库恢复成功后，还需要通过受控流程恢复生产 secrets。恢复脚本不得从普通备份 ZIP 中自动寻找或写入 secrets。
 
 ## 8. 性能诊断
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MenuVisibilitySettings from '@/components/MenuVisibilitySettings/index.vue'
 import AppConfigPanelLegacy from './AppConfigPanelLegacy.vue'
 
 defineOptions({ name: 'AppConfigPanel' })

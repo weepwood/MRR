@@ -3,28 +3,58 @@ import { getRequest } from '../index'
 
 export interface OperationsDiskStatus {
   status?: string
-  path?: string
+  location?: 'SERVER' | 'IMAGES' | string
   totalBytes?: number
   usableBytes?: number
   usedPercent?: number
-  error?: string
+  errorType?: string
 }
 
 export interface OperationsStatus {
   mode?: string
   checkedAt?: string
+  application?: {
+    status?: string
+    jvmUptimeSeconds?: number
+    availableProcessors?: number
+    heapUsedBytes?: number
+    heapCommittedBytes?: number
+    heapMaxBytes?: number
+    heapUsedPercent?: number
+  }
+  database?: {
+    status?: string
+    responseTimeMs?: number
+    lockWaiters?: number | null
+    unlinkedArchiveRecords?: number | null
+    errorType?: string
+    pool?: {
+      status?: string
+      active?: number
+      idle?: number
+      total?: number
+      waiting?: number
+    }
+  }
   audit?: {
     status?: string
     queuedEvents?: number
-    lastFailure?: string | null
+    deadLetterEvents?: number
+    fallbackAvailable?: boolean
+    lostEventDetected?: boolean
+    lastFailureCode?: string | null
+    lastFailureAt?: string | null
   }
   backup?: {
     status?: string
     completedAt?: string | null
     ageHours?: number | null
     dumpSizeBytes?: number
-    secondaryCopyPath?: string | null
-    lastError?: string | null
+    secondaryCopyConfigured?: boolean
+    secretsIncluded?: boolean
+    lastFailureAt?: string | null
+    lastErrorCode?: string | null
+    lastErrorType?: string | null
   }
   storage?: {
     server?: OperationsDiskStatus

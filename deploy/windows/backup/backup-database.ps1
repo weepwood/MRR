@@ -51,6 +51,44 @@ function Remove-Expired([string]$Path, [int]$Days) {
     } | Remove-Item -Force
 }
 
+function Test-SensitivePropertyKey([string]$Key) {
+    return $Key -match '(?i)(password|secret|token|credential|private[-_.]?key|access[-_.]?key|jwt|aes|hmac|oss.*key)'
+}
+
+function Copy-SanitizedProperties([string]$Source, [string]$Destination) {
+    if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) { return }
+    $parent = Split-Path $Destination -Parent
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    $output = foreach ($line in Get-Content -LiteralPath $Source -Encoding UTF8) {
+        $text = $line.Trim()
+        if (-not $text -or $text.StartsWith('#')) {
+            $line
+            continue
+        }
+        $separator = $line.IndexOf('=')
+        if ($separator -lt 1) {
+            $line
+            continue
+        }
+        $key = $line.Substring(0, $separator).Trim()
+        if (Test-SensitivePropertyKey $key) {
+            "$key=[REDACTED]"
+        }
+        else {
+            $line
+        }
+    }
+    $output | Set-Content -LiteralPath $Destination -Encoding UTF8
+}
+
+function Copy-SafeNginxConfiguration([string]$Source, [string]$Destination) {
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) { return }
+    Copy-Item -LiteralPath $Source -Destination $Destination -Recurse -Force
+    Get-ChildItem -LiteralPath $Destination -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @('.key', '.pem', '.pfx', '.p12', '.jks') } |
+        Remove-Item -Force
+}
+
 $config = Read-Properties (Join-Path $Root 'config\application-prod.properties')
 $secrets = Read-Properties (Join-Path $Root 'secrets\application-secrets.properties')
 foreach ($key in $secrets.Keys) { $config[$key] = $secrets[$key] }
@@ -103,15 +141,27 @@ try {
     Move-Item -LiteralPath $tempDump -Destination $dumpFile -Force
 
     New-Item -ItemType Directory -Path $tempConfigDir -Force | Out-Null
-    foreach ($source in @(
-        (Join-Path $Root 'config'),
-        (Join-Path $Root 'secrets'),
-        (Join-Path $Root 'current\manifest.json')
-    )) {
-        if (Test-Path -LiteralPath $source) {
-            Copy-Item -LiteralPath $source -Destination $tempConfigDir -Recurse -Force
-        }
+    Copy-SanitizedProperties `
+        (Join-Path $Root 'config\application-prod.properties') `
+        (Join-Path $tempConfigDir 'config\application-prod.properties')
+
+    $manifestSource = Join-Path $Root 'current\manifest.json'
+    if (Test-Path -LiteralPath $manifestSource -PathType Leaf) {
+        $manifestDestination = Join-Path $tempConfigDir 'current\manifest.json'
+        New-Item -ItemType Directory -Path (Split-Path $manifestDestination -Parent) -Force | Out-Null
+        Copy-Item -LiteralPath $manifestSource -Destination $manifestDestination -Force
     }
+
+    Copy-SafeNginxConfiguration `
+        (Join-Path $Root 'runtime\nginx\conf') `
+        (Join-Path $tempConfigDir 'nginx-conf')
+
+    @'
+This archive intentionally excludes C:\MRR\secrets.
+Sensitive values in application-prod.properties are replaced with [REDACTED].
+Back up application-secrets.properties separately using an approved encrypted secret-management process.
+'@ | Set-Content -LiteralPath (Join-Path $tempConfigDir 'SECRETS-NOT-INCLUDED.txt') -Encoding UTF8
+
     Compress-Archive -Path (Join-Path $tempConfigDir '*') -DestinationPath $configArchive -CompressionLevel Optimal -Force
 
     $dumpItem = Get-Item $dumpFile
@@ -130,7 +180,9 @@ try {
         configSizeBytes = $configItem.Length
         configSha256 = (Get-FileHash -Algorithm SHA256 $configArchive).Hash.ToLowerInvariant()
         verifiedBy = 'pg_restore --list'
-        secondaryCopyPath = $secondary
+        secondaryCopyConfigured = [bool]$secondary
+        secretsIncluded = $false
+        configurationPolicy = 'sanitized-no-secrets'
     }
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestFile -Encoding UTF8
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $stateDir 'last-backup.json') -Encoding UTF8
@@ -152,17 +204,20 @@ try {
 
     Write-Host "备份完成并通过目录校验：$dumpFile" -ForegroundColor Green
     if ($secondary) { Write-Host "已复制到第二备份位置：$secondary" -ForegroundColor Green }
+    Write-Warning '备份包未包含 secrets。请使用经批准的加密方式单独备份 application-secrets.properties。'
 }
 catch {
     Remove-Item -LiteralPath $tempDump -Force -ErrorAction SilentlyContinue
     [ordered]@{
         result = 'FAILED'
         failedAt = (Get-Date).ToUniversalTime().ToString('o')
-        error = $_.Exception.Message
+        errorCode = 'BACKUP_FAILED'
+        errorType = $_.Exception.GetType().Name
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stateDir 'last-backup-error.json') -Encoding UTF8
     throw
 }
 finally {
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    $dbPassword = $null
     Remove-Item -LiteralPath $tempConfigDir -Recurse -Force -ErrorAction SilentlyContinue
 }

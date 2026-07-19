@@ -47,7 +47,6 @@ const createForm = reactive({
   username: '',
   displayName: '',
   roleCode: '',
-  status: 'active' as 'active' | 'disabled',
   temporaryPasswordValidHours: 24,
 })
 
@@ -153,8 +152,10 @@ function isSelf(rowId?: number | string) {
 
 function openCreate() {
   Object.assign(createForm, {
-    username: '', displayName: '', roleCode: roles.value[0]?.code || '',
-    status: 'active', temporaryPasswordValidHours: 24,
+    username: '',
+    displayName: '',
+    roleCode: roles.value[0]?.code || '',
+    temporaryPasswordValidHours: 24,
   })
   createVisible.value = true
 }
@@ -167,7 +168,7 @@ async function handleCreate() {
       username: createForm.username.trim(),
       displayName: createForm.displayName.trim() || undefined,
       roleCode: createForm.roleCode,
-      status: createForm.status,
+      status: 'active',
       temporaryPasswordValidHours: createForm.temporaryPasswordValidHours,
     })
     createVisible.value = false
@@ -330,12 +331,8 @@ onMounted(loadData)
       description="管理系统账号、角色、凭据状态、启停状态与最近登录信息。"
     >
       <template #actions>
-        <el-button :loading="loading" @click="loadData">
-          <FaIcon name="i-ri:refresh-line" />刷新数据
-        </el-button>
-        <el-button v-if="canManage" type="primary" @click="openCreate">
-          <FaIcon name="i-ri:user-add-line" />创建用户
-        </el-button>
+        <el-button :loading="loading" @click="loadData"><FaIcon name="i-ri:refresh-line" />刷新数据</el-button>
+        <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-ri:user-add-line" />创建用户</el-button>
       </template>
     </MrrPageHeader>
 
@@ -364,17 +361,11 @@ onMounted(loadData)
 
       <el-table v-else :data="users" row-key="id">
         <el-table-column prop="username" label="用户名" min-width="150">
-          <template #default="{ row }">
-            <div class="user-identity"><span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span><strong>{{ row.username }}</strong></div>
-          </template>
+          <template #default="{ row }"><div class="user-identity"><span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span><strong>{{ row.username }}</strong></div></template>
         </el-table-column>
         <el-table-column prop="displayName" label="显示名称" min-width="140" />
-        <el-table-column label="角色" min-width="130">
-          <template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="凭据状态" min-width="170">
-          <template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template>
-        </el-table-column>
+        <el-table-column label="角色" min-width="130"><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
+        <el-table-column label="凭据状态" min-width="170"><template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template></el-table-column>
         <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" min-width="180"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
         <el-table-column label="操作" width="245" fixed="right" align="right">
@@ -395,15 +386,12 @@ onMounted(loadData)
     </MrrDataTablePanel>
 
     <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
-      <el-alert type="info" :closable="false" show-icon title="系统将生成一次性临时密码，用户首次登录后必须修改。" />
+      <el-alert type="info" :closable="false" show-icon title="新用户默认启用。系统将生成一次性临时密码，首次登录后必须修改；如暂不使用账号，可创建后再禁用。" />
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="createForm.displayName" placeholder="例如 张三" /></el-form-item>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="createForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
-        <div class="form-grid">
-          <el-form-item label="初始状态"><el-select v-model="createForm.status" class="full-width"><el-option v-for="option in statusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
-          <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
-        </div>
+        <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
     </el-dialog>
@@ -451,7 +439,6 @@ onMounted(loadData)
 .row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .no-perm, .unit { margin-left: 8px; font-size: 12px; color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: 18px; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .readonly-field { width: 100%; min-height: var(--mrr-control-height); padding: 9px 12px; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
 .credential-panel { display: grid; gap: 10px; padding: 18px; margin-top: 18px; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
@@ -460,5 +447,5 @@ onMounted(loadData)
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
 .acknowledge { margin-top: 16px; }
-@media (width <= 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .form-grid { grid-template-columns: 1fr; } .credential-actions { flex-direction: column; } }
+@media (width <= 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
 </style>

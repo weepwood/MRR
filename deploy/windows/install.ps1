@@ -123,7 +123,6 @@ $resolvedJava = Resolve-DirectoryOption $JavaHome @(
     (Join-Path $scriptDir 'runtime\jre'),
     (Join-Path $scriptDir 'runtime\jdk')
 ) 'bin\java.exe' 'JDK/JRE 21'
-$javaExe = Join-Path $resolvedJava 'bin\java.exe'
 
 $directories = @(
     'config', 'config\nginx', 'secrets', 'releases', 'staging', 'packages',
@@ -147,6 +146,23 @@ if (-not (Test-Path -LiteralPath $nginxDestination)) {
 } else {
     Write-Host "保留现有 Nginx：$nginxDestination"
 }
+
+$javaRuntime = $resolvedJava
+$bundledRuntimeRoot = [IO.Path]::GetFullPath((Join-Path $scriptDir 'runtime')).TrimEnd('\') + '\'
+$resolvedJavaFull = [IO.Path]::GetFullPath($resolvedJava)
+if ($resolvedJavaFull.StartsWith($bundledRuntimeRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    $javaDestination = Join-Path $Root 'runtime\java'
+    if ((Test-Path -LiteralPath $javaDestination) -and $Force) {
+        Remove-Item -LiteralPath $javaDestination -Recurse -Force
+    }
+    if (-not (Test-Path -LiteralPath $javaDestination)) {
+        Copy-Item -LiteralPath $resolvedJava -Destination $javaDestination -Recurse -Force
+    } else {
+        Write-Host "保留现有 Java 运行时：$javaDestination"
+    }
+    $javaRuntime = $javaDestination
+}
+$javaExe = Join-Path $javaRuntime 'bin\java.exe'
 
 $rootUri = $Root.Replace('\', '/')
 $templateTokens = @{ 'MRR_ROOT' = $Root; 'MRR_URI_ROOT' = $rootUri }

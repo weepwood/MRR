@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.DeveloperModeService;
+import com.zjcxph.imgapi.utils.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,10 +22,8 @@ class LoginInterceptorDeveloperModeTest {
 
     @Mock
     private TokenBlacklist tokenBlacklist;
-
     @Mock
     private AuthUserMapper authUserMapper;
-
     @Mock
     private DeveloperModeService developerModeService;
 
@@ -32,6 +31,7 @@ class LoginInterceptorDeveloperModeTest {
 
     @BeforeEach
     void setUp() {
+        JwtUtil.configure("test-jwt-secret-key-for-auth-tests-1234567890");
         loginInterceptor = new LoginInterceptor(tokenBlacklist, authUserMapper, developerModeService);
     }
 
@@ -70,5 +70,30 @@ class LoginInterceptorDeveloperModeTest {
         assertThat(allowed).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("请先登录");
+    }
+
+    @Test
+    void shouldFailClosedWhenUserDatabaseIsUnavailableEvenInDeveloperMode() throws Exception {
+        AuthSession tokenUser = new AuthSession();
+        tokenUser.setId(20L);
+        tokenUser.setUsername("doctor.test");
+        tokenUser.setStatus("active");
+        tokenUser.setPasswordVersion(1);
+        String token = JwtUtil.getToken(tokenUser);
+
+        when(tokenBlacklist.isRevoked(org.mockito.ArgumentMatchers.anyString())).thenReturn(false);
+        when(authUserMapper.findById(20L)).thenThrow(new IllegalStateException("database unavailable"));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/settings");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = loginInterceptor.preHandle(request, response, new Object());
+
+        assertThat(allowed).isFalse();
+        assertThat(response.getStatus()).isEqualTo(503);
+        assertThat(response.getContentAsString()).contains("AUTH_SERVICE_UNAVAILABLE");
+        assertThat(request.getAttribute(LoginInterceptor.DEVELOPER_MODE_ATTRIBUTE)).isNull();
+        assertThat(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).isNull();
     }
 }

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Menu } from '#/global'
+import { useMenuStore } from '@/store/modules/menu'
+import { useMenuVisibilityStore } from '@/store/modules/menu-visibility'
 
 defineOptions({ name: 'MenuVisibilitySettings' })
 

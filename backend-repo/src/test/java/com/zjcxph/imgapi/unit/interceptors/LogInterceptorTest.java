@@ -26,12 +26,13 @@ class LogInterceptorTest {
     @Test
     void exposesRequestIdEndpointTemplateAndServerTiming() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        request.addHeader("X-Request-Id", "nginx-request-1234");
         MockHttpServletResponse response = new MockHttpServletResponse();
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/scans/{id}");
 
         interceptor.preHandle(request, response, new Object());
 
-        assertThat(response.getHeader("X-Request-Id")).isNotBlank();
+        assertThat(response.getHeader("X-Request-Id")).isEqualTo("nginx-request-1234");
         assertThat(response.getHeader("X-Endpoint-Template")).isEqualTo("/api/v1/scans/{id}");
         assertThat(response.getHeader("Server-Timing")).isNull();
 
@@ -39,6 +40,19 @@ class LogInterceptorTest {
         interceptor.postHandle(request, response, new Object(), null);
 
         assertThat(response.getHeader("Server-Timing")).matches("app;dur=\\d+");
+    }
+
+    @Test
+    void rejectsUnsafeClientSuppliedRequestId() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        request.addHeader("X-Request-Id", "bad request id with spaces\r\nInjected: true");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        interceptor.preHandle(request, response, new Object());
+
+        assertThat(response.getHeader("X-Request-Id"))
+                .matches("[0-9a-f]{32}")
+                .doesNotContain("Injected");
     }
 
     @Test
@@ -92,5 +106,4 @@ class LogInterceptorTest {
                 .doesNotContain("00789508", "605746", "0072.jpg", "secret-password",
                         "330123456789012345", "secret-token");
     }
-
 }

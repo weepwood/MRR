@@ -1,8 +1,11 @@
 package com.zjcxph.imgapi.unit.interceptors;
 
+import com.zjcxph.imgapi.common.AppErrorCode;
 import com.zjcxph.imgapi.entity.Log;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.service.AsyncLogService;
+import com.zjcxph.imgapi.service.ReliableAuditService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -13,8 +16,11 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class LogInterceptorTest {
@@ -105,5 +111,60 @@ class LogInterceptorTest {
         assertThat(savedLog.toString())
                 .doesNotContain("00789508", "605746", "0072.jpg", "secret-password",
                         "330123456789012345", "secret-token");
+    }
+
+    @Test
+    void preflightsDurableAuditFallbackForSensitiveRequests() throws Exception {
+        ReliableAuditService reliableAuditService = mock(ReliableAuditService.class);
+        LogInterceptor secureInterceptor = new LogInterceptor(
+                asyncLogService,
+                reliableAuditService,
+                meterRegistry,
+                "audit-hmac-secret"
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(secureInterceptor.preHandle(request, response, new Object())).isTrue();
+
+        verify(reliableAuditService).assertFallbackAvailable();
+    }
+
+    @Test
+    void doesNotProbeAuditFallbackForOrdinaryReadOnlyEndpoints() throws Exception {
+        ReliableAuditService reliableAuditService = mock(ReliableAuditService.class);
+        LogInterceptor secureInterceptor = new LogInterceptor(
+                asyncLogService,
+                reliableAuditService,
+                meterRegistry,
+                "audit-hmac-secret"
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(secureInterceptor.preHandle(request, response, new Object())).isTrue();
+
+        verify(reliableAuditService, never()).assertFallbackAvailable();
+    }
+
+    @Test
+    void blocksSensitiveRequestWhenAuditFallbackIsUnavailable() {
+        ReliableAuditService reliableAuditService = mock(ReliableAuditService.class);
+        doThrow(new BusinessException(AppErrorCode.AUDIT_UNAVAILABLE))
+                .when(reliableAuditService).assertFallbackAvailable();
+        LogInterceptor secureInterceptor = new LogInterceptor(
+                asyncLogService,
+                reliableAuditService,
+                meterRegistry,
+                "audit-hmac-secret"
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "DELETE", "/api/v1/oss/object/123");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> secureInterceptor.preHandle(request, response, new Object()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("审计服务暂不可用");
     }
 }

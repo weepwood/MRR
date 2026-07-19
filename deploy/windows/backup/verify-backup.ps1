@@ -37,6 +37,13 @@ if (-not (Test-Path -LiteralPath $manifestFile -PathType Leaf)) {
 }
 $manifest = Get-Content -LiteralPath $manifestFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
+if ([bool]$manifest.secretsIncluded) {
+    throw '安全校验失败：普通备份清单声明包含 secrets。请删除该备份并重新生成。'
+}
+if ([string]$manifest.configurationPolicy -ne 'sanitized-no-secrets') {
+    throw '配置备份策略不是 sanitized-no-secrets，拒绝将其视为合规备份。'
+}
+
 $actualDumpHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $BackupFile).Hash.ToLowerInvariant()
 if ($actualDumpHash -ne [string]$manifest.dumpSha256) {
     throw '数据库备份 SHA-256 校验失败。'
@@ -61,6 +68,22 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [IO.Compression.ZipFile]::OpenRead($configFile)
 try {
     if ($archive.Entries.Count -eq 0) { throw '配置备份 ZIP 为空。' }
+
+    $unsafeEntries = @($archive.Entries | Where-Object {
+        $name = $_.FullName.Replace('\', '/').ToLowerInvariant()
+        $name -match '(^|/)secrets(/|$)' -or
+        $name -match 'application-secrets\.properties$' -or
+        $name -match '\.(key|pem|pfx|p12|jks)$'
+    })
+    if ($unsafeEntries.Count -gt 0) {
+        $names = ($unsafeEntries | Select-Object -ExpandProperty FullName) -join ', '
+        throw "配置备份包含禁止的 secrets 或私钥文件：$names"
+    }
+
+    $notice = $archive.Entries | Where-Object { $_.FullName -match 'SECRETS-NOT-INCLUDED\.txt$' } | Select-Object -First 1
+    if (-not $notice) {
+        throw '配置备份缺少 SECRETS-NOT-INCLUDED.txt 安全说明。'
+    }
 }
 finally {
     $archive.Dispose()
@@ -73,8 +96,18 @@ $result = [ordered]@{
     dumpSha256 = $actualDumpHash
     configArchive = (Resolve-Path $configFile).Path
     configSha256 = $actualConfigHash
-    checks = @('manifest', 'dump-sha256', 'pg_restore-list', 'config-sha256', 'config-zip')
+    secretsIncluded = $false
+    configurationPolicy = 'sanitized-no-secrets'
+    checks = @(
+        'manifest',
+        'dump-sha256',
+        'pg_restore-list',
+        'config-sha256',
+        'config-zip',
+        'secrets-excluded',
+        'private-keys-excluded'
+    )
 }
 $result | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $Root 'state\backup\last-verification.json') -Encoding UTF8
 $result | Format-List
-Write-Host '最近备份验证通过。' -ForegroundColor Green
+Write-Host '最近备份验证通过，普通配置包不包含 secrets。' -ForegroundColor Green

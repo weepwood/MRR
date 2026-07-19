@@ -58,22 +58,18 @@ export const useUserStore = defineStore('user', () => {
 
   async function login(data: { account: string, password: string }) {
     const res = await apiUser.login(data)
-    const payload = res.data || {}
-    const loginData = payload.data || payload
-    const user = loginData.user || loginData.profile || payload.user || {}
+    const payload: any = res.data || {}
+    const loginData: any = payload.data || payload
+    const user: Profile = loginData.user || loginData.profile || payload.user || {}
     setSession({ token: loginData.token || loginData.accessToken || loginData.jwt || '', user })
-    if (!user.displayName && !user.username) {
-      account.value = data.account
-    }
+    if (!user.displayName && !user.username) account.value = data.account
     return loginData.nextAction || (user.mustChangePassword ? 'CHANGE_PASSWORD' : 'NONE')
   }
 
   function logout(redirect = router.currentRoute.value.fullPath) {
     localStorage.removeItem('token')
     token.value = ''
-    if (!isDemoMode) {
-      apiUser.logout().catch(() => {})
-    }
+    if (!isDemoMode) apiUser.logout().catch(() => {})
     router.push({
       name: 'login',
       query: {
@@ -103,7 +99,7 @@ export const useUserStore = defineStore('user', () => {
 
   async function getPermissions() {
     const res = await apiUser.permission()
-    const nextProfile = res.data || {}
+    const nextProfile: Profile = (res.data || {}) as Profile
     account.value = nextProfile.displayName || nextProfile.username || account.value
     persistProfile(nextProfile)
   }

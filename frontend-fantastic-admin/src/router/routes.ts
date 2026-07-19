@@ -157,11 +157,13 @@ const asyncRoutes: Route.recordMainRaw[] = [
       },
       {
         path: '/login-settings',
-        component: () => import('@/views/login-settings/index.vue'),
+        redirect: '/settings?section=login-support',
         meta: {
           title: '登录页文案',
-          icon: 'i-ant-design:file-text-twotone',
           auth: ['system:read'],
+          menu: false,
+          breadcrumb: false,
+          activeMenu: '/settings',
           cache: false,
         },
       },

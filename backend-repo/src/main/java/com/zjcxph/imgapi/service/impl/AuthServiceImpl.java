@@ -62,20 +62,22 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public LoginResponseDTO login(UserRequest req) {
+    public LoginResponseDTO login(UserRequest req, String clientIp) {
         String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
         String password = Optional.ofNullable(req.getPassword()).orElse("");
 
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             throw new IllegalArgumentException("用户名和密码不能为空");
         }
-        if (rateLimiter.isLoginBlocked(username)) {
-            throw new BusinessException("登录尝试过于频繁，请15分钟后重试");
+
+        String attemptKey = loginAttemptKey(username, clientIp);
+        if (rateLimiter.isLoginBlocked(attemptKey)) {
+            throw new BusinessException(429, "登录尝试过于频繁，请15分钟后重试");
         }
 
         AuthUser user = authUserMapper.findByUsername(username);
         if (user == null || !PasswordUtil.matches(password, user.getPasswordHash())) {
-            rateLimiter.recordLoginFailure(username);
+            rateLimiter.recordLoginFailure(attemptKey);
             throw new IllegalArgumentException("用户名或密码错误");
         }
         // 只有凭据校验成功后才返回账号状态，避免通过任意密码枚举禁用账号。
@@ -85,12 +87,12 @@ public class AuthServiceImpl implements AuthService {
         if (user.isPasswordChangeRequired()
                 && user.getTemporaryPasswordExpiresAt() != null
                 && user.getTemporaryPasswordExpiresAt().isBefore(LocalDateTime.now())) {
-            securityAudit.warn("event=USER_TEMP_PASSWORD_EXPIRED targetUserId={} username={} result=DENIED",
-                    user.getId(), user.getUsername());
+            securityAudit.warn("event=USER_TEMP_PASSWORD_EXPIRED targetUserId={} username={} sourceIp={} result=DENIED",
+                    user.getId(), user.getUsername(), clientIp);
             throw new BusinessException("临时密码已过期，请联系管理员重新生成");
         }
 
-        rateLimiter.resetLoginFailures(username);
+        rateLimiter.resetLoginFailures(attemptKey);
         LocalDateTime now = LocalDateTime.now();
         authUserMapper.updateLastLoginAt(user.getId(), now);
         user.setLastLoginAt(now);
@@ -262,14 +264,14 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("临时密码已过期，请联系管理员重新生成");
         }
         if (!PasswordUtil.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BusinessException("当前临时密码错误");
+            throw new BusinessException("当前密码错误");
         }
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new BusinessException("两次输入的新密码不一致");
         }
         validatePassword(request.getNewPassword());
         if (request.getCurrentPassword().equals(request.getNewPassword())) {
-            throw new BusinessException("新密码不能与临时密码相同");
+            throw new BusinessException("新密码不能与当前密码相同");
         }
 
         authUserMapper.changePassword(userId, PasswordUtil.encode(request.getNewPassword()));
@@ -473,6 +475,14 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("角色不能为空");
         }
         return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private String loginAttemptKey(String username, String clientIp) {
+        String normalizedUser = Optional.ofNullable(username).map(String::trim)
+                .orElse("").toLowerCase(Locale.ROOT);
+        String normalizedIp = Optional.ofNullable(clientIp).map(String::trim)
+                .filter(StringUtils::hasText).orElse("unknown");
+        return normalizedUser + "|" + normalizedIp;
     }
 
     private boolean isAdminRole(String roleCode) {

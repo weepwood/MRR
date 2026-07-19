@@ -54,8 +54,10 @@ class AuthServiceCredentialLifecycleTest {
         request.setStatus("active");
         request.setTemporaryPasswordValidHours(24);
 
+        AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
         role.setCode("DOCTOR");
+        when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
         when(authUserMapper.findByUsername("doctor.test"))
                 .thenReturn(null)

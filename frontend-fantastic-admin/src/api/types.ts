@@ -1,6 +1,6 @@
 /** 后端统一响应格式 */
 export interface ApiResult<T = unknown> {
-  code?: number
+  code?: number | string
   message?: string
   data?: T
   timestamp?: string
@@ -242,7 +242,7 @@ export interface EncryptIDSearchParams {
   timestamp: string
 }
 
-/** 认证用户（对齐后端 AuthUserProfileDTO） */
+/** 认证用户（对齐后端 AuthUserProfileDTO / AuthSession） */
 export interface AuthUser {
   id?: number
   username?: string
@@ -251,7 +251,15 @@ export interface AuthUser {
   roleName?: string
   permissions?: string[]
   status?: string
+  mustChangePassword?: boolean
+  passwordVersion?: number
+  passwordChangedAt?: string
+  temporaryPasswordExpiresAt?: string
+  passwordResetAt?: string
+  passwordResetBy?: number
   lastLoginAt?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 /** 认证角色（对齐后端 AuthRole） */
@@ -291,6 +299,7 @@ export interface LoginResponse {
   jwt?: string
   user?: AuthUser
   profile?: AuthUser
+  nextAction?: 'NONE' | 'CHANGE_PASSWORD'
   data?: LoginResponse
 }
 

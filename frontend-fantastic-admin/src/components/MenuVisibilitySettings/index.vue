@@ -3,6 +3,8 @@ import type { Menu } from '#/global'
 
 defineOptions({ name: 'MenuVisibilitySettings' })
 
+type MenuTitle = string | (() => string) | undefined
+
 interface MenuVisibilityItem {
   path: string
   title: string
@@ -20,11 +22,7 @@ interface MenuVisibilityGroup {
 const menuStore = useMenuStore()
 const menuVisibilityStore = useMenuVisibilityStore()
 
-function resolveTitle(title: Menu.recordRaw['meta'] extends infer T
-  ? T extends { title?: infer P }
-    ? P
-    : never
-  : never, fallback: string) {
+function resolveTitle(title: MenuTitle, fallback: string): string {
   if (typeof title === 'function') {
     return title()
   }

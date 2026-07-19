@@ -76,6 +76,16 @@ function Install-WinSWService {
     }
 }
 
+function Set-ProtectedDirectoryAcl {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    & icacls.exe $Path /inheritance:r | Out-Null
+    & icacls.exe $Path /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "设置受保护目录 ACL 失败：$Path"
+    }
+}
+
 Assert-Administrator
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -110,11 +120,17 @@ $directories = @(
     'logs\nginx',
     'logs\service',
     'monitoring-data',
+    'monitoring-data\windows-exporter-textfile',
     'ops\services',
+    'ops\backup',
+    'ops\monitoring',
     'runtime',
     'shared',
     'state',
-    'backups'
+    'state\audit',
+    'backups',
+    'backups\postgresql\logical',
+    'backups\restore-drills'
 )
 foreach ($relative in $directories) {
     New-Item -ItemType Directory -Path (Join-Path $Root $relative) -Force | Out-Null
@@ -157,16 +173,15 @@ Write-TemplateIfMissing `
     -Destination (Join-Path $Root 'shared\maintenance.html')
 
 Set-Content -LiteralPath (Join-Path $Root 'config\nginx\maintenance.inc') -Value "# maintenance disabled`r`n" -Encoding ASCII
-Set-Content -LiteralPath (Join-Path $Root 'shared\healthz.txt') -Value "ok`r`n" -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $Root 'shared\healthz.txt') -Value "MRR_FRONTEND_OK`r`n" -Encoding ASCII
 Copy-Item -LiteralPath (Join-Path $scriptDir 'mrrctl.ps1') -Destination (Join-Path $Root 'ops\mrrctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'backup\*') -Destination (Join-Path $Root 'ops\backup') -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'monitoring\*') -Destination (Join-Path $Root 'ops\monitoring') -Recurse -Force
 
-# 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
-$secretsPath = Join-Path $Root 'secrets'
-& icacls.exe $secretsPath /inheritance:r | Out-Null
-& icacls.exe $secretsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "设置 secrets ACL 失败：$secretsPath"
-}
+# Secrets, durable audit spool and database backups contain security-sensitive information.
+Set-ProtectedDirectoryAcl -Path (Join-Path $Root 'secrets')
+Set-ProtectedDirectoryAcl -Path (Join-Path $Root 'state\audit')
+Set-ProtectedDirectoryAcl -Path (Join-Path $Root 'backups')
 
 $tokens = @{
     'MRR_ROOT'     = $Root

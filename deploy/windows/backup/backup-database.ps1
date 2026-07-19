@@ -153,7 +153,7 @@ try {
     }
 
     Copy-SafeNginxConfiguration `
-        (Join-Path $Root 'runtime\nginx\conf') `
+        (Join-Path $Root 'config\nginx') `
         (Join-Path $tempConfigDir 'nginx-conf')
 
     @'

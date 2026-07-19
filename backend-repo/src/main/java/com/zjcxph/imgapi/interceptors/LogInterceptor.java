@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.HexFormat;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,9 +41,11 @@ public class LogInterceptor implements HandlerInterceptor {
     private static final String AUTH_SESSION_ATTR = "AUTH_SESSION";
     private static final String START_TIME_ATTR = "startTime";
     private static final String REQUEST_ID_ATTR = "requestId";
+    private static final String TRACE_ID_FALLBACK_ATTR = "traceIdFallback";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ERROR_CODE_HEADER = "X-Error-Code";
     private static final String ENDPOINT_TEMPLATE_HEADER = "X-Endpoint-Template";
+    private static final Pattern SAFE_REQUEST_ID = Pattern.compile("[A-Za-z0-9._-]{8,64}");
 
     private final AsyncLogService asyncLogService;
     private final ReliableAuditService reliableAuditService;
@@ -73,14 +76,14 @@ public class LogInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String requestId = randomId();
+        String requestId = resolveRequestId(request.getHeader(REQUEST_ID_HEADER));
         MDC.put("requestId", requestId);
         MDC.put("clientIp", IpUtil.getClientIp(request));
 
         String traceId = MDC.get("traceId");
         if (traceId == null || traceId.isBlank()) {
-            traceId = requestId;
-            MDC.put("traceId", traceId);
+            MDC.put("traceId", requestId);
+            request.setAttribute(TRACE_ID_FALLBACK_ATTR, Boolean.TRUE);
         }
 
         String userId = request.getHeader("X-User-Id");
@@ -184,7 +187,7 @@ public class LogInterceptor implements HandlerInterceptor {
                     .register(meterRegistry)
                     .record(executeTime, TimeUnit.MILLISECONDS);
         } finally {
-            clearRequestMdc();
+            clearRequestMdc(request);
         }
     }
 
@@ -363,12 +366,25 @@ public class LogInterceptor implements HandlerInterceptor {
         }
     }
 
-    private void clearRequestMdc() {
+    private String resolveRequestId(String supplied) {
+        if (supplied != null) {
+            String candidate = supplied.trim();
+            if (SAFE_REQUEST_ID.matcher(candidate).matches()) {
+                return candidate;
+            }
+        }
+        return randomId();
+    }
+
+    private void clearRequestMdc(HttpServletRequest request) {
         MDC.remove("requestId");
         MDC.remove("clientIp");
         MDC.remove("userId");
         MDC.remove("userRole");
         MDC.remove("errorCode");
+        if (Boolean.TRUE.equals(request.getAttribute(TRACE_ID_FALLBACK_ATTR))) {
+            MDC.remove("traceId");
+        }
     }
 
     private String randomId() {

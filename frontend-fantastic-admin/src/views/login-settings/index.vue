@@ -90,7 +90,7 @@ onMounted(() => loadSettings())
 </script>
 
 <template>
-  <MrrPageShell width="wide">
+  <MrrPageShell width="standard">
     <MrrPageHeader
       eyebrow="Login Page Copy"
       title="登录页文案"

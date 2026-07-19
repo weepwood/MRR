@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
 import menu from '@/menu'
 import { resolveRoutePath } from '@/utils'
+import { useMenuVisibilityStore } from './menu-visibility'
 
 export const useMenuStore = defineStore(
   // 唯一ID

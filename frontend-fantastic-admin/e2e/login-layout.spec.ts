@@ -12,8 +12,34 @@ test.describe('登录页统一设计', () => {
     await expect(page.getByLabel('密码')).toBeVisible()
     await expect(page.getByRole('button', { name: '登录系统' })).toBeVisible()
     await expect(page.getByText('系统不开放自助注册和在线重置密码。', { exact: false })).toBeVisible()
+    await expect(page.locator('.theme-control')).toHaveCount(0)
+    await expect(page.locator('.brand-mark')).toHaveCount(0)
     await expect(page.getByText('注册新帐号', { exact: true })).toHaveCount(0)
     await expect(page.getByText('忘记密码了?', { exact: true })).toHaveCount(0)
+  })
+
+  test('匿名读取系统配置的登录页文案', async ({ page }) => {
+    await page.route('**/api/v1/public/config/login-page', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 200,
+          message: 'success',
+          data: {
+            loginBrandTitle: '医院病案影像平台',
+            loginFormTitle: '登录院内系统',
+            loginHelpText: '账号问题请联系病案室管理员。',
+          },
+        }),
+      })
+    })
+
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+
+    await expect(page.getByRole('heading', { name: '医院病案影像平台' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '登录院内系统' })).toBeVisible()
+    await expect(page.getByText('账号问题请联系病案室管理员。')).toBeVisible()
   })
 
   test('窄屏保持单列并隐藏非必要介绍', async ({ page }) => {

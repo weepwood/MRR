@@ -5,27 +5,15 @@ on:
     branches:
       - dev-no-login
     paths:
+      - 'VERSION'
+      - 'release-baseline.json'
+      - 'scripts/release_baseline.py'
+      - 'backend-repo/**'
+      - 'frontend-fantastic-admin/**'
+      - 'vitepress-doc/**'
       - 'deploy/windows/**'
       - '.github/workflows/windows-release-package.yml'
-      - 'backend-repo/src/main/resources/application.properties'
-      - 'vitepress-doc/.vitepress/config.full.mts'
-      - 'vitepress-doc/internal/windows-deployment.md'
   workflow_dispatch:
-    inputs:
-      version:
-        description: Product version, for example v0.1.2
-        required: true
-        type: string
-      database_schema_version:
-        description: Flyway/database schema version
-        required: true
-        default: V0
-        type: string
-      database_backward_compatible:
-        description: Whether the previous application version can use the upgraded database
-        required: true
-        default: true
-        type: boolean
   push:
     tags:
       - 'v*'
@@ -40,6 +28,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -55,8 +45,31 @@ jobs:
           cache: npm
           cache-dependency-path: vitepress-doc/package-lock.json
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Enable pnpm
         run: corepack enable && corepack prepare pnpm@10.33.0 --activate
+
+      - name: Validate release baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_baseline.py validate
+
+          PRODUCT_VERSION="$(tr -d '\r\n' < VERSION)"
+          BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]] && [[ "${GITHUB_REF_NAME}" != "v${PRODUCT_VERSION}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION v${PRODUCT_VERSION}" >&2
+            exit 1
+          fi
+
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> "${GITHUB_ENV}"
+          echo "MRR_GIT_COMMIT=${GITHUB_SHA}" >> "${GITHUB_ENV}"
+          echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
       - name: Validate deployment sources
         shell: pwsh
@@ -82,7 +95,16 @@ jobs:
 
       - name: Test and package backend
         working-directory: backend-repo
-        run: mvn -B test package
+        run: mvn -B -Drevision="${PRODUCT_VERSION}" test package
+
+      - name: Verify backend build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
+          test -n "${BACKEND_JAR}"
+          unzip -p "${BACKEND_JAR}" META-INF/build-info.properties | grep -F "build.version=${PRODUCT_VERSION}"
+          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties | grep -F "git.commit.id=${GITHUB_SHA}"
 
       - name: Test and build frontend
         working-directory: frontend-fantastic-admin
@@ -91,36 +113,29 @@ jobs:
           pnpm lint:tsc
           pnpm test:run
           pnpm build
+          grep -R --fixed-strings "${PRODUCT_VERSION}" dist >/dev/null
+          grep -R --fixed-strings "${GITHUB_SHA}" dist >/dev/null
 
       - name: Build documentation
         working-directory: vitepress-doc
         run: |
-          npm install
+          npm ci
           npm run docs:build
+          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
+          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
 
       - name: Assemble offline package
         id: package
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-          INPUT_SCHEMA_VERSION: ${{ inputs.database_schema_version }}
-          INPUT_DB_COMPATIBLE: ${{ inputs.database_backward_compatible }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
         run: |
           set -euo pipefail
 
-          if [ -n "${INPUT_VERSION:-}" ]; then
-            VERSION="${INPUT_VERSION}"
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF_NAME}"
-          else
-            VERSION="pr-${PR_NUMBER:-manual}-${GITHUB_SHA:0:8}"
-          fi
-          SCHEMA_VERSION="${INPUT_SCHEMA_VERSION:-V0}"
-          DB_COMPATIBLE="${INPUT_DB_COMPATIBLE:-true}"
-          COMMIT="${GITHUB_SHA}"
-          BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           PACKAGE_DIR="build/windows-package"
-          ARCHIVE="MRR-${VERSION}.zip"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            ARCHIVE="MRR-v${PRODUCT_VERSION}.zip"
+          else
+            ARCHIVE="MRR-v${PRODUCT_VERSION}-${GITHUB_SHA:0:8}.zip"
+          fi
 
           rm -rf build
           mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" \
@@ -134,32 +149,22 @@ jobs:
           cp -a vitepress-doc/.vitepress/dist-user/. "${PACKAGE_DIR}/docs/user/"
           cp -a vitepress-doc/.vitepress/dist-internal/. "${PACKAGE_DIR}/docs/internal/"
           cp -a deploy/windows/. "${PACKAGE_DIR}/deploy/windows/"
+          cp VERSION release-baseline.json "${PACKAGE_DIR}/"
 
-          python - <<PY
-          import json
-          from pathlib import Path
-          manifest = {
-              "productVersion": "${VERSION}",
-              "gitCommit": "${COMMIT}",
-              "buildTime": "${BUILD_TIME}",
-              "databaseSchemaVersion": "${SCHEMA_VERSION}",
-              "databaseBackwardCompatible": "${DB_COMPATIBLE}".lower() == "true"
-          }
-          Path("${PACKAGE_DIR}/manifest.json").write_text(
-              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-              encoding="utf-8"
-          )
-          PY
+          python scripts/release_baseline.py manifest \
+            --git-commit "${GITHUB_SHA}" \
+            --build-time "${MRR_BUILD_TIME}" \
+            --output "${PACKAGE_DIR}/manifest.json"
 
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR %s\n\nCommit: %s\n' "${VERSION}" "${COMMIT}" > "${PACKAGE_DIR}/release-notes.md"
+            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${GITHUB_SHA}" > "${PACKAGE_DIR}/release-notes.md"
           fi
 
           (
             cd "${PACKAGE_DIR}"
-            find backend frontend docs deploy manifest.json release-notes.md -type f -print0 \
+            find backend frontend docs deploy VERSION release-baseline.json manifest.json release-notes.md -type f -print0 \
               | sort -z \
               | xargs -0 sha256sum > SHA256SUMS
             zip -qr "../${ARCHIVE}" .
@@ -167,7 +172,7 @@ jobs:
 
           echo "archive=build/${ARCHIVE}" >> "${GITHUB_OUTPUT}"
           echo "archive_name=${ARCHIVE}" >> "${GITHUB_OUTPUT}"
-          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "version=${PRODUCT_VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v4

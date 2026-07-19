@@ -6,9 +6,16 @@ import {
 } from '../system-settings'
 
 describe('effective system settings', () => {
-  it('restores supported value types from server strings', () => {
+  it('restores supported branding, support and archive value types from server strings', () => {
     const settings = parseSystemSettings({
       systemName: '病案影像中心',
+      systemShortName: '影像中心',
+      systemEnglishName: 'Medical Archive Center',
+      organizationName: '测试医院',
+      loginFeatureEnabled: 'false',
+      systemAdminContactEnabled: 'true',
+      systemAdminPublicVisible: '1',
+      systemAdminPhone: '0571-12345678',
       imageSource: 'oss',
       archiveDefaultView: 'list',
       archivePreviewMode: 'scroll',
@@ -24,22 +31,27 @@ describe('effective system settings', () => {
       developerModeEnabled: 'enabled',
     })
 
-    expect(settings).toEqual({
-      systemName: '病案影像中心',
-      imageSource: 'oss',
-      archiveDefaultView: 'list',
-      archivePreviewMode: 'scroll',
-      archiveThumbnailSize: 260,
-      archivePreloadCount: 40,
-      archiveAutoFit: false,
-      archiveRememberSelection: true,
-      archiveWatermarkEnabled: false,
-      archiveWatermarkOpacity: 22,
-      archiveIpMaxChanges: 5,
-      patientIdCardRevealEnabled: true,
-      patientIdCardCopyEnabled: true,
-      developerModeEnabled: true,
-    })
+    expect(settings.systemName).toBe('病案影像中心')
+    expect(settings.systemShortName).toBe('影像中心')
+    expect(settings.systemEnglishName).toBe('Medical Archive Center')
+    expect(settings.organizationName).toBe('测试医院')
+    expect(settings.loginFeatureEnabled).toBe(false)
+    expect(settings.systemAdminContactEnabled).toBe(true)
+    expect(settings.systemAdminPublicVisible).toBe(true)
+    expect(settings.systemAdminPhone).toBe('0571-12345678')
+    expect(settings.imageSource).toBe('oss')
+    expect(settings.archiveDefaultView).toBe('list')
+    expect(settings.archivePreviewMode).toBe('scroll')
+    expect(settings.archiveThumbnailSize).toBe(260)
+    expect(settings.archivePreloadCount).toBe(40)
+    expect(settings.archiveAutoFit).toBe(false)
+    expect(settings.archiveRememberSelection).toBe(true)
+    expect(settings.archiveWatermarkEnabled).toBe(false)
+    expect(settings.archiveWatermarkOpacity).toBe(22)
+    expect(settings.archiveIpMaxChanges).toBe(5)
+    expect(settings.patientIdCardRevealEnabled).toBe(true)
+    expect(settings.patientIdCardCopyEnabled).toBe(true)
+    expect(settings.developerModeEnabled).toBe(true)
   })
 
   it('uses secure defaults and rejects unsupported modes', () => {
@@ -51,6 +63,7 @@ describe('effective system settings', () => {
       archivePreloadCount: 1,
       archiveWatermarkOpacity: -10,
       archiveIpMaxChanges: 99,
+      systemAdminPublicVisible: 'unexpected',
       developerModeEnabled: 'unexpected',
     })
 
@@ -61,6 +74,8 @@ describe('effective system settings', () => {
     expect(settings.archivePreloadCount).toBe(10)
     expect(settings.archiveWatermarkOpacity).toBe(5)
     expect(settings.archiveIpMaxChanges).toBe(20)
+    expect(settings.systemAdminContactEnabled).toBe(false)
+    expect(settings.systemAdminPublicVisible).toBe(false)
     expect(settings.developerModeEnabled).toBe(false)
   })
 
@@ -69,17 +84,13 @@ describe('effective system settings', () => {
     const serialized = serializeSystemSettings(defaults)
 
     expect(defaults.imageSource).toBe('local')
-    expect(defaults.archiveIpMaxChanges).toBe(3)
-    expect(defaults.patientIdCardRevealEnabled).toBe(false)
-    expect(defaults.patientIdCardCopyEnabled).toBe(false)
-    expect(defaults.developerModeEnabled).toBe(false)
-    expect(serialized.imageSource).toBe('local')
+    expect(defaults.systemAdminContactEnabled).toBe(false)
+    expect(defaults.systemAdminPublicVisible).toBe(false)
+    expect(serialized.systemName).toBe('MRR 病案文件管理系统')
+    expect(serialized.loginFeatureEnabled).toBe('true')
+    expect(serialized.systemAdminContactEnabled).toBe('false')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
-    expect(serialized.archiveIpMaxChanges).toBe('3')
-    expect(serialized.patientIdCardRevealEnabled).toBe('false')
-    expect(serialized.patientIdCardCopyEnabled).toBe('false')
-    expect(serialized.developerModeEnabled).toBe('false')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

@@ -23,12 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 登录拦截器。
- *
- * <p>默认要求有效 Bearer access token。系统设置启用开发者模式后，缺少或无效 Token
- * 的请求会恢复 dev-no-login 分支行为，注入虚拟管理员会话；有效 JWT 始终优先使用真实用户。</p>
- */
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
 
@@ -92,6 +86,10 @@ public class LoginInterceptor implements HandlerInterceptor {
             if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
                 return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
             }
+            if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
+                writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
+                return false;
+            }
 
             AuthSession session = toCurrentSession(currentUser);
             installSession(request, session);
@@ -112,7 +110,7 @@ public class LoginInterceptor implements HandlerInterceptor {
                                                String unauthorizedMessage,
                                                String reason) throws Exception {
         if (!developerModeService.isEnabled()) {
-            writeUnauthorized(response, unauthorizedMessage);
+            writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
             return false;
         }
 
@@ -123,11 +121,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         response.setHeader("X-MRR-Developer-Mode", "enabled");
         logger.warn(
                 "Developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
-                request.getMethod(),
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                reason
-        );
+                request.getMethod(), request.getRequestURI(), request.getRemoteAddr(), reason);
         return true;
     }
 
@@ -144,6 +138,8 @@ public class LoginInterceptor implements HandlerInterceptor {
         session.setRoleCode("ADMIN");
         session.setRoleName("Administrator");
         session.setStatus("active");
+        session.setMustChangePassword(false);
+        session.setPasswordVersion(1);
         session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
         return session;
     }
@@ -156,6 +152,9 @@ public class LoginInterceptor implements HandlerInterceptor {
         session.setRoleCode(user.getRoleCode());
         session.setRoleName(StringUtils.hasText(user.getRoleName()) ? user.getRoleName() : user.getRoleCode());
         session.setStatus(user.getStatus());
+        session.setMustChangePassword(user.isPasswordChangeRequired());
+        session.setPasswordVersion(user.effectivePasswordVersion());
+        session.setTemporaryPasswordExpiresAt(user.getTemporaryPasswordExpiresAt());
         session.setLastLoginAt(user.getLastLoginAt());
         session.setPermissions(resolvePermissions(user));
         return session;
@@ -176,10 +175,10 @@ public class LoginInterceptor implements HandlerInterceptor {
         return new ArrayList<>(PermissionResolver.resolve(configured));
     }
 
-    private void writeUnauthorized(HttpServletResponse response, String message) throws Exception {
+    private void writeUnauthorized(HttpServletResponse response, String message, String code) throws Exception {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json;charset=UTF-8");
-        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", 401, "message", message));
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", code, "message", message));
     }
 }

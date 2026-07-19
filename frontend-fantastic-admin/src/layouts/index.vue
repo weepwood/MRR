@@ -2,6 +2,7 @@
 import { useSlots } from '@/slots'
 import eventBus from '@/utils/eventBus'
 
+import DeveloperModeBanner from './components/DeveloperModeBanner/index.vue'
 import Header from './components/Header/index.vue'
 import MainSidebar from './components/MainSidebar/index.vue'
 import SubSidebar from './components/SubSidebar/index.vue'
@@ -107,6 +108,7 @@ onBeforeUnmount(() => {
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
+            <DeveloperModeBanner />
             <RouterView v-slot="{ Component, route }">
               <!-- 主内容不使用离场过渡，避免新旧页面在重页面切换时叠加闪烁。 -->
               <KeepAlive :include="keepAliveStore.list" :max="10">

@@ -10,6 +10,7 @@ export const useMenuStore = defineStore(
   () => {
     const settingsStore = useSettingsStore()
     const routeStore = useRouteStore()
+    const menuVisibilityStore = useMenuVisibilityStore()
 
     const filesystemMenusRaw = ref<Menu.recordMainRaw[]>([])
     const actived = ref(0)
@@ -42,6 +43,18 @@ export const useMenuStore = defineStore(
       })
       return returnMenus
     }
+    function convertRouteToGroupedMenu(routes: Route.recordMainRaw[]): Menu.recordMainRaw[] {
+      return routes
+        .filter(item => item.children.length > 0)
+        .map(item => ({
+          meta: {
+            title: item?.meta?.title,
+            icon: item?.meta?.icon,
+            auth: item?.meta?.auth,
+          },
+          children: convertRouteToMenuRecursive(item.children),
+        }))
+    }
     function convertRouteToMenuRecursive(routes: RouteRecordRaw[], basePath = ''): Menu.recordRaw[] {
       const returnMenus: Menu.recordRaw[] = []
       routes.forEach((item) => {
@@ -64,8 +77,47 @@ export const useMenuStore = defineStore(
       return returnMenus
     }
 
-    // 完整导航数据
-    const allMenus = computed(() => {
+    function hasDisplayableMenu(menuItem: Menu.recordRaw): boolean {
+      if (menuItem.meta?.menu === false) {
+        return false
+      }
+      if (menuItem.children?.length) {
+        return menuItem.children.some(hasDisplayableMenu)
+      }
+      return true
+    }
+
+    function filterMenuChildrenByVisibility(menus: Menu.recordRaw[]): Menu.recordRaw[] {
+      const visibleMenus: Menu.recordRaw[] = []
+      menus.forEach((menuItem) => {
+        if (!menuVisibilityStore.isVisible(menuItem.path)) {
+          return
+        }
+
+        const nextMenu = cloneDeep(menuItem)
+        if (nextMenu.children?.length) {
+          nextMenu.children = filterMenuChildrenByVisibility(nextMenu.children)
+          if (!nextMenu.children.some(hasDisplayableMenu)) {
+            return
+          }
+        }
+        visibleMenus.push(nextMenu)
+      })
+      return visibleMenus
+    }
+
+    function filterMainMenusByVisibility(menus: Menu.recordMainRaw[]): Menu.recordMainRaw[] {
+      return menus.reduce<Menu.recordMainRaw[]>((result, menuItem) => {
+        const nextMenu = cloneDeep(menuItem)
+        nextMenu.children = filterMenuChildrenByVisibility(nextMenu.children)
+        if (nextMenu.children.some(hasDisplayableMenu)) {
+          result.push(nextMenu)
+        }
+        return result
+      }, [])
+    }
+
+    function getMenusBeforeVisibilityFilter() {
       let returnMenus: Menu.recordMainRaw[] = []
       if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
         returnMenus = convertRouteToMenu(routeStore.routesRaw)
@@ -73,16 +125,29 @@ export const useMenuStore = defineStore(
       else {
         returnMenus = filesystemMenusRaw.value
       }
-      returnMenus = filterAsyncMenus(returnMenus)
-      return returnMenus
+      return filterAsyncMenus(returnMenus)
+    }
+
+    // 菜单显示设置使用固定分组，避免单栏模式下丢失业务分类。
+    const menuVisibilityMenus = computed(() => {
+      let returnMenus: Menu.recordMainRaw[] = []
+      if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
+        returnMenus = convertRouteToGroupedMenu(routeStore.routesRaw)
+      }
+      else {
+        returnMenus = filesystemMenusRaw.value
+      }
+      return filterAsyncMenus(returnMenus)
+    })
+
+    // 完整导航数据
+    const allMenus = computed(() => {
+      return filterMainMenusByVisibility(getMenusBeforeVisibilityFilter())
     })
     // 次导航数据
     const sidebarMenus = computed<Menu.recordMainRaw['children']>(() => {
-      return allMenus.value.length > 0
-        ? allMenus.value.length > 1
-          ? allMenus.value[actived.value].children
-          : allMenus.value[0].children
-        : []
+      const activeMenu = allMenus.value[actived.value] ?? allMenus.value[0]
+      return activeMenu?.children ?? []
     })
     // 次导航第一层最深路径
     const sidebarMenusFirstDeepestPath = computed(() => {
@@ -195,9 +260,19 @@ export const useMenuStore = defineStore(
       }
     }
 
+    watch(allMenus, (menus) => {
+      if (menus.length === 0) {
+        actived.value = 0
+      }
+      else if (actived.value >= menus.length) {
+        actived.value = menus.length - 1
+      }
+    }, { flush: 'sync' })
+
     return {
       actived,
       allMenus,
+      menuVisibilityMenus,
       sidebarMenus,
       sidebarMenusFirstDeepestPath,
       sidebarMenusHasOnlyMenu,

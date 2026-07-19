@@ -73,8 +73,11 @@ public class OperationsStatusService {
 
         Instant completedAt = parseInstant(latest.get("completedAt"));
         Instant failedAt = parseInstant(failure.get("failedAt"));
-        Double ageHours = completedAt == null ? null
-                : Math.round(Duration.between(completedAt, Instant.now()).toMinutes() / 0.6d) / 100.0d;
+        Double ageHours = null;
+        if (completedAt != null) {
+            long ageMinutes = Math.max(0L, Duration.between(completedAt, Instant.now()).toMinutes());
+            ageHours = Math.round(ageMinutes / 60.0d * 100.0d) / 100.0d;
+        }
 
         String status;
         if (failedAt != null && (completedAt == null || failedAt.isAfter(completedAt))) {
@@ -108,9 +111,12 @@ public class OperationsStatusService {
     private Map<String, Object> fileStoreStatus(Path path) {
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("path", path.toString());
+        if (!Files.exists(path)) {
+            status.put("status", "MISSING");
+            return status;
+        }
         try {
-            Path existing = nearestExisting(path);
-            FileStore store = Files.getFileStore(existing);
+            FileStore store = Files.getFileStore(path);
             long total = store.getTotalSpace();
             long usable = store.getUsableSpace();
             status.put("status", total > 0 && usable * 100.0d / total < 8.0d ? "CRITICAL" : "UP");
@@ -161,14 +167,6 @@ public class OperationsStatusService {
         } catch (Exception ignored) {
             return 0L;
         }
-    }
-
-    private Path nearestExisting(Path path) {
-        Path current = path;
-        while (current != null && !Files.exists(current)) {
-            current = current.getParent();
-        }
-        return current == null ? Path.of(".").toAbsolutePath().normalize() : current;
     }
 
     private static Path normalize(String value) {

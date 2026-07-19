@@ -488,26 +488,48 @@ export interface StatisticsDetailRecord {
   date?: string
   type?: string
   pages?: number
+  sjh?: string
+  openerNo?: string
+  cid?: string
 }
 
-/** 统计明细响应 */
-export interface StatisticsDetailResult {
-  list?: StatisticsDetailRecord[]
-  records?: StatisticsDetailRecord[]
-  items?: StatisticsDetailRecord[]
-  total?: number
+/** 病案统计查询参数 */
+export interface RecordsStatisticsQuery {
   page?: number
   size?: number
-  totalPages?: number
-}
-
-/** 统计导出参数 */
-export interface StatisticsExportParams {
   startDate?: string
   endDate?: string
   type?: string
-  keyword?: string
   date?: string
+  keyword?: string
+}
+
+/** 病案统计记录 */
+export interface RecordsStatistic {
+  bah?: string
+  cid?: string
+  openerNo?: string
+  date?: string
+  type?: string
+  pages?: number
+  sjh?: string
+  recordCount?: number
+  totalPages?: number
+  totalRecords?: number
+}
+
+/** Actuator 指标测量值 */
+export interface ActuatorMeasurement {
+  statistic?: string
+  value?: number
+}
+
+/** Actuator 指标（GET /actuator/metrics/{name}） */
+export interface ActuatorMetric {
+  name?: string
+  description?: string
+  baseUnit?: string
+  measurements?: ActuatorMeasurement[]
 }
 
 /** 数据库监控总览 */

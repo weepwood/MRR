@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.dto.req.AdminCreateUserRequest;
 import com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest;
@@ -12,11 +11,16 @@ import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
+import com.zjcxph.imgapi.entity.AuthRole;
 
 import java.util.List;
 
 public interface AuthService {
-    LoginResponseDTO login(UserRequest req);
+    default LoginResponseDTO login(UserRequest req) {
+        return login(req, null);
+    }
+
+    LoginResponseDTO login(UserRequest req, String clientIp);
 
     LoginResponseDTO register(RegisterRequest req);
 

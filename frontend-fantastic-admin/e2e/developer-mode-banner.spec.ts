@@ -12,7 +12,7 @@ test.describe('开发者模式全局警告', () => {
       })
     })
 
-    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
 
     const banner = page.getByTestId('developer-mode-banner')
     await expect(banner).toBeVisible({ timeout: 20_000 })
@@ -20,8 +20,8 @@ test.describe('开发者模式全局警告', () => {
     await expect(banner).toContainText('虚拟管理员身份')
     await expect(banner).toContainText('请勿在正式环境长期启用')
 
-    await banner.getByRole('button', { name: '前往系统设置关闭' }).click()
-    await expect(page).toHaveURL(/\/settings\?section=developer/)
+    await banner.getByRole('button', { name: '打开系统设置' }).click()
+    await expect(page).toHaveURL(/\/settings(?:\?.*)?$/)
   })
 
   test('关闭时不占用后台页面空间', async ({ page }) => {

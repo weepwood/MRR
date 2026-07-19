@@ -36,6 +36,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NGINX_VERSION: 1.30.4
+      WINSW_VERSION: 2.12.0
 
     steps:
       - name: Checkout
@@ -98,6 +102,97 @@ jobs:
           npm install
           npm run docs:build
 
+      - name: Download and verify offline Windows runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="deploy/windows/runtime"
+          work="${RUNNER_TEMP}/mrr-runtime"
+          rm -rf "$work" "$runtime/jdk" "$runtime/nginx" "$runtime/winsw"
+          mkdir -p "$work" "$runtime/jdk" "$runtime/nginx" "$runtime/winsw"
+
+          echo 'Downloading Eclipse Temurin JDK 21...'
+          curl -fsSL --retry 3 \
+            'https://api.adoptium.net/v3/assets/latest/21/hotspot?architecture=x64&image_type=jdk&os=windows&vendor=eclipse' \
+            -o "$work/temurin.json"
+          java_url="$(jq -r '.[0].binary.package.link' "$work/temurin.json")"
+          java_sha="$(jq -r '.[0].binary.package.checksum' "$work/temurin.json")"
+          java_version="$(jq -r '.[0].version_data.semver' "$work/temurin.json")"
+          test -n "$java_url" && test "$java_url" != null
+          test -n "$java_sha" && test "$java_sha" != null
+          curl -fsSL --retry 3 "$java_url" -o "$work/temurin.zip"
+          echo "$java_sha  $work/temurin.zip" | sha256sum -c -
+          unzip -q "$work/temurin.zip" -d "$work/temurin"
+          java_root="$(find "$work/temurin" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$java_root"
+          cp -a "$java_root/." "$runtime/jdk/"
+          test -f "$runtime/jdk/bin/java.exe"
+          test -f "$runtime/jdk/bin/jcmd.exe"
+
+          echo "Downloading nginx/Windows ${NGINX_VERSION}..."
+          nginx_url="https://nginx.org/download/nginx-${NGINX_VERSION}.zip"
+          curl -fsSL --retry 3 "$nginx_url" -o "$work/nginx.zip"
+          curl -fsSL --retry 3 "$nginx_url.asc" -o "$work/nginx.zip.asc"
+          export GNUPGHOME="$work/gnupg"
+          mkdir -m 700 -p "$GNUPGHOME"
+          for key in arut pluknet sb thresh nginx_signing; do
+            curl -fsSL --retry 3 "https://nginx.org/keys/${key}.key" -o "$work/${key}.key"
+            gpg --batch --import "$work/${key}.key"
+          done
+          gpg --batch --verify "$work/nginx.zip.asc" "$work/nginx.zip"
+          unzip -q "$work/nginx.zip" -d "$work/nginx"
+          nginx_root="$(find "$work/nginx" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$nginx_root"
+          cp -a "$nginx_root/." "$runtime/nginx/"
+          test -f "$runtime/nginx/nginx.exe"
+          test -f "$runtime/nginx/conf/mime.types"
+
+          echo "Downloading WinSW ${WINSW_VERSION}..."
+          curl -fsSL --retry 3 \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/winsw/winsw/releases/tags/v${WINSW_VERSION}" \
+            -o "$work/winsw-release.json"
+          winsw_url="$(jq -r '.assets[] | select(.name == "WinSW-x64.exe") | .browser_download_url' "$work/winsw-release.json")"
+          winsw_digest="$(jq -r '.assets[] | select(.name == "WinSW-x64.exe") | .digest // empty' "$work/winsw-release.json")"
+          test -n "$winsw_url"
+          curl -fsSL --retry 3 "$winsw_url" -o "$runtime/winsw/WinSW-x64.exe"
+          if [[ "$winsw_digest" == sha256:* ]]; then
+            winsw_sha="${winsw_digest#sha256:}"
+            echo "$winsw_sha  $runtime/winsw/WinSW-x64.exe" | sha256sum -c -
+            winsw_verification='GitHub release asset SHA-256 digest'
+          else
+            winsw_sha="$(sha256sum "$runtime/winsw/WinSW-x64.exe" | awk '{print $1}')"
+            winsw_verification='Pinned official GitHub release URL; digest recorded in package manifest'
+          fi
+
+          nginx_sha="$(sha256sum "$work/nginx.zip" | awk '{print $1}')"
+          cat > "$runtime/runtime-manifest.json" <<JSON
+          {
+            "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "architecture": "windows-x64",
+            "java": {
+              "distribution": "Eclipse Temurin",
+              "version": "$java_version",
+              "sha256": "$java_sha",
+              "verification": "Adoptium API checksum"
+            },
+            "nginx": {
+              "version": "$NGINX_VERSION",
+              "sha256": "$nginx_sha",
+              "verification": "nginx.org detached PGP signature"
+            },
+            "winsw": {
+              "version": "$WINSW_VERSION",
+              "sha256": "$winsw_sha",
+              "verification": "$winsw_verification"
+            }
+          }
+          JSON
+
       - name: Assemble offline package
         id: package
         env:
@@ -143,7 +238,9 @@ jobs:
               "gitCommit": "${COMMIT}",
               "buildTime": "${BUILD_TIME}",
               "databaseSchemaVersion": "${SCHEMA_VERSION}",
-              "databaseBackwardCompatible": "${DB_COMPATIBLE}".lower() == "true"
+              "databaseBackwardCompatible": "${DB_COMPATIBLE}".lower() == "true",
+              "deploymentMode": "single-server",
+              "bundledRuntime": True
           }
           Path("${PACKAGE_DIR}/manifest.json").write_text(
               json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -154,7 +251,8 @@ jobs:
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR %s\n\nCommit: %s\n' "${VERSION}" "${COMMIT}" > "${PACKAGE_DIR}/release-notes.md"
+            printf '# MRR %s\n\nCommit: %s\n\nWindows 单服务器离线包，已包含 Java 21、Nginx 和 WinSW。\n' \
+              "${VERSION}" "${COMMIT}" > "${PACKAGE_DIR}/release-notes.md"
           fi
 
           (

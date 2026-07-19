@@ -1,0 +1,58 @@
+groups:
+  - name: mrr-external-availability
+    rules:
+      - alert: MrrExternalProbeDown
+        expr: mrr_external_probe_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 外部可用性探针失败
+          description: 外部探针连续 2 分钟无法正常访问 {{ $labels.target }}，请检查网络、Nginx、后端和服务器状态。
+
+      - alert: MrrExternalProbeMissing
+        expr: absent(mrr_external_probe_last_run_timestamp_seconds)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 外部探针指标缺失
+          description: 未发现外部探针运行指标，请检查独立探针服务器和 windows_exporter textfile collector。
+
+      - alert: MrrExternalProbeStale
+        expr: time() - mrr_external_probe_last_run_timestamp_seconds > 300
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 外部探针超过 5 分钟未运行
+          description: 外部探针本身可能停止，当前无法确认 MRR 对用户是否可用。
+
+  - name: mrr-backup
+    rules:
+      - alert: MrrBackupMetricMissing
+        expr: absent(mrr_backup_last_success_timestamp_seconds)
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 备份成功指标缺失
+          description: 尚未发现经过校验的 PostgreSQL 逻辑备份成功记录。
+
+      - alert: MrrBackupStale
+        expr: time() - mrr_backup_last_success_timestamp_seconds > 108000
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 超过 30 小时没有成功备份
+          description: 最近一次通过 pg_restore 校验的逻辑备份已超过 30 小时。
+
+      - alert: MrrBackupLastAttemptFailed
+        expr: mrr_backup_last_failure_timestamp_seconds > mrr_backup_last_success_timestamp_seconds
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 最近一次数据库备份失败
+          description: 最近一次备份失败时间晚于最近一次成功时间，请检查备份日志和磁盘空间。

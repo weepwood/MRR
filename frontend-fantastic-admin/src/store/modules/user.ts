@@ -66,22 +66,37 @@ export const useUserStore = defineStore('user', () => {
     return loginData.nextAction || (user.mustChangePassword ? 'CHANGE_PASSWORD' : 'NONE')
   }
 
-  function logout(redirect = router.currentRoute.value.fullPath) {
+  async function logout(redirect = router.currentRoute.value.fullPath) {
+    const redirectTarget = redirect
+    const shouldRevokeToken = !isDemoMode && Boolean(token.value)
+
+    // 必须先携带当前 Bearer Token 请求后端撤销，再清理本地会话。
+    // 先删除 token 会导致 /logout 无法加入 JWT 黑名单。
+    if (shouldRevokeToken) {
+      try {
+        await apiUser.logout()
+      }
+      catch {
+        // 即使服务端不可达，也要保证本地会话可以退出。
+      }
+    }
+
     localStorage.removeItem('token')
     token.value = ''
-    if (!isDemoMode) apiUser.logout().catch(() => {})
-    router.push({
+    await router.push({
       name: 'login',
       query: {
-        ...(redirect !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect }),
+        ...(redirectTarget !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect: redirectTarget }),
       },
-    }).then(clearSession)
+    }).catch(() => {})
+    clearSession()
   }
 
-  function requestLogout() {
+  async function requestLogout() {
     localStorage.removeItem('token')
     token.value = ''
-    router.push({ name: 'login' }).then(clearSession)
+    await router.push({ name: 'login' }).catch(() => {})
+    clearSession()
   }
 
   function clearSession() {

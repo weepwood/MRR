@@ -60,7 +60,7 @@ C:\MRR\secrets\application-secrets.properties
 
 配置结构版本记录在发布包 `manifest.json` 的 `configuration.schemaVersion`。当结构版本变化时，升级前必须比较配置模板并补充新配置。
 
-## 服务管理
+## 服务与维护模式
 
 ```powershell
 $ctl = 'C:\MRR\ops\mrrctl.ps1'
@@ -71,56 +71,36 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 & $ctl stop backend
 & $ctl restart all
 & $ctl logs backend -Tail 300
-```
 
-`status` 同时检查 Windows 服务、Actuator、前端健康文件、当前版本、维护模式和磁盘剩余空间。
-
-## 维护模式
-
-MRR 不通过挂起 JVM 实现“暂停”。挂起 Java 进程可能让数据库事务、连接池连接和文件任务停在中间状态。
-
-```powershell
 & $ctl maintenance on -Message '系统升级中，请稍后再试。'
 & $ctl maintenance off
 ```
 
-维护模式由 Nginx 返回 503 页面，后端仍可完成已进入的请求，本机 Actuator 保持可用。
+MRR 不通过挂起 JVM 实现“暂停”。维护模式由 Nginx 返回 503 页面，后端仍可完成已进入的请求，本机 Actuator 保持可用。
 
 ## 唯一版本与发布目录
 
-产品版本由仓库根目录 `VERSION` 决定。正式标签必须为 `v<VERSION>`，例如 `VERSION=0.4.0` 对应标签 `v0.4.0` 和发布包：
+产品版本由仓库根目录 `VERSION` 决定。正式标签必须为 `v<VERSION>`，例如 `VERSION=0.4.0` 对应：
 
 ```text
-MRR-v0.4.0.zip
+Git Tag:       v0.4.0
+Windows ZIP:   MRR-v0.4.0.zip
+发布目录:      v0.4.0-abcdef12
 ```
 
-发布后的不可变目录示例：
+发布目录是不可变的：
 
 ```text
 C:\MRR\releases\v0.4.0-abcdef12
-C:\MRR\releases\v0.3.0-12345678
 C:\MRR\current  -> releases\v0.4.0-abcdef12
-C:\MRR\previous -> releases\v0.3.0-12345678
+C:\MRR\previous -> releases\另一份受管理发布包
 ```
 
 后端和 Nginx 始终读取 `current`，部署脚本只切换目录联接，不覆盖正在运行的 JAR 或静态文件。
 
-发布：
+## 受管理发布包
 
-```powershell
-& $ctl deploy C:\MRR\packages\MRR-v0.4.0.zip
-```
-
-回滚：
-
-```powershell
-& $ctl rollback previous
-& $ctl rollback v0.3.0
-```
-
-## 发布包与 manifest
-
-GitHub Actions 工作流 `.github/workflows/windows-release-package.yml` 构建：
+GitHub Actions 构建的 v1 发布包包含：
 
 ```text
 backend/mrr-backend.jar
@@ -158,18 +138,31 @@ release-notes.md
 }
 ```
 
-部署前必须检查：
+基线建立前生成的旧格式 ZIP 缺少 `VERSION`、v1 manifest 和兼容性声明，不能作为 `mrrctl rollback` 的普通目标。需要回到基线前版本时，必须使用数据库备份恢复与人工部署流程。
 
-1. `productVersion` 是否为目标版本；
-2. `gitCommit` 是否对应已验证的发布提交；
-3. 当前数据库 Flyway 版本是否位于兼容范围；
-4. `applicationRollback.allowed` 是否允许只切换应用；
-5. 配置结构版本是否需要更新服务器配置；
-6. `SHA256SUMS` 是否校验通过。
+## 发布与回滚
 
-生产服务器只接收 ZIP，不安装 Maven、Node.js 和 pnpm，也不执行 `git pull`。
+部署受管理包：
 
-## 自动失败恢复
+```powershell
+& $ctl deploy C:\MRR\packages\MRR-v0.4.0.zip
+```
+
+回滚到 `previous` 指向的另一份受管理包：
+
+```powershell
+& $ctl rollback previous
+```
+
+当当前 manifest 禁止应用回滚时，普通回滚会被拒绝。只有已经完成人工数据库恢复或明确确认兼容后，才可执行：
+
+```powershell
+& $ctl rollback previous -Force
+```
+
+`-Force` 只跳过回滚许可判断，不会把旧格式 ZIP 转换为受管理发布包。
+
+## 自动失败处置
 
 部署时按以下顺序执行：
 
@@ -183,13 +176,16 @@ release-notes.md
 8. 核对 `/actuator/info` 的版本和 Commit；
 9. 重新加载 Nginx 并关闭维护模式。
 
-新版本健康检查失败时，只有 manifest 明确允许应用回滚，才可自动重新指向原版本。否则应保持维护模式并按发布前数据库备份方案处理。
+新版本健康检查失败时：
+
+- manifest 明确允许应用回滚，脚本才可恢复原受管理应用版本；
+- manifest 禁止应用回滚，系统保持维护模式，等待数据库恢复或专项兼容处置。
 
 ## 回滚边界
 
 应用版本回滚不等于数据库回滚。Flyway 不自动降级。
 
-- `applicationRollback.allowed=true`：仍需确认目标旧版本处于兼容矩阵内；
+- `applicationRollback.allowed=true`：仍需确认目标受管理旧版本处于兼容矩阵内；
 - `applicationRollback.allowed=false`：不得直接切换旧 JAR/前端；
 - `database.backwardCompatibleWithPreviousApplication=false`：上一应用版本使用升级后数据库尚未完成兼容验证；
 - 涉及字段删除、类型修改、不可逆数据转换或旧版本无法识别的新约束时，必须使用发布前数据库备份或专用兼容迁移。

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
-import { Eye, EyeOff } from 'lucide-vue-next'
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 
 defineOptions({
@@ -105,7 +105,7 @@ const onSubmit = form.handleSubmit(async (values) => {
           <FormControl>
             <div class="relative w-full">
               <FaInput :type="showPwd ? 'text' : 'password'" placeholder="请输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showPwd = !showPwd">
+              <button type="button" class="absolute right-3 top-1/2 bg-transparent text-muted-foreground -translate-y-1/2 hover:text-foreground" @click="showPwd = !showPwd">
                 <Eye v-if="!showPwd" class="size-4" />
                 <EyeOff v-else class="size-4" />
               </button>
@@ -124,7 +124,7 @@ const onSubmit = form.handleSubmit(async (values) => {
           <FormControl>
             <div class="relative w-full">
               <FaInput :type="showCheckPwd ? 'text' : 'password'" placeholder="请再次输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showCheckPwd = !showCheckPwd">
+              <button type="button" class="absolute right-3 top-1/2 bg-transparent text-muted-foreground -translate-y-1/2 hover:text-foreground" @click="showCheckPwd = !showCheckPwd">
                 <Eye v-if="!showCheckPwd" class="size-4" />
                 <EyeOff v-else class="size-4" />
               </button>

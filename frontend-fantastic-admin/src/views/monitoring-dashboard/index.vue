@@ -109,8 +109,8 @@ function openStatusPage() {
   }
 
   .embedded-status-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .embedded-status-actions {

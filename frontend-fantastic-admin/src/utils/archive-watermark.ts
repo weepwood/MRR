@@ -20,11 +20,11 @@ function pad(value: number): string {
 }
 
 export function formatArchiveWatermarkTime(date: Date): string {
-  return [
+  return `${[
     date.getFullYear(),
     pad(date.getMonth() + 1),
     pad(date.getDate()),
-  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  ].join('-')} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export function resolveArchiveWatermarkUserId(

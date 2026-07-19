@@ -5,14 +5,14 @@ meta:
 </route>
 
 <script setup lang="ts">
+import type { DashboardData, ImageAuditCountItem, LogRecord } from '@/api/types'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/modules/user'
+import { getImageAuditAnalytics, searchImageAuditLogs } from '@/api/modules/logs'
 import { getDashboardData } from '@/api/modules/statistics'
 import { getSystemHealth } from '@/api/modules/system'
-import { getImageAuditAnalytics, searchImageAuditLogs } from '@/api/modules/logs'
+import { useUserStore } from '@/store/modules/user'
 import { hasPermission } from '@/utils/session'
-import type { DashboardData, ImageAuditCountItem, LogRecord } from '@/api/types'
 
 defineOptions({ name: 'HomePage' })
 
@@ -115,7 +115,8 @@ async function loadData() {
         topUsers.value = (res.value as any)?.data?.topUsers ?? []
       }
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -175,12 +176,18 @@ onMounted(() => {
   <div class="home-page">
     <div class="home-header">
       <div>
-        <p class="eyebrow">Medical Record Repository</p>
+        <p class="eyebrow">
+          Medical Record Repository
+        </p>
         <h2>欢迎回来{{ userStore.profile?.displayName ? `，${userStore.profile.displayName}` : '' }}</h2>
-        <p class="subtitle">病案影像系统运行状况总览</p>
+        <p class="subtitle">
+          病案影像系统运行状况总览
+        </p>
       </div>
       <el-button type="primary" :loading="loading" @click="loadData">
-        <template #icon><i class="i-ant-design:reload-twotone" /></template>
+        <template #icon>
+          <i class="i-ant-design:reload-twotone" />
+        </template>
         刷新数据
       </el-button>
     </div>
@@ -190,12 +197,16 @@ onMounted(() => {
       <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6">
         <el-card shadow="never" class="stat-card">
           <div class="stat-inner">
-            <div class="stat-icon" :style="{ background: card.color + '18', color: card.color }">
+            <div class="stat-icon" :style="{ background: `${card.color}18`, color: card.color }">
               <i :class="card.icon" />
             </div>
             <div class="stat-info">
-              <p class="stat-value">{{ card.value }}</p>
-              <p class="stat-label">{{ card.label }}</p>
+              <p class="stat-value">
+                {{ card.value }}
+              </p>
+              <p class="stat-label">
+                {{ card.label }}
+              </p>
             </div>
           </div>
         </el-card>
@@ -209,7 +220,9 @@ onMounted(() => {
           <template #header>
             <div class="card-header">
               <span>近 30 天高频访问用户</span>
-              <el-button text size="small" @click="router.push('/audit-images')">查看审计</el-button>
+              <el-button text size="small" @click="router.push('/audit-images')">
+                查看审计
+              </el-button>
             </div>
           </template>
           <div v-if="topUsers.length" class="top-users">
@@ -241,11 +254,15 @@ onMounted(() => {
           <div class="health-items">
             <div class="health-item">
               <span class="health-label">数据库</span>
-              <el-tag :type="dbOk ? 'success' : 'danger'" size="small">{{ dbStatus }}</el-tag>
+              <el-tag :type="dbOk ? 'success' : 'danger'" size="small">
+                {{ dbStatus }}
+              </el-tag>
             </div>
             <div class="health-item">
               <span class="health-label">内存</span>
-              <el-tag :type="memOk ? 'success' : 'warning'" size="small">{{ memUsage }}</el-tag>
+              <el-tag :type="memOk ? 'success' : 'warning'" size="small">
+                {{ memUsage }}
+              </el-tag>
             </div>
           </div>
         </el-card>
@@ -274,7 +291,9 @@ onMounted(() => {
       <template #header>
         <div class="card-header">
           <span>用户病案访问情况</span>
-          <el-button text size="small" @click="router.push('/audit-images')">查看全部</el-button>
+          <el-button text size="small" @click="router.push('/audit-images')">
+            查看全部
+          </el-button>
         </div>
       </template>
       <div v-if="auditLogs.length" class="audit-table">
@@ -292,7 +311,7 @@ onMounted(() => {
               {{ actionLabel(log.auditAction) }}
             </el-tag>
           </span>
-          <span class="col-target font-mono text-sm">{{ log.auditTarget || log.requestUri || '-' }}</span>
+          <span class="col-target text-sm font-mono">{{ log.auditTarget || log.requestUri || '-' }}</span>
           <span class="col-ip text-sm color-#64748b">{{ log.clientIp || '-' }}</span>
           <span class="col-time text-sm color-#64748b">{{ log.accessTime ? String(log.accessTime).slice(0, 19).replace('T', ' ') : '-' }}</span>
         </div>
@@ -312,7 +331,9 @@ onMounted(() => {
           >
             <i :class="expandedTimelineGroups.includes(group.key) ? 'i-ant-design:down-outlined' : 'i-ant-design:right-outlined'" />
             <span>{{ group.label }}</span>
-            <el-tag size="small" type="info">{{ group.logs.length }} 次</el-tag>
+            <el-tag size="small" type="info">
+              {{ group.logs.length }} 次
+            </el-tag>
           </button>
           <div v-if="expandedTimelineGroups.includes(group.key)" class="timeline-group-children">
             <div v-for="(log, index) in group.logs" :key="log.id ?? index" class="timeline-entry">
@@ -423,19 +444,19 @@ h2 {
   cursor: pointer;
   border: 1px solid var(--divider);
   border-radius: 10px;
-  transition: background .2s, border-color .2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .top-user:hover,
 .top-user:focus-visible {
+  outline: none;
   background: var(--surface-alt);
   border-color: var(--el-color-primary-light-5);
-  outline: none;
 }
 
 .top-user-rank {
-  color: var(--el-color-primary);
   font-weight: 800;
+  color: var(--el-color-primary);
   text-align: center;
 }
 
@@ -447,8 +468,8 @@ h2 {
 
 .top-user-count,
 .timeline-meta {
-  color: var(--text-secondary);
   font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .top-user-arrow {
@@ -497,8 +518,8 @@ h2 {
 
 .timeline-time {
   margin-right: 10px;
-  color: var(--text-secondary);
   font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .timeline-target {

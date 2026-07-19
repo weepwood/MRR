@@ -56,6 +56,121 @@ vitepress-doc/.vitepress/dist-user/
 vitepress-doc/.vitepress/dist-internal/
 ```
 
+## 开发代理与生产部署
+
+MRR 的开发环境和正式环境使用两套不同的 API 转发方式。不要把 Vite 的 `/proxy` 路径复制到正式部署配置中。
+
+### 开发环境
+
+开发时浏览器访问 Vite：
+
+```text
+http://localhost:9200
+```
+
+Axios 在开发模式下使用：
+
+```text
+/proxy/
+```
+
+例如登录请求为：
+
+```text
+POST http://localhost:9200/proxy/api/v1/auth/login
+```
+
+Vite 开发服务器将请求改写并转发到 Spring Boot：
+
+```text
+POST http://localhost:18045/api/v1/auth/login
+```
+
+开发链路：
+
+```text
+浏览器 :9200
+    ↓ /proxy/api/**
+Vite 开发代理
+    ↓ /api/**
+Spring Boot :18045
+```
+
+`vite.config.ts` 会在开发代理转发时同步改写 `Origin`，避免 Spring CORS 将 `localhost:9200` 转发到 `localhost:18045` 的请求误判为未授权跨域。修改 Vite 代理配置后必须停止并重新启动 `pnpm dev`，只刷新浏览器不会生效。
+
+### 正式环境
+
+生产构建使用：
+
+```properties
+VITE_APP_API_BASEURL=/
+```
+
+因此构建后的前端直接请求同源 `/api`：
+
+```text
+POST http://服务器地址/api/v1/auth/login
+```
+
+正式部署不运行 Vite，不监听 `9200`，也不提供 `/proxy/`。Nginx 同时提供前端静态文件，并把 `/api/` 转发给本机 Spring Boot：
+
+```text
+用户浏览器
+    ↓ http://服务器地址/
+Nginx :80
+    ├── /、/assets/ → Vue dist 静态文件
+    └── /api/       → Spring Boot 127.0.0.1:18045
+```
+
+推荐配置：
+
+```nginx
+upstream mrr_backend {
+    server 127.0.0.1:18045;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root C:/MRR/current/frontend;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://mrr_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+生产环境中浏览器看到的页面和 API 都来自同一 Origin，Nginx 到 `127.0.0.1:18045` 的转发发生在服务器内部，通常不需要浏览器 CORS。只有确实存在其他域名的浏览器前端直连 Spring Boot 时，才在 `mrr.cors.allowed-origins` 中添加精确 Origin。
+
+### 环境对照
+
+| 环境 | 页面入口 | API 请求路径 | 转发程序 | 是否运行 Vite |
+|------|----------|--------------|----------|---------------|
+| 开发 | `http://localhost:9200` | `/proxy/api/**` | Vite | 是 |
+| 正式 | `http://服务器地址` | `/api/**` | Nginx | 否 |
+| 后端内部 | 不直接提供给普通用户 | `127.0.0.1:18045` | Spring Boot | 否 |
+
+部署后在浏览器 Network 中，登录请求应为：
+
+```text
+POST /api/v1/auth/login
+```
+
+如果正式环境仍出现 `/proxy/api/...`，说明使用了错误的环境文件或部署了开发构建。重新确认 `.env.production` 中 `VITE_APP_API_BASEURL=/`，再执行 `pnpm build`。
+
 ## 推荐目录
 
 ```text
@@ -209,6 +324,7 @@ Actuator 默认监听 `127.0.0.1:18046`，不要映射公网。跨机采集使�
 ## 部署验证
 
 - 管理端可以登录。
+- 浏览器 Network 中登录请求为 `/api/v1/auth/login`，不是 `/proxy/api/v1/auth/login`。
 - `/status` 正常。
 - 记录、患者和统计可以读取数据。
 - `/archive` 可以按病案号与上架号查询。

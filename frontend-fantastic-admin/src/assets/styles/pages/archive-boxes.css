@@ -12,8 +12,8 @@
 
 .archive-box-page .mrr-metric-card__icon {
   position: relative !important;
-  display: block !important;
   box-sizing: border-box;
+  display: block !important;
   width: 52px !important;
   min-width: 52px !important;
   max-width: 52px !important;
@@ -25,8 +25,6 @@
   border-radius: 14px !important;
   mask: none !important;
   mask-size: auto !important;
-  -webkit-mask: none !important;
-  -webkit-mask-size: auto !important;
 }
 
 .archive-box-page .mrr-metric-card__icon::before {
@@ -38,12 +36,11 @@
   min-width: 26px !important;
   max-width: 26px !important;
   height: 26px !important;
-  content: "";
   pointer-events: none;
+  content: "";
   background-color: currentcolor;
   mask: var(--un-icon) no-repeat center / 100% 100%;
   transform: translate(-50%, -50%) !important;
-  -webkit-mask: var(--un-icon) no-repeat center / 100% 100%;
 }
 
 .archive-box-page .mrr-metric-card__body {

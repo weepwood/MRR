@@ -92,11 +92,7 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
 
   body.archive-immersive .archive-page {
     height: auto !important;
-    min-height: calc(
-      100dvh
-      - var(--g-header-actual-height)
-      - var(--g-tabbar-actual-height)
-    );
+    min-height: calc(100dvh - var(--g-header-actual-height) - var(--g-tabbar-actual-height));
   }
 
   body.archive-immersive .archive-workspace {

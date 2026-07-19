@@ -237,6 +237,7 @@ public class LogInterceptor implements HandlerInterceptor {
         }
         if (uri.startsWith("/api/v1/auth/users")
                 || uri.startsWith("/api/v1/auth/roles")
+                || uri.startsWith("/api/v1/auth/password/required-change")
                 || uri.startsWith("/api/v1/auth/password/edit")) {
             return true;
         }
@@ -257,10 +258,14 @@ public class LogInterceptor implements HandlerInterceptor {
             enrichUserManagementAudit(log, uri, method);
         } else if (uri.startsWith("/api/v1/auth/roles")) {
             enrichRoleManagementAudit(log, uri, method);
-        } else if (uri.startsWith("/api/v1/auth/password/edit")) {
-            log.setAuditAction("CHANGE_PASSWORD");
+        } else if (uri.startsWith("/api/v1/auth/password/required-change")) {
+            log.setAuditAction("USER_FIRST_PASSWORD_CHANGED");
             log.setAuditTarget(currentUserUsername(request));
-            log.setAuditDescription("修改密码");
+            log.setAuditDescription("首次登录或管理员重置后修改密码");
+        } else if (uri.startsWith("/api/v1/auth/password/edit")) {
+            log.setAuditAction("USER_PASSWORD_CHANGED");
+            log.setAuditTarget(currentUserUsername(request));
+            log.setAuditDescription("修改当前用户密码");
         } else if (uri.startsWith("/api/v1/oss/")
                 && ("POST".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method))) {
             enrichOssAudit(log, uri, method);
@@ -305,16 +310,33 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     private void enrichUserManagementAudit(Log log, String uri, String method) {
-        String target = uri.startsWith("/api/v1/auth/users/")
-                ? uri.substring("/api/v1/auth/users/".length()) : "list";
+        String base = "/api/v1/auth/users";
+        String suffix = uri.length() > base.length() ? uri.substring(base.length()) : "";
+
+        if ("POST".equalsIgnoreCase(method) && suffix.isEmpty()) {
+            log.setAuditAction("USER_CREATED");
+            log.setAuditTarget("new-user");
+            log.setAuditDescription("管理员创建用户");
+            return;
+        }
+
+        if ("POST".equalsIgnoreCase(method) && suffix.endsWith("/password/reset")) {
+            String target = suffix.substring(1, suffix.length() - "/password/reset".length());
+            log.setAuditAction("USER_PASSWORD_RESET");
+            log.setAuditTarget(target);
+            log.setAuditDescription("管理员重置用户密码");
+            return;
+        }
+
+        String target = suffix.startsWith("/") ? suffix.substring(1) : "list";
         if ("DELETE".equalsIgnoreCase(method)) {
-            log.setAuditAction("DISABLE_USER");
+            log.setAuditAction("USER_DISABLED");
             log.setAuditTarget(target);
             log.setAuditDescription("禁用用户");
         } else if ("PUT".equalsIgnoreCase(method)) {
-            log.setAuditAction("UPDATE_USER");
+            log.setAuditAction("USER_UPDATED");
             log.setAuditTarget(target);
-            log.setAuditDescription("更新用户信息");
+            log.setAuditDescription("更新用户信息、角色或状态");
         } else if ("GET".equalsIgnoreCase(method)) {
             log.setAuditAction("LIST_USERS");
             log.setAuditTarget("all");

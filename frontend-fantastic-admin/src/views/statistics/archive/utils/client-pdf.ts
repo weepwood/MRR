@@ -116,7 +116,7 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   }
 
   const objectCount = 2 + images.length * 3
-  const offsets = new Array<number>(objectCount + 1).fill(0)
+  const offsets = Array.from<number>({ length: objectCount + 1 }).fill(0)
   const parts: BlobPart[] = []
   let byteLength = 0
 
@@ -138,8 +138,21 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   const endObject = () => appendText('endobj\n')
 
   appendBytes(new Uint8Array([
-    0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A,
-    0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A,
+    0x25,
+    0x50,
+    0x44,
+    0x46,
+    0x2D,
+    0x31,
+    0x2E,
+    0x34,
+    0x0A,
+    0x25,
+    0xE2,
+    0xE3,
+    0xCF,
+    0xD3,
+    0x0A,
   ]))
 
   beginObject(1)

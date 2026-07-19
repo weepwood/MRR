@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AppLoading from '../AppLoading/index.vue'
 
-describe('AppLoading', () => {
+describe('appLoading', () => {
   it('renders table skeleton with default 5 rows', () => {
     const wrapper = mount(AppLoading, { props: { type: 'table' } })
     expect(wrapper.findAll('.skeleton-row')).toHaveLength(5)

@@ -242,8 +242,8 @@ onUnmounted(() => {
   .tabbar-container {
     position: relative;
     flex: 1;
-    height: 100%;
     min-width: 0;
+    height: 100%;
 
     .tabs {
       position: absolute;
@@ -301,14 +301,14 @@ onUnmounted(() => {
               flex: 1;
               gap: 6px;
               align-items: center;
-              height: 100%;
               min-width: 0;
+              height: 100%;
               padding: 0 10px;
               margin-right: 8px;
               overflow: hidden;
+              text-overflow: ellipsis;
               font-weight: 500;
               color: var(--text-secondary);
-              text-overflow: ellipsis;
               white-space: nowrap;
               transition: color 140ms ease, margin-right 140ms ease;
 
@@ -331,6 +331,7 @@ onUnmounted(() => {
               top: 50%;
               z-index: 2;
               display: grid;
+              place-items: center;
               width: 20px;
               height: 20px;
               font-size: 11px;
@@ -338,7 +339,6 @@ onUnmounted(() => {
               background: transparent;
               border-radius: var(--mrr-radius-sm);
               opacity: 0;
-              place-items: center;
               transform: translateY(-50%);
               transition: color 140ms ease, background-color 140ms ease, opacity 140ms ease;
             }
@@ -350,9 +350,9 @@ onUnmounted(() => {
 
             .hotkey-number {
               font-weight: 650;
-              opacity: 1;
               background: var(--mrr-secondary);
               border: 1px solid var(--mrr-border);
+              opacity: 1;
             }
           }
 

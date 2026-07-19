@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrStatusTag' })
 
-type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
-
 const props = defineProps<{
   status?: string
   label?: string
   tone?: StatusTone
 }>()
+
+type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
 
 const normalizedStatus = computed(() => String(props.status || '').trim().toLowerCase())
 

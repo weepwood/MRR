@@ -1,4 +1,4 @@
-import type { MigrationStatistics, MigrationLogRecord, PaginatedResult } from '../types'
+import type { MigrationLogRecord, MigrationStatistics, PaginatedResult } from '../types'
 import { getRequest, postRequest } from '../index'
 
 export function uploadToOss(scanIds: number[]) {
@@ -26,7 +26,7 @@ export function getPendingMigrations(params: { limit?: number, folder?: string }
 }
 
 export function getPendingFolders() {
-  return getRequest<{ folder: string; cnt: number }[]>('/api/v1/oss/migration/pending-folders')
+  return getRequest<{ folder: string, cnt: number }[]>('/api/v1/oss/migration/pending-folders')
 }
 
 export function getMigrationLogs(params: { status?: string, page?: number, size?: number } = {}) {

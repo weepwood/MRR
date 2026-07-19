@@ -39,7 +39,9 @@ class ScanMapperPostgresqlIntegrationTest {
 
     @DynamicPropertySource
     static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "?currentSchema=app");
+        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl()
+                + (POSTGRES.getJdbcUrl().contains("?") ? "&" : "?")
+                + "currentSchema=app");
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
@@ -47,6 +49,7 @@ class ScanMapperPostgresqlIntegrationTest {
         registry.add("spring.flyway.schemas", () -> "app");
         registry.add("spring.flyway.default-schema", () -> "app");
         registry.add("spring.sql.init.mode", () -> "never");
+        registry.add("mybatis.mapper-locations", () -> "classpath:mapper/*.xml");
     }
 
     @Autowired
@@ -62,9 +65,11 @@ class ScanMapperPostgresqlIntegrationTest {
     @DisplayName("在 PostgreSQL 16 上应用全部 Flyway 迁移")
     void appliesAllFlywayMigrationsOnPostgresql16() {
         String serverVersion = jdbcTemplate.queryForObject("SHOW server_version", String.class);
+        String currentSchema = jdbcTemplate.queryForObject("SELECT current_schema()", String.class);
         MigrationInfo[] applied = flyway.info().applied();
 
         assertThat(serverVersion).startsWith("16.");
+        assertThat(currentSchema).isEqualTo("app");
         assertThat(applied).isNotEmpty().allSatisfy(migration ->
                 assertThat(migration.getState().isApplied()).isTrue());
         assertThat(flyway.info().pending()).isEmpty();

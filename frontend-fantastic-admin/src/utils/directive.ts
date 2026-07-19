@@ -1,5 +1,5 @@
-import type { App, Directive, DirectiveBinding } from 'vue'
-import { watch, type WatchStopHandle } from 'vue'
+import type { App, Directive, DirectiveBinding, WatchStopHandle } from 'vue'
+import { watch } from 'vue'
 
 export default function directive(app: App) {
   // 用 mounted/unmounted 钩子替代简写函数，确保 watch 在元素卸载时被清理，避免内存泄漏

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Root = 'C:\MRR',
     [string]$WinSWPath,
@@ -123,6 +123,12 @@ $resolvedJava = Resolve-DirectoryOption $JavaHome @(
     (Join-Path $scriptDir 'runtime\jre'),
     (Join-Path $scriptDir 'runtime\jdk')
 ) 'bin\java.exe' 'JDK/JRE 21'
+
+$bundledRuntime = Join-Path $scriptDir 'runtime'
+$runtimeManifest = Join-Path $bundledRuntime 'runtime-manifest.json'
+if (Test-Path -LiteralPath $runtimeManifest -PathType Leaf) {
+    & (Join-Path $bundledRuntime 'verify-runtime.ps1') -RuntimeRoot $bundledRuntime
+}
 
 $directories = @(
     'config', 'config\nginx', 'secrets', 'releases', 'staging', 'packages',

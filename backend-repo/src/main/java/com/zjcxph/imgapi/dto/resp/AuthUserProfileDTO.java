@@ -15,6 +15,12 @@ public class AuthUserProfileDTO {
     private String roleName;
     private List<String> permissions = new ArrayList<>();
     private String status;
+    private Boolean mustChangePassword;
+    private Integer passwordVersion;
+    private LocalDateTime passwordChangedAt;
+    private LocalDateTime temporaryPasswordExpiresAt;
+    private LocalDateTime passwordResetAt;
+    private Long passwordResetBy;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

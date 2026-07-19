@@ -50,11 +50,7 @@ const selectedRecord = ref<BAHRecord | null>(null)
 
 // ==================== 图片查看器 ====================
 const selectedImageIndex = ref(0)
-// @ts-ignore: used as template ref
-const viewerContainer = ref<HTMLElement | null>(null)
 const thumbsContainer = ref<HTMLElement | null>(null)
-// @ts-ignore: used as template ref
-const viewerSplitRef = ref<HTMLElement | null>(null)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 
 // ==================== 布局和视图模式 ====================
@@ -606,7 +602,7 @@ watch(idCardParam, async (newId) => {
       <!-- 右侧面板：图片查看器 -->
       <div class="right-pane">
         <!-- 图片查看器分割区域 -->
-        <div ref="viewerSplitRef" class="viewer-split">
+        <div class="viewer-split">
           <!-- 缩略图区域 -->
           <div ref="thumbsContainer" class="thumbs">
             <!-- 图标视图模式 -->
@@ -660,7 +656,7 @@ watch(idCardParam, async (newId) => {
           <!-- 主视图区域 -->
           <div class="main-view">
             <!-- 图片查看器容器 -->
-            <div ref="viewerContainer" class="viewer-source" @wheel.prevent="onViewerWheel">
+            <div class="viewer-source" @wheel.prevent="onViewerWheel">
               <el-image
                 v-if="currentImage"
                 class="viewer-image-el"

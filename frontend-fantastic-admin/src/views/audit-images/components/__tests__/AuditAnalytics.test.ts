@@ -2,6 +2,24 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import AuditAnalytics from '../AuditAnalytics.vue'
 
+const chartStubs = {
+  MrrDonutChart: {
+    name: 'MrrDonutChart',
+    props: ['data'],
+    template: '<div />',
+  },
+  MrrHorizontalBarChart: {
+    name: 'MrrHorizontalBarChart',
+    props: ['data'],
+    template: '<div />',
+  },
+  MrrLineChart: {
+    name: 'MrrLineChart',
+    props: ['height'],
+    template: '<div />',
+  },
+}
+
 const analytics = {
   totalAccesses: 128,
   uniqueUsers: 6,
@@ -27,7 +45,9 @@ describe('auditAnalytics', () => {
     const wrapper = mount(AuditAnalytics, {
       props: { analytics },
       global: {
+        directives: { loading: {} },
         stubs: {
+          ...chartStubs,
           'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
           'el-icon': { template: '<i><slot/></i>' },
         },
@@ -40,15 +60,23 @@ describe('auditAnalytics', () => {
     expect(wrapper.find('[data-testid="audit-trend-chart"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-action-chart"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="audit-user-chart"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('查看本地图片')
-    expect(wrapper.text()).toContain('doctor-a')
+    expect(wrapper.findComponent({ name: 'MrrDonutChart' }).props('data')).toContainEqual({
+      label: '查看本地图片',
+      count: 80,
+    })
+    expect(wrapper.findComponent({ name: 'MrrHorizontalBarChart' }).props('data')).toContainEqual({
+      label: 'doctor-a',
+      count: 38,
+    })
   })
 
   it('lets the access trend chart fill the available card height', () => {
     const wrapper = mount(AuditAnalytics, {
       props: { analytics },
       global: {
+        directives: { loading: {} },
         stubs: {
+          ...chartStubs,
           'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
           'el-icon': true,
         },
@@ -73,7 +101,9 @@ describe('auditAnalytics', () => {
         },
       },
       global: {
+        directives: { loading: {} },
         stubs: {
+          ...chartStubs,
           'el-card': { template: '<section><slot name="header"/><slot/></section>' },
           'el-icon': true,
         },

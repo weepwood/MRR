@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import path from 'node:path'
+import process from 'node:process'
 
 const frontendRoot = process.cwd()
 const repositoryRoot = path.resolve(frontendRoot, '..')

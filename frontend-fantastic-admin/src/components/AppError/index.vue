@@ -23,7 +23,9 @@ function handleRetry() {
 <template>
   <div class="app-error">
     <div class="app-error-icon i-ant-design:warning-twotone" />
-    <p class="app-error-text">{{ message }}</p>
+    <p class="app-error-text">
+      {{ message }}
+    </p>
     <el-button type="primary" :icon="Refresh" @click="handleRetry">
       {{ retryText }}
     </el-button>

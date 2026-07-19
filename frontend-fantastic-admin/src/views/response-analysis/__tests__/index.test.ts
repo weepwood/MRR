@@ -59,12 +59,12 @@ describe('responseAnalysisPage', () => {
     getResponseMetricAnalysis.mockReset()
   })
 
-  it('loads the last seven days and renders overview, trend, and slow endpoints', async () => {
+  it('loads the last year and renders overview, trend, and slow endpoints', async () => {
     getResponseMetricAnalysis.mockResolvedValue({ code: 200, data: analysisData })
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(getResponseMetricAnalysis).toHaveBeenCalledWith(7)
+    expect(getResponseMetricAnalysis).toHaveBeenCalledWith(365)
     expect(wrapper.text()).toContain('120')
     expect(wrapper.text()).toContain('98.5%')
     expect(wrapper.text()).toContain('320.4 ms')

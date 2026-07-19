@@ -96,7 +96,6 @@ function openDocumentation(entry: DocumentationEntry) {
         </div>
       </el-card>
     </section>
-
   </div>
 </template>
 
@@ -111,55 +110,55 @@ function openDocumentation(entry: DocumentationEntry) {
 
 .help-header {
   display: flex;
+  gap: 24px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
   padding: 28px;
+  background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
   border-radius: 16px;
-  background: var(--el-bg-color);
 }
 
 .help-kicker {
   margin: 0 0 8px;
-  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 700;
+  color: var(--el-color-primary);
   letter-spacing: 0.16em;
 }
 
 .help-header h1 {
   margin: 0;
-  color: var(--el-text-color-primary);
   font-size: clamp(26px, 3vw, 38px);
   line-height: 1.2;
+  color: var(--el-text-color-primary);
 }
 
 .help-description {
   max-width: 680px;
   margin: 12px 0 0;
-  color: var(--el-text-color-secondary);
   line-height: 1.7;
+  color: var(--el-text-color-secondary);
 }
 
 .help-status {
   display: inline-flex;
   flex: none;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   padding: 8px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 999px;
+  font-size: 13px;
   color: var(--el-text-color-regular);
   background: var(--el-fill-color-light);
-  font-size: 13px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 999px;
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
   background: var(--el-color-success);
+  border-radius: 50%;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--el-color-success) 15%, transparent);
 }
 
@@ -172,9 +171,9 @@ function openDocumentation(entry: DocumentationEntry) {
 .documentation-card {
   position: relative;
   overflow: hidden;
+  background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   border: 1px solid var(--el-border-color-light);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -211,34 +210,34 @@ function openDocumentation(entry: DocumentationEntry) {
 
 .card-icon {
   display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
-  place-items: center;
-  border-radius: 14px;
   color: var(--card-accent);
   background: color-mix(in srgb, var(--card-accent) 12%, transparent);
+  border-radius: 14px;
 }
 
 .card-content h2 {
   margin: 2px 0 10px;
-  color: var(--el-text-color-primary);
   font-size: 19px;
+  color: var(--el-text-color-primary);
 }
 
 .card-content p {
   margin: 0;
-  color: var(--el-text-color-secondary);
   line-height: 1.7;
+  color: var(--el-text-color-secondary);
 }
 
 .card-footer {
   display: flex;
   grid-column: 1 / -1;
+  gap: 16px;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
-  margin-top: 16px;
   padding-top: 14px;
+  margin-top: 16px;
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -246,7 +245,7 @@ function openDocumentation(entry: DocumentationEntry) {
   min-width: 116px;
 }
 
-@media (max-width: 820px) {
+@media (width <= 820px) {
   .help-header {
     flex-direction: column;
   }
@@ -256,7 +255,7 @@ function openDocumentation(entry: DocumentationEntry) {
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   .help-header,
   .documentation-card :deep(.el-card__body) {
     padding: 18px;

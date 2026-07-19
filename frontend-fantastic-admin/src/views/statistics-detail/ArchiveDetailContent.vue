@@ -421,8 +421,10 @@ onBeforeUnmount(() => {
     </div>
 
     <section class="mrr-metric-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never" class="mrr-metric-card"
-        :class="`mrr-metric-card--${item.tone}`">
+      <el-card
+        v-for="item in summaryCards" :key="item.label" shadow="never" class="mrr-metric-card"
+        :class="`mrr-metric-card--${item.tone}`"
+      >
         <div class="mrr-metric-card__icon">
           <i :class="item.icon" />
         </div>
@@ -454,13 +456,17 @@ onBeforeUnmount(() => {
       <div class="filter-grid">
         <el-input v-model="filters.bah" class="filter-bah" clearable placeholder="病案号" @keyup.enter="handleSearch" />
         <el-input v-model="filters.sjh" class="filter-sjh" clearable placeholder="上架号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.keyword" class="filter-keyword" clearable placeholder="患者姓名、病人 ID、科室、设备或负责人"
-          @keyup.enter="handleSearch" />
+        <el-input
+          v-model="filters.keyword" class="filter-keyword" clearable placeholder="患者姓名、病人 ID、科室、设备或负责人"
+          @keyup.enter="handleSearch"
+        />
         <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
           <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
-        <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" range-separator="至"
-          start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD" />
+        <el-date-picker
+          v-model="filters.dateRange" class="filter-date" type="daterange" range-separator="至"
+          start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD"
+        />
         <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
@@ -493,12 +499,14 @@ onBeforeUnmount(() => {
         <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
         <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
         <div v-else-if="archiveDisplayMode === 'folder'" class="archive-grid">
-          <article v-for="(item, index) in listData.list" :key="archiveKey(item, index)" class="archive-folder-card"
+          <article
+            v-for="(item, index) in listData.list" :key="archiveKey(item, index)" class="archive-folder-card"
             :class="[toneClass(item, index), { 'is-selected': selectedArchiveKey === archiveKey(item, index) }]"
             role="button" tabindex="0" :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
             :aria-label="`患者 ${normalizeText(item.patientName)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
             @click="selectArchive(item, index)" @keyup.enter="selectArchive(item, index)"
-            @keyup.space.prevent="selectArchive(item, index)">
+            @keyup.space.prevent="selectArchive(item, index)"
+          >
             <div class="folder-layer folder-layer-back" />
             <div class="folder-layer folder-layer-middle" />
             <div class="folder-card-body">
@@ -528,13 +536,17 @@ onBeforeUnmount(() => {
                   <span class="folder-code-label">出院日期</span>
                   <strong class="folder-code-value">{{ formatDate(item.dischargeDate) }}</strong>
                 </div>
-                <div class="folder-code-block folder-code-copyable" title="点击复制病案号"
-                  @click="copyCode(padTo8Digits(item.bah), '病案号', item.bah)">
+                <div
+                  class="folder-code-block folder-code-copyable" title="点击复制病案号"
+                  @click="copyCode(padTo8Digits(item.bah), '病案号', item.bah)"
+                >
                   <span class="folder-code-label">病案号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
                 </div>
-                <div class="folder-code-block folder-code-copyable" title="点击复制上架号"
-                  @click="copyCode(padTo8Digits(item.sjh), '上架号', item.sjh)">
+                <div
+                  class="folder-code-block folder-code-copyable" title="点击复制上架号"
+                  @click="copyCode(padTo8Digits(item.sjh), '上架号', item.sjh)"
+                >
                   <span class="folder-code-label">上架号</span>
                   <strong class="folder-code-value">{{ padTo8Digits(item.sjh) }}</strong>
                 </div>
@@ -554,8 +566,10 @@ onBeforeUnmount(() => {
           </article>
         </div>
         <div v-else class="archive-list-wrap">
-          <el-table :data="listData.list" :row-class-name="archiveRowClassName" class="archive-list" row-key="id"
-            @row-click="selectArchiveFromList">
+          <el-table
+            :data="listData.list" :row-class-name="archiveRowClassName" class="archive-list" row-key="id"
+            @row-click="selectArchiveFromList"
+          >
             <el-table-column label="#" width="72" align="center">
               <template #default="{ $index }">
                 {{ tableIndex($index) }}
@@ -627,8 +641,10 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="pagination-wrapper">
-          <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="listData.total"
-            layout="total, prev, pager, next, jumper" @current-change="loadArchiveList" />
+          <el-pagination
+            v-model:current-page="currentPage" :page-size="pageSize" :total="listData.total"
+            layout="total, prev, pager, next, jumper" @current-change="loadArchiveList"
+          />
         </div>
       </div>
     </section>
@@ -1071,7 +1087,6 @@ h2 {
 .folder-code-block-full .folder-code-value {
   flex: 1;
   min-width: 0;
-  text-align: right;
   font-size: clamp(18px, 3.2vw, 20px);
   line-height: 1.1;
   color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
@@ -1129,7 +1144,6 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .archive-folder-card,
   .folder-layer,
   .folder-card-body,
@@ -1146,7 +1160,7 @@ h2 {
   }
 }
 
-@media (width <=720px) {
+@media (width <= 720px) {
   .page-header {
     flex-direction: column;
   }
@@ -1173,7 +1187,7 @@ h2 {
   }
 }
 
-@media (width <=480px) {
+@media (width <= 480px) {
   .archive-grid {
     grid-template-columns: minmax(0, 1fr);
   }

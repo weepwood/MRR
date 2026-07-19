@@ -5,9 +5,9 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { getPatients } from '@/api/modules/patients'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
 
 defineOptions({ name: 'PatientsPage' })
@@ -55,13 +55,15 @@ function isIdCardRevealed(value?: string) {
   return patientIdCardRevealEnabled.value && !!value && revealedIdCards.value.has(value)
 }
 async function handleIdCardClick(value?: string) {
-  if (!value) return
+  if (!value) { return }
   if (patientIdCardRevealEnabled.value) {
-    if (revealedIdCards.value.has(value)) revealedIdCards.value.delete(value)
-    else revealedIdCards.value.add(value)
+    if (revealedIdCards.value.has(value)) {
+      revealedIdCards.value.delete(value)
+    }
+    else { revealedIdCards.value.add(value) }
   }
 
-  if (!patientIdCardCopyEnabled.value) return
+  if (!patientIdCardCopyEnabled.value) { return }
 
   try {
     await navigator.clipboard.writeText(value)
@@ -75,7 +77,7 @@ async function handleIdCardClick(value?: string) {
 function applyIdCardSettings(settings: EffectiveSystemSettings) {
   patientIdCardRevealEnabled.value = settings.patientIdCardRevealEnabled
   patientIdCardCopyEnabled.value = settings.patientIdCardCopyEnabled
-  if (!settings.patientIdCardRevealEnabled) revealedIdCards.value.clear()
+  if (!settings.patientIdCardRevealEnabled) { revealedIdCards.value.clear() }
 }
 
 async function loadIdCardSettings() {
@@ -85,7 +87,7 @@ async function loadIdCardSettings() {
 
 function handleSystemSettingsUpdated(event: Event) {
   const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
-  if (settings) applyIdCardSettings(settings)
+  if (settings) { applyIdCardSettings(settings) }
 }
 
 onMounted(() => {
@@ -114,7 +116,6 @@ onUnmounted(() => {
       <el-button :loading="loading" :icon="Refresh" @click="loadData">
         刷新
       </el-button>
-
     </div>
 
     <el-card shadow="never">

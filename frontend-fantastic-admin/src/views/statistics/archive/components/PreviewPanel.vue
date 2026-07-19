@@ -219,10 +219,10 @@ onUnmounted(() => {
           :alt="`第 ${props.index + 1} 张影像`"
           @click="openImageViewer"
           @error="markImageFailed(props.image.imageUrl)"
-        />
+        >
       </div>
 
-      <el-image-viewer
+      <ElImageViewer
         v-if="isImageViewerOpen"
         ref="imageViewerRef"
         :url-list="props.previewList"
@@ -325,19 +325,21 @@ onUnmounted(() => {
 }
 
 .fit-scroll-image.fit-width {
-  width: min(
-    calc(100% * var(--scroll-preview-scale)),
-    calc(980px * var(--scroll-preview-scale))
-  );
+  width:
+    min(
+      calc(100% * var(--scroll-preview-scale)),
+      calc(980px * var(--scroll-preview-scale))
+    );
 }
 
 .fit-scroll-image.fit-height {
   width: auto;
   max-width: none;
-  height: min(
-    calc(64vh * var(--scroll-preview-scale)),
-    calc(720px * var(--scroll-preview-scale))
-  );
+  height:
+    min(
+      calc(64vh * var(--scroll-preview-scale)),
+      calc(720px * var(--scroll-preview-scale))
+    );
 }
 
 .preview-image-placeholder {

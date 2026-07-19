@@ -1,262 +1,370 @@
-# MRR Windows 单服务器部署
+# MRR Windows 原生部署运维
 
-MRR 默认面向一台 Windows Server 部署，不依赖 Docker，也不要求安装 Prometheus、Grafana、Alertmanager、OpenTelemetry Collector 或外部探针。
+本目录提供不依赖 Docker 的 Windows Server 部署方案。核心组件为：
 
-## 运行组件
+- WinSW：将 Spring Boot JAR 和 Nginx 注册为 Windows 服务。
+- `mrrctl.ps1`：统一执行状态检查、启停、维护模式、部署和回滚。
+- `releases/current/previous`：使用目录联接管理不可变版本。
+- 外置配置：普通配置与敏感配置分离，升级时不覆盖服务器配置。
+- Actuator、Prometheus、Grafana：继续使用仓库现有监控能力。
 
-生产环境只运行：
+## 1. 服务器准备
 
-1. PostgreSQL 16
-2. MRR Backend（Spring Boot + WinSW）
-3. MRR Gateway（Nginx + WinSW）
+建议准备：
 
-系统状态、错误定位、审计、备份和性能诊断均由 MRR 自身与 Windows 工具完成。
+- Windows Server 2019 或更高版本。
+- PowerShell 5.1 或 PowerShell 7。
+- JDK 21。
+- PostgreSQL 16。
+- Windows 版 Nginx 解压目录。
+- WinSW 可执行文件。
 
-## 最简安装方式
+生产服务器不需要安装 Node.js、pnpm、Maven，也不执行 `git pull`。构建由 GitHub Actions 或独立构建机完成，服务器只接收发布 ZIP。
 
-从 GitHub Release 下载 `MRR-vX.Y.Z.zip` 后：
+## 2. 首次安装
 
-1. 将 ZIP 解压到临时目录；
-2. 进入 `deploy\windows`；
-3. 双击 `install.cmd`；
-4. 编辑安装后生成的两个配置文件；
-5. 双击 `C:\MRR\MRR-Manager.cmd`，选择“部署新版本 ZIP”。
-
-离线发布包已经包含经过校验的：
-
-- Eclipse Temurin JDK 21；
-- nginx/Windows；
-- WinSW。
-
-因此生产服务器只需要预先安装 PostgreSQL 16，不需要安装 Java、Node.js、Maven、pnpm、Nginx、WinSW，也不需要在服务器执行 `git pull`。
-
-## 手工运行时方式
-
-需要使用服务器已有 Java、Nginx 或 WinSW 时，也可以执行：
+以管理员身份打开 PowerShell：
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 
-.\install.ps1 `
+.\deploy\windows\install.ps1 `
   -Root C:\MRR `
   -WinSWPath C:\Install\WinSW-x64.exe `
-  -NginxPath C:\Install\nginx `
+  -NginxPath C:\Install\nginx-1.xx.x `
   -JavaHome 'C:\Program Files\Java\jdk-21'
 ```
 
-安装脚本会自动完成：
+安装脚本会：
 
-- 创建 `C:\MRR` 目录；
-- 将内置 Java 和 Nginx 复制到持久运行目录；
-- 写入配置模板；
-- 保护 secrets、审计队列和备份目录 ACL；
-- 注册后端和 Nginx Windows 服务；
-- 创建每天 02:00 的数据库与脱敏配置备份任务；
-- 安装统一管理入口 `C:\MRR\MRR-Manager.cmd`。
+1. 创建 `C:\MRR` 目录结构。
+2. 写入配置模板，但默认不覆盖已有配置。
+3. 设置 `secrets` 目录 ACL，仅允许 Administrators 和 SYSTEM。
+4. 安装 `MRR-Backend` 和 `MRR-Gateway` Windows 服务。
+5. 校验 Nginx 配置。
 
-安装后先编辑：
+安装脚本不会启动业务服务。先完成配置，再部署第一个版本。
+
+## 3. 配置
+
+普通配置：
 
 ```text
 C:\MRR\config\application-prod.properties
+```
+
+敏感配置：
+
+```text
 C:\MRR\secrets\application-secrets.properties
 ```
 
-至少配置：
+至少修改：
 
-- PostgreSQL 地址、用户名和密码；
-- JWT 和 AES 密钥；
-- `app.audit.hmac-secret`；
-- 图片目录和图片服务地址；
+- PostgreSQL 地址、账号和密码。
+- JWT 和 AES 密钥。
+- 图片目录与图片服务地址。
+- 图片服务账号和密码。
 - OSS 凭据（使用 OSS 时）。
 
-## 日常管理
+不要把服务器上的敏感配置复制回 Git 仓库。
 
-双击：
+## 4. 前端代理与正式部署
 
-```text
-C:\MRR\MRR-Manager.cmd
+### 4.1 开发环境
+
+开发时运行：
+
+```powershell
+cd frontend-fantastic-admin
+pnpm dev
 ```
 
-菜单支持：
+浏览器访问：
 
-- 查看状态；
-- 启动、停止、重启；
-- 部署新版本；
-- 回滚上一版本；
-- 立即备份；
-- 验证最近备份；
-- 查看错误日志；
-- 导出诊断包；
-- 按需录制 5 分钟 JFR；
-- 手工执行完整恢复演练。
+```text
+http://localhost:9200
+```
 
-底层仍可直接使用：
+前端开发请求使用 `/proxy`：
+
+```text
+POST http://localhost:9200/proxy/api/v1/auth/login
+```
+
+Vite 转发到：
+
+```text
+POST http://localhost:18045/api/v1/auth/login
+```
+
+`/proxy` 只属于开发环境。修改 `vite.config.ts` 后必须停止并重新启动 `pnpm dev`，仅刷新浏览器不会更新代理配置。
+
+### 4.2 正式环境
+
+生产构建使用仓库中的 `.env.production`：
+
+```properties
+VITE_APP_API_BASEURL=/
+VITE_APP_DEMO_MODE=false
+VITE_BUILD_MOCK=false
+```
+
+在构建机执行：
+
+```powershell
+cd frontend-fantastic-admin
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+生成：
+
+```text
+frontend-fantastic-admin\dist\
+├─ index.html
+├─ assets\
+└─ 其他静态文件
+```
+
+将 `dist` 内容放入发布包的 `frontend` 目录。正式服务器不运行 Vite、不监听 `9200`，也不配置 `/proxy/`。
+
+正式请求链路：
+
+```text
+用户浏览器
+    ↓ http://服务器地址/
+Nginx :80
+    ├── /、/assets/ → C:\MRR\current\frontend
+    └── /api/       → Spring Boot 127.0.0.1:18045
+```
+
+登录请求应为：
+
+```text
+POST http://服务器地址/api/v1/auth/login
+```
+
+不是：
+
+```text
+POST http://服务器地址/proxy/api/v1/auth/login
+```
+
+### 4.3 Nginx 核心配置
+
+仓库模板 `deploy/windows/templates/nginx.conf` 已包含同源部署所需路由：
+
+```nginx
+upstream mrr_backend {
+    server 127.0.0.1:18045;
+    keepalive 32;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    root C:/MRR/current/frontend;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://mrr_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+前端页面和 `/api` 使用同一个 Nginx 地址，因此浏览器通常不产生跨域请求。Nginx 到 `127.0.0.1:18045` 的转发发生在服务器内部。
+
+不要在生产 Nginx 中添加：
+
+```nginx
+location /proxy/ {
+    # 不需要
+}
+```
+
+只有确实存在其他域名的浏览器应用直接调用 MRR API 时，才在后端 `mrr.cors.allowed-origins` 中添加精确 Origin。服务器到服务器调用不受浏览器 CORS 限制。
+
+### 4.4 部署后检查
+
+浏览器打开 Network，确认：
+
+```text
+页面地址：http://服务器地址/
+登录接口：/api/v1/auth/login
+```
+
+如果正式环境仍请求 `/proxy/api/...`：
+
+1. 检查是否误用了 `.env.development`。
+2. 检查 `.env.production` 是否为 `VITE_APP_API_BASEURL=/`。
+3. 删除旧 `dist` 后重新执行 `pnpm build`。
+4. 确认发布包中的 `frontend` 来自新构建产物。
+5. 清理浏览器缓存或使用无痕窗口测试。
+
+如果 `/api/v1/auth/login` 返回 502，检查 Spring Boot 是否监听 `127.0.0.1:18045`。如果返回 Nginx 404，检查 `/api/` location 和 `proxy_pass`。如果返回后端 JSON 401，说明代理已正常工作，应继续检查账号或 Token。
+
+## 5. 发布包结构
+
+```text
+MRR-v0.1.2.zip
+├─ backend
+│  └─ mrr-backend.jar
+├─ frontend
+│  ├─ index.html
+│  └─ assets
+├─ docs
+│  ├─ user
+│  └─ internal
+├─ manifest.json
+├─ SHA256SUMS
+└─ release-notes.md
+```
+
+`manifest.json` 至少包含：
+
+```json
+{
+  "productVersion": "v0.1.2",
+  "gitCommit": "abcdef1234567890",
+  "buildTime": "2026-07-15T15:30:00+09:00",
+  "databaseSchemaVersion": "V1",
+  "databaseBackwardCompatible": true
+}
+```
+
+`databaseBackwardCompatible=false` 时，普通回滚会被阻止，避免旧 JAR 直接读取不兼容数据库。
+
+## 6. 运维命令
 
 ```powershell
 $ctl = 'C:\MRR\ops\mrrctl.ps1'
+
+# 状态
 & $ctl status
 & $ctl doctor
-& $ctl deploy C:\MRR\packages\MRR-v0.4.0.zip
+
+# 服务控制
+& $ctl start all
+& $ctl stop backend
+& $ctl restart all
+
+# 维护模式；不会挂起 JVM
+& $ctl maintenance on -Message '系统升级中，预计很快恢复。'
+& $ctl maintenance off
+
+# 版本
+& $ctl version
+& $ctl versions
+
+# 部署和回滚
+& $ctl deploy C:\MRR\packages\MRR-v0.1.2.zip
 & $ctl rollback previous
+& $ctl rollback v0.1.1
+
+# 数据库已完成人工恢复后，强制应用回滚
+& $ctl rollback v0.1.1 -Force
+
+# 日志
+& $ctl logs backend -Tail 300
+& $ctl logs backend-service -Tail 300
+& $ctl logs gateway -Tail 300
 ```
 
-## 内置运维页面
+## 7. 部署行为
 
-管理员登录 MRR 后，系统监控页面直接显示：
+`deploy` 执行：
 
-- 应用、JVM 和数据库连通状态；
-- Hikari 连接池和 PostgreSQL 锁等待；
-- 病案主档未关联数量；
-- 最近备份时间、大小、失败代码和是否配置第二副本；
-- 审计队列积压、dead-letter 和兜底可用状态；
-- 服务器磁盘与图片磁盘；
-- 应用日志和错误日志大小；
-- 现有数据质量检查结果。
+1. 解压到临时目录。
+2. 校验 `manifest.json` 和必要文件。
+3. 将版本移动到 `releases/<版本>-<commit>`。
+4. 开启维护模式。
+5. 优雅停止后端服务。
+6. 更新 `previous` 和 `current` 目录联接。
+7. 启动后端并检查 `127.0.0.1:18046/actuator/health`。
+8. 健康检查通过后重新加载 Nginx 并退出维护模式。
+9. 健康检查失败时自动恢复原版本。
 
-网页只提供只读状态。部署、回滚、立即备份、恢复演练和 JFR 等高权限操作只能在服务器上的 `MRR-Manager.cmd` 中执行。
+默认保留最近 5 个版本，可以通过 `-KeepReleases` 调整。`current` 和 `previous` 指向的版本不会被清理。
 
-为减少信息泄露，网页不会返回服务器绝对目录、NAS 路径、原始异常文本或 secrets 内容，只返回逻辑位置、容量、计数和稳定错误码。
+## 8. 暂停语义
 
-## 发布与自动回滚
+不要使用系统工具挂起 Java 进程。MRR 将“暂停服务”实现为维护模式：
 
-部署过程：
+- 新的页面和业务 API 请求返回 503 维护页。
+- 后端进程继续完成已经进入的请求。
+- 本机 Actuator 和 Prometheus 端点保持可用。
+- `/status` 页面壳和静态资源保持可访问。
 
-1. 校验 ZIP、Manifest 和 SHA-256；
-2. 进入维护模式；
-3. 停止后端；
-4. 切换 `current` 和 `previous` 目录联接；
-5. 启动新版本；
-6. 检查本机 readiness；
-7. 成功后退出维护模式；
-8. 失败时自动恢复原版本。
+具体状态接口路径如果发生变化，应同步更新 `templates/nginx.conf` 中绕过维护模式的 status API location。
 
-单服务器模式不运行两套后端，也不实施蓝绿或按比例灰度发布。短暂维护窗口换取更低的部署复杂度。
-
-## 内置健康检查
-
-```text
-http://127.0.0.1:18046/actuator/health/liveness
-http://127.0.0.1:18046/actuator/health/readiness
-http://127.0.0.1:18046/actuator/metrics
-```
-
-- Liveness：Java 进程是否存活；
-- Readiness：数据库与可靠审计队列是否可用；
-- Metrics：本机诊断时查看 JVM、HTTP 和连接池指标。
-
-审计状态含义：
-
-- `UP`：数据库或可靠兜底可用，没有待重放事件；
-- `DEGRADED`：事件已可靠落入本地队列，等待数据库恢复；
-- `DOWN`：兜底目录不可写、出现损坏记录或检测到审计丢失。
-
-敏感病案和管理请求执行前会检查审计兜底。兜底不可用时返回 `MRR-AUDIT-7001`，不会继续执行业务操作。
-
-管理端口只监听 `127.0.0.1`，不要直接暴露到内网或公网。
-
-## 日志与诊断
-
-```text
-C:\MRR\logs\
-├─ backend\
-│  ├─ img-api.log
-│  ├─ mrr-error.log
-│  └─ gc.log
-├─ nginx\
-├─ service\
-└─ diagnostics\
-```
-
-系统不需要日志采集服务。发生问题时按请求编号搜索 JSON 日志，或使用管理器导出诊断包。
-
-JFR 默认不持续运行。CPU、内存或接口耗时异常时，使用管理器录制 5 分钟，结果保存在：
-
-```text
-C:\MRR\logs\diagnostics
-```
-
-## 备份
-
-每日 02:00 的计划任务执行：
-
-```text
-C:\MRR\ops\backup\backup-database.ps1
-```
-
-脚本读取现有 Spring 数据库配置用于连接数据库，不需要创建额外备份账号或 `pgpass.conf`。数据库密码仅短暂写入当前 PowerShell 进程的 `PGPASSWORD`，任务结束后清除。
-
-普通备份内容：
-
-- PostgreSQL custom-format dump；
-- 已脱敏的普通配置；
-- 不包含私钥文件的 Nginx 配置；
-- 当前版本 Manifest；
-- SHA-256 和 JSON 清单；
-- `SECRETS-NOT-INCLUDED.txt` 安全说明。
-
-普通备份**不包含**：
-
-```text
-C:\MRR\secrets\application-secrets.properties
-```
-
-密码、JWT、AES、HMAC、OSS 密钥等敏感属性会从普通配置包中替换为 `[REDACTED]`。`application-secrets.properties` 必须使用医院批准的密码库、加密介质或受控离线方式单独备份，不能以明文形式随普通 ZIP 复制到 NAS。
-
-默认保留：
-
-- 每日 14 天；
-- 每周 8 周；
-- 每月 12 个月。
-
-在 `application-prod.properties` 中可选配置第二备份位置：
-
-```properties
-app.backup.secondary-path=\\nas\mrr-backup
-```
-
-即使只有一台服务器，也建议把数据库和脱敏配置备份复制到 NAS、另一块物理磁盘或合规对象存储；备份与数据库放在同一块磁盘无法应对磁盘损坏。网页只显示第二副本是否配置，不显示真实路径。
-
-验证备份：
-
-```powershell
-C:\MRR\ops\backup\verify-backup.ps1
-```
-
-验证脚本会拒绝以下备份：
-
-- 清单声明 `secretsIncluded=true`；
-- 配置策略不是 `sanitized-no-secrets`；
-- ZIP 中存在 `secrets/`、`application-secrets.properties`；
-- ZIP 中存在 `.key`、`.pem`、`.pfx`、`.p12` 或 `.jks` 私钥文件；
-- 缺少 `SECRETS-NOT-INCLUDED.txt`。
-
-恢复数据库后，需要通过单独的受控流程恢复 secrets。普通备份 ZIP 不承担 secrets 恢复。
-
-## 目录结构
+## 9. 目录结构
 
 ```text
 C:\MRR
-├─ MRR-Manager.cmd
 ├─ config
 ├─ secrets
 ├─ releases
-├─ current
-├─ previous
+├─ current       -> releases\vX.Y.Z-commit
+├─ previous      -> releases\vX.Y.Z-commit
 ├─ packages
+├─ staging
 ├─ logs
+├─ runtime\nginx
+├─ monitoring-data
 ├─ backups
+├─ shared
 ├─ state
-├─ runtime
-│  ├─ java
-│  └─ nginx
 └─ ops
-   ├─ mrrctl.ps1
-   ├─ mrr-manager.ps1
-   ├─ backup
-   ├─ diagnostics
-   └─ services
 ```
 
-## 可选高级监控
+## 10. 故障处理
 
-仓库根目录的 `monitoring/` 仅供未来扩容使用。默认安装不会复制或启动其中的 Prometheus、Grafana、Alertmanager 和 exporter 配置。
+### 登录请求在开发环境返回 403
+
+如果请求地址为：
+
+```text
+http://localhost:9200/proxy/api/v1/auth/login
+```
+
+且响应为 `403 Invalid CORS request`，先确认已拉取最新 `vite.config.ts`，然后完全停止并重新启动 Vite。该问题发生在开发代理层，不代表账号无权限。
+
+### 正式环境请求路径仍包含 `/proxy`
+
+重新使用 `.env.production` 构建前端。正式环境必须请求 `/api/...`，Nginx 不应提供 `/proxy/`。
+
+### 后端服务运行但健康检查失败
+
+```powershell
+Get-Service MRR-Backend
+Get-Content C:\MRR\logs\backend\img-api.log -Tail 300
+C:\MRR\ops\mrrctl.ps1 doctor
+```
+
+重点检查数据库连接、Flyway、密钥、图片目录和端口占用。
+
+### Nginx 无法启动
+
+```powershell
+C:\MRR\runtime\nginx\nginx.exe `
+  -p C:\MRR\runtime\nginx `
+  -c C:\MRR\config\nginx\nginx.conf `
+  -t
+```
+
+### 自动回滚也失败
+
+保持维护模式，不要反复切换版本。检查数据库是否已经执行不兼容迁移，并按发布前备份恢复数据库。

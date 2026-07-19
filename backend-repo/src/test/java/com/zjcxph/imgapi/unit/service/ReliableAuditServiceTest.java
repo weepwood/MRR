@@ -12,6 +12,11 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -121,6 +126,63 @@ class ReliableAuditServiceTest {
         assertThat(service.isHealthy()).isFalse();
         assertThat(Files.readString(spool.resolveSibling("audit-events.jsonl.deadletter")))
                 .contains("{not-valid-json}");
+    }
+
+    @Test
+    void acceptsNewSpoolWritesDuringReplayAndDoesNotLoseThem() throws Exception {
+        LogMapper logMapper = mock(LogMapper.class);
+        doThrow(new IllegalStateException("database unavailable"))
+                .when(logMapper).insert(org.mockito.ArgumentMatchers.any(Log.class));
+
+        Path spool = tempDir.resolve("audit-concurrent/audit-events.jsonl");
+        ReliableAuditService service = new ReliableAuditService(
+                logMapper,
+                new ObjectMapper(),
+                new SimpleMeterRegistry(),
+                spool.toString());
+        service.persist(audit("event-before-replay"));
+
+        reset(logMapper);
+        CountDownLatch replayInsertStarted = new CountDownLatch(1);
+        CountDownLatch allowReplayInsert = new CountDownLatch(1);
+        when(logMapper.insert(org.mockito.ArgumentMatchers.any(Log.class))).thenAnswer(invocation -> {
+            Log value = invocation.getArgument(0);
+            if ("event-before-replay".equals(value.getEventId())) {
+                replayInsertStarted.countDown();
+                assertThat(allowReplayInsert.await(5, TimeUnit.SECONDS)).isTrue();
+                return 1;
+            }
+            throw new IllegalStateException("database unavailable");
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> replay = executor.submit(service::replaySpool);
+            assertThat(replayInsertStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<?> newWrite = executor.submit(() -> service.persist(audit("event-during-replay")));
+            newWrite.get(3, TimeUnit.SECONDS);
+
+            allowReplayInsert.countDown();
+            replay.get(5, TimeUnit.SECONDS);
+        } finally {
+            allowReplayInsert.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(service.getQueuedEvents()).isEqualTo(1);
+        assertThat(Files.readString(spool))
+                .contains("event-during-replay")
+                .doesNotContain("event-before-replay");
+
+        reset(logMapper);
+        when(logMapper.insert(org.mockito.ArgumentMatchers.any(Log.class))).thenReturn(1);
+        service.replaySpool();
+
+        assertThat(service.getQueuedEvents()).isZero();
+        assertThat(Files.readString(spool)).isEmpty();
+        verify(logMapper).insert(org.mockito.ArgumentMatchers.argThat(
+                value -> "event-during-replay".equals(value.getEventId())));
     }
 
     private Log audit(String eventId) {

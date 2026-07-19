@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$BackupFile,
     [string]$Root = 'C:\MRR',
@@ -47,6 +47,9 @@ if (-not $BackupFile -or -not (Test-Path -LiteralPath $BackupFile -PathType Leaf
     throw '没有找到可用于恢复演练的数据库备份。'
 }
 
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+& (Join-Path $scriptDir 'verify-backup.ps1') -Root $Root -BackupFile $BackupFile -PostgresBin $PostgresBin
+
 $config = Read-Properties (Join-Path $Root 'config\application-prod.properties')
 $jdbcUrl = [string]$config['spring.datasource.url']
 if ($jdbcUrl -notmatch '^jdbc:postgresql://(?<host>[^:/?]+)(:(?<port>\d+))?/(?<database>[^?]+)') {
@@ -73,6 +76,7 @@ New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
 $reportFile = Join-Path $reportDir "restore-drill-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
 $startedAt = Get-Date
 $checks = [ordered]@{}
+$checks.backupVerification = 'PASS'
 $created = $false
 $env:PGPASSWORD = $dbPassword
 

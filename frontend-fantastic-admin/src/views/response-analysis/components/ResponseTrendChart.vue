@@ -166,16 +166,16 @@ function formatBucket(bucket: string) {
   align-items: center;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--el-text-color-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .overview-item span::before {
+  flex: none;
   width: 7px;
   height: 7px;
-  flex: none;
   content: "";
   background: var(--series-color);
   border-radius: 2px;
@@ -184,11 +184,11 @@ function formatBucket(bucket: string) {
 .overview-item strong {
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 18px;
   font-weight: 650;
   line-height: 1.3;
   color: var(--el-text-color-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -196,10 +196,10 @@ function formatBucket(bucket: string) {
   align-self: end;
   padding-bottom: 2px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 10px;
   font-style: normal;
   color: var(--el-text-color-placeholder);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

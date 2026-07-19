@@ -1,6 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import RecordsPage from '../index.vue'
 
 vi.mock('@/api/modules/records', () => ({
   getScanList: () => Promise.resolve({
@@ -26,9 +28,7 @@ vi.mock('@/store/modules/settings', () => ({
   useSettingsStore: () => ({ settings: { home: { title: 'MRR' }, app: { enablePermission: true } } }),
 }))
 
-import RecordsPage from '../index.vue'
-
-describe('RecordsPage', () => {
+describe('recordsPage', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })

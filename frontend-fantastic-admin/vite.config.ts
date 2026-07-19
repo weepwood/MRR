@@ -6,9 +6,19 @@ import { defineConfig, loadEnv } from 'vite'
 import pkg from './package.json'
 import createVitePlugins from './vite/plugins'
 
+function resolveProxyOrigin(target: string): string | undefined {
+  try {
+    return new URL(target).origin
+  }
+  catch {
+    return undefined
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd())
+  const proxyOrigin = resolveProxyOrigin(env.VITE_APP_API_BASEURL)
   // 全局 scss 资源
   const scssResources: string[] = []
   fs.readdirSync('src/assets/styles/resources').forEach((dirname) => {
@@ -30,6 +40,20 @@ export default defineConfig(({ mode, command }) => {
               target: env.VITE_APP_API_BASEURL,
               changeOrigin: command === 'serve' && env.VITE_OPEN_PROXY === 'true',
               rewrite: path => path.replace(/\/proxy/, ''),
+              configure(proxy) {
+                // 浏览器访问的是 http://localhost:9200/proxy，Vite 使用 changeOrigin
+                // 转发后 Host 会变成后端地址，但原始 Origin 仍是 9200。Spring CORS
+                // 会把这种开发代理请求误判为未授权跨域并在登录控制器前返回 403。
+                // 仅开发代理改写 Origin，不扩大后端正式环境的 CORS 白名单。
+                if (!proxyOrigin) {
+                  return
+                }
+                proxy.on('proxyReq', (proxyRequest, request) => {
+                  if (request.headers.origin) {
+                    proxyRequest.setHeader('origin', proxyOrigin)
+                  }
+                })
+              },
             },
           },
     },

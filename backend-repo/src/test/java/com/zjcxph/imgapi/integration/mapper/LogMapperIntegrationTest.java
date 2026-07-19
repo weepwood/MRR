@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @MybatisTest
 @TestPropertySource(properties = {
         "mybatis.configuration.map-underscore-to-camel-case=true",
+        "mybatis.mapper-locations=classpath:mapper/*.xml",
         "spring.flyway.enabled=false"
 })
 @Sql("classpath:schema-itest.sql")
@@ -32,6 +34,9 @@ class LogMapperIntegrationTest {
 
     @Autowired
     private LogMapper logMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
@@ -125,17 +130,21 @@ class LogMapperIntegrationTest {
 
     private void insert(String username, String action, String target, String status, long duration,
                         LocalDateTime accessTime) {
-        Log log = new Log();
-        log.setUsername(username);
-        log.setClientIp("127.0.0.1");
-        log.setRequestUri(action == null ? "/api/v1/img/00999999" : "/api/test/" + action);
-        log.setMethod("GET");
-        log.setAccessTime(Date.from(accessTime.atZone(ZoneId.systemDefault()).toInstant()));
-        log.setResponseStatus(status);
-        log.setExecuteTime(duration);
-        log.setAuditAction(action);
-        log.setAuditTarget(target);
-        log.setAuditDescription("test");
-        logMapper.insert(log);
+        jdbcTemplate.update("""
+                        INSERT INTO access_log
+                            (username, client_ip, request_uri, method, access_time, response_status,
+                             execute_time, audit_action, audit_target, audit_description)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                username,
+                "127.0.0.1",
+                action == null ? "/api/v1/img/00999999" : "/api/test/" + action,
+                "GET",
+                Date.from(accessTime.atZone(ZoneId.systemDefault()).toInstant()),
+                status,
+                duration,
+                action,
+                target,
+                "test");
     }
 }

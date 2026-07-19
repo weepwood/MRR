@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AppEmpty from '../AppEmpty/index.vue'
 
-describe('AppEmpty', () => {
+describe('appEmpty', () => {
   it('renders default description', () => {
     const wrapper = mount(AppEmpty)
     expect(wrapper.find('.app-empty-text').text()).toBe('暂无数据')

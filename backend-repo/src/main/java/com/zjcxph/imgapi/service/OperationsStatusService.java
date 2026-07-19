@@ -71,7 +71,7 @@ public class OperationsStatusService {
         this(
                 reliableAuditService,
                 objectMapper,
-                null,
+                (JdbcTemplate) null,
                 runtimeRoot,
                 backupStateFile,
                 backupErrorFile,

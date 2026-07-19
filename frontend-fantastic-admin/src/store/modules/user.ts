@@ -15,6 +15,9 @@ interface Profile {
   roleName?: string
   permissions?: string[]
   status?: string
+  mustChangePassword?: boolean
+  passwordVersion?: number
+  temporaryPasswordExpiresAt?: string
   lastLoginAt?: string
 }
 
@@ -33,11 +36,11 @@ export const useUserStore = defineStore('user', () => {
   const profile = ref<Profile>(JSON.parse(localStorage.profile ?? 'null') ?? {})
 
   const isLogin = computed(() => Boolean(token.value))
+  const mustChangePassword = computed(() => Boolean(profile.value.mustChangePassword))
 
   function persistProfile(nextProfile: Profile) {
     profile.value = nextProfile
     permissions.value = Array.isArray(nextProfile.permissions) ? nextProfile.permissions : []
-
     localStorage.setItem('profile', JSON.stringify(nextProfile))
     localStorage.setItem('permissions', JSON.stringify(permissions.value))
     localStorage.setItem('account', nextProfile.displayName || nextProfile.username || account.value || '')
@@ -55,47 +58,50 @@ export const useUserStore = defineStore('user', () => {
 
   async function login(data: { account: string, password: string }) {
     const res = await apiUser.login(data)
-    const payload = res.data || {}
-    const loginData = payload.data || payload
-    const user = loginData.user || loginData.profile || payload.user || {}
-
+    const payload: any = res.data || {}
+    const loginData: any = payload.data || payload
+    const user: Profile = loginData.user || loginData.profile || payload.user || {}
     setSession({ token: loginData.token || loginData.accessToken || loginData.jwt || '', user })
-    if (!user.displayName && !user.username) {
-      account.value = data.account
-    }
+    if (!user.displayName && !user.username) { account.value = data.account }
+    return loginData.nextAction || (user.mustChangePassword ? 'CHANGE_PASSWORD' : 'NONE')
   }
 
-  function logout(redirect = router.currentRoute.value.fullPath) {
-    // 先清除本地 token，避免路由守卫误判
+  async function logout(redirect = router.currentRoute.value.fullPath) {
+    const redirectTarget = redirect
+    const shouldRevokeToken = !isDemoMode && Boolean(token.value)
+
+    // 必须先携带当前 Bearer Token 请求后端撤销，再清理本地会话。
+    // 先删除 token 会导致 /logout 无法加入 JWT 黑名单。
+    if (shouldRevokeToken) {
+      try {
+        await apiUser.logout()
+      }
+      catch {
+        // 即使服务端不可达，也要保证本地会话可以退出。
+      }
+    }
+
     localStorage.removeItem('token')
     token.value = ''
-    // 通知后端撤销 token（fire-and-forget，失败不影响登出）
-    if (!isDemoMode) {
-      apiUser.logout().catch(() => {})
-    }
-    router.push({
+    await router.push({
       name: 'login',
       query: {
-        ...(redirect !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect }),
+        ...(redirectTarget !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect: redirectTarget }),
       },
-    }).then(clearSession)
+    }).catch(() => {})
+    clearSession()
   }
 
-  function requestLogout() {
+  async function requestLogout() {
     localStorage.removeItem('token')
     token.value = ''
-    router.push({
-      name: 'login',
-      query: {
-        ...(router.currentRoute.value.fullPath !== settingsStore.settings.home.fullPath
-          && router.currentRoute.value.name !== 'login'
-          && { redirect: router.currentRoute.value.fullPath }),
-      },
-    }).then(clearSession)
+    await router.push({ name: 'login' }).catch(() => {})
+    clearSession()
   }
 
   function clearSession() {
-    ;['account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
+    ;['token', 'account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
+    token.value = ''
     account.value = ''
     avatar.value = ''
     permissions.value = []
@@ -108,7 +114,7 @@ export const useUserStore = defineStore('user', () => {
 
   async function getPermissions() {
     const res = await apiUser.permission()
-    const nextProfile = res.data || {}
+    const nextProfile: Profile = (res.data || {}) as Profile
     account.value = nextProfile.displayName || nextProfile.username || account.value
     persistProfile(nextProfile)
   }
@@ -124,6 +130,7 @@ export const useUserStore = defineStore('user', () => {
     permissions,
     profile,
     isLogin,
+    mustChangePassword,
     login,
     setSession,
     logout,

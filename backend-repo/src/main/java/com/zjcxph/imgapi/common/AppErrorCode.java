@@ -13,6 +13,7 @@ public enum AppErrorCode {
     UNAUTHORIZED("MRR-AUTH-1001", HttpStatus.UNAUTHORIZED, "未登录或登录已过期"),
     FORBIDDEN("MRR-PERMISSION-2001", HttpStatus.FORBIDDEN, "权限不足"),
     RESOURCE_NOT_FOUND("MRR-COMMON-4004", HttpStatus.NOT_FOUND, "资源不存在"),
+    GONE("MRR-COMMON-4010", HttpStatus.GONE, "资源已停用"),
     RATE_LIMITED("MRR-COMMON-4029", HttpStatus.TOO_MANY_REQUESTS, "请求过于频繁"),
     EXTERNAL_INTEGRATION_DISABLED("MRR-INTEGRATION-4001", HttpStatus.SERVICE_UNAVAILABLE, "外部系统集成未启用"),
     ARCHIVE_NOT_FOUND("MRR-ARCHIVE-3001", HttpStatus.NOT_FOUND, "未找到对应病案"),
@@ -40,6 +41,7 @@ public enum AppErrorCode {
             case 401 -> UNAUTHORIZED;
             case 403 -> FORBIDDEN;
             case 404 -> RESOURCE_NOT_FOUND;
+            case 410 -> GONE;
             case 429 -> RATE_LIMITED;
             case 503 -> DATABASE_FAILURE;
             case 1001 -> RESOURCE_NOT_FOUND;

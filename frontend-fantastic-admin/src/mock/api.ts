@@ -252,14 +252,14 @@ function filterScans(source: MockScanRecord[], filters: Record<string, unknown>)
     ].some(value => normalize(value).includes(keyword))) {
       return false
     }
-    if (bah && !normalize(item.bah).includes(bah)) return false
-    if (brxh && !normalize(item.brxh).includes(brxh)) return false
-    if (sjh && !normalize(item.sjh).includes(sjh)) return false
-    if (openerNo && !normalize(item.openerNo).includes(openerNo)) return false
-    if (btype && item.btype !== btype) return false
-    if (type && !normalize(typeNames[item.btype]).includes(type) && String(item.btype) !== type) return false
-    if (startDate && date < startDate) return false
-    if (endDate && date > endDate) return false
+    if (bah && !normalize(item.bah).includes(bah)) { return false }
+    if (brxh && !normalize(item.brxh).includes(brxh)) { return false }
+    if (sjh && !normalize(item.sjh).includes(sjh)) { return false }
+    if (openerNo && !normalize(item.openerNo).includes(openerNo)) { return false }
+    if (btype && item.btype !== btype) { return false }
+    if (type && !normalize(typeNames[item.btype]).includes(type) && String(item.btype) !== type) { return false }
+    if (startDate && date < startDate) { return false }
+    if (endDate && date > endDate) { return false }
     return true
   })
 }
@@ -381,7 +381,7 @@ function filterLogs(query: Record<string, QueryValue>, onlyAudit = false) {
     const auditAction = normalize(firstQuery(query.auditAction))
     const responseStatus = normalize(firstQuery(query.responseStatus))
 
-    if (onlyAudit && !item.auditAction) return false
+    if (onlyAudit && !item.auditAction) { return false }
     if (keyword && ![
       item.username,
       item.clientIp,
@@ -391,12 +391,12 @@ function filterLogs(query: Record<string, QueryValue>, onlyAudit = false) {
     ].some(value => normalize(value).includes(keyword))) {
       return false
     }
-    if (username && !normalize(item.username).includes(username)) return false
-    if (clientIp && !normalize(item.clientIp).includes(clientIp)) return false
-    if (requestUri && !normalize(item.requestUri).includes(requestUri)) return false
-    if (method && normalize(item.method) !== method) return false
-    if (auditAction && normalize(item.auditAction) !== auditAction) return false
-    if (responseStatus && !String(item.responseStatus).startsWith(responseStatus)) return false
+    if (username && !normalize(item.username).includes(username)) { return false }
+    if (clientIp && !normalize(item.clientIp).includes(clientIp)) { return false }
+    if (requestUri && !normalize(item.requestUri).includes(requestUri)) { return false }
+    if (method && normalize(item.method) !== method) { return false }
+    if (auditAction && normalize(item.auditAction) !== auditAction) { return false }
+    if (responseStatus && !String(item.responseStatus).startsWith(responseStatus)) { return false }
     return true
   })
 }
@@ -420,12 +420,10 @@ function imageAuditAnalytics(filteredLogs = logs) {
     uniqueTargets: new Set(auditLogs.map(item => item.auditTarget)).size,
     abnormalAccesses: auditLogs.filter(item => item.responseStatus >= 400).length,
     averageDurationMs: Math.round(auditLogs.reduce((sum, item) => sum + item.executeTime, 0) / Math.max(1, auditLogs.length)),
-    trend: [...trendMap.entries()]
-      .map(([date, count]) => ({ date, count }))
+    trend: Array.from(trendMap.entries(), ([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date)),
-    actionDistribution: [...actionMap.entries()].map(([label, count]) => ({ label, count })),
-    topUsers: [...userMap.entries()]
-      .map(([label, count]) => ({ label, count }))
+    actionDistribution: Array.from(actionMap.entries(), ([label, count]) => ({ label, count })),
+    topUsers: Array.from(userMap.entries(), ([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count),
   }
 }
@@ -551,9 +549,9 @@ export default defineFakeRoute([
       const roleCode = normalize(firstQuery(query.roleCode))
       const status = normalize(firstQuery(query.status))
       const filtered = users.filter((item) => {
-        if (keyword && !normalize(`${item.username} ${item.displayName}`).includes(keyword)) return false
-        if (roleCode && normalize(item.roleCode) !== roleCode) return false
-        if (status && normalize(item.status) !== status) return false
+        if (keyword && !normalize(`${item.username} ${item.displayName}`).includes(keyword)) { return false }
+        if (roleCode && normalize(item.roleCode) !== roleCode) { return false }
+        if (status && normalize(item.status) !== status) { return false }
         return true
       })
       return ok(paginate(filtered, query.page, query.size))
@@ -643,7 +641,7 @@ export default defineFakeRoute([
     response: ({ params, body }) => {
       const id = Number(params.id)
       const index = scans.findIndex(item => item.id === id)
-      if (index >= 0) scans[index] = { ...scans[index], ...body, id }
+      if (index >= 0) { scans[index] = { ...scans[index], ...body, id } }
       return ok(scans[index] ?? null, '扫描记录更新成功')
     },
   },
@@ -652,7 +650,7 @@ export default defineFakeRoute([
     method: 'DELETE',
     response: ({ params }) => {
       const index = scans.findIndex(item => item.id === Number(params.id))
-      if (index >= 0) scans.splice(index, 1)
+      if (index >= 0) { scans.splice(index, 1) }
       return ok(null, '扫描记录删除成功')
     },
   },
@@ -669,12 +667,12 @@ export default defineFakeRoute([
       const sortBy = firstQuery(query.sortBy) || 'date'
       const sortOrder = firstQuery(query.sortOrder) || 'desc'
       const filtered = source.filter((item) => {
-        if (keyword && !normalize(`${item.bah} ${item.sjh} ${item.type} ${item.openerNo}`).includes(keyword)) return false
-        if (bah && !normalize(item.bah).includes(bah)) return false
-        if (sjh && !normalize(item.sjh).includes(sjh)) return false
-        if (type && normalize(item.type) !== type) return false
-        if (startDate && item.date < startDate) return false
-        if (endDate && item.date > endDate) return false
+        if (keyword && !normalize(`${item.bah} ${item.sjh} ${item.type} ${item.openerNo}`).includes(keyword)) { return false }
+        if (bah && !normalize(item.bah).includes(bah)) { return false }
+        if (sjh && !normalize(item.sjh).includes(sjh)) { return false }
+        if (type && normalize(item.type) !== type) { return false }
+        if (startDate && item.date < startDate) { return false }
+        if (endDate && item.date > endDate) { return false }
         return true
       })
       filtered.sort((a, b) => {
@@ -735,8 +733,8 @@ export default defineFakeRoute([
       const startDate = normalize(firstQuery(query.startDate))
       const endDate = normalize(firstQuery(query.endDate))
       const rows = dateSummary().filter((item) => {
-        if (startDate && item.date < startDate) return false
-        if (endDate && item.date > endDate) return false
+        if (startDate && item.date < startDate) { return false }
+        if (endDate && item.date > endDate) { return false }
         return true
       })
       return ok(rows)
@@ -949,7 +947,7 @@ export default defineFakeRoute([
       scans.filter(item => item.migrationStatus === 'not_migrated').forEach((item) => {
         grouped.set(item.folder, (grouped.get(item.folder) ?? 0) + 1)
       })
-      return ok([...grouped.entries()].map(([folder, cnt]) => ({ folder, cnt })))
+      return ok(Array.from(grouped.entries(), ([folder, cnt]) => ({ folder, cnt })))
     },
   },
   {

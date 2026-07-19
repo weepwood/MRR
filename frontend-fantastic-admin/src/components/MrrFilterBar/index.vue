@@ -82,8 +82,8 @@ const slots = useSlots()
 
 @media (width <= 760px) {
   .mrr-filter-bar {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .mrr-filter-bar__fields,

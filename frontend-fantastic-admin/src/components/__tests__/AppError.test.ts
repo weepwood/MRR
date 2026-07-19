@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AppError from '../AppError/index.vue'
 
-describe('AppError', () => {
+describe('appError', () => {
   it('renders default error message', () => {
     const wrapper = mount(AppError)
     expect(wrapper.find('.app-error-text').text()).toBe('加载失败')

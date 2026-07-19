@@ -1,9 +1,9 @@
 import iconConfig from '@/iconify/index.json'
-// 自定义指令
-import directive from '@/utils/directive'
 import { installArchiveUserIdRouting } from '@/utils/archive-userid-routing'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
+// 自定义指令
+import directive from '@/utils/directive'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'

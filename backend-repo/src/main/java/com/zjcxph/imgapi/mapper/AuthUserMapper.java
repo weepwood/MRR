@@ -12,72 +12,65 @@ import org.apache.ibatis.annotations.Update;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Mapper
 public interface AuthUserMapper {
 
-    @Select("select " +
-            "u.id as id, " +
-            "u.username as username, " +
-            "u.display_name as displayName, " +
-            "u.password_hash as passwordHash, " +
-            "u.role_code as roleCode, " +
-            "r.name as roleName, " +
-            "r.permissions as permissionsCsv, " +
-            "u.status as status, " +
-            "u.last_login_at as lastLoginAt " +
-            "from mr_auth_user u " +
-            "left join mr_auth_role r on r.code = u.role_code " +
+    String USER_COLUMNS = "u.id as id, u.username as username, u.display_name as displayName, " +
+            "u.password_hash as passwordHash, u.role_code as roleCode, r.name as roleName, " +
+            "r.permissions as permissionsCsv, u.status as status, " +
+            "u.must_change_password as mustChangePassword, u.password_version as passwordVersion, " +
+            "u.password_changed_at as passwordChangedAt, " +
+            "u.temporary_password_expires_at as temporaryPasswordExpiresAt, " +
+            "u.created_by as createdBy, u.password_reset_at as passwordResetAt, " +
+            "u.password_reset_by as passwordResetBy, u.last_login_at as lastLoginAt, " +
+            "u.created_at as createdAt, u.updated_at as updatedAt ";
+
+    @Select("select " + USER_COLUMNS +
+            "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code " +
             "where u.username = #{username}")
     AuthUser findByUsername(@Param("username") String username);
 
-    @Select("select " +
-            "u.id as id, " +
-            "u.username as username, " +
-            "u.display_name as displayName, " +
-            "u.password_hash as passwordHash, " +
-            "u.role_code as roleCode, " +
-            "r.name as roleName, " +
-            "r.permissions as permissionsCsv, " +
-            "u.status as status, " +
-            "u.last_login_at as lastLoginAt " +
-            "from mr_auth_user u " +
-            "left join mr_auth_role r on r.code = u.role_code " +
+    @Select("select " + USER_COLUMNS +
+            "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code " +
             "where u.id = #{id}")
     AuthUser findById(@Param("id") Long id);
 
-    @Select("select " +
-            "u.id as id, " +
-            "u.username as username, " +
-            "u.display_name as displayName, " +
-            "u.password_hash as passwordHash, " +
-            "u.role_code as roleCode, " +
-            "r.name as roleName, " +
-            "r.permissions as permissionsCsv, " +
-            "u.status as status, " +
-            "u.last_login_at as lastLoginAt " +
-            "from mr_auth_user u " +
-            "left join mr_auth_role r on r.code = u.role_code " +
-            "order by u.id")
+    @Select("select " + USER_COLUMNS +
+            "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code order by u.id")
     List<AuthUser> findAll();
 
-    @Update("update mr_auth_user set last_login_at = #{lastLoginAt} where id = #{id}")
+    @Update("update mr_auth_user set last_login_at = #{lastLoginAt}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
-    @Update("update mr_auth_user " +
-            "set display_name = #{displayName}, " +
-            "role_code = #{roleCode}, " +
-            "status = #{status} " +
-            "where id = #{id}")
+    @Update("update mr_auth_user set display_name = #{displayName}, role_code = #{roleCode}, " +
+            "status = #{status}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateUser(AuthUser user);
 
-    @Update("update mr_auth_user set password_hash = #{passwordHash} where id = #{id}")
-    int updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
+    @Update("update mr_auth_user set password_hash = #{passwordHash}, password_changed_at = CURRENT_TIMESTAMP, " +
+            "must_change_password = false, temporary_password_expires_at = null, " +
+            "password_version = password_version + 1, updated_at = CURRENT_TIMESTAMP where id = #{id}")
+    int changePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
 
-    @Update("update mr_auth_user set status = #{status} where id = #{id}")
+    @Update("update mr_auth_user set password_hash = #{passwordHash}, must_change_password = true, " +
+            "temporary_password_expires_at = #{expiresAt}, password_reset_at = CURRENT_TIMESTAMP, " +
+            "password_reset_by = #{resetBy}, password_version = password_version + 1, " +
+            "updated_at = CURRENT_TIMESTAMP where id = #{id}")
+    int resetPassword(@Param("id") Long id,
+                      @Param("passwordHash") String passwordHash,
+                      @Param("expiresAt") LocalDateTime expiresAt,
+                      @Param("resetBy") Long resetBy);
+
+    @Update("update mr_auth_user set status = #{status}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
-    @Insert("insert into mr_auth_user (username, display_name, password_hash, role_code, status) " +
-            "values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status})")
+    @Insert("insert into mr_auth_user (username, display_name, password_hash, role_code, status, " +
+            "must_change_password, password_version, temporary_password_expires_at, created_by) " +
+            "values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status}, " +
+            "#{mustChangePassword}, #{passwordVersion}, #{temporaryPasswordExpiresAt}, #{createdBy})")
     int insertUser(AuthUser user);
+
+    @Select("select count(*) from mr_auth_user where upper(role_code) = 'ADMIN' and lower(status) = 'active'")
+    int countActiveAdmins();
 
     @Select({
             "<script>",
@@ -109,15 +102,22 @@ public interface AuthUserMapper {
             @Result(property = "roleName", column = "role_name"),
             @Result(property = "permissionsCsv", column = "permissions_csv"),
             @Result(property = "status", column = "status"),
+            @Result(property = "mustChangePassword", column = "must_change_password"),
+            @Result(property = "passwordVersion", column = "password_version"),
+            @Result(property = "passwordChangedAt", column = "password_changed_at"),
+            @Result(property = "temporaryPasswordExpiresAt", column = "temporary_password_expires_at"),
+            @Result(property = "createdBy", column = "created_by"),
+            @Result(property = "passwordResetAt", column = "password_reset_at"),
+            @Result(property = "passwordResetBy", column = "password_reset_by"),
             @Result(property = "lastLoginAt", column = "last_login_at"),
             @Result(property = "createdAt", column = "created_at"),
             @Result(property = "updatedAt", column = "updated_at")
     })
     List<AuthUser> findAllWithPagination(@Param("offset") int offset,
-                                          @Param("limit") int limit,
-                                          @Param("keyword") String keyword,
-                                          @Param("roleCode") String roleCode,
-                                          @Param("status") String status);
+                                         @Param("limit") int limit,
+                                         @Param("keyword") String keyword,
+                                         @Param("roleCode") String roleCode,
+                                         @Param("status") String status);
 
     @Select({
             "<script>",

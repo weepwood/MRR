@@ -1,7 +1,7 @@
-import { defineConfig } from 'vitest/config'
+import path from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import autoImport from 'unplugin-auto-import/vite'
-import path from 'node:path'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [

@@ -23,7 +23,9 @@ function handleAction() {
 <template>
   <div class="app-empty">
     <div class="app-empty-icon" :class="icon" />
-    <p class="app-empty-text">{{ description }}</p>
+    <p class="app-empty-text">
+      {{ description }}
+    </p>
     <el-button v-if="actionText" type="primary" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
     </el-button>

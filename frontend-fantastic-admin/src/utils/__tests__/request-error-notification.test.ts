@@ -1,5 +1,5 @@
-import { createApp } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { createApp } from 'vue'
 import {
   installRequestErrorFallback,
   registerRequestErrorFallback,

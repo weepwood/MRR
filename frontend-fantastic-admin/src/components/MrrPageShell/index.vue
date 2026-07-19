@@ -1,8 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrPageShell' })
 
-type PageWidth = 'fluid' | 'standard' | 'narrow'
-
 const props = withDefaults(defineProps<{
   width?: PageWidth
   compact?: boolean
@@ -10,6 +8,8 @@ const props = withDefaults(defineProps<{
   width: 'fluid',
   compact: false,
 })
+
+type PageWidth = 'fluid' | 'standard' | 'narrow'
 </script>
 
 <template>

@@ -52,7 +52,7 @@ async function loadDepartmentThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.prototype.hasOwnProperty.call(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       nextThemes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(nextThemes)
     }
@@ -123,71 +123,63 @@ onBeforeUnmount(() => {
 
 .department-themed-archive :deep(.folder-code-block) {
   display: flex;
-  min-height: 78px;
-  padding: 12px 14px;
   flex-direction: column;
   gap: 7px;
   justify-content: center;
+  min-height: 78px;
+  padding: 12px 14px;
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .department-themed-archive :deep(.folder-code-block-full) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  min-height: 86px;
-  padding: 15px 16px;
   column-gap: 18px;
   align-items: center;
+  min-height: 86px;
+  padding: 15px 16px;
 }
 
 .department-themed-archive :deep(.folder-code-label) {
   display: inline-flex;
-  width: fit-content;
-  margin-bottom: 0;
   gap: 6px;
   align-items: center;
+  width: fit-content;
+  margin-bottom: 0;
   font-size: 11px;
   line-height: 1;
   letter-spacing: 0.04em;
 }
 
 .department-themed-archive :deep(.folder-code-label::before) {
+  flex: none;
   width: 15px;
   height: 15px;
-  flex: none;
   content: "";
   background: var(--folder-accent);
   opacity: 0.78;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
+  mask-position: center;
   mask-size: contain;
 }
 
 .department-themed-archive :deep(.folder-code-block-full .folder-code-label::before) {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z'/%3E%3C/svg%3E");
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(1) .folder-code-label::before) {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 21V3h10v6h6v12h-2v-2h-2v2h-2V5H6v16H4Zm4-12h2V7H8v2Zm0 4h2v-2H8v2Zm0 4h2v-2H8v2Zm8-4h2v-2h-2v2Zm0 4h2v-2h-2v2Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 21V3h10v6h6v12h-2v-2h-2v2h-2V5H6v16H4Zm4-12h2V7H8v2Zm0 4h2v-2H8v2Zm0 4h2v-2H8v2Zm8-4h2v-2h-2v2Zm0 4h2v-2h-2v2Z'/%3E%3C/svg%3E");
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(2) .folder-code-label::before) {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Zm3 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Zm3 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z'/%3E%3C/svg%3E");
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(3) .folder-code-label::before) {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h9l5 5v15H6V2Zm2 2v16h10V8h-4V4H8Zm2 7h6v2h-6v-2Zm0 4h6v2h-6v-2Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h9l5 5v15H6V2Zm2 2v16h10V8h-4V4H8Zm2 7h6v2h-6v-2Zm0 4h6v2h-6v-2Z'/%3E%3C/svg%3E");
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(4) .folder-code-label::before) {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 4h18v5H3V4Zm2 7h14v9H5v-9Zm5 2v2h4v-2h-4Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 4h18v5H3V4Zm2 7h14v9H5v-9Zm5 2v2h4v-2h-4Z'/%3E%3C/svg%3E");
 }
 
@@ -196,8 +188,8 @@ onBeforeUnmount(() => {
 }
 
 .department-themed-archive :deep(.folder-code-block-full .folder-code-value) {
-  text-align: right;
   line-height: 1.15;
+  text-align: right;
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(-n+2) .folder-code-value) {

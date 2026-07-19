@@ -111,11 +111,11 @@ function onSelection(value: number | 'all') {
   padding: 4px 10px;
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -160,5 +160,4 @@ function onSelection(value: number | 'all') {
   background: var(--surface-alt);
   border-radius: 9999px;
 }
-
 </style>

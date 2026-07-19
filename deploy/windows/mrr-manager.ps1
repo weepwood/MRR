@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([string]$Root = 'C:\MRR')
 
 Set-StrictMode -Version Latest

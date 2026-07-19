@@ -1,5 +1,5 @@
-import type { ScanRecord, ScanRequest, PaginatedResult } from '../types'
-import api, { getRequest, postRequest, putRequest, deleteRequest } from '../index'
+import type { PaginatedResult, ScanRecord, ScanRequest } from '../types'
+import api, { deleteRequest, getRequest, postRequest, putRequest } from '../index'
 
 /** GET /api/v1/scan/page — 分页获取扫描记录 */
 export function getScanList(params: { page: number, size: number }) {

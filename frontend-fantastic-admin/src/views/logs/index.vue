@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import type { LogRecord, PaginatedResult } from '@/api/types'
 import { Refresh, Search, View } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
-import { useCrudList } from '@/composables/useCrudList'
-import type { LogRecord, PaginatedResult } from '@/api/types'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -47,19 +47,19 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
     // 构造后端请求参数：空值不传，timeRange 拆为 startTime/endTime
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Record<string, any> = { page, size }
-    if (keyword?.trim()) apiParams.keyword = keyword.trim()
-    if (username?.trim()) apiParams.username = username.trim()
-    if (clientIp?.trim()) apiParams.clientIp = clientIp.trim()
-    if (requestUri?.trim()) apiParams.requestUri = requestUri.trim()
-    if (method) apiParams.method = method
-    if (responseStatus) apiParams.responseStatus = responseStatus
+    if (keyword?.trim()) { apiParams.keyword = keyword.trim() }
+    if (username?.trim()) { apiParams.username = username.trim() }
+    if (clientIp?.trim()) { apiParams.clientIp = clientIp.trim() }
+    if (requestUri?.trim()) { apiParams.requestUri = requestUri.trim() }
+    if (method) { apiParams.method = method }
+    if (responseStatus) { apiParams.responseStatus = responseStatus }
     if (timeRange?.length === 2) {
       apiParams.startTime = timeRange[0]
       apiParams.endTime = timeRange[1]
     }
     try {
       error.value = ''
-    return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
+      return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
     }
     catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载日志记录失败'

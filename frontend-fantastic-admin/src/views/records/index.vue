@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import type { PaginatedResult, ScanRecord } from '@/api/types'
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
-import type { PaginatedResult, ScanRecord } from '@/api/types'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
-import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { useCrudList } from '@/composables/useCrudList'
+import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 
 defineOptions({ name: 'RecordsPage' })
 

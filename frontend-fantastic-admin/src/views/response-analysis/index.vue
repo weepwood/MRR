@@ -312,9 +312,9 @@ h2 {
   }
 
   .response-trend-card {
+    justify-self: start;
     width: max-content;
     max-width: 100%;
-    justify-self: start;
   }
 
   .response-trend-card :deep(.el-card__body) {

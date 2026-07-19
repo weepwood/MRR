@@ -238,9 +238,9 @@ function actionLabel(value: string) {
 }
 
 .trend-card {
-  grid-row: span 2;
   display: flex;
   flex-direction: column;
+  grid-row: span 2;
   height: 100%;
 }
 

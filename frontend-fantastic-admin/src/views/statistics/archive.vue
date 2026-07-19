@@ -699,8 +699,8 @@ onUnmounted(() => {
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip),
 .archive-page.scrollbars-semi-hidden :deep(.preview-stage) {
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar),

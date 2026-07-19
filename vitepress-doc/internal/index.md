@@ -12,6 +12,7 @@
 | [数据库](./database.md) | PostgreSQL、`mr_archive`、关联、编号和索引原则 |
 | [数据导入与迁移](./data-migration.md) | CSV、COPY、分卷、回填和校验 |
 | [API 与权限](./api.md) | 接口分组、认证、权限和实时 OpenAPI |
+| [外部系统影像接入](./external-archive-integration.md) | HIS、EMR 的 HMAC Ticket、IP 白名单和 Python、Java、C# 接入 |
 | [开发流程](./development.md) | 本地启动、分支、检查、测试和文档维护 |
 | [部署](./deployment.md) | 非 Docker 正式部署、Nginx、文档和图片服务 |
 | [Windows Server 部署](./windows-deployment.md) | Windows 原生 JAR、Nginx 和服务管理 |

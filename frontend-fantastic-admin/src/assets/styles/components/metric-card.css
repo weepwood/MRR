@@ -17,8 +17,7 @@
   height: 100%;
   overflow: hidden;
   color: var(--mrr-card-foreground);
-  background:
-    linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
@@ -56,6 +55,7 @@
 
 .mrr-metric-card__icon {
   display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
   font-size: 26px;
@@ -63,7 +63,6 @@
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
   border-radius: 14px;
-  place-items: center;
 }
 
 .mrr-metric-card__icon .el-icon {
@@ -78,11 +77,11 @@
   display: block;
   margin: 1px 0 6px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 550;
   line-height: 1.35;
   color: var(--mrr-muted-foreground);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -96,13 +95,13 @@
 .mrr-metric-card__value {
   display: block;
   margin: 0;
-  overflow-wrap: anywhere;
   font-size: 26px;
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   line-height: 1.16;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
 }
 
 .mrr-metric-card__value--compact {
@@ -121,10 +120,10 @@
 .mrr-metric-card__note {
   margin: 7px 0 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   line-height: 1.45;
   color: var(--mrr-muted-foreground);
-  text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.84;
 }

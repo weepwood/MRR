@@ -39,8 +39,8 @@ watch(() => settingsStore.settings, () => {
 }, { deep: true })
 
 const autoSaveLabel = computed(() => {
-  if (autoSaveState.value === 'saving') return '正在自动保存…'
-  if (autoSaveState.value === 'saved') return '已自动保存'
+  if (autoSaveState.value === 'saving') { return '正在自动保存…' }
+  if (autoSaveState.value === 'saved') { return '已自动保存' }
   return '修改后自动保存到当前浏览器'
 })
 
@@ -310,15 +310,21 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>启用标签栏</strong></div>
+              <div class="label-copy">
+                <strong>启用标签栏</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.tabbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>显示页面图标</strong></div>
+              <div class="label-copy">
+                <strong>显示页面图标</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>标签栏快捷键</strong></div>
+              <div class="label-copy">
+                <strong>标签栏快捷键</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" />
             </div>
           </div>
@@ -331,27 +337,39 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>启用工具栏</strong></div>
+              <div class="label-copy">
+                <strong>启用工具栏</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.enable" />
             </div>
             <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-              <div class="label-copy"><strong>面包屑导航</strong></div>
+              <div class="label-copy">
+                <strong>面包屑导航</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>导航搜索</strong></div>
+              <div class="label-copy">
+                <strong>导航搜索</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
             <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-              <div class="label-copy"><strong>全屏入口</strong></div>
+              <div class="label-copy">
+                <strong>全屏入口</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>页面刷新入口</strong></div>
+              <div class="label-copy">
+                <strong>页面刷新入口</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>主题切换入口</strong></div>
+              <div class="label-copy">
+                <strong>主题切换入口</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
           </div>
@@ -364,11 +382,15 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>主页快捷键</strong></div>
+              <div class="label-copy">
+                <strong>主页快捷键</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>导航搜索快捷键</strong></div>
+              <div class="label-copy">
+                <strong>导航搜索快捷键</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" />
             </div>
           </div>
@@ -393,11 +415,15 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>启用主页</strong></div>
+              <div class="label-copy">
+                <strong>启用主页</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.home.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>主页名称</strong></div>
+              <div class="label-copy">
+                <strong>主页名称</strong>
+              </div>
               <FaInput v-model="settingsStore.settings.home.title" />
             </div>
           </div>
@@ -410,23 +436,33 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>启用底部版权</strong></div>
+              <div class="label-copy">
+                <strong>启用底部版权</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.copyright.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>日期</strong></div>
+              <div class="label-copy">
+                <strong>日期</strong>
+              </div>
               <FaInput v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>公司</strong></div>
+              <div class="label-copy">
+                <strong>公司</strong>
+              </div>
               <FaInput v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>网址</strong></div>
+              <div class="label-copy">
+                <strong>网址</strong>
+              </div>
               <FaInput v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>备案号</strong></div>
+              <div class="label-copy">
+                <strong>备案号</strong>
+              </div>
               <FaInput v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" />
             </div>
           </div>
@@ -439,19 +475,27 @@ function handleReset() {
           </div>
           <div class="config-section config-section--nested">
             <div class="setting-item">
-              <div class="label-copy"><strong>启用权限控制</strong></div>
+              <div class="label-copy">
+                <strong>启用权限控制</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.app.enablePermission" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>显示载入进度条</strong></div>
+              <div class="label-copy">
+                <strong>显示载入进度条</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.app.enableProgress" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>色弱模式</strong></div>
+              <div class="label-copy">
+                <strong>色弱模式</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" />
             </div>
             <div class="setting-item">
-              <div class="label-copy"><strong>动态页面标题</strong></div>
+              <div class="label-copy">
+                <strong>动态页面标题</strong>
+              </div>
               <FaSwitch v-model="settingsStore.settings.app.enableDynamicTitle" />
             </div>
           </div>
@@ -471,8 +515,8 @@ function handleReset() {
 }
 
 .app-config-panel--drawer .config-summary {
-  align-items: stretch;
   flex-direction: column;
+  align-items: stretch;
 }
 
 .app-config-panel--drawer .config-summary-actions {
@@ -544,8 +588,8 @@ function handleReset() {
 }
 
 .config-groups :deep(.el-collapse-item__header) {
-  min-height: 66px;
   height: auto;
+  min-height: 66px;
   padding: 10px 16px;
   line-height: 1.4;
   background: var(--el-bg-color);
@@ -569,13 +613,13 @@ function handleReset() {
 .collapse-icon {
   display: grid;
   flex: 0 0 34px;
+  place-items: center;
   width: 34px;
   height: 34px;
   font-size: 16px;
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
   border-radius: 9px;
-  place-items: center;
 }
 
 .collapse-title strong,
@@ -716,7 +760,7 @@ function handleReset() {
 .mode-container {
   position: absolute;
   pointer-events: none;
-  content: '';
+  content: "";
 }
 
 .mode::before {
@@ -786,11 +830,11 @@ function handleReset() {
   border-radius: 0 4px 4px 0;
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .config-summary,
   .setting-item {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .theme-tabs,

@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.service;
 
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.impl.SystemSettingServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,11 +26,14 @@ class SystemSettingServiceImplTest {
     @Mock
     private SystemSettingMapper mapper;
 
+    @Mock
+    private DeveloperModeService developerModeService;
+
     private SystemSettingServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new SystemSettingServiceImpl(mapper);
+        service = new SystemSettingServiceImpl(mapper, developerModeService);
     }
 
     @Test
@@ -41,6 +45,17 @@ class SystemSettingServiceImplTest {
         service.saveSettings(settings, "admin");
 
         verify(mapper).upsertAll(anyList());
+    }
+
+    @Test
+    @DisplayName("saveSettings — 开发者模式保存后立即刷新运行时开关")
+    void saveSettings_shouldRefreshDeveloperMode() {
+        Map<String, String> settings = Map.of(DeveloperModeService.SETTING_KEY, "true");
+        when(mapper.upsertAll(anyList())).thenReturn(1);
+
+        service.saveSettings(settings, "admin");
+
+        verify(developerModeService).refreshFromValue("true");
     }
 
     @Test

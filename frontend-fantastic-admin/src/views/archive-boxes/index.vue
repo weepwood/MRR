@@ -396,7 +396,9 @@ onMounted(refreshAll)
         <div class="mrr-metric-card__body">
           <span class="mrr-metric-card__label">{{ card.label }}</span>
           <strong class="mrr-metric-card__value">{{ card.value }}</strong>
-          <p class="mrr-metric-card__note">{{ card.note }}</p>
+          <p class="mrr-metric-card__note">
+            {{ card.note }}
+          </p>
         </div>
       </el-card>
     </section>

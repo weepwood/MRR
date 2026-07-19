@@ -62,16 +62,15 @@ const hasAside = computed(() => Boolean(slots.actions))
 .mrr-page-header__icon {
   display: grid;
   flex: 0 0 42px;
+  place-items: center;
   width: 42px;
   height: 42px;
   font-size: 19px;
   color: var(--mrr-primary);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--mrr-primary) 12%, var(--mrr-card)), color-mix(in srgb, var(--mrr-primary) 5%, var(--mrr-card)));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--mrr-primary) 12%, var(--mrr-card)), color-mix(in srgb, var(--mrr-primary) 5%, var(--mrr-card)));
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
   border-radius: var(--mrr-radius-lg);
   box-shadow: var(--mrr-shadow-xs);
-  place-items: center;
 }
 
 .mrr-page-header__copy {
@@ -143,8 +142,8 @@ const hasAside = computed(() => Boolean(slots.actions))
   }
 
   .mrr-page-header__aside {
-    width: 100%;
     justify-content: flex-start;
+    width: 100%;
   }
 }
 </style>

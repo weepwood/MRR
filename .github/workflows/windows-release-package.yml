@@ -34,7 +34,19 @@ permissions:
   contents: write
 
 jobs:
+  windows-sandbox:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test backup, verification, restore and runtime manifests
+        shell: pwsh
+        run: ./deploy/windows/tests/backup-restore-sandbox.ps1
+
   build:
+    needs: windows-sandbox
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -170,6 +182,10 @@ jobs:
           fi
 
           nginx_sha="$(sha256sum "$work/nginx.zip" | awk '{print $1}')"
+          java_exe_sha="$(sha256sum "$runtime/jdk/bin/java.exe" | awk '{print $1}')"
+          jcmd_exe_sha="$(sha256sum "$runtime/jdk/bin/jcmd.exe" | awk '{print $1}')"
+          nginx_exe_sha="$(sha256sum "$runtime/nginx/nginx.exe" | awk '{print $1}')"
+          mime_types_sha="$(sha256sum "$runtime/nginx/conf/mime.types" | awk '{print $1}')"
           cat > "$runtime/runtime-manifest.json" <<JSON
           {
             "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -189,9 +205,18 @@ jobs:
               "version": "$WINSW_VERSION",
               "sha256": "$winsw_sha",
               "verification": "$winsw_verification"
+            },
+            "files": {
+              "jdk/bin/java.exe": "$java_exe_sha",
+              "jdk/bin/jcmd.exe": "$jcmd_exe_sha",
+              "nginx/nginx.exe": "$nginx_exe_sha",
+              "nginx/conf/mime.types": "$mime_types_sha",
+              "winsw/WinSW-x64.exe": "$winsw_sha"
             }
           }
           JSON
+
+          pwsh -NoProfile -File "$runtime/verify-runtime.ps1" -RuntimeRoot "$runtime"
 
       - name: Assemble offline package
         id: package

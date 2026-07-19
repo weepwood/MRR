@@ -124,9 +124,9 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-header {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
 .case-main,
@@ -178,8 +178,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 }
 
 .case-main {
-  min-width: 0;
   gap: 3px;
+  min-width: 0;
 }
 
 .case-main strong,

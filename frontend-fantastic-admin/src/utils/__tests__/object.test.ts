@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { merge, mergeWithoutUndefinedProps, diffTwoObj } from '../object'
+import { diffTwoObj, merge, mergeWithoutUndefinedProps } from '../object'
 
 describe('merge', () => {
   it('应合并两个普通对象（第一参数优先级更高）', () => {

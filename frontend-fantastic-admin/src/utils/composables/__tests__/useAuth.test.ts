@@ -1,5 +1,7 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+
+import useAuth from '../useAuth'
 
 vi.mock('@/store/modules/user', () => ({
   useUserStore: () => ({
@@ -13,8 +15,6 @@ vi.mock('@/store/modules/settings', () => ({
     settings: { app: { enablePermission: true } },
   }),
 }))
-
-import useAuth from '../useAuth'
 
 describe('useAuth — 权限检查 composable', () => {
   beforeEach(() => {
@@ -87,7 +87,7 @@ describe('useAuth — ADMIN bypass', () => {
     }))
   })
 
-  it('ADMIN 角色对任意权限返回 true', async () => {
+  it('aDMIN 角色对任意权限返回 true', async () => {
     vi.resetModules()
     vi.doMock('@/store/modules/user', () => ({
       useUserStore: () => ({

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrMetricCard' })
 
-type MetricTone = 'blue' | 'green' | 'amber' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
-
 const props = withDefaults(defineProps<{
   label: string
   value: string | number
@@ -15,6 +13,8 @@ const props = withDefaults(defineProps<{
   tone: 'blue',
   compactValue: false,
 })
+
+type MetricTone = 'blue' | 'green' | 'amber' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
 
 const toneClass = computed(() => props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`)
 </script>

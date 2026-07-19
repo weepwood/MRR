@@ -33,8 +33,8 @@ defineOptions({
   display: flex;
   flex: 1 1 auto;
   align-items: center;
-  height: 100%;
   min-width: 0;
+  height: 100%;
   padding-right: 48px;
   overflow: hidden;
   mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 36px), transparent);

@@ -167,100 +167,135 @@ public class ReliableAuditService {
         }
     }
 
+    /**
+     * Rotates the active spool into a replay segment so database writes never hold {@code spoolLock}.
+     * New fallback events keep using the active spool while failed old events remain in the replay
+     * segment. A crash may retry an event, which is safe because {@code event_id} is idempotent in
+     * the database.
+     */
     @Scheduled(fixedDelayString = "${app.audit.replay-interval-ms:30000}")
-    public void replaySpool() {
-        synchronized (spoolLock) {
-            if (!Files.exists(spoolFile)) {
-                queuedEvents.set(0);
-                return;
+    public synchronized void replaySpool() {
+        Path replayFile = spoolFile.resolveSibling(spoolFile.getFileName() + ".replay");
+        Path remainingFile = spoolFile.resolveSibling(spoolFile.getFileName() + ".remaining");
+
+        try {
+            synchronized (spoolLock) {
+                if (!Files.exists(replayFile)) {
+                    if (!Files.exists(spoolFile) || Files.size(spoolFile) == 0) {
+                        queuedEvents.set(0);
+                        return;
+                    }
+                    replaceSpoolFile(spoolFile, replayFile);
+                }
+            }
+        } catch (Exception exception) {
+            fallbackAvailable = false;
+            markFailure(exception.getClass().getSimpleName());
+            logger.warn("Unable to rotate durable audit spool: {}", exception.getMessage());
+            return;
+        }
+
+        long persisted = 0;
+        long remaining = 0;
+        long quarantined = 0;
+        String replayFailure = null;
+
+        try (BufferedReader reader = Files.newBufferedReader(replayFile, StandardCharsets.UTF_8);
+             BufferedWriter remainingWriter = Files.newBufferedWriter(
+                     remainingFile,
+                     StandardCharsets.UTF_8,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.WRITE,
+                     StandardOpenOption.TRUNCATE_EXISTING);
+             BufferedWriter deadLetterWriter = Files.newBufferedWriter(
+                     deadLetterFile,
+                     StandardCharsets.UTF_8,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.WRITE,
+                     StandardOpenOption.APPEND)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) {
+                    continue;
+                }
+
+                Log auditLog;
+                try {
+                    auditLog = objectMapper.readValue(line, Log.class);
+                } catch (Exception malformedEvent) {
+                    deadLetterWriter.write(line);
+                    deadLetterWriter.newLine();
+                    quarantined++;
+                    replayFailure = "SPOOL_CORRUPT";
+                    continue;
+                }
+
+                try {
+                    auditLog.setPersistedVia("SPOOL");
+                    logMapper.insert(auditLog);
+                    persisted++;
+                } catch (Exception databaseException) {
+                    remainingWriter.write(line);
+                    remainingWriter.newLine();
+                    remaining++;
+                    replayFailure = databaseException.getClass().getSimpleName();
+                }
+            }
+        } catch (Exception exception) {
+            fallbackAvailable = false;
+            markFailure(exception.getClass().getSimpleName());
+            logger.warn("Unable to replay durable audit spool: {}", exception.getMessage());
+            deleteQuietly(remainingFile);
+            return;
+        }
+
+        try {
+            forceFile(remainingFile);
+            if (quarantined > 0) {
+                forceFile(deadLetterFile);
             }
 
-            Path replayFile = spoolFile.resolveSibling(spoolFile.getFileName() + ".replay");
-            long persisted = 0;
-            long remaining = 0;
-            long quarantined = 0;
-            String replayFailure = null;
-
-            try (BufferedReader reader = Files.newBufferedReader(spoolFile, StandardCharsets.UTF_8);
-                 BufferedWriter remainingWriter = Files.newBufferedWriter(
-                         replayFile,
-                         StandardCharsets.UTF_8,
-                         StandardOpenOption.CREATE,
-                         StandardOpenOption.WRITE,
-                         StandardOpenOption.TRUNCATE_EXISTING);
-                 BufferedWriter deadLetterWriter = Files.newBufferedWriter(
-                         deadLetterFile,
-                         StandardCharsets.UTF_8,
-                         StandardOpenOption.CREATE,
-                         StandardOpenOption.WRITE,
-                         StandardOpenOption.APPEND)) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.isBlank()) {
-                        continue;
+            synchronized (spoolLock) {
+                if (remaining > 0) {
+                    if (Files.exists(spoolFile)) {
+                        replaceSpoolFile(remainingFile, replayFile);
+                    } else {
+                        replaceSpoolFile(remainingFile, spoolFile);
+                        Files.deleteIfExists(replayFile);
                     }
-
-                    Log auditLog;
-                    try {
-                        auditLog = objectMapper.readValue(line, Log.class);
-                    } catch (Exception malformedEvent) {
-                        deadLetterWriter.write(line);
-                        deadLetterWriter.newLine();
-                        quarantined++;
-                        replayFailure = "SPOOL_CORRUPT";
-                        continue;
-                    }
-
-                    try {
-                        auditLog.setPersistedVia("SPOOL");
-                        logMapper.insert(auditLog);
-                        persisted++;
-                    } catch (Exception databaseException) {
-                        remainingWriter.write(line);
-                        remainingWriter.newLine();
-                        remaining++;
-                        replayFailure = databaseException.getClass().getSimpleName();
+                } else {
+                    Files.deleteIfExists(remainingFile);
+                    Files.deleteIfExists(replayFile);
+                    if (!Files.exists(spoolFile)) {
+                        forceWrite(spoolFile, "", false);
                     }
                 }
-            } catch (Exception exception) {
-                fallbackAvailable = false;
-                markFailure(exception.getClass().getSimpleName());
-                logger.warn("Unable to replay durable audit spool: {}", exception.getMessage());
-                deleteQuietly(replayFile);
-                return;
+                queuedEvents.addAndGet(-(persisted + quarantined));
             }
 
-            try {
-                forceFile(replayFile);
-                if (quarantined > 0) {
-                    forceFile(deadLetterFile);
-                }
-                replaceSpool(replayFile);
-                queuedEvents.set(remaining);
-                if (quarantined > 0) {
-                    deadLetterEvents.addAndGet(quarantined);
-                }
-                fallbackAvailable = true;
-
-                if (persisted > 0) {
-                    databaseWrites.increment(persisted);
-                    logger.info("Replayed {} audit events from durable spool; {} remain; {} quarantined",
-                            persisted, remaining, quarantined);
-                }
-
-                if (quarantined > 0) {
-                    markFailure("SPOOL_CORRUPT");
-                } else if (remaining > 0) {
-                    markFailure(replayFailure == null ? "DATABASE_UNAVAILABLE" : replayFailure);
-                } else if (!lostEventDetected && deadLetterEvents.get() == 0) {
-                    clearFailure();
-                }
-            } catch (Exception exception) {
-                fallbackAvailable = false;
-                markFailure(exception.getClass().getSimpleName());
-                logger.warn("Unable to replace durable audit spool: {}", exception.getMessage());
-                deleteQuietly(replayFile);
+            if (quarantined > 0) {
+                deadLetterEvents.addAndGet(quarantined);
             }
+            fallbackAvailable = true;
+
+            if (persisted > 0) {
+                databaseWrites.increment(persisted);
+                logger.info("Replayed {} audit events from durable spool; {} remain; {} quarantined",
+                        persisted, remaining, quarantined);
+            }
+
+            if (quarantined > 0) {
+                markFailure("SPOOL_CORRUPT");
+            } else if (remaining > 0) {
+                markFailure(replayFailure == null ? "DATABASE_UNAVAILABLE" : replayFailure);
+            } else if (!lostEventDetected && deadLetterEvents.get() == 0) {
+                clearFailure();
+            }
+        } catch (Exception exception) {
+            fallbackAvailable = false;
+            markFailure(exception.getClass().getSimpleName());
+            logger.warn("Unable to merge replayed audit spool: {}", exception.getMessage());
+            deleteQuietly(remainingFile);
         }
     }
 
@@ -302,7 +337,8 @@ public class ReliableAuditService {
 
     private void refreshState() {
         try {
-            queuedEvents.set(countNonBlankLines(spoolFile));
+            Path replayFile = spoolFile.resolveSibling(spoolFile.getFileName() + ".replay");
+            queuedEvents.set(countNonBlankLines(spoolFile) + countNonBlankLines(replayFile));
             deadLetterEvents.set(countNonBlankLines(deadLetterFile));
             if (deadLetterEvents.get() > 0) {
                 markFailure("SPOOL_CORRUPT");
@@ -332,6 +368,8 @@ public class ReliableAuditService {
 
     private void ensureSpoolCapacity(long additionalBytes) throws Exception {
         long currentSize = Files.exists(spoolFile) ? Files.size(spoolFile) : 0L;
+        Path replayFile = spoolFile.resolveSibling(spoolFile.getFileName() + ".replay");
+        currentSize += Files.exists(replayFile) ? Files.size(replayFile) : 0L;
         if (currentSize + Math.max(0L, additionalBytes) > MAX_SPOOL_BYTES) {
             throw new IllegalStateException("audit spool has reached the 512 MB safety limit");
         }
@@ -360,12 +398,12 @@ public class ReliableAuditService {
         }
     }
 
-    private void replaceSpool(Path replayFile) throws Exception {
+    private void replaceSpoolFile(Path source, Path target) throws Exception {
         try {
-            Files.move(replayFile, spoolFile,
+            Files.move(source, target,
                     StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException exception) {
-            Files.move(replayFile, spoolFile, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

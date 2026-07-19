@@ -63,6 +63,15 @@ class ResultTest {
     }
 
     @Test
+    @DisplayName("旧版 410 业务码保持 HTTP Gone 语义")
+    void goneLegacyCode() {
+        Result<Object> result = Result.fail(410, "接口已停用");
+
+        assertThat(result.getCode()).isEqualTo(410);
+        assertThat(result.getErrorCode()).isEqualTo(AppErrorCode.GONE.getCode());
+    }
+
+    @Test
     @DisplayName("响应自动携带请求和追踪编号")
     void correlationIds() {
         MDC.put("requestId", "request-123");

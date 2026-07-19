@@ -55,7 +55,7 @@ body .main :is(
   .el-segmented,
   .el-collapse
 ),
-body .main .analytics-shell > .chart-grid .trend-chart {
+  body .main .analytics-shell > .chart-grid .trend-chart {
   border-radius: var(--mrr-radius-md) !important;
 }
 
@@ -66,7 +66,7 @@ body .main :is(
   .el-descriptions,
   .el-collapse
 ),
-body .main .analytics-shell > .chart-grid .trend-chart {
+  body .main .analytics-shell > .chart-grid .trend-chart {
   overflow: hidden;
 }
 

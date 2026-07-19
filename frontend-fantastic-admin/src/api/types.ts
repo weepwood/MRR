@@ -1,8 +1,11 @@
 /** 后端统一响应格式 */
 export interface ApiResult<T = unknown> {
   code?: number
+  errorCode?: string
   message?: string
   data?: T
+  requestId?: string
+  traceId?: string
   timestamp?: string
 }
 
@@ -194,6 +197,12 @@ export interface ResponseMetricAnalysis {
 /** 日志记录 */
 export interface LogRecord {
   id?: number
+  eventId?: string
+  requestId?: string
+  traceId?: string
+  errorCode?: string
+  auditResult?: 'SUCCESS' | 'FAILED' | string
+  persistedVia?: 'DATABASE' | 'SPOOL' | string
   username?: string
   clientIp?: string
   requestUri?: string
@@ -479,46 +488,124 @@ export interface StatisticsDetailRecord {
   date?: string
   type?: string
   pages?: number
-  sjh?: string
-  openerNo?: string
-  cid?: string
 }
 
-/** 病案统计查询参数 */
-export interface RecordsStatisticsQuery {
+/** 统计明细响应 */
+export interface StatisticsDetailResult {
+  list?: StatisticsDetailRecord[]
+  records?: StatisticsDetailRecord[]
+  items?: StatisticsDetailRecord[]
+  total?: number
   page?: number
   size?: number
+  totalPages?: number
+}
+
+/** 统计导出参数 */
+export interface StatisticsExportParams {
   startDate?: string
   endDate?: string
   type?: string
-  date?: string
   keyword?: string
-}
-
-/** 病案统计记录 */
-export interface RecordsStatistic {
-  bah?: string
-  cid?: string
-  openerNo?: string
   date?: string
-  type?: string
-  pages?: number
+}
+
+/** 数据库监控总览 */
+export interface DatabaseOverview {
+  database?: Record<string, unknown>
+  connections?: Record<string, unknown>
+  transactions?: Record<string, unknown>
+  contention?: Record<string, unknown>
+  hikari?: Record<string, unknown>
+  tables?: Array<Record<string, unknown>>
+}
+
+/** 数据库慢查询 */
+export interface SlowQueryRecord {
+  queryId?: string
+  calls?: number
+  totalExecTimeMs?: number
+  meanExecTimeMs?: number
+  rows?: number
+  sharedBlksHit?: number
+  sharedBlksRead?: number
+  tempBlksWritten?: number
+  walBytes?: number
+  queryTemplate?: string
+}
+
+/** 数据质量运行状态 */
+export interface DataQualityRun {
+  id?: number
+  status?: string
+  startedAt?: string
+  finishedAt?: string
+  durationMs?: number
+  totalIssues?: number
+  criticalIssues?: number
+  warningIssues?: number
+  errorMessage?: string
+}
+
+/** 数据质量检查结果 */
+export interface DataQualityCheckResult {
+  checkCode?: string
+  checkName?: string
+  severity?: string
+  issueCount?: number
+}
+
+/** 数据质量异常样本 */
+export interface DataQualityIssue {
+  checkCode?: string
+  severity?: string
+  sourceTable?: string
+  sourceId?: number
+  bah?: string
   sjh?: string
-  recordCount?: number
-  totalPages?: number
-  totalRecords?: number
-}
-
-/** Actuator 指标测量值 */
-export interface ActuatorMeasurement {
-  statistic?: string
-  value?: number
-}
-
-/** Actuator 指标（GET /actuator/metrics/{name}） */
-export interface ActuatorMetric {
-  name?: string
   description?: string
-  baseUnit?: string
-  measurements?: ActuatorMeasurement[]
+}
+
+/** 数据质量运行详情 */
+export interface DataQualityRunDetail {
+  run?: DataQualityRun
+  checks?: DataQualityCheckResult[]
+  issues?: DataQualityIssue[]
+}
+
+/** 当前服务状态摘要 */
+export interface SystemStatusSummary {
+  currentStatus?: 'UP' | 'DOWN' | 'NO_DATA' | string
+  currentStatusSince?: string
+  lastCheckedAt?: string
+  rangeStartedAt?: string
+  rangeEndedAt?: string
+  days?: number
+  uptimePercentage?: number | null
+  monitoredSeconds?: number
+  downtimeSeconds?: number
+}
+
+/** 每日可用率 */
+export interface SystemStatusDaily {
+  date?: string
+  status?: 'UP' | 'DOWN' | 'NO_DATA' | string
+  uptimePercentage?: number | null
+  monitoredSeconds?: number
+  downtimeSeconds?: number
+}
+
+/** 分钟级状态 */
+export interface SystemStatusMinute {
+  startedAt?: string
+  status?: 'UP' | 'DOWN' | 'NO_DATA' | string
+}
+
+/** 异常区间 */
+export interface SystemStatusIncident {
+  startedAt?: string
+  endedAt?: string | null
+  durationSeconds?: number
+  ongoing?: boolean
+  reason?: string
 }

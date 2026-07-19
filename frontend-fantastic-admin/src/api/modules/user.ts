@@ -1,4 +1,10 @@
 import type { AuthRole, AuthRoleUpdatePayload, AuthUser, AuthUserUpdatePayload, LoginResponse, PaginatedResult } from '../types'
+import type {
+  AdminCreateUserPayload,
+  AdminResetPasswordPayload,
+  RequiredPasswordChangePayload,
+  UserCredentialResult,
+} from '../user-credential-types'
 import { deleteRequest, getRequest, postRequest, putRequest } from '../index'
 
 const AUTH_SKIP_GLOBAL_ERROR = { skipGlobalError: true }
@@ -23,6 +29,12 @@ export default {
     data,
   ),
 
+  requiredPasswordChange: (data: RequiredPasswordChangePayload) => postRequest<void>(
+    '/api/v1/auth/password/required-change',
+    data,
+    AUTH_SKIP_GLOBAL_ERROR,
+  ),
+
   logout: () => postRequest<void>('/api/v1/auth/logout'),
 
   getUsers: (params: { page?: number, size?: number, keyword?: string, roleCode?: string, status?: string } = {}) =>
@@ -35,6 +47,16 @@ export default {
         status: params.status || undefined,
       },
     }),
+
+  createUser: (data: AdminCreateUserPayload) => postRequest<UserCredentialResult>(
+    '/api/v1/auth/users',
+    data,
+  ),
+
+  resetUserPassword: (id: string | number, data: AdminResetPasswordPayload) => postRequest<UserCredentialResult>(
+    `/api/v1/auth/users/${id}/password/reset`,
+    data,
+  ),
 
   getRoles: () => getRequest<AuthRole[]>('/api/v1/auth/roles'),
 

@@ -183,6 +183,7 @@ public class OperationsStatusService {
 
     private Map<String, Object> auditStatus() {
         long queued = reliableAuditService.getQueuedEvents();
+        String lastFailure = reliableAuditService.getLastFailure();
         Map<String, Object> audit = new LinkedHashMap<>();
         audit.put("status", reliableAuditService.isHealthy()
                 ? (reliableAuditService.isDegraded() ? "DEGRADED" : "UP")
@@ -191,7 +192,8 @@ public class OperationsStatusService {
         audit.put("deadLetterEvents", reliableAuditService.getDeadLetterEvents());
         audit.put("fallbackAvailable", reliableAuditService.isFallbackAvailable());
         audit.put("lostEventDetected", reliableAuditService.isLostEventDetected());
-        audit.put("lastFailureCode", reliableAuditService.getLastFailure());
+        audit.put("lastFailureCode", lastFailure);
+        audit.put("lastFailure", lastFailure);
         audit.put("lastFailureAt", reliableAuditService.getLastFailureAt() == null
                 ? null
                 : reliableAuditService.getLastFailureAt().toString());
@@ -222,14 +224,19 @@ public class OperationsStatusService {
             status = "UP";
         }
 
+        boolean secondaryCopyConfigured = Boolean.TRUE.equals(latest.get("secondaryCopyConfigured"));
+        Object errorCode = failure.get("errorCode");
+
         backup.put("status", status);
         backup.put("completedAt", completedAt == null ? null : completedAt.toString());
         backup.put("ageHours", ageHours);
         backup.put("dumpSizeBytes", latest.get("dumpSizeBytes"));
-        backup.put("secondaryCopyConfigured", Boolean.TRUE.equals(latest.get("secondaryCopyConfigured")));
+        backup.put("secondaryCopyConfigured", secondaryCopyConfigured);
+        backup.put("secondaryCopyPath", secondaryCopyConfigured ? "已配置（路径已隐藏）" : null);
         backup.put("secretsIncluded", Boolean.TRUE.equals(latest.get("secretsIncluded")));
         backup.put("lastFailureAt", failedAt == null ? null : failedAt.toString());
-        backup.put("lastErrorCode", failure.get("errorCode"));
+        backup.put("lastErrorCode", errorCode);
+        backup.put("lastError", errorCode);
         backup.put("lastErrorType", failure.get("errorType"));
         return backup;
     }
@@ -246,6 +253,7 @@ public class OperationsStatusService {
     private Map<String, Object> fileStoreStatus(String location, Path path) {
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("location", location);
+        status.put("path", location);
         if (!Files.exists(path)) {
             status.put("status", "MISSING");
             return status;
@@ -261,6 +269,7 @@ public class OperationsStatusService {
         } catch (Exception exception) {
             status.put("status", "UNKNOWN");
             status.put("errorType", exception.getClass().getSimpleName());
+            status.put("error", exception.getClass().getSimpleName());
         }
         return status;
     }

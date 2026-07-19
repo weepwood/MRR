@@ -1,10 +1,58 @@
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import dayjs from 'dayjs'
 import { defineConfig, loadEnv } from 'vite'
 import pkg from './package.json'
 import createVitePlugins from './vite/plugins'
+
+interface ReleaseBaseline {
+  database: {
+    minimumCompatibleMigration: string
+    maximumCompatibleMigration: string
+    backwardCompatibleWithPreviousApplication: boolean
+  }
+  applicationRollback: {
+    allowed: boolean
+    reason: string
+  }
+  configuration: {
+    schemaVersion: number
+  }
+}
+
+const repositoryRoot = path.resolve(__dirname, '..')
+
+function readProductVersion(): string {
+  const version = fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim()
+  if (!version) {
+    throw new Error('Repository root VERSION is empty')
+  }
+  return version
+}
+
+function readReleaseBaseline(): ReleaseBaseline {
+  return JSON.parse(
+    fs.readFileSync(path.join(repositoryRoot, 'release-baseline.json'), 'utf8'),
+  ) as ReleaseBaseline
+}
+
+function resolveGitCommit(): string {
+  const injectedCommit = process.env.MRR_GIT_COMMIT || process.env.GITHUB_SHA
+  if (injectedCommit) {
+    return injectedCommit
+  }
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  }
+  catch {
+    return 'unknown'
+  }
+}
 
 function resolveProxyOrigin(target: string): string | undefined {
   try {
@@ -19,6 +67,10 @@ function resolveProxyOrigin(target: string): string | undefined {
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd())
   const proxyOrigin = resolveProxyOrigin(env.VITE_APP_API_BASEURL)
+  const productVersion = readProductVersion()
+  const releaseBaseline = readReleaseBaseline()
+  const gitCommit = resolveGitCommit()
+  const buildTime = process.env.MRR_BUILD_TIME || new Date().toISOString()
   // 全局 scss 资源
   const scssResources: string[] = []
   fs.readdirSync('src/assets/styles/resources').forEach((dirname) => {
@@ -83,12 +135,20 @@ export default defineConfig(({ mode, command }) => {
     },
     define: {
       __SYSTEM_INFO__: JSON.stringify({
-        pkg: {
-          version: pkg.version,
-          dependencies: pkg.dependencies,
-          devDependencies: pkg.devDependencies,
+        product: {
+          name: 'MRR',
+          version: productVersion,
+          gitCommit,
+          buildTime,
+          database: releaseBaseline.database,
+          applicationRollback: releaseBaseline.applicationRollback,
+          configurationSchemaVersion: releaseBaseline.configuration.schemaVersion,
         },
-        lastBuildTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        template: {
+          version: pkg.version,
+        },
+        dependencies: pkg.dependencies,
+        devDependencies: pkg.devDependencies,
       }),
     },
     plugins: createVitePlugins(mode, command === 'build'),

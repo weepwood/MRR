@@ -7,6 +7,12 @@ import java.util.Date;
 @Data
 public class Log {
     private Long id;
+    private String eventId;
+    private String requestId;
+    private String traceId;
+    private String errorCode;
+    private String auditResult;
+    private String persistedVia;
     private String username;
     private String clientIp;
     private String requestUri;
@@ -25,7 +31,8 @@ public class Log {
     public Log() {
     }
 
-    public Log(String clientIp, String requestUri, String method, String userAgent, Date accessTime, String queryString, String requestBody) {
+    public Log(String clientIp, String requestUri, String method, String userAgent,
+               Date accessTime, String queryString, String requestBody) {
         this.clientIp = clientIp;
         this.requestUri = requestUri;
         this.method = method;
@@ -39,6 +46,12 @@ public class Log {
     public String toString() {
         return "Log{" +
                 "id=" + id +
+                ", eventId='" + eventId + '\'' +
+                ", requestId='" + requestId + '\'' +
+                ", traceId='" + traceId + '\'' +
+                ", errorCode='" + errorCode + '\'' +
+                ", auditResult='" + auditResult + '\'' +
+                ", persistedVia='" + persistedVia + '\'' +
                 ", username='" + username + '\'' +
                 ", clientIp='" + clientIp + '\'' +
                 ", requestUri='" + requestUri + '\'' +

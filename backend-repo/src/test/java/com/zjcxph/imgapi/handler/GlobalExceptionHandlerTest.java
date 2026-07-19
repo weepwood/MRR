@@ -31,4 +31,15 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getMessage()).isEqualTo("请求参数有误");
     }
+
+    @Test
+    void shouldNotExposeInternalExceptionMessage() {
+        ResponseEntity<Result<Void>> response = handler.handleException(
+                new IllegalStateException("JWT_SECRET_KEY=/internal/secret"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("服务器内部错误，请联系管理员");
+        assertThat(response.getBody().getData()).isNull();
+    }
 }

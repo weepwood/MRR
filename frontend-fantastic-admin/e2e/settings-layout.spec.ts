@@ -42,6 +42,26 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('导航与顶栏', { exact: true })).toBeVisible()
   })
 
+  test('缩略图宽度和水印透明度滑块具有可见滑轨宽度', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/settings?section=archive', { waitUntil: 'domcontentloaded' })
+
+    const thumbnailSlider = page.getByRole('slider', { name: '缩略图宽度' })
+    await expect(thumbnailSlider).toBeVisible({ timeout: 20_000 })
+    await expect.poll(async () => {
+      const box = await thumbnailSlider.boundingBox()
+      return box?.width ?? 0
+    }).toBeGreaterThan(100)
+
+    await page.locator('.settings-nav-item').filter({ hasText: '访问安全' }).click()
+    const watermarkSlider = page.getByRole('slider', { name: '水印透明度' })
+    await expect(watermarkSlider).toBeVisible()
+    await expect.poll(async () => {
+      const box = await watermarkSlider.boundingBox()
+      return box?.width ?? 0
+    }).toBeGreaterThan(100)
+  })
+
   test('旧登录文案地址跳转到系统设置内部分类', async ({ page }) => {
     await page.goto('/login-settings', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/settings\?section=login-support/)

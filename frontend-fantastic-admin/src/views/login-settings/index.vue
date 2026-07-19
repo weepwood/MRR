@@ -17,7 +17,7 @@ import {
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 
- defineOptions({ name: 'LoginPageSettings' })
+defineOptions({ name: 'LoginPageSettings' })
 
 const loading = ref(false)
 const saving = ref(false)
@@ -47,13 +47,11 @@ async function loadSettings(showMessage = false) {
 
 function validate() {
   const entries = Object.entries(form)
-  const empty = entries.find(([, value]) => !String(value).trim())
-  if (empty) {
+  if (entries.some(([, value]) => !String(value).trim())) {
     ElMessage.warning('登录页文案不能为空')
     return false
   }
-  const tooLong = entries.find(([, value]) => String(value).length > 240)
-  if (tooLong) {
+  if (entries.some(([, value]) => String(value).length > 240)) {
     ElMessage.warning('单项文案不能超过 240 个字符')
     return false
   }
@@ -128,13 +126,17 @@ onMounted(() => loadSettings())
 
       <section class="copy-card">
         <header><strong>功能说明</strong><span>登录页左侧三项能力介绍</span></header>
-        <div v-for="index in 3" :key="index" class="feature-editor">
-          <el-form-item :label="`功能 ${index} 标题`">
-            <el-input v-model="form[`loginFeature${index}Title` as keyof LoginPageSettings]" maxlength="60" show-word-limit />
-          </el-form-item>
-          <el-form-item :label="`功能 ${index} 说明`">
-            <el-input v-model="form[`loginFeature${index}Description` as keyof LoginPageSettings]" maxlength="120" show-word-limit />
-          </el-form-item>
+        <div class="feature-editor">
+          <el-form-item label="功能 1 标题"><el-input v-model="form.loginFeature1Title" maxlength="60" show-word-limit /></el-form-item>
+          <el-form-item label="功能 1 说明"><el-input v-model="form.loginFeature1Description" maxlength="120" show-word-limit /></el-form-item>
+        </div>
+        <div class="feature-editor">
+          <el-form-item label="功能 2 标题"><el-input v-model="form.loginFeature2Title" maxlength="60" show-word-limit /></el-form-item>
+          <el-form-item label="功能 2 说明"><el-input v-model="form.loginFeature2Description" maxlength="120" show-word-limit /></el-form-item>
+        </div>
+        <div class="feature-editor">
+          <el-form-item label="功能 3 标题"><el-input v-model="form.loginFeature3Title" maxlength="60" show-word-limit /></el-form-item>
+          <el-form-item label="功能 3 说明"><el-input v-model="form.loginFeature3Description" maxlength="120" show-word-limit /></el-form-item>
         </div>
       </section>
 

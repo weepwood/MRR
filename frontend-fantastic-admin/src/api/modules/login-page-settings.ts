@@ -1,6 +1,3 @@
-import { getRequest } from '../index'
-import { getSystemSettings, saveSystemSettings } from './settings'
-
 export const LOGIN_PAGE_SETTINGS_UPDATED_EVENT = 'mrr:login-page-settings-updated'
 
 export interface LoginPageSettings {
@@ -58,6 +55,7 @@ export function serializeLoginPageSettings(settings: LoginPageSettings): Record<
 /** 未登录页面只读取后端严格白名单后的公开文案。 */
 export async function getPublicLoginPageSettings(): Promise<LoginPageSettings> {
   try {
+    const { getRequest } = await import('../index')
     const response = await getRequest<Record<string, string>>('/api/v1/public/config/login-page', {
       skipGlobalError: true,
     } as any)
@@ -70,11 +68,13 @@ export async function getPublicLoginPageSettings(): Promise<LoginPageSettings> {
 
 /** 管理页面读取完整系统设置，再只提取登录页文案字段。 */
 export async function getManagedLoginPageSettings(): Promise<LoginPageSettings> {
+  const { getSystemSettings } = await import('./settings')
   const response = await getSystemSettings()
   return normalizeLoginPageSettings(response.data)
 }
 
 export async function saveManagedLoginPageSettings(settings: LoginPageSettings): Promise<void> {
+  const { saveSystemSettings } = await import('./settings')
   await saveSystemSettings(serializeLoginPageSettings(settings))
   window.dispatchEvent(new CustomEvent(LOGIN_PAGE_SETTINGS_UPDATED_EVENT, {
     detail: { ...settings },

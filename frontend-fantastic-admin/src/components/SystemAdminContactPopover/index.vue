@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
+import { computed, onBeforeUnmount, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
   visible?: boolean
@@ -72,7 +73,6 @@ onBeforeUnmount(() => {
           aria-label="查看系统管理员信息"
           @focus="show"
           @blur="hideLater"
-          @click="opened = !opened"
         >
           查看系统管理员信息
         </button>

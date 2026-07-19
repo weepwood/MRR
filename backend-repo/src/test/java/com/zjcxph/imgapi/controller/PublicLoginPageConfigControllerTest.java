@@ -13,19 +13,38 @@ import static org.mockito.Mockito.when;
 class PublicLoginPageConfigControllerTest {
 
     @Test
-    void shouldReturnOnlyWhitelistedLoginCopyWithDefaults() {
+    void shouldReturnOnlyWhitelistedBrandingAndVisibleSupportInformation() {
         SystemSettingService service = mock(SystemSettingService.class);
-        when(service.getSetting("loginBrandTitle")).thenReturn("医院病案影像平台");
+        when(service.getSetting("systemName")).thenReturn("医院病案影像平台");
+        when(service.getSetting("systemAdminContactEnabled")).thenReturn("true");
+        when(service.getSetting("systemAdminPublicVisible")).thenReturn("true");
+        when(service.getSetting("systemAdminPhone")).thenReturn("0571-12345678");
         when(service.getSetting("developerModeEnabled")).thenReturn("true");
 
         PublicLoginPageConfigController controller = new PublicLoginPageConfigController(service);
         Result<Map<String, String>> result = controller.getLoginPageConfig();
 
         assertThat(result.getData()).isNotNull();
-        assertThat(result.getData().get("loginBrandTitle")).isEqualTo("医院病案影像平台");
-        assertThat(result.getData().get("loginFormTitle")).isEqualTo("登录 MRR");
+        assertThat(result.getData().get("systemName")).isEqualTo("医院病案影像平台");
+        assertThat(result.getData().get("systemShortName")).isEqualTo("MRR");
+        assertThat(result.getData().get("systemAdminContactVisible")).isEqualTo("true");
+        assertThat(result.getData().get("systemAdminPhone")).isEqualTo("0571-12345678");
         assertThat(result.getData()).doesNotContainKey("developerModeEnabled");
         assertThat(result.getData()).doesNotContainKey("imageSource");
+    }
+
+    @Test
+    void shouldNotExposeContactDetailsWhenPublicVisibilityIsDisabled() {
+        SystemSettingService service = mock(SystemSettingService.class);
+        when(service.getSetting("systemAdminContactEnabled")).thenReturn("true");
+        when(service.getSetting("systemAdminPublicVisible")).thenReturn("false");
+        when(service.getSetting("systemAdminPhone")).thenReturn("0571-12345678");
+
+        Map<String, String> data = new PublicLoginPageConfigController(service).getLoginPageConfig().getData();
+
+        assertThat(data.get("systemAdminContactVisible")).isEqualTo("false");
+        assertThat(data).doesNotContainKey("systemAdminPhone");
+        assertThat(data).doesNotContainKey("systemAdminEmail");
     }
 
     @Test
@@ -33,8 +52,8 @@ class PublicLoginPageConfigControllerTest {
         SystemSettingService service = mock(SystemSettingService.class);
         when(service.getSetting("loginHelpText")).thenReturn("  " + "a".repeat(300) + "  ");
 
-        PublicLoginPageConfigController controller = new PublicLoginPageConfigController(service);
-        String value = controller.getLoginPageConfig().getData().get("loginHelpText");
+        String value = new PublicLoginPageConfigController(service)
+                .getLoginPageConfig().getData().get("loginHelpText");
 
         assertThat(value).hasSize(240);
     }

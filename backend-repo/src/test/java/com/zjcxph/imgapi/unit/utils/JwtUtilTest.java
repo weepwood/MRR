@@ -37,6 +37,8 @@ class JwtUtilTest {
         session.setRoleName("医生");
         session.setStatus("active");
         session.setPermissions(List.of("record:read", "record:edit"));
+        session.setMustChangePassword(true);
+        session.setPasswordVersion(4);
 
         String token = JwtUtil.getToken(session);
         AuthSession parsed = JwtUtil.parseToken(token);
@@ -48,6 +50,8 @@ class JwtUtilTest {
         assertThat(parsed.getRoleName()).isEqualTo("医生");
         assertThat(parsed.getStatus()).isEqualTo("active");
         assertThat(parsed.getPermissions()).containsExactly("record:read", "record:edit");
+        assertThat(parsed.isPasswordChangeRequired()).isTrue();
+        assertThat(parsed.getPasswordVersion()).isEqualTo(4);
     }
 
     @Test
@@ -58,7 +62,7 @@ class JwtUtilTest {
     }
 
     @Test
-    @DisplayName("parseToken — 解析仅含用户名的Token")
+    @DisplayName("parseToken — 解析仅含用户名的Token并使用默认密码版本")
     void parseToken_usernameOnly() {
         String token = JwtUtil.getToken("nurse");
         AuthSession parsed = JwtUtil.parseToken(token);
@@ -66,6 +70,8 @@ class JwtUtilTest {
         assertThat(parsed.getId()).isNull();
         assertThat(parsed.getDisplayName()).isNull();
         assertThat(parsed.getPermissions()).isEmpty();
+        assertThat(parsed.isPasswordChangeRequired()).isFalse();
+        assertThat(parsed.getPasswordVersion()).isEqualTo(1);
     }
 
     @Test

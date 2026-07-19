@@ -20,9 +20,6 @@ public final class JwtUtil {
     private JwtUtil() {
     }
 
-    /**
-     * 由 Spring 启动配置注入 JWT 密钥，同时保留操作系统环境变量兼容性。
-     */
     public static synchronized void configure(String configuredSecret) {
         String normalized = normalizeSecret(configuredSecret);
         if (normalized == null) {
@@ -85,6 +82,8 @@ public final class JwtUtil {
         if (session.getStatus() != null) {
             builder.withClaim("status", session.getStatus());
         }
+        builder.withClaim("mustChangePassword", session.isPasswordChangeRequired());
+        builder.withClaim("passwordVersion", session.effectivePasswordVersion());
 
         List<String> permissions = session.getPermissions();
         if (permissions != null && !permissions.isEmpty()) {
@@ -102,6 +101,9 @@ public final class JwtUtil {
         session.setRoleCode(decodedJWT.getClaim("roleCode").asString());
         session.setRoleName(decodedJWT.getClaim("roleName").asString());
         session.setStatus(decodedJWT.getClaim("status").asString());
+        session.setMustChangePassword(Boolean.TRUE.equals(decodedJWT.getClaim("mustChangePassword").asBoolean()));
+        Integer passwordVersion = decodedJWT.getClaim("passwordVersion").asInt();
+        session.setPasswordVersion(passwordVersion == null || passwordVersion < 1 ? 1 : passwordVersion);
         String[] permissions = decodedJWT.getClaim("permissions").asArray(String.class);
         if (permissions != null) {
             session.setPermissions(java.util.Arrays.asList(permissions));

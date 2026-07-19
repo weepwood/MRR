@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
   color: var(--el-color-danger-dark-2);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--el-color-danger) 12%, transparent), transparent 65%),
-    color-mix(in srgb, var(--el-color-danger-light-9) 92%, var(--mrr-surface));
+    color-mix(in srgb, var(--el-color-danger-light-9) 92%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 38%, var(--mrr-border));
   border-radius: var(--mrr-radius-lg);
   box-shadow: 0 10px 28px color-mix(in srgb, var(--el-color-danger) 12%, transparent);
@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   font-size: 12px;
   line-height: 1.5;
-  color: color-mix(in srgb, currentcolor 78%, var(--mrr-text-secondary));
+  color: color-mix(in srgb, currentcolor 78%, var(--mrr-muted-foreground));
   text-overflow: ellipsis;
   white-space: nowrap;
 }

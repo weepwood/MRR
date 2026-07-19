@@ -68,7 +68,7 @@ public class WebConfig implements WebMvcConfigurer {
         String[] baseExcludes = {
                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs.yaml",
                 "/v3/api-docs/**", "/docs/**", "/api/v1/documentation/access",
-                "/api/v1/public/status/**", "/error", "/actuator/**"
+                "/api/v1/public/status/**", "/api/v1/public/config/**", "/error", "/actuator/**"
         };
         String[] authenticationExcludes = {
                 "/api/v1/auth/login",

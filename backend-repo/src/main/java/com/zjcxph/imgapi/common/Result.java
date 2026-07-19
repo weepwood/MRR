@@ -1,179 +1,131 @@
 package com.zjcxph.imgapi.common;
 
-
-
 import lombok.Data;
+import org.slf4j.MDC;
 
 import java.time.LocalDateTime;
 
 /**
- * 统一响应结果封装类
- * @param <T> 数据类型
+ * Unified API response. Numeric code is retained for compatibility while errorCode is the stable machine-readable code.
  */
 @Data
 public class Result<T> {
-    
-    // ==================== 字段定义 ====================
     private Integer code;
+    private String errorCode;
     private String message;
     private T data;
+    private String requestId;
+    private String traceId;
     private final LocalDateTime timestamp;
 
-    // ==================== 构造方法 ====================
     public Result() {
         this.timestamp = LocalDateTime.now();
+        applyCorrelation();
     }
 
     public Result(Integer code, String message, T data) {
+        this(code, null, message, data);
+    }
+
+    public Result(Integer code, String errorCode, String message, T data) {
         this.code = code;
+        this.errorCode = errorCode;
         this.message = message;
         this.data = data;
         this.timestamp = LocalDateTime.now();
+        applyCorrelation();
     }
 
+    private void applyCorrelation() {
+        this.requestId = firstNonBlank(MDC.get("requestId"), MDC.get("traceId"));
+        this.traceId = firstNonBlank(MDC.get("traceId"), this.requestId);
+    }
 
+    private static String firstNonBlank(String primary, String fallback) {
+        return primary != null && !primary.isBlank() ? primary : fallback;
+    }
 
-    // ==================== 静态工厂方法 - 成功响应 ====================
-        
-    /**
-     * 成功响应(无数据)
-     * 使用示例: Result.success()
-     */
     public static <T> Result<T> success() {
         return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), null);
     }
-    
-    /**
-     * 成功响应(带消息) - 使用前注意：当 T 为 String 类型时请用 {@link #successWithData(Object)} 避免重载歧义
-     * 使用示例: Result.success("操作成功")
-     */
+
     public static <T> Result<T> success(String message) {
         return new Result<>(ResultCode.SUCCESS.getCode(), message, null);
     }
 
-    /**
-     * 成功响应(带数据) - 自动推断泛型类型
-     * 使用示例: Result.success(user) -> Result<User>
-     * 当 T 为 String 时请改用 {@link #successWithData(Object)}
-     */
     public static <T> Result<T> success(T data) {
         return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
     }
 
-    /**
-     * 成功响应(带字符串数据) - 避开 {@link #success(String)} 的重载歧义
-     * 使用示例: Result.successWithData("info")
-     */
     public static <T> Result<T> successWithData(T data) {
         return new Result<>(ResultCode.SUCCESS.getCode(), ResultCode.SUCCESS.getMessage(), data);
     }
-    
-    /**
-     * 成功响应(带消息和数据) - 自动推断泛型类型
-     * 使用示例: Result.success("查询成功", user) -> Result<User>
-     */
+
     public static <T> Result<T> success(String message, T data) {
         return new Result<>(ResultCode.SUCCESS.getCode(), message, data);
     }
-    
 
-
-    // ==================== 静态工厂方法 - 失败响应 ====================
-        
-    /**
-     * 失败响应(默认 400)
-     * 使用示例: Result.fail()
-     */
     public static <T> Result<T> fail() {
-        return new Result<>(ResultCode.BAD_REQUEST.getCode(), ResultCode.BAD_REQUEST.getMessage(), null);
-    }
-    
-    /**
-     * 失败响应(带消息)
-     * 使用示例: Result.fail("参数错误")
-     */
-    public static <T> Result<T> fail(String message) {
-        return new Result<>(ResultCode.BAD_REQUEST.getCode(), message, null);
-    }
-    
-    /**
-     * 失败响应(带状态码和消息)
-     * 使用示例: Result.fail(422, "验证失败")
-     */
-    public static <T> Result<T> fail(Integer code, String message) {
-        return new Result<>(code, message, null);
-    }
-    
-    /**
-     * 未授权响应
-     * 使用示例: Result.unauthorized("请先登录")
-     */
-    public static <T> Result<T> unauthorized(String message) {
-        return new Result<>(ResultCode.UNAUTHORIZED.getCode(), message, null);
-    }
-    
-    /**
-     * 禁止访问响应
-     * 使用示例: Result.forbidden("权限不足")
-     */
-    public static <T> Result<T> forbidden(String message) {
-        return new Result<>(ResultCode.FORBIDDEN.getCode(), message, null);
-    }
-    
-    /**
-     * 资源不存在响应
-     * 使用示例: Result.notFound("用户不存在")
-     */
-    public static <T> Result<T> notFound(String message) {
-        return new Result<>(ResultCode.NOT_FOUND.getCode(), message, null);
-    }
-    
-    /**
-     * 服务器内部错误响应
-     * 使用示例: Result.error("系统异常")
-     */
-    public static <T> Result<T> error(String message) {
-        return new Result<>(ResultCode.INTERNAL_ERROR.getCode(), message, null);
+        return fail(AppErrorCode.BAD_REQUEST, AppErrorCode.BAD_REQUEST.getDefaultMessage());
     }
 
-    // ==================== 链式调用方法 ====================
-    
-    /**
-     * 设置状态码（链式调用）
-     */
+    public static <T> Result<T> fail(String message) {
+        return fail(AppErrorCode.BAD_REQUEST, message);
+    }
+
+    public static <T> Result<T> fail(Integer code, String message) {
+        AppErrorCode error = AppErrorCode.fromLegacyCode(code);
+        return new Result<>(code, error.getCode(), message, null);
+    }
+
+    public static <T> Result<T> fail(AppErrorCode error) {
+        return fail(error, error.getDefaultMessage());
+    }
+
+    public static <T> Result<T> fail(AppErrorCode error, String message) {
+        return new Result<>(error.getHttpStatus().value(), error.getCode(), message, null);
+    }
+
+    public static <T> Result<T> unauthorized(String message) {
+        return fail(AppErrorCode.UNAUTHORIZED, message);
+    }
+
+    public static <T> Result<T> forbidden(String message) {
+        return fail(AppErrorCode.FORBIDDEN, message);
+    }
+
+    public static <T> Result<T> notFound(String message) {
+        return fail(AppErrorCode.RESOURCE_NOT_FOUND, message);
+    }
+
+    public static <T> Result<T> error(String message) {
+        return fail(AppErrorCode.INTERNAL_ERROR, message);
+    }
+
     public Result<T> code(Integer code) {
         this.code = code;
         return this;
     }
 
-    /**
-     * 设置消息（链式调用）
-     */
+    public Result<T> errorCode(String errorCode) {
+        this.errorCode = errorCode;
+        return this;
+    }
+
     public Result<T> message(String message) {
         this.message = message;
         return this;
     }
 
-    /**
-     * 设置数据（链式调用）
-     */
     public Result<T> data(T data) {
         this.data = data;
         return this;
     }
 
-    // ==================== 工具方法 ====================
-    
-    /**
-     * 判断是否成功
-     */
     public boolean isSuccess() {
         return ResultCode.SUCCESS.getCode() == (this.code != null ? this.code : -1);
     }
 
-    /**
-     * 判断是否失败
-     */
     public boolean isFail() {
         return !isSuccess();
     }

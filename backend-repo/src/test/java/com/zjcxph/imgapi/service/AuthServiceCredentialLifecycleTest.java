@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,12 +48,7 @@ class AuthServiceCredentialLifecycleTest {
 
     @Test
     void shouldCreateUserWithOneTimeTemporaryPassword() {
-        AdminCreateUserRequest request = new AdminCreateUserRequest();
-        request.setUsername("doctor.test");
-        request.setDisplayName("测试医生");
-        request.setRoleCode("DOCTOR");
-        request.setStatus("active");
-        request.setTemporaryPasswordValidHours(24);
+        AdminCreateUserRequest request = createRequest("active");
 
         AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
@@ -71,8 +67,26 @@ class AuthServiceCredentialLifecycleTest {
 
         ArgumentCaptor<AuthUser> captor = ArgumentCaptor.forClass(AuthUser.class);
         verify(authUserMapper).insertUser(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo("active");
         assertThat(captor.getValue().isPasswordChangeRequired()).isTrue();
         assertThat(PasswordUtil.matches(result.getTemporaryPassword(), captor.getValue().getPasswordHash())).isTrue();
+    }
+
+    @Test
+    void shouldRejectCreatingDisabledUserBeforeIssuingCredential() {
+        AdminCreateUserRequest request = createRequest("disabled");
+        AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
+        AuthRole role = new AuthRole();
+        role.setCode("DOCTOR");
+        when(authUserMapper.findById(1L)).thenReturn(administrator);
+        when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
+        when(authUserMapper.findByUsername("doctor.test")).thenReturn(null);
+
+        assertThatThrownBy(() -> service.createUser(request, 1L, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("初始状态必须为启用");
+
+        verify(authUserMapper, never()).insertUser(any(AuthUser.class));
     }
 
     @Test
@@ -111,6 +125,16 @@ class AuthServiceCredentialLifecycleTest {
         assertThatThrownBy(() -> service.changeRequiredPassword(2L, request, "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("临时密码已过期");
+    }
+
+    private AdminCreateUserRequest createRequest(String status) {
+        AdminCreateUserRequest request = new AdminCreateUserRequest();
+        request.setUsername("doctor.test");
+        request.setDisplayName("测试医生");
+        request.setRoleCode("DOCTOR");
+        request.setStatus(status);
+        request.setTemporaryPasswordValidHours(24);
+        return request;
     }
 
     private AuthUser createdUser(Long id,

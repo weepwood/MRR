@@ -1,3 +1,4 @@
+import type { RouteRecordRaw } from 'vue-router'
 import { loadingFadeOut } from 'virtual:app-loading'
 import { createRouter, createWebHistory } from 'vue-router'
 import pinia from '@/store'
@@ -5,7 +6,7 @@ import setupExtensions from './extensions'
 import setupGuards from './guards'
 import { constantRoutes, constantRoutesByFilesystem, systemRoutes } from './routes'
 
-const passwordChangeRequiredRoute = {
+const passwordChangeRequiredRoute: RouteRecordRaw = {
   path: '/password/change-required',
   name: 'passwordChangeRequired',
   component: () => import('@/views/password/change-required.vue'),

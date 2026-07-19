@@ -18,6 +18,7 @@ public enum AppErrorCode {
     ARCHIVE_NOT_FOUND("MRR-ARCHIVE-3001", HttpStatus.NOT_FOUND, "未找到对应病案"),
     STORAGE_FAILURE("MRR-STORAGE-6001", HttpStatus.INTERNAL_SERVER_ERROR, "影像存储访问失败"),
     DATABASE_FAILURE("MRR-DATA-5001", HttpStatus.SERVICE_UNAVAILABLE, "数据库服务暂时不可用"),
+    AUDIT_UNAVAILABLE("MRR-AUDIT-7001", HttpStatus.SERVICE_UNAVAILABLE, "审计服务暂不可用，请稍后重试"),
     INTERNAL_ERROR("MRR-SYSTEM-9000", HttpStatus.INTERNAL_SERVER_ERROR, "服务器内部错误，请联系管理员");
 
     private final String code;

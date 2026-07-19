@@ -13,8 +13,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -25,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Persists security-sensitive audit events synchronously. If PostgreSQL is temporarily unavailable,
- * the event is written to an append-only local spool and replayed after recovery.
+ * the event is forced to an append-only local spool and replayed after recovery.
  */
 @Service
 public class ReliableAuditService {
@@ -85,16 +87,12 @@ public class ReliableAuditService {
         auditLog.setPersistedVia("SPOOL");
         synchronized (spoolLock) {
             try {
-                Path parent = spoolFile.getParent();
-                if (parent != null) {
-                    Files.createDirectories(parent);
-                }
+                ensureParentDirectory();
                 if (Files.exists(spoolFile) && Files.size(spoolFile) >= MAX_SPOOL_BYTES) {
                     throw new IllegalStateException("audit spool has reached the 512 MB safety limit");
                 }
-                String json = objectMapper.writeValueAsString(auditLog);
-                Files.writeString(spoolFile, json + System.lineSeparator(), StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+                String jsonLine = objectMapper.writeValueAsString(auditLog) + System.lineSeparator();
+                forceWrite(spoolFile, jsonLine, true);
                 queuedEvents.incrementAndGet();
                 spoolWrites.increment();
                 lastFailure = databaseException.getClass().getSimpleName();
@@ -134,14 +132,12 @@ public class ReliableAuditService {
                     }
                 }
 
-                try (BufferedWriter writer = Files.newBufferedWriter(replayFile, StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
-                    for (String line : remaining) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
+                StringBuilder rewritten = new StringBuilder();
+                for (String line : remaining) {
+                    rewritten.append(line).append(System.lineSeparator());
                 }
-                Files.move(replayFile, spoolFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                forceWrite(replayFile, rewritten.toString(), false);
+                replaceSpool(replayFile);
                 queuedEvents.set(remaining.size());
                 if (persisted > 0) {
                     databaseWrites.increment(persisted);
@@ -188,6 +184,39 @@ public class ReliableAuditService {
         } catch (Exception exception) {
             lastFailure = exception.getClass().getSimpleName();
             logger.warn("Unable to inspect audit spool: {}", exception.getMessage());
+        }
+    }
+
+    private void ensureParentDirectory() throws Exception {
+        Path parent = spoolFile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+    }
+
+    private void forceWrite(Path path, String content, boolean append) throws Exception {
+        Path parent = path.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        StandardOpenOption[] options = append
+                ? new StandardOpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND}
+                : new StandardOpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING};
+        try (FileChannel channel = FileChannel.open(path, options)) {
+            ByteBuffer buffer = StandardCharsets.UTF_8.encode(content);
+            while (buffer.hasRemaining()) {
+                channel.write(buffer);
+            }
+            channel.force(true);
+        }
+    }
+
+    private void replaceSpool(Path replayFile) throws Exception {
+        try {
+            Files.move(replayFile, spoolFile,
+                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException exception) {
+            Files.move(replayFile, spoolFile, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 }

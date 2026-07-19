@@ -56,8 +56,9 @@ public class UserController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req) {
-        LoginResponseDTO response = authService.login(req);
+    public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req,
+                                          HttpServletRequest httpRequest) {
+        LoginResponseDTO response = authService.login(req, IpUtil.getClientIp(httpRequest));
         if (response.getToken() == null || response.getToken().isBlank()) {
             return Result.<LoginResponseDTO>fail("用户名或密码错误");
         }
@@ -73,7 +74,7 @@ public class UserController {
     @Operation(summary = "旧版注册接口（已停用）")
     @RequirePermissions({"user:manage"})
     @PostMapping("/register")
-    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req,
+    public Result<LoginResponseDTO> register(@RequestBody(required = false) RegisterRequest req,
                                               HttpServletRequest httpRequest) {
         logger.warn("Blocked legacy register endpoint: actor={}, sourceIp={}",
                 AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getUsername(),

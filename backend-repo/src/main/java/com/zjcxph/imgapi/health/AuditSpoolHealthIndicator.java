@@ -17,12 +17,28 @@ public class AuditSpoolHealthIndicator implements HealthIndicator {
     @Override
     public Health health() {
         long queued = reliableAuditService.getQueuedEvents();
+        long deadLetters = reliableAuditService.getDeadLetterEvents();
         String lastFailure = reliableAuditService.getLastFailure();
-        Health.Builder builder = queued > 10_000 ? Health.outOfService() : Health.up();
+
+        Health.Builder builder;
+        if (!reliableAuditService.isHealthy()) {
+            builder = Health.down();
+        } else if (queued > 10_000) {
+            builder = Health.outOfService();
+        } else {
+            builder = Health.up();
+        }
+
         return builder
+                .withDetail("status", reliableAuditService.isDegraded() ? "DEGRADED" : (reliableAuditService.isHealthy() ? "UP" : "DOWN"))
                 .withDetail("queuedEvents", queued)
-                .withDetail("spoolFile", reliableAuditService.getSpoolFile().toString())
+                .withDetail("deadLetterEvents", deadLetters)
+                .withDetail("fallbackAvailable", reliableAuditService.isFallbackAvailable())
+                .withDetail("lostEventDetected", reliableAuditService.isLostEventDetected())
                 .withDetail("lastFailure", lastFailure == null ? "none" : lastFailure)
+                .withDetail("lastFailureAt", reliableAuditService.getLastFailureAt() == null
+                        ? "none"
+                        : reliableAuditService.getLastFailureAt().toString())
                 .build();
     }
 }

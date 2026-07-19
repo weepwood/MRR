@@ -15,6 +15,7 @@ import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
@@ -64,13 +65,20 @@ public class UserController {
         return Result.success("登录成功", response);
     }
 
+    /**
+     * 旧版注册接口会直接签发新用户 JWT，绕过一次性临时密码与首次改密流程。
+     * 保留路由只用于向旧客户端返回明确迁移提示，不再创建账号或签发 Token。
+     */
     @Deprecated
-    @Operation(summary = "兼容旧版管理员注册接口")
+    @Operation(summary = "旧版注册接口（已停用）")
     @RequirePermissions({"user:manage"})
     @PostMapping("/register")
-    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req, HttpServletRequest httpRequest) {
-        LoginResponseDTO response = authService.register(req, IpUtil.getClientIp(httpRequest));
-        return Result.success("注册成功", response);
+    public Result<LoginResponseDTO> register(@Valid @RequestBody RegisterRequest req,
+                                              HttpServletRequest httpRequest) {
+        logger.warn("Blocked legacy register endpoint: actor={}, sourceIp={}",
+                AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getUsername(),
+                IpUtil.getClientIp(httpRequest));
+        throw new BusinessException(410, "旧版注册接口已停用，请使用用户管理中的创建用户功能");
     }
 
     @Operation(summary = "当前用户")

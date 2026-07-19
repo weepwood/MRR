@@ -35,9 +35,6 @@ test.describe('用户凭据生命周期', () => {
         body: JSON.stringify({ code: 200, message: '密码修改成功' }),
       })
     })
-    await page.route('**/api/v1/auth/logout', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200 }) })
-    })
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/password\/change-required/)
@@ -50,7 +47,7 @@ test.describe('用户凭据生命周期', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('管理员创建用户后只展示一次临时密码', async ({ page }) => {
+  test('管理员创建用户后只展示一次临时密码且账号固定启用', async ({ page }) => {
     await page.addInitScript((profile) => {
       localStorage.setItem('token', 'admin-token')
       localStorage.setItem('profile', JSON.stringify(profile))
@@ -72,6 +69,11 @@ test.describe('用户凭据生命周期', () => {
     })
     await page.route('**/api/v1/auth/users*', async (route) => {
       if (route.request().method() === 'POST') {
+        expect(route.request().postDataJSON()).toMatchObject({
+          username: 'doctor.test',
+          roleCode: 'DOCTOR',
+          status: 'active',
+        })
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -102,6 +104,8 @@ test.describe('用户凭据生命周期', () => {
 
     await page.goto('/users', { waitUntil: 'domcontentloaded' })
     await page.getByRole('button', { name: '创建用户' }).click()
+    await expect(page.getByLabel('初始状态')).toHaveCount(0)
+    await expect(page.getByText('新用户默认启用', { exact: false })).toBeVisible()
     await page.getByLabel('用户名').fill('doctor.test')
     await page.getByLabel('显示名称').fill('测试医生')
     await page.getByLabel('角色').click()

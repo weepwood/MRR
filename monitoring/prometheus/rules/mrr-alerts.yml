@@ -19,6 +19,30 @@ groups:
           summary: PostgreSQL 不可用
           description: postgres_exporter 连续 1 分钟无法连接数据库。
 
+      - alert: MrrHttp5xxRateHigh
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR HTTP 5xx 错误率超过 5%
+          description: 后端连续 5 分钟出现较高服务端错误率，请使用 requestId/traceId 检索错误日志。
+
+      - alert: MrrHttpP95LatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket[10m]))
+          ) > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR API P95 响应时间超过 3 秒
+          description: API P95 延迟连续 10 分钟超过性能预算。
+
   - name: mrr-database
     rules:
       - alert: MrrDatabaseConnectionsHigh
@@ -73,6 +97,57 @@ groups:
           summary: HikariCP 获取连接超时
           description: 最近 5 分钟发生数据库连接获取超时。
 
+  - name: mrr-audit
+    rules:
+      - alert: MrrAuditPersistenceFailed
+        expr: increase(mrr_audit_persist_total{result="failed"}[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: 关键审计事件无法持久化
+          description: 审计事件同时写入 PostgreSQL 和本地持久化队列失败，需要立即处理。
+
+      - alert: MrrAuditSpoolBacklog
+        expr: mrr_audit_spool_events > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 审计事件正在本地队列等待重放
+          description: PostgreSQL 写入曾失败，当前仍有审计事件等待重新写入数据库。
+
+      - alert: MrrAuditSpoolCritical
+        expr: mrr_audit_spool_events > 10000
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 审计持久化队列严重积压
+          description: 等待重放的审计事件超过 10000 条，readiness 将进入 OUT_OF_SERVICE。
+
+  - name: mrr-jvm
+    rules:
+      - alert: MrrJvmHeapHigh
+        expr: |
+          sum(jvm_memory_used_bytes{area="heap",application="imgapi"})
+          /
+          clamp_min(sum(jvm_memory_max_bytes{area="heap",application="imgapi"}), 1) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR JVM 堆内存使用率超过 85%
+          description: 请结合 JFR、GC 日志和请求负载检查内存增长原因。
+
+      - alert: MrrJvmGcPauseHigh
+        expr: rate(jvm_gc_pause_seconds_sum{application="imgapi"}[5m]) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR JVM GC 暂停时间偏高
+          description: 最近 5 分钟每秒平均 GC 暂停超过 100ms。
+
   - name: mrr-capacity
     rules:
       - alert: MrrHostDiskSpaceLow
@@ -114,6 +189,18 @@ groups:
         annotations:
           summary: 主机磁盘可用空间低于 8%
           description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 即将耗尽。
+
+      - alert: MrrDatabaseGrowthAbnormal
+        expr: |
+          (mrr_database_size_bytes - mrr_database_size_bytes offset 24h)
+          /
+          clamp_min(mrr_database_size_bytes offset 24h, 1) > 0.10
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 数据库 24 小时增长超过 10%
+          description: 请检查批量导入、审计日志增长、索引膨胀和异常任务。
 
   - name: mrr-data-quality
     rules:

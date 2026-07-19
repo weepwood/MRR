@@ -40,7 +40,7 @@ test.describe('用户凭据生命周期', () => {
     await expect(page).toHaveURL(/\/password\/change-required/)
     await expect(page.getByRole('heading', { name: '首次登录，请设置新密码' })).toBeVisible()
 
-    await page.getByLabel('当前临时密码').fill('TemporaryPassword123')
+    await page.getByLabel('当前初始密码').fill('TemporaryPassword123')
     await page.getByLabel('新密码').fill('A brand new password 123')
     await page.getByLabel('确认新密码').fill('A brand new password 123')
     await page.getByRole('button', { name: '保存新密码并重新登录' }).click()

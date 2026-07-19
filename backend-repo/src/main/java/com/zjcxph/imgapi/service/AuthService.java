@@ -1,18 +1,26 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.common.AuthSession;
-import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
+import com.zjcxph.imgapi.dto.req.AdminCreateUserRequest;
+import com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RequiredPasswordChangeRequest;
+import com.zjcxph.imgapi.dto.req.UserRequest;
+import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
-import com.zjcxph.imgapi.dto.req.UserRequest;
+import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
+import com.zjcxph.imgapi.entity.AuthRole;
 
 import java.util.List;
 
 public interface AuthService {
-    LoginResponseDTO login(UserRequest req);
+    default LoginResponseDTO login(UserRequest req) {
+        return login(req, null);
+    }
+
+    LoginResponseDTO login(UserRequest req, String clientIp);
 
     LoginResponseDTO register(RegisterRequest req);
 
@@ -22,14 +30,21 @@ public interface AuthService {
 
     List<AuthUserProfileDTO> listUsers();
 
-    /** 分页查询用户列表 */
     PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status);
 
     default PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size) {
         return listUsersPaginated(page, size, null, null, null);
     }
 
-    /** 修改当前用户密码 */
+    UserCredentialResultDTO createUser(AdminCreateUserRequest request, Long administratorId, String clientIp);
+
+    UserCredentialResultDTO resetPassword(Long userId,
+                                          AdminResetPasswordRequest request,
+                                          Long administratorId,
+                                          String clientIp);
+
+    void changeRequiredPassword(Long userId, RequiredPasswordChangeRequest request, String clientIp);
+
     void changePassword(Long userId, String oldPassword, String newPassword);
 
     List<AuthRole> listRoles();

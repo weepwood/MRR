@@ -35,6 +35,30 @@ OSS_ACCESS_KEY_SECRET
 - 401 处理应避免重复登出和重复提示。
 - 日志不得记录完整令牌。
 
+## 开发者模式
+
+系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。它用于受控开发、旧接口联调和迁移期间的临时兼容，不属于生产认证方案。
+
+开启后的行为：
+
+- 有效 JWT 仍按数据库中的真实用户、角色和权限处理；
+- 缺少、无效、过期、撤销或对应账号不可用的 Token 会回退到虚拟 `dev / ADMIN` 会话；
+- 虚拟会话拥有当前系统全部权限；
+- 普通 `/api/**` 跨域策略使用任意 Origin pattern；
+- 兼容响应添加 `X-MRR-Developer-Mode: enabled`；
+- 每次绕过认证都以 WARN 级别记录请求方法、路径、来源地址和原因；
+- 开关保存在 `mr_system_settings`，保存后刷新运行时缓存，无需重启。
+
+边界：
+
+- `/api/v1/integration/archive/tickets` 不经过 JWT 拦截器，仍执行 HMAC、时间戳、nonce 和 IP 白名单校验；
+- 外部影像 Session 仍按 Ticket 授权范围访问；
+- 开发者模式不会返回、生成或暴露 HMAC Secret；
+- 数据库不可用、配置缺失或配置值无法识别时必须按关闭处理；
+- 生产环境、真实患者数据环境和可被非开发网络访问的环境禁止开启。
+
+验收关闭状态时，应使用无 Token 请求普通受保护 API，确认返回 `401`，并检查响应中不存在 `X-MRR-Developer-Mode`。
+
 ## AES 与身份证令牌
 
 身份证 URL 令牌使用 AES-GCM 和随机 IV：
@@ -110,13 +134,14 @@ Nginx 必须保护搜索索引、JS、CSS、图片和 OpenAPI 文件，不能只
 
 ## CORS
 
-业务 API 与图片服务的 CORS 分别配置：
+正常模式下，业务 API 与图片服务的 CORS 分别配置：
 
 - 只允许实际前端来源。
 - 明确允许的方法与请求头。
 - 图片 PDF 导出使用 `credentials: omit`。
 - 使用 Cookie 的接口需要精确来源和 `Allow-Credentials`，不能使用通配符。
-- 生产环境不要复制开发阶段宽松配置。
+
+开发者模式会临时将普通 API 改为任意 Origin pattern，仅用于隔离联调环境。关闭开发者模式后，动态 CORS 过滤器立即恢复精确 Origin 列表。
 
 ## 日志安全
 

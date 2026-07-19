@@ -8,20 +8,21 @@ const publicStatusRoute: RouteRecordRaw = {
   path: '/status',
   name: 'publicStatus',
   component: () => import('@/views/status/index.vue'),
-  meta: {
-    title: '系统状态',
-  },
+  meta: { title: '系统状态' },
 }
 
 const archiveStandaloneRoute: RouteRecordRaw = {
   path: '/archive',
   name: 'archive',
   component: () => import('@/views/statistics/archive.vue'),
-  meta: {
-    title: '影像档案袋',
-    auth: ['record:read'],
-    cache: false,
-  },
+  meta: { title: '影像档案袋', auth: ['record:read'], cache: false },
+}
+
+const externalArchiveRoute: RouteRecordRaw = {
+  path: '/archive/external',
+  name: 'externalArchive',
+  component: () => import('@/views/statistics/external-archive.vue'),
+  meta: { title: '外部影像档案袋', cache: false },
 }
 
 const archiveEmbeddedRoute: RouteRecordRaw = {
@@ -48,40 +49,45 @@ const monitoringFilesystemRoute: RouteRecordRaw = {
   },
 }
 
+const authenticationTestRoute: RouteRecordRaw = {
+  path: '/auth-test',
+  name: 'authenticationApiTest',
+  component: () => import('@/views/auth-test/index.vue'),
+  meta: {
+    title: '认证接口测试',
+    icon: 'i-ant-design:api-twotone',
+    auth: ['user:manage'],
+    cache: false,
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
     component: () => import('@/views/login.vue'),
-    meta: {
-      title: '登录',
-    },
+    meta: { title: '登录' },
   },
   {
     path: '/idcard',
     name: 'idcardSearch',
     component: () => import('@/views/idcard/index.vue'),
-    meta: {
-      title: '病案查询',
-    },
+    meta: { title: '病案查询' },
   },
   {
     path: '/idcard/:idCard',
     name: 'scanImg',
     component: () => import('@/views/scan-img/index.vue'),
-    meta: {
-      title: '病案图像查询',
-    },
+    meta: { title: '病案图像查询' },
   },
   publicStatusRoute,
+  externalArchiveRoute,
   archiveStandaloneRoute,
   {
     path: '/:all(.*)*',
     name: 'notFound',
     component: () => import('@/views/[...all].vue'),
-    meta: {
-      title: '页面不存在',
-    },
+    meta: { title: '页面不存在' },
   },
 ]
 
@@ -109,10 +115,7 @@ const systemRoutes: RouteRecordRaw[] = [
         path: 'reload',
         name: 'reload',
         component: () => import('@/views/reload.vue'),
-        meta: {
-          title: '重新加载',
-          breadcrumb: false,
-        },
+        meta: { title: '重新加载', breadcrumb: false },
       },
     ],
   },
@@ -120,10 +123,7 @@ const systemRoutes: RouteRecordRaw[] = [
 
 const asyncRoutes: Route.recordMainRaw[] = [
   {
-    meta: {
-      title: '系统',
-      icon: 'i-ant-design:setting-twotone',
-    },
+    meta: { title: '系统', icon: 'i-ant-design:setting-twotone' },
     children: [
       {
         path: '/users',
@@ -155,53 +155,42 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
+      {
+        path: '/login-settings',
+        redirect: '/settings?section=login-support',
+        meta: {
+          title: '登录页文案',
+          auth: ['system:read'],
+          menu: false,
+          breadcrumb: false,
+          activeMenu: '/settings',
+          cache: false,
+        },
+      },
     ],
   },
   {
-    meta: {
-      title: '业务',
-      icon: 'i-ant-design:appstore-twotone',
-    },
+    meta: { title: '业务', icon: 'i-ant-design:appstore-twotone' },
     children: [
       {
         path: '/records',
         component: () => import('@/views/records/index.vue'),
-        meta: {
-          title: '记录管理',
-          icon: 'i-ant-design:database-twotone',
-          auth: ['record:read'],
-          cache: true,
-        },
+        meta: { title: '记录管理', icon: 'i-ant-design:database-twotone', auth: ['record:read'], cache: true },
       },
       {
         path: '/patients',
         component: () => import('@/views/patients/index.vue'),
-        meta: {
-          title: '患者管理',
-          icon: 'i-ant-design:team-outlined',
-          auth: ['record:read'],
-          cache: true,
-        },
+        meta: { title: '患者管理', icon: 'i-ant-design:team-outlined', auth: ['record:read'], cache: true },
       },
       {
         path: '/statistics',
         component: () => import('@/views/statistics/index.vue'),
-        meta: {
-          title: '病案扫描统计',
-          icon: 'i-ant-design:area-chart-outlined',
-          auth: ['statistics:read'],
-          cache: true,
-        },
+        meta: { title: '病案扫描统计', icon: 'i-ant-design:area-chart-outlined', auth: ['statistics:read'], cache: true },
       },
       {
         path: '/statistics-detail',
         component: () => import('@/views/statistics-detail/index.vue'),
-        meta: {
-          title: '统计明细',
-          icon: 'i-ant-design:profile-twotone',
-          auth: ['statistics:read'],
-          cache: true,
-        },
+        meta: { title: '统计明细', icon: 'i-ant-design:profile-twotone', auth: ['statistics:read'], cache: true },
       },
       {
         path: '/records-statistics',
@@ -218,61 +207,33 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/archive-boxes',
         component: () => import('@/views/archive-boxes/index.vue'),
-        meta: {
-          title: '档案装箱',
-          icon: 'i-ant-design:inbox-outlined',
-          auth: ['record:read'],
-          cache: true,
-        },
+        meta: { title: '档案装箱', icon: 'i-ant-design:inbox-outlined', auth: ['record:read'], cache: true },
       },
       {
         path: '/oss-migration',
         component: () => import('@/views/oss-migration/index.vue'),
-        meta: {
-          title: 'OSS 迁移管理',
-          icon: 'i-ant-design:cloud-upload-outlined',
-          auth: ['record:read'],
-          cache: true,
-        },
+        meta: { title: 'OSS 迁移管理', icon: 'i-ant-design:cloud-upload-outlined', auth: ['record:read'], cache: true },
       },
       archiveEmbeddedRoute,
     ],
   },
   {
-    meta: {
-      title: '运维',
-      icon: 'i-ant-design:control-twotone',
-    },
+    meta: { title: '运维', icon: 'i-ant-design:control-twotone' },
     children: [
       {
         path: '/logs',
         component: () => import('@/views/logs/index.vue'),
-        meta: {
-          title: '日志管理',
-          icon: 'i-ant-design:file-search-outlined',
-          auth: ['log:read'],
-          cache: true,
-        },
+        meta: { title: '日志管理', icon: 'i-ant-design:file-search-outlined', auth: ['log:read'], cache: true },
       },
       {
         path: '/audit-images',
         component: () => import('@/views/audit-images/index.vue'),
-        meta: {
-          title: '病案图片访问审计',
-          icon: 'i-ant-design:security-scan-outlined',
-          auth: ['log:read'],
-          cache: true,
-        },
+        meta: { title: '病案图片访问审计', icon: 'i-ant-design:security-scan-outlined', auth: ['log:read'], cache: true },
       },
       {
         path: '/monitoring',
         component: () => import('@/views/monitoring-dashboard/index.vue'),
-        meta: {
-          title: '系统监控',
-          icon: 'i-ant-design:dashboard-twotone',
-          auth: ['system:read'],
-          cache: true,
-        },
+        meta: { title: '系统监控', icon: 'i-ant-design:dashboard-twotone', auth: ['system:read'], cache: true },
       },
       {
         path: '/system-status',
@@ -296,34 +257,43 @@ const asyncRoutes: Route.recordMainRaw[] = [
           cache: true,
         },
       },
+      authenticationTestRoute,
     ],
   },
   {
-    meta: {
-      title: '帮助',
-      icon: 'i-ant-design:question-circle-twotone',
-    },
+    meta: { title: '帮助', icon: 'i-ant-design:question-circle-twotone' },
     children: [
       {
         path: '/help',
         component: () => import('@/views/help/index.vue'),
-        meta: {
-          title: '帮助与文档',
-          icon: 'i-ant-design:read-outlined',
-          cache: true,
-        },
+        meta: { title: '帮助与文档', icon: 'i-ant-design:read-outlined', cache: true },
       },
     ],
   },
 ]
 
+const externalArchiveGeneratedPaths = [
+  '/archive/external',
+  '/statistics/external-archive',
+  '/statistics/external-archive-viewer',
+]
+
 const generatedConstantRoutes = generatedRoutes.filter(
-  item => item.path !== '/status' && item.meta?.enabled !== false && item.meta?.constant === true,
+  item => !['/status', ...externalArchiveGeneratedPaths].includes(item.path)
+    && item.meta?.enabled !== false
+    && item.meta?.constant === true,
 )
-const constantRoutesByFilesystem = [publicStatusRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
+const constantRoutesByFilesystem = [publicStatusRoute, externalArchiveRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
 
 const generatedAsyncRoutes = generatedRoutes.filter(
-  item => !['/status', '/statistics/archive', '/monitoring', '/monitoring-dashboard'].includes(item.path)
+  item => ![
+    '/status',
+    '/auth-test',
+    ...externalArchiveGeneratedPaths,
+    '/statistics/archive',
+    '/monitoring',
+    '/monitoring-dashboard',
+  ].includes(item.path)
     && item.meta?.enabled !== false
     && item.meta?.constant !== true
     && item.meta?.layout !== false,
@@ -332,6 +302,7 @@ const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),
   archiveEmbeddedRoute,
   monitoringFilesystemRoute,
+  authenticationTestRoute,
 ]
 
 export {

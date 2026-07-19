@@ -12,4 +12,13 @@ describe('getRequestErrorMessage', () => {
   it('keeps a Chinese server message', () => {
     expect(getRequestErrorMessage({ response: { data: { message: '病案不存在' } } })).toBe('病案不存在')
   })
+
+  it('keeps the login credential error instead of replacing it with a generic server message', () => {
+    expect(getRequestErrorMessage({
+      response: {
+        status: 400,
+        data: { code: 400, message: '用户名或密码错误' },
+      },
+    })).toBe('用户名或密码错误')
+  })
 })

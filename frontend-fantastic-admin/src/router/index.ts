@@ -1,16 +1,26 @@
+import type { RouteRecordRaw } from 'vue-router'
 import { loadingFadeOut } from 'virtual:app-loading'
 import { createRouter, createWebHistory } from 'vue-router'
 import pinia from '@/store'
 import setupExtensions from './extensions'
 import setupGuards from './guards'
-// 路由相关数据
 import { constantRoutes, constantRoutesByFilesystem, systemRoutes } from './routes'
 
+const passwordChangeRequiredRoute: RouteRecordRaw = {
+  path: '/password/change-required',
+  name: 'passwordChangeRequired',
+  component: () => import('@/views/password/change-required.vue'),
+  meta: {
+    title: '修改初始密码',
+  },
+}
+
+const settingsStore = useSettingsStore(pinia)
 const router = createRouter({
   history: createWebHistory(),
-  routes: useSettingsStore(pinia).settings.app.routeBaseOn === 'filesystem'
+  routes: settingsStore.settings.app.routeBaseOn === 'filesystem'
     ? constantRoutesByFilesystem
-    : [...constantRoutes, ...systemRoutes],
+    : [...constantRoutes, passwordChangeRequiredRoute, ...systemRoutes],
 })
 
 setupGuards(router)

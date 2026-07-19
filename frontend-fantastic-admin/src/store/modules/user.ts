@@ -15,6 +15,9 @@ interface Profile {
   roleName?: string
   permissions?: string[]
   status?: string
+  mustChangePassword?: boolean
+  passwordVersion?: number
+  temporaryPasswordExpiresAt?: string
   lastLoginAt?: string
 }
 
@@ -33,11 +36,11 @@ export const useUserStore = defineStore('user', () => {
   const profile = ref<Profile>(JSON.parse(localStorage.profile ?? 'null') ?? {})
 
   const isLogin = computed(() => Boolean(token.value))
+  const mustChangePassword = computed(() => Boolean(profile.value.mustChangePassword))
 
   function persistProfile(nextProfile: Profile) {
     profile.value = nextProfile
     permissions.value = Array.isArray(nextProfile.permissions) ? nextProfile.permissions : []
-
     localStorage.setItem('profile', JSON.stringify(nextProfile))
     localStorage.setItem('permissions', JSON.stringify(permissions.value))
     localStorage.setItem('account', nextProfile.displayName || nextProfile.username || account.value || '')
@@ -58,18 +61,16 @@ export const useUserStore = defineStore('user', () => {
     const payload = res.data || {}
     const loginData = payload.data || payload
     const user = loginData.user || loginData.profile || payload.user || {}
-
     setSession({ token: loginData.token || loginData.accessToken || loginData.jwt || '', user })
     if (!user.displayName && !user.username) {
       account.value = data.account
     }
+    return loginData.nextAction || (user.mustChangePassword ? 'CHANGE_PASSWORD' : 'NONE')
   }
 
   function logout(redirect = router.currentRoute.value.fullPath) {
-    // 先清除本地 token，避免路由守卫误判
     localStorage.removeItem('token')
     token.value = ''
-    // 通知后端撤销 token（fire-and-forget，失败不影响登出）
     if (!isDemoMode) {
       apiUser.logout().catch(() => {})
     }
@@ -84,18 +85,12 @@ export const useUserStore = defineStore('user', () => {
   function requestLogout() {
     localStorage.removeItem('token')
     token.value = ''
-    router.push({
-      name: 'login',
-      query: {
-        ...(router.currentRoute.value.fullPath !== settingsStore.settings.home.fullPath
-          && router.currentRoute.value.name !== 'login'
-          && { redirect: router.currentRoute.value.fullPath }),
-      },
-    }).then(clearSession)
+    router.push({ name: 'login' }).then(clearSession)
   }
 
   function clearSession() {
-    ;['account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
+    ;['token', 'account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
+    token.value = ''
     account.value = ''
     avatar.value = ''
     permissions.value = []
@@ -124,6 +119,7 @@ export const useUserStore = defineStore('user', () => {
     permissions,
     profile,
     isLogin,
+    mustChangePassword,
     login,
     setSession,
     logout,

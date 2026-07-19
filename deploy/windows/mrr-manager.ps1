@@ -86,7 +86,7 @@ while ($true) {
             if ($confirm -eq 'RESTORE') { Invoke-MrrAction { & $restore -Root $Root } }
         }
         '14' { Start-Process 'http://127.0.0.1/' }
-        '0' { break }
+        '0' { return }
         default { Start-Sleep -Milliseconds 700 }
     }
 }

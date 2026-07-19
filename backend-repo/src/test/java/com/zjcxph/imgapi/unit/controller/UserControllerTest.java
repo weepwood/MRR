@@ -28,6 +28,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,6 +61,7 @@ class UserControllerTest {
         AuthSession user = adminSession();
         loginResponse.setUser(user);
         AuthContext.setCurrentUser(user);
+        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     }
 
     @AfterEach
@@ -70,23 +72,24 @@ class UserControllerTest {
     @Test
     @DisplayName("POST login — 正常登录返回 Token")
     void login_success() {
-        when(authService.login(any())).thenReturn(loginResponse);
+        when(authService.login(any(UserRequest.class), anyString())).thenReturn(loginResponse);
 
-        Result<LoginResponseDTO> result = userController.login(validRequest);
+        Result<LoginResponseDTO> result = userController.login(validRequest, httpServletRequest);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).isNotNull();
         assertThat(result.getData().getToken()).isEqualTo("test.jwt.token");
         assertThat(result.getData().getUser().getUsername()).isEqualTo("admin");
+        verify(authService).login(validRequest, "127.0.0.1");
     }
 
     @Test
     @DisplayName("POST login — Token 为空返回失败")
     void login_emptyToken() {
         loginResponse.setToken(null);
-        when(authService.login(any())).thenReturn(loginResponse);
+        when(authService.login(any(UserRequest.class), anyString())).thenReturn(loginResponse);
 
-        Result<LoginResponseDTO> result = userController.login(validRequest);
+        Result<LoginResponseDTO> result = userController.login(validRequest, httpServletRequest);
 
         assertThat(result.getCode()).isEqualTo(400);
         assertThat(result.getMessage()).contains("用户名或密码错误");
@@ -96,9 +99,9 @@ class UserControllerTest {
     @DisplayName("POST login — Token 空白返回失败")
     void login_blankToken() {
         loginResponse.setToken("   ");
-        when(authService.login(any())).thenReturn(loginResponse);
+        when(authService.login(any(UserRequest.class), anyString())).thenReturn(loginResponse);
 
-        Result<LoginResponseDTO> result = userController.login(validRequest);
+        Result<LoginResponseDTO> result = userController.login(validRequest, httpServletRequest);
 
         assertThat(result.getCode()).isEqualTo(400);
     }
@@ -109,7 +112,6 @@ class UserControllerTest {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("legacy.user");
         request.setPassword("LegacyPassword123");
-        when(httpServletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
 
         assertThatThrownBy(() -> userController.register(request, httpServletRequest))
                 .isInstanceOf(BusinessException.class)

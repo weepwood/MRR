@@ -4,31 +4,31 @@ import com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO;
 import com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO;
 import com.zjcxph.imgapi.dto.resp.ImageAuditTrendDTO;
 import com.zjcxph.imgapi.entity.Log;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LogMapper {
 
-    String BASE_COLUMNS = "id, " +
-            "username, " +
-            "client_ip AS clientIp, " +
-            "request_uri AS requestUri, " +
-            "method, " +
-            "user_agent AS userAgent, " +
-            "access_time AS accessTime, " +
-            "query_string AS queryString, " +
-            "request_body AS requestBody, " +
-            "response_status AS responseStatus, " +
-            "execute_time AS executeTime, " +
-            "referer, " +
-            "audit_action AS auditAction, " +
-            "audit_target AS auditTarget, " +
+    String BASE_COLUMNS = "id, event_id AS eventId, request_id AS requestId, trace_id AS traceId, " +
+            "error_code AS errorCode, audit_result AS auditResult, persisted_via AS persistedVia, " +
+            "username, client_ip AS clientIp, request_uri AS requestUri, method, " +
+            "user_agent AS userAgent, access_time AS accessTime, query_string AS queryString, " +
+            "request_body AS requestBody, response_status AS responseStatus, execute_time AS executeTime, " +
+            "referer, audit_action AS auditAction, audit_target AS auditTarget, " +
             "audit_description AS auditDescription";
-    
-    @Insert("INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, response_status, execute_time, referer, audit_action, audit_target, audit_description) " +
-            "VALUES (#{username}, #{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, #{requestBody}, #{responseStatus}, #{executeTime}, #{referer}, #{auditAction}, #{auditTarget}, #{auditDescription})")
+
+    @Insert("INSERT INTO access_log (event_id, request_id, trace_id, error_code, audit_result, persisted_via, " +
+            "username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, " +
+            "response_status, execute_time, referer, audit_action, audit_target, audit_description) " +
+            "VALUES (#{eventId}, #{requestId}, #{traceId}, #{errorCode}, #{auditResult}, #{persistedVia}, " +
+            "#{username}, #{clientIp}, #{requestUri}, #{method}, #{userAgent}, #{accessTime}, #{queryString}, " +
+            "#{requestBody}, #{responseStatus}, #{executeTime}, #{referer}, #{auditAction}, #{auditTarget}, " +
+            "#{auditDescription}) ON CONFLICT (event_id) WHERE event_id IS NOT NULL DO NOTHING")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Log log);
 
@@ -44,20 +44,16 @@ public interface LogMapper {
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log WHERE id = #{id}")
     Log findById(@Param("id") Long id);
 
-    // 删除指定时间之前的日志（分批删除）- XML 实现
     int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
 
-    // 统计指定时间之前的日志数量 - XML 实现
     int countOlderThan(@Param("cutoff") LocalDateTime cutoff);
 
-    // 查询指定时间之前的日志（带分页）- XML 实现
     List<Log> findOlderThan(
             @Param("cutoff") LocalDateTime cutoff,
             @Param("limit") int limit,
             @Param("offset") int offset
     );
 
-    // 动态搜索日志 - XML 实现
     List<Log> search(
             @Param("keyword") String keyword,
             @Param("username") String username,
@@ -85,7 +81,6 @@ public interface LogMapper {
             @Param("limit") int limit
     );
 
-    // 敏感病案图片访问审计搜索 - XML 实现
     List<Log> searchImageAudit(
             @Param("keyword") String keyword,
             @Param("username") String username,
@@ -98,7 +93,6 @@ public interface LogMapper {
             @Param("offset") int offset
     );
 
-    // 敏感病案图片访问审计总数 - XML 实现
     int countImageAudit(
             @Param("keyword") String keyword,
             @Param("username") String username,
@@ -149,7 +143,6 @@ public interface LogMapper {
             @Param("endTime") String endTime
     );
 
-    // 动态搜索日志总数 - XML 实现
     int countSearch(
             @Param("keyword") String keyword,
             @Param("username") String username,
@@ -171,15 +164,16 @@ public interface LogMapper {
     int countByRequestUri(@Param("requestUri") String requestUri);
 
     @Insert({"<script>",
-             "INSERT INTO access_log (username, client_ip, request_uri, method, user_agent, access_time, ",
-             "query_string, request_body, response_status, execute_time, referer, ",
-             "audit_action, audit_target, audit_description) VALUES ",
-             "<foreach item='log' collection='list' separator=','>",
-             "(#{log.username}, #{log.clientIp}, #{log.requestUri}, #{log.method}, #{log.userAgent}, ",
-             "#{log.accessTime}, #{log.queryString}, #{log.requestBody}, #{log.responseStatus}, ",
-             "#{log.executeTime}, #{log.referer}, #{log.auditAction}, #{log.auditTarget}, #{log.auditDescription})",
-             "</foreach>",
-             "</script>"})
+            "INSERT INTO access_log (event_id, request_id, trace_id, error_code, audit_result, persisted_via, ",
+            "username, client_ip, request_uri, method, user_agent, access_time, query_string, request_body, ",
+            "response_status, execute_time, referer, audit_action, audit_target, audit_description) VALUES ",
+            "<foreach item='log' collection='list' separator=','>",
+            "(#{log.eventId}, #{log.requestId}, #{log.traceId}, #{log.errorCode}, #{log.auditResult}, #{log.persistedVia}, ",
+            "#{log.username}, #{log.clientIp}, #{log.requestUri}, #{log.method}, #{log.userAgent}, ",
+            "#{log.accessTime}, #{log.queryString}, #{log.requestBody}, #{log.responseStatus}, ",
+            "#{log.executeTime}, #{log.referer}, #{log.auditAction}, #{log.auditTarget}, #{log.auditDescription})",
+            "</foreach>",
+            " ON CONFLICT (event_id) WHERE event_id IS NOT NULL DO NOTHING",
+            "</script>"})
     int batchInsert(@Param("list") List<Log> logs);
-    
 }

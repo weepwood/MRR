@@ -52,7 +52,7 @@ const passwordStrength = computed(() => {
   if (/[^\w\s]/.test(value)) score += 1
   if (score >= 4) return { label: '较强', type: 'success' as const, percent: 100 }
   if (score >= 2) return { label: '一般', type: 'warning' as const, percent: 58 }
-  return { label: '较弱', type: 'danger' as const, percent: value ? 28 : 0 }
+  return { label: '较弱', type: 'exception' as const, percent: value ? 28 : 0 }
 })
 
 async function submit() {

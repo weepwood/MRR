@@ -4,12 +4,27 @@ declare interface Window {
 }
 
 declare const __SYSTEM_INFO__: {
-  pkg: {
+  product: {
+    name: string
     version: string
-    dependencies: Record<string, string>
-    devDependencies: Record<string, string>
+    gitCommit: string
+    buildTime: string
+    database: {
+      minimumCompatibleMigration: string
+      maximumCompatibleMigration: string
+      backwardCompatibleWithPreviousApplication: boolean
+    }
+    applicationRollback: {
+      allowed: boolean
+      reason: string
+    }
+    configurationSchemaVersion: number
   }
-  lastBuildTime: string
+  template: {
+    version: string
+  }
+  dependencies: Record<string, string>
+  devDependencies: Record<string, string>
 }
 
 declare module '*.vue' {

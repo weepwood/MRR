@@ -13,7 +13,7 @@ export interface AdminCreateUserPayload {
   username: string
   displayName?: string
   roleCode: string
-  status: 'active' | 'disabled'
+  status: 'active'
   temporaryPasswordValidHours: number
 }
 

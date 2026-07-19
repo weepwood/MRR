@@ -119,7 +119,12 @@ export function useUnifiedSettings() {
       await saveSystemSettings(serializeSystemSettings(settings.value))
       settingsSource.value = 'server'
       writeLocalSystemSettings(settings.value)
-      window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', { detail: { ...settings.value } }))
+      window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', {
+        detail: {
+          ...settings.value,
+          systemAdminContactVisible: settings.value.systemAdminContactEnabled && settings.value.systemAdminPublicVisible,
+        },
+      }))
       markAsSaved()
       updateSyncTime()
       ElMessage.success(developerChangeRequested

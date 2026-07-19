@@ -1,19 +1,28 @@
 package com.zjcxph.imgapi.unit.common;
 
+import com.zjcxph.imgapi.common.AppErrorCode;
 import com.zjcxph.imgapi.common.Result;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("Result 统一响应封装测试")
 class ResultTest {
+
+    @AfterEach
+    void clearMdc() {
+        MDC.clear();
+    }
 
     @Test
     @DisplayName("success() 无参 — code=200, data=null")
     void success_noArgs() {
         Result<Object> result = Result.success();
         assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getErrorCode()).isNull();
         assertThat(result.getData()).isNull();
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.getTimestamp()).isNotNull();
@@ -36,10 +45,11 @@ class ResultTest {
     }
 
     @Test
-    @DisplayName("fail() — code=400")
+    @DisplayName("fail() — HTTP code 和稳定错误码同时返回")
     void fail_default() {
         Result<Object> result = Result.fail();
         assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getErrorCode()).isEqualTo("MRR-COMMON-4001");
         assertThat(result.isFail()).isTrue();
     }
 
@@ -48,7 +58,20 @@ class ResultTest {
     void unauthorized() {
         Result<Object> result = Result.unauthorized("请登录");
         assertThat(result.getCode()).isEqualTo(401);
+        assertThat(result.getErrorCode()).isEqualTo(AppErrorCode.UNAUTHORIZED.getCode());
         assertThat(result.getMessage()).isEqualTo("请登录");
+    }
+
+    @Test
+    @DisplayName("响应自动携带请求和追踪编号")
+    void correlationIds() {
+        MDC.put("requestId", "request-123");
+        MDC.put("traceId", "trace-456");
+
+        Result<Object> result = Result.fail(AppErrorCode.INTERNAL_ERROR);
+
+        assertThat(result.getRequestId()).isEqualTo("request-123");
+        assertThat(result.getTraceId()).isEqualTo("trace-456");
     }
 
     @Test

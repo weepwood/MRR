@@ -1,10 +1,10 @@
-# 可观测性与运维基线
+# 单服务器可观测性与运维
 
-本文说明 `feat/observability-operations` 引入的生产运维能力。当前生产模型仍是 Windows Server、Nginx、Spring Boot、PostgreSQL 原生部署，不要求 Docker。
+MRR 当前采用一台 Windows Server，生产运行组件只有 PostgreSQL、Spring Boot 后端和 Nginx。本文说明在不部署额外监控平台的情况下如何定位问题、备份数据和完成恢复。
 
-## 1. 请求关联与错误码
+## 1. 请求编号与错误码
 
-所有业务响应保留兼容字段 `code`，同时增加：
+业务响应保留数值 `code`，并增加：
 
 ```json
 {
@@ -12,200 +12,193 @@
   "errorCode": "MRR-SYSTEM-9000",
   "message": "服务器内部错误，请联系管理员",
   "requestId": "a5a13d5ddfe24c21945ac321fb56b832",
-  "traceId": "f08a6d1b20f04fd9b841a32d067b31ab"
+  "traceId": "a5a13d5ddfe24c21945ac321fb56b832"
 }
 ```
 
-Nginx 生成并覆盖公网请求的 `X-Request-Id`，后端验证格式后沿用。Nginx 访问日志同时记录网关和后端请求编号。用户反馈错误时应优先索取 `errorCode` 和 `requestId`，不得要求用户提供病案号、身份证号或完整 URL。
+单服务器模式不启用分布式追踪，`traceId` 与 `requestId` 使用同一个关联值。用户反馈问题时只需要提供错误码、请求编号和发生时间，不应提供病案号、身份证号、Token 或完整敏感 URL。
 
-通用 500 响应不会返回 SQL、数据库地址、文件路径或堆栈。完整异常只保存在受限的结构化错误日志中。
+排查顺序：
 
-## 2. 结构化日志
+1. 在 `C:\MRR\logs\backend\mrr-error.log` 搜索请求编号；
+2. 在 `img-api.log` 查看同一请求的上下文；
+3. 在 Nginx access log 查看网关耗时和 HTTP 状态；
+4. 必要时再查询 `access_log` 审计表。
 
-生产日志：
+## 2. 日志
+
+生产日志保存在本机：
 
 ```text
 C:\MRR\logs\backend\img-api.log
 C:\MRR\logs\backend\mrr-error.log
 C:\MRR\logs\backend\gc.log
-C:\MRR\logs\backend\mrr-<pid>.jfr
+C:\MRR\logs\nginx\
+C:\MRR\logs\service\
 ```
 
-JSON 日志字段包括 `service`、`version`、`requestId`、`traceId`、`spanId`、`errorCode`、`clientIp` 和日志级别。禁止记录患者姓名、身份证号、原始病案号、密码、令牌、HMAC 密钥、OSS 签名 URL 和完整请求体。
+日志为 JSON 或固定格式滚动文件，不需要 Loki、Elasticsearch、Fluent Bit 等采集组件。
 
-## 3. 轻量追踪
+禁止把患者姓名、身份证号、病案号、图片完整路径、签名 URL、密码、JWT 和 HMAC 密钥写入日志标签或错误响应。
 
-Spring Boot 默认对 10% 请求建立 Trace，但 OTLP 导出默认关闭。即使未部署 Collector，结构化日志仍可使用 `traceId/spanId` 关联请求。
+## 3. 健康检查
 
-部署 OpenTelemetry Collector 后配置：
-
-```properties
-management.tracing.export.otlp.enabled=true
-management.opentelemetry.tracing.export.otlp.endpoint=http://127.0.0.1:4318/v1/traces
-```
-
-不得把患者信息、病案号、用户令牌或文件路径写入 Span 标签。
-
-## 4. 健康检查
+管理端口只监听本机：
 
 ```text
 http://127.0.0.1:18046/actuator/health/liveness
 http://127.0.0.1:18046/actuator/health/readiness
-http://127.0.0.1:18045/livez
-http://127.0.0.1:18045/readyz
+http://127.0.0.1:18046/actuator/metrics
 ```
 
-- Liveness 只判断 JVM 是否仍在运行，不因数据库故障重启 JVM。
-- Readiness 检查数据库和可靠审计队列。
-- `/healthz.txt` 与 `/api/v1/public/status/ping` 在维护模式下仍可访问。
-- 外部探针必须运行在另一台服务器，避免业务服务器断电时探针同时消失。
+- Liveness 只判断 Java 进程是否正常；
+- Readiness 检查数据库与可靠审计队列；
+- Metrics 用于管理员本机诊断，不对外开放。
 
-外部探针示例：
+部署和回滚脚本以 readiness 结果作为是否切换版本的依据。
 
-```powershell
-C:\MRR\ops\monitoring\probe-mrr.ps1 `
-  -BaseUrl http://mrr-server `
-  -MetricsDirectory C:\windows_exporter\textfile
-```
+## 4. 可靠审计
 
-建议通过 Windows 任务计划程序每分钟执行一次。
-
-## 5. 可靠审计
-
-病案查询、影像查看和下载、用户与角色变更、密码修改、OSS 写操作属于关键审计事件：
-
-1. 请求线程优先写入 PostgreSQL。
-2. PostgreSQL 写入失败时，事件强制刷入本地 JSONL 队列。
-3. 后台 Worker 每 30 秒尝试重放。
-4. `event_id` 唯一约束保证重放幂等。
-5. 队列超过 10000 条时 readiness 进入 `OUT_OF_SERVICE` 并触发告警。
-
-本地队列：
+关键病案访问与管理操作优先同步写入 PostgreSQL。数据库短时不可用时，事件强制刷入：
 
 ```text
 C:\MRR\state\audit\audit-events.jsonl
 ```
 
-安装脚本会移除继承权限，只允许 Administrators 和 SYSTEM 访问。必须在 `application-secrets.properties` 设置独立密钥：
+数据库恢复后自动幂等重放。该目录仅允许 Administrators 和 SYSTEM 访问。
 
-```properties
-app.audit.hmac-secret=<独立随机密钥>
-```
+检查要点：
 
-不得复用 JWT、AES 或外部系统 HMAC 密钥。
+- `/actuator/health/readiness` 是否为 `UP`；
+- 审计队列文件是否持续增长；
+- 日志是否出现数据库与本地队列同时写入失败；
+- 磁盘是否已满或 ACL 是否被修改。
 
-## 6. 告警送达
+## 5. 统一管理入口
 
-仓库默认 Alertmanager 配置不保存通知凭据。使用部署脚本生成受 ACL 保护的 Webhook 配置：
-
-```powershell
-C:\MRR\ops\monitoring\configure-alertmanager.ps1 `
-  -WebhookUrl https://internal-alert-gateway.example/mrr `
-  -AmtoolPath C:\Monitoring\alertmanager\amtool.exe
-```
-
-关键告警包括：
-
-- 后端、PostgreSQL、外部探针不可用。
-- 5xx 错误率超过 5%。
-- API P95 延迟超过 3 秒。
-- HikariCP 连接等待或耗尽。
-- 审计事件无法落库和落盘。
-- 审计队列积压。
-- JVM 堆内存和 GC 暂停异常。
-- 磁盘不足、数据库增长异常。
-- 备份失败、缺失或超过 30 小时未成功。
-
-通知 Webhook 应由医院内部告警网关转发到企业微信、邮件或值班系统，不建议把公网通知凭据直接写入仓库。
-
-## 7. 性能剖析
-
-Windows 服务默认启用：
-
-- 24 小时滚动 JFR，最大 1 GB。
-- GC 与 Safepoint 滚动日志。
-- OOM 自动生成 Heap Dump。
-- `ExitOnOutOfMemoryError`，由 WinSW 按策略重启。
-
-出现慢请求时，先用 Prometheus/Grafana 判断影响范围，再通过 `requestId/traceId` 定位日志，最后结合 JFR 和 `pg_stat_statements` 判断是 JVM、数据库还是图片服务瓶颈。
-
-## 8. 容量指标
-
-Prometheus 固定采集以下低基数指标：
+双击：
 
 ```text
-mrr_database_size_bytes
-mrr_table_size_bytes{table="mr_scan|mr_statistics|mr_patient|access_log"}
-mrr_table_estimated_rows{table="..."}
+C:\MRR\MRR-Manager.cmd
 ```
 
-不得把病案号、用户 ID、请求 ID、文件路径或异常消息作为 Prometheus 标签。
+可以完成：
 
-## 9. 备份
+- 服务状态、启停和重启；
+- 部署、自动健康检查和回滚；
+- 数据库与配置备份；
+- 最近备份验证；
+- 错误日志查看；
+- 诊断包导出；
+- 按需 JFR；
+- 手工恢复演练。
 
-先创建最小权限角色：
+远程网页中不直接暴露执行备份、重启或 JFR 的接口，避免管理接口成为新的高权限攻击面。
 
-```powershell
-psql -U postgres -d postgres `
-  -v backup_password='<backup-password>' `
-  -v restore_password='<restore-password>' `
-  -f monitoring\postgresql\backup-roles.sql
-```
+## 6. 备份
 
-将连接凭据保存在 ACL 保护的：
+安装脚本创建 Windows 计划任务：
 
 ```text
-C:\MRR\secrets\pgpass.conf
+MRR-Daily-Backup
 ```
 
-执行逻辑备份：
+每天 02:00 执行：
 
-```powershell
+```text
 C:\MRR\ops\backup\backup-database.ps1
 ```
 
-脚本只有在以下步骤全部成功后才发布备份成功指标：
+脚本读取现有 Spring 数据库配置，不需要额外的备份数据库角色或 `pgpass.conf`。
 
-1. `pg_dump` 自定义格式备份完成。
-2. `pg_restore --list` 能读取目录。
-3. 生成 SHA-256 校验和与 JSON manifest。
+备份包含：
 
-## 10. 恢复演练
+- PostgreSQL custom-format dump；
+- 普通配置、secrets 和 Nginx 配置；
+- 当前版本 Manifest；
+- SHA-256 与 JSON 清单。
 
-每月至少执行一次隔离恢复：
-
-```powershell
-C:\MRR\ops\backup\restore-drill.ps1 `
-  -BackupFile C:\MRR\backups\postgresql\logical\imgapi-20260719-020000.dump
-```
-
-演练会创建临时数据库、完整恢复、检查核心表和关联数据、生成包含实际 RTO 的 JSON 报告，成功后默认删除临时数据库。
-
-报告目录：
+目录：
 
 ```text
-C:\MRR\backups\restore-drills
+C:\MRR\backups\postgresql\daily
+C:\MRR\backups\postgresql\weekly
+C:\MRR\backups\postgresql\monthly
 ```
 
-`pg_restore --list` 只能证明备份目录可读，不能替代完整恢复演练。
+默认保留每日 14 天、每周 8 周、每月 12 个月。
 
-## 11. 发布前验收
+建议配置第二备份位置：
 
-发布前至少验证：
+```properties
+app.backup.secondary-path=\\nas\mrr-backup
+```
+
+备份与数据库位于同一物理磁盘时，不能应对磁盘损坏。
+
+## 7. 验证与恢复演练
+
+日常验证不需要管理员数据库账号：
 
 ```powershell
-Invoke-WebRequest http://127.0.0.1:18046/actuator/health/liveness
-Invoke-WebRequest http://127.0.0.1:18046/actuator/health/readiness
-Invoke-WebRequest http://127.0.0.1/healthz.txt
+C:\MRR\ops\backup\verify-backup.ps1
 ```
 
-同时确认：
+验证内容：
 
-- 随机错误响应包含 `errorCode` 和 `requestId`。
-- 前端错误提示显示可检索的请求编号。
-- Prometheus Targets 全部为 UP。
-- Alertmanager 测试告警能够送达。
-- 数据库临时不可用时关键审计进入本地队列，恢复后自动清空。
-- 最近一次备份通过校验，最近一次恢复演练有 PASS 报告。
+- 清单存在；
+- 数据库 dump SHA-256；
+- `pg_restore --list`；
+- 配置 ZIP SHA-256 和可读性。
 
-本分支不实现 Blue/Green 或流量灰度；该项属于下一阶段发布架构改造。现有不可变版本、健康检查和自动回滚机制继续保留。
+完整恢复演练按需执行：
+
+```powershell
+C:\MRR\ops\backup\restore-drill.ps1
+```
+
+脚本会交互请求 PostgreSQL 管理员凭据，创建隔离临时数据库，执行恢复与核心表检查，最后生成 JSON 报告并默认删除临时数据库。
+
+## 8. 性能诊断
+
+JFR 默认不持续录制，避免长期磁盘写入和认知负担。发生 CPU、内存或慢接口问题时，通过管理器录制 5 分钟，或执行：
+
+```powershell
+C:\MRR\ops\diagnostics\profile.ps1 start -DurationMinutes 5
+```
+
+诊断文件保存在：
+
+```text
+C:\MRR\logs\diagnostics
+```
+
+基础 GC 与 Safepoint 日志仍持续滚动；OOM 时自动生成 Heap Dump 并退出，由 WinSW 按策略重启。
+
+## 9. 诊断包
+
+执行：
+
+```powershell
+C:\MRR\ops\diagnostics\export-diagnostics.ps1
+```
+
+诊断包包含服务状态、端口、磁盘、健康结果、脱敏配置和有限日志尾部，不包含 secrets 文件。诊断包仍可能包含内部 IP、用户名和错误上下文，应按敏感运维资料管理。
+
+## 10. 发布策略
+
+单服务器模式使用维护窗口和目录联接切换：
+
+1. 校验发布包；
+2. 开启维护模式；
+3. 停止后端；
+4. 切换 `current/previous`；
+5. 启动并检查 readiness；
+6. 成功后恢复访问；
+7. 失败时自动切回旧版本。
+
+不运行 Blue/Green 双实例，不部署服务网格，也不在生产服务器执行 k6 压测。
+
+## 11. 可选高级监控
+
+仓库 `monitoring/` 目录仅供未来多服务器部署使用。默认安装不会复制或启动 Prometheus、Grafana、Alertmanager、exporter 和外部探针。

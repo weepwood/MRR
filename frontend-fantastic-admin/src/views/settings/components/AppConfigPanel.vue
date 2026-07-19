@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppConfigPanelLegacy from './AppConfigPanelLegacy.vue'
+
 defineOptions({ name: 'AppConfigPanel' })
 
 const props = withDefaults(defineProps<{

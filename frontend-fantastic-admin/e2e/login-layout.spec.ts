@@ -6,19 +6,19 @@ test.describe('登录页统一设计', () => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
     await expect(page.locator('.login-shell')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByRole('heading', { name: '病案文件管理系统' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'MRR 病案文件管理系统' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '登录 MRR' })).toBeVisible()
     await expect(page.getByLabel('用户名')).toBeVisible()
     await expect(page.getByLabel('密码')).toBeVisible()
     await expect(page.getByRole('button', { name: '登录系统' })).toBeVisible()
-    await expect(page.getByText('系统不开放自助注册和在线重置密码。', { exact: false })).toBeVisible()
+    await expect(page.getByText('账号创建、角色调整或密码问题请联系系统管理员。', { exact: false })).toBeVisible()
     await expect(page.locator('.theme-control')).toHaveCount(0)
     await expect(page.locator('.brand-mark')).toHaveCount(0)
     await expect(page.getByText('注册新帐号', { exact: true })).toHaveCount(0)
     await expect(page.getByText('忘记密码了?', { exact: true })).toHaveCount(0)
   })
 
-  test('匿名读取系统配置的登录页文案', async ({ page }) => {
+  test('匿名读取系统标识并悬停显示管理员联系方式', async ({ page }) => {
     await page.route('**/api/v1/public/config/login-page', async (route) => {
       await route.fulfill({
         status: 200,
@@ -27,9 +27,17 @@ test.describe('登录页统一设计', () => {
           code: 200,
           message: 'success',
           data: {
-            loginBrandTitle: '医院病案影像平台',
-            loginFormTitle: '登录院内系统',
-            loginHelpText: '账号问题请联系病案室管理员。',
+            systemName: '医院病案影像平台',
+            systemShortName: '院内系统',
+            systemEnglishName: 'Hospital Medical Archive',
+            organizationName: '测试医院',
+            systemDescription: '统一管理院内病案影像。',
+            loginHelpText: '账号问题请联系系统管理员。',
+            systemAdminContactVisible: 'true',
+            systemAdminDisplayName: 'MRR 运维组',
+            systemAdminDepartment: '信息科',
+            systemAdminPhone: '0571-12345678',
+            systemAdminServiceHours: '工作日 08:00–17:30',
           },
         }),
       })
@@ -38,8 +46,13 @@ test.describe('登录页统一设计', () => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
     await expect(page.getByRole('heading', { name: '医院病案影像平台' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: '登录院内系统' })).toBeVisible()
-    await expect(page.getByText('账号问题请联系病案室管理员。')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '登录 院内系统' })).toBeVisible()
+    const contact = page.getByRole('button', { name: '查看系统管理员信息' })
+    await expect(contact).toBeVisible()
+    await contact.hover()
+    await expect(page.getByText('MRR 运维组')).toBeVisible()
+    await expect(page.getByText('0571-12345678')).toBeVisible()
+    await expect(page.getByText('工作日 08:00–17:30')).toBeVisible()
   })
 
   test('窄屏保持单列并隐藏非必要介绍', async ({ page }) => {

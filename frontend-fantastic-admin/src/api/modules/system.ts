@@ -4,10 +4,13 @@ import { getRequest } from '../index'
 export interface OperationsDiskStatus {
   status?: string
   location?: 'SERVER' | 'IMAGES' | string
+  /** 兼容旧界面；后端只返回逻辑位置，不返回绝对路径。 */
+  path?: string
   totalBytes?: number
   usableBytes?: number
   usedPercent?: number
   errorType?: string
+  error?: string
 }
 
 export interface OperationsStatus {
@@ -44,6 +47,8 @@ export interface OperationsStatus {
     lostEventDetected?: boolean
     lastFailureCode?: string | null
     lastFailureAt?: string | null
+    /** 兼容旧界面，值为脱敏后的失败代码。 */
+    lastFailure?: string | null
   }
   backup?: {
     status?: string
@@ -55,6 +60,10 @@ export interface OperationsStatus {
     lastFailureAt?: string | null
     lastErrorCode?: string | null
     lastErrorType?: string | null
+    /** 兼容旧界面，只返回“已配置（路径已隐藏）”。 */
+    secondaryCopyPath?: string | null
+    /** 兼容旧界面，值为稳定错误码，不返回原始异常。 */
+    lastError?: string | null
   }
   storage?: {
     server?: OperationsDiskStatus

@@ -74,16 +74,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser user = authUserMapper.findByUsername(username);
-        if (user == null) {
+        if (user == null || !PasswordUtil.matches(password, user.getPasswordHash())) {
             rateLimiter.recordLoginFailure(username);
             throw new IllegalArgumentException("用户名或密码错误");
         }
+        // 只有凭据校验成功后才返回账号状态，避免通过任意密码枚举禁用账号。
         if (!"active".equalsIgnoreCase(user.getStatus())) {
             throw new BusinessException("账号已被禁用，请联系管理员");
-        }
-        if (!PasswordUtil.matches(password, user.getPasswordHash())) {
-            rateLimiter.recordLoginFailure(username);
-            throw new IllegalArgumentException("用户名或密码错误");
         }
         if (user.isPasswordChangeRequired()
                 && user.getTemporaryPasswordExpiresAt() != null
@@ -182,7 +179,10 @@ public class AuthServiceImpl implements AuthService {
         }
         String roleCode = normalizeRoleCode(request.getRoleCode(), null);
         requireRole(roleCode);
-        String status = normalizeStatus(request.getStatus());
+        String requestedStatus = normalizeStatus(request.getStatus());
+        if (!"active".equals(requestedStatus)) {
+            throw new BusinessException("创建用户时初始状态必须为启用；如暂不使用，请创建后再禁用账号");
+        }
         int validHours = normalizeValidHours(request.getTemporaryPasswordValidHours());
         String temporaryPassword = generateTemporaryPassword();
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(validHours);
@@ -192,7 +192,7 @@ public class AuthServiceImpl implements AuthService {
         user.setDisplayName(firstText(request.getDisplayName(), username));
         user.setPasswordHash(PasswordUtil.encode(temporaryPassword));
         user.setRoleCode(roleCode);
-        user.setStatus(status);
+        user.setStatus("active");
         user.setMustChangePassword(true);
         user.setPasswordVersion(1);
         user.setTemporaryPasswordExpiresAt(expiresAt);

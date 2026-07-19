@@ -99,7 +99,16 @@ public class LogInterceptor implements HandlerInterceptor {
         request.setAttribute(REQUEST_ID_ATTR, requestId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
         response.setHeader(ENDPOINT_TEMPLATE_HEADER, endpointTemplate(request));
-        return true;
+
+        try {
+            if (reliableAuditService != null && isSecuritySensitive(request)) {
+                reliableAuditService.assertFallbackAvailable();
+            }
+            return true;
+        } catch (RuntimeException exception) {
+            clearRequestMdc(request);
+            throw exception;
+        }
     }
 
     @Override
@@ -215,6 +224,24 @@ public class LogInterceptor implements HandlerInterceptor {
                         || "/favicon.ico".equals(uri)
                         || "/error".equals(uri)
         );
+    }
+
+    private boolean isSecuritySensitive(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        if (uri == null) {
+            return false;
+        }
+        if (uri.startsWith("/api/v1/img/")) {
+            return !uri.contains("/hello");
+        }
+        if (uri.startsWith("/api/v1/auth/users")
+                || uri.startsWith("/api/v1/auth/roles")
+                || uri.startsWith("/api/v1/auth/password/edit")) {
+            return true;
+        }
+        return uri.startsWith("/api/v1/oss/")
+                && ("POST".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method));
     }
 
     private void enrichAuditFields(Log log, HttpServletRequest request) {

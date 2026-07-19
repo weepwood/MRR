@@ -30,11 +30,8 @@ function handleVisibilityChange() {
   }
 }
 
-function openDeveloperSettings() {
-  void router.push({
-    path: '/settings',
-    query: { section: 'developer' },
-  })
+function openSystemSettings() {
+  void router.push('/settings')
 }
 
 onMounted(() => {
@@ -69,8 +66,8 @@ onBeforeUnmount(() => {
         <strong>开发者模式已启用</strong>
         <span>无有效 JWT 的受保护接口可能以虚拟管理员身份执行，并允许宽松的跨域调试访问。请勿在正式环境长期启用。</span>
       </div>
-      <el-button type="danger" plain size="small" class="banner-action" @click="openDeveloperSettings">
-        前往系统设置关闭
+      <el-button type="danger" plain size="small" class="banner-action" @click="openSystemSettings">
+        打开系统设置
       </el-button>
     </section>
   </Transition>

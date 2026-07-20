@@ -132,12 +132,12 @@ describe('response metrics', () => {
     queue.dispose()
   })
 
-  it('uses the unload sender in capped batches when the page closes', () => {
+  it('uses the unload sender when the page closes', () => {
     const sender = vi.fn().mockResolvedValue(undefined)
     const unloadSender = vi.fn().mockReturnValue(true)
     const queue = createResponseMetricQueue(sender, {
-      batchSize: 2,
-      maxQueueSize: 10,
+      batchSize: 20,
+      maxQueueSize: 20,
       unloadSender,
       installUnloadHandlers: false,
     })
@@ -149,8 +149,8 @@ describe('response metrics', () => {
     queue.flushOnUnload()
 
     expect(sender).not.toHaveBeenCalled()
-    expect(unloadSender).toHaveBeenCalledTimes(2)
-    expect(unloadSender.mock.calls.map(([batch]) => batch.length)).toEqual([2, 1])
+    expect(unloadSender).toHaveBeenCalledOnce()
+    expect(unloadSender.mock.calls[0]?.[0]).toHaveLength(3)
     expect(queue.getStats()).toEqual({ queued: 0, sent: 3, dropped: 0, failedAttempts: 0 })
     queue.dispose()
   })

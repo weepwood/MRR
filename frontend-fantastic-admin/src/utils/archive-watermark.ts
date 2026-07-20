@@ -20,25 +20,33 @@ function pad(value: number): string {
 }
 
 export function formatArchiveWatermarkTime(date: Date): string {
-  return [
+  const datePart = [
     date.getFullYear(),
     pad(date.getMonth() + 1),
     pad(date.getDate()),
-  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  ].join('-')
+  return `${datePart} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export function resolveArchiveWatermarkUserId(
   profile?: ArchiveWatermarkProfile | null,
   account?: unknown,
 ): string {
-  const candidates = [profile?.id, profile?.username, account]
-  for (const candidate of candidates) {
-    const value = String(candidate ?? '').trim()
-    if (value) {
-      return value
-    }
+  const username = String(profile?.username ?? '').trim()
+  const id = String(profile?.id ?? '').trim()
+
+  if (username && id) {
+    return `${username}-${id}`
   }
-  return '未登录'
+  if (username) {
+    return username
+  }
+  if (id) {
+    return id
+  }
+
+  const accountValue = String(account ?? '').trim()
+  return accountValue || '未登录'
 }
 
 export function parseArchiveWatermarkEnabled(value: unknown, fallback = true): boolean {

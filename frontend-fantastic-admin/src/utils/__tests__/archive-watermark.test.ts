@@ -12,9 +12,11 @@ describe('archive watermark helpers', () => {
       .toBe('2026-07-14 09:05')
   })
 
-  it('prefers numeric user id and falls back to username or account', () => {
-    expect(resolveArchiveWatermarkUserId({ id: 42, username: 'doctor' }, 'operator')).toBe('42')
+  it('combines username and user id and falls back without extra separators', () => {
+    expect(resolveArchiveWatermarkUserId({ id: 42, username: 'doctor' }, 'operator')).toBe('doctor-42')
+    expect(resolveArchiveWatermarkUserId({ id: ' 007 ', username: ' nurse ' }, 'operator')).toBe('nurse-007')
     expect(resolveArchiveWatermarkUserId({ username: 'doctor' }, 'operator')).toBe('doctor')
+    expect(resolveArchiveWatermarkUserId({ id: 42 }, 'operator')).toBe('42')
     expect(resolveArchiveWatermarkUserId({}, 'operator')).toBe('operator')
     expect(resolveArchiveWatermarkUserId({}, '')).toBe('未登录')
   })

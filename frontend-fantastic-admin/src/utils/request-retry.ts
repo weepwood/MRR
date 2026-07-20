@@ -20,6 +20,8 @@ const BASE_RETRY_DELAY_MS = 500
 const MAX_BACKOFF_DELAY_MS = 10_000
 const MAX_RETRY_AFTER_MS = 60_000
 
+type RetryAbortSignal = AxiosRequestConfig['signal']
+
 export interface RequestRetryDecision {
   shouldRetry: boolean
   attempt: number
@@ -139,7 +141,7 @@ export function getRequestRetryDecision(
   }
 }
 
-export function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<boolean> {
+export function waitForRetryDelay(delayMs: number, signal?: RetryAbortSignal): Promise<boolean> {
   if (signal?.aborted) return Promise.resolve(false)
 
   return new Promise((resolve) => {
@@ -147,7 +149,7 @@ export function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promis
     const finish = (canRetry: boolean) => {
       if (settled) return
       settled = true
-      signal?.removeEventListener('abort', handleAbort)
+      signal?.removeEventListener?.('abort', handleAbort)
       resolve(canRetry)
     }
     const handleAbort = () => {
@@ -155,6 +157,6 @@ export function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promis
       finish(false)
     }
     const timer = setTimeout(() => finish(true), Math.max(0, delayMs))
-    signal?.addEventListener('abort', handleAbort, { once: true })
+    signal?.addEventListener?.('abort', handleAbort, { once: true })
   })
 }

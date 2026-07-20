@@ -2,7 +2,9 @@
 import type { StatisticsRecord } from '@/api/types'
 import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
 import {
+  Calendar,
   Document,
+  Download,
   Grid,
   Refresh,
   Tickets,
@@ -12,6 +14,7 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import {
+  exportStatisticsCsv,
   getStatisticsDateSummary,
   getStatisticsList,
   getStatisticsSummary,
@@ -40,8 +43,16 @@ interface StatisticsListResult {
   list: StatisticsRecord[]
 }
 
+interface StatisticsFilterParams {
+  keyword?: string
+  type?: string
+  startDate?: string
+  endDate?: string
+}
+
 const overviewLoading = ref(false)
 const listLoading = ref(false)
+const exportLoading = ref(false)
 const summaryData = ref<SummaryData>({
   total: { totalRecords: undefined, totalPages: undefined },
   uniqueBAHCount: undefined,
@@ -60,6 +71,7 @@ const currentPage = ref(1)
 const pageSize = ref(100)
 const listSearchKeyword = ref('')
 const listSearchType = ref('')
+const listSearchYear = ref('')
 const listSearchDateRange = ref<string[]>([])
 const tableSort = ref({ prop: 'date', order: 'descending' })
 
@@ -111,6 +123,21 @@ const typeOptions = computed(() => Array.from(new Set(
     .map(item => String(item.type || '').trim())
     .filter(Boolean),
 )))
+const yearOptions = computed(() => {
+  const years = new Set<string>()
+  for (const item of sortedDateData.value) {
+    const year = extractYear(item.date)
+    if (year) {
+      years.add(year)
+    }
+  }
+
+  if (!years.size) {
+    years.add(String(new Date().getFullYear()))
+  }
+
+  return [...years].sort((left, right) => Number(right) - Number(left))
+})
 
 function formatDate(dateStr?: string) {
   if (!dateStr) {
@@ -132,8 +159,45 @@ function formatNumber(value: number, maximumFractionDigits = 0) {
   return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits })
 }
 
+function extractYear(dateStr?: string) {
+  if (!dateStr) {
+    return ''
+  }
+  return dateStr.trim().match(/^(\d{4})[-/.]/)?.[1] ?? ''
+}
+
 function getBackendSortOrder(order: string) {
   return order === 'ascending' ? 'asc' : 'desc'
+}
+
+function buildStatisticsFilters(): StatisticsFilterParams {
+  const params: StatisticsFilterParams = {}
+  if (listSearchKeyword.value.trim()) {
+    params.keyword = listSearchKeyword.value.trim()
+  }
+  if (listSearchType.value) {
+    params.type = listSearchType.value
+  }
+  if (listSearchDateRange.value.length === 2) {
+    params.startDate = listSearchDateRange.value[0]
+    params.endDate = listSearchDateRange.value[1]
+  }
+  return params
+}
+
+function syncYearFromDateRange() {
+  if (listSearchDateRange.value.length !== 2) {
+    listSearchYear.value = ''
+    return
+  }
+
+  const [startDate, endDate] = listSearchDateRange.value
+  const year = extractYear(startDate)
+  listSearchYear.value = year
+    && startDate === `${year}-01-01`
+    && endDate === `${year}-12-31`
+    ? year
+    : ''
 }
 
 async function loadOverview() {
@@ -159,32 +223,12 @@ async function loadStatisticsList() {
   listLoading.value = true
   try {
     const { prop, order } = tableSort.value
-    const params: Record<string, string | number> = {
+    const res = await getStatisticsList({
       page: currentPage.value,
       size: pageSize.value,
       sortBy: prop || 'date',
       sortOrder: getBackendSortOrder(order),
-    }
-    if (listSearchKeyword.value.trim()) {
-      params.keyword = listSearchKeyword.value.trim()
-    }
-    if (listSearchType.value) {
-      params.type = listSearchType.value
-    }
-    if (listSearchDateRange.value.length === 2) {
-      params.startDate = listSearchDateRange.value[0] ?? ''
-      params.endDate = listSearchDateRange.value[1] ?? ''
-    }
-
-    const res = await getStatisticsList(params as unknown as {
-      page: number
-      size: number
-      keyword?: string
-      type?: string
-      startDate?: string
-      endDate?: string
-      sortBy?: string
-      sortOrder?: string
+      ...buildStatisticsFilters(),
     })
     const raw = res.data ?? { list: [], total: 0, page: 1, size: 20 }
     statisticsListData.value = {
@@ -213,9 +257,22 @@ function handleListSearch() {
   loadStatisticsList()
 }
 
+function handleYearChange(year: string) {
+  listSearchDateRange.value = year
+    ? [`${year}-01-01`, `${year}-12-31`]
+    : []
+  handleListSearch()
+}
+
+function handleDateRangeChange() {
+  syncYearFromDateRange()
+  handleListSearch()
+}
+
 function resetListSearch() {
   listSearchKeyword.value = ''
   listSearchType.value = ''
+  listSearchYear.value = ''
   listSearchDateRange.value = []
   currentPage.value = 1
   loadStatisticsList()
@@ -229,6 +286,39 @@ function handleListSizeChange() {
 function handleSortChange({ prop, order }: { prop: string, order: string | null }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
   loadStatisticsList()
+}
+
+async function handleExportTable() {
+  exportLoading.value = true
+  try {
+    const response = await exportStatisticsCsv(buildStatisticsFilters())
+    const payload: unknown = response instanceof Blob ? response : response.data
+    if (!(payload instanceof Blob)) {
+      throw new TypeError('导出接口未返回有效文件')
+    }
+
+    const blob = payload.type
+      ? payload
+      : new Blob([payload], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const scope = listSearchYear.value || 'all'
+    const date = new Date().toISOString().slice(0, 10)
+    link.href = url
+    link.download = `statistics-${scope}-${date}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    ElMessage.success('表格导出成功')
+  }
+  catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '未知错误'
+    ElMessage.error(`导出失败：${message}`)
+  }
+  finally {
+    exportLoading.value = false
+  }
 }
 
 onMounted(refreshAll)
@@ -386,6 +476,23 @@ onMounted(refreshAll)
             :value="item"
           />
         </el-select>
+        <el-select
+          v-model="listSearchYear"
+          placeholder="快速选择年份"
+          clearable
+          class="search-year"
+          @change="handleYearChange"
+        >
+          <template #prefix>
+            <el-icon><Calendar /></el-icon>
+          </template>
+          <el-option
+            v-for="year in yearOptions"
+            :key="year"
+            :label="`${year} 年`"
+            :value="year"
+          />
+        </el-select>
         <el-date-picker
           v-model="listSearchDateRange"
           type="daterange"
@@ -394,14 +501,26 @@ onMounted(refreshAll)
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
           class="search-date"
-          @change="handleListSearch"
+          @change="handleDateRangeChange"
         />
-        <el-button type="primary" @click="handleListSearch">
-          查询
-        </el-button>
-        <el-button @click="resetListSearch">
-          重置
-        </el-button>
+        <div class="search-actions">
+          <el-button type="primary" @click="handleListSearch">
+            查询
+          </el-button>
+          <el-button @click="resetListSearch">
+            重置
+          </el-button>
+          <el-button
+            type="success"
+            plain
+            :icon="Download"
+            :loading="exportLoading"
+            title="导出当前筛选结果，单次最多 100,000 条"
+            @click="handleExportTable"
+          >
+            导出表格
+          </el-button>
+        </div>
       </div>
 
       <el-table
@@ -542,9 +661,24 @@ onMounted(refreshAll)
   flex: 0 0 150px;
 }
 
+.search-year {
+  flex: 0 0 160px;
+}
+
 .search-date {
   flex: 1 1 260px;
   min-width: 220px;
+}
+
+.search-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.search-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .pagination-wrapper {
@@ -573,8 +707,14 @@ onMounted(refreshAll)
 
   .search-keyword,
   .search-type,
-  .search-date {
+  .search-year,
+  .search-date,
+  .search-actions {
     flex: 1 1 100%;
+  }
+
+  .search-actions :deep(.el-button) {
+    flex: 1 1 auto;
   }
 }
 </style>

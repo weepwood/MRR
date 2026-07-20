@@ -1,7 +1,14 @@
 name: quality-gate
 
 on:
+  pull_request:
+    branches:
+      - dev-no-login
+      - main
   push:
+    branches:
+      - dev-no-login
+      - main
     tags:
       - 'v*'
       - '*.*.*'
@@ -14,9 +21,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-baseline-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test release baseline tooling
+        run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
+      - name: Validate repository release baseline
+        run: python scripts/release_baseline.py validate
+
   frontend-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend-fantastic-admin
@@ -53,7 +78,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Test
+      - name: Unit Test
         run: pnpm test:run
 
       - name: Install Playwright browsers
@@ -62,9 +87,18 @@ jobs:
       - name: End-to-End Test
         run: pnpm test:e2e
 
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend-fantastic-admin/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
   backend-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: backend-repo
@@ -82,8 +116,17 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Test
-        run: mvn -B -ntp test
+      - name: Unit and integration tests
+        run: mvn -B -ntp verify
 
-      - name: Package
-        run: mvn -B -ntp -DskipTests package
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            backend-repo/target/surefire-reports
+            backend-repo/target/failsafe-reports
+            backend-repo/target/site/jacoco
+          if-no-files-found: ignore
+          retention-days: 7

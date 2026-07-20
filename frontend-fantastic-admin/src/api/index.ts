@@ -176,7 +176,7 @@ api.interceptors.response.use(
       }
 
       if ('code' in payload) {
-        if (payload.code === 200) return payload
+        if (typeof payload.code === 'number' && payload.code >= 200 && payload.code < 300) return payload
         if (payload.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
           redirectToRequiredPasswordChange()
         }

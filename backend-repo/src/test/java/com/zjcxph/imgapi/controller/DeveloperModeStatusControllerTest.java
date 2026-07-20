@@ -10,15 +10,15 @@ import static org.mockito.Mockito.when;
 class DeveloperModeStatusControllerTest {
 
     @Test
-    void shouldExposeOnlyEnabledFlag() {
+    void shouldExposeOnlyDisabledFlag() {
         DeveloperModeService service = mock(DeveloperModeService.class);
-        when(service.isEnabled()).thenReturn(true);
+        when(service.isEnabled()).thenReturn(false);
         DeveloperModeStatusController controller = new DeveloperModeStatusController(service);
 
         var result = controller.status();
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).containsOnlyKeys("enabled");
-        assertThat(result.getData().get("enabled")).isTrue();
+        assertThat(result.getData().get("enabled")).isFalse();
     }
 }

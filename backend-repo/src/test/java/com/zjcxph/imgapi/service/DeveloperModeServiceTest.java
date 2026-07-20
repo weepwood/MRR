@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class DeveloperModeServiceTest {
@@ -25,34 +24,28 @@ class DeveloperModeServiceTest {
     }
 
     @Test
-    void shouldBeDisabledWhenSettingDoesNotExist() {
-        when(systemSettingMapper.findByKey(DeveloperModeService.SETTING_KEY)).thenReturn(null);
-
+    void shouldAlwaysBeDisabledWithoutReadingDatabase() {
         assertThat(developerModeService.isEnabled()).isFalse();
+        verifyNoInteractions(systemSettingMapper);
     }
 
     @Test
-    void shouldReadEnabledValueFromDatabase() {
-        when(systemSettingMapper.findByKey(DeveloperModeService.SETTING_KEY))
-                .thenReturn(new SystemSetting(DeveloperModeService.SETTING_KEY, "true", null));
-
-        assertThat(developerModeService.isEnabled()).isTrue();
-    }
-
-    @Test
-    void shouldRefreshImmediatelyAfterSystemSettingSave() {
+    void shouldIgnoreLegacyEnableValues() {
+        developerModeService.refreshFromValue("true");
         developerModeService.refreshFromValue("on");
-        assertThat(developerModeService.isEnabled()).isTrue();
+        developerModeService.refreshFromValue("enabled");
 
-        developerModeService.refreshFromValue("false");
         assertThat(developerModeService.isEnabled()).isFalse();
+        verifyNoInteractions(systemSettingMapper);
     }
 
     @Test
-    void shouldFailClosedWhenDatabaseReadFails() {
-        when(systemSettingMapper.findByKey(DeveloperModeService.SETTING_KEY))
-                .thenThrow(new IllegalStateException("database unavailable"));
+    void shouldRemainDisabledAfterRefreshInvalidateAndDisable() {
+        developerModeService.refreshFromValue("false");
+        developerModeService.invalidate();
+        developerModeService.disableImmediately();
 
         assertThat(developerModeService.isEnabled()).isFalse();
+        verifyNoInteractions(systemSettingMapper);
     }
 }

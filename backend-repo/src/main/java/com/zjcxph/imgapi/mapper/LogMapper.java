@@ -69,17 +69,6 @@ public interface LogMapper {
                                                    @Param("responseStatus") String responseStatus, @Param("startTime") String startTime,
                                                    @Param("endTime") String endTime);
 
-    @Select({"<script>",
-            "SELECT audit_target AS label, COUNT(*) AS count FROM access_log WHERE audit_action IN ('LIST','DOWNLOAD','VIEW_IMAGE','VIEW_OSS_IMAGE') AND NULLIF(TRIM(audit_target), '') IS NOT NULL",
-            "<if test='keyword != null and keyword != \"\"'> AND (COALESCE(username,'') || CHR(1) || COALESCE(client_ip,'') || CHR(1) || COALESCE(request_uri,'') || CHR(1) || COALESCE(query_string,'') || CHR(1) || COALESCE(audit_target,'')) LIKE '%' || #{keyword} || '%'</if>",
-            "<if test='username != null and username != \"\"'> AND username LIKE '%' || #{username} || '%'</if>",
-            "<if test='clientIp != null and clientIp != \"\"'> AND client_ip LIKE '%' || #{clientIp} || '%'</if>",
-            "<if test='auditAction != null and auditAction != \"\"'> AND audit_action = #{auditAction}</if>",
-            "<if test='responseStatus != null and responseStatus != \"\"'> AND response_status LIKE #{responseStatus} || '%'</if>",
-            "<if test='startTime != null and startTime != \"\"'> AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>",
-            "<if test='endTime != null and endTime != \"\"'> AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>",
-            "GROUP BY audit_target ORDER BY COUNT(*) DESC, audit_target ASC LIMIT 10",
-            "</script>"})
     List<ImageAuditCountDTO> getTopImageAuditTargets(@Param("keyword") String keyword, @Param("username") String username,
                                                      @Param("clientIp") String clientIp, @Param("auditAction") String auditAction,
                                                      @Param("responseStatus") String responseStatus, @Param("startTime") String startTime,

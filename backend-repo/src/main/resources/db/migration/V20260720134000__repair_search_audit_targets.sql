@@ -3,8 +3,8 @@
 WITH parsed AS (
     SELECT
         id,
-        NULLIF((regexp_match(query_string, '(?:^|&)bah=([^&]+)'))[1], '') AS bah,
-        NULLIF((regexp_match(query_string, '(?:^|&)sjh=([^&]+)'))[1], '') AS sjh
+        NULLIF((regexp_match(query_string, '(^|&)bah=([^&]+)'))[2], '') AS bah,
+        NULLIF((regexp_match(query_string, '(^|&)sjh=([^&]+)'))[2], '') AS sjh
     FROM app.access_log
     WHERE audit_target = 'search'
       AND request_uri = '/api/v1/img/search'

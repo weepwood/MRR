@@ -33,6 +33,10 @@ function concatBytes(...chunks: Uint8Array[]): Uint8Array {
   return result
 }
 
+function toWebCryptoBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(bytes)
+}
+
 function sha256Fallback(input: Uint8Array): Uint8Array {
   const bitLength = input.length * 8
   const paddedLength = Math.ceil((input.length + 9) / 64) * 64
@@ -115,7 +119,7 @@ async function sha256Bytes(input: Uint8Array): Promise<Uint8Array> {
   const subtle = globalThis.crypto?.subtle
   if (subtle) {
     try {
-      return new Uint8Array(await subtle.digest('SHA-256', input))
+      return new Uint8Array(await subtle.digest('SHA-256', toWebCryptoBytes(input)))
     }
     catch {
       // 内网 HTTP 环境可能暴露 crypto 但拒绝 subtle 操作，回退到纯 JS 实现。
@@ -130,12 +134,12 @@ async function hmacSha256Bytes(secret: Uint8Array, message: Uint8Array): Promise
     try {
       const key = await subtle.importKey(
         'raw',
-        secret,
+        toWebCryptoBytes(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['sign'],
       )
-      return new Uint8Array(await subtle.sign('HMAC', key, message))
+      return new Uint8Array(await subtle.sign('HMAC', key, toWebCryptoBytes(message)))
     }
     catch {
       // 与 SHA-256 相同，安全上下文不可用时使用兼容实现。

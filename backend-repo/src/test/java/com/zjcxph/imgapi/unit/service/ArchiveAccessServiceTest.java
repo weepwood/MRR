@@ -40,6 +40,9 @@ class ArchiveAccessServiceTest {
     @BeforeEach
     void setUp() {
         archiveAccessService = new ArchiveAccessService(archiveIpBindingMapper, systemSettingService);
+    }
+
+    private void stubExternalUserAccess() {
         when(request.getHeader("X-Forwarded-For")).thenReturn(null);
         when(request.getHeader("X-Real-IP")).thenReturn(null);
         when(request.getRemoteAddr()).thenReturn("10.20.30.11");
@@ -57,6 +60,7 @@ class ArchiveAccessServiceTest {
 
     @Test
     void bindsFirstIpWithoutCountingAsAChange() {
+        stubExternalUserAccess();
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("u1001"), eq("10.20.30.11")))
                 .thenReturn(1);
 
@@ -69,6 +73,7 @@ class ArchiveAccessServiceTest {
 
     @Test
     void allowsSameIpWithoutIncreasingCounter() {
+        stubExternalUserAccess();
         ArchiveIpBinding binding = binding("10.20.30.11", 2);
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("u1001"), eq("10.20.30.11")))
                 .thenReturn(0);
@@ -82,6 +87,7 @@ class ArchiveAccessServiceTest {
 
     @Test
     void allowsIpChangeWithinConfiguredLimit() {
+        stubExternalUserAccess();
         ArchiveIpBinding binding = binding("10.20.30.10", 2);
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("u1001"), eq("10.20.30.11")))
                 .thenReturn(0);
@@ -98,6 +104,7 @@ class ArchiveAccessServiceTest {
 
     @Test
     void rejectsIpChangeAfterConfiguredLimit() {
+        stubExternalUserAccess();
         ArchiveIpBinding binding = binding("10.20.30.10", 3);
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("u1001"), eq("10.20.30.11")))
                 .thenReturn(0);
@@ -114,6 +121,7 @@ class ArchiveAccessServiceTest {
 
     @Test
     void allowsArchiveAccessWhenBindingStorageIsUnavailable() {
+        stubExternalUserAccess();
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("DOMAIN\\u1001"), eq("10.20.30.11")))
                 .thenThrow(new IllegalStateException("table missing"));
 

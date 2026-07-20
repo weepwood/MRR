@@ -55,7 +55,7 @@ class ResultCodeTest {
         assertThat(ResultCode.resolveHttpStatus(400)).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(ResultCode.resolveHttpStatus(409)).isEqualTo(HttpStatus.CONFLICT);
         assertThat(ResultCode.resolveHttpStatus(410)).isEqualTo(HttpStatus.GONE);
-        assertThat(ResultCode.resolveHttpStatus(422)).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(ResultCode.resolveHttpStatus(422)).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(ResultCode.resolveHttpStatus(428)).isEqualTo(HttpStatus.PRECONDITION_REQUIRED);
         assertThat(ResultCode.resolveHttpStatus(429)).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(ResultCode.resolveHttpStatus(503)).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);

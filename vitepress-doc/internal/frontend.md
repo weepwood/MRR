@@ -103,6 +103,34 @@ meta: {
 
 Axios 请求层负责设置 `baseURL`、携带认证信息、处理 401，并对未被页面处理的请求错误提供一次兜底提示。页面已经显示业务错误时，请求层不应再次弹出相同错误。
 
+## 登录状态存储与迁移
+
+认证数据统一由 `src/utils/auth-storage.ts` 管理，业务组件和 Store 不应直接解析或写入认证相关 `localStorage` 键。
+
+当前存储结构版本为 `1`，使用以下命名空间：
+
+```text
+mrr:auth:schema-version
+mrr:auth:token
+mrr:auth:account
+mrr:auth:avatar
+mrr:auth:profile
+mrr:auth:permissions
+mrr:login:remembered-account
+```
+
+首次运行新版本时，会迁移旧键 `token`、`account`、`avatar`、`profile`、`permissions` 和 `login_account`。无效 JSON 或类型错误只清除对应认证字段，不调用 `localStorage.clear()`，因此不会删除系统设置、影像档案偏好或搜索历史。
+
+浏览器恢复出的 Token 只是候选会话。进入受保护页面前，路由守卫必须调用 `/api/v1/auth/me` 获取服务端当前用户：
+
+- 验证成功后，才允许本地角色、权限和 `mustChangePassword` 参与路由判断。
+- 服务端返回 401 时，统一清理新旧认证键并进入登录页。
+- 网络故障、认证服务 503 或其他暂时性错误不会删除 Token，而是进入可重新登录、后续可重试的恢复状态。
+- 正常退出、401 自动退出和强制改密完成后使用相同的会话清理逻辑。
+- “记住用户名”不属于认证会话，退出时默认保留。
+
+排查旧登录数据问题时，只删除 `mrr:auth:*` 和历史认证键，不要清空整个站点存储。若需要同时取消记住用户名，再删除 `mrr:login:remembered-account`。
+
 ## 系统设置
 
 运行时设置优先级：

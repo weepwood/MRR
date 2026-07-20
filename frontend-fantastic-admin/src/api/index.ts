@@ -163,10 +163,6 @@ function normalizeRequestError(error: unknown): Error {
   return error instanceof Error ? error : new BusinessRequestError(error)
 }
 
-function getResponseData(error: unknown): unknown {
-  return axios.isAxiosError<unknown>(error) ? error.response?.data : undefined
-}
-
 function getRequestId(error: unknown): string | undefined {
   if (!axios.isAxiosError(error)) return undefined
   const value = error.response?.headers?.['x-request-id']

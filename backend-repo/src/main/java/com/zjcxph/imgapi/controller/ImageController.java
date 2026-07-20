@@ -55,7 +55,7 @@ public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
     private static final String BAH_REQUIRES_SJH_MESSAGE =
-            "病案号大于等于 10000000 时必须同时提供上架号";
+            "病案号大于等于 10000000 时必须使用上架号查询";
 
     private final ScanService scanService;
     private final ArchiveExportService archiveExportService;
@@ -141,13 +141,13 @@ public class ImageController {
         return Result.success(items).message(normalizedBah + " 数据获取成功");
     }
 
-    @Operation(summary = "按病案号和/或唯一上架号查询图片数据")
+    @Operation(summary = "按统一规则查询图片数据")
     @GetMapping("/search")
     public Result<List<BAHDataResponseDTO>> searchByCode(
-            @Parameter(description = "病案号，可省略前导零；大于等于 10000000 时必须同时传上架号")
+            @Parameter(description = "病案号；小于 10000000 时作为查询键，大于等于 10000000 时仅用于审计和展示")
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
             @RequestParam(required = false) String bah,
-            @Parameter(description = "唯一上架号，可省略前导零")
+            @Parameter(description = "唯一上架号；病案号大于等于 10000000 时作为查询键")
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
             @RequestParam(required = false) String sjh,
             @Parameter(description = "调用方内网系统当前用户 ID")
@@ -158,17 +158,25 @@ public class ImageController {
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
         }
-        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+
+        boolean useSjh = normalizedBah.isEmpty()
+                || MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah);
+        if (useSjh && normalizedSjh.isEmpty()) {
             return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
         }
 
         archiveAccessService.verifyAndRecord(userid, normalizedBah, normalizedSjh, request);
 
+        String queryBah = useSjh ? "" : normalizedBah;
+        String queryBahSearchCode = useSjh ? "" : MedicalRecordCodeUtils.toSearchTerm(bah);
+        String querySjh = useSjh ? normalizedSjh : "";
+        String querySjhSearchCode = useSjh ? MedicalRecordCodeUtils.toSearchTerm(sjh) : "";
+
         List<Scan> list = scanService.getImageListByCode(
-                normalizedBah,
-                MedicalRecordCodeUtils.toSearchTerm(bah),
-                normalizedSjh,
-                MedicalRecordCodeUtils.toSearchTerm(sjh)
+                queryBah,
+                queryBahSearchCode,
+                querySjh,
+                querySjhSearchCode
         );
         List<BAHDataResponseDTO> items = imageUrlService.toDtoList(list);
         return Result.success(items);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
 
-const settings = defineModel<EffectiveSystemSettings>({ required: true })
+defineModel<EffectiveSystemSettings>({ required: true })
 </script>
 
 <template>
@@ -29,7 +29,6 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
         <div><strong>跨域边界</strong><p>只允许服务端配置的精确 Origin，运行时设置不能放宽 CORS。</p></div>
       </article>
     </div>
-    <input v-model="settings.developerModeEnabled" type="hidden" disabled>
   </section>
 </template>
 

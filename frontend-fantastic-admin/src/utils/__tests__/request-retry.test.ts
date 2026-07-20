@@ -93,7 +93,7 @@ describe('request retry policy', () => {
 
   it('parses Retry-After HTTP dates and caps excessive delays', () => {
     const now = Date.parse('2026-07-20T10:00:00.000Z')
-    expect(parseRetryAfterMs('Sun, 20 Jul 2026 10:00:05 GMT', now)).toBe(5000)
+    expect(parseRetryAfterMs('Mon, 20 Jul 2026 10:00:05 GMT', now)).toBe(5000)
     expect(parseRetryAfterMs('3600', now)).toBe(60_000)
   })
 

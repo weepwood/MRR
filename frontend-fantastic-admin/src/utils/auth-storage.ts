@@ -108,7 +108,7 @@ function normalizePermissions(value: unknown): string[] | undefined {
 
 function normalizeProfile(value: unknown): AuthProfile | undefined {
   if (!isPlainObject(value)) return undefined
-  const profile: AuthProfile = { ...value }
+  const profile = { ...value } as AuthProfile
   if ('permissions' in profile) {
     const normalizedPermissions = normalizePermissions(profile.permissions)
     if (normalizedPermissions) profile.permissions = normalizedPermissions
@@ -167,17 +167,14 @@ export function migrateAuthStorage(storage?: Storage): void {
     return
   }
 
-  if (!storedVersion) {
-    migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.token, AUTH_STORAGE_KEYS.token)
-    migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.account, AUTH_STORAGE_KEYS.account)
-    migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.avatar, AUTH_STORAGE_KEYS.avatar)
-    migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.profile, AUTH_STORAGE_KEYS.profile)
-    migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.permissions, AUTH_STORAGE_KEYS.permissions)
-    safeSet(target, AUTH_STORAGE_KEYS.schemaVersion, AUTH_STORAGE_SCHEMA_VERSION)
-  }
-  else {
-    LEGACY_SESSION_KEYS.forEach(key => safeRemove(target, key))
-  }
+  // 即使版本号已经写入，也继续完成缺失字段的迁移，修复浏览器关闭、
+  // 配额异常等原因导致的部分迁移状态。
+  migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.token, AUTH_STORAGE_KEYS.token)
+  migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.account, AUTH_STORAGE_KEYS.account)
+  migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.avatar, AUTH_STORAGE_KEYS.avatar)
+  migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.profile, AUTH_STORAGE_KEYS.profile)
+  migrateKey(target, LEGACY_AUTH_STORAGE_KEYS.permissions, AUTH_STORAGE_KEYS.permissions)
+  safeSet(target, AUTH_STORAGE_KEYS.schemaVersion, AUTH_STORAGE_SCHEMA_VERSION)
 }
 
 export function readAuthStorage(storage?: Storage): AuthStorageSnapshot {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { ArrowLeft, Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
   ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
@@ -29,11 +30,13 @@ const emit = defineEmits<{
 const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
+const route = useRoute()
 
 const searchHistory = ref<ArchiveSearchHistoryItem[]>(readArchiveSearchHistory())
 const historyVisible = ref(false)
 const allHistoryVisible = ref(false)
 const historyStatus = ref<'success' | 'failure' | 'favorite'>('success')
+const returnToStatisticsDetail = ref(false)
 const displayedSuccessfulHistory = computed(() => searchHistory.value
   .filter(item => item.status === 'success')
   .slice(0, ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT))
@@ -46,6 +49,7 @@ const activeHistory = computed(() => {
   }
   return historyStatus.value === 'success' ? successfulHistory.value : failedHistory.value
 })
+const showReturnButton = computed(() => props.showBack || returnToStatisticsDetail.value)
 const historyTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: '2-digit',
   day: '2-digit',
@@ -53,6 +57,23 @@ const historyTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   minute: '2-digit',
   hour12: false,
 })
+
+function firstQueryValue(value: unknown): string {
+  return String(Array.isArray(value) ? value[0] : value ?? '').trim()
+}
+
+function updateReturnAvailability() {
+  const source = firstQueryValue(route.query.from)
+  const historyBack = typeof window === 'undefined'
+    ? ''
+    : String(window.history.state?.back ?? '')
+
+  if (source === 'statistics-detail' || historyBack.startsWith('/statistics-detail')) {
+    // 一旦确认由统计明细进入，在当前档案袋生命周期内持续保留返回入口，
+    // 避免搜索、刷新或路由参数规范化后 from 参数丢失导致按钮消失。
+    returnToStatisticsDetail.value = true
+  }
+}
 
 function formatHistoryTime(timestamp: number): string {
   return historyTimeFormatter.format(new Date(timestamp))
@@ -88,7 +109,14 @@ function openAllHistory() {
   allHistoryVisible.value = true
 }
 
+watch(
+  () => route.query.from,
+  updateReturnAvailability,
+  { immediate: true },
+)
+
 onMounted(() => {
+  updateReturnAvailability()
   void loadArchiveSearchHistory().then((history) => {
     searchHistory.value = history
   })
@@ -109,7 +137,7 @@ onUnmounted(() => {
         <h2>住院病案</h2>
       </div>
       <div class="heading-actions">
-        <el-button v-if="props.showBack" text size="small" :icon="ArrowLeft" @click="emit('back')">
+        <el-button v-if="showReturnButton" text size="small" :icon="ArrowLeft" @click="emit('back')">
           返回
         </el-button>
         <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">

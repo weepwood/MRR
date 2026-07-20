@@ -164,11 +164,11 @@ watch(() => menuStore.actived, (val, oldVal) => {
   .menu--grouped-single {
     padding-top: 10px;
 
-    :deep(> .menu-item) {
+    & > :deep(.menu-item) {
       padding: 2px 0;
     }
 
-    :deep(> .menu-item > .menu-item-container) {
+    & > :deep(.menu-item > .menu-item-container) {
       min-height: 40px;
       padding-inline: 10px !important;
       font-weight: 620;
@@ -178,11 +178,11 @@ watch(() => menuStore.actived, (val, oldVal) => {
       border-radius: var(--mrr-radius-md);
     }
 
-    :deep(> .menu-item > .menu-item-container:hover) {
+    & > :deep(.menu-item > .menu-item-container:hover) {
       background: var(--mrr-navigation-hover);
     }
 
-    :deep(> .sub-menu) {
+    & > :deep(.sub-menu) {
       margin: 2px 0 8px 13px;
       padding-inline-start: 7px;
       border-inline-start: 1px solid var(--mrr-navigation-border);

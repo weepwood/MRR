@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 
 vi.mock('@/store/modules/user', () => ({
   useUserStore: () => ({
+    isSessionVerified: true,
     profile: { roleCode: 'DOCTOR', username: 'doctor1' },
     permissions: ['record:read', 'statistics:read'],
   }),
@@ -81,6 +82,7 @@ describe('useAuth — ADMIN bypass', () => {
     setActivePinia(createPinia())
     vi.doMock('@/store/modules/user', () => ({
       useUserStore: () => ({
+        isSessionVerified: true,
         profile: { roleCode: 'ADMIN', username: 'admin' },
         permissions: [],
       }),
@@ -91,6 +93,7 @@ describe('useAuth — ADMIN bypass', () => {
     vi.resetModules()
     vi.doMock('@/store/modules/user', () => ({
       useUserStore: () => ({
+        isSessionVerified: true,
         profile: { roleCode: 'ADMIN' },
         permissions: [],
       }),

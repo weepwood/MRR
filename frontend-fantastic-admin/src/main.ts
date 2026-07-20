@@ -8,7 +8,6 @@ import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-cod
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
-import { installMotionEnhancements } from '@/motion/installMotionEnhancements'
 
 import App from './App.vue'
 import router from './router'
@@ -26,7 +25,6 @@ import '@/assets/styles/globals.css'
 import '@/assets/styles/pages/archive-boxes.css'
 import '@/assets/styles/pages/settings-navigation.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
-import '@/assets/styles/motion-enhancements.css'
 
 installMedicalRecordCodeInterceptors()
 installSystemSettingsRuntime()
@@ -43,7 +41,6 @@ installArchiveWatermark(router, pinia)
 directive(app)
 installRequestErrorFallback(app)
 app.mount('#app')
-installMotionEnhancements(router)
 
 async function installOfflineIcons() {
   const { downloadAndInstall } = await import('@/iconify')

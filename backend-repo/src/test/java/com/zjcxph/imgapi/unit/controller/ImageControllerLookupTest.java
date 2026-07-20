@@ -51,13 +51,13 @@ class ImageControllerLookupTest {
                 imageUrlService,
                 archiveAccessService
         );
-        when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
     }
 
     @Test
     void usesBahBelowUniqueLimitEvenWhenSjhIsProvided() {
         when(scanService.getImageListByCode("09999999", "9999999", "", ""))
                 .thenReturn(List.of());
+        when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
 
         controller.searchByCode("9999999", "456", null, request);
 
@@ -69,6 +69,7 @@ class ImageControllerLookupTest {
     void usesSjhAtAndAboveUniqueLimit() {
         when(scanService.getImageListByCode("", "", "00000456", "456"))
                 .thenReturn(List.of());
+        when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
 
         controller.searchByCode("10000000", "456", null, request);
 

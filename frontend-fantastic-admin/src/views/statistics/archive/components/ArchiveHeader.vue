@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
-import { ArrowLeft, Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
+import { Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
@@ -109,9 +109,6 @@ onUnmounted(() => {
         <h2>住院病案</h2>
       </div>
       <div class="heading-actions">
-        <el-button v-if="props.showBack" text size="small" :icon="ArrowLeft" @click="emit('back')">
-          返回
-        </el-button>
         <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
           刷新
         </el-button>

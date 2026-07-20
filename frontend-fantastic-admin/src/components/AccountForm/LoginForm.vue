@@ -8,6 +8,7 @@ import { computed, ref } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
 
 defineOptions({ name: 'LoginForm' })
 
@@ -25,6 +26,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const showPassword = ref(false)
 const buttonText = computed(() => loading.value ? '正在验证...' : '登录系统')
+const rememberedAccount = readRememberedAccount()
 
 function resolveMessage(payload: any, fallback: string): string {
   return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
@@ -37,9 +39,9 @@ const form = useForm({
     remember: z.boolean(),
   })),
   initialValues: {
-    account: props.account ?? localStorage.getItem('login_account') ?? '',
+    account: props.account ?? rememberedAccount,
     password: '',
-    remember: !!localStorage.getItem('login_account'),
+    remember: Boolean(rememberedAccount),
   },
 })
 
@@ -60,12 +62,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       token,
       user: loginData?.user || loginData?.profile || payload?.user || {},
     })
-    if (values.remember) {
-      localStorage.setItem('login_account', values.account.trim())
-    }
-    else {
-      localStorage.removeItem('login_account')
-    }
+    writeRememberedAccount(values.remember ? values.account : '')
     ElMessage.success('登录成功')
     emits('onLogin', values.account.trim())
   }

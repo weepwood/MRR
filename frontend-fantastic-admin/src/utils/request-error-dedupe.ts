@@ -30,6 +30,16 @@ function sanitizeRequestId(value: string | undefined): string | undefined {
   return sanitized || undefined
 }
 
+function hashCacheKey(value: string): string {
+  let hash = 0x811C9DC5
+  const boundedValue = value.slice(0, 512)
+  for (let index = 0; index < boundedValue.length; index += 1) {
+    hash ^= boundedValue.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return `error-${(hash >>> 0).toString(16).padStart(8, '0')}`
+}
+
 export function createErrorDedupeCache(options: ErrorDedupeOptions = {}): ErrorDedupeCache {
   const ttlMs = Math.max(1, options.ttlMs ?? DEFAULT_TTL_MS)
   const maxEntries = Math.max(1, Math.trunc(options.maxEntries ?? DEFAULT_MAX_ENTRIES))
@@ -54,15 +64,16 @@ export function createErrorDedupeCache(options: ErrorDedupeOptions = {}): ErrorD
   function check(key: string, requestId?: string): ErrorDedupeDecision {
     const currentTime = now()
     cleanupExpired(currentTime)
+    const cacheKey = hashCacheKey(key)
 
-    const existing = entries.get(key)
+    const existing = entries.get(cacheKey)
     if (existing) {
       return { shouldNotify: false, firstRequestId: existing.firstRequestId }
     }
 
     evictOldestIfNeeded()
     const firstRequestId = sanitizeRequestId(requestId)
-    entries.set(key, { shownAt: currentTime, firstRequestId })
+    entries.set(cacheKey, { shownAt: currentTime, firstRequestId })
     return { shouldNotify: true, firstRequestId }
   }
 

@@ -58,7 +58,15 @@ public class UserController {
     @PostMapping("/login")
     public Result<LoginResponseDTO> login(@Valid @RequestBody UserRequest req,
                                           HttpServletRequest httpRequest) {
-        LoginResponseDTO response = authService.login(req, IpUtil.getClientIp(httpRequest));
+        LoginResponseDTO response;
+        try {
+            response = authService.login(req, IpUtil.getClientIp(httpRequest));
+        } catch (IllegalArgumentException exception) {
+            if ("用户名或密码错误".equals(exception.getMessage())) {
+                return Result.<LoginResponseDTO>unauthorized("用户名或密码错误");
+            }
+            throw exception;
+        }
         if (response.getToken() == null || response.getToken().isBlank()) {
             return Result.<LoginResponseDTO>unauthorized("用户名或密码错误");
         }

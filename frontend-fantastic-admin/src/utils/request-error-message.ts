@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 const HTTP_ERROR_MESSAGES: Record<number, string> = {
   400: '请求参数有误，请检查后重试',
   401: '登录已失效，请重新登录',
@@ -13,34 +15,54 @@ const HTTP_ERROR_MESSAGES: Record<number, string> = {
   504: '服务响应超时，请稍后重试',
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 function isChineseMessage(value: unknown): value is string {
   return typeof value === 'string' && /[\u4E00-\u9FFF]/.test(value)
 }
 
-/** 将 HTTP 和网络请求失败统一为面向用户的中文提示。 */
-export function getRequestErrorMessage(error: any): string {
-  const serverMessage = error?.response?.data?.message ?? error?.response?.data?.msg ?? error?.message ?? error?.msg
-  if (isChineseMessage(serverMessage)) {
-    return serverMessage
-  }
+function getRecordMessage(value: unknown): unknown {
+  if (!isRecord(value)) return undefined
+  return value.message ?? value.msg
+}
 
-  const status = Number(error?.response?.status ?? error?.status)
-  if (HTTP_ERROR_MESSAGES[status]) {
-    return HTTP_ERROR_MESSAGES[status]
-  }
-  if (Number.isFinite(status) && status >= 500) {
-    return '服务器异常，请稍后重试'
-  }
+function getRecordStatus(value: unknown): unknown {
+  if (!isRecord(value)) return undefined
+  return value.status
+}
 
-  const message = String(error?.message || '')
-  if (message === 'Network Error' || error?.code === 'ERR_NETWORK') {
+function getErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError(error)) return error.code
+  if (!isRecord(error)) return undefined
+  return typeof error.code === 'string' ? error.code : undefined
+}
+
+/** 将 HTTP、业务响应和网络请求失败统一为面向用户的中文提示。 */
+export function getRequestErrorMessage(error: unknown): string {
+  const responseData = axios.isAxiosError<unknown>(error) ? error.response?.data : undefined
+  const serverMessage = getRecordMessage(responseData)
+    ?? getRecordMessage(error)
+    ?? (error instanceof Error ? error.message : undefined)
+
+  if (isChineseMessage(serverMessage)) return serverMessage
+
+  const statusValue = axios.isAxiosError(error)
+    ? error.response?.status
+    : getRecordStatus(error)
+  const status = Number(statusValue)
+  if (HTTP_ERROR_MESSAGES[status]) return HTTP_ERROR_MESSAGES[status]
+  if (Number.isFinite(status) && status >= 500) return '服务器异常，请稍后重试'
+
+  const code = getErrorCode(error)
+  const message = error instanceof Error ? error.message : String(getRecordMessage(error) ?? '')
+  if (message === 'Network Error' || code === 'ERR_NETWORK') {
     return '网络连接异常，请检查网络后重试'
   }
-  if (message.includes('timeout') || error?.code === 'ECONNABORTED') {
+  if (message.includes('timeout') || code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
     return '请求超时，请稍后重试'
   }
-  if (error?.code === 'ERR_CANCELED') {
-    return '请求已取消'
-  }
+  if (code === 'ERR_CANCELED') return '请求已取消'
   return '请求失败，请稍后重试'
 }

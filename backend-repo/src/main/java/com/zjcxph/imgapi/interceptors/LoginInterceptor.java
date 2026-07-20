@@ -2,7 +2,6 @@ package com.zjcxph.imgapi.interceptors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.common.AuthSession;
-import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
@@ -26,6 +25,9 @@ import java.util.Map;
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
 
+    /**
+     * 仅为兼容旧测试和诊断代码保留；认证流程不再设置这些属性。
+     */
     public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
 
@@ -59,7 +61,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         String token = extractToken(request.getHeader("Authorization"));
         if (token == null || token.isBlank()) {
-            return allowDeveloperModeOrReject(request, response, "请先登录", "missing_token");
+            return rejectUnauthorized(request, response, "请先登录", "missing_token");
         }
 
         AuthSession tokenSession;
@@ -67,18 +69,18 @@ public class LoginInterceptor implements HandlerInterceptor {
         try {
             String tokenType = JwtUtil.getTokenType(token);
             if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
-                return allowDeveloperModeOrReject(request, response, "Token 类型无效", "invalid_token_type");
+                return rejectUnauthorized(request, response, "Token 类型无效", "invalid_token_type");
             }
             jti = JwtUtil.getJti(token);
             tokenSession = JwtUtil.parseToken(token);
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
-            return allowDeveloperModeOrReject(request, response, "Token 无效或已过期", "invalid_or_expired_token");
+            return rejectUnauthorized(request, response, "Token 无效或已过期", "invalid_or_expired_token");
         }
 
         try {
             if (tokenBlacklist.isRevoked(jti)) {
-                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
+                return rejectUnauthorized(request, response, "Token 已失效，请重新登录", "revoked_token");
             }
         } catch (Exception exception) {
             logger.error("Token revocation store unavailable", exception);
@@ -87,14 +89,14 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
-            return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
+            return rejectUnauthorized(request, response, "Token 用户信息无效", "invalid_token_user");
         }
 
         AuthUser currentUser;
         try {
             currentUser = authUserMapper.findById(tokenSession.getId());
         } catch (Exception exception) {
-            // 数据库故障必须失败关闭。即使开发者模式已启用，也不能降级为虚拟管理员。
+            // 数据库故障必须失败关闭，不能降级为任何虚拟管理员会话。
             logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
             writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
             return false;
@@ -102,10 +104,10 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
                 || !currentUser.getUsername().equals(tokenSession.getUsername())) {
-            return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
+            return rejectUnauthorized(request, response, "账号不存在或 Token 已失效", "missing_token_user");
         }
         if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
-            return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
+            return rejectUnauthorized(request, response, "账号已被禁用", "disabled_user");
         }
         if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
             writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
@@ -122,43 +124,23 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthContext.clear();
     }
 
-    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
-                                                HttpServletResponse response,
-                                                String unauthorizedMessage,
-                                                String reason) throws Exception {
-        if (!developerModeService.isEnabled()) {
-            writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
-            return false;
+    private boolean rejectUnauthorized(HttpServletRequest request,
+                                       HttpServletResponse response,
+                                       String unauthorizedMessage,
+                                       String reason) throws Exception {
+        if (developerModeService.isEnabled()) {
+            // 防御性检查：即使未来错误恢复了旧设置值，也不得重新开放认证旁路。
+            logger.error(
+                    "Blocked legacy developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
+                    request.getMethod(), request.getRequestURI(), request.getRemoteAddr(), reason);
         }
-
-        AuthSession developerSession = createDeveloperSession();
-        installSession(request, developerSession);
-        request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
-        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, reason);
-        response.setHeader("X-MRR-Developer-Mode", "enabled");
-        logger.warn(
-                "Developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
-                request.getMethod(), request.getRequestURI(), request.getRemoteAddr(), reason);
-        return true;
+        writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
+        return false;
     }
 
     private void installSession(HttpServletRequest request, AuthSession session) {
         AuthContext.setCurrentUser(session);
         request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
-    }
-
-    private AuthSession createDeveloperSession() {
-        AuthSession session = new AuthSession();
-        session.setId(1L);
-        session.setUsername("dev");
-        session.setDisplayName("Developer Mode");
-        session.setRoleCode("ADMIN");
-        session.setRoleName("Administrator");
-        session.setStatus("active");
-        session.setMustChangePassword(false);
-        session.setPasswordVersion(1);
-        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
-        return session;
     }
 
     private AuthSession toCurrentSession(AuthUser user) {
@@ -179,14 +161,14 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     private List<String> resolvePermissions(AuthUser user) {
         if ("ADMIN".equalsIgnoreCase(user.getRoleCode())) {
-            return new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS));
+            return new ArrayList<>(PermissionResolver.resolve(com.zjcxph.imgapi.common.Permissions.ALL_PERMISSIONS));
         }
         if (!StringUtils.hasText(user.getPermissionsCsv())) {
             return List.of();
         }
         List<String> configured = Arrays.stream(user.getPermissionsCsv().split(","))
                 .map(String::trim)
-                .filter(StringUtils.hasText)
+                .filter(StringUtils::hasText)
                 .distinct()
                 .toList();
         return new ArrayList<>(PermissionResolver.resolve(configured));

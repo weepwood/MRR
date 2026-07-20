@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.handler;
 
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.common.ResultCode;
 import com.zjcxph.imgapi.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +24,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleBusinessException(BusinessException e) {
         logger.warn("业务异常: code={}, msg={}", e.getCode(), e.getMessage());
         return ResponseEntity
-                .status(mapToHttpStatus(e.getCode()))
+                .status(ResultCode.resolveHttpStatus(e.getCode()))
                 .body(Result.fail(e.getCode(), e.getMessage()));
     }
 
@@ -59,18 +60,5 @@ public class GlobalExceptionHandler {
         logger.error("未处理异常", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Result.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "服务器内部错误，请联系管理员"));
-    }
-
-    /** 将业务错误码映射为 HTTP 状态码。 */
-    private HttpStatus mapToHttpStatus(int code) {
-        return switch (code) {
-            case 400 -> HttpStatus.BAD_REQUEST;
-            case 401 -> HttpStatus.UNAUTHORIZED;
-            case 403 -> HttpStatus.FORBIDDEN;
-            case 404 -> HttpStatus.NOT_FOUND;
-            case 410 -> HttpStatus.GONE;
-            case 429 -> HttpStatus.TOO_MANY_REQUESTS;
-            default -> HttpStatus.INTERNAL_SERVER_ERROR;
-        };
     }
 }

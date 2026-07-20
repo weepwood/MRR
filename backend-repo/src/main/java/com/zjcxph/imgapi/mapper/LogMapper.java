@@ -69,6 +69,11 @@ public interface LogMapper {
                                                    @Param("responseStatus") String responseStatus, @Param("startTime") String startTime,
                                                    @Param("endTime") String endTime);
 
+    List<ImageAuditCountDTO> getTopImageAuditTargets(@Param("keyword") String keyword, @Param("username") String username,
+                                                     @Param("clientIp") String clientIp, @Param("auditAction") String auditAction,
+                                                     @Param("responseStatus") String responseStatus, @Param("startTime") String startTime,
+                                                     @Param("endTime") String endTime);
+
     int countSearch(@Param("keyword") String keyword, @Param("username") String username, @Param("clientIp") String clientIp,
                     @Param("requestUri") String requestUri, @Param("method") String method, @Param("responseStatus") String responseStatus,
                     @Param("startTime") String startTime, @Param("endTime") String endTime);

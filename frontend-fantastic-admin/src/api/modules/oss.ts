@@ -1,4 +1,5 @@
 import type {
+  ApiResult,
   MigrationLogRecord,
   MigrationStatistics,
   OssUploadResult,
@@ -14,6 +15,8 @@ interface OssUploadBatchResult {
   failed?: number
   bah?: string
 }
+
+type OssUploadResponse = ApiResult<OssUploadBatchResult> & Partial<OssUploadBatchResult>
 
 interface OssUrlResult {
   scanId: number
@@ -35,16 +38,16 @@ interface MigrationJob {
   updatedAt?: string
 }
 
-export function uploadToOss(scanIds: number[]) {
-  return postRequest<OssUploadBatchResult, { scanIds: number[] }>('/api/v1/oss/upload', { scanIds })
+export function uploadToOss(scanIds: number[]): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult, { scanIds: number[] }>('/api/v1/oss/upload', { scanIds }) as Promise<OssUploadResponse>
 }
 
-export function uploadByBah(bah: string) {
-  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/bah/${bah}`)
+export function uploadByBah(bah: string): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/bah/${bah}`) as Promise<OssUploadResponse>
 }
 
-export function uploadByFolder(folder: string) {
-  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/folder/${encodeURIComponent(folder)}`)
+export function uploadByFolder(folder: string): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/folder/${encodeURIComponent(folder)}`) as Promise<OssUploadResponse>
 }
 
 export function getOssUrl(scanId: number) {

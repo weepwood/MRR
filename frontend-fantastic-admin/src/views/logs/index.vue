@@ -10,7 +10,6 @@ import AppError from '@/components/AppError/index.vue'
 
 defineOptions({ name: 'LogsPage' })
 
-// 业务状态（非 CRUD 通用部分）
 const detailVisible = ref(false)
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
@@ -28,7 +27,6 @@ const statusOptions = [
   { label: '500', value: '500' },
 ]
 
-// CRUD 列表逻辑：复用 useCrudList composable
 interface LogsQuery {
   keyword: string
   username: string
@@ -44,7 +42,6 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
   LogsQuery
 >({
   fetchApi: async (params) => {
-    // 构造后端请求参数：空值不传，timeRange 拆为 startTime/endTime
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Record<string, any> = { page, size }
     if (keyword?.trim()) apiParams.keyword = keyword.trim()
@@ -59,7 +56,7 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
     }
     try {
       error.value = ''
-    return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
+      return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
     }
     catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载日志记录失败'
@@ -84,50 +81,30 @@ async function openDetail(row: LogRecord) {
 }
 
 function formatDateTime(value: unknown) {
-  if (!value) {
-    return '-'
-  }
+  if (!value) return '-'
   const date = new Date(String(value))
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 function formatExecuteTime(value: unknown) {
-  if (value === null || value === undefined || value === '') {
-    return '-'
-  }
+  if (value === null || value === undefined || value === '') return '-'
   return `${value} ms`
 }
 
 function methodTagType(method: string) {
-  if (method === 'GET') {
-    return 'primary'
-  }
-  if (method === 'POST') {
-    return 'success'
-  }
-  if (method === 'DELETE') {
-    return 'danger'
-  }
-  if (method === 'PUT' || method === 'PATCH') {
-    return 'warning'
-  }
+  if (method === 'GET') return 'primary'
+  if (method === 'POST') return 'success'
+  if (method === 'DELETE') return 'danger'
+  if (method === 'PUT' || method === 'PATCH') return 'warning'
   return 'info'
 }
 
 function statusTagType(status: string | number) {
   const code = Number(status)
-  if (Number.isNaN(code)) {
-    return 'info'
-  }
-  if (code >= 500) {
-    return 'danger'
-  }
-  if (code >= 400) {
-    return 'warning'
-  }
-  if (code >= 200) {
-    return 'success'
-  }
+  if (Number.isNaN(code)) return 'info'
+  if (code >= 500) return 'danger'
+  if (code >= 400) return 'warning'
+  if (code >= 200) return 'success'
   return 'info'
 }
 </script>
@@ -136,13 +113,9 @@ function statusTagType(status: string | number) {
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">
-          Operation Logs
-        </p>
+        <p class="eyebrow">Operation Logs</p>
         <h2>日志管理</h2>
-        <p class="subtitle">
-          支持按 URI、IP、状态码和时间范围快速检索系统访问日志。
-        </p>
+        <p class="subtitle">按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。</p>
       </div>
       <el-button :loading="loading" @click="loadData">
         <el-icon><Refresh /></el-icon>
@@ -153,7 +126,12 @@ function statusTagType(status: string | number) {
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="关键字">
-          <el-input v-model="query.keyword" clearable placeholder="URI / Body / UA / 用户名" @keyup.enter="handleSearch" />
+          <el-input
+            v-model="query.keyword"
+            clearable
+            placeholder="Request ID / URI / 参数 / 审计目标"
+            @keyup.enter="handleSearch"
+          />
         </el-form-item>
         <el-form-item label="用户">
           <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
@@ -162,7 +140,7 @@ function statusTagType(status: string | number) {
           <el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="请求 URI">
-          <el-input v-model="query.requestUri" clearable placeholder="/v1/scan-api/page" @keyup.enter="handleSearch" />
+          <el-input v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="方法">
           <el-select v-model="query.method" clearable placeholder="全部" style="width: 140px;">
@@ -190,9 +168,7 @@ function statusTagType(status: string | number) {
             <el-icon><Search /></el-icon>
             查询
           </el-button>
-          <el-button @click="resetFilters">
-            重置
-          </el-button>
+          <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -201,35 +177,28 @@ function statusTagType(status: string | number) {
       <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
       <el-table v-else :data="list" stripe style="margin-top: 12px;">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
-          <template #default="{ row }">
-            {{ formatDateTime(row.accessTime) }}
-          </template>
+          <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
+        </el-table-column>
+        <el-table-column prop="requestId" label="Request ID" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.requestId || '-' }}</template>
         </el-table-column>
         <el-table-column prop="username" label="用户" min-width="120">
-          <template #default="{ row }">
-            {{ row.username || '-' }}
-          </template>
+          <template #default="{ row }">{{ row.username || '-' }}</template>
         </el-table-column>
         <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
         <el-table-column prop="method" label="方法" width="100">
           <template #default="{ row }">
-            <el-tag :type="methodTagType(row.method)">
-              {{ row.method || '-' }}
-            </el-tag>
+            <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="requestUri" label="请求 URI" min-width="260" show-overflow-tooltip />
+        <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip />
         <el-table-column prop="responseStatus" label="状态码" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.responseStatus)">
-              {{ row.responseStatus || '-' }}
-            </el-tag>
+            <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="executeTime" label="耗时" width="100">
-          <template #default="{ row }">
-            {{ formatExecuteTime(row.executeTime) }}
-          </template>
+          <template #default="{ row }">{{ formatExecuteTime(row.executeTime) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
@@ -254,43 +223,41 @@ function statusTagType(status: string | number) {
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="日志详情" width="760px">
+    <el-dialog v-model="detailVisible" title="接口访问审计详情" width="900px">
       <el-descriptions v-if="currentLog" :column="2" border>
-        <el-descriptions-item label="ID">
-          {{ currentLog.id || '-' }}
+        <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="请求方法">{{ currentLog.method || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="访问时间">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
+        <el-descriptions-item label="耗时">{{ formatExecuteTime(currentLog.executeTime) }}</el-descriptions-item>
+        <el-descriptions-item label="真实请求 URI" :span="2">
+          <span class="detail-value">{{ currentLog.requestUri || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="用户">
-          {{ currentLog.username || '-' }}
+        <el-descriptions-item label="接口模板" :span="2">
+          <span class="detail-value">{{ currentLog.endpointTemplate || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="客户端 IP">
-          {{ currentLog.clientIp || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="请求方法">
-          {{ currentLog.method || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="状态码">
-          {{ currentLog.responseStatus || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="访问时间" :span="2">
-          {{ formatDateTime(currentLog.accessTime) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="请求 URI" :span="2">
-          {{ currentLog.requestUri || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="耗时">
-          {{ formatExecuteTime(currentLog.executeTime) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="Referer">
-          {{ currentLog.referer || '-' }}
+        <el-descriptions-item label="Referer" :span="2">
+          <span class="detail-value">{{ currentLog.referer || '-' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="Query String" :span="2">
-          {{ currentLog.queryString || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="User-Agent" :span="2">
-          {{ currentLog.userAgent || '-' }}
+          <pre class="detail-pre">{{ currentLog.queryString || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="Request Body" :span="2">
           <pre class="detail-pre">{{ currentLog.requestBody || '-' }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="审计动作">{{ currentLog.auditAction || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="审计目标">{{ currentLog.auditTarget || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="审计描述" :span="2">
+          <span class="detail-value">{{ currentLog.auditDescription || '-' }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="异常信息" :span="2">
+          <pre class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="User-Agent" :span="2">
+          <span class="detail-value">{{ currentLog.userAgent || '-' }}</span>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -335,9 +302,20 @@ h2 {
   margin-top: 16px;
 }
 
+.detail-value,
 .detail-pre {
-  margin: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-pre {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
   white-space: pre-wrap;
+}
+
+.error-detail {
+  color: var(--el-color-danger);
 }
 </style>

@@ -194,9 +194,11 @@ export interface ResponseMetricAnalysis {
 /** 日志记录 */
 export interface LogRecord {
   id?: number
+  requestId?: string
   username?: string
   clientIp?: string
   requestUri?: string
+  endpointTemplate?: string
   method?: string
   userAgent?: string
   accessTime?: string
@@ -205,6 +207,7 @@ export interface LogRecord {
   responseStatus?: number
   executeTime?: number | null
   referer?: string
+  errorMessage?: string
   auditAction?: string
   auditTarget?: string
   auditDescription?: string

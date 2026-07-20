@@ -60,15 +60,15 @@ class LogInterceptorTest {
     }
 
     @Test
-    void omitsRequestPayloadValuesAndUsesEndpointTemplateInAuditLog() throws Exception {
+    void preservesBusinessAuditValuesAndHashesCredentials() throws Exception {
         MockHttpServletRequest rawRequest = new MockHttpServletRequest(
                 "POST", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
-        rawRequest.setQueryString("bah=00123456&page=2");
-        rawRequest.addHeader("Referer", "http://localhost/records?token=secret-token");
+        rawRequest.setQueryString("bah=00123456&page=2&token=secret-token");
+        rawRequest.addHeader("Referer", "http://localhost/records?bah=00123456&ticket=secret-ticket");
         rawRequest.setContentType("application/json");
         rawRequest.setContent("{\"password\":\"secret-password\",\"idCard\":\"330123456789012345\"}"
                 .getBytes(StandardCharsets.UTF_8));
-        ContentCachingRequestWrapper request = new ContentCachingRequestWrapper(rawRequest, 10240);
+        ContentCachingRequestWrapper request = new ContentCachingRequestWrapper(rawRequest, 16384);
         request.getInputStream().readAllBytes();
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE,
                 "/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
@@ -81,16 +81,21 @@ class LogInterceptorTest {
         verify(asyncLogService).saveLogAsync(logCaptor.capture());
         Log savedLog = logCaptor.getValue();
 
+        assertThat(savedLog.getRequestId()).isNotBlank();
         assertThat(savedLog.getRequestUri())
+                .isEqualTo("/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
+        assertThat(savedLog.getEndpointTemplate())
                 .isEqualTo("/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
-        assertThat(savedLog.getQueryString()).isEqualTo("bah=[REDACTED]&page=[REDACTED]");
-        assertThat(savedLog.getRequestBody()).matches("\\[OMITTED \\d+ bytes]");
-        assertThat(savedLog.getReferer()).isEqualTo("[REDACTED]");
+        assertThat(savedLog.getQueryString())
+                .startsWith("bah=00123456&page=2&token=sha256:");
+        assertThat(savedLog.getReferer())
+                .startsWith("http://localhost/records?bah=00123456&ticket=sha256:");
+        assertThat(savedLog.getRequestBody())
+                .contains("330123456789012345", "password", "sha256:")
+                .doesNotContain("secret-password");
         assertThat(savedLog.getAuditAction()).isEqualTo("VIEW_IMAGE");
-        assertThat(savedLog.getAuditTarget()).matches("sha256:[0-9a-f]{32}");
+        assertThat(savedLog.getAuditTarget()).isEqualTo("00789508");
         assertThat(savedLog.toString())
-                .doesNotContain("00789508", "605746", "0072.jpg", "secret-password",
-                        "330123456789012345", "secret-token");
+                .doesNotContain("secret-password", "secret-token", "secret-ticket");
     }
-
 }

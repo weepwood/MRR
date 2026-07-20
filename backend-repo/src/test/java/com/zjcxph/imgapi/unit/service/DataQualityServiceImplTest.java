@@ -84,7 +84,7 @@ class DataQualityServiceImplTest {
         List<Map<String, Object>> result = service.getIssues(100);
 
         assertThat(result).isEmpty();
-        verify(jdbcTemplate, never()).queryForList(anyString(), any(), any());
+        verify(jdbcTemplate, never()).queryForList(anyString(), any(Object[].class));
     }
 
     @Test
@@ -159,7 +159,8 @@ class DataQualityServiceImplTest {
                 contains("SET status = 'FAILED'"), eq("db offline"), eq(77L));
         assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
         AtomicBoolean running = (AtomicBoolean) ReflectionTestUtils.getField(service, "running");
-        assertThat(running).isNotNull().isFalse();
+        assertThat(running).isNotNull();
+        assertThat(running.get()).isFalse();
     }
 
     @Test

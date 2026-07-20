@@ -185,7 +185,6 @@ watch(() => menuStore.actived, (val, oldVal) => {
     & > :deep(.sub-menu) {
       margin: 2px 0 8px 13px;
       padding-inline-start: 7px;
-      border-inline-start: 1px solid var(--mrr-navigation-border);
     }
   }
 

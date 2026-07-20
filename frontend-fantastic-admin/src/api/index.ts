@@ -163,6 +163,10 @@ function normalizeRequestError(error: unknown): Error {
   return error instanceof Error ? error : new BusinessRequestError(error)
 }
 
+function asInterceptorResult(payload: unknown): AxiosResponse {
+  return payload as AxiosResponse
+}
+
 function getRequestId(error: unknown): string | undefined {
   if (!axios.isAxiosError(error)) return undefined
   const value = error.response?.headers?.['x-request-id']
@@ -223,18 +227,19 @@ function recordFinalRetry(config: InternalAxiosRequestConfig | undefined, outcom
 async function handleError(error: unknown) {
   const axiosError = axios.isAxiosError<unknown>(error) ? error : undefined
   const config = axiosError?.config
-  const responseCode = extractBusinessCode(axiosError?.response?.data)
+  const response = axiosError?.response
+  const responseCode = extractBusinessCode(response?.data)
 
-  if (axiosError?.response?.status === 428 || responseCode === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
+  if (response?.status === 428 || responseCode === 'AUTH_PASSWORD_CHANGE_REQUIRED') {
     recordFinalRetry(config, 'failed')
-    enqueueResponseMetric(config, axiosError.response, axiosError.response.data)
+    enqueueResponseMetric(config, response, response?.data)
     redirectToRequiredPasswordChange()
     return Promise.reject(error)
   }
 
-  if (axiosError?.response?.status === 401) {
+  if (response?.status === 401) {
     recordFinalRetry(config, 'failed')
-    enqueueResponseMetric(config, axiosError.response, axiosError.response.data)
+    enqueueResponseMetric(config, response, response.data)
     if (!isLoggingOut) {
       isLoggingOut = true
       try {
@@ -293,7 +298,7 @@ api.interceptors.response.use(
     if (businessPayload) {
       if (businessPayload.status !== undefined && businessPayload.code === undefined) {
         const statusValue = businessPayload.status
-        if (statusValue === 1) return payload
+        if (statusValue === 1) return asInterceptorResult(payload)
         if (statusValue === 0 && !isLoggingOut) {
           isLoggingOut = true
           void Promise.resolve(useUserStore().requestLogout())
@@ -301,21 +306,21 @@ api.interceptors.response.use(
         }
         if (typeof statusValue === 'string') {
           const upperStatus = statusValue.toUpperCase()
-          if (['UP', 'DOWN', 'WARNING', 'UNKNOWN'].includes(upperStatus)) return payload
+          if (['UP', 'DOWN', 'WARNING', 'UNKNOWN'].includes(upperStatus)) return asInterceptorResult(payload)
         }
         return Promise.reject(normalizeRequestError(payload))
       }
 
       if (businessPayload.code !== undefined) {
         if (typeof businessPayload.code === 'number' && businessPayload.code >= 200 && businessPayload.code < 300) {
-          return payload
+          return asInterceptorResult(payload)
         }
         if (businessPayload.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') redirectToRequiredPasswordChange()
         return Promise.reject(normalizeRequestError(payload))
       }
     }
 
-    return payload
+    return asInterceptorResult(payload)
   },
   handleError,
 )

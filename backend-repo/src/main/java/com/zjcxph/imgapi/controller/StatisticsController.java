@@ -40,6 +40,7 @@ import java.util.Map;
 public class StatisticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);
+    private static final int EXPORT_LIMIT = 100000;
 
     private final StatisticsService statisticsService;
 
@@ -270,12 +271,17 @@ public class StatisticsController {
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
 
-        int exportLimit = 100000;
-        List<Statistics> list = statisticsService.findWithConditionAndPagination(
-                1, exportLimit, normalizedKeyword, normalizedBah, normalizedSjh,
-                normalizedType, normalizedStartDate, normalizedEndDate, "date", "asc");
-        if (list.size() >= exportLimit) {
-            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", exportLimit);
+        List<Statistics> list = statisticsService.findWithConditionForExport(
+                EXPORT_LIMIT,
+                normalizedKeyword,
+                normalizedBah,
+                normalizedSjh,
+                normalizedType,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+        if (list.size() >= EXPORT_LIMIT) {
+            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", EXPORT_LIMIT);
         }
 
         response.setContentType("text/csv; charset=UTF-8");

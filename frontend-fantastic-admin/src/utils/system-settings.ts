@@ -44,6 +44,7 @@ export interface EffectiveSystemSettings {
   archiveIpMaxChanges: number
   patientIdCardRevealEnabled: boolean
   patientIdCardCopyEnabled: boolean
+  /** @deprecated 旧版认证旁路已永久关闭，仅为兼容旧本地缓存保留。 */
   developerModeEnabled: boolean
 }
 
@@ -157,13 +158,16 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     archiveIpMaxChanges: Math.round(parseNumber(source.archiveIpMaxChanges, defaults.archiveIpMaxChanges, 0, 20)),
     patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
     patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
-    developerModeEnabled: parseBoolean(source.developerModeEnabled, defaults.developerModeEnabled),
+    // 不信任服务器或本地缓存中的旧值，认证旁路已永久关闭。
+    developerModeEnabled: false,
   }
 }
 
 export function serializeSystemSettings(settings: EffectiveSystemSettings): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(settings).map(([key, value]) => [key, String(value ?? '').trim()]),
+    Object.entries(settings)
+      .filter(([key]) => key !== 'developerModeEnabled')
+      .map(([key, value]) => [key, String(value ?? '').trim()]),
   )
 }
 
@@ -180,14 +184,17 @@ export function readLocalSystemSettings(): EffectiveSystemSettings | null {
 
 export function writeLocalSystemSettings(settings: EffectiveSystemSettings): void {
   try {
-    localStorage.setItem(SYSTEM_SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+    localStorage.setItem(SYSTEM_SETTINGS_STORAGE_KEY, JSON.stringify({
+      ...settings,
+      developerModeEnabled: false,
+    }))
   }
   catch {
     // 浏览器禁用本地存储时仍允许服务端配置继续工作。
   }
 
   window.dispatchEvent(new CustomEvent<EffectiveSystemSettings>(SYSTEM_SETTINGS_UPDATED_EVENT, {
-    detail: { ...settings },
+    detail: { ...settings, developerModeEnabled: false },
   }))
 }
 

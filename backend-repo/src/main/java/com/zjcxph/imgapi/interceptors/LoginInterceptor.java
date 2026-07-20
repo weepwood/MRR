@@ -186,7 +186,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
         List<String> configured = Arrays.stream(user.getPermissionsCsv().split(","))
                 .map(String::trim)
-                .filter(StringUtils.hasText)
+                .filter(StringUtils::hasText)
                 .distinct()
                 .toList();
         return new ArrayList<>(PermissionResolver.resolve(configured));

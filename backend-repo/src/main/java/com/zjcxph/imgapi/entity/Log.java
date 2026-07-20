@@ -7,9 +7,11 @@ import java.util.Date;
 @Data
 public class Log {
     private Long id;
+    private String requestId;
     private String username;
     private String clientIp;
     private String requestUri;
+    private String endpointTemplate;
     private String method;
     private String userAgent;
     private Date accessTime;
@@ -18,6 +20,7 @@ public class Log {
     private String responseStatus;
     private Long executeTime;
     private String referer;
+    private String errorMessage;
     private String auditAction;
     private String auditTarget;
     private String auditDescription;
@@ -39,9 +42,11 @@ public class Log {
     public String toString() {
         return "Log{" +
                 "id=" + id +
+                ", requestId='" + requestId + '\'' +
                 ", username='" + username + '\'' +
                 ", clientIp='" + clientIp + '\'' +
                 ", requestUri='" + requestUri + '\'' +
+                ", endpointTemplate='" + endpointTemplate + '\'' +
                 ", method='" + method + '\'' +
                 ", userAgent='" + userAgent + '\'' +
                 ", accessTime=" + accessTime +
@@ -50,6 +55,7 @@ public class Log {
                 ", responseStatus='" + responseStatus + '\'' +
                 ", executeTime=" + executeTime +
                 ", referer='" + referer + '\'' +
+                ", errorMessage='" + errorMessage + '\'' +
                 ", auditAction='" + auditAction + '\'' +
                 ", auditTarget='" + auditTarget + '\'' +
                 ", auditDescription='" + auditDescription + '\'' +

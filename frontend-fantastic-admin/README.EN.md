@@ -1,129 +1,42 @@
 [中文](./README.md) | **English**
 
-<p align="center">
-  <img src="https://MRR-ADMIN.hurui.me/logo.svg" width="200" height="200" alt="MRR-ADMIN" />
-</p>
+# MRR Medical Record Repository Frontend
 
-<h1 align="center">MRR-ADMIN</h1>
+This directory contains the Vue 3 frontend for MRR. It supports medical record scanning, image review, analytics, access auditing, and system administration.
 
-<p align="center">An <b>out-of-the-box</b> Vue3 management system framework</p>
+For the project overview, deployment instructions, and license, see the [repository README](../README.md).
 
-<p align="center">
-  <a href="https://MRR-ADMIN.hurui.me" target="_blank">Official Website</a>
-  <span>&nbsp;|&nbsp;</span>
-  <a href="https://MRR-ADMIN.pages.dev" target="_blank">Backup URL</a>
-<p>
+## Local development
 
-<p align="center">
-  <a href="###"><img src="https://img.shields.io/github/license/MRR-ADMIN/basic?label=License&style=flat-square" alt="" /></a>
-  <a href="https://github.com/MRR-ADMIN/basic/releases" target="_blank"><img src="https://img.shields.io/github/v/release/MRR-ADMIN/basic?label=Version&style=flat-square" alt="" /></a>
-</p>
+```bash
+pnpm install
+pnpm dev
+```
 
-## Features
+The development server runs on `http://localhost:9000` by default and proxies API requests to `http://localhost:18045`.
 
-- Freely replaceable UI component library, default using Element Plus
-- Rich layouts and themes, covering various back-office application scenarios in the market, compatible with PC, tablet and mobile
-- Provides system configuration files for easy personalized customization
-- Automatically generates navigation bar based on route configuration
-- File system-based routing
-- Supports comprehensive permission verification
-- Built-in multi-level routing best caching solution
-- Easy internationalization and multi-language adaptation
-- Provides tab functionality with an experience close to native browser tab operations
+## Common commands
 
-## Download
+```bash
+pnpm lint:tsc
+pnpm lint:eslint
+pnpm lint:stylelint
+pnpm test:run
+pnpm build
+```
 
-> This repository is the basic version
+## Technology
 
-**Directly pulling the source code may include unreleased content. It is recommended to download the stable version zip package from the [Github Releases](https://github.com/MRR-ADMIN/basic/releases) page**. If you are sure you need to pull the source code, please refer to the following branch descriptions:
+- Vue 3, TypeScript, and Vite
+- Element Plus, UnoCSS, and Pinia
+- Vue Router, Axios, and Vitest
 
-- `main` Vue3 version framework source code branch, without example code, can be directly used for actual development
-- `example` Vue3 version demo source code branch, same as the online demo site, contains many examples, can be used for reference learning
-- ~~`vue2` Vue2 version framework source code branch, without example code, can be directly used for actual development~~ (discontinued)
-- ~~`vue2-example` Vue2 version demo source code branch, contains many examples, can be used for reference learning~~ (discontinued)
+## Structure
 
-## Preview
+- `src/api`: backend APIs and type definitions
+- `src/views`: application pages
+- `src/components`: reusable business components
+- `src/store`: Pinia stores
+- `src/router`: routing and route guards
 
-> Preview screenshots are from Vue3 Professional version
-
-<table>
-  <tr>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview1.png" alt="" /></td>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview2.png" alt="" /></td>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview3.png" alt="" /></td>
-  </tr>
-  <tr>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview4.png" alt="" /></td>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview5.png" alt="" /></td>
-    <td><img src="https://MRR-ADMIN.hurui.me/preview6.png" alt="" /></td>
-  </tr>
-</table>
-
-## Support
-
-If you think the MRR-ADMIN framework is good, or you are already using it, I hope you can give me a ⭐ on **Github**, which will be a great encouragement to me.
-
-[![star](https://img.shields.io/github/stars/MRR-ADMIN/basic?style=social)](https://github.com/MRR-ADMIN/basic)
-
-<details>
-<summary>Github Stars Curve</summary>
-
-[![Stargazers over time](https://starchart.cc/MRR-ADMIN/basic.svg)](https://starchart.cc/MRR-ADMIN/basic)
-</details>
-
-## Ecosystem
-
-<table>
-  <tr>
-    <th colspan="3" align="center">
-      <a href="https://hooray.github.io/fantastic-startkit/" target="_blank">Fantastic-startkit</a>
-    </th>
-  </tr>
-  <tr>
-    <th colspan="3" align="center">
-      A simple and easy-to-use Vue3 project startup kit
-    </th>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th colspan="3" align="center">
-      <a href="https://one-step-admin.hurui.me" target="_blank">One-step-admin</a>
-    </th>
-  </tr>
-  <tr>
-    <th colspan="3" align="center">
-      A Vue middle and back-office management system framework that's always one step ahead
-    </th>
-  </tr>
-  <tr>
-    <td><img src="https://one-step-admin.hurui.me/preview1.png" alt="" /></td>
-    <td><img src="https://one-step-admin.hurui.me/preview2.png" alt="" /></td>
-    <td><img src="https://one-step-admin.hurui.me/preview3.png" alt="" /></td>
-  </tr>
-  <tr>
-    <td><img src="https://one-step-admin.hurui.me/preview4.png" alt="" /></td>
-    <td><img src="https://one-step-admin.hurui.me/preview5.png" alt="" /></td>
-    <td><img src="https://one-step-admin.hurui.me/preview6.png" alt="" /></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <th colspan="4" align="center">
-      <a href="https://fantastic-mobile.hurui.me" target="_blank">Fantastic-mobile</a>
-    </th>
-  </tr>
-  <tr>
-    <th colspan="4" align="center">
-      A unique mobile H5 framework
-    </th>
-  </tr>
-  <tr>
-    <td><img src="https://fantastic-mobile.hurui.me/preview1.png" alt="" /></td>
-    <td><img src="https://fantastic-mobile.hurui.me/preview2.png" alt="" /></td>
-    <td><img src="https://fantastic-mobile.hurui.me/preview3.png" alt="" /></td>
-    <td><img src="https://fantastic-mobile.hurui.me/preview4.png" alt="" /></td>
-  </tr>
-</table>
+See [ENGINEERING.md](./ENGINEERING.md) for project conventions.

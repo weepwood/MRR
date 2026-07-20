@@ -1,4 +1,4 @@
-# MRR 医疗病案文件记录管理系统
+# MRR 管理系统
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen)](https://spring.io/projects/spring-boot)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)

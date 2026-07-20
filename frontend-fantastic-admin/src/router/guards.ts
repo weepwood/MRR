@@ -234,7 +234,7 @@ function setupKeepAlive(router: Router) {
           keepAliveStore.add(componentName)
         }
         else {
-          console.warn('[MRR-ADMIN] 该页面组件未设置组件名，会导致缓存失效，请检查')
+          console.warn('[MRR] 该页面组件未设置组件名，会导致缓存失效，请检查')
         }
       }
     }

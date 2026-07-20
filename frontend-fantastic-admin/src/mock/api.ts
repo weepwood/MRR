@@ -136,7 +136,7 @@ let roles = [
 ]
 
 let settings: Record<string, string> = {
-  'app.title': 'MRR-ADMIN Mock',
+  'app.title': 'MRR 管理系统（模拟）',
   'scan.defaultPageSize': '20',
   'audit.retentionDays': '180',
   'oss.enabled': 'true',

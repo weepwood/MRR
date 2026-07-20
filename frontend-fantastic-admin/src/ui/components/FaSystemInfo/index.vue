@@ -63,7 +63,7 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
       前端工程信息
     </FaDivider>
     <div class="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover-bg-secondary">
-      <span class="font-bold">Fantastic Admin 模板版本</span>
+      <span class="font-bold">前端应用版本</span>
       <span class="font-sans">{{ template.version }}</span>
     </div>
 

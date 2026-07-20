@@ -9,7 +9,7 @@ const productVersion = fs.readFileSync(
 
 export default defineConfig({
   title: `MRR 用户手册 v${productVersion}`,
-  description: 'MRR 医疗病案文件记录管理系统用户操作手册',
+  description: 'MRR管理系统用户操作手册',
   lang: 'zh-CN',
   base: '/docs/',
   srcDir: 'user-guide',

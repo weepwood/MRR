@@ -141,9 +141,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     // https://github.com/chengpeiquan/vite-plugin-banner
     banner(`
 /**
- * 由 MRR-ADMIN 提供技术支持
- * Powered by MRR-ADMIN
- * https://MRR-ADMIN.hurui.me
+ * MRR 管理系统
  */
     `),
 
@@ -198,11 +196,11 @@ DisableDevtool()
       name: 'vite-plugin-terminal-info',
       apply: 'serve',
       async buildStart() {
-        const { bold, green, cyan, bgGreen, underline } = picocolors
+        const { bold, green, bgGreen } = picocolors
         // eslint-disable-next-line no-console
         console.log(
           boxen(
-            `${bold(green(`由 ${bgGreen('MRR-ADMIN')} 驱动`))}\n\n${underline('https://MRR-ADMIN.hurui.me')}\n\n当前使用：${cyan('')}`,
+            `${bold(green(`正在启动 ${bgGreen('MRR 管理系统')}`))}`,
             {
               padding: 1,
               margin: 1,

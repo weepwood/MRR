@@ -8,6 +8,7 @@ import { computed, ref } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import type { AuthProfile } from '@/utils/auth-storage'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
 
 defineOptions({ name: 'LoginForm' })
@@ -60,7 +61,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
     userStore.setSession({
       token,
-      user: loginData?.user || loginData?.profile || payload?.user || {},
+      user: (loginData?.user || loginData?.profile || payload?.user || {}) as AuthProfile,
     })
     writeRememberedAccount(values.remember ? values.account : '')
     ElMessage.success('登录成功')

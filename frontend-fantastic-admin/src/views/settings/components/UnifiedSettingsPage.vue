@@ -41,6 +41,8 @@ const {
   handleReload,
   handleReset,
 } = useUnifiedSettings()
+
+void shellRef
 </script>
 
 <template>

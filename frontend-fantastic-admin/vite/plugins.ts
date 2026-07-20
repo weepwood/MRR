@@ -59,7 +59,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
         // Element Plus API 按需自动导入（ElMessage、ElMessageBox 等）
         ElementPlusResolver(),
       ],
-      dts: './src/types/auto-imports.d.ts',
+      dts: isBuild ? false : './src/types/auto-imports.d.ts',
       dirs: [
         './src/store/modules',
         './src/utils/composables',
@@ -79,7 +79,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
           importStyle: 'css',
         }),
       ],
-      dts: './src/types/components.d.ts',
+      dts: isBuild ? false : './src/types/components.d.ts',
     }),
 
     Unocss(),

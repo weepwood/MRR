@@ -14,4 +14,5 @@ public class ImageAuditAnalyticsDTO {
     private List<ImageAuditTrendDTO> trend = List.of();
     private List<ImageAuditCountDTO> actionDistribution = List.of();
     private List<ImageAuditCountDTO> topUsers = List.of();
+    private List<ImageAuditCountDTO> topTargets = List.of();
 }

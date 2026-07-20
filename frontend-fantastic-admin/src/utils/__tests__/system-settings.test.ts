@@ -51,7 +51,7 @@ describe('effective system settings', () => {
     expect(settings.archiveIpMaxChanges).toBe(5)
     expect(settings.patientIdCardRevealEnabled).toBe(true)
     expect(settings.patientIdCardCopyEnabled).toBe(true)
-    expect(settings.developerModeEnabled).toBe(false)
+    expect(settings.developerModeEnabled).toBe(true)
   })
 
   it('uses secure defaults and rejects unsupported modes', () => {
@@ -79,7 +79,7 @@ describe('effective system settings', () => {
     expect(settings.developerModeEnabled).toBe(false)
   })
 
-  it('does not serialize the retired developer mode setting', () => {
+  it('serializes developer mode for the key-value API', () => {
     const defaults = createDefaultSystemSettings()
     const serialized = serializeSystemSettings({
       ...defaults,
@@ -94,7 +94,7 @@ describe('effective system settings', () => {
     expect(serialized.systemAdminContactEnabled).toBe('false')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
-    expect(serialized).not.toHaveProperty('developerModeEnabled')
-    expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length - 1)
+    expect(serialized.developerModeEnabled).toBe('true')
+    expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

@@ -10,9 +10,9 @@ import {
   getPatientByBah,
 } from '@/api/modules/search'
 import {
-  getArchiveLookupValidationMessage,
   normalizeMedicalRecordCode,
   requiresSjhForBah,
+  resolveArchiveLookup,
 } from '@/utils/medical-record-code'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { createArchiveZip } from '../utils/client-zip'
@@ -59,36 +59,38 @@ export function useArchiveImages() {
   }
 
   async function loadImages(forceRefresh = false): Promise<void> {
-    const bah = padCode(searchBah.value)
-    const sjh = padCode(searchSjh.value)
+    const lookup = resolveArchiveLookup(searchBah.value, searchSjh.value)
+    const { bah, sjh } = lookup
     const userid = searchUserId.value.trim()
-    const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
     searchBah.value = bah
     searchSjh.value = sjh
 
-    if (validationMessage) {
+    if (lookup.validationMessage) {
       images.value = []
       patientList.value = []
-      errorMsg.value = validationMessage
-      ElMessage.warning(validationMessage)
+      errorMsg.value = lookup.validationMessage
+      ElMessage.warning(lookup.validationMessage)
       return
     }
+
+    const requestBah = lookup.requestBah || ''
+    const requestSjh = lookup.requestSjh || ''
 
     loading.value = true
     errorMsg.value = ''
     try {
       const res = await asResult<BAHImageData[]>(getImgByCode(
-        bah || undefined,
-        sjh || undefined,
+        requestBah || undefined,
+        requestSjh || undefined,
         forceRefresh,
         userid || undefined,
       ))
       const rawList = Array.isArray(res?.data) ? res.data : []
-      let cacheBuster = readArchiveImageVersion(bah, sjh)
+      let cacheBuster = readArchiveImageVersion(requestBah, requestSjh)
       if (forceRefresh) {
         cacheBuster = Date.now()
-        writeArchiveImageVersion(bah, sjh, cacheBuster)
+        writeArchiveImageVersion(requestBah, requestSjh, cacheBuster)
       }
       images.value = rawList.map((item: BAHImageData) => ({
         ...item,

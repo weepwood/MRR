@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.service;
 
-import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,12 +7,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
- * 读取并缓存系统级开发者模式开关。
+ * 旧版开发者模式兼容服务。
  *
- * <p>设置缺失、数据库异常或值无法识别时一律按关闭处理，避免配置故障意外放开认证。</p>
+ * <p>开发者模式曾允许无 Token 请求获得虚拟管理员会话，并放宽跨域策略。
+ * 该能力不能由数据库运行时设置控制，现已永久按关闭处理。保留本服务仅用于
+ * 兼容已有依赖和公共状态接口，后续版本可在完成前端入口清理后删除。</p>
  */
 @Service
 public class DeveloperModeService {
@@ -22,61 +22,33 @@ public class DeveloperModeService {
 
     private static final Logger logger = LoggerFactory.getLogger(DeveloperModeService.class);
     private static final Set<String> TRUE_VALUES = Set.of("true", "1", "yes", "on", "enabled");
-    private static final long CACHE_TTL_NANOS = TimeUnit.SECONDS.toNanos(3);
 
-    private final SystemSettingMapper systemSettingMapper;
-
-    private volatile boolean cachedEnabled;
-    private volatile long cacheExpiresAtNanos;
-
-    public DeveloperModeService(SystemSettingMapper systemSettingMapper) {
-        this.systemSettingMapper = systemSettingMapper;
-    }
-
-    public boolean isEnabled() {
-        long now = System.nanoTime();
-        if (now < cacheExpiresAtNanos) {
-            return cachedEnabled;
-        }
-
-        synchronized (this) {
-            now = System.nanoTime();
-            if (now < cacheExpiresAtNanos) {
-                return cachedEnabled;
-            }
-
-            boolean enabled = loadFromDatabase();
-            cachedEnabled = enabled;
-            cacheExpiresAtNanos = now + CACHE_TTL_NANOS;
-            return enabled;
-        }
+    public DeveloperModeService(SystemSettingMapper ignoredSystemSettingMapper) {
+        // 保留构造参数以兼容现有 Spring 装配和单元测试；不再读取数据库安全开关。
     }
 
     /**
-     * 系统设置写入成功后立即刷新缓存，使开关无需重启即可生效。
+     * 旧版开发者模式始终关闭。
      */
-    public synchronized void refreshFromValue(String value) {
-        cachedEnabled = parseEnabled(value);
-        cacheExpiresAtNanos = System.nanoTime() + CACHE_TTL_NANOS;
+    public boolean isEnabled() {
+        return false;
     }
 
-    public synchronized void disableImmediately() {
-        cachedEnabled = false;
-        cacheExpiresAtNanos = System.nanoTime() + CACHE_TTL_NANOS;
-    }
-
-    public synchronized void invalidate() {
-        cacheExpiresAtNanos = 0L;
-    }
-
-    private boolean loadFromDatabase() {
-        try {
-            SystemSetting setting = systemSettingMapper.findByKey(SETTING_KEY);
-            return setting != null && parseEnabled(setting.getSettingValue());
-        } catch (Exception exception) {
-            logger.error("读取开发者模式设置失败，已按关闭处理", exception);
-            return false;
+    /**
+     * 运行时设置不再能够启用认证旁路。
+     */
+    public void refreshFromValue(String value) {
+        if (parseEnabled(value)) {
+            logger.warn("忽略已停用的开发者模式启用请求；该设置不再影响认证或跨域策略");
         }
+    }
+
+    public void disableImmediately() {
+        // 已永久关闭，无需维护运行时状态。
+    }
+
+    public void invalidate() {
+        // 已永久关闭，无需维护运行时缓存。
     }
 
     static boolean parseEnabled(String value) {

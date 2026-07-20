@@ -24,6 +24,10 @@ public class Log {
     private String auditAction;
     private String auditTarget;
     private String auditDescription;
+    /** 审计查询派生字段，不写入 access_log。 */
+    private String bah;
+    private String sjh;
+    private String patientId;
 
     public Log() {
     }
@@ -59,6 +63,9 @@ public class Log {
                 ", auditAction='" + auditAction + '\'' +
                 ", auditTarget='" + auditTarget + '\'' +
                 ", auditDescription='" + auditDescription + '\'' +
+                ", bah='" + bah + '\'' +
+                ", sjh='" + sjh + '\'' +
+                ", patientId='" + patientId + '\'' +
                 '}';
     }
 }

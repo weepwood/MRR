@@ -47,6 +47,15 @@ class ArchiveAccessServiceTest {
     }
 
     @Test
+    void recordsAuditTargetForInternalUserWithoutExternalUserId() {
+        archiveAccessService.verifyAndRecord(null, "00000011", "00000021", request);
+
+        verify(request).setAttribute(ArchiveAccessAttributes.AUDIT_TARGET, "00000011:00000021");
+        verify(request, never()).setAttribute(eq(ArchiveAccessAttributes.USER_ID), any());
+        verify(archiveIpBindingMapper, never()).insertIfAbsent(any(), any(), any());
+    }
+
+    @Test
     void bindsFirstIpWithoutCountingAsAChange() {
         when(archiveIpBindingMapper.insertIfAbsent(any(LocalDate.class), eq("u1001"), eq("10.20.30.11")))
                 .thenReturn(1);

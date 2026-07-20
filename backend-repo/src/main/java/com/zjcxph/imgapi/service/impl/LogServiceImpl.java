@@ -115,6 +115,8 @@ public class LogServiceImpl implements LogService {
                 keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
         analytics.setTopUsers(logMapper.getTopImageAuditUsers(
                 keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
+        analytics.setTopTargets(logMapper.getTopImageAuditTargets(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
         return analytics;
     }
 

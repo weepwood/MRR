@@ -35,8 +35,8 @@ public class ArchiveAccessService {
     }
 
     /**
-     * 对 archive URL 中的明文 userid 执行每日 IP 绑定。
-     * userid 为空时保持现有内部访问兼容性，不启用绑定。
+     * 记录病案查询目标，并对 archive URL 中的明文 userid 执行每日 IP 绑定。
+     * userid 为空时仍记录真实病案号，但不启用外部用户 IP 绑定。
      *
      * 明确的参数错误和 IP 切换超限会拒绝访问；数据库或设置读取异常只记录错误并临时放行，
      * 避免辅助审计功能故障导致原有病案图片完全不可用。
@@ -48,6 +48,11 @@ public class ArchiveAccessService {
             String normalizedSjh,
             HttpServletRequest request
     ) {
+        request.setAttribute(
+                ArchiveAccessAttributes.AUDIT_TARGET,
+                buildAuditTarget(normalizedBah, normalizedSjh)
+        );
+
         String userid = normalizeUserId(rawUserId);
         if (userid == null) {
             return;
@@ -57,10 +62,6 @@ public class ArchiveAccessService {
         LocalDate accessDate = LocalDate.now();
 
         request.setAttribute(ArchiveAccessAttributes.USER_ID, userid);
-        request.setAttribute(
-                ArchiveAccessAttributes.AUDIT_TARGET,
-                buildAuditTarget(normalizedBah, normalizedSjh)
-        );
 
         try {
             verifyIpBinding(userid, clientIp, accessDate, request);

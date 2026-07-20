@@ -1,8 +1,15 @@
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
 import { MermaidMarkdown, MermaidPlugin } from 'vitepress-plugin-mermaid'
 
+const productVersion = fs.readFileSync(
+  fileURLToPath(new URL('../../VERSION', import.meta.url)),
+  'utf8',
+).trim()
+
 export default defineConfig({
-  title: 'MRR 内部文档',
+  title: `MRR 内部文档 v${productVersion}`,
   description: 'MRR 医疗病案文件记录管理系统开发、部署与运维文档',
   lang: 'zh-CN',
   srcExclude: [
@@ -17,14 +24,14 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#0a7c42' }],
     ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
-    ['meta', { property: 'og:title', content: 'MRR 内部文档' }],
+    ['meta', { property: 'og:title', content: `MRR 内部文档 v${productVersion}` }],
     ['meta', { property: 'og:description', content: 'MRR 开发、架构、部署与运维文档' }],
     ['meta', { property: 'og:type', content: 'website' }],
   ],
 
   themeConfig: {
     logo: '/logo.svg',
-    siteTitle: 'MRR 内部文档',
+    siteTitle: `MRR 内部文档 v${productVersion}`,
     nav: [
       { text: '首页', link: '/' },
       { text: '内部文档', link: '/internal/' },
@@ -57,6 +64,7 @@ export default defineConfig({
       { text: '安装配置', link: '/getting-started/installation' },
       { text: '用户手册', link: '/user-guide/' },
       { text: '更新记录', link: '/user-guide/changelog' },
+      { text: `v${productVersion}`, link: '/internal/release' },
     ],
 
     sidebar: {
@@ -91,7 +99,7 @@ export default defineConfig({
             { text: '生产运行手册', link: '/internal/runbook' },
             { text: '安全', link: '/internal/security' },
             { text: '故障排查', link: '/internal/troubleshooting' },
-            { text: '发布流程', link: '/internal/release' },
+            { text: `发布流程（v${productVersion}）`, link: '/internal/release' },
           ],
         },
       ],
@@ -131,7 +139,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/weepwood/MRR' },
     ],
     footer: {
-      message: '内部文档以当前代码、配置与 Flyway 迁移为准',
+      message: `内部文档以 VERSION、release-baseline.json 与当前代码为准（v${productVersion}）`,
       copyright: `Copyright © 2024-${new Date().getFullYear()} MRR Team`,
     },
     search: {

@@ -23,6 +23,7 @@ const router = useRouter()
 const settingsStore = useSettingsStore()
 const redirect = ref(route.query.redirect?.toString() ?? settingsStore.settings.home.fullPath)
 const copy = reactive<LoginPageSettings>({ ...DEFAULT_LOGIN_PAGE_SETTINGS })
+const productVersion = __SYSTEM_INFO__.product.version
 
 const features = computed(() => [
   { icon: Document, title: copy.loginFeature1Title, description: copy.loginFeature1Description },
@@ -61,6 +62,8 @@ onBeforeUnmount(() => {
       <div class="environment-badge">
         <span class="status-dot" />
         {{ copy.loginEnvironmentLabel }}
+        <span class="version-separator">·</span>
+        <span class="product-version">MRR v{{ productVersion }}</span>
       </div>
     </header>
 
@@ -157,6 +160,8 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 15%, transparent);
 }
+.version-separator { color: var(--mrr-border-strong); }
+.product-version { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--mrr-primary); }
 .login-shell {
   align-self: center;
   display: grid;

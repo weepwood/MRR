@@ -1,7 +1,14 @@
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
 
+const productVersion = fs.readFileSync(
+  fileURLToPath(new URL('../../VERSION', import.meta.url)),
+  'utf8',
+).trim()
+
 export default defineConfig({
-  title: 'MRR 用户手册',
+  title: `MRR 用户手册 v${productVersion}`,
   description: 'MRR 医疗病案文件记录管理系统用户操作手册',
   lang: 'zh-CN',
   base: '/docs/',
@@ -17,12 +24,13 @@ export default defineConfig({
 
   themeConfig: {
     logo: '/logo.svg',
-    siteTitle: 'MRR 用户手册',
+    siteTitle: `MRR 用户手册 v${productVersion}`,
     nav: [
       { text: '用户手册', link: '/' },
       { text: '常见问题', link: '/faq' },
       { text: '更新说明', link: '/release-notes' },
       { text: '更新记录', link: '/changelog' },
+      { text: `v${productVersion}`, link: '/release-notes' },
     ],
     sidebar: [
       {
@@ -57,6 +65,7 @@ export default defineConfig({
         text: '版本信息',
         collapsed: false,
         items: [
+          { text: `当前版本 v${productVersion}`, link: '/release-notes' },
           { text: '更新说明', link: '/release-notes' },
           { text: 'Git 更新记录', link: '/changelog' },
         ],

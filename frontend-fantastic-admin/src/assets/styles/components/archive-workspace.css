@@ -36,6 +36,32 @@ body.archive-immersive .archive-workspace {
   min-height: 0;
 }
 
+/*
+ * 侧栏标题与操作按钮允许整组换行，但标题本身禁止逐字压缩。
+ * 统计明细嵌入主布局后，可用宽度小于浏览器视口，不能只依赖 viewport 媒体查询。
+ */
+.archive-page .archive-header .archive-heading {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.archive-page .archive-header .archive-title {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.archive-page .archive-header .archive-title h2 {
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.archive-page .archive-header .heading-actions {
+  min-width: min-content;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* 档案袋主容器统一使用卡片圆角。 */
 .archive-page :is(
   .search-card,
@@ -101,5 +127,16 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
 
   body.archive-immersive .archive-workspace {
     height: auto !important;
+  }
+}
+
+@media (width <= 520px) {
+  .archive-page .archive-header .archive-heading {
+    align-items: flex-start;
+  }
+
+  .archive-page .archive-header .heading-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
   }
 }

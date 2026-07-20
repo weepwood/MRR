@@ -70,7 +70,7 @@ class ResultHttpStatusAdviceTest {
     }
 
     private MockHttpServletResponse apply(Result<?> result, MockHttpServletResponse servletResponse) {
-        advice.beforeBody(
+        advice.beforeBodyWrite(
                 result,
                 null,
                 MediaType.APPLICATION_JSON,

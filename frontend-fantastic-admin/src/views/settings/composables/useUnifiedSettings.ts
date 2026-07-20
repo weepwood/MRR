@@ -11,7 +11,7 @@ import {
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
-export type SettingsSection = 'system' | 'login-support' | 'archive' | 'security' | 'developer' | 'department' | 'appearance'
+export type SettingsSection = 'system' | 'login-support' | 'archive' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
 
 export const settingsNavItems = [
   { key: 'system', title: '系统信息', description: '名称、机构与系统简介', icon: 'i-ri:information-line' },
@@ -20,6 +20,7 @@ export const settingsNavItems = [
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
   { key: 'developer', title: '开发者模式', description: '接口兼容与跨域调试', icon: 'i-ri:code-box-line' },
   { key: 'department', title: '科室配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },
+  { key: 'external-links', title: '外部链接', description: '维护“其他”导航入口', icon: 'i-ri:links-line' },
   { key: 'appearance', title: '界面外观', description: '主题、导航与页面样式', icon: 'i-ri:layout-4-line' },
 ] as const
 

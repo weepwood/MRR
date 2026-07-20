@@ -6,6 +6,12 @@ const DEFAULT_FLUSH_INTERVAL_MS = 5000
 const DEFAULT_MAX_SEND_RETRIES = 2
 const DEFAULT_RETRY_DELAY_MS = 500
 
+export type RetryOutcome = 'succeeded' | 'failed' | 'canceled'
+export type QueuedResponseMetric = FrontendResponseMetric & {
+  retryCount?: number
+  retryOutcome?: RetryOutcome
+}
+
 interface ResponseMetricInput {
   requestId?: string
   endpointTemplate?: string
@@ -17,7 +23,7 @@ interface ResponseMetricInput {
   serverDurationMs?: number
   occurredAt?: string
   retryCount?: number
-  retryOutcome?: 'succeeded' | 'failed' | 'canceled'
+  retryOutcome?: RetryOutcome
 }
 
 export type ResponseMetricDropReason = 'overflow' | 'send-failed' | 'unload-failed' | 'disposed'
@@ -41,13 +47,13 @@ export interface ResponseMetricQueueOptions {
   flushIntervalMs?: number
   maxSendRetries?: number
   retryDelayMs?: number
-  unloadSender?: (metrics: FrontendResponseMetric[]) => boolean
+  unloadSender?: (metrics: QueuedResponseMetric[]) => boolean
   onDrop?: (event: ResponseMetricDropEvent) => void
   installUnloadHandlers?: boolean
 }
 
 export interface ResponseMetricQueue {
-  enqueue: (metric: FrontendResponseMetric) => void
+  enqueue: (metric: QueuedResponseMetric) => void
   flush: () => Promise<void>
   flushOnUnload: () => void
   getStats: () => ResponseMetricQueueStats
@@ -67,7 +73,7 @@ function sleep(delayMs: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, Math.max(0, delayMs)))
 }
 
-export function createResponseMetric(input: ResponseMetricInput): FrontendResponseMetric | null {
+export function createResponseMetric(input: ResponseMetricInput): QueuedResponseMetric | null {
   const requestId = input.requestId?.trim()
   const endpointTemplate = input.endpointTemplate?.trim()
   if (!requestId || !endpointTemplate || input.startedAt === undefined) {
@@ -94,7 +100,7 @@ export function createResponseMetric(input: ResponseMetricInput): FrontendRespon
 }
 
 export function createResponseMetricQueue(
-  sender: (metrics: FrontendResponseMetric[]) => Promise<unknown>,
+  sender: (metrics: QueuedResponseMetric[]) => Promise<unknown>,
   options: ResponseMetricQueueOptions = {},
 ): ResponseMetricQueue {
   const batchSize = normalizePositiveInteger(options.batchSize, DEFAULT_BATCH_SIZE)
@@ -104,7 +110,7 @@ export function createResponseMetricQueue(
   const retryDelayMs = normalizePositiveInteger(options.retryDelayMs, DEFAULT_RETRY_DELAY_MS)
   const installUnloadHandlers = options.installUnloadHandlers ?? true
 
-  let metrics: FrontendResponseMetric[] = []
+  let metrics: QueuedResponseMetric[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
   let pendingFlush: Promise<void> | undefined
   let disposed = false
@@ -142,7 +148,7 @@ export function createResponseMetricQueue(
     }
   }
 
-  async function sendBatch(batch: FrontendResponseMetric[]): Promise<void> {
+  async function sendBatch(batch: QueuedResponseMetric[]): Promise<void> {
     for (let attempt = 0; attempt <= maxSendRetries; attempt += 1) {
       try {
         await sender(batch)
@@ -179,7 +185,7 @@ export function createResponseMetricQueue(
     return pendingFlush
   }
 
-  function enqueue(metric: FrontendResponseMetric) {
+  function enqueue(metric: QueuedResponseMetric) {
     if (disposed) {
       recordDrop(1, 'disposed')
       return

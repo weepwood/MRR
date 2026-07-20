@@ -37,6 +37,16 @@ export function getImageAuditAnalytics(params: ImageAuditFilterParams) {
   return getRequest<ImageAuditAnalytics>('/api/v1/logs/audit/images/analytics', { params })
 }
 
+export function exportImageAuditLogs(params: ImageAuditFilterParams & {
+  scope?: 'all' | 'user' | 'target'
+  value?: string
+}) {
+  return api.get<Blob>('/api/v1/logs/audit/images/export', {
+    params,
+    responseType: 'blob',
+  })
+}
+
 export function getLogById(id: string | number) {
   return getRequest<LogRecord>(`/api/v1/logs/${id}`)
 }

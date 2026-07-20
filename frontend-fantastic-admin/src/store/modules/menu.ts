@@ -24,7 +24,14 @@ export const useMenuStore = defineStore(
               meta: {},
               children: [],
             })
-            returnMenus[0].children.push(...convertRouteToMenuRecursive(item.children))
+            returnMenus[0].children.push({
+              meta: {
+                title: item?.meta?.title,
+                icon: item?.meta?.icon,
+                auth: item?.meta?.auth,
+              },
+              children: convertRouteToMenuRecursive(item.children),
+            })
           }
           else {
             const menuItem: Menu.recordMainRaw = {

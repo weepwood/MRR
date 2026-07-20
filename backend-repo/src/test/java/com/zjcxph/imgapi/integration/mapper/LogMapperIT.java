@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Sql("classpath:schema-itest.sql")
 @DisplayName("LogMapper 图片审计聚合集成测试 (H2)")
-class LogMapperIntegrationTest {
+class LogMapperIT {
 
     @Autowired
     private LogMapper logMapper;

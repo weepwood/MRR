@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("ScanMapper PostgreSQL 16 + Flyway 集成测试")
-class ScanMapperPostgresqlIntegrationTest {
+class ScanMapperPostgresqlIT {
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =

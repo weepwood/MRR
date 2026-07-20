@@ -119,10 +119,11 @@ function auditIdentifiers(row?: LogRecord | null): AuditIdentifiers {
   const queryParams = parseEncodedParams(row.queryString)
   const body = parseJsonIdentifiers(row.requestBody)
   const target = String(row.auditTarget || '').trim()
-  let bah = String(queryParams.get('bah') || body.bah || '').trim()
-  let sjh = String(queryParams.get('sjh') || body.sjh || '').trim()
+  let bah = String(row.bah || queryParams.get('bah') || body.bah || '').trim()
+  let sjh = String(row.sjh || queryParams.get('sjh') || body.sjh || '').trim()
   const idCard = String(
-    queryParams.get('idCard')
+    row.patientId
+      || queryParams.get('idCard')
       || queryParams.get('idcard')
       || queryParams.get('patientId')
       || queryParams.get('patientid')
@@ -286,63 +287,31 @@ onMounted(loadData)
         <p class="subtitle">按用户和病历双向追溯访问关系，并导出完整审计证据。</p>
       </div>
       <div class="header-actions">
-        <el-button :loading="exportLoading" @click="exportAudit('all')">
-          <el-icon><Download /></el-icon>导出当前明细
-        </el-button>
-        <el-button :loading="loading || analyticsLoading" @click="loadData">
-          <el-icon><Refresh /></el-icon>刷新
-        </el-button>
+        <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
+        <el-button :loading="loading || analyticsLoading" @click="loadData"><el-icon><Refresh /></el-icon>刷新</el-button>
       </div>
     </div>
 
     <el-card shadow="never" class="filter-card">
       <el-form inline @submit.prevent>
-        <el-form-item label="关键字">
-          <el-input v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="用户">
-          <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="客户端 IP">
-          <el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="访问类型">
-          <el-select v-model="query.auditAction" clearable placeholder="全部" style="width: 190px;">
-            <el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态码">
-          <el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 120px;">
-            <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="访问时间">
-          <el-date-picker v-model="query.timeRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>查询</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-        </el-form-item>
+        <el-form-item label="关键字"><el-input v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="用户"><el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="客户端 IP"><el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" style="width: 190px;"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 120px;"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+        <el-form-item><el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>查询</el-button><el-button @click="resetFilters">重置</el-button></el-form-item>
       </el-form>
     </el-card>
 
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
-
-    <AuditAnalytics
-      :analytics="analytics"
-      :loading="analyticsLoading"
-      @export-user="value => exportAudit('user', value)"
-      @export-target="value => exportAudit('target', value)"
-    />
+    <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
     <el-card shadow="never" class="detail-card">
       <template #header>
         <div class="section-header">
           <div><strong>最近访问明细</strong><span>病案号、上架号和身份证号独立展示</span></div>
-          <div class="section-actions">
-            <el-tag type="info" effect="plain">共 {{ total.toLocaleString('zh-CN') }} 条</el-tag>
-            <el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button>
-          </div>
+          <div class="section-actions"><el-tag type="info" effect="plain">共 {{ total.toLocaleString('zh-CN') }} 条</el-tag><el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button></div>
         </div>
       </template>
       <AppLoading v-if="loading" type="table" :rows="8" />

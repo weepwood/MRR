@@ -180,6 +180,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
       padding-inline: 10px !important;
       font-weight: 620;
       color: var(--text-primary) !important;
+      background: color-mix(in srgb, var(--mrr-navigation-hover) 52%, transparent);
       border-color: transparent;
       border-radius: var(--mrr-radius-md);
     }
@@ -189,8 +190,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
       padding-inline-start: 2px;
     }
 
-    :deep(.menu-item-container) {
-      background: color-mix(in srgb, var(--mrr-navigation-hover) 52%, transparent);
+    :deep(.sub-menu .menu-item-container) {
+      background: transparent;
     }
 
     :deep(.menu-item-container:hover) {

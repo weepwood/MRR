@@ -111,8 +111,8 @@ export default defineConfig(({ mode, command }) => {
     },
     // 构建选项 https://cn.vitejs.dev/config/build-options
     build: {
-      // 固定浏览器兼容契约，避免 Vite 升级后默认目标变化。
-      target: ['chrome111', 'edge111', 'firefox114', 'safari16.4'],
+      // Chrome 109 是内网终端的最低兼容基线；其余浏览器保持既有要求。
+      target: ['chrome109', 'edge111', 'firefox114', 'safari16.4'],
       outDir: mode === 'production' ? 'dist' : `dist-${mode}`,
       sourcemap: env.VITE_BUILD_SOURCEMAP === 'true',
       rolldownOptions: {

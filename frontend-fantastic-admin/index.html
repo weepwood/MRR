@@ -21,7 +21,7 @@
             此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
           </div>
           <div class="browser-compat-requirement">
-            最低支持：Edge 111、Chrome 111、Firefox 114、Safari 16.4。
+            最低支持：Edge 111、Chrome 109、Firefox 114、Safari 16.4。
           </div>
         </div>
       </div>
@@ -31,7 +31,7 @@
       (function () {
         var minimumVersions = {
           Edge: '111',
-          Chrome: '111',
+          Chrome: '109',
           Firefox: '114',
           Safari: '16.4'
         }
@@ -84,7 +84,7 @@
           }
 
           // Chromium 内核浏览器不一定携带 Chrome 标识，例如 Chromium 本身。
-          // 统一按内核主版本判断，低于 111 时必须显示升级提示。
+          // 统一按内核主版本判断，低于 109 时必须显示升级提示。
           match = userAgent.match(/(?:Chrome|Chromium|CriOS)\/([\d.]+)/)
           if (match) {
             return { name: 'Chrome', version: match[1] }
@@ -94,21 +94,14 @@
         }
 
         function lacksRequiredFeatures() {
-          var supportsColorMix = false
-          try {
-            supportsColorMix = !!(window.CSS && CSS.supports && CSS.supports('color', 'color-mix(in srgb, #000 50%, #fff)'))
-          }
-          catch (error) {
-            supportsColorMix = false
-          }
-
+          // 这里只检测会阻断应用启动的基础能力。color-mix()、backdrop-filter
+          // 等视觉增强能力允许在 Chrome 109 中降级，不能作为启动阻断条件。
           return typeof window.Promise !== 'function'
             || typeof window.fetch !== 'function'
             || typeof window.URL !== 'function'
             || typeof window.TextEncoder !== 'function'
             || typeof Array.prototype.at !== 'function'
             || typeof Array.prototype.findLast !== 'function'
-            || !supportsColorMix
         }
 
         function blockApplication(reason, title) {

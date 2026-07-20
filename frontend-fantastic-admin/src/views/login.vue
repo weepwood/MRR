@@ -32,6 +32,22 @@ const features = computed(() => [
 ])
 const loginTitle = computed(() => `登录 ${copy.systemShortName || 'MRR'}`)
 const footerText = computed(() => [copy.organizationName, copy.loginFooterText].filter(Boolean).join(' · '))
+const sessionNotice = computed(() => {
+  const status = route.query.session?.toString()
+  if (status === 'unavailable') {
+    return {
+      type: 'warning' as const,
+      title: '认证服务暂时不可用，原登录状态已保留。可以稍后刷新重试，或直接重新登录。',
+    }
+  }
+  if (status === 'expired') {
+    return {
+      type: 'info' as const,
+      title: '原登录状态已失效或账号凭据发生变化，请重新登录。',
+    }
+  }
+  return undefined
+})
 
 async function loadCopy() {
   Object.assign(copy, await getPublicLoginPageSettings())
@@ -98,6 +114,15 @@ onBeforeUnmount(() => {
           <h2>{{ loginTitle }}</h2>
           <p>{{ copy.loginFormDescription }}</p>
         </div>
+
+        <el-alert
+          v-if="sessionNotice"
+          class="session-notice"
+          :type="sessionNotice.type"
+          :title="sessionNotice.title"
+          :closable="false"
+          show-icon
+        />
 
         <LoginForm @on-login="handleLogin" />
 
@@ -216,6 +241,7 @@ onBeforeUnmount(() => {
 .form-panel { display: flex; flex-direction: column; justify-content: center; padding: 52px 48px; background: var(--mrr-card); }
 .form-header h2 { margin: var(--mrr-space-2) 0 0; font-size: 28px; letter-spacing: -0.025em; }
 .form-header p { margin: var(--mrr-space-2) 0 0; font-size: 13px; color: var(--mrr-muted-foreground); }
+.session-notice { margin-top: var(--mrr-space-4); }
 .login-help { display: flex; gap: var(--mrr-space-3); align-items: flex-start; padding: var(--mrr-space-4); margin-top: var(--mrr-space-5); color: var(--color-info); background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border)); border-radius: var(--mrr-radius-md); }
 .login-help p { margin: 0; font-size: 11px; line-height: 1.7; color: var(--mrr-muted-foreground); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }

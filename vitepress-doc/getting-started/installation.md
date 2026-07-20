@@ -109,7 +109,7 @@ image.url=http://localhost:8005/ba-img
 敏感值优先使用环境变量：
 
 ```powershell
-$env:SPRING_DATASOURCE_PASSWORD = '数据库密码'
+$env:SPRING_DATASOURCE_PASSWORD = '你的数据库密码'
 $env:JWT_SECRET_KEY = '足够长的随机 JWT 密钥'
 $env:AES_SECRET_KEY = '至少 32 字节的随机 AES 密钥'
 $env:OSS_ACCESS_KEY_ID = 'OSS AccessKey ID'
@@ -164,7 +164,7 @@ pnpm test:run
 pnpm build
 ```
 
-最低浏览器版本为 Edge 111、Chrome 111、Firefox 114 和 Safari 16.4。
+最低浏览器版本为 Edge 111、Chrome 109、Firefox 114 和 Safari 16.4。Chrome 109 以核心业务流程可用为兼容目标，部分较新的视觉效果会自动降级。
 
 ## 构建文档
 

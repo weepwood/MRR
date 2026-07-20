@@ -17,6 +17,7 @@ const props = withDefaults(
     mode: 'vertical',
     collapse: false,
     showCollapseName: false,
+    leadingExpandIndicator: false,
   },
 )
 

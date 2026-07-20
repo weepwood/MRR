@@ -20,12 +20,17 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,6 +42,20 @@ public class LogInterceptor implements HandlerInterceptor {
     private static final String REQUEST_ID_ATTR = "requestId";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ENDPOINT_TEMPLATE_HEADER = "X-Endpoint-Template";
+    private static final int MAX_REFERER_LENGTH = 4096;
+    private static final int MAX_REQUEST_BODY_LENGTH = 16384;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 2048;
+
+    private static final Set<String> SENSITIVE_PARAMETER_NAMES = Set.of(
+            "password", "oldpassword", "newpassword", "confirmpassword",
+            "token", "accesstoken", "refreshtoken", "authorization",
+            "secret", "clientsecret", "signature", "sign", "ticket",
+            "apikey", "api_key", "privatekey", "private_key"
+    );
+
+    private static final Pattern JSON_STRING_FIELD = Pattern.compile(
+            "(\"([^\"]+)\"\\s*:\\s*\")([^\"]*)(\")"
+    );
 
     private final AsyncLogService asyncLogService;
     private final MeterRegistry meterRegistry;
@@ -102,22 +121,21 @@ public class LogInterceptor implements HandlerInterceptor {
             }
         }
 
+        log.setRequestId(stringAttribute(request, REQUEST_ID_ATTR));
         log.setClientIp(IpUtil.getClientIp(request));
-        log.setRequestUri(endpointTemplate(request));
+        log.setRequestUri(request.getRequestURI());
+        log.setEndpointTemplate(endpointTemplate(request));
         log.setMethod(request.getMethod());
-        log.setUserAgent(request.getHeader("User-Agent"));
+        log.setUserAgent(truncate(request.getHeader("User-Agent"), MAX_REFERER_LENGTH));
         log.setAccessTime(new Date());
-        log.setQueryString(redactQueryString(request.getQueryString()));
+        log.setQueryString(sanitizeQueryString(request.getQueryString()));
         log.setRequestBody(getRequestBody(request));
         log.setResponseStatus(String.valueOf(response.getStatus()));
         log.setExecuteTime(executeTime);
-        log.setReferer(request.getHeader("Referer") == null ? null : "[REDACTED]");
+        log.setReferer(sanitizeReferer(request.getHeader("Referer")));
+        log.setErrorMessage(formatError(ex));
 
         enrichAuditFields(log, request);
-        if (stringAttribute(request, ArchiveAccessAttributes.AUDIT_TARGET) == null) {
-            log.setAuditTarget(pseudonymizeAuditTarget(log.getAuditTarget()));
-        }
-
         asyncLogService.saveLogAsync(log);
 
         Counter.builder("http.requests.total")
@@ -289,41 +307,131 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     private String getRequestBody(HttpServletRequest request) {
-        if (!(request instanceof ContentCachingRequestWrapper)) {
+        if (!(request instanceof ContentCachingRequestWrapper wrapper)) {
             return "";
         }
 
-        ContentCachingRequestWrapper wrapper = (ContentCachingRequestWrapper) request;
         byte[] content = wrapper.getContentAsByteArray();
         if (content.length == 0) {
             return "";
         }
-        return "[OMITTED " + content.length + " bytes]";
+
+        String contentType = request.getContentType();
+        String normalizedContentType = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
+        if (normalizedContentType.startsWith("multipart/")
+                || normalizedContentType.contains("application/octet-stream")
+                || normalizedContentType.startsWith("image/")
+                || normalizedContentType.startsWith("audio/")
+                || normalizedContentType.startsWith("video/")) {
+            return "[BINARY OMITTED " + content.length + " bytes; content-type=" + normalizedContentType + "]";
+        }
+
+        String body = new String(content, StandardCharsets.UTF_8);
+        if (normalizedContentType.contains("application/x-www-form-urlencoded")) {
+            return truncate(sanitizeQueryString(body), MAX_REQUEST_BODY_LENGTH);
+        }
+        return truncate(sanitizeJsonStringFields(body), MAX_REQUEST_BODY_LENGTH);
     }
 
-    private String redactQueryString(String queryString) {
+    private String sanitizeQueryString(String queryString) {
         if (queryString == null || queryString.isBlank()) {
             return queryString;
         }
         return Stream.of(queryString.split("&", -1))
                 .map(parameter -> {
                     int separator = parameter.indexOf('=');
-                    String name = separator < 0 ? parameter : parameter.substring(0, separator);
-                    return name + "=[REDACTED]";
+                    String rawName = separator < 0 ? parameter : parameter.substring(0, separator);
+                    if (separator < 0 || !isSensitiveName(decodeParameterName(rawName))) {
+                        return parameter;
+                    }
+                    String rawValue = parameter.substring(separator + 1);
+                    return rawName + "=" + hashForAudit(rawValue);
                 })
                 .collect(Collectors.joining("&"));
     }
 
-    private String pseudonymizeAuditTarget(String target) {
-        if (target == null || target.isBlank()) {
-            return target;
+    private String sanitizeReferer(String referer) {
+        if (referer == null || referer.isBlank()) {
+            return referer;
+        }
+        int fragmentIndex = referer.indexOf('#');
+        String withoutFragment = fragmentIndex >= 0 ? referer.substring(0, fragmentIndex) : referer;
+        int queryIndex = withoutFragment.indexOf('?');
+        if (queryIndex < 0) {
+            return truncate(withoutFragment, MAX_REFERER_LENGTH);
+        }
+        String base = withoutFragment.substring(0, queryIndex);
+        String query = withoutFragment.substring(queryIndex + 1);
+        return truncate(base + "?" + sanitizeQueryString(query), MAX_REFERER_LENGTH);
+    }
+
+    private String sanitizeJsonStringFields(String body) {
+        Matcher matcher = JSON_STRING_FIELD.matcher(body);
+        StringBuffer sanitized = new StringBuffer();
+        while (matcher.find()) {
+            if (!isSensitiveName(matcher.group(2))) {
+                matcher.appendReplacement(sanitized, Matcher.quoteReplacement(matcher.group()));
+                continue;
+            }
+            String replacement = matcher.group(1) + hashForAudit(matcher.group(3)) + matcher.group(4);
+            matcher.appendReplacement(sanitized, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sanitized);
+        return sanitized.toString();
+    }
+
+    private String decodeParameterName(String name) {
+        try {
+            return URLDecoder.decode(name, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException exception) {
+            return name;
+        }
+    }
+
+    private boolean isSensitiveName(String name) {
+        if (name == null) {
+            return false;
+        }
+        String normalized = name.toLowerCase(Locale.ROOT)
+                .replace("-", "")
+                .replace("_", "")
+                .replace("[", "")
+                .replace("]", "");
+        return SENSITIVE_PARAMETER_NAMES.contains(normalized)
+                || normalized.endsWith("password")
+                || normalized.endsWith("token")
+                || normalized.endsWith("secret")
+                || normalized.endsWith("signature");
+    }
+
+    private String formatError(Exception exception) {
+        if (exception == null) {
+            return null;
+        }
+        String message = exception.getClass().getName();
+        if (exception.getMessage() != null && !exception.getMessage().isBlank()) {
+            message += ": " + exception.getMessage();
+        }
+        return truncate(message, MAX_ERROR_MESSAGE_LENGTH);
+    }
+
+    private String hashForAudit(String value) {
+        if (value == null || value.isBlank()) {
+            return "[EMPTY]";
         }
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(target.getBytes(StandardCharsets.UTF_8));
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
             return "sha256:" + HexFormat.of().formatHex(digest, 0, 16);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
         }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength) + "...[TRUNCATED]";
     }
 }

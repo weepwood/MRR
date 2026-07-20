@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -149,9 +150,33 @@ class StatisticsServiceImplTest {
         @DisplayName("findWithConditionAndPagination — 含 bah/sjh 条件")
         void findWithConditionAndPagination_withBahAndSjh() {
             when(statisticsMapper.findWithConditionAndPagination(0, 10, null, "78", "SJH001", null, null, null, "date", "desc"))
-                .thenReturn(List.of(mockStat));
+                    .thenReturn(List.of(mockStat));
             var result = statisticsService.findWithConditionAndPagination(1, 10, null, "0078", "SJH001", null, null, null, "date", "desc");
             assertThat(result).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("findWithConditionForExport — 允许导出100000条且不走普通分页校验")
+        void findWithConditionForExport() {
+            when(statisticsMapper.findWithConditionAndPagination(
+                    0, 100000, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc"))
+                    .thenReturn(List.of(mockStat));
+
+            var result = statisticsService.findWithConditionForExport(
+                    100000, "007", null, null, "CT", "2026-01-01", "2026-12-31");
+
+            assertThat(result).containsExactly(mockStat);
+            verify(statisticsMapper).findWithConditionAndPagination(
+                    0, 100000, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc");
+        }
+
+        @Test
+        @DisplayName("findWithConditionForExport — 超过导出上限抛异常")
+        void findWithConditionForExport_invalidLimit() {
+            assertThatThrownBy(() -> statisticsService.findWithConditionForExport(
+                    100001, null, null, null, null, null, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("导出条数必须在1-100000之间");
         }
 
         @Test

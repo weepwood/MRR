@@ -79,6 +79,8 @@ public class ResponseMetricServiceImpl implements ResponseMetricService {
         metric.setSuccess(isSuccessful(request));
         metric.setClientDurationMs(request.getClientDurationMs());
         metric.setServerDurationMs(request.getServerDurationMs());
+        metric.setRetryCount(request.getRetryCount() == null ? 0 : request.getRetryCount());
+        metric.setRetryOutcome(request.getRetryOutcome());
         metric.setOccurredAt(Timestamp.from(Instant.now()));
         return metric;
     }

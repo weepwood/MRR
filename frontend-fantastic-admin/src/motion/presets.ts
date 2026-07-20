@@ -1,3 +1,5 @@
+// Keep administrative interactions brief: motion should explain state changes,
+// not delay access to medical-record workflows.
 export const motionDurations = {
   instant: 0.1,
   fast: 0.14,

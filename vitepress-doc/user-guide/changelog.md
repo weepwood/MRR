@@ -9,12 +9,18 @@ outline: [2, 3]
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 从 Git 提交历史自动生成，请勿手工维护提交列表。
 
 - 当前分支：`dev-no-login`
-- 更新至：2026-07-17 · `a85fcbb`
-- 记录范围：最近 361 条第一父级提交（上限 1000 条）
+- 更新至：2026-07-19 · `3e1303d`
+- 记录范围：最近 364 条第一父级提交（上限 1000 条）
 - 合并提交：优先使用 Pull Request 描述的首行作为更新内容
+
+## 2026-07-19
+
+- **新增** 完善认证、用户凭据与外部影像安全访问（[`3e1303d`](https://github.com/weepwood/MRR/commit/3e1303d50a8f637f302e21446713903354a77e0d) · [#84](https://github.com/weepwood/MRR/pull/84)）— weepwood
 
 ## 2026-07-17
 
+- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`8149342`](https://github.com/weepwood/MRR/commit/81493429d5ba0c417023669a705ec78fe9e33f3a)）— weepwood
+- **维护** `pom` 升级后端项目版本号从0.3.0到0.3.1（[`93f9b3a`](https://github.com/weepwood/MRR/commit/93f9b3a62d99e74b8f14f193fb7afbac8481552d)）— weepwood
 - **新增** `archive` add scroll preview scaling（[`a85fcbb`](https://github.com/weepwood/MRR/commit/a85fcbb6e35587bb5d1739a0fdeb9fe6376a7e44)）— weepwood
 - **新增** `archive` refine display preferences（[`43fcb60`](https://github.com/weepwood/MRR/commit/43fcb604fe7a4411b86ed2dc5eea1a6e95e5a016)）— weepwood
 - **合并** sync fullscreen image navigation（[`57b4d52`](https://github.com/weepwood/MRR/commit/57b4d52f5b1f01026475d2ca46f7efcb0fd43d28)）— weepwood

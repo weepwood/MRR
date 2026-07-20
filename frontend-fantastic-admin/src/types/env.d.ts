@@ -9,7 +9,7 @@ interface ImportMetaEnv {
    */
   readonly VITE_APP_DEBUG_TOOL: string
   /**
-   * 展示模式跳过认证接口，便于仅启动前端时浏览页面
+   * 默认联调真实登录；仅使用 .env.mock 时启用展示模式。
    */
   readonly VITE_APP_DEMO_MODE: boolean
   /**

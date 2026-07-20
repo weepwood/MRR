@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   motion-lock-bootstrap:
-    if: github.ref == 'refs/heads/feat/motion-interactions-poc'
+    if: github.head_ref == 'feat/motion-interactions-poc' || github.ref == 'refs/heads/feat/motion-interactions-poc'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:

@@ -9,18 +9,61 @@ on:
     branches:
       - dev-no-login
       - main
+      - feat/motion-interactions-poc
     tags:
       - 'v*'
       - '*.*.*'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: quality-gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  motion-lock-bootstrap:
+    if: github.ref == 'refs/heads/feat/motion-interactions-poc'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/motion-interactions-poc
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Update dependency lockfile
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Commit lockfile when changed
+        shell: bash
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "Lockfile is already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(frontend): update lockfile for motion-v"
+          git push origin "HEAD:feat/motion-interactions-poc"
+
   release-baseline-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5

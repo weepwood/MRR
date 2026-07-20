@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,15 +67,19 @@ public class SystemSettingController {
         if (settings == null || settings.isEmpty()) {
             return Result.fail(400, "设置内容不能为空");
         }
-        String restrictedKey = settings.keySet().stream()
-                .filter(RUNTIME_SECURITY_KEYS::contains)
-                .findFirst()
-                .orElse(null);
-        if (restrictedKey != null) {
-            return restrictedSettingResult(restrictedKey);
+
+        Map<String, String> writableSettings = new LinkedHashMap<>(settings);
+        RUNTIME_SECURITY_KEYS.forEach(key -> {
+            if (writableSettings.remove(key) != null) {
+                logger.warn("忽略批量设置请求中的安全敏感配置: key={}", key);
+            }
+        });
+        if (writableSettings.isEmpty()) {
+            return Result.fail(400, "没有可写入的系统设置");
         }
-        systemSettingService.saveSettings(settings, null);
-        logger.info("系统设置已更新: {} 项", settings.size());
+
+        systemSettingService.saveSettings(writableSettings, null);
+        logger.info("系统设置已更新: {} 项", writableSettings.size());
         return Result.<Void>success(null).message("设置已保存");
     }
 

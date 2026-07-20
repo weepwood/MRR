@@ -93,10 +93,7 @@ function redirectToRequiredPasswordChange() {
   if (isRedirectingToPasswordChange) return
   isRedirectingToPasswordChange = true
 
-  const userStore = useUserStore()
-  const nextProfile = { ...userStore.profile, mustChangePassword: true }
-  userStore.profile.mustChangePassword = true
-  localStorage.setItem('profile', JSON.stringify(nextProfile))
+  useUserStore().markPasswordChangeRequired()
 
   if (window.location.pathname !== '/password/change-required') {
     window.location.assign('/password/change-required')

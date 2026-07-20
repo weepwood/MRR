@@ -9,6 +9,9 @@ declare module 'axios' {
     idempotencyKey?: string
     metricRetryCount?: number
     metricRetryOutcome?: 'succeeded' | 'failed' | 'canceled'
+    skipGlobalError?: boolean
+    skipResponseMetrics?: boolean
+    metricStartedAt?: number
   }
 }
 

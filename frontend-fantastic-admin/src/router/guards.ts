@@ -21,8 +21,8 @@ function setupRoutes(router: Router) {
       name: 'login',
       replace: true,
       query: {
-        ...(to.fullPath !== settingsStore.settings.home.fullPath && { redirect: to.fullPath }),
-        ...(reason && { session: reason }),
+        ...(to.fullPath !== settingsStore.settings.home.fullPath ? { redirect: to.fullPath } : {}),
+        ...(reason ? { session: reason } : {}),
       },
     })
 

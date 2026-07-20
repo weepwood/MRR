@@ -4,9 +4,6 @@ export default function useAuth() {
   function hasPermission(permission: string) {
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
-    if (!userStore.isSessionVerified) {
-      return false
-    }
     if (String(userStore.profile?.roleCode || '').toUpperCase() === 'ADMIN') {
       return true
     }

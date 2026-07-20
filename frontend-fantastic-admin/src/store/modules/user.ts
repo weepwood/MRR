@@ -2,19 +2,24 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import router from '@/router'
-import type { AuthProfile } from '@/utils/auth-storage'
-import {
-  clearAuthSessionStorage,
-  readAuthStorage,
-  writeAuthProfile,
-  writeAuthSession,
-} from '@/utils/auth-storage'
 import { useMenuStore } from './menu'
 import { useRouteStore } from './route'
 import { useSettingsStore } from './settings'
 import { useTabbarStore } from './tabbar'
 
-export type AuthSessionStatus = 'anonymous' | 'candidate' | 'verifying' | 'verified' | 'unavailable'
+interface Profile {
+  id?: number
+  username?: string
+  displayName?: string
+  roleCode?: string
+  roleName?: string
+  permissions?: string[]
+  status?: string
+  mustChangePassword?: boolean
+  passwordVersion?: number
+  temporaryPasswordExpiresAt?: string
+  lastLoginAt?: string
+}
 
 const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 
@@ -23,59 +28,41 @@ export const useUserStore = defineStore('user', () => {
   const routeStore = useRouteStore()
   const menuStore = useMenuStore()
   const tabbarStore = useTabbarStore()
-  const initialSession = readAuthStorage()
 
-  const account = ref(initialSession.account)
-  const token = ref(initialSession.token)
-  const avatar = ref(initialSession.avatar)
-  const permissions = ref<string[]>(initialSession.permissions)
-  const profile = ref<AuthProfile>(initialSession.profile)
-  const sessionStatus = ref<AuthSessionStatus>(initialSession.token ? 'candidate' : 'anonymous')
+  const account = ref(localStorage.account ?? '')
+  const token = ref(localStorage.token ?? '')
+  const avatar = ref(localStorage.avatar ?? '')
+  const permissions = ref<string[]>(JSON.parse(localStorage.permissions ?? '[]'))
+  const profile = ref<Profile>(JSON.parse(localStorage.profile ?? 'null') ?? {})
 
   const isLogin = computed(() => Boolean(token.value))
-  const isSessionVerified = computed(() => Boolean(token.value) && sessionStatus.value === 'verified')
-  const mustChangePassword = computed(() => isSessionVerified.value && Boolean(profile.value.mustChangePassword))
+  const mustChangePassword = computed(() => Boolean(profile.value.mustChangePassword))
 
-  function persistProfile(nextProfile: AuthProfile) {
+  function persistProfile(nextProfile: Profile) {
     profile.value = nextProfile
     permissions.value = Array.isArray(nextProfile.permissions) ? nextProfile.permissions : []
-    account.value = nextProfile.displayName || nextProfile.username || account.value || ''
-    avatar.value = typeof nextProfile.avatar === 'string' ? nextProfile.avatar : avatar.value
-    writeAuthProfile(nextProfile, account.value, permissions.value)
+    localStorage.setItem('profile', JSON.stringify(nextProfile))
+    localStorage.setItem('permissions', JSON.stringify(permissions.value))
+    localStorage.setItem('account', nextProfile.displayName || nextProfile.username || account.value || '')
   }
 
-  function setSession(session: { token: string, user: AuthProfile }) {
-    const nextToken = session.token?.trim() || ''
-    if (!nextToken) {
-      clearSession()
-      return
-    }
-
+  function setSession(session: { token: string, user: Profile }) {
     const user = session.user || {}
-    token.value = nextToken
-    avatar.value = typeof user.avatar === 'string' ? user.avatar : ''
+    token.value = session.token || ''
+    localStorage.setItem('token', session.token || '')
+    avatar.value = (user as any).avatar || ''
+    localStorage.setItem('avatar', (user as any).avatar || '')
     account.value = user.displayName || user.username || ''
-    profile.value = user
-    permissions.value = Array.isArray(user.permissions) ? user.permissions : []
-    sessionStatus.value = 'verified'
-    writeAuthSession({
-      token: token.value,
-      account: account.value,
-      avatar: avatar.value,
-      profile: profile.value,
-      permissions: permissions.value,
-    })
+    persistProfile(user)
   }
 
   async function login(data: { account: string, password: string }) {
     const res = await apiUser.login(data)
     const payload: any = res.data || {}
     const loginData: any = payload.data || payload
-    const returnedUser: AuthProfile = loginData.user || loginData.profile || payload.user || {}
-    const user = returnedUser.displayName || returnedUser.username
-      ? returnedUser
-      : { ...returnedUser, username: data.account }
+    const user: Profile = loginData.user || loginData.profile || payload.user || {}
     setSession({ token: loginData.token || loginData.accessToken || loginData.jwt || '', user })
+    if (!user.displayName && !user.username) account.value = data.account
     return loginData.nextAction || (user.mustChangePassword ? 'CHANGE_PASSWORD' : 'NONE')
   }
 
@@ -84,6 +71,7 @@ export const useUserStore = defineStore('user', () => {
     const shouldRevokeToken = !isDemoMode && Boolean(token.value)
 
     // 必须先携带当前 Bearer Token 请求后端撤销，再清理本地会话。
+    // 先删除 token 会导致 /logout 无法加入 JWT 黑名单。
     if (shouldRevokeToken) {
       try {
         await apiUser.logout()
@@ -93,71 +81,41 @@ export const useUserStore = defineStore('user', () => {
       }
     }
 
-    clearSession()
+    localStorage.removeItem('token')
+    token.value = ''
     await router.push({
       name: 'login',
       query: {
         ...(redirectTarget !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect: redirectTarget }),
       },
     }).catch(() => {})
+    clearSession()
   }
 
   async function requestLogout() {
-    clearSession()
+    localStorage.removeItem('token')
+    token.value = ''
     await router.push({ name: 'login' }).catch(() => {})
+    clearSession()
   }
 
   function clearSession() {
-    clearAuthSessionStorage()
+    ;['token', 'account', 'avatar', 'profile', 'permissions'].forEach(key => localStorage.removeItem(key))
     token.value = ''
     account.value = ''
     avatar.value = ''
     permissions.value = []
     profile.value = {}
-    sessionStatus.value = 'anonymous'
     settingsStore.updateSettings({}, true)
     tabbarStore.clean()
     routeStore.removeRoutes()
     menuStore.setActived(0)
   }
 
-  async function refreshProfile() {
-    const res = await apiUser.permission()
-    const nextProfile: AuthProfile = (res.data || {}) as AuthProfile
-    persistProfile(nextProfile)
-    sessionStatus.value = 'verified'
-  }
-
-  async function verifySession() {
-    if (!token.value) {
-      sessionStatus.value = 'anonymous'
-      return false
-    }
-    if (sessionStatus.value === 'verified') return true
-
-    sessionStatus.value = 'verifying'
-    try {
-      await refreshProfile()
-      return true
-    }
-    catch (error: any) {
-      if (!token.value || error?.response?.status === 401) sessionStatus.value = 'anonymous'
-      else sessionStatus.value = 'unavailable'
-      throw error
-    }
-  }
-
   async function getPermissions() {
-    await refreshProfile()
-  }
-
-  function markSessionVerified() {
-    if (token.value) sessionStatus.value = 'verified'
-  }
-
-  function markPasswordChangeRequired() {
-    const nextProfile = { ...profile.value, mustChangePassword: true }
-    sessionStatus.value = token.value ? 'verified' : 'anonymous'
+    const res = await apiUser.permission()
+    const nextProfile: Profile = (res.data || {}) as Profile
+    account.value = nextProfile.displayName || nextProfile.username || account.value
     persistProfile(nextProfile)
   }
 
@@ -171,19 +129,14 @@ export const useUserStore = defineStore('user', () => {
     avatar,
     permissions,
     profile,
-    sessionStatus,
     isLogin,
-    isSessionVerified,
     mustChangePassword,
     login,
     setSession,
     logout,
     requestLogout,
     clearSession,
-    verifySession,
     getPermissions,
-    markSessionVerified,
-    markPasswordChangeRequired,
     editPassword,
   }
 })

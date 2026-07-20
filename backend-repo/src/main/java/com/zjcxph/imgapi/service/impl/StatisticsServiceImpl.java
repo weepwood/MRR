@@ -117,7 +117,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-       public List<Statistics> findByDate(String date) {
+    public List<Statistics> findByDate(String date) {
         return statisticsMapper.findByDate(date);
     }
 

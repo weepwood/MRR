@@ -17,10 +17,45 @@ function setupRoutes(router: Router) {
     const userStore = useUserStore()
     const routeStore = useRouteStore()
     const menuStore = useMenuStore()
+    const loginRedirect = (reason?: string) => ({
+      name: 'login',
+      replace: true,
+      query: {
+        ...(to.fullPath !== settingsStore.settings.home.fullPath && { redirect: to.fullPath }),
+        ...(reason && { session: reason }),
+      },
+    })
+
+    // localStorage 恢复出的 Token 只是候选会话。必须先通过 /auth/me
+    // 获取当前用户，旧权限和旧强制改密标记才允许参与路由判断。
+    if (userStore.isLogin && !userStore.isSessionVerified) {
+      if (isDemoMode) {
+        userStore.markSessionVerified()
+      }
+      else if (userStore.sessionStatus === 'unavailable' && to.name === 'login') {
+        return true
+      }
+      else {
+        try {
+          await userStore.verifySession()
+        }
+        catch (error: any) {
+          if (!userStore.isLogin || error?.response?.status === 401) {
+            return loginRedirect('expired')
+          }
+
+          // 网络错误或认证服务 503 不应误删仍可能有效的 Token。
+          // 允许进入登录页重新认证，并在下次访问受保护页面时重试验证。
+          console.error('[Router Guard] Session verification unavailable:', error)
+          if (to.name === 'login') return true
+          return loginRedirect('unavailable')
+        }
+      }
+    }
 
     if (to.name === PASSWORD_CHANGE_ROUTE_NAME) {
-      if (!userStore.isLogin) {
-        return { name: 'login', replace: true }
+      if (!userStore.isSessionVerified) {
+        return loginRedirect()
       }
       if (!userStore.mustChangePassword) {
         return { path: settingsStore.settings.home.fullPath, replace: true }
@@ -28,11 +63,11 @@ function setupRoutes(router: Router) {
       return true
     }
 
-    if (userStore.isLogin && userStore.mustChangePassword) {
+    if (userStore.isSessionVerified && userStore.mustChangePassword) {
       return { name: PASSWORD_CHANGE_ROUTE_NAME, replace: true }
     }
 
-    if (userStore.isLogin) {
+    if (userStore.isSessionVerified) {
       if (routeStore.isGenerate) {
         if (settingsStore.settings.menu.mode !== 'single') {
           menuStore.setActived(to.path)
@@ -56,14 +91,6 @@ function setupRoutes(router: Router) {
       }
       else {
         try {
-          if (settingsStore.settings.app.enablePermission && !isDemoMode) {
-            await userStore.getPermissions()
-          }
-
-          if (userStore.mustChangePassword) {
-            return { name: PASSWORD_CHANGE_ROUTE_NAME, replace: true }
-          }
-
           switch (settingsStore.settings.app.routeBaseOn) {
             case 'frontend':
               routeStore.generateRoutesAtFront(asyncRoutes)
@@ -94,13 +121,8 @@ function setupRoutes(router: Router) {
         }
         catch (error) {
           console.error('[Router Guard] Failed to generate routes:', error)
-          userStore.logout()
-          return {
-            name: 'login',
-            query: {
-              redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
-            },
-          }
+          void userStore.logout()
+          return loginRedirect()
         }
       }
     }
@@ -131,12 +153,7 @@ function setupRoutes(router: Router) {
         return true
       }
 
-      return {
-        name: 'login',
-        query: {
-          redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
-        },
-      }
+      return loginRedirect()
     }
   })
 }

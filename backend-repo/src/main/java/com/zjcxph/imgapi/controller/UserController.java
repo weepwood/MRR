@@ -60,7 +60,7 @@ public class UserController {
                                           HttpServletRequest httpRequest) {
         LoginResponseDTO response = authService.login(req, IpUtil.getClientIp(httpRequest));
         if (response.getToken() == null || response.getToken().isBlank()) {
-            return Result.<LoginResponseDTO>fail("用户名或密码错误");
+            return Result.<LoginResponseDTO>unauthorized("用户名或密码错误");
         }
         logger.info("User {} logged in successfully, nextAction={}", req.getUsername(), response.getNextAction());
         return Result.success("登录成功", response);
@@ -87,7 +87,7 @@ public class UserController {
     public Result<AuthSession> currentUser() {
         AuthSession session = authService.currentUser();
         if (session == null) {
-            return Result.<AuthSession>fail("未登录或 Token 已过期");
+            return Result.<AuthSession>unauthorized("未登录或 Token 已过期");
         }
         return Result.<AuthSession>success("success").data(session);
     }
@@ -163,11 +163,11 @@ public class UserController {
                                                   @Valid @RequestBody AuthUserUpdateRequest request) {
         AuthSession session = requireCurrentUser();
         if (session.getId().equals(id) && "disabled".equalsIgnoreCase(request.getStatus())) {
-            return Result.<AuthUserProfileDTO>fail("不能禁用当前登录账号");
+            return Result.<AuthUserProfileDTO>fail(409, "不能禁用当前登录账号");
         }
         AuthUserProfileDTO updated = authService.updateUser(id, request);
         if (updated == null) {
-            return Result.<AuthUserProfileDTO>fail("用户不存在");
+            return Result.<AuthUserProfileDTO>notFound("用户不存在");
         }
         return Result.<AuthUserProfileDTO>success("更新成功").data(updated);
     }
@@ -178,11 +178,11 @@ public class UserController {
     public Result<Void> disableUser(@PathVariable Long id) {
         AuthSession session = requireCurrentUser();
         if (session.getId().equals(id)) {
-            return Result.<Void>fail("不能禁用当前登录账号");
+            return Result.<Void>fail(409, "不能禁用当前登录账号");
         }
         int updated = authService.disableUser(id);
         if (updated == 0) {
-            return Result.<Void>fail("用户不存在");
+            return Result.<Void>notFound("用户不存在");
         }
         return Result.<Void>success("禁用成功");
     }
@@ -214,7 +214,7 @@ public class UserController {
     private AuthSession requireCurrentUser() {
         AuthSession session = AuthContext.getCurrentUser();
         if (session == null || session.getId() == null) {
-            throw new IllegalStateException("未登录");
+            throw new BusinessException(401, "未登录或 Token 已过期");
         }
         return session;
     }

@@ -14,5 +14,7 @@ public class FrontendResponseMetric {
     private Boolean success;
     private Long clientDurationMs;
     private Long serverDurationMs;
+    private Integer retryCount;
+    private String retryOutcome;
     private Timestamp occurredAt;
 }

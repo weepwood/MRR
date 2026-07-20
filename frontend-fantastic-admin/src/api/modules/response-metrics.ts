@@ -6,7 +6,7 @@ export function reportFrontendResponseMetrics(metrics: FrontendResponseMetric[])
   return postRequest<void, { metrics: FrontendResponseMetric[] }>(
     '/api/v1/response-metrics/frontend/batch',
     { metrics },
-    { skipResponseMetrics: true },
+    { skipResponseMetrics: true, skipGlobalError: true },
   )
 }
 

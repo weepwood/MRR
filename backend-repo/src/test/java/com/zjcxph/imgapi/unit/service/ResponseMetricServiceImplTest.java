@@ -36,6 +36,8 @@ class ResponseMetricServiceImplTest {
     void batchPersistsOnlyBusinessApiMetrics() {
         FrontendResponseMetricRequest businessMetric = metric("req-1", "/api/v1/scans/{id}");
         businessMetric.setSuccess(false);
+        businessMetric.setRetryCount(2);
+        businessMetric.setRetryOutcome("succeeded");
         FrontendResponseMetricRequest ingestionMetric = metric("req-2", "/api/v1/response-metrics/frontend/batch");
         Instant beforeSave = Instant.now();
 
@@ -46,8 +48,11 @@ class ResponseMetricServiceImplTest {
         ArgumentCaptor<List<FrontendResponseMetric>> captor = ArgumentCaptor.forClass(List.class);
         verify(mapper).batchInsert(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
-        assertThat(captor.getValue().getFirst().getSuccess()).isTrue();
-        assertThat(captor.getValue().getFirst().getOccurredAt())
+        FrontendResponseMetric savedMetric = captor.getValue().getFirst();
+        assertThat(savedMetric.getSuccess()).isTrue();
+        assertThat(savedMetric.getRetryCount()).isEqualTo(2);
+        assertThat(savedMetric.getRetryOutcome()).isEqualTo("succeeded");
+        assertThat(savedMetric.getOccurredAt())
                 .isBetween(Timestamp.from(beforeSave), Timestamp.from(afterSave.plusMillis(1)));
     }
 

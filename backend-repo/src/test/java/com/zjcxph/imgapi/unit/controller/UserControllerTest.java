@@ -85,26 +85,26 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST login — Token 为空返回失败")
+    @DisplayName("POST login — Token 为空返回 401")
     void login_emptyToken() {
         loginResponse.setToken(null);
         when(authService.login(any(UserRequest.class), anyString())).thenReturn(loginResponse);
 
         Result<LoginResponseDTO> result = userController.login(validRequest, httpServletRequest);
 
-        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getCode()).isEqualTo(401);
         assertThat(result.getMessage()).contains("用户名或密码错误");
     }
 
     @Test
-    @DisplayName("POST login — Token 空白返回失败")
+    @DisplayName("POST login — Token 空白返回 401")
     void login_blankToken() {
         loginResponse.setToken("   ");
         when(authService.login(any(UserRequest.class), anyString())).thenReturn(loginResponse);
 
         Result<LoginResponseDTO> result = userController.login(validRequest, httpServletRequest);
 
-        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getCode()).isEqualTo(401);
     }
 
     @Test
@@ -133,13 +133,13 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET currentUser — 未登录返回失败")
+    @DisplayName("GET currentUser — 未登录返回 401")
     void currentUser_notLoggedIn() {
         when(authService.currentUser()).thenReturn(null);
 
         Result<AuthSession> result = userController.currentUser();
 
-        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getCode()).isEqualTo(401);
         assertThat(result.getMessage()).contains("未登录");
     }
 
@@ -191,15 +191,26 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("PUT updateUser — 用户不存在返回失败")
+    @DisplayName("PUT updateUser — 用户不存在返回 404")
     void updateUser_notFound() {
         AuthUserUpdateRequest request = updateRequest("DOCTOR", "active");
         when(authService.updateUser(999L, request)).thenReturn(null);
 
         var result = userController.updateUser(999L, request);
 
-        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getCode()).isEqualTo(404);
         assertThat(result.getMessage()).contains("用户不存在");
+    }
+
+    @Test
+    @DisplayName("PUT updateUser — 禁用当前账号返回 409")
+    void updateUser_cannotDisableCurrentUser() {
+        AuthUserUpdateRequest request = updateRequest("ADMIN", "disabled");
+
+        var result = userController.updateUser(1L, request);
+
+        assertThat(result.getCode()).isEqualTo(409);
+        verify(authService, never()).updateUser(any(), any());
     }
 
     @Test
@@ -214,14 +225,23 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE disableUser — 用户不存在返回失败")
+    @DisplayName("DELETE disableUser — 用户不存在返回 404")
     void disableUser_notFound() {
         when(authService.disableUser(999L)).thenReturn(0);
 
         Result<Void> result = userController.disableUser(999L);
 
-        assertThat(result.getCode()).isEqualTo(400);
+        assertThat(result.getCode()).isEqualTo(404);
         assertThat(result.getMessage()).contains("用户不存在");
+    }
+
+    @Test
+    @DisplayName("DELETE disableUser — 禁用当前账号返回 409")
+    void disableUser_cannotDisableCurrentUser() {
+        Result<Void> result = userController.disableUser(1L);
+
+        assertThat(result.getCode()).isEqualTo(409);
+        verify(authService, never()).disableUser(any());
     }
 
     private AuthSession adminSession() {

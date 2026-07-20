@@ -1,0 +1,84 @@
+/*
+ * Chrome 109 compatibility layer.
+ *
+ * Chrome 109 does not implement CSS color-mix(). Decorative color blending is
+ * allowed to degrade, but core surfaces, controls and focus indicators must
+ * remain visible and usable.
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  :root {
+    --mrr-ring: var(--color-primary);
+    --mrr-destructive-muted: var(--mrr-muted);
+    --mrr-navigation-active: #eaf0fe;
+    --mrr-navigation-active-border: rgb(37 99 235 / 22%);
+    --text-tertiary: var(--mrr-muted-foreground);
+    --text-hint: var(--mrr-muted-foreground);
+    --mrr-control-bg-disabled: var(--mrr-muted);
+    --mrr-control-border-hover: var(--mrr-border);
+    --mrr-focus-ring: 0 0 0 3px rgb(37 99 235 / 30%);
+    --mrr-danger-focus-ring: 0 0 0 3px rgb(209 60 60 / 22%);
+    --mrr-warning-focus-ring: 0 0 0 3px rgb(180 95 6 / 22%);
+  }
+
+  :root.dark {
+    --mrr-input: rgb(255 255 255 / 15%);
+    --mrr-control-bg: var(--mrr-card);
+    --mrr-control-bg-hover: var(--mrr-card);
+    --mrr-control-bg-disabled: var(--mrr-muted);
+    --mrr-control-border-hover: var(--mrr-border);
+    --mrr-destructive-muted: var(--mrr-muted);
+    --mrr-navigation-active: #1c2d4d;
+    --mrr-navigation-active-border: rgb(96 165 250 / 36%);
+  }
+
+  /* 登录页：保留布局与信息层级，移除仅用于装饰的混色依赖。 */
+  .login-page .environment-badge,
+  .login-page .feature-list article,
+  .login-page .form-panel {
+    background: var(--mrr-card);
+  }
+
+  .login-page .brand-panel {
+    background: var(--mrr-muted);
+  }
+
+  .login-page .feature-icon,
+  .login-page .login-help {
+    background: var(--mrr-muted);
+    border-color: var(--mrr-border);
+  }
+
+  .login-page .status-dot {
+    box-shadow: none;
+  }
+
+  .login-page .brand-panel::after {
+    border-color: var(--mrr-border);
+    box-shadow: none;
+  }
+
+  /* 业务主流程组件：查询、表格、详情和设置页面保持明确边界。 */
+  .mrr-page-header,
+  .mrr-filter-bar,
+  .mrr-section-card,
+  .mrr-data-table-panel,
+  .mrr-chart-card {
+    background: var(--mrr-card);
+    border-color: var(--mrr-border);
+  }
+
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner,
+  .el-date-editor,
+  .el-dialog,
+  .el-drawer,
+  .el-message-box {
+    border-color: var(--mrr-border);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

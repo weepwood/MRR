@@ -2,14 +2,22 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.SystemSettingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 系统设置 REST 控制器。
@@ -24,6 +32,7 @@ import java.util.Map;
 public class SystemSettingController {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemSettingController.class);
+    private static final Set<String> RUNTIME_SECURITY_KEYS = Set.of(DeveloperModeService.SETTING_KEY);
 
     private final SystemSettingService systemSettingService;
 
@@ -52,10 +61,17 @@ public class SystemSettingController {
 
     @Operation(summary = "批量保存系统设置")
     @PutMapping("/settings")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> saveSettings(@RequestBody Map<String, String> settings) {
         if (settings == null || settings.isEmpty()) {
             return Result.fail(400, "设置内容不能为空");
+        }
+        String restrictedKey = settings.keySet().stream()
+                .filter(RUNTIME_SECURITY_KEYS::contains)
+                .findFirst()
+                .orElse(null);
+        if (restrictedKey != null) {
+            return restrictedSettingResult(restrictedKey);
         }
         systemSettingService.saveSettings(settings, null);
         logger.info("系统设置已更新: {} 项", settings.size());
@@ -64,8 +80,11 @@ public class SystemSettingController {
 
     @Operation(summary = "保存单个设置值")
     @PutMapping("/settings/{key}")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> setSetting(@PathVariable String key, @RequestBody Map<String, String> body) {
+        if (RUNTIME_SECURITY_KEYS.contains(key)) {
+            return restrictedSettingResult(key);
+        }
         String value = body != null ? body.get("value") : null;
         if (value == null) {
             return Result.fail(400, "value 不能为空");
@@ -76,9 +95,17 @@ public class SystemSettingController {
 
     @Operation(summary = "删除单个设置")
     @DeleteMapping("/settings/{key}")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> deleteSetting(@PathVariable String key) {
+        if (RUNTIME_SECURITY_KEYS.contains(key)) {
+            return restrictedSettingResult(key);
+        }
         systemSettingService.deleteSetting(key);
         return Result.<Void>success(null).message("设置已删除");
+    }
+
+    private Result<Void> restrictedSettingResult(String key) {
+        logger.warn("拒绝通过运行时设置接口修改安全敏感配置: key={}", key);
+        return Result.fail(400, "安全敏感配置不允许通过系统设置接口修改: " + key);
     }
 }

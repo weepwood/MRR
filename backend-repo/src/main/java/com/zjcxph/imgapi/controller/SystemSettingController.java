@@ -46,13 +46,18 @@ public class SystemSettingController {
     @RequirePermissions("system:read")
     public Result<Map<String, String>> getAllSettings() {
         logger.debug("获取全部系统设置");
-        return Result.success(systemSettingService.getAllSettings());
+        Map<String, String> visibleSettings = new LinkedHashMap<>(systemSettingService.getAllSettings());
+        RUNTIME_SECURITY_KEYS.forEach(visibleSettings::remove);
+        return Result.success(visibleSettings);
     }
 
     @Operation(summary = "获取单个设置值")
     @GetMapping("/settings/{key}")
     @RequirePermissions("system:read")
     public Result<String> getSetting(@PathVariable String key) {
+        if (RUNTIME_SECURITY_KEYS.contains(key)) {
+            return Result.fail(404, "设置项不存在: " + key);
+        }
         String value = systemSettingService.getSetting(key);
         if (value == null) {
             return Result.fail(404, "设置项不存在: " + key);
@@ -70,7 +75,8 @@ public class SystemSettingController {
 
         Map<String, String> writableSettings = new LinkedHashMap<>(settings);
         RUNTIME_SECURITY_KEYS.forEach(key -> {
-            if (writableSettings.remove(key) != null) {
+            if (writableSettings.containsKey(key)) {
+                writableSettings.remove(key);
                 logger.warn("忽略批量设置请求中的安全敏感配置: key={}", key);
             }
         });

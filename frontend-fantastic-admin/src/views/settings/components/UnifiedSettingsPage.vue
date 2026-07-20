@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { motion } from 'motion-v'
+import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -42,6 +44,15 @@ const {
   handleReset,
 } = useUnifiedSettings()
 
+const sectionEnter = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  transition: {
+    duration: motionDurations.fast,
+    ease: motionEasings.emphasized,
+  },
+}
+
 void shellRef
 </script>
 
@@ -73,21 +84,31 @@ void shellRef
     <div ref="shellRef" class="settings-shell">
       <aside class="settings-sidebar">
         <nav class="settings-nav" aria-label="设置分类">
-          <button
+          <motion.button
             v-for="item in settingsNavItems"
             :key="item.key"
+            layout
             type="button"
             class="settings-nav-item"
             :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
+            :transition="motionSprings.layout"
             @click="selectSection(item.key)"
           >
+            <motion.span
+              v-if="activeSection === item.key"
+              layout-id="settings-active-section"
+              class="settings-nav-active-indicator"
+              :class="{ danger: item.key === 'developer' && settings.developerModeEnabled }"
+              :transition="motionSprings.layout"
+              aria-hidden="true"
+            />
             <span class="nav-icon"><FaIcon :name="item.icon" /></span>
             <span class="nav-copy">
               <strong>{{ item.title }}</strong>
               <small>{{ item.description }}</small>
             </span>
             <FaIcon name="i-ri:arrow-right-s-line" class="nav-arrow" />
-          </button>
+          </motion.button>
         </nav>
 
         <div v-if="isServerSettingSection" class="sidebar-save-card" :class="{ dirty: isDirty }">
@@ -151,17 +172,25 @@ void shellRef
           </div>
         </header>
 
-        <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
-          <el-form :model="settings" label-position="top">
-            <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
-            <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
-            <ArchiveSettings v-else-if="activeSection === 'archive'" v-model="settings" />
-            <SecuritySettings v-else-if="activeSection === 'security'" v-model="settings" />
-            <DeveloperSettings v-else v-model="settings" />
-          </el-form>
-        </div>
-        <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
-        <AppConfigPanel v-else ref="appConfigRef" />
+        <motion.div
+          :key="activeSection"
+          class="settings-section-motion"
+          :initial="sectionEnter.initial"
+          :animate="sectionEnter.animate"
+          :transition="sectionEnter.transition"
+        >
+          <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
+            <el-form :model="settings" label-position="top">
+              <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
+              <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
+              <ArchiveSettings v-else-if="activeSection === 'archive'" v-model="settings" />
+              <SecuritySettings v-else-if="activeSection === 'security'" v-model="settings" />
+              <DeveloperSettings v-else v-model="settings" />
+            </el-form>
+          </div>
+          <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
+          <AppConfigPanel v-else ref="appConfigRef" />
+        </motion.div>
       </main>
     </div>
   </div>

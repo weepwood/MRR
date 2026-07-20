@@ -28,9 +28,19 @@ function getRecordMessage(value: unknown): unknown {
   return value.message ?? value.msg
 }
 
-function getRecordStatus(value: unknown): unknown {
-  if (!isRecord(value)) return undefined
-  return value.status
+function getGenericResponse(error: unknown): Record<string, unknown> | undefined {
+  if (!isRecord(error) || !isRecord(error.response)) return undefined
+  return error.response
+}
+
+function getResponseData(error: unknown): unknown {
+  if (axios.isAxiosError<unknown>(error)) return error.response?.data
+  return getGenericResponse(error)?.data
+}
+
+function getResponseStatus(error: unknown): unknown {
+  if (axios.isAxiosError(error)) return error.response?.status
+  return getGenericResponse(error)?.status ?? (isRecord(error) ? error.status : undefined)
 }
 
 function getErrorCode(error: unknown): string | undefined {
@@ -41,17 +51,13 @@ function getErrorCode(error: unknown): string | undefined {
 
 /** 将 HTTP、业务响应和网络请求失败统一为面向用户的中文提示。 */
 export function getRequestErrorMessage(error: unknown): string {
-  const responseData = axios.isAxiosError<unknown>(error) ? error.response?.data : undefined
-  const serverMessage = getRecordMessage(responseData)
+  const serverMessage = getRecordMessage(getResponseData(error))
     ?? getRecordMessage(error)
     ?? (error instanceof Error ? error.message : undefined)
 
   if (isChineseMessage(serverMessage)) return serverMessage
 
-  const statusValue = axios.isAxiosError(error)
-    ? error.response?.status
-    : getRecordStatus(error)
-  const status = Number(statusValue)
+  const status = Number(getResponseStatus(error))
   if (HTTP_ERROR_MESSAGES[status]) return HTTP_ERROR_MESSAGES[status]
   if (Number.isFinite(status) && status >= 500) return '服务器异常，请稍后重试'
 

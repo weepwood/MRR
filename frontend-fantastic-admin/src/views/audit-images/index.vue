@@ -30,6 +30,7 @@ function createEmptyAnalytics(): ImageAuditAnalytics {
     trend: [],
     actionDistribution: [],
     topUsers: [],
+    topTargets: [],
   }
 }
 
@@ -59,6 +60,12 @@ interface AuditQuery {
   timeRange: string[]
 }
 
+interface AuditIdentifiers {
+  bah: string
+  sjh: string
+  idCard: string
+}
+
 function buildAuditParams(source: AuditQuery): ImageAuditFilterParams {
   const params: ImageAuditFilterParams = {}
   for (const [key, value] of Object.entries({
@@ -76,6 +83,71 @@ function buildAuditParams(source: AuditQuery): ImageAuditFilterParams {
     params.endTime = source.timeRange[1]
   }
   return params
+}
+
+function parseEncodedParams(value?: string) {
+  const params = new URLSearchParams()
+  if (!value) return params
+  const source = value.startsWith('?') ? value.slice(1) : value
+  for (const pair of source.split('&')) {
+    const separator = pair.indexOf('=')
+    if (separator < 0) continue
+    const key = pair.slice(0, separator)
+    const rawValue = pair.slice(separator + 1)
+    try {
+      params.set(decodeURIComponent(key.replaceAll('+', ' ')), decodeURIComponent(rawValue.replaceAll('+', ' ')))
+    }
+    catch {
+      params.set(key, rawValue)
+    }
+  }
+  return params
+}
+
+function parseJsonIdentifiers(body?: string) {
+  if (!body?.trim().startsWith('{')) return {} as Record<string, unknown>
+  try {
+    return JSON.parse(body) as Record<string, unknown>
+  }
+  catch {
+    return {} as Record<string, unknown>
+  }
+}
+
+function auditIdentifiers(row?: LogRecord | null): AuditIdentifiers {
+  if (!row) return { bah: '-', sjh: '-', idCard: '-' }
+  const queryParams = parseEncodedParams(row.queryString)
+  const body = parseJsonIdentifiers(row.requestBody)
+  const target = String(row.auditTarget || '').trim()
+  let bah = String(queryParams.get('bah') || body.bah || '').trim()
+  let sjh = String(queryParams.get('sjh') || body.sjh || '').trim()
+  const idCard = String(
+    queryParams.get('idCard')
+      || queryParams.get('idcard')
+      || queryParams.get('patientId')
+      || queryParams.get('patientid')
+      || body.idCard
+      || body.idcard
+      || body.patientId
+      || body.patientid
+      || '',
+  ).trim()
+
+  if (target && target !== 'search') {
+    if (target.startsWith('sjh:')) {
+      sjh ||= target.slice(4)
+    }
+    else if (target.includes(':')) {
+      const [targetBah, targetSjh] = target.split(':', 2)
+      bah ||= targetBah
+      sjh ||= targetSjh
+    }
+    else {
+      bah ||= target
+    }
+  }
+
+  return { bah: bah || '-', sjh: sjh || '-', idCard: idCard || '-' }
 }
 
 const {
@@ -118,8 +190,8 @@ async function loadAnalytics() {
       trend: res.data?.trend ?? [],
       actionDistribution: res.data?.actionDistribution ?? [],
       topUsers: res.data?.topUsers ?? [],
-      topTargets: (res.data as any)?.topTargets ?? [],
-    } as ImageAuditAnalytics
+      topTargets: res.data?.topTargets ?? [],
+    }
   }
   catch (err: unknown) {
     analytics.value = createEmptyAnalytics()
@@ -161,6 +233,7 @@ async function exportAudit(scope: 'all' | 'user' | 'target', value?: string) {
   try {
     const response = await exportImageAuditLogs({ ...buildAuditParams(query), scope, value })
     const blob = response.data
+    if (!(blob instanceof Blob)) throw new TypeError('导出接口未返回有效的文件数据')
     const disposition = String(response.headers?.['content-disposition'] || '')
     const matchedName = disposition.match(/filename=([^;]+)/i)?.[1]?.replaceAll('"', '')
     const filename = matchedName || `image-audit-${scope}-${Date.now()}.csv`
@@ -225,7 +298,7 @@ onMounted(loadData)
     <el-card shadow="never" class="filter-card">
       <el-form inline @submit.prevent>
         <el-form-item label="关键字">
-          <el-input v-model="query.keyword" clearable placeholder="病历号 / URI / Request ID" @keyup.enter="handleSearch" />
+          <el-input v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="用户">
           <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
@@ -265,7 +338,7 @@ onMounted(loadData)
     <el-card shadow="never" class="detail-card">
       <template #header>
         <div class="section-header">
-          <div><strong>最近访问明细</strong><span>保留每次病历查询、查看与下载行为</span></div>
+          <div><strong>最近访问明细</strong><span>病案号、上架号和身份证号独立展示</span></div>
           <div class="section-actions">
             <el-tag type="info" effect="plain">共 {{ total.toLocaleString('zh-CN') }} 条</el-tag>
             <el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button>
@@ -278,7 +351,9 @@ onMounted(loadData)
       <el-table v-else :data="list" stripe>
         <el-table-column prop="accessTime" label="访问时间" min-width="180"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
         <el-table-column prop="username" label="用户" min-width="120"><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
-        <el-table-column prop="auditTarget" label="病历号" min-width="150"><template #default="{ row }">{{ row.auditTarget || '-' }}</template></el-table-column>
+        <el-table-column label="病案号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
+        <el-table-column label="上架号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
+        <el-table-column label="身份证号" min-width="190" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).idCard }}</template></el-table-column>
         <el-table-column prop="auditDescription" label="访问类型" min-width="170"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
         <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
         <el-table-column prop="responseStatus" label="状态码" width="100"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
@@ -293,7 +368,9 @@ onMounted(loadData)
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问类型">{{ currentLog.auditDescription || actionLabel(currentLog.auditAction) }}</el-descriptions-item>
-        <el-descriptions-item label="病历号">{{ currentLog.auditTarget || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="病案号">{{ auditIdentifiers(currentLog).bah }}</el-descriptions-item>
+        <el-descriptions-item label="上架号">{{ auditIdentifiers(currentLog).sjh }}</el-descriptions-item>
+        <el-descriptions-item label="身份证号">{{ auditIdentifiers(currentLog).idCard }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问时间" :span="2">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>

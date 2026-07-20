@@ -60,7 +60,14 @@ watch(() => menuStore.actived, (val, oldVal) => {
           <template v-for="(mainItem, mainIndex) in menuStore.allMenus" :key="mainIndex">
             <div v-show="mainIndex === menuStore.actived">
               <Menu
-                :menu="mainItem.children" :value="route.meta.activeMenu || route.path" :default-openeds="menuStore.defaultOpenedPaths" :accordion="settingsStore.settings.menu.subMenuUniqueOpened" :collapse="settingsStore.mode === 'pc' && settingsStore.settings.menu.subMenuCollapse" class="menu"
+                :menu="mainItem.children"
+                :value="route.meta.activeMenu || route.path"
+                :default-openeds="menuStore.defaultOpenedPaths"
+                :accordion="settingsStore.settings.menu.subMenuUniqueOpened"
+                :collapse="settingsStore.mode === 'pc' && settingsStore.settings.menu.subMenuCollapse"
+                :leading-expand-indicator="settingsStore.settings.menu.mode === 'single'"
+                class="menu"
+                :class="{ 'menu--grouped-single': settingsStore.settings.menu.mode === 'single' }"
               />
             </div>
           </template>
@@ -158,6 +165,41 @@ watch(() => menuStore.actived, (val, oldVal) => {
         background: var(--mrr-navigation-active) !important;
         border-color: var(--mrr-navigation-active-border);
       }
+    }
+  }
+
+  .menu--grouped-single {
+    padding-top: 10px;
+
+    & > :deep(.menu-item) {
+      padding: 2px 0;
+    }
+
+    & > :deep(.menu-item > .menu-item-container) {
+      min-height: 40px;
+      padding-inline: 10px !important;
+      font-weight: 620;
+      color: var(--text-primary) !important;
+      background: color-mix(in srgb, var(--mrr-navigation-hover) 52%, transparent);
+      border-color: transparent;
+      border-radius: var(--mrr-radius-md);
+    }
+
+    & > :deep(.sub-menu) {
+      margin: 2px 0 8px;
+      padding-inline-start: 2px;
+    }
+
+    :deep(.sub-menu .menu-item-container) {
+      background: transparent;
+    }
+
+    :deep(.menu-item-container:hover) {
+      background: var(--mrr-navigation-hover);
+    }
+
+    :deep(.menu-item.active .menu-item-container) {
+      background: var(--mrr-navigation-active) !important;
     }
   }
 

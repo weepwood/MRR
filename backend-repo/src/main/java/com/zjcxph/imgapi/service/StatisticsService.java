@@ -27,6 +27,17 @@ public interface StatisticsService {
             String sortOrder
     );
 
+    // 按筛选条件查询导出数据，不受普通分页每页 1000 条限制
+    List<Statistics> findWithConditionForExport(
+            int limit,
+            String keyword,
+            String bah,
+            String sjh,
+            String type,
+            String startDate,
+            String endDate
+    );
+
     // 获取总记录数
     Long getTotalCount();
     Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate);

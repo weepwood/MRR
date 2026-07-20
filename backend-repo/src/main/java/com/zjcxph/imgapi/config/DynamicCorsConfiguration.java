@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.config;
 
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -14,8 +15,8 @@ import java.util.List;
 /**
  * API 跨域策略。
  *
- * <p>只允许配置中的精确 Origin。运行时系统设置不得放宽跨域边界，
- * 开发和联调环境应通过独立配置文件显式声明允许的 Origin。</p>
+ * <p>正常模式只允许配置中的精确 Origin；开发者模式恢复旧版任意 Origin 调试能力。
+ * 配置源按请求读取，因此切换系统设置后无需重启。</p>
  */
 @Configuration
 public class DynamicCorsConfiguration {
@@ -27,28 +28,38 @@ public class DynamicCorsConfiguration {
             "X-Request-Id",
             "X-Endpoint-Template",
             "Server-Timing",
-            "Content-Disposition"
+            "Content-Disposition",
+            "X-MRR-Developer-Mode"
     );
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public CorsFilter mrrDynamicCorsFilter(CorsProperties corsProperties) {
+    public CorsFilter mrrDynamicCorsFilter(
+            CorsProperties corsProperties,
+            DeveloperModeService developerModeService
+    ) {
         CorsConfigurationSource source = request -> {
             if (!request.getRequestURI().startsWith("/api/")) {
                 return null;
             }
-            return createConfiguration(corsProperties);
+            return createConfiguration(corsProperties, developerModeService);
         };
         return new CorsFilter(source);
     }
 
-    private CorsConfiguration createConfiguration(CorsProperties corsProperties) {
+    private CorsConfiguration createConfiguration(CorsProperties corsProperties,
+                                                  DeveloperModeService developerModeService) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedMethods(ALLOWED_METHODS);
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(EXPOSED_HEADERS);
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
+
+        if (developerModeService.isEnabled()) {
+            configuration.setAllowedOriginPatterns(List.of("*"));
+            return configuration;
+        }
 
         List<String> allowedOrigins = corsProperties.getAllowedOrigins() == null
                 ? List.of()

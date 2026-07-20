@@ -7,33 +7,29 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class SystemSettingControllerSecurityTest {
 
     @Test
-    void bulkSaveShouldIgnoreLegacyDeveloperModeKeyAndPersistOtherSettings() {
+    void bulkSaveShouldPersistDeveloperModeWithOtherManagedSettings() {
         SystemSettingService service = mock(SystemSettingService.class);
         SystemSettingController controller = new SystemSettingController(service);
-
-        var result = controller.saveSettings(Map.of(
+        Map<String, String> settings = Map.of(
                 DeveloperModeService.SETTING_KEY, "true",
                 "systemName", "MRR"
-        ));
+        );
+
+        var result = controller.saveSettings(settings);
 
         assertThat(result.getCode()).isEqualTo(200);
-        verify(service).saveSettings(argThat(settings ->
-                settings.size() == 1
-                        && "MRR".equals(settings.get("systemName"))
-                        && !settings.containsKey(DeveloperModeService.SETTING_KEY)), isNull());
+        verify(service).saveSettings(settings, null);
     }
 
     @Test
-    void singleSettingMutationShouldRejectLegacyDeveloperModeKey() {
+    void singleSettingMutationShouldAllowDeveloperModeKey() {
         SystemSettingService service = mock(SystemSettingService.class);
         SystemSettingController controller = new SystemSettingController(service);
 
@@ -42,21 +38,18 @@ class SystemSettingControllerSecurityTest {
                 Map.of("value", "true")
         );
 
-        assertThat(result.getCode()).isEqualTo(400);
-        verify(service, never()).setSetting(
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.any());
+        assertThat(result.getCode()).isEqualTo(200);
+        verify(service).setSetting(DeveloperModeService.SETTING_KEY, "true", null);
     }
 
     @Test
-    void deleteShouldRejectLegacyDeveloperModeKey() {
+    void deleteShouldDisableDeveloperModeThroughSettingService() {
         SystemSettingService service = mock(SystemSettingService.class);
         SystemSettingController controller = new SystemSettingController(service);
 
         var result = controller.deleteSetting(DeveloperModeService.SETTING_KEY);
 
-        assertThat(result.getCode()).isEqualTo(400);
-        verify(service, never()).deleteSetting(org.mockito.ArgumentMatchers.anyString());
+        assertThat(result.getCode()).isEqualTo(200);
+        verify(service).deleteSetting(DeveloperModeService.SETTING_KEY);
     }
 }

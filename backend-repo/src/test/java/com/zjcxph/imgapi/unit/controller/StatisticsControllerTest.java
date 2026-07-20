@@ -14,7 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -55,8 +57,6 @@ class StatisticsControllerTest {
             Result<PageResult<Statistics>> r = controller.getAllStatistics(1, 20, "  ", "", "  \t", null, null, null, "", "  ");
 
             assertThat(r.getCode()).isEqualTo(200);
-            // 验证空白 key/type/startDate/endDate/sortBy 均被 normalize 为 null，
-            // sortOrder 默认为 "desc"
             verify(statisticsService).findWithConditionAndPagination(
                     eq(1), eq(20), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
         }
@@ -65,13 +65,13 @@ class StatisticsControllerTest {
         @DisplayName("传递非空 bah 和 sjh")
         void nonEmptyBahAndSjh() {
             when(statisticsService.findWithConditionAndPagination(anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(List.of());
+                    .thenReturn(List.of());
             when(statisticsService.getTotalCountByCondition(any(), any(), any(), any(), any(), any())).thenReturn(0L);
 
             controller.getAllStatistics(1, 20, null, "0078", "SJH001", null, null, null, null, null);
 
             verify(statisticsService).findWithConditionAndPagination(
-                eq(1), eq(20), isNull(), eq("0078"), eq("SJH001"), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
+                    eq(1), eq(20), isNull(), eq("0078"), eq("SJH001"), isNull(), isNull(), isNull(), eq("date"), eq("desc"));
         }
     }
 
@@ -104,6 +104,38 @@ class StatisticsControllerTest {
         void emptyDate() {
             Result<List<Statistics>> r = controller.getStatisticsByDate("");
             assertThat(r.getCode()).isEqualTo(400);
+        }
+    }
+
+    @Nested
+    @DisplayName("exportCsv")
+    class ExportCsv {
+
+        @Test
+        @DisplayName("使用专用导出查询并写入带 BOM 的 CSV")
+        void exportCsvUsesDedicatedQuery() throws Exception {
+            Statistics item = new Statistics();
+            item.setBah("00001234");
+            item.setPatientName("张三");
+            item.setDate("2026-01-02");
+            item.setPages(3);
+            when(statisticsService.findWithConditionForExport(
+                    eq(100000), eq("张三"), isNull(), isNull(), eq("01-病案首页"),
+                    eq("2026-01-01"), eq("2026-12-31")))
+                    .thenReturn(List.of(item));
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            controller.exportCsv(" 张三 ", null, null, "01-病案首页",
+                    "2026-01-01", "2026-12-31", response);
+
+            verify(statisticsService).findWithConditionForExport(
+                    100000, "张三", null, null, "01-病案首页", "2026-01-01", "2026-12-31");
+            assertThat(response.getContentType()).startsWith("text/csv");
+            assertThat(response.getContentAsString(StandardCharsets.UTF_8))
+                    .startsWith("\uFEFF病案号,")
+                    .contains("00001234,张三")
+                    .contains("2026-01-02")
+                    .contains(",3,");
         }
     }
 

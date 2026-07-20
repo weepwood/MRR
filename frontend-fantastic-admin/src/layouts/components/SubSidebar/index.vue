@@ -183,8 +183,24 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     & > :deep(.sub-menu) {
-      margin: 2px 0 8px 13px;
-      padding-inline-start: 7px;
+      margin: 2px 0 8px;
+      padding-inline-start: 2px;
+    }
+
+    :deep(.sub-menu .menu-item-container) {
+      background: color-mix(in srgb, var(--mrr-navigation-hover) 34%, transparent);
+    }
+
+    :deep(.sub-menu .menu-item-container:hover) {
+      background: color-mix(in srgb, var(--mrr-navigation-hover) 76%, transparent);
+    }
+
+    :deep(.sub-menu .sub-menu .menu-item-container) {
+      background: color-mix(in srgb, var(--mrr-navigation-hover) 18%, transparent);
+    }
+
+    :deep(.sub-menu .menu-item.active .menu-item-container) {
+      background: var(--mrr-navigation-active) !important;
     }
   }
 

@@ -30,6 +30,13 @@ const isItemActive = computed(() => {
   return isActived.value && (!props.subMenu || rootMenu.isMenuPopup)
 })
 
+const useLeadingExpandIndicator = computed(() => {
+  return props.subMenu
+    && rootMenu.props.leadingExpandIndicator
+    && props.level === 0
+    && !rootMenu.isMenuPopup
+})
+
 defineExpose({
   ref: itemRef,
 })
@@ -70,7 +77,11 @@ defineExpose({
               '--indent-level': !rootMenu.isMenuPopup ? props.level ?? 0 : 0,
             }"
           >
-            <FaIcon v-if="props.item.meta?.icon" :name="props.item.meta.icon" class="menu-item-container-icon size-4" />
+            <span v-if="useLeadingExpandIndicator" class="menu-leading-control" aria-hidden="true">
+              <FaIcon v-if="props.item.meta?.icon" :name="props.item.meta.icon" class="menu-item-container-icon menu-leading-control-icon size-4" />
+              <i class="menu-leading-control-arrow" :class="{ 'is-expanded': expand }" />
+            </span>
+            <FaIcon v-else-if="props.item.meta?.icon" :name="props.item.meta.icon" class="menu-item-container-icon size-4" />
             <span
               v-if="!(rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName)" :class="cn('w-0 flex-1 truncate text-[13px] transition-height transition-opacity transition-width', {
                 'opacity-0 w-0 h-0': rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName,
@@ -81,7 +92,7 @@ defineExpose({
             </span>
           </div>
           <i
-            v-if="subMenu && !(rootMenu.isMenuPopup && level === 0)" :class="cn('relative ms-1 w-[10px] after:absolute before:absolute after:h-[1.5px] after:w-[6px] before:h-[1.5px] before:w-[6px] after:bg-current before:bg-current after:transition-transform-200 before:transition-transform-200 after:content-empty before:content-empty after:-translate-y-[1px] before:-translate-y-[1px]', {
+            v-if="subMenu && !useLeadingExpandIndicator && !(rootMenu.isMenuPopup && level === 0)" :class="cn('relative ms-1 w-[10px] after:absolute before:absolute after:h-[1.5px] after:w-[6px] before:h-[1.5px] before:w-[6px] after:bg-current before:bg-current after:transition-transform-200 before:transition-transform-200 after:content-empty before:content-empty after:-translate-y-[1px] before:-translate-y-[1px]', {
               [expand ? 'before:-rotate-45 before:-translate-x-[2px] after:rotate-45 after:translate-x-[2px]' : 'before:rotate-45 before:-translate-x-[2px] after:-rotate-45 after:translate-x-[2px]']: true,
               'opacity-0': rootMenu.isMenuPopup && level === 0,
               '-rotate-90 -top-[1.5px]': rootMenu.isMenuPopup && level !== 0,
@@ -120,5 +131,50 @@ defineExpose({
   flex: 0 0 auto;
   color: currentcolor;
   transform: none !important;
+}
+
+.menu-leading-control {
+  position: relative;
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+}
+
+.menu-leading-control-icon,
+.menu-leading-control-arrow {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.menu-leading-control-arrow {
+  width: 7px;
+  height: 7px;
+  color: currentcolor;
+  opacity: 0;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  transform: rotate(-45deg);
+}
+
+.menu-leading-control-arrow.is-expanded {
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.menu-leading-control:hover .menu-leading-control-icon {
+  opacity: 0;
+  transform: scale(0.82) !important;
+}
+
+.menu-leading-control:hover .menu-leading-control-arrow {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-leading-control-icon,
+  .menu-leading-control-arrow {
+    transition: none;
+  }
 }
 </style>

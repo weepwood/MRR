@@ -216,13 +216,18 @@ export function writeAuthProfile(
   const target = resolveStorage(storage)
   if (!target) return
 
+  const avatar = typeof profile.avatar === 'string'
+    ? profile.avatar
+    : safeGet(target, AUTH_STORAGE_KEYS.avatar) ?? ''
   safeSet(target, AUTH_STORAGE_KEYS.schemaVersion, AUTH_STORAGE_SCHEMA_VERSION)
   safeSet(target, AUTH_STORAGE_KEYS.profile, JSON.stringify(profile))
   safeSet(target, AUTH_STORAGE_KEYS.permissions, JSON.stringify(permissions))
   safeSet(target, AUTH_STORAGE_KEYS.account, account)
+  safeSet(target, AUTH_STORAGE_KEYS.avatar, avatar)
   safeRemove(target, LEGACY_AUTH_STORAGE_KEYS.profile)
   safeRemove(target, LEGACY_AUTH_STORAGE_KEYS.permissions)
   safeRemove(target, LEGACY_AUTH_STORAGE_KEYS.account)
+  safeRemove(target, LEGACY_AUTH_STORAGE_KEYS.avatar)
 }
 
 export function readRememberedAccount(storage?: Storage): string {

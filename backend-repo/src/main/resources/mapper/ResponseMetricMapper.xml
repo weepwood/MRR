@@ -34,13 +34,14 @@
     <insert id="batchInsert">
         INSERT INTO frontend_response_metric (
             request_id, route_pattern, method, http_status, business_code, success,
-            client_duration_ms, server_duration_ms, occurred_at
+            client_duration_ms, server_duration_ms, retry_count, retry_outcome, occurred_at
         ) VALUES
         <foreach collection="metrics" item="metric" separator=",">
             (
                 #{metric.requestId}, #{metric.routePattern}, #{metric.method},
                 #{metric.httpStatus}, #{metric.businessCode}, #{metric.success},
-                #{metric.clientDurationMs}, #{metric.serverDurationMs}, #{metric.occurredAt}
+                #{metric.clientDurationMs}, #{metric.serverDurationMs},
+                #{metric.retryCount}, #{metric.retryOutcome}, #{metric.occurredAt}
             )
         </foreach>
         ON CONFLICT (request_id) DO NOTHING

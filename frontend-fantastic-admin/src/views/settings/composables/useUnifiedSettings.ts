@@ -27,9 +27,8 @@ export const settingsNavItems = [
 export function useUnifiedSettings() {
   const route = useRoute()
   const router = useRouter()
-  const pageRef = ref<HTMLElement>()
+  const shellRef = ref<HTMLElement>()
   const activeSection = ref<SettingsSection>('system')
-  const isHeaderCompact = ref(false)
   const loading = ref(false)
   const saving = ref(false)
   const settingsSource = ref<SettingsSource>('default')
@@ -161,24 +160,11 @@ export function useUnifiedSettings() {
     await loadSettings(true)
   }
 
-  async function focusSettingsWorkspace() {
-    if (window.innerWidth < 960) return
-    isHeaderCompact.value = true
-    await nextTick()
-    pageRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
-  }
-
-  async function toggleHeaderCompact() {
-    if (window.innerWidth < 960) return
-    isHeaderCompact.value = !isHeaderCompact.value
-    await nextTick()
-    pageRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
-  }
-
   async function selectSection(section: SettingsSection) {
     activeSection.value = section
     await router.replace({ query: { ...route.query, section } })
-    await focusSettingsWorkspace()
+    await nextTick()
+    if (window.innerWidth >= 960) shellRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
   }
 
   watch(() => route.query.section, (value) => {
@@ -186,19 +172,15 @@ export function useUnifiedSettings() {
   })
 
   onMounted(() => {
-    if (isSettingsSection(route.query.section)) {
-      activeSection.value = route.query.section
-      void focusSettingsWorkspace()
-    }
+    if (isSettingsSection(route.query.section)) activeSection.value = route.query.section
     void loadSettings()
   })
 
   return {
     settingsNavItems,
-    pageRef,
+    shellRef,
     activeSection,
     activeMeta,
-    isHeaderCompact,
     loading,
     saving,
     settings,
@@ -208,7 +190,6 @@ export function useUnifiedSettings() {
     isDirty,
     isServerSettingSection,
     selectSection,
-    toggleHeaderCompact,
     handleSave,
     handleReload,
     handleReset,

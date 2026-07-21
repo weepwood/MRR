@@ -15,13 +15,18 @@ public class ArchiveImageSourceResolver {
         this.sources = sources == null ? List.of() : List.copyOf(sources);
     }
 
-    public ArchiveImageSource resolve(PathDO image) throws IOException {
-        for (ArchiveImageSource source : sources) {
-            if (source.supports(image)) {
-                return source;
-            }
+    public List<ArchiveImageSource> resolveCandidates(PathDO image) throws IOException {
+        List<ArchiveImageSource> candidates = sources.stream()
+                .filter(source -> source.supports(image))
+                .toList();
+        if (candidates.isEmpty()) {
+            throw new IOException("没有可用的受控图片来源");
         }
-        throw new IOException("没有可用的受控图片来源");
+        return candidates;
+    }
+
+    public ArchiveImageSource resolve(PathDO image) throws IOException {
+        return resolveCandidates(image).get(0);
     }
 
     public String describeSource(PathDO image) throws IOException {

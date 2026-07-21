@@ -21,6 +21,7 @@ class ArchiveExportJobPolicyTest {
         properties.setAsyncItemThreshold(3);
         properties.setAsyncEstimatedBytesThreshold(1_000);
         properties.setAsyncSourceCountThreshold(2);
+        properties.setFallbackBytesPerImage(600);
         ArchiveExportJobService service = new ArchiveExportJobService(
                 mock(ArchiveExportService.class),
                 mock(ArchiveExportJobRepository.class),
@@ -35,6 +36,11 @@ class ArchiveExportJobPolicyTest {
         PathDO oss = item(2, 10, "OSS");
         assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(local, oss)))).isTrue();
         assertThat(service.shouldUseJob(export(2, 10, "LOCAL"))).isFalse();
+
+        PathDO known = item(3, 10, "LOCAL");
+        PathDO unknown = item(4, 0, "LOCAL");
+        unknown.setFileSize(null);
+        assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(known, unknown)))).isTrue();
     }
 
     private ArchiveExportService.BatchZipExport export(int count, long bytes, String source) {

@@ -1,5 +1,25 @@
 import type { AxiosResponse } from 'axios'
-import api from '../index'
+import type { ApiResult } from '../types'
+import api, { getRequest } from '../index'
+
+export interface ArchivePdfExportPlan {
+  format: 'PDF'
+  executionMode: 'CLIENT_PDF' | 'BACKEND_STREAM'
+  selectedCount: number
+  totalCount: number
+  clientPdfMaxImages: number
+  wholeArchive: boolean
+}
+
+export function getArchivePdfExportPlan(bah: string | undefined, sjh: string | undefined, selectedCount: number) {
+  return getRequest<ArchivePdfExportPlan>('/api/v1/archive-exports/plan/pdf', {
+    params: {
+      bah: bah || undefined,
+      sjh: sjh || undefined,
+      selectedCount,
+    },
+  }) as Promise<ApiResult<ArchivePdfExportPlan>>
+}
 
 export function downloadArchiveZip(bah?: string, sjh?: string) {
   return api.get<Blob, AxiosResponse<Blob>>('/api/v1/archive-exports/zip', {

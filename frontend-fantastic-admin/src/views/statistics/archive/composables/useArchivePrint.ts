@@ -172,8 +172,8 @@ export function useArchivePrint() {
       }
 
       if (wholeArchive) {
-        const response = await downloadArchivePdf(bah || undefined, sjh || undefined)
-        saveBlob(response.data, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
+        const pdfBlob = await downloadArchivePdf(bah || undefined, sjh || undefined)
+        saveBlob(pdfBlob, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
         ElMessage.success('整份病案 PDF 已由服务器生成并开始下载')
         return
       }
@@ -182,8 +182,8 @@ export function useArchivePrint() {
       if (ids.length !== images.length) {
         throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
       }
-      const response = await downloadSelectedImagesPdf(ids)
-      saveBlob(response.data, fileName)
+      const pdfBlob = await downloadSelectedImagesPdf(ids)
+      saveBlob(pdfBlob, fileName)
       ElMessage.success(`已由服务器生成并导出 ${images.length} 张影像`)
     }
     catch (err: unknown) {

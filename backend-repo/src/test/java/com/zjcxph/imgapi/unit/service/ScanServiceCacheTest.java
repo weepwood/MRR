@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.service;
 
 import com.zjcxph.imgapi.config.CacheConfig;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.ScanService;
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Import;
 
 import java.util.List;
 
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -57,6 +59,25 @@ class ScanServiceCacheTest {
         assertThat(first).containsExactly(scan);
         assertThat(second).containsExactly(scan);
         verify(scanMapper, times(1)).findByCode("00789508", "789508", "00000123", "123");
+    }
+
+    @Test
+    @DisplayName("查询策略与影像结果一起缓存")
+    void cachesArchiveLookupMetadata() {
+        Scan scan = new Scan();
+        scan.setId(1);
+        scan.setArchiveId(42L);
+        when(scanMapper.resolveArchiveId("00789508", "")).thenReturn(42L);
+        when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of(scan));
+
+        ArchiveLookupResult first = scanService.getImageLookupByCode("00789508", "789508", "", "");
+        ArchiveLookupResult second = scanService.getImageLookupByCode("00789508", "789508", "", "");
+
+        assertThat(first.strategy()).isEqualTo(ARCHIVE_ID_EXACT);
+        assertThat(second.strategy()).isEqualTo(ARCHIVE_ID_EXACT);
+        assertThat(second.archiveId()).isEqualTo(42L);
+        verify(scanMapper, times(1)).resolveArchiveId("00789508", "");
+        verify(scanMapper, times(1)).findActiveByArchiveId(42L);
     }
 
     @Test

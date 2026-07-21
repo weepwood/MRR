@@ -33,10 +33,12 @@ function mockBlobDownloadDom() {
     configurable: true,
     value: vi.fn(),
   })
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 }
 
 describe('resumable archive export download', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
   })

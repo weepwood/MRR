@@ -2,7 +2,6 @@ package com.zjcxph.imgapi.unit.controller;
 
 import com.zjcxph.imgapi.controller.ArchiveExportController;
 import com.zjcxph.imgapi.entity.PathDO;
-import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,13 +24,14 @@ class ArchiveExportPlanLimitTest {
     private ArchiveExportController controller;
 
     @Test
-    void rejectsPartialSelectionBeyondCurrentBackendLimit() {
+    void sendsLargePartialSelectionsToTheBackgroundJob() {
         when(archiveExportService.prepareArchive("00789508", ""))
                 .thenReturn(export(300));
 
-        assertThatThrownBy(() -> controller.planPdf("789508", null, 201))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("部分选择最多导出 200 张");
+        var result = controller.planPdf("789508", null, 201);
+
+        org.assertj.core.api.Assertions.assertThat(result.getData().wholeArchive()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(result.getData().executionMode()).isEqualTo("BACKEND_JOB");
     }
 
     @Test
@@ -43,7 +42,7 @@ class ArchiveExportPlanLimitTest {
         var result = controller.planPdf("789508", null, 300);
 
         org.assertj.core.api.Assertions.assertThat(result.getData().wholeArchive()).isTrue();
-        org.assertj.core.api.Assertions.assertThat(result.getData().executionMode()).isEqualTo("BACKEND_STREAM");
+        org.assertj.core.api.Assertions.assertThat(result.getData().executionMode()).isEqualTo("BACKEND_JOB");
     }
 
     private ArchiveExportService.BatchZipExport export(int count) {

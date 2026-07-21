@@ -2,6 +2,24 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import AuditAnalytics from '../AuditAnalytics.vue'
 
+const analyticsStubs = {
+  'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
+  'el-icon': { template: '<i><slot/></i>' },
+  'el-tag': { template: '<span><slot/></span>' },
+  'el-table': { template: '<div class="el-table"><slot/></div>' },
+  'el-table-column': { template: '<div><slot :row="{ label: \'dev\', count: 1 }" /></div>' },
+  'el-button': { template: '<button><slot/></button>' },
+  'MrrChartCard': {
+    props: ['empty', 'emptyDescription'],
+    template: '<section><span v-if="empty">{{ emptyDescription }}</span><slot v-else /></section>',
+  },
+  'MrrLineChart': {
+    name: 'MrrLineChart',
+    props: ['height'],
+    template: '<div class="line-chart" />',
+  },
+}
+
 const analytics = {
   totalAccesses: 128,
   uniqueUsers: 6,
@@ -27,35 +45,26 @@ describe('auditAnalytics', () => {
     const wrapper = mount(AuditAnalytics, {
       props: { analytics },
       global: {
-        stubs: {
-          'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
-          'el-icon': { template: '<i><slot/></i>' },
-        },
+        stubs: analyticsStubs,
       },
     })
 
     expect(wrapper.text()).toContain('128')
-    expect(wrapper.text()).toContain('独立用户')
-    expect(wrapper.text()).toContain('异常请求')
-    expect(wrapper.find('[data-testid="audit-trend-chart"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="audit-action-chart"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="audit-user-chart"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('查看本地图片')
-    expect(wrapper.text()).toContain('doctor-a')
+    expect(wrapper.text()).toContain('访问用户数')
+    expect(wrapper.text()).toContain('异常访问告警')
+    expect(wrapper.findAllComponents({ name: 'MrrLineChart' })).toHaveLength(2)
+    expect(wrapper.text()).toContain('按用户查看')
   })
 
   it('lets the access trend chart fill the available card height', () => {
     const wrapper = mount(AuditAnalytics, {
       props: { analytics },
       global: {
-        stubs: {
-          'el-card': { template: '<section class="el-card"><slot name="header"/><slot/></section>' },
-          'el-icon': true,
-        },
+        stubs: analyticsStubs,
       },
     })
 
-    expect(wrapper.findComponent({ name: 'MrrLineChart' }).props('height')).toBe('100%')
+    expect(wrapper.findComponent({ name: 'MrrLineChart' }).props('height')).toBe(250)
   })
 
   it('shows a clear empty state when no audit data matches', () => {
@@ -73,13 +82,10 @@ describe('auditAnalytics', () => {
         },
       },
       global: {
-        stubs: {
-          'el-card': { template: '<section><slot name="header"/><slot/></section>' },
-          'el-icon': true,
-        },
+        stubs: analyticsStubs,
       },
     })
 
-    expect(wrapper.text()).toContain('当前筛选条件下暂无可分析数据')
+    expect(wrapper.text()).toContain('暂无趋势数据')
   })
 })

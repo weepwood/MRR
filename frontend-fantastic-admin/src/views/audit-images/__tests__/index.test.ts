@@ -61,7 +61,9 @@ describe('audit images page', () => {
     expect(api.searchImageAuditLogs).toHaveBeenCalledWith({ page: 1, size: 20 })
     expect(api.getImageAuditAnalytics).toHaveBeenCalledWith({})
 
-    await wrapper.find('button').trigger('click')
+    const refreshButton = wrapper.findAll('button').find(button => button.text() === '刷新')
+    expect(refreshButton).toBeDefined()
+    await refreshButton!.trigger('click')
     await flushPromises()
 
     expect(api.searchImageAuditLogs).toHaveBeenCalledTimes(2)

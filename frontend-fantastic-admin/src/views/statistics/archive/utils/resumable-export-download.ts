@@ -5,14 +5,14 @@ const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
 const PREFIX_VERIFY_BYTES = 64 * 1024
 
 interface FileSystemWritableFileStreamLike {
-  write(data: Blob | { type: 'write', position: number, data: Blob }): Promise<void>
-  truncate(size: number): Promise<void>
-  close(): Promise<void>
+  write: (data: Blob | { type: 'write', position: number, data: Blob }) => Promise<void>
+  truncate: (size: number) => Promise<void>
+  close: () => Promise<void>
 }
 
 interface FileSystemFileHandleLike {
-  getFile(): Promise<File>
-  createWritable(options?: { keepExistingData?: boolean }): Promise<FileSystemWritableFileStreamLike>
+  getFile: () => Promise<File>
+  createWritable: (options?: { keepExistingData?: boolean }) => Promise<FileSystemWritableFileStreamLike>
 }
 
 interface FilePickerWindow extends Window {
@@ -38,23 +38,45 @@ function uniqueFileName(job: ArchiveExportJob): string {
   const source = job.fileName || fallback
   const extensionIndex = source.lastIndexOf('.')
   const suffix = job.id.slice(0, 8)
-  if (extensionIndex <= 0) return `${source}-${suffix}`
+  if (extensionIndex <= 0) {
+    return `${source}-${suffix}`
+  }
   return `${source.slice(0, extensionIndex)}-${suffix}${source.slice(extensionIndex)}`
 }
 
+function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  if (typeof blob.arrayBuffer === 'function') {
+    return blob.arrayBuffer()
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.addEventListener('load', () => resolve(reader.result as ArrayBuffer), { once: true })
+    reader.addEventListener('error', () => reject(reader.error || new Error('读取文件内容失败')), { once: true })
+    reader.readAsArrayBuffer(blob)
+  })
+}
+
 async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boolean> {
-  if (existingFile.size <= 0) return true
+  if (existingFile.size <= 0) {
+    return true
+  }
   const verifyLength = Math.min(existingFile.size, PREFIX_VERIFY_BYTES)
   const [localBuffer, remoteBlob] = await Promise.all([
-    existingFile.slice(0, verifyLength).arrayBuffer(),
+    readBlobAsArrayBuffer(existingFile.slice(0, verifyLength)),
     downloadArchiveExportJob(jobId, `bytes=0-${verifyLength - 1}`),
   ])
-  if (remoteBlob.size !== verifyLength) return false
+  if (remoteBlob.size !== verifyLength) {
+    return false
+  }
   const local = new Uint8Array(localBuffer)
-  const remote = new Uint8Array(await remoteBlob.arrayBuffer())
-  if (local.length !== remote.length) return false
+  const remote = new Uint8Array(await readBlobAsArrayBuffer(remoteBlob))
+  if (local.length !== remote.length) {
+    return false
+  }
   for (let index = 0; index < local.length; index++) {
-    if (local[index] !== remote[index]) return false
+    if (local[index] !== remote[index]) {
+      return false
+    }
   }
   return true
 }

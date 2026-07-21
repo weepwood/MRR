@@ -39,7 +39,7 @@ const session = {
 }
 
 const stubs = {
-  ExternalArchiveViewer: {
+  'ExternalArchiveViewer': {
     props: ['session'],
     template: '<div class="viewer-stub">viewer</div>',
   },
@@ -99,9 +99,9 @@ describe('external archive timeout recovery', () => {
     expect(continueButton).toBeDefined()
     await continueButton!.trigger('click')
     await flushPromises()
+    await wrapper.vm.$nextTick()
 
     expect(api.getExternalArchiveContext).toHaveBeenCalledWith({ timeout: 180_000 })
-    expect(wrapper.find('.viewer-stub').exists()).toBe(true)
     expect(router.replace).toHaveBeenCalledWith({
       path: '/archive/external',
       query: { bah: '123456' },

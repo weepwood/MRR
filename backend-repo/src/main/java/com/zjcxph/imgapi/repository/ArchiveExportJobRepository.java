@@ -45,24 +45,44 @@ public class ArchiveExportJobRepository {
         return queryOne("SELECT * FROM app.archive_export_job WHERE id = CAST(? AS UUID)", id);
     }
 
-    public Optional<ArchiveExportJob> findByIdempotency(String ownerUsername, String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+    /**
+     * 新任务以不可变用户 ID 隔离。仅对迁移前 owner_user_id 为空的历史任务，
+     * 临时使用用户名兼容，避免用户名变更或复用后读取他人导出文件。
+     */
+    public Optional<ArchiveExportJob> findByIdempotency(
+            Long ownerUserId,
+            String ownerUsername,
+            String idempotencyKey) {
+        if (ownerUserId == null || idempotencyKey == null || idempotencyKey.isBlank()) {
             return Optional.empty();
         }
         return queryOne("""
                 SELECT * FROM app.archive_export_job
-                WHERE owner_username = ?
+                WHERE (
+                        owner_user_id = ?
+                        OR (owner_user_id IS NULL AND owner_username = ?)
+                      )
                   AND idempotency_key = ?
                   AND status <> 'EXPIRED'
                 ORDER BY created_at DESC
                 LIMIT 1
-                """, ownerUsername, idempotencyKey);
+                """, ownerUserId, ownerUsername, idempotencyKey);
     }
 
-    public List<ArchiveExportJob> findActiveByOwner(String ownerUsername, String format, int limit) {
+    public List<ArchiveExportJob> findActiveByOwner(
+            Long ownerUserId,
+            String ownerUsername,
+            String format,
+            int limit) {
+        if (ownerUserId == null) {
+            return List.of();
+        }
         return jdbcTemplate.query("""
                 SELECT * FROM app.archive_export_job
-                WHERE owner_username = ?
+                WHERE (
+                        owner_user_id = ?
+                        OR (owner_user_id IS NULL AND owner_username = ?)
+                      )
                   AND format = ?
                   AND (
                       status IN ('PENDING', 'PROCESSING')
@@ -72,7 +92,7 @@ public class ArchiveExportJobRepository {
                     CASE WHEN status IN ('PENDING', 'PROCESSING') THEN 0 ELSE 1 END,
                     created_at DESC
                 LIMIT ?
-                """, ROW_MAPPER, ownerUsername, format, limit);
+                """, ROW_MAPPER, ownerUserId, ownerUsername, format, limit);
     }
 
     public List<ArchiveExportJob> findRecoverable() {

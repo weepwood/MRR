@@ -129,6 +129,7 @@ withDefaults(defineProps<{
 }
 
 .mrr-chart-card__content {
+  width: 100%;
   min-width: 0;
 }
 

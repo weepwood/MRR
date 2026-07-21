@@ -1,7 +1,29 @@
 import type { GalleryImage } from '../types'
+import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
+import {
+  downloadArchivePdf,
+  downloadSelectedImagesPdf,
+} from '@/api/modules/archive-export'
+import { getImgByCode } from '@/api/modules/image'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
+import { resolveArchiveExportMode } from '../utils/export-strategy'
+
+function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
+  return promise as unknown as Promise<ApiResult<T>>
+}
+
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 
 export function useArchivePrint() {
   const printing = ref(false)
@@ -100,6 +122,20 @@ export function useArchivePrint() {
     return `${String(image.bah || '').trim()}|${String(image.sjh || '').trim()}`
   }
 
+  async function resolveArchiveTotalCount(firstImage: GalleryImage, selectedCount: number): Promise<number> {
+    try {
+      const response = await asResult<BAHImageData[]>(getImgByCode(
+        String(firstImage.bah || '').trim() || undefined,
+        String(firstImage.sjh || '').trim() || undefined,
+      ))
+      return Array.isArray(response?.data) ? response.data.length : selectedCount
+    }
+    catch {
+      // 无法确认整份范围时采用保守策略：大批量仍走后端，小批量保持前端兼容。
+      return selectedCount + 1
+    }
+  }
+
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
     if (!images.length) {
       ElMessage.warning('请先选择要导出的影像')
@@ -112,28 +148,47 @@ export function useArchivePrint() {
       return
     }
 
-    const imageUrls = images.map(image => String(image.imageUrl || '').trim())
-    if (imageUrls.some(url => !url)) {
-      ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
-      return
-    }
+    const firstImage = images[0]
+    const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
+    const sjh = String(firstImage?.sjh || '').trim()
+    const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
 
     exportingPdf.value = true
     try {
-      const pdfBlob = await createPdfFromImageUrls(imageUrls)
-      const firstImage = images[0]
-      const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
-      const sjh = String(firstImage?.sjh || '').trim()
-      const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
-      const url = URL.createObjectURL(pdfBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
+      const totalCount = await resolveArchiveTotalCount(firstImage, images.length)
+      const mode = resolveArchiveExportMode({
+        format: 'pdf',
+        selectedCount: images.length,
+        totalCount,
+      })
+
+      if (mode === 'client-pdf') {
+        const imageUrls = images.map(image => String(image.imageUrl || '').trim())
+        if (imageUrls.some(url => !url)) {
+          ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
+          return
+        }
+        const pdfBlob = await createPdfFromImageUrls(imageUrls)
+        saveBlob(pdfBlob, fileName)
+        ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
+        return
+      }
+
+      const isWholeArchive = totalCount > 0 && images.length === totalCount
+      if (isWholeArchive) {
+        const response = await downloadArchivePdf(bah, sjh || undefined)
+        saveBlob(response.data, `${bah}${sjh ? `-${sjh}` : ''}.pdf`)
+        ElMessage.success(`整份病案 PDF 已由服务器生成并开始下载`)
+        return
+      }
+
+      const ids = images.map(image => image.id).filter((id): id is string | number => id !== undefined && id !== null)
+      if (ids.length !== images.length) {
+        throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
+      }
+      const response = await downloadSelectedImagesPdf(ids)
+      saveBlob(response.data, fileName)
+      ElMessage.success(`已由服务器生成并导出 ${images.length} 张影像`)
     }
     catch (err: unknown) {
       const message = (err as { message?: string })?.message || 'PDF 导出失败'

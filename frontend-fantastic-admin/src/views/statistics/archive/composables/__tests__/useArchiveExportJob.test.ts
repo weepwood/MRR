@@ -91,10 +91,12 @@ describe('useArchiveExportJob', () => {
     await composable.cancel()
     expect(composable.job.value?.status).toBe('PROCESSING')
     expect(composable.job.value?.cancelRequested).toBe(true)
+    expect(composable.cancelling.value).toBe(true)
 
     await vi.advanceTimersByTimeAsync(500)
 
     expect(composable.job.value?.status).toBe('CANCELLED')
+    expect(composable.cancelling.value).toBe(false)
     scope.stop()
   })
 })

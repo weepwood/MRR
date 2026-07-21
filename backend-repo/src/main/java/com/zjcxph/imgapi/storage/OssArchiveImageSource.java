@@ -1,0 +1,82 @@
+package com.zjcxph.imgapi.storage;
+
+import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.service.OssService;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+@Component
+@Order(10)
+public class OssArchiveImageSource implements ArchiveImageSource {
+
+    private final OssService ossService;
+    private final ArchiveImageSourceProperties properties;
+    private final SourcePermitGuard permitGuard;
+
+    public OssArchiveImageSource(OssService ossService, ArchiveImageSourceProperties properties) {
+        this.ossService = ossService;
+        this.properties = properties;
+        this.permitGuard = new SourcePermitGuard(
+                properties.getOssMaxConcurrency(), properties.getAcquireTimeout());
+    }
+
+    @Override
+    public boolean supports(PathDO image) {
+        if (image == null) {
+            return false;
+        }
+        String type = image.getSourceType() == null ? "" : image.getSourceType().trim();
+        if ("OSS".equalsIgnoreCase(type)) {
+            return objectKey(image) != null;
+        }
+        return properties.isPreferOss()
+                && (type.isEmpty() || "AUTO".equalsIgnoreCase(type))
+                && objectKey(image) != null;
+    }
+
+    @Override
+    public InputStream open(PathDO image) throws IOException {
+        String key = requireObjectKey(image);
+        return permitGuard.open(() -> ossService.openObject(key));
+    }
+
+    @Override
+    public long size(PathDO image) throws IOException {
+        if (image.getFileSize() != null && image.getFileSize() >= 0) {
+            return image.getFileSize();
+        }
+        String key = requireObjectKey(image);
+        return permitGuard.call(() -> ossService.getObjectSize(key));
+    }
+
+    @Override
+    public String describeSource(PathDO image) {
+        return "OSS";
+    }
+
+    private String requireObjectKey(PathDO image) throws IOException {
+        String key = objectKey(image);
+        if (key == null) {
+            throw new IOException("OSS 图片缺少 Object Key");
+        }
+        if (key.startsWith("/") || key.contains("..") || key.contains("\\")) {
+            throw new IOException("OSS Object Key 不合法");
+        }
+        return key;
+    }
+
+    private String objectKey(PathDO image) {
+        if (image == null) {
+            return null;
+        }
+        String value = image.getSourceRef();
+        if (value == null || value.isBlank()) {
+            value = image.getOssUrl();
+        }
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+}

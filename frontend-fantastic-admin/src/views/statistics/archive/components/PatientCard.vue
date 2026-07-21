@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { PatientInfo } from '../types'
+import { AnimatePresence, motion } from 'motion-v'
+import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
 
 defineOptions({ name: 'PatientCard' })
 
@@ -12,14 +14,15 @@ const props = defineProps<{
 const showShelfNumber = ref(false)
 
 const fields = computed(() => [
-  { label: '姓名', value: props.patient?.name || '-' },
+  { key: 'name', label: '姓名', value: props.patient?.name || '-' },
   {
+    key: 'record-number',
     label: showShelfNumber.value ? '上架号' : '病案号',
     value: showShelfNumber.value ? props.sjh || '-' : props.patient?.bah || '-',
     switchable: true,
   },
-  { label: '科室', value: props.patient?.department || '-' },
-  { label: '入院时间', value: props.patient?.admissionTime || '-' },
+  { key: 'department', label: '科室', value: props.patient?.department || '-' },
+  { key: 'admission-time', label: '入院时间', value: props.patient?.admissionTime || '-' },
 ])
 
 function toggleRecordNumber() {
@@ -30,7 +33,7 @@ function toggleRecordNumber() {
 <template>
   <section v-if="props.patient || loading" v-loading="loading" class="patient-card">
     <div class="patient-card-body">
-      <div v-for="field in fields" :key="field.label" class="patient-field">
+      <div v-for="field in fields" :key="field.key" class="patient-field">
         <button
           v-if="field.switchable"
           type="button"
@@ -39,10 +42,31 @@ function toggleRecordNumber() {
           @click="toggleRecordNumber"
         >
           {{ field.label }}
-          <FaIcon name="i-ri:repeat-line" />
+          <motion.span
+            class="field-switch-icon"
+            :animate="{ rotate: showShelfNumber ? 180 : 0 }"
+            :transition="motionSprings.interaction"
+            aria-hidden="true"
+          >
+            <FaIcon name="i-ri:repeat-line" />
+          </motion.span>
         </button>
         <span v-else class="field-label">{{ field.label }}</span>
-        <span class="field-value" :title="field.value">{{ field.value }}</span>
+
+        <AnimatePresence v-if="field.switchable" mode="wait" :initial="false">
+          <motion.span
+            :key="showShelfNumber ? 'sjh' : 'bah'"
+            class="field-value"
+            :title="field.value"
+            :initial="{ opacity: 0, y: 3 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :exit="{ opacity: 0, y: -3 }"
+            :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
+          >
+            {{ field.value }}
+          </motion.span>
+        </AnimatePresence>
+        <span v-else class="field-value" :title="field.value">{{ field.value }}</span>
       </div>
     </div>
   </section>
@@ -88,11 +112,19 @@ function toggleRecordNumber() {
   border: 0;
 }
 
-.field-label--switchable:hover {
+.field-label--switchable:hover,
+.field-label--switchable:focus-visible {
   color: var(--el-color-primary);
+  outline: none;
+}
+
+.field-switch-icon {
+  display: inline-flex;
+  transform-origin: center;
 }
 
 .field-value {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;

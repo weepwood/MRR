@@ -41,23 +41,11 @@ function handleCtrlClick() {
       </div>
     </template>
     <FaButton variant="ghost" size="icon" class="size-9" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick" @animationend="isAnimating = false">
-      <FaIcon name="i-iconoir:refresh-double" class="size-4" :class="{ animation: isAnimating }" />
+      <FaIcon
+        name="i-iconoir:refresh-double"
+        class="mrr-icon-interactive size-4"
+        :class="{ 'mrr-icon-spin-once': isAnimating }"
+      />
     </FaButton>
   </FaTooltip>
 </template>
-
-<style scoped>
-.animation {
-  animation: animation 1s;
-}
-
-@keyframes animation {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-</style>

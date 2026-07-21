@@ -59,40 +59,55 @@ async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boo
   return true
 }
 
+async function downloadAsBlob(job: ArchiveExportJob, fileName: string): Promise<'blob'> {
+  const blob = await downloadArchiveExportJob(job.id)
+  if (!(blob instanceof Blob) || blob.size <= 0) {
+    throw new Error('服务器返回的导出文件为空')
+  }
+  const expectedBytes = Number(job.outputBytes || 0)
+  if (expectedBytes > 0 && blob.size !== expectedBytes) {
+    throw new Error(`导出文件长度不一致：期望 ${expectedBytes}，实际 ${blob.size}`)
+  }
+  saveBlob(blob, fileName)
+  return 'blob'
+}
+
 export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
   const fileName = uniqueFileName(job)
   const totalBytes = Number(job.outputBytes || 0)
   const picker = (window as FilePickerWindow).showSaveFilePicker
   if (!picker || totalBytes <= 0) {
-    const blob = await downloadArchiveExportJob(job.id)
-    saveBlob(blob, fileName)
-    return 'blob'
+    return downloadAsBlob(job, fileName)
   }
 
-  const mimeType = job.format === 'PDF' ? 'application/pdf' : 'application/zip'
-  const extension = job.format === 'PDF' ? '.pdf' : '.zip'
-  const handle = await picker({
-    suggestedName: fileName,
-    types: [{
-      description: `${job.format} 病案导出文件`,
-      accept: { [mimeType]: [extension] },
-    }],
-  })
-  const existingFile = await handle.getFile()
-  const writable = await handle.createWritable({ keepExistingData: true })
-  let offset = existingFile.size
-  if (offset > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
-    await writable.truncate(0)
-    offset = 0
-  }
-
+  let writable: FileSystemWritableFileStreamLike | undefined
   try {
+    const mimeType = job.format === 'PDF' ? 'application/pdf' : 'application/zip'
+    const extension = job.format === 'PDF' ? '.pdf' : '.zip'
+    const handle = await picker({
+      suggestedName: fileName,
+      types: [{
+        description: `${job.format} 病案导出文件`,
+        accept: { [mimeType]: [extension] },
+      }],
+    })
+    const existingFile = await handle.getFile()
+    let offset = existingFile.size
+    if (offset > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
+      offset = 0
+    }
+
+    writable = await handle.createWritable({ keepExistingData: true })
+    if (offset === 0 && existingFile.size > 0) {
+      await writable.truncate(0)
+    }
+
     while (offset < totalBytes) {
       const end = Math.min(totalBytes - 1, offset + DOWNLOAD_CHUNK_BYTES - 1)
       const expectedLength = end - offset + 1
       const chunk = await downloadArchiveExportJob(job.id, `bytes=${offset}-${end}`)
-      if (chunk.size !== expectedLength) {
-        throw new Error(`断点下载区间长度不一致：期望 ${expectedLength}，实际 ${chunk.size}`)
+      if (!(chunk instanceof Blob) || chunk.size !== expectedLength) {
+        throw new Error(`断点下载区间长度不一致：期望 ${expectedLength}，实际 ${chunk instanceof Blob ? chunk.size : 0}`)
       }
       await writable.write({ type: 'write', position: offset, data: chunk })
       offset += chunk.size
@@ -100,7 +115,20 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
     await writable.truncate(totalBytes)
     return 'resumable'
   }
+  catch (error: unknown) {
+    if ((error as { name?: string })?.name === 'AbortError') {
+      throw error
+    }
+    return downloadAsBlob(job, fileName)
+  }
   finally {
-    await writable.close()
+    if (writable) {
+      try {
+        await writable.close()
+      }
+      catch {
+        // Range 下载失败时可能已回退普通下载，关闭失败不覆盖原始结果。
+      }
+    }
   }
 }

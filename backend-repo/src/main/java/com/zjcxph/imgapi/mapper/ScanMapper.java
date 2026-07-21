@@ -29,7 +29,7 @@ public interface ScanMapper {
     );
 
     /**
-     * 通过病案主表解析唯一 archive_id。查询操作不创建新的主档记录。
+     * 通过病案主表精确解析唯一 archive_id。查询操作不创建新的主档记录。
      */
     @Select("SELECT app.resolve_archive_id(" +
             "NULLIF(#{normalizedBah}, ''), NULLIF(#{normalizedSjh}, ''), FALSE)")
@@ -39,7 +39,28 @@ public interface ScanMapper {
     );
 
     /**
-     * archive_id 快速路径。现有 idx_mr_scan_archive_pages 可覆盖过滤与稳定页序。
+     * 仅在精确解析失败时兼容历史补零差异；出现多个等价编号时返回 NULL，避免错误关联。
+     */
+    @Select("<script>"
+            + "<choose>"
+            + "<when test='sjhSearchCode != null and sjhSearchCode != \"\"'>"
+            + "SELECT MIN(id) FROM mr_archive WHERE " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode} "
+            + "HAVING COUNT(*) = 1"
+            + "</when>"
+            + "<when test='bahSearchCode != null and bahSearchCode != \"\"'>"
+            + "SELECT MIN(id) FROM mr_archive WHERE " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode} "
+            + "HAVING COUNT(*) = 1"
+            + "</when>"
+            + "<otherwise>SELECT NULL::BIGINT</otherwise>"
+            + "</choose>"
+            + "</script>")
+    Long resolveArchiveIdBySearchCode(
+            @Param("bahSearchCode") String bahSearchCode,
+            @Param("sjhSearchCode") String sjhSearchCode
+    );
+
+    /**
+     * archive_id 快速路径。现有 idx_mr_scan_archive_pages 支持按主档过滤和稳定页序。
      */
     @Select("SELECT * FROM mr_scan WHERE archive_id = #{archiveId} " +
             "AND uploadflag != 0 ORDER BY pages, id")

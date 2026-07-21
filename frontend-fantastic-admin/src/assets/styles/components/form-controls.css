@@ -26,10 +26,18 @@
   min-height: var(--mrr-control-height);
 }
 
+.el-input-number {
+  height: var(--mrr-control-height);
+}
+
 .el-input--small:not(.el-input--textarea),
 .el-select--small,
-.el-input-number.is-controls-right.el-input-number--small {
+.el-input-number--small {
   min-height: var(--mrr-control-height-compact);
+}
+
+.el-input-number--small {
+  height: var(--mrr-control-height-compact);
 }
 
 .el-input--small:not(.el-input--textarea) .el-input__wrapper,
@@ -39,8 +47,12 @@
 
 .el-input--large:not(.el-input--textarea),
 .el-select--large,
-.el-input-number.is-controls-right.el-input-number--large {
+.el-input-number--large {
   min-height: var(--mrr-control-height-large);
+}
+
+.el-input-number--large {
+  height: var(--mrr-control-height-large);
 }
 
 .el-input--large:not(.el-input--textarea) .el-input__wrapper,

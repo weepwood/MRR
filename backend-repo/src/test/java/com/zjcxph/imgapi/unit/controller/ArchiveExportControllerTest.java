@@ -46,7 +46,7 @@ class ArchiveExportControllerTest {
     }
 
     @Test
-    void plansSmallPartialPdfInBrowser() {
+    void plansSmallPartialPdfInBrowserForLegacyClients() {
         when(archiveExportService.prepareArchive("00789508", ""))
                 .thenReturn(export(3));
 
@@ -89,6 +89,37 @@ class ArchiveExportControllerTest {
     }
 
     @Test
+    void routesMoreThanTwoHundredSelectedImagesToBackgroundJob() {
+        BatchDownloadRequest request = request(201);
+        when(archiveExportService.prepareSelectedArchive(request.getIds())).thenReturn(export(201));
+
+        Result<ArchiveExportPlanResponse> result = controller.planSelectedPdf(request);
+
+        assertThat(result.getData().executionMode()).isEqualTo("BACKEND_JOB");
+        assertThat(result.getData().selectedCount()).isEqualTo(201);
+        assertThat(result.getData().wholeArchive()).isFalse();
+    }
+
+    @Test
+    void acceptsTenThousandSelectedImagesForBackgroundPlanning() {
+        BatchDownloadRequest request = request(10_000);
+        when(archiveExportService.prepareSelectedArchive(request.getIds())).thenReturn(export(10_000));
+
+        Result<ArchiveExportPlanResponse> result = controller.planSelectedPdf(request);
+
+        assertThat(result.getData().executionMode()).isEqualTo("BACKEND_JOB");
+    }
+
+    @Test
+    void rejectsMoreThanTenThousandSelectedImages() {
+        BatchDownloadRequest request = request(10_001);
+
+        assertThatThrownBy(() -> controller.planSelectedPdf(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("10000");
+    }
+
+    @Test
     void streamsWholeArchiveZipForLegacyClients() {
         when(archiveExportService.prepareArchive("00789508", ""))
                 .thenReturn(export(1));
@@ -127,6 +158,7 @@ class ArchiveExportControllerTest {
     void declaresIndependentExportPermissions() throws Exception {
         assertPermission("planZip", "record:download", String.class, String.class);
         assertPermission("planPdf", "record:pdf:export", String.class, String.class, int.class);
+        assertPermission("planSelectedPdf", "record:pdf:export", BatchDownloadRequest.class);
         assertPermission("downloadZip", "record:download", String.class, String.class);
         assertPermission("downloadPdf", "record:pdf:export", String.class, String.class);
         assertPermission("downloadSelectedPdf", "record:pdf:export", BatchDownloadRequest.class);
@@ -137,6 +169,12 @@ class ArchiveExportControllerTest {
         RequirePermissions permissions = method.getAnnotation(RequirePermissions.class);
         assertThat(permissions).isNotNull();
         assertThat(permissions.value()).containsExactly(expected);
+    }
+
+    private BatchDownloadRequest request(int count) {
+        BatchDownloadRequest request = new BatchDownloadRequest();
+        request.setIds(IntStream.rangeClosed(1, count).mapToObj(String::valueOf).toList());
+        return request;
     }
 
     private ArchiveExportService.BatchZipExport export(int count) {

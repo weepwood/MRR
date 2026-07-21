@@ -15,17 +15,20 @@ import static org.mockito.Mockito.when;
 
 class OssArchiveImageSourceTest {
 
+    private static final String ACTUAL_OBJECT_KEY =
+            "medical-records/24.04/24.04.07/666666-00789124/0013.jpg";
+
     @Test
-    void opensObjectThroughBackendSdkReaderWithoutPresignedUrl() throws Exception {
+    void preservesActualMedicalRecordsObjectKeyWhenReadingThroughSdk() throws Exception {
         OssObjectReader reader = mock(OssObjectReader.class);
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
         sourceProperties.setPreferOss(true);
         OssProperties ossProperties = ossProperties();
-        PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        PathDO image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
         image.setSourceType("AUTO");
-        image.setOssUrl("archive/00789508/page.jpg");
+        image.setOssUrl(ACTUAL_OBJECT_KEY);
         image.setFileSize(3L);
-        when(reader.open("archive/00789508/page.jpg"))
+        when(reader.open(ACTUAL_OBJECT_KEY))
                 .thenReturn(new ByteArrayInputStream("img".getBytes(StandardCharsets.UTF_8)));
 
         OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
@@ -33,25 +36,44 @@ class OssArchiveImageSourceTest {
         assertThat(source.supports(image)).isTrue();
         assertThat(source.open(image).readAllBytes()).isEqualTo("img".getBytes(StandardCharsets.UTF_8));
         assertThat(source.size(image)).isEqualTo(3L);
-        verify(reader).open("archive/00789508/page.jpg");
+        verify(reader).open(ACTUAL_OBJECT_KEY);
     }
 
     @Test
-    void extractsObjectKeyFromConfiguredFullOssUrl() throws Exception {
+    void extractsActualObjectKeyFromConfiguredFullOssUrl() throws Exception {
         OssObjectReader reader = mock(OssObjectReader.class);
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
         OssProperties ossProperties = ossProperties();
-        PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        PathDO image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
         image.setSourceType("OSS");
-        image.setOssUrl("https://mrr-medical-records.oss-cn-hangzhou.aliyuncs.com/archive/00789508/page.jpg?versionId=1");
-        when(reader.open("archive/00789508/page.jpg"))
+        image.setOssUrl("https://mrr-medical-records.oss-cn-hangzhou.aliyuncs.com/"
+                + ACTUAL_OBJECT_KEY + "?versionId=1");
+        when(reader.open(ACTUAL_OBJECT_KEY))
                 .thenReturn(new ByteArrayInputStream("oss".getBytes(StandardCharsets.UTF_8)));
 
         OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
 
         assertThat(source.supports(image)).isTrue();
         assertThat(source.open(image).readAllBytes()).isEqualTo("oss".getBytes(StandardCharsets.UTF_8));
-        verify(reader).open("archive/00789508/page.jpg");
+        verify(reader).open(ACTUAL_OBJECT_KEY);
+    }
+
+    @Test
+    void preservesMedicalRecordsPrefixWhenStoredInSourceRef() throws Exception {
+        OssObjectReader reader = mock(OssObjectReader.class);
+        ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
+        OssProperties ossProperties = ossProperties();
+        PathDO image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
+        image.setSourceType("OSS");
+        image.setSourceRef(ACTUAL_OBJECT_KEY);
+        when(reader.open(ACTUAL_OBJECT_KEY))
+                .thenReturn(new ByteArrayInputStream("oss".getBytes(StandardCharsets.UTF_8)));
+
+        OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
+
+        assertThat(source.supports(image)).isTrue();
+        assertThat(source.open(image).readAllBytes()).isEqualTo("oss".getBytes(StandardCharsets.UTF_8));
+        verify(reader).open(ACTUAL_OBJECT_KEY);
     }
 
     @Test
@@ -59,9 +81,9 @@ class OssArchiveImageSourceTest {
         OssObjectReader reader = mock(OssObjectReader.class);
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
         OssProperties ossProperties = ossProperties();
-        PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        PathDO image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
         image.setSourceType("OSS");
-        image.setOssUrl("https://example.com/archive/00789508/page.jpg");
+        image.setOssUrl("https://example.com/" + ACTUAL_OBJECT_KEY);
 
         OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
 
@@ -73,9 +95,9 @@ class OssArchiveImageSourceTest {
         OssObjectReader reader = mock(OssObjectReader.class);
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
         OssProperties ossProperties = ossProperties();
-        PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        PathDO image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
         image.setSourceType("OSS");
-        image.setSourceRef("/archive/00789508/page.jpg");
+        image.setSourceRef("/" + ACTUAL_OBJECT_KEY);
 
         OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
 

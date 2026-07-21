@@ -45,7 +45,12 @@ public class ScanServiceImpl implements ScanService {
             String normalizedSjh,
             String sjhSearchCode
     ) {
-        Long archiveId = scanMapper.resolveArchiveId(normalizedBah, normalizedSjh);
+        Long archiveId = resolveArchiveId(
+                normalizedBah,
+                bahSearchCode,
+                normalizedSjh,
+                sjhSearchCode
+        );
         if (archiveId != null) {
             List<Scan> linkedScans = scanMapper.findActiveByArchiveId(archiveId);
             if (linkedScans != null && !linkedScans.isEmpty()) {
@@ -175,6 +180,34 @@ public class ScanServiceImpl implements ScanService {
     @Override
     public long countByCondition(ScanRequest request) {
         return scanMapper.countByCondition(prepareSearchRequest(request));
+    }
+
+    private Long resolveArchiveId(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    ) {
+        Long archiveId = scanMapper.resolveArchiveId(normalizedBah, normalizedSjh);
+        if (archiveId != null) {
+            return archiveId;
+        }
+
+        if (normalizedSjh != null && !normalizedSjh.isBlank()) {
+            if (!normalizedSjh.equals(sjhSearchCode)) {
+                return scanMapper.resolveArchiveIdBySearchCode("", sjhSearchCode);
+            }
+            return null;
+        }
+
+        if (normalizedBah != null
+                && !normalizedBah.isBlank()
+                && !MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)
+                && !normalizedBah.equals(bahSearchCode)) {
+            return scanMapper.resolveArchiveIdBySearchCode(bahSearchCode, "");
+        }
+
+        return null;
     }
 
     private int normalizeLegacyLimit(int limit) {

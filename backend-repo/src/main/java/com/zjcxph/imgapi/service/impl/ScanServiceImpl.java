@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -15,6 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.function.Supplier;
+
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.FallbackReason.ARCHIVE_HAS_NO_LINKED_SCANS;
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.FallbackReason.ARCHIVE_NOT_FOUND;
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.Strategy.ARCHIVE_ID_COMPAT;
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT;
 
 @Service
 public class ScanServiceImpl implements ScanService {
@@ -28,9 +35,57 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    @Cacheable(
+            value = "scanLookupByBah",
+            key = "#normalizedCode + ':' + #searchCode",
+            unless = "#result == null || #result.resultCount() == 0"
+    )
+    public ArchiveLookupResult getImageLookupByBAH(String normalizedCode, String searchCode) {
+        return performLookup(
+                normalizedCode,
+                searchCode,
+                "",
+                "",
+                () -> scanMapper.findBAH(normalizedCode, searchCode)
+        );
+    }
+
+    @Override
+    @Cacheable(
+            value = "scanLookupByCode",
+            key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
+            unless = "#result == null || #result.resultCount() == 0"
+    )
+    public ArchiveLookupResult getImageLookupByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    ) {
+        return performLookup(
+                normalizedBah,
+                bahSearchCode,
+                normalizedSjh,
+                sjhSearchCode,
+                () -> scanMapper.findByCode(
+                        normalizedBah,
+                        bahSearchCode,
+                        normalizedSjh,
+                        sjhSearchCode
+                )
+        );
+    }
+
+    @Override
     @Cacheable(value = "scanByBah", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
     public List<Scan> getImageListByBAH(String normalizedCode, String searchCode) {
-        return scanMapper.findBAH(normalizedCode, searchCode);
+        return performLookup(
+                normalizedCode,
+                searchCode,
+                "",
+                "",
+                () -> scanMapper.findBAH(normalizedCode, searchCode)
+        ).scans();
     }
 
     @Override
@@ -45,7 +100,18 @@ public class ScanServiceImpl implements ScanService {
             String normalizedSjh,
             String sjhSearchCode
     ) {
-        return scanMapper.findByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
+        return performLookup(
+                normalizedBah,
+                bahSearchCode,
+                normalizedSjh,
+                sjhSearchCode,
+                () -> scanMapper.findByCode(
+                        normalizedBah,
+                        bahSearchCode,
+                        normalizedSjh,
+                        sjhSearchCode
+                )
+        ).scans();
     }
 
     @Override
@@ -58,6 +124,8 @@ public class ScanServiceImpl implements ScanService {
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
             @CacheEvict(value = "scanByCode", allEntries = true),
+            @CacheEvict(value = "scanLookupByBah", allEntries = true),
+            @CacheEvict(value = "scanLookupByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#id")
     })
     public int updateImageType(Integer id, Integer type) {
@@ -68,7 +136,9 @@ public class ScanServiceImpl implements ScanService {
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
-            @CacheEvict(value = "scanByCode", allEntries = true)
+            @CacheEvict(value = "scanByCode", allEntries = true),
+            @CacheEvict(value = "scanLookupByBah", allEntries = true),
+            @CacheEvict(value = "scanLookupByCode", allEntries = true)
     })
     public Scan create(Scan scan) {
         normalizeStoredCodes(scan);
@@ -84,6 +154,8 @@ public class ScanServiceImpl implements ScanService {
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
             @CacheEvict(value = "scanByCode", allEntries = true),
+            @CacheEvict(value = "scanLookupByBah", allEntries = true),
+            @CacheEvict(value = "scanLookupByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#id")
     })
     public boolean softDeleteById(Integer id) {
@@ -95,6 +167,8 @@ public class ScanServiceImpl implements ScanService {
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),
             @CacheEvict(value = "scanByCode", allEntries = true),
+            @CacheEvict(value = "scanLookupByBah", allEntries = true),
+            @CacheEvict(value = "scanLookupByCode", allEntries = true),
             @CacheEvict(value = "scanById", key = "#scan.id")
     })
     public Scan update(Scan scan) {
@@ -169,6 +243,79 @@ public class ScanServiceImpl implements ScanService {
         return scanMapper.countByCondition(prepareSearchRequest(request));
     }
 
+    private ArchiveLookupResult performLookup(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode,
+            Supplier<List<Scan>> legacyQuery
+    ) {
+        ArchiveResolution resolution = resolveArchiveId(
+                normalizedBah,
+                bahSearchCode,
+                normalizedSjh,
+                sjhSearchCode
+        );
+
+        if (resolution.archiveId() != null) {
+            List<Scan> linkedScans = safeList(scanMapper.findActiveByArchiveId(resolution.archiveId()));
+            if (!linkedScans.isEmpty()) {
+                return ArchiveLookupResult.fastPath(
+                        linkedScans,
+                        resolution.strategy(),
+                        resolution.archiveId()
+                );
+            }
+        }
+
+        ArchiveLookupResult.FallbackReason fallbackReason = resolution.archiveId() == null
+                ? ARCHIVE_NOT_FOUND
+                : ARCHIVE_HAS_NO_LINKED_SCANS;
+        List<Scan> fallbackScans = safeList(legacyQuery.get());
+        if (fallbackScans.isEmpty()) {
+            return ArchiveLookupResult.notFound(fallbackReason, resolution.archiveId());
+        }
+        return ArchiveLookupResult.fallback(fallbackScans, fallbackReason, resolution.archiveId());
+    }
+
+    private ArchiveResolution resolveArchiveId(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    ) {
+        Long archiveId = scanMapper.resolveArchiveId(normalizedBah, normalizedSjh);
+        if (archiveId != null) {
+            return new ArchiveResolution(archiveId, ARCHIVE_ID_EXACT);
+        }
+
+        if (normalizedSjh != null && !normalizedSjh.isBlank()) {
+            if (!normalizedSjh.equals(sjhSearchCode)) {
+                Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode("", sjhSearchCode);
+                return compatibleArchiveId == null
+                        ? ArchiveResolution.unresolved()
+                        : new ArchiveResolution(compatibleArchiveId, ARCHIVE_ID_COMPAT);
+            }
+            return ArchiveResolution.unresolved();
+        }
+
+        if (normalizedBah != null
+                && !normalizedBah.isBlank()
+                && !MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)
+                && !normalizedBah.equals(bahSearchCode)) {
+            Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode(bahSearchCode, "");
+            return compatibleArchiveId == null
+                    ? ArchiveResolution.unresolved()
+                    : new ArchiveResolution(compatibleArchiveId, ARCHIVE_ID_COMPAT);
+        }
+
+        return ArchiveResolution.unresolved();
+    }
+
+    private List<Scan> safeList(List<Scan> scans) {
+        return scans == null ? List.of() : scans;
+    }
+
     private int normalizeLegacyLimit(int limit) {
         if (limit < 1) {
             return 1;
@@ -197,5 +344,14 @@ public class ScanServiceImpl implements ScanService {
             prepared.setSjh(MedicalRecordCodeUtils.toSearchTerm(prepared.getSjh()));
         }
         return prepared;
+    }
+
+    private record ArchiveResolution(
+            Long archiveId,
+            ArchiveLookupResult.Strategy strategy
+    ) {
+        private static ArchiveResolution unresolved() {
+            return new ArchiveResolution(null, null);
+        }
     }
 }

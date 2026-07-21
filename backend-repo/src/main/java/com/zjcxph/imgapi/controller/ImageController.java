@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.ImageRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,10 @@ public class ImageController {
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
     private static final String BAH_REQUIRES_SJH_MESSAGE =
             "病案号大于等于 10000000 时必须使用上架号查询";
+    private static final String LOOKUP_STRATEGY_HEADER = "X-MRR-Lookup-Strategy";
+    private static final String LOOKUP_ARCHIVE_ID_HEADER = "X-MRR-Archive-Id";
+    private static final String LOOKUP_FALLBACK_REASON_HEADER = "X-MRR-Fallback-Reason";
+    private static final String LOOKUP_IMAGE_COUNT_HEADER = "X-MRR-Image-Count";
 
     private final ScanService scanService;
     private final ArchiveExportService archiveExportService;
@@ -130,14 +136,16 @@ public class ImageController {
             @PathVariable
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
             @Parameter(description = "小于 10000000 的唯一病案号，可省略前导零", example = "789508")
-            String bah) {
+            String bah,
+            HttpServletResponse response) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)) {
             return Result.fail(BAH_REQUIRES_SJH_MESSAGE + "，请使用 /search 接口");
         }
         String bahSearchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
-        List<Scan> imageListByBAH = scanService.getImageListByBAH(normalizedBah, bahSearchCode);
-        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(imageListByBAH);
+        ArchiveLookupResult lookupResult = scanService.getImageLookupByBAH(normalizedBah, bahSearchCode);
+        applyLookupMetadata(response, lookupResult);
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
         return Result.success(items).message(normalizedBah + " 数据获取成功");
     }
 
@@ -152,7 +160,8 @@ public class ImageController {
             @RequestParam(required = false) String sjh,
             @Parameter(description = "调用方内网系统当前用户 ID")
             @RequestParam(required = false) String userid,
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            HttpServletResponse response) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
@@ -172,13 +181,14 @@ public class ImageController {
         String querySjh = useSjh ? normalizedSjh : "";
         String querySjhSearchCode = useSjh ? MedicalRecordCodeUtils.toSearchTerm(sjh) : "";
 
-        List<Scan> list = scanService.getImageListByCode(
+        ArchiveLookupResult lookupResult = scanService.getImageLookupByCode(
                 queryBah,
                 queryBahSearchCode,
                 querySjh,
                 querySjhSearchCode
         );
-        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(list);
+        applyLookupMetadata(response, lookupResult);
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
         return Result.success(items);
     }
 
@@ -296,5 +306,25 @@ public class ImageController {
             return ResponseEntity.internalServerError()
                     .body(Result.fail("获取 OSS 图片失败：" + exception.getMessage()));
         }
+    }
+
+    private void applyLookupMetadata(
+            HttpServletResponse response,
+            ArchiveLookupResult lookupResult
+    ) {
+        response.setHeader(LOOKUP_STRATEGY_HEADER, lookupResult.strategy().name());
+        response.setHeader(LOOKUP_FALLBACK_REASON_HEADER, lookupResult.fallbackReason().name());
+        response.setHeader(LOOKUP_IMAGE_COUNT_HEADER, Integer.toString(lookupResult.resultCount()));
+        if (lookupResult.archiveId() != null) {
+            response.setHeader(LOOKUP_ARCHIVE_ID_HEADER, Long.toString(lookupResult.archiveId()));
+        }
+
+        logger.info(
+                "影像档案查询完成: strategy={}, fallbackReason={}, archiveId={}, resultCount={}",
+                lookupResult.strategy(),
+                lookupResult.fallbackReason(),
+                lookupResult.archiveId(),
+                lookupResult.resultCount()
+        );
     }
 }

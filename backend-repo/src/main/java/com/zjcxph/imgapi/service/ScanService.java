@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -8,6 +9,15 @@ import com.zjcxph.imgapi.entity.Scan;
 import java.util.List;
 
 public interface ScanService {
+    ArchiveLookupResult getImageLookupByBAH(String normalizedCode, String searchCode);
+
+    ArchiveLookupResult getImageLookupByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    );
+
     List<Scan> getImageListByBAH(String normalizedCode, String searchCode);
 
     List<Scan> getImageListByCode(

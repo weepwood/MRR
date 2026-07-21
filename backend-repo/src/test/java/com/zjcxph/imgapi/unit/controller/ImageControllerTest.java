@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.unit.controller;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.ImageController;
 import com.zjcxph.imgapi.dto.req.ImageRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -13,6 +14,7 @@ import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.storage.ImageStorage;
 import com.zjcxph.imgapi.storage.InvalidImagePathException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -57,6 +60,9 @@ class ImageControllerTest {
 
     @Mock
     private ArchiveAccessService archiveAccessService;
+
+    @Mock
+    private HttpServletResponse response;
 
     @InjectMocks
     private ImageController imageController;
@@ -87,22 +93,23 @@ class ImageControllerTest {
         );
         when(archiveExportService.prepareArchive("00789508", "")).thenReturn(export);
 
-        ResponseEntity<StreamingResponseBody> response = imageController.download("789508", null);
+        ResponseEntity<StreamingResponseBody> responseEntity = imageController.download("789508", null);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getHeaders().getFirst("Content-Disposition"))
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getHeaders().getFirst("Content-Disposition"))
                 .contains("00789508.zip");
-        assertThat(response.getBody()).isNotNull();
+        assertThat(responseEntity.getBody()).isNotNull();
     }
 
     @Test
     void getDataByBAH() {
-        when(scanService.getImageListByBAH("00789508", "789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageLookupByBAH("00789508", "789508"))
+                .thenReturn(ArchiveLookupResult.fastPath(List.of(mockScan), ARCHIVE_ID_EXACT, 42L));
         BAHDataResponseDTO dto = new BAHDataResponseDTO();
         dto.setBah("00789508");
         doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
 
-        Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
+        Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508", response);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).hasSize(1);
@@ -111,13 +118,14 @@ class ImageControllerTest {
     @Test
     void getDataByBAH_nullFolder() {
         mockScan.setFolder(null);
-        when(scanService.getImageListByBAH("00789508", "789508")).thenReturn(List.of(mockScan));
+        when(scanService.getImageLookupByBAH("00789508", "789508"))
+                .thenReturn(ArchiveLookupResult.fastPath(List.of(mockScan), ARCHIVE_ID_EXACT, 42L));
         BAHDataResponseDTO dto = new BAHDataResponseDTO();
         dto.setBah("00789508");
         dto.setImg_url("http://192.2.1.182:8001/ba-img-00/605746-00789508/test.jpg");
         doReturn(List.of(dto)).when(imageUrlService).toDtoList(anyList());
 
-        Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508");
+        Result<List<BAHDataResponseDTO>> result = imageController.getDataByBAH("00789508", response);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData().get(0).getImg_url())

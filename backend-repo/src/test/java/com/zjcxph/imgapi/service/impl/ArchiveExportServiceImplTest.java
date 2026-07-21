@@ -22,6 +22,7 @@ import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,20 +57,22 @@ class ArchiveExportServiceImplTest {
 
     @Test
     void streamsZipAndAvoidsAllEntryNameCollisions() throws Exception {
-        PathDO first = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
-        PathDO duplicate = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
-        PathDO realSuffixed = new PathDO("25.03.15", "page-2.jpg", "605746", "00789508");
         List<String> ids = List.of("1", "2", "3");
         when(scanService.findActiveByIds(List.of(1, 2, 3))).thenReturn(List.of(
                 scan(1, 1L, "00789508", "", 1, "page.jpg"),
                 scan(2, 1L, "00789508", "", 2, "page.jpg"),
                 scan(3, 1L, "00789508", "", 3, "page-2.jpg")
         ));
-        when(imageStorage.open(first))
-                .thenReturn(new ByteArrayInputStream("one".getBytes(StandardCharsets.UTF_8)))
-                .thenReturn(new ByteArrayInputStream("two".getBytes(StandardCharsets.UTF_8)));
-        when(imageStorage.open(realSuffixed))
-                .thenReturn(new ByteArrayInputStream("three".getBytes(StandardCharsets.UTF_8)));
+        when(imageStorage.open(any(PathDO.class))).thenAnswer(invocation -> {
+            PathDO item = invocation.getArgument(0);
+            String value = switch (item.getScanId()) {
+                case 1 -> "one";
+                case 2 -> "two";
+                case 3 -> "three";
+                default -> throw new IOException("unexpected scan id");
+            };
+            return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8));
+        });
 
         ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
         ArchiveExportService.BatchZipExport export = service.prepareBatch(ids);

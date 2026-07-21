@@ -1,9 +1,13 @@
 -- ============================================================
--- MRR Database Schema (PostgreSQL, schema=app)
--- 完整建表入口，包含所有表结构、索引、视图、函数和种子数据
+-- MRR V0 基线（PostgreSQL, schema=app）
+-- 新生产数据库的唯一初始迁移：包含当前完整表结构、索引、视图、函数、注释和必要种子数据。
+-- 历史增量脚本已归档到 db/migration-legacy，不能与本文件同时作为 Flyway 迁移链执行。
 -- ============================================================
 
 CREATE SCHEMA IF NOT EXISTS app;
+
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 -- ============================================
 -- 1. 核心业务表
@@ -195,15 +199,18 @@ COMMENT ON COLUMN app.mr_system_settings.updated_by   IS '最后修改用户';
 CREATE INDEX IF NOT EXISTS idx_mr_scan_bah               ON app.mr_scan (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_brxh              ON app.mr_scan (brxh);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_sjh               ON app.mr_scan (sjh);
-CREATE INDEX IF NOT EXISTS idx_mr_scan_folder_bah         ON app.mr_scan (folder, bah);
+CREATE INDEX IF NOT EXISTS idx_mr_scan_folder_id          ON app.mr_scan (folder, id);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_migration_status   ON app.mr_scan (migration_status);
 CREATE INDEX IF NOT EXISTS idx_mr_scan_oss_url            ON app.mr_scan (oss_url) WHERE oss_url IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_migration  ON app.mr_scan (id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
+CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_id         ON app.mr_scan (id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
+CREATE INDEX IF NOT EXISTS idx_mr_scan_pending_folder_id  ON app.mr_scan (folder, id) WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '');
 CREATE INDEX IF NOT EXISTS idx_mr_scan_bah_cover          ON app.mr_scan (bah) INCLUDE (filename, pages, btype);
 
 -- 4.2 mr_statistics 索引
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_bah  ON app.mr_statistics (bah);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_date ON app.mr_statistics (date);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_date_normalized ON app.mr_statistics ((replace(date, '/', '-')));
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_keyword_trgm ON app.mr_statistics USING gin ((coalesce(cid, '') || chr(1) || coalesce(openerno, '') || chr(1) || coalesce(date, '') || chr(1) || coalesce(type, '')) public.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_type ON app.mr_statistics (type);
 CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 
@@ -211,8 +218,7 @@ CREATE INDEX IF NOT EXISTS idx_mr_statistics_sjh  ON app.mr_statistics (sjh);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_idcard ON app.mr_patient (idcard);
 CREATE INDEX IF NOT EXISTS idx_mr_patient_bah     ON app.mr_patient (bah);
 
--- 4.4 mr_auth_user 索引
-CREATE INDEX IF NOT EXISTS idx_mr_auth_user_username  ON app.mr_auth_user (username);
+-- 4.4 mr_auth_user 索引（username 的 UNIQUE 约束已自动创建索引）
 CREATE INDEX IF NOT EXISTS idx_mr_auth_user_role_code ON app.mr_auth_user (role_code);
 
 -- 4.5 access_log 索引（BRIN 适用于大容量追加型日志表）
@@ -223,12 +229,15 @@ CREATE INDEX IF NOT EXISTS idx_access_log_request_uri      ON app.access_log (re
 CREATE INDEX IF NOT EXISTS idx_access_log_method           ON app.access_log (method);
 CREATE INDEX IF NOT EXISTS idx_access_log_response_status  ON app.access_log (response_status);
 CREATE INDEX IF NOT EXISTS idx_access_log_method_status    ON app.access_log (method, response_status);
+CREATE INDEX IF NOT EXISTS idx_access_log_keyword_common_trgm ON app.access_log USING gin ((coalesce(username, '') || chr(1) || coalesce(client_ip, '') || chr(1) || coalesce(request_uri, '') || chr(1) || coalesce(query_string, '') || chr(1) || coalesce(user_agent, '')) public.gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_access_log_referer_trgm     ON app.access_log USING gin (referer public.gin_trgm_ops);
 
 -- 4.6 image_migration_log 索引
 CREATE INDEX IF NOT EXISTS idx_migration_status         ON app.image_migration_log (migration_status);
 CREATE INDEX IF NOT EXISTS idx_migration_scan_id        ON app.image_migration_log (scan_id);
 CREATE INDEX IF NOT EXISTS idx_migration_created_at     ON app.image_migration_log (created_at);
 CREATE INDEX IF NOT EXISTS idx_migration_status_created ON app.image_migration_log (migration_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_migration_scan_created   ON app.image_migration_log (scan_id, created_at DESC);
 
 -- 4.7 migration_job 索引
 CREATE INDEX IF NOT EXISTS idx_migration_job_status     ON app.migration_job (status);
@@ -367,3 +376,165 @@ ON CONFLICT (username) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     role_code     = EXCLUDED.role_code,
     status        = EXCLUDED.status;
+
+-- ============================================
+-- 8. 前端响应指标
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS app.frontend_response_metric (
+    request_id         VARCHAR(64) PRIMARY KEY,
+    route_pattern      VARCHAR(255) NOT NULL,
+    method             VARCHAR(10) NOT NULL,
+    http_status        INTEGER,
+    business_code      INTEGER,
+    success            BOOLEAN NOT NULL,
+    client_duration_ms BIGINT NOT NULL CHECK (client_duration_ms >= 0),
+    server_duration_ms BIGINT CHECK (server_duration_ms >= 0),
+    occurred_at        TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_response_metric_occurred_at
+    ON app.frontend_response_metric (occurred_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_response_metric_route_time
+    ON app.frontend_response_metric (route_pattern, method, occurred_at DESC);
+
+COMMENT ON TABLE app.frontend_response_metric IS '前端上报的接口响应性能指标';
+
+CREATE TABLE IF NOT EXISTS app.mr_archive_search_history (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    bah VARCHAR(64),
+    sjh VARCHAR(64),
+    success BOOLEAN NOT NULL,
+    image_count INTEGER NOT NULL DEFAULT 0 CHECK (image_count >= 0),
+    query_count INTEGER NOT NULL DEFAULT 1 CHECK (query_count >= 0),
+    failure_reason VARCHAR(1000),
+    favorite BOOLEAN NOT NULL DEFAULT FALSE,
+    searched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_archive_search_history_code CHECK (NULLIF(BTRIM(COALESCE(bah, '')), '') IS NOT NULL OR NULLIF(BTRIM(COALESCE(sjh, '')), '') IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_archive_search_history_user_time ON app.mr_archive_search_history (user_id, searched_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_archive_search_history_user_favorite ON app.mr_archive_search_history (user_id, favorite, searched_at DESC);
+COMMENT ON TABLE app.mr_archive_search_history IS '用户住院病案搜索记录与收藏';
+
+-- ============================================
+-- 9. 统计、装箱与数据质量扩展
+-- ============================================
+
+ALTER TABLE app.mr_statistics
+    ADD COLUMN IF NOT EXISTS patientname VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS inpatientdepartment VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS patientid VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS dischargedate VARCHAR(32);
+
+COMMENT ON COLUMN app.mr_statistics.patientname IS '病人姓名';
+COMMENT ON COLUMN app.mr_statistics.inpatientdepartment IS '住院科室';
+COMMENT ON COLUMN app.mr_statistics.patientid IS '病人ID';
+COMMENT ON COLUMN app.mr_statistics.dischargedate IS '出院日期';
+
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_patientname ON app.mr_statistics (patientname);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_inpatientdepartment ON app.mr_statistics (inpatientdepartment);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_patientid ON app.mr_statistics (patientid);
+CREATE INDEX IF NOT EXISTS idx_mr_statistics_dischargedate ON app.mr_statistics (dischargedate);
+
+CREATE TABLE IF NOT EXISTS app.mr_archive_box_record (
+    id              BIGSERIAL PRIMARY KEY,
+    bah             VARCHAR(64),
+    sjh             VARCHAR(64) UNIQUE,
+    box_no          VARCHAR(64),
+    expected_box_no VARCHAR(64),
+    status          VARCHAR(32) NOT NULL DEFAULT 'NORMAL',
+    remark          VARCHAR(1000),
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_archive_box_record_code CHECK (NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL OR NULLIF(TRIM(COALESCE(sjh, '')), '') IS NOT NULL),
+    CONSTRAINT chk_archive_box_record_status CHECK (status IN ('NORMAL', 'MISSING', 'MISPLACED', 'CONFLICT', 'OTHER')),
+    CONSTRAINT chk_archive_box_record_box CHECK (status = 'MISSING' OR NULLIF(TRIM(COALESCE(box_no, '')), '') IS NOT NULL)
+);
+
+COMMENT ON TABLE app.mr_archive_box_record IS '实体病案装箱位置与盘点状态记录';
+CREATE INDEX IF NOT EXISTS idx_archive_box_record_bah ON app.mr_archive_box_record (bah);
+CREATE INDEX IF NOT EXISTS idx_archive_box_record_box_no ON app.mr_archive_box_record (box_no);
+CREATE INDEX IF NOT EXISTS idx_archive_box_record_expected_box_no ON app.mr_archive_box_record (expected_box_no);
+CREATE INDEX IF NOT EXISTS idx_archive_box_record_status ON app.mr_archive_box_record (status);
+CREATE INDEX IF NOT EXISTS idx_archive_box_record_updated_at ON app.mr_archive_box_record (updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS app.mrr_data_quality_run (
+    id BIGSERIAL PRIMARY KEY,
+    status VARCHAR(20) NOT NULL,
+    triggered_by VARCHAR(32) NOT NULL DEFAULT 'manual',
+    check_count INTEGER NOT NULL DEFAULT 0,
+    total_issues BIGINT NOT NULL DEFAULT 0,
+    critical_count BIGINT NOT NULL DEFAULT 0,
+    warning_count BIGINT NOT NULL DEFAULT 0,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    error_message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS app.mrr_data_quality_check_result (
+    id BIGSERIAL PRIMARY KEY,
+    run_id BIGINT NOT NULL REFERENCES app.mrr_data_quality_run(id) ON DELETE CASCADE,
+    check_code VARCHAR(80) NOT NULL,
+    check_name VARCHAR(160) NOT NULL,
+    severity VARCHAR(16) NOT NULL,
+    issue_count BIGINT NOT NULL DEFAULT 0,
+    sampled_count INTEGER NOT NULL DEFAULT 0,
+    checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (run_id, check_code)
+);
+
+CREATE TABLE IF NOT EXISTS app.mrr_data_quality_issue (
+    id BIGSERIAL PRIMARY KEY,
+    run_id BIGINT NOT NULL REFERENCES app.mrr_data_quality_run(id) ON DELETE CASCADE,
+    check_code VARCHAR(80) NOT NULL,
+    check_name VARCHAR(160) NOT NULL,
+    severity VARCHAR(16) NOT NULL,
+    entity_type VARCHAR(80),
+    entity_id VARCHAR(160),
+    bah VARCHAR(32),
+    sjh VARCHAR(32),
+    detail TEXT,
+    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE app.mrr_data_quality_run IS '数据质量检查执行批次';
+COMMENT ON TABLE app.mrr_data_quality_check_result IS '数据质量检查项汇总结果';
+COMMENT ON TABLE app.mrr_data_quality_issue IS '数据质量检查发现的具体问题';
+CREATE INDEX IF NOT EXISTS idx_data_quality_run_started_at ON app.mrr_data_quality_run (started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_data_quality_run_status ON app.mrr_data_quality_run (status);
+CREATE INDEX IF NOT EXISTS idx_data_quality_check_run ON app.mrr_data_quality_check_result (run_id, severity, issue_count DESC);
+CREATE INDEX IF NOT EXISTS idx_data_quality_issue_run ON app.mrr_data_quality_issue (run_id, severity, check_code);
+CREATE INDEX IF NOT EXISTS idx_data_quality_issue_codes ON app.mrr_data_quality_issue (bah, sjh);
+
+CREATE TABLE IF NOT EXISTS app.system_availability_period (
+    id BIGSERIAL PRIMARY KEY,
+    status VARCHAR(16) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    ended_at TIMESTAMPTZ,
+    last_heartbeat_at TIMESTAMPTZ NOT NULL,
+    reason VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_system_availability_status CHECK (status IN ('UP', 'DOWN')),
+    CONSTRAINT ck_system_availability_period_time CHECK (ended_at IS NULL OR ended_at >= started_at)
+);
+
+COMMENT ON TABLE app.system_availability_period IS 'MRR 服务可用性状态时间区间';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_system_availability_open_period ON app.system_availability_period ((1)) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_system_availability_started_at ON app.system_availability_period (started_at DESC);
+
+-- 基线中统一补齐所有新建业务表的表级注释。
+COMMENT ON TABLE app.mr_scan IS '病案扫描影像记录，保存影像文件元数据及 OSS 迁移信息';
+COMMENT ON TABLE app.mr_patient IS '患者基本信息及病案关联信息';
+COMMENT ON TABLE app.mr_statistics IS '病案影像统计与检索数据';
+COMMENT ON TABLE app.mr_auth_role IS '系统角色及权限集合';
+COMMENT ON TABLE app.mr_auth_user IS '系统认证用户及登录状态信息';
+COMMENT ON TABLE app.access_log IS '接口访问与影像访问审计日志';
+COMMENT ON TABLE app.image_migration_log IS '影像文件迁移至 OSS 的逐文件执行日志';
+COMMENT ON TABLE app.migration_job IS '批量 OSS 迁移任务执行状态';
+COMMENT ON TABLE app.mr_system_settings IS '系统级键值配置';

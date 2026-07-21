@@ -1,0 +1,140 @@
+/*
+ * Element Plus 只在这里桥接 MRR 的尺寸令牌；颜色、边框、圆角和状态
+ * 继续由 element-plus-overrides.css 统一维护，避免两套全局规则互相覆盖。
+ * Fantastic Admin 自带的 FaInput / FaSelect 则使用同一套 MRR 控件令牌。
+ */
+.el-input,
+.el-select,
+.el-date-editor,
+.el-input-number {
+  --el-component-size: var(--mrr-control-height);
+}
+
+.el-input--small,
+.el-select--small,
+.el-date-editor--small,
+.el-range-editor--small,
+.el-input-number--small {
+  --el-component-size: var(--mrr-control-height-compact);
+}
+
+.el-input--large,
+.el-select--large,
+.el-date-editor--large,
+.el-range-editor--large,
+.el-input-number--large {
+  --el-component-size: var(--mrr-control-height-large);
+}
+
+.el-range-editor {
+  min-height: var(--el-component-size);
+}
+
+.el-range-editor--small,
+.el-input-number--small {
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-range-editor--small {
+  padding-inline: 9px;
+}
+
+.el-range-editor--large,
+.el-input-number--large {
+  border-radius: var(--mrr-radius-lg);
+}
+
+.el-range-editor--large {
+  padding-inline: 12px;
+}
+
+.el-input-number {
+  height: var(--el-component-size);
+}
+
+.el-input-number .el-input,
+.el-input-number .el-input__wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
+.el-range-input {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.el-date-editor .el-range-separator,
+.el-date-editor .el-range__icon,
+.el-date-editor .el-range__close-icon {
+  line-height: 20px;
+}
+
+.fa-input-control,
+.fa-select-trigger {
+  box-sizing: border-box;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 11px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--mrr-foreground);
+  background: var(--mrr-control-bg);
+  border: 1px solid var(--mrr-control-border);
+  border-radius: var(--mrr-control-radius);
+  box-shadow: var(--mrr-shadow-xs);
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.fa-input-control::placeholder,
+.fa-select-trigger[data-placeholder] {
+  color: var(--mrr-muted-foreground);
+  opacity: 0.78;
+}
+
+.fa-input-control:hover:not(:disabled),
+.fa-select-trigger:hover:not([data-disabled]) {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-control-border-hover);
+}
+
+.fa-input-control:focus-visible,
+.fa-select-trigger:focus-visible,
+.fa-select-trigger[data-state="open"] {
+  background: var(--mrr-background);
+  border-color: var(--mrr-ring);
+  outline: none;
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.fa-input-control:disabled,
+.fa-select-trigger:disabled,
+.fa-select-trigger[data-disabled] {
+  color: var(--mrr-muted-foreground);
+  cursor: not-allowed;
+  background: var(--mrr-control-bg-disabled);
+  border-color: var(--mrr-border);
+  box-shadow: none;
+  opacity: 0.62;
+}
+
+.fa-select-chevron {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--mrr-muted-foreground);
+  transition: color 120ms ease, transform 120ms ease;
+}
+
+.fa-select-trigger[data-state="open"] .fa-select-chevron {
+  color: var(--mrr-foreground);
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-input-control,
+  .fa-select-trigger,
+  .fa-select-chevron {
+    transition: none;
+  }
+}

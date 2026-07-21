@@ -14,6 +14,8 @@ public interface MigrationService {
 
     OssUploadResult uploadSingleScan(Integer scanId);
 
+    OssUploadResult uploadLoadedScan(Scan scan);
+
     List<OssUploadResult> uploadByBah(String bah);
 
     MigrationStatisticsDTO getStatistics();

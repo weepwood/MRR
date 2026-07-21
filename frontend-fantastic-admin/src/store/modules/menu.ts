@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
 import menu from '@/menu'
 import { resolveRoutePath } from '@/utils'
+import { normalizeExternalLinkUrl } from '@/utils/external-links'
 
 export const useMenuStore = defineStore(
   // 唯一ID
@@ -24,7 +25,14 @@ export const useMenuStore = defineStore(
               meta: {},
               children: [],
             })
-            returnMenus[0].children.push(...convertRouteToMenuRecursive(item.children))
+            returnMenus[0].children.push({
+              meta: {
+                title: item?.meta?.title,
+                icon: item?.meta?.icon,
+                auth: item?.meta?.auth,
+              },
+              children: convertRouteToMenuRecursive(item.children),
+            })
           }
           else {
             const menuItem: Menu.recordMainRaw = {
@@ -64,6 +72,48 @@ export const useMenuStore = defineStore(
       return returnMenus
     }
 
+    function createExternalLinkMenus(): Menu.recordRaw[] {
+      return settingsStore.settings.menu.externalLinks.flatMap((link) => {
+        const title = link.title.trim()
+        const url = normalizeExternalLinkUrl(link.url)
+        if (!title || !url) {
+          return []
+        }
+        return [{
+          path: `/__external/${encodeURIComponent(link.id)}`,
+          meta: {
+            title,
+            icon: link.icon || 'i-ri:external-link-line',
+            link: url,
+          },
+        }]
+      })
+    }
+
+    function appendExternalLinksGroup(menus: Menu.recordMainRaw[]): Menu.recordMainRaw[] {
+      if (settingsStore.settings.menu.mode !== 'single') {
+        return menus
+      }
+
+      const externalLinks = createExternalLinkMenus()
+      if (externalLinks.length === 0) {
+        return menus
+      }
+
+      if (menus.length === 0) {
+        menus.push({ meta: {}, children: [] })
+      }
+      menus[0].children.push({
+        path: '/__external',
+        meta: {
+          title: '其他',
+          icon: 'i-ri:links-line',
+        },
+        children: externalLinks,
+      })
+      return menus
+    }
+
     // 完整导航数据
     const allMenus = computed(() => {
       let returnMenus: Menu.recordMainRaw[] = []
@@ -71,8 +121,9 @@ export const useMenuStore = defineStore(
         returnMenus = convertRouteToMenu(routeStore.routesRaw)
       }
       else {
-        returnMenus = filesystemMenusRaw.value
+        returnMenus = cloneDeep(filesystemMenusRaw.value)
       }
+      returnMenus = appendExternalLinksGroup(returnMenus)
       returnMenus = filterAsyncMenus(returnMenus)
       return returnMenus
     })

@@ -1,47 +1,104 @@
-=·name: quality-gate
+name: quality-gate
 
 on:
   pull_request:
+    branches:
+      - dev-no-login
+      - main
   push:
     branches:
+      - dev-no-login
       - main
-      - master
+    tags:
+      - 'v*'
+      - '*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  release-baseline-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test release baseline tooling
+        run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
+      - name: Validate repository release baseline
+        run: python scripts/release_baseline.py validate
+
   frontend-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend-fantastic-admin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Type Check
+        run: pnpm lint:tsc
+
+      - name: Lint Changed Files
+        env:
+          LINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LINT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/lint-changed.mjs
 
       - name: Build
         run: pnpm build
 
-      - name: Test
+      - name: Unit Test
         run: pnpm test:run
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: End-to-End Test
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend-fantastic-admin/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
 
   backend-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: backend-repo
@@ -49,15 +106,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify Docker
+        run: docker info
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
           cache: maven
 
-      - name: Test
-        run: mvn -B -ntp test
+      - name: Unit and integration tests
+        run: mvn -B -ntp verify
 
-      - name: Package
-        run: mvn -B -ntp -DskipTests package
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            backend-repo/target/surefire-reports
+            backend-repo/target/failsafe-reports
+            backend-repo/target/site/jacoco
+          if-no-files-found: ignore
+          retention-days: 7

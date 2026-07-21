@@ -1,0 +1,187 @@
+/* MRR 业务指标卡片：现代 SaaS 仪表盘风格 */
+.mrr-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.mrr-metric-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--mrr-space-3);
+}
+
+.mrr-metric-card {
+  --mrr-metric-accent: var(--mrr-primary);
+
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  color: var(--mrr-card-foreground);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-xl);
+  box-shadow: var(--mrr-shadow-xs);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.mrr-metric-card::after {
+  position: absolute;
+  top: -54px;
+  right: -42px;
+  width: 132px;
+  height: 132px;
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(circle, color-mix(in srgb, var(--mrr-metric-accent) 15%, transparent) 0%, transparent 68%);
+}
+
+.mrr-metric-card:hover,
+.mrr-metric-card:focus-within {
+  border-color: color-mix(in srgb, var(--mrr-metric-accent) 24%, var(--mrr-border));
+  box-shadow: var(--mrr-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.mrr-metric-card .el-card__body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  min-height: 112px;
+  padding: 18px;
+}
+
+.mrr-metric-card__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+  color: var(--mrr-metric-accent);
+  background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
+  border-radius: 14px;
+  place-items: center;
+}
+
+.mrr-metric-card__icon .el-icon {
+  font-size: inherit;
+}
+
+.mrr-metric-card__body {
+  min-width: 0;
+}
+
+.mrr-metric-card__label {
+  display: block;
+  margin: 1px 0 6px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.35;
+  color: var(--mrr-muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mrr-metric-card__value-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: baseline;
+}
+
+.mrr-metric-card__value {
+  display: block;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 26px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.16;
+  color: var(--mrr-card-foreground);
+  letter-spacing: -0.035em;
+}
+
+.mrr-metric-card__value--compact {
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.mrr-metric-card__suffix {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-metric-card__note {
+  margin: 7px 0 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--mrr-muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.84;
+}
+
+.mrr-metric-card--rose {
+  --mrr-metric-accent: #e11d48;
+}
+
+.mrr-metric-card--green {
+  --mrr-metric-accent: #16803c;
+}
+
+.mrr-metric-card--amber {
+  --mrr-metric-accent: #b45f06;
+}
+
+.mrr-metric-card--violet {
+  --mrr-metric-accent: #7c3aed;
+}
+
+.mrr-metric-card--teal {
+  --mrr-metric-accent: #0f766e;
+}
+
+.mrr-metric-card--slate {
+  --mrr-metric-accent: #64748b;
+}
+
+.mrr-metric-card--danger {
+  --mrr-metric-accent: var(--mrr-destructive);
+}
+
+@media (width <= 600px) {
+  .mrr-metric-grid,
+  .mrr-metric-grid--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .mrr-metric-card .el-card__body {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .mrr-metric-card__icon {
+    width: 46px;
+    height: 46px;
+    font-size: 23px;
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mrr-metric-card {
+    transition: none;
+  }
+
+  .mrr-metric-card:hover,
+  .mrr-metric-card:focus-within {
+    transform: none;
+  }
+}

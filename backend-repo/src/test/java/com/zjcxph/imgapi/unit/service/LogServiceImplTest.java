@@ -1,5 +1,8 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO;
+import com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO;
+import com.zjcxph.imgapi.dto.resp.ImageAuditTrendDTO;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.service.impl.LogServiceImpl;
@@ -11,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,6 +125,58 @@ class LogServiceImplTest {
             assertThatThrownBy(() -> logService.searchLogs(null, null, null, null, null, null, null, null, 0, 5))
                     .isInstanceOf(IllegalArgumentException.class);
             verifyNoInteractions(logMapper);
+        }
+
+        @Test
+        @DisplayName("searchLogs — 游标查询透传 accessTime 与 id 且不计算 OFFSET")
+        void searchLogs_cursorDelegatesWithoutOffset() {
+            LocalDateTime cursorAccessTime = LocalDateTime.of(2026, 7, 13, 10, 20, 30);
+            when(logMapper.searchAfter(any(), any(), any(), any(), any(), any(), any(), any(),
+                    any(), any(), anyInt())).thenReturn(List.of());
+
+            logService.searchLogs("kw", null, null, null, null, null, null, null,
+                    99, 21, cursorAccessTime, 42L);
+
+            verify(logMapper).searchAfter("kw", null, null, null, null, null, null, null,
+                    cursorAccessTime, 42L, 21);
+        }
+    }
+
+    @Nested
+    @DisplayName("图片审计分析")
+    class ImageAuditAnalytics {
+
+        @Test
+        @DisplayName("组合 overview、trend、action distribution 和 top users")
+        void assemblesMapperResults() {
+            ImageAuditAnalyticsDTO overview = new ImageAuditAnalyticsDTO();
+            overview.setTotalAccesses(5L);
+            overview.setUniqueUsers(2L);
+            overview.setUniqueTargets(3L);
+            overview.setAbnormalAccesses(2L);
+            overview.setAverageDurationMs(30D);
+            List<ImageAuditTrendDTO> trend = List.of(new ImageAuditTrendDTO(LocalDate.of(2026, 7, 13), 5L));
+            List<ImageAuditCountDTO> actions = List.of(new ImageAuditCountDTO("VIEW_IMAGE", 2L));
+            List<ImageAuditCountDTO> users = List.of(new ImageAuditCountDTO("alice", 2L));
+
+            when(logMapper.getImageAuditOverview(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(overview);
+            when(logMapper.getImageAuditTrend(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(trend);
+            when(logMapper.getImageAuditActionDistribution(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(actions);
+            when(logMapper.getTopImageAuditUsers(any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(users);
+
+            ImageAuditAnalyticsDTO result = logService.getImageAuditAnalytics(
+                    "kw", "alice", "127.0.0.1", "VIEW_IMAGE", "2", "start", "end");
+
+            assertThat(result).isSameAs(overview);
+            assertThat(result.getTrend()).isSameAs(trend);
+            assertThat(result.getActionDistribution()).isSameAs(actions);
+            assertThat(result.getTopUsers()).isSameAs(users);
+            verify(logMapper).getTopImageAuditUsers(
+                    "kw", "alice", "127.0.0.1", "VIEW_IMAGE", "2", "start", "end");
         }
     }
 

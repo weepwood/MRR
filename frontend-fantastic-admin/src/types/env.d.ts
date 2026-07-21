@@ -9,6 +9,10 @@ interface ImportMetaEnv {
    */
   readonly VITE_APP_DEBUG_TOOL: string
   /**
+   * 默认联调真实登录；仅使用 .env.mock 时启用展示模式。
+   */
+  readonly VITE_APP_DEMO_MODE: boolean
+  /**
    * 是否禁用开发者工具，可防止被调试
    */
   readonly VITE_APP_DISABLE_DEVTOOL: boolean

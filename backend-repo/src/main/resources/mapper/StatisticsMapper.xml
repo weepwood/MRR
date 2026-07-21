@@ -4,17 +4,25 @@
 
 <mapper namespace="com.zjcxph.imgapi.mapper.StatisticsMapper">
 
+    <sql id="statisticsKeywordPredicate">
+        AND (
+            COALESCE(cid, '')
+            || CHR(1) || COALESCE(openerno, '')
+            || CHR(1) || COALESCE(date, '')
+            || CHR(1) || COALESCE(type, '')
+            || CHR(1) || COALESCE(patientname, '')
+            || CHR(1) || COALESCE(inpatientdepartment, '')
+            || CHR(1) || COALESCE(patientid, '')
+            || CHR(1) || COALESCE(dischargedate, '')
+        ) LIKE '%' || #{keyword} || '%'
+    </sql>
+
     <!-- 动态条件查询（带分页和排序） -->
     <select id="findWithConditionAndPagination" resultType="com.zjcxph.imgapi.entity.Statistics">
         SELECT * FROM mr_statistics
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (
-                    cid LIKE '%' || #{keyword} || '%'
-                    OR openerno LIKE '%' || #{keyword} || '%'
-                    OR date LIKE '%' || #{keyword} || '%'
-                    OR type LIKE '%' || #{keyword} || '%'
-                )
+                <include refid="statisticsKeywordPredicate"/>
             </if>
             <if test="bah != null and bah != ''">
                 AND bah LIKE '%' || #{bah} || '%'
@@ -41,6 +49,10 @@
             <when test="sortBy == 'type'">type</when>
             <when test="sortBy == 'pages'">pages</when>
             <when test="sortBy == 'sjh'">sjh</when>
+            <when test="sortBy == 'patientName'">patientname</when>
+            <when test="sortBy == 'inpatientDepartment'">inpatientdepartment</when>
+            <when test="sortBy == 'patientId'">patientid</when>
+            <when test="sortBy == 'dischargeDate'">REPLACE(dischargedate, '/', '-')</when>
             <otherwise>REPLACE(date, '/', '-')</otherwise>
         </choose>
         <choose>
@@ -56,12 +68,7 @@
         SELECT COUNT(*) FROM mr_statistics
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (
-                    cid LIKE '%' || #{keyword} || '%'
-                    OR openerno LIKE '%' || #{keyword} || '%'
-                    OR date LIKE '%' || #{keyword} || '%'
-                    OR type LIKE '%' || #{keyword} || '%'
-                )
+                <include refid="statisticsKeywordPredicate"/>
             </if>
             <if test="bah != null and bah != ''">
                 AND bah LIKE '%' || #{bah} || '%'

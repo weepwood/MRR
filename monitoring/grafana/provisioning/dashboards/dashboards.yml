@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: MRR Monitoring
+    orgId: 1
+    folder: MRR
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: ${MRR_GRAFANA_DASHBOARD_PATH}

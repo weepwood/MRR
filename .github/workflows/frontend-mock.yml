@@ -1,0 +1,97 @@
+name: frontend-mock
+
+on:
+  pull_request:
+    branches:
+      - dev-no-login
+    paths:
+      - 'frontend-fantastic-admin/**'
+      - '.github/workflows/frontend-mock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-mock-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standalone-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm lint:tsc
+
+      - name: Unit tests
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          set +e
+          pnpm test:run 2>&1 | tee vitest.log
+          test_status=${PIPESTATUS[0]}
+          echo "exit_code=${test_status}" >> "$GITHUB_OUTPUT"
+          exit "${test_status}"
+
+      - name: Upload failed unit test log
+        if: steps.unit-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-log-${{ github.run_id }}
+          path: frontend-fantastic-admin/vitest.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Build mock application
+        run: pnpm build:mock
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: End-to-end tests without backend
+        id: e2e-tests
+        continue-on-error: true
+        run: pnpm test:e2e
+
+      - name: Upload failed Playwright diagnostics
+        if: steps.e2e-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-${{ github.run_id }}
+          path: frontend-fantastic-admin/test-results
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Preserve unit test failure
+        if: always() && steps.unit-tests.outcome == 'failure'
+        run: |
+          echo "::error::Unit tests failed with exit code ${{ steps.unit-tests.outputs.exit_code }}. See the uploaded Vitest log artifact."
+          exit 1
+
+      - name: Preserve E2E failure
+        if: always() && steps.e2e-tests.outcome == 'failure'
+        run: |
+          echo "::error::End-to-end tests failed. See the uploaded Playwright diagnostics artifact."
+          exit 1

@@ -1,737 +1,222 @@
 <script setup lang="ts">
-import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
-import { ElMessage } from 'element-plus'
-import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
+import type { ArchiveDepartmentTheme } from '@/utils/archive-department-theme'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { getSystemSettings } from '@/api/modules/settings'
+import {
+  ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY,
+  ARCHIVE_DEPARTMENT_THEME_SETTING_KEY,
+  ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT,
+  archiveDepartmentThemeCssVariables,
+  loadArchiveDepartmentThemesFromLocal,
+  normalizeArchiveDepartmentThemes,
+  resolveArchiveDepartmentTheme,
+  saveArchiveDepartmentThemesToLocal,
+} from '@/utils/archive-department-theme'
+import ArchiveDetailContent from './ArchiveDetailContent.vue'
 
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+defineOptions({ name: 'StatisticsDetailThemePage' })
 
-import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
-import AppLoading from '@/components/AppLoading/index.vue'
-import AppEmpty from '@/components/AppEmpty/index.vue'
-import AppError from '@/components/AppError/index.vue'
+const rootRef = ref<HTMLElement | null>(null)
+let departmentThemes: ArchiveDepartmentTheme[] = loadArchiveDepartmentThemesFromLocal()
+let observer: MutationObserver | null = null
+let animationFrame = 0
 
-defineOptions({ name: 'StatisticsDetailPage' })
-
-interface ArchiveItem extends StatisticsRecord {}
-
-interface ListData {
-  total: number
-  size: number
-  totalPages: number
-  page: number
-  list: ArchiveItem[]
+function findDepartment(card: HTMLElement) {
+  const blocks = Array.from(card.querySelectorAll<HTMLElement>('.folder-code-block'))
+  const departmentBlock = blocks.find((block) => {
+    return block.querySelector<HTMLElement>('.folder-code-label')?.textContent?.trim() === '住院科室'
+  })
+  return departmentBlock?.querySelector<HTMLElement>('.folder-code-value')?.textContent?.trim()
 }
 
-/** 统计明细查询参数 */
-interface DetailQueryParams {
-  page: number
-  size: number
-  sortBy: string
-  sortOrder: string
-  keyword?: string
-  bah?: string
-  sjh?: string
-  type?: string
-  startDate?: string
-  endDate?: string
-}
-
-const router = useRouter()
-const loading = ref(false)
-
-const error = ref('')
-const summaryData = ref<StatisticsSummary>({ byType: [], total: {} })
-const listData = ref<ListData>({
-  total: 0,
-  size: 18,
-  totalPages: 0,
-  page: 1,
-  list: [],
-})
-
-const currentPage = ref(1)
-const pageSize = ref(18)
-const selectedArchive = ref<ArchiveItem | null>(null)
-const selectedArchiveKey = ref('')
-
-const filters = reactive({
-  keyword: '',
-  bah: '',
-  sjh: '',
-  type: '',
-  dateRange: [] as string[],
-})
-
-const sortKey = ref('date-desc')
-const sortOptions = [
-  { key: 'date-desc', label: '按日期倒序', prop: 'date', order: 'desc' },
-  { key: 'date-asc', label: '按日期升序', prop: 'date', order: 'asc' },
-  { key: 'bah-asc', label: '按病案号升序', prop: 'bah', order: 'asc' },
-  { key: 'pages-desc', label: '按页数倒序', prop: 'pages', order: 'desc' },
-]
-
-const typeOptions = computed(() => {
-  const source: TypeStatistics[] = summaryData.value?.byType ?? []
-  return source
-    .map(item => String(item?.type ?? '').trim())
-    .filter(item => item && item.toUpperCase() !== 'NULL')
-})
-
-const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
-
-
-
-const summaryCards = computed(() => [
-  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录' },
-  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量' },
-  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数' },
-  { label: '当前选中', value: selectedArchive.value?.bah || '未选择', note: '可进入影像档案袋查看原图' },
-])
-
-function normalizeText(value: unknown) {
-  const text = String(value ?? '').trim()
-  return text && text.toUpperCase() !== 'NULL' ? text : '-'
-}
-
-function formatDate(value: string | undefined) {
-  if (!value || value.toUpperCase?.() === 'NULL') {
-    return '-'
-  }
-  return String(value).replace(/\//g, '-')
-}
-
-function archiveKey(item: ArchiveItem, index = 0) {
-  return [item.bah, item.cid, item.date, item.type, item.pages, item.openerNo, item.sjh, index].join('|')
-}
-
-function tableIndex(index: number) {
-  return (currentPage.value - 1) * pageSize.value + index + 1
-}
-
-function typeTone(type: string | undefined) {
-  const value = String(type || '')
-  if (value.includes('首页')) { return 'success' }
-  if (value.includes('手术')) { return 'warning' }
-  if (value.includes('护理')) { return 'primary' }
-  if (value.includes('其它') || value.includes('其他')) { return 'info' }
-  return 'info'
-}
-
-function toneClass(item: ArchiveItem, index = 0) {
-  const palette = ['tone-blue', 'tone-green', 'tone-amber', 'tone-rose', 'tone-slate']
-  const seed = `${item.bah || ''}-${item.type || ''}-${index}`
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  }
-  return palette[hash % palette.length]
-}
-
-async function loadSummary() {
-  try {
-    const res = await getStatisticsSummary()
-    summaryData.value = res.data ?? { byType: [], total: {} }
-  }
-  catch (err) {
-    console.error('加载统计摘要失败:', err)
-  }
-}
-
-function buildQueryParams(): DetailQueryParams {
-  const params: DetailQueryParams = {
-    page: currentPage.value,
-    size: pageSize.value,
-    sortBy: currentSort.value.prop,
-    sortOrder: currentSort.value.order,
-  }
-  if (filters.keyword.trim()) {
-    params.keyword = filters.keyword.trim()
-  }
-  if (filters.bah.trim()) {
-    params.bah = filters.bah.trim()
-  }
-  if (filters.sjh.trim()) {
-    params.sjh = filters.sjh.trim()
-  }
-  if (filters.type) {
-    params.type = filters.type
-  }
-  if (filters.dateRange.length === 2) {
-    params.startDate = filters.dateRange[0]
-    params.endDate = filters.dateRange[1]
-  }
-  return params
-}
-
-async function loadArchiveList() {
-  loading.value = true
-  error.value = ''
-  try {
-    const res = await getStatisticsList(buildQueryParams())
-    const payload = res.data ?? {}
-    const list = Array.isArray(payload.list) ? payload.list.filter(Boolean) : []
-    listData.value = {
-      total: Number(payload.total || 0),
-      size: Number(payload.size || pageSize.value),
-      totalPages: Number(payload.totalPages || 0),
-      page: Number(payload.page || currentPage.value),
-      list,
-    }
-    selectedArchive.value = list[0] || null
-    selectedArchiveKey.value = selectedArchive.value ? archiveKey(selectedArchive.value, 0) : ''
-  }
-  catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : '病案明细加载失败'
-    error.value = msg
-    ElMessage.error(error.value)
-    listData.value = { total: 0, size: pageSize.value, totalPages: 0, page: 1, list: [] }
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-async function refreshAll() {
-  await Promise.all([loadSummary(), loadArchiveList()])
-}
-
-function handleSearch() {
-  currentPage.value = 1
-  loadArchiveList()
-}
-
-function resetSearch() {
-  filters.keyword = ''
-  filters.bah = ''
-  filters.sjh = ''
-  filters.type = ''
-  filters.dateRange = []
-  sortKey.value = 'date-desc'
-  currentPage.value = 1
-  loadArchiveList()
-}
-
-function handlePageSizeChange(value: number) {
-  pageSize.value = value
-  currentPage.value = 1
-  loadArchiveList()
-}
-
-function selectArchive(item: ArchiveItem, index = 0) {
-  selectedArchive.value = item
-  selectedArchiveKey.value = archiveKey(item, index)
-}
-
-function openArchive(item = selectedArchive.value) {
-  if (!item?.bah) {
-    ElMessage.warning('当前档案袋缺少病案号，无法打开影像')
-    return
-  }
-  router.push({
-    path: `/archive/${item.bah}`,
-    query: {
-      bah: item.bah,
-      cid: item.cid || '',
-      type: item.type || '',
-      date: item.date || '',
-      pages: String(item.pages ?? ''),
-      openerNo: item.openerNo || '',
-      sjh: item.sjh || '',
-    },
+function applyDepartmentThemes() {
+  animationFrame = 0
+  const cards = Array.from(rootRef.value?.querySelectorAll<HTMLElement>('.archive-folder-card') ?? [])
+  cards.forEach((card) => {
+    const theme = resolveArchiveDepartmentTheme(findDepartment(card), departmentThemes)
+    const variables = archiveDepartmentThemeCssVariables(theme)
+    Object.entries(variables).forEach(([name, value]) => card.style.setProperty(name, value))
+    card.dataset.department = theme.department
   })
 }
 
-function goBackToStatistics() {
-  router.push('/statistics')
+function scheduleDepartmentThemeApply() {
+  if (animationFrame) {
+    return
+  }
+  animationFrame = window.requestAnimationFrame(applyDepartmentThemes)
 }
 
-async function handleExportCsv() {
-  const params: Record<string, string> = {}
-  if (filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
-  if (filters.bah.trim()) { params.bah = filters.bah.trim() }
-  if (filters.sjh.trim()) { params.sjh = filters.sjh.trim() }
-  if (filters.type) { params.type = filters.type }
-  if (filters.dateRange.length === 2) {
-    params.startDate = filters.dateRange[0]
-    params.endDate = filters.dateRange[1]
-  }
+async function loadDepartmentThemes() {
+  let nextThemes = loadArchiveDepartmentThemesFromLocal()
   try {
-    const res = await exportStatisticsCsv(params)
-    const blob = new Blob([res.data as BlobPart], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `statistics-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    ElMessage.success('导出成功')
+    const response = await getSystemSettings()
+    const settings = response.data ?? {}
+    if (Object.prototype.hasOwnProperty.call(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+      nextThemes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
+      saveArchiveDepartmentThemesToLocal(nextThemes)
+    }
   }
   catch {
-    ElMessage.error('导出失败')
+    // 后端不可用时继续使用本地缓存，不影响档案列表加载。
   }
+
+  departmentThemes = nextThemes
+  await nextTick()
+  scheduleDepartmentThemeApply()
 }
 
-onMounted(refreshAll)
+function handleThemeUpdate(event: Event) {
+  const detail = event instanceof CustomEvent ? event.detail : null
+  departmentThemes = detail ? normalizeArchiveDepartmentThemes(detail) : loadArchiveDepartmentThemesFromLocal()
+  scheduleDepartmentThemeApply()
+}
+
+function handleStorage(event: StorageEvent) {
+  if (event.key !== ARCHIVE_DEPARTMENT_THEME_LOCAL_KEY) {
+    return
+  }
+  departmentThemes = normalizeArchiveDepartmentThemes(event.newValue)
+  scheduleDepartmentThemeApply()
+}
+
+onMounted(() => {
+  observer = new MutationObserver(scheduleDepartmentThemeApply)
+  if (rootRef.value) {
+    observer.observe(rootRef.value, { childList: true, subtree: true, characterData: true })
+  }
+  window.addEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleThemeUpdate)
+  window.addEventListener('storage', handleStorage)
+  scheduleDepartmentThemeApply()
+  loadDepartmentThemes()
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+  if (animationFrame) {
+    window.cancelAnimationFrame(animationFrame)
+  }
+  window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT, handleThemeUpdate)
+  window.removeEventListener('storage', handleStorage)
+})
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Archive Detail
-        </p>
-        <h2>病案明细档案袋</h2>
-        <p class="subtitle">
-          以档案袋方式查看病案统计明细，支持筛选、排序、影像查看和整袋下载。
-        </p>
-      </div>
-      <div class="header-actions">
-        <el-button :icon="Download" @click="handleExportCsv">
-          导出 CSV
-        </el-button>
-        <el-button :icon="Refresh" :loading="loading" @click="refreshAll">
-          刷新
-        </el-button>
-        <el-button :icon="DataBoard" @click="goBackToStatistics">
-          返回统计
-        </el-button>
-      </div>
-    </div>
-
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
-        </div>
-        <div class="summary-value">
-          {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
-    </section>
-
-    <el-card shadow="never">
-      <template #header>
-        <div class="panel-header">
-          <div>
-            <span class="panel-title">档案筛选</span>
-            <span class="panel-subtitle">按病案号、设备、类型和日期范围定位档案袋</span>
-          </div>
-          <el-tag type="info">
-            {{ listData.total || 0 }} 条
-          </el-tag>
-        </div>
-      </template>
-
-      <div class="filter-grid">
-        <el-input
-          v-model="filters.bah"
-          class="filter-bah"
-          clearable
-          placeholder="病案号"
-          @keyup.enter="handleSearch"
-        />
-        <el-input
-          v-model="filters.sjh"
-          class="filter-sjh"
-          clearable
-          placeholder="上架号"
-          @keyup.enter="handleSearch"
-        />
-        <el-input
-          v-model="filters.keyword"
-          class="filter-keyword"
-          clearable
-          placeholder="搜索设备、人员或日期"
-          @keyup.enter="handleSearch"
-        />
-        <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
-          <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
-        </el-select>
-        <el-date-picker
-          v-model="filters.dateRange"
-          class="filter-date"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-        />
-        <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
-          <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
-        </el-select>
-        <div class="filter-actions">
-          <el-button type="primary" :icon="Search" @click="handleSearch">
-            查询
-          </el-button>
-          <el-button @click="resetSearch">
-            重置
-          </el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <section class="content-layout">
-      <div class="archive-shelf">
-        <AppLoading v-if="loading" type="table" :rows="8" />
-        <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
-        <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
-        <div v-else class="archive-grid">
-          <article
-            v-for="(item, index) in listData.list"
-            :key="archiveKey(item, index)"
-            class="archive-folder-card"
-            :class="[toneClass(item, index), { 'is-selected': selectedArchiveKey === archiveKey(item, index) }]"
-            @click="selectArchive(item, index)"
-          >
-            <div class="folder-tab" />
-            <div class="folder-top">
-              <span class="folder-index">A{{ tableIndex(index) }}</span>
-              <el-tag size="small" :type="typeTone(item.type)">
-                {{ normalizeText(item.type) }}
-              </el-tag>
-            </div>
-
-            <h4 class="folder-title">
-              {{ normalizeText(item.bah) }}
-            </h4>
-            <p class="folder-subtitle">
-              {{ formatDate(item.date) }} / {{ normalizeText(item.cid) }}
-            </p>
-
-            <dl class="folder-meta-grid">
-              <div>
-                <dt>扫描设备</dt>
-                <dd>{{ normalizeText(item.cid) }}</dd>
-              </div>
-              <div>
-                <dt>负责人</dt>
-                <dd>{{ normalizeText(item.openerNo) }}</dd>
-              </div>
-              <div>
-                <dt>归档日期</dt>
-                <dd>{{ formatDate(item.date) }}</dd>
-              </div>
-              <div>
-                <dt>页数</dt>
-                <dd>{{ Number(item.pages || 0).toLocaleString('zh-CN') }} 页</dd>
-              </div>
-              <div>
-                <dt>上架号</dt>
-                <dd>{{ normalizeText(item.sjh) }}</dd>
-              </div>
-            </dl>
-
-            <div class="folder-footer">
-              <span>{{ Number(item.pages || 0).toLocaleString('zh-CN') }} 页档案</span>
-              <el-button text type="primary" @click.stop="openArchive(item)">
-                查看影像
-              </el-button>
-            </div>
-          </article>
-        </div>
-
-        <div class="pagination-wrapper">
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[18, 50, 100, 200]"
-            :total="listData.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handlePageSizeChange"
-            @current-change="loadArchiveList"
-          />
-        </div>
-      </div>
-
-
-    </section>
+  <div ref="rootRef" class="department-themed-archive">
+    <ArchiveDetailContent />
   </div>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 20px;
+.department-themed-archive :deep(.archive-folder-card .folder-card-body::before) {
+  background: var(--folder-strip, var(--folder-accent)) !important;
 }
 
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
+.department-themed-archive :deep(.folder-card-body) {
+  gap: 14px;
 }
 
-.header-actions {
-  display: flex;
-  flex-shrink: 0;
+.department-themed-archive :deep(.folder-code-grid) {
   gap: 10px;
 }
 
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+.department-themed-archive :deep(.folder-code-block) {
+  display: flex;
+  min-height: 78px;
+  padding: 12px 14px;
+  flex-direction: column;
+  gap: 7px;
+  justify-content: center;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
-h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
-.summary-grid {
+.department-themed-archive :deep(.folder-code-block-full) {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 10px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.panel-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-title {
-  margin-right: 8px;
-  font-weight: 700;
-}
-
-.panel-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.filter-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 86px;
+  padding: 15px 16px;
+  column-gap: 18px;
   align-items: center;
 }
 
-.filter-bah,
-.filter-sjh {
-  flex: 0 0 140px;
+.department-themed-archive :deep(.folder-code-label) {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.04em;
 }
 
-.filter-keyword {
-  flex: 1 1 220px;
-  min-width: 180px;
-}
-
-.filter-type,
-.filter-sort {
-  flex: 0 0 160px;
-}
-
-.filter-date {
-  flex: 1 1 280px;
-  min-width: 240px;
-}
-
-.filter-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.content-layout {
-  display: grid;
-  gap: 16px;
-}
-
-.archive-shelf {
-  display: grid;
-  gap: 16px;
-}
-
-.archive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.archive-loading,
-.empty-wrap {
-  padding: 40px 0;
-}
-
-.archive-folder-card {
-  --folder-accent: #1d4ed8;
-  --folder-bg: #eef4ff;
-
-  position: relative;
-  display: grid;
-  gap: 12px;
-  min-height: 270px;
-  padding: 18px;
-  overflow: hidden;
-  cursor: pointer;
-  background: linear-gradient(180deg, var(--folder-bg), var(--surface) 58%);
-  border: 1px solid var(--divider);
-  border-top: 6px solid var(--folder-accent);
-  border-radius: 7px;
-  box-shadow: 0 12px 28px rgb(15 23 42 / 7%);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.archive-folder-card:hover,
-.archive-folder-card.is-selected {
-  box-shadow: 0 20px 42px rgb(15 23 42 / 12%);
-  transform: translateY(-2px);
-}
-
-.archive-folder-card.is-selected {
-  outline: 2px solid color-mix(in srgb, var(--folder-accent) 70%, transparent);
-}
-
-.tone-blue { --folder-accent: #2563eb; --folder-bg: #eef4ff; }
-.tone-green { --folder-accent: #0f766e; --folder-bg: #ecfdf7; }
-.tone-amber { --folder-accent: #c97b18; --folder-bg: #fff6e8; }
-.tone-rose { --folder-accent: #be185d; --folder-bg: #fff0f5; }
-.tone-slate { --folder-accent: var(--text-secondary); --folder-bg: var(--surface-alt); }
-
-:global(.dark) .tone-blue { --folder-bg: color-mix(in srgb, #2563eb 18%, var(--surface)); }
-:global(.dark) .tone-green { --folder-bg: color-mix(in srgb, #0f766e 18%, var(--surface)); }
-:global(.dark) .tone-amber { --folder-bg: color-mix(in srgb, #c97b18 18%, var(--surface)); }
-:global(.dark) .tone-rose { --folder-bg: color-mix(in srgb, #be185d 18%, var(--surface)); }
-
-.folder-tab {
-  position: absolute;
-  top: 0;
-  left: 18px;
-  width: 70px;
-  height: 18px;
+.department-themed-archive :deep(.folder-code-label::before) {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  content: "";
   background: var(--folder-accent);
-  border-radius: 0 0 5px 5px;
-  opacity: 0.22;
+  opacity: 0.78;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
-.folder-top,
-.folder-footer {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
+.department-themed-archive :deep(.folder-code-block-full .folder-code-label::before) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z'/%3E%3C/svg%3E");
 }
 
-.folder-top {
-  padding-top: 14px;
+.department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(1) .folder-code-label::before) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 21V3h10v6h6v12h-2v-2h-2v2h-2V5H6v16H4Zm4-12h2V7H8v2Zm0 4h2v-2H8v2Zm0 4h2v-2H8v2Zm8-4h2v-2h-2v2Zm0 4h2v-2h-2v2Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 21V3h10v6h6v12h-2v-2h-2v2h-2V5H6v16H4Zm4-12h2V7H8v2Zm0 4h2v-2H8v2Zm0 4h2v-2H8v2Zm8-4h2v-2h-2v2Zm0 4h2v-2h-2v2Z'/%3E%3C/svg%3E");
 }
 
-.folder-index {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-secondary);
-  letter-spacing: 0.12em;
+.department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(2) .folder-code-label::before) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Zm3 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2Zm13 8H4v10h16V10ZM4 8h16V6H4v2Zm3 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z'/%3E%3C/svg%3E");
 }
 
-.folder-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
+.department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(3) .folder-code-label::before) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h9l5 5v15H6V2Zm2 2v16h10V8h-4V4H8Zm2 7h6v2h-6v-2Zm0 4h6v2h-6v-2Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h9l5 5v15H6V2Zm2 2v16h10V8h-4V4H8Zm2 7h6v2h-6v-2Zm0 4h6v2h-6v-2Z'/%3E%3C/svg%3E");
 }
 
-.folder-subtitle {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
+.department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(4) .folder-code-label::before) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 4h18v5H3V4Zm2 7h14v9H5v-9Zm5 2v2h4v-2h-4Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 4h18v5H3V4Zm2 7h14v9H5v-9Zm5 2v2h4v-2h-4Z'/%3E%3C/svg%3E");
 }
 
-.folder-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
+.department-themed-archive :deep(.folder-code-value) {
+  line-height: 1.3;
 }
 
-.folder-meta-grid dt {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
+.department-themed-archive :deep(.folder-code-block-full .folder-code-value) {
+  text-align: right;
+  line-height: 1.15;
 }
 
-.folder-meta-grid dd {
-  margin: 4px 0 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
+.department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(-n+2) .folder-code-value) {
+  font-size: 14px;
+  line-height: 1.35;
 }
 
-.folder-footer {
-  padding-top: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--folder-accent);
-  border-top: 1px dashed var(--divider);
+.department-themed-archive :deep(.folder-code-copyable:hover) {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--folder-accent) 9%, transparent);
 }
 
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (width <= 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (width <= 720px) {
-  .page-header {
-    flex-direction: column;
+@media (width <= 480px) {
+  .department-themed-archive :deep(.folder-code-block-full) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
   }
 
-  .summary-grid,
-  .folder-meta-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-bah,
-  .filter-sjh,
-  .filter-keyword,
-  .filter-type,
-  .filter-date,
-  .filter-sort,
-  .filter-actions {
-    flex: 1 1 100%;
-    margin-left: 0;
+  .department-themed-archive :deep(.folder-code-block-full .folder-code-value) {
+    text-align: left;
   }
 }
 </style>

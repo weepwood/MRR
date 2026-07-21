@@ -3,55 +3,60 @@ import type { ViewMode } from '../types'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const GAP = 6
-const MIN_ITEM_WIDTH = 80
-const MAX_ITEM_WIDTH = 130
+const CONTAINER_HORIZONTAL_PADDING = 16
 const SCROLL_LOAD_THRESHOLD = 80
 
 export function useThumbLayout(
   thumbsContainer: Ref<HTMLElement | null>,
   viewMode: Ref<ViewMode>,
+  preferredWidth: Ref<number>,
+  preloadCount: Ref<number>,
 ) {
-  const thumbColumns = ref(2)
-  const thumbItemWidth = ref(96)
-  const pageSize = ref(20)
-  const visibleCount = ref(20)
+  const thumbColumns = ref(1)
+  const thumbItemWidth = ref(preferredWidth.value)
+  const pageSize = ref(preloadCount.value)
+  const visibleCount = ref(preloadCount.value)
 
   let resizeObserver: ResizeObserver | null = null
+  let usesWindowResize = false
+
+  function updatePageSize(nextPageSize: number): void {
+    pageSize.value = Math.max(1, nextPageSize)
+    visibleCount.value = Math.max(visibleCount.value, pageSize.value, preloadCount.value)
+  }
 
   function calc(): void {
     const container = thumbsContainer.value
     if (!container) {
-      thumbColumns.value = viewMode.value === 'thumb' ? 2 : 1
+      thumbColumns.value = 1
       return
     }
-    const containerWidth = container.clientWidth
+
+    const containerWidth = Math.max(1, container.clientWidth - CONTAINER_HORIZONTAL_PADDING)
     if (viewMode.value === 'list') {
       thumbColumns.value = 1
-      pageSize.value = 40
+      thumbItemWidth.value = containerWidth
+      updatePageSize(Math.max(40, preloadCount.value))
       return
     }
-    const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (MIN_ITEM_WIDTH + GAP)))
-    const actualItemWidth = Math.min(
-      MAX_ITEM_WIDTH,
-      Math.max(MIN_ITEM_WIDTH, (containerWidth - (idealCols - 1) * GAP) / idealCols),
-    )
+
+    const targetWidth = Math.min(480, Math.max(160, preferredWidth.value))
+    const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (targetWidth + GAP)))
+    const actualItemWidth = Math.max(140, Math.floor((containerWidth - (idealCols - 1) * GAP) / idealCols))
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 
-    const viewportHeight = window.innerHeight
-    const stripTop = container.getBoundingClientRect().top
-    const availableHeight = viewportHeight - stripTop - 24
-    const itemHeight = actualItemWidth * 4 / 3 + 36
-    const rows = Math.max(1, Math.floor(availableHeight / itemHeight))
-    pageSize.value = thumbColumns.value * rows
+    const estimatedItemHeight = actualItemWidth + 52
+    const visibleRows = Math.ceil(container.clientHeight / estimatedItemHeight)
+    updatePageSize(Math.max(preloadCount.value, thumbColumns.value * Math.max(2, visibleRows + 1)))
   }
 
   function resetVisible(): void {
-    visibleCount.value = pageSize.value
+    visibleCount.value = Math.max(pageSize.value, preloadCount.value)
   }
 
   function loadMore(): void {
-    visibleCount.value += pageSize.value
+    visibleCount.value += Math.max(pageSize.value, preloadCount.value)
   }
 
   function onScroll(): void {
@@ -65,9 +70,17 @@ export function useThumbLayout(
   }
 
   onMounted(() => {
-    resizeObserver = new ResizeObserver(() => calc())
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => calc())
+      if (thumbsContainer.value) {
+        resizeObserver.observe(thumbsContainer.value)
+      }
+    }
+    else {
+      usesWindowResize = true
+      window.addEventListener('resize', calc)
+    }
     if (thumbsContainer.value) {
-      resizeObserver.observe(thumbsContainer.value)
       thumbsContainer.value.addEventListener('scroll', onScroll, { passive: true })
     }
     calc()
@@ -77,12 +90,15 @@ export function useThumbLayout(
   onUnmounted(() => {
     resizeObserver?.disconnect()
     resizeObserver = null
+    if (usesWindowResize) {
+      window.removeEventListener('resize', calc)
+    }
     if (thumbsContainer.value) {
       thumbsContainer.value.removeEventListener('scroll', onScroll)
     }
   })
 
-  watch(viewMode, () => {
+  watch([viewMode, preferredWidth, preloadCount], () => {
     nextTick(() => {
       calc()
       resetVisible()

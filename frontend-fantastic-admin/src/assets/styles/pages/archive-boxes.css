@@ -1,0 +1,79 @@
+/* 档案装箱指标卡图标修复
+ *
+ * 该页面将 Iconify 类直接用于指标卡图标容器。这里把卡片主体固定为
+ * “图标 + 文本”两列，并将图形限制在图标容器内部，避免遮挡文字。
+ */
+.archive-box-page .mrr-metric-card .el-card__body {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.archive-box-page .mrr-metric-card__icon {
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box;
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  height: 52px !important;
+  overflow: hidden;
+  color: var(--mrr-metric-accent) !important;
+  background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--surface)) !important;
+  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 14%, transparent) !important;
+  border-radius: 14px !important;
+  mask: none !important;
+  mask-size: auto !important;
+  -webkit-mask: none !important;
+  -webkit-mask-size: auto !important;
+}
+
+.archive-box-page .mrr-metric-card__icon::before {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  max-width: 26px !important;
+  height: 26px !important;
+  content: "";
+  pointer-events: none;
+  background-color: currentcolor;
+  mask: var(--un-icon) no-repeat center / 100% 100%;
+  transform: translate(-50%, -50%) !important;
+  -webkit-mask: var(--un-icon) no-repeat center / 100% 100%;
+}
+
+.archive-box-page .mrr-metric-card__body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+/* Ant Design 没有 file-protect-twotone，提供内置文件保护图标作为回退。 */
+.archive-box-page .i-ant-design\:file-protect-twotone {
+  --un-icon: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='black' d='M6 2h8l4 4v4h-2V7h-3V4H8v16h4v2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm11 9 5 2v3.5c0 3.1-2.1 5.9-5 6.5-2.9-.6-5-3.4-5-6.5V13l5-2Zm0 2.2-3 1.2v2.1c0 2.1 1.2 3.9 3 4.5 1.8-.6 3-2.4 3-4.5v-2.1l-3-1.2Z'/%3E%3C/svg%3E");
+}
+
+@media (width <= 600px) {
+  .archive-box-page .mrr-metric-card .el-card__body {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .archive-box-page .mrr-metric-card__icon {
+    width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+  }
+
+  .archive-box-page .mrr-metric-card__icon::before {
+    width: 23px !important;
+    min-width: 23px !important;
+    max-width: 23px !important;
+    height: 23px !important;
+  }
+}

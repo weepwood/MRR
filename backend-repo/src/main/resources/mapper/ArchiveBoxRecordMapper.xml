@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zjcxph.imgapi.mapper.ArchiveBoxRecordMapper">
+
+    <sql id="StatisticsSjhMatchesRecord">
+        s.sjh = abr.sjh
+    </sql>
+
+    <sql id="RecordColumns">
+        abr.id,
+        COALESCE(
+            abr.bah,
+            (
+                SELECT CASE
+                    WHEN s.bah ~ '^[0-9]{1,8}$' THEN LPAD(s.bah, 8, '0')
+                    ELSE s.bah
+                END
+                FROM mr_statistics s
+                WHERE <include refid="StatisticsSjhMatchesRecord" />
+                  AND s.bah IS NOT NULL
+                  AND TRIM(s.bah) != ''
+                LIMIT 1
+            )
+        ) AS bah,
+        abr.sjh,
+        abr.box_no AS boxNo,
+        abr.expected_box_no AS expectedBoxNo,
+        abr.status,
+        abr.remark,
+        abr.created_at AS createdAt,
+        abr.updated_at AS updatedAt
+    </sql>
+
+    <sql id="RecordFilters">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    COALESCE(abr.bah, '') ILIKE '%' || #{keyword} || '%'
+                    OR COALESCE(abr.sjh, '') ILIKE '%' || #{keyword} || '%'
+                    OR COALESCE(abr.box_no, '') ILIKE '%' || #{keyword} || '%'
+                    OR COALESCE(abr.expected_box_no, '') ILIKE '%' || #{keyword} || '%'
+                    OR COALESCE(abr.status, '') ILIKE '%' || #{keyword} || '%'
+                    OR COALESCE(abr.remark, '') ILIKE '%' || #{keyword} || '%'
+                    OR EXISTS (
+                        SELECT 1
+                        FROM mr_statistics s
+                        WHERE <include refid="StatisticsSjhMatchesRecord" />
+                          AND COALESCE(s.bah, '') ILIKE '%' || #{keyword} || '%'
+                    )
+                )
+            </if>
+            <if test="bah != null and bah != ''">
+                AND (
+                    abr.bah ILIKE '%' || #{bah} || '%'
+                    <if test="bahSearchCode != null and bahSearchCode != ''">
+                        OR (
+                            abr.bah ~ '^[0-9]+$'
+                            AND COALESCE(NULLIF(LTRIM(abr.bah, '0'), ''), '0')
+                                LIKE '%' || #{bahSearchCode} || '%'
+                        )
+                    </if>
+                    OR EXISTS (
+                        SELECT 1
+                        FROM mr_statistics s
+                        WHERE <include refid="StatisticsSjhMatchesRecord" />
+                          AND (
+                              s.bah ILIKE '%' || #{bah} || '%'
+                              <if test="bahSearchCode != null and bahSearchCode != ''">
+                                  OR (
+                                      s.bah ~ '^[0-9]+$'
+                                      AND COALESCE(NULLIF(LTRIM(s.bah, '0'), ''), '0')
+                                          LIKE '%' || #{bahSearchCode} || '%'
+                                  )
+                              </if>
+                          )
+                    )
+                )
+            </if>
+            <if test="sjh != null and sjh != ''">
+                AND (
+                    abr.sjh ILIKE '%' || #{sjh} || '%'
+                    <if test="sjhSearchCode != null and sjhSearchCode != ''">
+                        OR (
+                            abr.sjh ~ '^[0-9]+$'
+                            AND COALESCE(NULLIF(LTRIM(abr.sjh, '0'), ''), '0')
+                                LIKE '%' || #{sjhSearchCode} || '%'
+                        )
+                    </if>
+                )
+            </if>
+            <if test="boxNo != null and boxNo != ''">
+                AND abr.box_no ILIKE '%' || #{boxNo} || '%'
+            </if>
+            <if test="status != null and status != ''">
+                AND abr.status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="findPage" resultType="com.zjcxph.imgapi.entity.ArchiveBoxRecord">
+        SELECT <include refid="RecordColumns" />
+        FROM mr_archive_box_record abr
+        <include refid="RecordFilters" />
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'bah'">bah</when>
+            <when test="sortBy == 'sjh'">abr.sjh</when>
+            <when test="sortBy == 'boxNo'">abr.box_no</when>
+            <when test="sortBy == 'status'">abr.status</when>
+            <when test="sortBy == 'createdAt'">abr.created_at</when>
+            <otherwise>abr.updated_at</otherwise>
+        </choose>
+        <choose>
+            <when test="sortOrder == 'asc'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+        , abr.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*)
+        FROM mr_archive_box_record abr
+        <include refid="RecordFilters" />
+    </select>
+
+    <select id="findByRecordCode" resultType="com.zjcxph.imgapi.entity.ArchiveBoxRecord">
+        SELECT <include refid="RecordColumns" />
+        FROM mr_archive_box_record abr
+        WHERE abr.bah = #{normalizedCode}
+           OR abr.sjh = #{normalizedCode}
+           OR (
+                abr.bah ~ '^[0-9]+$'
+                AND COALESCE(NULLIF(LTRIM(abr.bah, '0'), ''), '0') = #{searchCode}
+           )
+           OR (
+                abr.sjh ~ '^[0-9]+$'
+                AND COALESCE(NULLIF(LTRIM(abr.sjh, '0'), ''), '0') = #{searchCode}
+           )
+           OR EXISTS (
+                SELECT 1
+                FROM mr_statistics s
+                WHERE <include refid="StatisticsSjhMatchesRecord" />
+                  AND (
+                      s.bah = #{normalizedCode}
+                      OR s.sjh = #{normalizedCode}
+                      OR (
+                          s.bah ~ '^[0-9]+$'
+                          AND COALESCE(NULLIF(LTRIM(s.bah, '0'), ''), '0') = #{searchCode}
+                      )
+                      OR (
+                          s.sjh ~ '^[0-9]+$'
+                          AND COALESCE(NULLIF(LTRIM(s.sjh, '0'), ''), '0') = #{searchCode}
+                      )
+                  )
+           )
+        ORDER BY abr.updated_at DESC, abr.id DESC
+    </select>
+
+    <select id="findByBoxNo" resultType="com.zjcxph.imgapi.entity.ArchiveBoxRecord">
+        SELECT <include refid="RecordColumns" />
+        FROM mr_archive_box_record abr
+        WHERE abr.box_no = #{boxNo}
+        ORDER BY abr.sjh, bah, abr.id
+    </select>
+
+    <select id="getSummary" resultType="com.zjcxph.imgapi.dto.resp.ArchiveBoxSummaryDTO">
+        SELECT COUNT(*) AS totalRecords,
+               COUNT(DISTINCT box_no) FILTER (
+                   WHERE box_no IS NOT NULL AND TRIM(box_no) != ''
+               ) AS totalBoxes,
+               COUNT(*) FILTER (WHERE status = 'MISSING') AS missingCount,
+               COUNT(*) FILTER (WHERE status != 'NORMAL') AS abnormalCount
+        FROM mr_archive_box_record
+    </select>
+
+    <select id="findBoxGroups" resultType="com.zjcxph.imgapi.dto.resp.ArchiveBoxGroupDTO">
+        SELECT box_no AS boxNo,
+               COUNT(*) AS recordCount,
+               SUM(CASE WHEN status != 'NORMAL' THEN 1 ELSE 0 END) AS abnormalCount,
+               MAX(updated_at) AS updatedAt
+        FROM mr_archive_box_record
+        WHERE box_no IS NOT NULL
+          AND TRIM(box_no) != ''
+        <if test="keyword != null and keyword != ''">
+            AND box_no ILIKE '%' || #{keyword} || '%'
+        </if>
+        GROUP BY box_no
+        ORDER BY box_no
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countBoxGroups" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT box_no
+            FROM mr_archive_box_record
+            WHERE box_no IS NOT NULL
+              AND TRIM(box_no) != ''
+            <if test="keyword != null and keyword != ''">
+                AND box_no ILIKE '%' || #{keyword} || '%'
+            </if>
+            GROUP BY box_no
+        ) boxes
+    </select>
+
+</mapper>

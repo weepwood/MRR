@@ -12,8 +12,8 @@
 - IDE: IntelliJ IDEA (推荐) 或 Eclipse
 
 **前端开发**
-- Node.js 18+ (推荐 20+)
-- npm 或 pnpm
+- Node.js 22
+- pnpm 10.33.0（项目锁定版本）
 - IDE: VS Code (推荐) 或 WebStorm
 
 **数据库**
@@ -93,7 +93,7 @@ Settings -> Editor -> Code Style -> Java
 ```
 Main class: com.zjcxph.imgapi.ImageApiApplication
 VM options: -Dspring.profiles.active=local
-Environment variables: DB_PASSWORD=your_password
+Environment variables: SPRING_DATASOURCE_PASSWORD=your_password; AES_SECRET_KEY=your-32-byte-key; JWT_SECRET_KEY=your-jwt-signing-key
 ```
 
 ### 前端项目
@@ -104,9 +104,7 @@ Environment variables: DB_PASSWORD=your_password
 3. 打开终端，安装依赖
 
 ```bash
-npm install
-# 或
-pnpm install
+corepack pnpm@10.33.0 install --frozen-lockfile
 ```
 
 ## 数据库设置
@@ -162,21 +160,13 @@ INSERT INTO app.mr_scan (scan_id, patient_id, scan_date, modality) VALUES
 
 创建 `.env` 文件 (不要提交到 Git):
 
-```env
-# 数据库
-DB_URL=jdbc:postgresql://localhost:5432/imgapi_dev?currentSchema=app
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
+```powershell
+# Copy the tracked template first, then set the actual database password and AES key.
+Copy-Item backend-repo\src\main\resources\application-local.template.properties backend-repo\src\main\resources\application-local.properties
 
-# JWT
-JWT_SECRET=dev-jwt-secret-key-for-development-only
-JWT_EXPIRATION=86400000
-
-# AES
-AES_SECRET_KEY=dev-aes-key-32-bytes-for-testing
-
-# 服务端口
-SERVER_PORT=18045
+$env:SPRING_DATASOURCE_PASSWORD = 'your-postgresql-password'
+$env:AES_SECRET_KEY = 'your-32-byte-aes-key'
+$env:JWT_SECRET_KEY = 'your-jwt-signing-key'
 ```
 
 在 IntelliJ IDEA 中配置环境变量:
@@ -188,11 +178,7 @@ Run -> Edit Configurations -> Environment variables
 
 创建 `.env.local`:
 
-```env
-VITE_API_URL=http://localhost:18045
-VITE_APP_TITLE=MRR 开发环境
-VITE_USE_MOCK=false
-```
+开发环境默认使用 `frontend-fantastic-admin/.env.development`，通过 Vite 代理访问 `http://localhost:18045`。`VITE_APP_DEMO_MODE=true` 时可浏览界面而不调用认证接口，但业务数据仍需后端运行。
 
 ## 开发流程
 
@@ -218,14 +204,10 @@ java -jar target/imgapi-*.jar --spring.profiles.active=local
 ```bash
 cd frontend-fantastic-admin
 
-# 开发模式
-npm run dev
-
-# 或
 pnpm dev
 ```
 
-访问 http://localhost:5173
+访问 http://localhost:9000
 
 ### 热重载
 
@@ -266,7 +248,7 @@ java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 \
       "type": "chrome",
       "request": "launch",
       "name": "Launch Chrome",
-      "url": "http://localhost:5173",
+  "url": "http://localhost:9000",
       "webRoot": "${workspaceFolder}/src"
     }
   ]
@@ -336,12 +318,12 @@ mvn jacoco:report
 
 **运行测试**
 ```bash
-npm run test
+pnpm test:run
 ```
 
 **测试覆盖率**
 ```bash
-npm run test:coverage
+pnpm test:coverage
 ```
 
 ## Git 配置
@@ -388,7 +370,7 @@ mvn checkstyle:check
 
 # 前端代码检查
 cd ../frontend-fantastic-admin
-npm run lint
+pnpm lint:tsc
 ```
 
 ## 常见问题
@@ -409,7 +391,7 @@ kill -9 <pid>
 **前端端口被占用**
 ```bash
 # 修改端口
-npm run dev -- --port 5174
+pnpm dev -- --port 9001
 ```
 
 ### 依赖问题
@@ -430,7 +412,7 @@ npm cache clean --force
 
 # 删除 node_modules
 rm -rf node_modules package-lock.json
-npm install
+corepack pnpm@10.33.0 install --frozen-lockfile
 ```
 
 ### 数据库连接失败

@@ -4,196 +4,248 @@
 
 <mapper namespace="com.zjcxph.imgapi.mapper.LogMapper">
 
-    <!-- 删除指定时间之前的日志（分批删除） -->
+    <sql id="baseColumns">
+        id,
+        request_id AS requestId,
+        username,
+        client_ip AS clientIp,
+        request_uri AS requestUri,
+        endpoint_template AS endpointTemplate,
+        method,
+        user_agent AS userAgent,
+        access_time AS accessTime,
+        query_string AS queryString,
+        request_body AS requestBody,
+        response_status AS responseStatus,
+        execute_time AS executeTime,
+        referer,
+        error_message AS errorMessage,
+        audit_action AS auditAction,
+        audit_target AS auditTarget,
+        audit_description AS auditDescription
+    </sql>
+
+    <sql id="logKeywordCommonExpression">
+        (
+            COALESCE(request_id, '')
+            || CHR(1) || COALESCE(username, '')
+            || CHR(1) || COALESCE(client_ip, '')
+            || CHR(1) || COALESCE(request_uri, '')
+            || CHR(1) || COALESCE(endpoint_template, '')
+            || CHR(1) || COALESCE(query_string, '')
+            || CHR(1) || COALESCE(request_body, '')
+            || CHR(1) || COALESCE(user_agent, '')
+            || CHR(1) || COALESCE(audit_target, '')
+            || CHR(1) || COALESCE(error_message, '')
+        )
+    </sql>
+
+    <sql id="logKeywordWithRefererPredicate">
+        AND (
+            <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+            OR referer LIKE '%' || #{keyword} || '%'
+        )
+    </sql>
+
+    <sql id="logKeywordCommonPredicate">
+        AND <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+    </sql>
+
+    <sql id="imageAuditFilters">
+        audit_action IN ('LIST', 'DOWNLOAD', 'VIEW_IMAGE', 'VIEW_OSS_IMAGE')
+        <if test="keyword != null and keyword != ''">
+            <include refid="logKeywordCommonPredicate"/>
+        </if>
+        <if test="username != null and username != ''">
+            AND username LIKE '%' || #{username} || '%'
+        </if>
+        <if test="clientIp != null and clientIp != ''">
+            AND client_ip LIKE '%' || #{clientIp} || '%'
+        </if>
+        <if test="auditAction != null and auditAction != ''">
+            AND audit_action = #{auditAction}
+        </if>
+        <if test="responseStatus != null and responseStatus != ''">
+            AND response_status LIKE #{responseStatus} || '%'
+        </if>
+        <if test="startTime != null and startTime != ''">
+            AND access_time &gt;= CAST(#{startTime} AS timestamp)
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND access_time &lt;= CAST(#{endTime} AS timestamp)
+        </if>
+    </sql>
+
     <delete id="deleteOlderThan">
-        WITH target AS (SELECT id
-                        FROM access_log
-                        WHERE access_time &lt; #{cutoff}
-                        ORDER BY access_time, id
-                        LIMIT #{limit})
-        DELETE
-        FROM access_log
-        WHERE id IN (SELECT id FROM target)
+        WITH target AS (
+            SELECT id FROM access_log
+            WHERE access_time &lt; #{cutoff}
+            ORDER BY access_time, id
+            LIMIT #{limit}
+        )
+        DELETE FROM access_log WHERE id IN (SELECT id FROM target)
     </delete>
 
-    <!-- 统计指定时间之前的日志数量 -->
     <select id="countOlderThan" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM access_log WHERE access_time &lt; #{cutoff}
     </select>
 
-    <!-- 查询指定时间之前的日志（带分页） -->
     <select id="findOlderThan" resultType="com.zjcxph.imgapi.entity.Log">
-        SELECT id,
-               username,
-               client_ip       AS clientIp,
-               request_uri     AS requestUri,
-               method,
-               user_agent      AS userAgent,
-               access_time     AS accessTime,
-               query_string    AS queryString,
-               request_body    AS requestBody,
-               response_status AS responseStatus,
-               execute_time    AS executeTime,
-               referer,
-               audit_action    AS auditAction,
-               audit_target    AS auditTarget,
-               audit_description AS auditDescription
+        SELECT <include refid="baseColumns"/>
         FROM access_log
         WHERE access_time &lt; #{cutoff}
         ORDER BY access_time, id
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 动态搜索日志 -->
     <select id="search" resultType="com.zjcxph.imgapi.entity.Log">
-        SELECT
-            id,
-            username,
-            client_ip AS clientIp,
-            request_uri AS requestUri,
-            method,
-            user_agent AS userAgent,
-            access_time AS accessTime,
-            query_string AS queryString,
-            request_body AS requestBody,
-            response_status AS responseStatus,
-            execute_time AS executeTime,
-            referer,
-            audit_action AS auditAction,
-            audit_target AS auditTarget,
-            audit_description AS auditDescription
+        SELECT <include refid="baseColumns"/>
         FROM access_log
         <where>
-            <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR referer LIKE '%' || #{keyword} || '%')
-            </if>
-            <if test="username != null and username != ''">
-                AND username LIKE '%' || #{username} || '%'
-            </if>
-            <if test="clientIp != null and clientIp != ''">
-                AND client_ip LIKE '%' || #{clientIp} || '%'
-            </if>
-            <if test="requestUri != null and requestUri != ''">
-                AND request_uri LIKE '%' || #{requestUri} || '%'
-            </if>
-            <if test="method != null and method != ''">
-                AND method = #{method}
-            </if>
-            <if test="responseStatus != null and responseStatus != ''">
-                AND response_status LIKE #{responseStatus} || '%'
-            </if>
-            <if test="startTime != null and startTime != ''">
-                AND access_time &gt;= CAST(#{startTime} AS timestamp)
-            </if>
-            <if test="endTime != null and endTime != ''">
-                AND access_time &lt;= CAST(#{endTime} AS timestamp)
-            </if>
-        </where>
-        ORDER BY access_time DESC
-        LIMIT #{limit} OFFSET #{offset}
-    </select>
-
-    <!-- 动态搜索日志总数 -->
-    <select id="countSearch" resultType="java.lang.Integer">
-        SELECT COUNT(*) FROM access_log
-        <where>
-            <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%'
-                    OR referer LIKE '%' || #{keyword} || '%')
-            </if>
-            <if test="username != null and username != ''">
-                AND username LIKE '%' || #{username} || '%'
-            </if>
-            <if test="clientIp != null and clientIp != ''">
-                AND client_ip LIKE '%' || #{clientIp} || '%'
-            </if>
-            <if test="requestUri != null and requestUri != ''">
-                AND request_uri LIKE '%' || #{requestUri} || '%'
-            </if>
-            <if test="method != null and method != ''">
-                AND method = #{method}
-            </if>
-            <if test="responseStatus != null and responseStatus != ''">
-                AND response_status LIKE #{responseStatus} || '%'
-            </if>
-            <if test="startTime != null and startTime != ''">
-                AND access_time &gt;= CAST(#{startTime} AS timestamp)
-            </if>
-            <if test="endTime != null and endTime != ''">
-                AND access_time &lt;= CAST(#{endTime} AS timestamp)
-            </if>
-        </where>
-    </select>
-
-    <!-- 敏感病案图片访问审计搜索 -->
-    <select id="searchImageAudit" resultType="com.zjcxph.imgapi.entity.Log">
-        SELECT
-            id, username, client_ip AS clientIp, request_uri AS requestUri, method,
-            user_agent AS userAgent, access_time AS accessTime, query_string AS queryString,
-            request_body AS requestBody, response_status AS responseStatus, execute_time AS executeTime,
-            referer, audit_action AS auditAction, audit_target AS auditTarget,
-            audit_description AS auditDescription
-        FROM access_log
-        <where>
-            <if test="auditAction != null and auditAction != ''">
-                AND audit_action = #{auditAction}
-            </if>
-            <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%')
-            </if>
-            <if test="username != null and username != ''">
-                AND username LIKE '%' || #{username} || '%'
-            </if>
-            <if test="clientIp != null and clientIp != ''">
-                AND client_ip LIKE '%' || #{clientIp} || '%'
-            </if>
-            <if test="responseStatus != null and responseStatus != ''">
-                AND response_status LIKE #{responseStatus} || '%'
-            </if>
-            <if test="startTime != null and startTime != ''">
-                AND access_time &gt;= CAST(#{startTime} AS timestamp)
-            </if>
-            <if test="endTime != null and endTime != ''">
-                AND access_time &lt;= CAST(#{endTime} AS timestamp)
-            </if>
-        </where>
-        ORDER BY access_time DESC
-        LIMIT #{limit} OFFSET #{offset}
-    </select>
-
-    <!-- 敏感病案图片访问审计总数 -->
-    <select id="countImageAudit" resultType="java.lang.Integer">
-        SELECT COUNT(*) FROM access_log
-        <where>
-            <if test="auditAction != null and auditAction != ''">
-                AND audit_action = #{auditAction}
-            </if>
-            <if test="keyword != null and keyword != ''">
-                AND (username LIKE '%' || #{keyword} || '%'
-                    OR client_ip LIKE '%' || #{keyword} || '%'
-                    OR request_uri LIKE '%' || #{keyword} || '%'
-                    OR query_string LIKE '%' || #{keyword} || '%'
-                    OR user_agent LIKE '%' || #{keyword} || '%')
-            </if>
+            <if test="keyword != null and keyword != ''"><include refid="logKeywordWithRefererPredicate"/></if>
             <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
             <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
+            <if test="requestUri != null and requestUri != ''">AND (request_uri LIKE '%' || #{requestUri} || '%' OR endpoint_template LIKE '%' || #{requestUri} || '%')</if>
+            <if test="method != null and method != ''">AND method = #{method}</if>
             <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
             <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
             <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
         </where>
+        ORDER BY access_time DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="searchAfter" resultType="com.zjcxph.imgapi.entity.Log">
+        SELECT <include refid="baseColumns"/>
+        FROM access_log
+        <where>
+            AND (access_time, id) &lt; (#{cursorAccessTime}, #{cursorId})
+            <if test="keyword != null and keyword != ''"><include refid="logKeywordWithRefererPredicate"/></if>
+            <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
+            <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
+            <if test="requestUri != null and requestUri != ''">AND (request_uri LIKE '%' || #{requestUri} || '%' OR endpoint_template LIKE '%' || #{requestUri} || '%')</if>
+            <if test="method != null and method != ''">AND method = #{method}</if>
+            <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
+            <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
+            <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
+        </where>
+        ORDER BY access_time DESC, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countSearch" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM access_log
+        <where>
+            <if test="keyword != null and keyword != ''"><include refid="logKeywordWithRefererPredicate"/></if>
+            <if test="username != null and username != ''">AND username LIKE '%' || #{username} || '%'</if>
+            <if test="clientIp != null and clientIp != ''">AND client_ip LIKE '%' || #{clientIp} || '%'</if>
+            <if test="requestUri != null and requestUri != ''">AND (request_uri LIKE '%' || #{requestUri} || '%' OR endpoint_template LIKE '%' || #{requestUri} || '%')</if>
+            <if test="method != null and method != ''">AND method = #{method}</if>
+            <if test="responseStatus != null and responseStatus != ''">AND response_status LIKE #{responseStatus} || '%'</if>
+            <if test="startTime != null and startTime != ''">AND access_time &gt;= CAST(#{startTime} AS timestamp)</if>
+            <if test="endTime != null and endTime != ''">AND access_time &lt;= CAST(#{endTime} AS timestamp)</if>
+        </where>
+    </select>
+
+    <select id="searchImageAudit" resultType="com.zjcxph.imgapi.entity.Log">
+        WITH filtered AS (
+            SELECT <include refid="baseColumns"/>
+            FROM access_log
+            <where><include refid="imageAuditFilters"/></where>
+            ORDER BY access_time DESC, id DESC
+            LIMIT #{limit} OFFSET #{offset}
+        ), identifiers AS (
+            SELECT filtered.*,
+                   CASE
+                       WHEN auditTarget LIKE 'sjh:%' THEN NULL
+                       WHEN POSITION(':' IN auditTarget) &gt; 0 THEN SPLIT_PART(auditTarget, ':', 1)
+                       WHEN auditTarget IS NULL OR auditTarget = '' OR auditTarget = 'search' THEN NULL
+                       ELSE auditTarget
+                   END AS bah,
+                   CASE
+                       WHEN auditTarget LIKE 'sjh:%' THEN SUBSTRING(auditTarget FROM 5)
+                       WHEN POSITION(':' IN auditTarget) &gt; 0 THEN SPLIT_PART(auditTarget, ':', 2)
+                       ELSE NULL
+                   END AS sjh
+            FROM filtered
+        )
+        SELECT identifiers.*,
+               (
+                   SELECT NULLIF(TRIM(stat.patientid), '')
+                   FROM mr_statistics stat
+                   WHERE NULLIF(TRIM(stat.patientid), '') IS NOT NULL
+                     AND (
+                         (identifiers.bah IS NOT NULL AND stat.bah = identifiers.bah
+                          AND (identifiers.sjh IS NULL OR identifiers.sjh = '' OR stat.sjh = identifiers.sjh))
+                         OR (identifiers.bah IS NULL AND identifiers.sjh IS NOT NULL AND stat.sjh = identifiers.sjh)
+                     )
+                   ORDER BY stat.id DESC
+                   LIMIT 1
+               ) AS patientId
+        FROM identifiers
+        ORDER BY accessTime DESC, id DESC
+    </select>
+
+    <select id="countImageAudit" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM access_log
+        <where><include refid="imageAuditFilters"/></where>
+    </select>
+
+    <select id="getImageAuditOverview" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO">
+        SELECT COUNT(*) AS "totalAccesses",
+               COUNT(DISTINCT NULLIF(TRIM(username), '')) AS "uniqueUsers",
+               COUNT(DISTINCT NULLIF(TRIM(audit_target), '')) AS "uniqueTargets",
+               COALESCE(SUM(CASE WHEN response_status LIKE '4%' OR response_status LIKE '5%' THEN 1 ELSE 0 END), 0) AS "abnormalAccesses",
+               ROUND(COALESCE(AVG(execute_time), 0), 1) AS "averageDurationMs"
+        FROM access_log
+        <where><include refid="imageAuditFilters"/></where>
+    </select>
+
+    <select id="getImageAuditTrend" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditTrendDTO">
+        SELECT recent.audit_date AS "date", recent.access_count AS "count"
+        FROM (
+            SELECT CAST(access_time AS DATE) AS audit_date, COUNT(*) AS access_count
+            FROM access_log
+            <where><include refid="imageAuditFilters"/> AND access_time IS NOT NULL</where>
+            GROUP BY CAST(access_time AS DATE)
+            ORDER BY audit_date DESC
+            LIMIT 14
+        ) recent
+        ORDER BY recent.audit_date ASC
+    </select>
+
+    <select id="getImageAuditActionDistribution" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">
+        SELECT actions.label AS "label", COUNT(filtered.audit_action) AS "count"
+        FROM (
+            SELECT 'LIST' AS label
+            UNION ALL SELECT 'DOWNLOAD'
+            UNION ALL SELECT 'VIEW_IMAGE'
+            UNION ALL SELECT 'VIEW_OSS_IMAGE'
+        ) actions
+        LEFT JOIN (
+            SELECT audit_action FROM access_log
+            <where><include refid="imageAuditFilters"/></where>
+        ) filtered ON filtered.audit_action = actions.label
+        GROUP BY actions.label
+        ORDER BY COUNT(filtered.audit_action) DESC, actions.label ASC
+    </select>
+
+    <select id="getTopImageAuditUsers" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">
+        SELECT username AS "label", COUNT(*) AS "count"
+        FROM access_log
+        <where><include refid="imageAuditFilters"/> AND NULLIF(TRIM(username), '') IS NOT NULL</where>
+        GROUP BY username
+        ORDER BY COUNT(*) DESC, username ASC
+        LIMIT 10
+    </select>
+
+    <select id="getTopImageAuditTargets" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">
+        SELECT audit_target AS "label", COUNT(*) AS "count"
+        FROM access_log
+        <where><include refid="imageAuditFilters"/> AND NULLIF(TRIM(audit_target), '') IS NOT NULL AND audit_target != 'search'</where>
+        GROUP BY audit_target
+        ORDER BY COUNT(*) DESC, audit_target ASC
+        LIMIT 10
     </select>
 
 </mapper>

@@ -1,14 +1,104 @@
-import type { Settings } from '#/global'
+import type { RecursiveRequired, Settings } from '#/global'
 import type { RouteMeta } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
 import settingsDefault from '@/settings'
 import { merge } from '@/utils/object'
 
+const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
+const DEFAULT_THEME_COLOR = '#2563EB'
+
+function normalizeThemeColor(value: unknown): string {
+  const color = String(value || '').trim()
+  return /^#[\dA-F]{6}$/i.test(color) ? color.toUpperCase() : DEFAULT_THEME_COLOR
+}
+
+function mixHexColor(source: string, target: string, sourceWeight: number): string {
+  const sourceValue = Number.parseInt(source.slice(1), 16)
+  const targetValue = Number.parseInt(target.slice(1), 16)
+  const channels = [16, 8, 0].map((shift) => {
+    const from = (sourceValue >> shift) & 0xFF
+    const to = (targetValue >> shift) & 0xFF
+    return Math.round(from * sourceWeight + to * (1 - sourceWeight))
+  })
+  return `#${channels.map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`
+}
+
+function toHslToken(color: string): string {
+  const value = Number.parseInt(color.slice(1), 16)
+  const red = ((value >> 16) & 0xFF) / 255
+  const green = ((value >> 8) & 0xFF) / 255
+  const blue = (value & 0xFF) / 255
+  const maximum = Math.max(red, green, blue)
+  const minimum = Math.min(red, green, blue)
+  const lightness = (maximum + minimum) / 2
+  const delta = maximum - minimum
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1))
+  let hue = 0
+  if (delta !== 0) {
+    if (maximum === red) {
+      hue = 60 * (((green - blue) / delta) % 6)
+    }
+    else if (maximum === green) {
+      hue = 60 * ((blue - red) / delta + 2)
+    }
+    else {
+      hue = 60 * ((red - green) / delta + 4)
+    }
+  }
+  if (hue < 0) {
+    hue += 360
+  }
+  return `${Math.round(hue)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
+}
+
+function applyThemeColor(value: unknown) {
+  const primary = normalizeThemeColor(value)
+  const rootStyle = document.documentElement.style
+  const primaryHsl = toHslToken(primary)
+  const variables = {
+    '--color-primary': primary,
+    '--color-primary-hover': mixHexColor(primary, '#000000', 0.86),
+    '--color-primary-active': mixHexColor(primary, '#000000', 0.72),
+    '--color-primary-deep': mixHexColor(primary, '#000000', 0.58),
+    '--primary': primaryHsl,
+    '--ring': primaryHsl,
+    '--el-color-primary': primary,
+    '--el-color-primary-light-3': mixHexColor(primary, '#FFFFFF', 0.7),
+    '--el-color-primary-light-5': mixHexColor(primary, '#FFFFFF', 0.5),
+    '--el-color-primary-light-7': mixHexColor(primary, '#FFFFFF', 0.3),
+    '--el-color-primary-light-8': mixHexColor(primary, '#FFFFFF', 0.2),
+    '--el-color-primary-light-9': mixHexColor(primary, '#FFFFFF', 0.1),
+    '--el-color-primary-dark-2': mixHexColor(primary, '#000000', 0.8),
+  }
+  Object.entries(variables).forEach(([name, color]) => rootStyle.setProperty(name, color))
+}
+
+function normalizePageTitleStyle(value: unknown): 'plain' | 'card' {
+  if (value === 'plain' || value === 'compact') {
+    return 'plain'
+  }
+  return 'card'
+}
+
+function getInitialSettings(): RecursiveRequired<Settings.all> {
+  const defaults = cloneDeep(settingsDefault)
+
+  try {
+    const savedSettings = localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
+    const initialSettings = savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
+    initialSettings.app.pageTitleStyle = normalizePageTitleStyle(initialSettings.app.pageTitleStyle)
+    return initialSettings
+  }
+  catch {
+    return defaults
+  }
+}
+
 export const useSettingsStore = defineStore(
   // 唯一ID
   'settings',
   () => {
-    const settings = ref(settingsDefault)
+    const settings = ref(getInitialSettings())
 
     const prefersColorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     watch(() => settings.value.app.colorScheme, (val) => {
@@ -54,6 +144,17 @@ export const useSettingsStore = defineStore(
     }, {
       immediate: true,
     })
+
+    watch(() => settings.value.app.themeColor, applyThemeColor, {
+      immediate: true,
+    })
+
+    watch(() => settings.value.app.pageTitleStyle, (val) => {
+      document.documentElement.setAttribute('data-page-title-style', normalizePageTitleStyle(val))
+    }, {
+      immediate: true,
+    })
+
     watch([
       () => settings.value.app.enableMournMode,
       () => settings.value.app.enableColorAmblyopiaMode,
@@ -158,7 +259,16 @@ export const useSettingsStore = defineStore(
 
     // 更新应用配置
     function updateSettings(data: Settings.all, fromBase = false) {
-      settings.value = merge(data, fromBase ? cloneDeep(settingsDefault) : settings.value)
+      settings.value = merge(data, fromBase ? getInitialSettings() : settings.value)
+    }
+
+    function saveAppSettings() {
+      localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(settings.value))
+    }
+
+    function resetAppSettings() {
+      localStorage.removeItem(APP_SETTINGS_STORAGE_KEY)
+      settings.value = cloneDeep(settingsDefault)
     }
 
     return {
@@ -175,6 +285,8 @@ export const useSettingsStore = defineStore(
       toggleSidebarCollapse,
       setColorScheme,
       updateSettings,
+      saveAppSettings,
+      resetAppSettings,
     }
   },
 )

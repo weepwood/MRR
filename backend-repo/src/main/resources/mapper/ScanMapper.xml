@@ -4,15 +4,29 @@
 
 <mapper namespace="com.zjcxph.imgapi.mapper.ScanMapper">
 
-    <!-- 根据 ID 列表查询图片路径 -->
     <select id="getImagePathList" resultType="com.zjcxph.imgapi.entity.PathDO">
-        SELECT BRXH AS brxh, BAH AS bah, folder, filename FROM mr_scan WHERE id IN
+        SELECT id AS scan_id, BRXH AS brxh, BAH AS bah, sjh, folder, filename,
+               source_type, source_node, source_ref, oss_url, file_size
+        FROM mr_scan
+        WHERE uploadflag != 0
+          AND id IN
         <foreach item="id" collection="ids" open="(" separator="," close=")">
             #{id}
         </foreach>
+        ORDER BY BAH, sjh, pages NULLS LAST, id
     </select>
 
-    <!-- 动态更新扫描记录 -->
+    <select id="findActiveByIds" resultType="com.zjcxph.imgapi.entity.Scan">
+        SELECT *
+        FROM mr_scan
+        WHERE uploadflag != 0
+          AND id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY BAH, sjh, pages NULLS LAST, id
+    </select>
+
     <update id="update">
         UPDATE mr_scan
         <set>
@@ -26,29 +40,32 @@
             <if test="uploadDate != null">uploaddate = #{uploadDate},</if>
             <if test="uploadFlag != null">uploadflag = #{uploadFlag},</if>
             <if test="folder != null">folder = #{folder},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="sourceNode != null">source_node = #{sourceNode},</if>
+            <if test="sourceRef != null">source_ref = #{sourceRef},</if>
         </set>
         WHERE id = #{id}
     </update>
 
-    <!-- 根据条件动态查询 -->
+    <!-- 兼容旧接口的有限条件查询，必须在 SQL 层 LIMIT。 -->
     <select id="findByCondition" resultType="com.zjcxph.imgapi.entity.Scan">
         SELECT * FROM mr_scan
         <where>
-            <if test="brxh != null and brxh != ''">AND BRXH LIKE '%' || #{brxh} || '%'</if>
-            <if test="bah != null and bah != ''">AND BAH LIKE '%' || #{bah} || '%'</if>
-            <if test="sjh != null and sjh != ''">AND sjh LIKE '%' || #{sjh} || '%'</if>
-            <if test="filename != null and filename != ''">AND filename LIKE '%' || #{filename} || '%'</if>
-            <if test="folder != null and folder != ''">AND folder LIKE '%' || #{folder} || '%'</if>
-            <if test="openerNo != null and openerNo != ''">AND openerno LIKE '%' || #{openerNo} || '%'</if>
-            <if test="uploadDate != null and uploadDate != ''">AND uploaddate LIKE '%' || #{uploadDate} || '%'</if>
-            <if test="btype != null">AND btype = #{btype}</if>
-            <if test="uploadFlag != null">AND uploadflag = #{uploadFlag}</if>
-            <if test="pages != null">AND pages = #{pages}</if>
+            <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>
+            <if test="request.bah != null and request.bah != ''">AND BAH LIKE '%' || #{request.bah} || '%'</if>
+            <if test="request.sjh != null and request.sjh != ''">AND sjh LIKE '%' || #{request.sjh} || '%'</if>
+            <if test="request.filename != null and request.filename != ''">AND filename LIKE '%' || #{request.filename} || '%'</if>
+            <if test="request.folder != null and request.folder != ''">AND folder LIKE '%' || #{request.folder} || '%'</if>
+            <if test="request.openerNo != null and request.openerNo != ''">AND openerno LIKE '%' || #{request.openerNo} || '%'</if>
+            <if test="request.uploadDate != null and request.uploadDate != ''">AND uploaddate LIKE '%' || #{request.uploadDate} || '%'</if>
+            <if test="request.btype != null">AND btype = #{request.btype}</if>
+            <if test="request.uploadFlag != null">AND uploadflag = #{request.uploadFlag}</if>
+            <if test="request.pages != null">AND pages = #{request.pages}</if>
         </where>
         ORDER BY id
+        LIMIT #{limit}
     </select>
 
-    <!-- 根据条件动态查询（带分页） -->
     <select id="findByConditionWithPagination" resultType="com.zjcxph.imgapi.entity.Scan">
         SELECT * FROM mr_scan
         <where>
@@ -66,8 +83,7 @@
         ORDER BY id LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 根据条件统计数量 -->
-    <select id="countByCondition" resultType="java.lang.Integer">
+    <select id="countByCondition" resultType="java.lang.Long">
         SELECT COUNT(*) FROM mr_scan
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>

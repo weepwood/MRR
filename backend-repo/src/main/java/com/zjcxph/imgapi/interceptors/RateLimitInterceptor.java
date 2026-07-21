@@ -1,8 +1,8 @@
 package com.zjcxph.imgapi.interceptors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.security.ApiRateLimiter;
 import com.zjcxph.imgapi.utils.IpUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -16,10 +16,6 @@ import java.util.Set;
 
 /**
  * API 限流拦截器 — 对敏感接口按 IP 进行频率限制。
- * <p>
- * 仅对 {@link #RATE_LIMITED_PATHS} 中列出的路径生效，
- * 其他请求直接放行（不影响普通 API 调用）。
- * </p>
  */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
@@ -31,6 +27,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/password/edit",
+            "/api/v1/auth/password/required-change",
             "/api/v1/search/getBAHByEncryptID",
             "/api/v1/search/getBAHByEncryptIDLegacy",
             "/api/v1/search/getBAHByID",
@@ -61,15 +58,23 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         String clientIp = IpUtil.getClientIp(request);
         if (!apiRateLimiter.tryAcquire(clientIp)) {
+            logger.warn("Sensitive API rate limit exceeded: path={}, clientIp={}", path, clientIp);
             writeRateLimitResponse(response);
             return false;
         }
         return true;
     }
 
-    private boolean isRateLimited(String path) {
+    boolean isRateLimited(String path) {
         return EXACT_PATHS.contains(path)
-                || PREFIX_PATHS.stream().anyMatch(path::startsWith);
+                || PREFIX_PATHS.stream().anyMatch(path::startsWith)
+                || isAdminPasswordResetPath(path);
+    }
+
+    private boolean isAdminPasswordResetPath(String path) {
+        return path != null
+                && path.startsWith("/api/v1/auth/users/")
+                && path.endsWith("/password/reset");
     }
 
     private void writeRateLimitResponse(HttpServletResponse response) throws IOException {

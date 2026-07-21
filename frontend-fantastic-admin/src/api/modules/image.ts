@@ -1,22 +1,39 @@
 import type { BAHImageData, ImageTypeRequest } from '../types'
 import api, { getRequest, putRequest } from '../index'
 
-/** GET /api/v1/img/{bah} — 获取病案号下的图片数据 */
+function resolveArchiveUserId(explicitUserId?: string): string | undefined {
+  const explicit = String(explicitUserId || '').trim()
+  if (explicit) {
+    return explicit
+  }
+
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+
+  return new URLSearchParams(window.location.search).get('userid')?.trim() || undefined
+}
+
+/** GET /api/v1/img/{bah} — 获取唯一病案号下的图片数据 */
 export function getImgApiByBah(bah: string) {
   return getRequest<BAHImageData[]>(`/api/v1/img/${bah}`)
 }
 
-/** GET /api/v1/img/search — 按病案号和/或上架号查询图片数据 */
-export function getImgByCode(bah?: string, sjh?: string) {
+/** GET /api/v1/img/search — 按病案号、上架号和调用方用户查询图片数据 */
+export function getImgByCode(bah?: string, sjh?: string, forceRefresh = false, userid?: string) {
   return getRequest<BAHImageData[]>('/api/v1/img/search', {
-    params: { bah, sjh },
-  })
-}
-
-/** GET /api/v1/img/download/{bah} — 下载病案压缩包（blob 下载，不走 Result 包装） */
-export function downloadBah(bah: string) {
-  return api.get<Blob>(`/api/v1/img/download/${bah}`, {
-    responseType: 'blob',
+    params: {
+      bah,
+      sjh,
+      userid: resolveArchiveUserId(userid),
+      ...(forceRefresh ? { _: Date.now() } : {}),
+    },
+    headers: forceRefresh
+      ? {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        }
+      : undefined,
   })
 }
 

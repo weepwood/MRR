@@ -35,9 +35,9 @@ server.tomcat.max-http-header-size=32768
 
 ```properties
 # 使用环境变量（推荐）
-jwt.secret=${JWT_SECRET}
-aes.secret.key=${AES_SECRET_KEY}
-spring.datasource.password=${DB_PASSWORD}
+aes.secret.key=${AES_SECRET_KEY:}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+# JWT 签名密钥由 JWT_SECRET_KEY 环境变量提供。
 ```
 
 ### 密钥轮换

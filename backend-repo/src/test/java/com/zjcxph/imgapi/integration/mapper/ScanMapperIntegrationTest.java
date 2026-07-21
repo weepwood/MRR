@@ -18,7 +18,10 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MybatisTest
-@TestPropertySource(properties = "mybatis.configuration.map-underscore-to-camel-case=true")
+@TestPropertySource(properties = {
+        "mybatis.configuration.map-underscore-to-camel-case=true",
+        "spring.flyway.enabled=false"
+})
 @Sql("classpath:schema-itest.sql")
 @DisplayName("ScanMapper 集成测试 (H2)")
 class ScanMapperIntegrationTest {
@@ -84,8 +87,8 @@ class ScanMapperIntegrationTest {
     void countByCondition() {
         ScanRequest param = new ScanRequest();
         param.setBah("00789508");
-        int count = scanMapper.countByCondition(param);
-        assertThat(count).isEqualTo(1);
+        long count = scanMapper.countByCondition(param);
+        assertThat(count).isEqualTo(1L);
     }
 
     @Test

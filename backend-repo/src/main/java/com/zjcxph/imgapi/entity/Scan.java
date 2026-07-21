@@ -4,10 +4,10 @@ import lombok.Data;
 
 import java.util.Date;
 
-
 @Data
 public class Scan {
     private Integer id;
+    private Long archiveId;
     private String brxh;
     private String bah;
     private String sjh;
@@ -19,7 +19,11 @@ public class Scan {
     private Integer uploadFlag;
     private String folder;
 
-    // OSS field accessors
+    // 多来源定位字段：仅保存受控类型、节点 ID 和相对引用。
+    private String sourceType;
+    private String sourceNode;
+    private String sourceRef;
+
     // OSS migration fields
     private String ossUrl;
     private Long fileSize;
@@ -27,7 +31,8 @@ public class Scan {
     private String migrationStatus;
     private Date migratedAt;
 
-    public Scan() {}
+    public Scan() {
+    }
 
     public Scan(Integer id, String brxh, String bah, String sjh, String filename, Integer btype, Integer pages,
                 String openerNo, Date uploadDate, Integer uploadFlag, String folder) {
@@ -43,5 +48,4 @@ public class Scan {
         this.uploadFlag = uploadFlag;
         this.folder = folder;
     }
-
 }

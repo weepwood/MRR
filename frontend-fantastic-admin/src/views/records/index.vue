@@ -3,11 +3,12 @@ import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
-import { useCrudList } from '@/composables/useCrudList'
 import type { PaginatedResult, ScanRecord } from '@/api/types'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { useCrudList } from '@/composables/useCrudList'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -27,12 +28,10 @@ const error = ref('')
 
 const typeOptions = [
   { label: '全部类型', value: '' },
-  { label: '病案首页', value: '1' },
-  { label: '病程记录', value: '2' },
-  { label: '手术记录', value: '3' },
-  { label: '护理记录', value: '5' },
-  { label: '检验单', value: '8' },
-  { label: '医嘱', value: '9' },
+  ...MEDICAL_RECORD_TYPES.map(item => ({
+    label: item.label,
+    value: String(item.value),
+  })),
 ]
 
 // CRUD 列表逻辑：复用 useCrudList composable，消除重复的分页/查询/重置代码
@@ -118,8 +117,7 @@ async function handleBatchDownload() {
 }
 
 function typeLabel(value: unknown) {
-  const option = typeOptions.find(item => item.value === String(value))
-  return option?.label || (value ? `类型 ${value}` : '-')
+  return value ? getMedicalRecordTypeLabel(value as number | string) : '-'
 }
 </script>
 
@@ -170,8 +168,8 @@ function typeLabel(value: unknown) {
           <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="query.btype" clearable placeholder="全部类型" style="width: 140px;">
-            <el-option v-for="item in typeOptions" :key="item.label" :label="item.label" :value="item.value" />
+          <el-select v-model="query.btype" clearable placeholder="全部类型" style="width: 180px;">
+            <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -200,7 +198,7 @@ function typeLabel(value: unknown) {
         <el-table-column prop="brxh" label="病人序号" min-width="120" />
         <el-table-column prop="sjh" label="上架号" min-width="120" />
         <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="btype" label="类型" width="140">
+        <el-table-column prop="btype" label="类型" width="160">
           <template #default="{ row }">
             {{ typeLabel(row.btype) }}
           </template>

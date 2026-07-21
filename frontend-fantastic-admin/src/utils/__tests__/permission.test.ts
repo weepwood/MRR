@@ -7,12 +7,23 @@ import {
 } from '../permission'
 
 describe('permission — PERMISSION_HIERARCHY', () => {
-  it('record:manage 包含 manage+edit+read', () => {
-    expect(PERMISSION_HIERARCHY['record:manage']).toEqual(['record:manage', 'record:edit', 'record:read'])
+  it('record:manage 包含管理、编辑、查看与导出权限', () => {
+    expect(PERMISSION_HIERARCHY['record:manage']).toEqual([
+      'record:manage',
+      'record:edit',
+      'record:read',
+      'record:download',
+      'record:pdf:export',
+    ])
   })
 
   it('record:edit 包含 edit+read', () => {
     expect(PERMISSION_HIERARCHY['record:edit']).toEqual(['record:edit', 'record:read'])
+  })
+
+  it('导出权限分别包含查看权限', () => {
+    expect(PERMISSION_HIERARCHY['record:download']).toEqual(['record:download', 'record:read'])
+    expect(PERMISSION_HIERARCHY['record:pdf:export']).toEqual(['record:pdf:export', 'record:read'])
   })
 
   it('role:manage 包含 manage+read', () => {
@@ -21,8 +32,14 @@ describe('permission — PERMISSION_HIERARCHY', () => {
 })
 
 describe('permission — resolvePermissions', () => {
-  it('record:manage 展开为 3 个权限', () => {
-    expect(resolvePermissions(['record:manage']).sort()).toEqual(['record:edit', 'record:manage', 'record:read'])
+  it('record:manage 展开为 5 个权限', () => {
+    expect(resolvePermissions(['record:manage']).sort()).toEqual([
+      'record:download',
+      'record:edit',
+      'record:manage',
+      'record:pdf:export',
+      'record:read',
+    ])
   })
 
   it('非层级权限原样保留', () => {
@@ -34,6 +51,8 @@ describe('permission — resolvePermissions', () => {
     expect(result).toContain('record:manage')
     expect(result).toContain('record:edit')
     expect(result).toContain('record:read')
+    expect(result).toContain('record:download')
+    expect(result).toContain('record:pdf:export')
     expect(result).toContain('statistics:read')
   })
 
@@ -49,8 +68,15 @@ describe('permission — resolvePermissions', () => {
 })
 
 describe('permission — checkPermission', () => {
-  it('拥有 record:manage 则通过 record:read 检查', () => {
+  it('拥有 record:manage 则通过查看和导出检查', () => {
     expect(checkPermission(['record:manage'], 'record:read')).toBe(true)
+    expect(checkPermission(['record:manage'], 'record:download')).toBe(true)
+    expect(checkPermission(['record:manage'], 'record:pdf:export')).toBe(true)
+  })
+
+  it('拥有 record:read 不能下载或导出 PDF', () => {
+    expect(checkPermission(['record:read'], 'record:download')).toBe(false)
+    expect(checkPermission(['record:read'], 'record:pdf:export')).toBe(false)
   })
 
   it('拥有 record:read 不通过 record:manage 检查', () => {

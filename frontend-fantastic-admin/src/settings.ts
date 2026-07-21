@@ -15,6 +15,8 @@ const globalSettings: Settings.all = {
     enable: true,
     breadcrumb: true,
     navSearch: true,
+    fullscreen: true,
+    pageReload: true,
   },
 }
 

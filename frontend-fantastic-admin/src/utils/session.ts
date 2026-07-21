@@ -2,42 +2,50 @@ import { useUserStore } from '@/store/modules/user'
 import { checkAnyPermission, checkPermission } from './permission'
 
 export function getCurrentUser() {
-  return useUserStore().profile || {}
+  const userStore = useUserStore()
+  return userStore.isSessionVerified ? userStore.profile || {} : {}
 }
 
 export function getUserDisplayName() {
-  const profile = useUserStore().profile
-  return profile?.displayName || profile?.username || ''
+  const userStore = useUserStore()
+  if (!userStore.isSessionVerified) return ''
+  return userStore.profile?.displayName || userStore.profile?.username || ''
 }
 
 export function getUserRoleName() {
-  const profile = useUserStore().profile
-  return profile?.roleName || profile?.roleCode || ''
+  const userStore = useUserStore()
+  if (!userStore.isSessionVerified) return ''
+  return userStore.profile?.roleName || userStore.profile?.roleCode || ''
 }
 
 export function isAdminUser() {
-  const profile = useUserStore().profile
-  return String(profile?.roleCode || '').toUpperCase() === 'ADMIN'
+  const userStore = useUserStore()
+  if (!userStore.isSessionVerified) return false
+  return String(userStore.profile?.roleCode || '').toUpperCase() === 'ADMIN'
 }
 
 export function hasPermission(permission: string) {
+  const userStore = useUserStore()
+  if (!userStore.isSessionVerified) return false
   if (isAdminUser()) {
     return true
   }
-  return checkPermission(useUserStore().permissions || [], permission)
+  return checkPermission(userStore.permissions || [], permission)
 }
 
 export function hasAnyPermission(permissions: string[]) {
+  const userStore = useUserStore()
+  if (!userStore.isSessionVerified) return false
   if (isAdminUser()) {
     return true
   }
-  return checkAnyPermission(useUserStore().permissions || [], permissions)
+  return checkAnyPermission(userStore.permissions || [], permissions)
 }
 
 export function clearSession() {
-  useUserStore().requestLogout()
+  void useUserStore().requestLogout()
 }
 
 export function isAuthenticated() {
-  return useUserStore().isLogin
+  return useUserStore().isSessionVerified
 }

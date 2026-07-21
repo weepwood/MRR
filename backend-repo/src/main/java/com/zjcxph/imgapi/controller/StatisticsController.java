@@ -40,6 +40,7 @@ import java.util.Map;
 public class StatisticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);
+    private static final int EXPORT_LIMIT = 100000;
 
     private final StatisticsService statisticsService;
 
@@ -54,7 +55,7 @@ public class StatisticsController {
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小", example = "100")
             @RequestParam(defaultValue = "100") int size,
-            @Parameter(description = "关键字，匹配 cid/openerNo/date/type", example = "CT")
+            @Parameter(description = "关键字，匹配设备、负责人、归档日期、类型、病人姓名、住院科室、病人ID和出院日期", example = "心内科")
             @RequestParam(required = false) String keyword,
             @Parameter(description = "病案号模糊匹配", example = "0078")
             @RequestParam(required = false) String bah,
@@ -66,7 +67,7 @@ public class StatisticsController {
             @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期，格式 yyyy-MM-dd", example = "2024-12-31")
             @RequestParam(required = false) String endDate,
-            @Parameter(description = "排序字段：bah/cid/openerNo/date/type/pages/sjh", example = "date")
+            @Parameter(description = "排序字段：bah/cid/openerNo/date/type/pages/sjh/patientName/inpatientDepartment/patientId/dischargeDate", example = "date")
             @RequestParam(required = false) String sortBy,
             @Parameter(description = "排序方向：asc/desc", example = "desc")
             @RequestParam(required = false) String sortOrder) {
@@ -249,7 +250,7 @@ public class StatisticsController {
     @Operation(summary = "导出统计明细 CSV")
     @GetMapping("/export/csv")
     public void exportCsv(
-            @Parameter(description = "关键字，匹配 cid/openerNo/date/type")
+            @Parameter(description = "关键字，匹配设备、负责人、归档日期、类型、病人姓名、住院科室、病人ID和出院日期")
             @RequestParam(required = false) String keyword,
             @Parameter(description = "病案号模糊匹配")
             @RequestParam(required = false) String bah,
@@ -270,12 +271,17 @@ public class StatisticsController {
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
 
-        int exportLimit = 100000;
-        List<Statistics> list = statisticsService.findWithConditionAndPagination(
-                1, exportLimit, normalizedKeyword, normalizedBah, normalizedSjh,
-                normalizedType, normalizedStartDate, normalizedEndDate, "date", "asc");
-        if (list.size() >= exportLimit) {
-            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", exportLimit);
+        List<Statistics> list = statisticsService.findWithConditionForExport(
+                EXPORT_LIMIT,
+                normalizedKeyword,
+                normalizedBah,
+                normalizedSjh,
+                normalizedType,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+        if (list.size() >= EXPORT_LIMIT) {
+            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", EXPORT_LIMIT);
         }
 
         response.setContentType("text/csv; charset=UTF-8");
@@ -284,9 +290,17 @@ public class StatisticsController {
 
         try (OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8)) {
             writer.write('\uFEFF');
-            writer.write("病案号,设备,负责人,日期,类型,页数,上架号\n");
+            writer.write("病案号,病人姓名,病人ID,住院科室,出院日期,设备,负责人,归档日期,类型,页数,上架号\n");
             for (Statistics s : list) {
                 writer.write(escapeCsv(s.getBah()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getPatientName()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getPatientId()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getInpatientDepartment()));
+                writer.write(',');
+                writer.write(escapeCsv(s.getDischargeDate()));
                 writer.write(',');
                 writer.write(escapeCsv(s.getCid()));
                 writer.write(',');
@@ -306,6 +320,14 @@ public class StatisticsController {
             logger.error("导出 CSV 失败", e);
             response.setStatus(500);
         }
+    }
+
+    /** GET /api/v1/statistics/departments — 获取所有住院科室列表 */
+    @GetMapping("/departments")
+    @Operation(summary = "获取所有住院科室列表（去重、排序）")
+    public Result<List<String>> getDepartments() {
+        List<String> departments = statisticsService.getDistinctDepartments();
+        return Result.success(departments);
     }
 
     private String escapeCsv(String value) {
@@ -339,6 +361,10 @@ public class StatisticsController {
             case "type":
             case "pages":
             case "sjh":
+            case "patientName":
+            case "inpatientDepartment":
+            case "patientId":
+            case "dischargeDate":
                 return value;
             default:
                 return "date";

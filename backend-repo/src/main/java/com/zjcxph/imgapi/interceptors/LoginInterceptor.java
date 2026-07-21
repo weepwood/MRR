@@ -3,61 +3,50 @@ package com.zjcxph.imgapi.interceptors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Permissions;
+import com.zjcxph.imgapi.entity.AuthUser;
+import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
+import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
+import com.zjcxph.imgapi.utils.PermissionResolver;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
-/**
- * 登录拦截器 — 开发模式（dev-no-login 分支）。
- *
- * <p><b>重要：本拦截器当前屏蔽了 JWT Token 验证。</b></p>
- *
- * <p>
- * 在 dev-no-login 分支中，该拦截器不再校验客户端传递的 Bearer Token，
- * 而是直接注入一个具备 ADMIN 角色和全部权限的虚拟开发会话。
- * 这意味着所有 API 请求均以管理员身份通过，无需登录。
- * </p>
- *
- * <p>注入的虚拟会话属性：</p>
- * <ul>
- *   <li>userId: 1 (dev)</li>
- *   <li>username: "dev"</li>
- *   <li>roleCode: "ADMIN"</li>
- *   <li>permissions: ALL_PERMISSIONS（全部权限）</li>
- * </ul>
- *
- * <p>
- * 恢复登录验证：将本拦截器的 preHandle 逻辑改为从 Authorization Header
- * 提取并验证 JWT Token，将解析后的用户信息注入 AuthSession。
- * 原始 JWT 验证逻辑参见该文件的 git history（本分支之前）。
- * </p>
- *
- * @see AuthorizationInterceptor 后续鉴权拦截器
- * @see AuthContext 线程级用户会话
- */
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
+
+    public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
+    public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final TokenBlacklist tokenBlacklist;
+    private final AuthUserMapper authUserMapper;
+    private final DeveloperModeService developerModeService;
 
-    public LoginInterceptor(TokenBlacklist tokenBlacklist) {
+    public LoginInterceptor(TokenBlacklist tokenBlacklist,
+                            AuthUserMapper authUserMapper,
+                            DeveloperModeService developerModeService) {
         this.tokenBlacklist = tokenBlacklist;
+        this.authUserMapper = authUserMapper;
+        this.developerModeService = developerModeService;
     }
 
     private String extractToken(String authorization) {
         if (authorization != null && authorization.startsWith("Bearer ")) {
-            return authorization.substring(7);
+            return authorization.substring(7).trim();
         }
         return null;
     }
@@ -68,20 +57,63 @@ public class LoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // ============================================================
-        // dev-no-login 模式：跳过 Token 校验，注入虚拟开发管理员会话
-        // 如需恢复登录验证，用 JwtUtil 校验 Authorization Header 中的 Bearer Token
-        // ============================================================
-        AuthSession session = new AuthSession();
-        session.setId(1L);
-        session.setUsername("dev");
-        session.setDisplayName("Dev User");
-        session.setRoleCode("ADMIN");
-        session.setRoleName("Administrator");
-        session.setStatus("active");
-        session.setPermissions(Permissions.ALL_PERMISSIONS);
-        AuthContext.setCurrentUser(session);
-        request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        String token = extractToken(request.getHeader("Authorization"));
+        if (token == null || token.isBlank()) {
+            return allowDeveloperModeOrReject(request, response, "请先登录", "missing_token");
+        }
+
+        AuthSession tokenSession;
+        String jti;
+        try {
+            String tokenType = JwtUtil.getTokenType(token);
+            if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
+                return allowDeveloperModeOrReject(request, response, "Token 类型无效", "invalid_token_type");
+            }
+            jti = JwtUtil.getJti(token);
+            tokenSession = JwtUtil.parseToken(token);
+        } catch (Exception exception) {
+            logger.debug("JWT verification failed: {}", exception.getMessage());
+            return allowDeveloperModeOrReject(request, response, "Token 无效或已过期", "invalid_or_expired_token");
+        }
+
+        try {
+            if (tokenBlacklist.isRevoked(jti)) {
+                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
+            }
+        } catch (Exception exception) {
+            logger.error("Token revocation store unavailable", exception);
+            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
+            return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
+        }
+
+        AuthUser currentUser;
+        try {
+            currentUser = authUserMapper.findById(tokenSession.getId());
+        } catch (Exception exception) {
+            // 数据库故障必须失败关闭。即使开发者模式已启用，也不能降级为虚拟管理员。
+            logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
+            writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
+                || !currentUser.getUsername().equals(tokenSession.getUsername())) {
+            return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
+        }
+        if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
+            return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
+        }
+        if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
+            writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
+            return false;
+        }
+
+        AuthSession session = toCurrentSession(currentUser);
+        installSession(request, session);
         return true;
     }
 
@@ -90,10 +122,89 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthContext.clear();
     }
 
-    private void writeUnauthorized(HttpServletResponse response, String message) throws Exception {
-        response.setStatus(401);
+    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
+                                                HttpServletResponse response,
+                                                String unauthorizedMessage,
+                                                String reason) throws Exception {
+        if (!developerModeService.isEnabled()) {
+            writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
+            return false;
+        }
+
+        AuthSession developerSession = createDeveloperSession();
+        installSession(request, developerSession);
+        request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
+        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, reason);
+        response.setHeader("X-MRR-Developer-Mode", "enabled");
+        logger.warn(
+                "Developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
+                request.getMethod(), request.getRequestURI(), request.getRemoteAddr(), reason);
+        return true;
+    }
+
+    private void installSession(HttpServletRequest request, AuthSession session) {
+        AuthContext.setCurrentUser(session);
+        request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+    }
+
+    private AuthSession createDeveloperSession() {
+        AuthSession session = new AuthSession();
+        session.setId(1L);
+        session.setUsername("dev");
+        session.setDisplayName("Developer Mode");
+        session.setRoleCode("ADMIN");
+        session.setRoleName("Administrator");
+        session.setStatus("active");
+        session.setMustChangePassword(false);
+        session.setPasswordVersion(1);
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
+        return session;
+    }
+
+    private AuthSession toCurrentSession(AuthUser user) {
+        AuthSession session = new AuthSession();
+        session.setId(user.getId());
+        session.setUsername(user.getUsername());
+        session.setDisplayName(StringUtils.hasText(user.getDisplayName()) ? user.getDisplayName() : user.getUsername());
+        session.setRoleCode(user.getRoleCode());
+        session.setRoleName(StringUtils.hasText(user.getRoleName()) ? user.getRoleName() : user.getRoleCode());
+        session.setStatus(user.getStatus());
+        session.setMustChangePassword(user.isPasswordChangeRequired());
+        session.setPasswordVersion(user.effectivePasswordVersion());
+        session.setTemporaryPasswordExpiresAt(user.getTemporaryPasswordExpiresAt());
+        session.setLastLoginAt(user.getLastLoginAt());
+        session.setPermissions(resolvePermissions(user));
+        return session;
+    }
+
+    private List<String> resolvePermissions(AuthUser user) {
+        if ("ADMIN".equalsIgnoreCase(user.getRoleCode())) {
+            return new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS));
+        }
+        if (!StringUtils.hasText(user.getPermissionsCsv())) {
+            return List.of();
+        }
+        List<String> configured = Arrays.stream(user.getPermissionsCsv().split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+        return new ArrayList<>(PermissionResolver.resolve(configured));
+    }
+
+    private void writeUnauthorized(HttpServletResponse response, String message, String code) throws Exception {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setCharacterEncoding("UTF-8");
-        response.setContentType("application/json");
-        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", 401, "message", message));
+        response.setContentType("application/json;charset=UTF-8");
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", code, "message", message));
+    }
+
+    private void writeServiceUnavailable(HttpServletResponse response, String message) throws Exception {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json;charset=UTF-8");
+        OBJECT_MAPPER.writeValue(response.getWriter(), Map.of(
+                "code", "AUTH_SERVICE_UNAVAILABLE",
+                "message", message));
     }
 }

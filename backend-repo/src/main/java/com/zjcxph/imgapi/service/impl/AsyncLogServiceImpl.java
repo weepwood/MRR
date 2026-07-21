@@ -7,6 +7,7 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,17 +91,32 @@ public class AsyncLogServiceImpl implements AsyncLogService {
         logger.info("日志重试插入完成, 成功: {}, 失败: {}", successCount, failCount);
     }
 
+    @Scheduled(fixedDelay = 5000)
+    public void flushPendingLogs() {
+        List<Log> pending = drainBuffer();
+        if (!pending.isEmpty()) {
+            batchInsertLogs(pending);
+        }
+    }
+
     @PreDestroy
     public void destroy() {
-        List<Log> remaining;
-        synchronized (bufferLock) {
-            if (logBuffer.isEmpty()) {
-                return;
-            }
-            remaining = new ArrayList<>(logBuffer);
-            logBuffer.clear();
+        List<Log> remaining = drainBuffer();
+        if (remaining.isEmpty()) {
+            return;
         }
         logger.info("应用关闭,刷新剩余 {} 条日志", remaining.size());
         batchInsertLogs(remaining);
+    }
+
+    private List<Log> drainBuffer() {
+        synchronized (bufferLock) {
+            if (logBuffer.isEmpty()) {
+                return List.of();
+            }
+            List<Log> remaining = new ArrayList<>(logBuffer);
+            logBuffer.clear();
+            return remaining;
+        }
     }
 }

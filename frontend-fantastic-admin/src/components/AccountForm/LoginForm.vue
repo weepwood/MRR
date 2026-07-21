@@ -3,16 +3,15 @@ import { Key, UserFilled } from '@element-plus/icons-vue'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
-import gsap from 'gsap'
 import { useForm } from 'vee-validate'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
-import { FormControl, FormField, FormItem } from '@/ui/shadcn/ui/form'
+import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import type { AuthProfile } from '@/utils/auth-storage'
+import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
 
-defineOptions({
-  name: 'LoginForm',
-})
+defineOptions({ name: 'LoginForm' })
 
 const props = defineProps<{
   account?: string
@@ -25,12 +24,10 @@ const emits = defineEmits<{
 }>()
 
 const userStore = useUserStore()
-
-	const loading = ref(false)
-	const showPassword = ref(false)
-	const buttonText = computed(() => loading.value ? '登录中...' : '登录')
-
-const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
+const loading = ref(false)
+const showPassword = ref(false)
+const buttonText = computed(() => loading.value ? '正在验证...' : '登录系统')
+const rememberedAccount = readRememberedAccount()
 
 function resolveMessage(payload: any, fallback: string): string {
   return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
@@ -38,255 +35,255 @@ function resolveMessage(payload: any, fallback: string): string {
 
 const form = useForm({
   validationSchema: toTypedSchema(z.object({
-    account: z.string().min(1, '请输入用户名'),
+    account: z.string().trim().min(1, '请输入用户名'),
     password: z.string().min(1, '请输入密码'),
     remember: z.boolean(),
   })),
   initialValues: {
-    account: props.account ?? localStorage.getItem('login_account') ?? '',
+    account: props.account ?? rememberedAccount,
     password: '',
-    remember: !!localStorage.getItem('login_account'),
+    remember: Boolean(rememberedAccount),
   },
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
-  if (!prefersReducedMotion) {
-    gsap.to('.login-form-inner', { opacity: 0.88, duration: 0.18, ease: 'power1.out' })
-  }
   try {
-    const res = await apiUser.login({ account: values.account, password: values.password })
+    const res = await apiUser.login({ account: values.account.trim(), password: values.password })
     const payload = res.data || {}
     const loginData = payload.data || payload
     const token = loginData?.token || loginData?.accessToken || loginData?.jwt
 
-    if (token) {
-      userStore.setSession({
-        token,
-        user: loginData?.user || loginData?.profile || payload?.user || {},
-      })
-      if (values.remember) {
-        localStorage.setItem('login_account', values.account)
-      }
-      else {
-        localStorage.removeItem('login_account')
-      }
-      ElMessage({ message: '登录成功，欢迎回来！', type: 'success' })
-      emits('onLogin', values.account)
+    if (!token) {
+      ElMessage.error(resolveMessage(payload, '登录失败，请检查账号信息'))
+      return
     }
-    else {
-      const msg = resolveMessage(payload, '登录失败，请检查账号信息')
-      ElMessage({ message: msg, type: 'error' })
-      animateFailure()
-    }
+
+    userStore.setSession({
+      token,
+      user: (loginData?.user || loginData?.profile || payload?.user || {}) as AuthProfile,
+    })
+    writeRememberedAccount(values.remember ? values.account : '')
+    ElMessage.success('登录成功')
+    emits('onLogin', values.account.trim())
   }
-  catch (err: any) {
-    console.error('Login failed:', err)
-    const msg = resolveMessage(err.response?.data, '登录失败，请重试')
+  catch (error: any) {
+    console.error('Login failed:', error)
     ElMessage({
-      message: msg,
+      message: resolveMessage(error.response?.data, '登录失败，请重试'),
       type: 'error',
       grouping: true,
-      offset: 90,
+      offset: 72,
     })
-    animateFailure()
   }
   finally {
     loading.value = false
-    if (!prefersReducedMotion) {
-      gsap.to('.login-form-inner', { opacity: 1, duration: 0.2, ease: 'power1.inOut' })
-    }
   }
-})
-
-function animateFailure() {
-  if (prefersReducedMotion) {
-    return
-  }
-  const tl = gsap.timeline({ defaults: { duration: 0.06, ease: 'power1.inOut' } })
-  tl.to('.login-form-inner', { x: -10 })
-    .to('.login-form-inner', { x: 10 })
-    .to('.login-form-inner', { x: -8 })
-    .to('.login-form-inner', { x: 8 })
-    .to('.login-form-inner', { x: 0 })
-}
-
-function animateButtonHover(isHovering: boolean) {
-  const btn = document.querySelector('.login-submit-btn') as HTMLElement | null
-  if (!btn) {
-    return
-  }
-  gsap.to(btn, {
-    scale: isHovering ? 1.04 : 1,
-    boxShadow: isHovering ? '0 12px 24px rgba(47, 111, 255, 0.25)' : '0 8px 18px rgba(47, 111, 255, 0.12)',
-    duration: 0.25,
-    ease: 'power2.out',
-  })
-}
-
-watch(loading, (_isLoading) => {
-  if (prefersReducedMotion) {
-    return
-  }
-  gsap.fromTo(
-    '.login-form-inner',
-    { opacity: 0.6, scale: 0.97 },
-    { opacity: 1, scale: 1, duration: 0.35, ease: 'power1.inOut' },
-  )
 })
 </script>
 
 <template>
-  <div class="login-form-inner">
-    <form class="login-form" @submit="onSubmit">
-      <FormField v-slot="{ componentField }" name="account">
+  <form class="login-form" @submit="onSubmit">
+    <FormField v-slot="{ componentField, errors }" name="account">
+      <FormItem class="field-item">
         <label for="login-account">用户名</label>
-        <div class="input-shell">
-          <span class="input-icon">
-            <el-icon><UserFilled /></el-icon>
-          </span>
-          <FaInput
-            id="login-account"
-            type="text"
-            placeholder="Enter your username"
-            autocomplete="username"
-            class="w-full"
-            v-bind="componentField"
-          />
-        </div>
-      </FormField>
-      <FormField v-slot="{ componentField }" name="password">
+        <FormControl>
+          <div class="input-shell" :class="{ invalid: errors.length > 0 }">
+            <span class="input-icon">
+              <el-icon><UserFilled /></el-icon>
+            </span>
+            <FaInput
+              id="login-account"
+              type="text"
+              placeholder="请输入系统用户名"
+              autocomplete="username"
+              class="w-full"
+              v-bind="componentField"
+            />
+          </div>
+        </FormControl>
+        <FormMessage class="field-message" />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField, errors }" name="password">
+      <FormItem class="field-item">
         <label for="login-password">密码</label>
-        <div class="input-shell relative">
-          <span class="input-icon">
-            <el-icon><Key /></el-icon>
-          </span>
-          <FaInput
-            id="login-password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Enter your password"
-            autocomplete="current-password"
-            class="w-full pr-12"
-            v-bind="componentField"
-          />
-          <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-gray-400 hover:text-gray-600" @click="showPassword = !showPassword">
-            <Eye v-if="!showPassword" class="size-4" />
-            <EyeOff v-else class="size-4" />
-          </button>
-        </div>
+        <FormControl>
+          <div class="input-shell password-shell" :class="{ invalid: errors.length > 0 }">
+            <span class="input-icon">
+              <el-icon><Key /></el-icon>
+            </span>
+            <FaInput
+              id="login-password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="请输入登录密码"
+              autocomplete="current-password"
+              class="w-full"
+              v-bind="componentField"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+              @click="showPassword = !showPassword"
+            >
+              <Eye v-if="!showPassword" class="size-4" />
+              <EyeOff v-else class="size-4" />
+            </button>
+          </div>
+        </FormControl>
+        <FormMessage class="field-message" />
+      </FormItem>
+    </FormField>
+
+    <div class="form-options">
+      <FormField v-slot="{ componentField }" type="checkbox" name="remember">
+        <FormItem>
+          <FormControl>
+            <FaCheckbox v-bind="componentField">
+              记住用户名
+            </FaCheckbox>
+          </FormControl>
+        </FormItem>
       </FormField>
+      <span>密码问题请联系系统管理员</span>
+    </div>
 
-      <div class="mb-2 flex-center-start">
-        <FormField v-slot="{ componentField }" type="checkbox" name="remember">
-          <FormItem>
-            <FormControl>
-              <FaCheckbox v-bind="componentField">
-                记住我
-              </FaCheckbox>
-            </FormControl>
-          </FormItem>
-        </FormField>
-      </div>
-
-      <button
-        class="login-submit-btn"
-        type="submit"
-        :disabled="loading"
-        @mouseenter="animateButtonHover(true)"
-        @mouseleave="animateButtonHover(false)"
-      >
-        {{ buttonText }}
-      </button>
-    </form>
-  </div>
+    <FaButton
+      :loading="loading"
+      size="lg"
+      class="login-submit-btn"
+      type="submit"
+    >
+      <FaIcon v-if="!loading" name="i-ri:login-box-line" />
+      {{ buttonText }}
+    </FaButton>
+  </form>
 </template>
 
 <style scoped>
-.login-form-inner {
-  min-height: 300px;
-}
-
 .login-form {
   display: grid;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--mrr-space-4);
+  margin-top: var(--mrr-space-6);
 }
 
-.login-form label {
+.field-item {
+  position: relative;
+  display: grid;
+  gap: var(--mrr-space-2);
+  padding-bottom: var(--mrr-space-3);
+}
+
+.field-item label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-secondary, hsl(var(--muted-foreground)));
+  font-weight: 650;
+  color: var(--mrr-foreground);
 }
 
 .input-shell {
   position: relative;
   display: flex;
   align-items: center;
+  border-radius: var(--mrr-control-radius);
 }
 
 .input-icon {
   position: absolute;
   left: 14px;
-  z-index: 1;
+  z-index: 2;
   display: grid;
+  color: var(--mrr-muted-foreground);
+  pointer-events: none;
   place-items: center;
-  color: #6d7d96;
 }
 
 .input-shell :deep(.fa-input__wrapper),
 .input-shell :deep(input) {
   width: 100%;
-  height: 46px;
-  padding: 0 14px 0 42px;
+  height: 44px;
+  padding-right: 14px;
+  padding-left: 42px;
   font-size: 14px;
-  color: var(--el-text-color-primary);
-  background: #fff;
-  border: 1px solid #d7e4fa;
-  border-radius: 12px;
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  color: var(--mrr-foreground);
+  background: var(--mrr-control-bg);
+  border-color: var(--mrr-control-border);
+  border-radius: var(--mrr-control-radius);
+  box-shadow: none;
 }
 
-[data-mode="dark"] .input-shell :deep(.fa-input__wrapper),
-[data-mode="dark"] .input-shell :deep(input) {
-  color: var(--el-text-color-primary);
-  background: hsl(var(--background));
-  border-color: hsl(var(--border));
+.password-shell :deep(input) {
+  padding-right: 44px;
 }
 
-.input-shell :deep(.fa-input__wrapper):focus-within,
-.input-shell :deep(input:focus) {
+.input-shell:focus-within :deep(.fa-input__wrapper),
+.input-shell:focus-within :deep(input) {
+  border-color: var(--mrr-ring);
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.input-shell.invalid :deep(.fa-input__wrapper),
+.input-shell.invalid :deep(input) {
+  border-color: var(--mrr-destructive);
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  z-index: 2;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--mrr-muted-foreground);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-sm);
+  place-items: center;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--mrr-foreground);
+  background: var(--mrr-muted);
   outline: none;
-  border-color: #2f6fff;
-  box-shadow: 0 0 0 4px rgb(47 111 255 / 14%);
+}
+
+.field-message {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  font-size: 11px;
+}
+
+.form-options {
+  display: flex;
+  gap: var(--mrr-space-4);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  font-size: 12px;
+  color: var(--mrr-muted-foreground);
+}
+
+.form-options :deep(.form-item) {
+  margin: 0;
 }
 
 .login-submit-btn {
-  height: 46px;
-  margin-top: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  background: #2f6fff;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 8px 18px rgb(47 111 255 / 12%);
-  transition:
-    transform 0.25s ease,
-    background-color 0.25s ease,
-    opacity 0.25s ease;
+  width: 100%;
+  height: 44px;
+  margin-top: var(--mrr-space-1);
+  border-radius: var(--mrr-control-radius);
 }
 
-.login-submit-btn:hover:not(:disabled) {
-  background: #1e54d6;
-  transform: translateY(-1px);
-}
-
-.login-submit-btn:disabled {
-  pointer-events: none;
-  cursor: not-allowed;
-  opacity: 0.72;
+@media (max-width: 520px) {
+  .form-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--mrr-space-2);
+  }
 }
 </style>

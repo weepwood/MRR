@@ -1,23 +1,14 @@
 <script setup lang="ts">
-import eventBus from '@/utils/eventBus'
-
 defineOptions({
   name: 'HotkeysIntro',
 })
 
-const isShow = ref(false)
-
+const visible = defineModel<boolean>({ default: false })
 const settingsStore = useSettingsStore()
-
-onMounted(() => {
-  eventBus.on('global-hotkeys-intro-toggle', () => {
-    isShow.value = !isShow.value
-  })
-})
 </script>
 
 <template>
-  <FaModal v-model="isShow" title="快捷键介绍" :footer="false">
+  <FaModal v-model="visible" title="快捷键介绍" :footer="false">
     <div class="px-4">
       <div class="grid gap-4 sm-grid-cols-2">
         <div>

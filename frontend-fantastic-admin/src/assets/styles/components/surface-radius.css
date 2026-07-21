@@ -1,0 +1,78 @@
+/*
+ * MRR 业务表面圆角兼容层
+ *
+ * 旧页面使用了大量局部 card / panel 类并硬编码 10–22px 圆角。
+ * 本文件在所有组件样式之后加载，将这些业务表面统一接入可调圆角令牌。
+ * 圆形头像、状态点、胶囊标签、进度条和图表柱等语义形状不在此处覆盖。
+ */
+
+/* 统一以 card / panel 命名的页面级业务表面。 */
+body .main :is(
+  .el-card,
+  [class~="card"],
+  [class~="panel"],
+  [class$="-card"],
+  [class*="-card "],
+  [class$="-panel"],
+  [class*="-panel "]
+) {
+  border-radius: var(--mrr-radius-card) !important;
+}
+
+/* 未使用 card / panel 命名，但视觉上属于独立卡片表面的容器。 */
+body .main :is(
+  .settings-page > .page-header,
+  .settings-shell,
+  .settings-tabs,
+  .settings-summary,
+  .config-summary,
+  .config-section,
+  .sidebar-status,
+  .setting-section,
+  .save-bar,
+  .list-search-bar,
+  .quality-summary > div,
+  .trend-summary > div,
+  .trend-insights > div,
+  .analytics-empty,
+  .analytics-loading > span
+) {
+  border-radius: var(--mrr-radius-card) !important;
+}
+
+/* 卡片内部的小型可交互块和摘要块使用中级圆角。 */
+body .main :is(
+  .type-item,
+  .quick-item,
+  .switch-row,
+  .role-icon,
+  .matrix-dot,
+  .section-index,
+  .stat-icon,
+  .el-alert,
+  .el-descriptions,
+  .el-table,
+  .el-segmented,
+  .el-collapse
+),
+body .main .analytics-shell > .chart-grid .trend-chart {
+  border-radius: var(--mrr-radius-md) !important;
+}
+
+/* 需要裁剪内部背景、表头或图表内容的表面。 */
+body .main :is(
+  .el-card,
+  .el-table,
+  .el-descriptions,
+  .el-collapse
+),
+body .main .analytics-shell > .chart-grid .trend-chart {
+  overflow: hidden;
+}
+
+/* Element Plus 描述列表和表格内部边界跟随外层圆角裁剪。 */
+body .main .el-table__inner-wrapper,
+body .main .el-descriptions__body,
+body .main .el-descriptions__table {
+  border-radius: inherit;
+}

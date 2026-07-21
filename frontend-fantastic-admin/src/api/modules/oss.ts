@@ -1,20 +1,57 @@
-import type { MigrationStatistics, MigrationLogRecord, PaginatedResult } from '../types'
+import type {
+  ApiResult,
+  MigrationLogRecord,
+  MigrationStatistics,
+  OssUploadResult,
+  PaginatedResult,
+  ScanRecord,
+} from '../types'
 import { getRequest, postRequest } from '../index'
 
-export function uploadToOss(scanIds: number[]) {
-  return postRequest('/api/v1/oss/upload', { scanIds })
+interface OssUploadBatchResult {
+  results: OssUploadResult[]
+  total?: number
+  success?: number
+  failed?: number
+  bah?: string
 }
 
-export function uploadByBah(bah: string) {
-  return postRequest(`/api/v1/oss/upload/bah/${bah}`)
+type OssUploadResponse = ApiResult<OssUploadBatchResult> & Partial<OssUploadBatchResult>
+
+interface OssUrlResult {
+  scanId: number
+  ossUrl: string
 }
 
-export function uploadByFolder(folder: string) {
-  return postRequest(`/api/v1/oss/upload/folder/${encodeURIComponent(folder)}`)
+interface MigrationJob {
+  id?: number
+  status?: string
+  totalCount?: number
+  processedCount?: number
+  failedCount?: number
+  rate?: number
+  errorMessage?: string
+  createdBy?: string
+  startedAt?: string
+  completedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function uploadToOss(scanIds: number[]): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult, { scanIds: number[] }>('/api/v1/oss/upload', { scanIds }) as Promise<OssUploadResponse>
+}
+
+export function uploadByBah(bah: string): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/bah/${bah}`) as Promise<OssUploadResponse>
+}
+
+export function uploadByFolder(folder: string): Promise<OssUploadResponse> {
+  return postRequest<OssUploadBatchResult>(`/api/v1/oss/upload/folder/${encodeURIComponent(folder)}`) as Promise<OssUploadResponse>
 }
 
 export function getOssUrl(scanId: number) {
-  return getRequest(`/api/v1/oss/url/${scanId}`)
+  return getRequest<OssUrlResult>(`/api/v1/oss/url/${scanId}`)
 }
 
 export function getMigrationStatistics() {
@@ -22,11 +59,11 @@ export function getMigrationStatistics() {
 }
 
 export function getPendingMigrations(params: { limit?: number, folder?: string } = {}) {
-  return getRequest<{ list: import('../types').ScanRecord[], total: number }>('/api/v1/oss/migration/pending', { params })
+  return getRequest<{ list: ScanRecord[], total: number }>('/api/v1/oss/migration/pending', { params })
 }
 
 export function getPendingFolders() {
-  return getRequest<{ folder: string; cnt: number }[]>('/api/v1/oss/migration/pending-folders')
+  return getRequest<{ folder: string, cnt: number }[]>('/api/v1/oss/migration/pending-folders')
 }
 
 export function getMigrationLogs(params: { status?: string, page?: number, size?: number } = {}) {
@@ -34,13 +71,13 @@ export function getMigrationLogs(params: { status?: string, page?: number, size?
 }
 
 export function createMigrationJob() {
-  return postRequest('/api/v1/oss/migration/jobs')
+  return postRequest<MigrationJob>('/api/v1/oss/migration/jobs')
 }
 
 export function getMigrationJob(id: number) {
-  return getRequest(`/api/v1/oss/migration/jobs/${id}`)
+  return getRequest<MigrationJob>(`/api/v1/oss/migration/jobs/${id}`)
 }
 
 export function getMigrationJobs(params: { page?: number, size?: number } = {}) {
-  return getRequest('/api/v1/oss/migration/jobs', { params })
+  return getRequest<PaginatedResult<MigrationJob>>('/api/v1/oss/migration/jobs', { params })
 }

@@ -4,7 +4,7 @@ import com.zjcxph.imgapi.common.Result;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("Result 统一响应封装测试")
 class ResultTest {
@@ -61,5 +61,14 @@ class ResultTest {
         assertThat(result.getCode()).isEqualTo(201);
         assertThat(result.getMessage()).isEqualTo("已创建");
         assertThat(result.getData()).isEqualTo("new-resource");
+        assertThat(result.isSuccess()).isTrue();
+    }
+
+    @Test
+    @DisplayName("所有 2xx code 均视为成功")
+    void all2xxCodes_areSuccessful() {
+        assertThat(new Result<>(204, "无内容", null).isSuccess()).isTrue();
+        assertThat(new Result<>(299, "成功", null).isSuccess()).isTrue();
+        assertThat(new Result<>(300, "重定向", null).isSuccess()).isFalse();
     }
 }

@@ -1,0 +1,80 @@
+/*
+ * 设置页桌面端双区滚动
+ *
+ * “系统设置”标题保留在主体上方，完整视口高度由 settings-workspace-frame 负责：
+ * - 外层框架负责视口高度和上下留白；
+ * - 内层卡片只填满框架剩余空间，不再重复声明 100vh；
+ * - 左侧分类栏不随右侧内容滚动；
+ * - 右侧内容区独立纵向滚动；
+ * - 不依赖 position: sticky、:has() 或祖先 overflow 行为。
+ */
+body .main .settings-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+body .main .settings-page .settings-workspace-frame {
+  box-sizing: border-box;
+  min-height: 100vh;
+  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+}
+
+body .main .settings-page .settings-shell {
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body .main .settings-page .settings-sidebar {
+  position: static;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+body .main .settings-page .settings-content {
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 980px) {
+  body .main .settings-page {
+    grid-template-rows: none;
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  body .main .settings-page .settings-workspace-frame {
+    min-height: 0;
+    height: auto;
+    padding-block: 0;
+  }
+
+  body .main .settings-page .settings-shell {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  body .main .settings-page .settings-sidebar,
+  body .main .settings-page .settings-content {
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+}

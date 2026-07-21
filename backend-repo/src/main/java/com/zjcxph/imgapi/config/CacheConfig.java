@@ -2,43 +2,48 @@ package com.zjcxph.imgapi.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Caffeine 缓存配置类
- * 配置本地缓存以提升热点数据访问性能
+ * Caffeine 缓存配置类。
+ *
+ * <p>档案搜索结果适合较长时间复用；按 ID 查询和 OSS 签名 URL 继续使用较短缓存，
+ * 避免签名 URL 在缓存中存活时间超过其有效期。</p>
  */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
-    /**
-     * 配置缓存管理器
-     * 定义不同缓存的过期策略
-     */
+    private static final int INITIAL_CAPACITY = 100;
+    private static final int MAXIMUM_SIZE = 1000;
+
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
-        
-        // 设置Caffeine配置
-        cacheManager.setCaffeine(Caffeine.newBuilder()
-                .initialCapacity(100)           // 初始容量
-                .maximumSize(1000)              // 最大缓存条目数
-                .expireAfterWrite(10, TimeUnit.MINUTES)  // 写入后10分钟过期
-                .recordStats());                // 记录统计信息
-        
-        // 定义缓存名称
-        cacheManager.setCacheNames(java.util.List.of(
-                "scanByBah",           // 病案号查询缓存
-                "scanById",            // ID查询缓存
-                "ossSignedUrl"         // OSS签名URL缓存
+        SimpleCacheManager cacheManager = new SimpleCacheManager();
+        cacheManager.setCaches(List.of(
+                buildCache("scanByBah", 1, TimeUnit.DAYS),
+                buildCache("scanByCode", 1, TimeUnit.DAYS),
+                buildCache("scanLookupByBah", 1, TimeUnit.DAYS),
+                buildCache("scanLookupByCode", 1, TimeUnit.DAYS),
+                buildCache("scanById", 10, TimeUnit.MINUTES),
+                buildCache("ossSignedUrl", 10, TimeUnit.MINUTES)
         ));
-        
         return cacheManager;
+    }
+
+    private CaffeineCache buildCache(String name, long duration, TimeUnit timeUnit) {
+        return new CaffeineCache(name, Caffeine.newBuilder()
+                .initialCapacity(INITIAL_CAPACITY)
+                .maximumSize(MAXIMUM_SIZE)
+                .expireAfterWrite(duration, timeUnit)
+                .recordStats()
+                .build());
     }
 }

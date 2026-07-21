@@ -11,18 +11,27 @@ import java.util.UUID;
 
 public final class JwtUtil {
 
-    private static final String SECRET;
-    private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
+    public static final String ACCESS_TOKEN_TYPE = "access";
+    public static final String DOCUMENTATION_TOKEN_TYPE = "documentation";
 
-    static {
-        String env = System.getenv("JWT_SECRET_KEY");
-        if (env == null || env.isBlank()) {
-            throw new ExceptionInInitializerError("JWT_SECRET_KEY environment variable must be set");
-        }
-        SECRET = env;
-    }
+    private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
+    private static volatile String secret = normalizeSecret(System.getenv("JWT_SECRET_KEY"));
 
     private JwtUtil() {
+    }
+
+    public static synchronized void configure(String configuredSecret) {
+        String normalized = normalizeSecret(configuredSecret);
+        if (normalized == null) {
+            if (secret == null) {
+                throw new IllegalStateException("JWT_SECRET_KEY must be configured");
+            }
+            return;
+        }
+        if (normalized.length() < 32) {
+            throw new IllegalArgumentException("JWT_SECRET_KEY must contain at least 32 characters");
+        }
+        secret = normalized;
     }
 
     public static String getToken(String username) {
@@ -32,13 +41,28 @@ public final class JwtUtil {
     }
 
     public static String getToken(AuthSession session) {
+        return getToken(session, EXPIRE_MILLIS, ACCESS_TOKEN_TYPE);
+    }
+
+    public static String getToken(AuthSession session, long expireMillis) {
+        return getToken(session, expireMillis, ACCESS_TOKEN_TYPE);
+    }
+
+    public static String getToken(AuthSession session, long expireMillis, String tokenType) {
         if (session == null) {
             session = new AuthSession();
         }
+        if (expireMillis <= 0) {
+            throw new IllegalArgumentException("expireMillis must be greater than 0");
+        }
+        if (tokenType == null || tokenType.isBlank()) {
+            throw new IllegalArgumentException("tokenType must not be blank");
+        }
 
         com.auth0.jwt.JWTCreator.Builder builder = JWT.create()
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRE_MILLIS))
-                .withJWTId(UUID.randomUUID().toString()); // 用于登出撤销
+                .withClaim("tokenType", tokenType)
+                .withExpiresAt(new Date(System.currentTimeMillis() + expireMillis))
+                .withJWTId(UUID.randomUUID().toString());
 
         if (session.getId() != null) {
             builder.withClaim("id", session.getId());
@@ -58,16 +82,18 @@ public final class JwtUtil {
         if (session.getStatus() != null) {
             builder.withClaim("status", session.getStatus());
         }
+        builder.withClaim("mustChangePassword", session.isPasswordChangeRequired());
+        builder.withClaim("passwordVersion", session.effectivePasswordVersion());
 
         List<String> permissions = session.getPermissions();
         if (permissions != null && !permissions.isEmpty()) {
             builder.withArrayClaim("permissions", permissions.toArray(new String[0]));
         }
-        return builder.sign(Algorithm.HMAC256(SECRET));
+        return builder.sign(algorithm());
     }
 
     public static AuthSession parseToken(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
+        DecodedJWT decodedJWT = verify(token);
         AuthSession session = new AuthSession();
         session.setId(decodedJWT.getClaim("id").isNull() ? null : decodedJWT.getClaim("id").asLong());
         session.setUsername(decodedJWT.getClaim("username").asString());
@@ -75,6 +101,9 @@ public final class JwtUtil {
         session.setRoleCode(decodedJWT.getClaim("roleCode").asString());
         session.setRoleName(decodedJWT.getClaim("roleName").asString());
         session.setStatus(decodedJWT.getClaim("status").asString());
+        session.setMustChangePassword(Boolean.TRUE.equals(decodedJWT.getClaim("mustChangePassword").asBoolean()));
+        Integer passwordVersion = decodedJWT.getClaim("passwordVersion").asInt();
+        session.setPasswordVersion(passwordVersion == null || passwordVersion < 1 ? 1 : passwordVersion);
         String[] permissions = decodedJWT.getClaim("permissions").asArray(String.class);
         if (permissions != null) {
             session.setPermissions(java.util.Arrays.asList(permissions));
@@ -82,19 +111,34 @@ public final class JwtUtil {
         return session;
     }
 
-    /**
-     * 从原始 token 字符串中提取 jti，用于黑名单检查。
-     */
-    public static String getJti(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
-        return decodedJWT.getId();
+    public static String getTokenType(String token) {
+        return verify(token).getClaim("tokenType").asString();
     }
 
-    /**
-     * 获取 token 的过期时间戳（毫秒），用于黑名单条目 TTL。
-     */
+    public static String getJti(String token) {
+        return verify(token).getId();
+    }
+
     public static long getExpirationMillis(String token) {
-        DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(SECRET)).build().verify(token);
-        return decodedJWT.getExpiresAt().getTime();
+        return verify(token).getExpiresAt().getTime();
+    }
+
+    private static DecodedJWT verify(String token) {
+        return JWT.require(algorithm()).build().verify(token);
+    }
+
+    private static Algorithm algorithm() {
+        String currentSecret = secret;
+        if (currentSecret == null) {
+            throw new IllegalStateException("JWT_SECRET_KEY must be configured before issuing or verifying tokens");
+        }
+        return Algorithm.HMAC256(currentSecret);
+    }
+
+    private static String normalizeSecret(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

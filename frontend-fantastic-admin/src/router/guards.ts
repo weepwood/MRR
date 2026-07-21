@@ -1,16 +1,73 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
+import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 
+const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
+const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
+
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
+    if (to.name === 'publicStatus' || to.name === 'externalArchive') {
+      return true
+    }
+
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
     const routeStore = useRouteStore()
     const menuStore = useMenuStore()
+    const loginRedirect = (reason?: string) => ({
+      name: 'login',
+      replace: true,
+      query: {
+        ...(to.fullPath !== settingsStore.settings.home.fullPath ? { redirect: to.fullPath } : {}),
+        ...(reason ? { session: reason } : {}),
+      },
+    })
 
-    if (userStore.isLogin) {
+    // localStorage 恢复出的 Token 只是候选会话。必须先通过 /auth/me
+    // 获取当前用户，旧权限和旧强制改密标记才允许参与路由判断。
+    if (userStore.isLogin && !userStore.isSessionVerified) {
+      if (isDemoMode) {
+        userStore.markSessionVerified()
+      }
+      else if (userStore.sessionStatus === 'unavailable' && to.name === 'login') {
+        return true
+      }
+      else {
+        try {
+          await userStore.verifySession()
+        }
+        catch (error: any) {
+          if (!userStore.isLogin || error?.response?.status === 401) {
+            return loginRedirect('expired')
+          }
+
+          // 网络错误或认证服务 503 不应误删仍可能有效的 Token。
+          // 允许进入登录页重新认证，并在下次访问受保护页面时重试验证。
+          console.error('[Router Guard] Session verification unavailable:', error)
+          if (to.name === 'login') return true
+          return loginRedirect('unavailable')
+        }
+      }
+    }
+
+    if (to.name === PASSWORD_CHANGE_ROUTE_NAME) {
+      if (!userStore.isSessionVerified) {
+        return loginRedirect()
+      }
+      if (!userStore.mustChangePassword) {
+        return { path: settingsStore.settings.home.fullPath, replace: true }
+      }
+      return true
+    }
+
+    if (userStore.isSessionVerified && userStore.mustChangePassword) {
+      return { name: PASSWORD_CHANGE_ROUTE_NAME, replace: true }
+    }
+
+    if (userStore.isSessionVerified) {
       if (routeStore.isGenerate) {
         if (settingsStore.settings.menu.mode !== 'single') {
           menuStore.setActived(to.path)
@@ -34,10 +91,6 @@ function setupRoutes(router: Router) {
       }
       else {
         try {
-          if (settingsStore.settings.app.enablePermission) {
-            await userStore.getPermissions()
-          }
-
           switch (settingsStore.settings.app.routeBaseOn) {
             case 'frontend':
               routeStore.generateRoutesAtFront(asyncRoutes)
@@ -68,25 +121,23 @@ function setupRoutes(router: Router) {
         }
         catch (error) {
           console.error('[Router Guard] Failed to generate routes:', error)
-          userStore.logout()
-          return {
-            name: 'login',
-            query: {
-              redirect: to.fullPath !== settingsStore.settings.home.fullPath ? to.fullPath : undefined,
-            },
-          }
+          void userStore.logout()
+          return loginRedirect()
         }
       }
     }
-    else {
+    else if (isDemoMode || await isRuntimeDeveloperModeEnabled()) {
+      const runtimeDeveloperMode = !isDemoMode
       userStore.setSession({
-        token: 'dev-token',
+        token: runtimeDeveloperMode ? 'developer-mode-runtime-token' : 'dev-token',
         user: {
           username: 'dev',
-          displayName: 'Dev User',
+          displayName: runtimeDeveloperMode ? 'Developer Mode' : 'Dev User',
           roleCode: 'ADMIN',
           roleName: 'Administrator',
           status: 'active',
+          mustChangePassword: false,
+          passwordVersion: 1,
           permissions: [],
         },
       })
@@ -97,10 +148,16 @@ function setupRoutes(router: Router) {
         replace: true,
       }
     }
+    else {
+      if (to.name === 'login') {
+        return true
+      }
+
+      return loginRedirect()
+    }
   })
 }
 
-// 当父级路由未配置重定向时，自动重定向到有访问权限的子路由
 function setupRedirectAuthChildrenRoute(router: Router) {
   router.beforeEach((to) => {
     const { auth } = useAuth()
@@ -114,7 +171,6 @@ function setupRedirectAuthChildrenRoute(router: Router) {
   })
 }
 
-// 进度条
 function setupProgress(router: Router) {
   const { isLoading } = useNProgress()
   router.beforeEach(() => {
@@ -131,7 +187,6 @@ function setupProgress(router: Router) {
   })
 }
 
-// 标题
 function setupTitle(router: Router) {
   router.afterEach((to) => {
     const settingsStore = useSettingsStore()
@@ -144,7 +199,6 @@ function setupTitle(router: Router) {
   })
 }
 
-// 页面缓存
 function setupKeepAlive(router: Router) {
   router.afterEach(async (to, from) => {
     const keepAliveStore = useKeepAliveStore()
@@ -152,13 +206,6 @@ function setupKeepAlive(router: Router) {
       if (to.meta.cache) {
         const componentName = to.matched.at(-1)?.components?.default.name
         if (componentName) {
-          // 缓存当前页面前，先判断是否需要进行清除缓存，判断依据：
-          // 1. 如果 to.meta.cache 为 boolean 类型，并且不为 true，则需要清除缓存
-          // 2. 如果 to.meta.cache 为 string 类型，并且与 from.name 不一致，则需要清除缓存
-          // 3. 如果 to.meta.cache 为 array 类型，并且不包含 from.name，则需要清除缓存
-          // 4. 如果 to.meta.noCache 为 string 类型，并且与 from.name 一致，则需要清除缓存
-          // 5. 如果 to.meta.noCache 为 array 类型，并且包含 from.name，则需要清除缓存
-          // 6. 如果是刷新页面，则需要清除缓存
           let shouldClearCache = false
           if (typeof to.meta.cache === 'boolean') {
             shouldClearCache = !to.meta.cache
@@ -187,15 +234,13 @@ function setupKeepAlive(router: Router) {
           keepAliveStore.add(componentName)
         }
         else {
-          // turbo-console-disable-next-line
-          console.warn('[MRR-ADMIN] 该页面组件未设置组件名，会导致缓存失效，请检查')
+          console.warn('[MRR] 该页面组件未设置组件名，会导致缓存失效，请检查')
         }
       }
     }
   })
 }
 
-// 其他
 function setupOther(router: Router) {
   router.afterEach(() => {
     document.documentElement.scrollTop = 0

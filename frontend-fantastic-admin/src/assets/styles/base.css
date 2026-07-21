@@ -1,0 +1,104 @@
+/* 明暗模式视图过渡 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation: none;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+.dark {
+  &::view-transition-old(root) {
+    z-index: 1;
+  }
+
+  &::view-transition-new(root) {
+    z-index: 0;
+  }
+}
+
+/* 全局基础规则 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  scrollbar-color: hsl(var(--scrollbar-color)) transparent;
+  scrollbar-width: thin;
+}
+
+.disable-color-scheme-transition-duration *,
+.disable-color-scheme-transition-duration *::before,
+.disable-color-scheme-transition-duration *::after {
+  transition-duration: 0ms !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/*
+ * 仅在浏览器支持 scrollbar-gutter 时启用稳定滚动条槽位，并同步关闭
+ * Element Plus 的重复宽度补偿。不支持该属性的 Safari 等浏览器继续使用
+ * Element Plus 原有补偿逻辑，避免 Dialog/Drawer 打开时页面横向抖动。
+ */
+@supports (scrollbar-gutter: stable) {
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body.el-popup-parent--hidden {
+    width: auto !important;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--mrr-foreground);
+  background-color: var(--mrr-app-shell-bg);
+  background-image:
+    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  font-synthesis-weight: none;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  color: var(--mrr-primary-foreground);
+  background: color-mix(in srgb, var(--mrr-primary) 82%, transparent);
+}
+
+#app {
+  height: 100%;
+}
+
+textarea {
+  font-family: inherit;
+}
+
+.mrr-tabular-number {
+  font-variant-numeric: tabular-nums;
+}

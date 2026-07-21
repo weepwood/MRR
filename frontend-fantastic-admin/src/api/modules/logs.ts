@@ -1,5 +1,15 @@
-import type { LogRecord, PaginatedResult } from '../types'
+import type { ImageAuditAnalytics, LogRecord, PaginatedResult } from '../types'
 import api, { getRequest, postRequest } from '../index'
+
+export interface ImageAuditFilterParams {
+  keyword?: string
+  username?: string
+  clientIp?: string
+  auditAction?: string
+  responseStatus?: string
+  startTime?: string
+  endTime?: string
+}
 
 export function searchSystemLogs(params: {
   page: number
@@ -16,18 +26,37 @@ export function searchSystemLogs(params: {
   return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/search', { params })
 }
 
-export function searchImageAuditLogs(params: {
+export function searchImageAuditLogs(params: ImageAuditFilterParams & {
   page: number
   size: number
-  keyword?: string
-  username?: string
-  clientIp?: string
-  auditAction?: string
-  responseStatus?: string
-  startTime?: string
-  endTime?: string
 }) {
   return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/audit/images', { params })
+}
+
+export function getImageAuditAnalytics(params: ImageAuditFilterParams) {
+  return getRequest<ImageAuditAnalytics>('/api/v1/logs/audit/images/analytics', { params })
+}
+
+export async function exportImageAuditLogs(params: ImageAuditFilterParams & {
+  scope?: 'all' | 'user' | 'target'
+  value?: string
+}) {
+  // The global Axios response interceptor returns response.data directly.
+  // Normalize the Blob back to the shape expected by the download caller.
+  const blob = await api.get<Blob>('/api/v1/logs/audit/images/export', {
+    params,
+    responseType: 'blob',
+    skipResponseMetrics: true,
+  }) as unknown as Blob
+
+  if (!(blob instanceof Blob)) {
+    throw new TypeError('导出接口未返回有效的文件数据')
+  }
+
+  return {
+    data: blob,
+    headers: {} as Record<string, string>,
+  }
 }
 
 export function getLogById(id: string | number) {

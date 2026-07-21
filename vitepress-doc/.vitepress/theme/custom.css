@@ -26,10 +26,13 @@
 }
 
 .VPHero .image-bg {
-  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 180ms ease-out;
 }
-.VPHero:hover .image-bg {
-  transform: scale(1.08) rotate(-2deg);
+
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .VPHero:hover .image-bg {
+    transform: translate(var(--mrr-hero-bg-x, 0), var(--mrr-hero-bg-y, 0)) scale(1.08) rotate(-2deg);
+  }
 }
 
 .VPHero .name {
@@ -148,6 +151,14 @@
   padding: 0;
 }
 
+/* 行号栏与代码内容之间保留稳定间距，避免边线紧贴首列代码。 */
+.vp-doc div[class*='language-'].line-numbers-mode {
+  padding-left: 48px;
+}
+.vp-doc .line-numbers-wrapper {
+  width: 40px;
+}
+
 .custom-block {
   margin: 1rem 0;
   border-radius: 8px;
@@ -155,6 +166,54 @@
 .custom-block.tip {
   border-color: var(--vp-c-brand-1);
   background: var(--vp-c-brand-soft);
+}
+
+.vp-doc img[src*='/screenshots/v1/'] {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgb(15 23 42 / 8%);
+  cursor: zoom-in;
+}
+
+.screenshot-preview {
+  position: fixed;
+  z-index: 9999;
+  display: grid;
+  inset: 0;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 9vw, 160px);
+  place-items: center;
+  background: rgb(15 23 42 / 88%);
+  cursor: zoom-out;
+}
+
+.screenshot-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+  cursor: default;
+}
+
+.screenshot-preview-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+  background: rgb(255 255 255 / 15%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
 }
 
 @media (max-width: 640px) {

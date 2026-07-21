@@ -14,6 +14,7 @@ export interface MenuProps {
   mode?: 'horizontal' | 'vertical'
   collapse?: boolean
   showCollapseName?: boolean
+  leadingExpandIndicator?: boolean
 }
 
 export interface MenuInjection {

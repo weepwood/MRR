@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
@@ -59,6 +60,18 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
+    public List<Log> searchLogs(String keyword, String username, String clientIp, String requestUri, String method,
+                                String responseStatus, String startTime, String endTime, int page, int size,
+                                LocalDateTime cursorAccessTime, Long cursorId) {
+        PaginationUtils.validatePageParams(page, size);
+        if (cursorAccessTime == null || cursorId == null) {
+            throw new IllegalArgumentException("游标时间与游标 ID 必须成对传入");
+        }
+        return logMapper.searchAfter(keyword, username, clientIp, requestUri, method, responseStatus,
+                startTime, endTime, cursorAccessTime, cursorId, size);
+    }
+
+    @Override
     public int getTotalLogCount() {
         return logMapper.countAll();
     }
@@ -88,6 +101,23 @@ public class LogServiceImpl implements LogService {
     @Override
     public int countImageAuditLogs(String keyword, String username, String clientIp, String auditAction, String responseStatus, String startTime, String endTime) {
         return logMapper.countImageAudit(keyword, username, clientIp, auditAction, responseStatus, startTime, endTime);
+    }
+
+    @Override
+    public ImageAuditAnalyticsDTO getImageAuditAnalytics(String keyword, String username, String clientIp,
+                                                         String auditAction, String responseStatus,
+                                                         String startTime, String endTime) {
+        ImageAuditAnalyticsDTO analytics = logMapper.getImageAuditOverview(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime);
+        analytics.setTrend(logMapper.getImageAuditTrend(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
+        analytics.setActionDistribution(logMapper.getImageAuditActionDistribution(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
+        analytics.setTopUsers(logMapper.getTopImageAuditUsers(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
+        analytics.setTopTargets(logMapper.getTopImageAuditTargets(
+                keyword, username, clientIp, auditAction, responseStatus, startTime, endTime));
+        return analytics;
     }
 
     @Override

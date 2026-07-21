@@ -1,0 +1,152 @@
+/*
+ * 影像档案袋属于沉浸式工作区，需要显式参与主布局的 Flex 高度计算。
+ * 该文件同时把档案袋内部仍然硬编码的圆角接入全局圆角令牌。
+ */
+
+body.archive-immersive .layout .wrapper .main-container {
+  height: calc(100dvh - var(--g-header-actual-height)) !important;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+body.archive-immersive .layout .wrapper .main-container .main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 100%;
+  height: auto !important;
+  min-height: 0;
+  padding: 0 !important;
+  margin-top: var(--g-tabbar-actual-height) !important;
+  overflow: hidden;
+}
+
+body.archive-immersive .archive-page {
+  display: flex;
+  flex: 1 1 0;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+}
+
+body.archive-immersive .archive-workspace {
+  flex: 1 1 0;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+}
+
+/*
+ * 侧栏标题与操作按钮允许整组换行，但标题本身禁止逐字压缩。
+ * 统计明细嵌入主布局后，可用宽度小于浏览器视口，不能只依赖 viewport 媒体查询。
+ */
+.archive-page .archive-header .archive-heading {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.archive-page .archive-header .archive-title {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.archive-page .archive-header .archive-title h2 {
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.archive-page .archive-header .heading-actions {
+  min-width: min-content;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 档案袋主容器统一使用卡片圆角。 */
+.archive-page :is(
+  .search-card,
+  .archive-case-card,
+  .patient-card,
+  .type-bar,
+  .thumb-strip,
+  .preview-stage
+) {
+  border-radius: var(--mrr-radius-card) !important;
+}
+
+body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sidebar {
+  border-radius: var(--mrr-radius-card);
+}
+
+/* 可点击项目和浮动工具条使用中级圆角。 */
+.archive-page :is(
+  .case-item,
+  .preview-toolbar,
+  .continuous-page,
+  .thumb-item
+) {
+  border-radius: var(--mrr-radius-md) !important;
+}
+
+/* 小型状态、图片和树节点使用小圆角。 */
+.archive-page :is(
+  .thumb-check,
+  .thumb-item img,
+  .thumb-image-placeholder,
+  .preview-image-placeholder,
+  .preview-file strong,
+  .type-tab,
+  .type-tree .el-tree-node__content
+) {
+  border-radius: var(--mrr-radius-sm) !important;
+}
+
+.archive-page .type-count {
+  border-radius: var(--mrr-radius-pill);
+}
+
+/* 主要操作按钮与导航菜单共用品牌色令牌。 */
+.archive-page .el-button--primary {
+  --el-button-bg-color: var(--color-primary);
+  --el-button-border-color: var(--color-primary);
+  --el-button-hover-bg-color: var(--color-primary-hover);
+  --el-button-hover-border-color: var(--color-primary-hover);
+  --el-button-active-bg-color: var(--color-primary-active);
+  --el-button-active-border-color: var(--color-primary-active);
+}
+
+@media (width <= 1100px) {
+  body.archive-immersive .layout .wrapper .main-container {
+    height: auto !important;
+    min-height: calc(100dvh - var(--g-header-actual-height)) !important;
+    overflow: visible;
+  }
+
+  body.archive-immersive .layout .wrapper .main-container .main {
+    overflow: visible;
+  }
+
+  body.archive-immersive .archive-page {
+    height: auto !important;
+    min-height: calc(
+      100dvh
+      - var(--g-header-actual-height)
+      - var(--g-tabbar-actual-height)
+    );
+  }
+
+  body.archive-immersive .archive-workspace {
+    height: auto !important;
+  }
+}
+
+@media (width <= 520px) {
+  .archive-page .archive-header .archive-heading {
+    align-items: flex-start;
+  }
+
+  .archive-page .archive-header .heading-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}

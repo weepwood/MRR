@@ -1,283 +1,253 @@
 # 安装指南
 
-> 本文档介绍如何安装和部署 MRR 系统
+本文说明如何在本地开发环境和 Windows/Linux 生产环境安装 MRR。
 
-## 系统要求
+::: warning 部署原则
+正式环境不依赖 Docker。仓库中的 Docker 配置只用于开发、测试或演示。生产环境建议使用 PostgreSQL 16、Spring Boot JAR、Nginx 静态站点和独立图片存储。
+:::
 
-### 硬件要求
+## 环境要求
 
-- **CPU**: 4 核或以上
-- **内存**: 8GB 或以上 (推荐 16GB)
-- **存储**: 50GB 可用空间 (用于数据库和影像存储)
+| 组件 | 要求 | 用途 |
+| --- | --- | --- |
+| JDK | 21+ | 后端编译与运行 |
+| Maven | 3.9+ | 后端构建 |
+| PostgreSQL | 16+ | 业务数据库 |
+| Node.js | `^20.19.0` 或 `>=22.12.0` | 前端与文档构建 |
+| pnpm | 10.33.0 | 前端依赖管理 |
+| Nginx | 当前稳定版 | 静态资源、API 代理和文档鉴权 |
 
-### 软件要求
+图片通常不存入 PostgreSQL，需要单独规划本地/NAS 或 OSS 容量。
 
-**后端服务**
-- JDK 21 或更高版本
-- Maven 3.9+
-- PostgreSQL 15+
-
-**前端应用**
-- Node.js 18+ (推荐 20+)
-- npm 或 pnpm
-
-**可选组件**
-- Docker & Docker Compose (容器化部署)
-- Nginx (生产环境反向代理)
-
-## 安装步骤
-
-### 1. 获取源代码
+## 获取代码
 
 ```bash
-# 克隆项目仓库
-git clone <repository-url>
+git clone https://github.com/weepwood/MRR.git
 cd MRR
+git checkout dev-no-login
 ```
 
-### 2. 数据库准备
+## 准备 PostgreSQL
 
-#### 安装 PostgreSQL
+### 创建数据库
 
-**Windows:**
-下载并安装 [PostgreSQL 官方安装包](https://www.postgresql.org/download/windows/)
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-**macOS:**
-```bash
-brew install postgresql@15
-brew services start postgresql@15
-```
-
-#### 创建数据库
-
-```bash
-# 登录 PostgreSQL
-psql -U postgres
-
-# 创建数据库
+```sql
 CREATE DATABASE imgapi;
-
-# 创建用户 (可选)
-CREATE USER mrr_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE imgapi TO mrr_user;
-
-# 退出
-\q
 ```
 
-### 3. 后端服务安装
+默认连接：
 
-#### 配置数据库连接
+```text
+jdbc:postgresql://localhost:5432/imgapi?currentSchema=app
+```
 
-创建配置文件 `backend-repo/src/main/resources/application-local.properties`:
+### Flyway 说明
+
+当前配置：
 
 ```properties
-# 数据库配置
-spring.datasource.url=jdbc:postgresql://localhost:5432/imgapi?currentSchema=app
-spring.datasource.username=postgres
-spring.datasource.password=your_password
-
-# 服务端口
-server.port=18045
-
-# JWT 密钥 (生产环境请修改)
-jwt.secret=your-jwt-secret-key-change-in-production
-
-# AES 加密密钥 (32 字节)
-aes.secret.key=change-this-in-production-32-bytes
+spring.flyway.locations=classpath:db/migration,classpath:db/callback
+spring.flyway.schemas=app
+spring.flyway.default-schema=app
+spring.flyway.out-of-order=true
+spring.flyway.ignore-migration-patterns=*:missing,*:future
+spring.flyway.baseline-on-migrate=false
+spring.flyway.validate-on-migrate=true
+spring.flyway.validate-migration-naming=true
 ```
 
-#### 构建项目
+当前仓库不使用单一 `V0__baseline_schema.sql` 作为唯一初始化入口。新数据库应执行 `db/migration` 下的完整迁移链。
+
+现有数据库部署前必须：
+
+1. 完成全量备份。
+2. 查询并保存 `app.flyway_schema_history`。
+3. 对比待发布迁移文件。
+4. 在数据库副本验证迁移。
+5. 不删除历史表、不修改已执行迁移、不用 `repair` 掩盖差异。
+
+新迁移统一使用：
+
+```text
+VyyyyMMddHHmmss__description.sql
+```
+
+### 本地 PostgreSQL 容器（可选）
+
+```bash
+docker compose up -d postgres
+```
+
+仅用于开发环境。
+
+## 配置后端
+
+复制模板：
+
+```bash
+# Linux / macOS
+cp backend-repo/src/main/resources/application-local.template.properties \
+  backend-repo/src/main/resources/application-local.properties
+
+# Windows PowerShell
+Copy-Item backend-repo/src/main/resources/application-local.template.properties `
+  backend-repo/src/main/resources/application-local.properties
+```
+
+至少配置：
+
+```properties
+server.port=18045
+spring.datasource.url=jdbc:postgresql://localhost:5432/imgapi?currentSchema=app
+spring.datasource.username=postgres
+spring.datasource.password=你的数据库密码
+
+image.basePath=C:\path\to\your\images
+image.url=http://localhost:8005/ba-img
+```
+
+敏感值优先使用环境变量：
+
+```powershell
+$env:SPRING_DATASOURCE_PASSWORD = '数据库密码'
+$env:JWT_SECRET_KEY = '足够长的随机 JWT 密钥'
+$env:AES_SECRET_KEY = '至少 32 字节的随机 AES 密钥'
+$env:OSS_ACCESS_KEY_ID = 'OSS AccessKey ID'
+$env:OSS_ACCESS_KEY_SECRET = 'OSS AccessKey Secret'
+```
+
+`application-local.properties` 不应提交到 Git。
+
+## 启动后端
 
 ```bash
 cd backend-repo
-
-# 安装依赖
-mvn clean install
-
-# 跳过测试构建 (快速构建)
-mvn -DskipTests package
+mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-#### 运行服务
+或构建 JAR：
 
 ```bash
-# 方式 1: 使用 Maven
-mvn spring-boot:run
-
-# 方式 2: 直接运行 JAR
-java -jar target/imgapi-*.jar
+mvn clean package
+java -jar target/imgapi-0.2.0.jar --spring.profiles.active=local
 ```
 
-服务启动后访问:
-- API 文档: http://localhost:18045/v1/swagger-ui/index.html
-- 健康检查: http://localhost:18045/actuator/health
+默认地址：
 
-### 4. 前端应用安装
+| 地址 | 用途 |
+| --- | --- |
+| `http://127.0.0.1:18045` | 业务 API |
+| `http://127.0.0.1:18046/actuator/health` | 本机健康检查 |
+| `http://127.0.0.1:18045/swagger-ui.html` | 后端直连 Springdoc |
 
-#### 安装依赖
+正式环境应通过受保护的 `/api-docs/` 访问 API 文档，不要公开 Actuator。
+
+## 启动前端
 
 ```bash
 cd frontend-fantastic-admin
-
-# 使用 npm
-npm install
-
-# 或使用 pnpm (推荐)
-pnpm install
-```
-
-#### 配置环境变量
-
-创建 `.env.local` 文件:
-
-```env
-# API 地址
-VITE_API_URL=http://localhost:18045
-
-# 其他配置
-VITE_APP_TITLE=MRR 医疗影像管理系统
-```
-
-#### 运行开发服务器
-
-```bash
-# 开发模式
-npm run dev
-
-# 或
+corepack pnpm@10.33.0 install --frozen-lockfile
 pnpm dev
 ```
 
-访问 http://localhost:5173
+默认访问：
 
-#### 构建生产版本
+```text
+http://localhost:9000
+```
+
+生产构建：
 
 ```bash
-npm run build
+pnpm lint:tsc
+pnpm test:run
+pnpm build
 ```
 
-构建产物位于 `dist/` 目录。
+最低浏览器版本为 Edge 111、Chrome 109、Firefox 114 和 Safari 16.4。Chrome 109 以核心业务流程可用为兼容目标，部分较新的视觉效果会自动降级。
 
-## Docker 部署 (可选)
-
-### 使用 Docker Compose
-
-创建 `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: imgapi
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  backend:
-    build: ./backend-repo
-    ports:
-      - "18045:18045"
-    depends_on:
-      - postgres
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imgapi?currentSchema=app
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-
-  frontend:
-    build: ./frontend-fantastic-admin
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-volumes:
-  postgres-data:
-```
-
-启动服务:
+## 构建文档
 
 ```bash
-docker-compose up -d
+cd vitepress-doc
+npm install
+npm run docs:changelog
+npm run docs:build
 ```
 
-## 验证安装
-
-### 1. 检查后端服务
+开发模式：
 
 ```bash
-# 健康检查
-curl http://localhost:18045/actuator/health
-
-# 预期返回
-{
-  "status": "UP"
-}
+npm run docs:dev:user
+npm run docs:dev:internal
 ```
 
-### 2. 检查前端应用
+构建产物：
 
-访问 http://localhost:5173，应该能看到登录页面。
-
-### 3. 测试登录
-
-使用默认管理员账号:
-- 用户名: `br_admin`
-- 密码: `br_password`
-
-::: warning 注意
-生产环境请立即修改默认密码!
-:::
-
-## 常见问题
-
-### 端口被占用
-
-修改后端端口 (默认 18045):
-```properties
-server.port=18046
+```text
+vitepress-doc/.vitepress/dist-user
+vitepress-doc/.vitepress/dist-internal
 ```
 
-修改前端端口 (默认 5173):
-```bash
-npm run dev -- --port 5174
+用户站点与内部站点独立构建，防止内部内容进入用户搜索索引。文档构建前会自动从 Git 提交刷新更新记录；无 `.git` 环境下保留仓库内快照。
+
+## 编号与图片目录
+
+病案号和上架号保留原始格式：
+
+- `123` 保持 `123`。
+- `00000123` 保持 `00000123`。
+- 不自动补齐 8 位。
+
+导入数据、数据库记录和图片文件夹必须一致。高位病案号 `>= 10000000` 查询时必须提供上架号。
+
+## 图片来源
+
+系统设置支持：
+
+- `local`：默认，本地或 NAS 图片。
+- `oss`：对已迁移记录生成 OSS 签名 URL，失败时回退本地。
+
+服务端 ZIP 当前仍从本地存储读取。浏览器端 PDF 读取当前有效图片 URL，需要图片服务允许管理端来源的 CORS：
+
+```nginx
+add_header Access-Control-Allow-Origin "https://mrr.example.com" always;
+add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+add_header Access-Control-Allow-Headers "Content-Type, Range" always;
 ```
 
-### 数据库连接失败
+## 生产部署结构
 
-1. 确认 PostgreSQL 服务已启动
-2. 检查连接参数是否正确
-3. 确认防火墙允许 5432 端口
+```text
+Browser
+  │
+  ▼
+Nginx :443
+  ├── /                Vue 管理端
+  ├── /docs/           用户手册
+  ├── /docs/internal/  内部文档
+  ├── /api-docs/       Springdoc
+  └── /api/            Spring Boot :18045
+                         ├── PostgreSQL 16
+                         ├── 本地/NAS 或 OSS
+                         └── Actuator 127.0.0.1:18046
+```
 
-### 前端无法连接后端
+## 初次验证
 
-1. 检查后端服务是否正常运行
-2. 确认 `.env.local` 中的 API 地址正确
-3. 检查 CORS 配置
+- [ ] 当前迁移链在空数据库完整执行
+- [ ] 现有数据库 Flyway 历史已核对
+- [ ] Actuator health 返回 `UP`
+- [ ] 前端能登录并加载真实数据
+- [ ] 短编号和前导零编号均保持原始格式
+- [ ] 高位病案号必须与上架号成对查询
+- [ ] `mr_archive` 与业务表 `archive_id` 关联正常
+- [ ] 本地图片可访问
+- [ ] OSS 模式和本地回退正常
+- [ ] 身份证查询后 URL 不保留明文
+- [ ] 图片 CORS 支持 PDF 导出
+- [ ] `/status` 能显示状态和运行区间
+- [ ] 用户手册、内部文档和 `/api-docs/` 权限正确
+- [ ] 默认密码和所有密钥已替换
 
-## 下一步
-
-- [配置说明](/getting-started/configuration) - 了解详细配置参数
-- [首次运行](/getting-started/first-run) - 系统初始化和基本使用
-- [系统架构](/architecture/overview) - 了解系统设计
-
-## 相关链接
-
-- [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
-- [Spring Boot 文档](https://spring.io/projects/spring-boot)
-- [Vue 3 文档](https://vuejs.org/)
+更完整的上线操作见 [生产运行手册](/internal/runbook) 和 [数据导入与迁移](/internal/data-migration)。

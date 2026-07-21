@@ -1,39 +1,52 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
-import com.zjcxph.imgapi.config.ImageProperties;
-import com.zjcxph.imgapi.entity.*;
-import com.zjcxph.imgapi.dto.req.*;
-import com.zjcxph.imgapi.dto.resp.*;
-import com.zjcxph.imgapi.common.*;
+import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.ImageRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
+import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.service.ArchiveAccessService;
+import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
-import com.zjcxph.imgapi.service.PdfService;
 import com.zjcxph.imgapi.service.ScanService;
-import com.zjcxph.imgapi.utils.ZipUtil;
+import com.zjcxph.imgapi.storage.ImageStorage;
+import com.zjcxph.imgapi.storage.InvalidImagePathException;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import jakarta.validation.constraints.Pattern;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
@@ -43,27 +56,37 @@ import java.util.stream.Collectors;
 public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);
+    private static final String BAH_REQUIRES_SJH_MESSAGE =
+            "病案号大于等于 10000000 时必须使用上架号查询";
+    private static final String LOOKUP_STRATEGY_HEADER = "X-MRR-Lookup-Strategy";
+    private static final String LOOKUP_ARCHIVE_ID_HEADER = "X-MRR-Archive-Id";
+    private static final String LOOKUP_FALLBACK_REASON_HEADER = "X-MRR-Fallback-Reason";
+    private static final String LOOKUP_IMAGE_COUNT_HEADER = "X-MRR-Image-Count";
 
-    private final ImageProperties imageProperties;
     private final ScanService scanService;
-    private final PdfService pdfService;
+    private final ArchiveExportService archiveExportService;
+    private final ImageStorage imageStorage;
     private final OssService ossService;
     private final ImageUrlService imageUrlService;
+    private final ArchiveAccessService archiveAccessService;
 
-    public ImageController(ImageProperties imageProperties, ScanService scanService,
-                           PdfService pdfService, OssService ossService,
-                           ImageUrlService imageUrlService) {
-        this.imageProperties = imageProperties;
+    public ImageController(ScanService scanService,
+                           ArchiveExportService archiveExportService,
+                           ImageStorage imageStorage,
+                           OssService ossService,
+                           ImageUrlService imageUrlService,
+                           ArchiveAccessService archiveAccessService) {
         this.scanService = scanService;
-        this.pdfService = pdfService;
+        this.archiveExportService = archiveExportService;
+        this.imageStorage = imageStorage;
         this.ossService = ossService;
         this.imageUrlService = imageUrlService;
+        this.archiveAccessService = archiveAccessService;
     }
 
     @Operation(summary = "服务器心跳")
     @GetMapping("/hello")
     public Result<Map<String, Object>> hello() {
-        logger.info("服务正常");
         Map<String, Object> data = new HashMap<>();
         data.put("message", "服务正常");
         return Result.success(data);
@@ -71,56 +94,102 @@ public class ImageController {
 
     @Operation(summary = "下载病案压缩包")
     @GetMapping("/download/{BAH}")
-    public ResponseEntity<FileSystemResource> download(@PathVariable
-                                                       @Pattern(regexp = "\\d{8}", message = "请输入正确的 8 位病案号")
-                                                       @Parameter(description = "病案号", example = "00789508")
-                                                       String BAH) throws IOException {
-        File zipFile = scanService.createZipForBAH(BAH);
-        zipFile.deleteOnExit();
-        String fileNameZip = BAH + ".zip";
-        FileSystemResource fileSystemResource = new FileSystemResource(zipFile);
+    @RequirePermissions({"record:download"})
+    public ResponseEntity<StreamingResponseBody> download(
+            @PathVariable
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
+            @Parameter(description = "病案号，可省略前导零", example = "789508")
+            String BAH,
+            @RequestParam(required = false)
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
+            @Parameter(description = "唯一上架号；病案号大于等于 10000000 时必填")
+            String sjh) {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(BAH);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah) && normalizedSjh.isEmpty()) {
+            throw new BusinessException(400, BAH_REQUIRES_SJH_MESSAGE);
+        }
 
-        logger.info("生成压缩包:{}", fileNameZip);
+        ArchiveExportService.BatchZipExport export =
+                archiveExportService.prepareArchive(normalizedBah, normalizedSjh);
+        if (export.itemCount() == 0) {
+            throw new BusinessException(404, "未找到匹配档案的图片");
+        }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileNameZip + "\"");
+        StreamingResponseBody body = outputStream ->
+                archiveExportService.writeBatchZip(export, outputStream);
+        String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
+        String fileName = archiveCode + ".zip";
+        String contentDisposition = ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+                .toString();
 
         return ResponseEntity.ok()
-                .headers(headers)
-                .contentLength(zipFile.length())
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(fileSystemResource);
+                .body(body);
     }
 
-    @Operation(summary = "获取病案号下的图片数据")
+    @Operation(summary = "获取唯一病案号下的图片数据")
     @GetMapping("/{bah}")
     public Result<List<BAHDataResponseDTO>> getDataByBAH(
             @PathVariable
-            @Pattern(regexp = "\\d{6,8}", message = "请输入正确的 6-8 位病案号")
-            @Parameter(description = "病案号", example = "00789508")
-            String bah) {
-        String paddedBah = ImageUrlService.normalizeCode(bah);
-        List<Scan> imageListByBAH = scanService.getImageListByBAH(paddedBah, bah);
-        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
-        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(imageListByBAH);
-        return Result.success(items).message(bah + " 数据获取成功");
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
+            @Parameter(description = "小于 10000000 的唯一病案号，可省略前导零", example = "789508")
+            String bah,
+            HttpServletResponse response) {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        if (MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)) {
+            return Result.fail(BAH_REQUIRES_SJH_MESSAGE + "，请使用 /search 接口");
+        }
+        String bahSearchCode = MedicalRecordCodeUtils.toSearchTerm(bah);
+        ArchiveLookupResult lookupResult = scanService.getImageLookupByBAH(normalizedBah, bahSearchCode);
+        applyLookupMetadata(response, lookupResult);
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
+        return Result.success(items).message(normalizedBah + " 数据获取成功");
     }
 
-    @Operation(summary = "按病案号和/或上架号查询图片数据")
+    @Operation(summary = "按统一规则查询图片数据")
     @GetMapping("/search")
     public Result<List<BAHDataResponseDTO>> searchByCode(
-            @Parameter(description = "病案号")
+            @Parameter(description = "病案号；小于 10000000 时作为查询键，大于等于 10000000 时仅用于审计和展示")
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
             @RequestParam(required = false) String bah,
-            @Parameter(description = "上架号")
-            @RequestParam(required = false) String sjh) {
-        String normalizedBah = bah != null ? ImageUrlService.normalizeCode(bah) : "";
-        String normalizedSjh = sjh != null ? sjh.trim() : "";
+            @Parameter(description = "唯一上架号；病案号大于等于 10000000 时作为查询键")
+            @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字上架号")
+            @RequestParam(required = false) String sjh,
+            @Parameter(description = "调用方内网系统当前用户 ID")
+            @RequestParam(required = false) String userid,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
         if (normalizedBah.isEmpty() && normalizedSjh.isEmpty()) {
             return Result.fail("病案号和上架号不能同时为空");
         }
-        List<Scan> list = scanService.getImageListByCode(normalizedBah, normalizedSjh);
-        // DTO 构建逻辑下沉到 ImageUrlService.toList，消除重复
-        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(list);
+
+        boolean useSjh = normalizedBah.isEmpty()
+                || MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah);
+        if (useSjh && normalizedSjh.isEmpty()) {
+            return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
+        }
+
+        archiveAccessService.verifyAndRecord(userid, normalizedBah, normalizedSjh, request);
+
+        String queryBah = useSjh ? "" : normalizedBah;
+        String queryBahSearchCode = useSjh ? "" : MedicalRecordCodeUtils.toSearchTerm(bah);
+        String querySjh = useSjh ? normalizedSjh : "";
+        String querySjhSearchCode = useSjh ? MedicalRecordCodeUtils.toSearchTerm(sjh) : "";
+
+        ArchiveLookupResult lookupResult = scanService.getImageLookupByCode(
+                queryBah,
+                queryBahSearchCode,
+                querySjh,
+                querySjhSearchCode
+        );
+        applyLookupMetadata(response, lookupResult);
+        List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
         return Result.success(items);
     }
 
@@ -135,55 +204,34 @@ public class ImageController {
             @PathVariable String FOLDER,
             @Parameter(description = "文件名", example = "0072.jpg")
             @PathVariable String FILENAME) {
-
-        if (BAH == null || BRXH == null || FOLDER == null || FILENAME == null) {
-            return ResponseEntity.badRequest().body(Result.fail("参数不能为空"));
-        }
-
-        if (FOLDER.length() < 5) {
-            return ResponseEntity.badRequest().body(Result.fail("文件夹格式错误"));
-        }
-
-        if (FILENAME.contains("..") || FOLDER.contains("..") || BAH.contains("..") || BRXH.contains("..")) {
-            logger.warn("检测到路径遍历尝试: BAH={}, BRXH={}, FOLDER={}, FILENAME={}", BAH, BRXH, FOLDER, FILENAME);
-            return ResponseEntity.badRequest().body(Result.fail("非法的路径参数"));
-        }
-
-        String folderName = BRXH + "-" + BAH;
-        String parentFolder = FOLDER.substring(0, 5);
-
-        Path basePath = Paths.get(imageProperties.getBasePath()).normalize();
-        Path resolvedPath = Paths.get(basePath.toString(), parentFolder, FOLDER, folderName, FILENAME).normalize();
-
-        if (!resolvedPath.startsWith(basePath)) {
-            logger.warn("路径遍历拦截: {} 不在允许的基路径内", resolvedPath);
-            return ResponseEntity.badRequest().body(Result.fail("非法的路径参数"));
-        }
-
-        Path filePath = resolvedPath;
-
-        logger.info("获取图片:{}", filePath);
-
-        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            logger.error("文件不存在:{}", filePath);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.fail("图片不存在"));
-        }
-
-        FileSystemResource resource = new FileSystemResource(filePath.toFile());
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline;filename=" + FILENAME);
-        headers.add("Cache-Control", "public, max-age=86400, immutable");
-        headers.setContentType(MediaType.IMAGE_JPEG);
-
+        PathDO image = new PathDO(FOLDER, FILENAME, BRXH, BAH);
         try {
+            long contentLength = imageStorage.size(image);
+            InputStreamResource resource = new InputStreamResource(imageStorage.open(image));
+            MediaType mediaType = MediaTypeFactory.getMediaType(FILENAME)
+                    .orElse(MediaType.APPLICATION_OCTET_STREAM);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDisposition(ContentDisposition.inline()
+                    .filename(FILENAME, StandardCharsets.UTF_8)
+                    .build());
+            headers.setCacheControl("public, max-age=86400, immutable");
+            headers.setContentType(mediaType);
+
             return ResponseEntity.ok()
                     .headers(headers)
-                    .contentLength(Files.size(filePath))
+                    .contentLength(contentLength)
                     .body(resource);
-        } catch (IOException e) {
-            logger.error("文件读取错误:{}", filePath, e);
+        } catch (InvalidImagePathException exception) {
+            logger.warn("拒绝非法影像路径: BAH={}, BRXH={}, FOLDER={}, FILENAME={}, reason={}",
+                    BAH, BRXH, FOLDER, FILENAME, exception.getMessage());
+            return ResponseEntity.badRequest().body(Result.fail(exception.getMessage()));
+        } catch (FileNotFoundException exception) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Result.fail("图片不存在"));
+        } catch (IOException exception) {
+            logger.error("读取影像失败: BAH={}, BRXH={}, FOLDER={}, FILENAME={}",
+                    BAH, BRXH, FOLDER, FILENAME, exception);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Result.fail("图片读取错误"));
         }
@@ -203,20 +251,18 @@ public class ImageController {
         if (id == null) {
             return Result.fail("图片id不能为空");
         }
-        if (imageType < 0 || imageType > 14) {
-            return Result.fail("图片类型错误");
+        if (imageType < 0 || imageType > 15) {
+            return Result.fail("图片类型错误，仅支持 0-15，其中 0 表示暂未分类");
         }
         int result = scanService.updateImageType(id, imageType);
         if (result != 1) {
             logger.error("修改图片 {} 的类型为 {} 失败", id, imageType);
             return Result.fail("修改图片类型失败");
         }
-
-        logger.info("修改图片 {} 的类型为 {}", id, imageType);
         return Result.success("修改图片类型成功");
     }
 
-    @Operation(summary = "获取图片URL")
+    @Operation(summary = "获取图片URL（遵循系统图片来源设置）")
     @GetMapping("/url/{id}")
     public Result<String> getImageUrl(
             @PathVariable
@@ -226,7 +272,7 @@ public class ImageController {
         if (scan == null) {
             return Result.fail("扫描记录不存在");
         }
-        String url = imageUrlService.buildImageUrl(scan);
+        String url = imageUrlService.buildPreferredImageUrl(scan);
         if (url == null) {
             return Result.fail("无法构造图片URL，缺少必要字段");
         }
@@ -256,10 +302,30 @@ public class ImageController {
                     .header(HttpHeaders.LOCATION, signedUrl)
                     .header("Cache-Control", "private, max-age=3600")
                     .build();
-        } catch (Exception e) {
-            logger.error("获取 OSS 图片失败：id={}", id, e);
+        } catch (Exception exception) {
+            logger.error("获取 OSS 图片失败：id={}", id, exception);
             return ResponseEntity.internalServerError()
-                    .body(Result.fail("获取 OSS 图片失败：" + e.getMessage()));
+                    .body(Result.fail("获取 OSS 图片失败：" + exception.getMessage()));
         }
+    }
+
+    private void applyLookupMetadata(
+            HttpServletResponse response,
+            ArchiveLookupResult lookupResult
+    ) {
+        response.setHeader(LOOKUP_STRATEGY_HEADER, lookupResult.strategy().name());
+        response.setHeader(LOOKUP_FALLBACK_REASON_HEADER, lookupResult.fallbackReason().name());
+        response.setHeader(LOOKUP_IMAGE_COUNT_HEADER, Integer.toString(lookupResult.resultCount()));
+        if (lookupResult.archiveId() != null) {
+            response.setHeader(LOOKUP_ARCHIVE_ID_HEADER, Long.toString(lookupResult.archiveId()));
+        }
+
+        logger.info(
+                "影像档案查询完成: strategy={}, fallbackReason={}, archiveId={}, resultCount={}",
+                lookupResult.strategy(),
+                lookupResult.fallbackReason(),
+                lookupResult.archiveId(),
+                lookupResult.resultCount()
+        );
     }
 }

@@ -1,6 +1,6 @@
 /** 后端统一响应格式 */
 export interface ApiResult<T = unknown> {
-  code?: number
+  code?: number | string
   message?: string
   data?: T
   timestamp?: string
@@ -64,6 +64,19 @@ export interface BAHImageData {
   ossUrl?: string
 }
 
+/** 住院病案搜索记录（服务端持久化） */
+export interface ArchiveSearchHistoryRecord {
+  id?: number
+  bah?: string
+  sjh?: string
+  success: boolean
+  imageCount: number
+  queryCount: number
+  failureReason?: string
+  favorite: boolean
+  searchedAt: string
+}
+
 /** 病案记录（身份证查询返回） */
 export interface BAHRecord {
   id?: number
@@ -98,7 +111,7 @@ export interface BAHStatistics {
 
 /** 日期统计汇总 */
 export interface DateStatistics {
-  date?: string
+  date: string
   recordCount?: number
   totalPages?: number
 }
@@ -128,12 +141,64 @@ export interface DashboardData {
   topBAH?: BAHStatistics[]
 }
 
+/** 浏览器观测到的单次 API 响应指标（不包含请求参数或响应内容） */
+export interface FrontendResponseMetric {
+  requestId: string
+  routePattern: string
+  method: string
+  httpStatus: number
+  businessCode?: number
+  success: boolean
+  clientDurationMs: number
+  serverDurationMs?: number
+  occurredAt: string
+}
+
+/** 接口响应分析总览 */
+export interface ResponseMetricOverview {
+  totalRequests: number
+  frontendSampleCount?: number
+  successRate: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
+  p95ClientDurationMs: number
+}
+
+/** 接口响应趋势点 */
+export interface ResponseMetricTrendPoint {
+  bucket: string
+  requestCount: number
+  errorCount: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
+}
+
+/** 慢接口排行项 */
+export interface SlowEndpointMetric {
+  routePattern: string
+  method: string
+  requestCount: number
+  errorCount: number
+  avgServerDurationMs: number
+  avgClientDurationMs: number
+  p95ClientDurationMs: number
+}
+
+/** 接口响应分析聚合结果 */
+export interface ResponseMetricAnalysis {
+  overview: ResponseMetricOverview
+  trend: ResponseMetricTrendPoint[]
+  slowEndpoints: SlowEndpointMetric[]
+}
+
 /** 日志记录 */
 export interface LogRecord {
   id?: number
+  requestId?: string
   username?: string
   clientIp?: string
   requestUri?: string
+  endpointTemplate?: string
   method?: string
   userAgent?: string
   accessTime?: string
@@ -142,9 +207,34 @@ export interface LogRecord {
   responseStatus?: number
   executeTime?: number | null
   referer?: string
+  errorMessage?: string
   auditAction?: string
   auditTarget?: string
   auditDescription?: string
+}
+
+/** 图片访问审计聚合项 */
+export interface ImageAuditCountItem {
+  label: string
+  count: number
+}
+
+/** 图片访问审计每日趋势 */
+export interface ImageAuditTrendItem {
+  date: string
+  count: number
+}
+
+/** 图片访问审计分析汇总 */
+export interface ImageAuditAnalytics {
+  totalAccesses: number
+  uniqueUsers: number
+  uniqueTargets: number
+  abnormalAccesses: number
+  averageDurationMs: number
+  trend: ImageAuditTrendItem[]
+  actionDistribution: ImageAuditCountItem[]
+  topUsers: ImageAuditCountItem[]
 }
 
 /** 加密ID搜索参数 */
@@ -155,7 +245,7 @@ export interface EncryptIDSearchParams {
   timestamp: string
 }
 
-/** 认证用户（对齐后端 AuthUserProfileDTO） */
+/** 认证用户（对齐后端 AuthUserProfileDTO / AuthSession） */
 export interface AuthUser {
   id?: number
   username?: string
@@ -164,7 +254,15 @@ export interface AuthUser {
   roleName?: string
   permissions?: string[]
   status?: string
+  mustChangePassword?: boolean
+  passwordVersion?: number
+  passwordChangedAt?: string
+  temporaryPasswordExpiresAt?: string
+  passwordResetAt?: string
+  passwordResetBy?: number
   lastLoginAt?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 /** 认证角色（对齐后端 AuthRole） */
@@ -200,7 +298,12 @@ export interface LoginRequest {
 /** 登录响应 */
 export interface LoginResponse {
   token?: string
+  accessToken?: string
+  jwt?: string
   user?: AuthUser
+  profile?: AuthUser
+  nextAction?: 'NONE' | 'CHANGE_PASSWORD'
+  data?: LoginResponse
 }
 
 /** 注册请求 */

@@ -1,134 +1,20 @@
-/* 页面布局 CSS 变量 */
-:root {
-  color-scheme: light;
-
-  /* 头部高度 */
-  --g-header-height: 60px;
-
-  /* 侧边栏宽度 */
-  --g-main-sidebar-width: 80px;
-  --g-sub-sidebar-width: 220px;
-  --g-sub-sidebar-collapse-width: 64px;
-
-  /* 侧边栏 Logo 区域高度 */
-  --g-sidebar-logo-height: 50px;
-
-  /* 标签栏高度 */
-  --g-tabbar-height: 50px;
-
-  /* 工具栏高度 */
-  --g-toolbar-height: 50px;
-
-  /* 滚动条颜色 */
-  --scrollbar-color: 240 5.9% 90%;
-
-  /* 语义化文本/表面令牌（基于 shadcn HSL 变量，供 scoped 样式使用） */
-  --text-primary: hsl(var(--foreground));
-  --text-secondary: hsl(var(--muted-foreground));
-  --text-tertiary: hsl(var(--muted-foreground) / 70%);
-  --text-hint: hsl(var(--muted-foreground) / 50%);
-  --surface: hsl(var(--card));
-  --surface-muted: hsl(var(--muted));
-  --surface-alt: hsl(var(--secondary));
-  --divider: hsl(var(--border));
-
-  /* ===== MRR 设计系统调色板（源自 DESIGN.md，Notion 风格） ===== */
-  /* 品牌主色 */
-  --color-primary: #0075de;          /* Notion Blue — CTA、链接、交互强调 */
-  --color-primary-active: #005bab;   /* Active Blue — 按下态 */
-  --color-primary-deep: #213183;     /* Deep Navy — 次级品牌色 */
-
-  /* 文本 */
-  --color-text: rgba(0, 0, 0, 0.95); /* Near-black — 主文本 */
-  --color-text-muted: #615d59;       /* Warm Gray 500 — 次级文本 */
-  --color-text-placeholder: #a39e98; /* Warm Gray 300 — 占位/禁用 */
-
-  /* 表面 */
-  --color-bg: #ffffff;               /* Pure White — 页面背景 */
-  --color-bg-warm: #f6f5f4;          /* Warm White — 区块交替/卡片填充 */
-  --color-bg-dark: #31302e;          /* Warm Dark — 暗色区域 */
-
-  /* 语义色 */
-  --color-success: #1aae39;          /* Green — 完成确认 */
-  --color-info: #2a9d99;             /* Teal — 正向指标 */
-  --color-warning: #dd5b00;          /* Orange — 警告 */
-  --color-danger: #e03e3e;           /* Red — 错误/危险（补充） */
-
-  /* 边框 — Notion 风格的 whisper-weight 分割线 */
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-strong: rgba(0, 0, 0, 0.16);
-
-  &.dark {
-    color-scheme: dark;
-
-    --scrollbar-color: 240 3.7% 15.9%;
-
-    /* 暗色模式下调色板映射 */
-    --color-text: rgba(255, 255, 255, 0.95);
-    --color-text-muted: #a39e98;
-    --color-text-placeholder: #615d59;
-
-    --color-bg: #31302e;
-    --color-bg-warm: #3d3a37;
-    --color-bg-dark: #252321;
-
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-strong: rgba(255, 255, 255, 0.16);
-  }
-}
-
-/* 明暗模式 CSS 变量 */
-::view-transition-old(root),
-::view-transition-new(root) {
-  mix-blend-mode: normal;
-  animation: none;
-}
-
-::view-transition-old(root) {
-  z-index: 0;
-}
-
-::view-transition-new(root) {
-  z-index: 1;
-}
-
-.dark {
-  &::view-transition-old(root) {
-    z-index: 1;
-  }
-
-  &::view-transition-new(root) {
-    z-index: 0;
-  }
-}
-
-* {
-  scrollbar-color: hsl(var(--scrollbar-color)) transparent;
-  scrollbar-width: thin;
-}
-
-.disable-color-scheme-transition-duration *,
-.disable-color-scheme-transition-duration *::before,
-.disable-color-scheme-transition-duration *::after {
-  transition-duration: 0ms !important;
-}
-
-html,
-body {
-  height: 100%;
-}
-
-body {
-  box-sizing: border-box;
-  margin: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-#app {
-  height: 100%;
-}
-
-/* textarea 字体跟随系统 */
-textarea {
-  font-family: inherit;
-}
+/*
+ * 全局样式入口
+ *
+ * 仅负责按依赖顺序加载样式模块：
+ * 1. tokens.css：布局变量、主题与设计令牌
+ * 2. browser-compatibility.css：最低浏览器版本的功能降级
+ * 3. base.css：全局基础规则和视图过渡
+ * 4. element-plus-overrides.css：Element Plus 统一外观与交互状态
+ * 5. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
+ * 6. 其余 components/：跨页面复用的业务组件样式
+ */
+@import "./tokens.css";
+@import "./browser-compatibility.css";
+@import "./base.css";
+@import "./element-plus-overrides.css";
+@import "./components/form-controls.css";
+@import "./components/page-header.css";
+@import "./components/metric-card.css";
+@import "./components/archive-workspace.css";
+@import "./components/surface-radius.css";

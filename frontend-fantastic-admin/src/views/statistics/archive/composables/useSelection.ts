@@ -1,6 +1,12 @@
 import type { ComputedRef } from 'vue'
 import { computed, ref, watch } from 'vue'
 
+export const ARCHIVE_SELECTION_CHANGED_EVENT = 'mrr:archive-selection-changed'
+
+export interface ArchiveSelectionChangedDetail {
+  keys: string[]
+}
+
 export interface Selectable {
   id?: number | string
   filename?: string
@@ -33,6 +39,22 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
     selectedIds.value = next
   }
 
+  function toggleItems(items: T[]): void {
+    const keys = items.map(keyOf).filter(Boolean)
+    if (!keys.length) {
+      return
+    }
+
+    const next = new Set(selectedIds.value)
+    if (keys.every(key => next.has(key))) {
+      keys.forEach(key => next.delete(key))
+    }
+    else {
+      keys.forEach(key => next.add(key))
+    }
+    selectedIds.value = next
+  }
+
   function selectAllVisible(): void {
     if (selectedIds.value.size === validItems.value.length && validItems.value.length > 0) {
       selectedIds.value = new Set()
@@ -56,6 +78,17 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
     }
   })
 
+  watch(selectedIds, (value) => {
+    if (typeof window === 'undefined') return
+    const detail: ArchiveSelectionChangedDetail = {
+      keys: [...value].filter(Boolean).sort(),
+    }
+    window.dispatchEvent(new CustomEvent<ArchiveSelectionChangedDetail>(
+      ARCHIVE_SELECTION_CHANGED_EVENT,
+      { detail },
+    ))
+  }, { flush: 'sync' })
+
   return {
     selectedIds,
     selectedCount,
@@ -64,6 +97,7 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
     keyOf,
     isSelected,
     toggleSelect,
+    toggleItems,
     selectAllVisible,
     clear,
   }

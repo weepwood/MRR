@@ -28,7 +28,9 @@ export default function createVitePlugins(mode: string, isBuild = false) {
   const vitePlugins: (PluginOption | PluginOption[])[] = [
     vue(),
     vueJsx(),
-    vueLegacy({
+    // 该开关只为现代构建补充少量运行时 polyfill，不生成 IE/旧 Edge 所需的
+    // legacy chunk，避免配置名称让运维误以为项目支持旧浏览器。
+    viteEnv.VITE_BUILD_MODERN_POLYFILLS && vueLegacy({
       renderLegacyChunks: false,
       modernPolyfills: [
         'es.array.at',
@@ -57,7 +59,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
         // Element Plus API 按需自动导入（ElMessage、ElMessageBox 等）
         ElementPlusResolver(),
       ],
-      dts: './src/types/auto-imports.d.ts',
+      dts: isBuild ? false : './src/types/auto-imports.d.ts',
       dirs: [
         './src/store/modules',
         './src/utils/composables',
@@ -77,7 +79,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
           importStyle: 'css',
         }),
       ],
-      dts: './src/types/components.d.ts',
+      dts: isBuild ? false : './src/types/components.d.ts',
     }),
 
     Unocss(),
@@ -90,11 +92,13 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     }),
 
     // https://github.com/condorheroblog/vite-plugin-fake-server
-    vitePluginFakeServer({
+    viteEnv.VITE_BUILD_MOCK && vitePluginFakeServer({
       logger: !isBuild,
       include: 'src/mock',
       infixName: false,
-      enableProd: isBuild && viteEnv.VITE_BUILD_MOCK,
+      basename: '/proxy',
+      timeout: 120,
+      enableProd: isBuild,
     }),
 
     // https://github.com/dishait/vite-plugin-vue-meta-layouts
@@ -105,8 +109,14 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     // https://github.com/hannoeru/vite-plugin-pages
     Pages({
       dirs: 'src/views',
+      // 顶层 index 默认会被同步导入；统一设为异步，避免与手写首页路由
+      // 重复引用时破坏动态分包。
+      importMode: 'async',
       exclude: [
         '**/components/**/*.vue',
+        '**/__tests__/**',
+        '**/*.test.*',
+        '**/*.spec.*',
       ],
     }),
 
@@ -131,9 +141,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     // https://github.com/chengpeiquan/vite-plugin-banner
     banner(`
 /**
- * 由 MRR-ADMIN 提供技术支持
- * Powered by MRR-ADMIN
- * https://MRR-ADMIN.hurui.me
+ * MRR 管理系统
  */
     `),
 
@@ -188,11 +196,11 @@ DisableDevtool()
       name: 'vite-plugin-terminal-info',
       apply: 'serve',
       async buildStart() {
-        const { bold, green, cyan, bgGreen, underline } = picocolors
+        const { bold, green, bgGreen } = picocolors
         // eslint-disable-next-line no-console
         console.log(
           boxen(
-            `${bold(green(`由 ${bgGreen('MRR-ADMIN')} 驱动`))}\n\n${underline('https://MRR-ADMIN.hurui.me')}\n\n当前使用：${cyan('')}`,
+            `${bold(green(`正在启动 ${bgGreen('MRR 管理系统')}`))}`,
             {
               padding: 1,
               margin: 1,

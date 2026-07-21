@@ -6,6 +6,7 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import type { AuthProfile } from '@/utils/auth-storage'
 
 defineOptions({
   name: 'RegisterForm',
@@ -58,7 +59,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     if (token) {
       userStore.setSession({
         token,
-        user: registerData?.user || registerData?.profile || payload?.user || {},
+        user: (registerData?.user || registerData?.profile || payload?.user || {}) as AuthProfile,
       })
       ElMessage({ message: '注册成功，欢迎加入！', type: 'success' })
       emits('onRegister', values.account)

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.zjcxph.imgapi.mapper.ResponseMetricMapper">
+
+    <resultMap id="overviewMap" type="com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO$Overview">
+        <result property="totalRequests" column="total_requests"/>
+        <result property="frontendSampleCount" column="frontend_sample_count"/>
+        <result property="successRate" column="success_rate"/>
+        <result property="avgServerDurationMs" column="avg_server_duration_ms"/>
+        <result property="avgClientDurationMs" column="avg_client_duration_ms"/>
+        <result property="p95ClientDurationMs" column="p95_client_duration_ms"/>
+    </resultMap>
+
+    <resultMap id="trendMap" type="com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO$TrendPoint">
+        <result property="bucket" column="bucket"/>
+        <result property="requestCount" column="request_count"/>
+        <result property="errorCount" column="error_count"/>
+        <result property="avgServerDurationMs" column="avg_server_duration_ms"/>
+        <result property="avgClientDurationMs" column="avg_client_duration_ms"/>
+    </resultMap>
+
+    <resultMap id="slowEndpointMap" type="com.zjcxph.imgapi.dto.resp.ResponseMetricAnalysisDTO$SlowEndpoint">
+        <result property="routePattern" column="route_pattern"/>
+        <result property="method" column="method"/>
+        <result property="requestCount" column="request_count"/>
+        <result property="errorCount" column="error_count"/>
+        <result property="avgServerDurationMs" column="avg_server_duration_ms"/>
+        <result property="avgClientDurationMs" column="avg_client_duration_ms"/>
+        <result property="p95ClientDurationMs" column="p95_client_duration_ms"/>
+    </resultMap>
+
+    <insert id="batchInsert">
+        INSERT INTO frontend_response_metric (
+            request_id, route_pattern, method, http_status, business_code, success,
+            client_duration_ms, server_duration_ms, retry_count, retry_outcome, occurred_at
+        ) VALUES
+        <foreach collection="metrics" item="metric" separator=",">
+            (
+                #{metric.requestId}, #{metric.routePattern}, #{metric.method},
+                #{metric.httpStatus}, #{metric.businessCode}, #{metric.success},
+                #{metric.clientDurationMs}, #{metric.serverDurationMs},
+                #{metric.retryCount}, #{metric.retryOutcome}, #{metric.occurredAt}
+            )
+        </foreach>
+        ON CONFLICT (request_id) DO NOTHING
+    </insert>
+
+    <select id="getServerOverview" resultMap="overviewMap">
+        SELECT COUNT(*) AS total_requests,
+               COALESCE(
+                   ROUND(100.0 * COUNT(*) FILTER (WHERE response_status LIKE '2%') / NULLIF(COUNT(*), 0), 2),
+                   0
+               ) AS success_rate,
+               COALESCE(AVG(execute_time), 0) AS avg_server_duration_ms
+        FROM access_log
+        WHERE access_time &gt;= CURRENT_TIMESTAMP - (#{days} * INTERVAL '1 day')
+          AND request_uri NOT LIKE '/api/v1/response-metrics/%'
+    </select>
+
+    <select id="getFrontendOverview" resultMap="overviewMap">
+        SELECT COUNT(*) AS frontend_sample_count,
+               COALESCE(AVG(client_duration_ms), 0) AS avg_client_duration_ms,
+               COALESCE(
+                   percentile_cont(0.95) WITHIN GROUP (ORDER BY client_duration_ms),
+                   0
+               ) AS p95_client_duration_ms
+        FROM frontend_response_metric
+        WHERE occurred_at &gt;= CURRENT_TIMESTAMP - (#{days} * INTERVAL '1 day')
+    </select>
+
+    <select id="getServerTrend" resultMap="trendMap">
+        SELECT CASE
+                   WHEN #{days} &lt;= 2 THEN date_trunc('hour', access_time)
+                   ELSE date_trunc('day', access_time)
+               END AS bucket,
+               COUNT(*) AS request_count,
+               COUNT(*) FILTER (WHERE COALESCE(response_status, '') NOT LIKE '2%') AS error_count,
+               COALESCE(AVG(execute_time), 0) AS avg_server_duration_ms
+        FROM access_log
+        WHERE access_time &gt;= CURRENT_TIMESTAMP - (#{days} * INTERVAL '1 day')
+          AND request_uri NOT LIKE '/api/v1/response-metrics/%'
+        GROUP BY bucket
+        ORDER BY bucket
+    </select>
+
+    <select id="getFrontendTrend" resultMap="trendMap">
+        SELECT CASE
+                   WHEN #{days} &lt;= 2 THEN date_trunc(
+                       'hour', occurred_at AT TIME ZONE current_setting('TIMEZONE')
+                   )
+                   ELSE date_trunc(
+                       'day', occurred_at AT TIME ZONE current_setting('TIMEZONE')
+                   )
+               END AS bucket,
+               COALESCE(AVG(client_duration_ms), 0) AS avg_client_duration_ms
+        FROM frontend_response_metric
+        WHERE occurred_at &gt;= CURRENT_TIMESTAMP - (#{days} * INTERVAL '1 day')
+        GROUP BY bucket
+        ORDER BY bucket
+    </select>
+
+    <select id="getSlowEndpoints" resultMap="slowEndpointMap">
+        SELECT route_pattern,
+               method,
+               COUNT(*) AS request_count,
+               COUNT(*) FILTER (WHERE NOT success) AS error_count,
+               COALESCE(AVG(server_duration_ms), 0) AS avg_server_duration_ms,
+               COALESCE(AVG(client_duration_ms), 0) AS avg_client_duration_ms,
+               COALESCE(
+                   percentile_cont(0.95) WITHIN GROUP (ORDER BY client_duration_ms),
+                   0
+               ) AS p95_client_duration_ms
+        FROM frontend_response_metric
+        WHERE occurred_at &gt;= CURRENT_TIMESTAMP - (#{days} * INTERVAL '1 day')
+        GROUP BY route_pattern, method
+        ORDER BY p95_client_duration_ms DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -21,8 +21,8 @@ function handleAction() {
 </script>
 
 <template>
-  <div class="app-empty">
-    <div class="app-empty-icon" :class="icon" />
+  <div class="app-empty mrr-content-enter">
+    <div class="app-empty-icon mrr-status-pop" :class="icon" />
     <p class="app-empty-text">{{ description }}</p>
     <el-button v-if="actionText" type="primary" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
@@ -39,11 +39,14 @@ function handleAction() {
   padding: 64px 16px;
   text-align: center;
 }
+
 .app-empty-icon {
+  margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-text-color-placeholder, #c0c4cc);
-  margin-bottom: 16px;
+  transform-origin: center;
 }
+
 .app-empty-text {
   margin: 0 0 20px;
   font-size: 14px;

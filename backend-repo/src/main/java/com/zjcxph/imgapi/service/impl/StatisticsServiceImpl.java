@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.service.StatisticsService;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,8 @@ import java.util.Map;
 
 @Service
 public class StatisticsServiceImpl implements StatisticsService {
+
+    private static final int MAX_EXPORT_LIMIT = 100000;
 
     private final StatisticsMapper statisticsMapper;
 
@@ -47,7 +50,45 @@ public class StatisticsServiceImpl implements StatisticsService {
     ) {
         PaginationUtils.validatePageParams(page, size);
         int offset = PaginationUtils.calculateOffset(page, size);
-        return statisticsMapper.findWithConditionAndPagination(offset, size, keyword, bah, sjh, type, startDate, endDate, sortBy, sortOrder);
+        return statisticsMapper.findWithConditionAndPagination(
+                offset,
+                size,
+                keyword,
+                normalizeSearchCode(bah),
+                normalizeSearchCode(sjh),
+                type,
+                startDate,
+                endDate,
+                sortBy,
+                sortOrder
+        );
+    }
+
+    @Override
+    public List<Statistics> findWithConditionForExport(
+            int limit,
+            String keyword,
+            String bah,
+            String sjh,
+            String type,
+            String startDate,
+            String endDate
+    ) {
+        if (limit < 1 || limit > MAX_EXPORT_LIMIT) {
+            throw new IllegalArgumentException("导出条数必须在1-100000之间");
+        }
+        return statisticsMapper.findWithConditionAndPagination(
+                0,
+                limit,
+                keyword,
+                normalizeSearchCode(bah),
+                normalizeSearchCode(sjh),
+                type,
+                startDate,
+                endDate,
+                "date",
+                "asc"
+        );
     }
 
     @Override
@@ -57,12 +98,22 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate) {
-        return statisticsMapper.getTotalCountByCondition(keyword, bah, sjh, type, startDate, endDate);
+        return statisticsMapper.getTotalCountByCondition(
+                keyword,
+                normalizeSearchCode(bah),
+                normalizeSearchCode(sjh),
+                type,
+                startDate,
+                endDate
+        );
     }
 
     @Override
     public List<Statistics> findByBah(String bah) {
-        return statisticsMapper.findByBah(bah);
+        return statisticsMapper.findByBah(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah)
+        );
     }
 
     @Override
@@ -98,5 +149,18 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public List<Map<String, Object>> getTypeStatistics() {
         return statisticsMapper.getTypeStatistics();
+    }
+
+    @Override
+    public List<String> getDistinctDepartments() {
+        return statisticsMapper.findDistinctDepartments();
+    }
+
+    private String normalizeSearchCode(String value) {
+        if (value == null) {
+            return null;
+        }
+        String searchTerm = MedicalRecordCodeUtils.toSearchTerm(value);
+        return searchTerm.isEmpty() ? null : searchTerm;
     }
 }

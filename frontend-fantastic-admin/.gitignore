@@ -2,6 +2,8 @@ node_modules
 .DS_Store
 dist*
 dist-ssr
+playwright-report/
+test-results/
 *.local
 .eslintcache
 .stylelintcache
@@ -12,6 +14,7 @@ export_to_markdown.py
 .env
 .env.*
 !.env.example
+!.env.mock
 
 # IDE
 .idea

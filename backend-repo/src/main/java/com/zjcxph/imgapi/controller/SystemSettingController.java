@@ -7,7 +7,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
@@ -52,7 +58,7 @@ public class SystemSettingController {
 
     @Operation(summary = "批量保存系统设置")
     @PutMapping("/settings")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> saveSettings(@RequestBody Map<String, String> settings) {
         if (settings == null || settings.isEmpty()) {
             return Result.fail(400, "设置内容不能为空");
@@ -64,7 +70,7 @@ public class SystemSettingController {
 
     @Operation(summary = "保存单个设置值")
     @PutMapping("/settings/{key}")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> setSetting(@PathVariable String key, @RequestBody Map<String, String> body) {
         String value = body != null ? body.get("value") : null;
         if (value == null) {
@@ -76,7 +82,7 @@ public class SystemSettingController {
 
     @Operation(summary = "删除单个设置")
     @DeleteMapping("/settings/{key}")
-    @RequirePermissions("system:read")
+    @RequirePermissions("system:manage")
     public Result<Void> deleteSetting(@PathVariable String key) {
         systemSettingService.deleteSetting(key);
         return Result.<Void>success(null).message("设置已删除");

@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/browser_upgrade/index.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover"/>
     <meta http-equiv="Expires" content="0">
@@ -12,25 +12,245 @@
     <title>%VITE_APP_TITLE%</title>
   </head>
   <body>
-    <div id="app">
-      <div id="browser-upgrade">
-        <div class="title">为了您的体验，推荐使用以下浏览器</div>
-        <div class="browsers">
-          <a href="https://www.microsoft.com/edge" target="_blank" class="browser">
-            <img class="browser-icon" src="/browser_upgrade/edge.png" />
-            <div class="browser-name">Microsoft Edge</div>
-          </a>
-          <a href="https://www.google.cn/chrome/" target="_blank" class="browser">
-            <img class="browser-icon" src="/browser_upgrade/chrome.png" />
-            <div class="browser-name">Google Chrome</div>
-          </a>
+    <div id="browser-compat-blocker" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="browser-compat-content">
+        <div class="browser-compat-icon" aria-hidden="true">!</div>
+        <div class="browser-compat-copy">
+          <div id="browser-compat-title" class="browser-compat-title">浏览器不受支持</div>
+          <div id="browser-compat-message" class="browser-compat-message">
+            此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
+          </div>
+          <div id="browser-compat-requirement" class="browser-compat-requirement">
+            最低支持：Edge 111、Chrome 109、Firefox 114、Safari 16.4。
+          </div>
+          <div id="browser-compat-actions" class="browser-compat-actions" hidden>
+            <button id="browser-compat-continue" class="browser-compat-button browser-compat-button-primary" type="button">继续等待</button>
+            <button id="browser-compat-reload" class="browser-compat-button" type="button">重新加载</button>
+            <button id="browser-compat-back" class="browser-compat-button" type="button">返回上一页</button>
+          </div>
         </div>
       </div>
     </div>
+    <div id="app"></div>
     <script>
-      if (!!window.ActiveXObject || 'ActiveXObject' in window) {
-        document.getElementById('browser-upgrade').style.display = 'block'
-      }
+      (function () {
+        var minimumVersions = {
+          Edge: '111',
+          Chrome: '109',
+          Firefox: '114',
+          Safari: '16.4'
+        }
+        var startupTimeout
+        var initialStartupTimeoutMs = 15000
+        var continuedStartupTimeoutMs = 60000
+
+        function compareVersions(current, minimum) {
+          var currentParts = String(current || '0').split('.')
+          var minimumParts = String(minimum || '0').split('.')
+          var length = Math.max(currentParts.length, minimumParts.length)
+          var index
+
+          for (index = 0; index < length; index += 1) {
+            var currentPart = parseInt(currentParts[index] || '0', 10)
+            var minimumPart = parseInt(minimumParts[index] || '0', 10)
+            if (currentPart > minimumPart) {
+              return 1
+            }
+            if (currentPart < minimumPart) {
+              return -1
+            }
+          }
+          return 0
+        }
+
+        function detectBrowser() {
+          var userAgent = window.navigator.userAgent || ''
+          var match
+
+          if (document.documentMode || /MSIE|Trident\//.test(userAgent)) {
+            return { name: 'Internet Explorer', version: '', unsupported: true }
+          }
+
+          match = userAgent.match(/Edge\/([\d.]+)/)
+          if (match) {
+            return { name: '旧版 Microsoft Edge', version: match[1], unsupported: true }
+          }
+
+          match = userAgent.match(/Edg\/([\d.]+)/)
+          if (match) {
+            return { name: 'Edge', version: match[1] }
+          }
+
+          match = userAgent.match(/Firefox\/([\d.]+)/)
+          if (match) {
+            return { name: 'Firefox', version: match[1] }
+          }
+
+          match = userAgent.match(/Version\/([\d.]+).*Safari\//)
+          if (match && !/Chrome|Chromium|CriOS|Edg\//.test(userAgent)) {
+            return { name: 'Safari', version: match[1] }
+          }
+
+          // Chromium 内核浏览器不一定携带 Chrome 标识，例如 Chromium 本身。
+          // 统一按内核主版本判断，低于 109 时必须显示升级提示。
+          match = userAgent.match(/(?:Chrome|Chromium|CriOS)\/([\d.]+)/)
+          if (match) {
+            return { name: 'Chrome', version: match[1] }
+          }
+
+          return { name: '当前浏览器', version: '' }
+        }
+
+        function lacksRequiredFeatures() {
+          // 这里只检测会阻断应用启动的基础能力。color-mix()、backdrop-filter
+          // 等视觉增强能力允许在 Chrome 109 中降级，不能作为启动阻断条件。
+          return typeof window.Promise !== 'function'
+            || typeof window.fetch !== 'function'
+            || typeof window.URL !== 'function'
+            || typeof window.TextEncoder !== 'function'
+            || typeof Array.prototype.at !== 'function'
+            || typeof Array.prototype.findLast !== 'function'
+        }
+
+        function showApplicationOverlay(reason, title, options) {
+          var blocker = document.getElementById('browser-compat-blocker')
+          var message = document.getElementById('browser-compat-message')
+          var titleElement = document.getElementById('browser-compat-title')
+          var requirement = document.getElementById('browser-compat-requirement')
+          var actions = document.getElementById('browser-compat-actions')
+
+          if (!blocker || !message || !titleElement || !requirement || !actions) {
+            return
+          }
+
+          titleElement.textContent = title
+          message.textContent = reason
+          requirement.textContent = options.requirement || ''
+          requirement.style.display = options.requirement ? 'block' : 'none'
+          actions.hidden = !options.showActions
+          blocker.style.display = 'flex'
+        }
+
+        function hideRecoverableOverlay() {
+          var blocker = document.getElementById('browser-compat-blocker')
+          var actions = document.getElementById('browser-compat-actions')
+
+          if (window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          window.__MRR_APP_STARTUP_DELAYED__ = false
+          if (actions) {
+            actions.hidden = true
+          }
+          if (blocker) {
+            blocker.style.display = 'none'
+          }
+        }
+
+        function blockApplication(reason, title) {
+          window.__MRR_APP_STARTUP_BLOCKED__ = true
+          window.clearTimeout(startupTimeout)
+          showApplicationOverlay(reason, title, {
+            requirement: '最低支持：Edge 111、Chrome 109、Firefox 114、Safari 16.4。',
+            showActions: false
+          })
+        }
+
+        function reportStartupFailure(reason) {
+          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          blockApplication(reason, '系统启动失败')
+        }
+
+        function showStartupDelay() {
+          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          window.__MRR_APP_STARTUP_DELAYED__ = true
+          showApplicationOverlay(
+            '当前网络速度较慢或服务器响应时间较长，系统仍在后台加载。您可以继续等待，也可以重新加载页面。',
+            '系统启动较慢',
+            {
+              requirement: '继续等待不会绕过登录、权限或安全校验。',
+              showActions: true
+            }
+          )
+        }
+
+        function scheduleStartupTimeout(timeout) {
+          window.clearTimeout(startupTimeout)
+          startupTimeout = window.setTimeout(showStartupDelay, timeout)
+        }
+
+        var continueButton = document.getElementById('browser-compat-continue')
+        var reloadButton = document.getElementById('browser-compat-reload')
+        var backButton = document.getElementById('browser-compat-back')
+
+        if (continueButton) {
+          continueButton.addEventListener('click', function () {
+            hideRecoverableOverlay()
+            scheduleStartupTimeout(continuedStartupTimeoutMs)
+          })
+        }
+        if (reloadButton) {
+          reloadButton.addEventListener('click', function () {
+            window.location.reload()
+          })
+        }
+        if (backButton) {
+          backButton.addEventListener('click', function () {
+            if (window.history.length > 1) {
+              window.history.back()
+            } else {
+              window.location.href = '/'
+            }
+          })
+        }
+
+        var browser = detectBrowser()
+        if (browser.unsupported) {
+          blockApplication('检测到不受支持的 ' + browser.name + '。请使用受支持版本的浏览器访问系统。', '浏览器不受支持')
+          return
+        }
+
+        var minimumVersion = minimumVersions[browser.name]
+        if (minimumVersion && compareVersions(browser.version, minimumVersion) < 0) {
+          blockApplication(
+            '检测到 ' + browser.name + ' ' + browser.version + '，低于最低支持版本 ' + browser.name + ' ' + minimumVersion + '。请升级浏览器后重试。',
+            '浏览器不受支持'
+          )
+          return
+        }
+
+        if (!minimumVersion && lacksRequiredFeatures()) {
+          blockApplication('当前浏览器缺少系统运行所需的关键功能，请升级浏览器后重试。', '浏览器不受支持')
+          return
+        }
+
+        scheduleStartupTimeout(initialStartupTimeoutMs)
+
+        window.addEventListener('mrr:app-ready', function () {
+          window.__MRR_APP_STARTUP_READY__ = true
+          window.clearTimeout(startupTimeout)
+          hideRecoverableOverlay()
+        }, { once: true })
+
+        window.addEventListener('mrr:app-startup-failed', function () {
+          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        }, { once: true })
+
+        window.addEventListener('error', function (event) {
+          var target = event.target
+          if (event.error || (target && target.tagName === 'SCRIPT')) {
+            reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+          }
+        }, true)
+
+        window.addEventListener('unhandledrejection', function () {
+          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        })
+      })()
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>

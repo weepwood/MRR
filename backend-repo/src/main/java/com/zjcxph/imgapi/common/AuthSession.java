@@ -16,6 +16,9 @@ public class AuthSession {
     private String roleName;
     private List<String> permissions = new ArrayList<>();
     private String status;
+    private Boolean mustChangePassword;
+    private Integer passwordVersion;
+    private LocalDateTime temporaryPasswordExpiresAt;
     private LocalDateTime lastLoginAt;
 
     public void setPermissions(List<String> permissions) {
@@ -24,6 +27,14 @@ public class AuthSession {
 
     public boolean isAdmin() {
         return "ADMIN".equalsIgnoreCase(roleCode);
+    }
+
+    public boolean isPasswordChangeRequired() {
+        return Boolean.TRUE.equals(mustChangePassword);
+    }
+
+    public int effectivePasswordVersion() {
+        return passwordVersion == null || passwordVersion < 1 ? 1 : passwordVersion;
     }
 
     public boolean hasPermission(String permission) {

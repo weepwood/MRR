@@ -1,0 +1,15 @@
+{
+  "manifestSchemaVersion": 1,
+  "database": {
+    "minimumCompatibleMigration": "20260715113552",
+    "maximumCompatibleMigration": "20260719174500",
+    "backwardCompatibleWithPreviousApplication": false
+  },
+  "applicationRollback": {
+    "allowed": false,
+    "reason": "当前认证与凭据生命周期迁移尚未完成上一应用版本兼容性演练；回滚前必须恢复发布前数据库备份并重新验证。"
+  },
+  "configuration": {
+    "schemaVersion": 1
+  }
+}

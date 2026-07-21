@@ -4,9 +4,9 @@ import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -60,10 +60,10 @@ const progressStatus = computed(() => {
 })
 
 const summaryCards = computed(() => [
-  { label: '总记录数', value: stats.value?.totalCount ?? 0, color: '#409eff', icon: 'i-ant-design:database-twotone' },
-  { label: '已迁移', value: stats.value?.migratedCount ?? 0, color: '#67c23a', icon: 'i-ant-design:check-circle-twotone' },
-  { label: '待迁移', value: stats.value?.pendingCount ?? 0, color: '#e6a23c', icon: 'i-ant-design:clock-circle-twotone' },
-  { label: '失败', value: stats.value?.failedCount ?? 0, color: '#f56c6c', icon: 'i-ant-design:close-circle-twotone' },
+  { label: '总记录数', value: stats.value?.totalCount ?? 0, note: '迁移任务涉及的扫描记录总量', tone: 'blue', icon: 'i-ant-design:database-twotone' },
+  { label: '已迁移', value: stats.value?.migratedCount ?? 0, note: '已完成 OSS 上传与记录更新', tone: 'green', icon: 'i-ant-design:check-circle-twotone' },
+  { label: '待迁移', value: stats.value?.pendingCount ?? 0, note: '等待处理的扫描记录', tone: 'amber', icon: 'i-ant-design:clock-circle-twotone' },
+  { label: '失败', value: stats.value?.failedCount ?? 0, note: '需要检查并重新处理', tone: 'danger', icon: 'i-ant-design:close-circle-twotone' },
 ])
 
 const pendingTitle = computed(() => {
@@ -416,57 +416,23 @@ onMounted(refreshAll)
     </div>
 
     <!-- Statistics Cards -->
-    <section class="summary-grid">
-      <el-card shadow="never" class="stat-card total-count">
-        <div class="stat-icon">
-          <i :class="summaryCards[0].icon" />
+    <section class="mrr-metric-grid">
+      <el-card
+        v-for="item in summaryCards"
+        :key="item.label"
+        shadow="never"
+        class="mrr-metric-card"
+        :class="`mrr-metric-card--${item.tone}`"
+      >
+        <div class="mrr-metric-card__icon">
+          <i :class="item.icon" />
         </div>
-        <div class="stat-body">
-          <div class="stat-label">
-            {{ summaryCards[0].label }}
-          </div>
-          <div class="stat-value">
-            {{ summaryCards[0].value.toLocaleString() }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="stat-card migrated-count">
-        <div class="stat-icon">
-          <i :class="summaryCards[1].icon" />
-        </div>
-        <div class="stat-body">
-          <div class="stat-label">
-            {{ summaryCards[1].label }}
-          </div>
-          <div class="stat-value">
-            {{ summaryCards[1].value.toLocaleString() }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="stat-card pending-count">
-        <div class="stat-icon">
-          <i :class="summaryCards[2].icon" />
-        </div>
-        <div class="stat-body">
-          <div class="stat-label">
-            {{ summaryCards[2].label }}
-          </div>
-          <div class="stat-value">
-            {{ summaryCards[2].value.toLocaleString() }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="stat-card failed-count">
-        <div class="stat-icon">
-          <i :class="summaryCards[3].icon" />
-        </div>
-        <div class="stat-body">
-          <div class="stat-label">
-            {{ summaryCards[3].label }}
-          </div>
-          <div class="stat-value">
-            {{ summaryCards[3].value.toLocaleString() }}
-          </div>
+        <div class="mrr-metric-card__body">
+          <span class="mrr-metric-card__label">{{ item.label }}</span>
+          <strong class="mrr-metric-card__value">{{ item.value.toLocaleString('zh-CN') }}</strong>
+          <p class="mrr-metric-card__note">
+            {{ item.note }}
+          </p>
         </div>
       </el-card>
     </section>
@@ -493,7 +459,9 @@ onMounted(refreshAll)
         <template #header>
           <div class="card-header">
             <span>待迁移文件夹</span>
-            <el-tag size="small" type="info">{{ totalPendingCount }}</el-tag>
+            <el-tag size="small" type="info">
+              {{ totalPendingCount }}
+            </el-tag>
           </div>
         </template>
         <div v-loading="loading.folders" class="tree-wrapper">
@@ -547,7 +515,8 @@ onMounted(refreshAll)
         <AppLoading v-if="loading.pending" type="table" :rows="6" />
         <AppError v-else-if="error" :message="error" @retry="loadPending" />
         <AppEmpty v-else-if="!pendingList.length" description="暂无待迁移记录" />
-        <el-table v-else
+        <el-table
+          v-else
           :data="pendingList"
           stripe
           size="small"
@@ -778,68 +747,6 @@ h2 {
   color: var(--text-secondary);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.stat-card {
-  position: relative;
-  overflow: hidden;
-  border-top: 3px solid transparent;
-}
-
-.stat-card.total-count { border-top-color: #409eff; }
-.stat-card.migrated-count { border-top-color: #67c23a; }
-.stat-card.pending-count { border-top-color: #e6a23c; }
-.stat-card.failed-count { border-top-color: #f56c6c; }
-
-.stat-card :deep(.el-card__body) {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-  padding: 20px 22px;
-}
-
-.stat-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  font-size: 26px;
-  border-radius: 14px;
-}
-
-.stat-card.total-count .stat-icon { color: #409eff; background: rgb(64 158 255 / 9%); }
-.stat-card.migrated-count .stat-icon { color: #67c23a; background: rgb(103 194 58 / 9%); }
-.stat-card.pending-count .stat-icon { color: #e6a23c; background: rgb(230 162 60 / 9%); }
-.stat-card.failed-count .stat-icon { color: #f56c6c; background: rgb(245 108 108 / 9%); }
-
-.stat-body { flex: 1; min-width: 0; }
-
-.stat-label {
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-
-.stat-value {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text-primary);
-  word-break: break-all;
-}
-
 .progress-section {
   padding: 4px 0;
 }
@@ -978,22 +885,12 @@ h2 {
 }
 
 @media (width <= 900px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .folder-pending-row {
     flex-direction: column;
   }
 
   .folder-tree-card {
     width: 100%;
-  }
-}
-
-@media (width <= 600px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

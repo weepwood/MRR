@@ -1,22 +1,35 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
+import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
-import com.zjcxph.imgapi.dto.req.ScanRequest;
 
-import java.nio.file.Path;
 import java.util.List;
 
 public interface ScanService {
-    List<Scan> getImageListByBAH(String bah, String bahRaw);
+    ArchiveLookupResult getImageLookupByBAH(String normalizedCode, String searchCode);
 
-    List<Scan> getImageListByCode(String bah, String sjh);
+    ArchiveLookupResult getImageLookupByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    );
 
-    Path getImagePath(String bah);
-    
-    java.io.File createZipForBAH(String bah) throws java.io.IOException;
+    List<Scan> getImageListByBAH(String normalizedCode, String searchCode);
+
+    List<Scan> getImageListByCode(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    );
 
     List<PathDO> getImagePathList(List<String> ids);
+
+    List<Scan> findActiveByIds(List<Integer> ids);
 
     int updateImageType(Integer id, Integer type);
 
@@ -26,7 +39,9 @@ public interface ScanService {
 
     Scan update(Scan scan);
 
-    List<Scan> findAll();
+    List<Scan> findAll(int limit);
+
+    CursorPageResult<Scan> findAfterId(Integer afterId, int size);
 
     Scan findById(Integer id);
 
@@ -36,7 +51,7 @@ public interface ScanService {
 
     List<Scan> findAllWithPagination(int page, int size);
 
-    List<Scan> findByCondition(ScanRequest request);
+    List<Scan> findByCondition(ScanRequest request, int limit);
 
     List<Scan> findByConditionWithPagination(ScanRequest request, int page, int size);
 

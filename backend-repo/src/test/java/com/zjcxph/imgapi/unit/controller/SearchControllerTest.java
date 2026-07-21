@@ -84,7 +84,7 @@ class SearchControllerTest {
         void decryptFails() {
             Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "ts");
             assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).contains("decrypt failed");
+            assertThat(r.getMessage()).contains("解密失败");
         }
     }
 }

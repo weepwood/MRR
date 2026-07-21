@@ -1,47 +1,37 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
-import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
-import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
+import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Scan;
-import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import jakarta.validation.Valid;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
-/**
- * Scan Controller
- * 提供 mr_scan 表的增删改查功能
- */
 @RestController
 @RequestMapping("/api/v1/scan")
 @Tag(name = "Scan Management", description = "病案扫描记录管理接口")
@@ -49,210 +39,160 @@ import java.util.zip.ZipOutputStream;
 public class ScanController {
 
     private static final Logger logger = LoggerFactory.getLogger(ScanController.class);
-
-    /** findAll 全表查询的最大返回条数兜底，防止 OOM */
-    private static final int MAX_FIND_ALL_LIMIT = 1000;
-
-    /** 批量下载 ZIP 的最大文件数，防止滥用 */
+    private static final int MAX_LEGACY_QUERY_LIMIT = 1000;
     private static final int MAX_BATCH_DOWNLOAD_COUNT = 200;
 
     private final ScanService scanService;
+    private final ArchiveExportService archiveExportService;
 
-    public ScanController(ScanService scanService) {
+    public ScanController(ScanService scanService, ArchiveExportService archiveExportService) {
         this.scanService = scanService;
+        this.archiveExportService = archiveExportService;
     }
-
-    @Value("${image.basePath}")
-    private String basePath;
 
     @Operation(summary = "创建新的扫描记录")
     @PostMapping
     @RequirePermissions({"record:edit"})
     public Result<Scan> create(@Valid @RequestBody ScanRequest request) {
         logger.info("创建扫描记录：BAH={}", request.getBah());
-        
         Scan scan = new Scan(
-            null,
-            request.getBrxh(),
-            request.getBah(),
-            request.getSjh(),
-            request.getFilename(),
-            request.getBtype(),
-            request.getPages(),
-            request.getOpenerNo(),
-            null, // uploadDate 由数据库自动处理
-            request.getUploadFlag(),
-            request.getFolder()
+                null,
+                request.getBrxh(),
+                request.getBah(),
+                request.getSjh(),
+                request.getFilename(),
+                request.getBtype(),
+                request.getPages(),
+                request.getOpenerNo(),
+                null,
+                request.getUploadFlag(),
+                request.getFolder()
         );
-        
+
         Scan created = scanService.create(scan);
-        if (created != null) {
-            logger.info("创建成功，ID={}", created.getId());
-            return Result.success(created);
-        } else {
-            logger.error("创建失败");
-            return Result.fail("创建扫描记录失败");
-        }
+        return created == null ? Result.fail("创建扫描记录失败") : Result.success(created);
     }
 
     @Operation(summary = "根据 ID 删除扫描记录")
     @DeleteMapping("/{id}")
     @RequirePermissions({"record:edit"})
     public Result<String> deleteById(
-            @PathVariable 
+            @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
-        logger.info("删除扫描记录：ID={}", id);
-        
         if (id == null) {
             return Result.fail("ID 不能为空");
         }
-        
-        boolean deleted = scanService.softDeleteById(id);
-        if (deleted) {
-            logger.info("删除成功：ID={}", id);
-            return Result.success("删除成功");
-        } else {
-            logger.error("删除失败：ID={}", id);
-            return Result.fail("删除失败，记录不存在");
-        }
+        return scanService.softDeleteById(id)
+                ? Result.success("删除成功")
+                : Result.fail("删除失败，记录不存在");
     }
 
     @Operation(summary = "更新扫描记录")
     @PutMapping("/{id}")
     @RequirePermissions({"record:edit"})
     public Result<Scan> update(
-            @PathVariable 
+            @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id,
             @Valid @RequestBody ScanRequest request) {
-        logger.info("更新扫描记录：ID={}", id);
-        
         if (id == null) {
             return Result.fail("ID 不能为空");
         }
-        
+
         Scan scan = new Scan(
-            id,
-            request.getBrxh(),
-            request.getBah(),
-            request.getSjh(),
-            request.getFilename(),
-            request.getBtype(),
-            request.getPages(),
-            request.getOpenerNo(),
-            null,
-            request.getUploadFlag(),
-            request.getFolder()
+                id,
+                request.getBrxh(),
+                request.getBah(),
+                request.getSjh(),
+                request.getFilename(),
+                request.getBtype(),
+                request.getPages(),
+                request.getOpenerNo(),
+                null,
+                request.getUploadFlag(),
+                request.getFolder()
         );
-        
         Scan updated = scanService.update(scan);
-        if (updated != null) {
-            logger.info("更新成功：ID={}", id);
-            return Result.success(updated);
-        } else {
-            logger.error("更新失败：ID={}", id);
-            return Result.fail("更新失败，记录不存在");
-        }
+        return updated == null ? Result.fail("更新失败，记录不存在") : Result.success(updated);
     }
 
     /**
-     * 获取所有扫描记录（全表查询，已废弃）。
-     * <p>
-     * 数据量增长后全表查询会导致 OOM 和长事务，建议改用 {@code GET /api/v1/scan/page} 分页接口。
-     * 当前为兼容保留，并对返回结果做最大条数限制。
-     * </p>
+     * 兼容旧客户端的有限查询。SQL 在数据库端最多返回 1000 条，不再加载全表后截断。
      */
     @Deprecated
-    @Operation(summary = "获取所有扫描记录（已废弃，请使用 /page 分页接口）")
+    @Operation(summary = "获取扫描记录（兼容接口，最多 1000 条；建议使用 /cursor）")
     @GetMapping
     public Result<List<Scan>> findAll() {
-        logger.warn("findAll 全表查询被调用，建议改用 /page 分页接口");
-        List<Scan> scans = scanService.findAll();
-        // 安全兜底：限制最大返回条数，防止全表数据导致内存溢出
-        if (scans.size() > MAX_FIND_ALL_LIMIT) {
-            logger.warn("findAll 结果被截断：{} -> {}", scans.size(), MAX_FIND_ALL_LIMIT);
-            scans = scans.subList(0, MAX_FIND_ALL_LIMIT);
-        }
-        return Result.success(scans);
+        logger.warn("兼容 findAll 接口被调用，建议改用 /api/v1/scan/cursor");
+        return Result.success(scanService.findAll(MAX_LEGACY_QUERY_LIMIT));
+    }
+
+    @Operation(summary = "按 ID 游标分页查询扫描记录")
+    @GetMapping("/cursor")
+    public Result<CursorPageResult<Scan>> findAfterId(
+            @RequestParam(defaultValue = "0") Integer afterId,
+            @RequestParam(defaultValue = "100") int size) {
+        return Result.success(scanService.findAfterId(afterId, size));
     }
 
     @Operation(summary = "根据 ID 查询扫描记录")
     @GetMapping("/{id}")
     public Result<Scan> findById(
-            @PathVariable 
+            @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
-        logger.info("查询扫描记录：ID={}", id);
-        
         if (id == null) {
             return Result.fail("ID 不能为空");
         }
-        
         Scan scan = scanService.findById(id);
-        if (scan != null) {
-            return Result.success(scan);
-        } else {
-            return Result.fail("未找到该扫描记录");
-        }
+        return scan == null ? Result.fail("未找到该扫描记录") : Result.success(scan);
     }
 
     @Operation(summary = "根据病案号查询扫描记录")
     @GetMapping("/bah/{bah}")
     public Result<List<Scan>> findByBah(
-            @PathVariable 
+            @PathVariable
             @Parameter(description = "病案号", example = "00789508")
             String bah) {
-        logger.info("查询病案号下的扫描记录：BAH={}", bah);
-        
         if (bah == null || bah.isEmpty()) {
             return Result.fail("病案号不能为空");
         }
-        
-        List<Scan> scans = scanService.findByBah(bah);
-        return Result.success(scans);
+        return Result.success(scanService.findByBah(bah));
     }
 
     @Operation(summary = "根据病人序号查询扫描记录")
     @GetMapping("/brxh/{brxh}")
     public Result<List<Scan>> findByBrxh(
-            @PathVariable 
+            @PathVariable
             @Parameter(description = "病人序号", example = "605746")
             String brxh) {
-        logger.info("查询病人序号下的扫描记录：BRXH={}", brxh);
-        
         if (brxh == null || brxh.isEmpty()) {
             return Result.fail("病人序号不能为空");
         }
-        
-        List<Scan> scans = scanService.findByBrxh(brxh);
-        return Result.success(scans);
+        return Result.success(scanService.findByBrxh(brxh));
     }
 
     @Operation(summary = "分页查询所有扫描记录")
     @GetMapping("/page")
     public Result<PageResult<Scan>> findAllWithPagination(
-            @Parameter(description = "页码", example = "1") 
             @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每页大小", example = "10") 
             @RequestParam(defaultValue = "10") int size) {
-        logger.info("分页查询扫描记录：page={}, size={}", page, size);
-        
         PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findAllWithPagination(page, size);
         long total = scanService.countByCondition(new ScanRequest());
-        
-        PageResult<Scan> pageResult = PageResult.of(scans, total, page, size);
-        return Result.success(pageResult);
+        return Result.success(PageResult.of(scans, total, page, size));
     }
 
-    @Operation(summary = "根据条件动态查询扫描记录")
+    /**
+     * 兼容旧客户端的有限条件查询。新页面应使用 /page/condition。
+     */
+    @Deprecated
+    @Operation(summary = "根据条件查询扫描记录（兼容接口，最多 1000 条）")
     @PostMapping("/condition")
     public Result<List<Scan>> findByCondition(@RequestBody ScanRequest request) {
-        logger.info("根据条件查询扫描记录");
-        
-        List<Scan> scans = scanService.findByCondition(request);
-        return Result.success(scans);
+        logger.warn("兼容 condition 接口被调用，建议改用 /api/v1/scan/page/condition");
+        return Result.success(scanService.findByCondition(request, MAX_LEGACY_QUERY_LIMIT));
     }
 
     @Operation(summary = "根据条件分页查询扫描记录")
@@ -261,18 +201,15 @@ public class ScanController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestBody ScanRequest request) {
-        logger.info("根据条件分页查询扫描记录: page={}, size={}", page, size);
-
         PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);
         long total = scanService.countByCondition(request);
-
-        PageResult<Scan> pageResult = PageResult.of(scans, total, page, size);
-        return Result.success(pageResult);
+        return Result.success(PageResult.of(scans, total, page, size));
     }
 
     @Operation(summary = "批量下载病案图片（ZIP，流式传输）")
     @PostMapping("/batch-download")
+    @RequirePermissions({"record:download"})
     public ResponseEntity<StreamingResponseBody> batchDownload(@RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -281,77 +218,16 @@ public class ScanController {
             return ResponseEntity.badRequest().build();
         }
 
-        List<PathDO> items = scanService.getImagePathList(request.getIds());
-        if (items == null || items.isEmpty()) {
+        ArchiveExportService.BatchZipExport export = archiveExportService.prepareBatch(request.getIds());
+        if (export.itemCount() == 0) {
             return ResponseEntity.badRequest().build();
         }
 
-        // 流式写入 ZIP，直接输出到响应流，避免全内存构建导致 OOM
-        StreamingResponseBody body = outputStream -> {
-            try (ZipOutputStream zos = new ZipOutputStream(outputStream)) {
-                byte[] buffer = new byte[8192];
-                for (PathDO item : items) {
-                    if (item == null) {
-                        continue;
-                    }
-                    Path path = buildImagePath(item);
-                    if (path == null) {
-                        continue;
-                    }
-                    File file = path.toFile();
-                    if (!file.exists() || !file.isFile()) {
-                        logger.warn("skip missing file: {}", path);
-                        continue;
-                    }
-
-                    String bah = item.getBah() == null ? "unknown" : item.getBah();
-                    String entryName = bah + "/" + file.getName();
-                    zos.putNextEntry(new ZipEntry(entryName));
-                    try (FileInputStream fis = new FileInputStream(file)) {
-                        int len;
-                        while ((len = fis.read(buffer)) != -1) {
-                            zos.write(buffer, 0, len);
-                        }
-                    }
-                    zos.closeEntry();
-                }
-                zos.finish();
-            } catch (IOException e) {
-                logger.error("batch download streaming failed", e);
-                throw e;
-            }
-        };
-
+        StreamingResponseBody body = outputStream -> archiveExportService.writeBatchZip(export, outputStream);
         String fileName = "scan-batch-" + System.currentTimeMillis() + ".zip";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(body);
-    }
-
-    private Path buildImagePath(PathDO item) {
-        String folder = item.getFolder();
-        String brxh = item.getBrxh();
-        String bah = item.getBah();
-        String filename = item.getFilename();
-
-        if (folder == null || folder.length() < 5 || brxh == null || bah == null || filename == null) {
-            logger.warn("incomplete file params: folder={}, brxh={}, bah={}, filename={}", folder, brxh, bah, filename);
-            return null;
-        }
-
-        if (folder.contains("..") || brxh.contains("..") || bah.contains("..") || filename.contains("..")) {
-            logger.warn("path traversal detected: folder={}, brxh={}, bah={}, filename={}", folder, brxh, bah, filename);
-            return null;
-        }
-
-        String parentFolder = folder.substring(0, 5);
-        String folderName = brxh + "-" + bah;
-        Path resolved = Paths.get(basePath, parentFolder, folder, folderName, filename).normalize();
-        if (!resolved.startsWith(Paths.get(basePath).normalize())) {
-            logger.warn("path traversal blocked: {}", resolved);
-            return null;
-        }
-        return resolved;
     }
 }

@@ -19,6 +19,13 @@ public class AuthUser {
     private String roleName;
     private String permissionsCsv;
     private String status;
+    private Boolean mustChangePassword;
+    private Integer passwordVersion;
+    private LocalDateTime passwordChangedAt;
+    private LocalDateTime temporaryPasswordExpiresAt;
+    private Long createdBy;
+    private LocalDateTime passwordResetAt;
+    private Long passwordResetBy;
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -31,6 +38,14 @@ public class AuthUser {
     @JsonIgnore
     public String getPermissionsCsv() {
         return permissionsCsv;
+    }
+
+    public boolean isPasswordChangeRequired() {
+        return Boolean.TRUE.equals(mustChangePassword);
+    }
+
+    public int effectivePasswordVersion() {
+        return passwordVersion == null || passwordVersion < 1 ? 1 : passwordVersion;
     }
 
     public List<String> getPermissions() {

@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.dto.resp;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +31,14 @@ public class PageResult<T> {
     @Schema(description = "总页数", example = "10")
     private int totalPages;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "下一页游标时间；与 nextCursorId 成对使用")
+    private String nextCursorAccessTime;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "下一页游标日志 ID；与 nextCursorAccessTime 成对使用")
+    private Long nextCursorId;
+
     public static <T> PageResult<T> of(List<T> list, long total, int page, int size) {
         int totalPages = size <= 0 ? 0 : (int) Math.ceil((double) total / size);
         return PageResult.<T>builder()
@@ -47,5 +56,11 @@ public class PageResult<T> {
 
     public boolean hasPrevious() {
         return page > 1;
+    }
+
+    public PageResult<T> withNextCursor(String accessTime, Long id) {
+        this.nextCursorAccessTime = accessTime;
+        this.nextCursorId = id;
+        return this;
     }
 }

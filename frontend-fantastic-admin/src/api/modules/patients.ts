@@ -6,8 +6,11 @@ export interface PatientRecord {
   idCard?: string
   bah?: string
   name?: string
+  ruyuan?: string
   admissiontime?: string
   department?: string
+  bingqu?: string
+  chuangwei?: string
 }
 
 /** GET /api/v1/patients — 分页查询患者列表 */
@@ -24,4 +27,3 @@ export function getPatientByBah(bah: string) {
 export function getPatientByIdCard(idCard: string) {
   return getRequest<PatientRecord[]>(`/api/v1/patients/idcard/${idCard}`)
 }
-

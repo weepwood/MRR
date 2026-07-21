@@ -17,11 +17,22 @@ declare namespace Settings {
      */
     colorScheme?: 'light' | 'dark' | ''
     /**
+     * 主题主色（十六进制颜色）
+     * @默认值 `'#2563eb'`
+     */
+    themeColor?: string
+    /**
      * 圆角系数
      * @默认值 `0.5`
      * @可选值 `0到1区间的任意值`
      */
     radius?: number
+    /**
+     * 页面标题容器风格
+     * @默认值 `'card'` 使用带背景和装饰的 Hero 卡片
+     * @可选值 `'plain'` 标题直接位于页面内容层级
+     */
+    pageTitleStyle?: 'plain' | 'card'
     /**
      * 是否开启哀悼模式
      * @默认值 `false`

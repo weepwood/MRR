@@ -800,7 +800,7 @@ import { Search, Edit, Delete } from 'lucide-vue-next'
 
 | 变量 | 环境 | 默认值 | 说明 |
 |------|------|--------|------|
-| `VITE_APP_TITLE` | 全部 | MRR-ADMIN | 应用标题 |
+| `VITE_APP_TITLE` | 全部 | MRR 管理系统 | 应用标题 |
 | `VITE_APP_API_BASEURL` | dev | `http://localhost:18045` | 后端 API 地址 |
 | `VITE_APP_API_BASEURL` | prod | `/` | 生产环境同域或反向代理 |
 | `VITE_BUILD_MOCK` | test | true | 测试环境启用 Mock |

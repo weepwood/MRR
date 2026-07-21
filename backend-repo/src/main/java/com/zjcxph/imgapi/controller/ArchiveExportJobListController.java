@@ -47,7 +47,8 @@ public class ArchiveExportJobListController {
         }
         int safeLimit = Math.max(1, Math.min(limit, 20));
         List<ArchiveExportJobResponse> jobs = repository
-                .findActiveByOwner(session.getUsername(), normalizedFormat, safeLimit)
+                .findActiveByOwner(
+                        session.getId(), session.getUsername(), normalizedFormat, safeLimit)
                 .stream()
                 .map(ArchiveExportJobResponse::from)
                 .toList();
@@ -57,7 +58,8 @@ public class ArchiveExportJobListController {
     private AuthSession session(HttpServletRequest request) {
         AuthSession session = (AuthSession) request.getAttribute(
                 AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE);
-        if (session == null || session.getUsername() == null || session.getUsername().isBlank()) {
+        if (session == null || session.getId() == null
+                || session.getUsername() == null || session.getUsername().isBlank()) {
             throw new BusinessException(401, "请先登录");
         }
         return session;

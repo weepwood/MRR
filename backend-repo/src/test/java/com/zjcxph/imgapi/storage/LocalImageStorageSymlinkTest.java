@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LocalImageStorageSymlinkTest {
@@ -40,5 +41,33 @@ class LocalImageStorageSymlinkTest {
         assertThatThrownBy(() -> storage.open(image))
                 .isInstanceOf(InvalidImagePathException.class)
                 .hasMessageContaining("符号链接越过");
+    }
+
+    @Test
+    void resolvesHighBahBySjhInsteadOfBrxh() throws Exception {
+        Path root = Files.createDirectory(tempDir.resolve("high-bah-root"));
+        ImageProperties properties = new ImageProperties();
+        properties.setBasePath(root.toString());
+        LocalImageStorage storage = new LocalImageStorage(properties);
+        PathDO image = new PathDO(
+                1,
+                "24.04.07",
+                "0013.jpg",
+                "666666",
+                "10000000",
+                "00789124",
+                "AUTO",
+                null,
+                null,
+                null,
+                null);
+
+        assertThat(storage.resolve(image)).isEqualTo(
+                root.resolve("24.04")
+                        .resolve("24.04.07")
+                        .resolve("00789124-10000000")
+                        .resolve("0013.jpg")
+                        .toAbsolutePath()
+                        .normalize());
     }
 }

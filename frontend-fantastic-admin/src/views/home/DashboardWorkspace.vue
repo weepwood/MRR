@@ -4,8 +4,8 @@ import type {
   DashboardWidgetPreference,
   DashboardWidgetSize,
 } from './dashboard-widgets'
-import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -239,7 +239,9 @@ const preferencesById = computed(() => new Map(preferences.value.map(item => [it
 
 const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferences(preferences.value).flatMap((preference) => {
   const definition = definitionsById.get(preference.id)
-  if (!definition || !preference.visible || !canAccessWidget(definition)) return []
+  if (!definition || !preference.visible || !canAccessWidget(definition)) {
+    return []
+  }
   return [{ ...definition, ...preference }]
 }))
 
@@ -292,12 +294,16 @@ function getSizeLabel(size: DashboardWidgetSize) {
 }
 
 function openWidget(widget: DashboardWidgetView) {
-  if (editMode.value) return
+  if (editMode.value) {
+    return
+  }
   void router.push(widget.path)
 }
 
 function handleWidgetKeydown(event: KeyboardEvent, widget: DashboardWidgetView) {
-  if (editMode.value || (event.key !== 'Enter' && event.key !== ' ')) return
+  if (editMode.value || (event.key !== 'Enter' && event.key !== ' ')) {
+    return
+  }
   event.preventDefault()
   openWidget(widget)
 }
@@ -309,7 +315,9 @@ function handleDragStart(event: DragEvent, widgetId: string) {
   }
   draggedWidgetId.value = widgetId
   event.dataTransfer?.setData('text/plain', widgetId)
-  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
 }
 
 function handleDragEnter(widgetId: string) {
@@ -319,13 +327,17 @@ function handleDragEnter(widgetId: string) {
 }
 
 function handleDrop(event: DragEvent, targetWidgetId: string) {
-  if (!editMode.value) return
+  if (!editMode.value) {
+    return
+  }
   const sourceWidgetId = draggedWidgetId.value || event.dataTransfer?.getData('text/plain') || ''
   const source = getWidgetPreference(sourceWidgetId)
   const target = getWidgetPreference(targetWidgetId)
   dragOverWidgetId.value = ''
   draggedWidgetId.value = ''
-  if (!source || !target || sourceWidgetId === targetWidgetId) return
+  if (!source || !target || sourceWidgetId === targetWidgetId) {
+    return
+  }
   if (source.pinned !== target.pinned) {
     ElMessage.info('置顶组件与普通组件需要先设置为相同置顶状态后再排序')
     return
@@ -363,7 +375,9 @@ function handleSizeChange(widgetId: string, value: unknown) {
 function openWidgetEditor(widgetId: string) {
   const preference = getWidgetPreference(widgetId)
   const definition = definitionsById.get(widgetId)
-  if (!preference || !definition) return
+  if (!preference || !definition) {
+    return
+  }
   editingWidgetId.value = widgetId
   editorForm.title = preference.title
   editorForm.description = preference.description
@@ -373,7 +387,9 @@ function openWidgetEditor(widgetId: string) {
 
 function restoreEditorDefaults() {
   const definition = definitionsById.get(editingWidgetId.value)
-  if (!definition) return
+  if (!definition) {
+    return
+  }
   editorForm.title = definition.title
   editorForm.description = definition.description
   editorForm.size = definition.defaultSize
@@ -381,7 +397,9 @@ function restoreEditorDefaults() {
 
 function saveWidgetEditor() {
   const definition = definitionsById.get(editingWidgetId.value)
-  if (!definition) return
+  if (!definition) {
+    return
+  }
   applyPreferences(updateWidgetPreference(preferences.value, editingWidgetId.value, {
     title: editorForm.title.trim() || definition.title,
     description: editorForm.description.trim() || definition.description,
@@ -393,10 +411,21 @@ function saveWidgetEditor() {
 
 function handleWidgetCommand(command: unknown, widget: DashboardWidgetView) {
   const normalizedCommand = String(command)
-  if (normalizedCommand === 'edit') openWidgetEditor(widget.id)
-  if (normalizedCommand === 'pin') toggleWidgetPinned(widget.id)
-  if (normalizedCommand === 'hide') setWidgetVisible(widget.id, false)
-  if (normalizedCommand.startsWith('size:')) handleSizeChange(widget.id, normalizedCommand.slice(5))
+  switch (normalizedCommand) {
+    case 'edit':
+      openWidgetEditor(widget.id)
+      break
+    case 'pin':
+      toggleWidgetPinned(widget.id)
+      break
+    case 'hide':
+      setWidgetVisible(widget.id, false)
+      break
+    default:
+      if (normalizedCommand.startsWith('size:')) {
+        handleSizeChange(widget.id, normalizedCommand.slice(5))
+      }
+  }
 }
 
 async function resetDashboard() {
@@ -861,8 +890,8 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: 6px;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 9px;
   margin-top: auto;
+  padding-top: 9px;
   font-size: 10px;
   color: var(--mrr-muted-foreground);
 }
@@ -988,8 +1017,8 @@ watch(storageKey, loadPreferences, { immediate: true })
   }
 
   .widget-manager-item :deep(.el-switch) {
-    grid-row: 2;
     grid-column: 3;
+    grid-row: 2;
   }
 }
 

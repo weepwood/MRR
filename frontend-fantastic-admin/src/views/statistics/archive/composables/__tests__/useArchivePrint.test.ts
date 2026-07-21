@@ -1,6 +1,8 @@
 import type { GalleryImage } from '../../types'
+import { effectScope } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useArchivePrint } from '../useArchivePrint'
+import { ARCHIVE_SELECTION_CHANGED_EVENT } from '../useSelection'
 
 const api = vi.hoisted(() => ({
   getArchivePdfExportPlan: vi.fn(),
@@ -39,7 +41,6 @@ describe('useArchivePrint', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     permission.auth.mockReturnValue(true)
-    api.listActiveArchiveExportJobs.mockResolvedValue({ data: [] })
   })
 
   it('规划接口拒绝时不会继续在浏览器生成 PDF', async () => {
@@ -117,5 +118,46 @@ describe('useArchivePrint', () => {
     expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
     expect(clientPdf.createPdfFromImageUrls).not.toHaveBeenCalled()
     dismissPdfJob()
+  })
+
+  it('选中图片变化后不会继续显示或下载上一次 PDF 任务', async () => {
+    api.getArchivePdfExportPlan.mockResolvedValue({
+      data: {
+        executionMode: 'BACKEND_JOB',
+        wholeArchive: false,
+      },
+    })
+    api.createArchiveExportJob.mockResolvedValue({
+      data: {
+        id: 'job-old-selection',
+        format: 'PDF',
+        scope: 'SELECTED_IMAGES',
+        status: 'SUCCESS',
+        plannedCount: 2,
+        processedCount: 2,
+        failedCount: 0,
+        estimatedBytes: 1024,
+        outputBytes: 900,
+        cancelRequested: false,
+      },
+    })
+    const scope = effectScope()
+    const composable = scope.run(() => useArchivePrint())
+    expect(composable).toBeDefined()
+    if (!composable) return
+
+    await composable.exportSelectedPdf([
+      { id: 1, bah: '00789508', sjh: '', imageUrl: '/1.jpg' },
+      { id: 2, bah: '00789508', sjh: '', imageUrl: '/2.jpg' },
+    ])
+    expect(composable.pdfJob.value?.id).toBe('job-old-selection')
+
+    window.dispatchEvent(new CustomEvent(ARCHIVE_SELECTION_CHANGED_EVENT, {
+      detail: { keys: ['3'] },
+    }))
+
+    expect(composable.pdfJob.value).toBeNull()
+    expect(api.downloadArchiveExportJob).not.toHaveBeenCalled()
+    scope.stop()
   })
 })

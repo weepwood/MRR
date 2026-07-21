@@ -72,6 +72,11 @@ async function downloadAsBlob(job: ArchiveExportJob, fileName: string): Promise<
   return 'blob'
 }
 
+/** 后台任务完成后直接交给浏览器下载，避免额外弹出文件保存对话框。 */
+export function downloadExportJobToBrowser(job: ArchiveExportJob): Promise<'blob'> {
+  return downloadAsBlob(job, uniqueFileName(job))
+}
+
 export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
   const fileName = uniqueFileName(job)
   const totalBytes = Number(job.outputBytes || 0)

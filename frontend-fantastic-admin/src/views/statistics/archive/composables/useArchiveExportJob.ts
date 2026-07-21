@@ -9,7 +9,10 @@ import {
   createArchiveExportJob,
   getArchiveExportJob,
 } from '@/api/modules/archive-export'
-import { downloadExportJobWithResume } from '../utils/resumable-export-download'
+import {
+  downloadExportJobToBrowser,
+  downloadExportJobWithResume,
+} from '../utils/resumable-export-download'
 
 function createIdempotencyKey(request: CreateArchiveExportJobRequest): string {
   const random = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -68,7 +71,14 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
         stopPolling()
         cancelling.value = false
         if (job.value?.status === 'SUCCESS') {
-          ElMessage.success('病案导出文件已生成，可在按钮上下载')
+          const completedJob = job.value
+          try {
+            await downloadExportJobToBrowser(completedJob)
+            ElMessage.success('病案导出文件已生成，已开始下载')
+          }
+          catch (error: unknown) {
+            ElMessage.error((error as { message?: string })?.message || '导出文件已生成，请点击按钮重新下载')
+          }
         }
         else if (job.value?.status === 'FAILED') {
           ElMessage.error(job.value.errorMessage || '病案导出任务失败')
@@ -107,10 +117,11 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       }
       applyJob(response.data)
       ElMessage.info('病案较大，已转为后台生成任务，进度将在按钮上显示')
-      if (!isTerminal(job.value.status)) {
-        schedulePoll(job.value.id, token, 500)
+      const createdJob = job.value
+      if (createdJob && !isTerminal(createdJob.status)) {
+        schedulePoll(createdJob.id, token, 500)
       }
-      return job.value
+      return createdJob
     }
     finally {
       if (token === generation) creating.value = false

@@ -170,7 +170,7 @@ export function useArchivePrint() {
 
     const ids = images
       .map(image => image.id)
-      .filter((id): id is string | number => id !== undefined && id !== null)
+      .filter((id): id is number => id !== undefined)
     if (ids.length !== images.length) {
       throw new Error('部分影像缺少记录 ID，无法生成 PDF')
     }

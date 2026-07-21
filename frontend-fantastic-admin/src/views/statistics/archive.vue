@@ -135,11 +135,22 @@ const pdfButtonLoading = computed(() =>
 )
 const downloadButtonType = computed(() => resolveExportButtonType(downloadJob.value, ''))
 const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, 'primary'))
-const downloadButtonDetail = computed(() => describeExportJob(downloadJob.value, '下载整份病案影像'))
-const pdfButtonDetail = computed(() => describeExportJob(
-  pdfJob.value,
-  selectedCount.value ? `已选择 ${selectedCount.value} 张影像` : '请先选择影像',
-))
+const downloadButtonLabel = computed(() => {
+  const job = downloadJob.value
+  if (job?.status === 'PENDING' || job?.status === 'PROCESSING') {
+    const total = Math.max(0, Number(job.plannedCount || 0))
+    const completed = Math.min(total, Math.max(0, Number(job.processedCount || 0)))
+    return total > 0
+      ? `下载病案（后端生成 ${completed}/${total}）`
+      : '下载病案（后端生成）'
+  }
+  if (job?.status === 'SUCCESS') {
+    const imageCount = Math.max(0, Number(job.processedCount || job.plannedCount || 0))
+    return `下载病案（${imageCount} 张，${formatBytes(job.outputBytes)}）`
+  }
+  return '下载病案（整份病案）'
+})
+const pdfButtonLabel = computed(() => `导出 PDF（${selectedCount.value}）`)
 
 const selectionStorageKey = computed(() => {
   const bah = normalizeSearchParam(searchBah.value)
@@ -177,33 +188,6 @@ function formatBytes(value: number | undefined): string {
     index++
   }
   return `${amount >= 10 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`
-}
-
-function shortError(message: string | undefined): string {
-  const text = String(message || '生成失败').trim()
-  return text.length > 18 ? `${text.slice(0, 18)}…` : text
-}
-
-function describeExportJob(job: ArchiveExportJob | null, idleText: string): string {
-  if (!job) return idleText
-  const total = Math.max(0, Number(job.plannedCount || 0))
-  const completed = Math.min(total, Math.max(0, Number(job.processedCount || 0)))
-  switch (job.status) {
-    case 'PENDING':
-      return `等待生成 · ${completed}/${total} 张 · 点击取消`
-    case 'PROCESSING':
-      return `生成中 · ${completed}/${total} 张 · 点击取消`
-    case 'SUCCESS':
-      return `已生成 ${formatBytes(job.outputBytes)} · 点击下载`
-    case 'FAILED':
-      return `${shortError(job.errorMessage)} · 点击重试`
-    case 'CANCELLED':
-      return '已取消 · 点击重新生成'
-    case 'EXPIRED':
-      return '文件已过期 · 点击重新生成'
-    default:
-      return idleText
-  }
 }
 
 function resolveExportButtonType(job: ArchiveExportJob | null, idleType: '' | 'primary') {
@@ -759,16 +743,13 @@ onUnmounted(() => {
 
         <div v-if="images.length > 0" class="archive-bottom-actions">
           <el-button
-            class="download-action export-action-button"
+            class="download-action"
             :type="downloadButtonType || undefined"
             :icon="Download"
             :loading="downloadButtonLoading"
             @click="handleDownloadAction"
           >
-            <span class="export-action-content">
-              <strong>下载文件</strong>
-              <small>{{ downloadButtonDetail }}</small>
-            </span>
+            {{ downloadButtonLabel }}
           </el-button>
           <el-button :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
             打印选中<template v-if="selectedCount">
@@ -776,17 +757,13 @@ onUnmounted(() => {
             </template>
           </el-button>
           <el-button
-            class="export-action-button"
             :type="pdfButtonType || undefined"
             :icon="Document"
             :loading="pdfButtonLoading"
             :disabled="!pdfJob && !selectedCount"
             @click="handleExportPdfAction"
           >
-            <span class="export-action-content">
-              <strong>导出 PDF</strong>
-              <small>{{ pdfButtonDetail }}</small>
-            </span>
+            {{ pdfButtonLabel }}
           </el-button>
         </div>
       </section>
@@ -942,35 +919,6 @@ onUnmounted(() => {
 .archive-bottom-actions :deep(.el-button) {
   min-width: 0;
   margin: 0;
-}
-
-.archive-bottom-actions :deep(.export-action-button) {
-  height: auto;
-  min-height: 50px;
-  padding-block: 7px;
-  white-space: normal;
-}
-
-.export-action-content {
-  display: grid;
-  min-width: 0;
-  line-height: 1.2;
-  text-align: left;
-}
-
-.export-action-content strong {
-  font-size: 13px;
-}
-
-.export-action-content small {
-  margin-top: 3px;
-  overflow: hidden;
-  font-size: 10px;
-  font-weight: 400;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.82;
 }
 
 :global(body.archive-immersive .toolbar-container) {

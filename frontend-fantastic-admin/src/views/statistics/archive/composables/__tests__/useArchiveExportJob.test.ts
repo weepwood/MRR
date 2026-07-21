@@ -16,8 +16,14 @@ const message = vi.hoisted(() => ({
   success: vi.fn(),
 }))
 
+const exportDownload = vi.hoisted(() => ({
+  downloadExportJobToBrowser: vi.fn(),
+  downloadExportJobWithResume: vi.fn(),
+}))
+
 vi.mock('@/api/modules/archive-export', () => api)
 vi.mock('element-plus', () => ({ ElMessage: message }))
+vi.mock('../../utils/resumable-export-download', () => exportDownload)
 
 function job(id: string, status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'CANCELLED') {
   return {
@@ -97,6 +103,24 @@ describe('useArchiveExportJob', () => {
 
     expect(composable.job.value?.status).toBe('CANCELLED')
     expect(composable.cancelling.value).toBe(false)
+    scope.stop()
+  })
+
+  it('任务完成后自动下载完整的导出文件', async () => {
+    const completedJob = job('job-complete', 'SUCCESS')
+    api.createArchiveExportJob.mockResolvedValue({ data: job('job-complete', 'PROCESSING') })
+    api.getArchiveExportJob.mockResolvedValue({ data: completedJob })
+    exportDownload.downloadExportJobToBrowser.mockResolvedValue('blob')
+
+    const scope = effectScope()
+    const composable = scope.run(() => useArchiveExportJob('PDF'))
+    expect(composable).toBeDefined()
+    if (!composable) return
+
+    await composable.start({ format: 'PDF', ids: [1, 2] })
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob)
     scope.stop()
   })
 })

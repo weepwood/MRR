@@ -76,11 +76,12 @@ public class ImageUrlService {
                                  String brxh,
                                  String bah,
                                  String sjh) {
-        if (brxh == null || filename == null || filename.isBlank()) {
+        if (filename == null || filename.isBlank()) {
             return null;
         }
         String paddedBah = normalizeCode(bah);
-        String folderKey = paddedBah.compareTo("10000000") >= 0 ? sjh : brxh;
+        boolean useSjh = paddedBah.compareTo("10000000") >= 0;
+        String folderKey = useSjh ? sjh : brxh;
         if (folderKey == null || folderKey.isBlank()) {
             return null;
         }

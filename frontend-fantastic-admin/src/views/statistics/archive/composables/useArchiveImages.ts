@@ -3,7 +3,10 @@ import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modul
 import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
-import { downloadArchiveZip } from '@/api/modules/archive-export'
+import {
+  downloadArchiveZip,
+  getArchiveZipExportPlan,
+} from '@/api/modules/archive-export'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
 import {
   getArchiveCasesByIdCard,
@@ -17,6 +20,7 @@ import {
   resolveArchiveLookup,
 } from '@/utils/medical-record-code'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
+import { useArchiveExportJob } from './useArchiveExportJob'
 import { addArchiveSearchHistory } from './useArchiveSearchHistory'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -36,6 +40,7 @@ function saveBlob(blob: Blob, fileName: string) {
 
 export function useArchiveImages() {
   const { auth } = useAuth()
+  const exportJob = useArchiveExportJob()
   const images = shallowRef<GalleryImage[]>([])
   const patientList = shallowRef<PatientInfo[]>([])
   const archiveCases = shallowRef<IdCardArchiveCase[]>([])
@@ -54,7 +59,6 @@ export function useArchiveImages() {
 
   async function loadPatient(bah: string): Promise<void> {
     if (!bah || requiresSjhForBah(bah)) {
-      // 患者表没有上架号，非唯一病案号无法可靠关联患者，避免显示第一条同号患者。
       patientList.value = []
       return
     }
@@ -231,6 +235,11 @@ export function useArchiveImages() {
 
     downloading.value = true
     try {
+      const plan = await getArchiveZipExportPlan(bah || undefined, sjh || undefined)
+      if (plan.data?.executionMode === 'BACKEND_JOB') {
+        await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
+        return
+      }
       const archiveBlob = await downloadArchiveZip(bah || undefined, sjh || undefined)
       saveBlob(archiveBlob, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
       ElMessage.success('档案袋已由服务器打包并开始下载')
@@ -289,12 +298,18 @@ export function useArchiveImages() {
     searchIdCard,
     idCardToken,
     maskedIdCard,
+    downloadJob: exportJob.job,
+    downloadJobCancelling: exportJob.cancelling,
+    downloadJobDownloading: exportJob.downloading,
     loadImages,
     loadArchiveCasesByIdCard,
     loadArchiveCasesByToken,
     setPatientFromArchiveCase,
     clearIdCardSearch,
     handleDownload,
+    cancelDownloadJob: exportJob.cancel,
+    downloadPreparedArchive: exportJob.download,
+    dismissDownloadJob: exportJob.dismiss,
     saveImageType,
   }
 }

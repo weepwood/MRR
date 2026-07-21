@@ -10,6 +10,7 @@ import {
   getArchiveCasesByToken,
   getPatientByBah,
 } from '@/api/modules/search'
+import useAuth from '@/utils/composables/useAuth'
 import {
   normalizeMedicalRecordCode,
   requiresSjhForBah,
@@ -34,6 +35,7 @@ function saveBlob(blob: Blob, fileName: string) {
 }
 
 export function useArchiveImages() {
+  const { auth } = useAuth()
   const images = shallowRef<GalleryImage[]>([])
   const patientList = shallowRef<PatientInfo[]>([])
   const archiveCases = shallowRef<IdCardArchiveCase[]>([])
@@ -215,6 +217,10 @@ export function useArchiveImages() {
   }
 
   async function handleDownload(): Promise<void> {
+    if (!auth('record:download')) {
+      ElMessage.warning('当前账号没有病案下载权限')
+      return
+    }
     const firstImage = images.value[0]
     const bah = padCode(searchBah.value || firstImage?.bah || '')
     const sjh = padCode(searchSjh.value || firstImage?.sjh || '')

@@ -140,6 +140,30 @@ class ScanMapperPostgresqlIT {
     }
 
     @Test
+    @DisplayName("主档保留短编号时可通过兼容搜索词进入快速路径")
+    void resolvesArchiveIdAcrossPaddingFormats() {
+        Long archiveId = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_archive (bah)
+                VALUES ('54321')
+                RETURNING id
+                """, Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (archive_id, brxh, bah, filename, pages, uploadflag, folder)
+                VALUES (?, '605746', '54321', 'mixed-format.jpg', 1, 1, '25.03.15')
+                """, archiveId);
+
+        Long exactArchiveId = scanMapper.resolveArchiveId("00054321", "");
+        Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode("54321", "");
+        List<Scan> results = scanMapper.findActiveByArchiveId(compatibleArchiveId);
+
+        assertThat(exactArchiveId).isNull();
+        assertThat(compatibleArchiveId).isEqualTo(archiveId);
+        assertThat(results).extracting(Scan::getFilename)
+                .containsExactly("mixed-format.jpg");
+    }
+
+    @Test
     @DisplayName("兼容查询排除已经软删除的影像")
     void legacyLookupExcludesSoftDeletedScans() {
         jdbcTemplate.update("""

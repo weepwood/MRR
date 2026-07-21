@@ -4,6 +4,7 @@ import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
 import DeveloperSettings from './DeveloperSettings.vue'
+import ExternalLinksSettings from './ExternalLinksSettings.vue'
 import LoginSupportSettings from './LoginSupportSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
@@ -121,6 +122,16 @@ void shellRef
           </el-button>
         </div>
 
+        <div v-else-if="activeSection === 'external-links'" class="sidebar-save-card">
+          <div class="save-status">
+            <span class="status-dot" />
+            <div>
+              <strong>外链设置自动保存</strong>
+              <small>添加或移除后立即保存到当前浏览器。</small>
+            </div>
+          </div>
+        </div>
+
         <div v-else class="sidebar-save-card">
           <div class="save-status">
             <span class="status-dot" />
@@ -161,6 +172,7 @@ void shellRef
           </el-form>
         </div>
         <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
+        <ExternalLinksSettings v-else-if="activeSection === 'external-links'" />
         <AppConfigPanel v-else ref="appConfigRef" />
       </main>
     </div>

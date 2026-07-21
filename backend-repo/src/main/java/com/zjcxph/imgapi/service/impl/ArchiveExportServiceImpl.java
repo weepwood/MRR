@@ -113,17 +113,22 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 String entryName = uniqueEntryName(item, usedEntryNames);
                 try (InputStream input = imageStorage.open(item)) {
                     zip.putNextEntry(new ZipEntry(entryName));
+                    long entryBytes = 0;
                     int read;
                     while ((read = input.read(buffer)) != -1) {
                         ensureNotCancelled(effectiveProgress);
                         zip.write(buffer, 0, read);
+                        entryBytes += read;
+                    }
+                    if (entryBytes <= 0) {
+                        throw new IOException("图片内容为空");
                     }
                     zip.closeEntry();
                 } catch (ArchiveExportCancelledException exception) {
                     throw exception;
                 } catch (IOException exception) {
                     logger.error("ZIP 导出影像失败: entry={}", entryName, exception);
-                    throw new IOException("无法读取导出影像: " + entryName, exception);
+                    throw exportReadFailure("无法读取导出影像: " + entryName, exception);
                 }
                 completed++;
                 effectiveProgress.onItemCompleted(completed, export.itemCount(), item);
@@ -151,9 +156,12 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 } catch (ArchiveExportCancelledException exception) {
                     throw exception;
                 } catch (IOException exception) {
-                    throw new IOException("无法读取 PDF 影像: " + imageName, exception);
+                    throw exportReadFailure("无法读取 PDF 影像: " + imageName, exception);
                 }
                 ensureNotCancelled(effectiveProgress);
+                if (imageBytes.length == 0) {
+                    throw new IOException("PDF 影像内容为空: " + imageName);
+                }
                 if (imageBytes.length > MAX_PDF_IMAGE_BYTES) {
                     throw new IOException("单张影像超过 PDF 导出大小上限: " + imageName);
                 }
@@ -192,6 +200,14 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
             logger.error("病案 PDF 生成失败", exception);
             throw new IOException("病案 PDF 生成失败", exception);
         }
+    }
+
+    private IOException exportReadFailure(String prefix, IOException exception) {
+        String reason = exception.getMessage();
+        if (reason == null || reason.isBlank() || prefix.equals(reason)) {
+            return new IOException(prefix, exception);
+        }
+        return new IOException(prefix + "；原因：" + reason, exception);
     }
 
     private void ensureNotCancelled(ExportProgress progress) throws ArchiveExportCancelledException {

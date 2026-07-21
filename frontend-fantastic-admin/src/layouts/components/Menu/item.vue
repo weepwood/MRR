@@ -199,5 +199,9 @@ defineExpose({
   .menu-item-container:active .menu-item-container-icon {
     transform: none;
   }
+
+  .menu-leading-control:hover .menu-leading-control-icon {
+    transform: none !important;
+  }
 }
 </style>

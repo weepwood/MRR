@@ -19,32 +19,75 @@ public interface ScanMapper {
     String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
 
-    @Select("SELECT * FROM mr_scan WHERE " +
+    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND (" +
             "BAH = #{normalizedCode} " +
-            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} " +
-            "ORDER BY pages")
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode}) " +
+            "ORDER BY pages, id")
     List<Scan> findBAH(
             @Param("normalizedCode") String normalizedCode,
             @Param("searchCode") String searchCode
     );
 
+    /**
+     * 通过病案主表精确解析唯一 archive_id。查询操作不创建新的主档记录。
+     */
+    @Select("SELECT app.resolve_archive_id(" +
+            "NULLIF(#{normalizedBah}, ''), NULLIF(#{normalizedSjh}, ''), FALSE)")
+    Long resolveArchiveId(
+            @Param("normalizedBah") String normalizedBah,
+            @Param("normalizedSjh") String normalizedSjh
+    );
+
+    /**
+     * 仅在精确解析失败时兼容历史补零差异；出现多个等价编号时返回 NULL，避免错误关联。
+     */
+    @Select("<script>"
+            + "<choose>"
+            + "<when test='sjhSearchCode != null and sjhSearchCode != \"\"'>"
+            + "SELECT MIN(id) FROM mr_archive WHERE " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode} "
+            + "HAVING COUNT(*) = 1"
+            + "</when>"
+            + "<when test='bahSearchCode != null and bahSearchCode != \"\"'>"
+            + "SELECT MIN(id) FROM mr_archive WHERE " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode} "
+            + "HAVING COUNT(*) = 1"
+            + "</when>"
+            + "<otherwise>SELECT NULL::BIGINT</otherwise>"
+            + "</choose>"
+            + "</script>")
+    Long resolveArchiveIdBySearchCode(
+            @Param("bahSearchCode") String bahSearchCode,
+            @Param("sjhSearchCode") String sjhSearchCode
+    );
+
+    /**
+     * archive_id 快速路径。现有 idx_mr_scan_archive_pages 支持按主档过滤和稳定页序。
+     */
+    @Select("SELECT * FROM mr_scan WHERE archive_id = #{archiveId} " +
+            "AND uploadflag != 0 ORDER BY pages, id")
+    List<Scan> findActiveByArchiveId(@Param("archiveId") Long archiveId);
+
+    /**
+     * 未完成 archive_id 关联的数据兼容查询。
+     */
     @Select("<script>"
             + "SELECT * FROM mr_scan "
             + "<where>"
+            + "uploadflag != 0 "
             + "<choose>"
             + "<when test='normalizedBah != null and normalizedBah != \"\" and normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "(BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
+            + "AND (BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}) "
             + "AND (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
             + "<when test='normalizedBah != null and normalizedBah != \"\"'>"
-            + "BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode}"
+            + "AND (BAH = #{normalizedBah} OR " + BAH_SEARCH_EXPRESSION + " = #{bahSearchCode})"
             + "</when>"
             + "<when test='normalizedSjh != null and normalizedSjh != \"\"'>"
-            + "SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode}"
+            + "AND (SJH = #{normalizedSjh} OR " + SJH_SEARCH_EXPRESSION + " = #{sjhSearchCode})"
             + "</when>"
+            + "<otherwise>AND 1 = 0</otherwise>"
             + "</choose>"
             + "</where>"
-            + " ORDER BY pages"
+            + " ORDER BY pages, id"
             + "</script>")
     List<Scan> findByCode(
             @Param("normalizedBah") String normalizedBah,
@@ -106,8 +149,8 @@ public interface ScanMapper {
     List<Scan> findByCondition(@Param("request") ScanRequest request, @Param("limit") int limit);
 
     List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request,
-                                             @Param("offset") int offset,
-                                             @Param("limit") int limit);
+                                              @Param("offset") int offset,
+                                              @Param("limit") int limit);
 
     long countByCondition(@Param("request") ScanRequest request);
 
@@ -115,8 +158,8 @@ public interface ScanMapper {
             "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +
             "migrated_at = NOW() WHERE id = #{id}")
     int updateOssInfo(@Param("id") Integer id, @Param("ossUrl") String ossUrl,
-                      @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
-                      @Param("migrationStatus") String migrationStatus);
+                       @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
+                       @Param("migrationStatus") String migrationStatus);
 
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND " +
             "(oss_url IS NULL OR oss_url = '') ORDER BY id LIMIT #{limit}")

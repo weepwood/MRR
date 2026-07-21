@@ -111,4 +111,72 @@ class ScanMapperPostgresqlIT {
 
         assertThat(results).extracting(Scan::getBah).contains("00000002").doesNotContain("00000001");
     }
+
+    @Test
+    @DisplayName("通过 mr_archive 解析 archive_id 并只读取有效影像")
+    void queriesActiveScansByResolvedArchiveId() {
+        Long archiveId = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_archive (bah, sjh)
+                VALUES ('00789508', '00000123')
+                RETURNING id
+                """, Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (archive_id, brxh, bah, sjh, filename, pages, uploadflag, folder)
+                VALUES
+                    (?, '605746', '00789508', '00000123', 'active.jpg', 2, 1, '25.03.15'),
+                    (?, '605746', '00789508', '00000123', 'deleted.jpg', 1, 0, '25.03.15')
+                """, archiveId, archiveId);
+
+        Long resolvedArchiveId = scanMapper.resolveArchiveId("00789508", "");
+        List<Scan> results = scanMapper.findActiveByArchiveId(resolvedArchiveId);
+
+        assertThat(resolvedArchiveId).isEqualTo(archiveId);
+        assertThat(results).singleElement().satisfies(scan -> {
+            assertThat(scan.getArchiveId()).isEqualTo(archiveId);
+            assertThat(scan.getFilename()).isEqualTo("active.jpg");
+            assertThat(scan.getUploadFlag()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("主档保留短编号时可通过兼容搜索词进入快速路径")
+    void resolvesArchiveIdAcrossPaddingFormats() {
+        Long archiveId = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_archive (bah)
+                VALUES ('54321')
+                RETURNING id
+                """, Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (archive_id, brxh, bah, filename, pages, uploadflag, folder)
+                VALUES (?, '605746', '54321', 'mixed-format.jpg', 1, 1, '25.03.15')
+                """, archiveId);
+
+        Long exactArchiveId = scanMapper.resolveArchiveId("00054321", "");
+        Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode("54321", "");
+        List<Scan> results = scanMapper.findActiveByArchiveId(compatibleArchiveId);
+
+        assertThat(exactArchiveId).isNull();
+        assertThat(compatibleArchiveId).isEqualTo(archiveId);
+        assertThat(results).extracting(Scan::getFilename)
+                .containsExactly("mixed-format.jpg");
+    }
+
+    @Test
+    @DisplayName("兼容查询排除已经软删除的影像")
+    void legacyLookupExcludesSoftDeletedScans() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (brxh, bah, filename, pages, uploadflag, folder)
+                VALUES
+                    ('605746', '00990001', 'active-legacy.jpg', 2, 1, '25.03.15'),
+                    ('605746', '00990001', 'deleted-legacy.jpg', 1, 0, '25.03.15')
+                """);
+
+        List<Scan> results = scanMapper.findByCode("00990001", "990001", "", "");
+
+        assertThat(results).extracting(Scan::getFilename)
+                .containsExactly("active-legacy.jpg");
+    }
 }

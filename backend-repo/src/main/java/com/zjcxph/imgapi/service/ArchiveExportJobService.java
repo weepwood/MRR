@@ -9,13 +9,14 @@ import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,18 +27,20 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 @Service
 public class ArchiveExportJobService {
 
     private static final int MAX_SELECTED_JOB_ITEMS = 10_000;
+    private static final String BAH_REQUIRES_SJH_MESSAGE =
+            "病案号大于等于 10000000 时必须使用上架号导出";
 
     private final ArchiveExportService archiveExportService;
     private final ArchiveExportJobRepository repository;
@@ -75,21 +78,30 @@ public class ArchiveExportJobService {
             throw new BusinessException(400, "导出任务参数不能为空");
         }
         String format = normalizeFormat(request.getFormat());
+        requirePermission(session, format);
         List<String> ids = normalizeIds(request.getIds());
         if (ids.size() > MAX_SELECTED_JOB_ITEMS) {
             throw new BusinessException(400, "单次异步导出最多包含 10000 张影像");
         }
+
+        String bah = MedicalRecordCodeUtils.normalizeOrEmpty(request.getBah());
+        String sjh = MedicalRecordCodeUtils.normalizeOrEmpty(request.getSjh());
+        String scope = ids.isEmpty() ? "WHOLE_ARCHIVE" : "SELECTED_IMAGES";
+        if (ids.isEmpty()) {
+            validateWholeArchiveCode(bah, sjh);
+        }
+        String scanIds = ids.isEmpty() ? null : String.join(",", ids);
         String idempotencyKey = normalizeIdempotencyKey(request.getIdempotencyKey());
         if (idempotencyKey != null) {
             var existing = repository.findByIdempotency(session.getUsername(), idempotencyKey);
             if (existing.isPresent() && !"EXPIRED".equals(existing.get().getStatus())) {
+                if (!matchesRequest(existing.get(), format, scope, bah, sjh, scanIds)) {
+                    throw new BusinessException(409, "幂等键已被其他导出请求使用");
+                }
                 return ArchiveExportJobResponse.from(existing.get());
             }
         }
 
-        String bah = normalize(request.getBah());
-        String sjh = normalize(request.getSjh());
-        String scope = ids.isEmpty() ? "WHOLE_ARCHIVE" : "SELECTED_IMAGES";
         ArchiveExportService.BatchZipExport export = ids.isEmpty()
                 ? archiveExportService.prepareArchive(bah, sjh)
                 : archiveExportService.prepareSelectedArchive(ids);
@@ -106,7 +118,7 @@ public class ArchiveExportJobService {
         job.setStatus("PENDING");
         job.setBah(bah);
         job.setSjh(sjh);
-        job.setScanIds(ids.isEmpty() ? null : String.join(",", ids));
+        job.setScanIds(scanIds);
         job.setPlannedCount(export.itemCount());
         job.setEstimatedBytes(estimateBytes(export));
         job.setSourceSummary(String.join(",", export.sourceSummary()));
@@ -117,9 +129,12 @@ public class ArchiveExportJobService {
         try {
             repository.insert(job);
         } catch (DuplicateKeyException exception) {
-            return repository.findByIdempotency(session.getUsername(), idempotencyKey)
-                    .map(ArchiveExportJobResponse::from)
+            ArchiveExportJob existing = repository.findByIdempotency(session.getUsername(), idempotencyKey)
                     .orElseThrow(() -> exception);
+            if (!matchesRequest(existing, format, scope, bah, sjh, scanIds)) {
+                throw new BusinessException(409, "幂等键已被其他导出请求使用");
+            }
+            return ArchiveExportJobResponse.from(existing);
         }
         submit(job.getId());
         return ArchiveExportJobResponse.from(repository.findById(job.getId()).orElse(job));
@@ -131,6 +146,7 @@ public class ArchiveExportJobService {
 
     public ArchiveExportJobResponse cancel(AuthSession session, String id) {
         ArchiveExportJob job = requireOwned(session, id);
+        requirePermission(session, job.getFormat());
         if (Set.of("SUCCESS", "FAILED", "CANCELLED", "EXPIRED").contains(job.getStatus())) {
             return ArchiveExportJobResponse.from(job);
         }
@@ -144,6 +160,7 @@ public class ArchiveExportJobService {
 
     public Path requireDownloadFile(AuthSession session, String id) throws IOException {
         ArchiveExportJob job = requireOwned(session, id);
+        requirePermission(session, job.getFormat());
         if (job.getExpiresAt() != null && job.getExpiresAt().isBefore(LocalDateTime.now())) {
             tempFileManager.deleteManagedFile(job.getFilePath());
             repository.markExpired(id);
@@ -268,9 +285,8 @@ public class ArchiveExportJobService {
         if (value == null || value.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(value.split(","))
+        return Arrays.stream(value.split(",", -1))
                 .map(String::trim)
-                .filter(item -> !item.isEmpty())
                 .toList();
     }
 
@@ -301,6 +317,29 @@ public class ArchiveExportJobService {
         return stem + "." + job.getFormat().toLowerCase(Locale.ROOT);
     }
 
+    private void validateWholeArchiveCode(String bah, String sjh) {
+        if (bah.isEmpty() && sjh.isEmpty()) {
+            throw new BusinessException(400, "病案号和上架号不能同时为空");
+        }
+        if (MedicalRecordCodeUtils.requiresSjhForBah(bah) && sjh.isEmpty()) {
+            throw new BusinessException(400, BAH_REQUIRES_SJH_MESSAGE);
+        }
+    }
+
+    private boolean matchesRequest(
+            ArchiveExportJob existing,
+            String format,
+            String scope,
+            String bah,
+            String sjh,
+            String scanIds) {
+        return Objects.equals(existing.getFormat(), format)
+                && Objects.equals(existing.getScope(), scope)
+                && Objects.equals(normalize(existing.getBah()), normalize(bah))
+                && Objects.equals(normalize(existing.getSjh()), normalize(sjh))
+                && Objects.equals(normalize(existing.getScanIds()), normalize(scanIds));
+    }
+
     private String normalizeFormat(String value) {
         String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
         if (!normalized.equals("ZIP") && !normalized.equals("PDF")) {
@@ -313,10 +352,7 @@ public class ArchiveExportJobService {
         if (ids == null) {
             return List.of();
         }
-        return ids.stream()
-                .map(this::normalize)
-                .filter(value -> value != null && !value.isBlank())
-                .collect(Collectors.toList());
+        return ids.stream().map(this::normalize).toList();
     }
 
     private String normalize(String value) {
@@ -337,6 +373,13 @@ public class ArchiveExportJobService {
     private void requireSession(AuthSession session) {
         if (session == null || session.getUsername() == null || session.getUsername().isBlank()) {
             throw new BusinessException(401, "请先登录");
+        }
+    }
+
+    private void requirePermission(AuthSession session, String format) {
+        String permission = "PDF".equals(format) ? "record:pdf:export" : "record:download";
+        if (!session.hasPermission(permission)) {
+            throw new BusinessException(403, "没有病案导出权限");
         }
     }
 }

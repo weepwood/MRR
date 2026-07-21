@@ -48,29 +48,47 @@ const {
   handleReset,
 } = useUnifiedSettings()
 
+function clearSavedFeedback() {
+  savedRecently.value = false
+  if (saveFeedbackTimer !== undefined) {
+    window.clearTimeout(saveFeedbackTimer)
+    saveFeedbackTimer = undefined
+  }
+}
+
+function clearDepartmentSavedFeedback() {
+  departmentSavedRecently.value = false
+  if (departmentFeedbackTimer !== undefined) {
+    window.clearTimeout(departmentFeedbackTimer)
+    departmentFeedbackTimer = undefined
+  }
+}
+
 function showSavedFeedback() {
+  clearSavedFeedback()
   savedRecently.value = true
-  if (saveFeedbackTimer !== undefined) window.clearTimeout(saveFeedbackTimer)
   saveFeedbackTimer = window.setTimeout(() => {
     savedRecently.value = false
+    saveFeedbackTimer = undefined
   }, 1200)
 }
 
 function showDepartmentSavedFeedback() {
+  clearDepartmentSavedFeedback()
   departmentSavedRecently.value = true
-  if (departmentFeedbackTimer !== undefined) window.clearTimeout(departmentFeedbackTimer)
   departmentFeedbackTimer = window.setTimeout(() => {
     departmentSavedRecently.value = false
+    departmentFeedbackTimer = undefined
   }, 1200)
 }
 
 async function handleServerSave() {
-  savedRecently.value = false
-  await handleSave()
+  clearSavedFeedback()
+  if (await handleSave()) showSavedFeedback()
 }
 
 async function handleDepartmentSave() {
-  departmentSavedRecently.value = false
+  clearDepartmentSavedFeedback()
   const panel = departmentThemeRef.value
   if (!panel) return
   await panel.saveThemes()
@@ -78,8 +96,12 @@ async function handleDepartmentSave() {
   if (!panel.isDirty) showDepartmentSavedFeedback()
 }
 
-watch([saving, isDirty], ([isSaving, dirty], [wasSaving]) => {
-  if (wasSaving && !isSaving && !dirty) showSavedFeedback()
+watch(isDirty, (dirty) => {
+  if (dirty) clearSavedFeedback()
+})
+
+watch(() => departmentThemeRef.value?.isDirty, (dirty) => {
+  if (dirty) clearDepartmentSavedFeedback()
 })
 
 onUnmounted(() => {

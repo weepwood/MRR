@@ -209,6 +209,7 @@ public class ScanController {
 
     @Operation(summary = "批量下载病案图片（ZIP，流式传输）")
     @PostMapping("/batch-download")
+    @RequirePermissions({"record:download"})
     public ResponseEntity<StreamingResponseBody> batchDownload(@RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
             return ResponseEntity.badRequest().build();

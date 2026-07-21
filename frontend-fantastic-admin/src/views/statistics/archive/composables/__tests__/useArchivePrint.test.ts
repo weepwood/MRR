@@ -6,14 +6,20 @@ const api = vi.hoisted(() => ({
   getArchivePdfExportPlan: vi.fn(),
   downloadArchivePdf: vi.fn(),
   downloadSelectedImagesPdf: vi.fn(),
+  createArchiveExportJob: vi.fn(),
+  getArchiveExportJob: vi.fn(),
+  cancelArchiveExportJob: vi.fn(),
+  downloadArchiveExportJob: vi.fn(),
 }))
 
 const clientPdf = vi.hoisted(() => ({
   createPdfFromImageUrls: vi.fn(),
 }))
 
+const notification = vi.hoisted(() => vi.fn(() => ({ close: vi.fn() })))
 const message = vi.hoisted(() => ({
   error: vi.fn(),
+  info: vi.fn(),
   warning: vi.fn(),
   success: vi.fn(),
 }))
@@ -27,7 +33,7 @@ vi.mock('@/utils/composables/useAuth', () => ({
   default: () => permission,
 }))
 vi.mock('../../utils/client-pdf', () => clientPdf)
-vi.mock('element-plus', () => ({ ElMessage: message }))
+vi.mock('element-plus', () => ({ ElMessage: message, ElNotification: notification }))
 
 describe('useArchivePrint', () => {
   beforeEach(() => {
@@ -53,6 +59,7 @@ describe('useArchivePrint', () => {
     expect(clientPdf.createPdfFromImageUrls).not.toHaveBeenCalled()
     expect(api.downloadArchivePdf).not.toHaveBeenCalled()
     expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
+    expect(api.createArchiveExportJob).not.toHaveBeenCalled()
     expect(message.error).toHaveBeenCalledWith('No permission')
   })
 
@@ -69,5 +76,44 @@ describe('useArchivePrint', () => {
 
     expect(api.getArchivePdfExportPlan).not.toHaveBeenCalled()
     expect(message.warning).toHaveBeenCalledWith('当前账号没有病案 PDF 导出权限')
+  })
+
+  it('服务端规划为 BACKEND_JOB 时创建选中影像异步任务', async () => {
+    api.getArchivePdfExportPlan.mockResolvedValue({
+      data: {
+        executionMode: 'BACKEND_JOB',
+        wholeArchive: false,
+      },
+    })
+    api.createArchiveExportJob.mockResolvedValue({
+      data: {
+        id: 'job-1',
+        format: 'PDF',
+        scope: 'SELECTED_IMAGES',
+        status: 'PENDING',
+        plannedCount: 2,
+        processedCount: 0,
+        failedCount: 0,
+        estimatedBytes: 1024,
+        outputBytes: 0,
+        cancelRequested: false,
+      },
+    })
+    const images: GalleryImage[] = [
+      { id: 1, bah: '00789508', sjh: '', imageUrl: '/1.jpg' },
+      { id: 2, bah: '00789508', sjh: '', imageUrl: '/2.jpg' },
+    ]
+
+    const { exportSelectedPdf } = useArchivePrint()
+    await exportSelectedPdf(images)
+
+    expect(api.createArchiveExportJob).toHaveBeenCalledWith(expect.objectContaining({
+      format: 'PDF',
+      bah: '00789508',
+      ids: [1, 2],
+      idempotencyKey: expect.any(String),
+    }))
+    expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
+    expect(clientPdf.createPdfFromImageUrls).not.toHaveBeenCalled()
   })
 })

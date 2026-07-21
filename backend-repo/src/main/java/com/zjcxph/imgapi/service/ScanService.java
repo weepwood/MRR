@@ -29,6 +29,8 @@ public interface ScanService {
 
     List<PathDO> getImagePathList(List<String> ids);
 
+    List<Scan> findActiveByIds(List<Integer> ids);
+
     int updateImageType(Integer id, Integer type);
 
     Scan create(Scan scan);

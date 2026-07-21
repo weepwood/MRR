@@ -3,7 +3,7 @@ import type {
   CreateArchiveExportJobRequest,
 } from '@/api/modules/archive-export'
 import { ElMessage } from 'element-plus'
-import { h, onScopeDispose, ref } from 'vue'
+import { getCurrentScope, h, onScopeDispose, ref } from 'vue'
 import {
   cancelArchiveExportJob,
   createArchiveExportJob,
@@ -25,7 +25,17 @@ export function useArchiveExportJob() {
   const downloading = ref(false)
   let pollTimer: ReturnType<typeof setTimeout> | undefined
   let notificationHandle: { close: () => void } | undefined
+  let notificationJobId = ''
   let renderVersion = 0
+
+  function applyJob(next: ArchiveExportJob) {
+    if (job.value?.id === next.id) {
+      Object.assign(job.value, next)
+    }
+    else {
+      job.value = next
+    }
+  }
 
   function stopPolling() {
     if (pollTimer) {
@@ -38,14 +48,17 @@ export function useArchiveExportJob() {
     return ['SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED'].includes(status)
   }
 
-  async function renderNotification() {
+  async function renderNotification(force = false) {
     const current = job.value
     const version = ++renderVersion
     if (!current) {
       notificationHandle?.close()
       notificationHandle = undefined
+      notificationJobId = ''
       return
     }
+    if (!force && notificationHandle && notificationJobId === current.id) return
+
     const [{ ElNotification }, { default: ArchiveExportJobPanel }] = await Promise.all([
       import('element-plus'),
       import('../components/ArchiveExportJobPanel.vue'),
@@ -66,6 +79,7 @@ export function useArchiveExportJob() {
         onDismiss: dismiss,
       }),
     })
+    notificationJobId = current.id
   }
 
   async function poll() {
@@ -73,8 +87,7 @@ export function useArchiveExportJob() {
     if (!id) return
     try {
       const response = await getArchiveExportJob(id)
-      if (response.data) job.value = response.data
-      void renderNotification()
+      if (response.data) applyJob(response.data)
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
         if (job.value?.status === 'SUCCESS') {
@@ -102,9 +115,9 @@ export function useArchiveExportJob() {
         idempotencyKey: request.idempotencyKey || createIdempotencyKey(request),
       })
       if (!response.data) throw new Error('服务器未返回导出任务')
-      job.value = response.data
+      applyJob(response.data)
       ElMessage.info('病案较大，已转为后台生成任务')
-      void renderNotification()
+      void renderNotification(true)
       if (!isTerminal(job.value.status)) {
         pollTimer = setTimeout(() => void poll(), 500)
       }
@@ -119,16 +132,16 @@ export function useArchiveExportJob() {
     const id = job.value?.id
     if (!id || isTerminal(job.value.status)) return
     cancelling.value = true
-    void renderNotification()
+    void renderNotification(true)
     try {
       const response = await cancelArchiveExportJob(id)
-      if (response.data) job.value = response.data
+      if (response.data) applyJob(response.data)
       stopPolling()
       ElMessage.info('已提交取消请求')
     }
     finally {
       cancelling.value = false
-      void renderNotification()
+      void renderNotification(true)
     }
   }
 
@@ -136,7 +149,7 @@ export function useArchiveExportJob() {
     const current = job.value
     if (!current || current.status !== 'SUCCESS') return
     downloading.value = true
-    void renderNotification()
+    void renderNotification(true)
     try {
       const mode = await downloadExportJobWithResume(current)
       ElMessage.success(mode === 'resumable' ? '导出文件已分块写入磁盘' : '导出文件已开始下载')
@@ -150,7 +163,7 @@ export function useArchiveExportJob() {
     }
     finally {
       downloading.value = false
-      void renderNotification()
+      void renderNotification(true)
     }
   }
 
@@ -159,14 +172,13 @@ export function useArchiveExportJob() {
     renderVersion++
     notificationHandle?.close()
     notificationHandle = undefined
+    notificationJobId = ''
     job.value = null
   }
 
-  onScopeDispose(() => {
-    stopPolling()
-    renderVersion++
-    notificationHandle?.close()
-  })
+  if (getCurrentScope()) {
+    onScopeDispose(dismiss)
+  }
 
   return {
     job,

@@ -56,9 +56,10 @@ public class ArchiveExportController {
             @RequestParam(required = false) String bah,
             @RequestParam(required = false) String sjh) {
         PreparedArchive prepared = prepareArchive(bah, sjh);
-        String executionMode = shouldUseJob(prepared.export())
-                ? "BACKEND_JOB"
-                : "BACKEND_STREAM";
+        // ZIP 必须在服务器完成全部图片读取、压缩和文件校验后再提供下载。
+        // 继续保留同步接口仅用于旧客户端兼容，新前端统一使用后台任务，
+        // 避免流式响应在中途失败后仍向浏览器留下损坏 ZIP。
+        String executionMode = "BACKEND_JOB";
         return Result.success(planResponse(
                 "ZIP", executionMode, prepared.export().itemCount(),
                 prepared.export().itemCount(), true, prepared.export()));

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  DashboardWidgetColor,
   DashboardWidgetDefinition,
   DashboardWidgetPreference,
   DashboardWidgetSize,
@@ -9,7 +10,6 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
-import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { hasPermission } from '@/utils/session'
 import {
@@ -29,9 +29,18 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const sizeOptions: Array<{ label: string, value: DashboardWidgetSize }> = [
-  { label: '小组件（1×1）', value: 'small' },
-  { label: '宽组件（2×1）', value: 'wide' },
-  { label: '大组件（2×2）', value: 'large' },
+  { label: '标准', value: 'small' },
+  { label: '宽', value: 'wide' },
+  { label: '大', value: 'large' },
+]
+
+const colorOptions: Array<{ label: string, value: DashboardWidgetColor }> = [
+  { label: '默认', value: 'default' },
+  { label: '蓝色', value: 'blue' },
+  { label: '绿色', value: 'green' },
+  { label: '橙色', value: 'orange' },
+  { label: '红色', value: 'red' },
+  { label: '紫色', value: 'purple' },
 ]
 
 const widgetDefinitions: DashboardWidgetDefinition[] = [
@@ -223,6 +232,7 @@ const editorForm = reactive({
   title: '',
   description: '',
   size: 'small' as DashboardWidgetSize,
+  color: 'default' as DashboardWidgetColor,
 })
 
 const storageKey = computed(() => {
@@ -247,7 +257,7 @@ const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferenc
 
 const accessibleWidgetCount = computed(() => accessibleDefinitions.value.length)
 const hiddenWidgetCount = computed(() => accessibleDefinitions.value.filter(definition => !isWidgetVisible(definition.id)).length)
-const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。可以按自己的工作习惯调整小组件内容、大小和位置。`)
+const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。可以按自己的工作习惯调整小组件内容、颜色、大小和位置。`)
 
 function loadPreferences() {
   try {
@@ -289,8 +299,8 @@ function getWidgetSize(widgetId: string): DashboardWidgetSize {
   return getWidgetPreference(widgetId)?.size ?? definitionsById.get(widgetId)?.defaultSize ?? 'small'
 }
 
-function getSizeLabel(size: DashboardWidgetSize) {
-  return sizeOptions.find(option => option.value === size)?.label ?? size
+function getWidgetColor(widgetId: string): DashboardWidgetColor {
+  return getWidgetPreference(widgetId)?.color ?? definitionsById.get(widgetId)?.defaultColor ?? 'default'
 }
 
 function openWidget(widget: DashboardWidgetView) {
@@ -362,13 +372,15 @@ function handleVisibilityChange(widgetId: string, value: unknown) {
   setWidgetVisible(widgetId, value === true)
 }
 
-function setWidgetSize(widgetId: string, size: DashboardWidgetSize) {
-  applyPreferences(updateWidgetPreference(preferences.value, widgetId, { size }))
-}
-
 function handleSizeChange(widgetId: string, value: unknown) {
   if (value === 'small' || value === 'wide' || value === 'large') {
-    setWidgetSize(widgetId, value)
+    applyPreferences(updateWidgetPreference(preferences.value, widgetId, { size: value }))
+  }
+}
+
+function handleColorChange(widgetId: string, value: unknown) {
+  if (value === 'default' || value === 'blue' || value === 'green' || value === 'orange' || value === 'red' || value === 'purple') {
+    applyPreferences(updateWidgetPreference(preferences.value, widgetId, { color: value }))
   }
 }
 
@@ -382,6 +394,7 @@ function openWidgetEditor(widgetId: string) {
   editorForm.title = preference.title
   editorForm.description = preference.description
   editorForm.size = preference.size
+  editorForm.color = preference.color
   editorVisible.value = true
 }
 
@@ -393,6 +406,7 @@ function restoreEditorDefaults() {
   editorForm.title = definition.title
   editorForm.description = definition.description
   editorForm.size = definition.defaultSize
+  editorForm.color = definition.defaultColor ?? 'default'
 }
 
 function saveWidgetEditor() {
@@ -404,6 +418,7 @@ function saveWidgetEditor() {
     title: editorForm.title.trim() || definition.title,
     description: editorForm.description.trim() || definition.description,
     size: editorForm.size,
+    color: editorForm.color,
   }))
   editorVisible.value = false
   ElMessage.success('小组件设置已保存')
@@ -431,7 +446,7 @@ function handleWidgetCommand(command: unknown, widget: DashboardWidgetView) {
 async function resetDashboard() {
   try {
     await ElMessageBox.confirm(
-      '将恢复默认的小组件内容、大小、显示状态和排列顺序。',
+      '将恢复默认的小组件内容、颜色、大小、显示状态和排列顺序。',
       '恢复默认布局',
       {
         type: 'warning',
@@ -456,7 +471,6 @@ watch(storageKey, loadPreferences, { immediate: true })
       eyebrow="Medical Record Repository"
       title="管理概览"
       :description="welcomeDescription"
-      icon="i-ant-design:home-twotone"
     >
       <template #badge>
         <span class="overview-count">
@@ -482,18 +496,11 @@ watch(storageKey, loadPreferences, { immediate: true })
       </template>
     </MrrPageHeader>
 
-    <MrrSectionCard
-      title="我的工作台"
-      :description="editMode ? '拖动小组件调整顺序，通过右上角菜单修改大小、内容或置顶状态。' : '点击小组件快速进入对应模块。'"
-      icon="i-ant-design:appstore-outlined"
-      body-padding="normal"
-    >
-      <template #actions>
-        <span v-if="editMode" class="edit-status">
-          <FaIcon name="i-ri:drag-move-2-line" />
-          正在调整布局
-        </span>
-      </template>
+    <section class="dashboard-workspace" aria-label="我的工作台">
+      <div v-if="editMode" class="dashboard-workspace__notice">
+        <FaIcon name="i-ri:drag-move-2-line" />
+        拖动卡片调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
+      </div>
 
       <div v-if="visibleWidgets.length" class="dashboard-grid" :class="{ 'is-editing': editMode }">
         <article
@@ -502,6 +509,7 @@ watch(storageKey, loadPreferences, { immediate: true })
           class="dashboard-widget"
           :class="[
             `dashboard-widget--${widget.size}`,
+            `dashboard-widget--color-${widget.color}`,
             {
               'is-editing': editMode,
               'is-pinned': widget.pinned,
@@ -534,7 +542,6 @@ watch(storageKey, loadPreferences, { immediate: true })
                   置顶
                 </span>
               </div>
-              <small>{{ getSizeLabel(widget.size) }}</small>
             </div>
 
             <div v-if="editMode" class="dashboard-widget__tools" @click.stop>
@@ -550,15 +557,15 @@ watch(storageKey, loadPreferences, { immediate: true })
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="edit">
-                      <FaIcon name="i-ri:edit-line" />编辑内容
+                      <FaIcon name="i-ri:edit-line" />编辑设置
                     </el-dropdown-item>
                     <el-dropdown-item command="pin">
                       <FaIcon :name="widget.pinned ? 'i-ri:unpin-line' : 'i-ri:pushpin-2-line'" />
                       {{ widget.pinned ? '取消置顶' : '置顶' }}
                     </el-dropdown-item>
-                    <el-dropdown-item divided command="size:small">小组件（1×1）</el-dropdown-item>
-                    <el-dropdown-item command="size:wide">宽组件（2×1）</el-dropdown-item>
-                    <el-dropdown-item command="size:large">大组件（2×2）</el-dropdown-item>
+                    <el-dropdown-item divided command="size:small">标准大小</el-dropdown-item>
+                    <el-dropdown-item command="size:wide">宽卡片</el-dropdown-item>
+                    <el-dropdown-item command="size:large">大卡片</el-dropdown-item>
                     <el-dropdown-item divided command="hide">
                       <FaIcon name="i-ri:eye-off-line" />隐藏组件
                     </el-dropdown-item>
@@ -585,15 +592,15 @@ watch(storageKey, loadPreferences, { immediate: true })
         <p>可以从“小组件管理”中重新启用需要的模块。</p>
         <el-button type="primary" @click="managerVisible = true">管理小组件</el-button>
       </div>
-    </MrrSectionCard>
+    </section>
 
-    <el-dialog v-model="managerVisible" title="管理小组件" width="760px">
+    <el-dialog v-model="managerVisible" title="管理小组件" width="860px">
       <p class="dialog-description">
-        选择首页需要展示的模块，并设置大小和置顶状态。配置只保存在当前浏览器和当前账号下。
+        选择首页需要展示的模块，并设置大小、颜色和置顶状态。配置只保存在当前浏览器和当前账号下。
       </p>
       <div class="widget-manager-list">
         <div v-for="definition in accessibleDefinitions" :key="definition.id" class="widget-manager-item">
-          <span class="widget-manager-item__icon">
+          <span class="widget-manager-item__icon" :class="`widget-manager-item__icon--${getWidgetColor(definition.id)}`">
             <FaIcon :name="definition.icon" />
           </span>
           <div class="widget-manager-item__copy">
@@ -604,9 +611,24 @@ watch(storageKey, loadPreferences, { immediate: true })
             :model-value="getWidgetSize(definition.id)"
             class="widget-size-select"
             :disabled="!isWidgetVisible(definition.id)"
+            aria-label="卡片大小"
             @change="handleSizeChange(definition.id, $event)"
           >
             <el-option v-for="option in sizeOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+          <el-select
+            :model-value="getWidgetColor(definition.id)"
+            class="widget-color-select"
+            :disabled="!isWidgetVisible(definition.id)"
+            aria-label="卡片颜色"
+            @change="handleColorChange(definition.id, $event)"
+          >
+            <el-option v-for="option in colorOptions" :key="option.value" :label="option.label" :value="option.value">
+              <span class="color-option">
+                <span class="color-option__swatch" :class="`color-option__swatch--${option.value}`" />
+                {{ option.label }}
+              </span>
+            </el-option>
           </el-select>
           <el-button
             text
@@ -633,7 +655,7 @@ watch(storageKey, loadPreferences, { immediate: true })
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editorVisible" title="编辑小组件" width="520px">
+    <el-dialog v-model="editorVisible" title="编辑小组件" width="540px">
       <el-form label-position="top" class="widget-editor-form">
         <el-form-item label="组件名称">
           <el-input v-model="editorForm.title" maxlength="30" show-word-limit />
@@ -648,6 +670,25 @@ watch(storageKey, loadPreferences, { immediate: true })
             </el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="卡片颜色">
+          <div class="color-picker-options">
+            <button
+              v-for="option in colorOptions"
+              :key="option.value"
+              type="button"
+              class="color-picker-option"
+              :class="[
+                `color-picker-option--${option.value}`,
+                { 'is-selected': editorForm.color === option.value },
+              ]"
+              :aria-pressed="editorForm.color === option.value"
+              @click="editorForm.color = option.value"
+            >
+              <span class="color-picker-option__swatch" />
+              {{ option.label }}
+            </button>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="restoreEditorDefaults">恢复该组件默认值</el-button>
@@ -660,7 +701,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 <style scoped>
 .overview-count,
-.edit-status {
+.dashboard-workspace__notice {
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -695,6 +736,17 @@ watch(storageKey, loadPreferences, { immediate: true })
   place-items: center;
 }
 
+.dashboard-workspace {
+  display: grid;
+  gap: var(--mrr-space-4);
+  min-width: 0;
+}
+
+.dashboard-workspace__notice {
+  justify-self: start;
+  border-style: dashed;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -704,6 +756,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget {
+  --widget-accent: var(--mrr-primary);
+  --widget-surface: var(--mrr-card);
+  --widget-border: var(--mrr-border);
+
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -711,8 +767,8 @@ watch(storageKey, loadPreferences, { immediate: true })
   overflow: hidden;
   color: var(--mrr-card-foreground);
   cursor: pointer;
-  background: var(--mrr-card);
-  border: 1px solid var(--mrr-border);
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-border);
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
   transition:
@@ -721,6 +777,36 @@ watch(storageKey, loadPreferences, { immediate: true })
     box-shadow var(--mrr-motion-fast) ease,
     opacity var(--mrr-motion-fast) ease,
     transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.dashboard-widget--color-blue {
+  --widget-accent: var(--el-color-primary);
+  --widget-surface: color-mix(in srgb, var(--el-color-primary) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-primary) 24%, var(--mrr-border));
+}
+
+.dashboard-widget--color-green {
+  --widget-accent: var(--el-color-success);
+  --widget-surface: color-mix(in srgb, var(--el-color-success) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-success) 24%, var(--mrr-border));
+}
+
+.dashboard-widget--color-orange {
+  --widget-accent: var(--el-color-warning);
+  --widget-surface: color-mix(in srgb, var(--el-color-warning) 8%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-warning) 28%, var(--mrr-border));
+}
+
+.dashboard-widget--color-red {
+  --widget-accent: var(--el-color-danger);
+  --widget-surface: color-mix(in srgb, var(--el-color-danger) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-danger) 24%, var(--mrr-border));
+}
+
+.dashboard-widget--color-purple {
+  --widget-accent: color-mix(in srgb, #8b5cf6 86%, var(--mrr-foreground));
+  --widget-surface: color-mix(in srgb, #8b5cf6 8%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, #8b5cf6 26%, var(--mrr-border));
 }
 
 .dashboard-widget--small {
@@ -739,8 +825,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget:hover {
-  background: color-mix(in srgb, var(--mrr-primary) 3%, var(--mrr-card));
-  border-color: color-mix(in srgb, var(--mrr-primary) 34%, var(--mrr-border));
+  border-color: color-mix(in srgb, var(--widget-accent) 48%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-sm);
 }
 
@@ -749,7 +834,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget:focus-visible {
-  outline: 2px solid var(--mrr-ring);
+  outline: 2px solid var(--widget-accent);
   outline-offset: 2px;
 }
 
@@ -763,7 +848,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget.is-pinned {
-  border-color: color-mix(in srgb, var(--mrr-primary) 28%, var(--mrr-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--widget-accent) 16%, transparent), var(--mrr-shadow-xs);
 }
 
 .dashboard-widget.is-dragging {
@@ -771,8 +856,8 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget.is-drag-over {
-  background: color-mix(in srgb, var(--mrr-primary) 7%, var(--mrr-card));
-  border-color: var(--mrr-primary);
+  border-color: var(--widget-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent) 18%, transparent);
 }
 
 .dashboard-widget__header {
@@ -791,16 +876,14 @@ watch(storageKey, loadPreferences, { immediate: true })
   width: 32px;
   height: 32px;
   font-size: 15px;
-  color: var(--mrr-primary);
-  background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--mrr-primary) 16%, var(--mrr-border));
+  color: var(--widget-accent, var(--mrr-primary));
+  background: color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 10%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 20%, var(--mrr-border));
   border-radius: var(--mrr-radius-md);
   place-items: center;
 }
 
 .dashboard-widget__heading {
-  display: grid;
-  gap: 2px;
   min-width: 0;
 }
 
@@ -819,11 +902,6 @@ watch(storageKey, loadPreferences, { immediate: true })
   white-space: nowrap;
 }
 
-.dashboard-widget__heading small {
-  font-size: 10px;
-  color: var(--mrr-muted-foreground);
-}
-
 .pin-badge {
   display: inline-flex;
   flex: 0 0 auto;
@@ -832,8 +910,8 @@ watch(storageKey, loadPreferences, { immediate: true })
   padding: 2px 6px;
   font-size: 9px;
   font-weight: 650;
-  color: var(--mrr-primary);
-  background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
+  color: var(--widget-accent);
+  background: color-mix(in srgb, var(--widget-accent) 10%, var(--mrr-card));
   border-radius: var(--mrr-radius-pill);
 }
 
@@ -857,7 +935,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget:hover .dashboard-widget__arrow {
-  color: var(--mrr-primary);
+  color: var(--widget-accent);
   transform: translateX(2px);
 }
 
@@ -905,6 +983,9 @@ watch(storageKey, loadPreferences, { immediate: true })
   min-height: 260px;
   padding: var(--mrr-space-6);
   text-align: center;
+  background: color-mix(in srgb, var(--mrr-muted) 22%, transparent);
+  border: 1px dashed var(--mrr-border);
+  border-radius: var(--mrr-radius-xl);
   place-content: center;
   place-items: center;
 }
@@ -942,7 +1023,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .widget-manager-item {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 160px auto auto auto;
+  grid-template-columns: 32px minmax(0, 1fr) 96px 110px auto auto auto;
   gap: 10px;
   align-items: center;
   min-width: 0;
@@ -952,6 +1033,26 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .widget-manager-item:last-child {
   border-bottom: 0;
+}
+
+.widget-manager-item__icon--blue {
+  --widget-accent: var(--el-color-primary);
+}
+
+.widget-manager-item__icon--green {
+  --widget-accent: var(--el-color-success);
+}
+
+.widget-manager-item__icon--orange {
+  --widget-accent: var(--el-color-warning);
+}
+
+.widget-manager-item__icon--red {
+  --widget-accent: var(--el-color-danger);
+}
+
+.widget-manager-item__icon--purple {
+  --widget-accent: color-mix(in srgb, #8b5cf6 86%, var(--mrr-foreground));
 }
 
 .widget-manager-item__copy {
@@ -977,7 +1078,82 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .widget-size-select {
-  width: 160px;
+  width: 96px;
+}
+
+.widget-color-select {
+  width: 110px;
+}
+
+.color-option {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.color-option__swatch,
+.color-picker-option__swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--swatch-color, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--swatch-color, var(--mrr-border)) 44%, var(--mrr-border));
+  border-radius: 50%;
+}
+
+.color-option__swatch--blue,
+.color-picker-option--blue {
+  --swatch-color: var(--el-color-primary);
+}
+
+.color-option__swatch--green,
+.color-picker-option--green {
+  --swatch-color: var(--el-color-success);
+}
+
+.color-option__swatch--orange,
+.color-picker-option--orange {
+  --swatch-color: var(--el-color-warning);
+}
+
+.color-option__swatch--red,
+.color-picker-option--red {
+  --swatch-color: var(--el-color-danger);
+}
+
+.color-option__swatch--purple,
+.color-picker-option--purple {
+  --swatch-color: #8b5cf6;
+}
+
+.color-picker-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.color-picker-option {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--mrr-foreground);
+  cursor: pointer;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.color-picker-option:hover,
+.color-picker-option.is-selected {
+  border-color: var(--swatch-color, var(--mrr-primary));
+}
+
+.color-picker-option.is-selected {
+  background: color-mix(in srgb, var(--swatch-color, var(--mrr-primary)) 7%, var(--mrr-card));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--swatch-color, var(--mrr-primary)) 16%, transparent);
 }
 
 .widget-editor-form {
@@ -990,15 +1166,15 @@ watch(storageKey, loadPreferences, { immediate: true })
   }
 
   .widget-manager-item {
-    grid-template-columns: 32px minmax(0, 1fr) 150px auto auto;
+    grid-template-columns: 32px minmax(0, 1fr) 92px 104px auto auto;
   }
 
   .widget-manager-item :deep(.el-switch) {
-    grid-column: 5;
+    grid-column: 6;
   }
 }
 
-@media (width <= 880px) {
+@media (width <= 900px) {
   .dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1011,14 +1187,21 @@ watch(storageKey, loadPreferences, { immediate: true })
     grid-column: 2 / 4;
   }
 
+  .widget-size-select,
+  .widget-color-select {
+    width: 100%;
+  }
+
   .widget-size-select {
     grid-column: 2;
-    width: 100%;
+  }
+
+  .widget-color-select {
+    grid-column: 3;
   }
 
   .widget-manager-item :deep(.el-switch) {
     grid-column: 3;
-    grid-row: 2;
   }
 }
 
@@ -1042,6 +1225,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 
   .widget-manager-item {
     grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+
+  .color-picker-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

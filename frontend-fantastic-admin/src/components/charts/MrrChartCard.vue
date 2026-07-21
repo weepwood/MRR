@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { AnimatePresence, motion } from 'motion-v'
+import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
+
 defineOptions({ name: 'MrrChartCard' })
 
 withDefaults(defineProps<{
@@ -34,11 +37,37 @@ withDefaults(defineProps<{
     </div>
 
     <div v-loading="loading" class="mrr-chart-card__body">
-      <div v-if="empty && !loading" class="mrr-chart-card__empty">
-        <i class="i-ant-design:bar-chart-outlined" aria-hidden="true" />
-        <span>{{ emptyDescription }}</span>
-      </div>
-      <slot v-else />
+      <AnimatePresence mode="wait" :initial="false">
+        <motion.div
+          v-if="empty && !loading"
+          key="empty"
+          class="mrr-chart-card__empty"
+          :initial="{ opacity: 0, y: 4 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :exit="{ opacity: 0, y: -2 }"
+          :transition="{ duration: motionDurations.standard, ease: motionEasings.emphasized }"
+        >
+          <motion.i
+            class="i-ant-design:bar-chart-outlined"
+            aria-hidden="true"
+            :initial="{ scale: 0.92 }"
+            :animate="{ scale: 1 }"
+            :transition="motionSprings.interaction"
+          />
+          <span>{{ emptyDescription }}</span>
+        </motion.div>
+        <motion.div
+          v-else
+          key="content"
+          class="mrr-chart-card__content"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+          :exit="{ opacity: 0 }"
+          :transition="{ duration: motionDurations.fast }"
+        >
+          <slot />
+        </motion.div>
+      </AnimatePresence>
     </div>
   </el-card>
 </template>
@@ -99,6 +128,10 @@ withDefaults(defineProps<{
   min-height: 120px;
 }
 
+.mrr-chart-card__content {
+  min-width: 0;
+}
+
 .mrr-chart-card__empty {
   display: grid;
   gap: 8px;
@@ -110,6 +143,7 @@ withDefaults(defineProps<{
 
 .mrr-chart-card__empty i {
   font-size: 30px;
+  transform-origin: center;
 }
 
 .mrr-chart-card__empty span {

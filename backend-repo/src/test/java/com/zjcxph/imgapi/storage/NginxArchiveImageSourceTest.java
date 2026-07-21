@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,7 +39,7 @@ class NginxArchiveImageSourceTest {
     private HttpClient client;
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void readsLegacyImageFromConfiguredNginxServerWithBasicAuth() throws Exception {
         ImageProperties imageProperties = imageProperties();
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
@@ -48,10 +49,9 @@ class NginxArchiveImageSourceTest {
         HttpResponse<java.io.InputStream> response = mock(HttpResponse.class);
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn(stream("nginx-image"));
-        when(client.send(
+        doReturn(response).when(client).send(
                 any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)))
-                .thenReturn(response);
+                any(HttpResponse.BodyHandler.class));
 
         NginxArchiveImageSource source = new NginxArchiveImageSource(
                 imageUrlService, imageProperties, sourceProperties, client);
@@ -72,7 +72,7 @@ class NginxArchiveImageSourceTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void fallsBackToBackendLocalFileOnlyAfterNginxReadFails() throws Exception {
         ImageProperties imageProperties = imageProperties();
         ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
@@ -82,10 +82,9 @@ class NginxArchiveImageSourceTest {
         HttpResponse<java.io.InputStream> response = mock(HttpResponse.class);
         when(response.statusCode()).thenReturn(404);
         when(response.body()).thenReturn(stream("not-found"));
-        when(client.send(
+        doReturn(response).when(client).send(
                 any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)))
-                .thenReturn(response);
+                any(HttpResponse.BodyHandler.class));
 
         NginxArchiveImageSource nginxSource = new NginxArchiveImageSource(
                 imageUrlService, imageProperties, sourceProperties, client);

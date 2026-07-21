@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.service.ImageUrlService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +38,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     private final SourcePermitGuard permitGuard;
     private final HttpClient client;
 
+    @Autowired
     public NginxArchiveImageSource(ImageUrlService imageUrlService,
                                    ImageProperties imageProperties,
                                    ArchiveImageSourceProperties sourceProperties) {

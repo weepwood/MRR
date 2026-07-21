@@ -20,5 +20,6 @@ code-review/
 **/.vitepress/*
 !vitepress-doc/.vitepress/theme/
 !vitepress-doc/.vitepress/theme/Layout.vue
+vitepress-doc/.cache/
 *.log
 *.tmp

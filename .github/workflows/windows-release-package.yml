@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  issues: read
+  pull-requests: read
 
 jobs:
   build:
@@ -118,8 +120,13 @@ jobs:
 
       - name: Build documentation
         working-directory: vitepress-doc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MRR_CHANGELOG_GITHUB: 'true'
+          MRR_CHANGELOG_BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           npm ci
+          npm run docs:changelog:test
           npm run docs:build
           grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
           grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null

@@ -47,6 +47,7 @@ export default defineConfig({
           { text: 'API 与权限', link: '/internal/api' },
           { text: '外部系统影像接入', link: '/internal/external-archive-integration' },
           { text: '开发流程', link: '/internal/development' },
+          { text: '更新日志工作流', link: '/internal/changelog-workflow' },
         ],
       },
       {
@@ -87,6 +88,7 @@ export default defineConfig({
             { text: 'API 与权限', link: '/internal/api' },
             { text: '外部系统影像接入', link: '/internal/external-archive-integration' },
             { text: '开发流程', link: '/internal/development' },
+            { text: '更新日志工作流', link: '/internal/changelog-workflow' },
           ],
         },
         {

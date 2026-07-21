@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { motion } from 'motion-v'
+import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
+
 defineOptions({ name: 'AppEmpty' })
 
 withDefaults(defineProps<{
@@ -21,13 +24,24 @@ function handleAction() {
 </script>
 
 <template>
-  <div class="app-empty">
-    <div class="app-empty-icon" :class="icon" />
+  <motion.div
+    class="app-empty"
+    :initial="{ opacity: 0, y: 4 }"
+    :animate="{ opacity: 1, y: 0 }"
+    :transition="{ duration: motionDurations.standard, ease: motionEasings.emphasized }"
+  >
+    <motion.div
+      class="app-empty-icon"
+      :class="icon"
+      :initial="{ scale: 0.92 }"
+      :animate="{ scale: 1 }"
+      :transition="motionSprings.interaction"
+    />
     <p class="app-empty-text">{{ description }}</p>
     <el-button v-if="actionText" type="primary" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
     </el-button>
-  </div>
+  </motion.div>
 </template>
 
 <style scoped>
@@ -44,6 +58,7 @@ function handleAction() {
   margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-text-color-placeholder, #c0c4cc);
+  transform-origin: center;
 }
 
 .app-empty-text {

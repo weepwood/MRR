@@ -79,7 +79,9 @@ public class OssArchiveImageSource implements ArchiveImageSource {
         }
         String sourceRef = trimToNull(image.getSourceRef());
         if (sourceRef != null) {
-            return validateRelativeKey(sourceRef);
+            return looksLikeUrl(sourceRef)
+                    ? resolveLegacyOssUrl(sourceRef)
+                    : validateRelativeKey(sourceRef);
         }
         return resolveLegacyOssUrl(image.getOssUrl());
     }
@@ -188,11 +190,8 @@ public class OssArchiveImageSource implements ArchiveImageSource {
 
     private String validateRelativeKey(String value) {
         String key = trimToNull(value);
-        if (key == null) {
-            return null;
-        }
-        key = stripLeadingSlash(key);
-        if (key.isBlank()
+        if (key == null
+                || key.startsWith("/")
                 || key.contains("..")
                 || key.contains("\\")
                 || key.indexOf('\0') >= 0

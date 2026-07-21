@@ -16,6 +16,7 @@ const definitions: DashboardWidgetDefinition[] = [
     icon: 'archive-icon',
     path: '/archive/embed',
     defaultSize: 'wide',
+    defaultPinned: true,
   },
   {
     id: 'records',

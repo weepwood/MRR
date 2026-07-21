@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.service.DataQualityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,6 +39,20 @@ public class DataQualityController {
     public Result<List<Map<String, Object>>> issues(@RequestParam(defaultValue = "100") int limit) {
         return Result.<List<Map<String, Object>>>success("获取数据质量异常成功")
                 .data(dataQualityService.getIssues(limit));
+    }
+
+    @Operation(summary = "获取数据质量异常详情")
+    @GetMapping("/issues/{issueId}")
+    public Result<Map<String, Object>> issue(@PathVariable long issueId) {
+        return Result.<Map<String, Object>>success("获取数据质量异常详情成功")
+                .data(dataQualityService.getIssue(issueId));
+    }
+
+    @Operation(summary = "预览异常的建议修复，不修改数据")
+    @GetMapping("/issues/{issueId}/repair-preview")
+    public Result<Map<String, Object>> repairPreview(@PathVariable long issueId) {
+        return Result.<Map<String, Object>>success("获取修复预览成功")
+                .data(dataQualityService.previewRepair(issueId));
     }
 
     @Operation(summary = "立即执行一次数据质量检查")

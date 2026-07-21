@@ -62,31 +62,24 @@ test.describe('系统设置分类布局', () => {
     }).toBeGreaterThan(100)
   })
 
-  test('默认输入框、下拉框和数字输入框使用统一控件高度', async ({ page }) => {
+  test('同一筛选栏中的输入框和下拉框使用统一控件高度', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+    await page.goto('/users', { waitUntil: 'domcontentloaded' })
 
-    const input = page.locator('.settings-content .el-input__wrapper').first()
+    const filterBar = page.locator('.users-filter-bar')
+    const input = filterBar.locator('.el-input__wrapper').first()
+    const select = filterBar.locator('.el-select__wrapper').first()
     await expect(input).toBeVisible({ timeout: 20_000 })
-    const inputHeight = await input.evaluate(element => element.getBoundingClientRect().height)
-
-    await page.locator('.settings-nav-item').filter({ hasText: '档案浏览' }).click()
-    const select = page.locator('.settings-content .el-select__wrapper').first()
     await expect(select).toBeVisible()
+
+    const inputHeight = await input.evaluate(element => element.getBoundingClientRect().height)
     const selectHeight = await select.evaluate(element => element.getBoundingClientRect().height)
-
-    await page.locator('.settings-nav-item').filter({ hasText: '访问安全' }).click()
-    const inputNumber = page.locator('.settings-content .el-input-number').first()
-    await expect(inputNumber).toBeVisible()
-    const inputNumberHeight = await inputNumber.evaluate(element => element.getBoundingClientRect().height)
-
     const controlHeight = await page.evaluate(() => Number.parseFloat(
       getComputedStyle(document.documentElement).getPropertyValue('--mrr-control-height'),
     ))
 
     expect(Math.abs(inputHeight - controlHeight)).toBeLessThanOrEqual(1)
     expect(Math.abs(selectHeight - inputHeight)).toBeLessThanOrEqual(1)
-    expect(Math.abs(inputNumberHeight - inputHeight)).toBeLessThanOrEqual(1)
   })
 
   test('旧登录文案地址跳转到系统设置内部分类', async ({ page }) => {

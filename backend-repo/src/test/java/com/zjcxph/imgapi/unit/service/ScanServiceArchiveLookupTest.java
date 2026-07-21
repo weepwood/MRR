@@ -47,9 +47,23 @@ class ScanServiceArchiveLookupTest {
     }
 
     @Test
+    @DisplayName("旧病案号图片接口同样优先使用 archive_id")
+    void usesArchiveIdFastPathForBahEndpoint() {
+        Scan scan = scan(2, 42L, "bah-endpoint.jpg");
+        when(scanMapper.resolveArchiveId("00789508", "")).thenReturn(42L);
+        when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of(scan));
+
+        List<Scan> result = scanService.getImageListByBAH("00789508", "789508");
+
+        assertThat(result).containsExactly(scan);
+        verify(scanMapper).findActiveByArchiveId(42L);
+        verify(scanMapper, never()).findBAH("00789508", "789508");
+    }
+
+    @Test
     @DisplayName("主档编号补零格式不一致时仍可进入快速路径")
     void usesCompatibilityResolverForMixedCodeFormats() {
-        Scan scan = scan(2, 42L, "mixed-format.jpg");
+        Scan scan = scan(3, 42L, "mixed-format.jpg");
         when(scanMapper.resolveArchiveId("00000123", "")).thenReturn(null);
         when(scanMapper.resolveArchiveIdBySearchCode("123", "")).thenReturn(42L);
         when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of(scan));
@@ -65,7 +79,7 @@ class ScanServiceArchiveLookupTest {
     @Test
     @DisplayName("主档不存在时回退原有病案号和上架号查询")
     void fallsBackWhenArchiveCannotBeResolved() {
-        Scan scan = scan(3, null, "legacy.jpg");
+        Scan scan = scan(4, null, "legacy.jpg");
         when(scanMapper.resolveArchiveId("00789508", "")).thenReturn(null);
         when(scanMapper.resolveArchiveIdBySearchCode("789508", "")).thenReturn(null);
         when(scanMapper.findByCode("00789508", "789508", "", ""))
@@ -82,7 +96,7 @@ class ScanServiceArchiveLookupTest {
     @Test
     @DisplayName("主档存在但尚未关联影像时回退原有查询")
     void fallsBackWhenArchiveHasNoLinkedScans() {
-        Scan scan = scan(4, null, "unlinked.jpg");
+        Scan scan = scan(5, null, "unlinked.jpg");
         when(scanMapper.resolveArchiveId("", "00000123")).thenReturn(42L);
         when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of());
         when(scanMapper.findByCode("", "", "00000123", "123"))

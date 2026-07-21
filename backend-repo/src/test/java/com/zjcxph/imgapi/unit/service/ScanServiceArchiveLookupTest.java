@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,29 +41,48 @@ class ScanServiceArchiveLookupTest {
 
         assertThat(result).containsExactly(scan);
         verify(scanMapper).resolveArchiveId("00789508", "");
+        verify(scanMapper, never()).resolveArchiveIdBySearchCode("789508", "");
         verify(scanMapper).findActiveByArchiveId(42L);
         verify(scanMapper, never()).findByCode("00789508", "789508", "", "");
     }
 
     @Test
+    @DisplayName("主档编号补零格式不一致时仍可进入快速路径")
+    void usesCompatibilityResolverForMixedCodeFormats() {
+        Scan scan = scan(2, 42L, "mixed-format.jpg");
+        when(scanMapper.resolveArchiveId("00000123", "")).thenReturn(null);
+        when(scanMapper.resolveArchiveIdBySearchCode("123", "")).thenReturn(42L);
+        when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of(scan));
+
+        List<Scan> result = scanService.getImageListByCode("00000123", "123", "", "");
+
+        assertThat(result).containsExactly(scan);
+        verify(scanMapper).resolveArchiveIdBySearchCode("123", "");
+        verify(scanMapper).findActiveByArchiveId(42L);
+        verify(scanMapper, never()).findByCode("00000123", "123", "", "");
+    }
+
+    @Test
     @DisplayName("主档不存在时回退原有病案号和上架号查询")
     void fallsBackWhenArchiveCannotBeResolved() {
-        Scan scan = scan(2, null, "legacy.jpg");
+        Scan scan = scan(3, null, "legacy.jpg");
         when(scanMapper.resolveArchiveId("00789508", "")).thenReturn(null);
+        when(scanMapper.resolveArchiveIdBySearchCode("789508", "")).thenReturn(null);
         when(scanMapper.findByCode("00789508", "789508", "", ""))
                 .thenReturn(List.of(scan));
 
         List<Scan> result = scanService.getImageListByCode("00789508", "789508", "", "");
 
         assertThat(result).containsExactly(scan);
-        verify(scanMapper, never()).findActiveByArchiveId(org.mockito.ArgumentMatchers.anyLong());
+        verify(scanMapper).resolveArchiveIdBySearchCode("789508", "");
+        verify(scanMapper, never()).findActiveByArchiveId(anyLong());
         verify(scanMapper).findByCode("00789508", "789508", "", "");
     }
 
     @Test
     @DisplayName("主档存在但尚未关联影像时回退原有查询")
     void fallsBackWhenArchiveHasNoLinkedScans() {
-        Scan scan = scan(3, null, "unlinked.jpg");
+        Scan scan = scan(4, null, "unlinked.jpg");
         when(scanMapper.resolveArchiveId("", "00000123")).thenReturn(42L);
         when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of());
         when(scanMapper.findByCode("", "", "00000123", "123"))
@@ -86,6 +106,7 @@ class ScanServiceArchiveLookupTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("database unavailable");
 
+        verify(scanMapper, never()).resolveArchiveIdBySearchCode("789508", "");
         verify(scanMapper, never()).findByCode("00789508", "789508", "", "");
     }
 

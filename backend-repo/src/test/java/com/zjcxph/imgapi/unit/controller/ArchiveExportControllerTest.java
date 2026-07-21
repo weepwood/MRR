@@ -35,6 +35,17 @@ class ArchiveExportControllerTest {
     private ArchiveExportController controller;
 
     @Test
+    void plansZipAsValidatedBackgroundJob() {
+        when(archiveExportService.prepareArchive("00789508", ""))
+                .thenReturn(export(1));
+
+        Result<ArchiveExportPlanResponse> result = controller.planZip("789508", null);
+
+        assertThat(result.getData().executionMode()).isEqualTo("BACKEND_JOB");
+        assertThat(result.getData().wholeArchive()).isTrue();
+    }
+
+    @Test
     void plansSmallPartialPdfInBrowser() {
         when(archiveExportService.prepareArchive("00789508", ""))
                 .thenReturn(export(3));
@@ -78,7 +89,7 @@ class ArchiveExportControllerTest {
     }
 
     @Test
-    void streamsWholeArchiveZip() {
+    void streamsWholeArchiveZipForLegacyClients() {
         when(archiveExportService.prepareArchive("00789508", ""))
                 .thenReturn(export(1));
 
@@ -114,6 +125,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void declaresIndependentExportPermissions() throws Exception {
+        assertPermission("planZip", "record:download", String.class, String.class);
         assertPermission("planPdf", "record:pdf:export", String.class, String.class, int.class);
         assertPermission("downloadZip", "record:download", String.class, String.class);
         assertPermission("downloadPdf", "record:pdf:export", String.class, String.class);

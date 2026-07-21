@@ -1,6 +1,7 @@
 import type { GalleryImage } from '../types'
+import type { ArchiveSelectionChangedDetail } from './useSelection'
 import { ElMessage } from 'element-plus'
-import { ref } from 'vue'
+import { getCurrentScope, onScopeDispose, ref } from 'vue'
 import {
   downloadArchivePdf,
   downloadSelectedImagesPdf,
@@ -9,6 +10,7 @@ import {
 import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
 import { useArchiveExportJob } from './useArchiveExportJob'
+import { ARCHIVE_SELECTION_CHANGED_EVENT } from './useSelection'
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
@@ -21,11 +23,21 @@ function saveBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function selectionSignature(images: GalleryImage[]): string {
+  return images
+    .map(image => String(image.id || image.filename || '').trim())
+    .filter(Boolean)
+    .sort()
+    .join(',')
+}
+
 export function useArchivePrint() {
   const printing = ref(false)
   const exportingPdf = ref(false)
   const { auth } = useAuth()
   const exportJob = useArchiveExportJob('PDF')
+  const jobSelectionSignature = ref('')
+  const currentSelectionSignature = ref('')
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -120,6 +132,28 @@ export function useArchivePrint() {
     return `${String(image.bah || '').trim()}|${String(image.sjh || '').trim()}`
   }
 
+  function bindSelection(images: GalleryImage[]) {
+    const nextSignature = selectionSignature(images)
+    currentSelectionSignature.value = nextSignature
+    if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
+      exportJob.dismiss()
+      jobSelectionSignature.value = ''
+    }
+    return nextSignature
+  }
+
+  function onSelectionChanged(event: Event) {
+    const detail = (event as CustomEvent<ArchiveSelectionChangedDetail>).detail
+    const nextSignature = Array.isArray(detail?.keys)
+      ? detail.keys.filter(Boolean).slice().sort().join(',')
+      : ''
+    currentSelectionSignature.value = nextSignature
+    if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
+      exportJob.dismiss()
+      jobSelectionSignature.value = ''
+    }
+  }
+
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
     if (!auth('record:pdf:export')) {
       ElMessage.warning('当前账号没有病案 PDF 导出权限')
@@ -130,6 +164,7 @@ export function useArchivePrint() {
       return
     }
 
+    const nextSelectionSignature = bindSelection(images)
     const archiveKey = getArchiveKey(images[0])
     if (images.some(image => getArchiveKey(image) !== archiveKey)) {
       ElMessage.warning('选中的影像不属于同一个档案袋')
@@ -153,6 +188,8 @@ export function useArchivePrint() {
       const mode = response?.data?.executionMode
 
       if (mode === 'CLIENT_PDF') {
+        exportJob.dismiss()
+        jobSelectionSignature.value = ''
         const imageUrls = images.map(image => String(image.imageUrl || '').trim())
         if (imageUrls.some(url => !url)) {
           ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
@@ -170,6 +207,7 @@ export function useArchivePrint() {
       }
 
       if (mode === 'BACKEND_JOB') {
+        jobSelectionSignature.value = nextSelectionSignature
         await exportJob.start({
           format: 'PDF',
           bah: bah || undefined,
@@ -179,6 +217,8 @@ export function useArchivePrint() {
         return
       }
 
+      exportJob.dismiss()
+      jobSelectionSignature.value = ''
       if (wholeArchive) {
         const pdfBlob = await downloadArchivePdf(bah || undefined, sjh || undefined)
         saveBlob(pdfBlob, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
@@ -197,6 +237,13 @@ export function useArchivePrint() {
     finally {
       exportingPdf.value = false
     }
+  }
+
+  if (typeof window !== 'undefined' && getCurrentScope()) {
+    window.addEventListener(ARCHIVE_SELECTION_CHANGED_EVENT, onSelectionChanged)
+    onScopeDispose(() => {
+      window.removeEventListener(ARCHIVE_SELECTION_CHANGED_EVENT, onSelectionChanged)
+    })
   }
 
   return {

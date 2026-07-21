@@ -3,6 +3,7 @@ import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modul
 import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef } from 'vue'
+import { downloadArchiveZip } from '@/api/modules/archive-export'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
 import {
   getArchiveCasesByIdCard,
@@ -15,11 +16,21 @@ import {
   resolveArchiveLookup,
 } from '@/utils/medical-record-code'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
-import { createArchiveZip } from '../utils/client-zip'
 import { addArchiveSearchHistory } from './useArchiveSearchHistory'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
+}
+
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export function useArchiveImages() {
@@ -214,16 +225,9 @@ export function useArchiveImages() {
 
     downloading.value = true
     try {
-      const archiveBlob = await createArchiveZip(images.value)
-      const url = URL.createObjectURL(archiveBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      ElMessage.success('档案袋下载已开始')
+      const response = await downloadArchiveZip(bah || undefined, sjh || undefined)
+      saveBlob(response.data, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
+      ElMessage.success('档案袋已由服务器打包并开始下载')
     }
     catch (err: unknown) {
       ElMessage.error((err as { message?: string })?.message || '下载失败')

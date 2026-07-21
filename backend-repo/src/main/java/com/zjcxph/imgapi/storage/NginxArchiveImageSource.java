@@ -40,15 +40,27 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     public NginxArchiveImageSource(ImageUrlService imageUrlService,
                                    ImageProperties imageProperties,
                                    ArchiveImageSourceProperties sourceProperties) {
+        this(
+                imageUrlService,
+                imageProperties,
+                sourceProperties,
+                HttpClient.newBuilder()
+                        .connectTimeout(orDefaultStatic(
+                                sourceProperties.getNginxConnectTimeout(), Duration.ofSeconds(5)))
+                        .followRedirects(HttpClient.Redirect.NEVER)
+                        .build());
+    }
+
+    NginxArchiveImageSource(ImageUrlService imageUrlService,
+                            ImageProperties imageProperties,
+                            ArchiveImageSourceProperties sourceProperties,
+                            HttpClient client) {
         this.imageUrlService = imageUrlService;
         this.imageProperties = imageProperties;
         this.sourceProperties = sourceProperties;
         this.permitGuard = new SourcePermitGuard(
                 sourceProperties.getNginxMaxConcurrency(), sourceProperties.getAcquireTimeout());
-        this.client = HttpClient.newBuilder()
-                .connectTimeout(orDefault(sourceProperties.getNginxConnectTimeout(), Duration.ofSeconds(5)))
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
+        this.client = client;
     }
 
     @Override
@@ -163,12 +175,15 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     }
 
     private boolean isConfiguredImageServer(URI candidate) {
-        String authority = authority(candidate);
+        String candidateAuthority = authority(candidate);
+        if (candidateAuthority == null) {
+            return false;
+        }
         return configuredImageUrls().stream()
                 .map(this::parseConfiguredUri)
-                .filter(uri -> uri != null)
                 .map(this::authority)
-                .anyMatch(authority::equals);
+                .filter(value -> value != null)
+                .anyMatch(candidateAuthority::equals);
     }
 
     private List<String> configuredImageUrls() {
@@ -192,6 +207,9 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     }
 
     private String authority(URI uri) {
+        if (uri == null || uri.getScheme() == null || uri.getHost() == null) {
+            return null;
+        }
         int port = uri.getPort();
         if (port < 0) {
             port = "http".equalsIgnoreCase(uri.getScheme()) ? 80 : 443;
@@ -215,6 +233,10 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     }
 
     private Duration orDefault(Duration value, Duration fallback) {
+        return orDefaultStatic(value, fallback);
+    }
+
+    private static Duration orDefaultStatic(Duration value, Duration fallback) {
         return value == null || value.isZero() || value.isNegative() ? fallback : value;
     }
 

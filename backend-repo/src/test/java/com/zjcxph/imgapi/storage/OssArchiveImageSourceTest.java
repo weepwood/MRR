@@ -68,6 +68,20 @@ class OssArchiveImageSourceTest {
         assertThat(source.supports(image)).isFalse();
     }
 
+    @Test
+    void rejectsAbsoluteSourceReferences() {
+        OssObjectReader reader = mock(OssObjectReader.class);
+        ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
+        OssProperties ossProperties = ossProperties();
+        PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        image.setSourceType("OSS");
+        image.setSourceRef("/archive/00789508/page.jpg");
+
+        OssArchiveImageSource source = new OssArchiveImageSource(reader, sourceProperties, ossProperties);
+
+        assertThat(source.supports(image)).isFalse();
+    }
+
     private OssProperties ossProperties() {
         OssProperties properties = new OssProperties();
         properties.setEndpoint("oss-cn-hangzhou.aliyuncs.com");

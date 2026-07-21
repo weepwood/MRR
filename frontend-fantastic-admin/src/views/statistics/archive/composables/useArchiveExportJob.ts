@@ -8,7 +8,6 @@ import {
   cancelArchiveExportJob,
   createArchiveExportJob,
   getArchiveExportJob,
-  listActiveArchiveExportJobs,
 } from '@/api/modules/archive-export'
 import { downloadExportJobWithResume } from '../utils/resumable-export-download'
 
@@ -19,7 +18,7 @@ function createIdempotencyKey(request: CreateArchiveExportJobRequest): string {
   return `${request.format.toLowerCase()}:${random}`
 }
 
-export function useArchiveExportJob(formatHint?: 'ZIP' | 'PDF') {
+export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   const job = ref<ArchiveExportJob | null>(null)
   const creating = ref(false)
   const cancelling = ref(false)
@@ -71,22 +70,6 @@ export function useArchiveExportJob(formatHint?: 'ZIP' | 'PDF') {
     }
   }
 
-  async function restoreActiveJob() {
-    if (!formatHint || disposed || job.value) return
-    try {
-      const response = await listActiveArchiveExportJobs(formatHint, 1)
-      const active = response.data?.[0]
-      if (!active || disposed || job.value) return
-      applyJob(active)
-      if (!isTerminal(active.status)) {
-        pollTimer = setTimeout(() => void poll(), 500)
-      }
-    }
-    catch {
-      // 恢复查询失败不阻塞当前病案页面，用户仍可创建新任务。
-    }
-  }
-
   async function start(request: CreateArchiveExportJobRequest) {
     stopPolling()
     creating.value = true
@@ -129,7 +112,7 @@ export function useArchiveExportJob(formatHint?: 'ZIP' | 'PDF') {
     downloading.value = true
     try {
       const mode = await downloadExportJobWithResume(current)
-      ElMessage.success(mode === 'resumable' ? '导出文件已分块写入磁盘' : '导出文件已开始下载')
+      ElMessage.success(mode === 'resumable' ? '导出文件已写入磁盘' : '导出文件已开始下载')
     }
     catch (error: unknown) {
       if ((error as { name?: string })?.name === 'AbortError') {
@@ -149,7 +132,6 @@ export function useArchiveExportJob(formatHint?: 'ZIP' | 'PDF') {
   }
 
   if (getCurrentScope()) {
-    void restoreActiveJob()
     onScopeDispose(() => {
       disposed = true
       stopPolling()

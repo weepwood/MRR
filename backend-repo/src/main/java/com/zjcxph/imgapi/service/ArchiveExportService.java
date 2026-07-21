@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.entity.PathDO;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -58,15 +59,20 @@ public interface ArchiveExportService {
         public long estimatedBytes() {
             long total = 0;
             for (PathDO item : items) {
-                if (item.getFileSize() != null && item.getFileSize() > 0) {
-                    total = Math.addExact(total, item.getFileSize());
+                if (item.getFileSize() == null || item.getFileSize() <= 0) {
+                    continue;
                 }
+                long value = item.getFileSize();
+                if (Long.MAX_VALUE - total < value) {
+                    return Long.MAX_VALUE;
+                }
+                total += value;
             }
             return total;
         }
 
         public Set<String> sourceSummary() {
-            Set<String> sources = new LinkedHashSet<>();
+            LinkedHashSet<String> sources = new LinkedHashSet<>();
             for (PathDO item : items) {
                 String source = item.getSourceType();
                 if (source == null || source.isBlank() || "AUTO".equalsIgnoreCase(source)) {
@@ -74,7 +80,7 @@ public interface ArchiveExportService {
                 }
                 sources.add(source.toUpperCase());
             }
-            return Set.copyOf(sources);
+            return Collections.unmodifiableSet(sources);
         }
     }
 }

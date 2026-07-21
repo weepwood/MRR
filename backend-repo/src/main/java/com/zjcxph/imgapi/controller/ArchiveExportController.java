@@ -42,6 +42,7 @@ public class ArchiveExportController {
 
     @Operation(summary = "规划 PDF 导出执行方式")
     @GetMapping("/plan/pdf")
+    @RequirePermissions({"record:pdf:export"})
     public Result<ArchiveExportPlanResponse> planPdf(
             @RequestParam(required = false) String bah,
             @RequestParam(required = false) String sjh,
@@ -52,6 +53,9 @@ public class ArchiveExportController {
 
         PreparedArchive prepared = prepareArchive(bah, sjh);
         int totalCount = prepared.export().itemCount();
+        if (selectedCount > totalCount) {
+            throw new BusinessException(400, "选中影像数量超过当前病案总数，请刷新后重试");
+        }
         boolean wholeArchive = selectedCount == totalCount;
         String executionMode = !wholeArchive && selectedCount <= CLIENT_PDF_MAX_IMAGES
                 ? "CLIENT_PDF"
@@ -68,6 +72,7 @@ public class ArchiveExportController {
 
     @Operation(summary = "流式下载整份病案 ZIP")
     @GetMapping("/zip")
+    @RequirePermissions({"record:download"})
     public ResponseEntity<StreamingResponseBody> downloadZip(
             @RequestParam(required = false) String bah,
             @RequestParam(required = false) String sjh) {
@@ -79,6 +84,7 @@ public class ArchiveExportController {
 
     @Operation(summary = "流式导出整份病案 PDF")
     @GetMapping("/pdf")
+    @RequirePermissions({"record:pdf:export"})
     public ResponseEntity<StreamingResponseBody> downloadPdf(
             @RequestParam(required = false) String bah,
             @RequestParam(required = false) String sjh) {
@@ -90,6 +96,7 @@ public class ArchiveExportController {
 
     @Operation(summary = "流式导出选中影像 PDF")
     @PostMapping("/pdf/selection")
+    @RequirePermissions({"record:pdf:export"})
     public ResponseEntity<StreamingResponseBody> downloadSelectedPdf(
             @RequestBody BatchDownloadRequest request) {
         if (request == null || request.getIds() == null || request.getIds().isEmpty()) {
@@ -100,7 +107,7 @@ public class ArchiveExportController {
         }
 
         ArchiveExportService.BatchZipExport export =
-                archiveExportService.prepareBatch(request.getIds());
+                archiveExportService.prepareSelectedArchive(request.getIds());
         if (export.itemCount() == 0) {
             throw new BusinessException(404, "未找到可导出的影像");
         }

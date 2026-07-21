@@ -76,6 +76,11 @@ public interface ArchiveExportService {
             return total;
         }
 
+        /**
+         * 返回每张图片的实际首选来源，而不是最终兜底来源。
+         * AUTO/LOCAL/无 Key 的 OSS 记录当前均先读取 Nginx 静态资源；
+         * 有 Object Key 的记录先读取 OSS，显式 NAS/HTTP 保持节点绑定。
+         */
         public Set<String> sourceSummary() {
             LinkedHashSet<String> sources = new LinkedHashSet<>();
             for (PathDO item : items) {
@@ -84,13 +89,13 @@ public interface ArchiveExportService {
                         : item.getSourceType().trim().toUpperCase(Locale.ROOT);
                 boolean hasOssReference = hasText(item.getSourceRef()) || hasText(item.getOssUrl());
 
-                if (configured.isEmpty() || "AUTO".equals(configured)) {
-                    sources.add(hasOssReference ? "OSS" : "LOCAL");
-                } else if ("OSS".equals(configured) && !hasOssReference) {
-                    // 同一份病案中允许部分图片迁移到 OSS，未迁移的图片继续从本地读取。
-                    sources.add("LOCAL");
-                } else {
+                if ("NAS".equals(configured) || "HTTP".equals(configured)) {
                     sources.add(configured);
+                } else if (hasOssReference
+                        && (configured.isEmpty() || "AUTO".equals(configured) || "OSS".equals(configured))) {
+                    sources.add("OSS");
+                } else {
+                    sources.add("NGINX");
                 }
             }
             return Collections.unmodifiableSet(sources);

@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
+import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
@@ -47,23 +48,68 @@ public class ImageUrlService {
         if (scan == null) {
             return null;
         }
-        String folder = scan.getFolder();
-        String brxh = scan.getBrxh();
-        if (brxh == null) {
+        return buildImageUrl(
+                scan.getFolder(),
+                scan.getFilename(),
+                scan.getBrxh(),
+                scan.getBah(),
+                scan.getSjh());
+    }
+
+    /**
+     * 为后台导出构建与前端展示完全一致的 Nginx 静态图片 URL。
+     */
+    public String buildImageUrl(PathDO image) {
+        if (image == null) {
             return null;
         }
-        String paddedBah = normalizeCode(scan.getBah());
-        String folderKey = paddedBah.compareTo("10000000") >= 0 ? scan.getSjh() : brxh;
+        return buildImageUrl(
+                image.getFolder(),
+                image.getFilename(),
+                image.getBrxh(),
+                image.getBah(),
+                image.getSjh());
+    }
+
+    private String buildImageUrl(String folder,
+                                 String filename,
+                                 String brxh,
+                                 String bah,
+                                 String sjh) {
+        if (brxh == null || filename == null || filename.isBlank()) {
+            return null;
+        }
+        String paddedBah = normalizeCode(bah);
+        String folderKey = paddedBah.compareTo("10000000") >= 0 ? sjh : brxh;
         if (folderKey == null || folderKey.isBlank()) {
             return null;
         }
         if (folder == null || folder.isBlank()) {
-            return imageProperties.getServerUrlDefault() + "/" + folderKey + "-" +
-                    scan.getBah() + "/" + scan.getFilename();
+            return joinUrl(
+                    imageProperties.getServerUrlDefault(),
+                    folderKey + "-" + bah,
+                    filename);
         }
-        String imgUrl = determineImageUrl(folder);
-        return imgUrl + "/" + extractYearMonth(folder) + "/" + folder + "/" +
-                folderKey + "-" + scan.getBah() + "/" + scan.getFilename();
+        return joinUrl(
+                determineImageUrl(folder),
+                extractYearMonth(folder),
+                folder,
+                folderKey + "-" + bah,
+                filename);
+    }
+
+    private String joinUrl(String base, String... segments) {
+        if (base == null || base.isBlank()) {
+            return null;
+        }
+        StringBuilder result = new StringBuilder(base.trim().replaceAll("/+$", ""));
+        for (String segment : segments) {
+            if (segment == null || segment.isBlank()) {
+                return null;
+            }
+            result.append('/').append(segment.trim().replaceAll("^/+|/+$", ""));
+        }
+        return result.toString();
     }
 
     /**

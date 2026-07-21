@@ -18,6 +18,10 @@ export interface ExternalArchiveSession {
   cases: ExternalArchiveCase[]
 }
 
+export interface ExternalArchiveRequestOptions {
+  timeout?: number
+}
+
 const externalApi = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
   timeout: 1000 * 60,
@@ -38,12 +42,18 @@ externalApi.interceptors.response.use((response) => {
   return Promise.reject(error)
 })
 
-export function exchangeExternalArchiveTicket(ticket: string) {
-  return externalApi.post<unknown, ApiResult<ExternalArchiveSession>>('/api/v1/external/archive/session', { ticket })
+export function exchangeExternalArchiveTicket(ticket: string, options: ExternalArchiveRequestOptions = {}) {
+  return externalApi.post<unknown, ApiResult<ExternalArchiveSession>>(
+    '/api/v1/external/archive/session',
+    { ticket },
+    { timeout: options.timeout },
+  )
 }
 
-export function getExternalArchiveContext() {
-  return externalApi.get<unknown, ApiResult<ExternalArchiveSession>>('/api/v1/external/archive/context')
+export function getExternalArchiveContext(options: ExternalArchiveRequestOptions = {}) {
+  return externalApi.get<unknown, ApiResult<ExternalArchiveSession>>('/api/v1/external/archive/context', {
+    timeout: options.timeout,
+  })
 }
 
 export function getExternalArchiveImages(bah: string, sjh?: string, forceRefresh = false) {

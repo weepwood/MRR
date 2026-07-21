@@ -45,6 +45,14 @@ public class ScanServiceImpl implements ScanService {
             String normalizedSjh,
             String sjhSearchCode
     ) {
+        Long archiveId = scanMapper.resolveArchiveId(normalizedBah, normalizedSjh);
+        if (archiveId != null) {
+            List<Scan> linkedScans = scanMapper.findActiveByArchiveId(archiveId);
+            if (linkedScans != null && !linkedScans.isEmpty()) {
+                return linkedScans;
+            }
+        }
+
         return scanMapper.findByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
     }
 

@@ -71,7 +71,7 @@ mr_statistics ───────► mr_archive ◄────── mr_archi
 - `mr_scan.archive_id` 缺失估算；
 - 最近扫描记录与主档编号不一致；
 - 统计记录和装箱记录缺失或错连主档；
-- 高位 BAH 缛少唯一 SJH；
+- 高位 BAH 缺少唯一 SJH；
 - 忽略前导零后 SJH 重复；
 - 患者 BAH 可以匹配多个主档；
 - 迁移状态和 OSS 地址不一致；

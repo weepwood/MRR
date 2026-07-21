@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS app.archive_export_job (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_archive_export_job_idempotency
     ON app.archive_export_job (owner_username, idempotency_key)
-    WHERE idempotency_key IS NOT NULL;
+    WHERE idempotency_key IS NOT NULL AND status <> 'EXPIRED';
 
 CREATE INDEX IF NOT EXISTS idx_archive_export_job_owner_created
     ON app.archive_export_job (owner_username, created_at DESC);

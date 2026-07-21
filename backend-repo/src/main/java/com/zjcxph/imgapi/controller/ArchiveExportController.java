@@ -5,10 +5,12 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveExportPlanResponse;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.service.ArchiveExportJobService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/v1/archive-exports")
@@ -35,9 +38,30 @@ public class ArchiveExportController {
             "病案号大于等于 10000000 时必须使用上架号导出";
 
     private final ArchiveExportService archiveExportService;
+    private ArchiveExportJobService archiveExportJobService;
 
     public ArchiveExportController(ArchiveExportService archiveExportService) {
         this.archiveExportService = archiveExportService;
+    }
+
+    @Autowired
+    void setArchiveExportJobService(ArchiveExportJobService archiveExportJobService) {
+        this.archiveExportJobService = archiveExportJobService;
+    }
+
+    @Operation(summary = "规划 ZIP 导出执行方式")
+    @GetMapping("/plan/zip")
+    @RequirePermissions({"record:download"})
+    public Result<ArchiveExportPlanResponse> planZip(
+            @RequestParam(required = false) String bah,
+            @RequestParam(required = false) String sjh) {
+        PreparedArchive prepared = prepareArchive(bah, sjh);
+        String executionMode = shouldUseJob(prepared.export())
+                ? "BACKEND_JOB"
+                : "BACKEND_STREAM";
+        return Result.success(planResponse(
+                "ZIP", executionMode, prepared.export().itemCount(),
+                prepared.export().itemCount(), true, prepared.export()));
     }
 
     @Operation(summary = "规划 PDF 导出执行方式")
@@ -57,20 +81,22 @@ public class ArchiveExportController {
             throw new BusinessException(400, "选中影像数量超过当前病案总数，请刷新后重试");
         }
         boolean wholeArchive = selectedCount == totalCount;
-        if (!wholeArchive && selectedCount > MAX_SELECTED_EXPORT_COUNT) {
-            throw new BusinessException(400, "部分选择最多导出 200 张影像；整份病案请使用全选导出");
+        if (!wholeArchive && selectedCount > MAX_SELECTED_EXPORT_COUNT
+                && !shouldUseJob(prepared.export())) {
+            throw new BusinessException(400, "部分选择最多同步导出 200 张影像");
         }
-        String executionMode = !wholeArchive && selectedCount <= CLIENT_PDF_MAX_IMAGES
-                ? "CLIENT_PDF"
-                : "BACKEND_STREAM";
-        return Result.success(new ArchiveExportPlanResponse(
-                "PDF",
-                executionMode,
-                selectedCount,
-                totalCount,
-                CLIENT_PDF_MAX_IMAGES,
-                wholeArchive
-        ));
+
+        String executionMode;
+        if (!wholeArchive && selectedCount <= CLIENT_PDF_MAX_IMAGES) {
+            executionMode = "CLIENT_PDF";
+        } else if (shouldUseJob(prepared.export())) {
+            executionMode = "BACKEND_JOB";
+        } else {
+            executionMode = "BACKEND_STREAM";
+        }
+        return Result.success(planResponse(
+                "PDF", executionMode, selectedCount, totalCount,
+                wholeArchive, prepared.export()));
     }
 
     @Operation(summary = "流式下载整份病案 ZIP")
@@ -106,7 +132,7 @@ public class ArchiveExportController {
             throw new BusinessException(400, "请选择要导出 PDF 的影像");
         }
         if (request.getIds().size() > MAX_SELECTED_EXPORT_COUNT) {
-            throw new BusinessException(400, "单次最多导出 200 张选中影像");
+            throw new BusinessException(400, "单次同步导出最多 200 张选中影像，请使用异步导出");
         }
 
         ArchiveExportService.BatchZipExport export =
@@ -122,6 +148,29 @@ public class ArchiveExportController {
                 "archive-selected-" + System.currentTimeMillis() + ".pdf",
                 MediaType.APPLICATION_PDF
         );
+    }
+
+    private ArchiveExportPlanResponse planResponse(
+            String format,
+            String executionMode,
+            int selectedCount,
+            int totalCount,
+            boolean wholeArchive,
+            ArchiveExportService.BatchZipExport export) {
+        return new ArchiveExportPlanResponse(
+                format,
+                executionMode,
+                selectedCount,
+                totalCount,
+                CLIENT_PDF_MAX_IMAGES,
+                wholeArchive,
+                export.estimatedBytes(),
+                new ArrayList<>(export.sourceSummary())
+        );
+    }
+
+    private boolean shouldUseJob(ArchiveExportService.BatchZipExport export) {
+        return archiveExportJobService != null && archiveExportJobService.shouldUseJob(export);
     }
 
     private PreparedArchive prepareArchive(String bah, String sjh) {

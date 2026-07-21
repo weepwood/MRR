@@ -81,6 +81,8 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
   }
 
   let writable: FileSystemWritableFileStreamLike | undefined
+  let originalSize = 0
+  let completed = false
   try {
     const mimeType = job.format === 'PDF' ? 'application/pdf' : 'application/zip'
     const extension = job.format === 'PDF' ? '.pdf' : '.zip'
@@ -92,16 +94,15 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
       }],
     })
     const existingFile = await handle.getFile()
-    let offset = existingFile.size
-    if (offset > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
-      offset = 0
+    originalSize = existingFile.size
+
+    // 文件不是当前任务的有效前缀时，不修改用户选择的原文件，直接走普通下载。
+    if (originalSize > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
+      return downloadAsBlob(job, fileName)
     }
 
+    let offset = originalSize
     writable = await handle.createWritable({ keepExistingData: true })
-    if (offset === 0 && existingFile.size > 0) {
-      await writable.truncate(0)
-    }
-
     while (offset < totalBytes) {
       const end = Math.min(totalBytes - 1, offset + DOWNLOAD_CHUNK_BYTES - 1)
       const expectedLength = end - offset + 1
@@ -113,21 +114,36 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
       offset += chunk.size
     }
     await writable.truncate(totalBytes)
+    await writable.close()
+    writable = undefined
+    completed = true
     return 'resumable'
   }
   catch (error: unknown) {
     if ((error as { name?: string })?.name === 'AbortError') {
       throw error
     }
-    return downloadAsBlob(job, fileName)
-  }
-  finally {
     if (writable) {
       try {
+        // 只会在已验证的远端前缀后追加，失败时恢复到原始长度即可避免残缺文件。
+        await writable.truncate(originalSize)
         await writable.close()
       }
       catch {
-        // Range 下载失败时可能已回退普通下载，关闭失败不覆盖原始结果。
+        // 恢复失败不覆盖后续普通下载结果，但调用方仍会得到完整文件校验。
+      }
+      writable = undefined
+    }
+    return downloadAsBlob(job, fileName)
+  }
+  finally {
+    if (writable && !completed) {
+      try {
+        await writable.truncate(originalSize)
+        await writable.close()
+      }
+      catch {
+        // 页面退出或浏览器写入异常时尽力恢复原文件长度。
       }
     }
   }

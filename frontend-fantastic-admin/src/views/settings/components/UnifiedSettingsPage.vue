@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { motion, useReducedMotion } from 'motion-v'
-import { motionDurations, motionEasings } from '@/motion/presets'
+import { nextTick, onUnmounted, ref, watch } from 'vue'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -26,7 +24,11 @@ interface AppConfigPanelRef {
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
-const shouldReduceMotion = useReducedMotion()
+const savedRecently = ref(false)
+const departmentSavedRecently = ref(false)
+let saveFeedbackTimer: number | undefined
+let departmentFeedbackTimer: number | undefined
+
 const {
   settingsNavItems,
   shellRef,
@@ -45,6 +47,45 @@ const {
   handleReload,
   handleReset,
 } = useUnifiedSettings()
+
+function showSavedFeedback() {
+  savedRecently.value = true
+  if (saveFeedbackTimer !== undefined) window.clearTimeout(saveFeedbackTimer)
+  saveFeedbackTimer = window.setTimeout(() => {
+    savedRecently.value = false
+  }, 1200)
+}
+
+function showDepartmentSavedFeedback() {
+  departmentSavedRecently.value = true
+  if (departmentFeedbackTimer !== undefined) window.clearTimeout(departmentFeedbackTimer)
+  departmentFeedbackTimer = window.setTimeout(() => {
+    departmentSavedRecently.value = false
+  }, 1200)
+}
+
+async function handleServerSave() {
+  savedRecently.value = false
+  await handleSave()
+}
+
+async function handleDepartmentSave() {
+  departmentSavedRecently.value = false
+  const panel = departmentThemeRef.value
+  if (!panel) return
+  await panel.saveThemes()
+  await nextTick()
+  if (!panel.isDirty) showDepartmentSavedFeedback()
+}
+
+watch([saving, isDirty], ([isSaving, dirty], [wasSaving]) => {
+  if (wasSaving && !isSaving && !dirty) showSavedFeedback()
+})
+
+onUnmounted(() => {
+  if (saveFeedbackTimer !== undefined) window.clearTimeout(saveFeedbackTimer)
+  if (departmentFeedbackTimer !== undefined) window.clearTimeout(departmentFeedbackTimer)
+})
 
 void shellRef
 </script>
@@ -66,10 +107,10 @@ void shellRef
       </div>
       <div v-if="isServerSettingSection" class="header-actions">
         <el-button :disabled="loading || saving" @click="handleReload">
-          <FaIcon name="i-ri:refresh-line" />重新加载
+          <FaIcon name="i-ri:refresh-line" class="mrr-icon-interactive" />重新加载
         </el-button>
         <el-button :disabled="loading || saving" @click="handleReset">
-          <FaIcon name="i-ri:restart-line" />恢复默认
+          <FaIcon name="i-ri:restart-line" class="mrr-icon-interactive" />恢复默认
         </el-button>
       </div>
     </header>
@@ -86,19 +127,9 @@ void shellRef
               :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
               @click="selectSection(item.key)"
             >
-              <motion.span
-                class="nav-icon"
-                :animate="{
-                  transform: shouldReduceMotion
-                    ? 'none'
-                    : activeSection === item.key
-                      ? 'scale(1.06)'
-                      : 'scale(1)',
-                }"
-                :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
-              >
+              <span class="nav-icon">
                 <FaIcon :name="item.icon" />
-              </motion.span>
+              </span>
               <span class="nav-copy">
                 <strong>{{ item.title }}</strong>
                 <small>{{ item.description }}</small>
@@ -115,8 +146,18 @@ void shellRef
                 <small>{{ isDirty ? '保存后写入系统数据库。' : `当前使用${sourceMeta.label}。` }}</small>
               </div>
             </div>
-            <el-button type="primary" :loading="saving" :disabled="loading || !isDirty" @click="handleSave">
-              <FaIcon name="i-ri:save-3-line" />保存设置
+            <el-button
+              :type="savedRecently ? 'success' : 'primary'"
+              :loading="saving"
+              :disabled="loading || !isDirty"
+              @click="handleServerSave"
+            >
+              <FaIcon
+                :name="savedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': savedRecently }"
+              />
+              {{ savedRecently ? '已保存' : '保存设置' }}
             </el-button>
           </div>
 
@@ -129,12 +170,17 @@ void shellRef
               </div>
             </div>
             <el-button
-              type="primary"
+              :type="departmentSavedRecently ? 'success' : 'primary'"
               :loading="departmentThemeRef?.saving"
               :disabled="!departmentThemeRef?.isDirty"
-              @click="departmentThemeRef?.saveThemes()"
+              @click="handleDepartmentSave"
             >
-              <FaIcon name="i-ri:save-3-line" />保存科室配色
+              <FaIcon
+                :name="departmentSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': departmentSavedRecently }"
+              />
+              {{ departmentSavedRecently ? '已保存' : '保存科室配色' }}
             </el-button>
           </div>
 

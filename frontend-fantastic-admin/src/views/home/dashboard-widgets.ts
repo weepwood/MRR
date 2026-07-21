@@ -69,9 +69,13 @@ export function mergeWidgetPreferences(
 
   stored.forEach((item) => {
     const id = String(item.id)
-    if (usedIds.has(id)) return
+    if (usedIds.has(id)) {
+      return
+    }
     const definition = definitionsById.get(id)
-    if (!definition) return
+    if (!definition) {
+      return
+    }
 
     usedIds.add(id)
     merged.push({
@@ -86,7 +90,9 @@ export function mergeWidgetPreferences(
   })
 
   definitions.forEach((definition) => {
-    if (usedIds.has(definition.id)) return
+    if (usedIds.has(definition.id)) {
+      return
+    }
     merged.push({
       id: definition.id,
       title: definition.title,
@@ -103,7 +109,9 @@ export function mergeWidgetPreferences(
 
 export function sortWidgetPreferences(preferences: DashboardWidgetPreference[]): DashboardWidgetPreference[] {
   return [...preferences].sort((left, right) => {
-    if (left.pinned !== right.pinned) return left.pinned ? -1 : 1
+    if (left.pinned !== right.pinned) {
+      return left.pinned ? -1 : 1
+    }
     return left.order - right.order
   })
 }
@@ -113,13 +121,19 @@ export function moveWidget(
   sourceId: string,
   targetId: string,
 ): DashboardWidgetPreference[] {
-  if (sourceId === targetId) return reindexWidgetPreferences([...preferences])
+  if (sourceId === targetId) {
+    return reindexWidgetPreferences([...preferences])
+  }
 
   const sorted = sortWidgetPreferences(preferences)
   const sourceIndex = sorted.findIndex(item => item.id === sourceId)
   const targetIndex = sorted.findIndex(item => item.id === targetId)
-  if (sourceIndex < 0 || targetIndex < 0) return reindexWidgetPreferences(sorted)
-  if (sorted[sourceIndex].pinned !== sorted[targetIndex].pinned) return reindexWidgetPreferences(sorted)
+  if (sourceIndex < 0 || targetIndex < 0) {
+    return reindexWidgetPreferences(sorted)
+  }
+  if (sorted[sourceIndex].pinned !== sorted[targetIndex].pinned) {
+    return reindexWidgetPreferences(sorted)
+  }
 
   const next = [...sorted]
   const [source] = next.splice(sourceIndex, 1)

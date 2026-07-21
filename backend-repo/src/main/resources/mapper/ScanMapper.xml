@@ -5,7 +5,8 @@
 <mapper namespace="com.zjcxph.imgapi.mapper.ScanMapper">
 
     <select id="getImagePathList" resultType="com.zjcxph.imgapi.entity.PathDO">
-        SELECT BRXH AS brxh, BAH AS bah, folder, filename
+        SELECT id AS scan_id, BRXH AS brxh, BAH AS bah, sjh, folder, filename,
+               source_type, source_node, source_ref, oss_url, file_size
         FROM mr_scan
         WHERE uploadflag != 0
           AND id IN
@@ -39,6 +40,9 @@
             <if test="uploadDate != null">uploaddate = #{uploadDate},</if>
             <if test="uploadFlag != null">uploadflag = #{uploadFlag},</if>
             <if test="folder != null">folder = #{folder},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="sourceNode != null">source_node = #{sourceNode},</if>
+            <if test="sourceRef != null">source_ref = #{sourceRef},</if>
         </set>
         WHERE id = #{id}
     </update>

@@ -1,591 +1,669 @@
 <route lang="yaml">
 meta:
-  title: 主页
+  title: 管理概览
   icon: ant-design:home-twotone
 </route>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 import { useUserStore } from '@/store/modules/user'
-import { getDashboardData } from '@/api/modules/statistics'
-import { getSystemHealth } from '@/api/modules/system'
-import { getImageAuditAnalytics, searchImageAuditLogs } from '@/api/modules/logs'
 import { hasPermission } from '@/utils/session'
-import type { DashboardData, ImageAuditCountItem, LogRecord } from '@/api/types'
 
 defineOptions({ name: 'HomePage' })
 
-const router = useRouter()
+type ModuleTone = 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+interface ModuleEntry {
+  title: string
+  description: string
+  icon: string
+  path: string
+  permission?: string
+  tone: ModuleTone
+}
+
+interface ModuleGroup {
+  key: string
+  title: string
+  description: string
+  modules: ModuleEntry[]
+}
+
 const userStore = useUserStore()
 
-const dashboard = ref<DashboardData>({})
-const health = ref<Record<string, any>>({})
-const auditLogs = ref<LogRecord[]>([])
-const topUsers = ref<ImageAuditCountItem[]>([])
-const timelineVisible = ref(false)
-const timelineLoading = ref(false)
-const timelineUsername = ref('')
-const userTimeline = ref<LogRecord[]>([])
-const expandedTimelineGroups = ref<string[]>([])
-const loading = ref(true)
-
-const canViewStats = computed(() => hasPermission('statistics:read'))
-const canViewHealth = computed(() => hasPermission('system:read'))
-const canViewAudit = computed(() => hasPermission('log:read'))
-
-const statsCards = computed(() => [
-  { label: '总记录数', value: dashboard.value.overview?.totalRecords ?? '-', icon: 'i-ant-design:file-text-twotone', color: '#409eff' },
-  { label: '总页数', value: dashboard.value.overview?.totalPages ?? '-', icon: 'i-ant-design:book-twotone', color: '#67c23a' },
-  { label: '病案数', value: dashboard.value.uniqueBAHCount ?? '-', icon: 'i-ant-design:team-twotone', color: '#e6a23c' },
-  { label: '影像类型', value: dashboard.value.overview?.byType?.length ?? '-', icon: 'i-ant-design:appstore-twotone', color: '#909399' },
-])
-
-const quickActions = [
-  { label: '记录管理', icon: 'i-ant-design:database-twotone', path: '/records', color: '#409eff', perm: 'record:read' },
-  { label: '统计分析', icon: 'i-ant-design:bar-chart-twotone', path: '/statistics', color: '#67c23a', perm: 'statistics:read' },
-  { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
-  { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive/embed', color: '#909399', perm: 'record:read' },
-  { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
-
+const moduleGroups: ModuleGroup[] = [
+  {
+    key: 'business',
+    title: '业务处理',
+    description: '病案记录、患者信息、影像档案与实体档案管理。',
+    modules: [
+      {
+        title: '影像档案袋',
+        description: '查询并浏览病案影像、缩略图和患者信息。',
+        icon: 'i-ant-design:folder-open-twotone',
+        path: '/archive/embed',
+        permission: 'record:read',
+        tone: 'primary',
+      },
+      {
+        title: '记录管理',
+        description: '维护病案扫描记录及其基础数据。',
+        icon: 'i-ant-design:database-twotone',
+        path: '/records',
+        permission: 'record:read',
+        tone: 'success',
+      },
+      {
+        title: '患者管理',
+        description: '查看患者与住院病案的关联信息。',
+        icon: 'i-ant-design:team-outlined',
+        path: '/patients',
+        permission: 'record:read',
+        tone: 'info',
+      },
+      {
+        title: '档案装箱',
+        description: '管理病案装箱、箱号和档案状态。',
+        icon: 'i-ant-design:inbox-outlined',
+        path: '/archive-boxes',
+        permission: 'record:read',
+        tone: 'warning',
+      },
+      {
+        title: 'OSS 迁移管理',
+        description: '查看与管理病案影像迁移任务。',
+        icon: 'i-ant-design:cloud-upload-outlined',
+        path: '/oss-migration',
+        permission: 'record:read',
+        tone: 'primary',
+      },
+    ],
+  },
+  {
+    key: 'data',
+    title: '数据与统计',
+    description: '查看扫描统计、明细数据和数据库关系。',
+    modules: [
+      {
+        title: '病案扫描统计',
+        description: '按年份、科室和扫描状态查看统计结果。',
+        icon: 'i-ant-design:area-chart-outlined',
+        path: '/statistics',
+        permission: 'statistics:read',
+        tone: 'success',
+      },
+      {
+        title: '统计明细',
+        description: '查看病案扫描与档案记录的详细数据。',
+        icon: 'i-ant-design:profile-twotone',
+        path: '/statistics-detail',
+        permission: 'statistics:read',
+        tone: 'primary',
+      },
+      {
+        title: '数据关系工作台',
+        description: '检查数据库表之间的关联和数据完整性。',
+        icon: 'i-ant-design:apartment-outlined',
+        path: '/data-relations',
+        permission: 'system:read',
+        tone: 'warning',
+      },
+    ],
+  },
+  {
+    key: 'system',
+    title: '系统管理',
+    description: '管理用户、权限和系统运行配置。',
+    modules: [
+      {
+        title: '用户管理',
+        description: '创建用户、审核账号和重置密码。',
+        icon: 'i-ant-design:user-outlined',
+        path: '/users',
+        permission: 'user:manage',
+        tone: 'primary',
+      },
+      {
+        title: '权限管理',
+        description: '维护角色权限和功能访问范围。',
+        icon: 'i-ant-design:lock-twotone',
+        path: '/permissions',
+        permission: 'role:read',
+        tone: 'danger',
+      },
+      {
+        title: '系统设置',
+        description: '配置系统信息、档案浏览、安全和界面外观。',
+        icon: 'i-ant-design:tool-twotone',
+        path: '/settings',
+        permission: 'system:read',
+        tone: 'info',
+      },
+    ],
+  },
+  {
+    key: 'operations',
+    title: '运维与审计',
+    description: '查看系统运行状态、访问审计和接口性能。',
+    modules: [
+      {
+        title: '病案图片访问审计',
+        description: '查询病案影像查看、下载和访问记录。',
+        icon: 'i-ant-design:security-scan-outlined',
+        path: '/audit-images',
+        permission: 'log:read',
+        tone: 'warning',
+      },
+      {
+        title: '日志管理',
+        description: '检索系统日志、操作记录和异常信息。',
+        icon: 'i-ant-design:file-search-outlined',
+        path: '/logs',
+        permission: 'log:read',
+        tone: 'info',
+      },
+      {
+        title: '系统监控',
+        description: '查看服务、数据库、内存和运行指标。',
+        icon: 'i-ant-design:dashboard-twotone',
+        path: '/monitoring',
+        permission: 'system:read',
+        tone: 'success',
+      },
+      {
+        title: '服务状态',
+        description: '快速确认系统服务是否正常运行。',
+        icon: 'i-ant-design:check-circle-twotone',
+        path: '/system-status',
+        permission: 'system:read',
+        tone: 'success',
+      },
+      {
+        title: '接口响应分析',
+        description: '分析慢接口、响应时间和近期性能趋势。',
+        icon: 'i-ant-design:fund-projection-screen-outlined',
+        path: '/response-analysis',
+        permission: 'system:read',
+        tone: 'primary',
+      },
+      {
+        title: '认证接口测试',
+        description: '验证登录、鉴权和外部系统接入流程。',
+        icon: 'i-ant-design:api-twotone',
+        path: '/auth-test',
+        permission: 'user:manage',
+        tone: 'danger',
+      },
+    ],
+  },
+  {
+    key: 'help',
+    title: '帮助',
+    description: '查看系统使用说明和相关文档。',
+    modules: [
+      {
+        title: '帮助与文档',
+        description: '查看功能说明、使用流程和常见问题。',
+        icon: 'i-ant-design:read-outlined',
+        path: '/help',
+        tone: 'info',
+      },
+    ],
+  },
 ]
 
-const visibleQuickActions = computed(() => quickActions.filter(a => hasPermission(a.perm)))
+const featuredPaths = ['/archive/embed', '/records', '/statistics', '/monitoring']
 
-const dbStatus = computed(() => {
-  const db = health.value?.components?.database
-  return db?.status === 'UP' ? '正常' : db?.status === 'DOWN' ? '异常' : '未知'
-})
-const dbOk = computed(() => dbStatus.value === '正常')
-const memUsage = computed(() => health.value?.components?.memory?.usagePercent ?? '-')
-const memOk = computed(() => health.value?.components?.memory?.status === 'UP')
-const timelineGroups = computed(() => {
-  const groups = new Map<string, LogRecord[]>()
-  userTimeline.value.forEach((log) => {
-    const key = log.auditAction || 'OTHER'
-    const logs = groups.get(key) ?? []
-    logs.push(log)
-    groups.set(key, logs)
-  })
-  return Array.from(groups, ([key, logs]) => ({ key, label: actionLabel(key), logs }))
-})
-
-function formatDateTime(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+function canAccess(module: ModuleEntry) {
+  return !module.permission || hasPermission(module.permission)
 }
 
-function getRecentAuditRange() {
-  const end = new Date()
-  const start = new Date(end)
-  start.setDate(start.getDate() - 30)
-  return { startTime: formatDateTime(start), endTime: formatDateTime(end) }
-}
+const visibleModuleGroups = computed(() => moduleGroups
+  .map(group => ({
+    ...group,
+    modules: group.modules.filter(canAccess),
+  }))
+  .filter(group => group.modules.length > 0))
 
-async function loadData() {
-  loading.value = true
-  try {
-    const tasks: Promise<any>[] = []
-    const keys: ('dash' | 'health' | 'audit' | 'topUsers')[] = []
-    if (canViewStats.value) {
-      tasks.push(getDashboardData())
-      keys.push('dash')
-    }
-    if (canViewHealth.value) {
-      tasks.push(getSystemHealth())
-      keys.push('health')
-    }
-    if (canViewAudit.value) {
-      tasks.push(searchImageAuditLogs({ page: 1, size: 10 }))
-      keys.push('audit')
-      tasks.push(getImageAuditAnalytics(getRecentAuditRange()))
-      keys.push('topUsers')
-    }
-    const results = await Promise.allSettled(tasks)
-    results.forEach((res, i) => {
-      if (res.status !== 'fulfilled') { return }
-      const key = keys[i]
-      if (key === 'dash') { dashboard.value = (res.value as any)?.data ?? {} }
-      if (key === 'health') { health.value = (res.value as any)?.data ?? {} }
-      if (key === 'audit') {
-        const payload = res.value as any
-        auditLogs.value = payload?.data?.list ?? payload?.list ?? payload?.data ?? []
-      }
-      if (key === 'topUsers') {
-        topUsers.value = (res.value as any)?.data?.topUsers ?? []
-      }
-    })
-  } finally {
-    loading.value = false
-  }
-}
+const accessibleModules = computed(() => visibleModuleGroups.value.flatMap(group => group.modules))
 
-function actionLabel(action?: string) {
-  const labels: Record<string, string> = {
-    VIEW_IMAGE: '查看图片',
-    VIEW_OSS_IMAGE: '查看 OSS 图片',
-    DOWNLOAD: '下载压缩包',
-    LIST: '查询列表',
-  }
-  return labels[action ?? ''] ?? action ?? '其他'
-}
+const featuredModules = computed(() => featuredPaths.flatMap((path) => {
+  const module = accessibleModules.value.find(item => item.path === path)
+  return module ? [module] : []
+}))
 
-function navigate(path: string) {
-  router.push(path)
-}
-
-async function showUserTimeline(user: ImageAuditCountItem) {
-  timelineUsername.value = user.label
-  timelineVisible.value = true
-  timelineLoading.value = true
-  userTimeline.value = []
-  expandedTimelineGroups.value = []
-  try {
-    const { startTime, endTime } = getRecentAuditRange()
-    const response = await searchImageAuditLogs({
-      username: user.label,
-      startTime,
-      endTime,
-      page: 1,
-      size: 100,
-    })
-    userTimeline.value = (response as any)?.data?.list ?? []
-  }
-  finally {
-    timelineLoading.value = false
-  }
-}
-
-function formatLogTime(value?: string) {
-  return value ? String(value).slice(0, 19).replace('T', ' ') : '-'
-}
-
-function toggleTimelineGroup(key: string) {
-  expandedTimelineGroups.value = expandedTimelineGroups.value.includes(key)
-    ? expandedTimelineGroups.value.filter(item => item !== key)
-    : [...expandedTimelineGroups.value, key]
-}
-
-onMounted(() => {
-  loadData()
-})
+const accessibleModuleCount = computed(() => accessibleModules.value.length)
 </script>
 
 <template>
-  <div class="home-page">
-    <div class="home-header">
-      <div>
-        <p class="eyebrow">Medical Record Repository</p>
-        <h2>欢迎回来{{ userStore.profile?.displayName ? `，${userStore.profile.displayName}` : '' }}</h2>
-        <p class="subtitle">病案影像系统运行状况总览</p>
+  <div class="overview-page">
+    <header class="overview-hero">
+      <div class="hero-copy">
+        <span class="hero-eyebrow">MRR 工作台</span>
+        <h1>管理概览</h1>
+        <p>
+          欢迎回来{{ userStore.profile?.displayName ? `，${userStore.profile.displayName}` : '' }}。从这里快速进入当前账号可访问的业务模块。
+        </p>
       </div>
-      <el-button type="primary" :loading="loading" @click="loadData">
-        <template #icon><i class="i-ant-design:reload-twotone" /></template>
-        刷新数据
-      </el-button>
-    </div>
+      <div class="hero-summary" aria-label="可访问模块数量">
+        <strong>{{ accessibleModuleCount }}</strong>
+        <span>个可访问模块</span>
+      </div>
+    </header>
 
-    <!-- 统计卡片 -->
-    <el-row v-if="canViewStats" :gutter="16">
-      <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6">
-        <el-card shadow="never" class="stat-card">
-          <div class="stat-inner">
-            <div class="stat-icon" :style="{ background: card.color + '18', color: card.color }">
-              <i :class="card.icon" />
-            </div>
-            <div class="stat-info">
-              <p class="stat-value">{{ card.value }}</p>
-              <p class="stat-label">{{ card.label }}</p>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row v-if="canViewStats || canViewHealth" :gutter="16">
-      <!-- 高频访问用户 -->
-      <el-col v-if="canViewAudit" :span="canViewHealth ? 16 : 24">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>近 30 天高频访问用户</span>
-              <el-button text size="small" @click="router.push('/audit-images')">查看审计</el-button>
-            </div>
-          </template>
-          <div v-if="topUsers.length" class="top-users">
-            <div
-              v-for="(user, i) in topUsers"
-              :key="user.label"
-              class="top-user"
-              role="button"
-              tabindex="0"
-              @click="showUserTimeline(user)"
-              @keydown.enter="showUserTimeline(user)"
-            >
-              <span class="top-user-rank">{{ i + 1 }}</span>
-              <span class="top-user-name">{{ user.label || '-' }}</span>
-              <span class="top-user-count">{{ user.count }} 次访问</span>
-              <i class="i-ant-design:right-outlined top-user-arrow" />
-            </div>
-          </div>
-          <el-empty v-else description="近 30 天暂无访问用户数据" />
-        </el-card>
-      </el-col>
-
-      <!-- 系统状态 + 快捷入口 -->
-      <el-col v-if="canViewHealth" :span="canViewStats ? 8 : 24">
-        <el-card shadow="never" class="mb-4">
-          <template #header>
-            <span>系统状态</span>
-          </template>
-          <div class="health-items">
-            <div class="health-item">
-              <span class="health-label">数据库</span>
-              <el-tag :type="dbOk ? 'success' : 'danger'" size="small">{{ dbStatus }}</el-tag>
-            </div>
-            <div class="health-item">
-              <span class="health-label">内存</span>
-              <el-tag :type="memOk ? 'success' : 'warning'" size="small">{{ memUsage }}</el-tag>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card shadow="never">
-          <template #header>
-            <span>快捷入口</span>
-          </template>
-          <div class="quick-grid">
-            <button
-              v-for="action in visibleQuickActions"
-              :key="action.label"
-              class="quick-item"
-              @click="navigate(action.path)"
-            >
-              <i :class="action.icon" :style="{ color: action.color }" />
-              <span>{{ action.label }}</span>
-            </button>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 用户病案访问情况 -->
-    <el-card v-if="canViewAudit" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>用户病案访问情况</span>
-          <el-button text size="small" @click="router.push('/audit-images')">查看全部</el-button>
+    <section v-if="featuredModules.length" class="featured-section" aria-labelledby="featured-title">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">常用功能</span>
+          <h2 id="featured-title">快捷访问</h2>
         </div>
-      </template>
-      <div v-if="auditLogs.length" class="audit-table">
-        <div class="audit-row audit-header">
-          <span class="col-user">用户</span>
-          <span class="col-action">操作</span>
-          <span class="col-target">目标</span>
-          <span class="col-ip">IP</span>
-          <span class="col-time">时间</span>
-        </div>
-        <div v-for="(log, i) in auditLogs" :key="i" class="audit-row">
-          <span class="col-user">{{ log.username || '-' }}</span>
-          <span class="col-action">
-            <el-tag :type="log.auditAction === 'DOWNLOAD' ? 'warning' : log.auditAction === 'VIEW_IMAGE' || log.auditAction === 'VIEW_OSS_IMAGE' ? 'success' : 'info'" size="small">
-              {{ actionLabel(log.auditAction) }}
-            </el-tag>
+        <p>优先进入日常使用频率较高的功能。</p>
+      </div>
+
+      <div class="featured-grid">
+        <router-link
+          v-for="module in featuredModules"
+          :key="module.path"
+          :to="module.path"
+          class="featured-card"
+          :data-tone="module.tone"
+        >
+          <span class="featured-icon">
+            <FaIcon :name="module.icon" />
           </span>
-          <span class="col-target font-mono text-sm">{{ log.auditTarget || log.requestUri || '-' }}</span>
-          <span class="col-ip text-sm color-#64748b">{{ log.clientIp || '-' }}</span>
-          <span class="col-time text-sm color-#64748b">{{ log.accessTime ? String(log.accessTime).slice(0, 19).replace('T', ' ') : '-' }}</span>
-        </div>
+          <span class="featured-copy">
+            <strong>{{ module.title }}</strong>
+            <small>{{ module.description }}</small>
+          </span>
+          <FaIcon name="i-ri:arrow-right-line" class="card-arrow" />
+        </router-link>
       </div>
-      <el-empty v-else description="暂无访问记录" />
-    </el-card>
+    </section>
 
-    <el-dialog v-model="timelineVisible" :title="`${timelineUsername} 的操作时间线`" width="min(720px, 92vw)">
-      <el-skeleton v-if="timelineLoading" :rows="5" animated />
-      <el-empty v-else-if="!userTimeline.length" description="该用户近 30 天暂无操作记录" />
-      <div v-else class="user-timeline">
-        <div v-for="group in timelineGroups" :key="group.key" class="timeline-group">
-          <button
-            class="timeline-group-header"
-            :aria-expanded="expandedTimelineGroups.includes(group.key)"
-            @click="toggleTimelineGroup(group.key)"
-          >
-            <i :class="expandedTimelineGroups.includes(group.key) ? 'i-ant-design:down-outlined' : 'i-ant-design:right-outlined'" />
-            <span>{{ group.label }}</span>
-            <el-tag size="small" type="info">{{ group.logs.length }} 次</el-tag>
-          </button>
-          <div v-if="expandedTimelineGroups.includes(group.key)" class="timeline-group-children">
-            <div v-for="(log, index) in group.logs" :key="log.id ?? index" class="timeline-entry">
-              <div>
-                <span class="timeline-time">{{ formatLogTime(log.accessTime) }}</span>
-                <span class="timeline-target">{{ log.auditTarget || log.requestUri || '-' }}</span>
-              </div>
-              <span class="timeline-meta">{{ log.clientIp || '-' }} · {{ log.responseStatus ?? '-' }}</span>
-            </div>
+    <div class="module-groups">
+      <section
+        v-for="group in visibleModuleGroups"
+        :key="group.key"
+        class="module-group"
+        :aria-labelledby="`${group.key}-title`"
+      >
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">{{ group.modules.length }} 个模块</span>
+            <h2 :id="`${group.key}-title`">{{ group.title }}</h2>
           </div>
+          <p>{{ group.description }}</p>
         </div>
-      </div>
-    </el-dialog>
+
+        <div class="module-grid">
+          <router-link
+            v-for="module in group.modules"
+            :key="module.path"
+            :to="module.path"
+            class="module-card"
+            :data-tone="module.tone"
+          >
+            <span class="module-icon">
+              <FaIcon :name="module.icon" />
+            </span>
+            <span class="module-copy">
+              <strong>{{ module.title }}</strong>
+              <small>{{ module.description }}</small>
+            </span>
+            <FaIcon name="i-ri:arrow-right-s-line" class="card-arrow" />
+          </router-link>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.home-page {
+.overview-page {
   display: grid;
-  gap: 16px;
-}
-
-.home-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.subtitle {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-/* 统计卡片 */
-.stat-card {
-  margin-bottom: 0;
-}
-
-.stat-inner {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-
-.stat-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
-  border-radius: 12px;
-}
-
-.stat-info {
+  gap: 22px;
   min-width: 0;
 }
 
-.stat-value {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.stat-label {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-/* 卡片头部 */
-.card-header {
+.overview-hero {
   display: flex;
+  gap: 24px;
   align-items: center;
+  justify-content: space-between;
+  min-height: 152px;
+  padding: 26px 28px;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-xl);
+  box-shadow: var(--mrr-shadow-sm);
+}
+
+.hero-copy {
+  min-width: 0;
+}
+
+.hero-eyebrow,
+.section-kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mrr-primary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-copy h1 {
+  margin: 7px 0 8px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+  color: var(--mrr-foreground);
+  letter-spacing: -0.03em;
+}
+
+.hero-copy p,
+.section-heading p {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--mrr-muted-foreground);
+}
+
+.hero-copy p {
+  max-width: 680px;
+  font-size: 13px;
+}
+
+.hero-summary {
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 132px;
+  padding: 18px;
+  text-align: center;
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.hero-summary strong {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--mrr-primary);
+}
+
+.hero-summary span {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--mrr-muted-foreground);
+}
+
+.featured-section,
+.module-group {
+  display: grid;
+  gap: 14px;
+}
+
+.section-heading {
+  display: flex;
+  gap: 20px;
+  align-items: end;
   justify-content: space-between;
 }
 
-/* 高频访问用户 */
-.top-users {
-  display: grid;
-  gap: 8px;
+.section-heading h2 {
+  margin: 4px 0 0;
+  font-size: 17px;
+  color: var(--mrr-foreground);
 }
 
-.top-user {
-  display: grid;
-  grid-template-columns: 28px 1fr auto 18px;
-  gap: 10px;
-  align-items: center;
-  padding: 11px 12px;
-  cursor: pointer;
-  border: 1px solid var(--divider);
-  border-radius: 10px;
-  transition: background .2s, border-color .2s;
-}
-
-.top-user:hover,
-.top-user:focus-visible {
-  background: var(--surface-alt);
-  border-color: var(--el-color-primary-light-5);
-  outline: none;
-}
-
-.top-user-rank {
-  color: var(--el-color-primary);
-  font-weight: 800;
-  text-align: center;
-}
-
-.top-user-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.top-user-count,
-.timeline-meta {
-  color: var(--text-secondary);
+.section-heading p {
+  max-width: 520px;
   font-size: 12px;
+  text-align: right;
 }
 
-.top-user-arrow {
-  color: var(--text-secondary);
-}
-
-.user-timeline {
-  max-height: 55vh;
-  padding: 8px 12px 8px 4px;
-  overflow-y: auto;
-}
-
-.timeline-group {
-  border: 1px solid var(--divider);
-  border-radius: 10px;
-}
-
-.timeline-group + .timeline-group {
-  margin-top: 8px;
-}
-
-.timeline-group-header {
-  display: grid;
-  grid-template-columns: 18px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 11px 12px;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-
-.timeline-group-header:hover {
-  background: var(--surface-alt);
-}
-
-.timeline-entry {
-  display: grid;
-  gap: 7px;
-  padding: 10px 12px 10px 34px;
-  border-top: 1px solid var(--divider);
-}
-
-.timeline-time {
-  margin-right: 10px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.timeline-target {
-  word-break: break-all;
-}
-
-/* 系统状态 */
-.health-items {
+.featured-grid,
+.module-grid {
   display: grid;
   gap: 12px;
 }
 
-.health-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.featured-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.health-label {
+.module-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.featured-card,
+.module-card {
+  display: grid;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  transition:
+    border-color var(--mrr-motion-fast) ease,
+    box-shadow var(--mrr-motion-fast) ease,
+    transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.featured-card {
+  grid-template-columns: 44px minmax(0, 1fr) 18px;
+  gap: 12px;
+  align-items: center;
+  min-height: 112px;
+  padding: 18px;
+  border-radius: var(--mrr-radius-xl);
+}
+
+.module-card {
+  grid-template-columns: 40px minmax(0, 1fr) 16px;
+  gap: 12px;
+  align-items: start;
+  min-height: 98px;
+  padding: 16px;
+  border-radius: var(--mrr-radius-lg);
+}
+
+.featured-card:hover,
+.module-card:hover {
+  border-color: var(--mrr-primary);
+  box-shadow: var(--mrr-shadow-sm);
+  transform: translateY(-2px);
+}
+
+.featured-card:active,
+.module-card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.featured-card:focus-visible,
+.module-card:focus-visible {
+  outline: 2px solid var(--mrr-primary);
+  outline-offset: 2px;
+}
+
+.featured-icon,
+.module-icon {
+  display: grid;
+  color: var(--module-color);
+  background: var(--module-background);
+  border: 1px solid var(--module-border);
+  place-items: center;
+}
+
+.featured-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 21px;
+  border-radius: 13px;
+}
+
+.module-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  border-radius: 11px;
+}
+
+.featured-copy,
+.module-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.featured-copy {
+  gap: 5px;
+}
+
+.module-copy {
+  gap: 4px;
+}
+
+.featured-copy strong,
+.module-copy strong {
+  color: var(--mrr-foreground);
+}
+
+.featured-copy strong {
+  font-size: 14px;
+}
+
+.module-copy strong {
   font-size: 13px;
-  color: var(--text-secondary);
 }
 
-/* 快捷入口 */
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.quick-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  padding: 12px 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  transition: all 0.2s;
-}
-
-.quick-item:hover {
-  background: var(--surface-alt);
-  border-color: var(--divider);
-}
-
-.quick-item i {
-  font-size: 22px;
-}
-
-/* 访问记录 */
-.audit-table {
-  display: grid;
-  gap: 0;
-}
-
-.audit-row {
-  display: grid;
-  grid-template-columns: 100px 110px 1fr 120px 150px;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 4px;
-  font-size: 13px;
-  border-bottom: 1px solid var(--surface-alt);
-}
-
-.audit-row.audit-header {
-  padding: 4px 4px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-bottom: 2px solid var(--divider);
-}
-
-.audit-row:last-child {
-  border-bottom: none;
-}
-
-.col-target {
+.featured-copy small,
+.module-copy small {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.55;
+  color: var(--mrr-muted-foreground);
+  -webkit-box-orient: vertical;
+}
+
+.featured-copy small {
+  font-size: 11px;
+  -webkit-line-clamp: 2;
+}
+
+.module-copy small {
+  font-size: 10px;
+  -webkit-line-clamp: 2;
+}
+
+.card-arrow {
+  align-self: center;
+  color: var(--mrr-muted-foreground);
+  transition:
+    color var(--mrr-motion-fast) ease,
+    transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.featured-card:hover .card-arrow,
+.module-card:hover .card-arrow {
+  color: var(--mrr-primary);
+  transform: translateX(2px);
+}
+
+.module-groups {
+  display: grid;
+  gap: 24px;
+}
+
+[data-tone="primary"] {
+  --module-color: var(--el-color-primary);
+  --module-background: var(--el-color-primary-light-9);
+  --module-border: var(--el-color-primary-light-7);
+}
+
+[data-tone="success"] {
+  --module-color: var(--el-color-success);
+  --module-background: var(--el-color-success-light-9);
+  --module-border: var(--el-color-success-light-7);
+}
+
+[data-tone="warning"] {
+  --module-color: var(--el-color-warning);
+  --module-background: var(--el-color-warning-light-9);
+  --module-border: var(--el-color-warning-light-7);
+}
+
+[data-tone="danger"] {
+  --module-color: var(--el-color-danger);
+  --module-background: var(--el-color-danger-light-9);
+  --module-border: var(--el-color-danger-light-7);
+}
+
+[data-tone="info"] {
+  --module-color: var(--el-color-info);
+  --module-background: var(--el-color-info-light-9);
+  --module-border: var(--el-color-info-light-7);
+}
+
+@media (max-width: 1180px) {
+  .featured-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .overview-hero,
+  .section-heading {
+    align-items: flex-start;
+  }
+
+  .overview-hero {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .hero-summary {
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: baseline;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .hero-summary span {
+    margin-top: 0;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .section-heading p {
+    text-align: left;
+  }
+
+  .featured-grid,
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-card,
+  .module-card,
+  .card-arrow {
+    transition: none;
+  }
+
+  .featured-card:hover,
+  .module-card:hover,
+  .featured-card:active,
+  .module-card:active,
+  .featured-card:hover .card-arrow,
+  .module-card:hover .card-arrow {
+    transform: none;
+  }
 }
 </style>

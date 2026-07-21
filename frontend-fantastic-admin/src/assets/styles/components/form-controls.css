@@ -1,69 +1,55 @@
 /*
- * 跨 Element Plus 与 Fantastic Admin 自带表单组件的统一控件契约。
- * 页面仅负责宽度和布局，不再分别定义输入框、下拉框的基础高度与状态。
- * 圆角统一使用 --mrr-control-radius，并由系统设置中的全局圆角实时控制。
+ * Element Plus 只在这里桥接 MRR 的尺寸令牌；颜色、边框、圆角和状态
+ * 继续由 element-plus-overrides.css 统一维护，避免两套全局规则互相覆盖。
+ * Fantastic Admin 自带的 FaInput / FaSelect 则使用同一套 MRR 控件令牌。
  */
 .el-input,
 .el-select,
 .el-date-editor,
 .el-input-number {
   --el-component-size: var(--mrr-control-height);
-  font-size: 13px;
 }
 
-.el-input:not(.el-input--textarea),
-.el-select,
-.el-date-editor,
-.el-input-number {
-  min-height: var(--mrr-control-height);
-}
-
-.el-input:not(.el-input--textarea) .el-input__wrapper,
-.el-select .el-select__wrapper,
-.el-date-editor.el-input__wrapper,
-.el-range-editor.el-input__wrapper,
-.el-input-number {
-  box-sizing: border-box;
-  min-height: var(--mrr-control-height);
-  border-radius: var(--mrr-control-radius);
-}
-
-.el-input-number {
-  height: var(--mrr-control-height);
-}
-
-.el-input--small:not(.el-input--textarea),
+.el-input--small,
 .el-select--small,
+.el-date-editor--small,
+.el-range-editor--small,
 .el-input-number--small {
-  min-height: var(--mrr-control-height-compact);
+  --el-component-size: var(--mrr-control-height-compact);
 }
 
-.el-input-number--small {
-  height: var(--mrr-control-height-compact);
-}
-
-.el-input--small:not(.el-input--textarea) .el-input__wrapper,
-.el-select--small .el-select__wrapper {
-  min-height: var(--mrr-control-height-compact);
-}
-
-.el-input--large:not(.el-input--textarea),
+.el-input--large,
 .el-select--large,
+.el-date-editor--large,
+.el-range-editor--large,
 .el-input-number--large {
-  min-height: var(--mrr-control-height-large);
+  --el-component-size: var(--mrr-control-height-large);
 }
 
-.el-input-number--large {
-  height: var(--mrr-control-height-large);
+.el-range-editor {
+  min-height: var(--el-component-size);
 }
 
-.el-input--large:not(.el-input--textarea) .el-input__wrapper,
-.el-select--large .el-select__wrapper {
-  min-height: var(--mrr-control-height-large);
+.el-range-editor--small {
+  padding-inline: 9px;
+  border-radius: var(--mrr-radius-sm);
 }
 
-.el-input__inner,
-.el-select__selected-item,
+.el-range-editor--large {
+  padding-inline: 12px;
+  border-radius: var(--mrr-radius-lg);
+}
+
+.el-input-number {
+  height: var(--el-component-size);
+}
+
+.el-input-number .el-input,
+.el-input-number .el-input__wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
 .el-range-input {
   min-width: 0;
   font-size: 13px;
@@ -74,12 +60,6 @@
 .el-date-editor .el-range__icon,
 .el-date-editor .el-range__close-icon {
   line-height: 20px;
-}
-
-.el-input-number .el-input,
-.el-input-number .el-input__wrapper {
-  height: 100%;
-  min-height: 0;
 }
 
 .fa-input-control,
@@ -130,7 +110,7 @@
   opacity: 0.62;
 }
 
-.fa-select-trigger > svg {
+.fa-select-chevron {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
@@ -138,7 +118,7 @@
   transition: color 120ms ease, transform 120ms ease;
 }
 
-.fa-select-trigger[data-state="open"] > svg {
+.fa-select-trigger[data-state="open"] .fa-select-chevron {
   color: var(--mrr-foreground);
   transform: rotate(180deg);
 }
@@ -146,7 +126,7 @@
 @media (prefers-reduced-motion: reduce) {
   .fa-input-control,
   .fa-select-trigger,
-  .fa-select-trigger > svg {
+  .fa-select-chevron {
     transition: none;
   }
 }

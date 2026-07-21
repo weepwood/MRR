@@ -94,6 +94,7 @@ public class ImageController {
 
     @Operation(summary = "下载病案压缩包")
     @GetMapping("/download/{BAH}")
+    @RequirePermissions({"record:download"})
     public ResponseEntity<StreamingResponseBody> download(
             @PathVariable
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")

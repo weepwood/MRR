@@ -120,6 +120,14 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    public List<Scan> findActiveByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return scanMapper.findActiveByIds(ids);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     @Caching(evict = {
             @CacheEvict(value = "scanByBah", allEntries = true),

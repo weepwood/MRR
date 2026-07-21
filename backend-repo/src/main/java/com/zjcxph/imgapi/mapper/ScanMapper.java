@@ -98,6 +98,8 @@ public interface ScanMapper {
 
     List<PathDO> getImagePathList(@Param("ids") List<String> ids);
 
+    List<Scan> findActiveByIds(@Param("ids") List<Integer> ids);
+
     @Update("UPDATE mr_scan SET btype = #{type} WHERE id = #{id}")
     int updateImageType(@Param("id") Integer id, @Param("type") Integer type);
 

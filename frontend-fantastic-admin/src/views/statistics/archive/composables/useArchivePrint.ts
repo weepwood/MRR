@@ -1,11 +1,29 @@
 import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
+import {
+  downloadArchivePdf,
+  downloadSelectedImagesPdf,
+  getArchivePdfExportPlan,
+} from '@/api/modules/archive-export'
+import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
+
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 
 export function useArchivePrint() {
   const printing = ref(false)
   const exportingPdf = ref(false)
+  const { auth } = useAuth()
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -101,6 +119,10 @@ export function useArchivePrint() {
   }
 
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
+    if (!auth('record:pdf:export')) {
+      ElMessage.warning('当前账号没有病案 PDF 导出权限')
+      return
+    }
     if (!images.length) {
       ElMessage.warning('请先选择要导出的影像')
       return
@@ -112,28 +134,50 @@ export function useArchivePrint() {
       return
     }
 
-    const imageUrls = images.map(image => String(image.imageUrl || '').trim())
-    if (imageUrls.some(url => !url)) {
-      ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
-      return
-    }
+    const firstImage = images[0]
+    const bah = String(firstImage?.bah || '').trim()
+    const sjh = String(firstImage?.sjh || '').trim()
+    const fileStem = bah || 'archive'
+    const fileName = `${fileStem}${sjh ? `-${sjh}` : ''}-selected.pdf`
 
     exportingPdf.value = true
     try {
-      const pdfBlob = await createPdfFromImageUrls(imageUrls)
-      const firstImage = images[0]
-      const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
-      const sjh = String(firstImage?.sjh || '').trim()
-      const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
-      const url = URL.createObjectURL(pdfBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
+      const response = await getArchivePdfExportPlan(
+        bah || undefined,
+        sjh || undefined,
+        images.length,
+      )
+      const wholeArchive = Boolean(response?.data?.wholeArchive)
+      const mode = response?.data?.executionMode === 'CLIENT_PDF'
+        ? 'client-pdf'
+        : 'backend-stream'
+
+      if (mode === 'client-pdf') {
+        const imageUrls = images.map(image => String(image.imageUrl || '').trim())
+        if (imageUrls.some(url => !url)) {
+          ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
+          return
+        }
+        const pdfBlob = await createPdfFromImageUrls(imageUrls)
+        saveBlob(pdfBlob, fileName)
+        ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
+        return
+      }
+
+      if (wholeArchive) {
+        const pdfBlob = await downloadArchivePdf(bah || undefined, sjh || undefined)
+        saveBlob(pdfBlob, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
+        ElMessage.success('整份病案 PDF 已由服务器生成并开始下载')
+        return
+      }
+
+      const ids = images.map(image => image.id).filter((id): id is string | number => id !== undefined && id !== null)
+      if (ids.length !== images.length) {
+        throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
+      }
+      const pdfBlob = await downloadSelectedImagesPdf(ids)
+      saveBlob(pdfBlob, fileName)
+      ElMessage.success(`已由服务器生成并导出 ${images.length} 张影像`)
     }
     catch (err: unknown) {
       const message = (err as { message?: string })?.message || 'PDF 导出失败'

@@ -7,19 +7,18 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 
 @Component
 @Order(100)
 public class LocalArchiveImageSource implements ArchiveImageSource {
 
     private final LocalImageStorage localImageStorage;
-    private final ArchiveImageSourceProperties properties;
     private final SourcePermitGuard permitGuard;
 
     public LocalArchiveImageSource(LocalImageStorage localImageStorage,
                                    ArchiveImageSourceProperties properties) {
         this.localImageStorage = localImageStorage;
-        this.properties = properties;
         this.permitGuard = new SourcePermitGuard(
                 properties.getLocalMaxConcurrency(), properties.getAcquireTimeout());
     }
@@ -27,11 +26,7 @@ public class LocalArchiveImageSource implements ArchiveImageSource {
     @Override
     public boolean supports(PathDO image) {
         String type = normalizedType(image);
-        if ("LOCAL".equals(type)) {
-            return true;
-        }
-        return (type.isEmpty() || "AUTO".equals(type))
-                && (!properties.isPreferOss() || image == null || isBlank(image.getOssUrl()));
+        return type.isEmpty() || "AUTO".equals(type) || "LOCAL".equals(type);
     }
 
     @Override
@@ -52,10 +47,6 @@ public class LocalArchiveImageSource implements ArchiveImageSource {
     private String normalizedType(PathDO image) {
         return image == null || image.getSourceType() == null
                 ? ""
-                : image.getSourceType().trim().toUpperCase();
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+                : image.getSourceType().trim().toUpperCase(Locale.ROOT);
     }
 }

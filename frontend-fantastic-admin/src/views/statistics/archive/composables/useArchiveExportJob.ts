@@ -8,6 +8,7 @@ import {
   cancelArchiveExportJob,
   createArchiveExportJob,
   getArchiveExportJob,
+  listActiveArchiveExportJobs,
 } from '@/api/modules/archive-export'
 import { downloadExportJobWithResume } from '../utils/resumable-export-download'
 
@@ -18,7 +19,7 @@ function createIdempotencyKey(request: CreateArchiveExportJobRequest): string {
   return `${request.format.toLowerCase()}:${random}`
 }
 
-export function useArchiveExportJob() {
+export function useArchiveExportJob(formatHint?: 'ZIP' | 'PDF') {
   const job = ref<ArchiveExportJob | null>(null)
   const creating = ref(false)
   const cancelling = ref(false)
@@ -27,6 +28,7 @@ export function useArchiveExportJob() {
   let notificationHandle: { close: () => void } | undefined
   let notificationJobId = ''
   let renderVersion = 0
+  let disposed = false
 
   function applyJob(next: ArchiveExportJob) {
     if (job.value?.id === next.id) {
@@ -63,7 +65,7 @@ export function useArchiveExportJob() {
       import('element-plus'),
       import('../components/ArchiveExportJobPanel.vue'),
     ])
-    if (version !== renderVersion || job.value?.id !== current.id) return
+    if (disposed || version !== renderVersion || job.value?.id !== current.id) return
     notificationHandle?.close()
     notificationHandle = ElNotification({
       title: '病案导出任务',
@@ -84,7 +86,7 @@ export function useArchiveExportJob() {
 
   async function poll() {
     const id = job.value?.id
-    if (!id) return
+    if (!id || disposed) return
     try {
       const response = await getArchiveExportJob(id)
       if (response.data) applyJob(response.data)
@@ -103,6 +105,21 @@ export function useArchiveExportJob() {
     catch (error: unknown) {
       stopPolling()
       ElMessage.error((error as { message?: string })?.message || '导出任务状态查询失败')
+    }
+  }
+
+  async function restoreActiveJob() {
+    if (!formatHint || disposed || job.value) return
+    try {
+      const response = await listActiveArchiveExportJobs(formatHint, 1)
+      const active = response.data?.[0]
+      if (!active || disposed || job.value) return
+      applyJob(active)
+      void renderNotification(true)
+      pollTimer = setTimeout(() => void poll(), 500)
+    }
+    catch {
+      // 恢复查询失败不阻塞当前病案页面，用户仍可创建新任务。
     }
   }
 
@@ -159,7 +176,7 @@ export function useArchiveExportJob() {
         ElMessage.info('已取消选择下载文件')
         return
       }
-      throw error
+      ElMessage.error((error as { message?: string })?.message || '导出文件下载失败')
     }
     finally {
       downloading.value = false
@@ -177,7 +194,11 @@ export function useArchiveExportJob() {
   }
 
   if (getCurrentScope()) {
-    onScopeDispose(dismiss)
+    void restoreActiveJob()
+    onScopeDispose(() => {
+      disposed = true
+      dismiss()
+    })
   }
 
   return {

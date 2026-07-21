@@ -111,7 +111,7 @@ defineExpose({
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+  transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease;
 }
 
 .menu-item-container:hover {
@@ -130,7 +130,21 @@ defineExpose({
 .menu-item-container-icon {
   flex: 0 0 auto;
   color: currentcolor;
-  transform: none !important;
+  transform-origin: center;
+  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.menu-item-container:hover .menu-item-container-icon {
+  transform: scale(1.04);
+}
+
+.menu-item-container.active .menu-item-container-icon,
+.menu-item.active .menu-item-container-icon {
+  transform: scale(1.06);
+}
+
+.menu-item-container:active .menu-item-container-icon {
+  transform: scale(0.92);
 }
 
 .menu-leading-control {
@@ -145,7 +159,7 @@ defineExpose({
   position: absolute;
   inset: 0;
   margin: auto;
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition: opacity var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
 }
 
 .menu-leading-control-arrow {
@@ -172,9 +186,18 @@ defineExpose({
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .menu-item-container,
+  .menu-item-container-icon,
   .menu-leading-control-icon,
   .menu-leading-control-arrow {
     transition: none;
+  }
+
+  .menu-item-container:hover .menu-item-container-icon,
+  .menu-item-container.active .menu-item-container-icon,
+  .menu-item.active .menu-item-container-icon,
+  .menu-item-container:active .menu-item-container-icon {
+    transform: none;
   }
 }
 </style>

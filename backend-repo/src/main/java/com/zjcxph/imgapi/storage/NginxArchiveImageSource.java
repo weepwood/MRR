@@ -142,6 +142,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     }
 
     private URI resolveUri(PathDO image) throws IOException {
+        validateLegacyPath(image);
         final String rawUrl;
         try {
             rawUrl = imageUrlService.buildImageUrl(image);
@@ -171,6 +172,27 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
             return uri;
         } catch (URISyntaxException | IllegalArgumentException exception) {
             throw new IOException("Nginx 图片地址格式不正确", exception);
+        }
+    }
+
+    private void validateLegacyPath(PathDO image) throws IOException {
+        if (image == null) {
+            throw new InvalidImagePathException("影像路径信息不能为空");
+        }
+        String folder = image.getFolder();
+        if (folder != null && !folder.isBlank()) {
+            String validFolder = ArchiveImagePathSupport.segment(folder, "folder");
+            if (validFolder.length() < 5) {
+                throw new InvalidImagePathException("folder 长度不足 5 位");
+            }
+        }
+        ArchiveImagePathSupport.segment(image.getFilename(), "filename");
+        ArchiveImagePathSupport.segment(image.getBah(), "bah");
+        String normalizedBah = ImageUrlService.normalizeCode(image.getBah());
+        if (normalizedBah.compareTo("10000000") >= 0) {
+            ArchiveImagePathSupport.segment(image.getSjh(), "sjh");
+        } else {
+            ArchiveImagePathSupport.segment(image.getBrxh(), "brxh");
         }
     }
 

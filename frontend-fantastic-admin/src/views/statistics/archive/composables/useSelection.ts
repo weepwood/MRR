@@ -1,6 +1,12 @@
 import type { ComputedRef } from 'vue'
 import { computed, ref, watch } from 'vue'
 
+export const ARCHIVE_SELECTION_CHANGED_EVENT = 'mrr:archive-selection-changed'
+
+export interface ArchiveSelectionChangedDetail {
+  keys: string[]
+}
+
 export interface Selectable {
   id?: number | string
   filename?: string
@@ -71,6 +77,17 @@ export function useSelection<T extends Selectable>(validItems: ComputedRef<T[]>)
       selectedIds.value = filtered
     }
   })
+
+  watch(selectedIds, (value) => {
+    if (typeof window === 'undefined') return
+    const detail: ArchiveSelectionChangedDetail = {
+      keys: [...value].filter(Boolean).sort(),
+    }
+    window.dispatchEvent(new CustomEvent<ArchiveSelectionChangedDetail>(
+      ARCHIVE_SELECTION_CHANGED_EVENT,
+      { detail },
+    ))
+  }, { flush: 'sync' })
 
   return {
     selectedIds,

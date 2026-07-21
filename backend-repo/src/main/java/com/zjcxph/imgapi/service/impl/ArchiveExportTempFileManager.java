@@ -27,8 +27,19 @@ public class ArchiveExportTempFileManager {
 
     @PostConstruct
     public void initialize() throws IOException {
-        root = Path.of(properties.getTempDirectory()).toAbsolutePath().normalize();
-        Files.createDirectories(root);
+        if (properties.getTempDirectory() == null || properties.getTempDirectory().isBlank()) {
+            throw new IOException("导出临时目录不能为空");
+        }
+        if (properties.getMaxFileBytes() <= 0 || properties.getMaxTotalBytes() <= 0
+                || properties.getMaxFileBytes() > properties.getMaxTotalBytes()) {
+            throw new IOException("导出临时文件配额配置不正确");
+        }
+        Path configuredRoot = Path.of(properties.getTempDirectory()).toAbsolutePath().normalize();
+        Files.createDirectories(configuredRoot);
+        if (Files.isSymbolicLink(configuredRoot)) {
+            throw new IOException("导出临时目录不能是符号链接");
+        }
+        root = configuredRoot.toRealPath();
     }
 
     public synchronized Reservation reserve(String jobId, long estimatedBytes, String extension) throws IOException {
@@ -38,20 +49,21 @@ public class ArchiveExportTempFileManager {
                 Math.max(estimatedBytes, 1L), properties.getMaxFileBytes()));
         long used = currentUsageBytes();
         long reserved = reservations.values().stream().mapToLong(Long::longValue).sum();
-        if (used + reserved + requested > properties.getMaxTotalBytes()) {
+        if (used > properties.getMaxTotalBytes() - reserved
+                || used + reserved > properties.getMaxTotalBytes() - requested) {
             throw new BusinessException(507, "导出临时文件配额不足，请清理旧任务后重试");
         }
-        reservations.put(jobId, requested);
         Path path = root.resolve(jobId + "." + safeExtension).normalize();
-        if (!path.startsWith(root)) {
-            reservations.remove(jobId);
-            throw new IOException("临时文件路径越过受控目录");
+        if (!path.startsWith(root) || Files.isSymbolicLink(path)) {
+            throw new IOException("临时文件路径越过受控目录或指向符号链接");
         }
+        reservations.put(jobId, requested);
         return new Reservation(jobId, path, requested);
     }
 
     public OutputStream openOutput(Reservation reservation) throws IOException {
-        if (reservation == null || !reservation.path().normalize().startsWith(root)) {
+        if (reservation == null || !reservation.path().normalize().startsWith(root)
+                || Files.isSymbolicLink(reservation.path())) {
             throw new IOException("临时文件预留无效");
         }
         OutputStream delegate = Files.newOutputStream(
@@ -77,7 +89,7 @@ public class ArchiveExportTempFileManager {
             }
 
             private void ensureCapacity(int increment) throws IOException {
-                if (increment < 0 || written + increment > properties.getMaxFileBytes()) {
+                if (increment < 0 || written > properties.getMaxFileBytes() - increment) {
                     throw new IOException("导出文件超过单文件配额");
                 }
             }
@@ -89,10 +101,14 @@ public class ArchiveExportTempFileManager {
             throw new IOException("导出文件路径为空");
         }
         Path path = Path.of(filePath).toAbsolutePath().normalize();
-        if (!path.startsWith(root) || !Files.isRegularFile(path)) {
+        if (!path.startsWith(root) || Files.isSymbolicLink(path) || !Files.isRegularFile(path)) {
             throw new IOException("导出文件不存在或不在受控目录");
         }
-        return path;
+        Path realPath = path.toRealPath();
+        if (!realPath.startsWith(root)) {
+            throw new IOException("导出文件越过受控目录");
+        }
+        return realPath;
     }
 
     public void deleteManagedFile(String filePath) {
@@ -114,7 +130,7 @@ public class ArchiveExportTempFileManager {
             return 0;
         }
         try (var stream = Files.list(root)) {
-            return stream.filter(Files::isRegularFile)
+            return stream.filter(path -> !Files.isSymbolicLink(path) && Files.isRegularFile(path))
                     .mapToLong(path -> {
                         try {
                             return Files.size(path);

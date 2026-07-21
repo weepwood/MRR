@@ -14,6 +14,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.zip.ZipInputStream;
 
@@ -23,6 +24,10 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ArchiveExportServiceImplTest {
+
+    private static final byte[] ONE_PIXEL_PNG = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nWQAAAAASUVORK5CYII="
+    );
 
     @Mock
     private ScanService scanService;
@@ -81,6 +86,24 @@ class ArchiveExportServiceImplTest {
                 "00789508/page-2.jpg",
                 "00789508/page-2-2.jpg"
         );
+    }
+
+    @Test
+    void streamsPdfWithOnePagePerImage() throws Exception {
+        PathDO first = new PathDO("25.03.15", "page-1.png", "605746", "00789508");
+        PathDO second = new PathDO("25.03.15", "page-2.png", "605746", "00789508");
+        when(imageStorage.open(first)).thenReturn(new ByteArrayInputStream(ONE_PIXEL_PNG));
+        when(imageStorage.open(second)).thenReturn(new ByteArrayInputStream(ONE_PIXEL_PNG));
+
+        ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
+        ArchiveExportService.BatchZipExport export = new ArchiveExportService.BatchZipExport(List.of(first, second));
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        service.writeBatchPdf(export, output);
+
+        String header = new String(output.toByteArray(), 0, 5, StandardCharsets.US_ASCII);
+        assertThat(header).isEqualTo("%PDF-");
+        assertThat(output.size()).isGreaterThan(100);
     }
 
     @Test

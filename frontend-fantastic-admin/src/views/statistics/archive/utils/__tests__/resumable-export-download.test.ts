@@ -77,4 +77,33 @@ describe('resumable archive export download', () => {
     expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, 'bytes=0-9')
     expect(write).toHaveBeenCalledWith(expect.objectContaining({ position: 0 }))
   })
+
+  it('falls back to a full blob download when the proxy rejects Range requests', async () => {
+    const write = vi.fn().mockResolvedValue(undefined)
+    const truncate = vi.fn().mockResolvedValue(undefined)
+    const close = vi.fn().mockResolvedValue(undefined)
+    const existing = new File([], 'archive-job.zip')
+    ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
+      getFile: vi.fn().mockResolvedValue(existing),
+      createWritable: vi.fn().mockResolvedValue({ write, truncate, close }),
+    })
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:test'),
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    api.downloadArchiveExportJob
+      .mockRejectedValueOnce(new Error('Range unsupported'))
+      .mockResolvedValueOnce(new Blob([new Uint8Array(10)]))
+    const currentJob = job()
+
+    await expect(downloadExportJobWithResume(currentJob)).resolves.toBe('blob')
+
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-9')
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id)
+    expect(close).toHaveBeenCalled()
+  })
 })

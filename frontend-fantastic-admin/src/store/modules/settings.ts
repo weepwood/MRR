@@ -1,4 +1,4 @@
-import type { Settings } from '#/global'
+import type { RecursiveRequired, Settings } from '#/global'
 import type { RouteMeta } from 'vue-router'
 import { cloneDeep } from 'es-toolkit'
 import settingsDefault from '@/settings'
@@ -13,7 +13,7 @@ function normalizePageTitleStyle(value: unknown): 'plain' | 'card' {
   return 'card'
 }
 
-function getInitialSettings() {
+function getInitialSettings(): RecursiveRequired<Settings.all> {
   const defaults = cloneDeep(settingsDefault)
 
   try {

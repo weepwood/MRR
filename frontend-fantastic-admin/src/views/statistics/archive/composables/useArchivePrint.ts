@@ -3,9 +3,8 @@ import type { ArchiveSelectionChangedDetail } from './useSelection'
 import { ElMessage } from 'element-plus'
 import { getCurrentScope, onScopeDispose, ref } from 'vue'
 import {
-  downloadArchivePdf,
   downloadSelectedImagesPdf,
-  getArchivePdfExportPlan,
+  getSelectedImagesPdfExportPlan,
 } from '@/api/modules/archive-export'
 import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
@@ -169,6 +168,13 @@ export function useArchivePrint() {
       return
     }
 
+    const ids = images
+      .map(image => image.id)
+      .filter((id): id is string | number => id !== undefined && id !== null)
+    if (ids.length !== images.length) {
+      throw new Error('部分影像缺少记录 ID，无法生成 PDF')
+    }
+
     const firstImage = images[0]
     const bah = String(firstImage?.bah || '').trim()
     const sjh = String(firstImage?.sjh || '').trim()
@@ -177,12 +183,8 @@ export function useArchivePrint() {
 
     exportingPdf.value = true
     try {
-      const response = await getArchivePdfExportPlan(
-        bah || undefined,
-        sjh || undefined,
-        images.length,
-      )
-      const wholeArchive = Boolean(response?.data?.wholeArchive)
+      // 规划和执行均绑定相同的 ID 集合，哪怕用户恰好选中了当前全部图片。
+      const response = await getSelectedImagesPdfExportPlan(ids)
       const mode = response?.data?.executionMode
 
       if (mode === 'CLIENT_PDF') {
@@ -199,31 +201,19 @@ export function useArchivePrint() {
         return
       }
 
-      const ids = images.map(image => image.id).filter((id): id is string | number => id !== undefined && id !== null)
-      if (!wholeArchive && ids.length !== images.length) {
-        throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
-      }
-
       if (mode === 'BACKEND_JOB') {
         jobSelectionSignature.value = nextSelectionSignature
         await exportJob.start({
           format: 'PDF',
           bah: bah || undefined,
           sjh: sjh || undefined,
-          ids: wholeArchive ? undefined : ids,
+          ids,
         })
         return
       }
 
       exportJob.dismiss()
       jobSelectionSignature.value = ''
-      if (wholeArchive) {
-        const pdfBlob = await downloadArchivePdf(bah || undefined, sjh || undefined)
-        saveBlob(pdfBlob, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
-        ElMessage.success('整份病案 PDF 已由服务器生成并开始下载')
-        return
-      }
-
       const pdfBlob = await downloadSelectedImagesPdf(ids)
       saveBlob(pdfBlob, fileName)
       ElMessage.success(`已由服务器生成并导出 ${images.length} 张影像`)

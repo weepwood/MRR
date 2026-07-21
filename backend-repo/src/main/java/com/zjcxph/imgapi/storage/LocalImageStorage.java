@@ -34,34 +34,16 @@ public class LocalImageStorage implements ImageStorage {
     }
 
     /**
-     * 根据历史目录规则解析影像文件，并阻止绝对路径、路径分隔符和目录穿越。
+     * 根据统一业务目录规则解析影像文件，并阻止绝对路径、路径分隔符和目录穿越。
      */
     public Path resolve(PathDO image) throws IOException {
-        if (image == null) {
-            throw new InvalidImagePathException("影像路径信息不能为空");
-        }
-
         String configuredBasePath = imageProperties.getBasePath();
         if (configuredBasePath == null || configuredBasePath.isBlank()) {
             throw new IOException("未配置 image.basePath");
         }
 
-        String folder = requireSegment(image.getFolder(), "folder");
-        if (folder.length() < 5) {
-            throw new InvalidImagePathException("folder 长度不足 5 位");
-        }
-        String brxh = requireSegment(image.getBrxh(), "brxh");
-        String bah = requireSegment(image.getBah(), "bah");
-        String filename = requireSegment(image.getFilename(), "filename");
-
         Path root = Paths.get(configuredBasePath).toAbsolutePath().normalize();
-        Path resolved = root
-                .resolve(folder.substring(0, 5))
-                .resolve(folder)
-                .resolve(brxh + "-" + bah)
-                .resolve(filename)
-                .normalize();
-
+        Path resolved = root.resolve(ArchiveImagePathSupport.relativePath(image)).normalize();
         if (!resolved.startsWith(root)) {
             throw new InvalidImagePathException("影像路径越过配置根目录");
         }
@@ -81,31 +63,5 @@ public class LocalImageStorage implements ImageStorage {
             throw new InvalidImagePathException("影像文件符号链接越过配置根目录");
         }
         return realFile;
-    }
-
-    private String requireSegment(String value, String field) throws InvalidImagePathException {
-        if (value == null || value.isBlank()) {
-            throw new InvalidImagePathException(field + " 不能为空");
-        }
-        String normalized = value.trim();
-        if (normalized.equals(".")
-                || normalized.equals("..")
-                || normalized.contains("/")
-                || normalized.contains("\\")
-                || normalized.indexOf('\0') >= 0
-                || containsWindowsReservedCharacter(normalized)) {
-            throw new InvalidImagePathException(field + " 包含非法路径字符");
-        }
-        return normalized;
-    }
-
-    private boolean containsWindowsReservedCharacter(String value) {
-        return value.indexOf(':') >= 0
-                || value.indexOf('*') >= 0
-                || value.indexOf('?') >= 0
-                || value.indexOf('"') >= 0
-                || value.indexOf('<') >= 0
-                || value.indexOf('>') >= 0
-                || value.indexOf('|') >= 0;
     }
 }

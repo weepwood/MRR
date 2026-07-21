@@ -112,8 +112,8 @@ export function useUnifiedSettings() {
     }
   }
 
-  async function handleSave() {
-    if (!validateSettings() || !await confirmDeveloperModeEnable()) return
+  async function handleSave(): Promise<boolean> {
+    if (!validateSettings() || !await confirmDeveloperModeEnable()) return false
     saving.value = true
     const developerChangeRequested = developerModeChanged.value
     try {
@@ -131,10 +131,12 @@ export function useUnifiedSettings() {
       ElMessage.success(developerChangeRequested
         ? `开发者模式已${settings.value.developerModeEnabled ? '启用' : '关闭'}，后端已即时生效`
         : '系统设置已保存')
+      return true
     }
     catch (error: any) {
       if (developerChangeRequested) settings.value.developerModeEnabled = savedDeveloperModeEnabled.value
       ElMessage.error(error?.response?.data?.message || error?.message || '服务端保存失败，设置未生效')
+      return false
     }
     finally {
       saving.value = false

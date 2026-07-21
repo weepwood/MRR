@@ -9,6 +9,8 @@ const settingsStore = useSettingsStore()
 const mainPage = useMainPage()
 
 const isAnimating = ref(false)
+let animationFrame: number | undefined
+let animationTimer: number | undefined
 
 onMounted(() => {
   hotkeys('f5', (e) => {
@@ -20,10 +22,26 @@ onMounted(() => {
 })
 onUnmounted(() => {
   hotkeys.unbind('f5')
+  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
+  if (animationTimer !== undefined) window.clearTimeout(animationTimer)
 })
 
+function playRefreshFeedback() {
+  isAnimating.value = false
+  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
+  animationFrame = requestAnimationFrame(() => {
+    isAnimating.value = true
+    animationFrame = undefined
+  })
+  if (animationTimer !== undefined) window.clearTimeout(animationTimer)
+  animationTimer = window.setTimeout(() => {
+    isAnimating.value = false
+    animationTimer = undefined
+  }, 700)
+}
+
 function handleClick() {
-  isAnimating.value = true
+  playRefreshFeedback()
   mainPage.reload()
 }
 
@@ -40,24 +58,12 @@ function handleCtrlClick() {
         <p>可切换为浏览器原生刷新</p>
       </div>
     </template>
-    <FaButton variant="ghost" size="icon" class="size-9" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick" @animationend="isAnimating = false">
-      <FaIcon name="i-iconoir:refresh-double" class="size-4" :class="{ animation: isAnimating }" />
+    <FaButton variant="ghost" size="icon" class="size-9" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
+      <FaIcon
+        name="i-iconoir:refresh-double"
+        class="mrr-icon-interactive size-4"
+        :class="{ 'mrr-icon-spin-once': isAnimating }"
+      />
     </FaButton>
   </FaTooltip>
 </template>
-
-<style scoped>
-.animation {
-  animation: animation 1s;
-}
-
-@keyframes animation {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-</style>

@@ -107,8 +107,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
     public void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException {
         validateExportArguments(export, outputStream);
 
-        try (PdfWriter writer = new PdfWriter(outputStream);
-             PdfDocument pdf = new PdfDocument(writer)) {
+        try (PdfDocument pdf = new PdfDocument(new PdfWriter(outputStream))) {
             int written = 0;
             for (PathDO item : export.items()) {
                 byte[] imageBytes;
@@ -130,7 +129,10 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                         pageSize.getWidth() - PDF_PAGE_MARGIN * 2f,
                         pageSize.getHeight() - PDF_PAGE_MARGIN * 2f
                 );
-                new PdfCanvas(page).addImageFittedIntoRectangle(image, target, false);
+                PdfCanvas canvas = new PdfCanvas(page);
+                canvas.addImageFittedIntoRectangle(image, target, false);
+                canvas.release();
+                page.flush();
                 written++;
             }
 

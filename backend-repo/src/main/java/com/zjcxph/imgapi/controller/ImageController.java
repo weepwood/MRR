@@ -94,6 +94,7 @@ public class ImageController {
 
     @Operation(summary = "下载病案压缩包")
     @GetMapping("/download/{BAH}")
+    @RequirePermissions({"record:download"})
     public ResponseEntity<StreamingResponseBody> download(
             @PathVariable
             @Pattern(regexp = "\\d{1,8}", message = "请输入 1-8 位数字病案号")
@@ -216,115 +217,55 @@ public class ImageController {
                     .build());
             headers.setCacheControl("public, max-age=86400, immutable");
             headers.setContentType(mediaType);
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentLength(contentLength)
-                    .body(resource);
+            headers.setContentLength(contentLength);
+            return new ResponseEntity<>(resource, headers, HttpStatus.OK);
         } catch (InvalidImagePathException exception) {
-            logger.warn("拒绝非法影像路径: BAH={}, BRXH={}, FOLDER={}, FILENAME={}, reason={}",
-                    BAH, BRXH, FOLDER, FILENAME, exception.getMessage());
-            return ResponseEntity.badRequest().body(Result.fail(exception.getMessage()));
+            logger.warn("非法图片路径请求被拒绝: BAH={}, BRXH={}, FOLDER={}, FILENAME={}",
+                    BAH, BRXH, FOLDER, FILENAME);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("非法图片路径");
         } catch (FileNotFoundException exception) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.fail("图片不存在"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("图片不存在");
         } catch (IOException exception) {
-            logger.error("读取影像失败: BAH={}, BRXH={}, FOLDER={}, FILENAME={}",
-                    BAH, BRXH, FOLDER, FILENAME, exception);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Result.fail("图片读取错误"));
+            logger.error("读取本地图片失败", exception);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("图片读取失败");
         }
     }
 
-    @Operation(summary = "根据图片id修改对应图片类型")
-    @PutMapping("/updateImageType/{id}")
-    public Result<Void> updateImageType(
-            @PathVariable
-            @Parameter(description = "图片id", example = "1")
-            Integer id,
-            @RequestBody ImageRequest req) {
-        Integer imageType = req.getBtype();
-        if (imageType == null) {
+    @Operation(summary = "更新图片类型")
+    @PutMapping("/{id}/type")
+    @RequirePermissions({"record:edit"})
+    public Result<String> updateImageType(
+            @PathVariable Integer id,
+            @RequestBody ImageRequest request) {
+        if (request == null || request.getBtype() == null) {
             return Result.fail("图片类型不能为空");
         }
-        if (id == null) {
-            return Result.fail("图片id不能为空");
-        }
-        if (imageType < 0 || imageType > 15) {
-            return Result.fail("图片类型错误，仅支持 0-15，其中 0 表示暂未分类");
-        }
-        int result = scanService.updateImageType(id, imageType);
-        if (result != 1) {
-            logger.error("修改图片 {} 的类型为 {} 失败", id, imageType);
-            return Result.fail("修改图片类型失败");
-        }
-        return Result.success("修改图片类型成功");
+        int updated = scanService.updateImageType(id, request.getBtype());
+        return updated > 0 ? Result.success("图片类型更新成功") : Result.fail("图片类型更新失败");
     }
 
-    @Operation(summary = "获取图片URL（遵循系统图片来源设置）")
-    @GetMapping("/url/{id}")
-    public Result<String> getImageUrl(
-            @PathVariable
-            @Parameter(description = "扫描记录 ID", example = "1")
-            Integer id) {
-        Scan scan = scanService.findById(id);
-        if (scan == null) {
-            return Result.fail("扫描记录不存在");
+    @Operation(summary = "获取 OSS 图片访问地址")
+    @GetMapping("/oss-url")
+    public Result<String> getOssUrl(@RequestParam String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return Result.fail("objectKey 不能为空");
         }
-        String url = imageUrlService.buildPreferredImageUrl(scan);
-        if (url == null) {
-            return Result.fail("无法构造图片URL，缺少必要字段");
-        }
-        return Result.<String>successWithData(url);
-    }
-
-    @Operation(summary = "通过后端代理获取 OSS 图片")
-    @GetMapping("/oss-image/{id}")
-    public ResponseEntity<?> getOssImage(
-            @PathVariable
-            @Parameter(description = "扫描记录 ID", example = "1")
-            Integer id) {
-        Scan scan = scanService.findById(id);
-        if (scan == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        String ossKey = scan.getOssUrl();
-        if (ossKey == null || ossKey.isBlank()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.fail("该记录未迁移到 OSS"));
-        }
-
         try {
-            String signedUrl = ossService.generatePresignedUrl(ossKey);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .header(HttpHeaders.LOCATION, signedUrl)
-                    .header("Cache-Control", "private, max-age=3600")
-                    .build();
+            return Result.success(ossService.generatePresignedUrl(objectKey));
         } catch (Exception exception) {
-            logger.error("获取 OSS 图片失败：id={}", id, exception);
-            return ResponseEntity.internalServerError()
-                    .body(Result.fail("获取 OSS 图片失败：" + exception.getMessage()));
+            logger.error("生成 OSS 访问地址失败", exception);
+            return Result.fail("生成 OSS 访问地址失败");
         }
     }
 
-    private void applyLookupMetadata(
-            HttpServletResponse response,
-            ArchiveLookupResult lookupResult
-    ) {
-        response.setHeader(LOOKUP_STRATEGY_HEADER, lookupResult.strategy().name());
-        response.setHeader(LOOKUP_FALLBACK_REASON_HEADER, lookupResult.fallbackReason().name());
-        response.setHeader(LOOKUP_IMAGE_COUNT_HEADER, Integer.toString(lookupResult.resultCount()));
-        if (lookupResult.archiveId() != null) {
-            response.setHeader(LOOKUP_ARCHIVE_ID_HEADER, Long.toString(lookupResult.archiveId()));
+    private void applyLookupMetadata(HttpServletResponse response, ArchiveLookupResult result) {
+        response.setHeader(LOOKUP_STRATEGY_HEADER, result.strategy().name());
+        response.setHeader(LOOKUP_IMAGE_COUNT_HEADER, String.valueOf(result.resultCount()));
+        if (result.archiveId() != null) {
+            response.setHeader(LOOKUP_ARCHIVE_ID_HEADER, String.valueOf(result.archiveId()));
         }
-
-        logger.info(
-                "影像档案查询完成: strategy={}, fallbackReason={}, archiveId={}, resultCount={}",
-                lookupResult.strategy(),
-                lookupResult.fallbackReason(),
-                lookupResult.archiveId(),
-                lookupResult.resultCount()
-        );
+        if (result.fallbackReason() != null) {
+            response.setHeader(LOOKUP_FALLBACK_REASON_HEADER, result.fallbackReason().name());
+        }
     }
 }

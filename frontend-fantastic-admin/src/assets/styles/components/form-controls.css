@@ -30,14 +30,22 @@
   min-height: var(--el-component-size);
 }
 
+.el-range-editor--small,
+.el-input-number--small {
+  border-radius: var(--mrr-radius-sm);
+}
+
 .el-range-editor--small {
   padding-inline: 9px;
-  border-radius: var(--mrr-radius-sm);
+}
+
+.el-range-editor--large,
+.el-input-number--large {
+  border-radius: var(--mrr-radius-lg);
 }
 
 .el-range-editor--large {
   padding-inline: 12px;
-  border-radius: var(--mrr-radius-lg);
 }
 
 .el-input-number {

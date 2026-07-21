@@ -106,6 +106,19 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     }
   }
 
+  async function discard() {
+    const current = job.value
+    stopPolling()
+    job.value = null
+    if (!current || isTerminal(current.status)) return
+    try {
+      await cancelArchiveExportJob(current.id)
+    }
+    catch {
+      // 当前页面已切换病案或选择，失效旧按钮状态不能被取消请求失败阻塞。
+    }
+  }
+
   async function download() {
     const current = job.value
     if (!current || current.status !== 'SUCCESS') return
@@ -145,6 +158,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     downloading,
     start,
     cancel,
+    discard,
     download,
     dismiss,
   }

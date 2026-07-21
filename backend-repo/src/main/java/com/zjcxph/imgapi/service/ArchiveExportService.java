@@ -4,8 +4,10 @@ import com.zjcxph.imgapi.entity.PathDO;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 病案影像导出应用服务。
@@ -18,9 +20,29 @@ public interface ArchiveExportService {
 
     BatchZipExport prepareArchive(String bah, String sjh);
 
-    void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException;
+    default void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException {
+        writeBatchZip(export, outputStream, ExportProgress.NONE);
+    }
 
-    void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException;
+    void writeBatchZip(BatchZipExport export, OutputStream outputStream, ExportProgress progress) throws IOException;
+
+    default void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException {
+        writeBatchPdf(export, outputStream, ExportProgress.NONE);
+    }
+
+    void writeBatchPdf(BatchZipExport export, OutputStream outputStream, ExportProgress progress) throws IOException;
+
+    interface ExportProgress {
+        ExportProgress NONE = new ExportProgress() {
+        };
+
+        default boolean isCancelled() {
+            return false;
+        }
+
+        default void onItemCompleted(int completed, int total, PathDO item) {
+        }
+    }
 
     record BatchZipExport(List<PathDO> items) {
         public BatchZipExport {
@@ -31,6 +53,28 @@ public interface ArchiveExportService {
 
         public int itemCount() {
             return items.size();
+        }
+
+        public long estimatedBytes() {
+            long total = 0;
+            for (PathDO item : items) {
+                if (item.getFileSize() != null && item.getFileSize() > 0) {
+                    total = Math.addExact(total, item.getFileSize());
+                }
+            }
+            return total;
+        }
+
+        public Set<String> sourceSummary() {
+            Set<String> sources = new LinkedHashSet<>();
+            for (PathDO item : items) {
+                String source = item.getSourceType();
+                if (source == null || source.isBlank() || "AUTO".equalsIgnoreCase(source)) {
+                    source = item.getOssUrl() == null || item.getOssUrl().isBlank() ? "LOCAL" : "OSS";
+                }
+                sources.add(source.toUpperCase());
+            }
+            return Set.copyOf(sources);
         }
     }
 }

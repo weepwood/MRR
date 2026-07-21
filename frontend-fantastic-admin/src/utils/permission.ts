@@ -1,6 +1,14 @@
 export const PERMISSION_HIERARCHY: Record<string, string[]> = {
-  'record:manage': ['record:manage', 'record:edit', 'record:read'],
+  'record:manage': [
+    'record:manage',
+    'record:edit',
+    'record:read',
+    'record:download',
+    'record:pdf:export',
+  ],
   'record:edit': ['record:edit', 'record:read'],
+  'record:download': ['record:download', 'record:read'],
+  'record:pdf:export': ['record:pdf:export', 'record:read'],
   'record:read': ['record:read'],
   'role:manage': ['role:manage', 'role:read'],
   'role:read': ['role:read'],

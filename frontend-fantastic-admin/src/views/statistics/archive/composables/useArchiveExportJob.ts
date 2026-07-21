@@ -25,6 +25,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   const downloading = ref(false)
   let pollTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
+  let generation = 0
 
   function applyJob(next: ArchiveExportJob) {
     if (job.value?.id === next.id) {
@@ -46,11 +47,22 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     return ['SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED'].includes(status)
   }
 
-  async function poll() {
-    const id = job.value?.id
-    if (!id || disposed) return
+  function isCurrent(id: string, token: number) {
+    return !disposed && token === generation && job.value?.id === id
+  }
+
+  function schedulePoll(id: string, token: number, delay: number) {
+    if (!isCurrent(id, token)) return
+    stopPolling()
+    pollTimer = setTimeout(() => void poll(id, token), delay)
+  }
+
+  async function poll(id: string, token: number) {
+    if (!isCurrent(id, token)) return
     try {
       const response = await getArchiveExportJob(id)
+      // discard/dismiss 或新任务启动后，即使旧请求稍后返回也不得恢复旧按钮状态。
+      if (!isCurrent(id, token)) return
       if (response.data) applyJob(response.data)
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
@@ -60,11 +72,15 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
         else if (job.value?.status === 'FAILED') {
           ElMessage.error(job.value.errorMessage || '病案导出任务失败')
         }
+        else if (job.value?.status === 'CANCELLED') {
+          ElMessage.info('病案导出任务已取消')
+        }
         return
       }
-      pollTimer = setTimeout(() => void poll(), 1500)
+      schedulePoll(id, token, 1500)
     }
     catch (error: unknown) {
+      if (!isCurrent(id, token)) return
       stopPolling()
       ElMessage.error((error as { message?: string })?.message || '导出任务状态查询失败')
     }
@@ -72,6 +88,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
 
   async function start(request: CreateArchiveExportJobRequest) {
     stopPolling()
+    const token = ++generation
     creating.value = true
     try {
       const response = await createArchiveExportJob({
@@ -79,37 +96,54 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
         idempotencyKey: request.idempotencyKey || createIdempotencyKey(request),
       })
       if (!response.data) throw new Error('服务器未返回导出任务')
+      if (disposed || token !== generation) {
+        if (!isTerminal(response.data.status)) {
+          void cancelArchiveExportJob(response.data.id).catch(() => undefined)
+        }
+        return null
+      }
       applyJob(response.data)
       ElMessage.info('病案较大，已转为后台生成任务，进度将在按钮上显示')
       if (!isTerminal(job.value.status)) {
-        pollTimer = setTimeout(() => void poll(), 500)
+        schedulePoll(job.value.id, token, 500)
       }
       return job.value
     }
     finally {
-      creating.value = false
+      if (token === generation) creating.value = false
     }
   }
 
   async function cancel() {
-    const id = job.value?.id
-    if (!id || isTerminal(job.value.status)) return
+    const current = job.value
+    if (!current || isTerminal(current.status)) return
+    const token = generation
     cancelling.value = true
     try {
-      const response = await cancelArchiveExportJob(id)
+      const response = await cancelArchiveExportJob(current.id)
+      if (!isCurrent(current.id, token)) return
       if (response.data) applyJob(response.data)
-      stopPolling()
-      ElMessage.info('已提交取消请求')
+      ElMessage.info(job.value?.status === 'CANCELLED' ? '导出任务已取消' : '正在取消导出任务')
+      if (job.value && !isTerminal(job.value.status)) {
+        // PROCESSING 任务的取消是协作式的，继续轮询直到后端写入终态。
+        schedulePoll(current.id, token, 500)
+      }
+      else {
+        stopPolling()
+      }
     }
     finally {
-      cancelling.value = false
+      if (token === generation) cancelling.value = false
     }
   }
 
   async function discard() {
     const current = job.value
+    generation++
     stopPolling()
     job.value = null
+    creating.value = false
+    cancelling.value = false
     if (!current || isTerminal(current.status)) return
     try {
       await cancelArchiveExportJob(current.id)
@@ -140,13 +174,17 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   }
 
   function dismiss() {
+    generation++
     stopPolling()
     job.value = null
+    creating.value = false
+    cancelling.value = false
   }
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
       disposed = true
+      generation++
       stopPolling()
     })
   }

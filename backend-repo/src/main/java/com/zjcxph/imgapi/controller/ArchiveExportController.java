@@ -1,7 +1,9 @@
 package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
+import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.BatchDownloadRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportPlanResponse;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
@@ -27,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 @RequirePermissions({"record:read"})
 public class ArchiveExportController {
 
+    private static final int CLIENT_PDF_MAX_IMAGES = 20;
     private static final int MAX_SELECTED_EXPORT_COUNT = 200;
     private static final String BAH_REQUIRES_SJH_MESSAGE =
             "病案号大于等于 10000000 时必须使用上架号导出";
@@ -35,6 +38,32 @@ public class ArchiveExportController {
 
     public ArchiveExportController(ArchiveExportService archiveExportService) {
         this.archiveExportService = archiveExportService;
+    }
+
+    @Operation(summary = "规划 PDF 导出执行方式")
+    @GetMapping("/plan/pdf")
+    public Result<ArchiveExportPlanResponse> planPdf(
+            @RequestParam(required = false) String bah,
+            @RequestParam(required = false) String sjh,
+            @RequestParam int selectedCount) {
+        if (selectedCount <= 0) {
+            throw new BusinessException(400, "请选择要导出 PDF 的影像");
+        }
+
+        PreparedArchive prepared = prepareArchive(bah, sjh);
+        int totalCount = prepared.export().itemCount();
+        boolean wholeArchive = selectedCount == totalCount;
+        String executionMode = !wholeArchive && selectedCount <= CLIENT_PDF_MAX_IMAGES
+                ? "CLIENT_PDF"
+                : "BACKEND_STREAM";
+        return Result.success(new ArchiveExportPlanResponse(
+                "PDF",
+                executionMode,
+                selectedCount,
+                totalCount,
+                CLIENT_PDF_MAX_IMAGES,
+                wholeArchive
+        ));
     }
 
     @Operation(summary = "流式下载整份病案 ZIP")

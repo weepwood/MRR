@@ -32,8 +32,17 @@ function saveBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function uniqueFileName(job: ArchiveExportJob): string {
+  const fallback = `archive-export.${job.format.toLowerCase()}`
+  const source = job.fileName || fallback
+  const extensionIndex = source.lastIndexOf('.')
+  const suffix = job.id.slice(0, 8)
+  if (extensionIndex <= 0) return `${source}-${suffix}`
+  return `${source.slice(0, extensionIndex)}-${suffix}${source.slice(extensionIndex)}`
+}
+
 export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
-  const fileName = job.fileName || `archive-export-${job.id}.${job.format.toLowerCase()}`
+  const fileName = uniqueFileName(job)
   const totalBytes = Number(job.outputBytes || 0)
   const picker = (window as FilePickerWindow).showSaveFilePicker
   if (!picker || totalBytes <= 0) {

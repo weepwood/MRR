@@ -20,8 +20,13 @@
           <div id="browser-compat-message" class="browser-compat-message">
             此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
           </div>
-          <div class="browser-compat-requirement">
+          <div id="browser-compat-requirement" class="browser-compat-requirement">
             最低支持：Edge 111、Chrome 109、Firefox 114、Safari 16.4。
+          </div>
+          <div id="browser-compat-actions" class="browser-compat-actions" hidden>
+            <button id="browser-compat-continue" class="browser-compat-button browser-compat-button-primary" type="button">继续等待</button>
+            <button id="browser-compat-reload" class="browser-compat-button" type="button">重新加载</button>
+            <button id="browser-compat-back" class="browser-compat-button" type="button">返回上一页</button>
           </div>
         </div>
       </div>
@@ -35,6 +40,9 @@
           Firefox: '114',
           Safari: '16.4'
         }
+        var startupTimeout
+        var initialStartupTimeoutMs = 15000
+        var continuedStartupTimeoutMs = 60000
 
         function compareVersions(current, minimum) {
           var currentParts = String(current || '0').split('.')
@@ -104,19 +112,48 @@
             || typeof Array.prototype.findLast !== 'function'
         }
 
-        function blockApplication(reason, title) {
+        function showApplicationOverlay(reason, title, options) {
           var blocker = document.getElementById('browser-compat-blocker')
           var message = document.getElementById('browser-compat-message')
           var titleElement = document.getElementById('browser-compat-title')
+          var requirement = document.getElementById('browser-compat-requirement')
+          var actions = document.getElementById('browser-compat-actions')
 
-          if (!blocker || !message || !titleElement) {
+          if (!blocker || !message || !titleElement || !requirement || !actions) {
             return
           }
 
-          window.__MRR_APP_STARTUP_BLOCKED__ = true
           titleElement.textContent = title
           message.textContent = reason
+          requirement.textContent = options.requirement || ''
+          requirement.style.display = options.requirement ? 'block' : 'none'
+          actions.hidden = !options.showActions
           blocker.style.display = 'flex'
+        }
+
+        function hideRecoverableOverlay() {
+          var blocker = document.getElementById('browser-compat-blocker')
+          var actions = document.getElementById('browser-compat-actions')
+
+          if (window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          window.__MRR_APP_STARTUP_DELAYED__ = false
+          if (actions) {
+            actions.hidden = true
+          }
+          if (blocker) {
+            blocker.style.display = 'none'
+          }
+        }
+
+        function blockApplication(reason, title) {
+          window.__MRR_APP_STARTUP_BLOCKED__ = true
+          window.clearTimeout(startupTimeout)
+          showApplicationOverlay(reason, title, {
+            requirement: '最低支持：Edge 111、Chrome 109、Firefox 114、Safari 16.4。',
+            showActions: false
+          })
         }
 
         function reportStartupFailure(reason) {
@@ -124,6 +161,51 @@
             return
           }
           blockApplication(reason, '系统启动失败')
+        }
+
+        function showStartupDelay() {
+          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
+            return
+          }
+          window.__MRR_APP_STARTUP_DELAYED__ = true
+          showApplicationOverlay(
+            '当前网络速度较慢或服务器响应时间较长，系统仍在后台加载。您可以继续等待，也可以重新加载页面。',
+            '系统启动较慢',
+            {
+              requirement: '继续等待不会绕过登录、权限或安全校验。',
+              showActions: true
+            }
+          )
+        }
+
+        function scheduleStartupTimeout(timeout) {
+          window.clearTimeout(startupTimeout)
+          startupTimeout = window.setTimeout(showStartupDelay, timeout)
+        }
+
+        var continueButton = document.getElementById('browser-compat-continue')
+        var reloadButton = document.getElementById('browser-compat-reload')
+        var backButton = document.getElementById('browser-compat-back')
+
+        if (continueButton) {
+          continueButton.addEventListener('click', function () {
+            hideRecoverableOverlay()
+            scheduleStartupTimeout(continuedStartupTimeoutMs)
+          })
+        }
+        if (reloadButton) {
+          reloadButton.addEventListener('click', function () {
+            window.location.reload()
+          })
+        }
+        if (backButton) {
+          backButton.addEventListener('click', function () {
+            if (window.history.length > 1) {
+              window.history.back()
+            } else {
+              window.location.href = '/'
+            }
+          })
         }
 
         var browser = detectBrowser()
@@ -146,13 +228,12 @@
           return
         }
 
-        var startupTimeout = window.setTimeout(function () {
-          reportStartupFailure('系统启动超时。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
-        }, 15000)
+        scheduleStartupTimeout(initialStartupTimeoutMs)
 
         window.addEventListener('mrr:app-ready', function () {
           window.__MRR_APP_STARTUP_READY__ = true
           window.clearTimeout(startupTimeout)
+          hideRecoverableOverlay()
         }, { once: true })
 
         window.addEventListener('mrr:app-startup-failed', function () {

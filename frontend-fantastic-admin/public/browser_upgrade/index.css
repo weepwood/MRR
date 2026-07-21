@@ -61,6 +61,48 @@
   color: #9a3412;
 }
 
+.browser-compat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.browser-compat-actions[hidden] {
+  display: none;
+}
+
+.browser-compat-button {
+  min-height: 36px;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #9a3412;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+}
+
+.browser-compat-button:hover,
+.browser-compat-button:focus-visible {
+  background: #fff7ed;
+  outline: none;
+}
+
+.browser-compat-button-primary {
+  font-weight: 600;
+  color: #fff;
+  background: #ea580c;
+  border-color: #ea580c;
+}
+
+.browser-compat-button-primary:hover,
+.browser-compat-button-primary:focus-visible {
+  background: #c2410c;
+}
+
 @media (max-width: 640px) {
   #browser-compat-blocker {
     padding: 16px;
@@ -74,4 +116,11 @@
     margin-right: 9px;
   }
 
+  .browser-compat-actions {
+    flex-direction: column;
+  }
+
+  .browser-compat-button {
+    width: 100%;
+  }
 }

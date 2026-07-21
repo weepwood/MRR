@@ -8,7 +8,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('@/api/modules/archive-export', () => api)
 
-function job(): ArchiveExportJob {
+function job(outputBytes = 10): ArchiveExportJob {
   return {
     id: '12345678-abcd',
     format: 'ZIP',
@@ -17,11 +17,22 @@ function job(): ArchiveExportJob {
     plannedCount: 2,
     processedCount: 2,
     failedCount: 0,
-    estimatedBytes: 10,
-    outputBytes: 10,
+    estimatedBytes: outputBytes,
+    outputBytes,
     cancelRequested: false,
     fileName: '00789508.zip',
   }
+}
+
+function mockBlobDownloadDom() {
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    value: vi.fn(() => 'blob:test'),
+  })
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    value: vi.fn(),
+  })
 }
 
 describe('resumable archive export download', () => {
@@ -57,28 +68,32 @@ describe('resumable archive export download', () => {
     expect(close).toHaveBeenCalled()
   })
 
-  it('restarts from zero when the selected file prefix does not match', async () => {
+  it('does not modify a selected file whose prefix belongs to another export', async () => {
+    mockBlobDownloadDom()
     const write = vi.fn().mockResolvedValue(undefined)
     const truncate = vi.fn().mockResolvedValue(undefined)
     const close = vi.fn().mockResolvedValue(undefined)
+    const createWritable = vi.fn().mockResolvedValue({ write, truncate, close })
     const existing = new File([new Uint8Array([9, 9, 9, 9])], 'wrong.zip')
     ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
       getFile: vi.fn().mockResolvedValue(existing),
-      createWritable: vi.fn().mockResolvedValue({ write, truncate, close }),
+      createWritable,
     })
     api.downloadArchiveExportJob
       .mockResolvedValueOnce(new Blob([new Uint8Array([1, 2, 3, 4])]))
       .mockResolvedValueOnce(new Blob([new Uint8Array(10)]))
     const currentJob = job()
 
-    await downloadExportJobWithResume(currentJob)
+    await expect(downloadExportJobWithResume(currentJob)).resolves.toBe('blob')
 
-    expect(truncate).toHaveBeenNthCalledWith(1, 0)
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, 'bytes=0-9')
-    expect(write).toHaveBeenCalledWith(expect.objectContaining({ position: 0 }))
+    expect(createWritable).not.toHaveBeenCalled()
+    expect(truncate).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id)
   })
 
-  it('falls back to a full blob download when the proxy rejects Range requests', async () => {
+  it('restores an empty target when the proxy rejects the first Range request', async () => {
+    mockBlobDownloadDom()
     const write = vi.fn().mockResolvedValue(undefined)
     const truncate = vi.fn().mockResolvedValue(undefined)
     const close = vi.fn().mockResolvedValue(undefined)
@@ -86,14 +101,6 @@ describe('resumable archive export download', () => {
     ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
       getFile: vi.fn().mockResolvedValue(existing),
       createWritable: vi.fn().mockResolvedValue({ write, truncate, close }),
-    })
-    Object.defineProperty(URL, 'createObjectURL', {
-      configurable: true,
-      value: vi.fn(() => 'blob:test'),
-    })
-    Object.defineProperty(URL, 'revokeObjectURL', {
-      configurable: true,
-      value: vi.fn(),
     })
     api.downloadArchiveExportJob
       .mockRejectedValueOnce(new Error('Range unsupported'))
@@ -104,6 +111,33 @@ describe('resumable archive export download', () => {
 
     expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-9')
     expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id)
+    expect(truncate).toHaveBeenCalledWith(0)
     expect(close).toHaveBeenCalled()
+  })
+
+  it('restores the original valid prefix when a later Range chunk fails', async () => {
+    mockBlobDownloadDom()
+    const chunkSize = 8 * 1024 * 1024
+    const totalBytes = chunkSize + 10
+    const write = vi.fn().mockResolvedValue(undefined)
+    const truncate = vi.fn().mockResolvedValue(undefined)
+    const close = vi.fn().mockResolvedValue(undefined)
+    const existingBytes = new Uint8Array([1, 2, 3, 4])
+    const existing = new File([existingBytes], 'partial.zip')
+    ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
+      getFile: vi.fn().mockResolvedValue(existing),
+      createWritable: vi.fn().mockResolvedValue({ write, truncate, close }),
+    })
+    api.downloadArchiveExportJob
+      .mockResolvedValueOnce(new Blob([existingBytes]))
+      .mockResolvedValueOnce(new Blob([new Uint8Array(chunkSize)]))
+      .mockRejectedValueOnce(new Error('second range failed'))
+      .mockResolvedValueOnce(new Blob([new Uint8Array(totalBytes)]))
+
+    await expect(downloadExportJobWithResume(job(totalBytes))).resolves.toBe('blob')
+
+    expect(truncate).toHaveBeenCalledWith(existing.size)
+    expect(close).toHaveBeenCalled()
+    expect(api.downloadArchiveExportJob).toHaveBeenLastCalledWith('12345678-abcd')
   })
 })

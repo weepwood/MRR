@@ -32,6 +32,7 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/archive-exports/jobs")
@@ -55,7 +56,7 @@ public class ArchiveExportJobController {
         AuthSession session = session(servletRequest);
         String format = request == null || request.getFormat() == null
                 ? ""
-                : request.getFormat().trim().toUpperCase();
+                : request.getFormat().trim().toUpperCase(Locale.ROOT);
         if ("ZIP".equals(format)) {
             requirePermission(session, "record:download");
         } else if ("PDF".equals(format)) {
@@ -126,7 +127,7 @@ public class ArchiveExportJobController {
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
                     .header(HttpHeaders.CONTENT_RANGE, "bytes */" + total)
-                    .build();
+                    .<StreamingResponseBody>build();
         }
 
         StreamingResponseBody body = output -> {

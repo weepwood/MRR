@@ -51,6 +51,10 @@ export function getArchiveZipExportPlan(bah?: string, sjh?: string) {
   })
 }
 
+/**
+ * 兼容旧客户端的按数量规划接口。新前端必须使用选中 ID 规划，
+ * 使阈值、来源和文件大小均基于本次实际选择。
+ */
 export function getArchivePdfExportPlan(bah: string | undefined, sjh: string | undefined, selectedCount: number) {
   return getRequest<ArchiveExportPlan>('/api/v1/archive-exports/plan/pdf', {
     params: {
@@ -58,6 +62,12 @@ export function getArchivePdfExportPlan(bah: string | undefined, sjh: string | u
       sjh: sjh || undefined,
       selectedCount,
     },
+  })
+}
+
+export function getSelectedImagesPdfExportPlan(ids: Array<string | number>) {
+  return postRequest<ArchiveExportPlan>('/api/v1/archive-exports/plan/pdf/selection', {
+    ids: ids.map(String),
   })
 }
 

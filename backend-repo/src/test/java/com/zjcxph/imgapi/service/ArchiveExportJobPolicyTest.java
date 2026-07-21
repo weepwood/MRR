@@ -34,6 +34,7 @@ class ArchiveExportJobPolicyTest {
 
         PathDO local = item(1, 10, "LOCAL");
         PathDO oss = item(2, 10, "OSS");
+        oss.setSourceRef("25.03/page-2.jpg");
         assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(local, oss)))).isTrue();
         assertThat(service.shouldUseJob(export(2, 10, "LOCAL"))).isFalse();
 
@@ -41,6 +42,18 @@ class ArchiveExportJobPolicyTest {
         PathDO unknown = item(4, 0, "LOCAL");
         unknown.setFileSize(null);
         assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(known, unknown)))).isTrue();
+    }
+
+    @Test
+    void treatsOssRowsWithoutObjectKeysAsLocalFallbackWithinTheSameArchive() {
+        PathDO migrated = item(1, 10, "OSS");
+        migrated.setSourceRef("25.03/page-1.jpg");
+        PathDO notMigrated = item(2, 10, "OSS");
+
+        ArchiveExportService.BatchZipExport export =
+                new ArchiveExportService.BatchZipExport(List.of(migrated, notMigrated));
+
+        assertThat(export.sourceSummary()).containsExactly("OSS", "LOCAL");
     }
 
     private ArchiveExportService.BatchZipExport export(int count, long bytes, String source) {

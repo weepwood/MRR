@@ -68,6 +68,12 @@ export function createArchiveExportJob(request: CreateArchiveExportJobRequest) {
   })
 }
 
+export function listActiveArchiveExportJobs(format: 'ZIP' | 'PDF', limit = 5) {
+  return getRequest<ArchiveExportJob[]>('/api/v1/archive-exports/jobs', {
+    params: { format, limit },
+  })
+}
+
 export function getArchiveExportJob(id: string) {
   return getRequest<ArchiveExportJob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}`)
 }

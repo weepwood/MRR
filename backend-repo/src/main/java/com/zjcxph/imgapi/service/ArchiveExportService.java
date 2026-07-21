@@ -14,6 +14,8 @@ public interface ArchiveExportService {
 
     BatchZipExport prepareBatch(List<String> scanIds);
 
+    BatchZipExport prepareSelectedArchive(List<String> scanIds);
+
     BatchZipExport prepareArchive(String bah, String sjh);
 
     void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException;

@@ -86,6 +86,10 @@ public class ResolvedImageStorage implements ImageStorage {
         message = message.replace('\r', ' ').replace('\n', ' ').trim();
         if ("LOCAL".equals(sourceType) && message.startsWith("影像文件不存在或不可读:")) {
             message = "后端本地文件不存在或不可读";
+        } else if ("OSS".equals(sourceType)
+                && !message.startsWith("OSS 图片缺少合法的 Object Key")) {
+            // SDK 异常可能包含带病案目录的 Object Key，不返回到前端任务错误中。
+            message = "OSS 对象不存在、无权限或读取失败";
         }
         return message.length() <= MAX_REASON_LENGTH
                 ? message

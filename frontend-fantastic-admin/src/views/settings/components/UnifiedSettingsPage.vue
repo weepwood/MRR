@@ -85,15 +85,18 @@ void shellRef
             @click="selectSection(item.key)"
           >
             <motion.span
-              v-if="activeSection === item.key"
-              class="settings-nav-active-indicator"
-              :class="{ danger: item.key === 'developer' && settings.developerModeEnabled }"
-              :initial="shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }"
-              :animate="{ opacity: 1, scale: 1 }"
+              class="nav-icon"
+              :animate="{
+                transform: shouldReduceMotion
+                  ? 'none'
+                  : activeSection === item.key
+                    ? 'scale(1.06)'
+                    : 'scale(1)',
+              }"
               :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
-              aria-hidden="true"
-            />
-            <span class="nav-icon"><FaIcon :name="item.icon" /></span>
+            >
+              <FaIcon :name="item.icon" />
+            </motion.span>
             <span class="nav-copy">
               <strong>{{ item.title }}</strong>
               <small>{{ item.description }}</small>

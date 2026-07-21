@@ -64,8 +64,13 @@ public class ArchiveExportJobRepository {
                 SELECT * FROM app.archive_export_job
                 WHERE owner_username = ?
                   AND format = ?
-                  AND status IN ('PENDING', 'PROCESSING')
-                ORDER BY created_at DESC
+                  AND (
+                      status IN ('PENDING', 'PROCESSING')
+                      OR (status = 'SUCCESS' AND expires_at > CURRENT_TIMESTAMP)
+                  )
+                ORDER BY
+                    CASE WHEN status IN ('PENDING', 'PROCESSING') THEN 0 ELSE 1 END,
+                    created_at DESC
                 LIMIT ?
                 """, ROW_MAPPER, ownerUsername, format, limit);
     }

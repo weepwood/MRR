@@ -66,6 +66,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       if (response.data) applyJob(response.data)
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
+        cancelling.value = false
         if (job.value?.status === 'SUCCESS') {
           ElMessage.success('病案导出文件已生成，可在按钮上下载')
         }
@@ -82,6 +83,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     catch (error: unknown) {
       if (!isCurrent(id, token)) return
       stopPolling()
+      cancelling.value = false
       ElMessage.error((error as { message?: string })?.message || '导出任务状态查询失败')
     }
   }
@@ -90,6 +92,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     stopPolling()
     const token = ++generation
     creating.value = true
+    cancelling.value = false
     try {
       const response = await createArchiveExportJob({
         ...request,
@@ -130,10 +133,12 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       }
       else {
         stopPolling()
+        cancelling.value = false
       }
     }
-    finally {
+    catch (error) {
       if (token === generation) cancelling.value = false
+      throw error
     }
   }
 

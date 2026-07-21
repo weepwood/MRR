@@ -41,6 +41,7 @@ import java.util.Locale;
 public class ArchiveExportJobController {
 
     private static final int BUFFER_SIZE = 64 * 1024;
+    private static final String PRIVATE_NO_STORE = "private, no-store, max-age=0";
 
     private final ArchiveExportJobService jobService;
 
@@ -105,6 +106,9 @@ public class ArchiveExportJobController {
                 .filename(job.getFileName(), StandardCharsets.UTF_8)
                 .build()
                 .toString();
+        String etag = job.getSha256() == null || job.getSha256().isBlank()
+                ? null
+                : "\"" + job.getSha256() + "\"";
 
         if (rangeHeader == null || rangeHeader.isBlank()) {
             StreamingResponseBody body = output -> {
@@ -112,11 +116,9 @@ public class ArchiveExportJobController {
                     input.transferTo(output);
                 }
             };
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                    .header("X-Archive-SHA256", job.getSha256() == null ? "" : job.getSha256())
-                    .contentType(contentType)
+            ResponseEntity.BodyBuilder builder = baseHeaders(
+                    ResponseEntity.ok(), disposition, job, etag);
+            return builder.contentType(contentType)
                     .contentLength(total)
                     .body(body);
         }
@@ -126,6 +128,8 @@ public class ArchiveExportJobController {
             range = HttpByteRange.parse(rangeHeader, total);
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE)
                     .header(HttpHeaders.CONTENT_RANGE, "bytes */" + total)
                     .<StreamingResponseBody>build();
         }
@@ -145,15 +149,30 @@ public class ArchiveExportJobController {
                 }
             }
         };
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+        ResponseEntity.BodyBuilder builder = baseHeaders(
+                ResponseEntity.status(HttpStatus.PARTIAL_CONTENT), disposition, job, etag)
                 .header(HttpHeaders.CONTENT_RANGE,
-                        "bytes " + range.start() + "-" + range.end() + "/" + total)
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                .header("X-Archive-SHA256", job.getSha256() == null ? "" : job.getSha256())
-                .contentType(contentType)
+                        "bytes " + range.start() + "-" + range.end() + "/" + total);
+        return builder.contentType(contentType)
                 .contentLength(range.length())
                 .body(body);
+    }
+
+    private ResponseEntity.BodyBuilder baseHeaders(
+            ResponseEntity.BodyBuilder builder,
+            String disposition,
+            ArchiveExportJob job,
+            String etag) {
+        builder.header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE)
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .header("X-Content-Type-Options", "nosniff")
+                .header("X-Archive-SHA256", job.getSha256() == null ? "" : job.getSha256());
+        if (etag != null) {
+            builder.header(HttpHeaders.ETAG, etag);
+        }
+        return builder;
     }
 
     private AuthSession session(HttpServletRequest request) {

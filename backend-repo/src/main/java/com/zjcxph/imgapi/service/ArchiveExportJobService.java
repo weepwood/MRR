@@ -214,6 +214,7 @@ public class ArchiveExportJobService {
     private void runJob(String id) {
         ArchiveExportJob job = repository.findById(id).orElse(null);
         if (job == null || Set.of("SUCCESS", "FAILED", "CANCELLED", "EXPIRED").contains(job.getStatus())) {
+            cancellationFlags.remove(id);
             return;
         }
         AtomicBoolean cancellation = cancellationFlags.computeIfAbsent(id, ignored -> new AtomicBoolean());
@@ -225,6 +226,10 @@ public class ArchiveExportJobService {
                 throw new ArchiveExportCancelledException();
             }
             ArchiveExportService.BatchZipExport export = prepare(job);
+            if (export.itemCount() == 0) {
+                throw new IOException("病案已没有可导出的影像");
+            }
+            tempFileManager.deleteManagedFile(job.getFilePath());
             reservation = tempFileManager.reserve(id, estimateBytes(export), extension);
             repository.markProcessing(
                     id,
@@ -235,7 +240,7 @@ public class ArchiveExportJobService {
             ArchiveExportService.ExportProgress progress = new ArchiveExportService.ExportProgress() {
                 @Override
                 public boolean isCancelled() {
-                    return cancellation.get() || repository.isCancelRequested(id);
+                    return cancellation.get() || Thread.currentThread().isInterrupted();
                 }
 
                 @Override
@@ -253,6 +258,9 @@ public class ArchiveExportJobService {
             }
 
             long outputBytes = Files.size(reservation.path());
+            if (outputBytes <= 0) {
+                throw new IOException("导出文件为空");
+            }
             String sha256;
             try (InputStream input = Files.newInputStream(reservation.path())) {
                 sha256 = DigestUtils.sha256Hex(input);
@@ -262,7 +270,8 @@ public class ArchiveExportJobService {
         } catch (ArchiveExportCancelledException exception) {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
-            repository.markFailed(id, exception.getMessage(), LocalDateTime.now());
+            String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+            repository.markFailed(id, message, LocalDateTime.now());
         } finally {
             cancellationFlags.remove(id);
             if (reservation != null) {
@@ -352,7 +361,13 @@ public class ArchiveExportJobService {
         if (ids == null) {
             return List.of();
         }
-        return ids.stream().map(this::normalize).toList();
+        return ids.stream().map((value) -> {
+            String normalized = normalize(value);
+            if (normalized == null || normalized.isBlank()) {
+                throw new BusinessException(400, "影像 ID 不能为空");
+            }
+            return normalized;
+        }).toList();
     }
 
     private String normalize(String value) {

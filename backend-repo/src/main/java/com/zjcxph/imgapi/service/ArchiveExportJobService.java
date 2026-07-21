@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ArchiveExportJobService {
 
     private static final int MAX_SELECTED_JOB_ITEMS = 10_000;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 2_000;
     private static final String BAH_REQUIRES_SJH_MESSAGE =
             "病案号大于等于 10000000 时必须使用上架号导出";
 
@@ -93,7 +95,8 @@ public class ArchiveExportJobService {
         String scanIds = ids.isEmpty() ? null : String.join(",", ids);
         String idempotencyKey = normalizeIdempotencyKey(request.getIdempotencyKey());
         if (idempotencyKey != null) {
-            var existing = repository.findByIdempotency(session.getUsername(), idempotencyKey);
+            var existing = repository.findByIdempotency(
+                    session.getId(), session.getUsername(), idempotencyKey);
             if (existing.isPresent() && !"EXPIRED".equals(existing.get().getStatus())) {
                 if (!matchesRequest(existing.get(), format, scope, bah, sjh, scanIds)) {
                     throw new BusinessException(409, "幂等键已被其他导出请求使用");
@@ -129,7 +132,8 @@ public class ArchiveExportJobService {
         try {
             repository.insert(job);
         } catch (DuplicateKeyException exception) {
-            ArchiveExportJob existing = repository.findByIdempotency(session.getUsername(), idempotencyKey)
+            ArchiveExportJob existing = repository.findByIdempotency(
+                            session.getId(), session.getUsername(), idempotencyKey)
                     .orElseThrow(() -> exception);
             if (!matchesRequest(existing, format, scope, bah, sjh, scanIds)) {
                 throw new BusinessException(409, "幂等键已被其他导出请求使用");
@@ -176,7 +180,7 @@ public class ArchiveExportJobService {
         requireSession(session);
         ArchiveExportJob job = repository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "导出任务不存在"));
-        if (!session.isAdmin() && !session.getUsername().equals(job.getOwnerUsername())) {
+        if (!isOwnedBy(session, job)) {
             throw new BusinessException(403, "无权访问该导出任务");
         }
         return job;
@@ -270,8 +274,7 @@ public class ArchiveExportJobService {
         } catch (ArchiveExportCancelledException exception) {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
-            String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
-            repository.markFailed(id, message, LocalDateTime.now());
+            repository.markFailed(id, safeFailureMessage(exception), LocalDateTime.now());
         } finally {
             cancellationFlags.remove(id);
             if (reservation != null) {
@@ -349,6 +352,42 @@ public class ArchiveExportJobService {
                 && Objects.equals(normalize(existing.getScanIds()), normalize(scanIds));
     }
 
+    private boolean isOwnedBy(AuthSession session, ArchiveExportJob job) {
+        if (session.isAdmin()) {
+            return true;
+        }
+        if (job.getOwnerUserId() != null) {
+            return Objects.equals(session.getId(), job.getOwnerUserId());
+        }
+        // 仅兼容迁移前没有 owner_user_id 的历史任务。
+        return Objects.equals(session.getUsername(), job.getOwnerUsername());
+    }
+
+    private String safeFailureMessage(Throwable failure) {
+        LinkedHashSet<String> messages = new LinkedHashSet<>();
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            String message = current.getMessage();
+            if (message == null || message.isBlank()) {
+                message = current.getClass().getSimpleName();
+            }
+            message = message.replace('\r', ' ').replace('\n', ' ').trim();
+            if (!message.isBlank()) {
+                messages.add(message.length() <= 500 ? message : message.substring(0, 500) + "…");
+            }
+            current = current.getCause();
+            depth++;
+        }
+        String result = String.join("；原因：", messages);
+        if (result.isBlank()) {
+            result = "病案导出失败";
+        }
+        return result.length() <= MAX_ERROR_MESSAGE_LENGTH
+                ? result
+                : result.substring(0, MAX_ERROR_MESSAGE_LENGTH);
+    }
+
     private String normalizeFormat(String value) {
         String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
         if (!normalized.equals("ZIP") && !normalized.equals("PDF")) {
@@ -386,7 +425,8 @@ public class ArchiveExportJobService {
     }
 
     private void requireSession(AuthSession session) {
-        if (session == null || session.getUsername() == null || session.getUsername().isBlank()) {
+        if (session == null || session.getId() == null
+                || session.getUsername() == null || session.getUsername().isBlank()) {
             throw new BusinessException(401, "请先登录");
         }
     }

@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   downloadSelectedImagesPdf: vi.fn(),
   createArchiveExportJob: vi.fn(),
   getArchiveExportJob: vi.fn(),
+  listActiveArchiveExportJobs: vi.fn(),
   cancelArchiveExportJob: vi.fn(),
   downloadArchiveExportJob: vi.fn(),
 }))
@@ -16,7 +17,6 @@ const clientPdf = vi.hoisted(() => ({
   createPdfFromImageUrls: vi.fn(),
 }))
 
-const notification = vi.hoisted(() => vi.fn(() => ({ close: vi.fn() })))
 const message = vi.hoisted(() => ({
   error: vi.fn(),
   info: vi.fn(),
@@ -33,12 +33,13 @@ vi.mock('@/utils/composables/useAuth', () => ({
   default: () => permission,
 }))
 vi.mock('../../utils/client-pdf', () => clientPdf)
-vi.mock('element-plus', () => ({ ElMessage: message, ElNotification: notification }))
+vi.mock('element-plus', () => ({ ElMessage: message }))
 
 describe('useArchivePrint', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     permission.auth.mockReturnValue(true)
+    api.listActiveArchiveExportJobs.mockResolvedValue({ data: [] })
   })
 
   it('规划接口拒绝时不会继续在浏览器生成 PDF', async () => {

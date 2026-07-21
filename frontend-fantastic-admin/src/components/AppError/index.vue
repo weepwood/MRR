@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Refresh } from '@element-plus/icons-vue'
+import { motion } from 'motion-v'
+import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
 
 defineOptions({ name: 'AppError' })
 
@@ -21,13 +23,24 @@ function handleRetry() {
 </script>
 
 <template>
-  <div class="app-error">
-    <div class="app-error-icon i-ant-design:warning-twotone" />
+  <motion.div
+    class="app-error"
+    role="alert"
+    :initial="{ opacity: 0, y: -4 }"
+    :animate="{ opacity: 1, y: 0 }"
+    :transition="{ duration: motionDurations.standard, ease: motionEasings.emphasized }"
+  >
+    <motion.div
+      class="app-error-icon i-ant-design:warning-twotone"
+      :initial="{ scale: 0.92 }"
+      :animate="{ scale: 1 }"
+      :transition="motionSprings.interaction"
+    />
     <p class="app-error-text">{{ message }}</p>
     <el-button type="primary" :icon="Refresh" @click="handleRetry">
       {{ retryText }}
     </el-button>
-  </div>
+  </motion.div>
 </template>
 
 <style scoped>
@@ -44,6 +57,7 @@ function handleRetry() {
   margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-color-warning, #e6a23c);
+  transform-origin: center;
 }
 
 .app-error-text {

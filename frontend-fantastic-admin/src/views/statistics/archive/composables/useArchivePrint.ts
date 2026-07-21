@@ -6,6 +6,7 @@ import {
   downloadSelectedImagesPdf,
   getArchivePdfExportPlan,
 } from '@/api/modules/archive-export'
+import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
 
 function saveBlob(blob: Blob, fileName: string) {
@@ -22,6 +23,7 @@ function saveBlob(blob: Blob, fileName: string) {
 export function useArchivePrint() {
   const printing = ref(false)
   const exportingPdf = ref(false)
+  const { auth } = useAuth()
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -117,6 +119,10 @@ export function useArchivePrint() {
   }
 
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
+    if (!auth('record:pdf:export')) {
+      ElMessage.warning('当前账号没有病案 PDF 导出权限')
+      return
+    }
     if (!images.length) {
       ElMessage.warning('请先选择要导出的影像')
       return

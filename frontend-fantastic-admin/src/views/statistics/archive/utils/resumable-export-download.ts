@@ -2,6 +2,7 @@ import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { downloadArchiveExportJob } from '@/api/modules/archive-export'
 
 const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
+const PREFIX_VERIFY_BYTES = 64 * 1024
 
 interface FileSystemWritableFileStreamLike {
   write(data: Blob | { type: 'write', position: number, data: Blob }): Promise<void>
@@ -41,6 +42,23 @@ function uniqueFileName(job: ArchiveExportJob): string {
   return `${source.slice(0, extensionIndex)}-${suffix}${source.slice(extensionIndex)}`
 }
 
+async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boolean> {
+  if (existingFile.size <= 0) return true
+  const verifyLength = Math.min(existingFile.size, PREFIX_VERIFY_BYTES)
+  const [localBuffer, remoteBlob] = await Promise.all([
+    existingFile.slice(0, verifyLength).arrayBuffer(),
+    downloadArchiveExportJob(jobId, `bytes=0-${verifyLength - 1}`),
+  ])
+  if (remoteBlob.size !== verifyLength) return false
+  const local = new Uint8Array(localBuffer)
+  const remote = new Uint8Array(await remoteBlob.arrayBuffer())
+  if (local.length !== remote.length) return false
+  for (let index = 0; index < local.length; index++) {
+    if (local[index] !== remote[index]) return false
+  }
+  return true
+}
+
 export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
   const fileName = uniqueFileName(job)
   const totalBytes = Number(job.outputBytes || 0)
@@ -63,7 +81,7 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
   const existingFile = await handle.getFile()
   const writable = await handle.createWritable({ keepExistingData: true })
   let offset = existingFile.size
-  if (offset > totalBytes) {
+  if (offset > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
     await writable.truncate(0)
     offset = 0
   }

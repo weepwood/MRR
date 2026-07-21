@@ -11,8 +11,16 @@ public class PermissionResolver {
     private static final Map<String, Set<String>> HIERARCHY = new HashMap<>();
 
     static {
-        HIERARCHY.put("record:manage", Set.of("record:manage", "record:edit", "record:read"));
+        HIERARCHY.put("record:manage", Set.of(
+                "record:manage",
+                "record:edit",
+                "record:read",
+                "record:download",
+                "record:pdf:export"
+        ));
         HIERARCHY.put("record:edit", Set.of("record:edit", "record:read"));
+        HIERARCHY.put("record:download", Set.of("record:download", "record:read"));
+        HIERARCHY.put("record:pdf:export", Set.of("record:pdf:export", "record:read"));
         HIERARCHY.put("record:read", Set.of("record:read"));
         HIERARCHY.put("role:manage", Set.of("role:manage", "role:read"));
         HIERARCHY.put("role:read", Set.of("role:read"));

@@ -5,8 +5,7 @@ import { useArchivePrint } from '../useArchivePrint'
 import { ARCHIVE_SELECTION_CHANGED_EVENT } from '../useSelection'
 
 const api = vi.hoisted(() => ({
-  getArchivePdfExportPlan: vi.fn(),
-  downloadArchivePdf: vi.fn(),
+  getSelectedImagesPdfExportPlan: vi.fn(),
   downloadSelectedImagesPdf: vi.fn(),
   createArchiveExportJob: vi.fn(),
   getArchiveExportJob: vi.fn(),
@@ -44,7 +43,7 @@ describe('useArchivePrint', () => {
   })
 
   it('规划接口拒绝时不会继续在浏览器生成 PDF', async () => {
-    api.getArchivePdfExportPlan.mockRejectedValue({
+    api.getSelectedImagesPdfExportPlan.mockRejectedValue({
       message: 'No permission',
       response: { status: 403 },
     })
@@ -59,7 +58,6 @@ describe('useArchivePrint', () => {
     await exportSelectedPdf([image])
 
     expect(clientPdf.createPdfFromImageUrls).not.toHaveBeenCalled()
-    expect(api.downloadArchivePdf).not.toHaveBeenCalled()
     expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
     expect(api.createArchiveExportJob).not.toHaveBeenCalled()
     expect(message.error).toHaveBeenCalledWith('No permission')
@@ -76,12 +74,12 @@ describe('useArchivePrint', () => {
     const { exportSelectedPdf } = useArchivePrint()
     await exportSelectedPdf([image])
 
-    expect(api.getArchivePdfExportPlan).not.toHaveBeenCalled()
+    expect(api.getSelectedImagesPdfExportPlan).not.toHaveBeenCalled()
     expect(message.warning).toHaveBeenCalledWith('当前账号没有病案 PDF 导出权限')
   })
 
-  it('服务端规划为 BACKEND_JOB 时创建选中影像异步任务', async () => {
-    api.getArchivePdfExportPlan.mockResolvedValue({
+  it('服务端规划为 BACKEND_JOB 时始终创建固定选中影像任务', async () => {
+    api.getSelectedImagesPdfExportPlan.mockResolvedValue({
       data: {
         executionMode: 'BACKEND_JOB',
         wholeArchive: false,
@@ -109,6 +107,7 @@ describe('useArchivePrint', () => {
     const { exportSelectedPdf, dismissPdfJob } = useArchivePrint()
     await exportSelectedPdf(images)
 
+    expect(api.getSelectedImagesPdfExportPlan).toHaveBeenCalledWith([1, 2])
     expect(api.createArchiveExportJob).toHaveBeenCalledWith(expect.objectContaining({
       format: 'PDF',
       bah: '00789508',
@@ -120,8 +119,25 @@ describe('useArchivePrint', () => {
     dismissPdfJob()
   })
 
+  it('选中数量等于当前全部图片时仍提交固定 IDs', async () => {
+    api.getSelectedImagesPdfExportPlan.mockResolvedValue({
+      data: { executionMode: 'BACKEND_STREAM', wholeArchive: false },
+    })
+    api.downloadSelectedImagesPdf.mockResolvedValue(new Blob(['pdf']))
+    const images: GalleryImage[] = [
+      { id: 11, bah: '00789508', sjh: '', imageUrl: '/11.jpg' },
+      { id: 12, bah: '00789508', sjh: '', imageUrl: '/12.jpg' },
+    ]
+
+    const { exportSelectedPdf } = useArchivePrint()
+    await exportSelectedPdf(images)
+
+    expect(api.getSelectedImagesPdfExportPlan).toHaveBeenCalledWith([11, 12])
+    expect(api.downloadSelectedImagesPdf).toHaveBeenCalledWith([11, 12])
+  })
+
   it('选中图片变化后不会继续显示或下载上一次 PDF 任务', async () => {
-    api.getArchivePdfExportPlan.mockResolvedValue({
+    api.getSelectedImagesPdfExportPlan.mockResolvedValue({
       data: {
         executionMode: 'BACKEND_JOB',
         wholeArchive: false,

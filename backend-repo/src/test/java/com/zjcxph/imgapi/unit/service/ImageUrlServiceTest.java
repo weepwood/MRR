@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.unit.service;
 
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
+import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.OssService;
@@ -117,6 +118,27 @@ class ImageUrlServiceTest {
     @DisplayName("determineImageUrl — 无匹配时回退默认")
     void determineImageUrl_noMatchFallsBackToDefault() throws Exception {
         assertThat(determineImageUrlMethod.invoke(service, "2099.01.01")).isEqualTo("http://url-default");
+    }
+
+    @Test
+    @DisplayName("后台导出使用与页面相同的 BA01 Nginx 路径")
+    void buildImageUrlForExportUsesNginxStaticPath() {
+        props.setServerUrlBa01("http://127.0.0.1:8005/ba-img-01/");
+        PathDO image = new PathDO(
+                13,
+                "24.04.07",
+                "0013.jpg",
+                "666666",
+                "00789124",
+                null,
+                "AUTO",
+                null,
+                null,
+                null,
+                null);
+
+        assertThat(service.buildImageUrl(image)).isEqualTo(
+                "http://127.0.0.1:8005/ba-img-01/24.04/24.04.07/666666-00789124/0013.jpg");
     }
 
     @Test

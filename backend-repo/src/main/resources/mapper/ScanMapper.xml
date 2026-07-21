@@ -7,10 +7,23 @@
     <select id="getImagePathList" resultType="com.zjcxph.imgapi.entity.PathDO">
         SELECT BRXH AS brxh, BAH AS bah, folder, filename
         FROM mr_scan
-        WHERE id IN
+        WHERE uploadflag != 0
+          AND id IN
         <foreach item="id" collection="ids" open="(" separator="," close=")">
             #{id}
         </foreach>
+        ORDER BY BAH, sjh, pages NULLS LAST, id
+    </select>
+
+    <select id="findActiveByIds" resultType="com.zjcxph.imgapi.entity.Scan">
+        SELECT *
+        FROM mr_scan
+        WHERE uploadflag != 0
+          AND id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY BAH, sjh, pages NULLS LAST, id
     </select>
 
     <update id="update">

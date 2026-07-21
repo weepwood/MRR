@@ -1,0 +1,71 @@
+name: Release v0.5.0 bootstrap
+
+on:
+  push:
+    branches:
+      - dev-no-login
+    paths:
+      - '.github/workflows/release-v0.5.0-bootstrap.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  create-tag-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release target
+        uses: actions/checkout@v4
+        with:
+          ref: 41605eec58dd15006d655677b822b6fcf13fd5cc
+          fetch-depth: 0
+
+      - name: Validate v0.5.0 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "0.5.0"
+          grep -F '<revision>0.5.0</revision>' backend-repo/pom.xml
+          python scripts/release_baseline.py validate
+
+      - name: Create tag and dispatch package workflow
+        uses: actions/github-script@v7
+        env:
+          RELEASE_SHA: 41605eec58dd15006d655677b822b6fcf13fd5cc
+          RELEASE_TAG: v0.5.0
+        with:
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const tag = process.env.RELEASE_TAG
+            const sha = process.env.RELEASE_SHA
+
+            try {
+              const existing = await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` })
+              if (existing.data.object.sha !== sha) {
+                core.setFailed(`标签 ${tag} 已存在，但指向 ${existing.data.object.sha}，预期为 ${sha}`)
+                return
+              }
+              core.info(`标签 ${tag} 已存在且指向正确提交`)
+            }
+            catch (error) {
+              if (error.status !== 404) {
+                throw error
+              }
+              await github.rest.git.createRef({
+                owner,
+                repo,
+                ref: `refs/tags/${tag}`,
+                sha,
+              })
+              core.info(`已创建标签 ${tag}`)
+            }
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'windows-release-package.yml',
+              ref: tag,
+            })
+            core.info(`已通过标签 ${tag} 触发 Windows 正式发布工作流`)

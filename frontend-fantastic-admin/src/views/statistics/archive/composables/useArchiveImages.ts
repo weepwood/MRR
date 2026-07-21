@@ -40,7 +40,7 @@ function saveBlob(blob: Blob, fileName: string) {
 
 export function useArchiveImages() {
   const { auth } = useAuth()
-  const exportJob = useArchiveExportJob()
+  const exportJob = useArchiveExportJob('ZIP')
   const images = shallowRef<GalleryImage[]>([])
   const patientList = shallowRef<PatientInfo[]>([])
   const archiveCases = shallowRef<IdCardArchiveCase[]>([])

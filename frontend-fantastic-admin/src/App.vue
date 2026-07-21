@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { MotionConfig } from 'motion-v'
 import Provider from './ui/provider/index.vue'
 
 const SystemInfo = defineAsyncComponent(() => import('@/ui/components/FaSystemInfo/index.vue'))
@@ -71,16 +70,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <MotionConfig reducedMotion="user">
-    <Provider>
-      <RouterView v-slot="{ Component }">
-        <component :is="Component" v-if="isAuth" />
-        <FaNotAllowed v-else />
-      </RouterView>
-      <FaBackToTop />
-      <FaToast />
-      <FaNotification />
-      <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
-    </Provider>
-  </MotionConfig>
+  <Provider>
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" v-if="isAuth" />
+      <FaNotAllowed v-else />
+    </RouterView>
+    <FaBackToTop />
+    <FaToast />
+    <FaNotification />
+    <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
+  </Provider>
 </template>

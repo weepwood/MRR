@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
-import { AnimatePresence, motion } from 'motion-v'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
   ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
@@ -47,20 +45,6 @@ const activeHistory = computed(() => {
     return favoriteHistory.value
   }
   return historyStatus.value === 'success' ? successfulHistory.value : failedHistory.value
-})
-const historyFilters = computed(() => [
-  { key: 'success' as const, label: '成功查询', count: successfulHistory.value.length },
-  { key: 'failure' as const, label: '失败查询', count: failedHistory.value.length },
-  { key: 'favorite' as const, label: '收藏病案', count: favoriteHistory.value.length },
-])
-const activeHistoryEmptyDescription = computed(() => {
-  if (historyStatus.value === 'success') {
-    return '暂无成功查询记录'
-  }
-  if (historyStatus.value === 'failure') {
-    return '暂无失败查询记录'
-  }
-  return '暂无收藏病案'
 })
 const historyTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: '2-digit',
@@ -157,39 +141,22 @@ onUnmounted(() => {
                   成功查询
                 </p>
                 <div class="history-list">
-                  <motion.div
-                    v-for="item in displayedSuccessfulHistory"
-                    :key="item.key"
-                    layout
-                    class="history-item"
-                    :transition="motionSprings.layout"
-                  >
+                  <div v-for="item in displayedSuccessfulHistory" :key="item.key" class="history-item">
                     <button class="history-main" type="button" @click="selectHistory(item)">
                       <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
                       <span class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
                       <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
                     </button>
-                    <motion.span
-                      :key="`${item.key}:${item.favorite}`"
-                      class="favorite-motion"
-                      :initial="{ scale: 0.86, rotate: item.favorite ? -8 : 0 }"
-                      :animate="{ scale: 1, rotate: 0 }"
-                      :transition="motionSprings.interaction"
-                    >
-                      <el-button
-                        text
-                        circle
-                        size="small"
-                        :class="{ 'is-favorite': item.favorite }"
-                        :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
-                        @click.stop="toggleHistoryFavorite(item.key)"
-                      >
-                        <template #icon>
-                          <component :is="item.favorite ? StarFilled : Star" />
-                        </template>
-                      </el-button>
-                    </motion.span>
-                  </motion.div>
+                    <el-button
+                      text
+                      circle
+                      size="small"
+                      :class="{ 'is-favorite': item.favorite }"
+                      :icon="item.favorite ? StarFilled : Star"
+                      :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
+                      @click.stop="toggleHistoryFavorite(item.key)"
+                    />
+                  </div>
                 </div>
               </section>
             </div>
@@ -201,90 +168,39 @@ onUnmounted(() => {
           <template #header>
             <div class="history-dialog-header">
               <strong>搜索记录</strong>
-              <div class="history-filter-actions" role="tablist" aria-label="搜索记录筛选">
-                <motion.button
-                  v-for="filter in historyFilters"
-                  :key="filter.key"
-                  type="button"
-                  role="tab"
-                  class="history-filter-button"
-                  :class="`history-filter-button--${filter.key}`"
-                  :aria-selected="historyStatus === filter.key"
-                  @click="historyStatus = filter.key"
-                >
-                  <motion.span
-                    v-if="historyStatus === filter.key"
-                    layout-id="archive-history-active-filter"
-                    class="history-filter-indicator"
-                    :class="`history-filter-indicator--${filter.key}`"
-                    :transition="motionSprings.layout"
-                    aria-hidden="true"
-                  />
-                  <span class="history-filter-label">
-                    <el-icon v-if="filter.key === 'favorite'"><StarFilled /></el-icon>
-                    {{ filter.label }} ({{ filter.count }})
-                  </span>
-                </motion.button>
+              <div class="history-filter-actions">
+                <el-button :type="historyStatus === 'success' ? 'primary' : 'default'" @click="historyStatus = 'success'">
+                  成功查询 ({{ successfulHistory.length }})
+                </el-button>
+                <el-button :type="historyStatus === 'failure' ? 'danger' : 'default'" @click="historyStatus = 'failure'">
+                  失败查询 ({{ failedHistory.length }})
+                </el-button>
+                <el-button :type="historyStatus === 'favorite' ? 'warning' : 'default'" :icon="StarFilled" @click="historyStatus = 'favorite'">
+                  收藏病案 ({{ favoriteHistory.length }})
+                </el-button>
               </div>
             </div>
           </template>
-
-          <AnimatePresence mode="wait" :initial="false">
-            <motion.div
-              v-if="activeHistory.length"
-              :key="historyStatus"
-              class="history-list history-dialog-list"
-              :initial="{ opacity: 0, y: 4 }"
-              :animate="{ opacity: 1, y: 0 }"
-              :exit="{ opacity: 0, y: -2 }"
-              :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
-            >
-              <motion.div
-                v-for="item in activeHistory"
-                :key="item.key"
-                layout
-                class="history-item"
-                :transition="motionSprings.layout"
-              >
-                <button class="history-main" type="button" @click="selectHistory(item)">
-                  <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
-                  <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
-                  <span v-else class="history-secondary">{{ item.failureReason }}</span>
-                  <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
-                </button>
-                <motion.span
-                  :key="`${item.key}:${item.favorite}`"
-                  class="favorite-motion"
-                  :initial="{ scale: 0.86, rotate: item.favorite ? -8 : 0 }"
-                  :animate="{ scale: 1, rotate: 0 }"
-                  :transition="motionSprings.interaction"
-                >
-                  <el-button
-                    text
-                    circle
-                    size="small"
-                    :class="{ 'is-favorite': item.favorite }"
-                    :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
-                    @click.stop="toggleHistoryFavorite(item.key)"
-                  >
-                    <template #icon>
-                      <component :is="item.favorite ? StarFilled : Star" />
-                    </template>
-                  </el-button>
-                </motion.span>
-              </motion.div>
-            </motion.div>
-            <motion.div
-              v-else
-              :key="`empty-${historyStatus}`"
-              :initial="{ opacity: 0 }"
-              :animate="{ opacity: 1 }"
-              :exit="{ opacity: 0 }"
-              :transition="{ duration: motionDurations.fast }"
-            >
-              <el-empty :image-size="54" :description="activeHistoryEmptyDescription" />
-            </motion.div>
-          </AnimatePresence>
+          <div v-if="activeHistory.length" class="history-list history-dialog-list">
+            <div v-for="item in activeHistory" :key="item.key" class="history-item">
+              <button class="history-main" type="button" @click="selectHistory(item)">
+                <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
+                <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
+                <span v-else class="history-secondary">{{ item.failureReason }}</span>
+                <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
+              </button>
+              <el-button
+                text
+                circle
+                size="small"
+                :class="{ 'is-favorite': item.favorite }"
+                :icon="item.favorite ? StarFilled : Star"
+                :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
+                @click.stop="toggleHistoryFavorite(item.key)"
+              />
+            </div>
+          </div>
+          <el-empty v-else :image-size="54" :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'" />
         </el-dialog>
       </div>
     </div>
@@ -371,62 +287,14 @@ onUnmounted(() => {
 }
 
 .history-filter-actions {
-  position: relative;
   display: flex;
-  gap: 6px;
-}
-
-.history-filter-button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 11px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--el-border-color);
-  border-radius: 7px;
-}
-
-.history-filter-button:focus-visible {
-  outline: 2px solid var(--el-color-primary-light-5);
-  outline-offset: 1px;
-}
-
-.history-filter-label {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.history-filter-indicator {
-  position: absolute;
-  inset: -1px;
-  z-index: 0;
-  background: var(--el-color-primary-light-9);
-  border: 1px solid var(--el-color-primary-light-5);
-  border-radius: 7px;
-}
-
-.history-filter-indicator--failure {
-  background: var(--el-color-danger-light-9);
-  border-color: var(--el-color-danger-light-5);
-}
-
-.history-filter-indicator--favorite {
-  background: var(--el-color-warning-light-9);
-  border-color: var(--el-color-warning-light-5);
+  gap: 8px;
 }
 
 .history-dialog-header {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
   justify-content: space-between;
 }
 
@@ -453,12 +321,6 @@ onUnmounted(() => {
 
 .history-item :deep(.is-favorite) {
   color: var(--el-color-warning);
-}
-
-.favorite-motion {
-  display: inline-flex;
-  flex: none;
-  transform-origin: center;
 }
 
 .history-main {
@@ -507,16 +369,5 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
-}
-
-@media (max-width: 720px) {
-  .history-dialog-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .history-filter-actions {
-    flex-wrap: wrap;
-  }
 }
 </style>

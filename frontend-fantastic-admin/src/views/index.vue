@@ -5,16 +5,14 @@ meta:
 </route>
 
 <script setup lang="ts">
-import type { DashboardData, ImageAuditCountItem, LogRecord } from '@/api/types'
 import { computed, onMounted, ref } from 'vue'
-import { AnimatePresence, motion } from 'motion-v'
 import { useRouter } from 'vue-router'
-import { getImageAuditAnalytics, searchImageAuditLogs } from '@/api/modules/logs'
+import { useUserStore } from '@/store/modules/user'
 import { getDashboardData } from '@/api/modules/statistics'
 import { getSystemHealth } from '@/api/modules/system'
-import { entranceDelay, motionDurations, motionEasings, motionSprings } from '@/motion/presets'
-import { useUserStore } from '@/store/modules/user'
+import { getImageAuditAnalytics, searchImageAuditLogs } from '@/api/modules/logs'
 import { hasPermission } from '@/utils/session'
+import type { DashboardData, ImageAuditCountItem, LogRecord } from '@/api/types'
 
 defineOptions({ name: 'HomePage' })
 
@@ -49,18 +47,8 @@ const quickActions = [
   { label: 'OSS 迁移', icon: 'i-ant-design:cloud-upload-twotone', path: '/oss-migration', color: '#e6a23c', perm: 'record:read' },
   { label: '影像档案袋', icon: 'i-ant-design:folder-open-twotone', path: '/archive/embed', color: '#909399', perm: 'record:read' },
   { label: '系统监控', icon: 'i-ant-design:dashboard-twotone', path: '/monitoring', color: '#f56c6c', perm: 'system:read' },
-]
 
-const quickActionVariants = {
-  idle: {},
-  hover: {},
-  press: {},
-}
-const quickIconVariants = {
-  idle: { scale: 1, y: 0 },
-  hover: { scale: 1.08, y: -1 },
-  press: { scale: 0.94, y: 0 },
-}
+]
 
 const visibleQuickActions = computed(() => quickActions.filter(a => hasPermission(a.perm)))
 
@@ -127,8 +115,7 @@ async function loadData() {
         topUsers.value = (res.value as any)?.data?.topUsers ?? []
       }
     })
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -198,39 +185,20 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <!-- 统计卡片：只做首次进入与数值更新反馈，不增加 hover 上浮。 -->
+    <!-- 统计卡片 -->
     <el-row v-if="canViewStats" :gutter="16">
-      <el-col v-for="(card, index) in statsCards" :key="card.label" :xs="12" :sm="6">
-        <motion.div
-          class="stat-card-motion"
-          :initial="{ opacity: 0, y: 8 }"
-          :animate="{ opacity: 1, y: 0 }"
-          :transition="{
-            duration: motionDurations.standard,
-            delay: entranceDelay(index),
-            ease: motionEasings.emphasized,
-          }"
-        >
-          <el-card shadow="never" class="stat-card">
-            <div class="stat-inner">
-              <div class="stat-icon" :style="{ background: card.color + '18', color: card.color }">
-                <i :class="card.icon" />
-              </div>
-              <div class="stat-info">
-                <motion.p
-                  :key="String(card.value)"
-                  class="stat-value"
-                  :initial="{ opacity: 0 }"
-                  :animate="{ opacity: 1 }"
-                  :transition="{ duration: motionDurations.fast }"
-                >
-                  {{ card.value }}
-                </motion.p>
-                <p class="stat-label">{{ card.label }}</p>
-              </div>
+      <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6">
+        <el-card shadow="never" class="stat-card">
+          <div class="stat-inner">
+            <div class="stat-icon" :style="{ background: card.color + '18', color: card.color }">
+              <i :class="card.icon" />
             </div>
-          </el-card>
-        </motion.div>
+            <div class="stat-info">
+              <p class="stat-value">{{ card.value }}</p>
+              <p class="stat-label">{{ card.label }}</p>
+            </div>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
@@ -287,25 +255,15 @@ onMounted(() => {
             <span>快捷入口</span>
           </template>
           <div class="quick-grid">
-            <motion.button
+            <button
               v-for="action in visibleQuickActions"
               :key="action.label"
-              type="button"
               class="quick-item"
-              :variants="quickActionVariants"
-              initial="idle"
-              whileHover="hover"
-              whilePress="press"
               @click="navigate(action.path)"
             >
-              <motion.i
-                :class="action.icon"
-                :style="{ color: action.color }"
-                :variants="quickIconVariants"
-                :transition="motionSprings.interaction"
-              />
+              <i :class="action.icon" :style="{ color: action.color }" />
               <span>{{ action.label }}</span>
-            </motion.button>
+            </button>
           </div>
         </el-card>
       </el-col>
@@ -352,44 +310,19 @@ onMounted(() => {
             :aria-expanded="expandedTimelineGroups.includes(group.key)"
             @click="toggleTimelineGroup(group.key)"
           >
-            <motion.i
-              class="i-ant-design:right-outlined"
-              :animate="{ rotate: expandedTimelineGroups.includes(group.key) ? 90 : 0 }"
-              :transition="motionSprings.interaction"
-            />
+            <i :class="expandedTimelineGroups.includes(group.key) ? 'i-ant-design:down-outlined' : 'i-ant-design:right-outlined'" />
             <span>{{ group.label }}</span>
             <el-tag size="small" type="info">{{ group.logs.length }} 次</el-tag>
           </button>
-          <AnimatePresence :initial="false">
-            <motion.div
-              v-if="expandedTimelineGroups.includes(group.key)"
-              :key="group.key"
-              class="timeline-group-children"
-              :initial="{ opacity: 0, height: 0 }"
-              :animate="{ opacity: 1, height: 'auto' }"
-              :exit="{ opacity: 0, height: 0 }"
-              :transition="{ duration: motionDurations.collapse, ease: motionEasings.emphasized }"
-            >
-              <motion.div
-                v-for="(log, index) in group.logs"
-                :key="log.id ?? index"
-                class="timeline-entry"
-                :initial="{ opacity: 0, x: -4 }"
-                :animate="{ opacity: 1, x: 0 }"
-                :transition="{
-                  duration: motionDurations.fast,
-                  delay: entranceDelay(index, 0.025, 0.12),
-                  ease: motionEasings.emphasized,
-                }"
-              >
-                <div>
-                  <span class="timeline-time">{{ formatLogTime(log.accessTime) }}</span>
-                  <span class="timeline-target">{{ log.auditTarget || log.requestUri || '-' }}</span>
-                </div>
-                <span class="timeline-meta">{{ log.clientIp || '-' }} · {{ log.responseStatus ?? '-' }}</span>
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
+          <div v-if="expandedTimelineGroups.includes(group.key)" class="timeline-group-children">
+            <div v-for="(log, index) in group.logs" :key="log.id ?? index" class="timeline-entry">
+              <div>
+                <span class="timeline-time">{{ formatLogTime(log.accessTime) }}</span>
+                <span class="timeline-target">{{ log.auditTarget || log.requestUri || '-' }}</span>
+              </div>
+              <span class="timeline-meta">{{ log.clientIp || '-' }} · {{ log.responseStatus ?? '-' }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -430,11 +363,6 @@ h2 {
 }
 
 /* 统计卡片 */
-.stat-card-motion,
-.stat-card {
-  height: 100%;
-}
-
 .stat-card {
   margin-bottom: 0;
 }
@@ -534,7 +462,6 @@ h2 {
 }
 
 .timeline-group {
-  overflow: hidden;
   border: 1px solid var(--divider);
   border-radius: 10px;
 }
@@ -559,10 +486,6 @@ h2 {
 
 .timeline-group-header:hover {
   background: var(--surface-alt);
-}
-
-.timeline-group-children {
-  overflow: hidden;
 }
 
 .timeline-entry {
@@ -618,19 +541,16 @@ h2 {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  transition: all 0.2s;
 }
 
-.quick-item:hover,
-.quick-item:focus-visible {
+.quick-item:hover {
   background: var(--surface-alt);
   border-color: var(--divider);
-  outline: none;
 }
 
 .quick-item i {
   font-size: 22px;
-  transform-origin: center;
 }
 
 /* 访问记录 */
@@ -667,12 +587,5 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .quick-item,
-  .top-user {
-    transition: none;
-  }
 }
 </style>

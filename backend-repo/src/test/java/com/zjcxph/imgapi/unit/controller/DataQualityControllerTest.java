@@ -40,7 +40,7 @@ class DataQualityControllerTest {
 
     @Test
     void issuesForwardsRequestedLimit() {
-        List<Map<String, Object>> issues = List.of(Map.of("check_code", "SCAN_BAH_MISSING"));
+        List<Map<String, Object>> issues = List.of(Map.of("check_code", "SCAN_CODE_BLANK"));
         when(dataQualityService.getIssues(25)).thenReturn(issues);
 
         Result<List<Map<String, Object>>> result = controller.issues(25);
@@ -49,6 +49,28 @@ class DataQualityControllerTest {
         assertThat(result.getMessage()).isEqualTo("获取数据质量异常成功");
         assertThat(result.getData()).isSameAs(issues);
         verify(dataQualityService).getIssues(25);
+    }
+
+    @Test
+    void issueReturnsSelectedIssue() {
+        Map<String, Object> issue = Map.of("id", 9L, "checkCode", "SCAN_ARCHIVE_LINK_MISSING_ESTIMATED");
+        when(dataQualityService.getIssue(9L)).thenReturn(issue);
+
+        Result<Map<String, Object>> result = controller.issue(9L);
+
+        assertThat(result.getData()).isSameAs(issue);
+        verify(dataQualityService).getIssue(9L);
+    }
+
+    @Test
+    void repairPreviewIsReadOnly() {
+        Map<String, Object> preview = Map.of("readOnly", true, "canApply", false);
+        when(dataQualityService.previewRepair(9L)).thenReturn(preview);
+
+        Result<Map<String, Object>> result = controller.repairPreview(9L);
+
+        assertThat(result.getData()).isSameAs(preview);
+        verify(dataQualityService).previewRepair(9L);
     }
 
     @Test

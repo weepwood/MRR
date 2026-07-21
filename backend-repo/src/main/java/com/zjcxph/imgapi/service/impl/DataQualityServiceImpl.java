@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.DataQualityService;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -17,7 +18,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -25,6 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DataQualityServiceImpl implements DataQualityService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataQualityServiceImpl.class);
+    private static final Set<String> LINKABLE_ENTITY_TYPES = Set.of(
+            "mr_scan",
+            "mr_statistics",
+            "mr_archive_box_record"
+    );
 
     private final JdbcTemplate jdbcTemplate;
     private final MultiGauge issuesGauge;
@@ -32,6 +40,7 @@ public class DataQualityServiceImpl implements DataQualityService {
     private final AtomicLong lastSuccessTimestampGauge = new AtomicLong();
     private final AtomicLong runningGauge = new AtomicLong();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final List<DataQualityCheckDefinition> checks = DataQualityCheckCatalog.standardChecks();
 
     @Value("${app.data-quality.enabled:true}")
     private boolean enabled;
@@ -41,170 +50,6 @@ public class DataQualityServiceImpl implements DataQualityService {
 
     @Value("${app.data-quality.retention-days:90}")
     private int retentionDays;
-
-    private final List<CheckDefinition> checks = List.of(
-            new CheckDefinition(
-                    "SCAN_BAH_MISSING", "扫描记录病案号为空", "CRITICAL",
-                    "SELECT COUNT(*) FROM mr_scan WHERE NULLIF(TRIM(COALESCE(bah, '')), '') IS NULL",
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           '扫描记录缺少病案号' AS detail
-                    FROM mr_scan
-                    WHERE NULLIF(TRIM(COALESCE(bah, '')), '') IS NULL
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "SCAN_SJH_MISSING", "扫描记录上架号为空", "WARNING",
-                    "SELECT COUNT(*) FROM mr_scan WHERE NULLIF(TRIM(COALESCE(sjh, '')), '') IS NULL",
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           '扫描记录缺少上架号' AS detail
-                    FROM mr_scan
-                    WHERE NULLIF(TRIM(COALESCE(sjh, '')), '') IS NULL
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "SCAN_CODE_FORMAT_INVALID", "病案号或上架号不是八位数字", "WARNING",
-                    """
-                    SELECT COUNT(*) FROM mr_scan
-                    WHERE (NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL AND TRIM(bah) !~ '^[0-9]{8}$')
-                       OR (NULLIF(TRIM(COALESCE(sjh, '')), '') IS NOT NULL AND TRIM(sjh) !~ '^[0-9]{8}$')
-                    """,
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           '病案号或上架号不符合八位数字规范' AS detail
-                    FROM mr_scan
-                    WHERE (NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL AND TRIM(bah) !~ '^[0-9]{8}$')
-                       OR (NULLIF(TRIM(COALESCE(sjh, '')), '') IS NOT NULL AND TRIM(sjh) !~ '^[0-9]{8}$')
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "SCAN_PAGES_INVALID", "扫描页数为空或小于等于零", "CRITICAL",
-                    "SELECT COUNT(*) FROM mr_scan WHERE pages IS NULL OR pages <= 0",
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           CONCAT('无效页数: ', COALESCE(pages::text, 'NULL')) AS detail
-                    FROM mr_scan
-                    WHERE pages IS NULL OR pages <= 0
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "SCAN_FILE_METADATA_MISSING", "扫描文件元数据缺失", "CRITICAL",
-                    """
-                    SELECT COUNT(*) FROM mr_scan
-                    WHERE NULLIF(TRIM(COALESCE(filename, '')), '') IS NULL
-                       OR NULLIF(TRIM(COALESCE(folder, '')), '') IS NULL
-                    """,
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           CONCAT('文件名=', COALESCE(filename, 'NULL'), ', 目录=', COALESCE(folder, 'NULL')) AS detail
-                    FROM mr_scan
-                    WHERE NULLIF(TRIM(COALESCE(filename, '')), '') IS NULL
-                       OR NULLIF(TRIM(COALESCE(folder, '')), '') IS NULL
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "MIGRATED_WITHOUT_OSS_URL", "已迁移记录缺少 OSS 地址", "CRITICAL",
-                    """
-                    SELECT COUNT(*) FROM mr_scan
-                    WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
-                      AND NULLIF(TRIM(COALESCE(oss_url, '')), '') IS NULL
-                    """,
-                    """
-                    SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
-                           CONCAT('迁移状态=', COALESCE(migration_status, 'NULL'), '，但 OSS 地址为空') AS detail
-                    FROM mr_scan
-                    WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
-                      AND NULLIF(TRIM(COALESCE(oss_url, '')), '') IS NULL
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "MIGRATION_SUCCESS_UNVERIFIED", "迁移成功但未完成校验", "WARNING",
-                    """
-                    SELECT COUNT(*) FROM image_migration_log
-                    WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
-                      AND verified_at IS NULL
-                    """,
-                    """
-                    SELECT 'image_migration_log' AS entity_type, id::text AS entity_id,
-                           NULL::text AS bah, NULL::text AS sjh,
-                           CONCAT('scan_id=', scan_id, '，迁移成功但 verified_at 为空') AS detail
-                    FROM image_migration_log
-                    WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
-                      AND verified_at IS NULL
-                    ORDER BY id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "DUPLICATE_SCAN_PAGE", "扫描页疑似重复", "WARNING",
-                    """
-                    SELECT COALESCE(SUM(duplicate_count - 1), 0)
-                    FROM (
-                        SELECT COUNT(*) AS duplicate_count
-                        FROM mr_scan
-                        WHERE NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL
-                        GROUP BY bah, sjh, filename, pages
-                        HAVING COUNT(*) > 1
-                    ) duplicate_rows
-                    """,
-                    """
-                    SELECT 'mr_scan' AS entity_type, MIN(id)::text AS entity_id, bah, sjh,
-                           CONCAT('相同病案号、上架号、文件名和页码重复 ', COUNT(*), ' 条') AS detail
-                    FROM mr_scan
-                    WHERE NULLIF(TRIM(COALESCE(bah, '')), '') IS NOT NULL
-                    GROUP BY bah, sjh, filename, pages
-                    HAVING COUNT(*) > 1
-                    ORDER BY COUNT(*) DESC, MIN(id) DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "STATISTICS_SCAN_NOT_FOUND", "统计记录找不到对应扫描记录", "WARNING",
-                    """
-                    SELECT COUNT(*)
-                    FROM mr_statistics s
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM mr_scan sc
-                        WHERE NULLIF(TRIM(COALESCE(sc.bah, '')), '') = NULLIF(TRIM(COALESCE(s.bah, '')), '')
-                          AND (
-                              NULLIF(TRIM(COALESCE(s.sjh, '')), '') IS NULL
-                              OR NULLIF(TRIM(COALESCE(sc.sjh, '')), '') = NULLIF(TRIM(COALESCE(s.sjh, '')), '')
-                          )
-                    )
-                    """,
-                    """
-                    SELECT 'mr_statistics' AS entity_type, s.id::text AS entity_id, s.bah, s.sjh,
-                           '统计记录找不到对应扫描记录' AS detail
-                    FROM mr_statistics s
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM mr_scan sc
-                        WHERE NULLIF(TRIM(COALESCE(sc.bah, '')), '') = NULLIF(TRIM(COALESCE(s.bah, '')), '')
-                          AND (
-                              NULLIF(TRIM(COALESCE(s.sjh, '')), '') IS NULL
-                              OR NULLIF(TRIM(COALESCE(sc.sjh, '')), '') = NULLIF(TRIM(COALESCE(s.sjh, '')), '')
-                          )
-                    )
-                    ORDER BY s.id DESC
-                    """
-            ),
-            new CheckDefinition(
-                    "ARCHIVE_BOX_EXCEPTION", "档案装箱状态异常", "WARNING",
-                    "SELECT COUNT(*) FROM mr_archive_box_record WHERE status <> 'NORMAL'",
-                    """
-                    SELECT 'mr_archive_box_record' AS entity_type, id::text AS entity_id, bah, sjh,
-                           CONCAT('装箱状态=', status, '，实际箱号=', COALESCE(box_no, 'NULL'),
-                                  '，预期箱号=', COALESCE(expected_box_no, 'NULL')) AS detail
-                    FROM mr_archive_box_record
-                    WHERE status <> 'NORMAL'
-                    ORDER BY updated_at DESC, id DESC
-                    """
-            )
-    );
 
     public DataQualityServiceImpl(JdbcTemplate jdbcTemplate, MeterRegistry meterRegistry) {
         this.jdbcTemplate = jdbcTemplate;
@@ -226,8 +71,8 @@ public class DataQualityServiceImpl implements DataQualityService {
     public void initializeMetrics() {
         try {
             refreshMetricsFromLatestRun();
-        } catch (Exception e) {
-            logger.warn("Unable to initialize data quality metrics: {}", e.getMessage());
+        } catch (Exception exception) {
+            logger.warn("Unable to initialize data quality metrics: {}", exception.getMessage());
         }
     }
 
@@ -238,8 +83,8 @@ public class DataQualityServiceImpl implements DataQualityService {
         }
         try {
             runChecks("scheduled");
-        } catch (Exception e) {
-            logger.error("Scheduled data quality run failed", e);
+        } catch (Exception exception) {
+            logger.error("Scheduled data quality run failed", exception);
         }
     }
 
@@ -248,7 +93,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         List<Map<String, Object>> runs = jdbcTemplate.queryForList("""
                 SELECT id, status, triggered_by, check_count, total_issues, critical_count,
                        warning_count, started_at, completed_at, error_message
-                FROM mrr_data_quality_run
+                FROM app.mrr_data_quality_run
                 ORDER BY id DESC
                 LIMIT 1
                 """);
@@ -260,13 +105,15 @@ public class DataQualityServiceImpl implements DataQualityService {
             result.put("checks", List.of());
             return result;
         }
+
         Map<String, Object> latestRun = runs.getFirst();
         result.put("latestRun", latestRun);
         result.put("checks", jdbcTemplate.queryForList("""
                 SELECT check_code, check_name, severity, issue_count, sampled_count, checked_at
-                FROM mrr_data_quality_check_result
+                FROM app.mrr_data_quality_check_result
                 WHERE run_id = ?
-                ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, issue_count DESC, check_code
+                ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END,
+                         issue_count DESC, check_code
                 """, latestRun.get("id")));
         return result;
     }
@@ -275,8 +122,8 @@ public class DataQualityServiceImpl implements DataQualityService {
     public List<Map<String, Object>> getIssues(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 500));
         List<Long> runIds = jdbcTemplate.query(
-                "SELECT id FROM mrr_data_quality_run ORDER BY id DESC LIMIT 1",
-                (rs, rowNum) -> rs.getLong(1)
+                "SELECT id FROM app.mrr_data_quality_run ORDER BY id DESC LIMIT 1",
+                (resultSet, rowNumber) -> resultSet.getLong(1)
         );
         if (runIds.isEmpty()) {
             return List.of();
@@ -284,11 +131,61 @@ public class DataQualityServiceImpl implements DataQualityService {
         return jdbcTemplate.queryForList("""
                 SELECT id, check_code, check_name, severity, entity_type, entity_id,
                        bah, sjh, detail, detected_at
-                FROM mrr_data_quality_issue
+                FROM app.mrr_data_quality_issue
                 WHERE run_id = ?
                 ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, id DESC
                 LIMIT ?
                 """, runIds.getFirst(), safeLimit);
+    }
+
+    @Override
+    public Map<String, Object> getIssue(long issueId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT i.id, i.run_id AS "runId", i.check_code AS "checkCode",
+                       i.check_name AS "checkName", i.severity,
+                       i.entity_type AS "entityType", i.entity_id AS "entityId",
+                       i.bah, i.sjh, i.detail, i.detected_at AS "detectedAt",
+                       r.status AS "runStatus", r.triggered_by AS "triggeredBy",
+                       r.started_at AS "runStartedAt", r.completed_at AS "runCompletedAt"
+                FROM app.mrr_data_quality_issue i
+                JOIN app.mrr_data_quality_run r ON r.id = i.run_id
+                WHERE i.id = ?
+                """, issueId);
+        if (rows.isEmpty()) {
+            throw new BusinessException(404, "数据质量异常不存在");
+        }
+        return rows.getFirst();
+    }
+
+    @Override
+    public Map<String, Object> previewRepair(long issueId) {
+        Map<String, Object> issue = getIssue(issueId);
+        String checkCode = normalize(issue.get("checkCode"));
+        String entityType = normalize(issue.get("entityType"));
+        String entityId = normalize(issue.get("entityId"));
+        String bah = normalize(issue.get("bah"));
+        String sjh = normalize(issue.get("sjh"));
+
+        List<Map<String, Object>> candidates = findArchiveCandidates(bah, sjh);
+        Map<String, Object> currentEntity = loadCurrentEntity(entityType, entityId);
+        String suggestedAction = suggestedAction(checkCode);
+        boolean deterministic = "LINK_ARCHIVE_ID".equals(suggestedAction)
+                && LINKABLE_ENTITY_TYPES.contains(entityType)
+                && candidates.size() == 1
+                && currentEntity.get("archiveId") == null;
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("issue", issue);
+        result.put("currentEntity", currentEntity);
+        result.put("candidateArchives", candidates);
+        result.put("suggestedAction", suggestedAction);
+        result.put("deterministic", deterministic);
+        result.put("readOnly", true);
+        result.put("canApply", false);
+        result.put("reason", deterministic
+                ? "存在唯一候选主档，但第一阶段仅提供预览，尚未开放写入"
+                : "候选关系不唯一或异常类型需要人工判断，禁止自动修改");
+        return result;
     }
 
     @Override
@@ -299,9 +196,9 @@ public class DataQualityServiceImpl implements DataQualityService {
         runningGauge.set(1);
         Long runId = null;
         try {
-            String safeTriggeredBy = triggeredBy == null || triggeredBy.isBlank() ? "manual" : triggeredBy.substring(0, Math.min(32, triggeredBy.length()));
+            String safeTriggeredBy = normalizeTrigger(triggeredBy);
             runId = jdbcTemplate.queryForObject("""
-                    INSERT INTO mrr_data_quality_run(status, triggered_by, started_at)
+                    INSERT INTO app.mrr_data_quality_run(status, triggered_by, started_at)
                     VALUES ('RUNNING', ?, CURRENT_TIMESTAMP)
                     RETURNING id
                     """, Long.class, safeTriggeredBy);
@@ -311,7 +208,7 @@ public class DataQualityServiceImpl implements DataQualityService {
             long warningCount = 0;
             int safeSampleLimit = Math.max(1, Math.min(sampleLimit, 1000));
 
-            for (CheckDefinition check : checks) {
+            for (DataQualityCheckDefinition check : checks) {
                 Long countValue = jdbcTemplate.queryForObject(check.countSql(), Long.class);
                 long issueCount = countValue == null ? 0 : countValue;
                 List<Map<String, Object>> samples = issueCount == 0
@@ -319,22 +216,12 @@ public class DataQualityServiceImpl implements DataQualityService {
                         : jdbcTemplate.queryForList(check.sampleSql() + " LIMIT ?", safeSampleLimit);
 
                 jdbcTemplate.update("""
-                        INSERT INTO mrr_data_quality_check_result
+                        INSERT INTO app.mrr_data_quality_check_result
                             (run_id, check_code, check_name, severity, issue_count, sampled_count)
                         VALUES (?, ?, ?, ?, ?, ?)
                         """, runId, check.code(), check.name(), check.severity(), issueCount, samples.size());
 
-                for (Map<String, Object> sample : samples) {
-                    jdbcTemplate.update("""
-                            INSERT INTO mrr_data_quality_issue
-                                (run_id, check_code, check_name, severity, entity_type, entity_id, bah, sjh, detail)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            runId, check.code(), check.name(), check.severity(),
-                            sample.get("entity_type"), sample.get("entity_id"), sample.get("bah"),
-                            sample.get("sjh"), sample.get("detail"));
-                }
-
+                saveSamples(runId, check, samples);
                 totalIssues += issueCount;
                 if ("CRITICAL".equals(check.severity())) {
                     criticalCount += issueCount;
@@ -344,7 +231,7 @@ public class DataQualityServiceImpl implements DataQualityService {
             }
 
             jdbcTemplate.update("""
-                    UPDATE mrr_data_quality_run
+                    UPDATE app.mrr_data_quality_run
                     SET status = 'SUCCESS', check_count = ?, total_issues = ?, critical_count = ?,
                         warning_count = ?, completed_at = CURRENT_TIMESTAMP
                     WHERE id = ?
@@ -355,33 +242,144 @@ public class DataQualityServiceImpl implements DataQualityService {
             logger.info("Data quality run {} completed: total={}, critical={}, warning={}",
                     runId, totalIssues, criticalCount, warningCount);
             return getSummary();
-        } catch (Exception e) {
-            if (runId != null) {
-                jdbcTemplate.update("""
-                        UPDATE mrr_data_quality_run
-                        SET status = 'FAILED', completed_at = CURRENT_TIMESTAMP, error_message = ?
-                        WHERE id = ?
-                        """, abbreviate(e.getMessage(), 2000), runId);
-            }
-            throw new IllegalStateException("数据质量检查失败: " + e.getMessage(), e);
+        } catch (Exception exception) {
+            recordFailedRun(runId, exception);
+            throw new IllegalStateException("数据质量检查失败: " + exception.getMessage(), exception);
         } finally {
             running.set(false);
             runningGauge.set(0);
         }
     }
 
+    private void saveSamples(
+            long runId,
+            DataQualityCheckDefinition check,
+            List<Map<String, Object>> samples
+    ) {
+        for (Map<String, Object> sample : samples) {
+            jdbcTemplate.update("""
+                    INSERT INTO app.mrr_data_quality_issue
+                        (run_id, check_code, check_name, severity,
+                         entity_type, entity_id, bah, sjh, detail)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    runId,
+                    check.code(),
+                    check.name(),
+                    check.severity(),
+                    sample.get("entity_type"),
+                    sample.get("entity_id"),
+                    sample.get("bah"),
+                    sample.get("sjh"),
+                    sample.get("detail"));
+        }
+    }
+
+    private List<Map<String, Object>> findArchiveCandidates(String bah, String sjh) {
+        if (bah == null && sjh == null) {
+            return List.of();
+        }
+        return jdbcTemplate.queryForList("""
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah,
+                           NULLIF(BTRIM(CAST(? AS text)), '') AS sjh
+                )
+                SELECT a.id, a.bah, a.sjh, a.patient_name AS "patientName",
+                       a.inpatient_department AS "department", a.page_count AS "pageCount",
+                       CASE
+                           WHEN i.sjh IS NOT NULL AND BTRIM(COALESCE(a.sjh, '')) = i.sjh
+                               THEN 'SJH_EXACT'
+                           WHEN i.bah IS NOT NULL AND BTRIM(COALESCE(a.bah, '')) = i.bah
+                               THEN 'BAH_EXACT'
+                           ELSE 'FORMAT_ONLY'
+                       END AS "matchType"
+                FROM app.mr_archive a
+                CROSS JOIN input i
+                WHERE (i.sjh IS NOT NULL
+                       AND app.numeric_code_key(a.sjh) = app.numeric_code_key(i.sjh))
+                   OR (i.sjh IS NULL AND i.bah IS NOT NULL
+                       AND app.numeric_code_key(a.bah) = app.numeric_code_key(i.bah))
+                ORDER BY CASE
+                           WHEN i.sjh IS NOT NULL AND BTRIM(COALESCE(a.sjh, '')) = i.sjh THEN 0
+                           WHEN i.bah IS NOT NULL AND BTRIM(COALESCE(a.bah, '')) = i.bah THEN 1
+                           ELSE 2
+                         END,
+                         a.id DESC
+                LIMIT 5
+                """, bah, sjh);
+    }
+
+    private Map<String, Object> loadCurrentEntity(String entityType, String entityId) {
+        if (entityType == null || entityId == null) {
+            return Map.of();
+        }
+        if (!LINKABLE_ENTITY_TYPES.contains(entityType)) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("entityType", entityType);
+            result.put("entityId", entityId);
+            result.put("archiveId", null);
+            result.put("readOnly", true);
+            return result;
+        }
+
+        Long id = parseEntityId(entityId);
+        if (id == null) {
+            return Map.of();
+        }
+        String sql = switch (entityType) {
+            case "mr_scan" -> """
+                    SELECT 'mr_scan' AS "entityType", id AS "entityId",
+                           archive_id AS "archiveId", bah, sjh, filename, pages,
+                           uploadflag AS "uploadFlag"
+                    FROM app.mr_scan WHERE id = ?
+                    """;
+            case "mr_statistics" -> """
+                    SELECT 'mr_statistics' AS "entityType", id AS "entityId",
+                           archive_id AS "archiveId", bah, sjh,
+                           patientname AS "patientName", pages
+                    FROM app.mr_statistics WHERE id = ?
+                    """;
+            case "mr_archive_box_record" -> """
+                    SELECT 'mr_archive_box_record' AS "entityType", id AS "entityId",
+                           archive_id AS "archiveId", bah, sjh,
+                           box_no AS "boxNo", status
+                    FROM app.mr_archive_box_record WHERE id = ?
+                    """;
+            default -> throw new IllegalStateException("unsupported entity type");
+        };
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, id);
+        return rows.isEmpty() ? Map.of() : rows.getFirst();
+    }
+
+    private String suggestedAction(String checkCode) {
+        String normalized = checkCode == null ? "" : checkCode.toUpperCase(Locale.ROOT);
+        if (normalized.contains("LINK_MISSING")) {
+            return "LINK_ARCHIVE_ID";
+        }
+        if (normalized.contains("LINK_MISMATCH")) {
+            return "REVIEW_ARCHIVE_LINK";
+        }
+        if (normalized.contains("DUPLICATE")) {
+            return "REVIEW_DUPLICATE";
+        }
+        if (normalized.contains("AMBIGUOUS")) {
+            return "MANUAL_DISAMBIGUATION";
+        }
+        return "MANUAL_REVIEW";
+    }
+
     private void cleanupExpiredRuns() {
         int safeRetentionDays = Math.max(7, retentionDays);
         jdbcTemplate.update("""
-                DELETE FROM mrr_data_quality_run
+                DELETE FROM app.mrr_data_quality_run
                 WHERE started_at < CURRENT_TIMESTAMP - make_interval(days => ?)
                 """, safeRetentionDays);
     }
 
     private void refreshMetricsFromLatestRun() {
         List<Long> ids = jdbcTemplate.query(
-                "SELECT id FROM mrr_data_quality_run WHERE status = 'SUCCESS' ORDER BY id DESC LIMIT 1",
-                (rs, rowNum) -> rs.getLong(1)
+                "SELECT id FROM app.mrr_data_quality_run WHERE status = 'SUCCESS' ORDER BY id DESC LIMIT 1",
+                (resultSet, rowNumber) -> resultSet.getLong(1)
         );
         if (!ids.isEmpty()) {
             refreshMetrics(ids.getFirst());
@@ -391,7 +389,7 @@ public class DataQualityServiceImpl implements DataQualityService {
     private void refreshMetrics(long runId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT check_code, severity, issue_count
-                FROM mrr_data_quality_check_result
+                FROM app.mrr_data_quality_check_result
                 WHERE run_id = ?
                 """, runId);
         List<MultiGauge.Row<?>> gaugeRows = new ArrayList<>();
@@ -412,19 +410,44 @@ public class DataQualityServiceImpl implements DataQualityService {
         lastSuccessTimestampGauge.set(Instant.now().getEpochSecond());
     }
 
+    private void recordFailedRun(Long runId, Exception exception) {
+        if (runId == null) {
+            return;
+        }
+        jdbcTemplate.update("""
+                UPDATE app.mrr_data_quality_run
+                SET status = 'FAILED', completed_at = CURRENT_TIMESTAMP, error_message = ?
+                WHERE id = ?
+                """, abbreviate(exception.getMessage(), 2000), runId);
+    }
+
+    private String normalizeTrigger(String triggeredBy) {
+        if (triggeredBy == null || triggeredBy.isBlank()) {
+            return "manual";
+        }
+        return triggeredBy.substring(0, Math.min(32, triggeredBy.length()));
+    }
+
+    private Long parseEntityId(String entityId) {
+        try {
+            return Long.parseLong(entityId);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private String normalize(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = String.valueOf(value).trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     private String abbreviate(String value, int maxLength) {
         if (value == null) {
             return "unknown error";
         }
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private record CheckDefinition(
-            String code,
-            String name,
-            String severity,
-            String countSql,
-            String sampleSql
-    ) {
     }
 }

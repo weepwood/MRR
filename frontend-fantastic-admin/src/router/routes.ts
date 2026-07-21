@@ -218,6 +218,21 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
+    meta: { title: '数据治理', icon: 'i-ant-design:cluster-outlined' },
+    children: [
+      {
+        path: '/data-relations',
+        component: () => import('@/views/data-relations/index.vue'),
+        meta: {
+          title: '数据关系工作台',
+          icon: 'i-ant-design:apartment-outlined',
+          auth: ['system:read'],
+          cache: true,
+        },
+      },
+    ],
+  },
+  {
     meta: { title: '运维', icon: 'i-ant-design:control-twotone' },
     children: [
       {
@@ -289,6 +304,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
   item => ![
     '/status',
     '/auth-test',
+    '/data-relations',
     ...externalArchiveGeneratedPaths,
     '/statistics/archive',
     '/monitoring',

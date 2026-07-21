@@ -29,9 +29,10 @@ const appConfigRef = ref<AppConfigPanelRef>()
 const shouldReduceMotion = useReducedMotion()
 const {
   settingsNavItems,
-  shellRef,
+  pageRef,
   activeSection,
   activeMeta,
+  isHeaderCompact,
   loading,
   saving,
   settings,
@@ -41,16 +42,15 @@ const {
   isDirty,
   isServerSettingSection,
   selectSection,
+  toggleHeaderCompact,
   handleSave,
   handleReload,
   handleReset,
 } = useUnifiedSettings()
-
-void shellRef
 </script>
 
 <template>
-  <div class="settings-page">
+  <div ref="pageRef" class="settings-page" :class="{ 'is-header-compact': isHeaderCompact }">
     <header class="page-header">
       <div class="header-title">
         <span class="header-icon"><FaIcon name="i-ri:settings-4-line" /></span>
@@ -64,17 +64,29 @@ void shellRef
           <p>统一管理系统标识、登录支持、档案浏览、安全策略与界面外观。</p>
         </div>
       </div>
-      <div v-if="isServerSettingSection" class="header-actions">
-        <el-button :disabled="loading || saving" @click="handleReload">
-          <FaIcon name="i-ri:refresh-line" />重新加载
+      <div class="header-actions">
+        <el-button
+          class="header-density-toggle"
+          text
+          :aria-expanded="!isHeaderCompact"
+          :title="isHeaderCompact ? '展开系统设置说明' : '收起系统设置说明'"
+          @click="toggleHeaderCompact"
+        >
+          <FaIcon :name="isHeaderCompact ? 'i-ri:expand-up-down-line' : 'i-ri:contract-up-down-line'" />
+          {{ isHeaderCompact ? '展开说明' : '收起说明' }}
         </el-button>
-        <el-button :disabled="loading || saving" @click="handleReset">
-          <FaIcon name="i-ri:restart-line" />恢复默认
-        </el-button>
+        <template v-if="isServerSettingSection">
+          <el-button :disabled="loading || saving" @click="handleReload">
+            <FaIcon name="i-ri:refresh-line" />重新加载
+          </el-button>
+          <el-button :disabled="loading || saving" @click="handleReset">
+            <FaIcon name="i-ri:restart-line" />恢复默认
+          </el-button>
+        </template>
       </div>
     </header>
 
-    <div ref="shellRef" class="settings-shell">
+    <div class="settings-shell">
       <aside class="settings-sidebar">
         <nav class="settings-nav" aria-label="设置分类">
           <button

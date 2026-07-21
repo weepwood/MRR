@@ -1,18 +1,13 @@
 import type { GalleryImage } from '../types'
-import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import {
   downloadArchivePdf,
   downloadSelectedImagesPdf,
+  getArchivePdfExportPlan,
 } from '@/api/modules/archive-export'
-import { getImgByCode } from '@/api/modules/image'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
 import { resolveArchiveExportMode } from '../utils/export-strategy'
-
-function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
-  return promise as unknown as Promise<ApiResult<T>>
-}
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
@@ -122,20 +117,6 @@ export function useArchivePrint() {
     return `${String(image.bah || '').trim()}|${String(image.sjh || '').trim()}`
   }
 
-  async function resolveArchiveTotalCount(firstImage: GalleryImage, selectedCount: number): Promise<number> {
-    try {
-      const response = await asResult<BAHImageData[]>(getImgByCode(
-        String(firstImage.bah || '').trim() || undefined,
-        String(firstImage.sjh || '').trim() || undefined,
-      ))
-      return Array.isArray(response?.data) ? response.data.length : selectedCount
-    }
-    catch {
-      // 无法确认整份范围时采用保守策略：大批量仍走后端，小批量保持前端兼容。
-      return selectedCount + 1
-    }
-  }
-
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {
     if (!images.length) {
       ElMessage.warning('请先选择要导出的影像')
@@ -149,18 +130,34 @@ export function useArchivePrint() {
     }
 
     const firstImage = images[0]
-    const bah = String(firstImage?.bah || 'archive').trim() || 'archive'
+    const bah = String(firstImage?.bah || '').trim()
     const sjh = String(firstImage?.sjh || '').trim()
-    const fileName = `${bah}${sjh ? `-${sjh}` : ''}-selected.pdf`
+    const fileStem = bah || 'archive'
+    const fileName = `${fileStem}${sjh ? `-${sjh}` : ''}-selected.pdf`
 
     exportingPdf.value = true
     try {
-      const totalCount = await resolveArchiveTotalCount(firstImage, images.length)
-      const mode = resolveArchiveExportMode({
-        format: 'pdf',
-        selectedCount: images.length,
-        totalCount,
-      })
+      let mode: 'client-pdf' | 'backend-stream'
+      let wholeArchive = false
+      try {
+        const response = await getArchivePdfExportPlan(
+          bah || undefined,
+          sjh || undefined,
+          images.length,
+        )
+        wholeArchive = Boolean(response?.data?.wholeArchive)
+        mode = response?.data?.executionMode === 'CLIENT_PDF'
+          ? 'client-pdf'
+          : 'backend-stream'
+      }
+      catch {
+        // 规划接口不可用时保持兼容：小批量前端，大批量后端。
+        mode = resolveArchiveExportMode({
+          format: 'pdf',
+          selectedCount: images.length,
+          totalCount: images.length + 1,
+        })
+      }
 
       if (mode === 'client-pdf') {
         const imageUrls = images.map(image => String(image.imageUrl || '').trim())
@@ -174,11 +171,10 @@ export function useArchivePrint() {
         return
       }
 
-      const isWholeArchive = totalCount > 0 && images.length === totalCount
-      if (isWholeArchive) {
-        const response = await downloadArchivePdf(bah, sjh || undefined)
-        saveBlob(response.data, `${bah}${sjh ? `-${sjh}` : ''}.pdf`)
-        ElMessage.success(`整份病案 PDF 已由服务器生成并开始下载`)
+      if (wholeArchive) {
+        const response = await downloadArchivePdf(bah || undefined, sjh || undefined)
+        saveBlob(response.data, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
+        ElMessage.success('整份病案 PDF 已由服务器生成并开始下载')
         return
       }
 

@@ -1,6 +1,7 @@
 /*
  * 跨 Element Plus 与 Fantastic Admin 自带表单组件的统一控件契约。
  * 页面仅负责宽度和布局，不再分别定义输入框、下拉框的基础高度与状态。
+ * 圆角统一使用 --mrr-control-radius，并由系统设置中的全局圆角实时控制。
  */
 .el-input,
 .el-select,
@@ -24,6 +25,7 @@
 .el-input-number {
   box-sizing: border-box;
   min-height: var(--mrr-control-height);
+  border-radius: var(--mrr-control-radius);
 }
 
 .el-input-number {

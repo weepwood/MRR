@@ -1,10 +1,11 @@
 /*
  * 设置页桌面端双区滚动
  *
- * “系统设置”标题保留在主体上方，设置工作区本身使用一个完整视口高度：
+ * “系统设置”标题保留在主体上方，完整视口高度由 settings-workspace-frame 负责：
+ * - 外层框架负责视口高度和上下留白；
+ * - 内层卡片只填满框架剩余空间，不再重复声明 100vh；
  * - 左侧分类栏不随右侧内容滚动；
  * - 右侧内容区独立纵向滚动；
- * - 不再因为页面标题、顶栏或工作区内边距压缩设置区域高度；
  * - 不依赖 position: sticky、:has() 或祖先 overflow 行为。
  */
 body .main .settings-page {
@@ -14,12 +15,18 @@ body .main .settings-page {
   overflow: visible;
 }
 
-body .main .settings-page .settings-shell {
-  align-items: stretch;
+body .main .settings-page .settings-workspace-frame {
+  box-sizing: border-box;
   min-height: 100vh;
   height: 100vh;
   min-height: 100dvh;
   height: 100dvh;
+}
+
+body .main .settings-page .settings-shell {
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -51,10 +58,16 @@ body .main .settings-page .settings-content {
     overflow: visible;
   }
 
-  body .main .settings-page .settings-shell {
-    min-height: 620px;
+  body .main .settings-page .settings-workspace-frame {
+    min-height: 0;
     height: auto;
-    overflow: hidden;
+    padding-block: 0;
+  }
+
+  body .main .settings-page .settings-shell {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
   }
 
   body .main .settings-page .settings-sidebar,

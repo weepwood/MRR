@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
@@ -78,13 +79,25 @@ public interface ArchiveExportService {
         public Set<String> sourceSummary() {
             LinkedHashSet<String> sources = new LinkedHashSet<>();
             for (PathDO item : items) {
-                String source = item.getSourceType();
-                if (source == null || source.isBlank() || "AUTO".equalsIgnoreCase(source)) {
-                    source = item.getOssUrl() == null || item.getOssUrl().isBlank() ? "LOCAL" : "OSS";
+                String configured = item.getSourceType() == null
+                        ? ""
+                        : item.getSourceType().trim().toUpperCase(Locale.ROOT);
+                boolean hasOssReference = hasText(item.getSourceRef()) || hasText(item.getOssUrl());
+
+                if (configured.isEmpty() || "AUTO".equals(configured)) {
+                    sources.add(hasOssReference ? "OSS" : "LOCAL");
+                } else if ("OSS".equals(configured) && !hasOssReference) {
+                    // 同一份病案中允许部分图片迁移到 OSS，未迁移的图片继续从本地读取。
+                    sources.add("LOCAL");
+                } else {
+                    sources.add(configured);
                 }
-                sources.add(source.toUpperCase());
             }
             return Collections.unmodifiableSet(sources);
+        }
+
+        private static boolean hasText(String value) {
+            return value != null && !value.isBlank();
         }
     }
 }

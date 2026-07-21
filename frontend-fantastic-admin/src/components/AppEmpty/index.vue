@@ -38,17 +38,37 @@ function handleAction() {
   justify-content: center;
   padding: 64px 16px;
   text-align: center;
+  animation: app-empty-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .app-empty-icon {
   margin-bottom: 16px;
   font-size: 48px;
   color: var(--el-text-color-placeholder, #c0c4cc);
+  transform-origin: center;
+  animation: app-empty-icon-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .app-empty-text {
   margin: 0 0 20px;
   font-size: 14px;
   color: var(--el-text-color-secondary, #909399);
+}
+
+@keyframes app-empty-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes app-empty-icon-enter {
+  from { transform: scale(0.92); }
+  to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-empty,
+  .app-empty-icon {
+    animation: none;
+  }
 }
 </style>

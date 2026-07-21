@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { motion, useReducedMotion } from 'motion-v'
+import { motionDurations, motionEasings } from '@/motion/presets'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -24,6 +26,7 @@ interface AppConfigPanelRef {
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
+const shouldReduceMotion = useReducedMotion()
 const {
   settingsNavItems,
   shellRef,
@@ -82,7 +85,19 @@ void shellRef
             :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
             @click="selectSection(item.key)"
           >
-            <span class="nav-icon"><FaIcon :name="item.icon" /></span>
+            <motion.span
+              class="nav-icon"
+              :animate="{
+                transform: shouldReduceMotion
+                  ? 'none'
+                  : activeSection === item.key
+                    ? 'scale(1.06)'
+                    : 'scale(1)',
+              }"
+              :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
+            >
+              <FaIcon :name="item.icon" />
+            </motion.span>
             <span class="nav-copy">
               <strong>{{ item.title }}</strong>
               <small>{{ item.description }}</small>

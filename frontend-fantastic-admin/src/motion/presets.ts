@@ -7,12 +7,3 @@ export const motionDurations = {
 export const motionEasings = {
   emphasized: [0.22, 1, 0.36, 1] as [number, number, number, number],
 }
-
-export const motionSprings = {
-  interaction: {
-    type: 'spring' as const,
-    stiffness: 420,
-    damping: 32,
-    mass: 0.7,
-  },
-}

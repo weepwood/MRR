@@ -65,9 +65,9 @@ body .main .settings-page .settings-content {
   }
 
   body .main .settings-page .settings-shell {
-    min-height: 620px;
+    min-height: 0;
     height: auto;
-    overflow: hidden;
+    overflow: visible;
   }
 
   body .main .settings-page .settings-sidebar,

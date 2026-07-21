@@ -30,6 +30,8 @@ public class CacheConfig {
         cacheManager.setCaches(List.of(
                 buildCache("scanByBah", 1, TimeUnit.DAYS),
                 buildCache("scanByCode", 1, TimeUnit.DAYS),
+                buildCache("scanLookupByBah", 1, TimeUnit.DAYS),
+                buildCache("scanLookupByCode", 1, TimeUnit.DAYS),
                 buildCache("scanById", 10, TimeUnit.MINUTES),
                 buildCache("ossSignedUrl", 10, TimeUnit.MINUTES)
         ));

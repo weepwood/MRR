@@ -225,8 +225,8 @@ export function useArchiveImages() {
 
     downloading.value = true
     try {
-      const response = await downloadArchiveZip(bah || undefined, sjh || undefined)
-      saveBlob(response.data, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
+      const archiveBlob = await downloadArchiveZip(bah || undefined, sjh || undefined)
+      saveBlob(archiveBlob, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
       ElMessage.success('档案袋已由服务器打包并开始下载')
     }
     catch (err: unknown) {

@@ -10,6 +10,7 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
@@ -82,55 +83,77 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
     public BatchZipExport prepareArchive(String bah, String sjh) {
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
-        List<Scan> scans = scanService.getImageListByCode(
+        List<Scan> queried = scanService.getImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(normalizedBah),
                 normalizedSjh,
                 MedicalRecordCodeUtils.toSearchTerm(normalizedSjh)
         );
-        return toExport(scans == null ? List.of() : scans);
+        List<Scan> scans = queried == null
+                ? new ArrayList<>()
+                : new ArrayList<>(queried.stream().filter(Objects::nonNull).toList());
+        scans.sort(ARCHIVE_PAGE_ORDER);
+        return toExport(scans);
     }
 
     @Override
-    public void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException {
+    public void writeBatchZip(BatchZipExport export,
+                              OutputStream outputStream,
+                              ExportProgress progress) throws IOException {
         validateExportArguments(export, outputStream);
+        ExportProgress effectiveProgress = progress == null ? ExportProgress.NONE : progress;
 
         Set<String> usedEntryNames = new HashSet<>();
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
+        int completed = 0;
 
         try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
             for (PathDO item : export.items()) {
+                ensureNotCancelled(effectiveProgress);
                 String entryName = uniqueEntryName(item, usedEntryNames);
                 try (InputStream input = imageStorage.open(item)) {
                     zip.putNextEntry(new ZipEntry(entryName));
                     int read;
                     while ((read = input.read(buffer)) != -1) {
+                        ensureNotCancelled(effectiveProgress);
                         zip.write(buffer, 0, read);
                     }
                     zip.closeEntry();
+                } catch (ArchiveExportCancelledException exception) {
+                    throw exception;
                 } catch (IOException exception) {
                     logger.error("ZIP 导出影像失败: entry={}", entryName, exception);
                     throw new IOException("无法读取导出影像: " + entryName, exception);
                 }
+                completed++;
+                effectiveProgress.onItemCompleted(completed, export.itemCount(), item);
             }
+            ensureNotCancelled(effectiveProgress);
             zip.finish();
         }
     }
 
     @Override
-    public void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException {
+    public void writeBatchPdf(BatchZipExport export,
+                              OutputStream outputStream,
+                              ExportProgress progress) throws IOException {
         validateExportArguments(export, outputStream);
+        ExportProgress effectiveProgress = progress == null ? ExportProgress.NONE : progress;
 
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(outputStream))) {
             int written = 0;
             for (PathDO item : export.items()) {
+                ensureNotCancelled(effectiveProgress);
                 String imageName = sanitizeSegment(item.getFilename(), "image");
                 byte[] imageBytes;
                 try (InputStream input = imageStorage.open(item)) {
                     imageBytes = input.readNBytes(MAX_PDF_IMAGE_BYTES + 1);
+                } catch (ArchiveExportCancelledException exception) {
+                    throw exception;
                 } catch (IOException exception) {
                     throw new IOException("无法读取 PDF 影像: " + imageName, exception);
                 }
+                ensureNotCancelled(effectiveProgress);
                 if (imageBytes.length > MAX_PDF_IMAGE_BYTES) {
                     throw new IOException("单张影像超过 PDF 导出大小上限: " + imageName);
                 }
@@ -156,8 +179,10 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 canvas.release();
                 page.flush();
                 written++;
+                effectiveProgress.onItemCompleted(written, export.itemCount(), item);
             }
 
+            ensureNotCancelled(effectiveProgress);
             if (written == 0) {
                 throw new IOException("没有可写入 PDF 的影像");
             }
@@ -166,6 +191,12 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         } catch (RuntimeException exception) {
             logger.error("病案 PDF 生成失败", exception);
             throw new IOException("病案 PDF 生成失败", exception);
+        }
+    }
+
+    private void ensureNotCancelled(ExportProgress progress) throws ArchiveExportCancelledException {
+        if (progress.isCancelled() || Thread.currentThread().isInterrupted()) {
+            throw new ArchiveExportCancelledException();
         }
     }
 
@@ -242,10 +273,17 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         List<PathDO> items = scans.stream()
                 .filter(Objects::nonNull)
                 .map(scan -> new PathDO(
+                        scan.getId(),
                         scan.getFolder(),
                         scan.getFilename(),
                         scan.getBrxh(),
-                        scan.getBah()
+                        scan.getBah(),
+                        scan.getSjh(),
+                        scan.getSourceType(),
+                        scan.getSourceNode(),
+                        scan.getSourceRef(),
+                        scan.getOssUrl(),
+                        scan.getFileSize()
                 ))
                 .toList();
         return new BatchZipExport(items);

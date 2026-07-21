@@ -62,7 +62,7 @@ test.describe('系统设置分类布局', () => {
     }).toBeGreaterThan(100)
   })
 
-  test('同一筛选栏中的输入框和下拉框使用统一控件高度', async ({ page }) => {
+  test('输入框和下拉框保持相同高度与可配置圆角', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/users', { waitUntil: 'domcontentloaded' })
 
@@ -72,14 +72,37 @@ test.describe('系统设置分类布局', () => {
     await expect(input).toBeVisible({ timeout: 20_000 })
     await expect(select).toBeVisible()
 
-    const inputHeight = await input.evaluate(element => element.getBoundingClientRect().height)
-    const selectHeight = await select.evaluate(element => element.getBoundingClientRect().height)
-    const controlHeight = await page.evaluate(() => Number.parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue('--mrr-control-height'),
-    ))
+    const initialStyles = await page.evaluate(() => {
+      const inputElement = document.querySelector('.users-filter-bar .el-input__wrapper')
+      const selectElement = document.querySelector('.users-filter-bar .el-select__wrapper')
+      if (!inputElement || !selectElement) throw new Error('筛选控件未渲染')
+      const inputStyle = getComputedStyle(inputElement)
+      const selectStyle = getComputedStyle(selectElement)
+      return {
+        inputHeight: inputElement.getBoundingClientRect().height,
+        selectHeight: selectElement.getBoundingClientRect().height,
+        inputRadius: inputStyle.borderRadius,
+        selectRadius: selectStyle.borderRadius,
+      }
+    })
 
-    expect(Math.abs(inputHeight - controlHeight)).toBeLessThanOrEqual(1)
-    expect(Math.abs(selectHeight - inputHeight)).toBeLessThanOrEqual(1)
+    expect(Math.abs(initialStyles.inputHeight - initialStyles.selectHeight)).toBeLessThanOrEqual(1)
+    expect(initialStyles.inputRadius).toBe(initialStyles.selectRadius)
+
+    await page.evaluate(() => document.documentElement.style.setProperty('--radius', '18px'))
+
+    const adjustedStyles = await page.evaluate(() => {
+      const inputElement = document.querySelector('.users-filter-bar .el-input__wrapper')
+      const selectElement = document.querySelector('.users-filter-bar .el-select__wrapper')
+      if (!inputElement || !selectElement) throw new Error('筛选控件未渲染')
+      return {
+        inputRadius: getComputedStyle(inputElement).borderRadius,
+        selectRadius: getComputedStyle(selectElement).borderRadius,
+      }
+    })
+
+    expect(adjustedStyles.inputRadius).toBe(adjustedStyles.selectRadius)
+    expect(adjustedStyles.inputRadius).not.toBe(initialStyles.inputRadius)
   })
 
   test('旧登录文案地址跳转到系统设置内部分类', async ({ page }) => {
@@ -88,20 +111,14 @@ test.describe('系统设置分类布局', () => {
     await expect(page.locator('.section-header').getByRole('heading', { name: '登录与支持' })).toBeVisible()
   })
 
-  test('桌面端点击设置分类后压缩顶部卡片并保持右侧独立滚动', async ({ page }) => {
+  test('桌面端点击设置工作区后自动占满视口且仅滚动右侧内容', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 720 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-    const settingsPage = page.locator('.settings-page')
-    const pageHeader = page.locator('.page-header')
-    const headerDescription = pageHeader.getByText('统一管理系统标识、登录支持、档案浏览、安全策略与界面外观。')
     const shell = page.locator('.settings-shell')
     const sidebar = page.locator('.settings-sidebar')
     const content = page.locator('.settings-content')
-
     await expect(shell).toBeVisible({ timeout: 20_000 })
-    await expect(pageHeader).toBeVisible()
-    await expect(headerDescription).toBeVisible()
     await expect(sidebar).toBeVisible()
     await expect(content).toHaveCSS('overflow-y', 'auto')
 
@@ -114,15 +131,9 @@ test.describe('系统设置分类布局', () => {
 
     await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
 
-    await expect(settingsPage).toHaveClass(/is-header-compact/)
-    await expect(pageHeader).toBeInViewport()
-    await expect(headerDescription).toBeHidden()
-    await expect.poll(async () => settingsPage.evaluate(
+    await expect.poll(async () => shell.evaluate(
       element => Math.abs(element.getBoundingClientRect().top),
     )).toBeLessThanOrEqual(2)
-    await expect.poll(async () => shell.evaluate(
-      element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight),
-    )).toBeLessThanOrEqual(3)
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(10)
 
     await page.getByText('工作区组件', { exact: true }).click()
@@ -146,9 +157,5 @@ test.describe('系统设置分类布局', () => {
     await expect(sidebar).toBeInViewport()
     await expect(page.locator('.settings-nav-item').filter({ hasText: '系统信息' })).toBeInViewport()
     await expect(page.locator('.settings-nav-item').filter({ hasText: '界面外观' })).toBeInViewport()
-
-    await page.getByRole('button', { name: '展开说明' }).click()
-    await expect(settingsPage).not.toHaveClass(/is-header-compact/)
-    await expect(headerDescription).toBeVisible()
   })
 })

@@ -26,7 +26,13 @@ public class LocalArchiveImageSource implements ArchiveImageSource {
     @Override
     public boolean supports(PathDO image) {
         String type = normalizedType(image);
-        return type.isEmpty() || "AUTO".equals(type) || "LOCAL".equals(type);
+        // OSS 是“优先来源”而不是唯一来源。同一份病案中没有 OSS Object Key
+        // 或 OSS 读取失败的图片，仍允许按历史目录规则降级到本地文件。
+        // NAS 与 HTTP 继续保持显式绑定，不跨节点降级。
+        return type.isEmpty()
+                || "AUTO".equals(type)
+                || "LOCAL".equals(type)
+                || "OSS".equals(type);
     }
 
     @Override

@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -61,7 +60,7 @@ public class DataRelationServiceImpl implements DataRelationService {
         result.put("relationChecks", latestRelationChecks());
         result.put("notes", List.of(
                 "mr_scan 覆盖率来自 PostgreSQL 统计信息，页面打开时不会全表扫描三千万级数据",
-                "mr_patient 当前没有 archive_id，暂时通过病案号/患者标识进行遗留关联",
+                "mr_patient 当前没有 archive_id，只按 BAH 进行遗留兼容匹配，不把 patient_id 当身份证号猜测关联",
                 "精确关联覆盖率以最近一次数据质量检查结果和外键验收为准"
         ));
         return result;
@@ -89,10 +88,9 @@ public class DataRelationServiceImpl implements DataRelationService {
         Map<String, Object> archive = findArchive(archiveId);
         String bah = DataRelationComparisonUtils.normalizeText(archive.get("bah"));
         String sjh = DataRelationComparisonUtils.normalizeText(archive.get("sjh"));
-        String patientId = DataRelationComparisonUtils.normalizeText(archive.get("patientId"));
 
         List<Map<String, Object>> statistics = relatedStatistics(archiveId, bah, sjh);
-        List<Map<String, Object>> patients = relatedPatients(bah, patientId);
+        List<Map<String, Object>> patients = relatedPatients(bah);
         List<Map<String, Object>> boxes = relatedBoxes(archiveId, bah, sjh);
         Map<String, Object> scanSummary = scanSummary(archiveId, bah, sjh);
         List<Map<String, Object>> scanSamples = scanSamples(archiveId);
@@ -107,17 +105,17 @@ public class DataRelationServiceImpl implements DataRelationService {
         );
 
         List<String> warnings = new ArrayList<>();
-        warnings.add("mr_patient 尚无 archive_id，本页患者记录属于 BAH/患者标识兼容匹配结果");
+        warnings.add("mr_patient 尚无 archive_id，患者记录仅通过 BAH 兼容匹配，结果不能视为数据库外键关系");
         if (number(scanSummary.get("unlinkedCandidateCount")) > 0) {
             warnings.add("发现编号相同但 archive_id 为空的扫描记录，需要进入异常中心确认关联");
         }
         if (number(scanSummary.get("duplicatePageCount")) > 0) {
             warnings.add("当前病案存在重复页码，请核对是否为重复扫描或合法多文件页");
         }
-        if (statistics.stream().anyMatch(row -> "LEGACY_CODE".equals(row.get("relationMode")))) {
+        if (hasLegacyRows(statistics)) {
             warnings.add("存在尚未写入 archive_id、仅通过编号兼容匹配的统计记录");
         }
-        if (boxes.stream().anyMatch(row -> "LEGACY_CODE".equals(row.get("relationMode")))) {
+        if (hasLegacyRows(boxes)) {
             warnings.add("存在尚未写入 archive_id、仅通过编号兼容匹配的装箱记录");
         }
 
@@ -141,16 +139,7 @@ public class DataRelationServiceImpl implements DataRelationService {
         );
         long total = number(counts.get("total_count"));
         long linked = number(counts.get("linked_count"));
-        return relationOverview(
-                tableName,
-                label,
-                relation,
-                total,
-                linked,
-                false,
-                "EXACT",
-                true
-        );
+        return relationOverview(tableName, label, relation, total, linked, false, "EXACT", true);
     }
 
     private Map<String, Object> estimatedScanCoverage() {
@@ -193,11 +182,11 @@ public class DataRelationServiceImpl implements DataRelationService {
         Map<String, Object> result = relationOverview(
                 "mr_patient",
                 "患者记录",
-                "mr_patient.bah / idcard ⇢ mr_archive（遗留关联）",
+                "mr_patient.bah ⇢ mr_archive（遗留关联）",
                 total,
                 0,
                 false,
-                "LEGACY_CODE_ONLY",
+                "LEGACY_BAH_ONLY",
                 false
         );
         result.put("status", "LEGACY");
@@ -249,23 +238,30 @@ public class DataRelationServiceImpl implements DataRelationService {
 
     private List<Map<String, Object>> searchByCode(String column, String value, int limit) {
         String sql = """
-                SELECT id, bah, sjh, patient_id AS "patientId", patient_name AS "patientName",
-                       inpatient_department AS "department", archive_date AS "archiveDate",
-                       discharge_date AS "dischargeDate", archive_type AS "archiveType",
-                       page_count AS "pageCount", scan_count AS "scanCount",
-                       CASE WHEN %1$s = ? THEN 'EXACT' ELSE 'FORMAT_ONLY' END AS "matchType"
-                FROM app.v_archive_summary
-                WHERE %1$s = ?
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS code
+                )
+                SELECT a.id, a.bah, a.sjh, a.patient_id AS "patientId",
+                       a.patient_name AS "patientName",
+                       a.inpatient_department AS "department", a.archive_date AS "archiveDate",
+                       a.discharge_date AS "dischargeDate", a.archive_type AS "archiveType",
+                       a.page_count AS "pageCount", a.scan_count AS "scanCount",
+                       CASE WHEN BTRIM(COALESCE(a.%1$s, '')) = i.code
+                            THEN 'EXACT' ELSE 'FORMAT_ONLY' END AS "matchType"
+                FROM app.v_archive_summary a
+                CROSS JOIN input i
+                WHERE BTRIM(COALESCE(a.%1$s, '')) = i.code
                    OR (
-                        %1$s ~ '^[0-9]+$'
-                        AND ? ~ '^[0-9]+$'
-                        AND COALESCE(NULLIF(LTRIM(%1$s, '0'), ''), '0') =
-                            COALESCE(NULLIF(LTRIM(?, '0'), ''), '0')
+                        BTRIM(COALESCE(a.%1$s, '')) ~ '^[0-9]+$'
+                        AND i.code ~ '^[0-9]+$'
+                        AND COALESCE(NULLIF(LTRIM(BTRIM(a.%1$s), '0'), ''), '0') =
+                            COALESCE(NULLIF(LTRIM(i.code, '0'), ''), '0')
                    )
-                ORDER BY CASE WHEN %1$s = ? THEN 0 ELSE 1 END, id DESC
+                ORDER BY CASE WHEN BTRIM(COALESCE(a.%1$s, '')) = i.code THEN 0 ELSE 1 END,
+                         a.id DESC
                 LIMIT ?
                 """.formatted(column);
-        return jdbcTemplate.queryForList(sql, value, value, value, value, value, limit);
+        return jdbcTemplate.queryForList(sql, value, limit);
     }
 
     private Map<String, Object> findArchive(long archiveId) {
@@ -287,69 +283,87 @@ public class DataRelationServiceImpl implements DataRelationService {
 
     private List<Map<String, Object>> relatedStatistics(long archiveId, String bah, String sjh) {
         return jdbcTemplate.queryForList("""
-                SELECT id, archive_id AS "archiveId", bah, sjh, cid, openerno,
-                       date, type, pages, patientname AS "patientName",
-                       inpatientdepartment AS "department", patientid AS "patientId",
-                       dischargedate AS "dischargeDate",
-                       CASE WHEN archive_id = ? THEN 'ARCHIVE_ID' ELSE 'LEGACY_CODE' END AS "relationMode"
-                FROM app.mr_statistics
-                WHERE archive_id = ?
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah,
+                           NULLIF(BTRIM(CAST(? AS text)), '') AS sjh
+                )
+                SELECT s.id, s.archive_id AS "archiveId", s.bah, s.sjh, s.cid, s.openerno,
+                       s.date, s.type, s.pages, s.patientname AS "patientName",
+                       s.inpatientdepartment AS "department", s.patientid AS "patientId",
+                       s.dischargedate AS "dischargeDate",
+                       CASE WHEN s.archive_id = ? THEN 'ARCHIVE_ID' ELSE 'LEGACY_CODE' END AS "relationMode"
+                FROM app.mr_statistics s
+                CROSS JOIN input i
+                WHERE s.archive_id = ?
                    OR (
-                        archive_id IS NULL
+                        s.archive_id IS NULL
                         AND (
-                            (? IS NOT NULL AND BTRIM(sjh) = ?)
-                            OR (? IS NULL AND ? IS NOT NULL AND BTRIM(bah) = ?)
+                            (i.sjh IS NOT NULL AND (
+                                BTRIM(COALESCE(s.sjh, '')) = i.sjh
+                                OR numeric_code_key(s.sjh) = numeric_code_key(i.sjh)
+                            ))
+                            OR (i.sjh IS NULL AND i.bah IS NOT NULL AND (
+                                BTRIM(COALESCE(s.bah, '')) = i.bah
+                                OR numeric_code_key(s.bah) = numeric_code_key(i.bah)
+                            ))
                         )
                    )
-                ORDER BY CASE WHEN archive_id = ? THEN 0 ELSE 1 END, id DESC
+                ORDER BY CASE WHEN s.archive_id = ? THEN 0 ELSE 1 END, s.id DESC
                 LIMIT ?
-                """, archiveId, archiveId, sjh, sjh, sjh, bah, bah, archiveId, DETAIL_SAMPLE_LIMIT);
+                """, bah, sjh, archiveId, archiveId, archiveId, DETAIL_SAMPLE_LIMIT);
     }
 
-    private List<Map<String, Object>> relatedPatients(String bah, String patientId) {
-        if (bah == null && patientId == null) {
+    private List<Map<String, Object>> relatedPatients(String bah) {
+        if (bah == null) {
             return List.of();
         }
         return jdbcTemplate.queryForList("""
-                SELECT id, idcard, bah, admissiontime, department, name, ruyuan, bingqu, chuangwei,
-                       CASE
-                           WHEN ? IS NOT NULL AND BTRIM(COALESCE(idcard, '')) = ? THEN 'PATIENT_ID'
-                           ELSE 'LEGACY_BAH'
-                       END AS "relationMode"
-                FROM app.mr_patient
-                WHERE (? IS NOT NULL AND BTRIM(COALESCE(idcard, '')) = ?)
-                   OR (? IS NOT NULL AND (
-                        BTRIM(COALESCE(bah, '')) = ?
-                        OR (
-                            BTRIM(COALESCE(bah, '')) ~ '^[0-9]+$'
-                            AND ? ~ '^[0-9]+$'
-                            AND COALESCE(NULLIF(LTRIM(BTRIM(bah), '0'), ''), '0') =
-                                COALESCE(NULLIF(LTRIM(?, '0'), ''), '0')
-                        )
-                   ))
-                ORDER BY id DESC
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah
+                )
+                SELECT p.id, p.idcard, p.bah, p.admissiontime, p.department, p.name,
+                       p.ruyuan, p.bingqu, p.chuangwei,
+                       CASE WHEN BTRIM(COALESCE(p.bah, '')) = i.bah
+                            THEN 'LEGACY_BAH_EXACT' ELSE 'LEGACY_BAH_FORMAT' END AS "relationMode"
+                FROM app.mr_patient p
+                CROSS JOIN input i
+                WHERE BTRIM(COALESCE(p.bah, '')) = i.bah
+                   OR numeric_code_key(p.bah) = numeric_code_key(i.bah)
+                ORDER BY p.id DESC
                 LIMIT ?
-                """, patientId, patientId, patientId, patientId, bah, bah, bah, bah, DETAIL_SAMPLE_LIMIT);
+                """, bah, DETAIL_SAMPLE_LIMIT);
     }
 
     private List<Map<String, Object>> relatedBoxes(long archiveId, String bah, String sjh) {
         return jdbcTemplate.queryForList("""
-                SELECT id, archive_id AS "archiveId", bah, sjh, box_no AS "boxNo",
-                       expected_box_no AS "expectedBoxNo", status, remark,
-                       created_at AS "createdAt", updated_at AS "updatedAt",
-                       CASE WHEN archive_id = ? THEN 'ARCHIVE_ID' ELSE 'LEGACY_CODE' END AS "relationMode"
-                FROM app.mr_archive_box_record
-                WHERE archive_id = ?
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah,
+                           NULLIF(BTRIM(CAST(? AS text)), '') AS sjh
+                )
+                SELECT b.id, b.archive_id AS "archiveId", b.bah, b.sjh, b.box_no AS "boxNo",
+                       b.expected_box_no AS "expectedBoxNo", b.status, b.remark,
+                       b.created_at AS "createdAt", b.updated_at AS "updatedAt",
+                       CASE WHEN b.archive_id = ? THEN 'ARCHIVE_ID' ELSE 'LEGACY_CODE' END AS "relationMode"
+                FROM app.mr_archive_box_record b
+                CROSS JOIN input i
+                WHERE b.archive_id = ?
                    OR (
-                        archive_id IS NULL
+                        b.archive_id IS NULL
                         AND (
-                            (? IS NOT NULL AND BTRIM(sjh) = ?)
-                            OR (? IS NULL AND ? IS NOT NULL AND BTRIM(bah) = ?)
+                            (i.sjh IS NOT NULL AND (
+                                BTRIM(COALESCE(b.sjh, '')) = i.sjh
+                                OR numeric_code_key(b.sjh) = numeric_code_key(i.sjh)
+                            ))
+                            OR (i.sjh IS NULL AND i.bah IS NOT NULL AND (
+                                BTRIM(COALESCE(b.bah, '')) = i.bah
+                                OR numeric_code_key(b.bah) = numeric_code_key(i.bah)
+                            ))
                         )
                    )
-                ORDER BY CASE WHEN archive_id = ? THEN 0 ELSE 1 END, updated_at DESC, id DESC
+                ORDER BY CASE WHEN b.archive_id = ? THEN 0 ELSE 1 END,
+                         b.updated_at DESC, b.id DESC
                 LIMIT ?
-                """, archiveId, archiveId, sjh, sjh, sjh, bah, bah, archiveId, DETAIL_SAMPLE_LIMIT);
+                """, bah, sjh, archiveId, archiveId, archiveId, DETAIL_SAMPLE_LIMIT);
     }
 
     private Map<String, Object> scanSummary(long archiveId, String bah, String sjh) {
@@ -361,21 +375,34 @@ public class DataRelationServiceImpl implements DataRelationService {
                        MAX(pages) FILTER (WHERE uploadflag <> 0) AS max_page,
                        COUNT(*) FILTER (WHERE uploadflag <> 0) -
                            COUNT(DISTINCT pages) FILTER (WHERE uploadflag <> 0) AS duplicate_page_count,
-                       COUNT(*) FILTER (WHERE uploadflag <> 0 AND oss_url IS NOT NULL AND oss_url <> '') AS oss_count
+                       COUNT(*) FILTER (
+                           WHERE uploadflag <> 0 AND NULLIF(BTRIM(COALESCE(oss_url, '')), '') IS NOT NULL
+                       ) AS oss_count
                 FROM app.mr_scan
                 WHERE archive_id = ?
                 """, archiveId);
 
         long unlinkedCandidates = queryCount("""
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah,
+                           NULLIF(BTRIM(CAST(? AS text)), '') AS sjh
+                )
                 SELECT COUNT(*)
-                FROM app.mr_scan
-                WHERE archive_id IS NULL
-                  AND uploadflag <> 0
+                FROM app.mr_scan s
+                CROSS JOIN input i
+                WHERE s.archive_id IS NULL
+                  AND s.uploadflag <> 0
                   AND (
-                        (? IS NOT NULL AND BTRIM(sjh) = ?)
-                        OR (? IS NULL AND ? IS NOT NULL AND BTRIM(bah) = ?)
+                        (i.sjh IS NOT NULL AND (
+                            BTRIM(COALESCE(s.sjh, '')) = i.sjh
+                            OR numeric_code_key(s.sjh) = numeric_code_key(i.sjh)
+                        ))
+                        OR (i.sjh IS NULL AND i.bah IS NOT NULL AND (
+                            BTRIM(COALESCE(s.bah, '')) = i.bah
+                            OR numeric_code_key(s.bah) = numeric_code_key(i.bah)
+                        ))
                   )
-                """, sjh, sjh, sjh, bah, bah);
+                """, bah, sjh);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("activeCount", number(summary.get("active_count")));
@@ -393,7 +420,8 @@ public class DataRelationServiceImpl implements DataRelationService {
         return jdbcTemplate.queryForList("""
                 SELECT id, archive_id AS "archiveId", bah, sjh, filename, btype, pages,
                        uploadflag AS "uploadFlag", folder, migration_status AS "migrationStatus",
-                       CASE WHEN oss_url IS NULL OR oss_url = '' THEN false ELSE true END AS "hasOss"
+                       CASE WHEN NULLIF(BTRIM(COALESCE(oss_url, '')), '') IS NULL
+                            THEN false ELSE true END AS "hasOss"
                 FROM app.mr_scan
                 WHERE archive_id = ?
                 ORDER BY pages, id
@@ -404,8 +432,13 @@ public class DataRelationServiceImpl implements DataRelationService {
     private Map<String, Object> migrationSummary(long archiveId) {
         return jdbcTemplate.queryForMap("""
                 SELECT COUNT(l.id) AS log_count,
-                       COUNT(l.id) FILTER (WHERE LOWER(COALESCE(l.migration_status, '')) IN ('success', 'migrated', 'completed', 'verified')) AS success_count,
-                       COUNT(l.id) FILTER (WHERE LOWER(COALESCE(l.migration_status, '')) IN ('failed', 'error')) AS failed_count,
+                       COUNT(l.id) FILTER (
+                           WHERE LOWER(COALESCE(l.migration_status, ''))
+                               IN ('success', 'migrated', 'completed', 'verified')
+                       ) AS success_count,
+                       COUNT(l.id) FILTER (
+                           WHERE LOWER(COALESCE(l.migration_status, '')) IN ('failed', 'error')
+                       ) AS failed_count,
                        MAX(l.updated_at) AS last_updated_at
                 FROM app.mr_scan s
                 LEFT JOIN app.image_migration_log l ON l.scan_id = s.id
@@ -475,6 +508,10 @@ public class DataRelationServiceImpl implements DataRelationService {
                 """);
     }
 
+    private boolean hasLegacyRows(List<Map<String, Object>> rows) {
+        return rows.stream().anyMatch(row -> "LEGACY_CODE".equals(row.get("relationMode")));
+    }
+
     private long queryCount(String sql, Object... args) {
         Long value = jdbcTemplate.queryForObject(sql, Long.class, args);
         return value == null ? 0 : value;
@@ -489,10 +526,7 @@ public class DataRelationServiceImpl implements DataRelationService {
     }
 
     private double decimal(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        return 0;
+        return value instanceof Number number ? number.doubleValue() : 0;
     }
 
     private double percentage(long numerator, long denominator) {
@@ -514,5 +548,9 @@ public class DataRelationServiceImpl implements DataRelationService {
             return "WARNING";
         }
         return "CRITICAL";
+    }
+
+    private static String numeric_code_key(String ignored) {
+        throw new UnsupportedOperationException("SQL marker only");
     }
 }

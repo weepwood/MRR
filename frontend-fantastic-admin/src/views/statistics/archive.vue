@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
-import type { GalleryImage, ViewMode } from './archive/types'
+import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
+import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
+import type { GalleryImage, ViewMode } from './archive/types'
 import { Document, Download, Printer } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
@@ -53,12 +54,18 @@ const {
   searchIdCard,
   idCardToken,
   maskedIdCard,
+  downloadJob,
+  downloadJobCancelling,
+  downloadJobDownloading,
   loadImages,
   loadArchiveCasesByIdCard,
   loadArchiveCasesByToken,
   setPatientFromArchiveCase,
   clearIdCardSearch,
   handleDownload,
+  cancelDownloadJob,
+  downloadPreparedArchive,
+  dismissDownloadJob,
   saveImageType,
 } = useArchiveImages()
 
@@ -88,7 +95,18 @@ const {
   keyOf,
 } = selection
 
-const { printing, exportingPdf, printSelected, exportSelectedPdf } = useArchivePrint()
+const {
+  printing,
+  exportingPdf,
+  pdfJob,
+  pdfJobCancelling,
+  pdfJobDownloading,
+  printSelected,
+  exportSelectedPdf,
+  cancelPdfJob,
+  downloadPreparedPdf,
+  dismissPdfJob,
+} = useArchivePrint()
 
 const currentImage = computed(() => filteredImages.value[selectedImageIndex.value] || null)
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))
@@ -108,6 +126,20 @@ const archiveWorkspaceStyle = computed(() => ({
 }))
 const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/embed' : '/archive')
 const showBackToStatisticsDetail = computed(() => route.query.from === 'statistics-detail')
+
+const downloadButtonLoading = computed(() =>
+  downloading.value || downloadJobDownloading.value || downloadJobCancelling.value,
+)
+const pdfButtonLoading = computed(() =>
+  exportingPdf.value || pdfJobDownloading.value || pdfJobCancelling.value,
+)
+const downloadButtonType = computed(() => resolveExportButtonType(downloadJob.value, ''))
+const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, 'primary'))
+const downloadButtonDetail = computed(() => describeExportJob(downloadJob.value, '下载整份病案影像'))
+const pdfButtonDetail = computed(() => describeExportJob(
+  pdfJob.value,
+  selectedCount.value ? `已选择 ${selectedCount.value} 张影像` : '请先选择影像',
+))
 
 const selectionStorageKey = computed(() => {
   const bah = normalizeSearchParam(searchBah.value)
@@ -132,6 +164,76 @@ function normalizeSearchParam(value: unknown): string {
 function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
   return normalizeSearchParam(item.bah) === bah
     && normalizeSearchParam(item.sjh) === sjh
+}
+
+function formatBytes(value: number | undefined): string {
+  const bytes = Number(value || 0)
+  if (!Number.isFinite(bytes) || bytes <= 0) return '大小未知'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let amount = bytes
+  let index = 0
+  while (amount >= 1024 && index < units.length - 1) {
+    amount /= 1024
+    index++
+  }
+  return `${amount >= 10 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`
+}
+
+function shortError(message: string | undefined): string {
+  const text = String(message || '生成失败').trim()
+  return text.length > 18 ? `${text.slice(0, 18)}…` : text
+}
+
+function describeExportJob(job: ArchiveExportJob | null, idleText: string): string {
+  if (!job) return idleText
+  const total = Math.max(0, Number(job.plannedCount || 0))
+  const completed = Math.min(total, Math.max(0, Number(job.processedCount || 0)))
+  switch (job.status) {
+    case 'PENDING':
+      return `等待生成 · ${completed}/${total} 张 · 点击取消`
+    case 'PROCESSING':
+      return `生成中 · ${completed}/${total} 张 · 点击取消`
+    case 'SUCCESS':
+      return `已生成 ${formatBytes(job.outputBytes)} · 点击下载`
+    case 'FAILED':
+      return `${shortError(job.errorMessage)} · 点击重试`
+    case 'CANCELLED':
+      return '已取消 · 点击重新生成'
+    case 'EXPIRED':
+      return '文件已过期 · 点击重新生成'
+    default:
+      return idleText
+  }
+}
+
+function resolveExportButtonType(job: ArchiveExportJob | null, idleType: '' | 'primary') {
+  if (!job) return idleType
+  if (job.status === 'SUCCESS') return 'success'
+  if (job.status === 'FAILED' || job.status === 'EXPIRED') return 'danger'
+  if (job.status === 'PENDING' || job.status === 'PROCESSING' || job.status === 'CANCELLED') return 'warning'
+  return idleType
+}
+
+function isJobRunning(job: ArchiveExportJob | null): boolean {
+  return job?.status === 'PENDING' || job?.status === 'PROCESSING'
+}
+
+async function confirmCancel(label: string): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(
+      `${label}正在后台生成，确定取消当前任务吗？`,
+      '取消导出任务',
+      {
+        confirmButtonText: '取消任务',
+        cancelButtonText: '继续生成',
+        type: 'warning',
+      },
+    )
+    return true
+  }
+  catch {
+    return false
+  }
 }
 
 function applyArchiveSettings(settings: EffectiveSystemSettings) {
@@ -426,8 +528,46 @@ function handlePrint() {
   printSelected(selectedItems.value)
 }
 
-function handleExportPdf() {
-  exportSelectedPdf(selectedItems.value)
+async function handleDownloadAction() {
+  const current = downloadJob.value
+  if (!current) {
+    await handleDownload()
+    return
+  }
+  if (current.status === 'SUCCESS') {
+    await downloadPreparedArchive()
+    return
+  }
+  if (isJobRunning(current)) {
+    if (await confirmCancel('病案 ZIP')) {
+      await cancelDownloadJob()
+    }
+    return
+  }
+  dismissDownloadJob()
+  await nextTick()
+  await handleDownload()
+}
+
+async function handleExportPdfAction() {
+  const current = pdfJob.value
+  if (!current) {
+    await exportSelectedPdf(selectedItems.value)
+    return
+  }
+  if (current.status === 'SUCCESS') {
+    await downloadPreparedPdf()
+    return
+  }
+  if (isJobRunning(current)) {
+    if (await confirmCancel('病案 PDF')) {
+      await cancelPdfJob()
+    }
+    return
+  }
+  dismissPdfJob()
+  await nextTick()
+  await exportSelectedPdf(selectedItems.value)
 }
 
 function goBack() {
@@ -618,18 +758,35 @@ onUnmounted(() => {
         </div>
 
         <div v-if="images.length > 0" class="archive-bottom-actions">
-          <el-button class="download-action" :icon="Download" :loading="downloading" @click="handleDownload">
-            下载档案袋
+          <el-button
+            class="download-action export-action-button"
+            :type="downloadButtonType || undefined"
+            :icon="Download"
+            :loading="downloadButtonLoading"
+            @click="handleDownloadAction"
+          >
+            <span class="export-action-content">
+              <strong>下载文件</strong>
+              <small>{{ downloadButtonDetail }}</small>
+            </span>
           </el-button>
           <el-button :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
             打印选中<template v-if="selectedCount">
               ({{ selectedCount }})
             </template>
           </el-button>
-          <el-button type="primary" :icon="Document" :loading="exportingPdf" :disabled="!selectedCount" @click="handleExportPdf">
-            导出 PDF<template v-if="selectedCount">
-              ({{ selectedCount }})
-            </template>
+          <el-button
+            class="export-action-button"
+            :type="pdfButtonType || undefined"
+            :icon="Document"
+            :loading="pdfButtonLoading"
+            :disabled="!pdfJob && !selectedCount"
+            @click="handleExportPdfAction"
+          >
+            <span class="export-action-content">
+              <strong>导出 PDF</strong>
+              <small>{{ pdfButtonDetail }}</small>
+            </span>
           </el-button>
         </div>
       </section>
@@ -785,6 +942,35 @@ onUnmounted(() => {
 .archive-bottom-actions :deep(.el-button) {
   min-width: 0;
   margin: 0;
+}
+
+.archive-bottom-actions :deep(.export-action-button) {
+  height: auto;
+  min-height: 50px;
+  padding-block: 7px;
+  white-space: normal;
+}
+
+.export-action-content {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.export-action-content strong {
+  font-size: 13px;
+}
+
+.export-action-content small {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.82;
 }
 
 :global(body.archive-immersive .toolbar-container) {

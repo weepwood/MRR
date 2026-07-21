@@ -56,11 +56,15 @@ public interface ArchiveExportService {
             return items.size();
         }
 
+        /**
+         * 仅当所有图片大小都已知时返回精确估算；任一图片大小缺失时返回 0，
+         * 由任务策略使用配置化的每图保守值估算，避免只累计部分已知大小而低估。
+         */
         public long estimatedBytes() {
             long total = 0;
             for (PathDO item : items) {
                 if (item.getFileSize() == null || item.getFileSize() <= 0) {
-                    continue;
+                    return 0;
                 }
                 long value = item.getFileSize();
                 if (Long.MAX_VALUE - total < value) {

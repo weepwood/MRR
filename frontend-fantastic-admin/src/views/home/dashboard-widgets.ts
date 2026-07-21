@@ -1,4 +1,5 @@
 export type DashboardWidgetSize = 'small' | 'wide' | 'large'
+export type DashboardWidgetColor = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'purple'
 
 export interface DashboardWidgetDefinition {
   id: string
@@ -8,6 +9,7 @@ export interface DashboardWidgetDefinition {
   path: string
   permission?: string
   defaultSize: DashboardWidgetSize
+  defaultColor?: DashboardWidgetColor
   defaultPinned?: boolean
   defaultVisible?: boolean
 }
@@ -17,15 +19,21 @@ export interface DashboardWidgetPreference {
   title: string
   description: string
   size: DashboardWidgetSize
+  color: DashboardWidgetColor
   pinned: boolean
   visible: boolean
   order: number
 }
 
 const widgetSizes: DashboardWidgetSize[] = ['small', 'wide', 'large']
+const widgetColors: DashboardWidgetColor[] = ['default', 'blue', 'green', 'orange', 'red', 'purple']
 
 function isWidgetSize(value: unknown): value is DashboardWidgetSize {
   return typeof value === 'string' && widgetSizes.includes(value as DashboardWidgetSize)
+}
+
+function isWidgetColor(value: unknown): value is DashboardWidgetColor {
+  return typeof value === 'string' && widgetColors.includes(value as DashboardWidgetColor)
 }
 
 function normalizeText(value: unknown, fallback: string) {
@@ -42,6 +50,7 @@ export function createDefaultWidgetPreferences(definitions: DashboardWidgetDefin
     title: definition.title,
     description: definition.description,
     size: definition.defaultSize,
+    color: definition.defaultColor ?? 'default',
     pinned: definition.defaultPinned === true,
     visible: definition.defaultVisible !== false,
     order,
@@ -83,6 +92,7 @@ export function mergeWidgetPreferences(
       title: normalizeText(item.title, definition.title),
       description: normalizeText(item.description, definition.description),
       size: isWidgetSize(item.size) ? item.size : definition.defaultSize,
+      color: isWidgetColor(item.color) ? item.color : definition.defaultColor ?? 'default',
       pinned: typeof item.pinned === 'boolean' ? item.pinned : definition.defaultPinned === true,
       visible: typeof item.visible === 'boolean' ? item.visible : definition.defaultVisible !== false,
       order: merged.length,
@@ -98,6 +108,7 @@ export function mergeWidgetPreferences(
       title: definition.title,
       description: definition.description,
       size: definition.defaultSize,
+      color: definition.defaultColor ?? 'default',
       pinned: definition.defaultPinned === true,
       visible: definition.defaultVisible !== false,
       order: merged.length,
@@ -154,7 +165,7 @@ export function setWidgetPinned(
 export function updateWidgetPreference(
   preferences: DashboardWidgetPreference[],
   widgetId: string,
-  patch: Partial<Pick<DashboardWidgetPreference, 'title' | 'description' | 'size' | 'visible'>>,
+  patch: Partial<Pick<DashboardWidgetPreference, 'title' | 'description' | 'size' | 'color' | 'visible'>>,
 ): DashboardWidgetPreference[] {
   return preferences.map(item => item.id === widgetId ? { ...item, ...patch } : item)
 }

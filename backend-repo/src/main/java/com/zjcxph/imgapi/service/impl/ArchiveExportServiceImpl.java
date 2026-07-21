@@ -191,17 +191,20 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         }
 
         List<Integer> ids = List.copyOf(uniqueIds);
-        List<Scan> scans = new ArrayList<>(scanService.findActiveByIds(ids));
+        List<Scan> queried = scanService.findActiveByIds(ids);
+        List<Scan> scans = queried == null
+                ? new ArrayList<>()
+                : new ArrayList<>(queried.stream().filter(Objects::nonNull).toList());
         Set<Integer> returnedIds = new HashSet<>();
         for (Scan scan : scans) {
-            if (scan != null && scan.getId() != null) {
+            if (scan.getId() != null) {
                 returnedIds.add(scan.getId());
             }
         }
         if (returnedIds.size() != ids.size() || !returnedIds.containsAll(ids)) {
             throw new BusinessException(404, "部分影像不存在或已失效，请刷新病案后重试");
         }
-        return scans.stream().filter(Objects::nonNull).toList();
+        return scans;
     }
 
     private void validateSameArchive(List<Scan> scans) {

@@ -51,8 +51,11 @@ public class ArchiveExportJobRepository {
         }
         return queryOne("""
                 SELECT * FROM app.archive_export_job
-                WHERE owner_username = ? AND idempotency_key = ?
-                ORDER BY created_at DESC LIMIT 1
+                WHERE owner_username = ?
+                  AND idempotency_key = ?
+                  AND status <> 'EXPIRED'
+                ORDER BY created_at DESC
+                LIMIT 1
                 """, ownerUsername, idempotencyKey);
     }
 

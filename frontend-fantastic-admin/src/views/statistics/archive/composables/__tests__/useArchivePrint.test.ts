@@ -18,13 +18,21 @@ const message = vi.hoisted(() => ({
   success: vi.fn(),
 }))
 
+const permission = vi.hoisted(() => ({
+  auth: vi.fn(() => true),
+}))
+
 vi.mock('@/api/modules/archive-export', () => api)
+vi.mock('@/utils/composables/useAuth', () => ({
+  default: () => permission,
+}))
 vi.mock('../../utils/client-pdf', () => clientPdf)
 vi.mock('element-plus', () => ({ ElMessage: message }))
 
 describe('useArchivePrint', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    permission.auth.mockReturnValue(true)
   })
 
   it('规划接口拒绝时不会继续在浏览器生成 PDF', async () => {
@@ -46,5 +54,20 @@ describe('useArchivePrint', () => {
     expect(api.downloadArchivePdf).not.toHaveBeenCalled()
     expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
     expect(message.error).toHaveBeenCalledWith('No permission')
+  })
+
+  it('缺少 PDF 导出权限时不会请求规划接口', async () => {
+    permission.auth.mockReturnValue(false)
+    const image: GalleryImage = {
+      id: 1,
+      bah: '00789508',
+      imageUrl: '/image.jpg',
+    }
+
+    const { exportSelectedPdf } = useArchivePrint()
+    await exportSelectedPdf([image])
+
+    expect(api.getArchivePdfExportPlan).not.toHaveBeenCalled()
+    expect(message.warning).toHaveBeenCalledWith('当前账号没有病案 PDF 导出权限')
   })
 })

@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.storage;
 
 import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
+import com.zjcxph.imgapi.config.OssProperties;
 import com.zjcxph.imgapi.entity.PathDO;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
@@ -18,11 +19,16 @@ class MixedArchiveImageSourceFallbackTest {
 
     @Test
     void readsEachImageFromOssOrLocalAccordingToItsOwnMigrationState() throws Exception {
-        ArchiveImageSourceProperties properties = new ArchiveImageSourceProperties();
+        ArchiveImageSourceProperties sourceProperties = new ArchiveImageSourceProperties();
+        OssProperties ossProperties = new OssProperties();
+        ossProperties.setEndpoint("oss-cn-hangzhou.aliyuncs.com");
+        ossProperties.setBucket("mrr-medical-records");
+        ossProperties.setBaseUrl("https://mrr-medical-records.oss-cn-hangzhou.aliyuncs.com");
         OssObjectReader objectReader = mock(OssObjectReader.class);
         LocalImageStorage localStorage = mock(LocalImageStorage.class);
-        OssArchiveImageSource ossSource = new OssArchiveImageSource(objectReader, properties);
-        LocalArchiveImageSource localSource = new LocalArchiveImageSource(localStorage, properties);
+        OssArchiveImageSource ossSource = new OssArchiveImageSource(
+                objectReader, sourceProperties, ossProperties);
+        LocalArchiveImageSource localSource = new LocalArchiveImageSource(localStorage, sourceProperties);
         ArchiveImageSourceResolver resolver = new ArchiveImageSourceResolver(List.of(ossSource, localSource));
         ResolvedImageStorage storage = new ResolvedImageStorage(resolver, new SimpleMeterRegistry());
 

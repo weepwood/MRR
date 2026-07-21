@@ -19,23 +19,24 @@ const progress = computed(() => {
   return Math.min(100, Math.round(props.job.processedCount * 100 / props.job.plannedCount))
 })
 
-const statusText = computed(() => ({
+const statusTextMap: Record<ArchiveExportJob['status'], string> = {
   PENDING: '等待处理',
   PROCESSING: '正在生成',
   SUCCESS: '生成完成',
   FAILED: '生成失败',
   CANCELLED: '已取消',
   EXPIRED: '文件已过期',
-}[props.job.status]))
+}
 
-const alertType = computed(() => {
+const statusText = computed(() => statusTextMap[props.job.status])
+const alertType = computed<'success' | 'warning' | 'info' | 'error'>(() => {
   if (props.job.status === 'SUCCESS') return 'success'
   if (props.job.status === 'FAILED' || props.job.status === 'EXPIRED') return 'error'
   if (props.job.status === 'CANCELLED') return 'warning'
   return 'info'
 })
 
-const canCancel = computed(() => ['PENDING', 'PROCESSING'].includes(props.job.status))
+const canCancel = computed(() => props.job.status === 'PENDING' || props.job.status === 'PROCESSING')
 const canDownload = computed(() => props.job.status === 'SUCCESS')
 
 function formatBytes(value: number) {

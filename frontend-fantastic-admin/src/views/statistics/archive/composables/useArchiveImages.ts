@@ -56,6 +56,15 @@ export function useArchiveImages() {
   const searchIdCard = ref('')
   const idCardToken = ref('')
   const maskedIdCard = ref('')
+  let downloadArchiveKey = ''
+
+  function bindDownloadArchive(bah: string, sjh: string) {
+    const nextKey = `${padCode(bah)}|${padCode(sjh)}`
+    if (downloadArchiveKey && downloadArchiveKey !== nextKey) {
+      exportJob.dismiss()
+    }
+    downloadArchiveKey = nextKey
+  }
 
   async function loadPatient(bah: string): Promise<void> {
     if (!bah || requiresSjhForBah(bah)) {
@@ -93,6 +102,7 @@ export function useArchiveImages() {
 
     const requestBah = lookup.requestBah || ''
     const requestSjh = lookup.requestSjh || ''
+    bindDownloadArchive(requestBah, requestSjh)
 
     loading.value = true
     errorMsg.value = ''
@@ -232,6 +242,7 @@ export function useArchiveImages() {
       ElMessage.warning('当前档案没有可下载的影像')
       return
     }
+    bindDownloadArchive(bah, sjh)
 
     downloading.value = true
     try {
@@ -240,9 +251,19 @@ export function useArchiveImages() {
         await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
         return
       }
-      const archiveBlob = await downloadArchiveZip(bah || undefined, sjh || undefined)
-      saveBlob(archiveBlob, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
-      ElMessage.success('档案袋已由服务器打包并开始下载')
+
+      try {
+        const archiveBlob = await downloadArchiveZip(bah || undefined, sjh || undefined)
+        if (!(archiveBlob instanceof Blob) || archiveBlob.size <= 0) {
+          throw new Error('服务器返回的 ZIP 文件为空')
+        }
+        saveBlob(archiveBlob, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
+        ElMessage.success('档案袋已由服务器打包并开始下载')
+      }
+      catch {
+        await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
+        ElMessage.warning('直接下载未完成，已自动转为后台生成任务')
+      }
     }
     catch (err: unknown) {
       ElMessage.error((err as { message?: string })?.message || '下载失败')

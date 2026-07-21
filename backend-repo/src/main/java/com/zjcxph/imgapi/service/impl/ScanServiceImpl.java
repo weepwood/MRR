@@ -30,6 +30,10 @@ public class ScanServiceImpl implements ScanService {
     @Override
     @Cacheable(value = "scanByBah", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
     public List<Scan> getImageListByBAH(String normalizedCode, String searchCode) {
+        List<Scan> linkedScans = findLinkedScans(normalizedCode, searchCode, "", "");
+        if (!linkedScans.isEmpty()) {
+            return linkedScans;
+        }
         return scanMapper.findBAH(normalizedCode, searchCode);
     }
 
@@ -45,17 +49,14 @@ public class ScanServiceImpl implements ScanService {
             String normalizedSjh,
             String sjhSearchCode
     ) {
-        Long archiveId = resolveArchiveId(
+        List<Scan> linkedScans = findLinkedScans(
                 normalizedBah,
                 bahSearchCode,
                 normalizedSjh,
                 sjhSearchCode
         );
-        if (archiveId != null) {
-            List<Scan> linkedScans = scanMapper.findActiveByArchiveId(archiveId);
-            if (linkedScans != null && !linkedScans.isEmpty()) {
-                return linkedScans;
-            }
+        if (!linkedScans.isEmpty()) {
+            return linkedScans;
         }
 
         return scanMapper.findByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
@@ -180,6 +181,26 @@ public class ScanServiceImpl implements ScanService {
     @Override
     public long countByCondition(ScanRequest request) {
         return scanMapper.countByCondition(prepareSearchRequest(request));
+    }
+
+    private List<Scan> findLinkedScans(
+            String normalizedBah,
+            String bahSearchCode,
+            String normalizedSjh,
+            String sjhSearchCode
+    ) {
+        Long archiveId = resolveArchiveId(
+                normalizedBah,
+                bahSearchCode,
+                normalizedSjh,
+                sjhSearchCode
+        );
+        if (archiveId == null) {
+            return List.of();
+        }
+
+        List<Scan> linkedScans = scanMapper.findActiveByArchiveId(archiveId);
+        return linkedScans == null ? List.of() : linkedScans;
     }
 
     private Long resolveArchiveId(

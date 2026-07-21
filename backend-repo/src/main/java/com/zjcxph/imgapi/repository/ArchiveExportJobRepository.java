@@ -59,6 +59,17 @@ public class ArchiveExportJobRepository {
                 """, ownerUsername, idempotencyKey);
     }
 
+    public List<ArchiveExportJob> findActiveByOwner(String ownerUsername, String format, int limit) {
+        return jdbcTemplate.query("""
+                SELECT * FROM app.archive_export_job
+                WHERE owner_username = ?
+                  AND format = ?
+                  AND status IN ('PENDING', 'PROCESSING')
+                ORDER BY created_at DESC
+                LIMIT ?
+                """, ROW_MAPPER, ownerUsername, format, limit);
+    }
+
     public List<ArchiveExportJob> findRecoverable() {
         return jdbcTemplate.query("""
                 SELECT * FROM app.archive_export_job

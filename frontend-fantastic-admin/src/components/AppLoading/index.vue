@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { motion } from 'motion-v'
+import { motionDurations } from '@/motion/presets'
+
 defineOptions({ name: 'AppLoading' })
 
 withDefaults(defineProps<{
@@ -13,7 +16,14 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <div class="app-loading">
+  <motion.div
+    class="app-loading"
+    :initial="{ opacity: 0 }"
+    :animate="{ opacity: 1 }"
+    :transition="{ duration: motionDurations.fast }"
+    aria-busy="true"
+    aria-label="内容加载中"
+  >
     <template v-if="type === 'table'">
       <div v-for="i in rows" :key="i" class="skeleton-row">
         <div v-for="j in cols" :key="j" class="skeleton-cell" />
@@ -36,7 +46,7 @@ withDefaults(defineProps<{
         </div>
       </div>
     </template>
-  </div>
+  </motion.div>
 </template>
 
 <style scoped>
@@ -128,5 +138,16 @@ withDefaults(defineProps<{
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-cell,
+  .skeleton-card-img,
+  .skeleton-card-line,
+  .skeleton-stat-label,
+  .skeleton-stat-value {
+    background-position: 0 0;
+    animation: none;
+  }
 }
 </style>

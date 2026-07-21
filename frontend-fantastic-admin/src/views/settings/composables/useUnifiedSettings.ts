@@ -160,11 +160,22 @@ export function useUnifiedSettings() {
     await loadSettings(true)
   }
 
+  function focusSettingsWorkspace() {
+    const shell = shellRef.value
+    if (!shell || window.innerWidth < 960) return
+
+    const configuredGap = Number.parseFloat(getComputedStyle(shell).getPropertyValue('--settings-workspace-edge-gap'))
+    const edgeGap = Number.isFinite(configuredGap) ? configuredGap : 10
+
+    shell.scrollIntoView({ block: 'start', behavior: 'auto' })
+    window.scrollBy({ top: -edgeGap, behavior: 'auto' })
+  }
+
   async function selectSection(section: SettingsSection) {
     activeSection.value = section
     await router.replace({ query: { ...route.query, section } })
     await nextTick()
-    if (window.innerWidth >= 960) shellRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
+    focusSettingsWorkspace()
   }
 
   watch(() => route.query.section, (value) => {

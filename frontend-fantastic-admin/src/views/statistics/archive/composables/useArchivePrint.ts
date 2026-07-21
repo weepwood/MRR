@@ -131,12 +131,16 @@ export function useArchivePrint() {
     return `${String(image.bah || '').trim()}|${String(image.sjh || '').trim()}`
   }
 
-  function bindSelection(images: GalleryImage[]) {
-    const nextSignature = selectionSignature(images)
+  function invalidateMismatchedJob(nextSignature: string) {
     if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
-      exportJob.dismiss()
+      void exportJob.discard()
       jobSelectionSignature.value = ''
     }
+  }
+
+  function bindSelection(images: GalleryImage[]) {
+    const nextSignature = selectionSignature(images)
+    invalidateMismatchedJob(nextSignature)
     return nextSignature
   }
 
@@ -145,10 +149,7 @@ export function useArchivePrint() {
     const nextSignature = Array.isArray(detail?.keys)
       ? detail.keys.filter(Boolean).slice().sort().join(',')
       : ''
-    if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
-      exportJob.dismiss()
-      jobSelectionSignature.value = ''
-    }
+    invalidateMismatchedJob(nextSignature)
   }
 
   async function exportSelectedPdf(images: GalleryImage[]): Promise<void> {

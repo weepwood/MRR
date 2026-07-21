@@ -26,10 +26,10 @@ class ArchiveExportTempFileManagerTest {
         ArchiveExportTempFileManager manager = new ArchiveExportTempFileManager(properties);
         manager.initialize();
 
-        try (ArchiveExportTempFileManager.Reservation reservation = manager.reserve("job-1", 6, "zip")) {
+        try (ArchiveExportTempFileManager.Reservation reservation = manager.reserve("job-0001", 6, "zip")) {
             assertThat(reservation.path().normalize()).startsWith(tempDir.normalize());
-            assertThat(reservation.path().getFileName().toString()).isEqualTo("job-1.zip");
-            assertThatThrownBy(() -> manager.reserve("job-2", 5, "pdf"))
+            assertThat(reservation.path().getFileName().toString()).isEqualTo("job-0001.zip");
+            assertThatThrownBy(() -> manager.reserve("job-0002", 5, "pdf"))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("临时文件配额不足");
         }

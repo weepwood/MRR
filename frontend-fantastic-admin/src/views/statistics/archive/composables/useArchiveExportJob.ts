@@ -3,7 +3,7 @@ import type {
   CreateArchiveExportJobRequest,
 } from '@/api/modules/archive-export'
 import { ElMessage } from 'element-plus'
-import { onScopeDispose, ref } from 'vue'
+import { h, onScopeDispose, ref } from 'vue'
 import {
   cancelArchiveExportJob,
   createArchiveExportJob,
@@ -35,6 +35,8 @@ export function useArchiveExportJob() {
   const cancelling = ref(false)
   const downloading = ref(false)
   let pollTimer: ReturnType<typeof setTimeout> | undefined
+  let notificationHandle: { close: () => void } | undefined
+  let renderVersion = 0
 
   function stopPolling() {
     if (pollTimer) {
@@ -47,12 +49,43 @@ export function useArchiveExportJob() {
     return ['SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED'].includes(status)
   }
 
+  async function renderNotification() {
+    const current = job.value
+    const version = ++renderVersion
+    if (!current) {
+      notificationHandle?.close()
+      notificationHandle = undefined
+      return
+    }
+    const [{ ElNotification }, { default: ArchiveExportJobPanel }] = await Promise.all([
+      import('element-plus'),
+      import('../components/ArchiveExportJobPanel.vue'),
+    ])
+    if (version !== renderVersion || job.value?.id !== current.id) return
+    notificationHandle?.close()
+    notificationHandle = ElNotification({
+      title: '病案导出任务',
+      duration: 0,
+      showClose: false,
+      position: 'bottom-right',
+      message: h(ArchiveExportJobPanel, {
+        job: current,
+        cancelling: cancelling.value,
+        downloading: downloading.value,
+        onCancel: () => void cancel(),
+        onDownload: () => void download(),
+        onDismiss: dismiss,
+      }),
+    })
+  }
+
   async function poll() {
     const id = job.value?.id
     if (!id) return
     try {
       const response = await getArchiveExportJob(id)
       if (response.data) job.value = response.data
+      void renderNotification()
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
         if (job.value?.status === 'SUCCESS') {
@@ -82,6 +115,7 @@ export function useArchiveExportJob() {
       if (!response.data) throw new Error('服务器未返回导出任务')
       job.value = response.data
       ElMessage.info('病案较大，已转为后台生成任务')
+      void renderNotification()
       if (!isTerminal(job.value.status)) {
         pollTimer = setTimeout(() => void poll(), 500)
       }
@@ -96,6 +130,7 @@ export function useArchiveExportJob() {
     const id = job.value?.id
     if (!id || isTerminal(job.value.status)) return
     cancelling.value = true
+    void renderNotification()
     try {
       const response = await cancelArchiveExportJob(id)
       if (response.data) job.value = response.data
@@ -104,6 +139,7 @@ export function useArchiveExportJob() {
     }
     finally {
       cancelling.value = false
+      void renderNotification()
     }
   }
 
@@ -111,21 +147,30 @@ export function useArchiveExportJob() {
     const current = job.value
     if (!current || current.status !== 'SUCCESS') return
     downloading.value = true
+    void renderNotification()
     try {
       const blob = await downloadArchiveExportJob(current.id)
       saveBlob(blob, current.fileName || `archive-export-${current.id}.${current.format.toLowerCase()}`)
     }
     finally {
       downloading.value = false
+      void renderNotification()
     }
   }
 
   function dismiss() {
     stopPolling()
+    renderVersion++
+    notificationHandle?.close()
+    notificationHandle = undefined
     job.value = null
   }
 
-  onScopeDispose(stopPolling)
+  onScopeDispose(() => {
+    stopPolling()
+    renderVersion++
+    notificationHandle?.close()
+  })
 
   return {
     job,

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class ArchiveExportTempFileManager {
@@ -49,14 +50,15 @@ public class ArchiveExportTempFileManager {
             throw new BusinessException(413, "预计导出文件超过单文件配额");
         }
 
-        // 运行中的任务始终按单文件最大值预留。这样即使文件大小元数据缺失或估算偏小，
-        // 多个任务同时写入也不会突破全局配额。
+        // 运行中的任务始终按单文件最大值预留。正在写入的任务文件已经由预留额度覆盖，
+        // 计算磁盘已用空间时必须排除这些文件，避免同一字节被重复计算。
         long requested = properties.getMaxFileBytes();
-        long used = currentUsageBytes();
+        long used = currentUsageBytesExcludingReservations();
         long reserved = reservations.values().stream().mapToLong(Long::longValue).sum();
-        if (reserved > properties.getMaxTotalBytes()
-                || used > properties.getMaxTotalBytes() - reserved
-                || used + reserved > properties.getMaxTotalBytes() - requested) {
+        long maxTotal = properties.getMaxTotalBytes();
+        if (reserved > maxTotal
+                || requested > maxTotal - reserved
+                || used > maxTotal - reserved - requested) {
             throw new BusinessException(507, "导出临时文件配额不足，请清理旧任务后重试");
         }
         Path path = root.resolve(jobId + "." + safeExtension).normalize();
@@ -132,11 +134,20 @@ public class ArchiveExportTempFileManager {
     }
 
     public synchronized long currentUsageBytes() throws IOException {
+        return calculateUsageBytes(Set.of());
+    }
+
+    private long currentUsageBytesExcludingReservations() throws IOException {
+        return calculateUsageBytes(Set.copyOf(reservations.keySet()));
+    }
+
+    private long calculateUsageBytes(Set<String> excludedJobIds) throws IOException {
         if (!Files.exists(root)) {
             return 0;
         }
         try (var stream = Files.list(root)) {
             return stream.filter(path -> !Files.isSymbolicLink(path) && Files.isRegularFile(path))
+                    .filter(path -> !belongsToReservedJob(path, excludedJobIds))
                     .mapToLong(path -> {
                         try {
                             return Files.size(path);
@@ -146,6 +157,14 @@ public class ArchiveExportTempFileManager {
                     })
                     .sum();
         }
+    }
+
+    private boolean belongsToReservedJob(Path path, Set<String> jobIds) {
+        if (jobIds.isEmpty() || path.getFileName() == null) {
+            return false;
+        }
+        String fileName = path.getFileName().toString();
+        return jobIds.stream().anyMatch(jobId -> fileName.startsWith(jobId + "."));
     }
 
     private void release(String jobId) {

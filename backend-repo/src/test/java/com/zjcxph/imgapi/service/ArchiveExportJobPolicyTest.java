@@ -32,10 +32,10 @@ class ArchiveExportJobPolicyTest {
         assertThat(service.shouldUseJob(export(3, 1, "LOCAL"))).isTrue();
         assertThat(service.shouldUseJob(export(1, 1_000, "LOCAL"))).isTrue();
 
-        PathDO local = item(1, 10, "LOCAL");
+        PathDO nginx = item(1, 10, "LOCAL");
         PathDO oss = item(2, 10, "OSS");
         oss.setSourceRef("25.03/page-2.jpg");
-        assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(local, oss)))).isTrue();
+        assertThat(service.shouldUseJob(new ArchiveExportService.BatchZipExport(List.of(nginx, oss)))).isTrue();
         assertThat(service.shouldUseJob(export(2, 10, "LOCAL"))).isFalse();
 
         PathDO known = item(3, 10, "LOCAL");
@@ -45,7 +45,7 @@ class ArchiveExportJobPolicyTest {
     }
 
     @Test
-    void treatsOssRowsWithoutObjectKeysAsLocalFallbackWithinTheSameArchive() {
+    void treatsOssRowsWithoutObjectKeysAsNginxFallbackWithinTheSameArchive() {
         PathDO migrated = item(1, 10, "OSS");
         migrated.setSourceRef("25.03/page-1.jpg");
         PathDO notMigrated = item(2, 10, "OSS");
@@ -53,7 +53,7 @@ class ArchiveExportJobPolicyTest {
         ArchiveExportService.BatchZipExport export =
                 new ArchiveExportService.BatchZipExport(List.of(migrated, notMigrated));
 
-        assertThat(export.sourceSummary()).containsExactly("OSS", "LOCAL");
+        assertThat(export.sourceSummary()).containsExactly("OSS", "NGINX");
     }
 
     private ArchiveExportService.BatchZipExport export(int count, long bytes, String source) {

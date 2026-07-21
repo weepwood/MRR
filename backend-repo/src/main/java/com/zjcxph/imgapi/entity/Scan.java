@@ -19,6 +19,11 @@ public class Scan {
     private Integer uploadFlag;
     private String folder;
 
+    // 多来源定位字段：仅保存受控类型、节点 ID 和相对引用。
+    private String sourceType;
+    private String sourceNode;
+    private String sourceRef;
+
     // OSS migration fields
     private String ossUrl;
     private Long fileSize;

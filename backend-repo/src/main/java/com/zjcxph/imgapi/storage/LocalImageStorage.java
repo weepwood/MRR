@@ -73,7 +73,14 @@ public class LocalImageStorage implements ImageStorage {
         if (!Files.isRegularFile(resolved) || !Files.isReadable(resolved)) {
             throw new FileNotFoundException("影像文件不存在或不可读: " + resolved);
         }
-        return resolved;
+
+        Path configuredRoot = Paths.get(imageProperties.getBasePath()).toAbsolutePath().normalize();
+        Path realRoot = configuredRoot.toRealPath();
+        Path realFile = resolved.toRealPath();
+        if (!realFile.startsWith(realRoot)) {
+            throw new InvalidImagePathException("影像文件符号链接越过配置根目录");
+        }
+        return realFile;
     }
 
     private String requireSegment(String value, String field) throws InvalidImagePathException {

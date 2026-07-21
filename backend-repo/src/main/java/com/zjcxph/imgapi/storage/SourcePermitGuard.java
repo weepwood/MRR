@@ -24,7 +24,9 @@ final class SourcePermitGuard {
 
     SourcePermitGuard(int maxConcurrency, Duration timeout) {
         this.semaphore = new Semaphore(Math.max(1, maxConcurrency), true);
-        this.timeout = timeout == null ? Duration.ofSeconds(30) : timeout;
+        this.timeout = timeout == null || timeout.isNegative() || timeout.isZero()
+                ? Duration.ofSeconds(30)
+                : timeout;
     }
 
     InputStream open(InputStreamSupplier supplier) throws IOException {
@@ -32,6 +34,9 @@ final class SourcePermitGuard {
         boolean success = false;
         try {
             InputStream delegate = supplier.get();
+            if (delegate == null) {
+                throw new IOException("图片来源返回了空数据流");
+            }
             success = true;
             return new FilterInputStream(delegate) {
                 private boolean released;

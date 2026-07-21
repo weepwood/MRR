@@ -1,0 +1,138 @@
+/*
+ * 跨 Element Plus 与 Fantastic Admin 自带表单组件的统一控件契约。
+ * 页面仅负责宽度和布局，不再分别定义输入框、下拉框的基础高度与状态。
+ */
+.el-input,
+.el-select,
+.el-date-editor,
+.el-input-number {
+  --el-component-size: var(--mrr-control-height);
+  font-size: 13px;
+}
+
+.el-input:not(.el-input--textarea),
+.el-select,
+.el-date-editor,
+.el-input-number {
+  min-height: var(--mrr-control-height);
+}
+
+.el-input:not(.el-input--textarea) .el-input__wrapper,
+.el-select .el-select__wrapper,
+.el-date-editor.el-input__wrapper,
+.el-range-editor.el-input__wrapper,
+.el-input-number {
+  box-sizing: border-box;
+  min-height: var(--mrr-control-height);
+}
+
+.el-input--small:not(.el-input--textarea),
+.el-select--small,
+.el-input-number.is-controls-right.el-input-number--small {
+  min-height: var(--mrr-control-height-compact);
+}
+
+.el-input--small:not(.el-input--textarea) .el-input__wrapper,
+.el-select--small .el-select__wrapper {
+  min-height: var(--mrr-control-height-compact);
+}
+
+.el-input--large:not(.el-input--textarea),
+.el-select--large,
+.el-input-number.is-controls-right.el-input-number--large {
+  min-height: var(--mrr-control-height-large);
+}
+
+.el-input--large:not(.el-input--textarea) .el-input__wrapper,
+.el-select--large .el-select__wrapper {
+  min-height: var(--mrr-control-height-large);
+}
+
+.el-input__inner,
+.el-select__selected-item,
+.el-range-input {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.el-date-editor .el-range-separator,
+.el-date-editor .el-range__icon,
+.el-date-editor .el-range__close-icon {
+  line-height: 20px;
+}
+
+.el-input-number .el-input,
+.el-input-number .el-input__wrapper {
+  height: 100%;
+  min-height: 0;
+}
+
+.fa-input-control,
+.fa-select-trigger {
+  box-sizing: border-box;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 11px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--mrr-foreground);
+  background: var(--mrr-control-bg);
+  border: 1px solid var(--mrr-control-border);
+  border-radius: var(--mrr-control-radius);
+  box-shadow: var(--mrr-shadow-xs);
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.fa-input-control::placeholder,
+.fa-select-trigger[data-placeholder] {
+  color: var(--mrr-muted-foreground);
+  opacity: 0.78;
+}
+
+.fa-input-control:hover:not(:disabled),
+.fa-select-trigger:hover:not([data-disabled]) {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-control-border-hover);
+}
+
+.fa-input-control:focus-visible,
+.fa-select-trigger:focus-visible,
+.fa-select-trigger[data-state="open"] {
+  background: var(--mrr-background);
+  border-color: var(--mrr-ring);
+  outline: none;
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.fa-input-control:disabled,
+.fa-select-trigger:disabled,
+.fa-select-trigger[data-disabled] {
+  color: var(--mrr-muted-foreground);
+  cursor: not-allowed;
+  background: var(--mrr-control-bg-disabled);
+  border-color: var(--mrr-border);
+  box-shadow: none;
+  opacity: 0.62;
+}
+
+.fa-select-trigger > svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--mrr-muted-foreground);
+  transition: color 120ms ease, transform 120ms ease;
+}
+
+.fa-select-trigger[data-state="open"] > svg {
+  color: var(--mrr-foreground);
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-input-control,
+  .fa-select-trigger,
+  .fa-select-trigger > svg {
+    transition: none;
+  }
+}

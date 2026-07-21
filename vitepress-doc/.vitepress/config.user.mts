@@ -58,6 +58,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: '系统管理', link: '/admin' },
+          { text: '数据关系工作台', link: '/data-relation-workbench' },
           { text: '日志、审计与监控', link: '/logs' },
         ],
       },

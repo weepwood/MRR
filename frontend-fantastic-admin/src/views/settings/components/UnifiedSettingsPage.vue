@@ -45,15 +45,6 @@ const {
   handleReset,
 } = useUnifiedSettings()
 
-const sectionEnter = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: {
-    duration: motionDurations.fast,
-    ease: motionEasings.emphasized,
-  },
-}
-
 void shellRef
 </script>
 
@@ -172,25 +163,17 @@ void shellRef
           </div>
         </header>
 
-        <motion.div
-          :key="activeSection"
-          class="settings-section-motion"
-          :initial="shouldReduceMotion ? false : sectionEnter.initial"
-          :animate="sectionEnter.animate"
-          :transition="sectionEnter.transition"
-        >
-          <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
-            <el-form :model="settings" label-position="top">
-              <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
-              <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
-              <ArchiveSettings v-else-if="activeSection === 'archive'" v-model="settings" />
-              <SecuritySettings v-else-if="activeSection === 'security'" v-model="settings" />
-              <DeveloperSettings v-else v-model="settings" />
-            </el-form>
-          </div>
-          <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
-          <AppConfigPanel v-else ref="appConfigRef" />
-        </motion.div>
+        <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
+          <el-form :model="settings" label-position="top">
+            <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
+            <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
+            <ArchiveSettings v-else-if="activeSection === 'archive'" v-model="settings" />
+            <SecuritySettings v-else-if="activeSection === 'security'" v-model="settings" />
+            <DeveloperSettings v-else v-model="settings" />
+          </el-form>
+        </div>
+        <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
+        <AppConfigPanel v-else ref="appConfigRef" />
       </main>
     </div>
   </div>

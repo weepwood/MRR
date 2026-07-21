@@ -7,7 +7,6 @@ import {
   getArchivePdfExportPlan,
 } from '@/api/modules/archive-export'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
-import { resolveArchiveExportMode } from '../utils/export-strategy'
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
@@ -137,27 +136,15 @@ export function useArchivePrint() {
 
     exportingPdf.value = true
     try {
-      let mode: 'client-pdf' | 'backend-stream'
-      let wholeArchive = false
-      try {
-        const response = await getArchivePdfExportPlan(
-          bah || undefined,
-          sjh || undefined,
-          images.length,
-        )
-        wholeArchive = Boolean(response?.data?.wholeArchive)
-        mode = response?.data?.executionMode === 'CLIENT_PDF'
-          ? 'client-pdf'
-          : 'backend-stream'
-      }
-      catch {
-        // 规划接口不可用时保持兼容：小批量前端，大批量后端。
-        mode = resolveArchiveExportMode({
-          format: 'pdf',
-          selectedCount: images.length,
-          totalCount: images.length + 1,
-        })
-      }
+      const response = await getArchivePdfExportPlan(
+        bah || undefined,
+        sjh || undefined,
+        images.length,
+      )
+      const wholeArchive = Boolean(response?.data?.wholeArchive)
+      const mode = response?.data?.executionMode === 'CLIENT_PDF'
+        ? 'client-pdf'
+        : 'backend-stream'
 
       if (mode === 'client-pdf') {
         const imageUrls = images.map(image => String(image.imageUrl || '').trim())

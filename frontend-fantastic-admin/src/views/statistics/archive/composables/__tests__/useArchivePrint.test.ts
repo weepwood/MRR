@@ -104,7 +104,7 @@ describe('useArchivePrint', () => {
       { id: 2, bah: '00789508', sjh: '', imageUrl: '/2.jpg' },
     ]
 
-    const { exportSelectedPdf } = useArchivePrint()
+    const { exportSelectedPdf, dismissPdfJob } = useArchivePrint()
     await exportSelectedPdf(images)
 
     expect(api.createArchiveExportJob).toHaveBeenCalledWith(expect.objectContaining({
@@ -115,5 +115,6 @@ describe('useArchivePrint', () => {
     }))
     expect(api.downloadSelectedImagesPdf).not.toHaveBeenCalled()
     expect(clientPdf.createPdfFromImageUrls).not.toHaveBeenCalled()
+    dismissPdfJob()
   })
 })

@@ -9,6 +9,7 @@ const settingsStore = useSettingsStore()
 const mainPage = useMainPage()
 
 const isAnimating = ref(false)
+let animationFrame: number | undefined
 let animationTimer: number | undefined
 
 onMounted(() => {
@@ -21,17 +22,21 @@ onMounted(() => {
 })
 onUnmounted(() => {
   hotkeys.unbind('f5')
+  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
   if (animationTimer !== undefined) window.clearTimeout(animationTimer)
 })
 
 function playRefreshFeedback() {
   isAnimating.value = false
-  requestAnimationFrame(() => {
+  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
+  animationFrame = requestAnimationFrame(() => {
     isAnimating.value = true
+    animationFrame = undefined
   })
   if (animationTimer !== undefined) window.clearTimeout(animationTimer)
   animationTimer = window.setTimeout(() => {
     isAnimating.value = false
+    animationTimer = undefined
   }, 700)
 }
 

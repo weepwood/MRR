@@ -111,7 +111,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page.locator('.section-header').getByRole('heading', { name: '登录与支持' })).toBeVisible()
   })
 
-  test('桌面端点击设置工作区后自动占满视口且仅滚动右侧内容', async ({ page }) => {
+  test('桌面端聚焦设置工作区后保留视口边距且仅滚动右侧内容', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 720 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
@@ -123,7 +123,7 @@ test.describe('系统设置分类布局', () => {
     await expect(content).toHaveCSS('overflow-y', 'auto')
 
     await expect.poll(async () => shell.evaluate(
-      element => Math.abs(element.getBoundingClientRect().height - window.innerHeight),
+      element => Math.abs(element.getBoundingClientRect().height - (window.innerHeight - 20)),
     )).toBeLessThanOrEqual(3)
     await expect.poll(async () => shell.evaluate(
       element => element.getBoundingClientRect().top,
@@ -132,7 +132,10 @@ test.describe('系统设置分类布局', () => {
     await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
 
     await expect.poll(async () => shell.evaluate(
-      element => Math.abs(element.getBoundingClientRect().top),
+      element => Math.abs(element.getBoundingClientRect().top - 10),
+    )).toBeLessThanOrEqual(2)
+    await expect.poll(async () => shell.evaluate(
+      element => Math.abs(element.getBoundingClientRect().bottom - (window.innerHeight - 10)),
     )).toBeLessThanOrEqual(2)
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(10)
 

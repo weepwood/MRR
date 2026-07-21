@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.impl.DataQualityServiceImpl;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,18 @@ class DataQualityServiceImplTest {
     }
 
     @Test
+    void configuredChecksUseBusinessRulesInsteadOfFixedEightDigitValidation() {
+        Object checks = ReflectionTestUtils.getField(service, "checks");
+
+        assertThat(String.valueOf(checks))
+                .contains("SCAN_CODE_BLANK")
+                .contains("HIGH_BAH_WITHOUT_SJH")
+                .contains("SCAN_ARCHIVE_LINK_MISSING_ESTIMATED")
+                .contains("STATISTICS_ARCHIVE_LINK_MISMATCH")
+                .doesNotContain("SCAN_CODE_FORMAT_INVALID");
+    }
+
+    @Test
     void summaryWithoutCompletedRunReturnsStableEmptyShape() {
         when(jdbcTemplate.queryForList(anyString())).thenReturn(List.of());
 
@@ -65,7 +78,7 @@ class DataQualityServiceImplTest {
     void summaryLoadsChecksForLatestRun() {
         Map<String, Object> latestRun = Map.of("id", 42L, "status", "SUCCESS", "total_issues", 3L);
         List<Map<String, Object>> checks = List.of(
-                Map.of("check_code", "SCAN_BAH_MISSING", "severity", "CRITICAL", "issue_count", 3L)
+                Map.of("check_code", "SCAN_CODE_BLANK", "severity", "CRITICAL", "issue_count", 3L)
         );
         when(jdbcTemplate.queryForList(anyString())).thenReturn(List.of(latestRun));
         when(jdbcTemplate.queryForList(anyString(), eq(42L))).thenReturn(checks);
@@ -112,6 +125,23 @@ class DataQualityServiceImplTest {
     }
 
     @Test
+    void issueLookupReturnsSelectedIssue() {
+        Map<String, Object> issue = Map.of("id", 9L, "checkCode", "BOX_ARCHIVE_LINK_MISSING");
+        when(jdbcTemplate.queryForList(anyString(), eq(9L))).thenReturn(List.of(issue));
+
+        assertThat(service.getIssue(9L)).isSameAs(issue);
+    }
+
+    @Test
+    void missingIssueReturnsNotFoundBusinessError() {
+        when(jdbcTemplate.queryForList(anyString(), eq(9L))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.getIssue(9L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("异常不存在");
+    }
+
+    @Test
     void scheduledRunDoesNothingWhenFeatureIsDisabled() {
         ReflectionTestUtils.setField(service, "enabled", false);
 
@@ -145,7 +175,7 @@ class DataQualityServiceImplTest {
     @Test
     void failedRunIsRecordedAndAlwaysResetsRunningGauge() {
         when(jdbcTemplate.queryForObject(
-                contains("INSERT INTO mrr_data_quality_run"), eq(Long.class), eq("manual")))
+                contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
                 .thenReturn(77L);
         when(jdbcTemplate.queryForObject(anyString(), eq(Long.class)))
                 .thenThrow(new DataAccessResourceFailureException("db offline"));

@@ -57,6 +57,9 @@ public class ArchiveExportController {
             throw new BusinessException(400, "选中影像数量超过当前病案总数，请刷新后重试");
         }
         boolean wholeArchive = selectedCount == totalCount;
+        if (!wholeArchive && selectedCount > MAX_SELECTED_EXPORT_COUNT) {
+            throw new BusinessException(400, "部分选择最多导出 200 张影像；整份病案请使用全选导出");
+        }
         String executionMode = !wholeArchive && selectedCount <= CLIENT_PDF_MAX_IMAGES
                 ? "CLIENT_PDF"
                 : "BACKEND_STREAM";

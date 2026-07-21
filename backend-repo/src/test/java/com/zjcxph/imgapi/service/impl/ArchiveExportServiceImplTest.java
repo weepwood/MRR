@@ -101,7 +101,37 @@ class ArchiveExportServiceImplTest {
 
         assertThatThrownBy(() -> service.writeBatchZip(export, new ByteArrayOutputStream()))
                 .isInstanceOf(IOException.class)
-                .hasMessageContaining("page-2.jpg");
+                .hasMessageContaining("page-2.jpg")
+                .hasMessageContaining("not found");
+    }
+
+    @Test
+    void failsZipInsteadOfSilentlyWritingAnEmptyImageEntry() throws Exception {
+        PathDO empty = new PathDO("25.03.15", "empty.jpg", "605746", "00789508");
+        when(imageStorage.open(empty)).thenReturn(new ByteArrayInputStream(new byte[0]));
+        ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
+
+        assertThatThrownBy(() -> service.writeBatchZip(
+                new ArchiveExportService.BatchZipExport(List.of(empty)),
+                new ByteArrayOutputStream()))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("图片内容为空");
+    }
+
+    @Test
+    void keepsSanitizedSourceFailuresInTheTaskFacingMessage() throws Exception {
+        PathDO missing = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
+        when(imageStorage.open(missing)).thenThrow(new IOException(
+                "所有受控图片来源均读取失败（NGINX: Nginx 图片服务返回状态码 404；LOCAL: 后端本地文件不存在或不可读）"));
+        ArchiveExportServiceImpl service = new ArchiveExportServiceImpl(scanService, imageStorage);
+
+        assertThatThrownBy(() -> service.writeBatchZip(
+                new ArchiveExportService.BatchZipExport(List.of(missing)),
+                new ByteArrayOutputStream()))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("NGINX")
+                .hasMessageContaining("404")
+                .hasMessageContaining("LOCAL");
     }
 
     @Test

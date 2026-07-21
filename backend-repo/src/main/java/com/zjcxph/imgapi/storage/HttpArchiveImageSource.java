@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Component
@@ -24,6 +25,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
 
     private final ArchiveImageSourceProperties properties;
     private final SourcePermitGuard permitGuard;
+    private final ConcurrentHashMap<String, HttpClient> clients = new ConcurrentHashMap<>();
 
     public HttpArchiveImageSource(ArchiveImageSourceProperties properties) {
         this.properties = properties;
@@ -48,7 +50,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
                     .GET();
             applyAuth(node, request);
             try {
-                HttpResponse<InputStream> response = client(node).send(
+                HttpResponse<InputStream> response = client(image.getSourceNode(), node).send(
                         request.build(), HttpResponse.BodyHandlers.ofInputStream());
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     response.body().close();
@@ -74,7 +76,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
                     .method("HEAD", HttpRequest.BodyPublishers.noBody());
             applyAuth(node, request);
             try {
-                HttpResponse<Void> response = client(node).send(
+                HttpResponse<Void> response = client(image.getSourceNode(), node).send(
                         request.build(), HttpResponse.BodyHandlers.discarding());
                 if (response.statusCode() < 200 || response.statusCode() >= 400) {
                     return -1L;
@@ -119,11 +121,13 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
         return baseUri.resolve(safePath);
     }
 
-    private HttpClient client(ArchiveImageSourceProperties.HttpNode node) {
-        return HttpClient.newBuilder()
-                .connectTimeout(orDefault(node.getConnectTimeout(), Duration.ofSeconds(5)))
+    private HttpClient client(String sourceNode, ArchiveImageSourceProperties.HttpNode node) {
+        Duration connectTimeout = orDefault(node.getConnectTimeout(), Duration.ofSeconds(5));
+        String key = sourceNode + "|" + node.getBaseUrl().trim() + "|" + connectTimeout.toMillis();
+        return clients.computeIfAbsent(key, ignored -> HttpClient.newBuilder()
+                .connectTimeout(connectTimeout)
                 .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
+                .build());
     }
 
     private void applyAuth(ArchiveImageSourceProperties.HttpNode node, HttpRequest.Builder request) {

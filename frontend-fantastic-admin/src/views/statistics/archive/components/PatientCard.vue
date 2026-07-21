@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PatientInfo } from '../types'
-import { AnimatePresence, motion } from 'motion-v'
+import { AnimatePresence, motion, useReducedMotion } from 'motion-v'
 import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
 
 defineOptions({ name: 'PatientCard' })
@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 
 const showShelfNumber = ref(false)
+const shouldReduceMotion = useReducedMotion()
 
 const fields = computed(() => [
   { key: 'name', label: '姓名', value: props.patient?.name || '-' },
@@ -44,7 +45,7 @@ function toggleRecordNumber() {
           {{ field.label }}
           <motion.span
             class="field-switch-icon"
-            :animate="{ rotate: showShelfNumber ? 180 : 0 }"
+            :animate="{ rotate: shouldReduceMotion ? 0 : showShelfNumber ? 180 : 0 }"
             :transition="motionSprings.interaction"
             aria-hidden="true"
           >
@@ -53,7 +54,14 @@ function toggleRecordNumber() {
         </button>
         <span v-else class="field-label">{{ field.label }}</span>
 
-        <AnimatePresence v-if="field.switchable" mode="wait" :initial="false">
+        <span
+          v-if="field.switchable && shouldReduceMotion"
+          class="field-value"
+          :title="field.value"
+        >
+          {{ field.value }}
+        </span>
+        <AnimatePresence v-else-if="field.switchable" mode="wait" :initial="false">
           <motion.span
             :key="showShelfNumber ? 'sjh' : 'bah'"
             class="field-value"

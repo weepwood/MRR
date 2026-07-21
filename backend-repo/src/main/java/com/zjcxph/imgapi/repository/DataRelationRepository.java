@@ -228,15 +228,21 @@ public class DataRelationRepository {
                 """, archiveId);
 
         Long unlinkedCandidates = jdbcTemplate.queryForObject("""
+                WITH input AS (
+                    SELECT NULLIF(BTRIM(CAST(? AS text)), '') AS bah,
+                           NULLIF(BTRIM(CAST(? AS text)), '') AS sjh
+                )
                 SELECT COUNT(*)
-                FROM app.mr_scan
-                WHERE archive_id IS NULL
-                  AND uploadflag <> 0
+                FROM app.mr_scan s
+                CROSS JOIN input i
+                WHERE s.archive_id IS NULL
+                  AND s.uploadflag <> 0
                   AND (
-                        (? IS NOT NULL AND BTRIM(COALESCE(sjh, '')) = ?)
-                        OR (? IS NULL AND ? IS NOT NULL AND BTRIM(COALESCE(bah, '')) = ?)
+                        (i.sjh IS NOT NULL AND BTRIM(COALESCE(s.sjh, '')) = i.sjh)
+                        OR (i.sjh IS NULL AND i.bah IS NOT NULL
+                            AND BTRIM(COALESCE(s.bah, '')) = i.bah)
                   )
-                """, Long.class, sjh, sjh, sjh, bah, bah);
+                """, Long.class, bah, sjh);
         summary.put("unlinked_candidate_count", unlinkedCandidates == null ? 0L : unlinkedCandidates);
         return summary;
     }

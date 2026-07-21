@@ -15,7 +15,15 @@ final class ArchiveImagePathSupport {
             throw new InvalidImagePathException("影像路径信息不能为空");
         }
         if (image.getSourceRef() != null && !image.getSourceRef().isBlank()) {
-            Path relative = Path.of(image.getSourceRef().trim()).normalize();
+            String rawReference = image.getSourceRef().trim();
+            if (rawReference.indexOf('\0') >= 0
+                    || rawReference.contains("\\")
+                    || rawReference.contains(":")
+                    || rawReference.startsWith("/")
+                    || rawReference.startsWith("//")) {
+                throw new InvalidImagePathException("图片来源引用必须是受控相对路径");
+            }
+            Path relative = Path.of(rawReference).normalize();
             if (relative.isAbsolute() || relative.startsWith("..")) {
                 throw new InvalidImagePathException("图片来源引用必须是受控相对路径");
             }
@@ -38,7 +46,8 @@ final class ArchiveImagePathSupport {
         String normalized = value.trim();
         if (normalized.equals(".") || normalized.equals("..")
                 || normalized.contains("/") || normalized.contains("\\")
-                || normalized.indexOf('\0') >= 0) {
+                || normalized.indexOf('\0') >= 0
+                || normalized.contains(":")) {
             throw new InvalidImagePathException(field + " 包含非法路径字符");
         }
         return normalized;

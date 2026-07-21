@@ -12,14 +12,15 @@ const props = defineProps<{
 const showShelfNumber = ref(false)
 
 const fields = computed(() => [
-  { label: '姓名', value: props.patient?.name || '-' },
+  { key: 'name', label: '姓名', value: props.patient?.name || '-' },
   {
+    key: 'record-number',
     label: showShelfNumber.value ? '上架号' : '病案号',
     value: showShelfNumber.value ? props.sjh || '-' : props.patient?.bah || '-',
     switchable: true,
   },
-  { label: '科室', value: props.patient?.department || '-' },
-  { label: '入院时间', value: props.patient?.admissionTime || '-' },
+  { key: 'department', label: '科室', value: props.patient?.department || '-' },
+  { key: 'admission-time', label: '入院时间', value: props.patient?.admissionTime || '-' },
 ])
 
 function toggleRecordNumber() {
@@ -30,7 +31,7 @@ function toggleRecordNumber() {
 <template>
   <section v-if="props.patient || loading" v-loading="loading" class="patient-card">
     <div class="patient-card-body">
-      <div v-for="field in fields" :key="field.label" class="patient-field">
+      <div v-for="field in fields" :key="field.key" class="patient-field">
         <button
           v-if="field.switchable"
           type="button"
@@ -39,10 +40,21 @@ function toggleRecordNumber() {
           @click="toggleRecordNumber"
         >
           {{ field.label }}
-          <FaIcon name="i-ri:repeat-line" />
+          <FaIcon
+            name="i-ri:repeat-line"
+            class="field-switch-icon"
+            :class="{ 'is-switched': showShelfNumber }"
+          />
         </button>
         <span v-else class="field-label">{{ field.label }}</span>
-        <span class="field-value" :title="field.value">{{ field.value }}</span>
+        <span
+          :key="field.switchable ? (showShelfNumber ? 'sjh' : 'bah') : field.key"
+          class="field-value"
+          :class="{ 'mrr-content-enter': field.switchable }"
+          :title="field.value"
+        >
+          {{ field.value }}
+        </span>
       </div>
     </div>
   </section>
@@ -86,10 +98,34 @@ function toggleRecordNumber() {
   cursor: pointer;
   background: transparent;
   border: 0;
+  transition: color var(--mrr-motion-fast) ease;
 }
 
-.field-label--switchable:hover {
+.field-label--switchable:hover,
+.field-label--switchable:focus-visible {
   color: var(--el-color-primary);
+}
+
+.field-label--switchable:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
+}
+
+.field-switch-icon {
+  transform-origin: center;
+  transition: transform var(--mrr-motion-normal) var(--mrr-ease-out);
+}
+
+.field-switch-icon.is-switched {
+  transform: rotate(180deg);
+}
+
+.field-label--switchable:active .field-switch-icon {
+  transform: scale(0.9) rotate(180deg);
+}
+
+.field-label--switchable:active .field-switch-icon:not(.is-switched) {
+  transform: scale(0.9);
 }
 
 .field-value {
@@ -99,5 +135,18 @@ function toggleRecordNumber() {
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field-label--switchable,
+  .field-switch-icon {
+    transition: none;
+  }
+
+  .field-switch-icon.is-switched,
+  .field-label--switchable:active .field-switch-icon,
+  .field-label--switchable:active .field-switch-icon:not(.is-switched) {
+    transform: none;
+  }
 }
 </style>

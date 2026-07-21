@@ -14,7 +14,7 @@ withDefaults(defineProps<{
 
 <template>
   <div
-    class="app-loading"
+    class="app-loading mrr-fade-enter"
     aria-busy="true"
     aria-label="内容加载中"
   >
@@ -46,7 +46,6 @@ withDefaults(defineProps<{
 <style scoped>
 .app-loading {
   width: 100%;
-  animation: app-loading-enter 140ms ease-out both;
 }
 
 .skeleton-row {
@@ -130,32 +129,19 @@ withDefaults(defineProps<{
   animation: shimmer 1.5s infinite;
 }
 
-@keyframes app-loading-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-loading,
-  .skeleton-cell,
-  .skeleton-card-img,
-  .skeleton-card-line,
-  .skeleton-stat-label,
-  .skeleton-stat-value {
-    animation: none;
-  }
-
   .skeleton-cell,
   .skeleton-card-img,
   .skeleton-card-line,
   .skeleton-stat-label,
   .skeleton-stat-value {
     background-position: 0 0;
+    animation: none;
   }
 }
 </style>

@@ -151,6 +151,7 @@ onUnmounted(() => {
                       text
                       circle
                       size="small"
+                      class="history-favorite-button"
                       :class="{ 'is-favorite': item.favorite }"
                       :icon="item.favorite ? StarFilled : Star"
                       :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
@@ -193,6 +194,7 @@ onUnmounted(() => {
                 text
                 circle
                 size="small"
+                class="history-favorite-button"
                 :class="{ 'is-favorite': item.favorite }"
                 :icon="item.favorite ? StarFilled : Star"
                 :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
@@ -313,14 +315,32 @@ onUnmounted(() => {
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
+  transition: background-color var(--mrr-motion-fast) ease;
 }
 
 .history-item:hover {
   background: var(--surface-muted);
 }
 
+.history-favorite-button :deep(.el-icon) {
+  transform-origin: center;
+  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.history-favorite-button:hover :deep(.el-icon) {
+  transform: scale(1.08);
+}
+
+.history-favorite-button:active :deep(.el-icon) {
+  transform: scale(0.86);
+}
+
 .history-item :deep(.is-favorite) {
   color: var(--el-color-warning);
+}
+
+.history-favorite-button.is-favorite :deep(.el-icon) {
+  animation: mrr-favorite-pop 220ms var(--mrr-ease-out) both;
 }
 
 .history-main {
@@ -369,5 +389,21 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-item,
+  .history-favorite-button :deep(.el-icon) {
+    transition: none;
+  }
+
+  .history-favorite-button:hover :deep(.el-icon),
+  .history-favorite-button:active :deep(.el-icon) {
+    transform: none;
+  }
+
+  .history-favorite-button.is-favorite :deep(.el-icon) {
+    animation: none;
+  }
 }
 </style>

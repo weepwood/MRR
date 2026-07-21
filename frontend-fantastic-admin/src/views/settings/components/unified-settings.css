@@ -9,21 +9,25 @@
 .settings-shell { box-sizing: border-box; display: grid; grid-template-columns: 270px minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); box-shadow: var(--mrr-shadow-sm); }
 .settings-sidebar { display: flex; flex-direction: column; gap: var(--mrr-space-4); min-height: 0; padding: var(--mrr-space-4); overflow-y: auto; background: var(--mrr-muted); border-right: 1px solid var(--mrr-border); }
 .settings-nav { display: grid; gap: 6px; }
-.settings-nav-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) 16px; gap: var(--mrr-space-3); align-items: center; width: 100%; padding: 11px; text-align: left; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: var(--mrr-radius-lg); }
+.settings-nav-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) 16px; gap: var(--mrr-space-3); align-items: center; width: 100%; padding: 11px; text-align: left; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: var(--mrr-radius-lg); transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease, box-shadow var(--mrr-motion-fast) ease; }
 .settings-nav-item:hover { background: color-mix(in srgb, var(--mrr-card) 68%, transparent); border-color: var(--mrr-border); }
 .settings-nav-item.active { background: var(--mrr-card); border-color: color-mix(in srgb, var(--mrr-primary) 24%, var(--mrr-border)); box-shadow: var(--mrr-shadow-xs); }
 .settings-nav-item.danger .nav-icon { color: var(--color-danger); }
-.nav-icon { width: 34px; height: 34px; border-radius: var(--mrr-radius-md); }
+.nav-icon { width: 34px; height: 34px; border-radius: var(--mrr-radius-md); transform-origin: center; transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out); }
+.settings-nav-item:hover .nav-icon { transform: scale(1.04); }
+.settings-nav-item.active .nav-icon { transform: scale(1.06); }
+.settings-nav-item:active .nav-icon { transform: scale(0.94); }
 .nav-copy { display: grid; min-width: 0; }
 .nav-copy strong { font-size: 13px; }
 .nav-copy small { overflow: hidden; margin-top: 2px; font-size: 10px; color: var(--mrr-muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
-.nav-arrow { color: var(--mrr-muted-foreground); }
+.nav-arrow { color: var(--mrr-muted-foreground); transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out); }
+.settings-nav-item:hover .nav-arrow, .settings-nav-item.active .nav-arrow { color: currentcolor; transform: translateX(1px); }
 .sidebar-save-card, .sidebar-status { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-3); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.sidebar-save-card { margin-top: auto; }
+.sidebar-save-card { margin-top: auto; transition: border-color var(--mrr-motion-normal) ease; }
 .sidebar-save-card.dirty { border-color: color-mix(in srgb, var(--color-warning) 48%, var(--mrr-border)); }
 .save-status { display: flex; gap: var(--mrr-space-2); align-items: flex-start; }
-.save-status .status-dot { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 5px; background: var(--color-success); border-radius: 50%; }
-.save-status.dirty .status-dot { background: var(--color-warning); }
+.save-status .status-dot { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 5px; background: var(--color-success); border-radius: 50%; transition: background-color var(--mrr-motion-normal) ease, transform var(--mrr-motion-normal) var(--mrr-ease-out); }
+.save-status.dirty .status-dot { background: var(--color-warning); transform: scale(1.12); }
 .save-status strong, .save-status small { display: block; }
 .save-status strong { font-size: 11px; }
 .save-status small { margin-top: 2px; font-size: 9px; color: var(--mrr-muted-foreground); }
@@ -47,4 +51,18 @@
   .header-actions { display: none; }
   .settings-nav { grid-template-columns: 1fr; }
   .settings-content { padding: var(--mrr-space-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-nav-item,
+  .nav-icon,
+  .nav-arrow,
+  .sidebar-save-card,
+  .save-status .status-dot { transition: none; }
+
+  .settings-nav-item:hover .nav-icon,
+  .settings-nav-item.active .nav-icon,
+  .settings-nav-item:active .nav-icon,
+  .settings-nav-item:hover .nav-arrow,
+  .settings-nav-item.active .nav-arrow,
+  .save-status.dirty .status-dot { transform: none; }
 }

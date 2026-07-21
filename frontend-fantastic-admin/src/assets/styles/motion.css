@@ -1,0 +1,122 @@
+:root {
+  --mrr-motion-fast: 120ms;
+  --mrr-motion-normal: 180ms;
+  --mrr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mrr-icon-interactive {
+  transform-origin: center;
+  transition:
+    color var(--mrr-motion-fast) ease,
+    opacity var(--mrr-motion-fast) ease,
+    transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+button:not(:disabled):hover .mrr-icon-interactive,
+a:hover .mrr-icon-interactive,
+[role="button"]:hover .mrr-icon-interactive {
+  transform: scale(1.06);
+}
+
+button:not(:disabled):active .mrr-icon-interactive,
+a:active .mrr-icon-interactive,
+[role="button"]:active .mrr-icon-interactive {
+  transform: scale(0.92);
+}
+
+.mrr-icon-spin-once {
+  animation: mrr-icon-spin 700ms var(--mrr-ease-out) both;
+}
+
+.mrr-status-pop {
+  animation: mrr-status-pop 220ms var(--mrr-ease-out) both;
+}
+
+.mrr-content-enter {
+  animation: mrr-content-enter var(--mrr-motion-normal) var(--mrr-ease-out) both;
+}
+
+.mrr-fade-enter {
+  animation: mrr-fade-enter var(--mrr-motion-fast) ease-out both;
+}
+
+@keyframes mrr-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mrr-status-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes mrr-favorite-pop {
+  0% {
+    transform: scale(0.8) rotate(-8deg);
+  }
+
+  65% {
+    transform: scale(1.14) rotate(3deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes mrr-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mrr-fade-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mrr-icon-interactive {
+    transition: none !important;
+  }
+
+  button:not(:disabled):hover .mrr-icon-interactive,
+  button:not(:disabled):active .mrr-icon-interactive,
+  a:hover .mrr-icon-interactive,
+  a:active .mrr-icon-interactive,
+  [role="button"]:hover .mrr-icon-interactive,
+  [role="button"]:active .mrr-icon-interactive {
+    transform: none;
+  }
+
+  .mrr-icon-spin-once,
+  .mrr-status-pop,
+  .mrr-content-enter,
+  .mrr-fade-enter {
+    animation: none !important;
+  }
+}

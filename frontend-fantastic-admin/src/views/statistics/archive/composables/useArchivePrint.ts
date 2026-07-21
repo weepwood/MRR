@@ -8,6 +8,7 @@ import {
 } from '@/api/modules/archive-export'
 import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
+import { useArchiveExportJob } from './useArchiveExportJob'
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
@@ -24,6 +25,7 @@ export function useArchivePrint() {
   const printing = ref(false)
   const exportingPdf = ref(false)
   const { auth } = useAuth()
+  const exportJob = useArchiveExportJob()
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -148,11 +150,9 @@ export function useArchivePrint() {
         images.length,
       )
       const wholeArchive = Boolean(response?.data?.wholeArchive)
-      const mode = response?.data?.executionMode === 'CLIENT_PDF'
-        ? 'client-pdf'
-        : 'backend-stream'
+      const mode = response?.data?.executionMode
 
-      if (mode === 'client-pdf') {
+      if (mode === 'CLIENT_PDF') {
         const imageUrls = images.map(image => String(image.imageUrl || '').trim())
         if (imageUrls.some(url => !url)) {
           ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
@@ -164,6 +164,21 @@ export function useArchivePrint() {
         return
       }
 
+      const ids = images.map(image => image.id).filter((id): id is string | number => id !== undefined && id !== null)
+      if (!wholeArchive && ids.length !== images.length) {
+        throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
+      }
+
+      if (mode === 'BACKEND_JOB') {
+        await exportJob.start({
+          format: 'PDF',
+          bah: bah || undefined,
+          sjh: sjh || undefined,
+          ids: wholeArchive ? undefined : ids,
+        })
+        return
+      }
+
       if (wholeArchive) {
         const pdfBlob = await downloadArchivePdf(bah || undefined, sjh || undefined)
         saveBlob(pdfBlob, `${fileStem}${sjh ? `-${sjh}` : ''}.pdf`)
@@ -171,22 +186,29 @@ export function useArchivePrint() {
         return
       }
 
-      const ids = images.map(image => image.id).filter((id): id is string | number => id !== undefined && id !== null)
-      if (ids.length !== images.length) {
-        throw new Error('部分影像缺少记录 ID，无法由服务器生成 PDF')
-      }
       const pdfBlob = await downloadSelectedImagesPdf(ids)
       saveBlob(pdfBlob, fileName)
       ElMessage.success(`已由服务器生成并导出 ${images.length} 张影像`)
     }
     catch (err: unknown) {
       const message = (err as { message?: string })?.message || 'PDF 导出失败'
-      ElMessage.error(message.includes('Failed to fetch') ? '影像获取失败，请检查图片服务 CORS 配置' : message)
+      ElMessage.error(message.includes('Failed to fetch') ? '影像获取失败，请检查图片服务配置' : message)
     }
     finally {
       exportingPdf.value = false
     }
   }
 
-  return { printing, exportingPdf, printSelected, exportSelectedPdf }
+  return {
+    printing,
+    exportingPdf,
+    pdfJob: exportJob.job,
+    pdfJobCancelling: exportJob.cancelling,
+    pdfJobDownloading: exportJob.downloading,
+    printSelected,
+    exportSelectedPdf,
+    cancelPdfJob: exportJob.cancel,
+    downloadPreparedPdf: exportJob.download,
+    dismissPdfJob: exportJob.dismiss,
+  }
 }

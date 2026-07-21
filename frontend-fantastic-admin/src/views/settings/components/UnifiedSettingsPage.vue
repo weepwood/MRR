@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { motion } from 'motion-v'
-import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
+import { motionDurations, motionEasings } from '@/motion/presets'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -45,8 +45,8 @@ const {
 } = useUnifiedSettings()
 
 const sectionEnter = {
-  initial: { opacity: 0, y: 4 },
-  animate: { opacity: 1, y: 0 },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
   transition: {
     duration: motionDurations.fast,
     ease: motionEasings.emphasized,
@@ -84,22 +84,21 @@ void shellRef
     <div ref="shellRef" class="settings-shell">
       <aside class="settings-sidebar">
         <nav class="settings-nav" aria-label="设置分类">
-          <motion.button
+          <button
             v-for="item in settingsNavItems"
             :key="item.key"
-            layout
             type="button"
             class="settings-nav-item"
             :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
-            :transition="motionSprings.layout"
             @click="selectSection(item.key)"
           >
             <motion.span
               v-if="activeSection === item.key"
-              layout-id="settings-active-section"
               class="settings-nav-active-indicator"
               :class="{ danger: item.key === 'developer' && settings.developerModeEnabled }"
-              :transition="motionSprings.layout"
+              :initial="{ opacity: 0, scale: 0.98 }"
+              :animate="{ opacity: 1, scale: 1 }"
+              :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
               aria-hidden="true"
             />
             <span class="nav-icon"><FaIcon :name="item.icon" /></span>
@@ -108,7 +107,7 @@ void shellRef
               <small>{{ item.description }}</small>
             </span>
             <FaIcon name="i-ri:arrow-right-s-line" class="nav-arrow" />
-          </motion.button>
+          </button>
         </nav>
 
         <div v-if="isServerSettingSection" class="sidebar-save-card" :class="{ dirty: isDirty }">

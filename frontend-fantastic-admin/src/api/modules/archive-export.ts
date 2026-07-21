@@ -1,5 +1,4 @@
 import type { AxiosResponse } from 'axios'
-import type { ApiResult } from '../types'
 import api, { getRequest } from '../index'
 
 export interface ArchivePdfExportPlan {
@@ -18,7 +17,7 @@ export function getArchivePdfExportPlan(bah: string | undefined, sjh: string | u
       sjh: sjh || undefined,
       selectedCount,
     },
-  }) as Promise<ApiResult<ArchivePdfExportPlan>>
+  })
 }
 
 export function downloadArchiveZip(bah?: string, sjh?: string) {

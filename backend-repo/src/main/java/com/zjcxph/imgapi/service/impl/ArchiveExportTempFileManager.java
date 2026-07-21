@@ -45,11 +45,17 @@ public class ArchiveExportTempFileManager {
     public synchronized Reservation reserve(String jobId, long estimatedBytes, String extension) throws IOException {
         requireSafeJobId(jobId);
         String safeExtension = requireExtension(extension);
-        long requested = Math.max(1L, Math.min(
-                Math.max(estimatedBytes, 1L), properties.getMaxFileBytes()));
+        if (estimatedBytes > properties.getMaxFileBytes()) {
+            throw new BusinessException(413, "预计导出文件超过单文件配额");
+        }
+
+        // 运行中的任务始终按单文件最大值预留。这样即使文件大小元数据缺失或估算偏小，
+        // 多个任务同时写入也不会突破全局配额。
+        long requested = properties.getMaxFileBytes();
         long used = currentUsageBytes();
         long reserved = reservations.values().stream().mapToLong(Long::longValue).sum();
-        if (used > properties.getMaxTotalBytes() - reserved
+        if (reserved > properties.getMaxTotalBytes()
+                || used > properties.getMaxTotalBytes() - reserved
                 || used + reserved > properties.getMaxTotalBytes() - requested) {
             throw new BusinessException(507, "导出临时文件配额不足，请清理旧任务后重试");
         }

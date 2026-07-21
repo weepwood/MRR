@@ -25,7 +25,7 @@ export function useArchivePrint() {
   const printing = ref(false)
   const exportingPdf = ref(false)
   const { auth } = useAuth()
-  const exportJob = useArchiveExportJob()
+  const exportJob = useArchiveExportJob('PDF')
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')

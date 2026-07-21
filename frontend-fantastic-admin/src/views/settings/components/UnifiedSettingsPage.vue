@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { motion } from 'motion-v'
+import { motion, useReducedMotion } from 'motion-v'
 import { motionDurations, motionEasings } from '@/motion/presets'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
@@ -25,6 +25,7 @@ interface AppConfigPanelRef {
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
+const shouldReduceMotion = useReducedMotion()
 const {
   settingsNavItems,
   shellRef,
@@ -96,7 +97,7 @@ void shellRef
               v-if="activeSection === item.key"
               class="settings-nav-active-indicator"
               :class="{ danger: item.key === 'developer' && settings.developerModeEnabled }"
-              :initial="{ opacity: 0, scale: 0.98 }"
+              :initial="shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }"
               :animate="{ opacity: 1, scale: 1 }"
               :transition="{ duration: motionDurations.fast, ease: motionEasings.emphasized }"
               aria-hidden="true"
@@ -174,7 +175,7 @@ void shellRef
         <motion.div
           :key="activeSection"
           class="settings-section-motion"
-          :initial="sectionEnter.initial"
+          :initial="shouldReduceMotion ? false : sectionEnter.initial"
           :animate="sectionEnter.animate"
           :transition="sectionEnter.transition"
         >

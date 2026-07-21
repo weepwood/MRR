@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { motion } from 'motion-v'
-import { motionDurations } from '@/motion/presets'
-
 defineOptions({ name: 'AppLoading' })
 
 withDefaults(defineProps<{
@@ -16,11 +13,8 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <motion.div
+  <div
     class="app-loading"
-    :initial="{ opacity: 0 }"
-    :animate="{ opacity: 1 }"
-    :transition="{ duration: motionDurations.fast }"
     aria-busy="true"
     aria-label="内容加载中"
   >
@@ -46,12 +40,13 @@ withDefaults(defineProps<{
         </div>
       </div>
     </template>
-  </motion.div>
+  </div>
 </template>
 
 <style scoped>
 .app-loading {
   width: 100%;
+  animation: app-loading-enter 140ms ease-out both;
 }
 
 .skeleton-row {
@@ -135,19 +130,32 @@ withDefaults(defineProps<{
   animation: shimmer 1.5s infinite;
 }
 
+@keyframes app-loading-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-loading,
+  .skeleton-cell,
+  .skeleton-card-img,
+  .skeleton-card-line,
+  .skeleton-stat-label,
+  .skeleton-stat-value {
+    animation: none;
+  }
+
   .skeleton-cell,
   .skeleton-card-img,
   .skeleton-card-line,
   .skeleton-stat-label,
   .skeleton-stat-value {
     background-position: 0 0;
-    animation: none;
   }
 }
 </style>

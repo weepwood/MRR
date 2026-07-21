@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { motion } from 'motion-v'
-import { motionDurations, motionEasings, motionSprings } from '@/motion/presets'
-
 defineOptions({ name: 'AppEmpty' })
 
 withDefaults(defineProps<{
@@ -24,24 +21,13 @@ function handleAction() {
 </script>
 
 <template>
-  <motion.div
-    class="app-empty"
-    :initial="{ opacity: 0, y: 4 }"
-    :animate="{ opacity: 1, y: 0 }"
-    :transition="{ duration: motionDurations.standard, ease: motionEasings.emphasized }"
-  >
-    <motion.div
-      class="app-empty-icon"
-      :class="icon"
-      :initial="{ scale: 0.92 }"
-      :animate="{ scale: 1 }"
-      :transition="motionSprings.interaction"
-    />
+  <div class="app-empty">
+    <div class="app-empty-icon" :class="icon" />
     <p class="app-empty-text">{{ description }}</p>
     <el-button v-if="actionText" type="primary" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
     </el-button>
-  </motion.div>
+  </div>
 </template>
 
 <style scoped>
@@ -52,6 +38,7 @@ function handleAction() {
   justify-content: center;
   padding: 64px 16px;
   text-align: center;
+  animation: app-empty-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .app-empty-icon {
@@ -59,11 +46,29 @@ function handleAction() {
   font-size: 48px;
   color: var(--el-text-color-placeholder, #c0c4cc);
   transform-origin: center;
+  animation: app-empty-icon-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .app-empty-text {
   margin: 0 0 20px;
   font-size: 14px;
   color: var(--el-text-color-secondary, #909399);
+}
+
+@keyframes app-empty-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes app-empty-icon-enter {
+  from { transform: scale(0.92); }
+  to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-empty,
+  .app-empty-icon {
+    animation: none;
+  }
 }
 </style>

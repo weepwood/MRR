@@ -61,7 +61,7 @@ export function useArchiveImages() {
   function bindDownloadArchive(bah: string, sjh: string) {
     const nextKey = `${padCode(bah)}|${padCode(sjh)}`
     if (downloadArchiveKey && downloadArchiveKey !== nextKey) {
-      exportJob.dismiss()
+      void exportJob.discard()
     }
     downloadArchiveKey = nextKey
   }

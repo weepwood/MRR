@@ -1,5 +1,13 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.itextpdf.io.image.ImageData;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.service.ArchiveExportService;
@@ -24,6 +32,8 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ArchiveExportServiceImpl.class);
     private static final int COPY_BUFFER_SIZE = 64 * 1024;
+    private static final int PDF_PAGE_MARGIN = 18;
+    private static final int MAX_PDF_IMAGE_BYTES = 100 * 1024 * 1024;
 
     private final ScanService scanService;
     private final ImageStorage imageStorage;
@@ -64,12 +74,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
 
     @Override
     public void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException {
-        if (export == null) {
-            throw new IllegalArgumentException("导出计划不能为空");
-        }
-        if (outputStream == null) {
-            throw new IllegalArgumentException("输出流不能为空");
-        }
+        validateExportArguments(export, outputStream);
 
         Set<String> usedEntryNames = new HashSet<>();
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
@@ -95,6 +100,57 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 }
             }
             zip.finish();
+        }
+    }
+
+    @Override
+    public void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException {
+        validateExportArguments(export, outputStream);
+
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer)) {
+            int written = 0;
+            for (PathDO item : export.items()) {
+                byte[] imageBytes;
+                try (InputStream input = imageStorage.open(item)) {
+                    imageBytes = input.readNBytes(MAX_PDF_IMAGE_BYTES + 1);
+                }
+                if (imageBytes.length > MAX_PDF_IMAGE_BYTES) {
+                    throw new IOException("单张影像超过 PDF 导出大小上限");
+                }
+
+                ImageData image = ImageDataFactory.create(imageBytes);
+                PageSize pageSize = image.getWidth() > image.getHeight()
+                        ? PageSize.A4.rotate()
+                        : PageSize.A4;
+                PdfPage page = pdf.addNewPage(pageSize);
+                Rectangle target = new Rectangle(
+                        PDF_PAGE_MARGIN,
+                        PDF_PAGE_MARGIN,
+                        pageSize.getWidth() - PDF_PAGE_MARGIN * 2f,
+                        pageSize.getHeight() - PDF_PAGE_MARGIN * 2f
+                );
+                new PdfCanvas(page).addImageFittedIntoRectangle(image, target, false);
+                written++;
+            }
+
+            if (written == 0) {
+                throw new IOException("没有可写入 PDF 的影像");
+            }
+        } catch (IOException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            logger.error("病案 PDF 生成失败", exception);
+            throw new IOException("病案 PDF 生成失败", exception);
+        }
+    }
+
+    private void validateExportArguments(BatchZipExport export, OutputStream outputStream) {
+        if (export == null) {
+            throw new IllegalArgumentException("导出计划不能为空");
+        }
+        if (outputStream == null) {
+            throw new IllegalArgumentException("输出流不能为空");
         }
     }
 

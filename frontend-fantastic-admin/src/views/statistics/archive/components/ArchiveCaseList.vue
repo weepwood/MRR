@@ -169,12 +169,13 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 }
 
 .case-item:hover {
-  border-color: var(--el-color-primary-light-5);
+  border-color: var(--mrr-navigation-active-border);
 }
 
 .case-item.active {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  color: var(--color-primary);
+  background: var(--mrr-navigation-active);
+  border-color: var(--mrr-navigation-active-border);
 }
 
 .case-main {

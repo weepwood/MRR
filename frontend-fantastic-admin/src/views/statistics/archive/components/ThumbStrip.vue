@@ -211,22 +211,19 @@ defineExpose({ resetVisible, scrollToIndex })
 
 .thumb-item:focus-visible,
 .thumb-check:focus-visible {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .thumb-item:hover {
-  border-color: hsl(var(--primary) / 50%);
+  border-color: var(--mrr-navigation-active-border);
 }
 
-.thumb-item.active {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 18%);
-}
-
+.thumb-item.active,
 .thumb-item.checked {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25%);
+  background: var(--mrr-navigation-active);
+  border-color: var(--mrr-navigation-active-border);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .thumb-check {
@@ -248,8 +245,8 @@ defineExpose({ resetVisible, scrollToIndex })
 
 .thumb-check.checked {
   color: #fff;
-  background: hsl(var(--primary));
-  border-color: hsl(var(--primary));
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .thumb-item img,

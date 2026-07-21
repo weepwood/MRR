@@ -3,6 +3,7 @@ import type { RecursiveRequired, Settings } from '#/global'
 const globalSettingsDefault: RecursiveRequired<Settings.all> = {
   app: {
     colorScheme: 'light',
+    themeColor: '#2563eb',
     radius: 0.75,
     pageTitleStyle: 'card',
     enableMournMode: false,

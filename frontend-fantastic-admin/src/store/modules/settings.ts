@@ -5,6 +5,73 @@ import settingsDefault from '@/settings'
 import { merge } from '@/utils/object'
 
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
+const DEFAULT_THEME_COLOR = '#2563EB'
+
+function normalizeThemeColor(value: unknown): string {
+  const color = String(value || '').trim()
+  return /^#[\dA-F]{6}$/i.test(color) ? color.toUpperCase() : DEFAULT_THEME_COLOR
+}
+
+function mixHexColor(source: string, target: string, sourceWeight: number): string {
+  const sourceValue = Number.parseInt(source.slice(1), 16)
+  const targetValue = Number.parseInt(target.slice(1), 16)
+  const channels = [16, 8, 0].map((shift) => {
+    const from = (sourceValue >> shift) & 0xFF
+    const to = (targetValue >> shift) & 0xFF
+    return Math.round(from * sourceWeight + to * (1 - sourceWeight))
+  })
+  return `#${channels.map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`
+}
+
+function toHslToken(color: string): string {
+  const value = Number.parseInt(color.slice(1), 16)
+  const red = ((value >> 16) & 0xFF) / 255
+  const green = ((value >> 8) & 0xFF) / 255
+  const blue = (value & 0xFF) / 255
+  const maximum = Math.max(red, green, blue)
+  const minimum = Math.min(red, green, blue)
+  const lightness = (maximum + minimum) / 2
+  const delta = maximum - minimum
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1))
+  let hue = 0
+  if (delta !== 0) {
+    if (maximum === red) {
+      hue = 60 * (((green - blue) / delta) % 6)
+    }
+    else if (maximum === green) {
+      hue = 60 * ((blue - red) / delta + 2)
+    }
+    else {
+      hue = 60 * ((red - green) / delta + 4)
+    }
+  }
+  if (hue < 0) {
+    hue += 360
+  }
+  return `${Math.round(hue)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
+}
+
+function applyThemeColor(value: unknown) {
+  const primary = normalizeThemeColor(value)
+  const rootStyle = document.documentElement.style
+  const primaryHsl = toHslToken(primary)
+  const variables = {
+    '--color-primary': primary,
+    '--color-primary-hover': mixHexColor(primary, '#000000', 0.86),
+    '--color-primary-active': mixHexColor(primary, '#000000', 0.72),
+    '--color-primary-deep': mixHexColor(primary, '#000000', 0.58),
+    '--primary': primaryHsl,
+    '--ring': primaryHsl,
+    '--el-color-primary': primary,
+    '--el-color-primary-light-3': mixHexColor(primary, '#FFFFFF', 0.7),
+    '--el-color-primary-light-5': mixHexColor(primary, '#FFFFFF', 0.5),
+    '--el-color-primary-light-7': mixHexColor(primary, '#FFFFFF', 0.3),
+    '--el-color-primary-light-8': mixHexColor(primary, '#FFFFFF', 0.2),
+    '--el-color-primary-light-9': mixHexColor(primary, '#FFFFFF', 0.1),
+    '--el-color-primary-dark-2': mixHexColor(primary, '#000000', 0.8),
+  }
+  Object.entries(variables).forEach(([name, color]) => rootStyle.setProperty(name, color))
+}
 
 function normalizePageTitleStyle(value: unknown): 'plain' | 'card' {
   if (value === 'plain' || value === 'compact') {
@@ -75,6 +142,10 @@ export const useSettingsStore = defineStore(
       document.documentElement.style.removeProperty('--radius')
       document.documentElement.style.setProperty('--radius', `${val}rem`)
     }, {
+      immediate: true,
+    })
+
+    watch(() => settings.value.app.themeColor, applyThemeColor, {
       immediate: true,
     })
 

@@ -17,6 +17,11 @@ declare namespace Settings {
      */
     colorScheme?: 'light' | 'dark' | ''
     /**
+     * 主题主色（十六进制颜色）
+     * @默认值 `'#2563eb'`
+     */
+    themeColor?: string
+    /**
      * 圆角系数
      * @默认值 `0.5`
      * @可选值 `0到1区间的任意值`

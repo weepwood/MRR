@@ -155,6 +155,18 @@ function handleReset() {
 
           <div class="setting-item">
             <div class="label-copy">
+              <strong>主题主色</strong>
+              <small>菜单、主要按钮和选中状态会同步使用此颜色。</small>
+            </div>
+            <el-color-picker
+              v-model="settingsStore.settings.app.themeColor"
+              color-format="hex"
+              :predefine="['#2563EB', '#0891B2', '#16803C', '#B45F06', '#7C3AED', '#DC2626']"
+            />
+          </div>
+
+          <div class="setting-item">
+            <div class="label-copy">
               <strong>圆角系数</strong>
               <small>统一调整页面卡片与面板的圆角程度。</small>
             </div>

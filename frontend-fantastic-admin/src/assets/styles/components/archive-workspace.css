@@ -71,7 +71,7 @@ body.archive-immersive .archive-workspace {
   .thumb-strip,
   .preview-stage
 ) {
-  border-radius: var(--mrr-radius-card);
+  border-radius: var(--mrr-radius-card) !important;
 }
 
 body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sidebar {
@@ -85,7 +85,7 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
   .continuous-page,
   .thumb-item
 ) {
-  border-radius: var(--mrr-radius-md);
+  border-radius: var(--mrr-radius-md) !important;
 }
 
 /* 小型状态、图片和树节点使用小圆角。 */
@@ -98,11 +98,21 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
   .type-tab,
   .type-tree .el-tree-node__content
 ) {
-  border-radius: var(--mrr-radius-sm);
+  border-radius: var(--mrr-radius-sm) !important;
 }
 
 .archive-page .type-count {
   border-radius: var(--mrr-radius-pill);
+}
+
+/* 主要操作按钮与导航菜单共用品牌色令牌。 */
+.archive-page .el-button--primary {
+  --el-button-bg-color: var(--color-primary);
+  --el-button-border-color: var(--color-primary);
+  --el-button-hover-bg-color: var(--color-primary-hover);
+  --el-button-hover-border-color: var(--color-primary-hover);
+  --el-button-active-bg-color: var(--color-primary-active);
+  --el-button-active-border-color: var(--color-primary-active);
 }
 
 @media (width <= 1100px) {

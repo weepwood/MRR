@@ -41,16 +41,16 @@ function onSelection(value: number | 'all') {
   <div class="type-bar">
     <div class="type-tabs" :class="{ 'type-tabs--single-column': displayMode === 'single-column' }">
       <div class="type-tab-entry">
-        <el-checkbox
-          :model-value="props.allSelected"
-          :indeterminate="props.allIndeterminate"
-          :disabled="props.totalCount === 0"
-          aria-label="选择全部病案"
-          @click.stop
-          @change="onSelection('all')"
-        />
         <button type="button" class="type-tab" :class="{ active: selectedType === 'all' }" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
-          全部
+          <el-checkbox
+            :model-value="props.allSelected"
+            :indeterminate="props.allIndeterminate"
+            :disabled="props.totalCount === 0"
+            aria-label="选择全部病案"
+            @click.stop
+            @change="onSelection('all')"
+          />
+          <span class="type-tab-label">全部</span>
           <span class="type-count">{{ props.totalCount }}</span>
         </button>
       </div>
@@ -59,14 +59,6 @@ function onSelection(value: number | 'all') {
         :key="item.value"
         class="type-tab-entry"
       >
-        <el-checkbox
-          :model-value="props.isTypeSelected(item.value)"
-          :indeterminate="props.isTypeIndeterminate(item.value)"
-          :disabled="item.count === 0"
-          :aria-label="`选择${item.label}病案`"
-          @click.stop
-          @change="onSelection(item.value)"
-        />
         <button
           type="button"
           class="type-tab"
@@ -75,7 +67,15 @@ function onSelection(value: number | 'all') {
           :disabled="item.count === 0"
           @click="onSelect(item.value)"
         >
-          {{ item.label }}
+          <el-checkbox
+            :model-value="props.isTypeSelected(item.value)"
+            :indeterminate="props.isTypeIndeterminate(item.value)"
+            :disabled="item.count === 0"
+            :aria-label="`选择${item.label}病案`"
+            @click.stop
+            @change="onSelection(item.value)"
+          />
+          <span class="type-tab-label">{{ item.label }}</span>
           <span v-if="item.count" class="type-count">{{ item.count }}</span>
         </button>
       </div>
@@ -94,7 +94,7 @@ function onSelection(value: number | 'all') {
 .type-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 
 .type-tabs--single-column {
@@ -104,42 +104,50 @@ function onSelection(value: number | 'all') {
 .type-tab {
   display: inline-flex;
   flex: 1;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   min-width: 0;
-  padding: 4px 10px;
+  padding: 4px 8px;
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 
 .type-tab-entry {
-  display: flex;
-  gap: 4px;
-  align-items: center;
   min-width: 0;
+}
+
+.type-tab-label {
+  margin-right: auto;
+}
+
+.type-tab :deep(.el-checkbox__inner) {
+  border-radius: var(--mrr-control-radius);
 }
 
 .type-tab.active {
   font-weight: 600;
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 10%);
-  border-color: hsl(var(--primary) / 30%);
+  color: var(--color-primary);
+  background: var(--mrr-navigation-active);
+  border-color: var(--mrr-navigation-active-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  animation: type-tab-selected 0.2s ease-out;
 }
 
 .type-tab:focus-visible {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .type-tab:hover:not(.disabled, .active) {
-  background: var(--surface-alt);
+  background: var(--mrr-navigation-hover);
 }
 
 .type-tab.disabled {
@@ -159,6 +167,30 @@ function onSelection(value: number | 'all') {
   color: var(--text-tertiary);
   background: var(--surface-alt);
   border-radius: 9999px;
+}
+
+@keyframes type-tab-selected {
+  0% {
+    transform: scale(0.96);
+  }
+
+  70% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .type-tab {
+    transition: none;
+  }
+
+  .type-tab.active {
+    animation: none;
+  }
 }
 
 </style>

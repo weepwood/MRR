@@ -18,6 +18,8 @@ public interface ArchiveExportService {
 
     void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException;
 
+    void writeBatchPdf(BatchZipExport export, OutputStream outputStream) throws IOException;
+
     record BatchZipExport(List<PathDO> items) {
         public BatchZipExport {
             items = items == null

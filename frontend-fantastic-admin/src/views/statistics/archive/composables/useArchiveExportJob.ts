@@ -7,20 +7,9 @@ import { h, onScopeDispose, ref } from 'vue'
 import {
   cancelArchiveExportJob,
   createArchiveExportJob,
-  downloadArchiveExportJob,
   getArchiveExportJob,
 } from '@/api/modules/archive-export'
-
-function saveBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
+import { downloadExportJobWithResume } from '../utils/resumable-export-download'
 
 function createIdempotencyKey(request: CreateArchiveExportJobRequest): string {
   const random = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -149,8 +138,15 @@ export function useArchiveExportJob() {
     downloading.value = true
     void renderNotification()
     try {
-      const blob = await downloadArchiveExportJob(current.id)
-      saveBlob(blob, current.fileName || `archive-export-${current.id}.${current.format.toLowerCase()}`)
+      const mode = await downloadExportJobWithResume(current)
+      ElMessage.success(mode === 'resumable' ? '导出文件已分块写入磁盘' : '导出文件已开始下载')
+    }
+    catch (error: unknown) {
+      if ((error as { name?: string })?.name === 'AbortError') {
+        ElMessage.info('已取消选择下载文件')
+        return
+      }
+      throw error
     }
     finally {
       downloading.value = false

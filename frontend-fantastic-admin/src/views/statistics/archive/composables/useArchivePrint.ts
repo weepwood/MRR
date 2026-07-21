@@ -37,7 +37,6 @@ export function useArchivePrint() {
   const { auth } = useAuth()
   const exportJob = useArchiveExportJob('PDF')
   const jobSelectionSignature = ref('')
-  const currentSelectionSignature = ref('')
 
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -134,7 +133,6 @@ export function useArchivePrint() {
 
   function bindSelection(images: GalleryImage[]) {
     const nextSignature = selectionSignature(images)
-    currentSelectionSignature.value = nextSignature
     if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
       exportJob.dismiss()
       jobSelectionSignature.value = ''
@@ -147,7 +145,6 @@ export function useArchivePrint() {
     const nextSignature = Array.isArray(detail?.keys)
       ? detail.keys.filter(Boolean).slice().sort().join(',')
       : ''
-    currentSelectionSignature.value = nextSignature
     if (exportJob.job.value && jobSelectionSignature.value !== nextSignature) {
       exportJob.dismiss()
       jobSelectionSignature.value = ''

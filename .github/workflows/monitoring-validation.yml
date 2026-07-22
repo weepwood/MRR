@@ -3,7 +3,7 @@ name: monitoring-validation
 on:
   pull_request:
     branches:
-      - dev-no-login
+      - main
     paths:
       - 'backend-repo/**'
       - 'frontend-fantastic-admin/**'

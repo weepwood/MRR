@@ -33,7 +33,8 @@ const permissionDefs: PermDef[] = [
   { value: 'role:manage', label: '角色管理（完整 CRUD）', shortLabel: '角色管理', category: '角色管理', children: ['role:read'] },
   { value: 'role:read', label: '角色查看', shortLabel: '角色查看', category: '角色管理', children: [] },
   { value: 'log:read', label: '日志审计查看', shortLabel: '日志审计', category: '日志管理', children: [] },
-  { value: 'system:read', label: '系统设置/监控', shortLabel: '系统设置', category: '系统管理', children: [] },
+  { value: 'system:manage', label: '系统设置、清理与运维写操作', shortLabel: '系统管理', category: '系统管理', children: ['system:read'] },
+  { value: 'system:read', label: '系统设置与监控查看', shortLabel: '系统查看', category: '系统管理', children: [] },
   { value: 'test:read', label: '测试中心访问', shortLabel: '测试中心', category: '测试管理', children: [] },
 ]
 
@@ -215,7 +216,7 @@ onMounted(loadPermissions)
         <p class="eyebrow">Permission Management</p>
         <h2>权限管理</h2>
         <p class="subtitle">
-          分离病案查看、ZIP 下载与 PDF 导出权限。修改保存后，用户重新登录生效。
+          分离病案查看、输出、系统查看与系统管理权限。修改保存后，用户重新登录生效。
         </p>
       </div>
       <div class="header-actions">
@@ -226,7 +227,7 @@ onMounted(loadPermissions)
 
     <el-alert type="info" :closable="false" show-icon>
       <template #title>
-        病案查看不会自动获得下载或 PDF 导出权限；病案管理权限会继承两项输出权限。
+        病案查看不会自动获得下载或 PDF 导出权限；系统查看不会自动获得设置修改、日志清理或数据质量执行权限。
       </template>
     </el-alert>
 

@@ -30,13 +30,11 @@ http://127.0.0.1:18046/actuator/prometheus
 
 ## 首次安装
 
-准备 JDK 21、PostgreSQL、Windows 版 Nginx 和 WinSW 后，以管理员身份执行：
+准备 JDK 21 和 PostgreSQL 后，以管理员身份执行。Nginx for Windows 与 WinSW 已包含在离线发布包中：
 
 ```powershell
 .\deploy\windows\install.ps1 `
   -Root C:\MRR `
-  -WinSWPath C:\Install\WinSW-x64.exe `
-  -NginxPath C:\Install\nginx `
   -JavaHome 'C:\Program Files\Java\jdk-21'
 ```
 
@@ -74,9 +72,19 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 
 & $ctl maintenance on -Message '系统升级中，请稍后再试。'
 & $ctl maintenance off
+
+$nginx = 'C:\MRR\ops\nginxctl.ps1'
+& $nginx status
+& $nginx start
+& $nginx reload
+& $nginx pause -Message '系统升级中，请稍后再试。'
+& $nginx resume
+& $nginx stop
 ```
 
-MRR 不通过挂起 JVM 实现“暂停”。维护模式由 Nginx 返回 503 页面，后端仍可完成已进入的请求，本机 Actuator 保持可用。
+MRR 不通过挂起 JVM 或 Nginx 进程实现“暂停”。`nginxctl.ps1 pause` 开启 503 维护模式并保持网关运行，`resume` 恢复正常流量；本机 Actuator 始终保持可用。
+
+
 
 ## 唯一版本与发布目录
 
@@ -108,6 +116,10 @@ frontend/
 docs/user/
 docs/internal/
 deploy/windows/
+runtime/nginx/
+runtime/winsw/
+runtime/versions.json
+runtime/SHA256SUMS
 VERSION
 release-baseline.json
 manifest.json

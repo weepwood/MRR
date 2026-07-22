@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      NGINX_VERSION: 1.31.3
+      WINSW_VERSION: 2.12.0
 
     steps:
       - name: Checkout
@@ -97,6 +99,55 @@ jobs:
             }
           }
           if ($failed) { exit 1 }
+
+      - name: Download pinned Windows runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME_DIR="build/windows-runtime"
+          DOWNLOAD_DIR="build/windows-runtime-download"
+          NGINX_DISTRIBUTION="nginx/Windows-${NGINX_VERSION}"
+
+          rm -rf "${RUNTIME_DIR}" "${DOWNLOAD_DIR}"
+          mkdir -p "${RUNTIME_DIR}/nginx" "${RUNTIME_DIR}/winsw" "${DOWNLOAD_DIR}"
+
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            "https://nginx.org/download/nginx-${NGINX_VERSION}.zip" \
+            --output "${DOWNLOAD_DIR}/nginx.zip"
+          unzip -q "${DOWNLOAD_DIR}/nginx.zip" -d "${DOWNLOAD_DIR}"
+          cp -a "${DOWNLOAD_DIR}/nginx-${NGINX_VERSION}/." "${RUNTIME_DIR}/nginx/"
+
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe" \
+            --output "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            "https://raw.githubusercontent.com/winsw/winsw/v${WINSW_VERSION}/LICENSE.txt" \
+            --output "${RUNTIME_DIR}/winsw/LICENSE.txt"
+
+          test -f "${RUNTIME_DIR}/nginx/nginx.exe"
+          test -f "${RUNTIME_DIR}/nginx/conf/mime.types"
+          test -f "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
+
+          cat > "${RUNTIME_DIR}/versions.json" <<EOF
+          {
+            "nginx": {
+              "distribution": "${NGINX_DISTRIBUTION}",
+              "version": "${NGINX_VERSION}",
+              "source": "https://nginx.org/download/nginx-${NGINX_VERSION}.zip"
+            },
+            "winsw": {
+              "version": "${WINSW_VERSION}",
+              "source": "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe"
+            }
+          }
+          EOF
+
+          (
+            cd "${RUNTIME_DIR}"
+            find nginx winsw versions.json -type f -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS
+          )
 
       - name: Test and package backend
         working-directory: backend-repo
@@ -195,14 +246,21 @@ jobs:
           rm -rf "${PACKAGE_DIR}"
           mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" \
                    "${PACKAGE_DIR}/docs/user" "${PACKAGE_DIR}/docs/internal" \
-                   "${PACKAGE_DIR}/deploy/windows"
+                   "${PACKAGE_DIR}/deploy/windows" "${PACKAGE_DIR}/runtime"
 
           cp "${BACKEND_JAR}" "${PACKAGE_DIR}/backend/mrr-backend.jar"
           cp -a frontend-fantastic-admin/dist/. "${PACKAGE_DIR}/frontend/"
           cp -a vitepress-doc/.vitepress/dist-user/. "${PACKAGE_DIR}/docs/user/"
           cp -a vitepress-doc/.vitepress/dist-internal/. "${PACKAGE_DIR}/docs/internal/"
           cp -a deploy/windows/. "${PACKAGE_DIR}/deploy/windows/"
+          cp -a build/windows-runtime/. "${PACKAGE_DIR}/runtime/"
           cp VERSION release-baseline.json "${PACKAGE_DIR}/"
+
+          test -f "${PACKAGE_DIR}/runtime/nginx/nginx.exe"
+          test -f "${PACKAGE_DIR}/runtime/winsw/WinSW-x64.exe"
+          test -f "${PACKAGE_DIR}/runtime/SHA256SUMS"
+          test -f "${PACKAGE_DIR}/deploy/windows/nginxctl.ps1"
+          test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"
 
           python scripts/release_baseline.py manifest \
             --git-commit "${SOURCE_SHA}" \
@@ -217,7 +275,7 @@ jobs:
 
           (
             cd "${PACKAGE_DIR}"
-            find backend frontend docs deploy VERSION release-baseline.json manifest.json release-notes.md -type f -print0 \
+            find backend frontend docs deploy runtime VERSION release-baseline.json manifest.json release-notes.md -type f -print0 \
               | sort -z \
               | xargs -0 sha256sum > SHA256SUMS
             zip -qr "../${ARCHIVE}" .

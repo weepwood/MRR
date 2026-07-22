@@ -1,6 +1,6 @@
 # MRR Windows 原生部署运维
 
-本目录提供面向单台 Windows Server 的 MRR 部署方案。生产服务器只运行 PostgreSQL、JDK、Nginx、WinSW 和 MRR 发布包，不需要安装 Node.js、pnpm、Maven，也不执行 `git pull`。
+本目录提供面向单台 Windows Server 的 MRR 部署方案。生产服务器只需要预装 PostgreSQL 和 JDK；Nginx 与 WinSW 已固定版本并包含在 MRR Windows 离线包中，不需要安装 Node.js、pnpm、Maven，也不执行 `git pull`。
 
 ## 组成
 
@@ -19,8 +19,7 @@
 - PowerShell 5.1 或 PowerShell 7；
 - JDK 21；
 - PostgreSQL 16；
-- Windows 版 Nginx；
-- WinSW。
+Nginx for Windows 与 WinSW 由发布工作流下载、记录版本和 SHA256，并随离线 ZIP 交付，无需在服务器上单独准备。
 
 ## 首次安装
 
@@ -31,8 +30,6 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 .\deploy\windows\install.ps1 `
   -Root C:\MRR `
-  -WinSWPath C:\Install\WinSW-x64.exe `
-  -NginxPath C:\Install\nginx-1.xx.x `
   -JavaHome 'C:\Program Files\Java\jdk-21'
 ```
 
@@ -126,6 +123,10 @@ frontend/index.html
 docs/user/
 docs/internal/
 deploy/windows/
+runtime/nginx/
+runtime/winsw/
+runtime/versions.json
+runtime/SHA256SUMS
 VERSION
 release-baseline.json
 manifest.json
@@ -200,6 +201,20 @@ $ctl = 'C:\MRR\ops\mrrctl.ps1'
 # 维护模式
 & $ctl maintenance on -Message '系统升级中，请稍后再试。'
 & $ctl maintenance off
+
+# 独立 Nginx 控制器
+$nginx = 'C:\MRR\ops\nginxctl.ps1'
+& $nginx status
+& $nginx start
+& $nginx test
+& $nginx reload
+& $nginx pause -Message '系统升级中，请稍后再试。'
+& $nginx resume
+& $nginx restart
+& $nginx stop
+
+# 也可使用 CMD 入口
+C:\MRR\ops\nginx-control.cmd status
 
 # 版本信息
 & $ctl version
@@ -284,7 +299,7 @@ http://127.0.0.1:18046/actuator/info
 
 ## 维护模式
 
-MRR 不使用系统工具挂起 Java 进程。维护模式由 Nginx 返回 503 页面，后端可完成已经进入的请求，本机 Actuator 仍保持可访问。
+MRR 不使用系统工具挂起 Java 或 Nginx 进程。`nginxctl.ps1 pause` 表示开启维护模式：Nginx 保持运行并返回 503 维护页，后端可完成已经进入的请求，本机 Actuator 仍保持可访问；`resume` 恢复正常流量。
 
 ## 目录结构
 

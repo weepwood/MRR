@@ -3,9 +3,12 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.resp.PageResult;
+import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
+import com.zjcxph.imgapi.dto.resp.PatientMultiRecordGroup;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.mapper.SearchMapper;
+import com.zjcxph.imgapi.service.PatientAnalyticsService;
 import com.zjcxph.imgapi.service.PatientImportService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
@@ -33,7 +36,7 @@ import java.util.List;
 
 /**
  * 患者管理 Controller
- * 提供患者信息的分页查询、按病案号/身份证号查询和文件导入等功能。
+ * 提供患者信息分页查询、统计分析、文件导入与导出等功能。
  */
 @RestController
 @RequestMapping("/api/v1/patients")
@@ -42,13 +45,20 @@ import java.util.List;
 public class PatientController {
 
     private static final Logger logger = LoggerFactory.getLogger(PatientController.class);
+    private static final int MAX_ANALYTICS_PAGE_SIZE = 200;
 
     private final SearchMapper searchMapper;
     private final PatientImportService patientImportService;
+    private final PatientAnalyticsService patientAnalyticsService;
 
-    public PatientController(SearchMapper searchMapper, PatientImportService patientImportService) {
+    public PatientController(
+            SearchMapper searchMapper,
+            PatientImportService patientImportService,
+            PatientAnalyticsService patientAnalyticsService
+    ) {
         this.searchMapper = searchMapper;
         this.patientImportService = patientImportService;
+        this.patientAnalyticsService = patientAnalyticsService;
     }
 
     @Operation(summary = "分页查询患者列表（支持关键字搜索）")
@@ -70,6 +80,51 @@ public class PatientController {
         List<Patient> patients = searchMapper.findAllPaginated(offset, size, normalizedKeyword);
         int total = searchMapper.countAll(normalizedKeyword);
         return Result.<PageResult<Patient>>success().data(PageResult.of(patients, total, page, size));
+    }
+
+    @Operation(summary = "获取患者数据质量与年度病案统计")
+    @GetMapping("/analytics/summary")
+    public Result<PatientAnalyticsSummary> getAnalyticsSummary(
+            @Parameter(description = "统计年份，默认当前年份", example = "2026")
+            @RequestParam(required = false) Integer year
+    ) {
+        try {
+            return Result.success(patientAnalyticsService.getSummary(year));
+        } catch (IllegalArgumentException exception) {
+            return Result.fail(exception.getMessage());
+        }
+    }
+
+    @Operation(summary = "分页查询身份证号为空的患者病案")
+    @GetMapping("/analytics/missing-idcard")
+    public Result<PageResult<Patient>> getMissingIdCardRecords(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PaginationUtils.validatePageParams(page, size);
+        size = Math.min(size, MAX_ANALYTICS_PAGE_SIZE);
+        List<Patient> records = patientAnalyticsService.findMissingIdCardRecords(page, size);
+        long total = patientAnalyticsService.countMissingIdCardRecords();
+        return Result.success(PageResult.of(records, total, page, size));
+    }
+
+    @Operation(summary = "分页查询同一患者对应多份病案的分组")
+    @GetMapping("/analytics/multi-record-groups")
+    public Result<PageResult<PatientMultiRecordGroup>> getMultiRecordGroups(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "是否包含仅姓名相同且身份证号为空的疑似分组")
+            @RequestParam(defaultValue = "true") boolean includeSuspected
+    ) {
+        PaginationUtils.validatePageParams(page, size);
+        size = Math.min(size, MAX_ANALYTICS_PAGE_SIZE);
+        List<PatientMultiRecordGroup> groups = patientAnalyticsService.findMultiRecordGroups(
+                page,
+                size,
+                includeSuspected
+        );
+        long total = patientAnalyticsService.countMultiRecordGroups(includeSuspected);
+        return Result.success(PageResult.of(groups, total, page, size));
     }
 
     @Operation(summary = "校验或导入患者 CSV/Excel 文件")
@@ -139,14 +194,14 @@ public class PatientController {
             header.createCell(5).setCellValue("入院时间");
 
             for (int i = 0; i < patients.size(); i++) {
-                Patient p = patients.get(i);
+                Patient patient = patients.get(i);
                 Row row = sheet.createRow(i + 1);
-                row.createCell(0).setCellValue(p.getId() != null ? p.getId() : 0);
-                row.createCell(1).setCellValue(p.getBah() != null ? p.getBah() : "");
-                row.createCell(2).setCellValue(p.getName() != null ? p.getName() : "");
-                row.createCell(3).setCellValue(p.getIdCard() != null ? p.getIdCard() : "");
-                row.createCell(4).setCellValue(p.getDepartment() != null ? p.getDepartment() : "");
-                row.createCell(5).setCellValue(p.getAdmissiontime() != null ? p.getAdmissiontime() : "");
+                row.createCell(0).setCellValue(patient.getId() != null ? patient.getId() : 0);
+                row.createCell(1).setCellValue(patient.getBah() != null ? patient.getBah() : "");
+                row.createCell(2).setCellValue(patient.getName() != null ? patient.getName() : "");
+                row.createCell(3).setCellValue(patient.getIdCard() != null ? patient.getIdCard() : "");
+                row.createCell(4).setCellValue(patient.getDepartment() != null ? patient.getDepartment() : "");
+                row.createCell(5).setCellValue(patient.getAdmissiontime() != null ? patient.getAdmissiontime() : "");
             }
 
             for (int i = 0; i < 6; i++) {

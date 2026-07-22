@@ -1,3 +1,5 @@
+import os
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -43,6 +45,7 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn('mrr-manager.ps1', wrapper)
         self.assertIn('-STA', wrapper)
         self.assertIn('%*', wrapper)
+        self.assertIn('if /I "%~1"=="-SelfTest"', wrapper)
 
     def test_windows_powershell_scripts_use_utf8_bom(self):
         scripts = sorted(WINDOWS_DEPLOY.rglob('*.ps1'))
@@ -77,6 +80,34 @@ class WindowsOneClickManagerTest(unittest.TestCase):
             )
             if first_non_ascii is not None:
                 self.assertLess(chcp_index, first_non_ascii)
+
+    @unittest.skipUnless(os.name == 'nt', 'CMD launcher integration test requires Windows')
+    def test_cmd_launcher_runs_manager_self_test_on_windows(self):
+        wrapper = WINDOWS_DEPLOY / 'MRR-Manager.cmd'
+        completed = subprocess.run(
+            [
+                os.environ.get('ComSpec', 'cmd.exe'),
+                '/d',
+                '/c',
+                str(wrapper),
+                '-SelfTest',
+                '-Root',
+                str(ROOT),
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            check=False,
+        )
+        self.assertEqual(
+            completed.returncode,
+            0,
+            'CMD launcher self-test failed:\n'
+            f'stdout:\n{completed.stdout}\n'
+            f'stderr:\n{completed.stderr}',
+        )
 
     def test_installer_copies_manager_to_ops(self):
         installer = (WINDOWS_DEPLOY / 'install.ps1').read_text(encoding='utf-8-sig')

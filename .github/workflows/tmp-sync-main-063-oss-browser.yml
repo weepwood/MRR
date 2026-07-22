@@ -1,0 +1,28 @@
+name: 临时同步 main 0.6.3 到 OSS 分支
+
+on:
+  push:
+    branches:
+      - feat/oss-migration-management-20260722
+    paths:
+      - '.github/workflows/tmp-sync-main-063-oss-browser.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/oss-migration-management-20260722
+          fetch-depth: 0
+      - name: Merge current main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-ff origin/main -m "合并：同步 main 0.6.3 到 OSS 迁移与文件浏览分支"
+          git push origin HEAD:feat/oss-migration-management-20260722

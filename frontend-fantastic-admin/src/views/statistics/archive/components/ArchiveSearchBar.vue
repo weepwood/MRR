@@ -2,6 +2,10 @@
 import { Search } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { requiresSjhForBah } from '@/utils/medical-record-code'
+import {
+  resolveArchiveAccessMode,
+  shouldShowArchiveSearchCard,
+} from '../access-mode'
 
 defineOptions({ name: 'ArchiveSearchBar' })
 
@@ -16,11 +20,15 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
+const runtimeAccessMode = typeof document === 'undefined'
+  ? 'internal'
+  : resolveArchiveAccessMode('internal', document.documentElement.dataset.mrrAccessMode || '')
+const showSearchCard = shouldShowArchiveSearchCard(runtimeAccessMode)
 const sjhRequired = computed(() => !searchIdCard.value.trim() && requiresSjhForBah(searchBah.value))
 </script>
 
 <template>
-  <section class="search-card">
+  <section v-if="showSearchCard" class="search-card">
     <div class="search-bar">
       <div class="search-fields">
         <div class="record-search-fields">

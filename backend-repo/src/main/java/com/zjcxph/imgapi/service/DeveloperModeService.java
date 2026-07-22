@@ -61,7 +61,9 @@ public class DeveloperModeService {
             @Value("${mrr.developer-mode.allowed:false}") boolean startupAllowed,
             @Value("${mrr.developer-mode.trusted-proxy-addresses:127.0.0.1,::1}") String trustedProxyAddresses
     ) {
-        this(systemSettingMapper, startupAllowed, parseConfiguredRules(trustedProxyAddresses, "可信代理地址"));
+        this.systemSettingMapper = systemSettingMapper;
+        this.startupAllowed = startupAllowed;
+        this.trustedProxyRules = List.copyOf(parseConfiguredRules(trustedProxyAddresses, "可信代理地址"));
     }
 
     DeveloperModeService(
@@ -69,19 +71,10 @@ public class DeveloperModeService {
             boolean startupAllowed,
             List<String> trustedProxyAddresses
     ) {
-        this(systemSettingMapper, startupAllowed,
-                parseConfiguredRules(String.join(",", trustedProxyAddresses == null ? List.of() : trustedProxyAddresses),
-                        "可信代理地址"));
-    }
-
-    private DeveloperModeService(
-            SystemSettingMapper systemSettingMapper,
-            boolean startupAllowed,
-            List<IpRule> trustedProxyRules
-    ) {
         this.systemSettingMapper = systemSettingMapper;
         this.startupAllowed = startupAllowed;
-        this.trustedProxyRules = List.copyOf(trustedProxyRules);
+        String configured = String.join(",", trustedProxyAddresses == null ? List.of() : trustedProxyAddresses);
+        this.trustedProxyRules = List.copyOf(parseConfiguredRules(configured, "可信代理地址"));
     }
 
     /**

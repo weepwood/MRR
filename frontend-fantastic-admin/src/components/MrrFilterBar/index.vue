@@ -72,7 +72,18 @@ const slots = useSlots()
 
 .mrr-filter-bar :deep(.el-input__wrapper),
 .mrr-filter-bar :deep(.el-select__wrapper) {
+  height: var(--mrr-control-height);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+}
+
+.mrr-filter-bar :deep(.el-input--small .el-input__wrapper),
+.mrr-filter-bar :deep(.el-select--small .el-select__wrapper) {
+  height: var(--mrr-control-height-compact);
+}
+
+.mrr-filter-bar :deep(.el-input--large .el-input__wrapper),
+.mrr-filter-bar :deep(.el-select--large .el-select__wrapper) {
+  height: var(--mrr-control-height-large);
 }
 
 .mrr-filter-bar :deep(.el-input__wrapper.is-focus),

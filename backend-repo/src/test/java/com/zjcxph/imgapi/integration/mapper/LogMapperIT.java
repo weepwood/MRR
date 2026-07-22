@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @MybatisTest
 @TestPropertySource(properties = {
         "mybatis.configuration.map-underscore-to-camel-case=true",
+        "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "spring.flyway.enabled=false"
 })
 @Sql("classpath:schema-itest.sql")

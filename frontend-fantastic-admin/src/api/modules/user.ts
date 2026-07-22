@@ -2,6 +2,10 @@ import type { AuthRole, AuthRoleUpdatePayload, AuthUser, AuthUserUpdatePayload, 
 import type {
   AdminCreateUserPayload,
   AdminResetPasswordPayload,
+  RegistrationApprovalPayload,
+  RegistrationPayload,
+  RegistrationRejectionPayload,
+  RegistrationResult,
   RequiredPasswordChangePayload,
   UserCredentialResult,
 } from '../user-credential-types'
@@ -16,9 +20,9 @@ export default {
     AUTH_SKIP_GLOBAL_ERROR,
   ),
 
-  register: (data: { account: string, password: string, displayName?: string }) => postRequest<LoginResponse>(
+  register: (data: RegistrationPayload) => postRequest<RegistrationResult>(
     '/api/v1/auth/register',
-    { username: data.account, password: data.password, displayName: data.displayName },
+    data,
     AUTH_SKIP_GLOBAL_ERROR,
   ),
 
@@ -50,6 +54,16 @@ export default {
 
   createUser: (data: AdminCreateUserPayload) => postRequest<UserCredentialResult>(
     '/api/v1/auth/users',
+    data,
+  ),
+
+  approveRegistration: (id: string | number, data: RegistrationApprovalPayload) => postRequest<AuthUser>(
+    `/api/v1/auth/users/${id}/registration/approve`,
+    data,
+  ),
+
+  rejectRegistration: (id: string | number, data: RegistrationRejectionPayload) => postRequest<AuthUser>(
+    `/api/v1/auth/users/${id}/registration/reject`,
     data,
   ),
 

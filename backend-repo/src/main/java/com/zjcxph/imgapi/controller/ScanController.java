@@ -190,6 +190,7 @@ public class ScanController {
     @Deprecated
     @Operation(summary = "根据条件查询扫描记录（兼容接口，最多 1000 条）")
     @PostMapping("/condition")
+    @RequirePermissions({"record:read"})
     public Result<List<Scan>> findByCondition(@RequestBody ScanRequest request) {
         logger.warn("兼容 condition 接口被调用，建议改用 /api/v1/scan/page/condition");
         return Result.success(scanService.findByCondition(request, MAX_LEGACY_QUERY_LIMIT));
@@ -197,6 +198,7 @@ public class ScanController {
 
     @Operation(summary = "根据条件分页查询扫描记录")
     @PostMapping("/page/condition")
+    @RequirePermissions({"record:read"})
     public Result<PageResult<Scan>> findByConditionWithPagination(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,

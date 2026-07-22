@@ -87,10 +87,14 @@ jobs:
           echo "RELEASE_RUN_ID=${run_id}" >> "${GITHUB_ENV}"
           gh run watch "${run_id}" --exit-status
 
-      - name: Verify GitHub Release and package
+      - name: Publish release notes and verify package
         shell: bash
         run: |
           set -euo pipefail
+          gh release edit "${RELEASE_TAG}" \
+            --title 'MRR v0.6.1' \
+            --notes-file release-notes/0.6.1.md
+
           gh release view "${RELEASE_TAG}" \
             --json tagName,targetCommitish,assets \
             --jq '.tagName, .targetCommitish, (.assets[] | .name)'

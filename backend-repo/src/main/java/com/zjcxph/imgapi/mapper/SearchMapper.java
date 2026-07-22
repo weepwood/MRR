@@ -25,6 +25,23 @@ public interface SearchMapper {
     @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient where id = #{id}")
     Patient findPatientById(@Param("id") Integer id);
 
+    @Select("""
+            select exists (
+                select 1
+                from mr_patient
+                where id <> #{id}
+                  and bah is not distinct from #{bah}
+                  and name is not distinct from #{name}
+                  and idcard is not distinct from #{idCard}
+                  and ruyuan is not distinct from #{ruyuan}
+                  and admissiontime is not distinct from #{admissiontime}
+                  and department is not distinct from #{department}
+                  and bingqu is not distinct from #{bingqu}
+                  and chuangwei is not distinct from #{chuangwei}
+            )
+            """)
+    boolean existsDuplicatePatient(Patient patient);
+
     @Update("""
             update mr_patient
             set idcard = #{idCard},

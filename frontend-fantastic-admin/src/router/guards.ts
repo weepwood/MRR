@@ -55,9 +55,21 @@ function setupRoutes(router: Router) {
       return true
     }
 
-    if (isExternalTicketArchiveRoute(to.name, to.query) && hasStoredExternalArchiveSession()) {
-      setArchiveDomAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
-      return true
+    if (isExternalTicketArchiveRoute(to.name, to.query)) {
+      if (hasStoredExternalArchiveSession()) {
+        setArchiveDomAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
+        return true
+      }
+      const bah = firstQueryValue(to.query.bah)
+      const sjh = firstQueryValue(to.query.sjh)
+      return {
+        name: 'externalArchive',
+        replace: true,
+        query: {
+          ...(bah ? { bah } : {}),
+          ...(sjh ? { sjh } : {}),
+        },
+      }
     }
 
     const settingsStore = useSettingsStore()

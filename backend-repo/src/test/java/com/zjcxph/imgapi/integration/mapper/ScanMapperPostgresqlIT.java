@@ -195,49 +195,63 @@ class ScanMapperPostgresqlIT {
     }
 
     @Test
-    @DisplayName("迁移统计以 OSS Object Key 为成功事实来源")
-    void migrationStatsUseOssKeyAsSourceOfTruth() {
+    @DisplayName("迁移统计区分待迁移、等待上架号和失败重试")
+    void migrationStatsUseOssKeyAndSjhAsSourceOfTruth() {
         jdbcTemplate.update("""
                 INSERT INTO app.mr_scan
-                    (brxh, bah, filename, pages, uploadflag, folder, oss_url, migration_status)
+                    (brxh, bah, sjh, filename, pages, uploadflag, folder, oss_url, migration_status)
                 VALUES
-                    ('1', '00991001', 'migrated.jpg', 1, 1, '25.03.15',
-                     'medical-records/25.03/25.03.15/1-00991001/migrated.jpg', NULL),
-                    ('2', '00991002', 'retry.jpg', 1, 1, '25.03.15', NULL, 'retry_wait'),
-                    ('3', '00991003', 'failed.jpg', 1, 1, '25.03.15', NULL, 'failed')
+                    ('1', '00991001', '11110001', 'migrated.jpg', 1, 1, '25.03.15',
+                     'medical-records/1111/11110001-00991001/migrated.jpg', NULL),
+                    ('2', '00991002', '22220002', 'retry.jpg', 1, 1, '25.03.15', NULL, 'retry_wait'),
+                    ('3', '00991003', '33330003', 'failed.jpg', 1, 1, '25.03.15', NULL, 'failed'),
+                    ('4', '00991004', '44440004', 'pending.jpg', 1, 1, '25.03.15', NULL, NULL),
+                    ('5', '00991005', NULL, 'waiting.jpg', 1, 1, '25.03.15', NULL, NULL)
                 """);
 
         Map<String, Object> stats = scanMapper.countMigrationStats();
 
-        assertThat(((Number) stats.get("total")).longValue()).isEqualTo(3);
+        assertThat(((Number) stats.get("total")).longValue()).isEqualTo(5);
         assertThat(((Number) stats.get("migrated")).longValue()).isEqualTo(1);
         assertThat(((Number) stats.get("failed")).longValue()).isEqualTo(1);
         assertThat(((Number) stats.get("retry_wait")).longValue()).isEqualTo(1);
         assertThat(((Number) stats.get("pending")).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("waiting_sjh")).longValue()).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("原子领取不会覆盖已存在 OSS Object Key 或未到期重试记录")
+    @DisplayName("原子领取跳过已迁移、未到期重试和缺少上架号记录")
     void atomicClaimOnlyUpdatesEligibleRows() {
         Integer migratedId = jdbcTemplate.queryForObject("""
                 INSERT INTO app.mr_scan
-                    (brxh, bah, filename, pages, uploadflag, folder, oss_url, migration_status)
+                    (brxh, bah, sjh, filename, pages, uploadflag, folder, oss_url, migration_status)
                 VALUES
-                    ('1', '00992001', 'migrated.jpg', 1, 1, '25.03.15',
+                    ('1', '00992001', '11110001', 'migrated.jpg', 1, 1, '25.03.15',
                      'medical-records/existing.jpg', 'not_migrated')
                 RETURNING id
                 """, Integer.class);
         Integer futureRetryId = jdbcTemplate.queryForObject("""
                 INSERT INTO app.mr_scan
-                    (brxh, bah, filename, pages, uploadflag, folder, migration_status, migration_next_retry_at)
+                    (brxh, bah, sjh, filename, pages, uploadflag, folder, migration_status, migration_next_retry_at)
                 VALUES
-                    ('2', '00992002', 'retry.jpg', 1, 1, '25.03.15',
+                    ('2', '00992002', '22220002', 'retry.jpg', 1, 1, '25.03.15',
                      'retry_wait', NOW() + INTERVAL '10 minutes')
+                RETURNING id
+                """, Integer.class);
+        Integer waitingSjhId = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_scan
+                    (brxh, bah, sjh, filename, pages, uploadflag, folder, migration_status)
+                VALUES
+                    ('3', '00992003', NULL, 'waiting.jpg', 1, 1, '25.03.15', 'waiting_sjh')
                 RETURNING id
                 """, Integer.class);
 
         assertThat(scanMapper.markMigrationStarted(migratedId)).isZero();
         assertThat(scanMapper.markMigrationStarted(futureRetryId)).isZero();
+        assertThat(scanMapper.markMigrationStarted(waitingSjhId)).isZero();
+
+        jdbcTemplate.update("UPDATE app.mr_scan SET sjh = '33330003' WHERE id = ?", waitingSjhId);
+        assertThat(scanMapper.markMigrationStarted(waitingSjhId)).isEqualTo(1);
 
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT migration_status FROM app.mr_scan WHERE id = ?",
@@ -249,6 +263,11 @@ class ScanMapperPostgresqlIT {
                 String.class,
                 futureRetryId
         )).isEqualTo("retry_wait");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT migration_status FROM app.mr_scan WHERE id = ?",
+                String.class,
+                waitingSjhId
+        )).isEqualTo("migrating");
     }
 
     @Test

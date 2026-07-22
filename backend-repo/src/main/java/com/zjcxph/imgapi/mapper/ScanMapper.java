@@ -19,9 +19,12 @@ public interface ScanMapper {
             "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
     String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
-    String MIGRATION_ELIGIBLE_EXPRESSION = "((migration_status IS NULL OR migration_status = 'not_migrated') " +
+    String VALID_SJH_EXPRESSION = "(NULLIF(BTRIM(SJH), '') IS NOT NULL " +
+            "AND LENGTH(BTRIM(SJH)) >= 4 AND BTRIM(SJH) ~ '^[0-9]+$')";
+    String MIGRATION_ELIGIBLE_EXPRESSION = "(" + VALID_SJH_EXPRESSION + " AND " +
+            "((migration_status IS NULL OR migration_status IN ('not_migrated', 'waiting_sjh')) " +
             "OR (migration_status = 'retry_wait' AND (migration_next_retry_at IS NULL " +
-            "OR NOT migration_next_retry_at > NOW())))";
+            "OR NOT migration_next_retry_at > NOW()))))";
 
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND (" +
             "BAH = #{normalizedCode} " +
@@ -209,6 +212,11 @@ public interface ScanMapper {
             "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
     int markMigrationFailed(@Param("id") Integer id, @Param("errorCode") String errorCode);
 
+    @Update("UPDATE mr_scan SET migration_status = 'waiting_sjh', migration_error_code = 'MISSING_SJH', " +
+            "migration_next_retry_at = NULL, migration_updated_at = NOW() " +
+            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
+    int markMigrationWaitingSjh(@Param("id") Integer id);
+
     @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = #{errorCode}, " +
             "migration_next_retry_at = #{nextRetryAt}, migration_updated_at = NOW() " +
             "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
@@ -246,8 +254,10 @@ public interface ScanMapper {
             + "AND migration_status = 'retry_wait' THEN 1 ELSE 0 END) AS retry_wait, "
             + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
             + "AND migration_status = 'migrating' THEN 1 ELSE 0 END) AS migrating, "
-            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
-            + "AND COALESCE(migration_status, 'not_migrated') <> 'failed' THEN 1 ELSE 0 END) AS pending "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND NOT "
+            + VALID_SJH_EXPRESSION + " THEN 1 ELSE 0 END) AS waiting_sjh, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND "
+            + MIGRATION_ELIGIBLE_EXPRESSION + " THEN 1 ELSE 0 END) AS pending "
             + "FROM mr_scan")
     Map<String, Object> countMigrationStats();
 

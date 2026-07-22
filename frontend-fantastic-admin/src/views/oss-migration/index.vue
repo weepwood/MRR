@@ -54,6 +54,7 @@ const STATUS_LABELS: Record<string, { label: string, type: TagType }> = {
   failed: { label: '失败', type: 'danger' },
   success: { label: '成功', type: 'success' },
   retry_wait: { label: '等待重试', type: 'warning' },
+  waiting_sjh: { label: '等待上架号', type: 'info' },
   migrating: { label: '迁移中', type: 'primary' },
   migrated: { label: '已迁移', type: 'success' },
   verified: { label: '已验证', type: 'success' },
@@ -97,8 +98,9 @@ const jobForm = reactive<JobFormState>({
 const summaryCards = computed(() => [
   { label: '总图片记录', value: stats.value.totalCount ?? 0, note: 'uploadflag 有效的扫描图片', tone: 'blue' },
   { label: '已迁移', value: stats.value.migratedCount ?? 0, note: '已写入 OSS Object Key', tone: 'green' },
-  { label: '待处理', value: stats.value.pendingCount ?? 0, note: '包含未迁移与等待重试', tone: 'amber' },
-  { label: '永久失败', value: stats.value.failedCount ?? 0, note: '需核对后人工重置', tone: 'danger' },
+  { label: '待迁移', value: stats.value.pendingCount ?? 0, note: '上架号完整且当前可领取', tone: 'amber' },
+  { label: '等待上架号', value: stats.value.waitingSjhCount ?? 0, note: '保留原图，补齐后自动进入迁移', tone: 'blue' },
+  { label: '永久失败', value: stats.value.failedCount ?? 0, note: '需核对 Nginx 原图或对象冲突', tone: 'danger' },
 ])
 const isMigrationStarted = computed(() => (stats.value.migratedCount ?? 0) > 0)
 const hasActiveJob = computed(() => Boolean(
@@ -421,7 +423,7 @@ onBeforeUnmount(stopPolling)
         </p>
         <h2>OSS 迁移管理</h2>
         <p class="subtitle">
-          先检查、再试迁移、按批次扩大，确认稳定后才允许全量迁移。
+          统一通过 Nginx 获取原图，按上架号分组上传；缺少上架号的记录先保留等待补齐。
         </p>
       </div>
       <el-button :icon="Refresh" @click="refreshAll">
@@ -471,7 +473,7 @@ onBeforeUnmount(stopPolling)
             <strong>{{ readiness?.ossConfigured ? '已配置' : '未通过' }}</strong>
           </div>
           <div class="check-item" :class="{ ok: readiness?.sourcePathReadable }">
-            <span>图片源</span>
+            <span>Nginx 图片源</span>
             <strong>{{ readiness?.sourcePathReadable ? '可读取' : '不可读取' }}</strong>
           </div>
           <div class="check-item" :class="{ ok: readiness?.noActiveJob }">
@@ -488,6 +490,7 @@ onBeforeUnmount(stopPolling)
           <span>缺失 {{ readiness?.sampleMissingCount ?? 0 }}</span>
           <span>路径异常 {{ readiness?.sampleInvalidCount ?? 0 }}</span>
           <span>待迁移 {{ (readiness?.pendingCount ?? 0).toLocaleString('zh-CN') }}</span>
+          <span>等待上架号 {{ (stats.waitingSjhCount ?? 0).toLocaleString('zh-CN') }}</span>
         </div>
         <el-alert
           v-if="readiness?.recommendedAction"

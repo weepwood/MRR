@@ -337,6 +337,7 @@ export interface MigrationStatistics {
   failedCount?: number
   retryWaitCount?: number
   migratingCount?: number
+  waitingSjhCount?: number
   percentage?: number
 }
 

@@ -13,6 +13,7 @@ interface OssUploadBatchResult {
   total?: number
   success?: number
   failed?: number
+  waitingSjh?: number
   bah?: string
 }
 

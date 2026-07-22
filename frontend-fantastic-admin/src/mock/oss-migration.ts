@@ -11,6 +11,19 @@ function ok<T>(data: T, message = '操作成功') {
 
 export default defineFakeRoute([
   {
+    url: '/api/v1/oss/migration/statistics',
+    response: () => ok({
+      totalCount: 100,
+      migratedCount: 60,
+      pendingCount: 16,
+      waitingSjhCount: 20,
+      failedCount: 2,
+      retryWaitCount: 2,
+      migratingCount: 0,
+      percentage: 60,
+    }),
+  },
+  {
     url: '/api/v1/oss/migration/readiness',
     response: () => ok({
       ready: true,

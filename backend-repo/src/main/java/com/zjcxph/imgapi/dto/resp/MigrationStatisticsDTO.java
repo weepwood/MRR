@@ -12,5 +12,6 @@ public class MigrationStatisticsDTO {
     private long failedCount;
     private long retryWaitCount;
     private long migratingCount;
+    private long waitingSjhCount;
     private double percentage;
 }

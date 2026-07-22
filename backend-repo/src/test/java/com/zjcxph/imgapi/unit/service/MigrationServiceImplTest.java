@@ -138,7 +138,7 @@ class MigrationServiceImplTest {
         when(ossService.getFileSize(file.toString())).thenReturn(3L);
         when(ossService.doesObjectExist(anyString())).thenReturn(false);
         when(ossService.uploadFile(anyString(), anyString(), anyString()))
-                .thenReturn("medical-records/25.03/25.03.15/605746-00789508/pilot.jpg");
+                .thenReturn("medical-records/1234/12345678-00789508/pilot.jpg");
         doAnswer(invocation -> {
             invocation.<Runnable>getArgument(0).run();
             return null;
@@ -262,7 +262,7 @@ class MigrationServiceImplTest {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         scan.setFilename("signed-url.jpg");
         Path file = createFile("signed-url.jpg", new byte[]{7, 8, 9});
-        String ossKey = "medical-records/25.03/25.03.15/605748-00789510/signed-url.jpg";
+        String ossKey = "medical-records/1234/12345678-00789510/signed-url.jpg";
 
         when(scanMapper.findById(3)).thenReturn(scan);
         when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
@@ -307,6 +307,24 @@ class MigrationServiceImplTest {
     }
 
     @Test
+    @DisplayName("缺少上架号时保留记录等待补齐且不计失败")
+    void missingSjhWaitsWithoutClaimingOrRetrying() {
+        Scan scan = legacyScan(6, "00789513", "605751", null);
+        scan.setSjh(null);
+        when(scanMapper.findById(6)).thenReturn(scan);
+
+        OssUploadResult result = migrationService.uploadSingleScan(6);
+
+        assertThat(result.getStatus()).isEqualTo("waiting_sjh");
+        verify(scanMapper).markMigrationWaitingSjh(6);
+        verify(scanMapper, never()).markMigrationStarted(6);
+        verify(scanMapper, never()).markMigrationFailed(eq(6), anyString());
+        verify(scanMapper, never()).markMigrationRetryWait(eq(6), anyString(), any());
+        verify(sourceResolver, never()).resolve(scan);
+        verify(ossService, never()).uploadFile(anyString(), anyString(), anyString());
+    }
+
+    @Test
     @DisplayName("高位病案号使用上架号构建 OSS Key")
     void highBahUsesSjhAsDirectoryKey() throws Exception {
         Scan scan = legacyScan(2, "10000001", "605746", "87654321");
@@ -323,7 +341,7 @@ class MigrationServiceImplTest {
         assertThat(result.getStatus()).isEqualTo("success");
         verify(ossService).uploadFile(
                 file.toString(),
-                "medical-records/25.03/25.03.15/87654321-10000001/high-bah.jpg",
+                "medical-records/8765/87654321-10000001/high-bah.jpg",
                 "0123456789abcdef0123456789abcdef"
         );
     }
@@ -404,7 +422,7 @@ class MigrationServiceImplTest {
         scan.setId(id);
         scan.setBah(bah);
         scan.setBrxh(brxh);
-        scan.setSjh(sjh);
+        scan.setSjh(sjh == null ? "12345678" : sjh);
         scan.setFolder("25.03.15");
         scan.setFilename(id + ".jpg");
         scan.setUploadFlag(1);
@@ -436,6 +454,7 @@ class MigrationServiceImplTest {
         values.put("retry_wait", retryWait);
         values.put("migrating", migrating);
         values.put("pending", pending);
+        values.put("waiting_sjh", 0L);
         return values;
     }
 }

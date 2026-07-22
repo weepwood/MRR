@@ -247,11 +247,15 @@ public class OssController {
         long successCount = results.stream()
                 .filter(result -> "success".equals(result.getStatus()) || "skipped".equals(result.getStatus()))
                 .count();
-        long failedCount = results.size() - successCount;
+        long waitingSjhCount = results.stream()
+                .filter(result -> "waiting_sjh".equals(result.getStatus()))
+                .count();
+        long failedCount = results.size() - successCount - waitingSjhCount;
         Map<String, Object> response = new HashMap<>();
         response.put("results", results);
         response.put("total", results.size());
         response.put("success", successCount);
+        response.put("waitingSjh", waitingSjhCount);
         response.put("failed", failedCount);
         return response;
     }

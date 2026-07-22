@@ -131,6 +131,10 @@ public class MigrationServiceImpl implements MigrationService {
             return skippedResult(scanId, scan.getOssUrl(), "已迁移过");
         }
 
+        if (!OssMigrationRoutePolicy.hasValidSjh(scan)) {
+            return waitForSjh(scanId, scan);
+        }
+
         String ossKey = buildOssKey(scan);
         if (ossKey == null) {
             return failPermanently(
@@ -270,6 +274,7 @@ public class MigrationServiceImpl implements MigrationService {
             long failed = number(counts, "failed");
             long retryWait = number(counts, "retry_wait");
             long migrating = number(counts, "migrating");
+            long waitingSjh = number(counts, "waiting_sjh");
             long pending = number(counts, "pending");
             long migratedTotal = migrated + verified;
 
@@ -279,6 +284,7 @@ public class MigrationServiceImpl implements MigrationService {
             statistics.setFailedCount(failed);
             statistics.setRetryWaitCount(retryWait);
             statistics.setMigratingCount(migrating);
+            statistics.setWaitingSjhCount(waitingSjh);
             statistics.setPendingCount(pending);
             if (total > 0) {
                 statistics.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
@@ -296,6 +302,10 @@ public class MigrationServiceImpl implements MigrationService {
         MigrationStatisticsDTO statistics = getStatistics();
         MigrationReadinessDTO readiness = new MigrationReadinessDTO();
         readiness.setPendingCount(statistics.getPendingCount());
+        if (statistics.getWaitingSjhCount() > 0) {
+            readiness.getWarnings().add("有 " + statistics.getWaitingSjhCount()
+                    + " 张图片缺少合法上架号，已保留并等待补齐，不会计入失败或重试");
+        }
 
         MigrationJob activeJob = migrationJobMapper.findLatestActive();
         readiness.setActiveJob(activeJob);
@@ -329,10 +339,10 @@ public class MigrationServiceImpl implements MigrationService {
         readiness.setSourcePathReadable(sourceReadable);
 
         if (!sourceReadable) {
-            readiness.getWarnings().add("当前抽样未找到可读图片；可先限定真实目录执行小规模试迁移，不会阻塞其他目录");
+            readiness.getWarnings().add("当前抽样未找到可读 Nginx 图片；请先核对图片服务器地址、路由和权限");
         }
         if (readiness.getSampleMissingCount() > 0) {
-            readiness.getWarnings().add("抽样中存在缺失或不可读文件，任务会标记失败并继续处理后续记录");
+            readiness.getWarnings().add("抽样中存在 Nginx 缺失或不可读文件；404 会标记永久失败，超时和连接异常会等待重试");
         }
         if (statistics.getPendingCount() == 0) {
             readiness.getWarnings().add("当前没有待迁移记录");
@@ -629,7 +639,8 @@ public class MigrationServiceImpl implements MigrationService {
                     }
                     processed++;
                     if (!("success".equals(result.getStatus())
-                            || "skipped".equals(result.getStatus()))) {
+                            || "skipped".equals(result.getStatus())
+                            || "waiting_sjh".equals(result.getStatus()))) {
                         failed++;
                     }
                 }
@@ -722,6 +733,13 @@ public class MigrationServiceImpl implements MigrationService {
         }
         return BigDecimal.valueOf(processed * 100.0 / total)
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private OssUploadResult waitForSjh(Integer scanId, Scan scan) {
+        String message = "上架号为空、少于 4 位或包含非数字字符，已保留原始图片并等待补齐";
+        scanMapper.markMigrationWaitingSjh(scanId);
+        logMigration(scanId, sourceResolver.describe(scan), null, "waiting_sjh", message, null, null);
+        return new OssUploadResult(scanId, "waiting_sjh", message);
     }
 
     private OssUploadResult skippedResult(Integer scanId, String ossUrl, String message) {
@@ -855,26 +873,7 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     private String buildOssKey(Scan scan) {
-        String folder = safeSegment(scan.getFolder());
-        String bah = safeSegment(scan.getBah());
-        String filename = safeSegment(scan.getFilename());
-        if (folder == null || folder.length() < 5 || bah == null || filename == null) {
-            return null;
-        }
-        String directoryKey = MedicalRecordCodeUtils.requiresSjhForBah(bah)
-                ? safeSegment(scan.getSjh())
-                : safeSegment(scan.getBrxh());
-        if (directoryKey == null) {
-            return null;
-        }
-        return String.format(
-                "medical-records/%s/%s/%s-%s/%s",
-                folder.substring(0, 5),
-                folder,
-                directoryKey,
-                bah,
-                filename
-        );
+        return OssMigrationRoutePolicy.buildObjectKey(scan);
     }
 
     private String safeSegment(String value) {

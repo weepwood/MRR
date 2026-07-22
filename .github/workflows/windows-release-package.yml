@@ -212,7 +212,7 @@ jobs:
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-nototes.md"
+            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-notes.md"
           fi
 
           (

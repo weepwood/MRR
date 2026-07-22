@@ -29,24 +29,34 @@ jobs:
       - name: Extract implementation scripts
         shell: bash
         run: |
-          python3 -m pip install --quiet pyyaml
           python3 - <<'PY'
           from pathlib import Path
-          import yaml
+          import re
+          import textwrap
 
-          workflow = yaml.safe_load(Path('.github/workflows/tmp-oss-route-implementation.yml').read_text(encoding='utf-8'))
-          steps = workflow['jobs']['implement']['steps']
-          selected = {
-              step.get('name'): step.get('run')
-              for step in steps
-              if step.get('name') in {'写入新路线测试', '实施 Nginx 与上架号迁移路线'}
-          }
-          for name in ('写入新路线测试', '实施 Nginx 与上架号迁移路线'):
-              script = selected.get(name)
-              if not script:
-                  raise SystemExit(f'未找到原实施流程步骤：{name}')
-          Path('/tmp/write-tests.sh').write_text(selected['写入新路线测试'], encoding='utf-8')
-          Path('/tmp/implement.sh').write_text(selected['实施 Nginx 与上架号迁移路线'], encoding='utf-8')
+          source = Path('.github/workflows/tmp-oss-route-implementation.yml').read_text(encoding='utf-8')
+
+          def extract(start_name: str, end_name: str) -> str:
+              pattern = re.compile(
+                  rf"      - name: {re.escape(start_name)}\n"
+                  rf"        shell: bash\n"
+                  rf"        run: \|\n"
+                  rf"(?P<body>.*?)(?=\n      - name: {re.escape(end_name)}\n)",
+                  re.S,
+              )
+              match = pattern.search(source)
+              if not match:
+                  raise SystemExit(f'未找到原实施流程步骤：{start_name}')
+              return textwrap.dedent(match.group('body'))
+
+          Path('/tmp/write-tests.sh').write_text(
+              extract('写入新路线测试', '验证测试先失败'),
+              encoding='utf-8',
+          )
+          Path('/tmp/implement.sh').write_text(
+              extract('实施 Nginx 与上架号迁移路线', '后端完整验证'),
+              encoding='utf-8',
+          )
           PY
 
       - name: Apply tests and implementation

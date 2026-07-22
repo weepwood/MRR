@@ -18,13 +18,16 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertIn('runtime/winsw/WinSW-x64.exe', workflow)
         self.assertIn('runtime/SHA256SUMS', workflow)
 
-    def test_installer_uses_packaged_runtime_by_default(self):
+    def test_installer_uses_and_verifies_packaged_runtime_by_default(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
 
         self.assertNotRegex(installer, r'\[Parameter\(Mandatory\s*=\s*\$true\)\]\s*\[string\]\$NginxPath')
         self.assertNotRegex(installer, r'\[Parameter\(Mandatory\s*=\s*\$true\)\]\s*\[string\]\$WinSWPath')
         self.assertIn("Join-Path $scriptDir '..\\..\\runtime\\nginx'", installer)
         self.assertIn("Join-Path $scriptDir '..\\..\\runtime\\winsw\\WinSW-x64.exe'", installer)
+        self.assertIn("Join-Path $scriptDir '..\\..\\runtime\\SHA256SUMS'", installer)
+        self.assertIn('function Assert-BundledRuntimeChecksums', installer)
+        self.assertIn('Get-FileHash', installer)
         self.assertIn("Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1')", installer)
 
     def test_dedicated_nginx_controller_exposes_lifecycle_commands(self):

@@ -9,6 +9,11 @@ import java.util.Date;
 public class MigrationJob {
     private Long id;
     private String status;
+    private String mode;
+    private String scopeValue;
+    private Long requestedCount;
+    private Integer maxScanId;
+    private Boolean cancelRequested;
     private Long totalCount;
     private Long processedCount;
     private Long failedCount;
@@ -19,4 +24,7 @@ public class MigrationJob {
     private Date completedAt;
     private Date createdAt;
     private Date updatedAt;
+
+    /** 仅用于接口返回，表示本次请求复用了已存在的活动任务。 */
+    private Boolean reused;
 }

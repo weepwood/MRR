@@ -1,0 +1,52 @@
+package com.zjcxph.imgapi.service.impl;
+
+import com.zjcxph.imgapi.entity.Scan;
+
+/**
+ * OSS 正式迁移的稳定路由规则。
+ *
+ * <p>Object Key: medical-records/{上架号前4位}/{上架号}-{病案号}/{文件名}</p>
+ */
+public final class OssMigrationRoutePolicy {
+
+    private static final String ROOT = "medical-records";
+
+    private OssMigrationRoutePolicy() {
+    }
+
+    public static boolean hasValidSjh(Scan scan) {
+        String sjh = normalize(scan == null ? null : scan.getSjh());
+        return sjh != null && sjh.length() >= 4 && sjh.chars().allMatch(Character::isDigit);
+    }
+
+    public static String buildObjectKey(Scan scan) {
+        if (!hasValidSjh(scan)) {
+            return null;
+        }
+        String sjh = safeSegment(scan.getSjh());
+        String bah = safeSegment(scan.getBah());
+        String filename = safeSegment(scan.getFilename());
+        if (sjh == null || bah == null || filename == null) {
+            return null;
+        }
+        return ROOT + "/" + sjh.substring(0, 4) + "/" + sjh + "-" + bah + "/" + filename;
+    }
+
+    private static String safeSegment(String value) {
+        String normalized = normalize(value);
+        if (normalized == null
+                || normalized.equals(".")
+                || normalized.equals("..")
+                || normalized.contains("/")
+                || normalized.indexOf((char) 92) >= 0
+                || normalized.indexOf(0) >= 0
+                || normalized.contains(":")) {
+            return null;
+        }
+        return normalized;
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+}

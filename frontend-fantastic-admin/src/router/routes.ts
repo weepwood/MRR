@@ -214,6 +214,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/oss-migration/index.vue'),
         meta: { title: 'OSS 迁移管理', icon: 'i-ant-design:cloud-upload-outlined', auth: ['record:read'], cache: true },
       },
+      {
+        path: '/oss-browser',
+        component: () => import('@/views/oss-browser/index.vue'),
+        meta: { title: 'OSS 文件浏览', icon: 'i-ant-design:folder-open-twotone', auth: ['record:read'], cache: true },
+      },
       archiveEmbeddedRoute,
     ],
   },
@@ -310,9 +315,9 @@ const generatedAsyncRoutes = generatedRoutes.filter(
     '/monitoring',
     '/monitoring-dashboard',
   ].includes(item.path)
-    && item.meta?.enabled !== false
-    && item.meta?.constant !== true
-    && item.meta?.layout !== false,
+  && item.meta?.enabled !== false
+  && item.meta?.constant !== true
+  && item.meta?.layout !== false,
 )
 const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),

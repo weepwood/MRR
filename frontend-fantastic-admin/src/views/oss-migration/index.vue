@@ -1,705 +1,1308 @@
 <script setup lang="ts">
-import type { MigrationLogRecord, MigrationStatistics, OssUploadResult, ScanRecord } from '@/api/types'
-import { Folder, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus/icons-vue'
+import type {
+  MigrationJob,
+  MigrationJobPayload,
+  MigrationReadiness,
+  MigrationRecordQuery,
+  MigrationScanRecord,
+  OssUploadBatchResult,
+} from '@/api/modules/oss'
+import type { MigrationLogRecord, MigrationStatistics, OssUploadResult } from '@/api/types'
+import {
+  CircleClose,
+  Document,
+  Refresh,
+  Search,
+  UploadFilled,
+  VideoPlay,
+} from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { getMigrationLogs, getMigrationStatistics, getPendingFolders, getPendingMigrations, uploadByBah, uploadByFolder, uploadToOss } from '@/api/modules/oss'
-import AppEmpty from '@/components/AppEmpty/index.vue'
-import AppError from '@/components/AppError/index.vue'
-import AppLoading from '@/components/AppLoading/index.vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import {
+  cancelMigrationJob,
+  createMigrationJob,
+  getMigrationJob,
+  getMigrationJobs,
+  getMigrationLogs,
+  getMigrationReadiness,
+  getMigrationStatistics,
+  getPendingFolders,
+  getPendingManagementRecords,
+  getWaitingSjhRecords,
+  retryMigrationScans,
+  uploadByBah,
+  uploadToOss,
+} from '@/api/modules/oss'
 
 defineOptions({ name: 'OssMigrationPage' })
 
-// ==================== Types ====================
-interface FolderNode {
-  id: string
-  label: string
-  folder?: string
-  count?: number
-  children?: FolderNode[]
-  isLeaf: boolean
+type MigrationMode = 'pilot' | 'batch' | 'full'
+type RecordTab = 'pending' | 'waiting'
+type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
+
+interface JobFormState {
+  mode: MigrationMode
+  limit: number
+  folder: string
+  confirmation: string
 }
 
-// ==================== State ====================
+interface FolderSummary {
+  folder: string
+  cnt: number
+}
+
+interface RecordFilterState {
+  folder: string
+  bah: string
+  sjh: string
+  limit: number
+}
+
+const ACTIVE_STATUSES = new Set(['pending', 'running', 'cancelling'])
+const TERMINAL_STATUSES = new Set([
+  'cancelled',
+  'interrupted',
+  'completed',
+  'completed_with_errors',
+  'failed',
+])
+const AUTO_REFRESH_INTERVAL = 15_000
+const JOB_POLL_INTERVAL = 2_000
+
+const MODE_LABELS: Record<string, string> = {
+  pilot: '试迁移',
+  batch: '限定批次',
+  full: '全量迁移',
+  retry: '失败重试',
+}
+
+const STATUS_LABELS: Record<string, { label: string, type: TagType }> = {
+  pending: { label: '等待启动', type: 'warning' },
+  running: { label: '迁移中', type: 'primary' },
+  cancelling: { label: '正在取消', type: 'warning' },
+  cancelled: { label: '已取消', type: 'info' },
+  interrupted: { label: '已中断', type: 'warning' },
+  completed: { label: '已完成', type: 'success' },
+  completed_with_errors: { label: '完成但有失败', type: 'warning' },
+  failed: { label: '失败', type: 'danger' },
+  success: { label: '成功', type: 'success' },
+  retry_wait: { label: '等待重试', type: 'warning' },
+  waiting_sjh: { label: '等待上架号', type: 'info' },
+  migrating: { label: '迁移中', type: 'primary' },
+  migrated: { label: '已迁移', type: 'success' },
+  verified: { label: '已验证', type: 'success' },
+  not_migrated: { label: '未迁移', type: 'info' },
+  skipped: { label: '已跳过', type: 'info' },
+}
+
 const stats = ref<MigrationStatistics>({})
-const pendingList = ref<ScanRecord[]>([])
-const error = ref('')
-const logList = ref<MigrationLogRecord[]>([])
+const readiness = ref<MigrationReadiness>()
+const folders = ref<FolderSummary[]>([])
+const records = ref<MigrationScanRecord[]>([])
+const recordTab = ref<RecordTab>('pending')
+const recordReturned = ref(0)
+const recordHasMore = ref(false)
+const selectedRecords = ref<MigrationScanRecord[]>([])
+const jobs = ref<MigrationJob[]>([])
+const jobTotal = ref(0)
+const jobPage = ref(1)
+const jobSize = ref(10)
+const currentJob = ref<MigrationJob>()
+const jobDetail = ref<MigrationJob>()
+const jobDrawerVisible = ref(false)
+const logs = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
 const logPage = ref(1)
 const logSize = ref(20)
-const logStatusFilter = ref('')
+const logStatus = ref('')
+const logScanId = ref<number>()
+const selectedLogs = ref<MigrationLogRecord[]>([])
+const bahInput = ref('')
+const uploadResult = ref<OssUploadBatchResult>()
+const uploadResultVisible = ref(false)
+const autoRefresh = ref(true)
+const lastUpdatedAt = ref<Date>()
+let pollTimer: ReturnType<typeof setInterval> | undefined
+let overviewTimer: ReturnType<typeof setInterval> | undefined
 
 const loading = reactive({
-  stats: false,
-  pending: false,
+  page: false,
+  overview: false,
+  readiness: false,
+  records: false,
+  jobs: false,
   logs: false,
-  upload: false,
-  bahUpload: false,
-  folderUpload: false,
-  folders: false,
+  start: false,
+  cancel: false,
+  manual: false,
+  bah: false,
+  retry: false,
+  detail: false,
 })
 
-const bahInput = ref('')
-const folderInput = ref('')
-const uploadResults = ref<OssUploadResult[]>([])
-const selectedPending = ref<ScanRecord[]>([])
-const folderTree = ref<FolderNode[]>([])
-const selectedFolder = ref('')
-
-// ==================== Computed ====================
-const progressPercentage = computed(() => {
-  return stats.value?.percentage ?? 0
+const jobForm = reactive<JobFormState>({
+  mode: 'pilot',
+  limit: 500,
+  folder: '',
+  confirmation: '',
 })
 
-const progressStatus = computed(() => {
-  const pct = progressPercentage.value
-  if (pct >= 100) { return 'success' }
-  if (pct >= 50) { return '' }
-  return 'warning'
+const recordFilters = reactive<RecordFilterState>({
+  folder: '',
+  bah: '',
+  sjh: '',
+  limit: 100,
 })
 
 const summaryCards = computed(() => [
-  { label: '总记录数', value: stats.value?.totalCount ?? 0, note: '迁移任务涉及的扫描记录总量', tone: 'blue', icon: 'i-ant-design:database-twotone' },
-  { label: '已迁移', value: stats.value?.migratedCount ?? 0, note: '已完成 OSS 上传与记录更新', tone: 'green', icon: 'i-ant-design:check-circle-twotone' },
-  { label: '待迁移', value: stats.value?.pendingCount ?? 0, note: '等待处理的扫描记录', tone: 'amber', icon: 'i-ant-design:clock-circle-twotone' },
-  { label: '失败', value: stats.value?.failedCount ?? 0, note: '需要检查并重新处理', tone: 'danger', icon: 'i-ant-design:close-circle-twotone' },
+  {
+    label: '总图片记录',
+    value: stats.value.totalCount ?? 0,
+    note: 'uploadflag 有效的扫描图片',
+    tone: 'blue',
+  },
+  {
+    label: '已迁移',
+    value: stats.value.migratedCount ?? 0,
+    note: `整体完成 ${stats.value.percentage ?? 0}%`,
+    tone: 'green',
+  },
+  {
+    label: '当前可领取',
+    value: stats.value.pendingCount ?? 0,
+    note: '上架号完整且已到重试时间',
+    tone: 'amber',
+  },
+  {
+    label: '等待上架号',
+    value: stats.value.waitingSjhCount ?? 0,
+    note: '保留原图，补齐后自动恢复',
+    tone: 'blue',
+  },
+  {
+    label: '等待重试',
+    value: stats.value.retryWaitCount ?? 0,
+    note: '后续任务到期后可再次领取',
+    tone: 'amber',
+  },
+  {
+    label: '正在迁移',
+    value: stats.value.migratingCount ?? 0,
+    note: '已原子领取、正在处理',
+    tone: 'blue',
+  },
+  {
+    label: '永久失败',
+    value: stats.value.failedCount ?? 0,
+    note: '核对 Nginx 原图或对象冲突',
+    tone: 'danger',
+  },
 ])
 
-const pendingTitle = computed(() => {
-  return selectedFolder.value ? `待迁移记录 - ${selectedFolder.value} (${pendingList.value.length})` : `待迁移记录 (${pendingList.value.length})`
+const isMigrationStarted = computed(() => (stats.value.migratedCount ?? 0) > 0)
+const hasActiveJob = computed(() => Boolean(
+  currentJob.value && ACTIVE_STATUSES.has(currentJob.value.status ?? ''),
+))
+const canStartJob = computed(() => Boolean(readiness.value?.ready && !hasActiveJob.value))
+const startDisabledReason = computed(() => {
+  if (hasActiveJob.value) {
+    return '已有迁移任务正在运行'
+  }
+  if (!readiness.value?.ossConfigured) {
+    return 'OSS 配置未通过'
+  }
+  if (!readiness.value?.sourcePathReadable) {
+    return 'Nginx 抽样读取未通过'
+  }
+  if ((readiness.value?.pendingCount ?? 0) <= 0) {
+    return '当前没有可领取记录'
+  }
+  return ''
+})
+const selectedPendingIds = computed(() => selectedRecords.value
+  .map(item => item.id)
+  .filter((id): id is number => id != null))
+const failedLogScanIds = computed(() => Array.from(new Set(
+  selectedLogs.value
+    .filter(item => item.migrationStatus === 'failed' && item.scanId != null)
+    .map(item => item.scanId as number),
+)))
+const jobPercentage = computed(() => Math.min(100, Number(currentJob.value?.rate || 0)))
+const currentRecordTitle = computed(() => recordTab.value === 'pending'
+  ? '当前可领取记录'
+  : '等待补齐上架号')
+const currentRecordDescription = computed(() => recordTab.value === 'pending'
+  ? '仅显示当前满足领取条件的记录，可用于小规模手工验证。'
+  : '这些记录不会上传、不会失败；上架号补齐后会自动进入待迁移集合。')
+
+watch(() => jobForm.mode, (mode) => {
+  jobForm.confirmation = ''
+  jobForm.limit = mode === 'pilot' ? 500 : 10000
 })
 
-const totalPendingCount = computed(() => {
-  let total = 0
-  function walk(nodes: FolderNode[]) {
-    for (const n of nodes) {
-      if (n.isLeaf && n.count) { total += n.count }
-      if (n.children) { walk(n.children) }
-    }
-  }
-  walk(folderTree.value)
-  return total
+watch(recordTab, () => {
+  selectedRecords.value = []
+  void loadRecords()
 })
 
-// ==================== Folder Tree ====================
-function buildFolderTree(folders: { folder: string, cnt: number }[]): FolderNode[] {
-  const hasNested = folders.some(f => f.folder.includes('/'))
-
-  if (!hasNested) {
-    return folders
-      .map(f => ({
-        id: f.folder,
-        label: f.folder,
-        folder: f.folder,
-        count: f.cnt,
-        isLeaf: true,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label))
+watch(autoRefresh, (enabled) => {
+  if (enabled) {
+    startOverviewRefresh()
   }
+  else {
+    stopOverviewRefresh()
+  }
+})
 
-  const rootMap = new Map<string, { node: FolderNode, childMap: Map<string, FolderNode> }>()
+function statusMeta(status?: string) {
+  return STATUS_LABELS[status ?? ''] ?? { label: status || '-', type: 'info' as TagType }
+}
 
-  for (const f of folders) {
-    const parts = f.folder.split('/')
-    const rootKey = parts[0]
-    if (!rootMap.has(rootKey)) {
-      rootMap.set(rootKey, {
-        node: { id: rootKey, label: rootKey, folder: rootKey, children: [], isLeaf: false },
-        childMap: new Map(),
-      })
+function modeLabel(mode?: string) {
+  return MODE_LABELS[mode ?? ''] ?? mode ?? '-'
+}
+
+function formatDate(value?: string | Date | null) {
+  if (!value) {
+    return '-'
+  }
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+function formatNumber(value?: number | null) {
+  return Number(value ?? 0).toLocaleString('zh-CN')
+}
+
+function formatFileSize(value?: number | null) {
+  if (!value || value <= 0) {
+    return '-'
+  }
+  if (value < 1024) {
+    return `${value} B`
+  }
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`
+  }
+  return `${(value / 1024 / 1024).toFixed(1)} MB`
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
+function normalizeUploadResult(response: Awaited<ReturnType<typeof uploadToOss>>) {
+  if (response.data) {
+    return response.data
+  }
+  return {
+    results: response.results ?? [],
+    total: response.total,
+    success: response.success,
+    failed: response.failed,
+    waitingSjh: response.waitingSjh,
+    bah: response.bah,
+  }
+}
+
+function handleRecordSelection(selection: MigrationScanRecord[]) {
+  selectedRecords.value = selection
+}
+
+function handleLogSelection(selection: MigrationLogRecord[]) {
+  selectedLogs.value = selection
+}
+
+function logSelectable(row: MigrationLogRecord) {
+  return row.migrationStatus === 'failed' && row.scanId != null
+}
+
+async function loadStats() {
+  const response = await getMigrationStatistics()
+  stats.value = response.data ?? {}
+}
+
+async function loadReadiness(showMessage = false) {
+  loading.readiness = true
+  try {
+    const response = await getMigrationReadiness(100)
+    readiness.value = response.data
+    if (response.data?.activeJob) {
+      currentJob.value = response.data.activeJob
+      startPolling()
     }
-    const entry = rootMap.get(rootKey)!
-
-    if (parts.length === 1) {
-      entry.node.count = (entry.node.count || 0) + f.cnt
-    }
-    else {
-      const childKey = f.folder
-      if (!entry.childMap.has(childKey)) {
-        entry.childMap.set(childKey, {
-          id: childKey,
-          label: parts.slice(1).join('/'),
-          folder: childKey,
-          count: f.cnt,
-          isLeaf: true,
-        })
-      }
+    if (showMessage) {
+      ElMessage.success('迁移前检查已重新执行')
     }
   }
-
-  const result: FolderNode[] = []
-  for (const [, entry] of rootMap) {
-    entry.node.children = Array.from(entry.childMap.values())
-    const childSum = entry.node.children.reduce((s, c) => s + (c.count || 0), 0)
-    entry.node.count = (entry.node.count || 0) + childSum
-    if (entry.node.children.length === 0) {
-      delete entry.node.children
-      entry.node.isLeaf = true
-    }
-    result.push(entry.node)
+  finally {
+    loading.readiness = false
   }
-
-  result.sort((a, b) => a.label.localeCompare(b.label))
-  return result
 }
 
 async function loadFolders() {
-  loading.folders = true
-  try {
-    const res = await getPendingFolders()
-    folderTree.value = buildFolderTree(res.data ?? [])
-  }
-  catch (err: any) {
-    console.error('[OSS] load folders error:', err)
-  }
-  finally {
-    loading.folders = false
+  const response = await getPendingFolders()
+  folders.value = response.data ?? []
+}
+
+function recordQuery(): MigrationRecordQuery {
+  return {
+    limit: recordFilters.limit,
+    folder: recordFilters.folder || undefined,
+    bah: recordFilters.bah.trim() || undefined,
+    sjh: recordFilters.sjh.trim() || undefined,
   }
 }
 
-function handleFolderClick(node: FolderNode) {
-  if (node.isLeaf && node.folder) {
-    selectedFolder.value = node.folder
-    loadPendingByFolder(node.folder)
+async function loadRecords() {
+  loading.records = true
+  try {
+    const response = recordTab.value === 'pending'
+      ? await getPendingManagementRecords(recordQuery())
+      : await getWaitingSjhRecords(recordQuery())
+    records.value = response.data?.list ?? []
+    recordReturned.value = response.data?.returned ?? records.value.length
+    recordHasMore.value = Boolean(response.data?.hasMore)
+    selectedRecords.value = []
   }
-  else {
-    selectedFolder.value = ''
-    loadPending()
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '加载迁移记录失败'))
+  }
+  finally {
+    loading.records = false
   }
 }
 
-async function loadPendingByFolder(folder: string) {
-  loading.pending = true
-  try {
-    const res = await getPendingMigrations({ folder })
-    pendingList.value = res.data?.list ?? []
-    selectedPending.value = []
-  }
-  catch (err: any) {
-    console.error('[OSS] load pending by folder error:', err)
-    ElMessage.error(err?.message || '加载文件夹记录失败')
-  }
-  finally {
-    loading.pending = false
-  }
+function resetRecordFilters() {
+  recordFilters.folder = ''
+  recordFilters.bah = ''
+  recordFilters.sjh = ''
+  recordFilters.limit = 100
+  void loadRecords()
 }
 
-async function loadPending() {
-  selectedFolder.value = ''
-  loading.pending = true
-  error.value = ''
+async function loadJobs() {
+  loading.jobs = true
   try {
-    const res = await getPendingMigrations({ limit: 50 })
-    pendingList.value = res.data?.list ?? []
-  }
-  catch (err: any) {
-    console.error('[OSS] load pending error:', err)
-    error.value = err?.message || '加载待迁移列表失败'
-    ElMessage.error(err?.message || '加载待迁移列表失败')
+    const response = await getMigrationJobs({ page: jobPage.value, size: jobSize.value })
+    jobs.value = response.data?.list ?? []
+    jobTotal.value = response.data?.total ?? 0
+    const active = jobs.value.find(job => ACTIVE_STATUSES.has(job.status ?? ''))
+    if (active) {
+      currentJob.value = active
+      startPolling()
+    }
+    else if (currentJob.value && ACTIVE_STATUSES.has(currentJob.value.status ?? '')) {
+      stopPolling()
+      currentJob.value = undefined
+    }
   }
   finally {
-    loading.pending = false
-  }
-}
-
-// ==================== Data Loading ====================
-async function loadStats() {
-  loading.stats = true
-  try {
-    const res = await getMigrationStatistics()
-    stats.value = res.data ?? {}
-  }
-  catch {
-    // silent
-  }
-  finally {
-    loading.stats = false
+    loading.jobs = false
   }
 }
 
 async function loadLogs() {
   loading.logs = true
   try {
-    const res = await getMigrationLogs({
-      status: logStatusFilter.value || undefined,
+    const response = await getMigrationLogs({
+      status: logStatus.value || undefined,
+      scanId: logScanId.value,
       page: logPage.value,
       size: logSize.value,
     })
-    const data = res.data ?? { list: [], total: 0 }
-    logList.value = data.list
-    logTotal.value = data.total
+    logs.value = response.data?.list ?? []
+    logTotal.value = response.data?.total ?? 0
+    selectedLogs.value = []
   }
-  catch {
-    // silent
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '加载迁移日志失败'))
   }
   finally {
     loading.logs = false
   }
 }
 
-function handleLogFilterChange() {
-  logPage.value = 1
-  loadLogs()
+async function refreshOverview(silent = false) {
+  if (!silent) {
+    loading.overview = true
+  }
+  try {
+    await Promise.all([loadStats(), loadReadiness(), loadJobs()])
+    lastUpdatedAt.value = new Date()
+  }
+  catch (error: unknown) {
+    if (!silent) {
+      ElMessage.error(errorMessage(error, '刷新迁移概览失败'))
+    }
+  }
+  finally {
+    loading.overview = false
+  }
 }
 
 async function refreshAll() {
-  await Promise.all([loadStats(), loadFolders()])
-  await loadPending()
-  nextTick(() => loadLogs())
+  loading.page = true
+  try {
+    await Promise.all([
+      loadStats(),
+      loadReadiness(),
+      loadFolders(),
+      loadRecords(),
+      loadJobs(),
+      loadLogs(),
+    ])
+    lastUpdatedAt.value = new Date()
+  }
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '加载 OSS 迁移管理数据失败'))
+  }
+  finally {
+    loading.page = false
+  }
 }
 
-// ==================== Upload Actions ====================
+function stopPolling() {
+  if (!pollTimer) {
+    return
+  }
+  clearInterval(pollTimer)
+  pollTimer = undefined
+}
+
+function startPolling() {
+  if (pollTimer || currentJob.value?.id == null) {
+    return
+  }
+  pollTimer = setInterval(async () => {
+    const jobId = currentJob.value?.id
+    if (jobId == null) {
+      stopPolling()
+      return
+    }
+    try {
+      const response = await getMigrationJob(jobId)
+      if (response.data) {
+        currentJob.value = response.data
+      }
+      if (TERMINAL_STATUSES.has(currentJob.value?.status ?? '')) {
+        stopPolling()
+        await refreshAll()
+      }
+    }
+    catch {
+      stopPolling()
+    }
+  }, JOB_POLL_INTERVAL)
+}
+
+function stopOverviewRefresh() {
+  if (!overviewTimer) {
+    return
+  }
+  clearInterval(overviewTimer)
+  overviewTimer = undefined
+}
+
+function startOverviewRefresh() {
+  stopOverviewRefresh()
+  overviewTimer = setInterval(() => {
+    void refreshOverview(true)
+  }, AUTO_REFRESH_INTERVAL)
+}
+
+function applyRecommendedMode() {
+  const mode = readiness.value?.recommendedMode
+  if (mode === 'pilot' || mode === 'batch') {
+    jobForm.mode = mode
+  }
+}
+
+async function handleStartJob() {
+  if (!canStartJob.value) {
+    ElMessage.warning(startDisabledReason.value || '迁移前检查未通过')
+    return
+  }
+  if (jobForm.mode === 'full' && jobForm.confirmation !== '确认全量迁移') {
+    ElMessage.warning('请输入完整确认短语：确认全量迁移')
+    return
+  }
+
+  const scopeText = jobForm.folder ? `目录 ${jobForm.folder}` : '全部待迁移记录'
+  const countText = jobForm.mode === 'full' ? '当前快照内全部记录' : `最多 ${jobForm.limit} 条`
+  try {
+    await ElMessageBox.confirm(
+      `将创建${modeLabel(jobForm.mode)}任务，范围为${scopeText}，处理${countText}。单个文件失败不会阻塞后续记录，是否开始？`,
+      '确认创建迁移任务',
+      { confirmButtonText: '创建任务', cancelButtonText: '取消', type: 'warning' },
+    )
+  }
+  catch {
+    return
+  }
+
+  const payload: MigrationJobPayload = {
+    mode: jobForm.mode,
+    folder: jobForm.folder || undefined,
+    limit: jobForm.mode === 'full' ? undefined : jobForm.limit,
+    confirmation: jobForm.mode === 'full' ? jobForm.confirmation : undefined,
+  }
+  loading.start = true
+  try {
+    const response = await createMigrationJob(payload)
+    if (response.data) {
+      currentJob.value = response.data
+      startPolling()
+    }
+    ElMessage.success(response.message || '迁移任务已创建')
+    await refreshOverview()
+  }
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '创建迁移任务失败'))
+  }
+  finally {
+    loading.start = false
+  }
+}
+
+async function handleCancelJob() {
+  const jobId = currentJob.value?.id
+  if (jobId == null) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '取消会在当前图片处理完成后停止。已经成功迁移的图片不会回滚，是否继续？',
+      '安全取消迁移任务',
+      { confirmButtonText: '安全取消', cancelButtonText: '继续运行', type: 'warning' },
+    )
+  }
+  catch {
+    return
+  }
+
+  loading.cancel = true
+  try {
+    const response = await cancelMigrationJob(jobId)
+    if (response.data) {
+      currentJob.value = response.data
+    }
+    ElMessage.success('已提交安全取消请求')
+    startPolling()
+  }
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '取消任务失败'))
+  }
+  finally {
+    loading.cancel = false
+  }
+}
+
+function showUploadResult(result: OssUploadBatchResult) {
+  uploadResult.value = result
+  uploadResultVisible.value = true
+  const failed = result.failed ?? 0
+  const waiting = result.waitingSjh ?? 0
+  if (failed > 0 || waiting > 0) {
+    ElMessage.warning(`上传完成：成功或跳过 ${result.success ?? 0}，失败 ${failed}，等待上架号 ${waiting}`)
+  }
+  else {
+    ElMessage.success(`上传完成：${result.success ?? 0}/${result.total ?? 0} 成功或已跳过`)
+  }
+}
+
+async function handleManualUpload() {
+  const ids = selectedPendingIds.value
+  if (!ids.length) {
+    ElMessage.warning('请先选择当前可领取记录')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `将立即手工上传选中的 ${ids.length} 张图片。手工上传只用于小规模验证，是否继续？`,
+      '确认手工上传',
+      { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'warning' },
+    )
+  }
+  catch {
+    return
+  }
+
+  loading.manual = true
+  try {
+    const response = await uploadToOss(ids)
+    showUploadResult(normalizeUploadResult(response))
+    await refreshAll()
+  }
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '手工上传失败'))
+  }
+  finally {
+    loading.manual = false
+  }
+}
+
 async function handleBahUpload() {
   const bah = bahInput.value.trim()
   if (!bah) {
     ElMessage.warning('请输入病案号')
     return
   }
+  loading.bah = true
+  try {
+    const response = await uploadByBah(bah)
+    showUploadResult(normalizeUploadResult(response as Awaited<ReturnType<typeof uploadToOss>>))
+    await refreshAll()
+  }
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '病案手工上传失败'))
+  }
+  finally {
+    loading.bah = false
+  }
+}
 
+async function handleRetryFailed() {
+  if (!failedLogScanIds.value.length) {
+    ElMessage.warning('请在迁移日志中选择永久失败记录')
+    return
+  }
   try {
     await ElMessageBox.confirm(
-      `确认上传病案号 ${bah} 下的所有图片到 OSS？`,
-      '确认上传',
-      { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'info' },
+      `将把 ${failedLogScanIds.value.length} 条永久失败记录重置为待迁移。请确保已经处理原图、权限或对象冲突，是否继续？`,
+      '确认重置失败记录',
+      { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },
     )
   }
   catch {
     return
   }
 
-  loading.bahUpload = true
-  uploadResults.value = []
+  loading.retry = true
   try {
-    const res = await uploadByBah(bah)
-    const data = res.data || res || {}
-    uploadResults.value = Array.isArray(data.results) ? data.results : []
-    const successCount = uploadResults.value.filter(r => r.status === 'success').length
-    ElMessage.success(`上传完成：${successCount}/${uploadResults.value.length} 成功`)
+    const response = await retryMigrationScans(failedLogScanIds.value)
+    ElMessage.success(`已重置 ${response.data?.updated ?? 0} 条记录，请重新执行试迁移`)
     await refreshAll()
   }
-  catch (err: any) {
-    ElMessage.error(err?.message || '上传失败')
+  catch (error: unknown) {
+    ElMessage.error(errorMessage(error, '重置失败记录失败'))
   }
   finally {
-    loading.bahUpload = false
+    loading.retry = false
   }
 }
 
-async function handleFolderUpload() {
-  const folder = folderInput.value.trim()
-  if (!folder) {
-    ElMessage.warning('请输入文件夹路径')
+async function showJobDetail(job: MigrationJob) {
+  if (job.id == null) {
     return
   }
-
+  loading.detail = true
+  jobDrawerVisible.value = true
   try {
-    await ElMessageBox.confirm(
-      `确认上传文件夹 ${folder} 下的所有图片到 OSS？`,
-      '确认上传',
-      { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'info' },
-    )
+    const response = await getMigrationJob(job.id)
+    jobDetail.value = response.data ?? job
   }
-  catch {
-    return
-  }
-
-  loading.folderUpload = true
-  uploadResults.value = []
-  try {
-    const res = await uploadByFolder(folder)
-    const data = res.data || res || {}
-    uploadResults.value = Array.isArray(data.results) ? data.results : []
-    const successCount = uploadResults.value.filter(r => r.status === 'success').length
-    ElMessage.success(`上传完成：${successCount}/${uploadResults.value.length} 成功`)
-    await refreshAll()
-  }
-  catch (err: any) {
-    ElMessage.error(err?.message || '上传失败')
+  catch (error: unknown) {
+    jobDetail.value = job
+    ElMessage.error(errorMessage(error, '加载任务详情失败'))
   }
   finally {
-    loading.folderUpload = false
+    loading.detail = false
   }
 }
 
-async function handleBatchUpload() {
-  if (!selectedPending.value.length) {
-    ElMessage.warning('请先选择要上传的记录')
+function resetLogFilters() {
+  logStatus.value = ''
+  logScanId.value = undefined
+  logPage.value = 1
+  void loadLogs()
+}
+
+function openOssUrl(url?: string) {
+  if (!url) {
     return
   }
-
-  try {
-    await ElMessageBox.confirm(
-      `确认上传选中的 ${selectedPending.value.length} 条记录到 OSS？`,
-      '确认批量上传',
-      { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'info' },
-    )
-  }
-  catch {
-    return
-  }
-
-  loading.upload = true
-  uploadResults.value = []
-  try {
-    const ids = selectedPending.value.map(s => s.id!).filter(Boolean)
-    const res = await uploadToOss(ids)
-    const data = res.data || res || {}
-    uploadResults.value = Array.isArray(data.results) ? data.results : []
-    const successCount = uploadResults.value.filter(r => r.status === 'success').length
-    ElMessage.success(`上传完成：${successCount}/${uploadResults.value.length} 成功`)
-    await refreshAll()
-  }
-  catch (err: any) {
-    ElMessage.error(err?.message || '批量上传失败')
-  }
-  finally {
-    loading.upload = false
-  }
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-function handlePendingSelection(rows: ScanRecord[]) {
-  selectedPending.value = rows
-}
+onMounted(() => {
+  void refreshAll()
+  startOverviewRefresh()
+})
 
-// ==================== Helpers ====================
-function statusTag(status?: string) {
-  const map: Record<string, { type: string, label: string }> = {
-    success: { type: 'success', label: '成功' },
-    failed: { type: 'danger', label: '失败' },
-    pending: { type: 'warning', label: '待迁移' },
-    migrating: { type: 'info', label: '迁移中' },
-    migrated: { type: 'success', label: '已迁移' },
-    verified: { type: 'success', label: '已验证' },
-    not_migrated: { type: 'info', label: '未迁移' },
-    skipped: { type: 'info', label: '已跳过' },
-  }
-  return map[status || ''] || { type: 'info', label: status || '-' }
-}
-
-function formatBytes(bytes?: number) {
-  if (!bytes) { return '-' }
-  if (bytes < 1024) { return `${bytes} B` }
-  if (bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(1)} KB` }
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-}
-
-function formatDate(d?: string) {
-  if (!d) { return '-' }
-  return new Date(d).toLocaleString('zh-CN')
-}
-
-function getOssImageUrl(ossUrl?: string) {
-  return ossUrl || ''
-}
-
-// ==================== Lifecycle ====================
-onMounted(refreshAll)
+onBeforeUnmount(() => {
+  stopPolling()
+  stopOverviewRefresh()
+})
 </script>
 
 <template>
-  <div class="page-shell">
-    <!-- Header -->
-    <div class="page-header">
+  <div v-loading="loading.page" class="page-shell">
+    <header class="page-header">
       <div>
         <p class="eyebrow">
-          OSS Migration
+          OSS Migration Control
         </p>
         <h2>OSS 迁移管理</h2>
         <p class="subtitle">
-          管理本地图片到 OSS 的迁移，支持按文件夹/病案号/批量上传。
+          统一通过 Nginx 获取原图，按上架号分组上传；缺少上架号的记录保留等待补齐。
         </p>
       </div>
-      <el-button type="primary" :icon="Refresh" @click="refreshAll">
-        刷新数据
-      </el-button>
-    </div>
+      <div class="page-actions">
+        <div class="refresh-state">
+          <span>最后刷新：{{ formatDate(lastUpdatedAt) }}</span>
+          <el-switch
+            v-model="autoRefresh"
+            inline-prompt
+            active-text="自动"
+            inactive-text="手动"
+          />
+        </div>
+        <el-button
+          :icon="Refresh"
+          :loading="loading.overview"
+          @click="refreshAll"
+        >
+          刷新全部
+        </el-button>
+      </div>
+    </header>
 
-    <!-- Statistics Cards -->
-    <section class="mrr-metric-grid">
-      <el-card
+    <el-alert
+      v-if="!isMigrationStarted"
+      title="当前尚未开始正式 OSS 迁移"
+      description="建议先使用 100～500 张真实图片试迁移，核对影像档案袋访问、ZIP/PDF 导出、日志与 OSS 费用后，再逐步扩大批次。"
+      type="info"
+      :closable="false"
+      show-icon
+    />
+
+    <section class="metric-grid">
+      <article
         v-for="item in summaryCards"
         :key="item.label"
-        shadow="never"
-        class="mrr-metric-card"
-        :class="`mrr-metric-card--${item.tone}`"
+        class="metric-card"
+        :class="`metric-card--${item.tone}`"
       >
-        <div class="mrr-metric-card__icon">
-          <i :class="item.icon" />
-        </div>
-        <div class="mrr-metric-card__body">
-          <span class="mrr-metric-card__label">{{ item.label }}</span>
-          <strong class="mrr-metric-card__value">{{ item.value.toLocaleString('zh-CN') }}</strong>
-          <p class="mrr-metric-card__note">
-            {{ item.note }}
-          </p>
-        </div>
-      </el-card>
+        <span>{{ item.label }}</span>
+        <strong>{{ formatNumber(item.value) }}</strong>
+        <small>{{ item.note }}</small>
+      </article>
     </section>
 
-    <!-- Progress Bar -->
-    <el-card shadow="never">
-      <div class="progress-section">
-        <div class="progress-header">
-          <span class="progress-title">迁移进度</span>
-          <span class="progress-pct">{{ progressPercentage }}%</span>
-        </div>
-        <el-progress
-          :percentage="progressPercentage"
-          :status="progressStatus"
-          :stroke-width="16"
-          :text-inside="true"
-        />
-      </div>
-    </el-card>
-
-    <!-- Folder Tree + Pending Table (side-by-side) -->
-    <div class="folder-pending-row">
-      <el-card shadow="never" class="folder-tree-card">
+    <div class="primary-grid">
+      <el-card shadow="never">
         <template #header>
           <div class="card-header">
-            <span>待迁移文件夹</span>
-            <el-tag size="small" type="info">
-              {{ totalPendingCount }}
-            </el-tag>
-          </div>
-        </template>
-        <div v-loading="loading.folders" class="tree-wrapper">
-          <el-tree
-            :data="folderTree"
-            :props="{ children: 'children', label: 'label' }"
-            node-key="id"
-            highlight-current
-            @node-click="handleFolderClick"
-          >
-            <template #default="{ data }">
-              <span class="tree-node">
-                <el-icon :size="16">
-                  <FolderOpened v-if="!data.isLeaf" />
-                  <Folder v-else />
-                </el-icon>
-                <span class="tree-label">{{ data.label }}</span>
-                <el-tag v-if="data.count" size="small" type="info" class="tree-count">
-                  {{ data.count }}
-                </el-tag>
-              </span>
-            </template>
-          </el-tree>
-        </div>
-      </el-card>
-
-      <el-card shadow="never" class="pending-table-card">
-        <template #header>
-          <div class="card-header">
-            <span>{{ pendingTitle }}</span>
-            <div class="pending-actions">
+            <div>
+              <strong>迁移前检查</strong>
+              <p>只抽样检查配置和 Nginx 可读性，不上传文件、不更新迁移状态。</p>
+            </div>
+            <div class="header-actions">
+              <el-tag :type="readiness?.ready ? 'success' : 'warning'">
+                {{ readiness?.ready ? '可开始迁移' : '需要处理' }}
+              </el-tag>
               <el-button
-                v-if="selectedFolder"
-                size="small"
-                @click="loadPending()"
+                :loading="loading.readiness"
+                :icon="Refresh"
+                @click="loadReadiness(true)"
               >
-                显示全部
-              </el-button>
-              <el-button
-                type="primary"
-                size="small"
-                :loading="loading.upload"
-                :disabled="!selectedPending.length"
-                @click="handleBatchUpload"
-              >
-                批量上传 ({{ selectedPending.length }})
+                重新检查
               </el-button>
             </div>
           </div>
         </template>
-        <AppLoading v-if="loading.pending" type="table" :rows="6" />
-        <AppError v-else-if="error" :message="error" @retry="loadPending" />
-        <AppEmpty v-else-if="!pendingList.length" description="暂无待迁移记录" />
-        <el-table
-          v-else
-          :data="pendingList"
-          stripe
-          size="small"
-          max-height="450"
-          @selection-change="handlePendingSelection"
+
+        <div class="check-grid">
+          <div class="check-item" :class="{ ok: readiness?.ossConfigured }">
+            <span>OSS 客户端</span>
+            <strong>{{ readiness?.ossConfigured ? '已配置' : '未通过' }}</strong>
+          </div>
+          <div class="check-item" :class="{ ok: readiness?.sourcePathReadable }">
+            <span>Nginx 图片源</span>
+            <strong>{{ readiness?.sourcePathReadable ? '可读取' : '不可读取' }}</strong>
+          </div>
+          <div class="check-item" :class="{ ok: readiness?.noActiveJob }">
+            <span>活动任务</span>
+            <strong>{{ readiness?.noActiveJob ? '无' : '已有任务' }}</strong>
+          </div>
+          <div class="check-item" :class="{ ok: (readiness?.sampleReadableCount ?? 0) > 0 }">
+            <span>抽样文件</span>
+            <strong>{{ readiness?.sampleReadableCount ?? 0 }} / {{ readiness?.sampleSize ?? 0 }} 可读</strong>
+          </div>
+        </div>
+
+        <div class="facts">
+          <span>抽样缺失 {{ readiness?.sampleMissingCount ?? 0 }}</span>
+          <span>路径异常 {{ readiness?.sampleInvalidCount ?? 0 }}</span>
+          <span>当前可领取 {{ formatNumber(readiness?.pendingCount) }}</span>
+          <span>等待上架号 {{ formatNumber(stats.waitingSjhCount) }}</span>
+        </div>
+
+        <el-alert
+          v-if="readiness?.recommendedAction"
+          :title="readiness.recommendedAction"
+          type="success"
+          :closable="false"
+          show-icon
         >
-          <el-table-column type="selection" width="48" />
-          <el-table-column prop="id" label="ID" width="70" />
-          <el-table-column prop="bah" label="病案号" width="110" />
-          <el-table-column prop="brxh" label="病人序号" width="90" />
-          <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="folder" label="目录" min-width="110" show-overflow-tooltip />
-          <el-table-column prop="migrationStatus" label="状态" width="90">
-            <template #default="{ row }">
-              <el-tag :type="statusTag(row.migrationStatus).type as any" size="small">
-                {{ statusTag(row.migrationStatus).label }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+          <template #default>
+            <el-button link type="success" @click="applyRecommendedMode">
+              应用推荐阶段
+            </el-button>
+          </template>
+        </el-alert>
+
+        <ul v-if="readiness?.warnings?.length" class="warning-list">
+          <li v-for="warning in readiness.warnings" :key="warning">
+            {{ warning }}
+          </li>
+        </ul>
+      </el-card>
+
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <strong>创建迁移任务</strong>
+              <p>同一时刻只运行一个任务；创建时固定数据快照上界。</p>
+            </div>
+          </div>
+        </template>
+
+        <el-form label-position="top">
+          <el-form-item label="迁移阶段">
+            <el-radio-group v-model="jobForm.mode">
+              <el-radio-button value="pilot">
+                试迁移
+              </el-radio-button>
+              <el-radio-button value="batch">
+                限定批次
+              </el-radio-button>
+              <el-radio-button value="full">
+                全量迁移
+              </el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item v-if="jobForm.mode !== 'full'" label="最大处理数量">
+            <el-input-number
+              v-model="jobForm.limit"
+              :min="1"
+              :max="jobForm.mode === 'pilot' ? 1000 : 100000"
+              :step="jobForm.mode === 'pilot' ? 100 : 1000"
+              controls-position="right"
+            />
+          </el-form-item>
+
+          <el-form-item label="目录范围（可选）">
+            <el-select
+              v-model="jobForm.folder"
+              clearable
+              filterable
+              placeholder="全部待迁移目录"
+            >
+              <el-option
+                v-for="item in folders"
+                :key="item.folder"
+                :label="`${item.folder}（${formatNumber(item.cnt)}）`"
+                :value="item.folder"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item v-if="jobForm.mode === 'full'" label="全量迁移确认短语">
+            <el-input v-model="jobForm.confirmation" placeholder="请输入：确认全量迁移" />
+          </el-form-item>
+
+          <el-button
+            type="primary"
+            :icon="VideoPlay"
+            :loading="loading.start"
+            :disabled="!canStartJob"
+            @click="handleStartJob"
+          >
+            创建{{ modeLabel(jobForm.mode) }}任务
+          </el-button>
+          <p v-if="startDisabledReason" class="disabled-reason">
+            {{ startDisabledReason }}
+          </p>
+        </el-form>
       </el-card>
     </div>
 
-    <!-- Upload by Folder -->
-    <el-card shadow="never">
+    <el-card v-if="currentJob" shadow="never" class="current-job-card">
       <template #header>
         <div class="card-header">
-          <span>按文件夹上传</span>
-        </div>
-      </template>
-      <el-form inline @submit.prevent="handleFolderUpload">
-        <el-form-item label="文件夹">
-          <el-input
-            v-model="folderInput"
-            placeholder="输入文件夹路径"
-            clearable
-            style="width: 260px;"
-            @keyup.enter="handleFolderUpload"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            :loading="loading.folderUpload"
-            :icon="UploadFilled"
-            @click="handleFolderUpload"
-          >
-            上传到 OSS
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- Upload by BAH -->
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>按病案号上传</span>
-        </div>
-      </template>
-      <el-form inline @submit.prevent="handleBahUpload">
-        <el-form-item label="病案号">
-          <el-input
-            v-model="bahInput"
-            placeholder="输入8位病案号"
-            clearable
-            style="width: 200px;"
-            @keyup.enter="handleBahUpload"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            :loading="loading.bahUpload"
-            :icon="UploadFilled"
-            @click="handleBahUpload"
-          >
-            上传到 OSS
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <!-- Upload Results -->
-      <div v-if="uploadResults.length" class="upload-results">
-        <h4>上传结果（{{ uploadResults.length }} 条）</h4>
-        <el-table :data="uploadResults" stripe size="small" max-height="300">
-          <el-table-column prop="scanId" label="Scan ID" width="100" />
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="statusTag(row.status).type as any" size="small">
-                {{ statusTag(row.status).label }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="OSS 链接" min-width="250">
-            <template #default="{ row }">
-              <a
-                v-if="row.ossUrl && row.status === 'success'"
-                :href="row.ossUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="oss-link"
-              >
-                <el-icon><Link /></el-icon>
-                <span class="link-text">查看图片</span>
-              </a>
-              <span v-else class="no-link">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="fileSize" label="文件大小" width="120">
-            <template #default="{ row }">
-              {{ formatBytes(row.fileSize) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="checksumMd5" label="MD5" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
-        </el-table>
-      </div>
-    </el-card>
-
-    <!-- Migration Logs -->
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>迁移日志</span>
-          <div class="log-filters">
-            <el-select
-              v-model="logStatusFilter"
-              clearable
-              placeholder="全部状态"
-              size="small"
-              style="width: 130px;"
-              @change="handleLogFilterChange"
+          <div>
+            <strong>当前任务 #{{ currentJob.id }}</strong>
+            <p>
+              {{ modeLabel(currentJob.mode) }} · {{ currentJob.scopeValue || '全部目录' }} ·
+              创建者 {{ currentJob.createdBy || '-' }}
+            </p>
+          </div>
+          <div class="header-actions">
+            <el-tag :type="statusMeta(currentJob.status).type">
+              {{ statusMeta(currentJob.status).label }}
+            </el-tag>
+            <el-button :icon="Document" @click="showJobDetail(currentJob)">
+              查看详情
+            </el-button>
+            <el-button
+              v-if="hasActiveJob"
+              type="danger"
+              plain
+              :icon="CircleClose"
+              :loading="loading.cancel"
+              @click="handleCancelJob"
             >
-              <el-option label="全部" value="" />
-              <el-option label="成功" value="success" />
-              <el-option label="失败" value="failed" />
-              <el-option label="待迁移" value="pending" />
-            </el-select>
-            <el-button size="small" :icon="Refresh" @click="loadLogs">
-              刷新
+              安全取消
             </el-button>
           </div>
         </div>
       </template>
-      <el-table v-loading="loading.logs" :data="logList" stripe size="small">
-        <el-table-column prop="scanId" label="Scan ID" width="90" />
-        <el-table-column prop="localPath" label="本地路径" min-width="200" show-overflow-tooltip />
-        <el-table-column label="OSS 链接" min-width="150">
+
+      <el-progress
+        :percentage="jobPercentage"
+        :status="currentJob.status === 'failed' ? 'exception' : undefined"
+        :stroke-width="18"
+        text-inside
+      />
+      <div class="facts">
+        <span>计划 {{ formatNumber(currentJob.totalCount) }}</span>
+        <span>已处理 {{ formatNumber(currentJob.processedCount) }}</span>
+        <span>失败 {{ formatNumber(currentJob.failedCount) }}</span>
+        <span>快照上界 ID {{ currentJob.maxScanId ?? '-' }}</span>
+        <span>开始 {{ formatDate(currentJob.startedAt) }}</span>
+      </div>
+      <el-alert
+        v-if="currentJob.errorMessage"
+        :title="currentJob.errorMessage"
+        type="warning"
+        :closable="false"
+      />
+    </el-card>
+
+    <el-card shadow="never" class="workspace-card">
+      <el-tabs v-model="recordTab" class="workspace-tabs">
+        <el-tab-pane label="迁移记录" name="pending">
+          <template #label>
+            <span>当前可领取（{{ formatNumber(stats.pendingCount) }}）</span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane name="waiting">
+          <template #label>
+            <span>等待上架号（{{ formatNumber(stats.waitingSjhCount) }}）</span>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+
+      <div class="section-header">
+        <div>
+          <strong>{{ currentRecordTitle }}</strong>
+          <p>{{ currentRecordDescription }}</p>
+        </div>
+        <div class="result-meta">
+          <el-tag type="info">
+            当前返回 {{ recordReturned }} 条
+          </el-tag>
+          <el-tag v-if="recordHasMore" type="warning">
+            仍有更多，请缩小条件
+          </el-tag>
+        </div>
+      </div>
+
+      <el-form class="filter-grid" label-position="top">
+        <el-form-item label="目录">
+          <el-select
+            v-model="recordFilters.folder"
+            clearable
+            filterable
+            placeholder="全部目录"
+          >
+            <el-option
+              v-for="item in folders"
+              :key="item.folder"
+              :label="item.folder"
+              :value="item.folder"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="病案号">
+          <el-input
+            v-model="recordFilters.bah"
+            clearable
+            placeholder="精确病案号"
+            @keyup.enter="loadRecords"
+          />
+        </el-form-item>
+        <el-form-item label="上架号">
+          <el-input
+            v-model="recordFilters.sjh"
+            clearable
+            placeholder="精确上架号"
+            @keyup.enter="loadRecords"
+          />
+        </el-form-item>
+        <el-form-item label="返回数量">
+          <el-input-number
+            v-model="recordFilters.limit"
+            :min="20"
+            :max="500"
+            :step="20"
+            controls-position="right"
+          />
+        </el-form-item>
+        <el-form-item class="filter-actions" label="操作">
+          <el-button type="primary" :icon="Search" @click="loadRecords">
+            查询
+          </el-button>
+          <el-button @click="resetRecordFilters">
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-alert
+        v-if="recordTab === 'waiting'"
+        title="等待上架号记录不会进入失败或重试"
+        description="补齐上架号后无需修改迁移状态，下一次查询和迁移任务会自动把它识别为可领取记录。"
+        type="info"
+        :closable="false"
+        show-icon
+      />
+
+      <el-table
+        v-loading="loading.records"
+        :data="records"
+        stripe
+        row-key="id"
+        empty-text="当前条件下没有记录"
+        @selection-change="handleRecordSelection"
+      >
+        <el-table-column v-if="recordTab === 'pending'" type="selection" width="48" />
+        <el-table-column prop="id" label="Scan ID" width="100" />
+        <el-table-column prop="bah" label="病案号" width="140" />
+        <el-table-column prop="sjh" label="上架号" width="140">
           <template #default="{ row }">
-            <a
-              v-if="row.ossUrl && row.migrationStatus === 'success'"
-              :href="getOssImageUrl(row.ossUrl)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="oss-link"
-            >
-              <el-icon><Link /></el-icon>
-              <span class="link-text">查看</span>
-            </a>
-            <span v-else class="no-link">-</span>
+            {{ row.sjh || '未填写' }}
           </template>
         </el-table-column>
-        <el-table-column prop="migrationStatus" label="状态" width="90">
+        <el-table-column prop="folder" label="原目录" width="130" />
+        <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="migrationAttempts" label="尝试" width="80">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.migrationStatus).type as any" size="small">
-              {{ statusTag(row.migrationStatus).label }}
+            {{ row.migrationAttempts ?? 0 }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="migrationStatus" label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
+              {{ statusMeta(row.migrationStatus).label }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="fileSize" label="大小" width="100">
+        <el-table-column prop="migrationNextRetryAt" label="下次可重试" width="180">
           <template #default="{ row }">
-            {{ formatBytes(row.fileSize) }}
+            {{ formatDate(row.migrationNextRetryAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="checksumMd5" label="MD5" width="180" show-overflow-tooltip />
-        <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="migratedAt" label="迁移时间" width="170">
+        <el-table-column prop="migrationErrorCode" label="错误码" width="160">
           <template #default="{ row }">
-            {{ formatDate(row.migratedAt) }}
+            {{ row.migrationErrorCode || '-' }}
           </template>
         </el-table-column>
       </el-table>
+
+      <div v-if="recordTab === 'pending'" class="record-actions">
+        <div class="manual-bah">
+          <span>按病案号验证</span>
+          <el-input
+            v-model="bahInput"
+            placeholder="输入病案号"
+            clearable
+            @keyup.enter="handleBahUpload"
+          />
+          <el-button
+            :loading="loading.bah"
+            :disabled="hasActiveJob"
+            @click="handleBahUpload"
+          >
+            上传整份病案
+          </el-button>
+        </div>
+        <el-button
+          type="primary"
+          :icon="UploadFilled"
+          :disabled="!selectedPendingIds.length || hasActiveJob"
+          :loading="loading.manual"
+          @click="handleManualUpload"
+        >
+          手工上传 {{ selectedPendingIds.length }} 条
+        </el-button>
+      </div>
+    </el-card>
+
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header">
+          <div>
+            <strong>迁移任务历史</strong>
+            <p>分页查看试迁移、批次迁移和全量迁移的执行结果。</p>
+          </div>
+          <el-button :icon="Refresh" :loading="loading.jobs" @click="loadJobs">
+            刷新任务
+          </el-button>
+        </div>
+      </template>
+
+      <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
+        <el-table-column prop="id" label="任务" width="80" />
+        <el-table-column label="阶段" width="110">
+          <template #default="{ row }">
+            {{ modeLabel(row.mode) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="scopeValue" label="目录范围" min-width="140">
+          <template #default="{ row }">
+            {{ row.scopeValue || '全部目录' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalCount" label="计划" width="100" />
+        <el-table-column prop="processedCount" label="已处理" width="100" />
+        <el-table-column prop="failedCount" label="失败" width="90" />
+        <el-table-column label="完成率" width="150">
+          <template #default="{ row }">
+            <el-progress :percentage="Math.min(100, Number(row.rate || 0))" :stroke-width="8" />
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="130">
+          <template #default="{ row }">
+            <el-tag :type="statusMeta(row.status).type" size="small">
+              {{ statusMeta(row.status).label }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="showJobDetail(row)">
+              详情
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pager">
+        <el-pagination
+          v-model:current-page="jobPage"
+          v-model:page-size="jobSize"
+          :page-sizes="[10, 20, 50]"
+          :total="jobTotal"
+          layout="total, sizes, prev, pager, next"
+          @size-change="loadJobs"
+          @current-change="loadJobs"
+        />
+      </div>
+    </el-card>
+
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header">
+          <div>
+            <strong>迁移日志与失败处理</strong>
+            <p>按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。</p>
+          </div>
+          <el-button
+            :disabled="!failedLogScanIds.length || hasActiveJob"
+            :loading="loading.retry"
+            @click="handleRetryFailed"
+          >
+            重置失败记录 {{ failedLogScanIds.length }} 条
+          </el-button>
+        </div>
+      </template>
+
+      <el-form class="log-filter" inline>
+        <el-form-item label="结果">
+          <el-select v-model="logStatus" clearable placeholder="全部状态">
+            <el-option label="成功" value="success" />
+            <el-option label="永久失败" value="failed" />
+            <el-option label="等待重试" value="retry_wait" />
+            <el-option label="等待上架号" value="waiting_sjh" />
+            <el-option label="已跳过" value="skipped" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Scan ID">
+          <el-input-number
+            v-model="logScanId"
+            :min="1"
+            controls-position="right"
+            placeholder="精确 ID"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="loadLogs">
+            查询
+          </el-button>
+          <el-button @click="resetLogFilters">
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table
+        v-loading="loading.logs"
+        :data="logs"
+        stripe
+        empty-text="暂无迁移日志"
+        @selection-change="handleLogSelection"
+      >
+        <el-table-column type="selection" width="48" :selectable="logSelectable" />
+        <el-table-column prop="scanId" label="Scan ID" width="100" />
+        <el-table-column prop="localPath" label="迁移来源" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="结果" width="120">
+          <template #default="{ row }">
+            <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
+              {{ statusMeta(row.migrationStatus).label }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="fileSize" label="文件大小" width="110">
+          <template #default="{ row }">
+            {{ formatFileSize(row.fileSize) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="checksumMd5" label="MD5" min-width="190" show-overflow-tooltip />
+        <el-table-column prop="errorMessage" label="错误信息" min-width="240" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.errorMessage || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.migratedAt || row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.ossUrl"
+              link
+              type="primary"
+              @click="openOssUrl(row.ossUrl)"
+            >
+              查看图片
+            </el-button>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
       <div class="pager">
         <el-pagination
           v-model:current-page="logPage"
@@ -712,184 +1315,358 @@ onMounted(refreshAll)
         />
       </div>
     </el-card>
+
+    <el-dialog v-model="uploadResultVisible" title="手工上传结果" width="min(900px, 92vw)">
+      <div v-if="uploadResult" class="upload-summary">
+        <el-tag type="info">
+          总数 {{ uploadResult.total ?? uploadResult.results.length }}
+        </el-tag>
+        <el-tag type="success">
+          成功或跳过 {{ uploadResult.success ?? 0 }}
+        </el-tag>
+        <el-tag type="warning">
+          等待上架号 {{ uploadResult.waitingSjh ?? 0 }}
+        </el-tag>
+        <el-tag type="danger">
+          失败 {{ uploadResult.failed ?? 0 }}
+        </el-tag>
+      </div>
+      <el-table :data="uploadResult?.results ?? []" stripe max-height="520">
+        <el-table-column prop="scanId" label="Scan ID" width="100" />
+        <el-table-column prop="status" label="结果" width="130">
+          <template #default="{ row }: { row: OssUploadResult }">
+            <el-tag :type="statusMeta(row.status).type">
+              {{ statusMeta(row.status).label }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="fileSize" label="文件大小" width="120">
+          <template #default="{ row }: { row: OssUploadResult }">
+            {{ formatFileSize(row.fileSize) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="errorMessage" label="说明" min-width="240">
+          <template #default="{ row }: { row: OssUploadResult }">
+            {{ row.errorMessage || '上传成功或已有一致对象' }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-drawer v-model="jobDrawerVisible" title="迁移任务详情" size="460px">
+      <div v-loading="loading.detail">
+        <el-descriptions v-if="jobDetail" :column="1" border>
+          <el-descriptions-item label="任务 ID">
+            {{ jobDetail.id }}
+          </el-descriptions-item>
+          <el-descriptions-item label="阶段">
+            {{ modeLabel(jobDetail.mode) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="statusMeta(jobDetail.status).type">
+              {{ statusMeta(jobDetail.status).label }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="目录范围">
+            {{ jobDetail.scopeValue || '全部目录' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="请求数量">
+            {{ formatNumber(jobDetail.requestedCount) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="快照上界 ID">
+            {{ jobDetail.maxScanId ?? '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="处理进度">
+            {{ formatNumber(jobDetail.processedCount) }} / {{ formatNumber(jobDetail.totalCount) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="失败数量">
+            {{ formatNumber(jobDetail.failedCount) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="创建者">
+            {{ jobDetail.createdBy || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="创建时间">
+            {{ formatDate(jobDetail.createdAt) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="开始时间">
+            {{ formatDate(jobDetail.startedAt) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="完成时间">
+            {{ formatDate(jobDetail.completedAt) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="错误信息">
+            {{ jobDetail.errorMessage || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <style scoped>
 .page-shell {
   display: grid;
-  gap: 20px;
+  gap: 18px;
 }
 
-.page-header {
+.page-header,
+.card-header,
+.section-header,
+.page-actions,
+.header-actions,
+.result-meta,
+.facts,
+.record-actions,
+.manual-bah,
+.upload-summary,
+.refresh-state {
   display: flex;
+  align-items: center;
+}
+
+.page-header,
+.card-header,
+.section-header,
+.record-actions {
   gap: 16px;
-  align-items: flex-start;
   justify-content: space-between;
 }
 
+.page-header h2,
+.card-header p,
+.section-header p,
+.subtitle,
+.eyebrow,
+.disabled-reason {
+  margin: 0;
+}
+
+.page-header h2 {
+  margin-top: 4px;
+  font-size: 26px;
+}
+
 .eyebrow {
-  margin: 0 0 6px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--el-color-primary);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 
-h2 {
-  margin: 0;
+.subtitle,
+.card-header p,
+.section-header p,
+.refresh-state,
+.disabled-reason {
+  margin-top: 6px;
+  color: var(--el-text-color-secondary);
+}
+
+.page-actions,
+.header-actions,
+.result-meta,
+.facts,
+.record-actions,
+.manual-bah,
+.upload-summary,
+.refresh-state {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-actions {
+  justify-content: flex-end;
+}
+
+.refresh-state {
+  justify-content: flex-end;
+  font-size: 12px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--el-border-radius-base);
+}
+
+.metric-card strong {
   font-size: 28px;
 }
 
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
+.metric-card small,
+.metric-card span {
+  color: var(--el-text-color-secondary);
 }
 
-.progress-section {
-  padding: 4px 0;
+.metric-card--blue {
+  border-top: 3px solid var(--el-color-primary);
 }
 
-.progress-header {
+.metric-card--green {
+  border-top: 3px solid var(--el-color-success);
+}
+
+.metric-card--amber {
+  border-top: 3px solid var(--el-color-warning);
+}
+
+.metric-card--danger {
+  border-top: 3px solid var(--el-color-danger);
+}
+
+.primary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(340px, 0.7fr);
+  gap: 18px;
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.check-item {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  padding: 14px;
+  background: var(--el-color-warning-light-9);
+  border: 1px solid var(--el-color-warning-light-5);
+  border-radius: var(--el-border-radius-base);
 }
 
-.progress-title {
-  font-size: 16px;
-  font-weight: 600;
+.check-item.ok {
+  background: var(--el-color-success-light-9);
+  border-color: var(--el-color-success-light-5);
 }
 
-.progress-pct {
-  font-size: 20px;
-  font-weight: 800;
-  color: #409eff;
+.facts {
+  margin: 14px 0;
+  color: var(--el-text-color-secondary);
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* ===== Folder Tree + Pending Table Row ===== */
-.folder-pending-row {
-  display: flex;
-  gap: 20px;
-}
-
-.folder-tree-card {
-  flex-shrink: 0;
-  width: 300px;
-}
-
-.pending-table-card {
-  flex: 1;
-  min-width: 0;
-}
-
-.tree-wrapper {
-  max-height: 480px;
-  overflow-y: auto;
-}
-
-.tree-node {
-  display: flex;
+.warning-list {
+  display: grid;
   gap: 6px;
-  align-items: center;
-  width: 100%;
-  padding: 2px 0;
-  font-size: 13px;
+  padding-left: 20px;
+  margin: 14px 0 0;
+  color: var(--el-color-warning-dark-2);
 }
 
-.tree-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.disabled-reason {
+  font-size: 12px;
 }
 
-.tree-count {
-  flex-shrink: 0;
-  margin-left: auto;
-  font-size: 11px;
+.current-job-card {
+  border-left: 3px solid var(--el-color-primary);
 }
 
-.pending-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.workspace-card :deep(.el-card__body) {
+  padding-top: 8px;
 }
 
-.empty-pending {
-  padding: 32px 0;
-  font-size: 14px;
-  color: #909399;
-  text-align: center;
+.workspace-tabs {
+  margin-bottom: 16px;
 }
 
-.upload-results {
-  padding-top: 12px;
-  margin-top: 16px;
-  border-top: 1px solid #ebeef5;
+.section-header {
+  margin-bottom: 14px;
 }
 
-.upload-results h4 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: #303133;
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(180px, auto);
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
 }
 
-.oss-link {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-  padding: 4px 8px;
-  color: #409eff;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: all 0.2s;
+.filter-grid :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
-.oss-link:hover {
-  color: #66b1ff;
-  background-color: #ecf5ff;
+.filter-actions :deep(.el-form-item__content) {
+  flex-wrap: nowrap;
 }
 
-.oss-link .el-icon {
-  font-size: 14px;
+.record-actions {
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
-.link-text {
-  font-size: 13px;
+.manual-bah :deep(.el-input) {
+  width: 220px;
 }
 
-.no-link {
-  font-size: 13px;
-  color: #c0c4cc;
+.log-filter {
+  padding: 14px;
+  margin-bottom: 14px;
+  background: var(--el-fill-color-lighter);
+  border-radius: var(--el-border-radius-base);
 }
 
-.log-filters {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.log-filter :deep(.el-select) {
+  width: 160px;
 }
 
 .pager {
   display: flex;
-  justify-content: center;
-  margin-top: 16px;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 
-@media (width <= 900px) {
-  .folder-pending-row {
-    flex-direction: column;
+.upload-summary {
+  margin-bottom: 14px;
+}
+
+:deep(.el-input-number),
+:deep(.el-select) {
+  width: 100%;
+}
+
+@media (width <= 1100px) {
+  .primary-grid {
+    grid-template-columns: 1fr;
   }
 
-  .folder-tree-card {
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 720px) {
+  .check-grid,
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header,
+  .card-header,
+  .section-header,
+  .record-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-actions,
+  .manual-bah {
+    width: 100%;
+  }
+
+  .manual-bah :deep(.el-input) {
     width: 100%;
   }
 }

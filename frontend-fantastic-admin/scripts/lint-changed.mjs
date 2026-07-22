@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 const frontendRoot = process.cwd()
@@ -31,6 +32,7 @@ function getChangedFiles() {
     .split('\0')
     .filter(Boolean)
     .map(file => path.relative(frontendRoot, path.resolve(repositoryRoot, file)).split(path.sep).join('/'))
+    .filter(file => existsSync(path.resolve(frontendRoot, file)))
 }
 
 function run(command, files) {

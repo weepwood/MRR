@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,12 @@ public interface ScanMapper {
             "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
     String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
+    String VALID_SJH_EXPRESSION = "(NULLIF(BTRIM(SJH), '') IS NOT NULL " +
+            "AND LENGTH(BTRIM(SJH)) >= 4 AND BTRIM(SJH) ~ '^[0-9]+$')";
+    String MIGRATION_ELIGIBLE_EXPRESSION = "(" + VALID_SJH_EXPRESSION + " AND " +
+            "((migration_status IS NULL OR migration_status IN ('not_migrated', 'waiting_sjh')) " +
+            "OR (migration_status = 'retry_wait' AND (migration_next_retry_at IS NULL " +
+            "OR NOT migration_next_retry_at > NOW()))))";
 
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND (" +
             "BAH = #{normalizedCode} " +
@@ -158,14 +165,76 @@ public interface ScanMapper {
 
     @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +
             "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +
-            "migrated_at = NOW() WHERE id = #{id}")
+            "migration_attempts = 0, migration_error_code = NULL, migration_next_retry_at = NULL, " +
+            "migration_updated_at = NOW(), migrated_at = NOW() WHERE id = #{id}")
     int updateOssInfo(@Param("id") Integer id, @Param("ossUrl") String ossUrl,
-                       @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
-                       @Param("migrationStatus") String migrationStatus);
+                      @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
+                      @Param("migrationStatus") String migrationStatus);
 
-    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND " +
-            "(oss_url IS NULL OR oss_url = '') ORDER BY id LIMIT #{limit}")
+    @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') AND " + MIGRATION_ELIGIBLE_EXPRESSION +
+            " ORDER BY id LIMIT #{limit}")
     List<Scan> findPendingMigration(@Param("limit") int limit);
+
+    @Select("<script>SELECT * FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') " +
+            "AND id &gt; #{afterId} AND id &lt;= #{maxScanId} " +
+            "AND " + MIGRATION_ELIGIBLE_EXPRESSION + " " +
+            "<if test='folder != null and folder != \"\"'>AND folder = #{folder} </if>" +
+            "ORDER BY id LIMIT #{limit}</script>")
+    List<Scan> findPendingMigrationAfterId(@Param("afterId") int afterId,
+                                           @Param("maxScanId") int maxScanId,
+                                           @Param("folder") String folder,
+                                           @Param("limit") int limit);
+
+    @Select("<script>SELECT MAX(id) FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') AND " + MIGRATION_ELIGIBLE_EXPRESSION + " " +
+            "<if test='folder != null and folder != \"\"'>AND folder = #{folder}</if>" +
+            "</script>")
+    Integer findMaxPendingMigrationId(@Param("folder") String folder);
+
+    @Select("<script>SELECT COUNT(*) FROM mr_scan WHERE uploadflag != 0 " +
+            "AND (oss_url IS NULL OR oss_url = '') AND id &lt;= #{maxScanId} " +
+            "AND " + MIGRATION_ELIGIBLE_EXPRESSION + " " +
+            "<if test='folder != null and folder != \"\"'>AND folder = #{folder}</if>" +
+            "</script>")
+    long countEligibleMigrations(@Param("maxScanId") int maxScanId, @Param("folder") String folder);
+
+    @Update("UPDATE mr_scan SET migration_status = 'migrating', " +
+            "migration_attempts = COALESCE(migration_attempts, 0) + 1, " +
+            "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
+            "WHERE id = #{id} AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND " +
+            MIGRATION_ELIGIBLE_EXPRESSION)
+    int markMigrationStarted(@Param("id") Integer id);
+
+    @Update("UPDATE mr_scan SET migration_status = 'failed', migration_error_code = #{errorCode}, " +
+            "migration_next_retry_at = NULL, migration_updated_at = NOW() " +
+            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
+    int markMigrationFailed(@Param("id") Integer id, @Param("errorCode") String errorCode);
+
+    @Update("UPDATE mr_scan SET migration_status = 'waiting_sjh', migration_error_code = 'MISSING_SJH', " +
+            "migration_next_retry_at = NULL, migration_updated_at = NOW() " +
+            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
+    int markMigrationWaitingSjh(@Param("id") Integer id);
+
+    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = #{errorCode}, " +
+            "migration_next_retry_at = #{nextRetryAt}, migration_updated_at = NOW() " +
+            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
+    int markMigrationRetryWait(@Param("id") Integer id,
+                               @Param("errorCode") String errorCode,
+                               @Param("nextRetryAt") Date nextRetryAt);
+
+    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = 'APPLICATION_RESTART', " +
+            "migration_next_retry_at = NOW(), migration_updated_at = NOW() " +
+            "WHERE migration_status = 'migrating' AND (oss_url IS NULL OR oss_url = '')")
+    int recoverInterruptedMigrations();
+
+    @Update("<script>UPDATE mr_scan SET migration_status = 'not_migrated', migration_attempts = 0, " +
+            "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
+            "WHERE (oss_url IS NULL OR oss_url = '') AND id IN " +
+            "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
+            "</script>")
+    int resetMigrationFailures(@Param("ids") List<Integer> ids);
 
     @Select("SELECT COUNT(*) FROM mr_scan WHERE migration_status = #{status}")
     long countByMigrationStatus(@Param("status") String status);
@@ -175,19 +244,32 @@ public interface ScanMapper {
 
     @Select("SELECT "
             + "SUM(CASE WHEN uploadflag != 0 THEN 1 ELSE 0 END) AS total, "
-            + "SUM(CASE WHEN migration_status = 'migrated' THEN 1 ELSE 0 END) AS migrated, "
-            + "SUM(CASE WHEN migration_status = 'verified' THEN 1 ELSE 0 END) AS verified, "
-            + "SUM(CASE WHEN migration_status = 'not_migrated' THEN 1 ELSE 0 END) AS not_migrated "
+            + "SUM(CASE WHEN uploadflag != 0 AND oss_url IS NOT NULL AND oss_url <> '' "
+            + "AND migration_status IS DISTINCT FROM 'verified' THEN 1 ELSE 0 END) AS migrated, "
+            + "SUM(CASE WHEN uploadflag != 0 AND oss_url IS NOT NULL AND oss_url <> '' "
+            + "AND migration_status = 'verified' THEN 1 ELSE 0 END) AS verified, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "AND migration_status = 'failed' THEN 1 ELSE 0 END) AS failed, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "AND migration_status = 'retry_wait' THEN 1 ELSE 0 END) AS retry_wait, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "AND migration_status = 'migrating' THEN 1 ELSE 0 END) AS migrating, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND NOT "
+            + VALID_SJH_EXPRESSION + " THEN 1 ELSE 0 END) AS waiting_sjh, "
+            + "SUM(CASE WHEN uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND "
+            + MIGRATION_ELIGIBLE_EXPRESSION + " THEN 1 ELSE 0 END) AS pending "
             + "FROM mr_scan")
     Map<String, Object> countMigrationStats();
 
     @Select("SELECT folder, COUNT(*) AS cnt FROM mr_scan "
-            + "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
+            + "WHERE uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND "
+            + MIGRATION_ELIGIBLE_EXPRESSION + " "
             + "GROUP BY folder ORDER BY folder")
     List<Map<String, Object>> findPendingFolders();
 
     @Select("SELECT * FROM mr_scan WHERE folder = #{folder} "
-            + "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') "
-            + "ORDER BY id")
-    List<Scan> findPendingByFolder(@Param("folder") String folder);
+            + "AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND "
+            + MIGRATION_ELIGIBLE_EXPRESSION + " "
+            + "ORDER BY id LIMIT #{limit}")
+    List<Scan> findPendingByFolder(@Param("folder") String folder, @Param("limit") int limit);
 }

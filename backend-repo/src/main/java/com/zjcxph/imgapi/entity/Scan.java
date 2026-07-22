@@ -29,6 +29,10 @@ public class Scan {
     private Long fileSize;
     private String checksumMd5;
     private String migrationStatus;
+    private Integer migrationAttempts;
+    private String migrationErrorCode;
+    private Date migrationNextRetryAt;
+    private Date migrationUpdatedAt;
     private Date migratedAt;
 
     public Scan() {

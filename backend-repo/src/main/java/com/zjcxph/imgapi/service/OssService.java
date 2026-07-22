@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.dto.resp.OssBrowserPageDTO;
+
 public interface OssService {
 
     /**
@@ -26,6 +28,24 @@ public interface OssService {
      * @return a time-limited signed URL
      */
     String generatePresignedUrl(String ossKey);
+
+    /**
+     * Browse the managed OSS prefix using S3 prefix/delimiter pagination.
+     *
+     * @param prefix current virtual directory prefix
+     * @param continuationToken opaque S3 pagination token
+     * @param maxKeys maximum entries requested from OSS
+     * @return current virtual directory page
+     */
+    OssBrowserPageDTO browseObjects(String prefix, String continuationToken, int maxKeys);
+
+    /**
+     * Generate a pre-signed URL for an object visible in the read-only OSS browser.
+     *
+     * @param ossKey object key below the managed root prefix
+     * @return time-limited signed URL
+     */
+    String generateBrowserPresignedUrl(String ossKey);
 
     /**
      * Calculate the MD5 checksum of a local file.

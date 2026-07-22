@@ -236,7 +236,7 @@
         <where><include refid="imageAuditFilters"/> AND NULLIF(TRIM(username), '') IS NOT NULL</where>
         GROUP BY username
         ORDER BY COUNT(*) DESC, username ASC
-        LIMIT 10
+        LIMIT 5
     </select>
 
     <select id="getTopImageAuditTargets" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditCountDTO">

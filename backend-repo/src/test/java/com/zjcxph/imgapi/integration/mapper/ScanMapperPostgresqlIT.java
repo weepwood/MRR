@@ -23,7 +23,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MybatisTest(properties = "mybatis.mapper-locations=classpath*:mapper/*.xml")
+@MybatisTest(properties = {
+        "mybatis.configuration.map-underscore-to-camel-case=true",
+        "mybatis.mapper-locations=classpath*:mapper/*.xml"
+})
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)

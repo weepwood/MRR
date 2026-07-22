@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.req.MigrationRetryRequest;
 import com.zjcxph.imgapi.dto.req.OssUploadRequest;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
+import com.zjcxph.imgapi.dto.resp.OssBrowserPageDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.ImageMigrationLog;
@@ -112,6 +113,39 @@ public class OssController {
         } catch (Exception e) {
             logger.error("获取 OSS URL 失败：scanId={}", scanId, e);
             return Result.fail("获取 OSS URL 失败");
+        }
+    }
+
+    @Operation(summary = "浏览 OSS 迁移文件目录")
+    @GetMapping("/browser")
+    public Result<OssBrowserPageDTO> browseOssFiles(
+            @RequestParam(required = false) String prefix,
+            @RequestParam(required = false) String continuationToken,
+            @RequestParam(defaultValue = "200") int maxKeys) {
+        try {
+            return Result.success(ossService.browseObjects(prefix, continuationToken, maxKeys));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            logger.error("浏览 OSS 文件失败：prefix={}", prefix, e);
+            return Result.fail("读取 OSS 目录失败");
+        }
+    }
+
+    @Operation(summary = "获取 OSS 浏览器文件签名 URL")
+    @GetMapping("/browser/url")
+    public Result<Map<String, Object>> getBrowserOssUrl(@RequestParam String key) {
+        try {
+            String signedUrl = ossService.generateBrowserPresignedUrl(key);
+            Map<String, Object> response = new HashMap<>();
+            response.put("key", key);
+            response.put("ossUrl", signedUrl);
+            return Result.success(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            logger.error("获取 OSS 浏览文件 URL 失败：key={}", key, e);
+            return Result.fail("获取 OSS 文件地址失败");
         }
     }
 

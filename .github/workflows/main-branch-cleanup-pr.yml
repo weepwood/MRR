@@ -41,7 +41,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: main-branch-cleanup-log-${{ github.run_id }}
-          path: cleanup.log
+          path: |
+            cleanup.log
+            scripts/check_main_branch_references.py
+            scripts/tests/test_check_main_branch_references.py
           if-no-files-found: warn
           retention-days: 7
 

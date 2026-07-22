@@ -16,7 +16,7 @@ import { useTabbarStore } from './tabbar'
 
 export type AuthSessionStatus = 'anonymous' | 'candidate' | 'verifying' | 'verified' | 'unavailable'
 
-const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
+const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE === 'true'
 
 export const useUserStore = defineStore('user', () => {
   const settingsStore = useSettingsStore()

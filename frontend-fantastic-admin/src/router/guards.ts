@@ -1,14 +1,30 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
-import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
+import { canUseArchiveLegacyRoute, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
+import '@/assets/styles/archive-legacy-mode.css'
 
 const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
+const ARCHIVE_LEGACY_ACCESS_MODE = 'archive-legacy'
+
+function setArchiveLegacyDomMode(enabled: boolean) {
+  if (typeof document === 'undefined') {
+    return
+  }
+  if (enabled) {
+    document.documentElement.dataset.mrrAccessMode = ARCHIVE_LEGACY_ACCESS_MODE
+  }
+  else {
+    delete document.documentElement.dataset.mrrAccessMode
+  }
+}
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
+    setArchiveLegacyDomMode(false)
+
     if (to.name === 'publicStatus' || to.name === 'externalArchive') {
       return true
     }
@@ -126,13 +142,12 @@ function setupRoutes(router: Router) {
         }
       }
     }
-    else if (isDemoMode || await isRuntimeDeveloperModeEnabled()) {
-      const runtimeDeveloperMode = !isDemoMode
+    else if (isDemoMode) {
       userStore.setSession({
-        token: runtimeDeveloperMode ? 'developer-mode-runtime-token' : 'dev-token',
+        token: 'dev-token',
         user: {
           username: 'dev',
-          displayName: runtimeDeveloperMode ? 'Developer Mode' : 'Dev User',
+          displayName: 'Dev User',
           roleCode: 'ADMIN',
           roleName: 'Administrator',
           status: 'active',
@@ -149,6 +164,12 @@ function setupRoutes(router: Router) {
       }
     }
     else {
+      const developerModeStatus = await getRuntimeDeveloperModeStatus()
+      if (canUseArchiveLegacyRoute(to.name, developerModeStatus)) {
+        setArchiveLegacyDomMode(true)
+        return true
+      }
+
       if (to.name === 'login') {
         return true
       }

@@ -64,6 +64,15 @@ async function executeProbe(): Promise<DeveloperModeStatus> {
 }
 
 /**
+ * 只有独立档案袋路由可以使用匿名旧接口兼容模式。
+ */
+export function canUseArchiveLegacyRoute(routeName: unknown, status: DeveloperModeStatus): boolean {
+  return routeName === 'archive'
+    && status.enabled
+    && status.accessMode === 'ARCHIVE_LEGACY'
+}
+
+/**
  * 匿名路由跳转前读取最小化公共状态，仅用于判断旧版档案袋是否可用。
  */
 export async function getRuntimeDeveloperModeStatus(force = false): Promise<DeveloperModeStatus> {

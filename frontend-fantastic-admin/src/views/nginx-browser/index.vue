@@ -843,8 +843,8 @@ onBeforeUnmount(revokePreviewUrl)
 
 .tree-button {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   width: 100%;
   padding: 8px 9px;
   overflow: hidden;
@@ -922,8 +922,8 @@ onBeforeUnmount(revokePreviewUrl)
 .file-name {
   width: 100%;
   overflow: hidden;
-  font-size: 13px;
   text-overflow: ellipsis;
+  font-size: 13px;
   text-align: center;
   white-space: nowrap;
 }

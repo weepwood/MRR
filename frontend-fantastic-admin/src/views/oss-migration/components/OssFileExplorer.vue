@@ -729,8 +729,8 @@ onMounted(() => {
 
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   gap: 10px;
   align-content: start;
 }

@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.FrontendResponseMetricBatchRequest;
@@ -25,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class ResponseMetricController {
 
     private static final int MAX_ANALYSIS_DAYS = 365;
-
     private final ResponseMetricService responseMetricService;
 
     public ResponseMetricController(ResponseMetricService responseMetricService) {
@@ -33,10 +33,9 @@ public class ResponseMetricController {
     }
 
     @PostMapping("/frontend/batch")
+    @AuthenticatedOnly
     @Operation(summary = "批量记录前端响应指标")
-    public Result<Void> saveFrontendMetrics(
-            @RequestBody @Valid FrontendResponseMetricBatchRequest batch
-    ) {
+    public Result<Void> saveFrontendMetrics(@RequestBody @Valid FrontendResponseMetricBatchRequest batch) {
         responseMetricService.saveFrontendMetrics(batch.getMetrics());
         return Result.success();
     }
@@ -45,11 +44,7 @@ public class ResponseMetricController {
     @RequirePermissions({"system:read"})
     @Operation(summary = "获取前后端响应分析")
     public Result<ResponseMetricAnalysisDTO> getAnalysis(
-            @RequestParam(defaultValue = "365")
-            @Min(1)
-            @Max(MAX_ANALYSIS_DAYS)
-            int days
-    ) {
+            @RequestParam(defaultValue = "365") @Min(1) @Max(MAX_ANALYSIS_DAYS) int days) {
         return Result.success(responseMetricService.getAnalysis(days));
     }
 }

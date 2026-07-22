@@ -123,3 +123,5 @@ jobs:
           name: backend-test-log
           path: backend-test.log
           if-no-files-found: ignore
+
+# trigger-after-push-definition

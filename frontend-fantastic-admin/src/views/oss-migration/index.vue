@@ -779,8 +779,8 @@ onBeforeUnmount(stopPolling)
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
   color: var(--el-color-primary);
+  letter-spacing: 0.12em;
 }
 
 .subtitle,
@@ -832,8 +832,8 @@ onBeforeUnmount(stopPolling)
 
 .check-item {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   justify-content: space-between;
   padding: 14px;
   background: var(--el-color-warning-light-9);

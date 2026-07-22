@@ -1,26 +1,15 @@
-import type { AuthProfile } from '@/utils/auth-storage'
 import axios from 'axios'
-
-export interface DeveloperModeSession extends AuthProfile {
-  username: string
-  displayName: string
-  roleCode: 'DEVELOPER_API'
-  roleName: string
-  status: 'active'
-  mustChangePassword: false
-  passwordVersion: number
-  permissions: string[]
-}
 
 export interface DeveloperModeStatus {
   enabled: boolean
-  accessMode: 'API_FULL' | 'ARCHIVE_LEGACY' | 'DISABLED'
-  session?: DeveloperModeSession
+  accessMode: 'ARCHIVE_LEGACY' | 'DISABLED'
+  apiPermissionBypassEnabled: boolean
 }
 
 const DISABLED_STATUS: DeveloperModeStatus = {
   enabled: false,
   accessMode: 'DISABLED',
+  apiPermissionBypassEnabled: false,
 }
 
 const developerModeProbeApi = axios.create({
@@ -48,28 +37,6 @@ function parseEnabled(value: unknown): boolean {
   return false
 }
 
-function parseSession(value: unknown): DeveloperModeSession | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined
-  }
-  const source = value as Record<string, unknown>
-  if (String(source.roleCode || '') !== 'DEVELOPER_API') {
-    return undefined
-  }
-  return {
-    username: String(source.username || 'developer-api'),
-    displayName: String(source.displayName || 'Developer API'),
-    roleCode: 'DEVELOPER_API',
-    roleName: String(source.roleName || 'Developer Full API'),
-    status: 'active',
-    mustChangePassword: false,
-    passwordVersion: Number(source.passwordVersion || 1),
-    permissions: Array.isArray(source.permissions)
-      ? source.permissions.map(item => String(item)).filter(Boolean)
-      : [],
-  }
-}
-
 function unwrapStatus(payload: unknown): DeveloperModeStatus {
   if (!payload || typeof payload !== 'object') {
     return DISABLED_STATUS
@@ -79,17 +46,12 @@ function unwrapStatus(payload: unknown): DeveloperModeStatus {
     ? root.data as Record<string, unknown>
     : root
   const enabled = parseEnabled(source.enabled)
-  const accessMode = enabled && ['API_FULL', 'ARCHIVE_LEGACY'].includes(String(source.accessMode))
-    ? String(source.accessMode) as 'API_FULL' | 'ARCHIVE_LEGACY'
-    : 'DISABLED'
-  const session = accessMode === 'API_FULL' ? parseSession(source.session) : undefined
-  if (accessMode === 'API_FULL' && !session) {
-    return DISABLED_STATUS
-  }
   return {
-    enabled: accessMode !== 'DISABLED',
-    accessMode,
-    ...(session ? { session } : {}),
+    enabled,
+    accessMode: enabled && source.accessMode === 'ARCHIVE_LEGACY'
+      ? 'ARCHIVE_LEGACY'
+      : 'DISABLED',
+    apiPermissionBypassEnabled: parseEnabled(source.apiPermissionBypassEnabled),
   }
 }
 
@@ -112,12 +74,6 @@ export function canUseArchiveLegacyRoute(routeName: unknown, status: DeveloperMo
     && status.accessMode === 'ARCHIVE_LEGACY'
 }
 
-export function canUseDeveloperApi(status: DeveloperModeStatus): boolean {
-  return status.enabled
-    && status.accessMode === 'API_FULL'
-    && status.session?.roleCode === 'DEVELOPER_API'
-}
-
 export async function getRuntimeDeveloperModeStatus(force = false): Promise<DeveloperModeStatus> {
   const now = Date.now()
   if (!force && now < cacheExpiresAt) {
@@ -130,7 +86,7 @@ export async function getRuntimeDeveloperModeStatus(force = false): Promise<Deve
   pendingProbe = executeProbe()
     .then((status) => {
       cachedStatus = status
-      cacheExpiresAt = Date.now() + (status.enabled ? 5000 : 2000)
+      cacheExpiresAt = Date.now() + (status.enabled || status.apiPermissionBypassEnabled ? 5000 : 2000)
       return status
     })
     .finally(() => {
@@ -141,7 +97,7 @@ export async function getRuntimeDeveloperModeStatus(force = false): Promise<Deve
 
 export async function isRuntimeDeveloperModeEnabled(force = false): Promise<boolean> {
   const status = await getRuntimeDeveloperModeStatus(force)
-  return status.enabled && status.accessMode !== 'DISABLED'
+  return status.enabled
 }
 
 export function clearDeveloperModeProbeCache(): void {

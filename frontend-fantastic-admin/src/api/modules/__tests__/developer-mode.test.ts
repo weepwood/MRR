@@ -16,7 +16,7 @@ describe('developer mode access', () => {
     expect(canUseArchiveLegacyRoute('users', archiveStatus)).toBe(false)
   })
 
-  it('API 权限旁路不会开放匿名后台路由', () => {
+  it('api 权限旁路不会开放匿名后台路由', () => {
     const status: DeveloperModeStatus = {
       enabled: false,
       accessMode: 'DISABLED',

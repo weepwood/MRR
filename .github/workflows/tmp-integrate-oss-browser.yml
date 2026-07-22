@@ -82,3 +82,5 @@ jobs:
           git add frontend-fantastic-admin/src/views/oss-migration/index.vue
           git commit -m "功能：在迁移管理页面集成 OSS 文件资源管理器"
           git push origin HEAD:feat/oss-migration-management-20260722
+
+# trigger

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { PatientImportResult } from '@/api/modules/patients'
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
+import type { PatientImportResult } from '@/api/modules/patients'
 import { Download, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, genFileId } from 'element-plus'
 import { computed, ref, watch } from 'vue'
@@ -53,7 +53,9 @@ function resetState() {
 }
 
 watch(() => props.modelValue, (visible) => {
-  if (!visible) resetState()
+  if (!visible) {
+    resetState()
+  }
 })
 
 function handleFileChange(uploadFile: UploadFile, uploadFiles: UploadFiles) {
@@ -97,12 +99,16 @@ async function validateFile() {
 }
 
 async function commitImport() {
-  if (!selectedFile.value || !canCommit.value) return
+  if (!selectedFile.value || !canCommit.value) {
+    return
+  }
 
   importing.value = true
   try {
     const response = await importPatients(selectedFile.value, false)
-    if (!response.data) return
+    if (!response.data) {
+      return
+    }
     validationResult.value = response.data
     ElMessage.success(`导入完成，新增 ${response.data.insertedRows} 条，跳过重复 ${response.data.duplicateRows} 条`)
     emit('imported', response.data)
@@ -269,25 +275,108 @@ function downloadTemplate() {
 </template>
 
 <style scoped>
-.import-dialog { display: grid; gap: 18px; }
+.import-dialog {
+  display: grid;
+  gap: 18px;
+}
+
 .field-section,
-.result-section { display: grid; gap: 14px; }
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.section-heading h3 { margin: 0; font-size: 16px; }
-.section-heading p { margin: 6px 0 0; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.6; }
-.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
-.field-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 10px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; background: var(--el-fill-color-lighter); }
-.field-item code { flex: 0 0 112px; color: var(--el-color-primary); font-weight: 700; }
-.field-item span { color: var(--el-text-color-secondary); font-size: 12px; }
-.result-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.summary-item { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; }
-.summary-item span { color: var(--el-text-color-secondary); font-size: 12px; }
-.summary-item strong { font-size: 20px; }
-.summary-item.danger strong { color: var(--el-color-danger); }
-.truncated-tip { margin: -4px 0 0; color: var(--el-color-warning); font-size: 12px; }
-@media (max-width: 760px) {
-  .section-heading { flex-direction: column; }
-  .field-grid { grid-template-columns: 1fr; }
-  .result-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.result-section {
+  display: grid;
+  gap: 14px;
+}
+
+.section-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.section-heading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.section-heading p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.field-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.field-item code {
+  flex: 0 0 112px;
+  font-weight: 700;
+  color: var(--el-color-primary);
+}
+
+.field-item span {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.summary-item span {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.summary-item strong {
+  font-size: 20px;
+}
+
+.summary-item.danger strong {
+  color: var(--el-color-danger);
+}
+
+.truncated-tip {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--el-color-warning);
+}
+
+@media (width <= 760px) {
+  .section-heading {
+    flex-direction: column;
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

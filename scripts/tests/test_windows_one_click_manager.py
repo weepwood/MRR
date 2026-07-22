@@ -32,19 +32,23 @@ class WindowsOneClickManagerTest(unittest.TestCase):
 
     def test_manager_has_uac_and_double_click_entry(self):
         manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
-        wrapper = (ROOT / 'deploy/windows/MRR-管理中心.cmd').read_text(encoding='utf-8')
+        wrapper_path = ROOT / 'deploy/windows/MRR-Manager.cmd'
+        wrapper = wrapper_path.read_text(encoding='utf-8')
 
         self.assertIn('-Verb RunAs', manager)
         self.assertIn('-STA', manager)
         self.assertIn('mrr-manager.ps1', wrapper)
         self.assertIn('-STA', wrapper)
+        self.assertIn('-WindowStyle Hidden', wrapper)
+        self.assertFalse((ROOT / 'deploy/windows/MRR-管理中心.cmd').exists())
 
     def test_installer_copies_manager_to_ops(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
 
         self.assertIn("Join-Path $scriptDir 'mrr-manager.ps1'", installer)
         self.assertIn("Join-Path $Root 'ops\\mrr-manager.ps1'", installer)
-        self.assertIn("Join-Path $scriptDir 'MRR-管理中心.cmd'", installer)
+        self.assertIn("Join-Path $scriptDir 'MRR-Manager.cmd'", installer)
+        self.assertIn("Join-Path $Root 'ops\\MRR-Manager.cmd'", installer)
         self.assertIn("Join-Path $Root 'ops\\MRR-管理中心.cmd'", installer)
 
     def test_release_workflow_packages_entire_windows_deployment_directory(self):

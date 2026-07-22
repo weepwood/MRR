@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
     [ValidateSet('status','start','stop','restart','maintenance','deploy','rollback','version','versions','logs','doctor')]
@@ -379,6 +379,7 @@ function Start-Mrr([string]$Name) {
     Assert-ServiceTarget $Name
     if ($Name -in @('backend','all')) { Start-Service $S.Backend; if (-not (Wait-Health)) { throw '后端健康检查失败。' } }
     if ($Name -in @('gateway','all')) { Start-Service $S.Gateway }
+    if ($Name -eq 'all') { Set-Maintenance $false }
 }
 
 function Stop-Mrr([string]$Name) {

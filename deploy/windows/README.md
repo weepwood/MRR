@@ -7,6 +7,7 @@
 - **MRR-Backend**：Spring Boot JAR，由 WinSW 注册为 Windows 服务；
 - **MRR-Gateway**：Nginx，由 WinSW 注册为 Windows 服务；
 - **mrrctl.ps1**：状态、启停、维护、部署、版本和回滚入口；
+- **MRR 一键管理中心**：双击运行的 Windows 图形化管理入口，复用受控脚本执行操作；
 - **不可变发布目录**：`releases/current/previous`；
 - **外置配置**：普通配置和敏感配置与发布包分离；
 - **运行识别**：发布 manifest 与 `/actuator/info` 双重核对产品版本和 Git Commit。
@@ -34,6 +35,38 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 安装脚本会创建目录、复制配置模板、保护敏感配置目录、安装后端和网关服务并校验 Nginx。首次安装不会自动启动业务服务。
+
+## 一键管理中心
+
+安装完成后，直接双击：
+
+```text
+C:\MRR\ops\MRR-管理中心.cmd
+```
+
+若解压或文件系统不支持中文文件名，也可以运行 `C:\MRR\ops\MRR-Manager.cmd`。两个入口指向同一个管理程序。
+
+程序会自动请求管理员权限，并集中展示产品版本、后端服务、Nginx 网关、健康状态、维护模式和磁盘空间。可执行：
+
+- 一键启动、停止和重启全部服务；
+- 开启维护模式与恢复正常访问；
+- 选择受管理 ZIP 执行部署；
+- 查看版本列表和执行系统诊断；
+- 检查或平滑重载 Nginx；
+- 打开系统首页、日志、配置和发布包目录。
+
+所有服务、维护和部署操作仍由 `mrrctl.ps1` 或 `nginxctl.ps1` 执行，管理中心不绕过发布基线、健康检查、构建身份或 SHA-256 校验。
+
+## Windows 脚本编码约定
+
+为兼容 Windows Server 2019 自带的 Windows PowerShell 5.1：
+
+- `deploy/windows/**/*.ps1` 必须使用 **UTF-8 with BOM**，否则 PowerShell 5.1 会按系统 ANSI 代码页解释中文字符串和文件名；
+- `deploy/windows/*.cmd` 必须使用 **UTF-8 without BOM**，避免 BOM 被 `cmd.exe` 当作首条命令的一部分；
+- CMD 入口必须先执行 `chcp 65001`，再输出或解析中文内容；
+- `mrr-manager.ps1 -SelfTest` 用于在 Windows PowerShell 5.1 下无界面验证程序集、中文文本和控制脚本路径。
+
+该约定由 Python 防回归测试和 `windows-latest` 门禁共同检查。
 
 ## 配置
 

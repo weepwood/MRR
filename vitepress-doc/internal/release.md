@@ -30,7 +30,7 @@ MRR 的发布必须能够回答五个问题：运行的是什么产品版本、�
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260719174500",
+    "maximumCompatibleMigration": "20260722110500",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
@@ -80,18 +80,18 @@ python scripts/release_baseline.py validate
 
 ### 后端
 
-Maven 构建后的可执行 JAR 包含：
+Maven 构建会生成：
 
-- `META-INF/maven/com.zjcxph/imgapi/pom.properties`：Maven 坐标和产品版本；
+- `META-INF/build-info.properties`：产品版本和构建时间；
 - `BOOT-INF/classes/git.properties`：完整 Git Commit、短 Commit、分支和提交时间。
 
-Windows 发布工作流会直接读取上述两个文件，验证产品版本和 Git Commit 与本次构建一致。
-
-运行中的后端可通过本机管理端口查看应用公开的构建与 Git 信息：
+运行中的后端可通过本机管理端口查看：
 
 ```http
 GET http://127.0.0.1:18046/actuator/info
 ```
+
+响应中的 `build.version` 必须等于 `VERSION`，`git.commit.id` 必须能够定位到唯一提交。
 
 ### 前端
 
@@ -178,7 +178,7 @@ mvn package
 确认生成的 JAR 内存在：
 
 ```text
-META-INF/maven/com.zjcxph/imgapi/pom.properties
+META-INF/build-info.properties
 BOOT-INF/classes/git.properties
 ```
 

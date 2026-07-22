@@ -18,7 +18,10 @@ export interface DeveloperModeStatus {
   session?: DeveloperModeSession
 }
 
-const DISABLED_STATUS: DeveloperModeStatus = { enabled: false, accessMode: 'DISABLED' }
+const DISABLED_STATUS: DeveloperModeStatus = {
+  enabled: false,
+  accessMode: 'DISABLED',
+}
 
 const developerModeProbeApi = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
@@ -33,8 +36,12 @@ let cacheExpiresAt = 0
 let pendingProbe: Promise<DeveloperModeStatus> | null = null
 
 function parseEnabled(value: unknown): boolean {
-  if (typeof value === 'boolean') return value
-  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value !== 0
+  }
   if (typeof value === 'string') {
     return ['true', '1', 'yes', 'on', 'enabled'].includes(value.trim().toLowerCase())
   }
@@ -42,9 +49,13 @@ function parseEnabled(value: unknown): boolean {
 }
 
 function parseSession(value: unknown): DeveloperModeSession | undefined {
-  if (!value || typeof value !== 'object') return undefined
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
   const source = value as Record<string, unknown>
-  if (String(source.roleCode || '') !== 'DEVELOPER_API') return undefined
+  if (String(source.roleCode || '') !== 'DEVELOPER_API') {
+    return undefined
+  }
   return {
     username: String(source.username || 'developer-api'),
     displayName: String(source.displayName || 'Developer API'),
@@ -60,7 +71,9 @@ function parseSession(value: unknown): DeveloperModeSession | undefined {
 }
 
 function unwrapStatus(payload: unknown): DeveloperModeStatus {
-  if (!payload || typeof payload !== 'object') return DISABLED_STATUS
+  if (!payload || typeof payload !== 'object') {
+    return DISABLED_STATUS
+  }
   const root = payload as Record<string, unknown>
   const source = root.data && typeof root.data === 'object'
     ? root.data as Record<string, unknown>
@@ -70,14 +83,22 @@ function unwrapStatus(payload: unknown): DeveloperModeStatus {
     ? String(source.accessMode) as 'API_FULL' | 'ARCHIVE_LEGACY'
     : 'DISABLED'
   const session = accessMode === 'API_FULL' ? parseSession(source.session) : undefined
-  if (accessMode === 'API_FULL' && !session) return DISABLED_STATUS
-  return { enabled: accessMode !== 'DISABLED', accessMode, ...(session ? { session } : {}) }
+  if (accessMode === 'API_FULL' && !session) {
+    return DISABLED_STATUS
+  }
+  return {
+    enabled: accessMode !== 'DISABLED',
+    accessMode,
+    ...(session ? { session } : {}),
+  }
 }
 
 async function executeProbe(): Promise<DeveloperModeStatus> {
   try {
     const response = await developerModeProbeApi.get('/api/v1/public/status/developer-mode')
-    if (response.status < 200 || response.status >= 300) return DISABLED_STATUS
+    if (response.status < 200 || response.status >= 300) {
+      return DISABLED_STATUS
+    }
     return unwrapStatus(response.data)
   }
   catch {
@@ -99,8 +120,12 @@ export function canUseDeveloperApi(status: DeveloperModeStatus): boolean {
 
 export async function getRuntimeDeveloperModeStatus(force = false): Promise<DeveloperModeStatus> {
   const now = Date.now()
-  if (!force && now < cacheExpiresAt) return cachedStatus
-  if (pendingProbe) return pendingProbe
+  if (!force && now < cacheExpiresAt) {
+    return cachedStatus
+  }
+  if (pendingProbe) {
+    return pendingProbe
+  }
 
   pendingProbe = executeProbe()
     .then((status) => {
@@ -108,7 +133,9 @@ export async function getRuntimeDeveloperModeStatus(force = false): Promise<Deve
       cacheExpiresAt = Date.now() + (status.enabled ? 5000 : 2000)
       return status
     })
-    .finally(() => { pendingProbe = null })
+    .finally(() => {
+      pendingProbe = null
+    })
   return pendingProbe
 }
 

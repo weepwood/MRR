@@ -8,6 +8,7 @@ meta:
 </route>
 
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import apiUser from '@/api/modules/user'
 import ColorScheme from '@/layouts/components/Topbar/Toolbar/ColorScheme/index.vue'
@@ -162,6 +163,7 @@ async function logout() {
 </template>
 
 <style scoped>
+/* stylelint-disable order/properties-order, at-rule-empty-line-before */
 .password-page {
   display: grid;
   grid-template-rows: auto 1fr;

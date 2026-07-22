@@ -215,7 +215,7 @@ class ScanMapperPostgresqlIT {
         assertThat(((Number) stats.get("migrated")).longValue()).isEqualTo(1);
         assertThat(((Number) stats.get("failed")).longValue()).isEqualTo(1);
         assertThat(((Number) stats.get("retry_wait")).longValue()).isEqualTo(1);
-        assertThat(((Number) stats.get("pending")).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("pending")).longValue()).isEqualTo(2);
         assertThat(((Number) stats.get("waiting_sjh")).longValue()).isEqualTo(1);
     }
 

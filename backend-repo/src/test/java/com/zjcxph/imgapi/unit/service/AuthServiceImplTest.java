@@ -1,8 +1,15 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
+import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
+import com.zjcxph.imgapi.dto.resp.RegistrationResultDTO;
+import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.entity.AuthUser;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.LoginRateLimiter;
@@ -16,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,7 +34,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -120,14 +127,36 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("账号禁用 — 正确密码后返回禁用状态")
+        @DisplayName("待审核账号 — 正确密码也不能登录")
+        void login_pendingUser() {
+            mockUser.setStatus("pending");
+            when(authUserMapper.findByUsername("admin")).thenReturn(mockUser);
+
+            assertThatThrownBy(() -> authService.login(request("admin", "123456"), "10.0.0.8"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("等待管理员审核");
+        }
+
+        @Test
+        @DisplayName("审核拒绝账号 — 正确密码也不能登录")
+        void login_rejectedUser() {
+            mockUser.setStatus("rejected");
+            when(authUserMapper.findByUsername("admin")).thenReturn(mockUser);
+
+            assertThatThrownBy(() -> authService.login(request("admin", "123456"), "10.0.0.8"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("已被拒绝");
+        }
+
+        @Test
+        @DisplayName("账号禁用 — 正确密码后返回停用状态")
         void login_disabledUser() {
             mockUser.setStatus("disabled");
             when(authUserMapper.findByUsername("admin")).thenReturn(mockUser);
 
             assertThatThrownBy(() -> authService.login(request("admin", "123456"), "10.0.0.8"))
-                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
-                    .hasMessageContaining("禁用");
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("停用");
         }
 
         @Test
@@ -149,6 +178,119 @@ class AuthServiceImplTest {
             request.setUsername(username);
             request.setPassword(password);
             return request;
+        }
+    }
+
+    @Nested
+    @DisplayName("注册与审核")
+    class RegistrationReviewTests {
+
+        @Test
+        @DisplayName("自主注册只能创建 pending 账号且不签发 JWT")
+        void register_createsPendingUserWithoutToken() {
+            RegisterRequest request = registrationRequest();
+            AuthUser created = pendingUser();
+            when(authUserMapper.findByUsername("new.doctor")).thenReturn(null, created);
+            when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role("DOCTOR"));
+
+            RegistrationResultDTO result = authService.register(request, "10.0.0.8");
+
+            ArgumentCaptor<AuthUser> insertedUser = ArgumentCaptor.forClass(AuthUser.class);
+            verify(authUserMapper).insertUser(insertedUser.capture());
+            assertThat(insertedUser.getValue().getStatus()).isEqualTo("pending");
+            assertThat(insertedUser.getValue().getRoleCode()).isEqualTo("DOCTOR");
+            assertThat(insertedUser.getValue().getContactInfo()).isEqualTo("内线 6123");
+            assertThat(result.getStatus()).isEqualTo("pending");
+            assertThat(result.getUsername()).isEqualTo("new.doctor");
+        }
+
+        @Test
+        @DisplayName("管理员审核通过执行 pending 到 active 单向转换")
+        void approveRegistration_activatesPendingUser() {
+            AuthUser pending = pendingUser();
+            AuthUser approved = pendingUser();
+            approved.setStatus("active");
+            approved.setRoleCode("DOCTOR");
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(pending, approved);
+            when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role("DOCTOR"));
+            when(authUserMapper.approveRegistration(2L, "DOCTOR", 1L)).thenReturn(1);
+            RegistrationApprovalRequest request = new RegistrationApprovalRequest();
+            request.setRoleCode("DOCTOR");
+
+            var result = authService.approveRegistration(2L, request, 1L, "10.0.0.8");
+
+            assertThat(result.getStatus()).isEqualTo("active");
+            verify(authUserMapper).approveRegistration(2L, "DOCTOR", 1L);
+        }
+
+        @Test
+        @DisplayName("管理员拒绝申请并保存原因")
+        void rejectRegistration_recordsReason() {
+            AuthUser pending = pendingUser();
+            AuthUser rejected = pendingUser();
+            rejected.setStatus("rejected");
+            rejected.setRejectReason("身份信息无法核验");
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(pending, rejected);
+            when(authUserMapper.rejectRegistration(2L, "身份信息无法核验", 1L)).thenReturn(1);
+            RegistrationRejectionRequest request = new RegistrationRejectionRequest();
+            request.setRejectReason("身份信息无法核验");
+
+            var result = authService.rejectRegistration(2L, request, 1L, "10.0.0.8");
+
+            assertThat(result.getStatus()).isEqualTo("rejected");
+            assertThat(result.getRejectReason()).contains("无法核验");
+            verify(authUserMapper).rejectRegistration(2L, "身份信息无法核验", 1L);
+        }
+
+        @Test
+        @DisplayName("通用用户编辑不能绕过审核直接启用 pending 账号")
+        void updateUser_cannotActivatePendingRegistration() {
+            AuthUser pending = pendingUser();
+            when(authUserMapper.findById(2L)).thenReturn(pending);
+            AuthUserUpdateRequest request = new AuthUserUpdateRequest();
+            request.setDisplayName("新医生");
+            request.setRoleCode("DOCTOR");
+            request.setStatus("active");
+
+            assertThatThrownBy(() -> authService.updateUser(2L, request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("专用审核");
+        }
+
+        private RegisterRequest registrationRequest() {
+            RegisterRequest request = new RegisterRequest();
+            request.setUsername("new.doctor");
+            request.setPassword("Registration123!");
+            request.setDisplayName("新医生");
+            request.setContactInfo("内线 6123");
+            request.setApplyRemark("肿瘤科病案查阅");
+            return request;
+        }
+
+        private AuthUser pendingUser() {
+            AuthUser user = new AuthUser();
+            user.setId(2L);
+            user.setUsername("new.doctor");
+            user.setDisplayName("新医生");
+            user.setPasswordHash(PasswordUtil.encode("Registration123!"));
+            user.setRoleCode("DOCTOR");
+            user.setRoleName("医生");
+            user.setPermissionsCsv("record:read");
+            user.setStatus("pending");
+            user.setContactInfo("内线 6123");
+            user.setApplyRemark("肿瘤科病案查阅");
+            user.setAppliedAt(LocalDateTime.now());
+            user.setPasswordVersion(1);
+            return user;
+        }
+
+        private AuthRole role(String code) {
+            AuthRole role = new AuthRole();
+            role.setCode(code);
+            role.setName("医生");
+            return role;
         }
     }
 
@@ -199,7 +341,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("返回所有角色列表")
         void listRoles_returnsRoles() {
-            var role = new com.zjcxph.imgapi.entity.AuthRole();
+            AuthRole role = new AuthRole();
             role.setCode("ADMIN");
             role.setName("管理员");
             when(authRoleMapper.findAll()).thenReturn(List.of(role));

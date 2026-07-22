@@ -1,6 +1,7 @@
 import type { AxiosResponse } from 'axios'
 import type { ApiResult, BAHImageData } from '../types'
 import axios from 'axios'
+import { readonly, shallowRef } from 'vue'
 
 export interface ExternalArchiveCase {
   bah: string
@@ -22,6 +23,18 @@ export interface ExternalArchiveRequestOptions {
   timeout?: number
 }
 
+const externalArchiveSessionState = shallowRef<ExternalArchiveSession | null>(null)
+
+export const externalArchiveSession = readonly(externalArchiveSessionState)
+
+export function setExternalArchiveSession(session: ExternalArchiveSession): void {
+  externalArchiveSessionState.value = session
+}
+
+export function clearExternalArchiveSession(): void {
+  externalArchiveSessionState.value = null
+}
+
 const externalApi = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
   timeout: 1000 * 60,
@@ -37,8 +50,16 @@ externalApi.interceptors.response.use((response) => {
   if (payload?.code === 200) {
     return payload
   }
+  if (payload?.code === 401) {
+    clearExternalArchiveSession()
+  }
   const error = new Error(payload?.message || '外部影像访问失败')
   Object.assign(error, { response })
+  return Promise.reject(error)
+}, (error) => {
+  if (error?.response?.status === 401) {
+    clearExternalArchiveSession()
+  }
   return Promise.reject(error)
 })
 

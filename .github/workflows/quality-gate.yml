@@ -41,7 +41,7 @@ jobs:
 
   frontend-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: frontend-fantastic-admin
@@ -92,11 +92,11 @@ jobs:
       - name: Unit Test
         run: pnpm test:run
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: End-to-End Test
-        timeout-minutes: 30
+        timeout-minutes: 15
         run: pnpm test:e2e
 
       - name: Upload Playwright report

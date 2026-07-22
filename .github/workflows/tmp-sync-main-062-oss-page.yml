@@ -45,3 +45,5 @@ jobs:
             git commit -m "合并：同步 main 0.6.2 到 OSS 迁移管理分支"
           fi
           git push origin HEAD:feat/oss-migration-management-20260722
+
+# trigger merge

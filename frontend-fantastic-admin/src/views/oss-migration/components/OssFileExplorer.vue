@@ -652,8 +652,8 @@ onMounted(() => {
   padding: 0;
   font: inherit;
   color: inherit;
-  background: transparent;
   cursor: pointer;
+  background: transparent;
   border: 0;
 }
 
@@ -730,8 +730,8 @@ onMounted(() => {
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
-  gap: 10px;
   flex: 1;
+  gap: 10px;
   align-content: start;
 }
 
@@ -781,9 +781,9 @@ onMounted(() => {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  text-align: center;
 }
 
 .file-tile small {

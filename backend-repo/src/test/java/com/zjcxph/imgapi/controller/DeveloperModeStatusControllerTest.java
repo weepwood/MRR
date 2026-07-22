@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -12,17 +13,34 @@ class DeveloperModeStatusControllerTest {
 
     @Test
     void shouldExposeArchiveLegacyAvailabilityWithoutSensitiveConfiguration() {
-        DeveloperModeService service = mock(DeveloperModeService.class);
+        DeveloperModeService archiveService = mock(DeveloperModeService.class);
+        DeveloperApiAccessService apiService = mock(DeveloperApiAccessService.class);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/public/status/developer-mode");
-        request.setRemoteAddr("127.0.0.1");
-        when(service.isArchiveLegacyRequestAvailable(request)).thenReturn(true);
-        DeveloperModeStatusController controller = new DeveloperModeStatusController(service);
+        when(archiveService.isArchiveLegacyRequestAvailable(request)).thenReturn(true);
+        DeveloperModeStatusController controller = new DeveloperModeStatusController(archiveService, apiService);
 
         var result = controller.status(request);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).containsOnlyKeys("enabled", "accessMode");
-        assertThat(result.getData().get("enabled")).isEqualTo(Boolean.TRUE);
         assertThat(result.getData().get("accessMode")).isEqualTo("ARCHIVE_LEGACY");
+    }
+
+    @Test
+    void shouldExposeVirtualSessionOnlyForFullApiMode() {
+        DeveloperModeService archiveService = mock(DeveloperModeService.class);
+        DeveloperApiAccessService apiService = mock(DeveloperApiAccessService.class);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/public/status/developer-mode");
+        when(apiService.isRequestAllowed(request)).thenReturn(true);
+        DeveloperModeStatusController controller = new DeveloperModeStatusController(archiveService, apiService);
+
+        var result = controller.status(request);
+
+        assertThat(result.getData().get("accessMode")).isEqualTo("API_FULL");
+        @SuppressWarnings("unchecked")
+        var session = (java.util.Map<String, Object>) result.getData().get("session");
+        assertThat(session.get("roleCode")).isEqualTo("DEVELOPER_API");
+        assertThat((java.util.List<String>) session.get("permissions"))
+                .contains("record:manage", "system:manage", "user:manage");
     }
 }

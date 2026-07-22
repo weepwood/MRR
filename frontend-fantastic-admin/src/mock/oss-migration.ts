@@ -88,6 +88,81 @@ const logs = [
   },
 ]
 
+function browserDirectory(name: string, key: string) {
+  return {
+    name,
+    key,
+    directory: true,
+    size: 0,
+  }
+}
+
+function browserFile(name: string, key: string, size: number, storageClass = 'STANDARD') {
+  return {
+    name,
+    key,
+    directory: false,
+    size,
+    lastModified: new Date(Date.now() - size).toISOString(),
+    etag: `mock-etag-${name}`,
+    storageClass,
+  }
+}
+
+function browserEntries(prefix: string, continuationToken?: string) {
+  if (prefix === 'medical-records/') {
+    return [
+      browserDirectory('0012', 'medical-records/0012/'),
+      browserDirectory('0013', 'medical-records/0013/'),
+      browserDirectory('0024', 'medical-records/0024/'),
+    ]
+  }
+  if (prefix === 'medical-records/0012/') {
+    return [
+      browserDirectory('00123456-00789124', 'medical-records/0012/00123456-00789124/'),
+      browserDirectory('00124567-00880211', 'medical-records/0012/00124567-00880211/'),
+    ]
+  }
+  if (prefix === 'medical-records/0012/00123456-00789124/') {
+    if (continuationToken === 'mock-page-2') {
+      return Array.from({ length: 6 }, (_, index) => browserFile(
+        `${String(index + 201).padStart(4, '0')}.jpg`,
+        `medical-records/0012/00123456-00789124/${String(index + 201).padStart(4, '0')}.jpg`,
+        260000 + index * 1200,
+      ))
+    }
+    return [
+      browserFile('0001.jpg', 'medical-records/0012/00123456-00789124/0001.jpg', 235000),
+      browserFile('0002.jpg', 'medical-records/0012/00123456-00789124/0002.jpg', 248000),
+      browserFile('0003.tif', 'medical-records/0012/00123456-00789124/0003.tif', 310000, 'IA'),
+      browserFile('病案目录说明.txt', 'medical-records/0012/00123456-00789124/病案目录说明.txt', 1200),
+    ]
+  }
+  return []
+}
+
+function browserPage(query: Record<string, unknown>) {
+  const prefix = String(query.prefix || 'medical-records/')
+  const continuationToken = query.continuationToken ? String(query.continuationToken) : undefined
+  const entries = browserEntries(prefix, continuationToken)
+  const truncated = prefix === 'medical-records/0012/00123456-00789124/' && !continuationToken
+  return {
+    configured: true,
+    bucket: 'mrr-medical-records',
+    endpoint: 'oss-cn-hangzhou.aliyuncs.com',
+    region: 'cn-hangzhou',
+    rootPrefix: 'medical-records/',
+    prefix,
+    entries,
+    nextContinuationToken: truncated ? 'mock-page-2' : null,
+    truncated,
+    maxKeys: Number(query.maxKeys || 200),
+    loadedDirectories: entries.filter(entry => entry.directory).length,
+    loadedFiles: entries.filter(entry => !entry.directory).length,
+    loadedBytes: entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0),
+  }
+}
+
 function filteredRecords(records: typeof pendingRecords | typeof waitingRecords, query: Record<string, unknown>) {
   const limit = Math.max(1, Math.min(Number(query.limit || 100), 500))
   const filtered = records.filter((item) => {
@@ -104,6 +179,20 @@ function filteredRecords(records: typeof pendingRecords | typeof waitingRecords,
 }
 
 export default defineFakeRoute([
+  {
+    url: '/api/v1/oss/browser/url',
+    response: ({ query }) => {
+      const key = String((query as Record<string, unknown>)?.key || '')
+      return ok({
+        key,
+        ossUrl: `https://images.example.test/${encodeURIComponent(key)}?signature=mock`,
+      })
+    },
+  },
+  {
+    url: '/api/v1/oss/browser',
+    response: ({ query }) => ok(browserPage((query ?? {}) as Record<string, unknown>)),
+  },
   {
     url: '/api/v1/oss/migration/statistics',
     response: () => ok({

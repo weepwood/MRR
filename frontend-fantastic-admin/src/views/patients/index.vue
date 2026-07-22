@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { getPatients } from '@/api/modules/patients'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import useAuth from '@/utils/composables/useAuth'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
+import PatientImportDialog from './components/PatientImportDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
@@ -21,6 +23,9 @@ const total = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
+const importDialogVisible = ref(false)
+const { auth } = useAuth()
+const canImportPatients = computed(() => auth('record:edit'))
 
 const filters = reactive({ keyword: '' })
 
@@ -47,6 +52,7 @@ function handleSearch() { page.value = 1; loadData() }
 function resetFilters() { filters.keyword = ''; handleSearch() }
 function handlePageChange(p: number) { page.value = p; loadData() }
 function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData() }
+function handleImported() { page.value = 1; void loadData() }
 function maskIdCard(value?: string) {
   if (!value || value.length <= 7) { return value || '—' }
   return `${value.slice(0, 3)}${'*'.repeat(value.length - 7)}${value.slice(-4)}`
@@ -111,10 +117,19 @@ onUnmounted(() => {
           查询患者基本信息，支持按病案号、姓名、身份证号、科室、病区和床位搜索。
         </p>
       </div>
-      <el-button :loading="loading" :icon="Refresh" @click="loadData">
-        刷新
-      </el-button>
-
+      <div class="header-actions">
+        <el-button
+          v-if="canImportPatients"
+          type="primary"
+          :icon="Upload"
+          @click="importDialogVisible = true"
+        >
+          导入患者数据
+        </el-button>
+        <el-button :loading="loading" :icon="Refresh" @click="loadData">
+          刷新
+        </el-button>
+      </div>
     </div>
 
     <el-card shadow="never">
@@ -177,7 +192,7 @@ onUnmounted(() => {
         <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
         <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
-        <el-table-column prop="admissiontime" label="出院时间" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
       </el-table>
 
       <div class="pagination-bar">
@@ -192,12 +207,15 @@ onUnmounted(() => {
         />
       </div>
     </el-card>
+
+    <PatientImportDialog v-model="importDialogVisible" @imported="handleImported" />
   </div>
 </template>
 
 <style scoped>
 .page-shell { display: grid; gap: 16px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
 .eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: #64748b; }
@@ -207,4 +225,8 @@ h2 { margin: 0; font-size: 28px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }
 .bah-link:hover { text-decoration: underline; }
+@media (max-width: 760px) {
+  .page-header { flex-direction: column; }
+  .header-actions { width: 100%; flex-wrap: wrap; }
+}
 </style>

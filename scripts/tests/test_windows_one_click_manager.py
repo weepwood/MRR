@@ -27,8 +27,8 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
         wrapper = (ROOT / 'deploy/windows/MRR-管理中心.cmd').read_text(encoding='utf-8')
 
-        self.assertIn("-Verb RunAs", manager)
-        self.assertIn("-STA", manager)
+        self.assertIn('-Verb RunAs', manager)
+        self.assertIn('-STA', manager)
         self.assertIn('mrr-manager.ps1', wrapper)
         self.assertIn('-STA', wrapper)
 
@@ -40,11 +40,11 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn("Join-Path $scriptDir 'MRR-管理中心.cmd'", installer)
         self.assertIn("Join-Path $Root 'ops\\MRR-管理中心.cmd'", installer)
 
-    def test_release_workflow_requires_manager_files(self):
+    def test_release_workflow_packages_entire_windows_deployment_directory(self):
         workflow = (ROOT / '.github/workflows/windows-release-package.yml').read_text(encoding='utf-8')
 
-        self.assertIn('deploy/windows/mrr-manager.ps1', workflow)
-        self.assertIn('deploy/windows/MRR-管理中心.cmd', workflow)
+        self.assertIn('cp -a deploy/windows/. "${PACKAGE_DIR}/deploy/windows/"', workflow)
+        self.assertIn('find backend frontend docs deploy runtime', workflow)
 
     def test_start_all_restores_access(self):
         controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')

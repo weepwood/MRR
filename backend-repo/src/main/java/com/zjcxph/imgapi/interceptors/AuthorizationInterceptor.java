@@ -22,7 +22,6 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
     public static final String AUTH_SESSION_ATTRIBUTE = "AUTH_SESSION";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final String[] REGISTER_PERMISSIONS = {"user:manage"};
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -35,10 +34,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
             annotation = handlerMethod.getBeanType().getAnnotation(RequirePermissions.class);
         }
 
-        boolean registerEndpoint = "/api/v1/auth/register".equals(request.getRequestURI());
-        String[] requiredPermissions = registerEndpoint
-                ? REGISTER_PERMISSIONS
-                : annotation == null ? new String[0] : annotation.value();
+        String[] requiredPermissions = annotation == null ? new String[0] : annotation.value();
         if (requiredPermissions.length == 0) {
             return true;
         }

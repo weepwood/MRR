@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.unit.service;
 
-import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
@@ -12,6 +11,7 @@ import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.impl.MigrationServiceImpl;
+import com.zjcxph.imgapi.service.impl.MigrationSourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -33,7 +34,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -57,7 +57,7 @@ class MigrationServiceImplTest {
     @Mock
     private MigrationJobMapper migrationJobMapper;
     @Mock
-    private ImageProperties imageProperties;
+    private MigrationSourceResolver sourceResolver;
     @Mock
     private Executor taskAsyncExecutor;
     @Mock
@@ -72,8 +72,12 @@ class MigrationServiceImplTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(migrationService, "self", self);
-        lenient().when(imageProperties.getBasePath()).thenReturn(tempDir.toString());
-        lenient().when(ossService.generatePresignedUrl(anyString())).thenReturn("https://signed.example/image");
+        lenient().when(ossService.generatePresignedUrl(anyString()))
+                .thenReturn("https://signed.example/image");
+        lenient().when(sourceResolver.describe(any())).thenAnswer(invocation -> {
+            Scan scan = invocation.getArgument(0);
+            return "AUTO:scan:" + (scan == null ? "unknown" : scan.getId());
+        });
     }
 
     @Test
@@ -104,7 +108,7 @@ class MigrationServiceImplTest {
     }
 
     @Test
-    @DisplayName("试迁移固定快照与数量并按已加载 Scan 执行")
+    @DisplayName("试迁移固定快照与数量并在任务记录可见后执行")
     void createsPilotJobWithSnapshotAndLimit() {
         MigrationJobRequest request = new MigrationJobRequest();
         request.setMode("pilot");
@@ -112,6 +116,9 @@ class MigrationServiceImplTest {
 
         Scan pending = legacyScan(1, "00789508", "605746", null);
         AtomicReference<MigrationJob> persisted = new AtomicReference<>();
+        when(scanMapper.countMigrationStats()).thenReturn(stats(5, 0, 0, 0, 0, 0));
+        when(scanMapper.findPendingMigration(20)).thenReturn(List.of(pending));
+        when(sourceResolver.canRead(pending)).thenReturn(true);
         when(scanMapper.findMaxPendingMigrationId(isNull())).thenReturn(10);
         when(scanMapper.countEligibleMigrations(10, null)).thenReturn(5L);
         when(migrationJobMapper.insert(any(MigrationJob.class))).thenAnswer(invocation -> {
@@ -136,21 +143,24 @@ class MigrationServiceImplTest {
         assertThat(result.getTotalCount()).isEqualTo(1);
         assertThat(result.getStatus()).isEqualTo("completed");
         assertThat(result.getProcessedCount()).isEqualTo(1);
+        verify(migrationJobMapper).insert(result);
         verify(self).uploadLoadedScan(same(pending));
     }
 
     @Test
-    @DisplayName("本地文件缺失会标记永久失败，不继续停留在待迁移集合")
-    void missingFileIsMarkedFailed() {
+    @DisplayName("所有受控来源均缺失时标记永久失败")
+    void missingSourceIsMarkedFailed() throws Exception {
         Scan scan = legacyScan(1, "00789508", "605746", null);
         when(scanMapper.findById(1)).thenReturn(scan);
+        when(sourceResolver.resolve(scan))
+                .thenThrow(new IOException("所有受控图片来源均读取失败：文件不存在"));
 
         OssUploadResult result = migrationService.uploadSingleScan(1);
 
         assertThat(result.getStatus()).isEqualTo("failed");
-        assertThat(result.getErrorMessage()).contains("不存在或不可读");
+        assertThat(result.getErrorMessage()).contains("不存在");
         verify(scanMapper).markMigrationStarted(1);
-        verify(scanMapper).markMigrationFailed(1, "SOURCE_FILE_MISSING");
+        verify(scanMapper).markMigrationFailed(1, "SOURCE_FILE_UNAVAILABLE");
         verify(ossService, never()).uploadFile(anyString(), anyString());
     }
 
@@ -158,10 +168,11 @@ class MigrationServiceImplTest {
     @DisplayName("OSS 临时异常在最大次数前进入等待重试")
     void temporaryOssFailureWaitsForRetry() throws Exception {
         Scan scan = legacyScan(1, "00789508", "605746", null);
+        Path file = createFile("test.jpg", new byte[]{1, 2, 3});
         when(scanMapper.findById(1)).thenReturn(scan);
-        createLegacyFile(scan, new byte[]{1, 2, 3});
-        when(ossService.calculateMd5(anyString())).thenReturn("md5");
-        when(ossService.getFileSize(anyString())).thenReturn(3L);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("md5");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
         when(ossService.doesObjectExist(anyString())).thenReturn(false);
         when(ossService.uploadFile(anyString(), anyString()))
                 .thenThrow(new RuntimeException("connection timeout"));
@@ -169,42 +180,46 @@ class MigrationServiceImplTest {
         OssUploadResult result = migrationService.uploadSingleScan(1);
 
         assertThat(result.getStatus()).isEqualTo("retry_wait");
-        verify(scanMapper).markMigrationRetryWait(eq(1), eq("OSS_TIMEOUT"), any());
+        verify(scanMapper).markMigrationRetryWait(eq(1), eq("SOURCE_OR_OSS_TIMEOUT"), any());
         verify(scanMapper, never()).markMigrationFailed(eq(1), anyString());
     }
 
     @Test
-    @DisplayName("高位病案号使用上架号构建本地目录和 OSS Key")
+    @DisplayName("高位病案号使用上架号构建 OSS Key")
     void highBahUsesSjhAsDirectoryKey() throws Exception {
         Scan scan = legacyScan(2, "10000001", "605746", "87654321");
+        Path file = createFile("test.jpg", new byte[]{4, 5, 6});
         when(scanMapper.findById(2)).thenReturn(scan);
-        Path file = tempDir.resolve("25.03").resolve("25.03.15")
-                .resolve("87654321-10000001").resolve("test.jpg");
-        Files.createDirectories(file.getParent());
-        Files.write(file, new byte[]{4, 5, 6});
-        when(ossService.calculateMd5(anyString())).thenReturn("md5");
-        when(ossService.getFileSize(anyString())).thenReturn(3L);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("md5");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
         when(ossService.doesObjectExist(anyString())).thenReturn(false);
 
         OssUploadResult result = migrationService.uploadSingleScan(2);
 
         assertThat(result.getStatus()).isEqualTo("success");
-        verify(ossService).uploadFile(file.toString(),
-                "medical-records/25.03/25.03.15/87654321-10000001/test.jpg");
+        verify(ossService).uploadFile(
+                file.toString(),
+                "medical-records/25.03/25.03.15/87654321-10000001/test.jpg"
+        );
     }
 
     @Test
-    @DisplayName("迁移前检查抽样展示可读与缺失文件")
-    void readinessSamplesSourceFiles() throws Exception {
+    @DisplayName("迁移前检查抽样支持多来源可读与缺失统计")
+    void readinessSamplesResolvedSources() {
         Scan readable = legacyScan(1, "00789508", "605746", null);
         Scan missing = legacyScan(2, "00789509", "605747", null);
-        createLegacyFile(readable, new byte[]{1});
         when(scanMapper.countMigrationStats()).thenReturn(stats(2, 0, 0, 0, 0, 0));
         when(scanMapper.findPendingMigration(2)).thenReturn(List.of(readable, missing));
+        when(sourceResolver.canRead(readable)).thenReturn(true);
+        when(sourceResolver.canRead(missing)).thenReturn(false);
+        when(sourceResolver.isLocalBasePathConfigured()).thenReturn(false);
+        when(sourceResolver.isLocalBasePathReadable()).thenReturn(false);
 
         MigrationReadinessDTO readiness = migrationService.getReadiness(2);
 
         assertThat(readiness.isReady()).isTrue();
+        assertThat(readiness.isSourcePathConfigured()).isTrue();
         assertThat(readiness.getSampleReadableCount()).isEqualTo(1);
         assertThat(readiness.getSampleMissingCount()).isEqualTo(1);
         assertThat(readiness.getRecommendedMode()).isEqualTo("pilot");
@@ -223,12 +238,14 @@ class MigrationServiceImplTest {
         return scan;
     }
 
-    private void createLegacyFile(Scan scan, byte[] content) throws Exception {
-        String directoryKey = scan.getBah().compareTo("10000000") >= 0 ? scan.getSjh() : scan.getBrxh();
-        Path file = tempDir.resolve("25.03").resolve("25.03.15")
-                .resolve(directoryKey + "-" + scan.getBah()).resolve("test.jpg");
-        Files.createDirectories(file.getParent());
+    private Path createFile(String name, byte[] content) throws Exception {
+        Path file = tempDir.resolve(name);
         Files.write(file, content);
+        return file;
+    }
+
+    private MigrationSourceResolver.ResolvedSource resolved(Path file) {
+        return new MigrationSourceResolver.ResolvedSource(file, file.toString(), false);
     }
 
     private OssUploadResult success(int id) {
@@ -238,8 +255,12 @@ class MigrationServiceImplTest {
         return result;
     }
 
-    private Map<String, Object> stats(long total, long migrated, long verified,
-                                      long failed, long retryWait, long migrating) {
+    private Map<String, Object> stats(long total,
+                                      long migrated,
+                                      long verified,
+                                      long failed,
+                                      long retryWait,
+                                      long migrating) {
         Map<String, Object> values = new HashMap<>();
         values.put("total", total);
         values.put("migrated", migrated);

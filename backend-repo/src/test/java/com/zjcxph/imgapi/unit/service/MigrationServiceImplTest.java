@@ -291,7 +291,7 @@ class MigrationServiceImplTest {
 
     @Test
     @DisplayName("原子领取失败时不重复读取和上传")
-    void skippedWhenAtomicClaimFails() {
+    void skippedWhenAtomicClaimFails() throws Exception {
         Scan scan = legacyScan(4, "00789511", "605749", null);
         Scan latest = legacyScan(4, "00789511", "605749", null);
         latest.setOssUrl("medical-records/existing.jpg");

@@ -5,7 +5,9 @@ import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
+import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import com.zjcxph.imgapi.security.TokenBlacklist;
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -22,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
@@ -31,25 +32,25 @@ public class LoginInterceptor implements HandlerInterceptor {
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
     public static final String ACCESS_MODE_ATTRIBUTE = "MRR_ACCESS_MODE";
     public static final String ARCHIVE_LEGACY_ACCESS_MODE = DeveloperModeService.ARCHIVE_LEGACY_ACCESS_MODE;
+    public static final String API_FULL_ACCESS_MODE = DeveloperApiAccessService.API_FULL_ACCESS_MODE;
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> ARCHIVE_LEGACY_PERMISSIONS = List.of("record:read", "search:read");
-    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
-            "/api/v1/auth/login",
-            "/api/v1/auth/register"
-    );
 
     private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
     private final DeveloperModeService developerModeService;
+    private final DeveloperApiAccessService developerApiAccessService;
 
     public LoginInterceptor(TokenBlacklist tokenBlacklist,
                             AuthUserMapper authUserMapper,
-                            DeveloperModeService developerModeService) {
+                            DeveloperModeService developerModeService,
+                            DeveloperApiAccessService developerApiAccessService) {
         this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
         this.developerModeService = developerModeService;
+        this.developerApiAccessService = developerApiAccessService;
     }
 
     private String extractToken(String authorization) {
@@ -67,7 +68,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         String authorization = request.getHeader("Authorization");
         if (!StringUtils.hasText(authorization)) {
-            return allowArchiveLegacyModeOrReject(request, response);
+            return allowDeveloperModeOrReject(request, response);
         }
 
         String token = extractToken(authorization);
@@ -153,27 +154,41 @@ public class LoginInterceptor implements HandlerInterceptor {
         while (path.length() > 1 && path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
         }
-        return PUBLIC_AUTH_PATHS.contains(path);
+        return ApiAccessPolicy.isAuthenticationExcluded(path)
+                && ("/api/v1/auth/login".equals(path) || ApiAccessPolicy.REGISTRATION_PATH.equals(path));
     }
 
-    private boolean allowArchiveLegacyModeOrReject(HttpServletRequest request,
-                                                    HttpServletResponse response) throws Exception {
-        if (!developerModeService.isArchiveLegacyRequestAllowed(request)) {
-            writeUnauthorized(response, "请先登录", "UNAUTHORIZED");
-            return false;
+    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
+                                                HttpServletResponse response) throws Exception {
+        if (developerApiAccessService.isRequestAllowed(request)) {
+            installDeveloperSession(request, response, createFullApiDeveloperSession(),
+                    "missing_token_api_full", API_FULL_ACCESS_MODE);
+            return true;
         }
 
-        AuthSession developerSession = createArchiveLegacySession();
-        installSession(request, developerSession);
+        if (developerModeService.isArchiveLegacyRequestAllowed(request)) {
+            installDeveloperSession(request, response, createArchiveLegacySession(),
+                    "missing_token_archive_legacy", ARCHIVE_LEGACY_ACCESS_MODE);
+            return true;
+        }
+
+        writeUnauthorized(response, "请先登录", "UNAUTHORIZED");
+        return false;
+    }
+
+    private void installDeveloperSession(HttpServletRequest request,
+                                         HttpServletResponse response,
+                                         AuthSession session,
+                                         String reason,
+                                         String accessMode) {
+        installSession(request, session);
         request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
-        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, "missing_token_archive_legacy");
-        request.setAttribute(ACCESS_MODE_ATTRIBUTE, ARCHIVE_LEGACY_ACCESS_MODE);
+        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, reason);
+        request.setAttribute(ACCESS_MODE_ATTRIBUTE, accessMode);
         response.setHeader("X-MRR-Developer-Mode", "enabled");
-        response.setHeader("X-MRR-Access-Mode", ARCHIVE_LEGACY_ACCESS_MODE);
-        logger.warn(
-                "Developer archive legacy access: method={}, path={}, remoteIp={}",
-                request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
-        return true;
+        response.setHeader("X-MRR-Access-Mode", accessMode);
+        logger.warn("Developer mode access: mode={}, method={}, path={}, remoteIp={}",
+                accessMode, request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
     }
 
     private void installSession(HttpServletRequest request, AuthSession session) {
@@ -192,6 +207,20 @@ public class LoginInterceptor implements HandlerInterceptor {
         session.setMustChangePassword(false);
         session.setPasswordVersion(1);
         session.setPermissions(new ArrayList<>(PermissionResolver.resolve(ARCHIVE_LEGACY_PERMISSIONS)));
+        return session;
+    }
+
+    private AuthSession createFullApiDeveloperSession() {
+        AuthSession session = new AuthSession();
+        session.setId(-2L);
+        session.setUsername("developer-api");
+        session.setDisplayName("Developer API");
+        session.setRoleCode("DEVELOPER_API");
+        session.setRoleName("Developer Full API");
+        session.setStatus("active");
+        session.setMustChangePassword(false);
+        session.setPasswordVersion(1);
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
         return session;
     }
 
@@ -238,7 +267,6 @@ public class LoginInterceptor implements HandlerInterceptor {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json;charset=UTF-8");
         OBJECT_MAPPER.writeValue(response.getWriter(), Map.of(
-                "code", "AUTH_SERVICE_UNAVAILABLE",
-                "message", message));
+                "code", "AUTH_SERVICE_UNAVAILABLE", "message", message));
     }
 }

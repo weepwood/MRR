@@ -70,6 +70,8 @@ public class WebConfig implements WebMvcConfigurer {
                 "/v3/api-docs/**", "/docs/**", "/api/v1/documentation/access",
                 "/api/v1/public/status/**", "/api/v1/public/config/**", "/error", "/actuator/**"
         };
+        // 登录和注册是公开入口。LoginInterceptor 内部保留同一白名单，避免上下文路径、
+        // 尾斜杠或反向代理转发方式导致 Spring 路径排除规则未命中。
         String[] authenticationExcludes = {
                 "/api/v1/auth/login",
                 "/api/v1/auth/register",

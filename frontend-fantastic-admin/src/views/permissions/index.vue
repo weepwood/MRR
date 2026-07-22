@@ -3,40 +3,11 @@ import type { AuthRole } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
-import { PERMISSION_HIERARCHY } from '@/utils/permission'
+import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
 
 defineOptions({ name: 'PermissionsPage' })
 
-interface PermDef {
-  value: string
-  label: string
-  shortLabel: string
-  category: string
-  children: string[]
-}
-
-const permissionDefs: PermDef[] = [
-  {
-    value: 'record:manage',
-    label: '病案管理（完整 CRUD 与输出）',
-    shortLabel: '病案管理',
-    category: '病案管理',
-    children: ['record:edit', 'record:download', 'record:pdf:export', 'record:read'],
-  },
-  { value: 'record:edit', label: '病案编辑', shortLabel: '病案编辑', category: '病案管理', children: ['record:read'] },
-  { value: 'record:read', label: '病案查看', shortLabel: '病案查看', category: '病案管理', children: [] },
-  { value: 'record:download', label: '下载病案 ZIP 文件', shortLabel: '病案下载', category: '病案输出', children: ['record:read'] },
-  { value: 'record:pdf:export', label: '导出病案 PDF 文件', shortLabel: 'PDF 导出', category: '病案输出', children: ['record:read'] },
-  { value: 'search:read', label: '病案搜索', shortLabel: '病案搜索', category: '病案检索', children: [] },
-  { value: 'statistics:read', label: '统计分析查看', shortLabel: '统计分析', category: '统计分析', children: [] },
-  { value: 'user:manage', label: '用户管理', shortLabel: '用户管理', category: '用户管理', children: [] },
-  { value: 'role:manage', label: '角色管理（完整 CRUD）', shortLabel: '角色管理', category: '角色管理', children: ['role:read'] },
-  { value: 'role:read', label: '角色查看', shortLabel: '角色查看', category: '角色管理', children: [] },
-  { value: 'log:read', label: '日志审计查看', shortLabel: '日志审计', category: '日志管理', children: [] },
-  { value: 'system:read', label: '系统设置/监控', shortLabel: '系统设置', category: '系统管理', children: [] },
-  { value: 'test:read', label: '测试中心访问', shortLabel: '测试中心', category: '测试管理', children: [] },
-]
-
+const permissionDefs = PERMISSION_DEFINITIONS
 const loading = ref(false)
 const saving = ref(false)
 const roles = ref<AuthRole[]>([])
@@ -55,7 +26,7 @@ const sortedRoles = computed(() => [...roles.value]
 const editDirectPerms = computed(() => getDirectPerms(editForm.permissions))
 const editInheritedPerms = computed(() => getInheritedPerms(editForm.permissions))
 const groupedOptions = computed(() => {
-  const grouped = new Map<string, PermDef[]>()
+  const grouped = new Map<string, typeof permissionDefs>()
   for (const def of getAvailablePerms(editForm.permissions)) {
     const options = grouped.get(def.category) ?? []
     options.push(def)
@@ -94,7 +65,7 @@ function getInheritedPerms(perms: string[]): string[] {
   return [...inherited]
 }
 
-function getAvailablePerms(perms: string[]): PermDef[] {
+function getAvailablePerms(perms: string[]) {
   const owned = new Set(perms)
   for (const permission of perms) {
     getAllChildren(permission).forEach(child => owned.add(child))
@@ -215,7 +186,7 @@ onMounted(loadPermissions)
         <p class="eyebrow">Permission Management</p>
         <h2>权限管理</h2>
         <p class="subtitle">
-          分离病案查看、ZIP 下载与 PDF 导出权限。修改保存后，用户重新登录生效。
+          按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。
         </p>
       </div>
       <div class="header-actions">
@@ -226,7 +197,7 @@ onMounted(loadPermissions)
 
     <el-alert type="info" :closable="false" show-icon>
       <template #title>
-        病案查看不会自动获得下载或 PDF 导出权限；病案管理权限会继承两项输出权限。
+        上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。
       </template>
     </el-alert>
 

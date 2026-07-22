@@ -44,8 +44,20 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         boolean authenticatedOnly = false;
 
         if (requiredPermissions == null) {
-            permissionAnnotation = findPermissions(handlerMethod);
-            authenticatedOnly = hasAuthenticatedOnly(handlerMethod);
+            RequirePermissions methodPermission = AnnotatedElementUtils.findMergedAnnotation(
+                    handlerMethod.getMethod(), RequirePermissions.class);
+            boolean methodAuthenticated = AnnotatedElementUtils.hasAnnotation(
+                    handlerMethod.getMethod(), AuthenticatedOnly.class);
+
+            if (methodPermission != null || methodAuthenticated) {
+                permissionAnnotation = methodPermission;
+                authenticatedOnly = methodAuthenticated;
+            } else {
+                permissionAnnotation = AnnotatedElementUtils.findMergedAnnotation(
+                        handlerMethod.getBeanType(), RequirePermissions.class);
+                authenticatedOnly = AnnotatedElementUtils.hasAnnotation(
+                        handlerMethod.getBeanType(), AuthenticatedOnly.class);
+            }
         }
 
         if (requiredPermissions == null && permissionAnnotation == null && !authenticatedOnly) {
@@ -90,21 +102,6 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         logger.debug("权限校验通过: user={}, permissions={}",
                 session.getUsername(), Arrays.toString(requiredPermissions));
         return true;
-    }
-
-    private RequirePermissions findPermissions(HandlerMethod handlerMethod) {
-        RequirePermissions methodAnnotation = AnnotatedElementUtils.findMergedAnnotation(
-                handlerMethod.getMethod(), RequirePermissions.class);
-        return methodAnnotation != null
-                ? methodAnnotation
-                : AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequirePermissions.class);
-    }
-
-    private boolean hasAuthenticatedOnly(HandlerMethod handlerMethod) {
-        if (AnnotatedElementUtils.hasAnnotation(handlerMethod.getMethod(), AuthenticatedOnly.class)) {
-            return true;
-        }
-        return AnnotatedElementUtils.hasAnnotation(handlerMethod.getBeanType(), AuthenticatedOnly.class);
     }
 
     private String normalizeRequestPath(HttpServletRequest request) {

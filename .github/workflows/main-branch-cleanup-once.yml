@@ -1,0 +1,263 @@
+name: main-branch-cleanup-once
+
+on:
+  push:
+    branches:
+      - chore/cleanup-main-branch-migration
+    paths:
+      - '.github/workflows/main-branch-cleanup-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clean active dev-no-login references
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+
+          def read(path: str) -> str:
+              return (root / path).read_text(encoding='utf-8')
+
+          def write(path: str, content: str) -> None:
+              (root / path).write_text(content, encoding='utf-8', newline='\n')
+
+          def replace_exact(path: str, old: str, new: str, minimum: int = 1) -> None:
+              content = read(path)
+              count = content.count(old)
+              if count < minimum:
+                  raise SystemExit(f'{path}: expected at least {minimum} occurrence(s): {old!r}')
+              write(path, content.replace(old, new))
+
+          def replace_regex(path: str, pattern: str, replacement: str, minimum: int = 1, flags: int = 0) -> None:
+              content = read(path)
+              updated, count = re.subn(pattern, replacement, content, flags=flags)
+              if count < minimum:
+                  raise SystemExit(f'{path}: expected regex match: {pattern!r}')
+              write(path, updated)
+
+          # GitHub Actions：所有 PR 门禁只面向正式主分支 main。
+          replace_exact('.github/workflows/quality-gate.yml', '      - dev-no-login\n', '', minimum=2)
+          for workflow in (
+              '.github/workflows/backend-normalization-check.yml',
+              '.github/workflows/frontend-mock.yml',
+              '.github/workflows/monitoring-validation.yml',
+              '.github/workflows/windows-release-package.yml',
+          ):
+              replace_exact(workflow, '      - dev-no-login\n', '      - main\n')
+          replace_regex(
+              '.github/workflows/windows-release-package.yml',
+              r'(?m)^\s*MRR_CHANGELOG_BASE_BRANCH:.*$',
+              "          MRR_CHANGELOG_BASE_BRANCH: 'main'",
+          )
+
+          # 活跃开发与安装文档。
+          replace_exact('README.md', 'git checkout dev-no-login', 'git switch main')
+          replace_exact('CONTRIBUTING.md', 'dev-no-login', 'main', minimum=8)
+          replace_exact('vitepress-doc/internal/development.md', 'git checkout dev-no-login', 'git switch main')
+          replace_exact('vitepress-doc/getting-started/installation.md', 'git checkout dev-no-login', 'git switch main')
+          replace_exact(
+              'vitepress-doc/internal/index.md',
+              '本文档以 `dev-no-login` 当前代码、`application.properties` 和实际 Flyway 迁移为事实来源。',
+              '本文档以 `main` 当前代码、`application.properties` 和实际 Flyway 迁移为事实来源。',
+          )
+          replace_exact(
+              'vitepress-doc/user-guide/index.md',
+              '本手册对应 `dev-no-login` 当前开发分支。',
+              '本手册对应 `main` 当前主分支。',
+          )
+
+          # Agent 指令：删除已经失真的“全局绕过认证”说明，写入当前真实安全边界。
+          agent_tail = '''## 分支与认证边界
+
+- `main` 是唯一正式主分支；功能和修复分支都从 `main` 创建，并向 `main` 提交 Pull Request。
+- 管理端默认使用后端真实 JWT、账号状态、密码版本和 RBAC 权限校验。
+- 无 Token 请求默认返回 401；只有显式启用的旧影像档案袋兼容模式可以建立受限只读会话。
+- 旧兼容模式默认关闭，并同时受启动开关、可信代理、客户端 IP/CIDR 白名单、只读接口白名单和访问审计约束。
+- `VITE_APP_DEMO_MODE=true` 仅用于 `.env.mock` 的无后端开发与自动化测试，不得用于生产构建。
+- 不得重新引入无条件 `dev/ADMIN` 会话、全权限 Token 或跳过登录的生产逻辑。
+'''
+          for path in ('CLAUDE.md', 'AGENTS.md'):
+              replace_regex(
+                  path,
+                  r'## 当前分支：`dev-no-login`[\s\S]*\Z',
+                  agent_tail,
+              )
+
+          # AGENTS 中关于 CI 额度的旧结论也已失效。
+          replace_regex(
+              'AGENTS.md',
+              r'- \*\*CI\*\*: GitHub Actions 当前免费额度已用尽，现有流程可能因额度限制报错；本地验证仍应执行[^\n]*',
+              '- **CI**: GitHub Actions 对 `main` 的 Pull Request 执行类型检查、Lint、单元测试、Chromium E2E、后端集成测试、监控配置校验和 Windows 离线包构建。',
+          )
+
+          # 架构说明与可编辑图纸。
+          replace_exact(
+              'vitepress-doc/architecture/mrr-system-architecture.md',
+              '- 当前默认分支 `dev-no-login` 故意绕过登录与权限验证；该状态已在图中单独标注，不应作为正式生产认证架构。',
+              '- 当前默认分支 `main` 使用正式 JWT 与 RBAC 认证；旧影像档案袋兼容模式默认关闭，并受可信代理、客户端白名单、只读接口和审计限制。',
+          )
+          for path in (
+              'vitepress-doc/architecture/MRR-system-architecture.drawio',
+              'vitepress-doc/architecture/MRR-system-architecture-overview.svg',
+          ):
+              content = read(path)
+              content = content.replace('dev-no-login', 'main')
+              content = content.replace('故意绕过登录与权限验证', '启用正式登录与权限验证')
+              content = content.replace('认证屏蔽分支', '正式认证主分支')
+              content = content.replace('不应作为正式生产认证架构', '旧系统兼容访问默认关闭且仅限只读')
+              write(path, content)
+
+          # 历史文档保留当时分支名，但明确它只是历史背景。
+          replace_exact(
+              'backend-repo/docs/architecture-foundation-phase-1.md',
+              '本阶段基于 `dev-no-login` 已合并的病案主数据模型实施',
+              '本阶段最初基于历史分支 `dev-no-login` 中已合并的病案主数据模型实施',
+          )
+          replace_exact(
+              'vitepress-doc/user-guide/release-notes.md',
+              '> 适用快照：`dev-no-login`，更新至 2026-07-15。',
+              '> 历史快照：2026-07-15，当时基于 `dev-no-login`；当前开发与发布以 `main` 为准。',
+          )
+
+          # 更新日志生成器测试与生成文档头部。
+          replace_exact(
+              'vitepress-doc/scripts/generate-git-changelog.test.mjs',
+              "    branch: 'dev-no-login',\n    githubBranch: 'dev-no-login',",
+              "    branch: 'main',\n    githubBranch: 'main',",
+          )
+          replace_exact(
+              'vitepress-doc/user-guide/changelog.md',
+              '- 当前分支：`dev-no-login`',
+              '- 当前分支：`main`',
+          )
+          changelog_workflow = root / 'vitepress-doc/internal/changelog-workflow.md'
+          if changelog_workflow.exists():
+              content = changelog_workflow.read_text(encoding='utf-8')
+              content = content.replace('dev-no-login', 'main')
+              changelog_workflow.write_text(content, encoding='utf-8', newline='\n')
+
+          # 加入防回归检查，只扫描当前仍会指导开发或决定 CI 的活跃文件。
+          checker = '''#!/usr/bin/env python3
+          from __future__ import annotations
+
+          from pathlib import Path
+
+          ACTIVE_PATHS = (
+              '.github/workflows/quality-gate.yml',
+              '.github/workflows/backend-normalization-check.yml',
+              '.github/workflows/frontend-mock.yml',
+              '.github/workflows/monitoring-validation.yml',
+              '.github/workflows/windows-release-package.yml',
+              'README.md',
+              'CONTRIBUTING.md',
+              'CLAUDE.md',
+              'AGENTS.md',
+              'vitepress-doc/internal/index.md',
+              'vitepress-doc/internal/development.md',
+              'vitepress-doc/getting-started/installation.md',
+              'vitepress-doc/user-guide/index.md',
+              'vitepress-doc/architecture/mrr-system-architecture.md',
+          )
+
+          FORBIDDEN = 'dev-no-login'
+
+          def find_forbidden_references(root: Path, paths: tuple[str, ...] = ACTIVE_PATHS) -> list[str]:
+              violations: list[str] = []
+              for relative_path in paths:
+                  path = root / relative_path
+                  if not path.is_file():
+                      violations.append(f'{relative_path}: 文件不存在')
+                      continue
+                  for line_number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), start=1):
+                      if FORBIDDEN in line:
+                          violations.append(f'{relative_path}:{line_number}: {line.strip()}')
+              return violations
+
+          def main() -> int:
+              violations = find_forbidden_references(Path(__file__).resolve().parents[1])
+              if violations:
+                  print('发现活跃 dev-no-login 残留：')
+                  print('\\n'.join(violations))
+                  return 1
+              print('main 分支活跃引用检查通过。')
+              return 0
+
+          if __name__ == '__main__':
+              raise SystemExit(main())
+          '''
+          checker = re.sub(r'(?m)^          ', '', checker)
+          write('scripts/check_main_branch_references.py', checker)
+
+          test_file = '''import tempfile
+          import unittest
+          from pathlib import Path
+
+          from scripts.check_main_branch_references import find_forbidden_references
+
+
+          class MainBranchReferenceCheckTest(unittest.TestCase):
+              def test_reports_active_legacy_branch_reference(self):
+                  with tempfile.TemporaryDirectory() as directory:
+                      root = Path(directory)
+                      path = root / 'README.md'
+                      path.write_text('git checkout dev-no-login\\n', encoding='utf-8')
+
+                      self.assertEqual(
+                          find_forbidden_references(root, ('README.md',)),
+                          ['README.md:1: git checkout dev-no-login'],
+                      )
+
+              def test_accepts_main_branch_reference(self):
+                  with tempfile.TemporaryDirectory() as directory:
+                      root = Path(directory)
+                      path = root / 'README.md'
+                      path.write_text('git switch main\\n', encoding='utf-8')
+
+                      self.assertEqual(find_forbidden_references(root, ('README.md',)), [])
+
+
+          if __name__ == '__main__':
+              unittest.main()
+          '''
+          test_file = re.sub(r'(?m)^          ', '', test_file)
+          write('scripts/tests/test_check_main_branch_references.py', test_file)
+
+          quality_gate = read('.github/workflows/quality-gate.yml')
+          marker = '      - name: Validate repository release baseline\n        run: python scripts/release_baseline.py validate\n'
+          addition = marker + '\n      - name: Validate main branch references\n        run: python scripts/check_main_branch_references.py\n'
+          if marker not in quality_gate:
+              raise SystemExit('quality-gate.yml: release baseline marker not found')
+          write('.github/workflows/quality-gate.yml', quality_gate.replace(marker, addition, 1))
+
+          # 最终验证：活跃文件不得继续出现旧分支名。
+          import subprocess
+          subprocess.run(['python', 'scripts/check_main_branch_references.py'], check=True)
+          PY
+
+      - name: Run branch reference tests
+        run: python -m unittest scripts.tests.test_check_main_branch_references -v
+
+      - name: Remove one-time workflow
+        run: rm .github/workflows/main-branch-cleanup-once.yml
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m '维护：清理 dev-no-login 分支残留'
+          git push origin HEAD:chore/cleanup-main-branch-migration

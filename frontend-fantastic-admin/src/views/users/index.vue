@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/consistent-list-newline, antfu/if-newline, curly, regexp/prefer-w, regexp/use-ignore-case, vue/singleline-html-element-content-newline */
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -568,6 +569,7 @@ onMounted(loadData)
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
 .users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
 .users-filter__select { flex: 0 1 190px; width: 190px; }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }

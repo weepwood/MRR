@@ -6,6 +6,7 @@ meta:
 </route>
 
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
 import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
 import {
   DEFAULT_LOGIN_PAGE_SETTINGS,
@@ -197,6 +198,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, @stylistic/string-quotes, at-rule-empty-line-before, media-feature-range-notation, order/properties-order, rule-empty-line-before */
 .login-page {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;

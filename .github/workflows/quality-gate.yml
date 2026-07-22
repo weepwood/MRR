@@ -57,13 +57,32 @@ jobs:
           '
           git diff --check
 
-      - name: Commit implementation
+      - name: Package generated release workflow
+        shell: bash
+        run: |
+          mkdir -p generated-workflow
+          cp .github/workflows/windows-release-package.yml generated-workflow/windows-release-package.yml
+
+      - name: Upload generated release workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-workflow-${{ github.run_id }}
+          path: generated-workflow/windows-release-package.yml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit non-workflow implementation
         shell: bash
         run: |
           rm scripts/apply_windows_nginx_bundle_once.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add \
+            deploy/windows/install.ps1 \
+            deploy/windows/README.md \
+            vitepress-doc/internal/windows-deployment.md \
+            scripts/apply_windows_nginx_bundle_once.py \
+            docs/placeholder-nginx-bundle.md
           git commit -m '功能：内置 Nginx 并增加生命周期控制'
           git push origin HEAD:feat/windows-bundled-nginx-control-20260722
 

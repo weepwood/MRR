@@ -26,3 +26,5 @@ jobs:
           git fetch origin main
           git merge --no-ff origin/main -m "合并：同步 main 0.6.3 到 OSS 迁移与文件浏览分支"
           git push origin HEAD:feat/oss-migration-management-20260722
+
+# trigger

@@ -110,7 +110,9 @@ function setupRoutes(router: Router) {
             return loginRedirect('expired')
           }
           console.error('[Router Guard] Session verification unavailable:', error)
-          if (to.name === 'login') { return true }
+          if (to.name === 'login') {
+            return true
+          }
           return loginRedirect('unavailable')
         }
       }
@@ -118,7 +120,9 @@ function setupRoutes(router: Router) {
 
     if (to.name === PASSWORD_CHANGE_ROUTE_NAME) {
       setArchiveAccessMode('internal')
-      if (!userStore.isSessionVerified) return loginRedirect()
+      if (!userStore.isSessionVerified) {
+        return loginRedirect()
+      }
       if (!userStore.mustChangePassword) {
         return { path: settingsStore.settings.home.fullPath, replace: true }
       }
@@ -161,7 +165,9 @@ function setupRoutes(router: Router) {
           routeStore.routes.forEach((route) => {
             if (!/^(?:https?:|mailto:|tel:)/.test(route.path)) {
               const childRoute = { ...route } as RouteRecordRaw
-              if (childRoute.path.startsWith('/')) childRoute.path = childRoute.path.slice(1)
+              if (childRoute.path.startsWith('/')) {
+                childRoute.path = childRoute.path.slice(1)
+              }
               removeRoutes.push(router.addRoute('layout', childRoute))
             }
           })
@@ -205,7 +211,9 @@ function setupRoutes(router: Router) {
       }
 
       setArchiveAccessMode('internal')
-      if (to.name === 'login') return true
+      if (to.name === 'login') {
+        return true
+      }
       return loginRedirect()
     }
   })
@@ -217,7 +225,9 @@ function setupRedirectAuthChildrenRoute(router: Router) {
     const currentRoute = router.getRoutes().find(route => route.path === (to.matched.at(-1)?.path ?? ''))
     if (!currentRoute?.redirect) {
       const findAuthRoute = currentRoute?.children?.find(route => route.meta?.menu !== false && auth(route.meta?.auth ?? ''))
-      if (findAuthRoute) return findAuthRoute
+      if (findAuthRoute) {
+        return findAuthRoute
+      }
     }
   })
 }
@@ -226,11 +236,15 @@ function setupProgress(router: Router) {
   const { isLoading } = useNProgress()
   router.beforeEach(() => {
     const settingsStore = useSettingsStore()
-    if (settingsStore.settings.app.enableProgress) isLoading.value = true
+    if (settingsStore.settings.app.enableProgress) {
+      isLoading.value = true
+    }
   })
   router.afterEach(() => {
     const settingsStore = useSettingsStore()
-    if (settingsStore.settings.app.enableProgress) isLoading.value = false
+    if (settingsStore.settings.app.enableProgress) {
+      isLoading.value = false
+    }
   })
 }
 
@@ -240,7 +254,9 @@ function setupTitle(router: Router) {
     if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
       settingsStore.setTitle(to.matched?.at(-1)?.meta?.title ?? to.meta.title)
     }
-    else settingsStore.setTitle(to.meta.title)
+    else {
+      settingsStore.setTitle(to.meta.title)
+    }
   })
 }
 
@@ -251,27 +267,43 @@ function setupKeepAlive(router: Router) {
       const componentName = to.matched.at(-1)?.components?.default.name
       if (componentName) {
         let shouldClearCache = false
-        if (typeof to.meta.cache === 'boolean') shouldClearCache = !to.meta.cache
-        else if (typeof to.meta.cache === 'string') shouldClearCache = to.meta.cache !== from.name
-        else if (Array.isArray(to.meta.cache)) shouldClearCache = !to.meta.cache.includes(from.name as string)
-        if (to.meta.noCache) {
-          if (typeof to.meta.noCache === 'string') shouldClearCache = to.meta.noCache === from.name
-          else if (Array.isArray(to.meta.noCache)) shouldClearCache = to.meta.noCache.includes(from.name as string)
+        if (typeof to.meta.cache === 'boolean') {
+          shouldClearCache = !to.meta.cache
         }
-        if (from.name === 'reload') shouldClearCache = true
+        else if (typeof to.meta.cache === 'string') {
+          shouldClearCache = to.meta.cache !== from.name
+        }
+        else if (Array.isArray(to.meta.cache)) {
+          shouldClearCache = !to.meta.cache.includes(from.name as string)
+        }
+        if (to.meta.noCache) {
+          if (typeof to.meta.noCache === 'string') {
+            shouldClearCache = to.meta.noCache === from.name
+          }
+          else if (Array.isArray(to.meta.noCache)) {
+            shouldClearCache = to.meta.noCache.includes(from.name as string)
+          }
+        }
+        if (from.name === 'reload') {
+          shouldClearCache = true
+        }
         if (shouldClearCache) {
           keepAliveStore.remove(componentName)
           await nextTick()
         }
         keepAliveStore.add(componentName)
       }
-      else console.warn('[MRR] 该页面组件未设置组件名，会导致缓存失效，请检查')
+      else {
+        console.warn('[MRR] 该页面组件未设置组件名，会导致缓存失效，请检查')
+      }
     }
   })
 }
 
 function setupOther(router: Router) {
-  router.afterEach(() => { document.documentElement.scrollTop = 0 })
+  router.afterEach(() => {
+    document.documentElement.scrollTop = 0
+  })
 }
 
 export default function setupGuards(router: Router) {

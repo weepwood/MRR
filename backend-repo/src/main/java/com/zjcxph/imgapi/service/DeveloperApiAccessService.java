@@ -12,11 +12,17 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 开发者模式下的业务权限旁路。
+ *
+ * <p>该服务只跳过业务权限检查，不跳过登录认证。请求仍必须携带有效 Token，
+ * 因此数据库写入、审计日志和用户关联始终使用真实账号。</p>
+ */
 @Service
 public class DeveloperApiAccessService {
 
     public static final String SETTING_KEY = "developerModeApiAccessEnabled";
-    public static final String API_FULL_ACCESS_MODE = "api-full";
+    public static final String API_PERMISSION_BYPASS_MODE = "api-permission-bypass";
 
     private static final Logger logger = LoggerFactory.getLogger(DeveloperApiAccessService.class);
     private static final Set<String> TRUE_VALUES = Set.of("true", "1", "yes", "on", "enabled");
@@ -24,6 +30,7 @@ public class DeveloperApiAccessService {
 
     private final SystemSettingMapper systemSettingMapper;
     private final DeveloperModeService developerModeService;
+
     private volatile boolean cachedEnabled;
     private volatile long cacheExpiresAtNanos;
 
@@ -38,11 +45,8 @@ public class DeveloperApiAccessService {
         return cachedEnabled && developerModeService.isEnabled();
     }
 
-    public boolean isRequestAllowed(HttpServletRequest request) {
+    public boolean isPermissionBypassAllowed(HttpServletRequest request) {
         if (request == null || !isEnabled()) {
-            return false;
-        }
-        if (StringUtils.hasText(request.getHeader("Authorization"))) {
             return false;
         }
         String path = request.getRequestURI();
@@ -55,13 +59,13 @@ public class DeveloperApiAccessService {
     public synchronized void refreshFromValue(String value) {
         cachedEnabled = parseEnabled(value);
         cacheExpiresAtNanos = System.nanoTime() + CACHE_TTL_NANOS;
-        logger.warn("开发者完整 API 访问状态已更新: enabled={}", cachedEnabled);
+        logger.warn("开发者 API 权限旁路状态已更新: enabled={}", cachedEnabled);
     }
 
     public synchronized void disableImmediately() {
         cachedEnabled = false;
         cacheExpiresAtNanos = System.nanoTime() + CACHE_TTL_NANOS;
-        logger.warn("开发者完整 API 访问已关闭");
+        logger.warn("开发者 API 权限旁路已关闭");
     }
 
     public synchronized void invalidate() {
@@ -83,7 +87,7 @@ public class DeveloperApiAccessService {
                 cachedEnabled = setting != null && parseEnabled(setting.getSettingValue());
             } catch (Exception exception) {
                 cachedEnabled = false;
-                logger.error("读取开发者完整 API 访问设置失败，已按关闭处理", exception);
+                logger.error("读取开发者 API 权限旁路设置失败，已按关闭处理", exception);
             }
             cacheExpiresAtNanos = now + CACHE_TTL_NANOS;
         }

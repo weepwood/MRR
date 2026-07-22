@@ -30,23 +30,29 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/oss/migration/jobs/:id/cancel',
-    method: 'POST',
-    response: ({ params }) => ok({
-      id: Number(params.id),
-      status: 'cancelling',
-      mode: 'pilot',
-      totalCount: 500,
-      processedCount: 120,
-      failedCount: 1,
-      rate: 24,
-      cancelRequested: true,
-    }, '已提交安全取消请求'),
+    method: 'post',
+    response: ({ params }) => {
+      const routeParams = params as Record<string, string>
+      return ok({
+        id: Number(routeParams.id),
+        status: 'cancelling',
+        mode: 'pilot',
+        totalCount: 500,
+        processedCount: 120,
+        failedCount: 1,
+        rate: 24,
+        cancelRequested: true,
+      }, '已提交安全取消请求')
+    },
   },
   {
     url: '/api/v1/oss/migration/retry',
-    method: 'POST',
-    response: ({ body }) => ok({
-      updated: Array.isArray(body.scanIds) ? body.scanIds.length : 0,
-    }, '失败记录已重置'),
+    method: 'post',
+    response: ({ body }) => {
+      const payload = (body ?? {}) as { scanIds?: unknown }
+      return ok({
+        updated: Array.isArray(payload.scanIds) ? payload.scanIds.length : 0,
+      }, '失败记录已重置')
+    },
   },
 ])

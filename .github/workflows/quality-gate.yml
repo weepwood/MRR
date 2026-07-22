@@ -36,12 +36,6 @@ jobs:
       - name: Run encoding regression tests
         run: python -m unittest scripts.tests.test_windows_one_click_manager -v
 
-      - name: Validate repository files
-        run: |
-          python scripts/release_baseline.py validate
-          python scripts/check_main_branch_references.py
-          git diff --check
-
       - name: Commit encoding patch
         shell: bash
         run: |

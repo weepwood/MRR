@@ -32,7 +32,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          import textwrap
 
           source = Path('.github/workflows/tmp-oss-route-implementation.yml').read_text(encoding='utf-8')
 
@@ -47,7 +46,11 @@ jobs:
               match = pattern.search(source)
               if not match:
                   raise SystemExit(f'未找到原实施流程步骤：{start_name}')
-              return textwrap.dedent(match.group('body'))
+              lines = match.group('body').splitlines()
+              return '\n'.join(
+                  line[10:] if line.startswith('          ') else line
+                  for line in lines
+              ) + '\n'
 
           Path('/tmp/write-tests.sh').write_text(
               extract('写入新路线测试', '验证测试先失败'),

@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.service.impl;
 
-import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
@@ -27,11 +26,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -61,7 +57,7 @@ public class MigrationServiceImpl implements MigrationService {
     private final ScanMapper scanMapper;
     private final ImageMigrationLogMapper migrationLogMapper;
     private final MigrationJobMapper migrationJobMapper;
-    private final ImageProperties imageProperties;
+    private final MigrationSourceResolver sourceResolver;
     private final Executor taskAsyncExecutor;
 
     /**
@@ -71,16 +67,17 @@ public class MigrationServiceImpl implements MigrationService {
     @Autowired
     private MigrationService self;
 
-    public MigrationServiceImpl(OssService ossService, ScanMapper scanMapper,
-                                 ImageMigrationLogMapper migrationLogMapper,
-                                 MigrationJobMapper migrationJobMapper,
-                                 ImageProperties imageProperties,
-                                 @Qualifier("taskAsyncExecutor") Executor taskAsyncExecutor) {
+    public MigrationServiceImpl(OssService ossService,
+                                ScanMapper scanMapper,
+                                ImageMigrationLogMapper migrationLogMapper,
+                                MigrationJobMapper migrationJobMapper,
+                                MigrationSourceResolver sourceResolver,
+                                @Qualifier("taskAsyncExecutor") Executor taskAsyncExecutor) {
         this.ossService = ossService;
         this.scanMapper = scanMapper;
         this.migrationLogMapper = migrationLogMapper;
         this.migrationJobMapper = migrationJobMapper;
-        this.imageProperties = imageProperties;
+        this.sourceResolver = sourceResolver;
         this.taskAsyncExecutor = taskAsyncExecutor;
     }
 
@@ -90,10 +87,11 @@ public class MigrationServiceImpl implements MigrationService {
             int interruptedJobs = migrationJobMapper.interruptActiveJobs();
             int releasedScans = scanMapper.recoverInterruptedMigrations();
             if (interruptedJobs > 0 || releasedScans > 0) {
-                logger.warn("Recovered OSS migration state after restart: jobs={}, scans={}", interruptedJobs, releasedScans);
+                logger.warn("Recovered OSS migration state after restart: jobs={}, scans={}",
+                        interruptedJobs, releasedScans);
             }
-        } catch (Exception e) {
-            logger.warn("Unable to recover interrupted OSS migration state during startup", e);
+        } catch (Exception exception) {
+            logger.warn("Unable to recover interrupted OSS migration state during startup", exception);
         }
     }
 
@@ -111,6 +109,9 @@ public class MigrationServiceImpl implements MigrationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OssUploadResult uploadLoadedScan(Scan scan) {
+        if (scan == null || scan.getId() == null) {
+            return new OssUploadResult(null, "failed", "扫描记录或 Scan ID 为空");
+        }
         return uploadLoadedScan(scan.getId(), scan);
     }
 
@@ -124,38 +125,42 @@ public class MigrationServiceImpl implements MigrationService {
             return result;
         }
 
+        String ossKey = buildOssKey(scan);
+        if (ossKey == null) {
+            return failPermanently(
+                    scanId,
+                    sourceResolver.describe(scan),
+                    "INVALID_OSS_KEY",
+                    "无法构建 OSS Object Key: " + scanId
+            );
+        }
+
         scanMapper.markMigrationStarted(scanId);
         int currentAttempt = (scan.getMigrationAttempts() == null ? 0 : scan.getMigrationAttempts()) + 1;
-        String localPath = buildLocalPath(scan);
-        if (localPath == null) {
-            return failPermanently(scanId, null, "INVALID_SOURCE_METADATA", "无法构建受控本地路径: " + scanId);
-        }
+        String sourceDescription = sourceResolver.describe(scan);
 
-        File localFile = new File(localPath);
-        if (!localFile.isFile() || !localFile.canRead()) {
-            return failPermanently(scanId, localPath, "SOURCE_FILE_MISSING", "本地文件不存在或不可读: " + localPath);
-        }
-
-        try {
-            String md5 = ossService.calculateMd5(localPath);
-            long fileSize = ossService.getFileSize(localPath);
-            String ossKey = buildOssKey(scan);
-            if (ossKey == null) {
-                return failPermanently(scanId, localPath, "INVALID_OSS_KEY", "无法构建 OSS Object Key: " + scanId);
-            }
+        try (MigrationSourceResolver.ResolvedSource source = sourceResolver.resolve(scan)) {
+            sourceDescription = source.description();
+            String sourcePath = source.path().toString();
+            String md5 = ossService.calculateMd5(sourcePath);
+            long fileSize = ossService.getFileSize(sourcePath);
 
             if (ossService.doesObjectExist(ossKey)) {
                 if (!ossService.verifyUploadIntegrity(ossKey, md5)) {
-                    return failPermanently(scanId, localPath, "OBJECT_CONFLICT",
-                            "OSS 已存在同名对象，但内容校验不一致: " + ossKey);
+                    return failPermanently(
+                            scanId,
+                            sourceDescription,
+                            "OBJECT_CONFLICT",
+                            "OSS 已存在同名对象，但内容校验不一致: " + ossKey
+                    );
                 }
                 logger.info("OSS object already exists and matches source, updating database only: {}", ossKey);
             } else {
-                ossService.uploadFile(localPath, ossKey);
+                ossService.uploadFile(sourcePath, ossKey);
             }
 
             scanMapper.updateOssInfo(scanId, ossKey, fileSize, md5, "migrated");
-            logMigration(scanId, localPath, ossKey, "success", null, fileSize, md5);
+            logMigration(scanId, sourceDescription, ossKey, "success", null, fileSize, md5);
 
             OssUploadResult result = new OssUploadResult();
             result.setScanId(scanId);
@@ -164,9 +169,22 @@ public class MigrationServiceImpl implements MigrationService {
             result.setChecksumMd5(md5);
             result.setStatus("success");
             return result;
-        } catch (Exception e) {
-            logger.error("Failed to upload scan {} to OSS", scanId, e);
-            return failTemporarilyOrPermanently(scanId, localPath, currentAttempt, e);
+        } catch (Exception exception) {
+            logger.error("Failed to upload scan {} to OSS", scanId, exception);
+            if (isPermanentSourceFailure(exception)) {
+                return failPermanently(
+                        scanId,
+                        sourceDescription,
+                        "SOURCE_FILE_UNAVAILABLE",
+                        safeErrorMessage(exception)
+                );
+            }
+            return failTemporarilyOrPermanently(
+                    scanId,
+                    sourceDescription,
+                    currentAttempt,
+                    exception
+            );
         }
     }
 
@@ -195,7 +213,7 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public MigrationStatisticsDTO getStatistics() {
-        MigrationStatisticsDTO stats = new MigrationStatisticsDTO();
+        MigrationStatisticsDTO statistics = new MigrationStatisticsDTO();
         Map<String, Object> counts = scanMapper.countMigrationStats();
         long total = number(counts, "total");
         long migrated = number(counts, "migrated");
@@ -205,16 +223,16 @@ public class MigrationServiceImpl implements MigrationService {
         long migrating = number(counts, "migrating");
         long migratedTotal = migrated + verified;
 
-        stats.setTotalCount(total);
-        stats.setMigratedCount(migratedTotal);
-        stats.setFailedCount(failed);
-        stats.setRetryWaitCount(retryWait);
-        stats.setMigratingCount(migrating);
-        stats.setPendingCount(Math.max(0, total - migratedTotal - failed));
+        statistics.setTotalCount(total);
+        statistics.setMigratedCount(migratedTotal);
+        statistics.setFailedCount(failed);
+        statistics.setRetryWaitCount(retryWait);
+        statistics.setMigratingCount(migrating);
+        statistics.setPendingCount(Math.max(0, total - migratedTotal - failed));
         if (total > 0) {
-            stats.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
+            statistics.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
         }
-        return stats;
+        return statistics;
     }
 
     @Override
@@ -231,18 +249,6 @@ public class MigrationServiceImpl implements MigrationService {
             readiness.getWarnings().add("已有迁移任务正在运行，请等待完成或安全取消后再创建新任务");
         }
 
-        String basePath = trimToNull(imageProperties.getBasePath());
-        readiness.setSourcePathConfigured(basePath != null);
-        boolean sourceReadable = false;
-        if (basePath != null) {
-            File root = new File(basePath);
-            sourceReadable = root.isDirectory() && root.canRead();
-        }
-        readiness.setSourcePathReadable(sourceReadable);
-        if (!sourceReadable) {
-            readiness.getWarnings().add("图片源目录未配置、不是目录或当前服务账号不可读");
-        }
-
         boolean ossConfigured = canCreatePresignedUrl();
         readiness.setOssConfigured(ossConfigured);
         if (!ossConfigured) {
@@ -254,31 +260,38 @@ public class MigrationServiceImpl implements MigrationService {
                 : List.of();
         readiness.setSampleSize(sample.size());
         for (Scan scan : sample) {
-            String localPath = buildLocalPath(scan);
-            if (localPath == null) {
-                readiness.setSampleInvalidCount(readiness.getSampleInvalidCount() + 1);
-                continue;
-            }
-            File file = new File(localPath);
-            if (file.isFile() && file.canRead()) {
+            if (sourceResolver.canRead(scan)) {
                 readiness.setSampleReadableCount(readiness.getSampleReadableCount() + 1);
             } else {
                 readiness.setSampleMissingCount(readiness.getSampleMissingCount() + 1);
             }
         }
+
+        boolean localConfigured = sourceResolver.isLocalBasePathConfigured();
+        boolean sourceReadable = sourceResolver.isLocalBasePathReadable()
+                || readiness.getSampleReadableCount() > 0;
+        readiness.setSourcePathConfigured(localConfigured || readiness.getSampleReadableCount() > 0);
+        readiness.setSourcePathReadable(sourceReadable);
+
+        if (!sourceReadable) {
+            readiness.getWarnings().add("本地、NAS、Nginx 或 HTTP 图片源均未通过抽样读取");
+        }
         if (readiness.getSampleMissingCount() > 0) {
             readiness.getWarnings().add("抽样中存在缺失或不可读文件，任务会标记失败并继续处理后续记录");
         }
-        if (readiness.getSampleInvalidCount() > 0) {
-            readiness.getWarnings().add("抽样中存在无法构建路径的记录，请先检查 folder、BAH、BRXH/SJH 与 filename");
-        }
         if (statistics.getPendingCount() == 0) {
             readiness.getWarnings().add("当前没有待迁移记录");
+        } else if (sample.isEmpty()) {
+            readiness.getWarnings().add("当前只有尚未到重试时间的记录，暂时没有可领取的迁移数据");
         }
 
-        boolean hasReadableCandidate = sample.isEmpty() || readiness.getSampleReadableCount() > 0;
-        readiness.setReady(ossConfigured && sourceReadable && activeJob == null
-                && statistics.getPendingCount() > 0 && hasReadableCandidate);
+        boolean hasReadableCandidate = !sample.isEmpty() && readiness.getSampleReadableCount() > 0;
+        readiness.setReady(
+                ossConfigured
+                        && activeJob == null
+                        && statistics.getPendingCount() > 0
+                        && hasReadableCandidate
+        );
         if (statistics.getMigratedCount() == 0) {
             readiness.setRecommendedMode("pilot");
             readiness.setRecommendedAction("先迁移 100 至 500 张真实图片，核对访问、下载与日志后再扩大批次");
@@ -331,17 +344,18 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public void enrichWithPresignedUrl(ImageMigrationLog log) {
-        if ("success".equals(log.getMigrationStatus()) && log.getOssUrl() != null && !log.getOssUrl().isBlank()) {
+        if ("success".equals(log.getMigrationStatus())
+                && log.getOssUrl() != null
+                && !log.getOssUrl().isBlank()) {
             try {
                 log.setOssUrl(ossService.generatePresignedUrl(log.getOssUrl()));
-            } catch (Exception e) {
-                logger.warn("Failed to generate presigned URL for log id={}", log.getId(), e);
+            } catch (Exception exception) {
+                logger.warn("Failed to generate presigned URL for log id={}", log.getId(), exception);
             }
         }
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public MigrationJob createMigrationJob(MigrationJobRequest request) {
         MigrationJob active = migrationJobMapper.findLatestActive();
         if (active != null) {
@@ -351,8 +365,11 @@ public class MigrationServiceImpl implements MigrationService {
 
         String mode = normalizeMode(request == null ? null : request.getMode());
         String folder = normalizeFolder(request == null ? null : request.getFolder());
-        long requestedCount = resolveRequestedCount(mode, request == null ? null : request.getLimit(),
-                request == null ? null : request.getConfirmation());
+        long requestedCount = resolveRequestedCount(
+                mode,
+                request == null ? null : request.getLimit(),
+                request == null ? null : request.getConfirmation()
+        );
         assertMigrationCanStart();
 
         Integer maxScanId = scanMapper.findMaxPendingMigrationId(folder);
@@ -360,7 +377,9 @@ public class MigrationServiceImpl implements MigrationService {
             return null;
         }
         long eligibleCount = scanMapper.countEligibleMigrations(maxScanId, folder);
-        long totalCount = "full".equals(mode) ? eligibleCount : Math.min(eligibleCount, requestedCount);
+        long totalCount = "full".equals(mode)
+                ? eligibleCount
+                : Math.min(eligibleCount, requestedCount);
         if (totalCount <= 0) {
             return null;
         }
@@ -382,14 +401,16 @@ public class MigrationServiceImpl implements MigrationService {
 
         try {
             migrationJobMapper.insert(job);
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException exception) {
             MigrationJob existing = migrationJobMapper.findLatestActive();
             if (existing != null) {
                 existing.setReused(true);
                 return existing;
             }
-            throw e;
+            throw exception;
         }
+
+        // 当前方法不包裹事务，确保 insert 已提交后才启动异步线程。
         executeMigrationJobAsync(job.getId());
         return job;
     }
@@ -446,6 +467,7 @@ public class MigrationServiceImpl implements MigrationService {
         taskAsyncExecutor.execute(() -> {
             MigrationJob job = migrationJobMapper.findById(jobId);
             if (job == null) {
+                logger.error("Migration job {} was not visible after creation", jobId);
                 return;
             }
             try {
@@ -485,12 +507,17 @@ public class MigrationServiceImpl implements MigrationService {
                         OssUploadResult result;
                         try {
                             result = self.uploadLoadedScan(scan);
-                        } catch (Exception e) {
-                            logger.error("Migration failed for scan {}", scan.getId(), e);
-                            result = new OssUploadResult(scan.getId(), "failed", e.getMessage());
+                        } catch (Exception exception) {
+                            logger.error("Migration failed for scan {}", scan.getId(), exception);
+                            result = new OssUploadResult(
+                                    scan.getId(),
+                                    "failed",
+                                    safeErrorMessage(exception)
+                            );
                         }
                         processed++;
-                        if (!("success".equals(result.getStatus()) || "skipped".equals(result.getStatus()))) {
+                        if (!("success".equals(result.getStatus())
+                                || "skipped".equals(result.getStatus()))) {
                             failed++;
                         }
                     }
@@ -516,14 +543,19 @@ public class MigrationServiceImpl implements MigrationService {
                     job.setStatus(failed > 0 ? "completed_with_errors" : "completed");
                 }
                 migrationJobMapper.update(job);
-                logger.info("Migration job {} finished: status={}, processed={}, failed={}",
-                        jobId, job.getStatus(), processed, failed);
-            } catch (Exception e) {
-                logger.error("Migration job {} error", jobId, e);
+                logger.info(
+                        "Migration job {} finished: status={}, processed={}, failed={}",
+                        jobId,
+                        job.getStatus(),
+                        processed,
+                        failed
+                );
+            } catch (Exception exception) {
+                logger.error("Migration job {} error", jobId, exception);
                 MigrationJob latest = migrationJobMapper.findById(jobId);
                 if (latest != null) {
                     latest.setStatus("failed");
-                    latest.setErrorMessage(safeErrorMessage(e));
+                    latest.setErrorMessage(safeErrorMessage(exception));
                     latest.setCompletedAt(new Date());
                     migrationJobMapper.update(latest);
                 }
@@ -542,20 +574,26 @@ public class MigrationServiceImpl implements MigrationService {
         if (total <= 0) {
             return BigDecimal.ZERO;
         }
-        return BigDecimal.valueOf(processed * 100.0 / total).setScale(2, RoundingMode.HALF_UP);
+        return BigDecimal.valueOf(processed * 100.0 / total)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
-    private OssUploadResult failPermanently(Integer scanId, String localPath, String errorCode, String message) {
+    private OssUploadResult failPermanently(Integer scanId,
+                                             String sourceDescription,
+                                             String errorCode,
+                                             String message) {
         scanMapper.markMigrationFailed(scanId, errorCode);
-        logMigration(scanId, localPath, null, "failed", message, null, null);
+        logMigration(scanId, sourceDescription, null, "failed", message, null, null);
         return new OssUploadResult(scanId, "failed", message);
     }
 
-    private OssUploadResult failTemporarilyOrPermanently(Integer scanId, String localPath,
-                                                          int currentAttempt, Exception error) {
+    private OssUploadResult failTemporarilyOrPermanently(Integer scanId,
+                                                          String sourceDescription,
+                                                          int currentAttempt,
+                                                          Exception error) {
         String message = safeErrorMessage(error);
         String errorCode = classifyUploadError(error);
-        logMigration(scanId, localPath, null, "failed", message, null, null);
+        logMigration(scanId, sourceDescription, null, "failed", message, null, null);
         if (currentAttempt >= MAX_ATTEMPTS || "OBJECT_CONFLICT".equals(errorCode)) {
             scanMapper.markMigrationFailed(scanId, errorCode);
             return new OssUploadResult(scanId, "failed", message);
@@ -566,34 +604,48 @@ public class MigrationServiceImpl implements MigrationService {
         return new OssUploadResult(scanId, "retry_wait", message);
     }
 
+    private boolean isPermanentSourceFailure(Exception error) {
+        String message = safeErrorMessage(error).toLowerCase(Locale.ROOT);
+        return message.contains("不存在")
+                || message.contains("不可读")
+                || message.contains("不能为空")
+                || message.contains("非法")
+                || message.contains("越出")
+                || message.contains("没有可用")
+                || message.contains("status 404")
+                || message.contains("状态码 404");
+    }
+
     private String classifyUploadError(Exception error) {
         String message = safeErrorMessage(error).toLowerCase(Locale.ROOT);
         if (message.contains("同名对象") || message.contains("校验不一致")) {
             return "OBJECT_CONFLICT";
         }
-        if (message.contains("timeout") || message.contains("timed out")) {
-            return "OSS_TIMEOUT";
+        if (message.contains("timeout") || message.contains("timed out") || message.contains("超时")) {
+            return "SOURCE_OR_OSS_TIMEOUT";
         }
-        if (message.contains("connection") || message.contains("connect")) {
-            return "OSS_CONNECTION";
+        if (message.contains("connection") || message.contains("connect") || message.contains("连接")) {
+            return "SOURCE_OR_OSS_CONNECTION";
         }
-        if (message.contains("403") || message.contains("access denied") || message.contains("forbidden")) {
-            return "OSS_PERMISSION";
+        if (message.contains("403")
+                || message.contains("access denied")
+                || message.contains("forbidden")
+                || message.contains("无权限")) {
+            return "SOURCE_OR_OSS_PERMISSION";
         }
-        return "OSS_UPLOAD_FAILED";
+        return "SOURCE_OR_OSS_IO_FAILED";
     }
 
     private void assertMigrationCanStart() {
-        if (!canCreatePresignedUrl()) {
+        MigrationReadinessDTO readiness = getReadiness(20);
+        if (!readiness.isOssConfigured()) {
             throw new IllegalStateException("OSS 尚未完成配置，请先检查 endpoint、bucket 与访问凭据");
         }
-        String basePath = trimToNull(imageProperties.getBasePath());
-        if (basePath == null) {
-            throw new IllegalStateException("图片源目录 image.base-path 尚未配置");
+        if (!readiness.isSourcePathReadable()) {
+            throw new IllegalStateException("本地、NAS、Nginx 或 HTTP 图片源均未通过读取检查");
         }
-        File root = new File(basePath);
-        if (!root.isDirectory() || !root.canRead()) {
-            throw new IllegalStateException("图片源目录不存在或当前服务账号不可读: " + basePath);
+        if (readiness.getPendingCount() <= 0 || readiness.getSampleSize() <= 0) {
+            throw new IllegalStateException("当前没有到期且可领取的待迁移记录");
         }
     }
 
@@ -607,8 +659,8 @@ public class MigrationServiceImpl implements MigrationService {
         try {
             String probe = ossService.generatePresignedUrl(READINESS_PROBE_KEY);
             return probe != null && !probe.isBlank();
-        } catch (Exception e) {
-            logger.debug("OSS readiness probe failed: {}", e.getMessage());
+        } catch (Exception exception) {
+            logger.debug("OSS readiness probe failed: {}", exception.getMessage());
             return false;
         }
     }
@@ -653,45 +705,6 @@ public class MigrationServiceImpl implements MigrationService {
         return value instanceof Number number ? number.longValue() : 0L;
     }
 
-    private String buildLocalPath(Scan scan) {
-        String basePath = trimToNull(imageProperties.getBasePath());
-        if (scan == null || basePath == null) {
-            return null;
-        }
-        Path base = Paths.get(basePath).toAbsolutePath().normalize();
-
-        String sourceType = trimToNull(scan.getSourceType());
-        String sourceRef = trimToNull(scan.getSourceRef());
-        if (sourceRef != null && sourceType != null
-                && Set.of("LOCAL", "NAS", "HTTP").contains(sourceType.toUpperCase(Locale.ROOT))) {
-            Path relative = controlledRelativePath(sourceRef);
-            if (relative == null) {
-                return null;
-            }
-            Path resolved = base.resolve(relative).normalize();
-            return resolved.startsWith(base) ? resolved.toString() : null;
-        }
-
-        String folder = safeSegment(scan.getFolder());
-        String bah = safeSegment(scan.getBah());
-        String filename = safeSegment(scan.getFilename());
-        if (folder == null || folder.length() < 5 || bah == null || filename == null) {
-            return null;
-        }
-        String directoryKey = MedicalRecordCodeUtils.requiresSjhForBah(bah)
-                ? safeSegment(scan.getSjh())
-                : safeSegment(scan.getBrxh());
-        if (directoryKey == null) {
-            return null;
-        }
-        return base.resolve(folder.substring(0, 5))
-                .resolve(folder)
-                .resolve(directoryKey + "-" + bah)
-                .resolve(filename)
-                .normalize()
-                .toString();
-    }
-
     private String buildOssKey(Scan scan) {
         String folder = safeSegment(scan.getFolder());
         String bah = safeSegment(scan.getBah());
@@ -705,35 +718,32 @@ public class MigrationServiceImpl implements MigrationService {
         if (directoryKey == null) {
             return null;
         }
-        return String.format("medical-records/%s/%s/%s-%s/%s",
-                folder.substring(0, 5), folder, directoryKey, bah, filename);
-    }
-
-    private Path controlledRelativePath(String sourceRef) {
-        String normalizedRef = sourceRef.trim().replace('\\', '/');
-        if (normalizedRef.indexOf('\0') >= 0 || normalizedRef.contains(":")
-                || normalizedRef.startsWith("/") || normalizedRef.startsWith("//")) {
-            return null;
-        }
-        Path relative = Paths.get(normalizedRef).normalize();
-        return relative.isAbsolute() || relative.startsWith("..") ? null : relative;
+        return String.format(
+                "medical-records/%s/%s/%s-%s/%s",
+                folder.substring(0, 5),
+                folder,
+                directoryKey,
+                bah,
+                filename
+        );
     }
 
     private String safeSegment(String value) {
         String normalized = trimToNull(value);
-        if (normalized == null || normalized.equals(".") || normalized.equals("..")
-                || normalized.contains("/") || normalized.contains("\\")
-                || normalized.indexOf('\0') >= 0 || normalized.contains(":")) {
+        if (normalized == null
+                || normalized.equals(".")
+                || normalized.equals("..")
+                || normalized.contains("/")
+                || normalized.contains("\\")
+                || normalized.indexOf('\0') >= 0
+                || normalized.contains(":")) {
             return null;
         }
         return normalized;
     }
 
     private String trimToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String safeErrorMessage(Throwable error) {
@@ -744,12 +754,17 @@ public class MigrationServiceImpl implements MigrationService {
         return message.length() > 1000 ? message.substring(0, 1000) : message;
     }
 
-    private void logMigration(Integer scanId, String localPath, String ossUrl,
-                              String status, String errorMessage, Long fileSize, String md5) {
+    private void logMigration(Integer scanId,
+                              String sourceDescription,
+                              String ossUrl,
+                              String status,
+                              String errorMessage,
+                              Long fileSize,
+                              String md5) {
         try {
             ImageMigrationLog log = new ImageMigrationLog();
             log.setScanId(scanId);
-            log.setLocalPath(localPath == null ? "" : localPath);
+            log.setLocalPath(sourceDescription == null ? "" : sourceDescription);
             log.setOssUrl(ossUrl);
             log.setMigrationStatus(status);
             log.setErrorMessage(errorMessage);
@@ -759,8 +774,8 @@ public class MigrationServiceImpl implements MigrationService {
                 log.setMigratedAt(new Date());
             }
             migrationLogMapper.insert(log);
-        } catch (Exception e) {
-            logger.error("Failed to insert migration log for scanId={}", scanId, e);
+        } catch (Exception exception) {
+            logger.error("Failed to insert migration log for scanId={}", scanId, exception);
         }
     }
 }

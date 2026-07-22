@@ -4,7 +4,6 @@ import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.Scan;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
@@ -48,8 +47,8 @@ public interface OssMigrationManagementMapper {
     @Select("<script>"
             + "SELECT * FROM image_migration_log "
             + "<where>"
-            + "<if test='status != null and status != \"\"'>AND migration_status = #{status}</if>"
-            + "<if test='scanId != null'>AND scan_id = #{scanId}</if>"
+            + "<if test='status != null and status != \"\"'>AND migration_status = #{status} </if>"
+            + "<if test='scanId != null'>AND scan_id = #{scanId} </if>"
             + "</where>"
             + "ORDER BY created_at DESC LIMIT #{limit} OFFSET #{offset}"
             + "</script>")
@@ -75,8 +74,8 @@ public interface OssMigrationManagementMapper {
     @Select("<script>"
             + "SELECT COUNT(*) FROM image_migration_log "
             + "<where>"
-            + "<if test='status != null and status != \"\"'>AND migration_status = #{status}</if>"
-            + "<if test='scanId != null'>AND scan_id = #{scanId}</if>"
+            + "<if test='status != null and status != \"\"'>AND migration_status = #{status} </if>"
+            + "<if test='scanId != null'>AND scan_id = #{scanId} </if>"
             + "</where>"
             + "</script>")
     long countLogs(@Param("status") String status, @Param("scanId") Integer scanId);

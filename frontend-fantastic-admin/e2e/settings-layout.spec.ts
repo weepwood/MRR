@@ -42,13 +42,13 @@ test.describe('系统设置分类布局', () => {
 
     const thumbnailSlider = page.getByRole('slider', { name: '缩略图宽度' })
     await expect(thumbnailSlider).toBeVisible({ timeout: 20_000 })
-    const thumbnailRail = thumbnailSlider.locator('xpath=ancestor::*[contains(@class,"el-slider")][1]')
+    const thumbnailRail = thumbnailSlider.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " el-slider ")][1]')
     await expect.poll(async () => (await thumbnailRail.boundingBox())?.width ?? 0).toBeGreaterThan(100)
 
     await page.locator('.settings-nav-item').filter({ hasText: '访问安全' }).click()
     const watermarkSlider = page.getByRole('slider', { name: '水印透明度' })
     await expect(watermarkSlider).toBeVisible()
-    const watermarkRail = watermarkSlider.locator('xpath=ancestor::*[contains(@class,"el-slider")][1]')
+    const watermarkRail = watermarkSlider.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " el-slider ")][1]')
     await expect.poll(async () => (await watermarkRail.boundingBox())?.width ?? 0).toBeGreaterThan(100)
   })
 

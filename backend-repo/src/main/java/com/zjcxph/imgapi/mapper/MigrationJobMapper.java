@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 public interface MigrationJobMapper {
@@ -31,12 +33,33 @@ public interface MigrationJobMapper {
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(MigrationJob job);
 
-    @Update("update migration_job set status = #{status}, mode = #{mode}, scope_value = #{scopeValue}, " +
-            "requested_count = #{requestedCount}, max_scan_id = #{maxScanId}, cancel_requested = #{cancelRequested}, " +
-            "total_count = #{totalCount}, processed_count = #{processedCount}, failed_count = #{failedCount}, " +
-            "rate = #{rate}, error_message = #{errorMessage}, started_at = #{startedAt}, " +
-            "completed_at = #{completedAt}, updated_at = NOW() where id = #{id}")
-    int update(MigrationJob job);
+    @Update("update migration_job set status = 'running', started_at = #{startedAt}, updated_at = NOW() " +
+            "where id = #{id} and status = 'pending' and cancel_requested = false")
+    int markRunning(@Param("id") Long id, @Param("startedAt") Date startedAt);
+
+    @Update("update migration_job set processed_count = #{processedCount}, failed_count = #{failedCount}, " +
+            "rate = #{rate}, updated_at = NOW() where id = #{id}")
+    int updateProgress(@Param("id") Long id,
+                       @Param("processedCount") long processedCount,
+                       @Param("failedCount") long failedCount,
+                       @Param("rate") BigDecimal rate);
+
+    @Update("update migration_job set " +
+            "status = CASE WHEN cancel_requested THEN 'cancelled' ELSE #{status} END, " +
+            "total_count = #{totalCount}, processed_count = #{processedCount}, " +
+            "failed_count = #{failedCount}, rate = #{rate}, " +
+            "error_message = CASE WHEN cancel_requested " +
+            "THEN COALESCE(NULLIF(#{errorMessage}, ''), '管理员已请求安全取消，任务已停止') " +
+            "ELSE #{errorMessage} END, completed_at = #{completedAt}, updated_at = NOW() " +
+            "where id = #{id}")
+    int complete(@Param("id") Long id,
+                 @Param("status") String status,
+                 @Param("totalCount") long totalCount,
+                 @Param("processedCount") long processedCount,
+                 @Param("failedCount") long failedCount,
+                 @Param("rate") BigDecimal rate,
+                 @Param("errorMessage") String errorMessage,
+                 @Param("completedAt") Date completedAt);
 
     @Update("update migration_job set cancel_requested = true, status = 'cancelling', updated_at = NOW() " +
             "where id = #{id} and status in ('pending', 'running')")

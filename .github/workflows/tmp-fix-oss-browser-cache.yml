@@ -64,3 +64,5 @@ jobs:
             backend-repo/src/test/java/com/zjcxph/imgapi/unit/service/OssServiceImplTest.java
           git commit -m "修复：隔离 OSS 浏览签名地址缓存边界"
           git push origin HEAD:feat/oss-migration-management-20260722
+
+# trigger

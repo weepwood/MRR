@@ -234,7 +234,7 @@ onMounted(reloadAll)
       :closable="false"
     />
 
-    <div class="metric-grid" v-loading="summaryLoading">
+    <div v-loading="summaryLoading" class="metric-grid">
       <article class="metric-card">
         <span class="metric-icon"><el-icon><User /></el-icon></span>
         <div>
@@ -407,42 +407,192 @@ onMounted(reloadAll)
 </template>
 
 <style scoped>
-.analytics-panel { display: grid; gap: 16px; }
-.analytics-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.analytics-heading h3 { margin: 0; font-size: 20px; }
-.analytics-heading p { margin: 6px 0 0; color: var(--el-text-color-secondary); }
-.analytics-actions { display: flex; gap: 10px; align-items: center; }
-.year-select { width: 112px; }
-.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; min-height: 112px; }
-.metric-card { display: flex; gap: 14px; align-items: center; min-width: 0; padding: 18px; border: 1px solid var(--el-border-color-light); border-radius: 12px; background: var(--el-bg-color); }
-.metric-card--warning { border-color: var(--el-color-warning-light-5); background: var(--el-color-warning-light-9); }
-.metric-icon { display: grid; flex: 0 0 42px; width: 42px; height: 42px; place-items: center; border-radius: 12px; color: var(--el-color-primary); background: var(--el-color-primary-light-9); font-size: 21px; }
-.metric-card--warning .metric-icon { color: var(--el-color-warning); background: var(--el-color-warning-light-8); }
-.metric-card p { margin: 0 0 4px; color: var(--el-text-color-secondary); font-size: 13px; }
-.metric-card strong { display: block; color: var(--el-text-color-primary); font-size: 26px; line-height: 1.2; }
-.metric-card small { display: block; margin-top: 5px; color: var(--el-text-color-placeholder); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chart-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr); gap: 16px; }
-.chart-card :deep(.el-card__header) { padding: 15px 18px; }
-.card-title { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
-.card-title span { font-weight: 600; }
-.card-title small { color: var(--el-text-color-placeholder); }
-.detail-card :deep(.el-card__body) { padding-top: 4px; }
-.multi-toolbar { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 12px; color: var(--el-text-color-secondary); font-size: 13px; }
-.pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
-.record-link { color: var(--el-color-primary); text-decoration: none; }
-.record-link:hover { text-decoration: underline; }
-.archive-tags { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.analytics-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.analytics-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.analytics-heading h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.analytics-heading p {
+  margin: 6px 0 0;
+  color: var(--el-text-color-secondary);
+}
+
+.analytics-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.year-select {
+  width: 112px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 112px;
+}
+
+.metric-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  padding: 18px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 12px;
+}
+
+.metric-card--warning {
+  background: var(--el-color-warning-light-9);
+  border-color: var(--el-color-warning-light-5);
+}
+
+.metric-icon {
+  display: grid;
+  flex: 0 0 42px;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  font-size: 21px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 12px;
+}
+
+.metric-card--warning .metric-icon {
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-8);
+}
+
+.metric-card p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--el-text-color-primary);
+}
+
+.metric-card small {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--el-text-color-placeholder);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+  gap: 16px;
+}
+
+.chart-card :deep(.el-card__header) {
+  padding: 15px 18px;
+}
+
+.card-title {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.card-title span {
+  font-weight: 600;
+}
+
+.card-title small {
+  color: var(--el-text-color-placeholder);
+}
+
+.detail-card :deep(.el-card__body) {
+  padding-top: 4px;
+}
+
+.multi-toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.record-link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.record-link:hover {
+  text-decoration: underline;
+}
+
+.archive-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
 
 @media (width <= 1100px) {
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .chart-grid { grid-template-columns: 1fr; }
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (width <= 720px) {
-  .analytics-heading { flex-direction: column; }
-  .analytics-actions { width: 100%; flex-wrap: wrap; }
-  .metric-grid { grid-template-columns: 1fr; }
-  .multi-toolbar { align-items: flex-start; flex-direction: column; }
-  .card-title { align-items: flex-start; flex-direction: column; }
+  .analytics-heading {
+    flex-direction: column;
+  }
+
+  .analytics-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .multi-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

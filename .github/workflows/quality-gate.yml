@@ -3,11 +3,9 @@ name: quality-gate
 on:
   pull_request:
     branches:
-      - dev-no-login
       - main
   push:
     branches:
-      - dev-no-login
       - main
     tags:
       - 'v*'
@@ -38,6 +36,9 @@ jobs:
 
       - name: Validate repository release baseline
         run: python scripts/release_baseline.py validate
+
+      - name: Validate main branch references
+        run: python scripts/check_main_branch_references.py
 
   frontend-gate:
     runs-on: ubuntu-latest

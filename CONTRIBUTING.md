@@ -26,26 +26,26 @@ gitGraph
     branch feature/my-feature
     commit
     commit
-    checkout dev-no-login
+    checkout main
     merge feature/my-feature
     commit
 ```
 
-1. 从 `dev-no-login` 分支创建特性分支
+1. 从 `main` 分支创建特性分支
 2. 在特性分支上开发
 3. 提交前运行测试和 lint
-4. 创建 Pull Request 到 `dev-no-login` 分支
+4. 创建 Pull Request 到 `main` 分支
 5. 等待 Code Review
 
 ## 分支规范
 
 | 分支名 | 用途 | 来源 |
 |--------|------|------|
-| `dev-no-login` | 默认集成分支 | - |
-| `feature/*` | 新功能开发 | `dev-no-login` |
-| `fix/*` | Bug 修复 | `dev-no-login` |
-| `hotfix/*` | 紧急修复 | `dev-no-login` |
-| `release/*` | 发布准备 | `dev-no-login` |
+| `main` | 默认集成分支 | - |
+| `feature/*` | 新功能开发 | `main` |
+| `fix/*` | Bug 修复 | `main` |
+| `hotfix/*` | 紧急修复 | `main` |
+| `release/*` | 发布准备 | `main` |
 
 命名示例：
 - `feature/user-export`

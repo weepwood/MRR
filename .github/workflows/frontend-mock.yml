@@ -3,7 +3,7 @@ name: frontend-mock
 on:
   pull_request:
     branches:
-      - dev-no-login
+      - main
     paths:
       - 'frontend-fantastic-admin/**'
       - '.github/workflows/frontend-mock.yml'

@@ -1,5 +1,5 @@
 import type { PaginatedResult } from '../types'
-import api, { getRequest, postRequest } from '../index'
+import api, { getRequest, postRequest, putRequest } from '../index'
 
 export interface PatientRecord {
   id?: number
@@ -11,6 +11,17 @@ export interface PatientRecord {
   department?: string
   bingqu?: string
   chuangwei?: string
+}
+
+export interface PatientUpdatePayload {
+  bah: string
+  idCard?: string | null
+  name?: string | null
+  ruyuan?: string | null
+  admissiontime?: string | null
+  department?: string | null
+  bingqu?: string | null
+  chuangwei?: string | null
 }
 
 export interface PatientImportError {
@@ -71,6 +82,11 @@ export interface PatientMultiRecordGroup {
 /** GET /api/v1/patients — 分页查询患者列表 */
 export function getPatients(params: { page: number, size: number, keyword?: string }) {
   return getRequest<PaginatedResult<PatientRecord>>('/api/v1/patients', { params })
+}
+
+/** PUT /api/v1/patients/{id} — 更新患者信息 */
+export function updatePatient(id: number, payload: PatientUpdatePayload) {
+  return putRequest<PatientRecord, PatientUpdatePayload>(`/api/v1/patients/${id}`, payload)
 }
 
 /** GET /api/v1/patients/analytics/summary — 患者数据质量与年度统计 */

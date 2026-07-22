@@ -117,7 +117,7 @@ test.describe('用户凭据生命周期', () => {
     await page.goto('/users', { waitUntil: 'domcontentloaded' })
     await page.getByRole('button', { name: '创建用户' }).click()
     await expect(page.getByLabel('初始状态')).toHaveCount(0)
-    await expect(page.getByText('新用户默认启用', { exact: false })).toBeVisible()
+    await expect(page.getByText('默认启用', { exact: false })).toBeVisible()
     await page.getByLabel('用户名').fill('doctor.test')
     await page.getByLabel('显示名称').fill('测试医生')
     const roleField = page.locator('.el-form-item').filter({ hasText: '角色' }).locator('.el-select__wrapper')

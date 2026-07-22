@@ -57,7 +57,7 @@ class AuthServiceLoginSecurityTest {
 
         assertThatThrownBy(() -> service.login(request, "10.0.0.8"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("账号已被禁用，请联系管理员");
+                .hasMessage("账号已被停用，请联系管理员");
     }
 
     private AuthUser disabledUser() {

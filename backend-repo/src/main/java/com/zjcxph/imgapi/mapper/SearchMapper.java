@@ -2,9 +2,9 @@ package com.zjcxph.imgapi.mapper;
 
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -21,6 +21,40 @@ public interface SearchMapper {
     @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient where idcard = #{idCard} " +
             "order by admissiontime desc nulls last, ruyuan desc nulls last, id desc")
     List<Patient> findBAHByIDCard(String idCard);
+
+    @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient where id = #{id}")
+    Patient findPatientById(@Param("id") Integer id);
+
+    @Select("""
+            select exists (
+                select 1
+                from mr_patient
+                where id <> #{id}
+                  and bah is not distinct from #{bah}
+                  and name is not distinct from #{name}
+                  and idcard is not distinct from #{idCard}
+                  and ruyuan is not distinct from #{ruyuan}
+                  and admissiontime is not distinct from #{admissiontime}
+                  and department is not distinct from #{department}
+                  and bingqu is not distinct from #{bingqu}
+                  and chuangwei is not distinct from #{chuangwei}
+            )
+            """)
+    boolean existsDuplicatePatient(Patient patient);
+
+    @Update("""
+            update mr_patient
+            set idcard = #{idCard},
+                bah = #{bah},
+                name = #{name},
+                ruyuan = #{ruyuan},
+                admissiontime = #{admissiontime},
+                department = #{department},
+                bingqu = #{bingqu},
+                chuangwei = #{chuangwei}
+            where id = #{id}
+            """)
+    int updatePatient(Patient patient);
 
     @Select("select " + PATIENT_SELECT_COLUMNS + " from mr_patient " +
             "where bah = #{normalizedBah} or " + BAH_SEARCH_EXPRESSION + " = #{searchCode}")

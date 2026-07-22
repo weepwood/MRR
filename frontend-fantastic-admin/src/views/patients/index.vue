@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Edit, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
-import { getPatients } from '@/api/modules/patients'
-import AppLoading from '@/components/AppLoading/index.vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import useAuth from '@/utils/composables/useAuth'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
+import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
+import PatientEditDialog from './components/PatientEditDialog.vue'
+import PatientImportDialog from './components/PatientImportDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
 const loading = ref(false)
+const exporting = ref(false)
 const tableData = ref<PatientRecord[]>([])
 const error = ref('')
 const page = ref(1)
@@ -21,6 +26,13 @@ const total = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
+const importDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const editingPatient = ref<PatientRecord>()
+const analyticsRefreshKey = ref(0)
+const { auth } = useAuth()
+const canImportPatients = computed(() => auth('record:edit'))
+const canEditPatients = computed(() => auth('record:edit'))
 
 const filters = reactive({ keyword: '' })
 
@@ -40,28 +52,107 @@ async function loadData() {
     total.value = 0
     error.value = err instanceof Error ? err.message : '患者列表加载失败'
   }
-  finally { loading.value = false }
+  finally {
+    loading.value = false
+  }
 }
 
-function handleSearch() { page.value = 1; loadData() }
-function resetFilters() { filters.keyword = ''; handleSearch() }
-function handlePageChange(p: number) { page.value = p; loadData() }
-function handleSizeChange(s: number) { size.value = s; page.value = 1; loadData() }
+function refreshAll() {
+  void loadData()
+  analyticsRefreshKey.value += 1
+}
+
+function handleSearch() {
+  page.value = 1
+  void loadData()
+}
+
+function resetFilters() {
+  filters.keyword = ''
+  handleSearch()
+}
+
+function handlePageChange(nextPage: number) {
+  page.value = nextPage
+  void loadData()
+}
+
+function handleSizeChange(nextSize: number) {
+  size.value = nextSize
+  page.value = 1
+  void loadData()
+}
+
+function handleImported() {
+  page.value = 1
+  refreshAll()
+}
+
+function handleEdit(row: PatientRecord) {
+  editingPatient.value = { ...row }
+  editDialogVisible.value = true
+}
+
+function handlePatientSaved(updated: PatientRecord) {
+  const index = tableData.value.findIndex(item => item.id === updated.id)
+  if (index >= 0) {
+    tableData.value[index] = updated
+  }
+  refreshAll()
+}
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const response = await exportPatientsExcel(filters.keyword.trim() || undefined)
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `患者数据-${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('患者数据导出完成')
+  }
+  catch {
+    ElMessage.error('患者数据导出失败')
+  }
+  finally {
+    exporting.value = false
+  }
+}
+
 function maskIdCard(value?: string) {
-  if (!value || value.length <= 7) { return value || '—' }
+  if (!value || value.length <= 7) {
+    return value || '—'
+  }
   return `${value.slice(0, 3)}${'*'.repeat(value.length - 7)}${value.slice(-4)}`
 }
+
 function isIdCardRevealed(value?: string) {
   return patientIdCardRevealEnabled.value && !!value && revealedIdCards.value.has(value)
 }
+
 async function handleIdCardClick(value?: string) {
-  if (!value) return
+  if (!value) {
+    return
+  }
   if (patientIdCardRevealEnabled.value) {
-    if (revealedIdCards.value.has(value)) revealedIdCards.value.delete(value)
-    else revealedIdCards.value.add(value)
+    if (revealedIdCards.value.has(value)) {
+      revealedIdCards.value.delete(value)
+    }
+    else {
+      revealedIdCards.value.add(value)
+    }
   }
 
-  if (!patientIdCardCopyEnabled.value) return
+  if (!patientIdCardCopyEnabled.value) {
+    return
+  }
 
   try {
     await navigator.clipboard.writeText(value)
@@ -75,7 +166,9 @@ async function handleIdCardClick(value?: string) {
 function applyIdCardSettings(settings: EffectiveSystemSettings) {
   patientIdCardRevealEnabled.value = settings.patientIdCardRevealEnabled
   patientIdCardCopyEnabled.value = settings.patientIdCardCopyEnabled
-  if (!settings.patientIdCardRevealEnabled) revealedIdCards.value.clear()
+  if (!settings.patientIdCardRevealEnabled) {
+    revealedIdCards.value.clear()
+  }
 }
 
 async function loadIdCardSettings() {
@@ -85,11 +178,13 @@ async function loadIdCardSettings() {
 
 function handleSystemSettingsUpdated(event: Event) {
   const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
-  if (settings) applyIdCardSettings(settings)
+  if (settings) {
+    applyIdCardSettings(settings)
+  }
 }
 
 onMounted(() => {
-  loadData()
+  void loadData()
   void loadIdCardSettings()
   window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, handleSystemSettingsUpdated)
 })
@@ -108,14 +203,28 @@ onUnmounted(() => {
         </p>
         <h2>患者管理</h2>
         <p class="subtitle">
-          查询患者基本信息，支持按病案号、姓名、身份证号、科室、病区和床位搜索。
+          查询、编辑、导入和导出患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。
         </p>
       </div>
-      <el-button :loading="loading" :icon="Refresh" @click="loadData">
-        刷新
-      </el-button>
-
+      <div class="header-actions">
+        <el-button
+          v-if="canImportPatients"
+          type="primary"
+          :icon="Upload"
+          @click="importDialogVisible = true"
+        >
+          导入患者数据
+        </el-button>
+        <el-button :icon="Download" :loading="exporting" @click="handleExport">
+          导出当前结果
+        </el-button>
+        <el-button :loading="loading" :icon="Refresh" @click="refreshAll">
+          刷新
+        </el-button>
+      </div>
     </div>
+
+    <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey" />
 
     <el-card shadow="never">
       <div class="filter-bar">
@@ -177,7 +286,14 @@ onUnmounted(() => {
         <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
         <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
-        <el-table-column prop="admissiontime" label="出院时间" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
+        <el-table-column v-if="canEditPatients" label="操作" width="96" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">
+              编辑
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <div class="pagination-bar">
@@ -192,12 +308,20 @@ onUnmounted(() => {
         />
       </div>
     </el-card>
+
+    <PatientImportDialog v-model="importDialogVisible" @imported="handleImported" />
+    <PatientEditDialog
+      v-model="editDialogVisible"
+      :patient="editingPatient"
+      @saved="handlePatientSaved"
+    />
   </div>
 </template>
 
 <style scoped>
 .page-shell { display: grid; gap: 16px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
 .eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: #64748b; }
@@ -207,4 +331,9 @@ h2 { margin: 0; font-size: 28px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }
 .bah-link:hover { text-decoration: underline; }
+
+@media (width <= 760px) {
+  .page-header { flex-direction: column; }
+  .header-actions { flex-wrap: wrap; width: 100%; }
+}
 </style>

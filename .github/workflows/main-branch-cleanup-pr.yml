@@ -33,11 +33,119 @@ jobs:
           end_marker = "\n          PY\n"
           script = workflow.split(start_marker, 1)[1].split(end_marker, 1)[0]
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          script = script.replace(
+              "subprocess.run(['python', 'scripts/check_main_branch_references.py'], check=True)",
+              "print('防回归脚本将在独立步骤中重写并验证。')",
+          )
           exec(compile(script, 'main-branch-cleanup-once.yml', 'exec'))
           PY
 
+      - name: Preserve replacement failure
+        if: steps.cleanup-script.outcome == 'failure'
+        run: exit 1
+
+      - name: Write branch reference checker
+        shell: bash
+        run: |
+          cat > scripts/check_main_branch_references.py <<'PY'
+          #!/usr/bin/env python3
+          from __future__ import annotations
+
+          from pathlib import Path
+
+          ACTIVE_PATHS = (
+              '.github/workflows/quality-gate.yml',
+              '.github/workflows/backend-normalization-check.yml',
+              '.github/workflows/frontend-mock.yml',
+              '.github/workflows/monitoring-validation.yml',
+              '.github/workflows/windows-release-package.yml',
+              'README.md',
+              'CONTRIBUTING.md',
+              'CLAUDE.md',
+              'AGENTS.md',
+              'vitepress-doc/internal/index.md',
+              'vitepress-doc/internal/development.md',
+              'vitepress-doc/getting-started/installation.md',
+              'vitepress-doc/user-guide/index.md',
+              'vitepress-doc/architecture/mrr-system-architecture.md',
+          )
+
+          FORBIDDEN = 'dev-no-login'
+
+
+          def find_forbidden_references(
+              root: Path,
+              paths: tuple[str, ...] = ACTIVE_PATHS,
+          ) -> list[str]:
+              violations: list[str] = []
+              for relative_path in paths:
+                  path = root / relative_path
+                  if not path.is_file():
+                      violations.append(f'{relative_path}: 文件不存在')
+                      continue
+                  for line_number, line in enumerate(
+                      path.read_text(encoding='utf-8').splitlines(),
+                      start=1,
+                  ):
+                      if FORBIDDEN in line:
+                          violations.append(f'{relative_path}:{line_number}: {line.strip()}')
+              return violations
+
+
+          def main() -> int:
+              violations = find_forbidden_references(Path(__file__).resolve().parents[1])
+              if violations:
+                  print('发现活跃 dev-no-login 残留：')
+                  print('\n'.join(violations))
+                  return 1
+              print('main 分支活跃引用检查通过。')
+              return 0
+
+
+          if __name__ == '__main__':
+              raise SystemExit(main())
+          PY
+
+          cat > scripts/tests/test_check_main_branch_references.py <<'PY'
+          import tempfile
+          import unittest
+          from pathlib import Path
+
+          from scripts.check_main_branch_references import find_forbidden_references
+
+
+          class MainBranchReferenceCheckTest(unittest.TestCase):
+              def test_reports_active_legacy_branch_reference(self):
+                  with tempfile.TemporaryDirectory() as directory:
+                      root = Path(directory)
+                      path = root / 'README.md'
+                      path.write_text('git checkout dev-no-login\n', encoding='utf-8')
+
+                      self.assertEqual(
+                          find_forbidden_references(root, ('README.md',)),
+                          ['README.md:1: git checkout dev-no-login'],
+                      )
+
+              def test_accepts_main_branch_reference(self):
+                  with tempfile.TemporaryDirectory() as directory:
+                      root = Path(directory)
+                      path = root / 'README.md'
+                      path.write_text('git switch main\n', encoding='utf-8')
+
+                      self.assertEqual(find_forbidden_references(root, ('README.md',)), [])
+
+
+          if __name__ == '__main__':
+              unittest.main()
+          PY
+
+      - name: Validate cleanup
+        run: |
+          python -m unittest scripts.tests.test_check_main_branch_references -v
+          python scripts/check_main_branch_references.py
+
       - name: Upload cleanup diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: main-branch-cleanup-log-${{ github.run_id }}
@@ -47,13 +155,6 @@ jobs:
             scripts/tests/test_check_main_branch_references.py
           if-no-files-found: warn
           retention-days: 7
-
-      - name: Preserve cleanup failure
-        if: steps.cleanup-script.outcome == 'failure'
-        run: exit 1
-
-      - name: Run branch reference tests
-        run: python -m unittest scripts.tests.test_check_main_branch_references -v
 
       - name: Remove temporary cleanup files
         run: |

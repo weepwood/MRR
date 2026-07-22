@@ -1,11 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Root = 'C:\MRR',
-
-    [Parameter(Mandatory = $true)]
     [string]$WinSWPath,
 
-    [Parameter(Mandatory = $true)]
     [string]$NginxPath,
 
     [Parameter(Mandatory = $true)]
@@ -79,6 +76,13 @@ function Install-WinSWService {
 Assert-Administrator
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($WinSWPath)) {
+    $WinSWPath = Join-Path $scriptDir '..\..\runtime\winsw\WinSW-x64.exe'
+}
+if ([string]::IsNullOrWhiteSpace($NginxPath)) {
+    $NginxPath = Join-Path $scriptDir '..\..\runtime\nginx'
+}
+
 $resolvedWinSW = (Resolve-Path -LiteralPath $WinSWPath).Path
 $resolvedNginx = (Resolve-Path -LiteralPath $NginxPath).Path
 $resolvedJava = (Resolve-Path -LiteralPath $JavaHome).Path
@@ -159,6 +163,8 @@ Write-TemplateIfMissing `
 Set-Content -LiteralPath (Join-Path $Root 'config\nginx\maintenance.inc') -Value "# maintenance disabled`r`n" -Encoding ASCII
 Set-Content -LiteralPath (Join-Path $Root 'shared\healthz.txt') -Value "ok`r`n" -Encoding ASCII
 Copy-Item -LiteralPath (Join-Path $scriptDir 'mrrctl.ps1') -Destination (Join-Path $Root 'ops\mrrctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1') -Destination (Join-Path $Root 'ops\nginxctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'nginx-control.cmd') -Destination (Join-Path $Root 'ops\nginx-control.cmd') -Force
 
 # 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
 $secretsPath = Join-Path $Root 'secrets'
@@ -198,3 +204,4 @@ Write-Host "1. 编辑 $Root\config\application-prod.properties"
 Write-Host "2. 编辑 $Root\secrets\application-secrets.properties"
 Write-Host "3. 将发布包放入 $Root\packages"
 Write-Host "4. 执行：$Root\ops\mrrctl.ps1 deploy <发布包路径>"
+Write-Host "5. Nginx 控制：$Root\ops\nginx-control.cmd status|start|stop|restart|reload|test|pause|resume"

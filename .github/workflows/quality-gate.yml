@@ -12,49 +12,13 @@ on:
       - '*.*.*'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: quality-gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  apply-windows-manager-review-patch:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/windows-one-click-manager-20260722'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
-      - name: Apply review patch
-        run: python scripts/apply_windows_manager_review_patch.py
-
-      - name: Run manager regression tests
-        run: python -m unittest scripts.tests.test_windows_one_click_manager -v
-
-      - name: Validate repository files
-        run: |
-          python scripts/release_baseline.py validate
-          python scripts/check_main_branch_references.py
-          git diff --check
-
-      - name: Commit review patch
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo 'Patch already applied.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add deploy/windows/mrr-manager.ps1 scripts/apply_windows_manager_review_patch.py
-          git commit -m '修复：正确传递管理中心后台参数'
-          git push origin HEAD:feat/windows-one-click-manager-20260722
-
   release-baseline-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5

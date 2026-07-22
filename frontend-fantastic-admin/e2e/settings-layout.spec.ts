@@ -28,8 +28,8 @@ test.describe('系统设置分类布局', () => {
     await expect(page.locator('.section-header').getByRole('heading', { name: '开发者模式' })).toBeVisible()
     await expect(page.getByText('兼容旧版影像档案袋调用', { exact: true })).toBeVisible()
     await expect(page.getByText('允许访问的客户端 IP / 网段', { exact: true })).toBeVisible()
-    await expect(page.getByText('只读档案袋', { exact: true })).toBeVisible()
-    await expect(page.getByText('双层来源校验', { exact: true })).toBeVisible()
+    await expect(page.getByText('匿名只读范围', { exact: true })).toBeVisible()
+    await expect(page.getByText('真实账号审计', { exact: true })).toBeVisible()
 
     await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
     await expect(page.locator('.section-header').getByRole('heading', { name: '界面外观' })).toBeVisible()

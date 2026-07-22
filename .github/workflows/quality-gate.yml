@@ -46,6 +46,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          show-progress: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -71,16 +73,41 @@ jobs:
           if ($failed) { exit 1 }
 
       - name: Run manager self-test with Windows PowerShell 5.1
+        id: manager-self-test
         shell: powershell
         run: |
-          $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD 2>&1
-          $exitCode = $LASTEXITCODE
-          $output | Write-Host
-          if ($exitCode -ne 0) { exit $exitCode }
-          $text = $output | Out-String
+          $diagnostics = Join-Path $PWD 'build\windows-manager-selftest'
+          New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+          $stdout = Join-Path $diagnostics 'stdout.txt'
+          $stderr = Join-Path $diagnostics 'stderr.txt'
+          $exitCodeFile = Join-Path $diagnostics 'exit-code.txt'
+          $script = (Resolve-Path '.\deploy\windows\mrr-manager.ps1').Path
+          $root = $PWD.Path
+          $process = Start-Process powershell.exe `
+            -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-STA','-File',$script,'-SelfTest','-Root',$root) `
+            -RedirectStandardOutput $stdout `
+            -RedirectStandardError $stderr `
+            -Wait `
+            -PassThru
+          Set-Content -LiteralPath $exitCodeFile -Value ([string]$process.ExitCode) -Encoding ASCII
+          Write-Host '--- stdout ---'
+          if (Test-Path $stdout) { Get-Content $stdout -Raw | Write-Host }
+          Write-Host '--- stderr ---'
+          if (Test-Path $stderr) { Get-Content $stderr -Raw | Write-Host }
+          if ($process.ExitCode -ne 0) { throw "管理中心自检失败，退出码：$($process.ExitCode)" }
+          $text = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { '' }
           if ($text -notmatch 'PowerShellEdition' -or $text -notmatch 'Desktop') {
             throw '管理中心未在 Windows PowerShell 5.1 Desktop Edition 下完成自检。'
           }
+
+      - name: Upload manager self-test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-manager-selftest
+          path: build/windows-manager-selftest
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Run CMD launcher self-test
         shell: powershell

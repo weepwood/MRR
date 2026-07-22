@@ -39,10 +39,6 @@ const session = {
 }
 
 const stubs = {
-  StatisticsArchivePage: {
-    props: ['externalSession', 'accessMode'],
-    template: '<div class="archive-page-stub" :data-access-mode="accessMode">{{ externalSession.clientId }}</div>',
-  },
   'el-button': {
     template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
   },
@@ -68,19 +64,19 @@ describe('external archive timeout recovery', () => {
     router.replace.mockReset().mockResolvedValue(undefined)
   })
 
-  it('renders the current archive page after the Ticket is exchanged', async () => {
+  it('redirects to the current archive page after the Ticket is exchanged', async () => {
     api.exchangeExternalArchiveTicket.mockResolvedValue({ data: session })
 
-    const wrapper = mountPage()
+    mountPage()
     await flushPromises()
 
-    const archivePage = wrapper.find('.archive-page-stub')
-    expect(archivePage.exists()).toBe(true)
-    expect(archivePage.attributes('data-access-mode')).toBe('external-ticket')
-    expect(archivePage.text()).toContain('his')
     expect(router.replace).toHaveBeenCalledWith({
-      path: '/archive/external',
-      query: { bah: '123456' },
+      path: '/archive',
+      query: { external: 'ticket', bah: '123456' },
+    })
+    expect(JSON.parse(sessionStorage.getItem('MRR-EXTERNAL-ARCHIVE:session') || '{}')).toMatchObject({
+      clientId: 'his',
+      externalUserId: 'doctor-1',
     })
   })
 
@@ -119,8 +115,8 @@ describe('external archive timeout recovery', () => {
 
     expect(api.getExternalArchiveContext).toHaveBeenCalledWith({ timeout: 180_000 })
     expect(router.replace).toHaveBeenCalledWith({
-      path: '/archive/external',
-      query: { bah: '123456' },
+      path: '/archive',
+      query: { external: 'ticket', bah: '123456' },
     })
   })
 

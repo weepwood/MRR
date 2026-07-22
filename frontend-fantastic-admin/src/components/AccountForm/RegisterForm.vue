@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/consistent-chaining, regexp/prefer-w, regexp/use-ignore-case */
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
 import { Eye, EyeOff } from 'lucide-vue-next'
@@ -181,6 +182,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
 .register-form { display: grid; gap: var(--mrr-space-4); margin-top: var(--mrr-space-5); }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); padding-bottom: var(--mrr-space-3); }

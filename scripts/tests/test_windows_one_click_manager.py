@@ -3,11 +3,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+WINDOWS_DEPLOY = ROOT / 'deploy/windows'
+UTF8_BOM = b'\xef\xbb\xbf'
 
 
 class WindowsOneClickManagerTest(unittest.TestCase):
     def test_manager_reuses_existing_control_scripts(self):
-        manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
+        manager = (WINDOWS_DEPLOY / 'mrr-manager.ps1').read_text(encoding='utf-8-sig')
 
         self.assertIn('System.Windows.Forms', manager)
         self.assertIn("Join-Path $Root 'ops\\mrrctl.ps1'", manager)
@@ -24,26 +26,60 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn("@('reload')", manager)
 
     def test_background_invocation_splats_each_argument(self):
-        manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
+        manager = (WINDOWS_DEPLOY / 'mrr-manager.ps1').read_text(encoding='utf-8-sig')
 
         self.assertIn('`$invokeArguments = @($literalArguments)', manager)
         self.assertIn('& $scriptLiteral @invokeArguments', manager)
         self.assertNotIn('& $scriptLiteral @($literalArguments)', manager)
 
-    def test_manager_has_uac_and_double_click_entry(self):
-        manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
-        wrapper_path = ROOT / 'deploy/windows/MRR-Manager.cmd'
-        wrapper = wrapper_path.read_text(encoding='utf-8')
+    def test_manager_has_uac_double_click_entry_and_self_test(self):
+        manager = (WINDOWS_DEPLOY / 'mrr-manager.ps1').read_text(encoding='utf-8-sig')
+        wrapper = (WINDOWS_DEPLOY / 'MRR-Manager.cmd').read_text(encoding='utf-8')
 
         self.assertIn('-Verb RunAs', manager)
         self.assertIn('-STA', manager)
+        self.assertIn('[switch]$SelfTest', manager)
+        self.assertIn("'MRR 一键管理中心'", manager)
         self.assertIn('mrr-manager.ps1', wrapper)
         self.assertIn('-STA', wrapper)
-        self.assertIn('-WindowStyle Hidden', wrapper)
-        self.assertFalse((ROOT / 'deploy/windows/MRR-管理中心.cmd').exists())
+        self.assertIn('%*', wrapper)
+
+    def test_windows_powershell_scripts_use_utf8_bom(self):
+        scripts = sorted(WINDOWS_DEPLOY.rglob('*.ps1'))
+        self.assertGreaterEqual(len(scripts), 4)
+
+        for script in scripts:
+            raw = script.read_bytes()
+            self.assertTrue(
+                raw.startswith(UTF8_BOM),
+                f'{script.relative_to(ROOT)} must use UTF-8 with BOM for Windows PowerShell 5.1',
+            )
+            raw.decode('utf-8-sig')
+
+    def test_cmd_launchers_use_utf8_without_bom_and_switch_code_page(self):
+        launchers = sorted(WINDOWS_DEPLOY.glob('*.cmd'))
+        self.assertGreaterEqual(len(launchers), 2)
+
+        for launcher in launchers:
+            raw = launcher.read_bytes()
+            self.assertFalse(
+                raw.startswith(UTF8_BOM),
+                f'{launcher.relative_to(ROOT)} must not start with a BOM because cmd.exe would treat it as command text',
+            )
+            text = raw.decode('utf-8')
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            self.assertEqual(lines[0].lower(), '@echo off')
+            chcp_index = next((index for index, line in enumerate(lines) if line.lower().startswith('chcp 65001')), None)
+            self.assertIsNotNone(chcp_index, f'{launcher.relative_to(ROOT)} must switch to UTF-8 code page')
+            first_non_ascii = next(
+                (index for index, line in enumerate(lines) if any(ord(char) > 127 for char in line)),
+                None,
+            )
+            if first_non_ascii is not None:
+                self.assertLess(chcp_index, first_non_ascii)
 
     def test_installer_copies_manager_to_ops(self):
-        installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
+        installer = (WINDOWS_DEPLOY / 'install.ps1').read_text(encoding='utf-8-sig')
 
         self.assertIn("Join-Path $scriptDir 'mrr-manager.ps1'", installer)
         self.assertIn("Join-Path $Root 'ops\\mrr-manager.ps1'", installer)
@@ -58,7 +94,7 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn('find backend frontend docs deploy runtime', workflow)
 
     def test_start_all_restores_access(self):
-        controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')
+        controller = (WINDOWS_DEPLOY / 'mrrctl.ps1').read_text(encoding='utf-8-sig')
 
         self.assertIn("if ($Name -eq 'all') { Set-Maintenance $false }", controller)
 

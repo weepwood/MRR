@@ -3,7 +3,6 @@ package com.zjcxph.imgapi.interceptors;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
-import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -26,15 +25,13 @@ class LoginInterceptorDeveloperModeTest {
     @Mock private TokenBlacklist tokenBlacklist;
     @Mock private AuthUserMapper authUserMapper;
     @Mock private DeveloperModeService developerModeService;
-    @Mock private DeveloperApiAccessService developerApiAccessService;
 
     private LoginInterceptor loginInterceptor;
 
     @BeforeEach
     void setUp() {
         JwtUtil.configure("test-jwt-secret-key-for-auth-tests-1234567890");
-        loginInterceptor = new LoginInterceptor(
-                tokenBlacklist, authUserMapper, developerModeService, developerApiAccessService);
+        loginInterceptor = new LoginInterceptor(tokenBlacklist, authUserMapper, developerModeService);
     }
 
     @AfterEach
@@ -49,7 +46,6 @@ class LoginInterceptorDeveloperModeTest {
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isTrue();
         assertThat(response.getStatus()).isEqualTo(200);
-        verify(developerApiAccessService, never()).isRequestAllowed(request);
         verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
     }
 
@@ -61,14 +57,12 @@ class LoginInterceptorDeveloperModeTest {
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isTrue();
         assertThat(response.getStatus()).isEqualTo(200);
-        verify(developerApiAccessService, never()).isRequestAllowed(request);
     }
 
     @Test
     void shouldNotExposePublicRegistrationByGetRequest() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/auth/register");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(developerApiAccessService.isRequestAllowed(request)).thenReturn(false);
         when(developerModeService.isArchiveLegacyRequestAllowed(request)).thenReturn(false);
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
@@ -76,20 +70,14 @@ class LoginInterceptorDeveloperModeTest {
     }
 
     @Test
-    void shouldAllowFullApiRequestWhenSecondLevelDeveloperSwitchIsAllowed() throws Exception {
+    void shouldRejectAnonymousFullApiRequestEvenWhenDeveloperModeIsEnabled() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/oss/migration/jobs");
-        request.setRemoteAddr("127.0.0.1");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(developerApiAccessService.isRequestAllowed(request)).thenReturn(true);
+        when(developerModeService.isArchiveLegacyRequestAllowed(request)).thenReturn(false);
 
-        assertThat(loginInterceptor.preHandle(request, response, new Object())).isTrue();
-        assertThat(response.getHeader("X-MRR-Access-Mode")).isEqualTo("api-full");
-        AuthSession session = (AuthSession) request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE);
-        assertThat(session.getId()).isEqualTo(-2L);
-        assertThat(session.getRoleCode()).isEqualTo("DEVELOPER_API");
-        assertThat(session.getPermissions())
-                .contains("record:manage", "record:edit", "system:manage", "user:manage");
-        verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
+        assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test
@@ -97,7 +85,6 @@ class LoginInterceptorDeveloperModeTest {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/search");
         request.setRemoteAddr("127.0.0.1");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(developerApiAccessService.isRequestAllowed(request)).thenReturn(false);
         when(developerModeService.isArchiveLegacyRequestAllowed(request)).thenReturn(true);
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isTrue();
@@ -116,7 +103,6 @@ class LoginInterceptorDeveloperModeTest {
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("Token 无效或已过期");
-        verify(developerApiAccessService, never()).isRequestAllowed(request);
         verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
     }
 
@@ -128,7 +114,6 @@ class LoginInterceptorDeveloperModeTest {
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
-        verify(developerApiAccessService, never()).isRequestAllowed(request);
         verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
     }
 
@@ -136,7 +121,6 @@ class LoginInterceptorDeveloperModeTest {
     void shouldRejectAnonymousRequestWhenDeveloperModeIsDisabled() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/search");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(developerApiAccessService.isRequestAllowed(request)).thenReturn(false);
         when(developerModeService.isArchiveLegacyRequestAllowed(request)).thenReturn(false);
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
@@ -161,7 +145,6 @@ class LoginInterceptorDeveloperModeTest {
 
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(503);
-        verify(developerApiAccessService, never()).isRequestAllowed(request);
         verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
     }
 }

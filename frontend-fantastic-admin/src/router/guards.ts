@@ -311,10 +311,17 @@ function setupKeepAlive(router: Router) {
   })
 }
 
+function setupOther(router: Router) {
+  router.afterEach(() => {
+    document.documentElement.scrollTop = 0
+  })
+}
+
 export default function setupGuards(router: Router) {
   setupRoutes(router)
   setupRedirectAuthChildrenRoute(router)
   setupProgress(router)
   setupTitle(router)
   setupKeepAlive(router)
+  setupOther(router)
 }

@@ -7,6 +7,7 @@
 - **MRR-Backend**：Spring Boot JAR，由 WinSW 注册为 Windows 服务；
 - **MRR-Gateway**：Nginx，由 WinSW 注册为 Windows 服务；
 - **mrrctl.ps1**：状态、启停、维护、部署、版本和回滚入口；
+- **MRR 一键管理中心**：双击运行的 Windows 图形化管理入口，复用受控脚本执行操作；
 - **不可变发布目录**：`releases/current/previous`；
 - **外置配置**：普通配置和敏感配置与发布包分离；
 - **运行识别**：发布 manifest 与 `/actuator/info` 双重核对产品版本和 Git Commit。
@@ -34,6 +35,25 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 安装脚本会创建目录、复制配置模板、保护敏感配置目录、安装后端和网关服务并校验 Nginx。首次安装不会自动启动业务服务。
+
+## 一键管理中心
+
+安装完成后，直接双击：
+
+```text
+C:\MRR\ops\MRR-管理中心.cmd
+```
+
+程序会自动请求管理员权限，并集中展示产品版本、后端服务、Nginx 网关、健康状态、维护模式和磁盘空间。可执行：
+
+- 一键启动、停止和重启全部服务；
+- 开启维护模式与恢复正常访问；
+- 选择受管理 ZIP 执行部署；
+- 查看版本列表和执行系统诊断；
+- 检查或平滑重载 Nginx；
+- 打开系统首页、日志、配置和发布包目录。
+
+所有服务、维护和部署操作仍由 `mrrctl.ps1` 或 `nginxctl.ps1` 执行，管理中心不绕过发布基线、健康检查、构建身份或 SHA-256 校验。
 
 ## 配置
 

@@ -24,27 +24,41 @@ class DeveloperApiAccessServiceTest {
         DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
         service.refreshFromValue("true");
         when(developerModeService.isEnabled()).thenReturn(false);
+
         assertThat(service.isEnabled()).isFalse();
     }
 
     @Test
-    void shouldAllowOnlyNoTokenApiRequestFromTrustedDeveloperSource() {
+    void shouldAllowApiPermissionBypassFromTrustedDeveloperSource() {
         DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
         service.refreshFromValue("true");
         when(developerModeService.isEnabled()).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/oss/migration/jobs");
         when(developerModeService.isArchiveLegacyRequestAvailable(request)).thenReturn(true);
-        assertThat(service.isRequestAllowed(request)).isTrue();
+
+        assertThat(service.isPermissionBypassAllowed(request)).isTrue();
     }
 
     @Test
-    void shouldNeverAcceptRequestThatCarriesAuthorization() {
+    void authorizationHeaderDoesNotReplaceLoginValidationInThisService() {
         DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
         service.refreshFromValue("true");
         when(developerModeService.isEnabled()).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/settings");
-        request.addHeader("Authorization", "Bearer invalid-token");
-        assertThat(service.isRequestAllowed(request)).isFalse();
+        request.addHeader("Authorization", "Bearer real-token-validated-by-login-interceptor");
+        when(developerModeService.isArchiveLegacyRequestAvailable(request)).thenReturn(true);
+
+        assertThat(service.isPermissionBypassAllowed(request)).isTrue();
+    }
+
+    @Test
+    void shouldRejectNonApiRequestBeforeSourceCheck() {
+        DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
+        service.refreshFromValue("true");
+        when(developerModeService.isEnabled()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/assets/app.js");
+
+        assertThat(service.isPermissionBypassAllowed(request)).isFalse();
         verify(developerModeService, never()).isArchiveLegacyRequestAvailable(request);
     }
 
@@ -53,6 +67,7 @@ class DeveloperApiAccessServiceTest {
         when(systemSettingMapper.findByKey(DeveloperApiAccessService.SETTING_KEY))
                 .thenThrow(new IllegalStateException("database unavailable"));
         DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
+
         assertThat(service.isEnabled()).isFalse();
     }
 
@@ -62,6 +77,7 @@ class DeveloperApiAccessServiceTest {
                 .thenReturn(new SystemSetting(DeveloperApiAccessService.SETTING_KEY, "true", null));
         when(developerModeService.isEnabled()).thenReturn(true);
         DeveloperApiAccessService service = new DeveloperApiAccessService(systemSettingMapper, developerModeService);
+
         assertThat(service.isEnabled()).isTrue();
     }
 }

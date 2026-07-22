@@ -57,6 +57,7 @@ public class DataQualityController {
 
     @Operation(summary = "立即执行一次数据质量检查")
     @PostMapping("/run")
+    @RequirePermissions({"system:manage"})
     public Result<Map<String, Object>> run() {
         try {
             return Result.<Map<String, Object>>success("数据质量检查完成")

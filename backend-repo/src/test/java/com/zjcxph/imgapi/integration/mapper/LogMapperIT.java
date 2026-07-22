@@ -10,8 +10,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,15 +27,39 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MybatisTest
-@TestPropertySource(properties = {
+@MybatisTest(properties = {
         "mybatis.configuration.map-underscore-to-camel-case=true",
-        "mybatis.mapper-locations=classpath*:mapper/*.xml",
-        "spring.flyway.enabled=false"
+        "mybatis.mapper-locations=classpath*:mapper/*.xml"
 })
-@Sql("classpath:schema-itest.sql")
-@DisplayName("LogMapper 图片审计聚合集成测试 (H2)")
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Testcontainers(disabledWithoutDocker = true)
+@DisplayName("LogMapper 图片审计聚合集成测试 (PostgreSQL 16)")
 class LogMapperIT {
+
+    @Container
+    private static final PostgreSQLContainer<?> POSTGRES =
+            new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("imgapi")
+                    .withUsername("imgapi")
+                    .withPassword("imgapi");
+
+    @DynamicPropertySource
+    static void configurePostgresql(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> appendJdbcParameter(
+                POSTGRES.getJdbcUrl(), "currentSchema=app"));
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        registry.add("spring.flyway.enabled", () -> true);
+        registry.add("spring.flyway.schemas", () -> "app");
+        registry.add("spring.flyway.default-schema", () -> "app");
+        registry.add("spring.sql.init.mode", () -> "never");
+    }
+
+    private static String appendJdbcParameter(String jdbcUrl, String parameter) {
+        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + parameter;
+    }
 
     @Autowired
     private LogMapper logMapper;

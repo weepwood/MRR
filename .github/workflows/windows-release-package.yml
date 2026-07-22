@@ -26,12 +26,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -70,7 +73,7 @@ jobs:
           fi
 
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> "${GITHUB_ENV}"
-          echo "MRR_GIT_COMMIT=${GITHUB_SHA}" >> "${GITHUB_ENV}"
+          echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
           echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
       - name: Validate deployment sources
@@ -110,14 +113,14 @@ jobs:
           GIT_INFO="$(unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties)"
           grep -F "build.version=${PRODUCT_VERSION}" <<< "${BUILD_INFO}"
 
-          if grep -F "git.commit.id=${GITHUB_SHA}" <<< "${GIT_INFO}"; then
+          if grep -F "git.commit.id=${SOURCE_SHA}" <<< "${GIT_INFO}"; then
             exit 0
           fi
-          if grep -F "git.commit.id.abbrev=${GITHUB_SHA:0:7}" <<< "${GIT_INFO}"; then
+          if grep -F "git.commit.id.abbrev=${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
             exit 0
           fi
 
-          echo "Backend git.properties does not match ${GITHUB_SHA}" >&2
+          echo "Backend git.properties does not match ${SOURCE_SHA}" >&2
           printf '%s\n' "${GIT_INFO}" >&2
           exit 1
 
@@ -129,7 +132,7 @@ jobs:
           pnpm test:run
           pnpm build
           grep -R --fixed-strings "${PRODUCT_VERSION}" dist >/dev/null
-          grep -R --fixed-strings "${GITHUB_SHA}" dist >/dev/null
+          grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
 
       - name: Build documentation
         working-directory: vitepress-doc
@@ -154,7 +157,7 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             ARCHIVE="MRR-v${PRODUCT_VERSION}.zip"
           else
-            ARCHIVE="MRR-v${PRODUCT_VERSION}-${GITHUB_SHA:0:8}.zip"
+            ARCHIVE="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}.zip"
           fi
 
           rm -rf build
@@ -172,14 +175,14 @@ jobs:
           cp VERSION release-baseline.json "${PACKAGE_DIR}/"
 
           python scripts/release_baseline.py manifest \
-            --git-commit "${GITHUB_SHA}" \
+            --git-commit "${SOURCE_SHA}" \
             --build-time "${MRR_BUILD_TIME}" \
             --output "${PACKAGE_DIR}/manifest.json"
 
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${GITHUB_SHA}" > "${PACKAGE_DIR}/release-notes.md"
+            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-notes.md"
           fi
 
           (

@@ -10,9 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
@@ -73,19 +79,29 @@ public class MigrationSourceResolver {
     }
 
     public ResolvedSource resolve(Scan scan) throws IOException {
-        validateScan(scan);
-        Path directPath = resolveDirectPath(scan);
-        if (directPath != null && Files.isRegularFile(directPath) && Files.isReadable(directPath)) {
-            return new ResolvedSource(directPath, directPath.toString(), false);
+        try {
+            validateScan(scan);
+            Path directPath = resolveDirectPath(scan);
+            if (directPath != null && Files.isRegularFile(directPath) && Files.isReadable(directPath)) {
+                return new ResolvedSource(directPath, directPath.toString(), false);
+            }
+        } catch (IOException | InvalidPathException exception) {
+            throw new SourceResolutionException(safeMessage(exception), true, exception);
         }
 
         Path directory = tempDirectory();
-        Files.createDirectories(directory);
-        Path tempFile = Files.createTempFile(
-                directory,
-                "scan-" + scan.getId() + "-",
-                safeSuffix(scan.getFilename())
-        );
+        Path tempFile;
+        try {
+            Files.createDirectories(directory);
+            tempFile = Files.createTempFile(
+                    directory,
+                    "scan-" + scan.getId() + "-",
+                    safeSuffix(scan.getFilename())
+            );
+        } catch (IOException | RuntimeException exception) {
+            throw new SourceResolutionException("无法创建 OSS 迁移临时文件", false, exception);
+        }
+
         try (InputStream input = imageStorage.open(toPathDO(scan))) {
             Files.copy(input, tempFile, StandardCopyOption.REPLACE_EXISTING);
             if (!Files.isRegularFile(tempFile) || !Files.isReadable(tempFile)) {
@@ -94,10 +110,12 @@ public class MigrationSourceResolver {
             return new ResolvedSource(tempFile, describe(scan), true);
         } catch (IOException | RuntimeException exception) {
             deleteQuietly(tempFile);
-            if (exception instanceof IOException ioException) {
-                throw ioException;
-            }
-            throw new IOException("多来源图片读取失败", exception);
+            FailureNature nature = classifyFailure(exception);
+            throw new SourceResolutionException(
+                    safeMessage(exception),
+                    nature == FailureNature.PERMANENT,
+                    exception
+            );
         }
     }
 
@@ -248,6 +266,81 @@ public class MigrationSourceResolver {
         return Path.of(systemTemp, TEMP_DIRECTORY_NAME).toAbsolutePath().normalize();
     }
 
+    private FailureNature classifyFailure(Throwable failure) {
+        if (failure == null) {
+            return FailureNature.UNKNOWN;
+        }
+
+        Throwable[] suppressed = failure.getSuppressed();
+        if (suppressed.length > 0) {
+            boolean allPermanent = true;
+            for (Throwable item : suppressed) {
+                FailureNature itemNature = classifyFailure(item);
+                if (itemNature == FailureNature.TRANSIENT) {
+                    return FailureNature.TRANSIENT;
+                }
+                if (itemNature != FailureNature.PERMANENT) {
+                    allPermanent = false;
+                }
+            }
+            return allPermanent ? FailureNature.PERMANENT : FailureNature.UNKNOWN;
+        }
+
+        if (failure instanceof SocketTimeoutException
+                || failure instanceof ConnectException
+                || failure instanceof SocketException) {
+            return FailureNature.TRANSIENT;
+        }
+        if (failure instanceof NoSuchFileException
+                || failure instanceof FileNotFoundException
+                || failure instanceof InvalidPathException
+                || failure instanceof IllegalArgumentException) {
+            return FailureNature.PERMANENT;
+        }
+
+        Throwable cause = failure.getCause();
+        if (cause != null && cause != failure) {
+            FailureNature causeNature = classifyFailure(cause);
+            if (causeNature != FailureNature.UNKNOWN) {
+                return causeNature;
+            }
+        }
+
+        String message = safeMessage(failure).toLowerCase(Locale.ROOT);
+        if (message.contains("timeout")
+                || message.contains("timed out")
+                || message.contains("超时")
+                || message.contains("connection reset")
+                || message.contains("connection refused")
+                || message.contains("连接中断")
+                || message.contains("连接失败")) {
+            return FailureNature.TRANSIENT;
+        }
+        if (message.contains("status 404")
+                || message.contains("状态码 404")
+                || message.contains("not found")
+                || message.contains("不存在")
+                || message.contains("不可读")
+                || message.contains("不能为空")
+                || message.contains("非法")
+                || message.contains("越出")
+                || message.contains("没有可用")
+                || message.contains("access denied")
+                || message.contains("forbidden")
+                || message.contains("无权限")) {
+            return FailureNature.PERMANENT;
+        }
+        return FailureNature.UNKNOWN;
+    }
+
+    private String safeMessage(Throwable error) {
+        if (error == null || error.getMessage() == null || error.getMessage().isBlank()) {
+            return error == null ? "未知图片源错误" : error.getClass().getSimpleName();
+        }
+        String message = error.getMessage().replace('\r', ' ').replace('\n', ' ').trim();
+        return message.length() <= 1000 ? message : message.substring(0, 1000);
+    }
+
     private static void deleteQuietly(Path path) {
         if (path == null) {
             return;
@@ -265,6 +358,25 @@ public class MigrationSourceResolver {
 
     private String trimToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private enum FailureNature {
+        PERMANENT,
+        TRANSIENT,
+        UNKNOWN
+    }
+
+    public static final class SourceResolutionException extends IOException {
+        private final boolean permanent;
+
+        public SourceResolutionException(String message, boolean permanent, Throwable cause) {
+            super(message, cause);
+            this.permanent = permanent;
+        }
+
+        public boolean isPermanent() {
+            return permanent;
+        }
     }
 
     public record ResolvedSource(Path path, String description, boolean temporary) implements AutoCloseable {

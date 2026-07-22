@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -94,8 +95,8 @@ class NginxBrowserServiceTest {
     @Test
     void shouldProxyFileWithBasicAuthentication() throws IOException {
         NginxBrowserService.RemoteFile remoteFile = service.openFile("default", "0013.jpg");
-        try (remoteFile.inputStream()) {
-            assertArrayEquals("image-data".getBytes(StandardCharsets.UTF_8), remoteFile.inputStream().readAllBytes());
+        try (InputStream input = remoteFile.inputStream()) {
+            assertArrayEquals("image-data".getBytes(StandardCharsets.UTF_8), input.readAllBytes());
         }
         assertEquals("image/jpeg", remoteFile.contentType());
     }

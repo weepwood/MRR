@@ -2,22 +2,29 @@ package com.zjcxph.imgapi.unit.service;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.zjcxph.imgapi.config.OssProperties;
 import com.zjcxph.imgapi.service.impl.OssServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +37,9 @@ class OssServiceImplTest {
 
     @Mock
     private AmazonS3 amazonS3;
+
+    @TempDir
+    Path tempDir;
 
     private OssServiceImpl ossService;
 
@@ -92,5 +102,21 @@ class OssServiceImplTest {
         );
 
         assertThat(verified).isTrue();
+    }
+
+    @Test
+    @DisplayName("上传使用调用方已计算的 MD5，避免再次读取大文件")
+    void uploadUsesPrecomputedMd5() throws Exception {
+        Path file = tempDir.resolve("test.jpg");
+        Files.write(file, new byte[]{1, 2, 3});
+        String md5 = "0123456789abcdef0123456789abcdef";
+        OssServiceImpl spyService = spy(ossService);
+        when(amazonS3.putObject(any(PutObjectRequest.class))).thenReturn(new PutObjectResult());
+
+        String result = spyService.uploadFile(file.toString(), "medical-records/test.jpg", md5);
+
+        assertThat(result).isEqualTo("medical-records/test.jpg");
+        verify(spyService, never()).calculateMd5(anyString());
+        verify(amazonS3).putObject(any(PutObjectRequest.class));
     }
 }

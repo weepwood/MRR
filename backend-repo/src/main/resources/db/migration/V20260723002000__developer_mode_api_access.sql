@@ -5,7 +5,7 @@ BEGIN
         VALUES (
             'developerModeApiAccessEnabled',
             'false',
-            '开发者模式下是否允许可信来源以无 Token 开发身份访问受保护 API；默认关闭',
+            '开发者模式下是否允许可信来源中的已登录用户跳过 API 业务权限检查；默认关闭',
             'system'
         )
         ON CONFLICT (setting_key) DO NOTHING;

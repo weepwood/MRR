@@ -102,15 +102,34 @@ jobs:
         working-directory: backend-repo
         run: mvn -B -Drevision="${PRODUCT_VERSION}" test package
 
-      - name: Verify backend build identity
+      - name: Extract backend build identity
         shell: bash
         run: |
           set -euo pipefail
           BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
           test -n "${BACKEND_JAR}"
+          IDENTITY_DIR="build/backend-identity"
+          mkdir -p "${IDENTITY_DIR}"
+          unzip -l "${BACKEND_JAR}" > "${IDENTITY_DIR}/jar-entries.txt"
+          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/META-INF/build-info.properties > "${IDENTITY_DIR}/build-info.properties" || true
+          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties > "${IDENTITY_DIR}/git.properties" || true
+          printf 'source.sha=%s\njar.path=%s\n' "${SOURCE_SHA}" "${BACKEND_JAR}" > "${IDENTITY_DIR}/expected.properties"
+          echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
 
-          BUILD_INFO="$(unzip -p "${BACKEND_JAR}" BOOT-INF/classes/META-INF/build-info.properties)"
-          GIT_INFO="$(unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties)"
+      - name: Upload backend build identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build-identity
+          path: build/backend-identity
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify backend build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_INFO="$(cat build/backend-identity/build-info.properties)"
+          GIT_INFO="$(cat build/backend-identity/git.properties)"
           grep -F "build.version=${PRODUCT_VERSION}" <<< "${BUILD_INFO}"
 
           if grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}"; then
@@ -160,13 +179,11 @@ jobs:
             ARCHIVE="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}.zip"
           fi
 
-          rm -rf build
+          rm -rf "${PACKAGE_DIR}"
           mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" \
                    "${PACKAGE_DIR}/docs/user" "${PACKAGE_DIR}/docs/internal" \
                    "${PACKAGE_DIR}/deploy/windows"
 
-          BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
-          test -n "${BACKEND_JAR}"
           cp "${BACKEND_JAR}" "${PACKAGE_DIR}/backend/mrr-backend.jar"
           cp -a frontend-fantastic-admin/dist/. "${PACKAGE_DIR}/frontend/"
           cp -a vitepress-doc/.vitepress/dist-user/. "${PACKAGE_DIR}/docs/user/"

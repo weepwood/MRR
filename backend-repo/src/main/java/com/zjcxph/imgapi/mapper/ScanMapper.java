@@ -212,6 +212,11 @@ public interface ScanMapper {
                                @Param("errorCode") String errorCode,
                                @Param("nextRetryAt") Date nextRetryAt);
 
+    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = 'APPLICATION_RESTART', " +
+            "migration_next_retry_at = NOW(), migration_updated_at = NOW() " +
+            "WHERE migration_status = 'migrating' AND (oss_url IS NULL OR oss_url = '')")
+    int recoverInterruptedMigrations();
+
     @Update("<script>UPDATE mr_scan SET migration_status = 'not_migrated', migration_attempts = 0, " +
             "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
             "WHERE (oss_url IS NULL OR oss_url = '') AND id IN " +

@@ -65,6 +65,10 @@ public class PatientService {
         patient.setBingqu(normalizeText(request.getBingqu()));
         patient.setChuangwei(normalizeText(request.getChuangwei()));
 
+        if (searchMapper.existsDuplicatePatient(patient)) {
+            throw new IllegalArgumentException("保存后将与现有患者记录完全重复，请核对后再修改");
+        }
+
         int updated = searchMapper.updatePatient(patient);
         return updated == 0 ? null : searchMapper.findPatientById(id);
     }

@@ -16,7 +16,13 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -84,6 +90,7 @@ public class SearchController {
 
     @Operation(summary = "通过身份证号查询全部影像档案，并生成 URL 安全令牌")
     @PostMapping("/archive-cases")
+    @RequirePermissions({"search:read"})
     public Result<IdCardArchiveSearchResponse> getArchiveCasesByIdCard(
             @Valid @RequestBody IdCardQueryRequest request) {
         String idCard = request.getIdCard().trim();
@@ -141,6 +148,7 @@ public class SearchController {
 
     @Operation(summary = "通过身份证号查询病案号")
     @PostMapping("/getBAHByID")
+    @RequirePermissions({"search:read"})
     public Result<List<Patient>> getBAHByIdCard(@Valid @RequestBody IdCardQueryRequest request) {
         List<Patient> patients = searchService.getBAHByID(request.getIdCard());
         logger.info("Found {} records for idCard={}***", patients.size(),

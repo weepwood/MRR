@@ -5,6 +5,9 @@ import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.storage.ImageStorage;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -12,8 +15,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * 为 OSS 迁移解析可读取的源文件。
@@ -24,8 +30,11 @@ import java.util.Set;
 @Component
 public class MigrationSourceResolver {
 
+    private static final Logger logger = LoggerFactory.getLogger(MigrationSourceResolver.class);
     private static final Set<String> DIRECT_LOCAL_TYPES = Set.of("", "AUTO", "LOCAL", "OSS");
     private static final String TEMP_DIRECTORY_NAME = "mrr-oss-migration";
+    private static final Duration STALE_TEMP_AGE = Duration.ofHours(24);
+    private static final int MAX_STARTUP_CLEANUP_FILES = 10_000;
 
     private final ImageStorage imageStorage;
     private final ImageProperties imageProperties;
@@ -35,6 +44,34 @@ public class MigrationSourceResolver {
         this.imageProperties = imageProperties;
     }
 
+    @PostConstruct
+    public void cleanupStaleTemporaryFiles() {
+        Path directory = tempDirectory();
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        Instant cutoff = Instant.now().minus(STALE_TEMP_AGE);
+        int deleted = 0;
+        try (Stream<Path> files = Files.list(directory)) {
+            for (Path file : files.limit(MAX_STARTUP_CLEANUP_FILES).toList()) {
+                try {
+                    if (Files.isRegularFile(file)
+                            && Files.getLastModifiedTime(file).toInstant().isBefore(cutoff)
+                            && Files.deleteIfExists(file)) {
+                        deleted++;
+                    }
+                } catch (IOException exception) {
+                    logger.debug("Unable to delete stale OSS migration temp file: {}", file, exception);
+                }
+            }
+        } catch (IOException exception) {
+            logger.warn("Unable to inspect OSS migration temp directory: {}", directory, exception);
+        }
+        if (deleted > 0) {
+            logger.info("Deleted {} stale OSS migration temporary files", deleted);
+        }
+    }
+
     public ResolvedSource resolve(Scan scan) throws IOException {
         validateScan(scan);
         Path directPath = resolveDirectPath(scan);
@@ -42,12 +79,10 @@ public class MigrationSourceResolver {
             return new ResolvedSource(directPath, directPath.toString(), false);
         }
 
-        Path tempDirectory = Path.of(System.getProperty("java.io.tmpdir"), TEMP_DIRECTORY_NAME)
-                .toAbsolutePath()
-                .normalize();
-        Files.createDirectories(tempDirectory);
+        Path directory = tempDirectory();
+        Files.createDirectories(directory);
         Path tempFile = Files.createTempFile(
-                tempDirectory,
+                directory,
                 "scan-" + scan.getId() + "-",
                 safeSuffix(scan.getFilename())
         );
@@ -58,7 +93,7 @@ public class MigrationSourceResolver {
             }
             return new ResolvedSource(tempFile, describe(scan), true);
         } catch (IOException | RuntimeException exception) {
-            Files.deleteIfExists(tempFile);
+            deleteQuietly(tempFile);
             if (exception instanceof IOException ioException) {
                 throw ioException;
             }
@@ -82,8 +117,7 @@ public class MigrationSourceResolver {
     }
 
     public boolean isLocalBasePathConfigured() {
-        String basePath = trimToNull(imageProperties.getBasePath());
-        return basePath != null;
+        return trimToNull(imageProperties.getBasePath()) != null;
     }
 
     public boolean isLocalBasePathReadable() {
@@ -206,6 +240,25 @@ public class MigrationSourceResolver {
         return extension.matches("\\.[a-z0-9]{1,10}") ? extension : ".bin";
     }
 
+    private Path tempDirectory() {
+        String systemTemp = System.getProperty("java.io.tmpdir");
+        if (systemTemp == null || systemTemp.isBlank()) {
+            systemTemp = ".";
+        }
+        return Path.of(systemTemp, TEMP_DIRECTORY_NAME).toAbsolutePath().normalize();
+    }
+
+    private static void deleteQuietly(Path path) {
+        if (path == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException exception) {
+            logger.warn("Unable to delete OSS migration temporary file: {}", path, exception);
+        }
+    }
+
     private String normalizeType(String value) {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
@@ -216,9 +269,9 @@ public class MigrationSourceResolver {
 
     public record ResolvedSource(Path path, String description, boolean temporary) implements AutoCloseable {
         @Override
-        public void close() throws IOException {
+        public void close() {
             if (temporary) {
-                Files.deleteIfExists(path);
+                deleteQuietly(path);
             }
         }
     }

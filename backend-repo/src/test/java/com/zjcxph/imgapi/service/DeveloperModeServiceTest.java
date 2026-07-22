@@ -100,6 +100,23 @@ class DeveloperModeServiceTest {
     }
 
     @Test
+    void shouldFailClosedWhenStoredAllowedSourcesContainInvalidRule() {
+        when(systemSettingMapper.findByKey(DeveloperModeService.SETTING_KEY))
+                .thenReturn(new SystemSetting(DeveloperModeService.SETTING_KEY, "true", null));
+        when(systemSettingMapper.findByKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY))
+                .thenReturn(new SystemSetting(
+                        DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY,
+                        "192.168.10.0/24\n192.168.1.999",
+                        null));
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.25")))
+                .isFalse();
+        assertThat(service.isEnabled()).isFalse();
+    }
+
+    @Test
     void shouldAllowOnlyAuditedReadOnlyArchivePaths() {
         DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
         service.refreshFromValue("true");
@@ -112,8 +129,12 @@ class DeveloperModeServiceTest {
                 proxiedRequest("GET", "/api/v1/img/image/123/1/folder/1.jpg", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
         assertThat(service.isArchiveLegacyRequestAllowed(
-                proxiedRequest("GET", "/api/v1/search/patient/12345678", "127.0.0.1", "192.168.10.25")))
+                proxiedRequest("GET", "/api/v1/search/patient/1234567", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/search/patient/12345678", "127.0.0.1", "192.168.10.25")))
+                .as("1000 万及以上病案必须携带上架号，不能匿名调用仅按病案号查询患者接口")
+                .isFalse();
 
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/img/12345678", "127.0.0.1", "192.168.10.25")))

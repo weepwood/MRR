@@ -44,6 +44,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 C:\MRR\ops\MRR-管理中心.cmd
 ```
 
+若解压或文件系统不支持中文文件名，也可以运行 `C:\MRR\ops\MRR-Manager.cmd`。两个入口指向同一个管理程序。
+
 程序会自动请求管理员权限，并集中展示产品版本、后端服务、Nginx 网关、健康状态、维护模式和磁盘空间。可执行：
 
 - 一键启动、停止和重启全部服务；

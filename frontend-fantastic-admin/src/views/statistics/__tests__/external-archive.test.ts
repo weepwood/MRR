@@ -39,9 +39,9 @@ const session = {
 }
 
 const stubs = {
-  'ExternalArchiveViewer': {
-    props: ['session'],
-    template: '<div class="viewer-stub">viewer</div>',
+  StatisticsArchivePage: {
+    props: ['externalSession', 'accessMode'],
+    template: '<div class="archive-page-stub" :data-access-mode="accessMode">{{ externalSession.clientId }}</div>',
   },
   'el-button': {
     template: '<button type="button" @click="$emit(\'click\')"><slot /></button>',
@@ -66,6 +66,22 @@ describe('external archive timeout recovery', () => {
     api.getExternalArchiveContext.mockReset()
     router.back.mockReset()
     router.replace.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('renders the current archive page after the Ticket is exchanged', async () => {
+    api.exchangeExternalArchiveTicket.mockResolvedValue({ data: session })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const archivePage = wrapper.find('.archive-page-stub')
+    expect(archivePage.exists()).toBe(true)
+    expect(archivePage.attributes('data-access-mode')).toBe('external-ticket')
+    expect(archivePage.text()).toContain('his')
+    expect(router.replace).toHaveBeenCalledWith({
+      path: '/archive/external',
+      query: { bah: '123456' },
+    })
   })
 
   it('keeps the session and offers recovery actions after a timeout', async () => {

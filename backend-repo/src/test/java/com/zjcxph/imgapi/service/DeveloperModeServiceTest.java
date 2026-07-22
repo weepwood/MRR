@@ -46,30 +46,74 @@ class DeveloperModeServiceTest {
     }
 
     @Test
-    void shouldAllowOnlyReadOnlyArchivePathsFromTrustedProxy() {
+    void shouldAllowExactClientIpConfiguredInSystemSettings() {
         DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
         service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.10.25");
 
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/search", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/12345678", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.26")))
+                .isFalse();
+    }
+
+    @Test
+    void shouldAllowClientIpInsideConfiguredCidr() {
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+        service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.20.0/24\n10.10.0.0/16");
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.20.88")))
                 .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/image/123/1/folder/1.jpg", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "10.10.15.9")))
                 .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/url/1", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.21.1")))
+                .isFalse();
+    }
+
+    @Test
+    void shouldIgnoreForwardedHeadersFromUntrustedProxy() {
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+        service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.10.0/24");
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "10.0.0.8", "192.168.10.25")))
+                .isFalse();
+    }
+
+    @Test
+    void shouldAllowOnlyReadOnlyArchivePaths() {
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+        service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.10.0/24");
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/oss-image/1", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/12345678", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/search/patient/12345678", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/image/123/1/folder/1.jpg", "127.0.0.1", "192.168.10.25")))
+                .isTrue();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/search/patient/12345678", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
 
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/settings", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/settings", "127.0.0.1", "192.168.10.25")))
                 .isFalse();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/download/12345678", "127.0.0.1")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/download/12345678", "127.0.0.1", "192.168.10.25")))
                 .isFalse();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("PUT", "/api/v1/img/updateImageType/1", "127.0.0.1")))
-                .isFalse();
-        assertThat(service.isArchiveLegacyRequestAllowed(request("GET", "/api/v1/img/search", "10.10.20.15")))
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("PUT", "/api/v1/img/updateImageType/1", "127.0.0.1", "192.168.10.25")))
                 .isFalse();
     }
 
@@ -103,13 +147,20 @@ class DeveloperModeServiceTest {
         assertThat(service.isEnabled()).isFalse();
     }
 
-    private DeveloperModeService createService(boolean startupAllowed, List<String> allowedRemoteAddresses) {
-        return new DeveloperModeService(systemSettingMapper, startupAllowed, allowedRemoteAddresses);
+    private DeveloperModeService createService(boolean startupAllowed, List<String> trustedProxyAddresses) {
+        return new DeveloperModeService(systemSettingMapper, startupAllowed, trustedProxyAddresses);
     }
 
-    private MockHttpServletRequest request(String method, String path, String remoteAddr) {
+    private MockHttpServletRequest proxiedRequest(
+            String method,
+            String path,
+            String proxyAddress,
+            String clientAddress
+    ) {
         MockHttpServletRequest request = new MockHttpServletRequest(method, path);
-        request.setRemoteAddr(remoteAddr);
+        request.setRemoteAddr(proxyAddress);
+        request.addHeader("X-Forwarded-For", clientAddress);
+        request.addHeader("X-Real-IP", clientAddress);
         return request;
     }
 }

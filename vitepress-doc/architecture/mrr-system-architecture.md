@@ -18,7 +18,7 @@ Draw.io 源文件包含三个页面：
 - 生产请求由 Nginx `:80` 同源转发至 Spring Boot `127.0.0.1:18045`。
 - PostgreSQL 使用 `app` schema；影像可来自本地目录、多节点图片服务或可选 OSS。
 - Actuator 管理端口默认为 `127.0.0.1:18046`，可由 Prometheus、Grafana 和 PostgreSQL exporter 组成原生监控链路。
-- 当前默认分支 `dev-no-login` 故意绕过登录与权限验证；该状态已在图中单独标注，不应作为正式生产认证架构。
+- 当前默认分支 `main` 使用正式 JWT 与 RBAC 认证；旧影像档案袋兼容模式默认关闭，并受可信代理、客户端白名单、只读接口和审计限制。
 
 ## 编辑方式
 

@@ -4,22 +4,43 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-22
+
 ### 新增
 
-- 建立根目录 `VERSION` 唯一产品版本源，后端、前端、文档和 Windows 发布包统一读取该版本。
-- 增加 `release-baseline.json`，声明数据库最低/最高兼容迁移、上一应用版本兼容性、应用回滚许可和配置结构版本。
-- 增加 `scripts/release_baseline.py`，校验 SemVer、Maven revision、Flyway 迁移链和发布兼容基线，并生成 `manifest.json`。
-- 后端构建生成 `build-info.properties` 和 `git.properties`，运行服务可通过 `/actuator/info` 定位产品版本、构建时间和唯一 Git SHA。
-- 前端系统信息面板展示产品版本、Git Commit、构建时间、数据库兼容范围、回滚许可和配置结构版本；前端模板版本单独标注。
-- 用户手册与内部文档标题、导航统一显示根目录产品版本。
-- Windows 发布工作流校验 Tag 与 `VERSION`，并生成带完整构建身份、兼容基线和 SHA256 清单的离线 ZIP。
+- 建立根目录 `VERSION` 唯一产品版本源，后端、前端、文档和 Windows 发布包统一读取产品版本。
+- 增加 `release-baseline.json`、发布清单生成和构建身份校验，明确数据库迁移兼容范围与应用回滚限制。
+- 前端系统信息面板展示产品版本、Git Commit、构建时间、数据库兼容范围和配置结构版本。
+- 增加 `main` 分支活跃引用检查，并解压检查 Draw.io 页面 XML，防止旧分支和错误认证说明重新进入活跃文档。
 
-### 文档
+### 变更
 
-- 重写项目 README 和发布流程，明确唯一版本源、发布清单、数据库兼容和回滚判定。
-- 新建正式内部工程文档体系，覆盖架构、前端、后端、数据库、API、开发、部署、运维、安全、故障排查和发布流程。
-- 从内部站点构建和搜索索引中排除旧 `ai-generation`、旧架构、旧 API、旧开发和旧运维文档。
-- 文档启动脚本支持 Windows 端口排除范围检测并自动选择可用端口。
+- `main` 成为唯一正式主分支；5 个正式 GitHub Actions、贡献流程、安装文档和内部开发说明统一面向 `main`。
+- 外部 Ticket 调阅复用现有影像档案袋，不再维护独立外部查看页面；外部会话每次进入都由后端 Context 验证。
+- 旧影像档案袋兼容模式默认关闭，并限制为可信代理、客户端 IP/CIDR 白名单、只读接口白名单和访问审计。
+- E2E 测试统一使用 Chromium，并完善真实 Mock 认证会话、匿名会话和 Chrome 109 兼容基线。
+- Windows 发布工作流统一校验产品版本、源提交、后端构建身份、文档和离线包 SHA256 清单。
+
+### 修复
+
+- 修复外部影像会话可能从浏览器存储恢复并回退到内部查询的问题。
+- 修复匿名 `/api/v1/img/{bah}` 绕过用户标识、来源 IP 和访问审计的问题。
+- 修复档案访问模式不是响应式状态，导致路由复用后搜索卡片和历史记录状态过期的问题。
+- 修复后端集成测试中的 MyBatis XML 装载、PostgreSQL `search_path`、测试建表和字段映射问题。
+- 修复 Windows 发布身份校验对 Spring Boot 4 JAR 路径和 PR 临时合并提交的错误假设。
+- 修复架构 SVG 与压缩 Draw.io 中错误的“main 绕过 JWT”说明。
+
+### 安全
+
+- 管理端继续使用真实 JWT、账号状态、密码版本和 RBAC 校验，不允许无条件 `dev/ADMIN` 会话进入生产逻辑。
+- 开发者兼容白名单只要包含非法规则即整体失败关闭；仅病案号匿名患者查询限制为 1000 万以下业务范围。
+- 外部 Session 只保存在内存并由 HttpOnly Cookie/后端 Context 决定授权范围，URL 或浏览器存储不能扩大权限。
+
+### 发布与兼容性
+
+- 数据库兼容范围：`20260715113552` 至 `20260722110500`。
+- 配置结构版本：`1`。
+- 未完成 0.6.0 应用连接升级后数据库的兼容性演练，不允许只回滚应用文件；升级前必须备份数据库和配置。
 
 ## [0.1.1] - 2026-07-15
 
@@ -67,6 +88,7 @@
 - 初始化 Spring Boot、Vue、PostgreSQL 和 VitePress 项目结构。
 - 建立基础认证、病案记录、统计、日志和文档能力。
 
-[Unreleased]: https://github.com/weepwood/MRR/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/weepwood/MRR/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/weepwood/MRR/releases/tag/v0.6.1
 [0.1.1]: https://github.com/weepwood/MRR/releases/tag/v0.1.1
 [0.1.0]: https://github.com/weepwood/MRR/releases/tag/v0.1.0

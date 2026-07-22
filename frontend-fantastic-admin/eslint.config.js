@@ -23,6 +23,14 @@ export default antfu(
   },
   {
     files: [
+      'src/api/index.ts',
+    ],
+    rules: {
+      'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
+    },
+  },
+  {
+    files: [
       'src/**/*.vue',
     ],
     rules: {

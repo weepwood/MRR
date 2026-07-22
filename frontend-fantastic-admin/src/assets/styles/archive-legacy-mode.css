@@ -1,0 +1,48 @@
+html[data-mrr-access-mode="archive-legacy"] .archive-page,
+html[data-mrr-access-mode="external-ticket"] .archive-page {
+  padding-top: 44px !important;
+}
+
+html[data-mrr-access-mode="archive-legacy"] .archive-page::before,
+html[data-mrr-access-mode="external-ticket"] .archive-page::before {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: 8px;
+  z-index: 20;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 8px;
+}
+
+html[data-mrr-access-mode="archive-legacy"] .archive-page::before {
+  color: var(--el-color-warning-dark-2);
+  content: "开发者兼容模式：当前页面通过旧版影像档案接口访问，仅提供只读查看。";
+  background: var(--el-color-warning-light-9);
+  border: 1px solid var(--el-color-warning-light-5);
+}
+
+html[data-mrr-access-mode="external-ticket"] .archive-page::before {
+  color: var(--el-color-primary-dark-2);
+  content: "外部授权访问：当前页面由外部 Ticket 会话指定病案范围，不提供病案搜索。";
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-5);
+}
+
+html[data-mrr-access-mode="archive-legacy"] .archive-page .search-card,
+html[data-mrr-access-mode="external-ticket"] .archive-page .search-card,
+html[data-mrr-access-mode="archive-legacy"] .archive-page .preview-type-select,
+html[data-mrr-access-mode="external-ticket"] .archive-page .preview-type-select {
+  display: none !important;
+}
+
+html[data-mrr-access-mode="archive-legacy"] .archive-page .archive-bottom-actions,
+html[data-mrr-access-mode="archive-legacy"] .archive-page .preview-controls > .el-button {
+  display: none !important;
+}
+
+html[data-mrr-access-mode="external-ticket"] .archive-page .archive-bottom-actions > .el-button:nth-child(3) {
+  display: none !important;
+}

@@ -72,7 +72,21 @@ const slots = useSlots()
 
 .mrr-filter-bar :deep(.el-input__wrapper),
 .mrr-filter-bar :deep(.el-select__wrapper) {
+  height: var(--mrr-control-height);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  border-radius: var(--mrr-control-radius);
+}
+
+.mrr-filter-bar :deep(.el-input--small .el-input__wrapper),
+.mrr-filter-bar :deep(.el-select--small .el-select__wrapper) {
+  height: var(--mrr-control-height-compact);
+  border-radius: var(--mrr-radius-sm);
+}
+
+.mrr-filter-bar :deep(.el-input--large .el-input__wrapper),
+.mrr-filter-bar :deep(.el-select--large .el-select__wrapper) {
+  height: var(--mrr-control-height-large);
+  border-radius: var(--mrr-radius-lg);
 }
 
 .mrr-filter-bar :deep(.el-input__wrapper.is-focus),
@@ -82,8 +96,8 @@ const slots = useSlots()
 
 @media (width <= 760px) {
   .mrr-filter-bar {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .mrr-filter-bar__fields,

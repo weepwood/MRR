@@ -45,6 +45,7 @@ export interface EffectiveSystemSettings {
   patientIdCardRevealEnabled: boolean
   patientIdCardCopyEnabled: boolean
   developerModeEnabled: boolean
+  developerModeAllowedSources: string
 }
 
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
@@ -87,29 +88,35 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     patientIdCardRevealEnabled: false,
     patientIdCardCopyEnabled: false,
     developerModeEnabled: false,
+    developerModeAllowedSources: '127.0.0.1\n::1',
   }
 }
 
 function parseBoolean(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') return value
-  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'boolean') { return value }
+  if (typeof value === 'number') { return value !== 0 }
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase()
-    if (['true', '1', 'yes', 'on', 'enabled'].includes(normalized)) return true
-    if (['false', '0', 'no', 'off', 'disabled'].includes(normalized)) return false
+    if (['true', '1', 'yes', 'on', 'enabled'].includes(normalized)) { return true }
+    if (['false', '0', 'no', 'off', 'disabled'].includes(normalized)) { return false }
   }
   return fallback
 }
 
 function parseNumber(value: unknown, fallback: number, min: number, max: number): number {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return fallback
+  if (!Number.isFinite(parsed)) { return fallback }
   return Math.min(max, Math.max(min, parsed))
 }
 
 function parseText(value: unknown, fallback = ''): string {
   const text = String(value ?? '').trim()
   return text || fallback
+}
+
+function parseOptionalText(value: unknown, fallback = ''): string {
+  if (value === undefined || value === null) { return fallback }
+  return String(value).trim()
 }
 
 export function parseSystemSettings(values?: Record<string, unknown> | null): EffectiveSystemSettings {
@@ -158,6 +165,10 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
     patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
     developerModeEnabled: parseBoolean(source.developerModeEnabled, defaults.developerModeEnabled),
+    developerModeAllowedSources: parseOptionalText(
+      source.developerModeAllowedSources,
+      defaults.developerModeAllowedSources,
+    ),
   }
 }
 
@@ -170,7 +181,7 @@ export function serializeSystemSettings(settings: EffectiveSystemSettings): Reco
 export function readLocalSystemSettings(): EffectiveSystemSettings | null {
   try {
     const raw = localStorage.getItem(SYSTEM_SETTINGS_STORAGE_KEY)
-    if (!raw) return null
+    if (!raw) { return null }
     return parseSystemSettings(JSON.parse(raw) as Record<string, unknown>)
   }
   catch {
@@ -211,7 +222,7 @@ export async function loadEffectiveSystemSettings(): Promise<{
     // 服务端不可用时回退到本地配置。
   }
 
-  if (localSettings) return { settings: localSettings, source: 'local' }
+  if (localSettings) { return { settings: localSettings, source: 'local' } }
   return { settings: createDefaultSystemSettings(), source: 'default' }
 }
 
@@ -224,12 +235,12 @@ export function installSystemSettingsRuntime(): void {
 
   window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, (event) => {
     const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
-    if (settings) applyRuntimeSettings(settings)
+    if (settings) { applyRuntimeSettings(settings) }
   })
 
   window.addEventListener('storage', (event) => {
-    if (event.key !== SYSTEM_SETTINGS_STORAGE_KEY) return
+    if (event.key !== SYSTEM_SETTINGS_STORAGE_KEY) { return }
     const settings = readLocalSystemSettings()
-    if (settings) applyRuntimeSettings(settings)
+    if (settings) { applyRuntimeSettings(settings) }
   })
 }

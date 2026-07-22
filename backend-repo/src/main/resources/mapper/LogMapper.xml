@@ -158,13 +158,15 @@
             SELECT filtered.*,
                    CASE
                        WHEN auditTarget LIKE 'sjh:%' THEN NULL
-                       WHEN POSITION(':' IN auditTarget) &gt; 0 THEN SPLIT_PART(auditTarget, ':', 1)
+                       WHEN POSITION(':' IN auditTarget) &gt; 0
+                           THEN SUBSTRING(auditTarget, 1, POSITION(':' IN auditTarget) - 1)
                        WHEN auditTarget IS NULL OR auditTarget = '' OR auditTarget = 'search' THEN NULL
                        ELSE auditTarget
                    END AS bah,
                    CASE
                        WHEN auditTarget LIKE 'sjh:%' THEN SUBSTRING(auditTarget FROM 5)
-                       WHEN POSITION(':' IN auditTarget) &gt; 0 THEN SPLIT_PART(auditTarget, ':', 2)
+                       WHEN POSITION(':' IN auditTarget) &gt; 0
+                           THEN SUBSTRING(auditTarget, POSITION(':' IN auditTarget) + 1)
                        ELSE NULL
                    END AS sjh
             FROM filtered

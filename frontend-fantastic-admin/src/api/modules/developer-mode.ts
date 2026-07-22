@@ -1,5 +1,15 @@
 import axios from 'axios'
 
+export interface DeveloperModeStatus {
+  enabled: boolean
+  accessMode: 'ARCHIVE_LEGACY' | 'DISABLED'
+}
+
+const DISABLED_STATUS: DeveloperModeStatus = {
+  enabled: false,
+  accessMode: 'DISABLED',
+}
+
 const developerModeProbeApi = axios.create({
   baseURL: import.meta.env.DEV ? '/proxy/' : import.meta.env.VITE_APP_API_BASEURL,
   timeout: 1200,
@@ -8,9 +18,9 @@ const developerModeProbeApi = axios.create({
   validateStatus: () => true,
 })
 
-let cachedEnabled = false
+let cachedStatus: DeveloperModeStatus = DISABLED_STATUS
 let cacheExpiresAt = 0
-let pendingProbe: Promise<boolean> | null = null
+let pendingProbe: Promise<DeveloperModeStatus> | null = null
 
 function parseEnabled(value: unknown): boolean {
   if (typeof value === 'boolean') {
@@ -25,47 +35,60 @@ function parseEnabled(value: unknown): boolean {
   return false
 }
 
-function unwrapEnabled(payload: unknown): unknown {
+function unwrapStatus(payload: unknown): DeveloperModeStatus {
   if (!payload || typeof payload !== 'object') {
-    return undefined
+    return DISABLED_STATUS
   }
   const root = payload as Record<string, unknown>
-  const data = root.data
-  if (data && typeof data === 'object' && 'enabled' in data) {
-    return (data as Record<string, unknown>).enabled
-  }
-  return root.enabled
+  const source = root.data && typeof root.data === 'object'
+    ? root.data as Record<string, unknown>
+    : root
+  const enabled = parseEnabled(source.enabled)
+  const accessMode = source.accessMode === 'ARCHIVE_LEGACY' && enabled
+    ? 'ARCHIVE_LEGACY'
+    : 'DISABLED'
+  return { enabled: accessMode === 'ARCHIVE_LEGACY', accessMode }
 }
 
-async function executeProbe(): Promise<boolean> {
+async function executeProbe(): Promise<DeveloperModeStatus> {
   try {
     const response = await developerModeProbeApi.get('/api/v1/public/status/developer-mode')
-    return response.status >= 200
-      && response.status < 300
-      && parseEnabled(unwrapEnabled(response.data))
+    if (response.status < 200 || response.status >= 300) {
+      return DISABLED_STATUS
+    }
+    return unwrapStatus(response.data)
   }
   catch {
-    return false
+    return DISABLED_STATUS
   }
 }
 
 /**
- * 在匿名路由跳转前读取最小化公共状态，只返回开发者模式是否启用。
+ * 只有独立档案袋路由可以使用匿名旧接口兼容模式。
  */
-export async function isRuntimeDeveloperModeEnabled(force = false): Promise<boolean> {
+export function canUseArchiveLegacyRoute(routeName: unknown, status: DeveloperModeStatus): boolean {
+  return routeName === 'archive'
+    && status.enabled
+    && status.accessMode === 'ARCHIVE_LEGACY'
+}
+
+/**
+ * 匿名路由跳转前读取最小化公共状态，仅用于判断旧版档案袋是否可用。
+ */
+export async function getRuntimeDeveloperModeStatus(force = false): Promise<DeveloperModeStatus> {
   const now = Date.now()
   if (!force && now < cacheExpiresAt) {
-    return cachedEnabled
+    return cachedStatus
   }
   if (pendingProbe) {
     return pendingProbe
   }
 
   pendingProbe = executeProbe()
-    .then((enabled) => {
-      cachedEnabled = enabled
-      cacheExpiresAt = Date.now() + (enabled ? 5000 : 2000)
-      return enabled
+    .then((status) => {
+      cachedStatus = status
+      cacheExpiresAt = Date.now() + (status.enabled ? 5000 : 2000)
+      return status
     })
     .finally(() => {
       pendingProbe = null
@@ -73,8 +96,13 @@ export async function isRuntimeDeveloperModeEnabled(force = false): Promise<bool
   return pendingProbe
 }
 
+export async function isRuntimeDeveloperModeEnabled(force = false): Promise<boolean> {
+  const status = await getRuntimeDeveloperModeStatus(force)
+  return status.enabled && status.accessMode === 'ARCHIVE_LEGACY'
+}
+
 export function clearDeveloperModeProbeCache(): void {
-  cachedEnabled = false
+  cachedStatus = DISABLED_STATUS
   cacheExpiresAt = 0
   pendingProbe = null
 }

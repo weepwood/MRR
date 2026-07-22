@@ -1,6 +1,18 @@
 import { expect, test } from '@playwright/test'
 
+test.use({ storageState: 'e2e/.auth/anonymous.json' })
+
 test.describe('登录页统一设计', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/public/status/developer-mode', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 200, data: { enabled: false, accessMode: 'DISABLED' } }),
+      })
+    })
+  })
+
   test('展示统一品牌、登录表单和管理员账号说明', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/login', { waitUntil: 'domcontentloaded' })
@@ -8,8 +20,9 @@ test.describe('登录页统一设计', () => {
     await expect(page.locator('.login-shell')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('heading', { name: 'MRR 病案文件管理系统' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '登录 MRR' })).toBeVisible()
-    await expect(page.getByLabel('用户名')).toBeVisible()
-    await expect(page.getByLabel('密码')).toBeVisible()
+    await expect(page.getByRole('textbox', { name: '用户名' })).toBeVisible()
+    await expect(page.getByLabel('密码', { exact: true })).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: '记住用户名' })).toBeVisible()
     await expect(page.getByRole('button', { name: '登录系统' })).toBeVisible()
     await expect(page.getByText('账号创建、角色调整或密码问题请联系系统管理员。', { exact: false })).toBeVisible()
     await expect(page.locator('.theme-control')).toHaveCount(0)

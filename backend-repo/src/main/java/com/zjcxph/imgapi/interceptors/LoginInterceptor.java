@@ -28,9 +28,12 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
+    public static final String ACCESS_MODE_ATTRIBUTE = "MRR_ACCESS_MODE";
+    public static final String ARCHIVE_LEGACY_ACCESS_MODE = DeveloperModeService.ARCHIVE_LEGACY_ACCESS_MODE;
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final List<String> ARCHIVE_LEGACY_PERMISSIONS = List.of("record:read", "search:read");
 
     private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
@@ -57,9 +60,15 @@ public class LoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String token = extractToken(request.getHeader("Authorization"));
-        if (token == null || token.isBlank()) {
-            return allowDeveloperModeOrReject(request, response, "请先登录", "missing_token");
+        String authorization = request.getHeader("Authorization");
+        if (!StringUtils.hasText(authorization)) {
+            return allowArchiveLegacyModeOrReject(request, response);
+        }
+
+        String token = extractToken(authorization);
+        if (!StringUtils.hasText(token)) {
+            writeUnauthorized(response, "Authorization 格式无效", "INVALID_AUTHORIZATION_HEADER");
+            return false;
         }
 
         AuthSession tokenSession;
@@ -67,18 +76,21 @@ public class LoginInterceptor implements HandlerInterceptor {
         try {
             String tokenType = JwtUtil.getTokenType(token);
             if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
-                return allowDeveloperModeOrReject(request, response, "Token 类型无效", "invalid_token_type");
+                writeUnauthorized(response, "Token 类型无效", "INVALID_TOKEN_TYPE");
+                return false;
             }
             jti = JwtUtil.getJti(token);
             tokenSession = JwtUtil.parseToken(token);
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
-            return allowDeveloperModeOrReject(request, response, "Token 无效或已过期", "invalid_or_expired_token");
+            writeUnauthorized(response, "Token 无效或已过期", "INVALID_OR_EXPIRED_TOKEN");
+            return false;
         }
 
         try {
             if (tokenBlacklist.isRevoked(jti)) {
-                return allowDeveloperModeOrReject(request, response, "Token 已失效，请重新登录", "revoked_token");
+                writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
+                return false;
             }
         } catch (Exception exception) {
             logger.error("Token revocation store unavailable", exception);
@@ -87,14 +99,14 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
-            return allowDeveloperModeOrReject(request, response, "Token 用户信息无效", "invalid_token_user");
+            writeUnauthorized(response, "Token 用户信息无效", "INVALID_TOKEN_USER");
+            return false;
         }
 
         AuthUser currentUser;
         try {
             currentUser = authUserMapper.findById(tokenSession.getId());
         } catch (Exception exception) {
-            // 数据库故障必须失败关闭。即使开发者模式已启用，也不能降级为虚拟管理员。
             logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
             writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
             return false;
@@ -102,10 +114,12 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
                 || !currentUser.getUsername().equals(tokenSession.getUsername())) {
-            return allowDeveloperModeOrReject(request, response, "账号不存在或 Token 已失效", "missing_token_user");
+            writeUnauthorized(response, "账号不存在或 Token 已失效", "MISSING_TOKEN_USER");
+            return false;
         }
         if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
-            return allowDeveloperModeOrReject(request, response, "账号已被禁用", "disabled_user");
+            writeUnauthorized(response, "账号已被禁用", "DISABLED_USER");
+            return false;
         }
         if (tokenSession.effectivePasswordVersion() != currentUser.effectivePasswordVersion()) {
             writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
@@ -122,23 +136,23 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthContext.clear();
     }
 
-    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
-                                                HttpServletResponse response,
-                                                String unauthorizedMessage,
-                                                String reason) throws Exception {
-        if (!developerModeService.isEnabled()) {
-            writeUnauthorized(response, unauthorizedMessage, "UNAUTHORIZED");
+    private boolean allowArchiveLegacyModeOrReject(HttpServletRequest request,
+                                                    HttpServletResponse response) throws Exception {
+        if (!developerModeService.isArchiveLegacyRequestAllowed(request)) {
+            writeUnauthorized(response, "请先登录", "UNAUTHORIZED");
             return false;
         }
 
-        AuthSession developerSession = createDeveloperSession();
+        AuthSession developerSession = createArchiveLegacySession();
         installSession(request, developerSession);
         request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
-        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, reason);
+        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, "missing_token_archive_legacy");
+        request.setAttribute(ACCESS_MODE_ATTRIBUTE, ARCHIVE_LEGACY_ACCESS_MODE);
         response.setHeader("X-MRR-Developer-Mode", "enabled");
+        response.setHeader("X-MRR-Access-Mode", ARCHIVE_LEGACY_ACCESS_MODE);
         logger.warn(
-                "Developer mode authentication bypass: method={}, path={}, remoteIp={}, reason={}",
-                request.getMethod(), request.getRequestURI(), request.getRemoteAddr(), reason);
+                "Developer archive legacy access: method={}, path={}, remoteIp={}",
+                request.getMethod(), request.getRequestURI(), request.getRemoteAddr());
         return true;
     }
 
@@ -147,17 +161,17 @@ public class LoginInterceptor implements HandlerInterceptor {
         request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
     }
 
-    private AuthSession createDeveloperSession() {
+    private AuthSession createArchiveLegacySession() {
         AuthSession session = new AuthSession();
-        session.setId(1L);
-        session.setUsername("dev");
-        session.setDisplayName("Developer Mode");
-        session.setRoleCode("ADMIN");
-        session.setRoleName("Administrator");
+        session.setId(-1L);
+        session.setUsername("developer-archive");
+        session.setDisplayName("Developer Archive Legacy");
+        session.setRoleCode("DEVELOPER_ARCHIVE");
+        session.setRoleName("Archive Legacy Reader");
         session.setStatus("active");
         session.setMustChangePassword(false);
         session.setPasswordVersion(1);
-        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(ARCHIVE_LEGACY_PERMISSIONS)));
         return session;
     }
 

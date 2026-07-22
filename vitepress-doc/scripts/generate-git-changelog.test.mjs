@@ -103,8 +103,8 @@ test('renders PR and Issue information in the generated document', () => {
   const rendered = renderDocument({
     commits,
     entries: commits,
-    branch: 'dev-no-login',
-    githubBranch: 'dev-no-login',
+    branch: 'main',
+    githubBranch: 'main',
     repositorySlug: 'weepwood/MRR',
     githubStatus: { enabled: true, source: 'api', pullRequestCount: 1, issueCount: 1 },
   })

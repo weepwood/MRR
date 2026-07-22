@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import type { ExternalArchiveSession } from '@/api/modules/external-archive'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  clearExternalArchiveSession,
   exchangeExternalArchiveTicket,
   getExternalArchiveContext,
+  setExternalArchiveSession,
 } from '@/api/modules/external-archive'
-import ExternalArchiveViewer from './external-archive-viewer.vue'
 
-const EXTERNAL_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
 const DEFAULT_REQUEST_TIMEOUT = 60_000
 const EXTENDED_REQUEST_TIMEOUT = 180_000
 const RECOVERABLE_ERROR_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ERR_NETWORK'])
@@ -33,14 +32,9 @@ const router = useRouter()
 const loading = ref(true)
 const errorMessage = ref('')
 const recoverableError = ref(false)
-const session = ref<ExternalArchiveSession | null>(null)
 
 function firstQueryValue(value: unknown): string {
   return String(Array.isArray(value) ? value[0] : value ?? '').trim()
-}
-
-function persistSession(value: ExternalArchiveSession) {
-  sessionStorage.setItem(EXTERNAL_SESSION_STORAGE_KEY, JSON.stringify(value))
 }
 
 function isRecoverableError(error: unknown): boolean {
@@ -90,6 +84,7 @@ async function initialize(options: InitializeOptions = {}) {
   loading.value = true
   errorMessage.value = ''
   recoverableError.value = false
+  clearExternalArchiveSession()
   try {
     const ticket = firstQueryValue(route.query.ticket)
     const response = await requestExternalSession(ticket, resolvedOptions)
@@ -97,8 +92,7 @@ async function initialize(options: InitializeOptions = {}) {
     if (!nextSession?.cases?.length) {
       throw new Error('外部系统未授权任何可访问的影像病案')
     }
-    session.value = nextSession
-    persistSession(nextSession)
+    setExternalArchiveSession(nextSession)
 
     const currentBah = firstQueryValue(route.query.bah)
     const currentSjh = firstQueryValue(route.query.sjh)
@@ -106,22 +100,22 @@ async function initialize(options: InitializeOptions = {}) {
       || nextSession.cases[0]
 
     await router.replace({
-      path: '/archive/external',
+      path: '/archive',
       query: {
+        external: 'ticket',
         bah: selected.bah,
         ...(selected.sjh ? { sjh: selected.sjh } : {}),
       },
     })
   }
   catch (error: unknown) {
-    session.value = null
+    clearExternalArchiveSession()
     if (isRecoverableError(error)) {
       recoverableError.value = true
       errorMessage.value = '网络较慢或服务暂时没有响应。你可以继续等待，或重新发起访问。'
       return
     }
 
-    sessionStorage.removeItem(EXTERNAL_SESSION_STORAGE_KEY)
     errorMessage.value = (error as ExternalArchiveError)?.message || '外部影像访问链接无效或已过期'
   }
   finally {
@@ -174,14 +168,13 @@ onMounted(() => void initialize())
   <div v-else-if="errorMessage" class="external-archive-state">
     <el-result icon="error" title="无法访问影像档案袋" :sub-title="errorMessage" />
   </div>
-  <ExternalArchiveViewer v-else-if="session" :session="session" />
 </template>
 
 <style scoped>
 .external-archive-state {
   display: grid;
-  min-height: 100vh;
   place-items: center;
+  min-height: 100vh;
   background: var(--surface-muted);
 }
 

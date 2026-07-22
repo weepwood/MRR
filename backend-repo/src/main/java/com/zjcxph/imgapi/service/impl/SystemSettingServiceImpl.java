@@ -58,6 +58,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     @Override
     @Transactional
     public void saveSettings(Map<String, String> settings, String updatedBy) {
+        validateRuntimeSettings(settings);
         String operator = resolveOperator(updatedBy);
         List<SystemSetting> entities = settings.entrySet().stream()
                 .map(e -> new SystemSetting(e.getKey(), e.getValue(), null))
@@ -70,12 +71,17 @@ public class SystemSettingServiceImpl implements SystemSettingService {
 
     @Override
     public void setSetting(String key, String value, String updatedBy) {
+        if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
+            developerModeService.validateAllowedSourcesValue(value);
+        }
         String operator = resolveOperator(updatedBy);
         SystemSetting setting = new SystemSetting(key, value, null);
         setting.setUpdatedBy(operator);
         systemSettingMapper.upsert(setting);
         if (DeveloperModeService.SETTING_KEY.equals(key)) {
             developerModeService.refreshFromValue(value);
+        } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
+            developerModeService.refreshAllowedSourcesFromValue(value);
         }
         logger.info("系统设置已更新: {} = ..., 操作者: {}", key, operator);
     }
@@ -85,13 +91,26 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         systemSettingMapper.deleteByKey(key);
         if (DeveloperModeService.SETTING_KEY.equals(key)) {
             developerModeService.disableImmediately();
+        } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
+            developerModeService.refreshAllowedSourcesFromValue("");
         }
         logger.info("系统设置已删除: {}", key);
+    }
+
+    private void validateRuntimeSettings(Map<String, String> settings) {
+        if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {
+            developerModeService.validateAllowedSourcesValue(
+                    settings.get(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY));
+        }
     }
 
     private void refreshRuntimeSettings(Map<String, String> settings) {
         if (settings.containsKey(DeveloperModeService.SETTING_KEY)) {
             developerModeService.refreshFromValue(settings.get(DeveloperModeService.SETTING_KEY));
+        }
+        if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {
+            developerModeService.refreshAllowedSourcesFromValue(
+                    settings.get(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY));
         }
     }
 

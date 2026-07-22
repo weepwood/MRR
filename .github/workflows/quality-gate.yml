@@ -3,11 +3,9 @@ name: quality-gate
 on:
   pull_request:
     branches:
-      - dev-no-login
       - main
   push:
     branches:
-      - dev-no-login
       - main
     tags:
       - 'v*'
@@ -38,6 +36,9 @@ jobs:
 
       - name: Validate repository release baseline
         run: python scripts/release_baseline.py validate
+
+      - name: Validate main branch references
+        run: python scripts/check_main_branch_references.py
 
   frontend-gate:
     runs-on: ubuntu-latest
@@ -73,7 +74,18 @@ jobs:
         env:
           LINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           LINT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: node scripts/lint-changed.mjs
+        run: |
+          set -o pipefail
+          node scripts/lint-changed.mjs 2>&1 | tee lint-changed.log
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lint-report
+          path: frontend-fantastic-admin/lint-changed.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build
         run: pnpm build
@@ -81,10 +93,11 @@ jobs:
       - name: Unit Test
         run: pnpm test:run
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: End-to-End Test
+        timeout-minutes: 15
         run: pnpm test:e2e
 
       - name: Upload Playwright report
@@ -92,7 +105,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: frontend-fantastic-admin/playwright-report
+          path: |
+            frontend-fantastic-admin/playwright-report
+            frontend-fantastic-admin/test-results
           if-no-files-found: ignore
           retention-days: 7
 

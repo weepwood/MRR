@@ -1,11 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Root = 'C:\MRR',
-
-    [Parameter(Mandatory = $true)]
     [string]$WinSWPath,
 
-    [Parameter(Mandatory = $true)]
     [string]$NginxPath,
 
     [Parameter(Mandatory = $true)]
@@ -23,6 +20,43 @@ function Assert-Administrator {
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         throw '请以管理员身份运行 PowerShell。'
     }
+}
+
+function Assert-BundledRuntimeChecksums {
+    param(
+        [Parameter(Mandatory = $true)][string]$ChecksumPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ChecksumPath -PathType Leaf)) {
+        throw "发布包缺少 Nginx 运行时校验清单：$ChecksumPath"
+    }
+
+    $runtimeRoot = [IO.Path]::GetFullPath((Split-Path -Parent $ChecksumPath))
+    $runtimePrefix = $runtimeRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+
+    foreach ($line in Get-Content -LiteralPath $ChecksumPath -Encoding UTF8) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        if ($line -notmatch '^([a-fA-F0-9]{64})\s+\*?(.+)$') {
+            throw "无效的 Nginx 运行时校验行：$line"
+        }
+
+        $expected = $Matches[1].ToUpperInvariant()
+        $relative = $Matches[2].Trim().TrimStart('.', '/', '\').Replace('/', [IO.Path]::DirectorySeparatorChar)
+        $target = [IO.Path]::GetFullPath((Join-Path $runtimeRoot $relative))
+        if (-not $target.StartsWith($runtimePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Nginx 运行时校验路径越界：$relative"
+        }
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "Nginx 运行时文件不存在：$relative"
+        }
+
+        $actual = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+        if ($actual -ne $expected) {
+            throw "Nginx 运行时 SHA-256 不匹配：$relative"
+        }
+    }
+
+    Write-Host '包内 Nginx 与 WinSW 运行时校验通过。' -ForegroundColor Green
 }
 
 function Write-TemplateIfMissing {
@@ -79,6 +113,18 @@ function Install-WinSWService {
 Assert-Administrator
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$usingBundledWinSW = [string]::IsNullOrWhiteSpace($WinSWPath)
+$usingBundledNginx = [string]::IsNullOrWhiteSpace($NginxPath)
+if ($usingBundledWinSW -or $usingBundledNginx) {
+    Assert-BundledRuntimeChecksums (Join-Path $scriptDir '..\..\runtime\SHA256SUMS')
+}
+if ($usingBundledWinSW) {
+    $WinSWPath = Join-Path $scriptDir '..\..\runtime\winsw\WinSW-x64.exe'
+}
+if ($usingBundledNginx) {
+    $NginxPath = Join-Path $scriptDir '..\..\runtime\nginx'
+}
+
 $resolvedWinSW = (Resolve-Path -LiteralPath $WinSWPath).Path
 $resolvedNginx = (Resolve-Path -LiteralPath $NginxPath).Path
 $resolvedJava = (Resolve-Path -LiteralPath $JavaHome).Path
@@ -122,14 +168,23 @@ foreach ($relative in $directories) {
 Remove-Item -LiteralPath (Join-Path $Root 'previous-placeholder') -Force -ErrorAction SilentlyContinue
 
 $nginxDestination = Join-Path $Root 'runtime\nginx'
-if ((Test-Path -LiteralPath $nginxDestination) -and $Force) {
-    Remove-Item -LiteralPath $nginxDestination -Recurse -Force
-}
-if (-not (Test-Path -LiteralPath $nginxDestination)) {
-    Copy-Item -LiteralPath $resolvedNginx -Destination $nginxDestination -Recurse -Force
+$nginxSourceFull = [IO.Path]::GetFullPath($resolvedNginx).TrimEnd([IO.Path]::DirectorySeparatorChar)
+$nginxDestinationFull = [IO.Path]::GetFullPath($nginxDestination).TrimEnd([IO.Path]::DirectorySeparatorChar)
+$nginxSourceIsDestination = $nginxSourceFull.Equals($nginxDestinationFull, [StringComparison]::OrdinalIgnoreCase)
+
+if ($nginxSourceIsDestination) {
+    Write-Host "使用目标安装目录中已存在的包内 Nginx：$nginxDestination"
 }
 else {
-    Write-Host "保留现有 Nginx：$nginxDestination"
+    if ((Test-Path -LiteralPath $nginxDestination) -and $Force) {
+        Remove-Item -LiteralPath $nginxDestination -Recurse -Force
+    }
+    if (-not (Test-Path -LiteralPath $nginxDestination)) {
+        Copy-Item -LiteralPath $resolvedNginx -Destination $nginxDestination -Recurse -Force
+    }
+    else {
+        Write-Host "保留现有 Nginx：$nginxDestination"
+    }
 }
 
 $rootUri = $Root.Replace('\', '/')
@@ -159,6 +214,8 @@ Write-TemplateIfMissing `
 Set-Content -LiteralPath (Join-Path $Root 'config\nginx\maintenance.inc') -Value "# maintenance disabled`r`n" -Encoding ASCII
 Set-Content -LiteralPath (Join-Path $Root 'shared\healthz.txt') -Value "ok`r`n" -Encoding ASCII
 Copy-Item -LiteralPath (Join-Path $scriptDir 'mrrctl.ps1') -Destination (Join-Path $Root 'ops\mrrctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1') -Destination (Join-Path $Root 'ops\nginxctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'nginx-control.cmd') -Destination (Join-Path $Root 'ops\nginx-control.cmd') -Force
 
 # 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
 $secretsPath = Join-Path $Root 'secrets'
@@ -198,3 +255,4 @@ Write-Host "1. 编辑 $Root\config\application-prod.properties"
 Write-Host "2. 编辑 $Root\secrets\application-secrets.properties"
 Write-Host "3. 将发布包放入 $Root\packages"
 Write-Host "4. 执行：$Root\ops\mrrctl.ps1 deploy <发布包路径>"
+Write-Host "5. Nginx 控制：$Root\ops\nginx-control.cmd status|start|stop|restart|reload|test|pause|resume"

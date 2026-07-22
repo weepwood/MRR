@@ -1,16 +1,74 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
-import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
+import { canUseArchiveLegacyRoute, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
+import {
+  clearExternalArchiveSession,
+  getExternalArchiveContext,
+  setExternalArchiveSession,
+} from '@/api/modules/external-archive'
+import { setArchiveAccessMode } from '@/views/statistics/archive/access-mode'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
+import '@/assets/styles/archive-legacy-mode.css'
 
 const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
+const EXTERNAL_TICKET_ACCESS_MODE = 'external-ticket'
+const EXTERNAL_CONTEXT_TIMEOUT = 5_000
+
+function firstQueryValue(value: unknown): string {
+  return String(Array.isArray(value) ? value[0] : value ?? '').trim()
+}
+
+function isExternalTicketArchiveRoute(name: unknown, query: Record<string, unknown>): boolean {
+  return name === 'archive'
+    && (firstQueryValue(query.external) === 'ticket'
+      || firstQueryValue(query.id) === EXTERNAL_TICKET_ACCESS_MODE)
+}
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
-    if (to.name === 'publicStatus' || to.name === 'externalArchive') {
+    if (to.name === 'publicStatus') {
+      clearExternalArchiveSession()
+      setArchiveAccessMode('internal')
       return true
+    }
+    if (to.name === 'externalArchive') {
+      clearExternalArchiveSession()
+      setArchiveAccessMode('internal')
+      return true
+    }
+
+    if (isExternalTicketArchiveRoute(to.name, to.query)) {
+      try {
+        const response = await getExternalArchiveContext({ timeout: EXTERNAL_CONTEXT_TIMEOUT })
+        const session = response.data
+        if (!session?.cases?.length) {
+          throw new Error('外部系统未授权任何可访问的影像病案')
+        }
+        setExternalArchiveSession(session)
+        setArchiveAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
+        return true
+      }
+      catch {
+        clearExternalArchiveSession()
+        setArchiveAccessMode('internal')
+        const bah = firstQueryValue(to.query.bah)
+        const sjh = firstQueryValue(to.query.sjh)
+        return {
+          name: 'externalArchive',
+          replace: true,
+          query: {
+            ...(bah ? { bah } : {}),
+            ...(sjh ? { sjh } : {}),
+          },
+        }
+      }
+    }
+
+    clearExternalArchiveSession()
+    if (to.name !== 'archive') {
+      setArchiveAccessMode('internal')
     }
 
     const settingsStore = useSettingsStore()
@@ -33,6 +91,7 @@ function setupRoutes(router: Router) {
         userStore.markSessionVerified()
       }
       else if (userStore.sessionStatus === 'unavailable' && to.name === 'login') {
+        setArchiveAccessMode('internal')
         return true
       }
       else {
@@ -40,6 +99,7 @@ function setupRoutes(router: Router) {
           await userStore.verifySession()
         }
         catch (error: any) {
+          setArchiveAccessMode('internal')
           if (!userStore.isLogin || error?.response?.status === 401) {
             return loginRedirect('expired')
           }
@@ -47,13 +107,14 @@ function setupRoutes(router: Router) {
           // 网络错误或认证服务 503 不应误删仍可能有效的 Token。
           // 允许进入登录页重新认证，并在下次访问受保护页面时重试验证。
           console.error('[Router Guard] Session verification unavailable:', error)
-          if (to.name === 'login') return true
+          if (to.name === 'login') { return true }
           return loginRedirect('unavailable')
         }
       }
     }
 
     if (to.name === PASSWORD_CHANGE_ROUTE_NAME) {
+      setArchiveAccessMode('internal')
       if (!userStore.isSessionVerified) {
         return loginRedirect()
       }
@@ -64,10 +125,12 @@ function setupRoutes(router: Router) {
     }
 
     if (userStore.isSessionVerified && userStore.mustChangePassword) {
+      setArchiveAccessMode('internal')
       return { name: PASSWORD_CHANGE_ROUTE_NAME, replace: true }
     }
 
     if (userStore.isSessionVerified) {
+      setArchiveAccessMode('internal')
       if (routeStore.isGenerate) {
         if (settingsStore.settings.menu.mode !== 'single') {
           menuStore.setActived(to.path)
@@ -126,13 +189,13 @@ function setupRoutes(router: Router) {
         }
       }
     }
-    else if (isDemoMode || await isRuntimeDeveloperModeEnabled()) {
-      const runtimeDeveloperMode = !isDemoMode
+    else if (isDemoMode) {
+      setArchiveAccessMode('internal')
       userStore.setSession({
-        token: runtimeDeveloperMode ? 'developer-mode-runtime-token' : 'dev-token',
+        token: 'dev-token',
         user: {
           username: 'dev',
-          displayName: runtimeDeveloperMode ? 'Developer Mode' : 'Dev User',
+          displayName: 'Dev User',
           roleCode: 'ADMIN',
           roleName: 'Administrator',
           status: 'active',
@@ -149,6 +212,13 @@ function setupRoutes(router: Router) {
       }
     }
     else {
+      const developerModeStatus = await getRuntimeDeveloperModeStatus()
+      if (canUseArchiveLegacyRoute(to.name, developerModeStatus)) {
+        setArchiveAccessMode('archive-legacy')
+        return true
+      }
+
+      setArchiveAccessMode('internal')
       if (to.name === 'login') {
         return true
       }

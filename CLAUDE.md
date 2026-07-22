@@ -176,26 +176,11 @@ docker compose up -d postgres  # 仅启动数据库 (开发模式)
 claude plugin update superpowers@superpowers-marketplace
 ```
 
-## 当前分支：`dev-no-login` (认证屏蔽)
+## 分支与认证边界
 
-> **⚠️ 重要：本分支故意屏蔽了登录验证。不要将其合并到 main！
-
-### 认证屏蔽机制
-
-| 层级 | 文件 | 说明 |
-|------|------|------|
-| **后端拦截器** | `backend-repo/.../interceptors/LoginInterceptor.java` | `preHandle()` 跳过 JWT 校验，直接注入硬编码 dev/ADMIN 会话 |
-| **权限检查** | `backend-repo/.../interceptors/AuthorizationInterceptor.java` | `isAdmin()` 短路：ADMIN 角色直接通过所有 `@RequirePermissions` |
-| **前端路由** | `frontend-fantastic-admin/src/router/guards.ts` | 未登录时自动注入 `dev-token` 和 ADMIN 用户信息，不跳转登录页 |
-
-### 虚拟会话属性
-
-- **用户名**: dev（userId=1）
-- **角色**: ADMIN（全部权限）
-- **权限**: ALL_PERMISSIONS（record、search、statistics、user、role、log、system、test 全部读写）
-
-### 恢复登录验证
-
-将 `LoginInterceptor.preHandle()` 改为从 `Authorization: Bearer <token>` 提取并验证 JWT，原始逻辑见该文件的 git history。同时撤销：
-1. 前端 `guards.ts` 中的硬编码 `userStore.setSession()`
-2. 前端 `guards.ts` 中移除的 login 页重定向
+- `main` 是唯一正式主分支；功能和修复分支都从 `main` 创建，并向 `main` 提交 Pull Request。
+- 管理端默认使用后端真实 JWT、账号状态、密码版本和 RBAC 权限校验。
+- 无 Token 请求默认返回 401；只有显式启用的旧影像档案袋兼容模式可以建立受限只读会话。
+- 旧兼容模式默认关闭，并同时受启动开关、可信代理、客户端 IP/CIDR 白名单、只读接口白名单和访问审计约束。
+- `VITE_APP_DEMO_MODE=true` 仅用于 `.env.mock` 的无后端开发与自动化测试，不得用于生产构建。
+- 不得重新引入无条件 `dev/ADMIN` 会话、全权限 Token 或跳过登录的生产逻辑。

@@ -1,0 +1,66 @@
+name: 临时修复 OSS 浏览签名缓存边界
+
+on:
+  push:
+    branches:
+      - feat/oss-migration-management-20260722
+    paths:
+      - '.github/workflows/tmp-fix-oss-browser-cache.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/oss-migration-management-20260722
+          fetch-depth: 0
+      - name: Add regression test and isolate browser URL validation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          service_path = Path('backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/OssServiceImpl.java')
+          service = service_path.read_text(encoding='utf-8')
+          old = '''    @Override
+    @Cacheable(value = "ossSignedUrl", key = "#ossKey", unless = "#result == null")
+    public String generateBrowserPresignedUrl(String ossKey) {'''
+          new = '''    @Override
+    public String generateBrowserPresignedUrl(String ossKey) {'''
+          if old not in service:
+              raise SystemExit('未找到浏览器签名缓存注解')
+          service = service.replace(old, new, 1)
+          service_path.write_text(service, encoding='utf-8')
+
+          test_path = Path('backend-repo/src/test/java/com/zjcxph/imgapi/unit/service/OssServiceImplTest.java')
+          test = test_path.read_text(encoding='utf-8')
+          marker = '''    @Test
+    @DisplayName("deleteObject — 不抛异常即成功")
+    void deleteObjectDoesNotThrow() {'''
+          addition = '''    @Test
+    @DisplayName("浏览器签名方法不得复用通用签名 URL 缓存")
+    void browserPresignedUrlValidationCannotBeBypassedBySharedCache() throws Exception {
+        var method = OssServiceImpl.class.getMethod("generateBrowserPresignedUrl", String.class);
+
+        assertThat(method.getAnnotation(org.springframework.cache.annotation.Cacheable.class)).isNull();
+    }
+
+    @Test
+    @DisplayName("deleteObject — 不抛异常即成功")
+    void deleteObjectDoesNotThrow() {'''
+          if marker not in test:
+              raise SystemExit('未找到 OSS 服务测试插入位置')
+          test = test.replace(marker, addition, 1)
+          test_path.write_text(test, encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend-repo/src/main/java/com/zjcxph/imgapi/service/impl/OssServiceImpl.java \
+            backend-repo/src/test/java/com/zjcxph/imgapi/unit/service/OssServiceImplTest.java
+          git commit -m "修复：隔离 OSS 浏览签名地址缓存边界"
+          git push origin HEAD:feat/oss-migration-management-20260722

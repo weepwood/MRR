@@ -127,22 +127,29 @@ public class OssServiceImpl implements OssService {
 
     @Override
     public String uploadFile(String localFilePath, String ossKey) {
+        return uploadFile(localFilePath, ossKey, calculateMd5(localFilePath));
+    }
+
+    @Override
+    public String uploadFile(String localFilePath, String ossKey, String sourceMd5) {
         ensureClient();
         File file = new File(localFilePath);
         if (!file.exists() || !file.isFile()) {
             throw new IllegalArgumentException("Local file does not exist: " + localFilePath);
         }
+        if (sourceMd5 == null || !sourceMd5.matches("(?i)[0-9a-f]{32}")) {
+            throw new IllegalArgumentException("Source MD5 must be a 32-character hexadecimal value");
+        }
 
         try {
-            String localMd5 = calculateMd5(localFilePath);
-            logger.debug("Local file MD5: {} for {}", localMd5, localFilePath);
+            logger.debug("Local file MD5: {} for {}", sourceMd5, localFilePath);
 
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.length());
             metadata.setContentMD5(
-                    Base64.getEncoder().encodeToString(Hex.decodeHex(localMd5.toCharArray()))
+                    Base64.getEncoder().encodeToString(Hex.decodeHex(sourceMd5.toCharArray()))
             );
-            metadata.addUserMetadata(SOURCE_MD5_METADATA, localMd5);
+            metadata.addUserMetadata(SOURCE_MD5_METADATA, sourceMd5);
             metadata.setContentType(resolveContentType(file.getName()));
 
             PutObjectRequest putRequest = new PutObjectRequest(
@@ -155,7 +162,7 @@ public class OssServiceImpl implements OssService {
             String etag = result.getETag();
             if (etag != null) {
                 etag = etag.replace("\"", "").trim();
-                if (etag.equalsIgnoreCase(localMd5)) {
+                if (etag.equalsIgnoreCase(sourceMd5)) {
                     logger.info("Upload verified by ETag for {} -> {}", localFilePath, ossKey);
                 } else {
                     logger.info(

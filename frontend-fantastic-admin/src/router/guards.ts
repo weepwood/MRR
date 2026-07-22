@@ -28,14 +28,14 @@ function isExternalTicketArchiveRoute(name: unknown, query: Record<string, unkno
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
-    setArchiveAccessMode('internal')
-
     if (to.name === 'publicStatus') {
       clearExternalArchiveSession()
+      setArchiveAccessMode('internal')
       return true
     }
     if (to.name === 'externalArchive') {
       clearExternalArchiveSession()
+      setArchiveAccessMode('internal')
       return true
     }
 
@@ -52,6 +52,7 @@ function setupRoutes(router: Router) {
       }
       catch {
         clearExternalArchiveSession()
+        setArchiveAccessMode('internal')
         const bah = firstQueryValue(to.query.bah)
         const sjh = firstQueryValue(to.query.sjh)
         return {
@@ -66,6 +67,9 @@ function setupRoutes(router: Router) {
     }
 
     clearExternalArchiveSession()
+    if (to.name !== 'archive') {
+      setArchiveAccessMode('internal')
+    }
 
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
@@ -87,6 +91,7 @@ function setupRoutes(router: Router) {
         userStore.markSessionVerified()
       }
       else if (userStore.sessionStatus === 'unavailable' && to.name === 'login') {
+        setArchiveAccessMode('internal')
         return true
       }
       else {
@@ -94,6 +99,7 @@ function setupRoutes(router: Router) {
           await userStore.verifySession()
         }
         catch (error: any) {
+          setArchiveAccessMode('internal')
           if (!userStore.isLogin || error?.response?.status === 401) {
             return loginRedirect('expired')
           }
@@ -108,6 +114,7 @@ function setupRoutes(router: Router) {
     }
 
     if (to.name === PASSWORD_CHANGE_ROUTE_NAME) {
+      setArchiveAccessMode('internal')
       if (!userStore.isSessionVerified) {
         return loginRedirect()
       }
@@ -118,10 +125,12 @@ function setupRoutes(router: Router) {
     }
 
     if (userStore.isSessionVerified && userStore.mustChangePassword) {
+      setArchiveAccessMode('internal')
       return { name: PASSWORD_CHANGE_ROUTE_NAME, replace: true }
     }
 
     if (userStore.isSessionVerified) {
+      setArchiveAccessMode('internal')
       if (routeStore.isGenerate) {
         if (settingsStore.settings.menu.mode !== 'single') {
           menuStore.setActived(to.path)
@@ -181,6 +190,7 @@ function setupRoutes(router: Router) {
       }
     }
     else if (isDemoMode) {
+      setArchiveAccessMode('internal')
       userStore.setSession({
         token: 'dev-token',
         user: {
@@ -208,6 +218,7 @@ function setupRoutes(router: Router) {
         return true
       }
 
+      setArchiveAccessMode('internal')
       if (to.name === 'login') {
         return true
       }

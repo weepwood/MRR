@@ -46,7 +46,11 @@ public class NginxOnlyMigrationSourceResolver extends MigrationSourceResolver {
         Path tempFile;
         try {
             Files.createDirectories(directory);
-            tempFile = Files.createTempFile(directory, "scan-" + scan.getId() + "-", safeSuffix(scan.getFilename()));
+            tempFile = Files.createTempFile(
+                    directory,
+                    "scan-" + scan.getId() + "-",
+                    safeSuffix(scan.getFilename())
+            );
         } catch (IOException | RuntimeException exception) {
             throw new SourceResolutionException("无法创建 OSS 迁移临时文件", false, exception);
         }
@@ -77,7 +81,7 @@ public class NginxOnlyMigrationSourceResolver extends MigrationSourceResolver {
 
     @Override
     public boolean isLocalBasePathConfigured() {
-        // 迁移不再依赖后端本地目录；Nginx 配置通过抽样读取验证。
+        // 迁移任务不再依赖后端本地目录，Nginx 可用性由抽样读取验证。
         return true;
     }
 
@@ -93,8 +97,18 @@ public class NginxOnlyMigrationSourceResolver extends MigrationSourceResolver {
 
     private PathDO toPathDO(Scan scan) {
         return new PathDO(
-                scan.getId(), scan.getFolder(), scan.getFilename(), scan.getBrxh(), scan.getBah(), scan.getSjh(),
-                scan.getSourceType(), scan.getSourceNode(), scan.getSourceRef(), scan.getOssUrl(), scan.getFileSize());
+                scan.getId(),
+                scan.getFolder(),
+                scan.getFilename(),
+                scan.getBrxh(),
+                scan.getBah(),
+                scan.getSjh(),
+                scan.getSourceType(),
+                scan.getSourceNode(),
+                scan.getSourceRef(),
+                scan.getOssUrl(),
+                scan.getFileSize()
+        );
     }
 
     private void validateScan(Scan scan) throws IOException {
@@ -121,7 +135,7 @@ public class NginxOnlyMigrationSourceResolver extends MigrationSourceResolver {
             return ".bin";
         }
         String extension = normalized.substring(dot).toLowerCase(Locale.ROOT);
-        return extension.matches("\.[a-z0-9]{1,10}") ? extension : ".bin";
+        return extension.matches("[.][a-z0-9]{1,10}") ? extension : ".bin";
     }
 
     private boolean isPermanent(Throwable failure) {
@@ -160,8 +174,10 @@ public class NginxOnlyMigrationSourceResolver extends MigrationSourceResolver {
         if (error == null || error.getMessage() == null || error.getMessage().isBlank()) {
             return error == null ? "未知 Nginx 图片源错误" : error.getClass().getSimpleName();
         }
-        String message = error.getMessage().replace('', ' ').replace('
-', ' ').trim();
+        String message = error.getMessage()
+                .replace((char) 13, ' ')
+                .replace((char) 10, ' ')
+                .trim();
         return message.length() <= 1000 ? message : message.substring(0, 1000);
     }
 

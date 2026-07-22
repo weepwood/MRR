@@ -5,11 +5,14 @@ import com.zjcxph.imgapi.dto.req.AdminCreateUserRequest;
 import com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.dto.req.RequiredPasswordChangeRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
+import com.zjcxph.imgapi.dto.resp.RegistrationResultDTO;
 import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
 
@@ -22,9 +25,21 @@ public interface AuthService {
 
     LoginResponseDTO login(UserRequest req, String clientIp);
 
-    LoginResponseDTO register(RegisterRequest req);
+    default RegistrationResultDTO register(RegisterRequest req) {
+        return register(req, null);
+    }
 
-    LoginResponseDTO register(RegisterRequest req, String clientIp);
+    RegistrationResultDTO register(RegisterRequest req, String clientIp);
+
+    AuthUserProfileDTO approveRegistration(Long userId,
+                                            RegistrationApprovalRequest request,
+                                            Long administratorId,
+                                            String clientIp);
+
+    AuthUserProfileDTO rejectRegistration(Long userId,
+                                           RegistrationRejectionRequest request,
+                                           Long administratorId,
+                                           String clientIp);
 
     AuthSession currentUser();
 

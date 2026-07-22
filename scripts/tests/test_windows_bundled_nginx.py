@@ -37,11 +37,16 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertIn("Start-Service $GatewayService", controller)
         self.assertIn("Stop-Service $GatewayService", controller)
 
-    def test_double_click_wrapper_uses_nginx_controller(self):
+    def test_double_click_wrapper_offers_chinese_control_menu(self):
         wrapper = (ROOT / 'deploy/windows/nginx-control.cmd').read_text(encoding='utf-8')
 
         self.assertIn('nginxctl.ps1', wrapper)
         self.assertIn('%*', wrapper)
+        self.assertIn('if not "%~1"=="" goto execute', wrapper)
+        self.assertIn('启动 Nginx', wrapper)
+        self.assertIn('暂停访问（维护模式）', wrapper)
+        self.assertIn('恢复访问', wrapper)
+        self.assertIn('set /p "choice=', wrapper)
 
 
 if __name__ == '__main__':

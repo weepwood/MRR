@@ -15,6 +15,22 @@ ALTER TABLE app.migration_job
     ADD COLUMN IF NOT EXISTS max_scan_id INTEGER,
     ADD COLUMN IF NOT EXISTS cancel_requested BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- 升级前若应用曾异常退出，先释放遗留状态，避免唯一索引创建失败。
+UPDATE app.migration_job
+SET status = 'interrupted',
+    completed_at = COALESCE(completed_at, NOW()),
+    error_message = COALESCE(error_message, '数据库升级时清理遗留活动任务'),
+    updated_at = NOW()
+WHERE status IN ('pending', 'running', 'cancelling');
+
+UPDATE app.mr_scan
+SET migration_status = 'retry_wait',
+    migration_error_code = 'APPLICATION_RESTART',
+    migration_next_retry_at = NOW(),
+    migration_updated_at = NOW()
+WHERE migration_status = 'migrating'
+  AND (oss_url IS NULL OR oss_url = '');
+
 -- PostgreSQL 负责兜底，保证应用误触或重复请求时同一时刻仍只有一个活动任务。
 CREATE UNIQUE INDEX IF NOT EXISTS uk_migration_job_single_active
     ON app.migration_job ((1))

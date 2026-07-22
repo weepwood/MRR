@@ -1,8 +1,8 @@
+import type { AuthProfile } from '@/utils/auth-storage'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import router from '@/router'
-import type { AuthProfile } from '@/utils/auth-storage'
 import {
   clearAuthSessionStorage,
   readAuthStorage,
@@ -158,7 +158,9 @@ export const useUserStore = defineStore('user', () => {
       sessionStatus.value = 'anonymous'
       return false
     }
-    if (sessionStatus.value === 'verified') return true
+    if (sessionStatus.value === 'verified') {
+      return true
+    }
 
     sessionStatus.value = 'verifying'
     try {
@@ -166,8 +168,12 @@ export const useUserStore = defineStore('user', () => {
       return true
     }
     catch (error: any) {
-      if (!token.value || error?.response?.status === 401) sessionStatus.value = 'anonymous'
-      else sessionStatus.value = 'unavailable'
+      if (!token.value || error?.response?.status === 401) {
+        sessionStatus.value = 'anonymous'
+      }
+      else {
+        sessionStatus.value = 'unavailable'
+      }
       throw error
     }
   }
@@ -177,7 +183,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function markSessionVerified() {
-    if (token.value || developerApiSession.value) sessionStatus.value = 'verified'
+    if (token.value || developerApiSession.value) {
+      sessionStatus.value = 'verified'
+    }
   }
 
   function markPasswordChangeRequired() {

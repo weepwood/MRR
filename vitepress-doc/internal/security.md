@@ -35,29 +35,59 @@ OSS_ACCESS_KEY_SECRET
 - 401 处理应避免重复登出和重复提示。
 - 日志不得记录完整令牌。
 
-## 开发者模式
+## 开发者档案袋兼容模式
 
-系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。它用于受控开发、旧接口联调和迁移期间的临时兼容，不属于生产认证方案。
+系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。该开关只用于旧系统通过无 Token URL 打开独立影像档案袋，不再提供全系统开发者管理员身份。
 
-开启后的行为：
+模式必须同时满足：
 
-- 有效 JWT 仍按数据库中的真实用户、角色和权限处理；
-- 缺少、无效、过期、撤销或对应账号不可用的 Token 会回退到虚拟 `dev / ADMIN` 会话；
-- 虚拟会话拥有当前系统全部权限；
-- 普通 `/api/**` 跨域策略使用任意 Origin pattern；
-- 兼容响应添加 `X-MRR-Developer-Mode: enabled`；
-- 每次绕过认证都以 WARN 级别记录请求方法、路径、来源地址和原因；
-- 开关保存在 `mr_system_settings`，保存后刷新运行时缓存，无需重启。
+```text
+MRR_DEVELOPER_MODE_ALLOWED=true
++
+系统设置 developerModeEnabled=true
++
+请求来自受信任的本机 Nginx
++
+请求没有 Authorization Header
++
+请求属于档案袋只读 GET 白名单
+```
+
+默认受信任地址为 `127.0.0.1`、`::1`，可以通过以下环境变量调整：
+
+```text
+MRR_DEVELOPER_MODE_ALLOWED_REMOTE_ADDRESSES=127.0.0.1,::1
+```
+
+允许的兼容接口仅包括：
+
+- `/api/v1/img/search`；
+- 按病案号读取图片列表；
+- 单张本地、Nginx、OSS 图片读取；
+- 按病案号读取患者基本信息。
+
+兼容身份使用虚拟 ID `-1`、角色 `DEVELOPER_ARCHIVE`，只具备 `record:read` 和 `search:read`。它不能进入用户管理、系统设置、扫描管理和其他后台页面，也不能下载 ZIP、导出 PDF、打印或修改图片类型。
+
+旧系统示例：
+
+```text
+/archive?bah=789508&userid=HIS001
+/archive?bah=10000001&sjh=12345678&userid=HIS001
+```
+
+`userid` 仅作为审计标识和 IP 绑定键，不是登录凭据。任何无效、过期、撤销、错误类型 Token 或禁用用户都必须返回 401/403，不得降级到兼容身份。
+
+模式不会放开任意 Origin CORS。正常部署应通过同源 Nginx 访问；确需跨域联调时只配置精确 Origin。
 
 边界：
 
 - `/api/v1/integration/archive/tickets` 不经过 JWT 拦截器，仍执行 HMAC、时间戳、nonce 和 IP 白名单校验；
 - 外部影像 Session 仍按 Ticket 授权范围访问；
-- 开发者模式不会返回、生成或暴露 HMAC Secret；
+- 兼容模式不会返回、生成或暴露 HMAC Secret；
 - 数据库不可用、配置缺失或配置值无法识别时必须按关闭处理；
-- 生产环境、真实患者数据环境和可被非开发网络访问的环境禁止开启。
+- 生产正式外部接入优先使用 HMAC Ticket，旧接口兼容完成后应关闭该模式。
 
-验收关闭状态时，应使用无 Token 请求普通受保护 API，确认返回 `401`，并检查响应中不存在 `X-MRR-Developer-Mode`。
+验收关闭状态时，应使用无 Token 请求 `/api/v1/img/search`，确认返回 `401`，并检查响应中不存在 `X-MRR-Access-Mode`。
 
 ## AES 与身份证令牌
 
@@ -134,14 +164,13 @@ Nginx 必须保护搜索索引、JS、CSS、图片和 OpenAPI 文件，不能只
 
 ## CORS
 
-正常模式下，业务 API 与图片服务的 CORS 分别配置：
+业务 API 与图片服务的 CORS 分别配置：
 
 - 只允许实际前端来源。
 - 明确允许的方法与请求头。
 - 图片 PDF 导出使用 `credentials: omit`。
 - 使用 Cookie 的接口需要精确来源和 `Allow-Credentials`，不能使用通配符。
-
-开发者模式会临时将普通 API 改为任意 Origin pattern，仅用于隔离联调环境。关闭开发者模式后，动态 CORS 过滤器立即恢复精确 Origin 列表。
+- 开发者档案袋兼容模式不会修改 CORS 策略。
 
 ## 日志安全
 

@@ -6,6 +6,7 @@ meta:
 </route>
 
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
 import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
 import {
   DEFAULT_LOGIN_PAGE_SETTINGS,
@@ -14,9 +15,12 @@ import {
   type LoginPageSettings,
 } from '@/api/modules/login-page-settings'
 import LoginForm from '@/components/AccountForm/LoginForm.vue'
+import RegisterForm from '@/components/AccountForm/RegisterForm.vue'
 import SystemAdminContactPopover from '@/components/SystemAdminContactPopover/index.vue'
 
 defineOptions({ name: 'Login' })
+
+type AuthMode = 'login' | 'register'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,15 +28,23 @@ const settingsStore = useSettingsStore()
 const redirect = ref(route.query.redirect?.toString() ?? settingsStore.settings.home.fullPath)
 const copy = reactive<LoginPageSettings>({ ...DEFAULT_LOGIN_PAGE_SETTINGS })
 const productVersion = __SYSTEM_INFO__.product.version
+const authMode = ref<AuthMode>(route.query.mode === 'register' ? 'register' : 'login')
+const account = ref('')
 
 const features = computed(() => [
   { icon: Document, title: copy.loginFeature1Title, description: copy.loginFeature1Description },
   { icon: DataBoard, title: copy.loginFeature2Title, description: copy.loginFeature2Description },
   { icon: Lock, title: copy.loginFeature3Title, description: copy.loginFeature3Description },
 ])
-const loginTitle = computed(() => `登录 ${copy.systemShortName || 'MRR'}`)
+const loginTitle = computed(() => authMode.value === 'register'
+  ? '申请系统账号'
+  : `登录 ${copy.systemShortName || 'MRR'}`)
+const formDescription = computed(() => authMode.value === 'register'
+  ? '填写申请信息。管理员审核通过后，才可以使用注册账号登录。'
+  : copy.loginFormDescription)
 const footerText = computed(() => [copy.organizationName, copy.loginFooterText].filter(Boolean).join(' · '))
 const sessionNotice = computed(() => {
+  if (authMode.value !== 'login') return undefined
   const status = route.query.session?.toString()
   if (status === 'unavailable') {
     return {
@@ -62,6 +74,20 @@ function handleLogin() {
   router.push(redirect.value)
 }
 
+function showLogin(nextAccount?: string) {
+  account.value = nextAccount?.trim() || account.value
+  authMode.value = 'login'
+}
+
+function showRegister(nextAccount?: string) {
+  account.value = nextAccount?.trim() || account.value
+  authMode.value = 'register'
+}
+
+function handleRegistrationSubmitted(nextAccount?: string) {
+  showLogin(nextAccount)
+}
+
 onMounted(() => {
   void loadCopy()
   window.addEventListener(LOGIN_PAGE_SETTINGS_UPDATED_EVENT, handleUpdated)
@@ -83,7 +109,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <section class="login-shell" :aria-label="`${copy.systemName}登录`">
+    <section class="login-shell" :class="{ 'is-register': authMode === 'register' }" :aria-label="`${copy.systemName}${authMode === 'register' ? '注册申请' : '登录'}`">
       <aside class="brand-panel">
         <div class="brand-heading">
           <span>{{ copy.systemEnglishName }}</span>
@@ -109,10 +135,19 @@ onBeforeUnmount(() => {
       </aside>
 
       <section class="form-panel">
+        <div class="auth-mode-switch" role="tablist" aria-label="登录或注册">
+          <button type="button" :class="{ active: authMode === 'login' }" role="tab" :aria-selected="authMode === 'login'" @click="showLogin()">
+            账号登录
+          </button>
+          <button type="button" :class="{ active: authMode === 'register' }" role="tab" :aria-selected="authMode === 'register'" @click="showRegister()">
+            注册申请
+          </button>
+        </div>
+
         <div class="form-header">
-          <span class="form-eyebrow">Secure sign in</span>
+          <span class="form-eyebrow">{{ authMode === 'register' ? 'Account application' : 'Secure sign in' }}</span>
           <h2>{{ loginTitle }}</h2>
-          <p>{{ copy.loginFormDescription }}</p>
+          <p>{{ formDescription }}</p>
         </div>
 
         <el-alert
@@ -124,12 +159,25 @@ onBeforeUnmount(() => {
           show-icon
         />
 
-        <LoginForm @on-login="handleLogin" />
+        <LoginForm
+          v-if="authMode === 'login'"
+          :key="`login-${account}`"
+          :account="account"
+          @on-login="handleLogin"
+          @on-register="showRegister"
+        />
+        <RegisterForm
+          v-else
+          :key="`register-${account}`"
+          :account="account"
+          @on-login="showLogin"
+          @on-register="handleRegistrationSubmitted"
+        />
 
         <div class="login-help">
           <FaIcon name="i-ri:information-line" />
           <p>
-            {{ copy.loginHelpText }}
+            {{ authMode === 'register' ? '注册申请由系统管理员审核。请填写可核验的显示名称、联系方式或申请说明。' : copy.loginHelpText }}
             <SystemAdminContactPopover
               :visible="copy.systemAdminContactVisible"
               :display-name="copy.systemAdminDisplayName"
@@ -150,6 +198,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, @stylistic/string-quotes, at-rule-empty-line-before, media-feature-range-notation, order/properties-order, rule-empty-line-before */
 .login-page {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -163,7 +212,7 @@ onBeforeUnmount(() => {
     linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
   background-size: 32px 32px;
 }
-.login-toolbar { display: flex; align-items: center; width: min(1080px, 100%); margin: 0 auto; }
+.login-toolbar { display: flex; align-items: center; width: min(1120px, 100%); margin: 0 auto; }
 .environment-badge {
   display: inline-flex;
   gap: var(--mrr-space-2);
@@ -178,20 +227,14 @@ onBeforeUnmount(() => {
   box-shadow: var(--mrr-shadow-xs);
   backdrop-filter: blur(12px);
 }
-.status-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--color-success);
-  border-radius: 50%;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 15%, transparent);
-}
+.status-dot { width: 7px; height: 7px; background: var(--color-success); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 15%, transparent); }
 .version-separator { color: var(--mrr-border-strong); }
 .product-version { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--mrr-primary); }
 .login-shell {
   align-self: center;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
-  width: min(1080px, 100%);
+  grid-template-columns: minmax(0, 1.02fr) minmax(420px, 0.98fr);
+  width: min(1120px, 100%);
   min-height: 610px;
   margin: var(--mrr-space-6) auto;
   overflow: hidden;
@@ -200,6 +243,7 @@ onBeforeUnmount(() => {
   border-radius: var(--mrr-radius-2xl);
   box-shadow: var(--mrr-shadow-md);
 }
+.login-shell.is-register { min-height: 760px; }
 .brand-panel {
   position: relative;
   display: flex;
@@ -222,13 +266,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 38px color-mix(in srgb, var(--mrr-primary) 4%, transparent), 0 0 0 76px color-mix(in srgb, var(--mrr-primary) 3%, transparent);
 }
 .brand-heading { position: relative; z-index: 1; max-width: 500px; }
-.brand-heading > span, .form-eyebrow {
-  font-size: 11px;
-  font-weight: 750;
-  color: var(--mrr-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
+.brand-heading > span, .form-eyebrow { font-size: 11px; font-weight: 750; color: var(--mrr-primary); text-transform: uppercase; letter-spacing: 0.1em; }
 .brand-heading h1 { margin: var(--mrr-space-3) 0 0; font-size: clamp(30px, 4vw, 42px); line-height: 1.14; letter-spacing: -0.035em; }
 .brand-heading small { display: block; margin-top: var(--mrr-space-2); font-size: 12px; color: var(--mrr-primary); }
 .brand-heading p { max-width: 440px; margin: var(--mrr-space-4) 0 0; font-size: 14px; line-height: 1.75; color: var(--mrr-muted-foreground); }
@@ -238,19 +276,19 @@ onBeforeUnmount(() => {
 .feature-list strong { display: block; font-size: 13px; }
 .feature-list p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--mrr-muted-foreground); }
 .brand-footer { position: relative; z-index: 1; display: flex; gap: var(--mrr-space-2); align-items: center; margin-top: auto; padding-top: var(--mrr-space-6); font-size: 11px; color: var(--mrr-muted-foreground); }
-.form-panel { display: flex; flex-direction: column; justify-content: center; padding: 52px 48px; background: var(--mrr-card); }
+.form-panel { display: flex; flex-direction: column; justify-content: center; padding: 44px 48px; background: var(--mrr-card); }
+.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: var(--mrr-space-5); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.auth-mode-switch button { min-height: 36px; padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); }
+.auth-mode-switch button.active { color: var(--mrr-foreground); background: var(--mrr-card); box-shadow: var(--mrr-shadow-xs); }
 .form-header h2 { margin: var(--mrr-space-2) 0 0; font-size: 28px; letter-spacing: -0.025em; }
-.form-header p { margin: var(--mrr-space-2) 0 0; font-size: 13px; color: var(--mrr-muted-foreground); }
+.form-header p { margin: var(--mrr-space-2) 0 0; font-size: 13px; line-height: 1.6; color: var(--mrr-muted-foreground); }
 .session-notice { margin-top: var(--mrr-space-4); }
 .login-help { display: flex; gap: var(--mrr-space-3); align-items: flex-start; padding: var(--mrr-space-4); margin-top: var(--mrr-space-5); color: var(--color-info); background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border)); border-radius: var(--mrr-radius-md); }
 .login-help p { margin: 0; font-size: 11px; line-height: 1.7; color: var(--mrr-muted-foreground); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
-@media (prefers-reduced-motion: no-preference) {
-  .login-shell { animation: login-enter 0.35s ease-out both; }
-  @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-}
+@media (prefers-reduced-motion: no-preference) { .login-shell { animation: login-enter 0.35s ease-out both; } @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
 @media (max-width: 900px) {
-  .login-shell { grid-template-columns: 1fr; width: min(560px, 100%); }
+  .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }
   .brand-heading h1 { font-size: 30px; }
   .feature-list { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--mrr-space-5); }

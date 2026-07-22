@@ -18,6 +18,9 @@ public interface AuthUserMapper {
     String USER_COLUMNS = "u.id as id, u.username as username, u.display_name as displayName, " +
             "u.password_hash as passwordHash, u.role_code as roleCode, r.name as roleName, " +
             "r.permissions as permissionsCsv, u.status as status, " +
+            "u.contact_info as contactInfo, u.apply_remark as applyRemark, " +
+            "u.applied_at as appliedAt, u.reviewed_at as reviewedAt, " +
+            "u.reviewed_by as reviewedBy, u.reject_reason as rejectReason, " +
             "u.must_change_password as mustChangePassword, u.password_version as passwordVersion, " +
             "u.password_changed_at as passwordChangedAt, " +
             "u.temporary_password_expires_at as temporaryPasswordExpiresAt, " +
@@ -64,10 +67,26 @@ public interface AuthUserMapper {
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     @Insert("insert into mr_auth_user (username, display_name, password_hash, role_code, status, " +
-            "must_change_password, password_version, temporary_password_expires_at, created_by) " +
+            "contact_info, apply_remark, applied_at, must_change_password, password_version, " +
+            "temporary_password_expires_at, created_by) " +
             "values (#{username}, #{displayName}, #{passwordHash}, #{roleCode}, #{status}, " +
-            "#{mustChangePassword}, #{passwordVersion}, #{temporaryPasswordExpiresAt}, #{createdBy})")
+            "#{contactInfo}, #{applyRemark}, #{appliedAt}, #{mustChangePassword}, #{passwordVersion}, " +
+            "#{temporaryPasswordExpiresAt}, #{createdBy})")
     int insertUser(AuthUser user);
+
+    @Update("update mr_auth_user set role_code = #{roleCode}, status = 'active', " +
+            "reviewed_at = CURRENT_TIMESTAMP, reviewed_by = #{reviewedBy}, reject_reason = null, " +
+            "updated_at = CURRENT_TIMESTAMP where id = #{id} and lower(status) = 'pending'")
+    int approveRegistration(@Param("id") Long id,
+                            @Param("roleCode") String roleCode,
+                            @Param("reviewedBy") Long reviewedBy);
+
+    @Update("update mr_auth_user set status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, " +
+            "reviewed_by = #{reviewedBy}, reject_reason = #{rejectReason}, updated_at = CURRENT_TIMESTAMP " +
+            "where id = #{id} and lower(status) = 'pending'")
+    int rejectRegistration(@Param("id") Long id,
+                           @Param("rejectReason") String rejectReason,
+                           @Param("reviewedBy") Long reviewedBy);
 
     @Select("select count(*) from mr_auth_user where upper(role_code) = 'ADMIN' and lower(status) = 'active'")
     int countActiveAdmins();
@@ -80,6 +99,7 @@ public interface AuthUserMapper {
             "  <if test='keyword != null and keyword != \"\"'>",
             "    AND (LOWER(u.username) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(u.display_name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.contact_info, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(r.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(u.role_code, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))",
             "  </if>",
@@ -90,7 +110,8 @@ public interface AuthUserMapper {
             "    AND LOWER(u.status) = LOWER(#{status})",
             "  </if>",
             "</where>",
-            "ORDER BY u.id LIMIT #{limit} OFFSET #{offset}",
+            "ORDER BY CASE WHEN LOWER(u.status) = 'pending' THEN 0 ELSE 1 END, " +
+                    "COALESCE(u.applied_at, u.created_at) DESC, u.id DESC LIMIT #{limit} OFFSET #{offset}",
             "</script>"
     })
     @Results({
@@ -102,6 +123,12 @@ public interface AuthUserMapper {
             @Result(property = "roleName", column = "role_name"),
             @Result(property = "permissionsCsv", column = "permissions_csv"),
             @Result(property = "status", column = "status"),
+            @Result(property = "contactInfo", column = "contact_info"),
+            @Result(property = "applyRemark", column = "apply_remark"),
+            @Result(property = "appliedAt", column = "applied_at"),
+            @Result(property = "reviewedAt", column = "reviewed_at"),
+            @Result(property = "reviewedBy", column = "reviewed_by"),
+            @Result(property = "rejectReason", column = "reject_reason"),
             @Result(property = "mustChangePassword", column = "must_change_password"),
             @Result(property = "passwordVersion", column = "password_version"),
             @Result(property = "passwordChangedAt", column = "password_changed_at"),
@@ -127,6 +154,7 @@ public interface AuthUserMapper {
             "  <if test='keyword != null and keyword != \"\"'>",
             "    AND (LOWER(u.username) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(u.display_name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
+            "      OR LOWER(COALESCE(u.contact_info, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(r.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')",
             "      OR LOWER(COALESCE(u.role_code, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))",
             "  </if>",

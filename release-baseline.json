@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260722110500",
+    "maximumCompatibleMigration": "20260722221000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "0.6.2 调整 Windows 离线包运行时、Nginx 服务注册和运维控制脚本；尚未完成 0.6.1 应用连接升级后环境的完整回滚演练，回滚前必须恢复发布前数据库与配置备份并重新验证。"
+    "reason": "0.6.2 调整 Windows 离线包运行时、Nginx 服务注册和运维控制脚本，并新增用户注册审核状态与字段；尚未完成旧版本应用连接升级后数据库的完整回滚演练，回滚前必须恢复发布前数据库与配置备份并重新验证。"
   },
   "configuration": {
     "schemaVersion": 1

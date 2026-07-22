@@ -6,11 +6,14 @@ import com.zjcxph.imgapi.dto.req.AdminCreateUserRequest;
 import com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.dto.req.RequiredPasswordChangeRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
+import com.zjcxph.imgapi.dto.resp.RegistrationResultDTO;
 import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.entity.AuthUser;
@@ -25,6 +28,7 @@ import com.zjcxph.imgapi.utils.PasswordUtil;
 import com.zjcxph.imgapi.utils.PermissionResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -45,9 +50,11 @@ public class AuthServiceImpl implements AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final char[] TEMPORARY_PASSWORD_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%".toCharArray();
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{3,40}$");
     private static final int TEMPORARY_PASSWORD_LENGTH = 16;
     private static final int MIN_PASSWORD_LENGTH = 12;
     private static final int MAX_PASSWORD_LENGTH = 64;
+    private static final String DEFAULT_REGISTER_ROLE = "DOCTOR";
 
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;
@@ -80,10 +87,8 @@ public class AuthServiceImpl implements AuthService {
             rateLimiter.recordLoginFailure(attemptKey);
             throw new IllegalArgumentException("用户名或密码错误");
         }
-        // 只有凭据校验成功后才返回账号状态，避免通过任意密码枚举禁用账号。
-        if (!"active".equalsIgnoreCase(user.getStatus())) {
-            throw new BusinessException("账号已被禁用，请联系管理员");
-        }
+
+        requireLoginAllowed(user, clientIp);
         if (user.isPasswordChangeRequired()
                 && user.getTemporaryPasswordExpiresAt() != null
                 && user.getTemporaryPasswordExpiresAt().isBefore(LocalDateTime.now())) {
@@ -103,42 +108,90 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public LoginResponseDTO register(RegisterRequest req) {
-        return register(req, null);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public LoginResponseDTO register(RegisterRequest req, String clientIp) {
+    public RegistrationResultDTO register(RegisterRequest req, String clientIp) {
         String username = Optional.ofNullable(req.getUsername()).map(String::trim).orElse("");
         String password = Optional.ofNullable(req.getPassword()).orElse("");
-        validatePassword(password);
-        if (!StringUtils.hasText(username)) {
-            throw new IllegalArgumentException("用户名不能为空");
-        }
+        String displayName = Optional.ofNullable(req.getDisplayName()).map(String::trim).orElse("");
+        validateRegistration(username, password, displayName);
+
         if (authUserMapper.findByUsername(username) != null) {
             throw new BusinessException("用户名已存在");
         }
 
-        String roleCode = normalizeRoleCode(req.getRoleCode(), "DOCTOR");
-        requireRole(roleCode);
-
+        requireRole(DEFAULT_REGISTER_ROLE);
+        LocalDateTime appliedAt = LocalDateTime.now();
         AuthUser user = new AuthUser();
         user.setUsername(username);
-        user.setDisplayName(firstText(req.getDisplayName(), username));
+        user.setDisplayName(displayName);
         user.setPasswordHash(PasswordUtil.encode(password));
-        user.setRoleCode(roleCode);
-        user.setStatus("active");
+        user.setRoleCode(DEFAULT_REGISTER_ROLE);
+        user.setStatus("pending");
+        user.setContactInfo(trimToNull(req.getContactInfo()));
+        user.setApplyRemark(trimToNull(req.getApplyRemark()));
+        user.setAppliedAt(appliedAt);
         user.setMustChangePassword(false);
         user.setPasswordVersion(1);
-        authUserMapper.insertUser(user);
+
+        try {
+            authUserMapper.insertUser(user);
+        } catch (DuplicateKeyException exception) {
+            throw new BusinessException("用户名已存在");
+        }
 
         AuthUser created = authUserMapper.findByUsername(username);
-        securityAudit.info("event=USER_CREATED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS legacyRegister=true",
-                AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
-                created == null ? null : created.getId(), username, clientIp);
-        AuthSession session = toSession(created);
-        return new LoginResponseDTO(JwtUtil.getToken(session), session);
+        if (created == null) {
+            throw new BusinessException("注册申请保存失败，请稍后重试");
+        }
+        securityAudit.info("event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS",
+                created.getId(), username, clientIp);
+        return new RegistrationResultDTO(
+                created.getId(), created.getUsername(), created.getDisplayName(), created.getStatus(), created.getAppliedAt());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AuthUserProfileDTO approveRegistration(Long userId,
+                                                   RegistrationApprovalRequest request,
+                                                   Long administratorId,
+                                                   String clientIp) {
+        requireActiveAdministrator(administratorId);
+        AuthUser target = requirePendingRegistration(userId);
+        String roleCode = normalizeRoleCode(request.getRoleCode(), null);
+        requireRole(roleCode);
+
+        int updated = authUserMapper.approveRegistration(userId, roleCode, administratorId);
+        if (updated == 0) {
+            throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
+        }
+
+        AuthUser approved = authUserMapper.findById(userId);
+        securityAudit.info("event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
+                administratorId, userId, target.getUsername(), roleCode, clientIp);
+        return toProfile(approved);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AuthUserProfileDTO rejectRegistration(Long userId,
+                                                  RegistrationRejectionRequest request,
+                                                  Long administratorId,
+                                                  String clientIp) {
+        requireActiveAdministrator(administratorId);
+        AuthUser target = requirePendingRegistration(userId);
+        String rejectReason = trimToNull(request.getRejectReason());
+        if (!StringUtils.hasText(rejectReason)) {
+            throw new BusinessException("拒绝原因不能为空");
+        }
+
+        int updated = authUserMapper.rejectRegistration(userId, rejectReason, administratorId);
+        if (updated == 0) {
+            throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
+        }
+
+        AuthUser rejected = authUserMapper.findById(userId);
+        securityAudit.warn("event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS",
+                administratorId, userId, target.getUsername(), clientIp, sanitizeAuditText(rejectReason));
+        return toProfile(rejected);
     }
 
     @Override
@@ -157,16 +210,16 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status) {
-        int offset = (page - 1) * size;
+        int normalizedPage = Math.max(page, 1);
+        int normalizedSize = Math.min(Math.max(size, 1), 200);
+        int offset = (normalizedPage - 1) * normalizedSize;
         String normalizedKeyword = trimToNull(keyword);
         String normalizedRoleCode = trimToNull(roleCode);
-        String normalizedStatus = Optional.ofNullable(trimToNull(status))
-                .map(value -> value.toLowerCase(Locale.ROOT))
-                .orElse(null);
+        String normalizedStatus = normalizeFilterStatus(status);
         List<AuthUser> users = authUserMapper.findAllWithPagination(
-                offset, size, normalizedKeyword, normalizedRoleCode, normalizedStatus);
+                offset, normalizedSize, normalizedKeyword, normalizedRoleCode, normalizedStatus);
         int total = authUserMapper.countAll(normalizedKeyword, normalizedRoleCode, normalizedStatus);
-        return PageResult.of(users.stream().map(this::toProfile).toList(), total, page, size);
+        return PageResult.of(users.stream().map(this::toProfile).toList(), total, normalizedPage, normalizedSize);
     }
 
     @Override
@@ -181,7 +234,7 @@ public class AuthServiceImpl implements AuthService {
         }
         String roleCode = normalizeRoleCode(request.getRoleCode(), null);
         requireRole(roleCode);
-        String requestedStatus = normalizeStatus(request.getStatus());
+        String requestedStatus = normalizeEditableStatus(request.getStatus());
         if (!"active".equals(requestedStatus)) {
             throw new BusinessException("创建用户时初始状态必须为启用；如暂不使用，请创建后再禁用账号");
         }
@@ -232,7 +285,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("用户不存在");
         }
         if (!"active".equalsIgnoreCase(target.getStatus())) {
-            throw new BusinessException("用户已被禁用，请先启用账号再重置密码");
+            throw new BusinessException("仅已启用账号可以重置密码");
         }
 
         int validHours = normalizeValidHours(request.getTemporaryPasswordValidHours());
@@ -286,10 +339,13 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             return null;
         }
+        if ("pending".equalsIgnoreCase(user.getStatus()) || "rejected".equalsIgnoreCase(user.getStatus())) {
+            throw new BusinessException(409, "注册申请账号必须通过专用审核操作处理，不能通过编辑直接启用");
+        }
 
         String nextRoleCode = normalizeRoleCode(request.getRoleCode(), null);
         requireRole(nextRoleCode);
-        String nextStatus = normalizeStatus(request.getStatus());
+        String nextStatus = normalizeEditableStatus(request.getStatus());
         if (isLastActiveAdmin(user)
                 && (!"ADMIN".equalsIgnoreCase(nextRoleCode) || !"active".equalsIgnoreCase(nextStatus))) {
             throw new BusinessException("不能停用或降级最后一个有效管理员");
@@ -320,8 +376,9 @@ public class AuthServiceImpl implements AuthService {
         }
         int updated = authUserMapper.updateStatus(id, "disabled");
         if (updated > 0) {
-            securityAudit.warn("event=USER_DISABLED actorUserId={} targetUserId={} result=SUCCESS",
-                    AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(), id);
+            securityAudit.warn("event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS",
+                    AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
+                    id, user.getStatus());
         }
         return updated;
     }
@@ -365,6 +422,39 @@ public class AuthServiceImpl implements AuthService {
         return role;
     }
 
+    private void requireLoginAllowed(AuthUser user, String clientIp) {
+        String status = Optional.ofNullable(user.getStatus()).orElse("").toLowerCase(Locale.ROOT);
+        if ("active".equals(status)) {
+            return;
+        }
+        securityAudit.warn("event=USER_LOGIN_STATUS_DENIED targetUserId={} username={} status={} sourceIp={} result=DENIED",
+                user.getId(), user.getUsername(), status, clientIp);
+        if ("pending".equals(status)) {
+            throw new BusinessException(403, "账号正在等待管理员审核");
+        }
+        if ("rejected".equals(status)) {
+            throw new BusinessException(403, "账号注册申请已被拒绝，请联系管理员");
+        }
+        if ("disabled".equals(status)) {
+            throw new BusinessException(403, "账号已被停用，请联系管理员");
+        }
+        throw new BusinessException(403, "账号状态异常，请联系管理员");
+    }
+
+    private AuthUser requirePendingRegistration(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户信息无效");
+        }
+        AuthUser target = authUserMapper.findById(userId);
+        if (target == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if (!"pending".equalsIgnoreCase(target.getStatus())) {
+            throw new BusinessException(409, "只有待审核的注册申请可以执行该操作");
+        }
+        return target;
+    }
+
     private AuthSession toSession(AuthUser user) {
         AuthSession session = new AuthSession();
         session.setId(user.getId());
@@ -397,6 +487,12 @@ public class AuthServiceImpl implements AuthService {
                 ? adminPermissions()
                 : new ArrayList<>(PermissionResolver.resolve(splitPermissions(user.getPermissionsCsv()))));
         profile.setStatus(user.getStatus());
+        profile.setContactInfo(user.getContactInfo());
+        profile.setApplyRemark(user.getApplyRemark());
+        profile.setAppliedAt(user.getAppliedAt());
+        profile.setReviewedAt(user.getReviewedAt());
+        profile.setReviewedBy(user.getReviewedBy());
+        profile.setRejectReason(user.getRejectReason());
         profile.setMustChangePassword(user.isPasswordChangeRequired());
         profile.setPasswordVersion(user.effectivePasswordVersion());
         profile.setPasswordChangedAt(user.getPasswordChangedAt());
@@ -446,6 +542,16 @@ public class AuthServiceImpl implements AuthService {
         return password.toString();
     }
 
+    private void validateRegistration(String username, String password, String displayName) {
+        if (!USERNAME_PATTERN.matcher(username).matches()) {
+            throw new IllegalArgumentException("用户名长度应为3到40位，且只能包含字母、数字、点、下划线和短横线");
+        }
+        if (!StringUtils.hasText(displayName) || displayName.length() > 80) {
+            throw new IllegalArgumentException("显示名称不能为空且不能超过80个字符");
+        }
+        validatePassword(password);
+    }
+
     private void validatePassword(String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH || password.length() > MAX_PASSWORD_LENGTH) {
             throw new IllegalArgumentException("密码长度应为 12 到 64 位");
@@ -460,10 +566,23 @@ public class AuthServiceImpl implements AuthService {
         return normalized;
     }
 
-    private String normalizeStatus(String status) {
+    private String normalizeEditableStatus(String status) {
         String normalized = Optional.ofNullable(status).map(String::trim).orElse("active").toLowerCase(Locale.ROOT);
         if (!"active".equals(normalized) && !"disabled".equals(normalized)) {
-            throw new BusinessException("用户状态只能是 active 或 disabled");
+            throw new BusinessException("编辑用户时状态只能是 active 或 disabled");
+        }
+        return normalized;
+    }
+
+    private String normalizeFilterStatus(String status) {
+        String normalized = Optional.ofNullable(trimToNull(status))
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .orElse(null);
+        if (normalized == null) {
+            return null;
+        }
+        if (!List.of("pending", "active", "rejected", "disabled").contains(normalized)) {
+            throw new BusinessException("用户状态筛选值无效");
         }
         return normalized;
     }
@@ -513,5 +632,12 @@ public class AuthServiceImpl implements AuthService {
             return null;
         }
         return value.trim();
+    }
+
+    private String sanitizeAuditText(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replace('\n', ' ').replace('\r', ' ');
     }
 }

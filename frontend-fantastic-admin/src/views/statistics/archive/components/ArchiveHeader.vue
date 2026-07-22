@@ -373,4 +373,53 @@ onUnmounted(() => {
   border: 0;
   border-radius: 6px;
 }
+
+.history-main:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 1px;
+}
+
+.history-primary,
+.history-secondary,
+.history-main time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-primary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.history-secondary,
+.history-main time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.archive-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-item,
+  .history-favorite-button :deep(.el-icon) {
+    transition: none;
+  }
+
+  .history-favorite-button:hover :deep(.el-icon),
+  .history-favorite-button:active :deep(.el-icon) {
+    transform: none;
+  }
+
+  .history-favorite-button.is-favorite :deep(.el-icon) {
+    animation: none;
+  }
+}
 </style>

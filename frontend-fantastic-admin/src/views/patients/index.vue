@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Download, Refresh, Search, Upload } from '@element-plus/icons-vue'
+import { Download, Edit, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
@@ -11,6 +11,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import useAuth from '@/utils/composables/useAuth'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
+import PatientEditDialog from './components/PatientEditDialog.vue'
 import PatientImportDialog from './components/PatientImportDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
@@ -26,9 +27,12 @@ const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
 const importDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const editingPatient = ref<PatientRecord>()
 const analyticsRefreshKey = ref(0)
 const { auth } = useAuth()
 const canImportPatients = computed(() => auth('record:edit'))
+const canEditPatients = computed(() => auth('record:edit'))
 
 const filters = reactive({ keyword: '' })
 
@@ -81,6 +85,19 @@ function handleSizeChange(nextSize: number) {
 
 function handleImported() {
   page.value = 1
+  refreshAll()
+}
+
+function handleEdit(row: PatientRecord) {
+  editingPatient.value = { ...row }
+  editDialogVisible.value = true
+}
+
+function handlePatientSaved(updated: PatientRecord) {
+  const index = tableData.value.findIndex(item => item.id === updated.id)
+  if (index >= 0) {
+    tableData.value[index] = updated
+  }
   refreshAll()
 }
 
@@ -186,7 +203,7 @@ onUnmounted(() => {
         </p>
         <h2>患者管理</h2>
         <p class="subtitle">
-          查询、导入和导出患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。
+          查询、编辑、导入和导出患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。
         </p>
       </div>
       <div class="header-actions">
@@ -270,6 +287,13 @@ onUnmounted(() => {
         <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
+        <el-table-column v-if="canEditPatients" label="操作" width="96" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">
+              编辑
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <div class="pagination-bar">
@@ -286,6 +310,11 @@ onUnmounted(() => {
     </el-card>
 
     <PatientImportDialog v-model="importDialogVisible" @imported="handleImported" />
+    <PatientEditDialog
+      v-model="editDialogVisible"
+      :patient="editingPatient"
+      @saved="handlePatientSaved"
+    />
   </div>
 </template>
 

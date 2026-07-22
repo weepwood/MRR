@@ -59,8 +59,8 @@ test.describe('登录页统一设计', () => {
     await page.getByLabel('用户名').fill('doctor.apply')
     await page.getByLabel('显示名称').fill('申请医生')
     await page.getByLabel('联系方式').fill('内线 6123')
-    await page.getByLabel('密码', { exact: true }).fill('123456')
-    await page.getByLabel('确认密码').fill('123456')
+    await page.locator('#register-password').fill('123456')
+    await page.locator('#register-password-confirm').fill('123456')
     await page.getByRole('button', { name: '提交注册申请' }).click()
 
     await expect.poll(() => registrationRequested).toBe(true)

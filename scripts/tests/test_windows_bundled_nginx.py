@@ -30,15 +30,29 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertIn('Get-FileHash', installer)
         self.assertIn("Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1')", installer)
 
+    def test_installer_does_not_delete_nginx_when_source_is_destination(self):
+        installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
+
+        self.assertIn('$nginxSourceIsDestination', installer)
+        self.assertIn(
+            '$nginxSourceFull.Equals($nginxDestinationFull, [StringComparison]::OrdinalIgnoreCase)',
+            installer,
+        )
+        self.assertIn('使用目标安装目录中已存在的包内 Nginx', installer)
+        self.assertRegex(
+            installer,
+            r'if \(\$nginxSourceIsDestination\) \{[\s\S]*?\}\s*else \{[\s\S]*?Remove-Item',
+        )
+
     def test_dedicated_nginx_controller_exposes_lifecycle_commands(self):
         controller = (ROOT / 'deploy/windows/nginxctl.ps1').read_text(encoding='utf-8')
 
         for action in ('status', 'start', 'stop', 'restart', 'reload', 'test', 'pause', 'resume'):
             self.assertIn(f"'{action}'", controller)
         self.assertIn('function Set-NginxMaintenance', controller)
-        self.assertIn("return 503", controller)
-        self.assertIn("Start-Service $GatewayService", controller)
-        self.assertIn("Stop-Service $GatewayService", controller)
+        self.assertIn('return 503', controller)
+        self.assertIn('Start-Service $GatewayService', controller)
+        self.assertIn('Stop-Service $GatewayService', controller)
 
     def test_double_click_wrapper_offers_chinese_control_menu(self):
         wrapper = (ROOT / 'deploy/windows/nginx-control.cmd').read_text(encoding='utf-8')

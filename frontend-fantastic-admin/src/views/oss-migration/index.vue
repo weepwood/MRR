@@ -416,11 +416,17 @@ onBeforeUnmount(stopPolling)
   <div v-loading="loading.page" class="page-shell">
     <header class="page-header">
       <div>
-        <p class="eyebrow">OSS Migration Control</p>
+        <p class="eyebrow">
+          OSS Migration Control
+        </p>
         <h2>OSS 迁移管理</h2>
-        <p class="subtitle">先检查、再试迁移、按批次扩大，确认稳定后才允许全量迁移。</p>
+        <p class="subtitle">
+          先检查、再试迁移、按批次扩大，确认稳定后才允许全量迁移。
+        </p>
       </div>
-      <el-button :icon="Refresh" @click="refreshAll">刷新</el-button>
+      <el-button :icon="Refresh" @click="refreshAll">
+        刷新
+      </el-button>
     </header>
 
     <el-alert
@@ -491,7 +497,9 @@ onBeforeUnmount(stopPolling)
           show-icon
         />
         <ul v-if="readiness?.warnings?.length" class="warning-list">
-          <li v-for="warning in readiness.warnings" :key="warning">{{ warning }}</li>
+          <li v-for="warning in readiness.warnings" :key="warning">
+            {{ warning }}
+          </li>
         </ul>
       </el-card>
 
@@ -508,9 +516,15 @@ onBeforeUnmount(stopPolling)
         <el-form label-position="top">
           <el-form-item label="迁移阶段">
             <el-radio-group v-model="jobForm.mode">
-              <el-radio-button value="pilot">试迁移</el-radio-button>
-              <el-radio-button value="batch">限定批次</el-radio-button>
-              <el-radio-button value="full">全量迁移</el-radio-button>
+              <el-radio-button value="pilot">
+                试迁移
+              </el-radio-button>
+              <el-radio-button value="batch">
+                限定批次
+              </el-radio-button>
+              <el-radio-button value="full">
+                全量迁移
+              </el-radio-button>
             </el-radio-group>
           </el-form-item>
           <el-form-item v-if="jobForm.mode !== 'full'" label="最大处理数量">
@@ -658,10 +672,14 @@ onBeforeUnmount(stopPolling)
       <el-table :data="jobs" stripe>
         <el-table-column prop="id" label="任务" width="80" />
         <el-table-column label="阶段" width="110">
-          <template #default="{ row }">{{ modeLabel(row.mode) }}</template>
+          <template #default="{ row }">
+            {{ modeLabel(row.mode) }}
+          </template>
         </el-table-column>
         <el-table-column prop="scopeValue" label="目录范围" min-width="140">
-          <template #default="{ row }">{{ row.scopeValue || '全部目录' }}</template>
+          <template #default="{ row }">
+            {{ row.scopeValue || '全部目录' }}
+          </template>
         </el-table-column>
         <el-table-column prop="totalCount" label="计划" width="100" />
         <el-table-column prop="processedCount" label="已处理" width="100" />
@@ -674,7 +692,9 @@ onBeforeUnmount(stopPolling)
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -724,7 +744,9 @@ onBeforeUnmount(stopPolling)
         </el-table-column>
         <el-table-column prop="errorMessage" label="错误信息" min-width="220" show-overflow-tooltip />
         <el-table-column label="时间" width="180">
-          <template #default="{ row }">{{ formatDate(row.migratedAt || row.createdAt) }}</template>
+          <template #default="{ row }">
+            {{ formatDate(row.migratedAt || row.createdAt) }}
+          </template>
         </el-table-column>
       </el-table>
       <div class="pager">

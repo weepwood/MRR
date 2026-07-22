@@ -4,7 +4,6 @@ import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
-import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +17,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,14 +24,12 @@ import static org.mockito.Mockito.when;
 class AuthorizationInterceptorTest {
 
     private AuthorizationInterceptor interceptor;
-    private DeveloperApiAccessService developerApiAccessService;
     private HttpServletRequest request;
     private HttpServletResponse response;
 
     @BeforeEach
     void setUp() throws Exception {
-        developerApiAccessService = mock(DeveloperApiAccessService.class);
-        interceptor = new AuthorizationInterceptor(developerApiAccessService);
+        interceptor = new AuthorizationInterceptor();
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
         StringWriter sw = new StringWriter();
@@ -66,7 +62,6 @@ class AuthorizationInterceptorTest {
     void preHandle_noAnnotation() throws Exception {
         assertThat(interceptor.preHandle(request, response, handler("open"))).isFalse();
         verify(response).setStatus(403);
-        verify(developerApiAccessService, never()).isPermissionBypassAllowed(request);
     }
 
     @Test
@@ -106,37 +101,22 @@ class AuthorizationInterceptorTest {
     }
 
     @Test
-    @DisplayName("已登录真实用户可以使用开发者权限旁路")
-    void preHandle_authenticatedDeveloperBypass() throws Exception {
-        AuthSession user = session("NURSE", List.of("log:read"));
-        when(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).thenReturn(user);
-        when(developerApiAccessService.isPermissionBypassAllowed(request)).thenReturn(true);
-
-        assertThat(interceptor.preHandle(request, response, handler("guarded"))).isTrue();
-        verify(response).setHeader("X-MRR-Developer-Mode", "enabled");
-        verify(response).setHeader("X-MRR-Access-Mode", "api-permission-bypass");
-    }
-
-    @Test
-    @DisplayName("开发者权限旁路不能代替登录认证")
-    void preHandle_developerBypassWithoutSession() throws Exception {
-        when(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).thenReturn(null);
-        when(developerApiAccessService.isPermissionBypassAllowed(request)).thenReturn(true);
-
-        assertThat(interceptor.preHandle(request, response, handler("guarded"))).isFalse();
-        verify(response).setStatus(401);
-        verify(developerApiAccessService, never()).isPermissionBypassAllowed(request);
-    }
-
-    @Test
-    @DisplayName("关闭权限旁路后缺少权限的用户被拒绝")
+    @DisplayName("缺少权限的用户被拒绝")
     void preHandle_noPermission() throws Exception {
         when(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE))
                 .thenReturn(session("NURSE", List.of("log:read")));
-        when(developerApiAccessService.isPermissionBypassAllowed(request)).thenReturn(false);
 
         assertThat(interceptor.preHandle(request, response, handler("guarded"))).isFalse();
         verify(response).setStatus(403);
+    }
+
+    @Test
+    @DisplayName("无会话时返回 401")
+    void preHandle_noSession() throws Exception {
+        when(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).thenReturn(null);
+
+        assertThat(interceptor.preHandle(request, response, handler("guarded"))).isFalse();
+        verify(response).setStatus(401);
     }
 
     @Test

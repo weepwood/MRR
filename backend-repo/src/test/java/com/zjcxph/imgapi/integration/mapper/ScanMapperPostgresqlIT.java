@@ -17,6 +17,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,12 +29,13 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MybatisTest(properties = {
-        "mybatis.configuration.map-underscore-to-camel-case=true",
-        "mybatis.mapper-locations=classpath*:mapper/*.xml"
-})
+@MybatisTest
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestPropertySource(properties = {
+        "mybatis.mapper-locations=classpath*:mapper/*.xml",
+        "mybatis.configuration.map-underscore-to-camel-case=true"
+})
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("ScanMapper PostgreSQL 16 + Flyway 集成测试")
 class ScanMapperPostgresqlIT {
@@ -47,19 +49,15 @@ class ScanMapperPostgresqlIT {
 
     @DynamicPropertySource
     static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> appendJdbcParameter(
-                POSTGRES.getJdbcUrl(), "currentSchema=app"));
+        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "?currentSchema=app");
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        registry.add("spring.datasource.hikari.connection-init-sql", () -> "SET search_path TO app, public");
         registry.add("spring.flyway.enabled", () -> true);
         registry.add("spring.flyway.schemas", () -> "app");
         registry.add("spring.flyway.default-schema", () -> "app");
         registry.add("spring.sql.init.mode", () -> "never");
-    }
-
-    private static String appendJdbcParameter(String jdbcUrl, String parameter) {
-        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + parameter;
     }
 
     @Autowired
@@ -151,6 +149,7 @@ class ScanMapperPostgresqlIT {
         assertThat(results).singleElement().satisfies(scan -> {
             assertThat(scan.getArchiveId()).isEqualTo(archiveId);
             assertThat(scan.getFilename()).isEqualTo("active.jpg");
+            assertThat(scan.getUploadFlag()).isEqualTo(1);
         });
     }
 

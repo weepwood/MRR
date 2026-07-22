@@ -127,8 +127,11 @@ test.describe('系统设置分类布局', () => {
 
     const finalSidebarBox = await sidebar.boundingBox()
     expect(finalSidebarBox).not.toBeNull()
-    expect(Math.abs(finalSidebarBox!.top - initialSidebarBox!.top)).toBeLessThanOrEqual(1)
-    expect(Math.abs(finalSidebarBox!.bottom - initialSidebarBox!.bottom)).toBeLessThanOrEqual(1)
+    expect(Math.abs(finalSidebarBox!.y - initialSidebarBox!.y)).toBeLessThanOrEqual(1)
+    expect(Math.abs(
+      (finalSidebarBox!.y + finalSidebarBox!.height)
+      - (initialSidebarBox!.y + initialSidebarBox!.height),
+    )).toBeLessThanOrEqual(1)
     await expect(sidebar).toBeInViewport()
   })
 })

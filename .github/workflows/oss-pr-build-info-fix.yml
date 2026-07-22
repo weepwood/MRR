@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
 
+# 一次性修复工作流：完成后删除。
 jobs:
   build-info-fix:
     runs-on: ubuntu-latest

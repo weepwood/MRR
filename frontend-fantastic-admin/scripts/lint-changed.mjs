@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 const frontendRoot = process.cwd()
@@ -8,6 +9,7 @@ const requestedBaseSha = process.env.LINT_BASE_SHA?.trim()
 const baseSha = requestedBaseSha && !/^0+$/.test(requestedBaseSha)
   ? requestedBaseSha
   : `${headSha}^`
+const shouldFix = process.argv.includes('--fix')
 
 function getChangedFiles() {
   const output = execFileSync(
@@ -30,6 +32,7 @@ function getChangedFiles() {
     .split('\0')
     .filter(Boolean)
     .map(file => path.relative(frontendRoot, path.resolve(repositoryRoot, file)).split(path.sep).join('/'))
+    .filter(file => existsSync(path.resolve(frontendRoot, file)))
 }
 
 function run(command, files) {
@@ -38,8 +41,9 @@ function run(command, files) {
     return
   }
 
-  console.log(`[lint-changed] ${command}: ${files.join(', ')}`)
-  const result = spawnSync('pnpm', ['exec', command, ...files], {
+  console.log(`[lint-changed] ${command}${shouldFix ? ' --fix' : ''}: ${files.join(', ')}`)
+  const args = ['exec', command, ...(shouldFix ? ['--fix'] : []), ...files]
+  const result = spawnSync('pnpm', args, {
     cwd: frontendRoot,
     stdio: 'inherit',
   })

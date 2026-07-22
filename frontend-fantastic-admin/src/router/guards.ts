@@ -8,24 +8,51 @@ import '@/assets/styles/archive-legacy-mode.css'
 const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
 const ARCHIVE_LEGACY_ACCESS_MODE = 'archive-legacy'
+const EXTERNAL_TICKET_ACCESS_MODE = 'external-ticket'
+const EXTERNAL_ARCHIVE_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
 
-function setArchiveLegacyDomMode(enabled: boolean) {
+function setArchiveDomAccessMode(mode = '') {
   if (typeof document === 'undefined') {
     return
   }
-  if (enabled) {
-    document.documentElement.dataset.mrrAccessMode = ARCHIVE_LEGACY_ACCESS_MODE
+  if (mode) {
+    document.documentElement.dataset.mrrAccessMode = mode
   }
   else {
     delete document.documentElement.dataset.mrrAccessMode
   }
 }
 
+function hasStoredExternalArchiveSession(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  try {
+    const raw = sessionStorage.getItem(EXTERNAL_ARCHIVE_SESSION_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) as { cases?: unknown[] } : null
+    return Array.isArray(parsed?.cases) && parsed.cases.length > 0
+  }
+  catch {
+    return false
+  }
+}
+
+function firstQueryValue(value: unknown): string {
+  return String(Array.isArray(value) ? value[0] : value ?? '').trim()
+}
+
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
-    setArchiveLegacyDomMode(false)
+    setArchiveDomAccessMode()
 
     if (to.name === 'publicStatus' || to.name === 'externalArchive') {
+      return true
+    }
+
+    if (to.name === 'archive'
+      && firstQueryValue(to.query.external) === 'ticket'
+      && hasStoredExternalArchiveSession()) {
+      setArchiveDomAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
       return true
     }
 
@@ -166,7 +193,7 @@ function setupRoutes(router: Router) {
     else {
       const developerModeStatus = await getRuntimeDeveloperModeStatus()
       if (canUseArchiveLegacyRoute(to.name, developerModeStatus)) {
-        setArchiveLegacyDomMode(true)
+        setArchiveDomAccessMode(ARCHIVE_LEGACY_ACCESS_MODE)
         return true
       }
 
@@ -262,17 +289,10 @@ function setupKeepAlive(router: Router) {
   })
 }
 
-function setupOther(router: Router) {
-  router.afterEach(() => {
-    document.documentElement.scrollTop = 0
-  })
-}
-
 export default function setupGuards(router: Router) {
   setupRoutes(router)
   setupRedirectAuthChildrenRoute(router)
   setupProgress(router)
   setupTitle(router)
   setupKeepAlive(router)
-  setupOther(router)
 }

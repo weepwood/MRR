@@ -8,7 +8,7 @@ import type {
 } from '../types'
 import { getRequest, postRequest } from '../index'
 
-interface OssUploadBatchResult {
+export interface OssUploadBatchResult {
   results: OssUploadResult[]
   total?: number
   success?: number
@@ -69,6 +69,27 @@ export interface MigrationJobPayload {
   confirmation?: string
 }
 
+export interface MigrationScanRecord extends ScanRecord {
+  migrationAttempts?: number | null
+  migrationErrorCode?: string
+  migrationNextRetryAt?: string | null
+  migrationUpdatedAt?: string | null
+}
+
+export interface MigrationRecordQuery {
+  limit?: number
+  folder?: string
+  bah?: string
+  sjh?: string
+}
+
+export interface MigrationRecordResult {
+  list: MigrationScanRecord[]
+  returned: number
+  limit: number
+  hasMore: boolean
+}
+
 export function uploadToOss(scanIds: number[]): Promise<OssUploadResponse> {
   return postRequest<OssUploadBatchResult, { scanIds: number[] }>('/api/v1/oss/upload', { scanIds }) as Promise<OssUploadResponse>
 }
@@ -93,12 +114,22 @@ export function getPendingMigrations(params: { limit?: number, folder?: string }
   return getRequest<{ list: ScanRecord[], total: number, limit?: number }>('/api/v1/oss/migration/pending', { params })
 }
 
+export function getPendingManagementRecords(params: MigrationRecordQuery = {}) {
+  return getRequest<MigrationRecordResult>('/api/v1/oss/migration/management/pending', { params })
+}
+
+export function getWaitingSjhRecords(params: MigrationRecordQuery = {}) {
+  return getRequest<MigrationRecordResult>('/api/v1/oss/migration/management/waiting-sjh', { params })
+}
+
 export function getPendingFolders() {
   return getRequest<{ folder: string, cnt: number }[]>('/api/v1/oss/migration/pending-folders')
 }
 
-export function getMigrationLogs(params: { status?: string, page?: number, size?: number } = {}) {
-  return getRequest<PaginatedResult<MigrationLogRecord>>('/api/v1/oss/migration/logs', { params })
+export function getMigrationLogs(
+  params: { status?: string, scanId?: number, page?: number, size?: number } = {},
+) {
+  return getRequest<PaginatedResult<MigrationLogRecord>>('/api/v1/oss/migration/management/logs', { params })
 }
 
 export function createMigrationJob(payload: MigrationJobPayload) {

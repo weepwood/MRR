@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.DocumentationAccessService;
@@ -37,6 +38,7 @@ public class DocumentationController {
     }
 
     @PostMapping("/session")
+    @AuthenticatedOnly
     @Operation(summary = "创建短期文档访问会话")
     public Result<Map<String, Object>> createSession(
             @RequestBody(required = false) Map<String, String> body,

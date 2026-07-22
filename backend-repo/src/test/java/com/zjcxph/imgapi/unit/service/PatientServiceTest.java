@@ -16,6 +16,8 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +52,7 @@ class PatientServiceTest {
         request.setChuangwei("12A");
 
         when(searchMapper.findPatientById(7)).thenReturn(existing, updated);
-        when(searchMapper.updatePatient(org.mockito.ArgumentMatchers.any(Patient.class))).thenReturn(1);
+        when(searchMapper.updatePatient(any(Patient.class))).thenReturn(1);
 
         Patient result = patientService.update(7, request);
 
@@ -73,6 +75,7 @@ class PatientServiceTest {
         when(searchMapper.findPatientById(99)).thenReturn(null);
 
         assertThat(patientService.update(99, request)).isNull();
+        verify(searchMapper, never()).updatePatient(any(Patient.class));
     }
 
     @Test
@@ -88,5 +91,22 @@ class PatientServiceTest {
         assertThatThrownBy(() -> patientService.update(7, request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("入院时间");
+    }
+
+    @Test
+    @DisplayName("拒绝保存为完全重复的患者记录")
+    void rejectsDuplicatePatient() {
+        Patient existing = new Patient();
+        existing.setId(7);
+        PatientUpdateRequest request = new PatientUpdateRequest();
+        request.setBah("00789508");
+        request.setName("张三");
+        when(searchMapper.findPatientById(7)).thenReturn(existing);
+        when(searchMapper.existsDuplicatePatient(any(Patient.class))).thenReturn(true);
+
+        assertThatThrownBy(() -> patientService.update(7, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("完全重复");
+        verify(searchMapper, never()).updatePatient(any(Patient.class));
     }
 }

@@ -1,7 +1,10 @@
 export type ArchiveAccessMode = 'internal' | 'external-ticket' | 'archive-legacy'
 
-export function resolveArchiveAccessMode(runtimeMode = ''): ArchiveAccessMode {
-  if (runtimeMode === 'external-ticket') {
+export function resolveArchiveAccessMode(
+  explicitMode: 'internal' | 'external-ticket' = 'internal',
+  runtimeMode = '',
+): ArchiveAccessMode {
+  if (explicitMode === 'external-ticket' || runtimeMode === 'external-ticket') {
     return 'external-ticket'
   }
   return runtimeMode === 'archive-legacy' ? 'archive-legacy' : 'internal'

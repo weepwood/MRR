@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.entity.SystemSetting;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,8 +23,6 @@ class DeveloperModeServiceTest {
 
     @Test
     void shouldRemainDisabledWhenStartupSwitchIsOff() {
-        when(systemSettingMapper.findByKey(DeveloperModeService.SETTING_KEY))
-                .thenReturn(new SystemSetting(DeveloperModeService.SETTING_KEY, "true", null));
         DeveloperModeService service = createService(false, List.of("127.0.0.1", "::1"));
 
         assertThat(service.isEnabled()).isFalse();
@@ -85,6 +85,18 @@ class DeveloperModeServiceTest {
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/img/search", "10.0.0.8", "192.168.10.25")))
                 .isFalse();
+    }
+
+    @Test
+    void shouldRejectInvalidAllowedSourceRule() {
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+
+        assertThatThrownBy(() -> service.validateAllowedSourcesValue("192.168.1.999"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("可信来源格式不正确");
+        assertThatThrownBy(() -> service.validateAllowedSourcesValue("192.168.1.0/99"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("可信来源格式不正确");
     }
 
     @Test

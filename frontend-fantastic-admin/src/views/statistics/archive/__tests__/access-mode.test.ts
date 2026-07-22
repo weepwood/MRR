@@ -17,7 +17,8 @@ describe('archive access mode', () => {
     expect(isExternalArchiveAccessMode('external-ticket')).toBe(true)
   })
 
-  it('uses the runtime legacy mode for unauthenticated archive access', () => {
+  it('recognizes external Ticket and legacy runtime modes', () => {
+    expect(resolveArchiveAccessMode('internal', 'external-ticket')).toBe('external-ticket')
     expect(resolveArchiveAccessMode('internal', 'archive-legacy')).toBe('archive-legacy')
     expect(resolveArchiveAccessMode('internal', '')).toBe('internal')
   })

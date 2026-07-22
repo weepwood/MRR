@@ -54,8 +54,6 @@ class OssServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         when(ossProperties.getBucket()).thenReturn("test-bucket");
-        when(ossProperties.getEndpoint()).thenReturn("oss.example.com");
-        when(ossProperties.getRegion()).thenReturn("test-region");
         ossService = new OssServiceImpl(ossProperties);
 
         java.lang.reflect.Field field = OssServiceImpl.class.getDeclaredField("s3Client");
@@ -82,6 +80,9 @@ class OssServiceImplTest {
     @Test
     @DisplayName("OSS 浏览使用 prefix、delimiter 和 continuation token 分页")
     void browseObjectsUsesVirtualDirectoryPagination() {
+        when(ossProperties.getEndpoint()).thenReturn("oss.example.com");
+        when(ossProperties.getRegion()).thenReturn("test-region");
+
         S3ObjectSummary file = new S3ObjectSummary();
         file.setKey("medical-records/0012/00123456-00789124/0013.jpg");
         file.setSize(235_000);
@@ -91,7 +92,7 @@ class OssServiceImplTest {
 
         ListObjectsV2Result listing = new ListObjectsV2Result();
         listing.setCommonPrefixes(List.of("medical-records/0012/00123456-00789124/"));
-        listing.setObjectSummaries(List.of(file));
+        listing.getObjectSummaries().add(file);
         listing.setTruncated(true);
         listing.setNextContinuationToken("next-token");
         when(amazonS3.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listing);

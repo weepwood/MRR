@@ -182,7 +182,7 @@ function openFolder(entry: OssBrowserEntry) {
   void loadDirectory(entry.key, undefined, { rememberFolder: true })
 }
 
-function selectEntry(entry: OssBrowserEntry) {
+function selectEntry(entry?: OssBrowserEntry) {
   selectedEntry.value = entry
 }
 
@@ -314,7 +314,11 @@ onMounted(() => {
           <el-tag :type="page?.configured ? 'success' : 'danger'">
             {{ page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
           </el-tag>
-          <el-button :icon="Refresh" :loading="loading" @click="loadDirectory(currentPrefix, currentContinuationToken, { resetPageHistory: false })">
+          <el-button
+            :icon="Refresh"
+            :loading="loading"
+            @click="loadDirectory(currentPrefix, currentContinuationToken, { resetPageHistory: false })"
+          >
             刷新
           </el-button>
         </div>
@@ -386,7 +390,11 @@ onMounted(() => {
 
     <div class="explorer-layout">
       <aside class="folder-sidebar">
-        <button type="button" class="sidebar-item root" @click="loadDirectory(rootPrefix, undefined, { rememberFolder: true })">
+        <button
+          type="button"
+          class="sidebar-item root"
+          @click="loadDirectory(rootPrefix, undefined, { rememberFolder: true })"
+        >
           <el-icon><Folder /></el-icon>
           <span>{{ rootPrefix.replace(/\/$/, '') }}</span>
         </button>
@@ -491,20 +499,37 @@ onMounted(() => {
           <h3>{{ selectedEntry.name }}</h3>
           <dl>
             <dt>类型</dt>
-            <dd>{{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}</dd>
+            <dd>
+              {{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}
+            </dd>
             <dt>大小</dt>
-            <dd>{{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}</dd>
+            <dd>
+              {{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}
+            </dd>
             <dt>修改时间</dt>
-            <dd>{{ formatDate(selectedEntry.lastModified) }}</dd>
+            <dd>
+              {{ formatDate(selectedEntry.lastModified) }}
+            </dd>
             <dt>存储类型</dt>
-            <dd>{{ selectedEntry.storageClass || '-' }}</dd>
+            <dd>
+              {{ selectedEntry.storageClass || '-' }}
+            </dd>
             <dt>ETag</dt>
-            <dd class="break-text">{{ selectedEntry.etag || '-' }}</dd>
+            <dd class="break-text">
+              {{ selectedEntry.etag || '-' }}
+            </dd>
             <dt>Object Key</dt>
-            <dd class="break-text">{{ selectedEntry.key }}</dd>
+            <dd class="break-text">
+              {{ selectedEntry.key }}
+            </dd>
           </dl>
           <div class="details-actions">
-            <el-button v-if="selectedEntry.directory" type="primary" :icon="Folder" @click="openFolder(selectedEntry)">
+            <el-button
+              v-if="selectedEntry.directory"
+              type="primary"
+              :icon="Folder"
+              @click="openFolder(selectedEntry)"
+            >
               打开文件夹
             </el-button>
             <template v-else>
@@ -589,8 +614,8 @@ onMounted(() => {
 }
 
 .summary-item span {
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .summary-item strong {
@@ -628,8 +653,8 @@ onMounted(() => {
   font: inherit;
   color: inherit;
   background: transparent;
-  border: 0;
   cursor: pointer;
+  border: 0;
 }
 
 .breadcrumb-button:hover {
@@ -637,8 +662,8 @@ onMounted(() => {
 }
 
 .pagination-hint {
-  color: var(--el-color-warning);
   font-size: 12px;
+  color: var(--el-color-warning);
 }
 
 .explorer-layout {
@@ -666,9 +691,9 @@ onMounted(() => {
 
 .sidebar-section-title {
   margin: 18px 8px 8px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 700;
+  color: var(--el-text-color-secondary);
 }
 
 .sidebar-item {
@@ -706,8 +731,8 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   gap: 10px;
-  align-content: start;
   flex: 1;
+  align-content: start;
 }
 
 .file-tile {
@@ -755,8 +780,8 @@ onMounted(() => {
   display: -webkit-box;
   max-width: 100%;
   overflow: hidden;
-  text-align: center;
   text-overflow: ellipsis;
+  text-align: center;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -778,8 +803,8 @@ onMounted(() => {
 .cursor-pager {
   padding-top: 14px;
   margin-top: auto;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -795,8 +820,8 @@ onMounted(() => {
 
 .details-pane h3 {
   margin: 8px 0 18px;
-  overflow-wrap: anywhere;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .details-pane dl {
@@ -826,8 +851,8 @@ onMounted(() => {
 }
 
 .preview-title span {
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .preview-content {
@@ -843,7 +868,7 @@ onMounted(() => {
   height: 70vh;
 }
 
-@media (max-width: 1280px) {
+@media (width <= 1280px) {
   .repository-summary {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
@@ -857,7 +882,7 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 860px) {
+@media (width <= 860px) {
   .repository-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -881,8 +906,8 @@ onMounted(() => {
   }
 
   .cursor-pager {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

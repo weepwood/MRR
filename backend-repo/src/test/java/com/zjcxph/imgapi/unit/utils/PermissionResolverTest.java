@@ -63,6 +63,13 @@ class PermissionResolverTest {
     }
 
     @Test
+    @DisplayName("resolve — system:manage 展开为 manage+read")
+    void resolve_systemManage() {
+        Set<String> result = PermissionResolver.resolve(List.of("system:manage"));
+        assertThat(result).containsExactlyInAnyOrder("system:manage", "system:read");
+    }
+
+    @Test
     @DisplayName("resolve — 无层级权限原样保留")
     void resolve_nonHierarchical() {
         Set<String> result = PermissionResolver.resolve(List.of("statistics:read", "log:read"));
@@ -122,6 +129,13 @@ class PermissionResolverTest {
     void hasPermission_readDoesNotImplyExports() {
         assertThat(PermissionResolver.hasPermission(List.of("record:read"), "record:download")).isFalse();
         assertThat(PermissionResolver.hasPermission(List.of("record:read"), "record:pdf:export")).isFalse();
+    }
+
+    @Test
+    @DisplayName("hasPermission — system:read 不能执行系统管理写操作")
+    void hasPermission_systemReadDoesNotImplyManage() {
+        assertThat(PermissionResolver.hasPermission(List.of("system:read"), "system:manage")).isFalse();
+        assertThat(PermissionResolver.hasPermission(List.of("system:manage"), "system:read")).isTrue();
     }
 
     @Test

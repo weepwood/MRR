@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Locale;
 
 @Service
 public class OssServiceImpl implements OssService {
@@ -138,7 +139,9 @@ public class OssServiceImpl implements OssService {
 
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(file.length());
-            metadata.setContentMD5(Base64.getEncoder().encodeToString(Hex.decodeHex(localMd5)));
+            metadata.setContentMD5(
+                    Base64.getEncoder().encodeToString(Hex.decodeHex(localMd5.toCharArray()))
+            );
             metadata.addUserMetadata(SOURCE_MD5_METADATA, localMd5);
             metadata.setContentType(resolveContentType(file.getName()));
 

@@ -47,3 +47,5 @@ jobs:
           git add frontend-fantastic-admin/src/views/oss-migration/index.vue
           git commit -m "修复：调整 OSS 页面 Flex 属性顺序"
           git push origin HEAD:feat/oss-migration-management-20260722
+
+# second-push trigger

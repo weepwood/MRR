@@ -22,8 +22,10 @@ import java.util.Map;
 
 @Component
 public class AuthorizationInterceptor implements HandlerInterceptor {
-    private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
+
     public static final String AUTH_SESSION_ATTRIBUTE = "AUTH_SESSION";
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
@@ -31,49 +33,78 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
-        if (ApiAccessPolicy.isPublicApiPath(normalizeRequestPath(request))) {
+
+        String path = normalizeRequestPath(request);
+        if (ApiAccessPolicy.isPublicApiPath(path)) {
             return true;
         }
 
-        AccessDeclaration declaration = resolveDeclaration(request, handlerMethod);
-        if (!declaration.isDeclared()) {
+        String[] requiredPermissions = ApiAccessPolicy.requiredPermissionOverride(request.getMethod(), path);
+        RequirePermissions permissionAnnotation = null;
+        boolean authenticatedOnly = false;
+
+        if (requiredPermissions == null) {
+            permissionAnnotation = findPermissions(handlerMethod);
+            authenticatedOnly = hasAuthenticatedOnly(handlerMethod);
+        }
+
+        if (requiredPermissions == null && permissionAnnotation == null && !authenticatedOnly) {
             logger.error("拒绝未声明访问策略的 API: method={}, uri={}, handler={}",
                     request.getMethod(), request.getRequestURI(), handlerMethod.getShortLogMessage());
             writeJsonResponse(response, 403, "接口未配置访问策略");
             return false;
         }
-        if (declaration.isConflicting() || declaration.hasEmptyPermissions()) {
-            logger.error("API 访问策略配置冲突: method={}, uri={}, handler={}",
-                    request.getMethod(), request.getRequestURI(), handlerMethod.getShortLogMessage());
+        if (permissionAnnotation != null && authenticatedOnly) {
+            logger.error("API 同时声明了仅登录与业务权限: handler={}", handlerMethod.getShortLogMessage());
+            writeJsonResponse(response, 500, "API 安全策略配置错误");
+            return false;
+        }
+        if (permissionAnnotation != null) {
+            requiredPermissions = permissionAnnotation.value();
+        }
+        if (!authenticatedOnly && (requiredPermissions == null || requiredPermissions.length == 0)) {
+            logger.error("API 权限声明为空: handler={}", handlerMethod.getShortLogMessage());
             writeJsonResponse(response, 500, "API 安全策略配置错误");
             return false;
         }
 
         AuthSession session = (AuthSession) request.getAttribute(AUTH_SESSION_ATTRIBUTE);
         if (session == null) {
-            writeJsonResponse(response, 401, "Please login first");
+            writeJsonResponse(response, 401, "请先登录");
             return false;
         }
-        if (declaration.authenticatedOnly()) {
-            return true;
-        }
-        if (isAdmin(session)) {
+        if (authenticatedOnly || isAdmin(session)) {
             return true;
         }
 
-        String[] requiredPermissions = declaration.requiredPermissions();
-        List<String> permissions = session.getPermissions() == null
-                ? java.util.Collections.emptyList()
+        List<String> userPermissions = session.getPermissions() == null
+                ? List.of()
                 : session.getPermissions();
         boolean allowed = Arrays.stream(requiredPermissions)
-                .allMatch(permission -> PermissionResolver.hasPermission(permissions, permission));
+                .allMatch(permission -> PermissionResolver.hasPermission(userPermissions, permission));
         if (!allowed) {
-            writeJsonResponse(response, 403, "No permission");
+            writeJsonResponse(response, 403, "没有接口访问权限");
             return false;
         }
 
-        logger.debug("permission granted for {} -> {}", session.getUsername(), Arrays.toString(requiredPermissions));
+        logger.debug("权限校验通过: user={}, permissions={}",
+                session.getUsername(), Arrays.toString(requiredPermissions));
         return true;
+    }
+
+    private RequirePermissions findPermissions(HandlerMethod handlerMethod) {
+        RequirePermissions methodAnnotation = AnnotatedElementUtils.findMergedAnnotation(
+                handlerMethod.getMethod(), RequirePermissions.class);
+        return methodAnnotation != null
+                ? methodAnnotation
+                : AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequirePermissions.class);
+    }
+
+    private boolean hasAuthenticatedOnly(HandlerMethod handlerMethod) {
+        if (AnnotatedElementUtils.hasAnnotation(handlerMethod.getMethod(), AuthenticatedOnly.class)) {
+            return true;
+        }
+        return AnnotatedElementUtils.hasAnnotation(handlerMethod.getBeanType(), AuthenticatedOnly.class);
     }
 
     private String normalizeRequestPath(HttpServletRequest request) {
@@ -88,28 +119,6 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         return path;
     }
 
-    private AccessDeclaration resolveDeclaration(HttpServletRequest request, HandlerMethod handlerMethod) {
-        String[] override = ApiAccessPolicy.requiredPermissionOverride(
-                request.getMethod(), normalizeRequestPath(request));
-        if (override != null) {
-            return AccessDeclaration.forOverride(override);
-        }
-
-        RequirePermissions methodPermissions = AnnotatedElementUtils.findMergedAnnotation(
-                handlerMethod.getMethod(), RequirePermissions.class);
-        boolean methodAuthenticatedOnly = AnnotatedElementUtils.hasAnnotation(
-                handlerMethod.getMethod(), AuthenticatedOnly.class);
-        if (methodPermissions != null || methodAuthenticatedOnly) {
-            return new AccessDeclaration(methodPermissions, methodAuthenticatedOnly, null);
-        }
-
-        RequirePermissions classPermissions = AnnotatedElementUtils.findMergedAnnotation(
-                handlerMethod.getBeanType(), RequirePermissions.class);
-        boolean classAuthenticatedOnly = AnnotatedElementUtils.hasAnnotation(
-                handlerMethod.getBeanType(), AuthenticatedOnly.class);
-        return new AccessDeclaration(classPermissions, classAuthenticatedOnly, null);
-    }
-
     private void writeJsonResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
@@ -118,35 +127,5 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
 
     private boolean isAdmin(AuthSession session) {
         return "ADMIN".equalsIgnoreCase(session.getRoleCode());
-    }
-
-    private record AccessDeclaration(
-            RequirePermissions permissions,
-            boolean authenticatedOnly,
-            String[] overridePermissions
-    ) {
-        private static AccessDeclaration forOverride(String[] permissions) {
-            return new AccessDeclaration(null, false, permissions == null ? null : permissions.clone());
-        }
-
-        private boolean isDeclared() {
-            return permissions != null || authenticatedOnly || overridePermissions != null;
-        }
-
-        private boolean isConflicting() {
-            return permissions != null && authenticatedOnly;
-        }
-
-        private boolean hasEmptyPermissions() {
-            return (permissions != null && permissions.value().length == 0)
-                    || (overridePermissions != null && overridePermissions.length == 0);
-        }
-
-        private String[] requiredPermissions() {
-            if (overridePermissions != null) {
-                return overridePermissions.clone();
-            }
-            return permissions == null ? new String[0] : permissions.value();
-        }
     }
 }

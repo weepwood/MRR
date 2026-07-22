@@ -138,9 +138,10 @@ function New-EncodedInvocation {
     $scriptLiteral = ConvertTo-PowerShellLiteral $ScriptPath
     $command = @"
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
+`$invokeArguments = @($literalArguments)
 try {
-    & $scriptLiteral @($literalArguments)
-    if (`$LASTEXITCODE -and `$LASTEXITCODE -ne 0) { exit `$LASTEXITCODE }
+    & $scriptLiteral @invokeArguments
+    if (-not `$?) { exit 1 }
     exit 0
 }
 catch {

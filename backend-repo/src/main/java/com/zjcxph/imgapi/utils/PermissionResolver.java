@@ -24,6 +24,8 @@ public class PermissionResolver {
         HIERARCHY.put("record:read", Set.of("record:read"));
         HIERARCHY.put("role:manage", Set.of("role:manage", "role:read"));
         HIERARCHY.put("role:read", Set.of("role:read"));
+        HIERARCHY.put("system:manage", Set.of("system:manage", "system:read"));
+        HIERARCHY.put("system:read", Set.of("system:read"));
     }
 
     public static Set<String> resolve(Collection<String> permissions) {

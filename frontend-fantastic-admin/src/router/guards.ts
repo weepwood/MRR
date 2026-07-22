@@ -273,7 +273,7 @@ function setupKeepAlive(router: Router) {
               shouldClearCache = to.meta.noCache === from.name
             }
             else if (Array.isArray(to.meta.noCache)) {
-              shouldClearCache = !to.meta.noCache.includes(from.name as string)
+              shouldClearCache = to.meta.noCache.includes(from.name as string)
             }
           }
           if (from.name === 'reload') {

@@ -58,6 +58,7 @@ function mountPage() {
 
 describe('external archive timeout recovery', () => {
   beforeEach(() => {
+    sessionStorage.clear()
     route.query = { ticket: 'ticket-123' }
     api.clearExternalArchiveSession.mockReset()
     api.exchangeExternalArchiveTicket.mockReset()

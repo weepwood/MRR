@@ -10,7 +10,7 @@ public class RequiredPasswordChangeRequest {
     private String currentPassword;
 
     @NotBlank(message = "新密码不能为空")
-    @Size(min = 12, max = 64, message = "新密码长度应为 12 到 64 位")
+    @Size(min = 6, max = 64, message = "新密码长度应为 6 到 64 位")
     private String newPassword;
 
     @NotBlank(message = "确认密码不能为空")

@@ -1,0 +1,51 @@
+name: main-branch-cleanup-pr
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.head_ref == 'chore/cleanup-main-branch-migration'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Execute embedded cleanup script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/main-branch-cleanup-once.yml').read_text(encoding='utf-8')
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          script = workflow.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          exec(compile(script, 'main-branch-cleanup-once.yml', 'exec'))
+          PY
+
+      - name: Run branch reference tests
+        run: python -m unittest scripts.tests.test_check_main_branch_references -v
+
+      - name: Remove temporary cleanup files
+        run: |
+          rm .github/workflows/main-branch-cleanup-once.yml
+          rm .github/workflows/main-branch-cleanup-pr.yml
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m '维护：清理 dev-no-login 分支残留'
+          git push origin HEAD:chore/cleanup-main-branch-migration

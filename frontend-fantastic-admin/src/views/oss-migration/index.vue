@@ -759,8 +759,8 @@ onBeforeUnmount(stopPolling)
 
 .page-header,
 .card-header {
-  justify-content: space-between;
   gap: 16px;
+  justify-content: space-between;
 }
 
 .page-header h2,
@@ -776,11 +776,11 @@ onBeforeUnmount(stopPolling)
 }
 
 .eyebrow {
-  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.12em;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--el-color-primary);
 }
 
 .subtitle,
@@ -799,9 +799,9 @@ onBeforeUnmount(stopPolling)
   display: grid;
   gap: 8px;
   padding: 18px;
+  background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--el-border-radius-base);
-  background: var(--el-bg-color);
 }
 
 .metric-card strong {
@@ -833,17 +833,17 @@ onBeforeUnmount(stopPolling)
 .check-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  justify-content: space-between;
   padding: 14px;
+  background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
   border-radius: var(--el-border-radius-base);
-  background: var(--el-color-warning-light-9);
 }
 
 .check-item.ok {
-  border-color: var(--el-color-success-light-5);
   background: var(--el-color-success-light-9);
+  border-color: var(--el-color-success-light-5);
 }
 
 .facts,
@@ -861,8 +861,8 @@ onBeforeUnmount(stopPolling)
 .warning-list {
   display: grid;
   gap: 6px;
-  margin: 14px 0 0;
   padding-left: 20px;
+  margin: 14px 0 0;
   color: var(--el-color-warning-dark-2);
 }
 
@@ -873,8 +873,8 @@ onBeforeUnmount(stopPolling)
 
 .manual-bah {
   justify-content: flex-end;
-  margin-top: 14px;
   padding-top: 14px;
+  margin-top: 14px;
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -892,14 +892,14 @@ onBeforeUnmount(stopPolling)
   margin-top: 14px;
 }
 
-@media (max-width: 1100px) {
+@media (width <= 1100px) {
   .metric-grid,
   .primary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .metric-grid,
   .primary-grid,
   .check-grid {
@@ -908,8 +908,8 @@ onBeforeUnmount(stopPolling)
 
   .page-header,
   .card-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

@@ -12,13 +12,62 @@ on:
       - '*.*.*'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: quality-gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  prepare-release-0-6-1:
+    if: github.event_name == 'pull_request' && github.head_ref == 'release/0.6.1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Execute release preparation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/prepare-release-0.6.1-once.yml').read_text(encoding='utf-8')
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          script = workflow.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          version = Path('VERSION').read_text(encoding='utf-8').strip()
+          if version == '0.6.1':
+              print('0.6.1 release files are already prepared.')
+          elif version == '0.6.0':
+              exec(compile(script, 'prepare-release-0.6.1-once.yml', 'exec'))
+          else:
+              raise SystemExit(f'Unexpected VERSION: {version}')
+          PY
+
+      - name: Validate prepared release
+        run: |
+          python scripts/release_baseline.py validate
+          python scripts/check_main_branch_references.py
+
+      - name: Commit release preparation
+        shell: bash
+        run: |
+          if git diff --quiet -- VERSION backend-repo/pom.xml release-baseline.json CHANGELOG.md release-notes/0.6.1.md; then
+            echo 'Release files already committed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERSION backend-repo/pom.xml release-baseline.json CHANGELOG.md release-notes/0.6.1.md
+          git commit -m '发布：准备 0.6.1 版本'
+          git push origin HEAD:release/0.6.1
+
   release-baseline-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5

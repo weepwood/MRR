@@ -19,9 +19,7 @@ import com.zjcxph.imgapi.utils.PaginationUtils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 @Service
 public class MigrationServiceImpl implements MigrationService {
@@ -50,6 +49,8 @@ public class MigrationServiceImpl implements MigrationService {
     private static final int MAX_MANUAL_RETRY_IDS = 1_000;
     private static final int MAX_MANUAL_BAH_FILES = 2_000;
     private static final int MAX_ATTEMPTS = 3;
+    private static final long STATISTICS_CACHE_MILLIS = 15_000L;
+    private static final long FOLDER_CACHE_MILLIS = 60_000L;
     private static final String FULL_CONFIRMATION = "确认全量迁移";
     private static final String READINESS_PROBE_KEY = "__mrr_migration_readiness_probe__";
 
@@ -58,27 +59,27 @@ public class MigrationServiceImpl implements MigrationService {
     private final ImageMigrationLogMapper migrationLogMapper;
     private final MigrationJobMapper migrationJobMapper;
     private final MigrationSourceResolver sourceResolver;
-    private final Executor taskAsyncExecutor;
+    private final Executor migrationTaskExecutor;
 
-    /**
-     * 批量迁移通过自身代理调用 uploadLoadedScan，保留每条扫描的事务边界。
-     */
-    @Lazy
-    @Autowired
-    private MigrationService self;
+    private final Object statisticsCacheLock = new Object();
+    private final Object folderCacheLock = new Object();
+    private volatile MigrationStatisticsDTO cachedStatistics;
+    private volatile long statisticsCachedAt;
+    private volatile List<Map<String, Object>> cachedPendingFolders;
+    private volatile long foldersCachedAt;
 
     public MigrationServiceImpl(OssService ossService,
                                 ScanMapper scanMapper,
                                 ImageMigrationLogMapper migrationLogMapper,
                                 MigrationJobMapper migrationJobMapper,
                                 MigrationSourceResolver sourceResolver,
-                                @Qualifier("taskAsyncExecutor") Executor taskAsyncExecutor) {
+                                @Qualifier("migrationTaskExecutor") Executor migrationTaskExecutor) {
         this.ossService = ossService;
         this.scanMapper = scanMapper;
         this.migrationLogMapper = migrationLogMapper;
         this.migrationJobMapper = migrationJobMapper;
         this.sourceResolver = sourceResolver;
-        this.taskAsyncExecutor = taskAsyncExecutor;
+        this.migrationTaskExecutor = migrationTaskExecutor;
     }
 
     @PostConstruct
@@ -89,6 +90,7 @@ public class MigrationServiceImpl implements MigrationService {
             if (interruptedJobs > 0 || releasedScans > 0) {
                 logger.warn("Recovered OSS migration state after restart: jobs={}, scans={}",
                         interruptedJobs, releasedScans);
+                invalidateSummaryCaches();
             }
         } catch (Exception exception) {
             logger.warn("Unable to recover interrupted OSS migration state during startup", exception);
@@ -96,33 +98,37 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public OssUploadResult uploadSingleScan(Integer scanId) {
         assertManualUploadAllowed();
         Scan scan = scanMapper.findById(scanId);
         if (scan == null) {
             return new OssUploadResult(scanId, "failed", "扫描记录不存在: " + scanId);
         }
-        return uploadLoadedScan(scanId, scan);
+        OssUploadResult result = uploadLoadedScanInternal(scanId, scan, true);
+        invalidateSummaryCaches();
+        return result;
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public OssUploadResult uploadLoadedScan(Scan scan) {
         if (scan == null || scan.getId() == null) {
             return new OssUploadResult(null, "failed", "扫描记录或 Scan ID 为空");
         }
-        return uploadLoadedScan(scan.getId(), scan);
+        OssUploadResult result = uploadLoadedScanInternal(scan.getId(), scan, true);
+        invalidateSummaryCaches();
+        return result;
     }
 
-    private OssUploadResult uploadLoadedScan(Integer scanId, Scan scan) {
+    private OssUploadResult uploadLoadedScanForJob(Scan scan) {
+        if (scan == null || scan.getId() == null) {
+            return new OssUploadResult(null, "failed", "扫描记录或 Scan ID 为空");
+        }
+        return uploadLoadedScanInternal(scan.getId(), scan, false);
+    }
+
+    private OssUploadResult uploadLoadedScanInternal(Integer scanId, Scan scan, boolean includeSignedUrl) {
         if (scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
-            OssUploadResult result = new OssUploadResult();
-            result.setScanId(scanId);
-            result.setOssUrl(scan.getOssUrl());
-            result.setStatus("skipped");
-            result.setErrorMessage("已迁移过");
-            return result;
+            return skippedResult(scanId, scan.getOssUrl(), "已迁移过");
         }
 
         String ossKey = buildOssKey(scan);
@@ -135,7 +141,19 @@ public class MigrationServiceImpl implements MigrationService {
             );
         }
 
-        scanMapper.markMigrationStarted(scanId);
+        int claimed = scanMapper.markMigrationStarted(scanId);
+        if (claimed == 0) {
+            Scan latest = scanMapper.findById(scanId);
+            String existingOssKey = latest == null ? null : latest.getOssUrl();
+            return skippedResult(
+                    scanId,
+                    existingOssKey,
+                    existingOssKey == null || existingOssKey.isBlank()
+                            ? "记录已被其他处理流程领取，或尚未到下一次重试时间"
+                            : "记录已由其他处理流程迁移完成"
+            );
+        }
+
         int currentAttempt = (scan.getMigrationAttempts() == null ? 0 : scan.getMigrationAttempts()) + 1;
         String sourceDescription = sourceResolver.describe(scan);
 
@@ -156,7 +174,7 @@ public class MigrationServiceImpl implements MigrationService {
                 }
                 logger.info("OSS object already exists and matches source, updating database only: {}", ossKey);
             } else {
-                ossService.uploadFile(sourcePath, ossKey);
+                ossService.uploadFile(sourcePath, ossKey, md5);
             }
 
             scanMapper.updateOssInfo(scanId, ossKey, fileSize, md5, "migrated");
@@ -164,14 +182,24 @@ public class MigrationServiceImpl implements MigrationService {
 
             OssUploadResult result = new OssUploadResult();
             result.setScanId(scanId);
-            result.setOssUrl(ossService.generatePresignedUrl(ossKey));
             result.setFileSize(fileSize);
             result.setChecksumMd5(md5);
             result.setStatus("success");
+            if (includeSignedUrl) {
+                try {
+                    result.setOssUrl(ossService.generatePresignedUrl(ossKey));
+                } catch (Exception exception) {
+                    logger.warn(
+                            "Scan {} migrated successfully, but presigned URL generation failed",
+                            scanId,
+                            exception
+                    );
+                }
+            }
             return result;
-        } catch (Exception exception) {
-            logger.error("Failed to upload scan {} to OSS", scanId, exception);
-            if (isPermanentSourceFailure(exception)) {
+        } catch (MigrationSourceResolver.SourceResolutionException exception) {
+            logger.error("Failed to resolve source for scan {}", scanId, exception);
+            if (exception.isPermanent()) {
                 return failPermanently(
                         scanId,
                         sourceDescription,
@@ -179,6 +207,14 @@ public class MigrationServiceImpl implements MigrationService {
                         safeErrorMessage(exception)
                 );
             }
+            return failTemporarilyOrPermanently(
+                    scanId,
+                    sourceDescription,
+                    currentAttempt,
+                    exception
+            );
+        } catch (Exception exception) {
+            logger.error("Failed to upload scan {} to OSS", scanId, exception);
             return failTemporarilyOrPermanently(
                     scanId,
                     sourceDescription,
@@ -206,33 +242,52 @@ public class MigrationServiceImpl implements MigrationService {
             if (scan.getUploadFlag() == null || scan.getUploadFlag() == 0) {
                 continue;
             }
-            results.add(self.uploadLoadedScan(scan));
+            results.add(uploadLoadedScanInternal(scan.getId(), scan, true));
         }
+        invalidateSummaryCaches();
         return results;
     }
 
     @Override
     public MigrationStatisticsDTO getStatistics() {
-        MigrationStatisticsDTO statistics = new MigrationStatisticsDTO();
-        Map<String, Object> counts = scanMapper.countMigrationStats();
-        long total = number(counts, "total");
-        long migrated = number(counts, "migrated");
-        long verified = number(counts, "verified");
-        long failed = number(counts, "failed");
-        long retryWait = number(counts, "retry_wait");
-        long migrating = number(counts, "migrating");
-        long migratedTotal = migrated + verified;
-
-        statistics.setTotalCount(total);
-        statistics.setMigratedCount(migratedTotal);
-        statistics.setFailedCount(failed);
-        statistics.setRetryWaitCount(retryWait);
-        statistics.setMigratingCount(migrating);
-        statistics.setPendingCount(Math.max(0, total - migratedTotal - failed));
-        if (total > 0) {
-            statistics.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
+        long now = System.currentTimeMillis();
+        MigrationStatisticsDTO cached = cachedStatistics;
+        if (cached != null && now - statisticsCachedAt < STATISTICS_CACHE_MILLIS) {
+            return cached;
         }
-        return statistics;
+
+        synchronized (statisticsCacheLock) {
+            now = System.currentTimeMillis();
+            cached = cachedStatistics;
+            if (cached != null && now - statisticsCachedAt < STATISTICS_CACHE_MILLIS) {
+                return cached;
+            }
+
+            Map<String, Object> counts = scanMapper.countMigrationStats();
+            long total = number(counts, "total");
+            long migrated = number(counts, "migrated");
+            long verified = number(counts, "verified");
+            long failed = number(counts, "failed");
+            long retryWait = number(counts, "retry_wait");
+            long migrating = number(counts, "migrating");
+            long pending = number(counts, "pending");
+            long migratedTotal = migrated + verified;
+
+            MigrationStatisticsDTO statistics = new MigrationStatisticsDTO();
+            statistics.setTotalCount(total);
+            statistics.setMigratedCount(migratedTotal);
+            statistics.setFailedCount(failed);
+            statistics.setRetryWaitCount(retryWait);
+            statistics.setMigratingCount(migrating);
+            statistics.setPendingCount(pending);
+            if (total > 0) {
+                statistics.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
+            }
+
+            cachedStatistics = statistics;
+            statisticsCachedAt = now;
+            return statistics;
+        }
     }
 
     @Override
@@ -274,7 +329,7 @@ public class MigrationServiceImpl implements MigrationService {
         readiness.setSourcePathReadable(sourceReadable);
 
         if (!sourceReadable) {
-            readiness.getWarnings().add("本地、NAS、Nginx 或 HTTP 图片源均未通过抽样读取");
+            readiness.getWarnings().add("当前抽样未找到可读图片；可先限定真实目录执行小规模试迁移，不会阻塞其他目录");
         }
         if (readiness.getSampleMissingCount() > 0) {
             readiness.getWarnings().add("抽样中存在缺失或不可读文件，任务会标记失败并继续处理后续记录");
@@ -285,12 +340,11 @@ public class MigrationServiceImpl implements MigrationService {
             readiness.getWarnings().add("当前只有尚未到重试时间的记录，暂时没有可领取的迁移数据");
         }
 
-        boolean hasReadableCandidate = !sample.isEmpty() && readiness.getSampleReadableCount() > 0;
         readiness.setReady(
                 ossConfigured
                         && activeJob == null
                         && statistics.getPendingCount() > 0
-                        && hasReadableCandidate
+                        && !sample.isEmpty()
         );
         if (statistics.getMigratedCount() == 0) {
             readiness.setRecommendedMode("pilot");
@@ -318,7 +372,22 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public List<Map<String, Object>> getPendingFolders() {
-        return scanMapper.findPendingFolders();
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> cached = cachedPendingFolders;
+        if (cached != null && now - foldersCachedAt < FOLDER_CACHE_MILLIS) {
+            return cached;
+        }
+        synchronized (folderCacheLock) {
+            now = System.currentTimeMillis();
+            cached = cachedPendingFolders;
+            if (cached != null && now - foldersCachedAt < FOLDER_CACHE_MILLIS) {
+                return cached;
+            }
+            List<Map<String, Object>> folders = scanMapper.findPendingFolders();
+            cachedPendingFolders = folders == null ? List.of() : List.copyOf(folders);
+            foldersCachedAt = now;
+            return cachedPendingFolders;
+        }
     }
 
     @Override
@@ -370,25 +439,32 @@ public class MigrationServiceImpl implements MigrationService {
                 request == null ? null : request.getLimit(),
                 request == null ? null : request.getConfirmation()
         );
-        assertMigrationCanStart();
+        assertMigrationCanStart(mode, folder);
 
         Integer maxScanId = scanMapper.findMaxPendingMigrationId(folder);
         if (maxScanId == null) {
             return null;
         }
-        long eligibleCount = scanMapper.countEligibleMigrations(maxScanId, folder);
-        long totalCount = "full".equals(mode)
-                ? eligibleCount
-                : Math.min(eligibleCount, requestedCount);
-        if (totalCount <= 0) {
-            return null;
+
+        long totalCount;
+        long persistedRequestedCount;
+        if ("full".equals(mode)) {
+            long eligibleCount = scanMapper.countEligibleMigrations(maxScanId, folder);
+            if (eligibleCount <= 0) {
+                return null;
+            }
+            totalCount = eligibleCount;
+            persistedRequestedCount = eligibleCount;
+        } else {
+            totalCount = requestedCount;
+            persistedRequestedCount = requestedCount;
         }
 
         MigrationJob job = new MigrationJob();
         job.setStatus("pending");
         job.setMode(mode);
         job.setScopeValue(folder);
-        job.setRequestedCount("full".equals(mode) ? eligibleCount : requestedCount);
+        job.setRequestedCount(persistedRequestedCount);
         job.setMaxScanId(maxScanId);
         job.setCancelRequested(false);
         job.setTotalCount(totalCount);
@@ -410,7 +486,6 @@ public class MigrationServiceImpl implements MigrationService {
             throw exception;
         }
 
-        // 当前方法不包裹事务，确保 insert 已提交后才启动异步线程。
         executeMigrationJobAsync(job.getId());
         return job;
     }
@@ -455,7 +530,9 @@ public class MigrationServiceImpl implements MigrationService {
         if (uniqueIds.size() > MAX_MANUAL_RETRY_IDS) {
             throw new IllegalArgumentException("单次最多重置 " + MAX_MANUAL_RETRY_IDS + " 条记录");
         }
-        return scanMapper.resetMigrationFailures(new ArrayList<>(uniqueIds));
+        int updated = scanMapper.resetMigrationFailures(new ArrayList<>(uniqueIds));
+        invalidateSummaryCaches();
+        return updated;
     }
 
     @Override
@@ -464,110 +541,179 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     private void executeMigrationJobAsync(Long jobId) {
-        taskAsyncExecutor.execute(() -> {
-            MigrationJob job = migrationJobMapper.findById(jobId);
-            if (job == null) {
-                logger.error("Migration job {} was not visible after creation", jobId);
+        try {
+            migrationTaskExecutor.execute(() -> runMigrationJob(jobId));
+        } catch (RejectedExecutionException exception) {
+            logger.error("Migration executor rejected job {}", jobId, exception);
+            migrationJobMapper.complete(
+                    jobId,
+                    "failed",
+                    0,
+                    0,
+                    0,
+                    BigDecimal.ZERO,
+                    "迁移执行器暂不可用，任务未启动，请稍后重新创建",
+                    new Date()
+            );
+            invalidateSummaryCaches();
+            throw new IllegalStateException("迁移执行器暂不可用，任务未启动，请稍后重试", exception);
+        }
+    }
+
+    private void runMigrationJob(Long jobId) {
+        MigrationJob job = migrationJobMapper.findById(jobId);
+        if (job == null) {
+            logger.error("Migration job {} was not visible after creation", jobId);
+            return;
+        }
+
+        long plannedTotal = job.getTotalCount() == null ? 0 : job.getTotalCount();
+        long processed = 0;
+        long failed = 0;
+
+        try {
+            if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                completeCancelledJob(job, 0, 0);
                 return;
             }
-            try {
-                job.setStatus("running");
-                job.setStartedAt(new Date());
-                job.setCancelRequested(false);
-                migrationJobMapper.update(job);
 
-                long processed = 0;
-                long failed = 0;
-                int afterId = 0;
-                boolean cancelled = false;
+            Date startedAt = new Date();
+            if (migrationJobMapper.markRunning(jobId, startedAt) == 0) {
+                if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                    completeCancelledJob(job, 0, 0);
+                } else {
+                    logger.warn("Migration job {} could not transition from pending to running", jobId);
+                }
+                return;
+            }
 
-                while (processed < job.getTotalCount()) {
+            int afterId = 0;
+            boolean cancelled = false;
+            boolean exhausted = false;
+
+            while (processed < plannedTotal) {
+                if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                    cancelled = true;
+                    break;
+                }
+
+                int fetchSize = (int) Math.min(JOB_BATCH_SIZE, plannedTotal - processed);
+                List<Scan> batch = scanMapper.findPendingMigrationAfterId(
+                        afterId,
+                        job.getMaxScanId(),
+                        job.getScopeValue(),
+                        fetchSize
+                );
+                if (batch.isEmpty()) {
+                    exhausted = true;
+                    break;
+                }
+
+                for (Scan scan : batch) {
+                    afterId = Math.max(afterId, scan.getId());
                     if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
                         cancelled = true;
                         break;
                     }
 
-                    int fetchSize = (int) Math.min(JOB_BATCH_SIZE, job.getTotalCount() - processed);
-                    List<Scan> batch = scanMapper.findPendingMigrationAfterId(
-                            afterId,
-                            job.getMaxScanId(),
-                            job.getScopeValue(),
-                            fetchSize
-                    );
-                    if (batch.isEmpty()) {
-                        break;
+                    OssUploadResult result;
+                    try {
+                        result = uploadLoadedScanForJob(scan);
+                    } catch (Exception exception) {
+                        logger.error("Migration failed for scan {}", scan.getId(), exception);
+                        result = new OssUploadResult(
+                                scan.getId(),
+                                "failed",
+                                safeErrorMessage(exception)
+                        );
                     }
-
-                    for (Scan scan : batch) {
-                        afterId = Math.max(afterId, scan.getId());
-                        if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
-                            cancelled = true;
-                            break;
-                        }
-                        OssUploadResult result;
-                        try {
-                            result = self.uploadLoadedScan(scan);
-                        } catch (Exception exception) {
-                            logger.error("Migration failed for scan {}", scan.getId(), exception);
-                            result = new OssUploadResult(
-                                    scan.getId(),
-                                    "failed",
-                                    safeErrorMessage(exception)
-                            );
-                        }
-                        processed++;
-                        if (!("success".equals(result.getStatus())
-                                || "skipped".equals(result.getStatus()))) {
-                            failed++;
-                        }
-                    }
-
-                    updateJobProgress(job, processed, failed);
-                    if (cancelled) {
-                        break;
+                    processed++;
+                    if (!("success".equals(result.getStatus())
+                            || "skipped".equals(result.getStatus()))) {
+                        failed++;
                     }
                 }
 
-                job.setProcessedCount(processed);
-                job.setFailedCount(failed);
-                job.setRate(calculateRate(processed, job.getTotalCount()));
-                job.setCompletedAt(new Date());
-                job.setCancelRequested(cancelled);
-                if (cancelled) {
-                    job.setStatus("cancelled");
-                    job.setErrorMessage("管理员已请求安全取消，未处理记录仍保持待迁移状态");
-                } else if (processed == 0 && job.getTotalCount() > 0) {
-                    job.setStatus("failed");
-                    job.setErrorMessage("未领取到可处理记录，请刷新迁移前检查后重试");
-                } else {
-                    job.setStatus(failed > 0 ? "completed_with_errors" : "completed");
-                }
-                migrationJobMapper.update(job);
-                logger.info(
-                        "Migration job {} finished: status={}, processed={}, failed={}",
+                migrationJobMapper.updateProgress(
                         jobId,
-                        job.getStatus(),
                         processed,
-                        failed
+                        failed,
+                        calculateRate(processed, plannedTotal)
                 );
-            } catch (Exception exception) {
-                logger.error("Migration job {} error", jobId, exception);
-                MigrationJob latest = migrationJobMapper.findById(jobId);
-                if (latest != null) {
-                    latest.setStatus("failed");
-                    latest.setErrorMessage(safeErrorMessage(exception));
-                    latest.setCompletedAt(new Date());
-                    migrationJobMapper.update(latest);
+                if (cancelled) {
+                    break;
                 }
             }
-        });
+
+            if (!cancelled && Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                cancelled = true;
+            }
+
+            long finalTotal = exhausted && processed > 0 && processed < plannedTotal
+                    ? processed
+                    : plannedTotal;
+            String status;
+            String errorMessage = null;
+            if (cancelled) {
+                status = "cancelled";
+                errorMessage = "管理员已请求安全取消，未处理记录仍保持待迁移状态";
+            } else if (processed == 0 && plannedTotal > 0) {
+                status = "failed";
+                errorMessage = "未领取到可处理记录，请刷新迁移前检查后重试";
+            } else {
+                status = failed > 0 ? "completed_with_errors" : "completed";
+            }
+
+            migrationJobMapper.complete(
+                    jobId,
+                    status,
+                    finalTotal,
+                    processed,
+                    failed,
+                    calculateRate(processed, finalTotal),
+                    errorMessage,
+                    new Date()
+            );
+            invalidateSummaryCaches();
+            logger.info(
+                    "Migration job {} finished: status={}, processed={}, failed={}",
+                    jobId,
+                    status,
+                    processed,
+                    failed
+            );
+        } catch (Exception exception) {
+            logger.error("Migration job {} error", jobId, exception);
+            boolean cancelled = Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId));
+            migrationJobMapper.complete(
+                    jobId,
+                    cancelled ? "cancelled" : "failed",
+                    plannedTotal,
+                    processed,
+                    failed,
+                    calculateRate(processed, plannedTotal),
+                    cancelled
+                            ? "管理员已请求安全取消，任务异常退出后已停止"
+                            : safeErrorMessage(exception),
+                    new Date()
+            );
+            invalidateSummaryCaches();
+        }
     }
 
-    private void updateJobProgress(MigrationJob job, long processed, long failed) {
-        job.setProcessedCount(processed);
-        job.setFailedCount(failed);
-        job.setRate(calculateRate(processed, job.getTotalCount()));
-        migrationJobMapper.update(job);
+    private void completeCancelledJob(MigrationJob job, long processed, long failed) {
+        long total = job.getTotalCount() == null ? 0 : job.getTotalCount();
+        migrationJobMapper.complete(
+                job.getId(),
+                "cancelled",
+                total,
+                processed,
+                failed,
+                calculateRate(processed, total),
+                "管理员已请求安全取消，任务尚未开始或已停止领取新记录",
+                new Date()
+        );
+        invalidateSummaryCaches();
     }
 
     private BigDecimal calculateRate(long processed, long total) {
@@ -576,6 +722,15 @@ public class MigrationServiceImpl implements MigrationService {
         }
         return BigDecimal.valueOf(processed * 100.0 / total)
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private OssUploadResult skippedResult(Integer scanId, String ossUrl, String message) {
+        OssUploadResult result = new OssUploadResult();
+        result.setScanId(scanId);
+        result.setOssUrl(ossUrl);
+        result.setStatus("skipped");
+        result.setErrorMessage(message);
+        return result;
     }
 
     private OssUploadResult failPermanently(Integer scanId,
@@ -593,27 +748,17 @@ public class MigrationServiceImpl implements MigrationService {
                                                           Exception error) {
         String message = safeErrorMessage(error);
         String errorCode = classifyUploadError(error);
-        logMigration(scanId, sourceDescription, null, "failed", message, null, null);
         if (currentAttempt >= MAX_ATTEMPTS || "OBJECT_CONFLICT".equals(errorCode)) {
             scanMapper.markMigrationFailed(scanId, errorCode);
+            logMigration(scanId, sourceDescription, null, "failed", message, null, null);
             return new OssUploadResult(scanId, "failed", message);
         }
+
         long delaySeconds = Math.min(1800L, 60L * (1L << Math.max(0, currentAttempt - 1)));
         Date nextRetryAt = Date.from(Instant.now().plusSeconds(delaySeconds));
         scanMapper.markMigrationRetryWait(scanId, errorCode, nextRetryAt);
+        logMigration(scanId, sourceDescription, null, "retry_wait", message, null, null);
         return new OssUploadResult(scanId, "retry_wait", message);
-    }
-
-    private boolean isPermanentSourceFailure(Exception error) {
-        String message = safeErrorMessage(error).toLowerCase(Locale.ROOT);
-        return message.contains("不存在")
-                || message.contains("不可读")
-                || message.contains("不能为空")
-                || message.contains("非法")
-                || message.contains("越出")
-                || message.contains("没有可用")
-                || message.contains("status 404")
-                || message.contains("状态码 404");
     }
 
     private String classifyUploadError(Exception error) {
@@ -636,16 +781,20 @@ public class MigrationServiceImpl implements MigrationService {
         return "SOURCE_OR_OSS_IO_FAILED";
     }
 
-    private void assertMigrationCanStart() {
-        MigrationReadinessDTO readiness = getReadiness(20);
-        if (!readiness.isOssConfigured()) {
+    private void assertMigrationCanStart(String mode, String folder) {
+        if (!canCreatePresignedUrl()) {
             throw new IllegalStateException("OSS 尚未完成配置，请先检查 endpoint、bucket 与访问凭据");
         }
-        if (!readiness.isSourcePathReadable()) {
-            throw new IllegalStateException("本地、NAS、Nginx 或 HTTP 图片源均未通过读取检查");
+
+        List<Scan> sample = getPendingMigrations(20, folder);
+        if (sample.isEmpty()) {
+            throw new IllegalStateException("当前范围没有到期且可领取的待迁移记录");
         }
-        if (readiness.getPendingCount() <= 0 || readiness.getSampleSize() <= 0) {
-            throw new IllegalStateException("当前没有到期且可领取的待迁移记录");
+
+        boolean anyReadable = sourceResolver.isLocalBasePathReadable()
+                || sample.stream().anyMatch(sourceResolver::canRead);
+        if (!anyReadable && !"pilot".equals(mode)) {
+            throw new IllegalStateException("当前范围抽样未找到可读图片，请先限定真实目录执行试迁移");
         }
     }
 
@@ -752,6 +901,13 @@ public class MigrationServiceImpl implements MigrationService {
         }
         String message = error.getMessage().trim();
         return message.length() > 1000 ? message.substring(0, 1000) : message;
+    }
+
+    private void invalidateSummaryCaches() {
+        cachedStatistics = null;
+        statisticsCachedAt = 0;
+        cachedPendingFolders = null;
+        foldersCachedAt = 0;
     }
 
     private void logMigration(Integer scanId,

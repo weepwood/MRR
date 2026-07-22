@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  PERMISSION_DEFINITIONS,
-  PERMISSION_HIERARCHY,
   checkAnyPermission,
   checkPermission,
+  PERMISSION_DEFINITIONS,
+  PERMISSION_HIERARCHY,
   resolvePermissions,
 } from '../permission'
 

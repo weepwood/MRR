@@ -16,6 +16,7 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertIn('WinSW-x64.exe', workflow)
         self.assertIn('runtime/nginx/nginx.exe', workflow)
         self.assertIn('runtime/winsw/WinSW-x64.exe', workflow)
+        self.assertIn('runtime/SHA256SUMS', workflow)
 
     def test_installer_uses_packaged_runtime_by_default(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
@@ -24,22 +25,23 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertNotRegex(installer, r'\[Parameter\(Mandatory\s*=\s*\$true\)\]\s*\[string\]\$WinSWPath')
         self.assertIn("Join-Path $scriptDir '..\\..\\runtime\\nginx'", installer)
         self.assertIn("Join-Path $scriptDir '..\\..\\runtime\\winsw\\WinSW-x64.exe'", installer)
+        self.assertIn("Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1')", installer)
 
-    def test_mrrctl_exposes_nginx_lifecycle_commands(self):
-        controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')
+    def test_dedicated_nginx_controller_exposes_lifecycle_commands(self):
+        controller = (ROOT / 'deploy/windows/nginxctl.ps1').read_text(encoding='utf-8')
 
-        self.assertIn("'nginx'", controller)
         for action in ('status', 'start', 'stop', 'restart', 'reload', 'test', 'pause', 'resume'):
             self.assertIn(f"'{action}'", controller)
-        self.assertIn('function Invoke-NginxControl', controller)
-        self.assertIn("Set-Maintenance $true", controller)
-        self.assertIn("Set-Maintenance $false", controller)
+        self.assertIn('function Set-NginxMaintenance', controller)
+        self.assertIn("return 503", controller)
+        self.assertIn("Start-Service $GatewayService", controller)
+        self.assertIn("Stop-Service $GatewayService", controller)
 
-    def test_package_validation_requires_runtime_files(self):
-        controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')
+    def test_double_click_wrapper_uses_nginx_controller(self):
+        wrapper = (ROOT / 'deploy/windows/nginx-control.cmd').read_text(encoding='utf-8')
 
-        self.assertIn("'runtime\\nginx\\nginx.exe'", controller)
-        self.assertIn("'runtime\\winsw\\WinSW-x64.exe'", controller)
+        self.assertIn('nginxctl.ps1', wrapper)
+        self.assertIn('%*', wrapper)
 
 
 if __name__ == '__main__':

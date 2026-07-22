@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.controller.UserController;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -28,8 +29,10 @@ class AuthorizationInterceptorPublicRegistrationTest {
         HandlerMethod handlerMethod = new HandlerMethod(controller, method);
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/register");
         MockHttpServletResponse response = new MockHttpServletResponse();
+        AuthorizationInterceptor interceptor = new AuthorizationInterceptor(
+                mock(DeveloperApiAccessService.class));
 
-        boolean allowed = new AuthorizationInterceptor().preHandle(request, response, handlerMethod);
+        boolean allowed = interceptor.preHandle(request, response, handlerMethod);
 
         assertThat(allowed).isTrue();
         assertThat(response.getStatus()).isEqualTo(200);

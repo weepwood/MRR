@@ -497,8 +497,8 @@ onMounted(reloadAll)
   margin-top: 5px;
   overflow: hidden;
   color: var(--el-text-color-placeholder);
-  white-space: nowrap;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chart-grid {

@@ -4,7 +4,7 @@ MRR 的发布必须能够回答五个问题：运行的是什么产品版本、�
 
 ## 唯一版本来源
 
-仓库根目录的 [`VERSION`](../../VERSION) 是 MRR 产品版本的唯一可信来源，当前格式为不带 `v` 前缀的 SemVer，例如：
+仓库根目录的 `VERSION` 是 MRR 产品版本的唯一可信来源，当前格式为不带 `v` 前缀的 SemVer，例如：
 
 ```text
 0.4.0
@@ -23,14 +23,14 @@ MRR 的发布必须能够回答五个问题：运行的是什么产品版本、�
 
 ## 发布兼容性来源
 
-根目录 [`release-baseline.json`](../../release-baseline.json) 描述当前产品版本的兼容边界：
+根目录 `release-baseline.json` 描述当前产品版本的兼容边界：
 
 ```json
 {
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260719174500",
+    "maximumCompatibleMigration": "20260722110500",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
@@ -83,7 +83,7 @@ python scripts/release_baseline.py validate
 Maven 构建会生成：
 
 - `META-INF/build-info.properties`：产品版本和构建时间；
-- `git.properties`：完整 Git Commit、短 Commit、分支和提交时间。
+- `BOOT-INF/classes/git.properties`：完整 Git Commit、短 Commit、分支和提交时间。
 
 运行中的后端可通过本机管理端口查看：
 

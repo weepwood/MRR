@@ -72,7 +72,7 @@ python scripts/release_baseline.py validate
 ```bash
 git clone https://github.com/weepwood/MRR.git
 cd MRR
-git checkout dev-no-login
+git switch main
 ```
 
 ### 数据库

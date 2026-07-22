@@ -13,7 +13,7 @@
 
 ```bash
 git fetch origin
-git checkout dev-no-login
+git switch main
 git pull --ff-only
 git checkout -b feat/short-description-YYYYMMDD
 ```

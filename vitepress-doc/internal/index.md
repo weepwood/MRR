@@ -1,6 +1,6 @@
 # MRR 内部文档
 
-> 面向开发、测试、部署、数据库和运维人员。本文档以 `dev-no-login` 当前代码、`application.properties` 和实际 Flyway 迁移为事实来源。
+> 面向开发、测试、部署、数据库和运维人员。本文档以 `main` 当前代码、`application.properties` 和实际 Flyway 迁移为事实来源。
 
 ## 文档导航
 

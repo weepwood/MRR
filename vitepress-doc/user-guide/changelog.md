@@ -8,7 +8,7 @@ outline: [2, 3]
 
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。GitHub 数据不可用时会自动降级为本地 Git 提交历史。
 
-- 当前分支：`dev-no-login`
+- 当前分支：`main`
 - GitHub 目标分支：`main`
 - 更新至：2026-07-21 · `eef2ac7`
 - 记录范围：最近 415 条第一父级提交（上限 1000 条）

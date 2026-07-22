@@ -22,6 +22,43 @@ function Assert-Administrator {
     }
 }
 
+function Assert-BundledRuntimeChecksums {
+    param(
+        [Parameter(Mandatory = $true)][string]$ChecksumPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ChecksumPath -PathType Leaf)) {
+        throw "发布包缺少 Nginx 运行时校验清单：$ChecksumPath"
+    }
+
+    $runtimeRoot = [IO.Path]::GetFullPath((Split-Path -Parent $ChecksumPath))
+    $runtimePrefix = $runtimeRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+
+    foreach ($line in Get-Content -LiteralPath $ChecksumPath -Encoding UTF8) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        if ($line -notmatch '^([a-fA-F0-9]{64})\s+\*?(.+)$') {
+            throw "无效的 Nginx 运行时校验行：$line"
+        }
+
+        $expected = $Matches[1].ToUpperInvariant()
+        $relative = $Matches[2].Trim().TrimStart('.', '/', '\').Replace('/', [IO.Path]::DirectorySeparatorChar)
+        $target = [IO.Path]::GetFullPath((Join-Path $runtimeRoot $relative))
+        if (-not $target.StartsWith($runtimePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Nginx 运行时校验路径越界：$relative"
+        }
+        if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+            throw "Nginx 运行时文件不存在：$relative"
+        }
+
+        $actual = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+        if ($actual -ne $expected) {
+            throw "Nginx 运行时 SHA-256 不匹配：$relative"
+        }
+    }
+
+    Write-Host '包内 Nginx 与 WinSW 运行时校验通过。' -ForegroundColor Green
+}
+
 function Write-TemplateIfMissing {
     param(
         [Parameter(Mandatory = $true)][string]$Source,
@@ -76,10 +113,15 @@ function Install-WinSWService {
 Assert-Administrator
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if ([string]::IsNullOrWhiteSpace($WinSWPath)) {
+$usingBundledWinSW = [string]::IsNullOrWhiteSpace($WinSWPath)
+$usingBundledNginx = [string]::IsNullOrWhiteSpace($NginxPath)
+if ($usingBundledWinSW -or $usingBundledNginx) {
+    Assert-BundledRuntimeChecksums (Join-Path $scriptDir '..\..\runtime\SHA256SUMS')
+}
+if ($usingBundledWinSW) {
     $WinSWPath = Join-Path $scriptDir '..\..\runtime\winsw\WinSW-x64.exe'
 }
-if ([string]::IsNullOrWhiteSpace($NginxPath)) {
+if ($usingBundledNginx) {
     $NginxPath = Join-Path $scriptDir '..\..\runtime\nginx'
 }
 

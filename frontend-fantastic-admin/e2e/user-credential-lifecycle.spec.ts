@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test.use({ storageState: { cookies: [], origins: [] } })
+test.use({ storageState: 'e2e/.auth/anonymous.json' })
 
 const adminProfile = {
   id: 1,
@@ -27,6 +27,7 @@ test.describe('用户凭据生命周期', () => {
       permissions: [],
     }
     await page.addInitScript((profile) => {
+      localStorage.clear()
       localStorage.setItem('token', 'temporary-token')
       localStorage.setItem('profile', JSON.stringify(profile))
       localStorage.setItem('permissions', '[]')
@@ -59,6 +60,7 @@ test.describe('用户凭据生命周期', () => {
 
   test('管理员创建用户后只展示一次临时密码且账号固定启用', async ({ page }) => {
     await page.addInitScript((profile) => {
+      localStorage.clear()
       localStorage.setItem('token', 'admin-token')
       localStorage.setItem('profile', JSON.stringify(profile))
       localStorage.setItem('permissions', JSON.stringify(profile.permissions))
@@ -118,7 +120,8 @@ test.describe('用户凭据生命周期', () => {
     await expect(page.getByText('新用户默认启用', { exact: false })).toBeVisible()
     await page.getByLabel('用户名').fill('doctor.test')
     await page.getByLabel('显示名称').fill('测试医生')
-    await page.getByLabel('角色').click()
+    const roleField = page.locator('.el-form-item').filter({ hasText: '角色' }).locator('.el-select__wrapper')
+    await roleField.click()
     await page.getByRole('option', { name: '医生' }).click()
     await page.getByRole('button', { name: '创建用户', exact: true }).last().click()
 

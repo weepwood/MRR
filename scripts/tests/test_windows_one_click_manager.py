@@ -23,6 +23,13 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn("@('test')", manager)
         self.assertIn("@('reload')", manager)
 
+    def test_background_invocation_splats_each_argument(self):
+        manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
+
+        self.assertIn('`$invokeArguments = @($literalArguments)', manager)
+        self.assertIn('& $scriptLiteral @invokeArguments', manager)
+        self.assertNotIn('& $scriptLiteral @($literalArguments)', manager)
+
     def test_manager_has_uac_and_double_click_entry(self):
         manager = (ROOT / 'deploy/windows/mrr-manager.ps1').read_text(encoding='utf-8')
         wrapper = (ROOT / 'deploy/windows/MRR-管理中心.cmd').read_text(encoding='utf-8')

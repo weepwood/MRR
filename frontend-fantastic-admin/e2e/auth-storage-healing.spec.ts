@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+test.use({ storageState: { cookies: [], origins: [] } })
+
 test.describe('登录状态迁移与自愈', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/v1/public/status/developer-mode', async (route) => {

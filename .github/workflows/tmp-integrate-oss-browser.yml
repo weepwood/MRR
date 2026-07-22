@@ -1,0 +1,84 @@
+name: 临时集成 OSS 文件资源管理器
+
+on:
+  push:
+    branches:
+      - feat/oss-migration-management-20260722
+    paths:
+      - '.github/workflows/tmp-integrate-oss-browser.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/oss-migration-management-20260722
+          fetch-depth: 0
+      - name: Integrate explorer component
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('frontend-fantastic-admin/src/views/oss-migration/index.vue')
+          text = path.read_text(encoding='utf-8')
+
+          import_marker = "} from '@/api/modules/oss'\n\ndefineOptions({ name: 'OssMigrationPage' })"
+          import_replacement = "} from '@/api/modules/oss'\nimport OssFileExplorer from './components/OssFileExplorer.vue'\n\ndefineOptions({ name: 'OssMigrationPage' })"
+          if import_marker not in text:
+              raise SystemExit('未找到 OSS 页面导入位置')
+          text = text.replace(import_marker, import_replacement, 1)
+
+          component_marker = '''      </div>
+          <el-button
+            type="primary"
+            :icon="UploadFilled"
+            :disabled="!selectedPendingIds.length || hasActiveJob"
+            :loading="loading.manual"
+            @click="handleManualUpload"
+          >
+            手工上传 {{ selectedPendingIds.length }} 条
+          </el-button>
+        </div>
+      </el-card>
+
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <strong>迁移任务历史</strong>'''
+          component_replacement = '''      </div>
+          <el-button
+            type="primary"
+            :icon="UploadFilled"
+            :disabled="!selectedPendingIds.length || hasActiveJob"
+            :loading="loading.manual"
+            @click="handleManualUpload"
+          >
+            手工上传 {{ selectedPendingIds.length }} 条
+          </el-button>
+        </div>
+      </el-card>
+
+      <OssFileExplorer />
+
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <strong>迁移任务历史</strong>'''
+          if component_marker not in text:
+              raise SystemExit('未找到 OSS 浏览器组件插入位置')
+          text = text.replace(component_marker, component_replacement, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend-fantastic-admin/src/views/oss-migration/index.vue
+          git commit -m "功能：在迁移管理页面集成 OSS 文件资源管理器"
+          git push origin HEAD:feat/oss-migration-management-20260722

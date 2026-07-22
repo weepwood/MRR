@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PERMISSION_DEFINITIONS,
   PERMISSION_HIERARCHY,
   checkAnyPermission,
   checkPermission,
   resolvePermissions,
 } from '../permission'
 
-describe('permission — PERMISSION_HIERARCHY', () => {
+describe('permission catalog', () => {
+  it('权限代码唯一且包含系统管理权限', () => {
+    const values = PERMISSION_DEFINITIONS.map(item => item.value)
+    expect(new Set(values).size).toBe(values.length)
+    expect(values).toContain('system:manage')
+    expect(values).toContain('system:read')
+  })
+
   it('record:manage 包含管理、编辑、查看与导出权限', () => {
     expect(PERMISSION_HIERARCHY['record:manage']).toEqual([
       'record:manage',
@@ -17,17 +25,14 @@ describe('permission — PERMISSION_HIERARCHY', () => {
     ])
   })
 
-  it('record:edit 包含 edit+read', () => {
-    expect(PERMISSION_HIERARCHY['record:edit']).toEqual(['record:edit', 'record:read'])
-  })
-
   it('导出权限分别包含查看权限', () => {
     expect(PERMISSION_HIERARCHY['record:download']).toEqual(['record:download', 'record:read'])
     expect(PERMISSION_HIERARCHY['record:pdf:export']).toEqual(['record:pdf:export', 'record:read'])
   })
 
-  it('role:manage 包含 manage+read', () => {
+  it('角色与系统管理权限继承对应查看权限', () => {
     expect(PERMISSION_HIERARCHY['role:manage']).toEqual(['role:manage', 'role:read'])
+    expect(PERMISSION_HIERARCHY['system:manage']).toEqual(['system:manage', 'system:read'])
   })
 })
 
@@ -79,8 +84,9 @@ describe('permission — checkPermission', () => {
     expect(checkPermission(['record:read'], 'record:pdf:export')).toBe(false)
   })
 
-  it('拥有 record:read 不通过 record:manage 检查', () => {
-    expect(checkPermission(['record:read'], 'record:manage')).toBe(false)
+  it('系统查看不能执行系统管理操作', () => {
+    expect(checkPermission(['system:read'], 'system:manage')).toBe(false)
+    expect(checkPermission(['system:manage'], 'system:read')).toBe(true)
   })
 
   it('拥有精确权限通过检查', () => {

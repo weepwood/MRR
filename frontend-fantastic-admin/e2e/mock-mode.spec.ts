@@ -86,7 +86,7 @@ test.describe('无后端 Mock 模式', () => {
     await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'plain')
 
-    const header = page.locator('.mrr-page-header').first()
+    const header = page.locator('.page-header').first()
     await expect(header).toBeVisible()
     const plainStyle = await header.evaluate((node) => {
       const style = window.getComputedStyle(node)
@@ -106,7 +106,7 @@ test.describe('无后端 Mock 模式', () => {
 
     await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
     await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
-    const cardStyle = await page.locator('.mrr-page-header').first().evaluate((node) => {
+    const cardStyle = await page.locator('.page-header').first().evaluate((node) => {
       const style = window.getComputedStyle(node)
       return { backgroundImage: style.backgroundImage, borderRadius: Number.parseFloat(style.borderRadius), boxShadow: style.boxShadow }
     })

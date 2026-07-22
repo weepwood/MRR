@@ -11,6 +11,16 @@ public interface OssService {
     String uploadFile(String localFilePath, String ossKey);
 
     /**
+     * Upload a local file to OSS with a checksum already calculated by the caller.
+     *
+     * <p>The default keeps compatibility with existing implementations. Implementations may override
+     * this method to avoid reading a large file twice.</p>
+     */
+    default String uploadFile(String localFilePath, String ossKey, String sourceMd5) {
+        return uploadFile(localFilePath, ossKey);
+    }
+
+    /**
      * Generate a pre-signed URL for private read access.
      * @param ossKey the OSS object key
      * @return a time-limited signed URL

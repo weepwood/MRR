@@ -9,7 +9,7 @@ const productVersion = fs.readFileSync(
 
 export default defineConfig({
   title: `MRR 用户手册 v${productVersion}`,
-  description: 'MRR管理系统用户操作手册',
+  description: 'MRR 医疗病案文件管理系统用户操作手册',
   lang: 'zh-CN',
   base: '/docs/',
   srcDir: 'user-guide',
@@ -20,6 +20,8 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/docs/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#0a7c42' }],
     ['meta', { name: 'robots', content: 'noindex,nofollow' }],
+    ['meta', { property: 'og:title', content: `MRR 用户手册 v${productVersion}` }],
+    ['meta', { property: 'og:description', content: '病案查询、影像调阅、导出、迁移和系统管理指南' }],
   ],
 
   themeConfig: {
@@ -27,9 +29,10 @@ export default defineConfig({
     siteTitle: `MRR 用户手册 v${productVersion}`,
     nav: [
       { text: '用户手册', link: '/' },
+      { text: '影像档案袋', link: '/images' },
+      { text: '系统管理', link: '/admin' },
       { text: '常见问题', link: '/faq' },
       { text: '更新说明', link: '/release-notes' },
-      { text: '更新记录', link: '/changelog' },
       { text: `v${productVersion}`, link: '/release-notes' },
     ],
     sidebar: [
@@ -39,6 +42,7 @@ export default defineConfig({
         items: [
           { text: '用户指南', link: '/' },
           { text: '快速上手', link: '/getting-started' },
+          { text: '账号、注册与登录', link: '/accounts' },
           { text: '常见问题', link: '/faq' },
         ],
       },
@@ -54,12 +58,19 @@ export default defineConfig({
         ],
       },
       {
+        text: '存储与数据治理',
+        collapsed: false,
+        items: [
+          { text: 'OSS 迁移管理', link: '/oss-migration' },
+          { text: '存储与文件浏览', link: '/storage-browser' },
+          { text: '数据关系工作台', link: '/data-relation-workbench' },
+        ],
+      },
+      {
         text: '管理与运维',
         collapsed: false,
         items: [
           { text: '系统管理', link: '/admin' },
-          { text: 'OSS 迁移管理', link: '/oss-migration' },
-          { text: '数据关系工作台', link: '/data-relation-workbench' },
           { text: '日志、审计与监控', link: '/logs' },
         ],
       },
@@ -91,6 +102,10 @@ export default defineConfig({
     lastUpdated: { text: '最后更新于', formatOptions: { dateStyle: 'short', timeStyle: 'short' } },
     returnToTopLabel: '返回顶部',
     sidebarMenuLabel: '菜单',
+    footer: {
+      message: `本手册以 main 当前代码与权限配置为准（v${productVersion}）`,
+      copyright: `Copyright © 2024-${new Date().getFullYear()} MRR Team`,
+    },
   },
 
   markdown: {
@@ -102,5 +117,5 @@ export default defineConfig({
   },
 
   lastUpdated: true,
-  ignoreDeadLinks: true,
+  ignoreDeadLinks: false,
 })

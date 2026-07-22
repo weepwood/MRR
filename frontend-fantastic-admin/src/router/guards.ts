@@ -11,7 +11,7 @@ import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 import '@/assets/styles/archive-legacy-mode.css'
 
-const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE === 'true'
+const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
 const EXTERNAL_TICKET_ACCESS_MODE = 'external-ticket'
 const EXTERNAL_CONTEXT_TIMEOUT = 5_000

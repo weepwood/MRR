@@ -1,0 +1,181 @@
+name: release-0.6.2-once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VERSION'
+      - 'backend-repo/pom.xml'
+      - 'release-baseline.json'
+      - 'CHANGELOG.md'
+      - 'release-notes/0.6.2.md'
+      - '.github/workflows/release-0.6.2-once.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-0.6.2
+  cancel-in-progress: false
+
+jobs:
+  tag-build-verify-and-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: v0.6.2
+      RELEASE_ASSET: MRR-v0.6.2.zip
+      SOURCE_SHA: ${{ github.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Validate release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = '0.6.2'
+          grep -F '<revision>0.6.2</revision>' backend-repo/pom.xml
+          test -f release-notes/0.6.2.md
+          python scripts/release_baseline.py validate
+          python scripts/check_main_branch_references.py
+          python -m unittest scripts.tests.test_windows_bundled_nginx -v
+
+      - name: Create immutable release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_tag="$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+          if [ -z "${remote_tag}" ]; then
+            remote_tag="$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+          fi
+
+          if [ -n "${remote_tag}" ]; then
+            if [ "${remote_tag}" != "${SOURCE_SHA}" ]; then
+              echo "Tag ${RELEASE_TAG} already points to ${remote_tag}, refusing to move it to ${SOURCE_SHA}." >&2
+              exit 1
+            fi
+            echo "Tag ${RELEASE_TAG} already points to the release commit."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "${RELEASE_TAG}" "${SOURCE_SHA}" -m 'MRR 0.6.2'
+          git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Ensure formal Windows release build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          asset_count='0'
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            asset_count="$(gh release view "${RELEASE_TAG}" --json assets --jq "[.assets[] | select(.name == env.RELEASE_ASSET)] | length")"
+          fi
+
+          if [ "${asset_count}" = '1' ]; then
+            echo 'Formal release asset already exists.'
+            exit 0
+          fi
+
+          run_id="$(gh run list \
+            --workflow windows-release-package.yml \
+            --event workflow_dispatch \
+            --limit 30 \
+            --json databaseId,headSha,status \
+            --jq '.[] | select(.headSha == env.SOURCE_SHA and (.status == "queued" or .status == "in_progress")) | .databaseId' \
+            | head -n 1)"
+
+          if [ -z "${run_id}" ]; then
+            gh workflow run windows-release-package.yml --ref "${RELEASE_TAG}"
+            for attempt in $(seq 1 30); do
+              run_id="$(gh run list \
+                --workflow windows-release-package.yml \
+                --event workflow_dispatch \
+                --limit 30 \
+                --json databaseId,headSha,status,createdAt \
+                --jq '.[] | select(.headSha == env.SOURCE_SHA) | .databaseId' \
+                | head -n 1)"
+              if [ -n "${run_id}" ]; then
+                break
+              fi
+              sleep 2
+            done
+          fi
+
+          if [ -z "${run_id}" ]; then
+            echo 'Unable to locate the formal Windows release workflow run.' >&2
+            exit 1
+          fi
+
+          echo "FORMAL_RELEASE_RUN_ID=${run_id}" >> "${GITHUB_ENV}"
+          gh run watch "${run_id}" --exit-status
+
+      - name: Publish release notes and verify asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "${RELEASE_TAG}" \
+            --title 'MRR v0.6.2' \
+            --notes-file release-notes/0.6.2.md
+
+          asset_count="$(gh release view "${RELEASE_TAG}" --json assets --jq "[.assets[] | select(.name == env.RELEASE_ASSET)] | length")"
+          test "${asset_count}" = '1'
+
+          rm -rf /tmp/mrr-release-check
+          mkdir -p /tmp/mrr-release-check/package
+          gh release download "${RELEASE_TAG}" --pattern "${RELEASE_ASSET}" --dir /tmp/mrr-release-check
+          test -s "/tmp/mrr-release-check/${RELEASE_ASSET}"
+          unzip -q "/tmp/mrr-release-check/${RELEASE_ASSET}" -d /tmp/mrr-release-check/package
+
+          package=/tmp/mrr-release-check/package
+          test "$(tr -d '\r\n' < "${package}/VERSION")" = '0.6.2'
+          test -f "${package}/backend/mrr-backend.jar"
+          test -f "${package}/frontend/index.html"
+          test -f "${package}/runtime/nginx/nginx.exe"
+          test -f "${package}/runtime/nginx/conf/mime.types"
+          test -f "${package}/runtime/winsw/WinSW-x64.exe"
+          test -f "${package}/deploy/windows/nginxctl.ps1"
+          test -f "${package}/deploy/windows/nginx-control.cmd"
+          test -f "${package}/deploy/windows/templates/nginx.conf"
+          test -f "${package}/deploy/windows/services/mrr-gateway.xml"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          package = Path('/tmp/mrr-release-check/package')
+          manifest = json.loads((package / 'manifest.json').read_text(encoding='utf-8'))
+          versions = json.loads((package / 'runtime/versions.json').read_text(encoding='utf-8'))
+          assert manifest['productVersion'] == '0.6.2'
+          assert manifest['gitCommit'] == '${{ github.sha }}'
+          assert versions['nginx']['version'] == '1.31.3'
+          assert versions['winsw']['version'] == '2.12.0'
+          PY
+
+          (
+            cd "${package}"
+            sha256sum --check --strict SHA256SUMS
+            cd runtime
+            sha256sum --check --strict SHA256SUMS
+          )
+
+      - name: Remove one-time release workflow
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          workflow_sha="$(gh api "repos/${REPOSITORY}/contents/.github/workflows/release-0.6.2-once.yml?ref=main" --jq '.sha')"
+          gh api \
+            --method DELETE \
+            "repos/${REPOSITORY}/contents/.github/workflows/release-0.6.2-once.yml" \
+            -f message='发布：验证 v0.6.2 并删除一次性任务' \
+            -f sha="${workflow_sha}" \
+            -f branch='main'

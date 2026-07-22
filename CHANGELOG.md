@@ -4,6 +4,39 @@
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-07-22
+
+### 新增
+
+- Windows 离线包内置 Nginx for Windows `1.31.3` 与 WinSW `2.12.0`，无需在内网服务器额外下载。
+- 新增 `nginxctl.ps1`，支持 `status/start/stop/restart/reload/test/pause/resume`。
+- 新增可双击运行并自动请求管理员权限的 `nginx-control.cmd` 中文控制菜单。
+- 发布包增加 `runtime/versions.json` 与独立运行时 `SHA256SUMS`。
+
+### 变更
+
+- `install.ps1` 默认读取发布包内运行时，并继续允许显式覆盖 Nginx 与 WinSW 路径。
+- 安装时根据 `-Root` 自动生成 Nginx 配置并注册 `MRR-Gateway` Windows 服务。
+- `pause` 统一表示 503 维护模式，Nginx 与后端进程保持运行；`resume` 平滑恢复流量。
+- Windows 发布工作流固定下载运行时版本，并将其纳入顶层发布包 SHA-256 清单。
+
+### 修复
+
+- 修复安装脚本依赖外部 Nginx/WinSW 路径，导致离线部署步骤不完整的问题。
+- 修复发布包直接解压到目标根目录且使用 `-Force` 时可能删除源 Nginx 运行时的问题。
+- 修复 Nginx 启停、重载、配置检查和维护模式缺少独立可视化入口的问题。
+
+### 安全与完整性
+
+- 安装前逐项验证包内 Nginx、WinSW、许可和版本文件的 SHA-256。
+- 校验清单中的路径必须位于运行时目录内，路径越界、文件缺失或摘要不一致时拒绝安装。
+
+### 发布与兼容性
+
+- 数据库兼容范围保持 `20260715113552` 至 `20260722110500`，本版本不新增 Flyway 迁移。
+- 配置结构版本保持 `1`。
+- 未完成 0.6.1 应用连接升级后环境的完整回滚演练，不允许只替换回旧应用文件。
+
 ## [0.6.1] - 2026-07-22
 
 ### 新增
@@ -88,7 +121,8 @@
 - 初始化 Spring Boot、Vue、PostgreSQL 和 VitePress 项目结构。
 - 建立基础认证、病案记录、统计、日志和文档能力。
 
-[Unreleased]: https://github.com/weepwood/MRR/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/weepwood/MRR/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/weepwood/MRR/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/weepwood/MRR/releases/tag/v0.6.1
 [0.1.1]: https://github.com/weepwood/MRR/releases/tag/v0.1.1
 [0.1.0]: https://github.com/weepwood/MRR/releases/tag/v0.1.0

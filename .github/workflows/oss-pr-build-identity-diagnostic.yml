@@ -1,0 +1,61 @@
+name: oss-pr-build-identity-diagnostic
+
+on:
+  pull_request:
+    branches:
+      - dev-no-login
+    paths:
+      - backend-repo/**
+      - VERSION
+      - .github/workflows/oss-pr-build-identity-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  identity-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and capture identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          PRODUCT_VERSION="$(tr -d '\r\n' < VERSION)"
+          (
+            cd backend-repo
+            mvn -B -ntp -DskipTests -Drevision="${PRODUCT_VERSION}" package
+          )
+          BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
+          {
+            echo "GITHUB_SHA=${GITHUB_SHA}"
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "HEAD_PARENTS=$(git show -s --format=%P HEAD)"
+            echo "PRODUCT_VERSION=${PRODUCT_VERSION}"
+            echo "BACKEND_JAR=${BACKEND_JAR}"
+            echo "--- build-info.properties ---"
+            unzip -p "${BACKEND_JAR}" BOOT-INF/classes/META-INF/build-info.properties || true
+            echo
+            echo "--- git.properties ---"
+            unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties || true
+          } > build-identity.txt
+
+      - name: Upload identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: oss-pr-build-identity
+          path: build-identity.txt
+          if-no-files-found: error
+          retention-days: 1

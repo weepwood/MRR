@@ -1,8 +1,8 @@
+import type { Ref } from 'vue'
+import type { GalleryImage, PatientInfo } from '../types'
 import type { ExternalArchiveCase, ExternalArchiveSession } from '@/api/modules/external-archive'
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import type { ApiResult, BAHImageData } from '@/api/types'
-import type { Ref } from 'vue'
-import type { GalleryImage, PatientInfo } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef, watch } from 'vue'
 import {

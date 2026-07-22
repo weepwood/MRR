@@ -173,8 +173,8 @@ onMounted(() => void initialize())
 <style scoped>
 .external-archive-state {
   display: grid;
-  min-height: 100vh;
   place-items: center;
+  min-height: 100vh;
   background: var(--surface-muted);
 }
 

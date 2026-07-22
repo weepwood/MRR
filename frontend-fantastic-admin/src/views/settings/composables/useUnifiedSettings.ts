@@ -1,13 +1,14 @@
+import type { EffectiveSystemSettings, SettingsSource } from '@/utils/system-settings'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import {
   createDefaultSystemSettings,
+
   loadEffectiveSystemSettings,
   serializeSystemSettings,
-  type EffectiveSystemSettings,
-  type SettingsSource,
+
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
@@ -33,10 +34,10 @@ function splitDeveloperSources(value: string): string[] {
 
 function isValidDeveloperSourceShape(value: string): boolean {
   const parts = value.split('/')
-  if (parts.length > 2 || !/^[0-9a-f:.]+$/i.test(parts[0] || '')) return false
+  if (parts.length > 2 || !/^[0-9a-f:.]+$/i.test(parts[0] || '')) { return false }
   const address = parts[0] || ''
-  if (!address.includes('.') && !address.includes(':')) return false
-  if (parts.length === 1) return true
+  if (!address.includes('.') && !address.includes(':')) { return false }
+  if (parts.length === 1) { return true }
 
   const prefix = Number(parts[1])
   const maxPrefix = address.includes(':') ? 128 : 32
@@ -91,7 +92,7 @@ export function useUnifiedSettings() {
       settingsSource.value = result.source
       markAsSaved()
       updateSyncTime()
-      if (showMessage) ElMessage.success('设置已重新加载')
+      if (showMessage) { ElMessage.success('设置已重新加载') }
     }
     finally {
       loading.value = false
@@ -104,7 +105,7 @@ export function useUnifiedSettings() {
       ElMessage.warning('系统名称、简称和英文名称不能为空')
       return false
     }
-    if (value.systemAdminEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.systemAdminEmail)) {
+    if (value.systemAdminEmail && !/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(value.systemAdminEmail)) {
       ElMessage.warning('系统管理员邮箱格式不正确')
       return false
     }
@@ -131,7 +132,7 @@ export function useUnifiedSettings() {
   }
 
   async function confirmDeveloperModeEnable() {
-    if (!developerModeChanged.value || !settings.value.developerModeEnabled || savedDeveloperModeEnabled.value) return true
+    if (!developerModeChanged.value || !settings.value.developerModeEnabled || savedDeveloperModeEnabled.value) { return true }
     try {
       await ElMessageBox.confirm(
         '启用后，只有配置的 IP 或网段才能通过本机 Nginx 以只读方式打开影像档案袋。请确认可信来源范围没有配置过大。',
@@ -146,7 +147,7 @@ export function useUnifiedSettings() {
   }
 
   async function handleSave(): Promise<boolean> {
-    if (!validateSettings() || !await confirmDeveloperModeEnable()) return false
+    if (!validateSettings() || !await confirmDeveloperModeEnable()) { return false }
     saving.value = true
     const developerChangeRequested = developerModeChanged.value
     try {
@@ -167,7 +168,7 @@ export function useUnifiedSettings() {
       return true
     }
     catch (error: any) {
-      if (developerChangeRequested) settings.value.developerModeEnabled = savedDeveloperModeEnabled.value
+      if (developerChangeRequested) { settings.value.developerModeEnabled = savedDeveloperModeEnabled.value }
       ElMessage.error(error?.response?.data?.message || error?.message || '服务端保存失败，设置未生效')
       return false
     }
@@ -185,7 +186,9 @@ export function useUnifiedSettings() {
     if (isDirty.value) {
       try {
         await ElMessageBox.confirm('重新加载会丢弃当前未保存修改，是否继续？', '重新加载设置', {
-          type: 'warning', confirmButtonText: '继续加载', cancelButtonText: '取消',
+          type: 'warning',
+          confirmButtonText: '继续加载',
+          cancelButtonText: '取消',
         })
       }
       catch {
@@ -196,7 +199,7 @@ export function useUnifiedSettings() {
   }
 
   function focusSettingsWorkspace() {
-    if (window.innerWidth < 960) return
+    if (window.innerWidth < 960) { return }
     shellRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
   }
 
@@ -208,11 +211,11 @@ export function useUnifiedSettings() {
   }
 
   watch(() => route.query.section, (value) => {
-    if (isSettingsSection(value)) activeSection.value = value
+    if (isSettingsSection(value)) { activeSection.value = value }
   })
 
   onMounted(() => {
-    if (isSettingsSection(route.query.section)) activeSection.value = route.query.section
+    if (isSettingsSection(route.query.section)) { activeSection.value = route.query.section }
     void loadSettings()
   })
 

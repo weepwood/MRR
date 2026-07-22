@@ -1,4 +1,5 @@
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type { QueuedResponseMetric, RetryOutcome } from '@/utils/response-metrics'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { createErrorDedupeCache } from '@/utils/request-error-dedupe'
@@ -12,8 +13,7 @@ import {
 import {
   createResponseMetric,
   createResponseMetricQueue,
-  type QueuedResponseMetric,
-  type RetryOutcome,
+
 } from '@/utils/response-metrics'
 import { shouldLogoutForUnauthorizedResponse } from '@/utils/unauthorized-session'
 
@@ -60,14 +60,14 @@ const api = axios.create({
 })
 
 function resolveApiUrl(path: string): string {
-  if (typeof window === 'undefined') return path
+  if (typeof window === 'undefined') { return path }
   const rawBase = String(api.defaults.baseURL || '/')
   const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`
   return new URL(path.replace(/^\/+/, ''), new URL(base, window.location.origin)).toString()
 }
 
 function sendResponseMetricsOnUnload(metrics: QueuedResponseMetric[]): boolean {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') { return false }
 
   const body = JSON.stringify({ metrics })
   const token = useUserStore().token
@@ -79,7 +79,7 @@ function sendResponseMetricsOnUnload(metrics: QueuedResponseMetric[]): boolean {
 
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (token) headers.Authorization = `Bearer ${token}`
+    if (token) { headers.Authorization = `Bearer ${token}` }
     void fetch(url, {
       method: 'POST',
       body,
@@ -110,12 +110,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function asBusinessPayload(value: unknown): BusinessErrorPayload | undefined {
-  if (!isRecord(value)) return undefined
+  if (!isRecord(value)) { return undefined }
   const payload: BusinessErrorPayload = {}
-  if (typeof value.code === 'number' || typeof value.code === 'string') payload.code = value.code
-  if (typeof value.status === 'number' || typeof value.status === 'string') payload.status = value.status
-  if (typeof value.message === 'string') payload.message = value.message
-  if (typeof value.msg === 'string') payload.msg = value.msg
+  if (typeof value.code === 'number' || typeof value.code === 'string') { payload.code = value.code }
+  if (typeof value.status === 'number' || typeof value.status === 'string') { payload.status = value.status }
+  if (typeof value.message === 'string') { payload.message = value.message }
+  if (typeof value.msg === 'string') { payload.msg = value.msg }
   return payload
 }
 
@@ -133,7 +133,7 @@ function parseServerDuration(response: AxiosResponse) {
   const explicitDuration = Number(
     response.headers['x-server-duration-ms'] ?? response.headers['x-response-time-ms'],
   )
-  if (Number.isFinite(explicitDuration)) return explicitDuration
+  if (Number.isFinite(explicitDuration)) { return explicitDuration }
 
   const serverTiming = String(response.headers['server-timing'] ?? '')
   const durationMatch = serverTiming.match(/(?:^|,)\s*app;dur=([\d.]+)/i)
@@ -145,7 +145,7 @@ function enqueueResponseMetric(
   response: AxiosResponse | undefined,
   payload: unknown,
 ) {
-  if (!config || config.skipResponseMetrics || !response) return
+  if (!config || config.skipResponseMetrics || !response) { return }
   const metric = createResponseMetric({
     requestId: String(response.headers['x-request-id'] ?? ''),
     endpointTemplate: String(response.headers['x-endpoint-template'] ?? ''),
@@ -157,7 +157,7 @@ function enqueueResponseMetric(
     retryCount: config.metricRetryCount,
     retryOutcome: config.metricRetryOutcome,
   })
-  if (metric) responseMetricQueue.enqueue(metric)
+  if (metric) { responseMetricQueue.enqueue(metric) }
 }
 
 function normalizeRequestError(error: unknown): Error {
@@ -169,7 +169,7 @@ function asInterceptorResult(payload: unknown): AxiosResponse {
 }
 
 function getRequestId(error: unknown): string | undefined {
-  if (!axios.isAxiosError(error)) return undefined
+  if (!axios.isAxiosError(error)) { return undefined }
   const value = error.response?.headers?.['x-request-id']
   return value == null ? undefined : String(value)
 }
@@ -193,7 +193,7 @@ function showGlobalError(error: Error) {
 
   registerRequestErrorFallback(error, () => {
     const decision = errorToastDedupe.check(key, requestId)
-    if (!decision.shouldNotify) return
+    if (!decision.shouldNotify) { return }
     const displayMessage = decision.firstRequestId
       ? `${message}（请求 ID：${decision.firstRequestId}）`
       : message
@@ -202,7 +202,7 @@ function showGlobalError(error: Error) {
 }
 
 function redirectToRequiredPasswordChange() {
-  if (isRedirectingToPasswordChange) return
+  if (isRedirectingToPasswordChange) { return }
   isRedirectingToPasswordChange = true
 
   useUserStore().markPasswordChangeRequired()
@@ -216,7 +216,7 @@ function redirectToRequiredPasswordChange() {
 }
 
 function recordFinalRetry(config: InternalAxiosRequestConfig | undefined, outcome: RetryOutcome) {
-  if (!config?.metricRetryCount) return
+  if (!config?.metricRetryCount) { return }
   config.metricRetryOutcome = outcome
   console.info('[HTTP retry completed]', {
     method: String(config.method ?? 'GET').toUpperCase(),
@@ -265,7 +265,7 @@ async function handleError(error: unknown) {
     })
 
     const canRetry = await waitForRetryDelay(retryDecision.delayMs, config.signal)
-    if (canRetry) return api(config)
+    if (canRetry) { return api(config) }
 
     recordFinalRetry(config, 'canceled')
     enqueueResponseMetric(config, axiosError?.response, axiosError?.response?.data)
@@ -276,16 +276,16 @@ async function handleError(error: unknown) {
   enqueueResponseMetric(config, axiosError?.response, axiosError?.response?.data)
 
   const normalizedError = normalizeRequestError(error)
-  if (!config?.skipGlobalError) showGlobalError(normalizedError)
+  if (!config?.skipGlobalError) { showGlobalError(normalizedError) }
   return Promise.reject(normalizedError)
 }
 
 api.interceptors.request.use((request) => {
-  if (request.metricStartedAt === undefined) request.metricStartedAt = performance.now()
-  if (request.idempotencyKey) request.headers.set('Idempotency-Key', request.idempotencyKey)
+  if (request.metricStartedAt === undefined) { request.metricStartedAt = performance.now() }
+  if (request.idempotencyKey) { request.headers.set('Idempotency-Key', request.idempotencyKey) }
 
   const userStore = useUserStore()
-  if (userStore.isLogin) request.headers.set('Authorization', `Bearer ${userStore.token}`)
+  if (userStore.isLogin) { request.headers.set('Authorization', `Bearer ${userStore.token}`) }
   return request
 })
 
@@ -299,7 +299,7 @@ api.interceptors.response.use(
     if (businessPayload) {
       if (businessPayload.status !== undefined && businessPayload.code === undefined) {
         const statusValue = businessPayload.status
-        if (statusValue === 1) return asInterceptorResult(payload)
+        if (statusValue === 1) { return asInterceptorResult(payload) }
         if (statusValue === 0 && !isLoggingOut) {
           isLoggingOut = true
           void Promise.resolve(useUserStore().requestLogout())
@@ -307,7 +307,7 @@ api.interceptors.response.use(
         }
         if (typeof statusValue === 'string') {
           const upperStatus = statusValue.toUpperCase()
-          if (['UP', 'DOWN', 'WARNING', 'UNKNOWN'].includes(upperStatus)) return asInterceptorResult(payload)
+          if (['UP', 'DOWN', 'WARNING', 'UNKNOWN'].includes(upperStatus)) { return asInterceptorResult(payload) }
         }
         return Promise.reject(normalizeRequestError(payload))
       }
@@ -316,7 +316,7 @@ api.interceptors.response.use(
         if (typeof businessPayload.code === 'number' && businessPayload.code >= 200 && businessPayload.code < 300) {
           return asInterceptorResult(payload)
         }
-        if (businessPayload.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') redirectToRequiredPasswordChange()
+        if (businessPayload.code === 'AUTH_PASSWORD_CHANGE_REQUIRED') { redirectToRequiredPasswordChange() }
         return Promise.reject(normalizeRequestError(payload))
       }
     }

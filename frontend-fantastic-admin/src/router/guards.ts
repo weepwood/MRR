@@ -107,7 +107,7 @@ function setupRoutes(router: Router) {
           // 网络错误或认证服务 503 不应误删仍可能有效的 Token。
           // 允许进入登录页重新认证，并在下次访问受保护页面时重试验证。
           console.error('[Router Guard] Session verification unavailable:', error)
-          if (to.name === 'login') return true
+          if (to.name === 'login') { return true }
           return loginRedirect('unavailable')
         }
       }

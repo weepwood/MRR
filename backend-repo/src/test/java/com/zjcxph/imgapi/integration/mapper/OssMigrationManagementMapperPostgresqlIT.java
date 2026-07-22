@@ -100,6 +100,13 @@ class OssMigrationManagementMapperPostgresqlIT {
     @DisplayName("迁移日志支持状态和 Scan ID 联合筛选")
     void filtersLogsByStatusAndScanId() {
         jdbcTemplate.update("""
+                INSERT INTO app.mr_scan
+                    (id, brxh, bah, sjh, filename, pages, uploadflag, folder)
+                VALUES
+                    (88, '88', '00994088', '88880088', 'log-88.jpg', 1, 1, '25.03.15'),
+                    (99, '99', '00994099', '99990099', 'log-99.jpg', 1, 1, '25.03.15')
+                """);
+        jdbcTemplate.update("""
                 INSERT INTO app.image_migration_log
                     (scan_id, local_path, migration_status, error_message)
                 VALUES

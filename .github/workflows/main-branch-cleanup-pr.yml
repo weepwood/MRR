@@ -154,11 +154,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          {
+            git diff --name-only --diff-filter=ACMRT -z
+            git ls-files --others --exclude-standard -z
+          } > /tmp/cleanup-changed-files.z
+
           mkdir -p cleanup-result/files
           while IFS= read -r -d '' file; do
+            case "$file" in
+              cleanup-result/*) continue ;;
+            esac
             mkdir -p "cleanup-result/files/$(dirname "$file")"
             cp "$file" "cleanup-result/files/$file"
-          done < <(git diff --name-only --diff-filter=ACMRT -z)
+          done < /tmp/cleanup-changed-files.z
+
           git diff --name-only --diff-filter=D > cleanup-result/deleted-files.txt
           git diff --stat > cleanup-result/diff-stat.txt
           git diff --binary > cleanup-result/cleanup.patch
@@ -169,5 +178,6 @@ jobs:
         with:
           name: main-branch-cleanup-result-${{ github.run_id }}
           path: cleanup-result
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7

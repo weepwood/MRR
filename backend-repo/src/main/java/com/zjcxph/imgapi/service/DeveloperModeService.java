@@ -40,7 +40,6 @@ public class DeveloperModeService {
     private static final Set<String> TRUE_VALUES = Set.of("true", "1", "yes", "on", "enabled");
     private static final long CACHE_TTL_NANOS = TimeUnit.SECONDS.toNanos(3);
 
-    private static final Pattern IMAGE_BY_BAH = Pattern.compile("^/api/v1/img/\\d{1,8}$");
     private static final Pattern IMAGE_CONTENT = Pattern.compile("^/api/v1/img/image/[^/]+/[^/]+/[^/]+/[^/]+$");
     private static final Pattern IMAGE_URL = Pattern.compile("^/api/v1/img/url/\\d+$");
     private static final Pattern OSS_IMAGE = Pattern.compile("^/api/v1/img/oss-image/\\d+$");
@@ -109,8 +108,7 @@ public class DeveloperModeService {
         if (path.startsWith("/api/v1/img/download/")) {
             return false;
         }
-        return IMAGE_BY_BAH.matcher(path).matches()
-                || IMAGE_CONTENT.matcher(path).matches()
+        return IMAGE_CONTENT.matcher(path).matches()
                 || IMAGE_URL.matcher(path).matches()
                 || OSS_IMAGE.matcher(path).matches()
                 || PATIENT_BY_BAH.matcher(path).matches();

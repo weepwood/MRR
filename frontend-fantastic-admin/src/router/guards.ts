@@ -1,41 +1,20 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
 import { canUseArchiveLegacyRoute, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
+import {
+  clearExternalArchiveSession,
+  getExternalArchiveContext,
+  setExternalArchiveSession,
+} from '@/api/modules/external-archive'
+import { setArchiveAccessMode } from '@/views/statistics/archive/access-mode'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 import '@/assets/styles/archive-legacy-mode.css'
 
 const isDemoMode = import.meta.env.VITE_APP_DEMO_MODE
 const PASSWORD_CHANGE_ROUTE_NAME = 'passwordChangeRequired'
-const ARCHIVE_LEGACY_ACCESS_MODE = 'archive-legacy'
 const EXTERNAL_TICKET_ACCESS_MODE = 'external-ticket'
-const EXTERNAL_ARCHIVE_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
-
-function setArchiveDomAccessMode(mode = '') {
-  if (typeof document === 'undefined') {
-    return
-  }
-  if (mode) {
-    document.documentElement.dataset.mrrAccessMode = mode
-  }
-  else {
-    delete document.documentElement.dataset.mrrAccessMode
-  }
-}
-
-function hasStoredExternalArchiveSession(): boolean {
-  if (typeof window === 'undefined') {
-    return false
-  }
-  try {
-    const raw = sessionStorage.getItem(EXTERNAL_ARCHIVE_SESSION_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) as { cases?: unknown[] } : null
-    return Array.isArray(parsed?.cases) && parsed.cases.length > 0
-  }
-  catch {
-    return false
-  }
-}
+const EXTERNAL_CONTEXT_TIMEOUT = 5_000
 
 function firstQueryValue(value: unknown): string {
   return String(Array.isArray(value) ? value[0] : value ?? '').trim()
@@ -49,28 +28,44 @@ function isExternalTicketArchiveRoute(name: unknown, query: Record<string, unkno
 
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
-    setArchiveDomAccessMode()
+    setArchiveAccessMode('internal')
 
-    if (to.name === 'publicStatus' || to.name === 'externalArchive') {
+    if (to.name === 'publicStatus') {
+      clearExternalArchiveSession()
+      return true
+    }
+    if (to.name === 'externalArchive') {
+      clearExternalArchiveSession()
       return true
     }
 
     if (isExternalTicketArchiveRoute(to.name, to.query)) {
-      if (hasStoredExternalArchiveSession()) {
-        setArchiveDomAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
+      try {
+        const response = await getExternalArchiveContext({ timeout: EXTERNAL_CONTEXT_TIMEOUT })
+        const session = response.data
+        if (!session?.cases?.length) {
+          throw new Error('外部系统未授权任何可访问的影像病案')
+        }
+        setExternalArchiveSession(session)
+        setArchiveAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
         return true
       }
-      const bah = firstQueryValue(to.query.bah)
-      const sjh = firstQueryValue(to.query.sjh)
-      return {
-        name: 'externalArchive',
-        replace: true,
-        query: {
-          ...(bah ? { bah } : {}),
-          ...(sjh ? { sjh } : {}),
-        },
+      catch {
+        clearExternalArchiveSession()
+        const bah = firstQueryValue(to.query.bah)
+        const sjh = firstQueryValue(to.query.sjh)
+        return {
+          name: 'externalArchive',
+          replace: true,
+          query: {
+            ...(bah ? { bah } : {}),
+            ...(sjh ? { sjh } : {}),
+          },
+        }
       }
     }
+
+    clearExternalArchiveSession()
 
     const settingsStore = useSettingsStore()
     const userStore = useUserStore()
@@ -209,7 +204,7 @@ function setupRoutes(router: Router) {
     else {
       const developerModeStatus = await getRuntimeDeveloperModeStatus()
       if (canUseArchiveLegacyRoute(to.name, developerModeStatus)) {
-        setArchiveDomAccessMode(ARCHIVE_LEGACY_ACCESS_MODE)
+        setArchiveAccessMode('archive-legacy')
         return true
       }
 

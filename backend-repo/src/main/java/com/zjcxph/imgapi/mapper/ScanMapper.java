@@ -20,7 +20,8 @@ public interface ScanMapper {
     String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
             "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
     String MIGRATION_ELIGIBLE_EXPRESSION = "((migration_status IS NULL OR migration_status = 'not_migrated') " +
-            "OR (migration_status = 'retry_wait' AND (migration_next_retry_at IS NULL OR migration_next_retry_at <= NOW())))";
+            "OR (migration_status = 'retry_wait' AND (migration_next_retry_at IS NULL " +
+            "OR NOT migration_next_retry_at > NOW())))";
 
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 AND (" +
             "BAH = #{normalizedCode} " +

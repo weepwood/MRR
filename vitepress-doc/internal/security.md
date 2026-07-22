@@ -35,29 +35,97 @@ OSS_ACCESS_KEY_SECRET
 - 401 处理应避免重复登出和重复提示。
 - 日志不得记录完整令牌。
 
-## 开发者模式
+## 开发者档案袋兼容模式
 
-系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。它用于受控开发、旧接口联调和迁移期间的临时兼容，不属于生产认证方案。
+系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。该开关只用于旧系统通过无 Token URL 打开独立影像档案袋，不再提供全系统开发者管理员身份。
 
-开启后的行为：
+模式必须同时满足：
 
-- 有效 JWT 仍按数据库中的真实用户、角色和权限处理；
-- 缺少、无效、过期、撤销或对应账号不可用的 Token 会回退到虚拟 `dev / ADMIN` 会话；
-- 虚拟会话拥有当前系统全部权限；
-- 普通 `/api/**` 跨域策略使用任意 Origin pattern；
-- 兼容响应添加 `X-MRR-Developer-Mode: enabled`；
-- 每次绕过认证都以 WARN 级别记录请求方法、路径、来源地址和原因；
-- 开关保存在 `mr_system_settings`，保存后刷新运行时缓存，无需重启。
+```text
+MRR_DEVELOPER_MODE_ALLOWED=true
++
+系统设置 developerModeEnabled=true
++
+后端连接来自启动配置允许的本机 Nginx
++
+真实客户端 IP 命中系统设置中的单 IP/CIDR 白名单
++
+请求没有 Authorization Header
++
+请求属于档案袋只读 GET 白名单
+```
+
+启动配置只维护可信代理地址，默认只信任与后端同机的 Nginx：
+
+```text
+MRR_DEVELOPER_MODE_TRUSTED_PROXY_ADDRESSES=127.0.0.1,::1
+```
+
+真实客户端白名单在“系统设置 → 开发者模式”中维护，对应设置键 `developerModeAllowedSources`。每行或使用逗号填写一个规则，支持：
+
+```text
+192.168.1.20
+192.168.1.0/24
+10.20.0.0/16
+::1
+2001:db8::/64
+```
+
+后端只在 `request.remoteAddr` 命中可信代理配置时读取 `X-Forwarded-For` 或 `X-Real-IP`。直接访问后端或从非可信代理伪造转发头不会获得兼容访问权限。空白名单会拒绝全部兼容访问，非法 IP/CIDR 会阻止设置保存。
+
+允许的兼容接口仅包括：
+
+- `/api/v1/img/search`；
+- 按病案号读取图片列表；
+- 单张本地、Nginx、OSS 图片读取；
+- 按病案号读取患者基本信息。
+
+兼容身份使用虚拟 ID `-1`、角色 `DEVELOPER_ARCHIVE`，只具备 `record:read` 和 `search:read`。它不能进入用户管理、系统设置、扫描管理和其他后台页面，也不能下载 ZIP、导出 PDF、打印或修改图片类型。
+
+旧系统示例：
+
+```text
+/archive?bah=789508&userid=HIS001
+/archive?bah=10000001&sjh=12345678&userid=HIS001
+```
+
+`userid` 仅作为审计标识和 IP 绑定键，不是登录凭据。任何无效、过期、撤销、错误类型 Token 或禁用用户都必须返回 401/403，不得降级到兼容身份。
+
+模式不会放开任意 Origin CORS。正常部署应通过同源 Nginx 访问；确需跨域联调时只配置精确 Origin。
+
+## 外部 Ticket 档案袋界面
+
+外部 Ticket 接口继续使用 HMAC、时间戳、nonce、客户端 IP 和外部 Session Cookie 作为授权边界。Ticket 验证成功后，不再打开独立的外部查看器，而是跳转并复用当前 `/archive` 影像档案袋页面：
+
+```text
+/archive/external?ticket=...
+        ↓ 交换 Ticket 并建立外部 Session
+/archive?external=ticket&bah=...&sjh=...
+```
+
+页面组件与内部档案袋保持一致，但数据源切换为 `/api/v1/external/archive/**`。外部 Session 中的 `cases` 是唯一可切换的病案范围，前端 URL 或 SessionStorage 不能扩大后端授权范围。
+
+所有外部访问模式，包括正式 Ticket 和旧开发者兼容调用，都遵循以下界面边界：
+
+- 不渲染 `search-card`，不能手动输入身份证号、病案号或上架号搜索其他病案；
+- 不加载或展示内部账号的“最近查询”和收藏记录；
+- 只显示外部 Session 或旧接口参数指定的病案；
+- 不允许修改图片类型；
+- Ticket 下载请求只有在 `allowDownload=true` 时才由外部下载接口执行，未授权时必须拒绝；
+- 外部 Ticket 不提供内部 PDF 导出入口；
+- Ticket 前端 Session 丢失时必须重新调用外部 Context 验证，不能回退到开发者兼容模式。
+
+删除独立外部查看器后，缩略图、类型筛选、患者卡片、图片预览和多病案切换均复用现有档案袋组件，避免两套界面产生行为差异。
 
 边界：
 
 - `/api/v1/integration/archive/tickets` 不经过 JWT 拦截器，仍执行 HMAC、时间戳、nonce 和 IP 白名单校验；
 - 外部影像 Session 仍按 Ticket 授权范围访问；
-- 开发者模式不会返回、生成或暴露 HMAC Secret；
+- 兼容模式不会返回、生成或暴露 HMAC Secret；
 - 数据库不可用、配置缺失或配置值无法识别时必须按关闭处理；
-- 生产环境、真实患者数据环境和可被非开发网络访问的环境禁止开启。
+- 生产正式外部接入优先使用 HMAC Ticket，旧接口兼容完成后应关闭该模式。
 
-验收关闭状态时，应使用无 Token 请求普通受保护 API，确认返回 `401`，并检查响应中不存在 `X-MRR-Developer-Mode`。
+验收关闭状态时，应使用无 Token 请求 `/api/v1/img/search`，确认返回 `401`，并检查响应中不存在 `X-MRR-Access-Mode`。
 
 ## AES 与身份证令牌
 
@@ -134,14 +202,13 @@ Nginx 必须保护搜索索引、JS、CSS、图片和 OpenAPI 文件，不能只
 
 ## CORS
 
-正常模式下，业务 API 与图片服务的 CORS 分别配置：
+业务 API 与图片服务的 CORS 分别配置：
 
 - 只允许实际前端来源。
 - 明确允许的方法与请求头。
 - 图片 PDF 导出使用 `credentials: omit`。
 - 使用 Cookie 的接口需要精确来源和 `Allow-Credentials`，不能使用通配符。
-
-开发者模式会临时将普通 API 改为任意 Origin pattern，仅用于隔离联调环境。关闭开发者模式后，动态 CORS 过滤器立即恢复精确 Origin 列表。
+- 开发者档案袋兼容模式不会修改 CORS 策略。
 
 ## 日志安全
 

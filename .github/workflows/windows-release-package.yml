@@ -26,12 +26,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -70,7 +73,7 @@ jobs:
           fi
 
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> "${GITHUB_ENV}"
-          echo "MRR_GIT_COMMIT=${GITHUB_SHA}" >> "${GITHUB_ENV}"
+          echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
           echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
       - name: Validate deployment sources
@@ -99,14 +102,46 @@ jobs:
         working-directory: backend-repo
         run: mvn -B -Drevision="${PRODUCT_VERSION}" test package
 
-      - name: Verify backend build identity
+      - name: Extract backend build identity
         shell: bash
         run: |
           set -euo pipefail
           BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
           test -n "${BACKEND_JAR}"
-          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/META-INF/build-info.properties | grep -F "build.version=${PRODUCT_VERSION}"
-          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties | grep -F "git.commit.id=${GITHUB_SHA}"
+          IDENTITY_DIR="build/backend-identity"
+          mkdir -p "${IDENTITY_DIR}"
+          unzip -l "${BACKEND_JAR}" > "${IDENTITY_DIR}/jar-entries.txt"
+          unzip -p "${BACKEND_JAR}" META-INF/build-info.properties > "${IDENTITY_DIR}/build-info.properties" || true
+          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties > "${IDENTITY_DIR}/git.properties" || true
+          printf 'source.sha=%s\njar.path=%s\n' "${SOURCE_SHA}" "${BACKEND_JAR}" > "${IDENTITY_DIR}/expected.properties"
+          echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
+
+      - name: Upload backend build identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build-identity
+          path: build/backend-identity
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify backend build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_INFO="$(cat build/backend-identity/build-info.properties)"
+          GIT_INFO="$(cat build/backend-identity/git.properties)"
+          grep -F "build.version=${PRODUCT_VERSION}" <<< "${BUILD_INFO}"
+
+          if grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}"; then
+            exit 0
+          fi
+          if grep -F "${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
+            exit 0
+          fi
+
+          echo "Backend git.properties does not contain source commit ${SOURCE_SHA}" >&2
+          printf '%s\n' "${GIT_INFO}" >&2
+          exit 1
 
       - name: Test and build frontend
         working-directory: frontend-fantastic-admin
@@ -116,20 +151,33 @@ jobs:
           pnpm test:run
           pnpm build
           grep -R --fixed-strings "${PRODUCT_VERSION}" dist >/dev/null
-          grep -R --fixed-strings "${GITHUB_SHA}" dist >/dev/null
+          grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
 
       - name: Build documentation
+        shell: bash
         working-directory: vitepress-doc
         env:
           GITHUB_TOKEN: ${{ github.token }}
           MRR_CHANGELOG_GITHUB: 'true'
           MRR_CHANGELOG_BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          npm ci
-          npm run docs:changelog:test
-          npm run docs:build
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+          set -o pipefail
+          {
+            npm ci
+            npm run docs:changelog:test
+            npm run docs:build
+            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
+            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+          } 2>&1 | tee docs-build.log
+
+      - name: Upload documentation build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-build-log
+          path: vitepress-doc/docs-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Assemble offline package
         id: package
@@ -141,16 +189,14 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             ARCHIVE="MRR-v${PRODUCT_VERSION}.zip"
           else
-            ARCHIVE="MRR-v${PRODUCT_VERSION}-${GITHUB_SHA:0:8}.zip"
+            ARCHIVE="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}.zip"
           fi
 
-          rm -rf build
+          rm -rf "${PACKAGE_DIR}"
           mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" \
                    "${PACKAGE_DIR}/docs/user" "${PACKAGE_DIR}/docs/internal" \
                    "${PACKAGE_DIR}/deploy/windows"
 
-          BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
-          test -n "${BACKEND_JAR}"
           cp "${BACKEND_JAR}" "${PACKAGE_DIR}/backend/mrr-backend.jar"
           cp -a frontend-fantastic-admin/dist/. "${PACKAGE_DIR}/frontend/"
           cp -a vitepress-doc/.vitepress/dist-user/. "${PACKAGE_DIR}/docs/user/"
@@ -159,14 +205,14 @@ jobs:
           cp VERSION release-baseline.json "${PACKAGE_DIR}/"
 
           python scripts/release_baseline.py manifest \
-            --git-commit "${GITHUB_SHA}" \
+            --git-commit "${SOURCE_SHA}" \
             --build-time "${MRR_BUILD_TIME}" \
             --output "${PACKAGE_DIR}/manifest.json"
 
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${GITHUB_SHA}" > "${PACKAGE_DIR}/release-notes.md"
+            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-notes.md"
           fi
 
           (

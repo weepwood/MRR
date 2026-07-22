@@ -204,11 +204,35 @@ Process.Start(new ProcessStartInfo
 浏览器打开 `launchUrl` 后，MRR 自动：
 
 1. 将一次性 Ticket 兑换为短期 HttpOnly Cookie；
-2. 从地址栏移除 Ticket；
-3. 读取授权病案上下文；
-4. 按授权范围读取图片和下载接口。
+2. 保存当前外部 Session 的授权病案上下文；
+3. 跳转到现有 `/archive` 影像档案袋页面，并从地址栏移除 Ticket；
+4. 使用 `/api/v1/external/archive/**` 读取授权病案、图片和可选下载接口；
+5. 只允许在 Ticket Session 的 `cases` 范围内切换病案。
+
+实际跳转形式：
+
+```text
+/archive/external?ticket=...
+        ↓
+/archive?external=ticket&bah=...&sjh=...
+```
 
 正式 HIS 后端不需要管理 MRR 外部 Session Cookie。
+
+### 外部页面界面边界
+
+外部 Ticket 页面复用当前影像档案袋的缩略图、患者卡片、类型筛选和图片预览组件，不再维护独立的外部查看器。
+
+所有外部调用均不提供 `search-card`：
+
+- 不显示身份证号、病案号和上架号输入框；
+- 不允许通过页面搜索 Ticket 未授权的其他病案；
+- 不加载或展示内部账号的最近查询和收藏记录；
+- 不允许修改图片类型；
+- 不提供内部 PDF 导出入口；
+- 下载请求仅在 Ticket 的 `allowDownload=true` 时由外部接口执行，未授权时会拒绝。
+
+浏览器刷新后若前端保存的外部 Session 已丢失，页面会重新请求外部 Context。Context 无效时直接显示外部访问错误，不会回退到开发者兼容模式。
 
 ## 认证测试台
 

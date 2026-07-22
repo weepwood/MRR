@@ -3,12 +3,12 @@ import { expect, test } from '@playwright/test'
 const developerModeStatusPattern = '**/api/v1/public/status/developer-mode'
 
 test.describe('开发者模式标题标识', () => {
-  test('启用时在应用名称旁显示紧凑标识', async ({ page }) => {
+  test('档案袋兼容模式启用时在应用名称旁显示紧凑标识', async ({ page }) => {
     await page.route(developerModeStatusPattern, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 200, data: { enabled: true } }),
+        body: JSON.stringify({ code: 200, data: { enabled: true, accessMode: 'ARCHIVE_LEGACY' } }),
       })
     })
 
@@ -26,7 +26,7 @@ test.describe('开发者模式标题标识', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 200, data: { enabled: false } }),
+        body: JSON.stringify({ code: 200, data: { enabled: false, accessMode: 'DISABLED' } }),
       })
     })
 

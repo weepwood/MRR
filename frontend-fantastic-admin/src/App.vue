@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { archiveAccessMode, canRenderArchiveRoute } from '@/views/statistics/archive/access-mode'
 import Provider from './ui/provider/index.vue'
 
 const SystemInfo = defineAsyncComponent(() => import('@/ui/components/FaSystemInfo/index.vue'))
@@ -9,6 +10,9 @@ const systemInfoVisible = ref(false)
 let resizeFrame: number | undefined
 
 const isAuth = computed(() => {
+  if (canRenderArchiveRoute(route.name, archiveAccessMode.value)) {
+    return true
+  }
   return route.matched.every((item) => {
     return auth(item.meta.auth ?? '')
   })

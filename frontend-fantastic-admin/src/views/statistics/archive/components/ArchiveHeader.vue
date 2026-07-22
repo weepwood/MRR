@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  archiveAccessMode,
+  isExternalArchiveAccessMode,
+} from '../access-mode'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
   ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
@@ -30,10 +34,13 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
-const searchHistory = ref<ArchiveSearchHistoryItem[]>(readArchiveSearchHistory())
+const externalAccess = computed(() => isExternalArchiveAccessMode(archiveAccessMode.value))
+const searchHistory = ref<ArchiveSearchHistoryItem[]>([])
 const historyVisible = ref(false)
 const allHistoryVisible = ref(false)
 const historyStatus = ref<'success' | 'failure' | 'favorite'>('success')
+let historyListenersAttached = false
+
 const displayedSuccessfulHistory = computed(() => searchHistory.value
   .filter(item => item.status === 'success')
   .slice(0, ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT))
@@ -88,17 +95,51 @@ function openAllHistory() {
   allHistoryVisible.value = true
 }
 
-onMounted(() => {
-  void loadArchiveSearchHistory().then((history) => {
-    searchHistory.value = history
-  })
+function attachHistoryListeners() {
+  if (historyListenersAttached) {
+    return
+  }
   window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
   window.addEventListener('storage', handleStorage)
+  historyListenersAttached = true
+}
+
+function detachHistoryListeners() {
+  if (!historyListenersAttached) {
+    return
+  }
+  window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
+  window.removeEventListener('storage', handleStorage)
+  historyListenersAttached = false
+}
+
+async function syncHistoryAccess(isExternal: boolean) {
+  if (isExternal) {
+    detachHistoryListeners()
+    searchHistory.value = []
+    historyVisible.value = false
+    allHistoryVisible.value = false
+    return
+  }
+
+  attachHistoryListeners()
+  searchHistory.value = readArchiveSearchHistory()
+  const history = await loadArchiveSearchHistory()
+  if (!externalAccess.value) {
+    searchHistory.value = history
+  }
+}
+
+onMounted(() => {
+  void syncHistoryAccess(externalAccess.value)
+})
+
+watch(externalAccess, (isExternal) => {
+  void syncHistoryAccess(isExternal)
 })
 
 onUnmounted(() => {
-  window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
-  window.removeEventListener('storage', handleStorage)
+  detachHistoryListeners()
 })
 </script>
 
@@ -112,98 +153,100 @@ onUnmounted(() => {
         <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
           刷新
         </el-button>
-        <el-popover
-          v-model:visible="historyVisible"
-          placement="bottom-end"
-          trigger="click"
-          :width="340"
-        >
-          <template #reference>
-            <el-button text size="small" :icon="Clock">
-              最近查询
-              <span v-if="successfulHistory.length" class="history-count">{{ successfulHistory.length }}</span>
-            </el-button>
-          </template>
+        <template v-if="!externalAccess">
+          <el-popover
+            v-model:visible="historyVisible"
+            placement="bottom-end"
+            trigger="click"
+            :width="340"
+          >
+            <template #reference>
+              <el-button text size="small" :icon="Clock">
+                最近查询
+                <span v-if="successfulHistory.length" class="history-count">{{ successfulHistory.length }}</span>
+              </el-button>
+            </template>
 
-          <div class="history-panel">
-            <div class="history-header">
-              <strong>搜索记录</strong>
-              <div class="history-actions">
-                <el-button v-if="searchHistory.length" text size="small" @click="openAllHistory">
-                  查看全部
-                </el-button>
-              </div>
-            </div>
-
-            <div v-if="displayedSuccessfulHistory.length" class="history-groups">
-              <section class="history-group">
-                <p class="history-group-title">
-                  成功查询
-                </p>
-                <div class="history-list">
-                  <div v-for="item in displayedSuccessfulHistory" :key="item.key" class="history-item">
-                    <button class="history-main" type="button" @click="selectHistory(item)">
-                      <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
-                      <span class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
-                      <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
-                    </button>
-                    <el-button
-                      text
-                      circle
-                      size="small"
-                      class="history-favorite-button"
-                      :class="{ 'is-favorite': item.favorite }"
-                      :icon="item.favorite ? StarFilled : Star"
-                      :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
-                      @click.stop="toggleHistoryFavorite(item.key)"
-                    />
-                  </div>
+            <div class="history-panel">
+              <div class="history-header">
+                <strong>搜索记录</strong>
+                <div class="history-actions">
+                  <el-button v-if="searchHistory.length" text size="small" @click="openAllHistory">
+                    查看全部
+                  </el-button>
                 </div>
-              </section>
-            </div>
-            <el-empty v-else :image-size="54" description="暂无成功查询记录" />
-          </div>
-        </el-popover>
+              </div>
 
-        <el-dialog v-model="allHistoryVisible" width="min(560px, calc(100vw - 32px))">
-          <template #header>
-            <div class="history-dialog-header">
-              <strong>搜索记录</strong>
-              <div class="history-filter-actions">
-                <el-button :type="historyStatus === 'success' ? 'primary' : 'default'" @click="historyStatus = 'success'">
-                  成功查询 ({{ successfulHistory.length }})
-                </el-button>
-                <el-button :type="historyStatus === 'failure' ? 'danger' : 'default'" @click="historyStatus = 'failure'">
-                  失败查询 ({{ failedHistory.length }})
-                </el-button>
-                <el-button :type="historyStatus === 'favorite' ? 'warning' : 'default'" :icon="StarFilled" @click="historyStatus = 'favorite'">
-                  收藏病案 ({{ favoriteHistory.length }})
-                </el-button>
+              <div v-if="displayedSuccessfulHistory.length" class="history-groups">
+                <section class="history-group">
+                  <p class="history-group-title">
+                    成功查询
+                  </p>
+                  <div class="history-list">
+                    <div v-for="item in displayedSuccessfulHistory" :key="item.key" class="history-item">
+                      <button class="history-main" type="button" @click="selectHistory(item)">
+                        <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
+                        <span class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
+                        <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
+                      </button>
+                      <el-button
+                        text
+                        circle
+                        size="small"
+                        class="history-favorite-button"
+                        :class="{ 'is-favorite': item.favorite }"
+                        :icon="item.favorite ? StarFilled : Star"
+                        :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
+                        @click.stop="toggleHistoryFavorite(item.key)"
+                      />
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <el-empty v-else :image-size="54" description="暂无成功查询记录" />
+            </div>
+          </el-popover>
+
+          <el-dialog v-model="allHistoryVisible" width="min(560px, calc(100vw - 32px))">
+            <template #header>
+              <div class="history-dialog-header">
+                <strong>搜索记录</strong>
+                <div class="history-filter-actions">
+                  <el-button :type="historyStatus === 'success' ? 'primary' : 'default'" @click="historyStatus = 'success'">
+                    成功查询 ({{ successfulHistory.length }})
+                  </el-button>
+                  <el-button :type="historyStatus === 'failure' ? 'danger' : 'default'" @click="historyStatus = 'failure'">
+                    失败查询 ({{ failedHistory.length }})
+                  </el-button>
+                  <el-button :type="historyStatus === 'favorite' ? 'warning' : 'default'" :icon="StarFilled" @click="historyStatus = 'favorite'">
+                    收藏病案 ({{ favoriteHistory.length }})
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            <div v-if="activeHistory.length" class="history-list history-dialog-list">
+              <div v-for="item in activeHistory" :key="item.key" class="history-item">
+                <button class="history-main" type="button" @click="selectHistory(item)">
+                  <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
+                  <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
+                  <span v-else class="history-secondary">{{ item.failureReason }}</span>
+                  <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
+                </button>
+                <el-button
+                  text
+                  circle
+                  size="small"
+                  class="history-favorite-button"
+                  :class="{ 'is-favorite': item.favorite }"
+                  :icon="item.favorite ? StarFilled : Star"
+                  :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
+                  @click.stop="toggleHistoryFavorite(item.key)"
+                />
               </div>
             </div>
-          </template>
-          <div v-if="activeHistory.length" class="history-list history-dialog-list">
-            <div v-for="item in activeHistory" :key="item.key" class="history-item">
-              <button class="history-main" type="button" @click="selectHistory(item)">
-                <span class="history-primary">病案号 {{ item.bah || '-' }}</span>
-                <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
-                <span v-else class="history-secondary">{{ item.failureReason }}</span>
-                <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
-              </button>
-              <el-button
-                text
-                circle
-                size="small"
-                class="history-favorite-button"
-                :class="{ 'is-favorite': item.favorite }"
-                :icon="item.favorite ? StarFilled : Star"
-                :aria-label="`${item.favorite ? '取消收藏' : '收藏'}病案号 ${item.bah || item.sjh}`"
-                @click.stop="toggleHistoryFavorite(item.key)"
-              />
-            </div>
-          </div>
-          <el-empty v-else :image-size="54" :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'" />
-        </el-dialog>
+            <el-empty v-else :image-size="54" :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'" />
+          </el-dialog>
+        </template>
       </div>
     </div>
   </header>
@@ -295,8 +338,8 @@ onUnmounted(() => {
 
 .history-dialog-header {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   justify-content: space-between;
 }
 

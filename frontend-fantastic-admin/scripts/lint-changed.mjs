@@ -8,6 +8,7 @@ const requestedBaseSha = process.env.LINT_BASE_SHA?.trim()
 const baseSha = requestedBaseSha && !/^0+$/.test(requestedBaseSha)
   ? requestedBaseSha
   : `${headSha}^`
+const shouldFix = process.argv.includes('--fix')
 
 function getChangedFiles() {
   const output = execFileSync(
@@ -38,8 +39,9 @@ function run(command, files) {
     return
   }
 
-  console.log(`[lint-changed] ${command}: ${files.join(', ')}`)
-  const result = spawnSync('pnpm', ['exec', command, ...files], {
+  console.log(`[lint-changed] ${command}${shouldFix ? ' --fix' : ''}: ${files.join(', ')}`)
+  const args = ['exec', command, ...(shouldFix ? ['--fix'] : []), ...files]
+  const result = spawnSync('pnpm', args, {
     cwd: frontendRoot,
     stdio: 'inherit',
   })

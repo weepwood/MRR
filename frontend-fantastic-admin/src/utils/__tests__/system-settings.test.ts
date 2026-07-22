@@ -29,6 +29,7 @@ describe('effective system settings', () => {
       patientIdCardRevealEnabled: 'true',
       patientIdCardCopyEnabled: '1',
       developerModeEnabled: 'enabled',
+      developerModeAllowedSources: '192.168.10.25\n192.168.20.0/24',
     })
 
     expect(settings.systemName).toBe('病案影像中心')
@@ -52,6 +53,7 @@ describe('effective system settings', () => {
     expect(settings.patientIdCardRevealEnabled).toBe(true)
     expect(settings.patientIdCardCopyEnabled).toBe(true)
     expect(settings.developerModeEnabled).toBe(true)
+    expect(settings.developerModeAllowedSources).toBe('192.168.10.25\n192.168.20.0/24')
   })
 
   it('uses secure defaults and rejects unsupported modes', () => {
@@ -77,6 +79,7 @@ describe('effective system settings', () => {
     expect(settings.systemAdminContactEnabled).toBe(false)
     expect(settings.systemAdminPublicVisible).toBe(false)
     expect(settings.developerModeEnabled).toBe(false)
+    expect(settings.developerModeAllowedSources).toBe('127.0.0.1\n::1')
   })
 
   it('serializes developer mode for the key-value API', () => {
@@ -84,6 +87,7 @@ describe('effective system settings', () => {
     const serialized = serializeSystemSettings({
       ...defaults,
       developerModeEnabled: true,
+      developerModeAllowedSources: '192.168.10.25\n192.168.20.0/24',
     })
 
     expect(defaults.imageSource).toBe('local')
@@ -95,6 +99,7 @@ describe('effective system settings', () => {
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(serialized.developerModeEnabled).toBe('true')
+    expect(serialized.developerModeAllowedSources).toBe('192.168.10.25\n192.168.20.0/24')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })
 })

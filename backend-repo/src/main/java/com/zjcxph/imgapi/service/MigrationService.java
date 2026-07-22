@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
+import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
 import com.zjcxph.imgapi.dto.resp.PageResult;
@@ -20,6 +22,8 @@ public interface MigrationService {
 
     MigrationStatisticsDTO getStatistics();
 
+    MigrationReadinessDTO getReadiness(int sampleSize);
+
     List<Scan> getPendingMigrations(int limit);
 
     List<Scan> getPendingMigrations(int limit, String folder);
@@ -34,9 +38,15 @@ public interface MigrationService {
 
     void enrichWithPresignedUrl(ImageMigrationLog log);
 
-    MigrationJob createMigrationJob();
+    MigrationJob createMigrationJob(MigrationJobRequest request);
 
     MigrationJob getMigrationJob(Long id);
 
     PageResult<MigrationJob> listMigrationJobs(int page, int size);
+
+    MigrationJob cancelMigrationJob(Long id);
+
+    int retryFailedScans(List<Integer> scanIds);
+
+    boolean hasActiveMigrationJob();
 }

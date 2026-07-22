@@ -374,7 +374,9 @@ onMounted(loadPermissions)
 
 <style scoped>
 .page-shell { display: grid; gap: 18px; }
+
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+
 .header-actions,
 .role-header,
 .role-name-row,
@@ -382,48 +384,77 @@ onMounted(loadPermissions)
 .matrix-legend,
 .matrix-legend span,
 .edit-fields { display: flex; align-items: center; }
+
 .header-actions,
 .role-name-row,
 .permission-tags,
 .matrix-legend,
 .edit-fields { gap: 8px; }
+
 .eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.12em; }
+
 h2 { margin: 0; font-size: 28px; }
+
 .subtitle,
 .role-description { margin: 8px 0 0; color: var(--text-secondary); }
+
 .roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+
 .role-card { display: grid; gap: 12px; }
+
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
+
 .role-header { gap: 12px; justify-content: space-between; }
+
 .permission-count,
 .admin-note,
 .category-label,
 .empty-text,
 .matrix-permission span { font-size: 12px; color: var(--text-tertiary); }
+
 .role-description { font-size: 13px; line-height: 1.6; }
+
 .admin-note { margin: 0; }
+
 .permission-groups { display: grid; gap: 10px; }
+
 .permission-groups section,
 .edit-section,
 .matrix-permission { display: grid; gap: 6px; }
+
 .permission-tags { flex-wrap: wrap; }
+
 .category-label { font-weight: 600; letter-spacing: 0.04em; }
+
 .edit-fields :deep(.el-input) { width: 150px; }
+
 .permission-select { width: 100%; }
+
 .matrix-card { overflow-x: auto; }
+
 .matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; }
+
 .matrix-dot.direct { color: hsl(var(--primary)); background: hsl(var(--primary) / 10%); }
+
 .matrix-dot.inherited { color: var(--text-tertiary); background: var(--surface-alt); }
+
 .matrix-legend { padding-top: 12px; margin-top: 14px; border-top: 1px solid var(--divider); }
+
 .matrix-legend span { gap: 5px; font-size: 12px; color: var(--text-secondary); }
+
 .legend { width: 13px; height: 13px; border: 1px solid var(--divider); border-radius: 4px; }
+
 .legend.direct { background: hsl(var(--primary) / 15%); border-color: hsl(var(--primary) / 30%); }
+
 .legend.inherited { background: var(--surface-alt); }
+
 .legend.none { background: transparent; }
 
 @media (width <= 760px) {
   .page-header { flex-direction: column; }
+
   .header-actions { justify-content: space-between; width: 100%; }
+
   .roles-grid { grid-template-columns: 1fr; }
 }
 </style>

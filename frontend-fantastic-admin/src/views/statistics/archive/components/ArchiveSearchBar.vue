@@ -3,7 +3,7 @@ import { Search } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { requiresSjhForBah } from '@/utils/medical-record-code'
 import {
-  resolveArchiveAccessMode,
+  archiveAccessMode,
   shouldShowArchiveSearchCard,
 } from '../access-mode'
 
@@ -20,10 +20,7 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
-const runtimeAccessMode = typeof document === 'undefined'
-  ? 'internal'
-  : resolveArchiveAccessMode('internal', document.documentElement.dataset.mrrAccessMode || '')
-const showSearchCard = shouldShowArchiveSearchCard(runtimeAccessMode)
+const showSearchCard = computed(() => shouldShowArchiveSearchCard(archiveAccessMode.value))
 const sjhRequired = computed(() => !searchIdCard.value.trim() && requiresSjhForBah(searchBah.value))
 </script>
 

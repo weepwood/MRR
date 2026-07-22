@@ -18,11 +18,30 @@ export const settingsNavItems = [
   { key: 'login-support', title: '登录与支持', description: '登录展示与管理员联系', icon: 'i-ri:customer-service-2-line' },
   { key: 'archive', title: '档案浏览', description: '图片来源与加载策略', icon: 'i-ri:image-2-line' },
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
-  { key: 'developer', title: '开发者模式', description: '接口兼容与跨域调试', icon: 'i-ri:code-box-line' },
+  { key: 'developer', title: '开发者模式', description: '旧接口与可信来源', icon: 'i-ri:code-box-line' },
   { key: 'department', title: '科室配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },
   { key: 'external-links', title: '外部链接', description: '维护“其他”导航入口', icon: 'i-ri:links-line' },
   { key: 'appearance', title: '界面外观', description: '主题、导航与页面样式', icon: 'i-ri:layout-4-line' },
 ] as const
+
+function splitDeveloperSources(value: string): string[] {
+  return value
+    .split(/[,;\r\n]+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function isValidDeveloperSourceShape(value: string): boolean {
+  const parts = value.split('/')
+  if (parts.length > 2 || !/^[0-9a-f:.]+$/i.test(parts[0] || '')) return false
+  const address = parts[0] || ''
+  if (!address.includes('.') && !address.includes(':')) return false
+  if (parts.length === 1) return true
+
+  const prefix = Number(parts[1])
+  const maxPrefix = address.includes(':') ? 128 : 32
+  return Number.isInteger(prefix) && prefix >= 0 && prefix <= maxPrefix
+}
 
 export function useUnifiedSettings() {
   const route = useRoute()
@@ -46,7 +65,10 @@ export function useUnifiedSettings() {
   const currentSnapshot = computed(() => serializeSystemSettings(settings.value))
   const changedKeys = computed(() => Object.keys(currentSnapshot.value).filter(key => currentSnapshot.value[key] !== savedSnapshot.value[key]))
   const isDirty = computed(() => changedKeys.value.length > 0)
-  const developerModeChanged = computed(() => changedKeys.value.includes('developerModeEnabled'))
+  const developerModeChanged = computed(() => changedKeys.value.some(key => [
+    'developerModeEnabled',
+    'developerModeAllowedSources',
+  ].includes(key)))
   const savedDeveloperModeEnabled = computed(() => savedSnapshot.value.developerModeEnabled === 'true')
 
   function isSettingsSection(value: unknown): value is SettingsSection {
@@ -94,6 +116,17 @@ export function useUnifiedSettings() {
       ElMessage.warning('每日 IP 切换次数必须是 0 到 20 之间的整数')
       return false
     }
+
+    const developerSources = splitDeveloperSources(value.developerModeAllowedSources)
+    if (value.developerModeEnabled && developerSources.length === 0) {
+      ElMessage.warning('启用开发者模式前，至少配置一个允许访问的 IP 或网段')
+      return false
+    }
+    const invalidSource = developerSources.find(item => !isValidDeveloperSourceShape(item))
+    if (invalidSource) {
+      ElMessage.warning(`可信来源格式不正确：${invalidSource}`)
+      return false
+    }
     return true
   }
 
@@ -101,9 +134,9 @@ export function useUnifiedSettings() {
     if (!developerModeChanged.value || !settings.value.developerModeEnabled || savedDeveloperModeEnabled.value) return true
     try {
       await ElMessageBox.confirm(
-        '启用后，无有效 JWT 的受保护 API 将以虚拟管理员身份执行，同时允许任意浏览器 Origin 跨域访问。仅限隔离的开发或联调环境使用。',
+        '启用后，只有配置的 IP 或网段才能通过本机 Nginx 以只读方式打开影像档案袋。请确认可信来源范围没有配置过大。',
         '确认启用开发者模式',
-        { type: 'error', confirmButtonText: '确认启用', cancelButtonText: '取消' },
+        { type: 'warning', confirmButtonText: '确认启用', cancelButtonText: '取消' },
       )
       return true
     }
@@ -129,7 +162,7 @@ export function useUnifiedSettings() {
       markAsSaved()
       updateSyncTime()
       ElMessage.success(developerChangeRequested
-        ? `开发者模式已${settings.value.developerModeEnabled ? '启用' : '关闭'}，后端已即时生效`
+        ? `开发者模式配置已保存，当前状态：${settings.value.developerModeEnabled ? '启用' : '关闭'}`
         : '系统设置已保存')
       return true
     }

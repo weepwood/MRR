@@ -11,6 +11,7 @@ import {
 } from '@/api/modules/archive-export'
 import {
   downloadExternalArchive,
+  externalArchiveSession,
   getExternalArchiveImages,
 } from '@/api/modules/external-archive'
 import { getImgByCode, updateImageType } from '@/api/modules/image'
@@ -25,15 +26,15 @@ import {
   requiresSjhForBah,
   resolveArchiveLookup,
 } from '@/utils/medical-record-code'
+import { archiveAccessMode } from '../access-mode'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { useArchiveExportJob } from './useArchiveExportJob'
 import { addArchiveSearchHistory } from './useArchiveSearchHistory'
 
 export interface UseArchiveImagesOptions {
-  externalSession?: Ref<ExternalArchiveSession | null | undefined>
+  externalSession?: Readonly<Ref<ExternalArchiveSession | null | undefined>>
 }
 
-const EXTERNAL_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
 const EXTERNAL_CASE_TOKEN = 'external-ticket'
 
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
@@ -61,26 +62,6 @@ function externalCaseToArchiveCase(item: ExternalArchiveCase): IdCardArchiveCase
   }
 }
 
-function readStoredExternalSession(): ExternalArchiveSession | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-  const params = new URLSearchParams(window.location.search)
-  const isExternalRoute = window.location.pathname === '/archive'
-    && (params.get('external') === 'ticket' || params.get('id') === EXTERNAL_CASE_TOKEN)
-  if (!isExternalRoute) {
-    return null
-  }
-  try {
-    const raw = sessionStorage.getItem(EXTERNAL_SESSION_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) as ExternalArchiveSession : null
-    return parsed?.cases?.length ? parsed : null
-  }
-  catch {
-    return null
-  }
-}
-
 export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const { auth } = useAuth()
   const exportJob = useArchiveExportJob('ZIP')
@@ -101,7 +82,18 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const maskedIdCard = ref('')
   let downloadArchiveKey = ''
 
-  const currentExternalSession = () => options.externalSession?.value || readStoredExternalSession()
+  const sessionSource = options.externalSession || externalArchiveSession
+  const currentExternalSession = () => sessionSource.value || null
+  const isExternalTicketMode = () => archiveAccessMode.value === 'external-ticket'
+
+  function clearExternalViewState(message = '') {
+    images.value = []
+    patientList.value = []
+    archiveCases.value = []
+    idCardToken.value = ''
+    maskedIdCard.value = ''
+    errorMsg.value = message
+  }
 
   function syncExternalArchiveCases(session = currentExternalSession()) {
     if (!session) {
@@ -142,7 +134,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       return
     }
 
-    if (currentExternalSession()) {
+    if (isExternalTicketMode()) {
       patientList.value = []
       return
     }
@@ -172,6 +164,11 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
     searchBah.value = bah
     searchSjh.value = sjh
+
+    if (isExternalTicketMode() && !externalSession) {
+      clearExternalViewState('外部影像会话已失效，请重新发起访问')
+      return
+    }
 
     if (lookup.validationMessage) {
       images.value = []
@@ -266,7 +263,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null> {
-    if (currentExternalSession()) {
+    if (isExternalTicketMode()) {
       return null
     }
     idCardLoading.value = true
@@ -292,7 +289,11 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
   async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null> {
     const externalSession = currentExternalSession()
-    if (externalSession && token === EXTERNAL_CASE_TOKEN) {
+    if (isExternalTicketMode()) {
+      if (!externalSession || token !== EXTERNAL_CASE_TOKEN) {
+        clearExternalViewState('外部影像会话已失效，请重新发起访问')
+        return null
+      }
       syncExternalArchiveCases(externalSession)
       return {
         token: EXTERNAL_CASE_TOKEN,
@@ -335,7 +336,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   function clearIdCardSearch() {
-    if (syncExternalArchiveCases()) {
+    if (isExternalTicketMode()) {
+      if (!syncExternalArchiveCases()) {
+        clearExternalViewState('外部影像会话已失效，请重新发起访问')
+      }
       return
     }
     archiveCases.value = []
@@ -349,7 +353,11 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     const bah = padCode(searchBah.value || firstImage?.bah || '')
     const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
 
-    if (externalSession) {
+    if (isExternalTicketMode()) {
+      if (!externalSession) {
+        ElMessage.warning('外部影像会话已失效，请重新发起访问')
+        return
+      }
       if (!externalSession.allowDownload) {
         ElMessage.warning('外部系统未授予批量下载权限')
         return
@@ -417,7 +425,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function saveImageType(img: GalleryImage, nextType: number): Promise<void> {
-    if (currentExternalSession()) {
+    if (isExternalTicketMode()) {
       ElMessage.warning('外部影像会话为只读模式，不能修改图片类型')
       return
     }
@@ -450,16 +458,15 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     }
   }
 
-  if (options.externalSession) {
-    watch(options.externalSession, (session) => {
-      if (session) {
-        syncExternalArchiveCases(session)
-      }
-    }, { immediate: true })
-  }
-  else {
-    syncExternalArchiveCases()
-  }
+  watch(sessionSource, (session) => {
+    if (session) {
+      syncExternalArchiveCases(session)
+      return
+    }
+    if (isExternalTicketMode()) {
+      clearExternalViewState('外部影像会话已失效，请重新发起访问')
+    }
+  }, { immediate: true })
 
   return {
     images,

@@ -1,0 +1,53 @@
+name: oss-pr-eslint-fix
+
+on:
+  push:
+    branches:
+      - feat/oss-migration-management-20260722
+
+permissions:
+  contents: write
+
+jobs:
+  eslint-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/oss-migration-management-20260722
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Fix Vue lint warnings
+        run: pnpm exec eslint src/views/oss-migration/index.vue --fix
+
+      - name: Commit lint fixes
+        shell: bash
+        working-directory: .
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend-fantastic-admin/src/views/oss-migration/index.vue
+          git commit -m "fix(OSS迁移): 修复迁移控制台模板格式"
+          git push origin HEAD:feat/oss-migration-management-20260722

@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 开发者模式下的业务权限旁路。
  *
- * <p>该服务只跳过业务权限检查，不跳过登录认证。请求仍必须携带有效 Token，
+ * <p>该服务只补齐业务权限，不跳过登录认证。请求仍必须携带有效 Token，
  * 因此数据库写入、审计日志和用户关联始终使用真实账号。</p>
  */
 @Service
@@ -49,7 +49,7 @@ public class DeveloperApiAccessService {
         if (request == null || !isEnabled()) {
             return false;
         }
-        String path = request.getRequestURI();
+        String path = normalizeRequestPath(request);
         if (!StringUtils.hasText(path) || !path.startsWith("/api/")) {
             return false;
         }
@@ -70,6 +70,15 @@ public class DeveloperApiAccessService {
 
     public synchronized void invalidate() {
         cacheExpiresAtNanos = 0L;
+    }
+
+    private String normalizeRequestPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (StringUtils.hasText(contextPath) && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        return path;
     }
 
     private void ensureLoaded() {

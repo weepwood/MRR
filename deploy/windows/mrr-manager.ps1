@@ -1,6 +1,7 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [string]$Root
+    [string]$Root,
+    [switch]$SelfTest
 )
 
 Set-StrictMode -Version Latest
@@ -23,7 +24,7 @@ if ([string]::IsNullOrWhiteSpace($Root)) {
 }
 $Root = [IO.Path]::GetFullPath($Root)
 
-if (-not (Test-Administrator)) {
+if (-not $SelfTest -and -not (Test-Administrator)) {
     $escapedScript = $PSCommandPath.Replace('"', '\"')
     $escapedRoot = $Root.Replace('"', '\"')
     $arguments = "-NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -File `"$escapedScript`" -Root `"$escapedRoot`""
@@ -43,6 +44,20 @@ if (-not (Test-Path -LiteralPath $mrrCtl -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $nginxCtl -PathType Leaf)) {
     $nginxCtl = Join-Path $scriptDir 'nginxctl.ps1'
+}
+
+if ($SelfTest) {
+    if (-not (Test-Path -LiteralPath $mrrCtl -PathType Leaf)) { throw "找不到 MRR 控制脚本：$mrrCtl" }
+    if (-not (Test-Path -LiteralPath $nginxCtl -PathType Leaf)) { throw "找不到 Nginx 控制脚本：$nginxCtl" }
+    [pscustomobject]@{
+        Title = 'MRR 一键管理中心'
+        PowerShellVersion = [string]$PSVersionTable.PSVersion
+        PowerShellEdition = [string]$PSVersionTable.PSEdition
+        MrrControl = $mrrCtl
+        NginxControl = $nginxCtl
+        Root = $Root
+    } | ConvertTo-Json -Depth 3
+    exit 0
 }
 
 $manifestPath = Join-Path $Root 'current\manifest.json'

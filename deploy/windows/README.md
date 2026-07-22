@@ -57,6 +57,17 @@ C:\MRR\ops\MRR-管理中心.cmd
 
 所有服务、维护和部署操作仍由 `mrrctl.ps1` 或 `nginxctl.ps1` 执行，管理中心不绕过发布基线、健康检查、构建身份或 SHA-256 校验。
 
+## Windows 脚本编码约定
+
+为兼容 Windows Server 2019 自带的 Windows PowerShell 5.1：
+
+- `deploy/windows/**/*.ps1` 必须使用 **UTF-8 with BOM**，否则 PowerShell 5.1 会按系统 ANSI 代码页解释中文字符串和文件名；
+- `deploy/windows/*.cmd` 必须使用 **UTF-8 without BOM**，避免 BOM 被 `cmd.exe` 当作首条命令的一部分；
+- CMD 入口必须先执行 `chcp 65001`，再输出或解析中文内容；
+- `mrr-manager.ps1 -SelfTest` 用于在 Windows PowerShell 5.1 下无界面验证程序集、中文文本和控制脚本路径。
+
+该约定由 Python 防回归测试和 `windows-latest` 门禁共同检查。
+
 ## 配置
 
 普通配置：

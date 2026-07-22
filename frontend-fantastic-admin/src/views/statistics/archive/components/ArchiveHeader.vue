@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { Clock, Refresh, Star, StarFilled } from '@element-plus/icons-vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
+  archiveAccessMode,
   isExternalArchiveAccessMode,
-  resolveArchiveAccessMode,
 } from '../access-mode'
 import {
   ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT,
@@ -34,14 +34,13 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
-const runtimeAccessMode = typeof document === 'undefined'
-  ? 'internal'
-  : resolveArchiveAccessMode('internal', document.documentElement.dataset.mrrAccessMode || '')
-const externalAccess = isExternalArchiveAccessMode(runtimeAccessMode)
-const searchHistory = ref<ArchiveSearchHistoryItem[]>(externalAccess ? [] : readArchiveSearchHistory())
+const externalAccess = computed(() => isExternalArchiveAccessMode(archiveAccessMode.value))
+const searchHistory = ref<ArchiveSearchHistoryItem[]>([])
 const historyVisible = ref(false)
 const allHistoryVisible = ref(false)
 const historyStatus = ref<'success' | 'failure' | 'favorite'>('success')
+let historyListenersAttached = false
+
 const displayedSuccessfulHistory = computed(() => searchHistory.value
   .filter(item => item.status === 'success')
   .slice(0, ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT))
@@ -96,23 +95,51 @@ function openAllHistory() {
   allHistoryVisible.value = true
 }
 
-onMounted(() => {
-  if (externalAccess) {
+function attachHistoryListeners() {
+  if (historyListenersAttached) {
     return
   }
-  void loadArchiveSearchHistory().then((history) => {
-    searchHistory.value = history
-  })
   window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
   window.addEventListener('storage', handleStorage)
-})
+  historyListenersAttached = true
+}
 
-onUnmounted(() => {
-  if (externalAccess) {
+function detachHistoryListeners() {
+  if (!historyListenersAttached) {
     return
   }
   window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, handleHistoryUpdated)
   window.removeEventListener('storage', handleStorage)
+  historyListenersAttached = false
+}
+
+async function syncHistoryAccess(isExternal: boolean) {
+  if (isExternal) {
+    detachHistoryListeners()
+    searchHistory.value = []
+    historyVisible.value = false
+    allHistoryVisible.value = false
+    return
+  }
+
+  attachHistoryListeners()
+  searchHistory.value = readArchiveSearchHistory()
+  const history = await loadArchiveSearchHistory()
+  if (!externalAccess.value) {
+    searchHistory.value = history
+  }
+}
+
+onMounted(() => {
+  void syncHistoryAccess(externalAccess.value)
+})
+
+watch(externalAccess, (isExternal) => {
+  void syncHistoryAccess(isExternal)
+})
+
+onUnmounted(() => {
+  detachHistoryListeners()
 })
 </script>
 

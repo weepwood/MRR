@@ -93,6 +93,30 @@ MRR_DEVELOPER_MODE_TRUSTED_PROXY_ADDRESSES=127.0.0.1,::1
 
 模式不会放开任意 Origin CORS。正常部署应通过同源 Nginx 访问；确需跨域联调时只配置精确 Origin。
 
+## 外部 Ticket 档案袋界面
+
+外部 Ticket 接口继续使用 HMAC、时间戳、nonce、客户端 IP 和外部 Session Cookie 作为授权边界。Ticket 验证成功后，不再打开独立的外部查看器，而是跳转并复用当前 `/archive` 影像档案袋页面：
+
+```text
+/archive/external?ticket=...
+        ↓ 交换 Ticket 并建立外部 Session
+/archive?external=ticket&bah=...&sjh=...
+```
+
+页面组件与内部档案袋保持一致，但数据源切换为 `/api/v1/external/archive/**`。外部 Session 中的 `cases` 是唯一可切换的病案范围，前端 URL 或 SessionStorage 不能扩大后端授权范围。
+
+所有外部访问模式，包括正式 Ticket 和旧开发者兼容调用，都遵循以下界面边界：
+
+- 不渲染 `search-card`，不能手动输入身份证号、病案号或上架号搜索其他病案；
+- 不加载或展示内部账号的“最近查询”和收藏记录；
+- 只显示外部 Session 或旧接口参数指定的病案；
+- 不允许修改图片类型；
+- Ticket 下载仅在 `allowDownload=true` 时显示并调用外部下载接口；
+- 外部 Ticket 不提供内部 PDF 导出入口；
+- Ticket 前端 Session 丢失时必须重新调用外部 Context 验证，不能回退到开发者兼容模式。
+
+删除独立外部查看器后，缩略图、类型筛选、患者卡片、图片预览和多病案切换均复用现有档案袋组件，避免两套界面产生行为差异。
+
 边界：
 
 - `/api/v1/integration/archive/tickets` 不经过 JWT 拦截器，仍执行 HMAC、时间戳、nonce 和 IP 白名单校验；

@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   cleanup:
@@ -143,29 +143,31 @@ jobs:
         run: |
           python -m unittest scripts.tests.test_check_main_branch_references -v
           python scripts/check_main_branch_references.py
+          git diff --check
 
-      - name: Upload cleanup diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: main-branch-cleanup-log-${{ github.run_id }}
-          path: |
-            cleanup.log
-            scripts/check_main_branch_references.py
-            scripts/tests/test_check_main_branch_references.py
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Remove temporary cleanup files
+      - name: Remove temporary cleanup workflows
         run: |
           rm .github/workflows/main-branch-cleanup-once.yml
           rm .github/workflows/main-branch-cleanup-pr.yml
 
-      - name: Commit cleanup
+      - name: Package cleanup result
         shell: bash
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m '维护：清理 dev-no-login 分支残留'
-          git push origin HEAD:chore/cleanup-main-branch-migration
+          set -euo pipefail
+          mkdir -p cleanup-result/files
+          while IFS= read -r -d '' file; do
+            mkdir -p "cleanup-result/files/$(dirname "$file")"
+            cp "$file" "cleanup-result/files/$file"
+          done < <(git diff --name-only --diff-filter=ACMRT -z)
+          git diff --name-only --diff-filter=D > cleanup-result/deleted-files.txt
+          git diff --stat > cleanup-result/diff-stat.txt
+          git diff --binary > cleanup-result/cleanup.patch
+          cp cleanup.log cleanup-result/cleanup.log
+
+      - name: Upload cleanup result
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-branch-cleanup-result-${{ github.run_id }}
+          path: cleanup-result
+          if-no-files-found: error
+          retention-days: 7

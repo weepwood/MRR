@@ -308,7 +308,7 @@ class MigrationServiceImplTest {
 
     @Test
     @DisplayName("缺少上架号时保留记录等待补齐且不计失败")
-    void missingSjhWaitsWithoutClaimingOrRetrying() {
+    void missingSjhWaitsWithoutClaimingOrRetrying() throws Exception {
         Scan scan = legacyScan(6, "00789513", "605751", null);
         scan.setSjh(null);
         when(scanMapper.findById(6)).thenReturn(scan);

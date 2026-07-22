@@ -154,17 +154,30 @@ jobs:
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
 
       - name: Build documentation
+        shell: bash
         working-directory: vitepress-doc
         env:
           GITHUB_TOKEN: ${{ github.token }}
           MRR_CHANGELOG_GITHUB: 'true'
           MRR_CHANGELOG_BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          npm ci
-          npm run docs:changelog:test
-          npm run docs:build
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+          set -o pipefail
+          {
+            npm ci
+            npm run docs:changelog:test
+            npm run docs:build
+            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
+            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+          } 2>&1 | tee docs-build.log
+
+      - name: Upload documentation build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-build-log
+          path: vitepress-doc/docs-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Assemble offline package
         id: package
@@ -199,7 +212,7 @@ jobs:
           if [ -f CHANGELOG.md ]; then
             cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
           else
-            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-notes.md"
+            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-nototes.md"
           fi
 
           (

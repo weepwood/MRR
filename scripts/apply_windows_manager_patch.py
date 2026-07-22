@@ -37,14 +37,6 @@ replace_once(
 )
 
 replace_once(
-    ROOT / '.github/workflows/windows-release-package.yml',
-    '          test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"\n',
-    '          test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"\n'
-    '          test -f "${PACKAGE_DIR}/deploy/windows/mrr-manager.ps1"\n'
-    '          test -f "${PACKAGE_DIR}/deploy/windows/MRR-管理中心.cmd"\n',
-)
-
-replace_once(
     ROOT / 'deploy/windows/README.md',
     '- **mrrctl.ps1**：状态、启停、维护、部署、版本和回滚入口；\n',
     '- **mrrctl.ps1**：状态、启停、维护、部署、版本和回滚入口；\n'

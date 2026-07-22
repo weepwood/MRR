@@ -3,8 +3,10 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.resp.PageResult;
+import com.zjcxph.imgapi.dto.resp.PatientImportResult;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.mapper.SearchMapper;
+import com.zjcxph.imgapi.service.PatientImportService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,20 +17,23 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 
 /**
  * 患者管理 Controller
- * 提供患者信息的分页查询、按病案号/身份证号查询等功能。
+ * 提供患者信息的分页查询、按病案号/身份证号查询和文件导入等功能。
  */
 @RestController
 @RequestMapping("/api/v1/patients")
@@ -39,9 +44,11 @@ public class PatientController {
     private static final Logger logger = LoggerFactory.getLogger(PatientController.class);
 
     private final SearchMapper searchMapper;
+    private final PatientImportService patientImportService;
 
-    public PatientController(SearchMapper searchMapper) {
+    public PatientController(SearchMapper searchMapper, PatientImportService patientImportService) {
         this.searchMapper = searchMapper;
+        this.patientImportService = patientImportService;
     }
 
     @Operation(summary = "分页查询患者列表（支持关键字搜索）")
@@ -63,6 +70,27 @@ public class PatientController {
         List<Patient> patients = searchMapper.findAllPaginated(offset, size, normalizedKeyword);
         int total = searchMapper.countAll(normalizedKeyword);
         return Result.<PageResult<Patient>>success().data(PageResult.of(patients, total, page, size));
+    }
+
+    @Operation(summary = "校验或导入患者 CSV/Excel 文件")
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequirePermissions({"record:edit"})
+    public Result<PatientImportResult> importPatients(
+            @Parameter(description = "CSV、XLSX 或 XLS 文件")
+            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "true 仅校验，false 正式导入")
+            @RequestParam(defaultValue = "true") boolean dryRun
+    ) {
+        try {
+            PatientImportResult result = patientImportService.importPatients(file, dryRun);
+            String message = dryRun ? "患者文件校验完成" : "患者数据导入完成";
+            return Result.success(message, result);
+        } catch (IllegalArgumentException exception) {
+            return Result.fail(exception.getMessage());
+        } catch (IOException exception) {
+            logger.warn("患者导入文件读取失败：file={}", safeFileName(file));
+            return Result.fail("导入文件读取失败，请检查文件格式和编码");
+        }
     }
 
     @Operation(summary = "根据病案号查询患者信息")
@@ -129,5 +157,13 @@ public class PatientController {
             response.setHeader("Content-Disposition", "attachment; filename=patients.xlsx");
             workbook.write(response.getOutputStream());
         }
+    }
+
+    private String safeFileName(MultipartFile file) {
+        if (file == null || file.getOriginalFilename() == null) {
+            return "unknown";
+        }
+        String fileName = file.getOriginalFilename().replace('\\', '/');
+        return fileName.substring(fileName.lastIndexOf('/') + 1);
     }
 }

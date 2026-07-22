@@ -15,6 +15,7 @@ import {
   type QueuedResponseMetric,
   type RetryOutcome,
 } from '@/utils/response-metrics'
+import { shouldLogoutForUnauthorizedResponse } from '@/utils/unauthorized-session'
 
 type BusinessCode = number | string
 
@@ -240,7 +241,7 @@ async function handleError(error: unknown) {
   if (response?.status === 401) {
     recordFinalRetry(config, 'failed')
     enqueueResponseMetric(config, response, response.data)
-    if (!isLoggingOut) {
+    if (!isLoggingOut && shouldLogoutForUnauthorizedResponse(useUserStore().isLogin)) {
       isLoggingOut = true
       try {
         await useUserStore().requestLogout()

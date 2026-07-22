@@ -9,6 +9,9 @@ const systemInfoVisible = ref(false)
 let resizeFrame: number | undefined
 
 const isAuth = computed(() => {
+  if (route.name === 'archive' && document.documentElement.dataset.mrrAccessMode === 'archive-legacy') {
+    return true
+  }
   return route.matched.every((item) => {
     return auth(item.meta.auth ?? '')
   })

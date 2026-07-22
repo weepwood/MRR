@@ -48,14 +48,18 @@ class SystemSettingServiceImplTest {
     }
 
     @Test
-    @DisplayName("saveSettings — 开发者模式保存后立即刷新运行时开关")
+    @DisplayName("saveSettings — 开发者模式保存后立即刷新运行时设置")
     void saveSettings_shouldRefreshDeveloperMode() {
-        Map<String, String> settings = Map.of(DeveloperModeService.SETTING_KEY, "true");
-        when(mapper.upsertAll(anyList())).thenReturn(1);
+        Map<String, String> settings = Map.of(
+                DeveloperModeService.SETTING_KEY, "true",
+                DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY, "192.168.10.0/24"
+        );
+        when(mapper.upsertAll(anyList())).thenReturn(2);
 
         service.saveSettings(settings, "admin");
 
         verify(developerModeService).refreshFromValue("true");
+        verify(developerModeService).refreshAllowedSourcesFromValue("192.168.10.0/24");
     }
 
     @Test
@@ -66,6 +70,16 @@ class SystemSettingServiceImplTest {
         service.setSetting("maxFileSize", "20", "admin");
 
         verify(mapper).upsert(any());
+    }
+
+    @Test
+    @DisplayName("setSetting — 可信来源单项设置即时刷新")
+    void setSetting_shouldRefreshDeveloperAllowedSources() {
+        when(mapper.upsert(any())).thenReturn(1);
+
+        service.setSetting(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY, "10.20.0.0/16", "admin");
+
+        verify(developerModeService).refreshAllowedSourcesFromValue("10.20.0.0/16");
     }
 
     @Test

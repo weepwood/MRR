@@ -168,14 +168,23 @@ foreach ($relative in $directories) {
 Remove-Item -LiteralPath (Join-Path $Root 'previous-placeholder') -Force -ErrorAction SilentlyContinue
 
 $nginxDestination = Join-Path $Root 'runtime\nginx'
-if ((Test-Path -LiteralPath $nginxDestination) -and $Force) {
-    Remove-Item -LiteralPath $nginxDestination -Recurse -Force
-}
-if (-not (Test-Path -LiteralPath $nginxDestination)) {
-    Copy-Item -LiteralPath $resolvedNginx -Destination $nginxDestination -Recurse -Force
+$nginxSourceFull = [IO.Path]::GetFullPath($resolvedNginx).TrimEnd([IO.Path]::DirectorySeparatorChar)
+$nginxDestinationFull = [IO.Path]::GetFullPath($nginxDestination).TrimEnd([IO.Path]::DirectorySeparatorChar)
+$nginxSourceIsDestination = $nginxSourceFull.Equals($nginxDestinationFull, [StringComparison]::OrdinalIgnoreCase)
+
+if ($nginxSourceIsDestination) {
+    Write-Host "使用目标安装目录中已存在的包内 Nginx：$nginxDestination"
 }
 else {
-    Write-Host "保留现有 Nginx：$nginxDestination"
+    if ((Test-Path -LiteralPath $nginxDestination) -and $Force) {
+        Remove-Item -LiteralPath $nginxDestination -Recurse -Force
+    }
+    if (-not (Test-Path -LiteralPath $nginxDestination)) {
+        Copy-Item -LiteralPath $resolvedNginx -Destination $nginxDestination -Recurse -Force
+    }
+    else {
+        Write-Host "保留现有 Nginx：$nginxDestination"
+    }
 }
 
 $rootUri = $Root.Replace('\', '/')

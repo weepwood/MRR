@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '.github/workflows/main-branch-cleanup-pr.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   cleanup:
@@ -20,12 +22,9 @@ jobs:
           fetch-depth: 0
 
       - name: Execute embedded cleanup script
-        id: cleanup-script
-        continue-on-error: true
         shell: bash
         run: |
-          set -o pipefail
-          python - <<'PY' 2>&1 | tee cleanup.log
+          python - <<'PY'
           from pathlib import Path
 
           workflow = Path('.github/workflows/main-branch-cleanup-once.yml').read_text(encoding='utf-8')
@@ -39,10 +38,6 @@ jobs:
           )
           exec(compile(script, 'main-branch-cleanup-once.yml', 'exec'))
           PY
-
-      - name: Preserve replacement failure
-        if: steps.cleanup-script.outcome == 'failure'
-        run: exit 1
 
       - name: Write branch reference checker
         shell: bash
@@ -145,39 +140,27 @@ jobs:
           python scripts/check_main_branch_references.py
           git diff --check
 
-      - name: Remove temporary cleanup workflows
-        run: |
-          rm .github/workflows/main-branch-cleanup-once.yml
-          rm .github/workflows/main-branch-cleanup-pr.yml
-
-      - name: Package cleanup result
+      - name: Commit non-workflow cleanup
         shell: bash
         run: |
-          set -euo pipefail
-          {
-            git diff --name-only --diff-filter=ACMRT -z
-            git ls-files --others --exclude-standard -z
-          } > /tmp/cleanup-changed-files.z
-
-          mkdir -p cleanup-result/files
-          while IFS= read -r -d '' file; do
-            case "$file" in
-              cleanup-result/*) continue ;;
-            esac
-            mkdir -p "cleanup-result/files/$(dirname "$file")"
-            cp "$file" "cleanup-result/files/$file"
-          done < /tmp/cleanup-changed-files.z
-
-          git diff --name-only --diff-filter=D > cleanup-result/deleted-files.txt
-          git diff --stat > cleanup-result/diff-stat.txt
-          git diff --binary > cleanup-result/cleanup.patch
-          cp cleanup.log cleanup-result/cleanup.log
-
-      - name: Upload cleanup result
-        uses: actions/upload-artifact@v4
-        with:
-          name: main-branch-cleanup-result-${{ github.run_id }}
-          path: cleanup-result
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 7
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            AGENTS.md \
+            CLAUDE.md \
+            CONTRIBUTING.md \
+            README.md \
+            backend-repo/docs/architecture-foundation-phase-1.md \
+            scripts/check_main_branch_references.py \
+            scripts/tests/test_check_main_branch_references.py \
+            vitepress-doc/architecture/MRR-system-architecture-overview.svg \
+            vitepress-doc/architecture/mrr-system-architecture.md \
+            vitepress-doc/getting-started/installation.md \
+            vitepress-doc/internal/development.md \
+            vitepress-doc/internal/index.md \
+            vitepress-doc/scripts/generate-git-changelog.test.mjs \
+            vitepress-doc/user-guide/changelog.md \
+            vitepress-doc/user-guide/index.md \
+            vitepress-doc/user-guide/release-notes.md
+          git commit -m '维护：更新 main 分支开发与认证说明'
+          git push origin HEAD:chore/cleanup-main-branch-migration

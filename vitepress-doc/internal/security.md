@@ -46,18 +46,32 @@ MRR_DEVELOPER_MODE_ALLOWED=true
 +
 系统设置 developerModeEnabled=true
 +
-请求来自受信任的本机 Nginx
+后端连接来自启动配置允许的本机 Nginx
++
+真实客户端 IP 命中系统设置中的单 IP/CIDR 白名单
 +
 请求没有 Authorization Header
 +
 请求属于档案袋只读 GET 白名单
 ```
 
-默认受信任地址为 `127.0.0.1`、`::1`，可以通过以下环境变量调整：
+启动配置只维护可信代理地址，默认只信任与后端同机的 Nginx：
 
 ```text
-MRR_DEVELOPER_MODE_ALLOWED_REMOTE_ADDRESSES=127.0.0.1,::1
+MRR_DEVELOPER_MODE_TRUSTED_PROXY_ADDRESSES=127.0.0.1,::1
 ```
+
+真实客户端白名单在“系统设置 → 开发者模式”中维护，对应设置键 `developerModeAllowedSources`。每行或使用逗号填写一个规则，支持：
+
+```text
+192.168.1.20
+192.168.1.0/24
+10.20.0.0/16
+::1
+2001:db8::/64
+```
+
+后端只在 `request.remoteAddr` 命中可信代理配置时读取 `X-Forwarded-For` 或 `X-Real-IP`。直接访问后端或从非可信代理伪造转发头不会获得兼容访问权限。空白名单会拒绝全部兼容访问，非法 IP/CIDR 会阻止设置保存。
 
 允许的兼容接口仅包括：
 

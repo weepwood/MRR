@@ -33,6 +33,9 @@ export interface UseArchiveImagesOptions {
   externalSession?: Ref<ExternalArchiveSession | null | undefined>
 }
 
+const EXTERNAL_SESSION_STORAGE_KEY = 'MRR-EXTERNAL-ARCHIVE:session'
+const EXTERNAL_CASE_TOKEN = 'external-ticket'
+
 function asResult<T>(promise: Promise<unknown>): Promise<ApiResult<T>> {
   return promise as unknown as Promise<ApiResult<T>>
 }
@@ -58,6 +61,24 @@ function externalCaseToArchiveCase(item: ExternalArchiveCase): IdCardArchiveCase
   }
 }
 
+function readStoredExternalSession(): ExternalArchiveSession | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const params = new URLSearchParams(window.location.search)
+  if (window.location.pathname !== '/archive' || params.get('external') !== 'ticket') {
+    return null
+  }
+  try {
+    const raw = sessionStorage.getItem(EXTERNAL_SESSION_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) as ExternalArchiveSession : null
+    return parsed?.cases?.length ? parsed : null
+  }
+  catch {
+    return null
+  }
+}
+
 export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const { auth } = useAuth()
   const exportJob = useArchiveExportJob('ZIP')
@@ -78,14 +99,14 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const maskedIdCard = ref('')
   let downloadArchiveKey = ''
 
-  const currentExternalSession = () => options.externalSession?.value || null
+  const currentExternalSession = () => options.externalSession?.value || readStoredExternalSession()
 
   function syncExternalArchiveCases(session = currentExternalSession()) {
     if (!session) {
       return false
     }
     archiveCases.value = session.cases.map(externalCaseToArchiveCase)
-    idCardToken.value = ''
+    idCardToken.value = EXTERNAL_CASE_TOKEN
     maskedIdCard.value = ''
     return true
   }
@@ -268,8 +289,14 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null> {
-    if (currentExternalSession()) {
-      return null
+    const externalSession = currentExternalSession()
+    if (externalSession && token === EXTERNAL_CASE_TOKEN) {
+      syncExternalArchiveCases(externalSession)
+      return {
+        token: EXTERNAL_CASE_TOKEN,
+        maskedIdCard: '',
+        cases: archiveCases.value,
+      }
     }
     idCardLoading.value = true
     errorMsg.value = ''
@@ -306,9 +333,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   function clearIdCardSearch() {
-    if (!syncExternalArchiveCases()) {
-      archiveCases.value = []
+    if (syncExternalArchiveCases()) {
+      return
     }
+    archiveCases.value = []
     idCardToken.value = ''
     maskedIdCard.value = ''
   }
@@ -426,6 +454,9 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         syncExternalArchiveCases(session)
       }
     }, { immediate: true })
+  }
+  else {
+    syncExternalArchiveCases()
   }
 
   return {

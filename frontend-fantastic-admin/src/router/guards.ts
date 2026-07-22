@@ -1,6 +1,6 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { useNProgress } from '@vueuse/integrations/useNProgress'
-import { canUseArchiveLegacyRoute, canUseDeveloperApi, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
+import { canUseArchiveLegacyRoute, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
 import {
   clearExternalArchiveSession,
   getExternalArchiveContext,
@@ -83,14 +83,6 @@ function setupRoutes(router: Router) {
         ...(reason ? { session: reason } : {}),
       },
     })
-
-    if (userStore.developerApiSession) {
-      const status = await getRuntimeDeveloperModeStatus(true)
-      if (!canUseDeveloperApi(status)) {
-        userStore.clearSession()
-        return loginRedirect('expired')
-      }
-    }
 
     if (userStore.isLogin && !userStore.isSessionVerified) {
       if (isDemoMode) {
@@ -200,11 +192,6 @@ function setupRoutes(router: Router) {
     }
     else {
       const developerModeStatus = await getRuntimeDeveloperModeStatus()
-      if (to.name !== 'login' && canUseDeveloperApi(developerModeStatus) && developerModeStatus.session) {
-        setArchiveAccessMode('internal')
-        userStore.setDeveloperSession(developerModeStatus.session)
-        return { path: to.path, query: to.query, replace: true }
-      }
       if (canUseArchiveLegacyRoute(to.name, developerModeStatus)) {
         setArchiveAccessMode('archive-legacy')
         return true

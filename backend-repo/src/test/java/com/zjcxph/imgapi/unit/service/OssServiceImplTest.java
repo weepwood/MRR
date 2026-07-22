@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -53,7 +54,7 @@ class OssServiceImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        when(ossProperties.getBucket()).thenReturn("test-bucket");
+        lenient().when(ossProperties.getBucket()).thenReturn("test-bucket");
         ossService = new OssServiceImpl(ossProperties);
 
         java.lang.reflect.Field field = OssServiceImpl.class.getDeclaredField("s3Client");
@@ -84,7 +85,7 @@ class OssServiceImplTest {
         when(ossProperties.getRegion()).thenReturn("test-region");
 
         S3ObjectSummary file = new S3ObjectSummary();
-        file.setKey("medical-records/0012/00123456-00789124/0013.jpg");
+        file.setKey("medical-records/0012/0013.jpg");
         file.setSize(235_000);
         file.setETag("etag-0013");
         file.setStorageClass("STANDARD");

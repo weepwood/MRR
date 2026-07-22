@@ -3,7 +3,6 @@ package com.zjcxph.imgapi.security;
 import org.springframework.util.AntPathMatcher;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * API 公开路径、拦截器排除项和少量遗留接口权限覆盖的单一配置来源。
@@ -11,7 +10,6 @@ import java.util.Map;
 public final class ApiAccessPolicy {
 
     public static final String REGISTRATION_PATH = "/api/v1/auth/register";
-
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private static final List<String> GENERAL_EXCLUDES = List.of(
@@ -31,8 +29,18 @@ public final class ApiAccessPolicy {
             "/api/v1/integration/archive/tickets", "/api/v1/external/archive/**"
     );
 
-    private static final Map<String, String[]> LEGACY_PERMISSION_OVERRIDES = Map.of(
-            key("POST", "/api/v1/logs/retention/cleanup"), new String[]{"system:manage"}
+    private static final List<PermissionRule> PERMISSION_OVERRIDES = List.of(
+            rule("PUT", "/api/v1/img/updateImageType/*", "record:edit"),
+            rule("POST", "/api/v1/scan/condition", "record:read"),
+            rule("POST", "/api/v1/scan/page/condition", "record:read"),
+            rule("POST", "/api/v1/search/archive-cases", "search:read"),
+            rule("POST", "/api/v1/search/getBAHByID", "search:read"),
+            rule("POST", "/api/v1/archive-search-history", "record:read"),
+            rule("PUT", "/api/v1/archive-search-history/*/favorite", "record:read"),
+            rule("POST", "/api/v1/archive-exports/jobs", "record:read"),
+            rule("POST", "/api/v1/archive-exports/jobs/*/cancel", "record:read"),
+            rule("POST", "/api/v1/system/data-quality/run", "system:manage"),
+            rule("POST", "/api/v1/logs/retention/cleanup", "system:manage")
     );
 
     private ApiAccessPolicy() {
@@ -55,8 +63,13 @@ public final class ApiAccessPolicy {
     }
 
     public static String[] requiredPermissionOverride(String method, String path) {
-        String[] permissions = LEGACY_PERMISSION_OVERRIDES.get(key(method, path));
-        return permissions == null ? null : permissions.clone();
+        if (method == null || path == null) return null;
+        return PERMISSION_OVERRIDES.stream()
+                .filter(rule -> rule.method().equalsIgnoreCase(method)
+                        && PATH_MATCHER.match(rule.pathPattern(), path))
+                .findFirst()
+                .map(rule -> rule.permissions().clone())
+                .orElse(null);
     }
 
     public static boolean hasPermissionOverride(String method, String path) {
@@ -64,15 +77,14 @@ public final class ApiAccessPolicy {
     }
 
     private static boolean matches(List<String> patterns, String path) {
-        if (path == null || path.isBlank()) {
-            return false;
-        }
+        if (path == null || path.isBlank()) return false;
         return patterns.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
-    private static String key(String method, String path) {
-        String normalizedMethod = method == null ? "" : method.trim().toUpperCase();
-        String normalizedPath = path == null ? "" : path.trim();
-        return normalizedMethod + " " + normalizedPath;
+    private static PermissionRule rule(String method, String pathPattern, String... permissions) {
+        return new PermissionRule(method, pathPattern, permissions);
+    }
+
+    private record PermissionRule(String method, String pathPattern, String[] permissions) {
     }
 }

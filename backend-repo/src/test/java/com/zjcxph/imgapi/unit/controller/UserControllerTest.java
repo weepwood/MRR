@@ -5,11 +5,13 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.controller.UserController;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
+import com.zjcxph.imgapi.dto.resp.RegistrationResultDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
-import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.AuthService;
 import com.zjcxph.imgapi.utils.AuthContext;
@@ -23,10 +25,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -108,16 +110,60 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST register — 旧接口已停用且不调用注册服务")
-    void register_disabled() {
+    @DisplayName("POST register — 提交注册申请且不返回登录 Token")
+    void register_submitsPendingApplication() {
         RegisterRequest request = new RegisterRequest();
-        request.setUsername("legacy.user");
-        request.setPassword("LegacyPassword123");
+        request.setUsername("new.doctor");
+        request.setPassword("Registration123!");
+        request.setDisplayName("新医生");
+        RegistrationResultDTO registration = new RegistrationResultDTO(
+                2L, "new.doctor", "新医生", "pending", LocalDateTime.now());
+        when(authService.register(request, "127.0.0.1")).thenReturn(registration);
 
-        assertThatThrownBy(() -> userController.register(request, httpServletRequest))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("旧版注册接口已停用");
-        verify(authService, never()).register(any(RegisterRequest.class), any());
+        Result<RegistrationResultDTO> result = userController.register(request, httpServletRequest);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData()).isNotNull();
+        assertThat(result.getData().getStatus()).isEqualTo("pending");
+        assertThat(result.getMessage()).contains("等待管理员审核");
+        verify(authService).register(request, "127.0.0.1");
+    }
+
+    @Test
+    @DisplayName("POST approve registration — 管理员审核通过")
+    void approveRegistration_success() {
+        RegistrationApprovalRequest request = new RegistrationApprovalRequest();
+        request.setRoleCode("DOCTOR");
+        AuthUserProfileDTO approved = new AuthUserProfileDTO();
+        approved.setId(2L);
+        approved.setUsername("new.doctor");
+        approved.setStatus("active");
+        when(authService.approveRegistration(2L, request, 1L, "127.0.0.1")).thenReturn(approved);
+
+        Result<AuthUserProfileDTO> result = userController.approveRegistration(2L, request, httpServletRequest);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData().getStatus()).isEqualTo("active");
+        verify(authService).approveRegistration(2L, request, 1L, "127.0.0.1");
+    }
+
+    @Test
+    @DisplayName("POST reject registration — 管理员记录拒绝原因")
+    void rejectRegistration_success() {
+        RegistrationRejectionRequest request = new RegistrationRejectionRequest();
+        request.setRejectReason("身份信息无法核验");
+        AuthUserProfileDTO rejected = new AuthUserProfileDTO();
+        rejected.setId(2L);
+        rejected.setStatus("rejected");
+        rejected.setRejectReason("身份信息无法核验");
+        when(authService.rejectRegistration(2L, request, 1L, "127.0.0.1")).thenReturn(rejected);
+
+        Result<AuthUserProfileDTO> result = userController.rejectRegistration(2L, request, httpServletRequest);
+
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData().getStatus()).isEqualTo("rejected");
+        assertThat(result.getData().getRejectReason()).contains("无法核验");
+        verify(authService).rejectRegistration(2L, request, 1L, "127.0.0.1");
     }
 
     @Test

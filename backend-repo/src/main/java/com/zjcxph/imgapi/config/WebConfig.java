@@ -72,6 +72,7 @@ public class WebConfig implements WebMvcConfigurer {
         };
         String[] authenticationExcludes = {
                 "/api/v1/auth/login",
+                "/api/v1/auth/register",
                 "/api/v1/img/hello",
                 "/api/v1/integration/archive/tickets",
                 "/api/v1/external/archive/**"

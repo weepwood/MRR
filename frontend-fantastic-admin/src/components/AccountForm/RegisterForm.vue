@@ -1,16 +1,14 @@
 <script setup lang="ts">
+/* eslint-disable antfu/consistent-chaining, regexp/prefer-w, regexp/use-ignore-case */
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
-import { Eye, EyeOff } from 'lucide-vue-next'
-import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
-import type { AuthProfile } from '@/utils/auth-storage'
+import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 
-defineOptions({
-  name: 'RegisterForm',
-})
+defineOptions({ name: 'RegisterForm' })
 
 const props = defineProps<{
   account?: string
@@ -21,7 +19,6 @@ const emits = defineEmits<{
   onRegister: [account?: string]
 }>()
 
-const userStore = useUserStore()
 const loading = ref(false)
 const showPwd = ref(false)
 const showCheckPwd = ref(false)
@@ -33,8 +30,14 @@ function resolveMessage(payload: any, fallback: string): string {
 const form = useForm({
   validationSchema: toTypedSchema(
     z.object({
-      account: z.string().min(1, '请输入用户名'),
-      password: z.string().min(1, '请输入密码').min(6, '密码长度为6到18位').max(18, '密码长度为6到18位'),
+      account: z.string().trim()
+        .min(3, '用户名长度应为3到40位')
+        .max(40, '用户名长度应为3到40位')
+        .regex(/^[A-Za-z0-9._-]+$/, '只能包含字母、数字、点、下划线和短横线'),
+      displayName: z.string().trim().min(1, '请输入显示名称').max(80, '显示名称不能超过80个字符'),
+      contactInfo: z.string().trim().max(200, '联系方式不能超过200个字符').optional(),
+      applyRemark: z.string().trim().max(500, '申请说明不能超过500个字符').optional(),
+      password: z.string().min(12, '密码长度应为12到64位').max(64, '密码长度应为12到64位'),
       checkPassword: z.string().min(1, '请再次输入密码'),
     }).refine(data => data.password === data.checkPassword, {
       message: '两次输入的密码不一致',
@@ -43,6 +46,9 @@ const form = useForm({
   ),
   initialValues: {
     account: props.account ?? '',
+    displayName: '',
+    contactInfo: '',
+    applyRemark: '',
     password: '',
     checkPassword: '',
   },
@@ -51,27 +57,23 @@ const form = useForm({
 const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
   try {
-    const res = await apiUser.register({ account: values.account, password: values.password })
-    const payload = res.data || {}
-    const registerData = payload.data || payload
-    const token = registerData?.token || registerData?.accessToken || registerData?.jwt
-
-    if (token) {
-      userStore.setSession({
-        token,
-        user: (registerData?.user || registerData?.profile || payload?.user || {}) as AuthProfile,
-      })
-      ElMessage({ message: '注册成功，欢迎加入！', type: 'success' })
-      emits('onRegister', values.account)
-    }
-    else {
-      const msg = resolveMessage(payload, '注册失败，请稍后重试')
-      ElMessage({ message: msg, type: 'error' })
-    }
+    await apiUser.register({
+      username: values.account.trim(),
+      password: values.password,
+      displayName: values.displayName.trim(),
+      contactInfo: values.contactInfo?.trim() || undefined,
+      applyRemark: values.applyRemark?.trim() || undefined,
+    })
+    ElMessage({
+      message: '注册申请已提交，请等待管理员审核。审核通过后即可登录。',
+      type: 'success',
+      duration: 5000,
+    })
+    emits('onRegister', values.account.trim())
   }
   catch (err: any) {
     console.error('Registration failed:', err)
-    const msg = resolveMessage(err.response?.data, '注册失败，请重试')
+    const msg = resolveMessage(err?.response?.data ?? err, '注册申请提交失败，请重试')
     ElMessage({ message: msg, type: 'error', grouping: true, offset: 90 })
   }
   finally {
@@ -81,70 +83,115 @@ const onSubmit = form.handleSubmit(async (values) => {
 </script>
 
 <template>
-  <div class="min-h-500px w-full flex-col-stretch-center p-12">
-    <form @submit="onSubmit">
-      <div class="mb-8 space-y-2">
-        <h3 class="text-4xl color-[var(--el-text-color-primary)] font-bold">
-          创建新帐号
-        </h3>
-        <p class="text-sm text-muted-foreground lg:text-base">
-          注册后默认分配医生角色权限
-        </p>
-      </div>
+  <form class="register-form" @submit="onSubmit">
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      title="注册后账号处于待审核状态，管理员审核通过前无法登录。"
+    />
+
+    <div class="field-grid">
       <FormField v-slot="{ componentField, errors }" name="account">
-        <FormItem class="relative pb-6 space-y-0">
+        <FormItem class="field-item">
+          <label for="register-account">用户名</label>
           <FormControl>
-            <FaInput type="text" placeholder="请输入用户名" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <FaInput id="register-account" type="text" autocomplete="username" placeholder="例如 zhangsan" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
           </FormControl>
-          <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
-            <FormMessage class="absolute bottom-1 text-xs" />
-          </Transition>
+          <FormMessage class="field-message" />
         </FormItem>
       </FormField>
-      <FormField v-slot="{ componentField, value, errors }" name="password">
-        <FormItem class="relative pb-6 space-y-0">
+
+      <FormField v-slot="{ componentField, errors }" name="displayName">
+        <FormItem class="field-item">
+          <label for="register-display-name">显示名称</label>
           <FormControl>
-            <div class="relative w-full">
-              <FaInput :type="showPwd ? 'text' : 'password'" placeholder="请输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showPwd = !showPwd">
+            <FaInput id="register-display-name" type="text" placeholder="例如 张三" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+          </FormControl>
+          <FormMessage class="field-message" />
+        </FormItem>
+      </FormField>
+    </div>
+
+    <FormField v-slot="{ componentField, errors }" name="contactInfo">
+      <FormItem class="field-item">
+        <label for="register-contact">联系方式（可选）</label>
+        <FormControl>
+          <FaInput id="register-contact" type="text" placeholder="手机号、工号、科室内线等" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+        </FormControl>
+        <FormMessage class="field-message" />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField, errors }" name="applyRemark">
+      <FormItem class="field-item">
+        <label for="register-remark">申请说明（可选）</label>
+        <FormControl>
+          <FaTextarea id="register-remark" :rows="3" placeholder="说明所在科室、岗位及使用目的，便于管理员审核" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+        </FormControl>
+        <FormMessage class="field-message" />
+      </FormItem>
+    </FormField>
+
+    <div class="field-grid">
+      <FormField v-slot="{ componentField, value, errors }" name="password">
+        <FormItem class="field-item">
+          <label for="register-password">密码</label>
+          <FormControl>
+            <div class="password-shell">
+              <FaInput id="register-password" :type="showPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="12到64位" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <button type="button" class="password-toggle" :aria-label="showPwd ? '隐藏密码' : '显示密码'" @click="showPwd = !showPwd">
                 <Eye v-if="!showPwd" class="size-4" />
                 <EyeOff v-else class="size-4" />
               </button>
             </div>
           </FormControl>
-          <FormDescription>
-            <FaPasswordStrength :password="value" class="mt-2" />
-          </FormDescription>
-          <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
-            <FormMessage class="absolute bottom-1 text-xs" />
-          </Transition>
+          <FaPasswordStrength :password="value" class="mt-2" />
+          <FormMessage class="field-message" />
         </FormItem>
       </FormField>
+
       <FormField v-slot="{ componentField, errors }" name="checkPassword">
-        <FormItem class="relative pb-6 space-y-0">
+        <FormItem class="field-item">
+          <label for="register-password-confirm">确认密码</label>
           <FormControl>
-            <div class="relative w-full">
-              <FaInput :type="showCheckPwd ? 'text' : 'password'" placeholder="请再次输入密码" class="w-full pr-10" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
-              <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground" @click="showCheckPwd = !showCheckPwd">
+            <div class="password-shell">
+              <FaInput id="register-password-confirm" :type="showCheckPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="再次输入密码" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <button type="button" class="password-toggle" :aria-label="showCheckPwd ? '隐藏密码' : '显示密码'" @click="showCheckPwd = !showCheckPwd">
                 <Eye v-if="!showCheckPwd" class="size-4" />
                 <EyeOff v-else class="size-4" />
               </button>
             </div>
           </FormControl>
-          <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
-            <FormMessage class="absolute bottom-1 text-xs" />
-          </Transition>
+          <FormMessage class="field-message" />
         </FormItem>
       </FormField>
-      <FaButton :loading="loading" size="lg" class="mt-4 w-full" type="submit">
-        注册
+    </div>
+
+    <FaButton :loading="loading" size="lg" class="w-full" type="submit">
+      提交注册申请
+    </FaButton>
+
+    <div class="switch-link">
+      <span>已有账号？</span>
+      <FaButton type="button" variant="link" class="h-auto p-0" @click="emits('onLogin', form.values.account)">
+        返回登录
       </FaButton>
-      <div class="mt-4 flex-center gap-2 text-sm">
-        <span class="text-secondary-foreground op-50">已经有帐号?</span>
-        <FaButton variant="link" class="h-auto p-0" @click="emits('onLogin', form.values.account)">
-          去登录
-        </FaButton>
-      </div>
-    </form>
-  </div>
+    </div>
+  </form>
 </template>
+
+<style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
+.register-form { display: grid; gap: var(--mrr-space-4); margin-top: var(--mrr-space-5); }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
+.field-item { position: relative; display: grid; gap: var(--mrr-space-2); padding-bottom: var(--mrr-space-3); }
+.field-item label { font-size: 13px; font-weight: 650; color: var(--mrr-foreground); }
+.field-item :deep(.fa-input__wrapper), .field-item :deep(input) { width: 100%; }
+.field-message { position: absolute; bottom: 0; font-size: 11px; }
+.password-shell { position: relative; }
+.password-shell :deep(input) { padding-right: 42px; }
+.password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
+.switch-link { display: flex; gap: var(--mrr-space-2); align-items: center; justify-content: center; font-size: 13px; color: var(--mrr-muted-foreground); }
+@media (max-width: 620px) { .field-grid { grid-template-columns: 1fr; gap: 0; } }
+</style>

@@ -4,6 +4,39 @@
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-07-22
+
+### 新增
+
+- 新增用户自主注册申请；新注册账号默认为待审核状态，管理员审核通过后才能登录。
+- 管理员可在用户管理中审核通过或拒绝注册申请，审核操作写入审计日志。
+- 新增 Windows PowerShell WinForms 一键管理中心，统一展示产品版本、后端、Nginx、健康状态、维护模式和磁盘空间。
+- 安装后提供 `MRR-Manager.cmd` 与 `MRR-管理中心.cmd` 两个双击入口。
+- 支持一键启停、重启、维护暂停/恢复、受管理 ZIP 部署、版本列表、系统诊断、Nginx 检查/重载和运维目录快捷入口。
+- 增加 `windows-latest` 永久门禁，使用 Windows PowerShell 5.1 与 Windows ComSpec 验证管理脚本和真实 CMD 入口。
+
+### 变更
+
+- 用户状态增加注册待审核与已拒绝流程，用户列表优先展示待审核申请。
+- 所有 `deploy/windows/**/*.ps1` 统一使用 UTF-8 with BOM，兼容 Windows PowerShell 5.1。
+- 所有 `deploy/windows/*.cmd` 统一使用 UTF-8 without BOM，并在中文处理前切换到代码页 65001。
+- 管理中心增加 `-SelfTest` 无界面检查，正常双击仍隐藏控制台窗口。
+- 管理中心继续复用 `mrrctl.ps1` 与 `nginxctl.ps1`，不绕过发布基线、健康检查、构建身份和 SHA-256 校验。
+
+### 修复
+
+- 修复旧注册路由无法满足用户自主申请和管理员审核需求的问题。
+- 修复停止全部服务后再次启动仍停留在维护模式的问题。
+- 修复管理中心后台执行时参数未逐项传递的问题。
+- 修复部分 ZIP 工具处理中文源入口文件名不一致的问题。
+- 修复 Windows PowerShell 5.1 将无 BOM UTF-8 管理脚本按系统 ANSI 代码页解释，可能导致中文乱码和中文路径失效的问题。
+
+### 发布与兼容性
+
+- 数据库兼容范围更新为 `20260715113552` 至 `20260722221000`，包含注册申请审核字段与状态迁移。
+- 配置结构版本保持 `1`。
+- 未完成 0.6.2 应用连接升级后环境的完整回滚演练，不允许只替换回旧应用文件。
+
 ## [0.6.2] - 2026-07-22
 
 ### 新增
@@ -121,7 +154,8 @@
 - 初始化 Spring Boot、Vue、PostgreSQL 和 VitePress 项目结构。
 - 建立基础认证、病案记录、统计、日志和文档能力。
 
-[Unreleased]: https://github.com/weepwood/MRR/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/weepwood/MRR/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/weepwood/MRR/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/weepwood/MRR/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/weepwood/MRR/releases/tag/v0.6.1
 [0.1.1]: https://github.com/weepwood/MRR/releases/tag/v0.1.1

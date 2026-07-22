@@ -40,6 +40,42 @@ jobs:
       - name: Validate main branch references
         run: python scripts/check_main_branch_references.py
 
+  windows-management-gate:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate script encoding and CMD entry
+        run: python -m unittest scripts.tests.test_windows_one_click_manager -v
+
+      - name: Parse scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem deploy/windows -Filter *.ps1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Error "Windows PowerShell 5.1 syntax error in $($_.FullName): $($errors -join '; ')"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Run manager self-test with Windows PowerShell 5.1
+        shell: powershell
+        run: .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
+
   frontend-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30

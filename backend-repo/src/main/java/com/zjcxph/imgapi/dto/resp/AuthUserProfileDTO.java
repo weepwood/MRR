@@ -15,6 +15,12 @@ public class AuthUserProfileDTO {
     private String roleName;
     private List<String> permissions = new ArrayList<>();
     private String status;
+    private String contactInfo;
+    private String applyRemark;
+    private LocalDateTime appliedAt;
+    private LocalDateTime reviewedAt;
+    private Long reviewedBy;
+    private String rejectReason;
     private Boolean mustChangePassword;
     private Integer passwordVersion;
     private LocalDateTime passwordChangedAt;

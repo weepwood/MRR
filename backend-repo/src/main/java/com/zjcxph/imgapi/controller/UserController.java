@@ -8,11 +8,14 @@ import com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest;
 import com.zjcxph.imgapi.dto.req.AuthRoleUpdateRequest;
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
 import com.zjcxph.imgapi.dto.req.RegisterRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.dto.req.RequiredPasswordChangeRequest;
 import com.zjcxph.imgapi.dto.req.UserRequest;
 import com.zjcxph.imgapi.dto.resp.AuthUserProfileDTO;
 import com.zjcxph.imgapi.dto.resp.LoginResponseDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
+import com.zjcxph.imgapi.dto.resp.RegistrationResultDTO;
 import com.zjcxph.imgapi.dto.resp.UserCredentialResultDTO;
 import com.zjcxph.imgapi.entity.AuthRole;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -74,20 +77,12 @@ public class UserController {
         return Result.success("登录成功", response);
     }
 
-    /**
-     * 旧版注册接口会直接签发新用户 JWT，绕过一次性临时密码与首次改密流程。
-     * 保留路由只用于向旧客户端返回明确迁移提示，不再创建账号或签发 Token。
-     */
-    @Deprecated
-    @Operation(summary = "旧版注册接口（已停用）")
-    @RequirePermissions({"user:manage"})
+    @Operation(summary = "提交用户注册申请")
     @PostMapping("/register")
-    public Result<LoginResponseDTO> register(@RequestBody(required = false) RegisterRequest req,
-                                              HttpServletRequest httpRequest) {
-        logger.warn("Blocked legacy register endpoint: actor={}, sourceIp={}",
-                AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getUsername(),
-                IpUtil.getClientIp(httpRequest));
-        throw new BusinessException(410, "旧版注册接口已停用，请使用用户管理中的创建用户功能");
+    public Result<RegistrationResultDTO> register(@Valid @RequestBody RegisterRequest req,
+                                                   HttpServletRequest httpRequest) {
+        RegistrationResultDTO registration = authService.register(req, IpUtil.getClientIp(httpRequest));
+        return Result.success("注册申请已提交，请等待管理员审核", registration);
     }
 
     @Operation(summary = "当前用户")
@@ -122,6 +117,30 @@ public class UserController {
             @RequestParam(required = false) String status) {
         return Result.<PageResult<AuthUserProfileDTO>>success("success")
                 .data(authService.listUsersPaginated(page, size, keyword, roleCode, status));
+    }
+
+    @Operation(summary = "审核通过注册申请")
+    @RequirePermissions({"user:manage"})
+    @PostMapping("/users/{id}/registration/approve")
+    public Result<AuthUserProfileDTO> approveRegistration(@PathVariable Long id,
+                                                           @Valid @RequestBody RegistrationApprovalRequest request,
+                                                           HttpServletRequest httpRequest) {
+        AuthSession administrator = requireCurrentUser();
+        AuthUserProfileDTO approved = authService.approveRegistration(
+                id, request, administrator.getId(), IpUtil.getClientIp(httpRequest));
+        return Result.success("注册申请已通过，用户现在可以登录", approved);
+    }
+
+    @Operation(summary = "拒绝注册申请")
+    @RequirePermissions({"user:manage"})
+    @PostMapping("/users/{id}/registration/reject")
+    public Result<AuthUserProfileDTO> rejectRegistration(@PathVariable Long id,
+                                                          @Valid @RequestBody RegistrationRejectionRequest request,
+                                                          HttpServletRequest httpRequest) {
+        AuthSession administrator = requireCurrentUser();
+        AuthUserProfileDTO rejected = authService.rejectRegistration(
+                id, request, administrator.getId(), IpUtil.getClientIp(httpRequest));
+        return Result.success("注册申请已拒绝", rejected);
     }
 
     @Operation(summary = "管理员重置用户密码")

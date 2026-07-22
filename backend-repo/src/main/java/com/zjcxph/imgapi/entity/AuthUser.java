@@ -1,8 +1,7 @@
 package com.zjcxph.imgapi.entity;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,6 +18,12 @@ public class AuthUser {
     private String roleName;
     private String permissionsCsv;
     private String status;
+    private String contactInfo;
+    private String applyRemark;
+    private LocalDateTime appliedAt;
+    private LocalDateTime reviewedAt;
+    private Long reviewedBy;
+    private String rejectReason;
     private Boolean mustChangePassword;
     private Integer passwordVersion;
     private LocalDateTime passwordChangedAt;

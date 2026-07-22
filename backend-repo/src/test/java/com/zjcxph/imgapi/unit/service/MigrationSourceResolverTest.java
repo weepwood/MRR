@@ -13,7 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -91,16 +93,51 @@ class MigrationSourceResolverTest {
     }
 
     @Test
+    @DisplayName("混合来源包含超时时不能因其他来源缺失而判定永久失败")
+    void mixedPermanentAndTransientFailuresRemainRetryable() throws Exception {
+        Scan scan = scan(4, "00789510", "605748", null);
+        scan.setSourceType("AUTO");
+        IOException aggregate = new IOException("所有受控图片来源均读取失败");
+        aggregate.addSuppressed(new FileNotFoundException("本地文件不存在"));
+        aggregate.addSuppressed(new SocketTimeoutException("HTTP timeout"));
+        when(imageStorage.open(any(PathDO.class))).thenThrow(aggregate);
+        MigrationSourceResolver resolver = new MigrationSourceResolver(imageStorage, imageProperties);
+
+        assertThatThrownBy(() -> resolver.resolve(scan))
+                .isInstanceOfSatisfying(
+                        MigrationSourceResolver.SourceResolutionException.class,
+                        exception -> assertThat(exception.isPermanent()).isFalse()
+                );
+    }
+
+    @Test
+    @DisplayName("所有候选来源均明确缺失时判定永久失败")
+    void allPermanentFailuresArePermanent() throws Exception {
+        Scan scan = scan(5, "00789511", "605749", null);
+        IOException aggregate = new IOException("所有受控图片来源均读取失败");
+        aggregate.addSuppressed(new FileNotFoundException("本地文件不存在"));
+        aggregate.addSuppressed(new IOException("HTTP 状态码 404"));
+        when(imageStorage.open(any(PathDO.class))).thenThrow(aggregate);
+        MigrationSourceResolver resolver = new MigrationSourceResolver(imageStorage, imageProperties);
+
+        assertThatThrownBy(() -> resolver.resolve(scan))
+                .isInstanceOfSatisfying(
+                        MigrationSourceResolver.SourceResolutionException.class,
+                        exception -> assertThat(exception.isPermanent()).isTrue()
+                );
+    }
+
+    @Test
     @DisplayName("LOCAL sourceRef 越界时拒绝读取")
     void rejectsTraversalSourceRef() {
-        Scan scan = scan(4, "00789510", "605748", null);
+        Scan scan = scan(6, "00789512", "605750", null);
         scan.setSourceType("LOCAL");
         scan.setSourceRef("../outside.jpg");
         when(imageProperties.getBasePath()).thenReturn(tempDir.toString());
         MigrationSourceResolver resolver = new MigrationSourceResolver(imageStorage, imageProperties);
 
         assertThatThrownBy(() -> resolver.resolve(scan))
-                .isInstanceOf(IOException.class)
+                .isInstanceOf(MigrationSourceResolver.SourceResolutionException.class)
                 .hasMessageContaining("受控相对路径");
     }
 

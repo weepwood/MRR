@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -91,8 +92,8 @@ public class NginxBrowserController {
             }
 
             StreamingResponseBody body = output -> {
-                try (remoteFile.inputStream()) {
-                    remoteFile.inputStream().transferTo(output);
+                try (InputStream input = remoteFile.inputStream()) {
+                    input.transferTo(output);
                 }
             };
             return new ResponseEntity<>(body, headers, HttpStatus.OK);

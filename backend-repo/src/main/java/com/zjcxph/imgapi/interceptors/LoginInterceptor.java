@@ -7,7 +7,6 @@ import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import com.zjcxph.imgapi.security.TokenBlacklist;
-import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -32,32 +31,24 @@ public class LoginInterceptor implements HandlerInterceptor {
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
     public static final String ACCESS_MODE_ATTRIBUTE = "MRR_ACCESS_MODE";
     public static final String ARCHIVE_LEGACY_ACCESS_MODE = DeveloperModeService.ARCHIVE_LEGACY_ACCESS_MODE;
-    public static final String API_FULL_ACCESS_MODE = DeveloperApiAccessService.API_FULL_ACCESS_MODE;
 
     private static final Logger logger = LoggerFactory.getLogger(LoginInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final List<String> ARCHIVE_LEGACY_PERMISSIONS = List.of("record:read", "search:read");
+    private static final List<String> ARCHIVE_LEGACY_PERMISSIONS = List.of(
+            Permissions.RECORD_READ,
+            Permissions.SEARCH_READ
+    );
 
     private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
     private final DeveloperModeService developerModeService;
-    private final DeveloperApiAccessService developerApiAccessService;
 
     public LoginInterceptor(TokenBlacklist tokenBlacklist,
                             AuthUserMapper authUserMapper,
-                            DeveloperModeService developerModeService,
-                            DeveloperApiAccessService developerApiAccessService) {
+                            DeveloperModeService developerModeService) {
         this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
         this.developerModeService = developerModeService;
-        this.developerApiAccessService = developerApiAccessService;
-    }
-
-    private String extractToken(String authorization) {
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            return authorization.substring(7).trim();
-        }
-        return null;
     }
 
     @Override
@@ -68,7 +59,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         String authorization = request.getHeader("Authorization");
         if (!StringUtils.hasText(authorization)) {
-            return allowDeveloperModeOrReject(request, response);
+            return allowArchiveLegacyOrReject(request, response);
         }
 
         String token = extractToken(authorization);
@@ -132,8 +123,7 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        AuthSession session = toCurrentSession(currentUser);
-        installSession(request, session);
+        installSession(request, toCurrentSession(currentUser));
         return true;
     }
 
@@ -142,30 +132,24 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthContext.clear();
     }
 
+    private String extractToken(String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7).trim();
+        }
+        return null;
+    }
+
     private boolean isPublicAuthenticationRequest(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return false;
         }
-        String path = request.getRequestURI();
-        String contextPath = request.getContextPath();
-        if (StringUtils.hasText(contextPath) && path.startsWith(contextPath)) {
-            path = path.substring(contextPath.length());
-        }
-        while (path.length() > 1 && path.endsWith("/")) {
-            path = path.substring(0, path.length() - 1);
-        }
+        String path = normalizeRequestPath(request);
         return ApiAccessPolicy.isAuthenticationExcluded(path)
                 && ("/api/v1/auth/login".equals(path) || ApiAccessPolicy.REGISTRATION_PATH.equals(path));
     }
 
-    private boolean allowDeveloperModeOrReject(HttpServletRequest request,
-                                                HttpServletResponse response) throws Exception {
-        if (developerApiAccessService.isRequestAllowed(request)) {
-            installDeveloperSession(request, response, createFullApiDeveloperSession(),
-                    "missing_token_api_full", API_FULL_ACCESS_MODE);
-            return true;
-        }
-
+    private boolean allowArchiveLegacyOrReject(HttpServletRequest request,
+                                               HttpServletResponse response) throws Exception {
         if (developerModeService.isArchiveLegacyRequestAllowed(request)) {
             installDeveloperSession(request, response, createArchiveLegacySession(),
                     "missing_token_archive_legacy", ARCHIVE_LEGACY_ACCESS_MODE);
@@ -210,20 +194,6 @@ public class LoginInterceptor implements HandlerInterceptor {
         return session;
     }
 
-    private AuthSession createFullApiDeveloperSession() {
-        AuthSession session = new AuthSession();
-        session.setId(-2L);
-        session.setUsername("developer-api");
-        session.setDisplayName("Developer API");
-        session.setRoleCode("DEVELOPER_API");
-        session.setRoleName("Developer Full API");
-        session.setStatus("active");
-        session.setMustChangePassword(false);
-        session.setPasswordVersion(1);
-        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
-        return session;
-    }
-
     private AuthSession toCurrentSession(AuthUser user) {
         AuthSession session = new AuthSession();
         session.setId(user.getId());
@@ -253,6 +223,18 @@ public class LoginInterceptor implements HandlerInterceptor {
                 .distinct()
                 .toList();
         return new ArrayList<>(PermissionResolver.resolve(configured));
+    }
+
+    private String normalizeRequestPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (StringUtils.hasText(contextPath) && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        while (path.length() > 1 && path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path;
     }
 
     private void writeUnauthorized(HttpServletResponse response, String message, String code) throws Exception {

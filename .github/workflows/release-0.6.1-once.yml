@@ -1,0 +1,113 @@
+name: release-0.6.1-once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VERSION'
+      - 'backend-repo/pom.xml'
+      - 'release-baseline.json'
+      - 'CHANGELOG.md'
+      - 'release-notes/0.6.1.md'
+      - '.github/workflows/release-0.6.1-once.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-0.6.1
+  cancel-in-progress: false
+
+jobs:
+  tag-build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: v0.6.1
+      SOURCE_SHA: ${{ github.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Validate release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = '0.6.1'
+          grep -F '<revision>0.6.1</revision>' backend-repo/pom.xml
+          test -f release-notes/0.6.1.md
+          python scripts/release_baseline.py validate
+          python scripts/check_main_branch_references.py
+
+      - name: Create signed release reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Tag ${RELEASE_TAG} already exists; refusing to move or overwrite it." >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "${RELEASE_TAG}" "${SOURCE_SHA}" -m 'MRR 0.6.1'
+          git push origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Dispatch Windows release build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run windows-release-package.yml --ref "${RELEASE_TAG}"
+
+          run_id=''
+          for attempt in $(seq 1 30); do
+            run_id="$(gh run list \
+              --workflow windows-release-package.yml \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha,status \
+              --jq '.[] | select(.headSha == env.SOURCE_SHA) | .databaseId' \
+              | head -n 1)"
+            if [ -n "${run_id}" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "${run_id}" ]; then
+            echo 'Unable to locate dispatched Windows release workflow run.' >&2
+            exit 1
+          fi
+
+          echo "RELEASE_RUN_ID=${run_id}" >> "${GITHUB_ENV}"
+          gh run watch "${run_id}" --exit-status
+
+      - name: Publish release notes and verify package
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "${RELEASE_TAG}" \
+            --title 'MRR v0.6.1' \
+            --notes-file release-notes/0.6.1.md
+
+          gh release view "${RELEASE_TAG}" \
+            --json tagName,targetCommitish,assets \
+            --jq '.tagName, .targetCommitish, (.assets[] | .name)'
+
+          asset_count="$(gh release view "${RELEASE_TAG}" \
+            --json assets \
+            --jq '[.assets[] | select(.name == "MRR-v0.6.1.zip")] | length')"
+          test "${asset_count}" = '1'
+
+          mkdir -p /tmp/mrr-release-check
+          gh release download "${RELEASE_TAG}" \
+            --pattern 'MRR-v0.6.1.zip' \
+            --dir /tmp/mrr-release-check
+          test -s /tmp/mrr-release-check/MRR-v0.6.1.zip
+          unzip -l /tmp/mrr-release-check/MRR-v0.6.1.zip | grep -F 'manifest.json'
+          unzip -l /tmp/mrr-release-check/MRR-v0.6.1.zip | grep -F 'SHA256SUMS'

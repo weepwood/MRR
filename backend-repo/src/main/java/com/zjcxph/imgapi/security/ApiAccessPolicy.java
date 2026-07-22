@@ -1,70 +1,64 @@
 package com.zjcxph.imgapi.security;
 
+import com.zjcxph.imgapi.common.Permissions;
 import org.springframework.util.AntPathMatcher;
 
 import java.util.List;
 
 /**
- * API 公开路径、拦截器排除项和少量遗留接口权限覆盖的单一配置来源。
+ * 只集中保存两类无法通过 Controller 注解表达的路径规则：
+ * 框架排除路径、匿名 API，以及待迁移的少量遗留权限例外。
  */
 public final class ApiAccessPolicy {
 
     public static final String REGISTRATION_PATH = "/api/v1/auth/register";
+
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    private static final List<String> GENERAL_EXCLUDES = List.of(
+    private static final List<String> INTERCEPTOR_EXCLUDES = List.of(
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs.yaml",
             "/v3/api-docs/**", "/docs/**", "/api/v1/documentation/access",
             "/api/v1/public/status/**", "/api/v1/public/config/**", "/error", "/actuator/**"
     );
 
-    private static final List<String> AUTHENTICATION_EXCLUDES = List.of(
-            "/api/v1/auth/login", REGISTRATION_PATH, "/api/v1/img/hello",
-            "/api/v1/integration/archive/tickets", "/api/v1/external/archive/**"
+    private static final List<String> ANONYMOUS_API_PATTERNS = List.of(
+            "/api/v1/auth/login",
+            REGISTRATION_PATH,
+            "/api/v1/img/hello",
+            "/api/v1/integration/archive/tickets",
+            "/api/v1/external/archive/**"
     );
 
-    public static final List<String> PUBLIC_API_PATTERNS = List.of(
-            "/api/v1/documentation/access", "/api/v1/public/status/**", "/api/v1/public/config/**",
-            "/api/v1/auth/login", REGISTRATION_PATH, "/api/v1/img/hello",
-            "/api/v1/integration/archive/tickets", "/api/v1/external/archive/**"
-    );
-
-    private static final List<PermissionRule> PERMISSION_OVERRIDES = List.of(
-            rule("PUT", "/api/v1/img/updateImageType/*", "record:edit"),
-            rule("POST", "/api/v1/scan/condition", "record:read"),
-            rule("POST", "/api/v1/scan/page/condition", "record:read"),
-            rule("POST", "/api/v1/search/archive-cases", "search:read"),
-            rule("POST", "/api/v1/search/getBAHByID", "search:read"),
-            rule("POST", "/api/v1/archive-search-history", "record:read"),
-            rule("PUT", "/api/v1/archive-search-history/*/favorite", "record:read"),
-            rule("POST", "/api/v1/archive-exports/jobs", "record:read"),
-            rule("POST", "/api/v1/archive-exports/jobs/*/cancel", "record:read"),
-            rule("POST", "/api/v1/system/data-quality/run", "system:manage"),
-            rule("POST", "/api/v1/logs/retention/cleanup", "system:manage")
+    private static final List<PermissionRule> LEGACY_PERMISSION_OVERRIDES = List.of(
+            rule("PUT", "/api/v1/img/updateImageType/*", Permissions.RECORD_EDIT),
+            rule("POST", "/api/v1/logs/retention/cleanup", Permissions.SYSTEM_MANAGE)
     );
 
     private ApiAccessPolicy() {
     }
 
     public static String[] generalExcludes() {
-        return GENERAL_EXCLUDES.toArray(String[]::new);
+        return INTERCEPTOR_EXCLUDES.toArray(String[]::new);
     }
 
     public static String[] authenticationExcludes() {
-        return AUTHENTICATION_EXCLUDES.toArray(String[]::new);
+        return ANONYMOUS_API_PATTERNS.toArray(String[]::new);
     }
 
     public static boolean isAuthenticationExcluded(String path) {
-        return matches(AUTHENTICATION_EXCLUDES, path);
+        return matches(ANONYMOUS_API_PATTERNS, path);
     }
 
     public static boolean isPublicApiPath(String path) {
-        return matches(PUBLIC_API_PATTERNS, path);
+        return matches(INTERCEPTOR_EXCLUDES, path)
+                || matches(ANONYMOUS_API_PATTERNS, path);
     }
 
     public static String[] requiredPermissionOverride(String method, String path) {
-        if (method == null || path == null) return null;
-        return PERMISSION_OVERRIDES.stream()
+        if (method == null || path == null) {
+            return null;
+        }
+        return LEGACY_PERMISSION_OVERRIDES.stream()
                 .filter(rule -> rule.method().equalsIgnoreCase(method)
                         && PATH_MATCHER.match(rule.pathPattern(), path))
                 .findFirst()
@@ -77,8 +71,9 @@ public final class ApiAccessPolicy {
     }
 
     private static boolean matches(List<String> patterns, String path) {
-        if (path == null || path.isBlank()) return false;
-        return patterns.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
+        return path != null
+                && !path.isBlank()
+                && patterns.stream().anyMatch(pattern -> PATH_MATCHER.match(pattern, path));
     }
 
     private static PermissionRule rule(String method, String pathPattern, String... permissions) {

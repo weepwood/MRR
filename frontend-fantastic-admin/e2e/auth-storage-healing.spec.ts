@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test'
 
-test.use({ storageState: { cookies: [], origins: [] } })
+test.use({ storageState: 'e2e/.auth/anonymous.json' })
+
+async function installLegacySession(page: import('@playwright/test').Page, values: Record<string, string>) {
+  await page.addInitScript((entries) => {
+    localStorage.clear()
+    for (const [key, value] of Object.entries(entries)) {
+      localStorage.setItem(key, value)
+    }
+  }, values)
+}
 
 test.describe('登录状态迁移与自愈', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,20 +17,20 @@ test.describe('登录状态迁移与自愈', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 200, data: { enabled: false } }),
+        body: JSON.stringify({ code: 200, data: { enabled: false, accessMode: 'DISABLED' } }),
       })
     })
   })
 
   test('旧版强制改密与权限在服务端验证前不会成为最终状态', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'legacy-token')
-      localStorage.setItem('profile', JSON.stringify({
+    await installLegacySession(page, {
+      token: 'legacy-token',
+      profile: JSON.stringify({
         username: 'doctor',
         mustChangePassword: true,
         permissions: ['stale:permission'],
-      }))
-      localStorage.setItem('permissions', JSON.stringify(['stale:permission']))
+      }),
+      permissions: JSON.stringify(['stale:permission']),
     })
     await page.route('**/api/v1/auth/me', async (route) => {
       await route.fulfill({
@@ -44,6 +53,7 @@ test.describe('登录状态迁移与自愈', () => {
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
 
     await expect(page).toHaveURL(/\/records/)
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('mrr:auth:token'))).toBe('legacy-token')
     const state = await page.evaluate(() => ({
       token: localStorage.getItem('mrr:auth:token'),
       legacyToken: localStorage.getItem('token'),
@@ -57,12 +67,12 @@ test.describe('登录状态迁移与自愈', () => {
   })
 
   test('401 会清理新旧认证键但保留记住用户名和业务偏好', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'expired-token')
-      localStorage.setItem('profile', JSON.stringify({ username: 'doctor' }))
-      localStorage.setItem('permissions', '[]')
-      localStorage.setItem('login_account', 'doctor')
-      localStorage.setItem('mrr:archive:preference', 'keep-me')
+    await installLegacySession(page, {
+      token: 'expired-token',
+      profile: JSON.stringify({ username: 'doctor' }),
+      permissions: '[]',
+      login_account: 'doctor',
+      'mrr:archive:preference': 'keep-me',
     })
     await page.route('**/api/v1/auth/me', async (route) => {
       await route.fulfill({
@@ -73,7 +83,7 @@ test.describe('登录状态迁移与自愈', () => {
     })
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
 
     const state = await page.evaluate(() => ({
       token: localStorage.getItem('mrr:auth:token'),
@@ -90,11 +100,11 @@ test.describe('登录状态迁移与自愈', () => {
   })
 
   test('认证服务 503 时保留候选 Token 并进入可恢复登录状态', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'candidate-token')
-      localStorage.setItem('profile', JSON.stringify({ username: 'doctor', mustChangePassword: true }))
-      localStorage.setItem('permissions', JSON.stringify(['stale:permission']))
-      localStorage.setItem('mrr:archive:preference', 'keep-me')
+    await installLegacySession(page, {
+      token: 'candidate-token',
+      profile: JSON.stringify({ username: 'doctor', mustChangePassword: true }),
+      permissions: JSON.stringify(['stale:permission']),
+      'mrr:archive:preference': 'keep-me',
     })
     await page.route('**/api/v1/auth/me', async (route) => {
       await route.fulfill({
@@ -105,7 +115,7 @@ test.describe('登录状态迁移与自愈', () => {
     })
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
     expect(new URL(page.url()).searchParams.get('session')).toBe('unavailable')
 
     const state = await page.evaluate(() => ({

@@ -24,6 +24,32 @@ interface OssUrlResult {
   ossUrl: string
 }
 
+export interface OssBrowserEntry {
+  name: string
+  key: string
+  directory: boolean
+  size: number
+  lastModified?: string | null
+  etag?: string | null
+  storageClass?: string | null
+}
+
+export interface OssBrowserPage {
+  configured: boolean
+  bucket?: string
+  endpoint?: string
+  region?: string
+  rootPrefix: string
+  prefix: string
+  entries: OssBrowserEntry[]
+  nextContinuationToken?: string | null
+  truncated: boolean
+  maxKeys: number
+  loadedDirectories: number
+  loadedFiles: number
+  loadedBytes: number
+}
+
 export interface MigrationJob {
   id?: number
   status?: string
@@ -100,6 +126,16 @@ export function uploadByBah(bah: string): Promise<OssUploadResponse> {
 
 export function getOssUrl(scanId: number) {
   return getRequest<OssUrlResult>(`/api/v1/oss/url/${scanId}`)
+}
+
+export function browseOssObjects(
+  params: { prefix?: string, continuationToken?: string, maxKeys?: number } = {},
+) {
+  return getRequest<OssBrowserPage>('/api/v1/oss/browser', { params })
+}
+
+export function getOssBrowserUrl(key: string) {
+  return getRequest<{ key: string, ossUrl: string }>('/api/v1/oss/browser/url', { params: { key } })
 }
 
 export function getMigrationStatistics() {

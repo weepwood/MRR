@@ -61,6 +61,18 @@ const authenticationTestRoute: RouteRecordRaw = {
   },
 }
 
+const nginxBrowserRoute: RouteRecordRaw = {
+  path: '/nginx-browser',
+  name: 'nginxBrowser',
+  component: () => import('@/views/nginx-browser/index.vue'),
+  meta: {
+    title: 'Nginx 文件浏览',
+    icon: 'i-ant-design:folder-open-twotone',
+    auth: ['record:read'],
+    cache: true,
+  },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -219,6 +231,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/oss-browser/index.vue'),
         meta: { title: 'OSS 文件浏览', icon: 'i-ant-design:folder-open-twotone', auth: ['record:read'], cache: true },
       },
+      nginxBrowserRoute,
       archiveEmbeddedRoute,
     ],
   },
@@ -310,6 +323,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
     '/status',
     '/auth-test',
     '/data-relations',
+    '/nginx-browser',
     ...externalArchiveGeneratedPaths,
     '/statistics/archive',
     '/monitoring',
@@ -324,6 +338,7 @@ const asyncRoutesByFilesystem = [
   archiveEmbeddedRoute,
   monitoringFilesystemRoute,
   authenticationTestRoute,
+  nginxBrowserRoute,
 ]
 
 export {

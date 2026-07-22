@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.utils.PermissionResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,6 +28,12 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthorizationInterceptor.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final DeveloperApiAccessService developerApiAccessService;
+
+    public AuthorizationInterceptor(DeveloperApiAccessService developerApiAccessService) {
+        this.developerApiAccessService = developerApiAccessService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -85,7 +92,14 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
             writeJsonResponse(response, 401, "请先登录");
             return false;
         }
-        if (authenticatedOnly || isAdmin(session)) {
+        if (authenticatedOnly || session.isAdmin()) {
+            return true;
+        }
+        if (developerApiAccessService.isPermissionBypassAllowed(request)) {
+            response.setHeader("X-MRR-Developer-Mode", "enabled");
+            response.setHeader("X-MRR-Access-Mode", DeveloperApiAccessService.API_PERMISSION_BYPASS_MODE);
+            logger.warn("Developer API permission bypass: user={}, method={}, path={}, remoteIp={}",
+                    session.getUsername(), request.getMethod(), path, request.getRemoteAddr());
             return true;
         }
 
@@ -120,9 +134,5 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         OBJECT_MAPPER.writeValue(response.getWriter(), Map.of("code", status, "message", message));
-    }
-
-    private boolean isAdmin(AuthSession session) {
-        return "ADMIN".equalsIgnoreCase(session.getRoleCode());
     }
 }

@@ -10,6 +10,7 @@ public class MigrationStatisticsDTO {
     private long migratedCount;
     private long pendingCount;
     private long failedCount;
+    private long retryWaitCount;
+    private long migratingCount;
     private double percentage;
-
 }

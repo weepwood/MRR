@@ -66,7 +66,9 @@ function readStoredExternalSession(): ExternalArchiveSession | null {
     return null
   }
   const params = new URLSearchParams(window.location.search)
-  if (window.location.pathname !== '/archive' || params.get('external') !== 'ticket') {
+  const isExternalRoute = window.location.pathname === '/archive'
+    && (params.get('external') === 'ticket' || params.get('id') === EXTERNAL_CASE_TOKEN)
+  if (!isExternalRoute) {
     return null
   }
   try {

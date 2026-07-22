@@ -61,13 +61,21 @@ function isIdCardRevealed(value?: string) {
   return patientIdCardRevealEnabled.value && !!value && revealedIdCards.value.has(value)
 }
 async function handleIdCardClick(value?: string) {
-  if (!value) return
+  if (!value) {
+    return
+  }
   if (patientIdCardRevealEnabled.value) {
-    if (revealedIdCards.value.has(value)) revealedIdCards.value.delete(value)
-    else revealedIdCards.value.add(value)
+    if (revealedIdCards.value.has(value)) {
+      revealedIdCards.value.delete(value)
+    }
+    else {
+      revealedIdCards.value.add(value)
+    }
   }
 
-  if (!patientIdCardCopyEnabled.value) return
+  if (!patientIdCardCopyEnabled.value) {
+    return
+  }
 
   try {
     await navigator.clipboard.writeText(value)
@@ -81,7 +89,9 @@ async function handleIdCardClick(value?: string) {
 function applyIdCardSettings(settings: EffectiveSystemSettings) {
   patientIdCardRevealEnabled.value = settings.patientIdCardRevealEnabled
   patientIdCardCopyEnabled.value = settings.patientIdCardCopyEnabled
-  if (!settings.patientIdCardRevealEnabled) revealedIdCards.value.clear()
+  if (!settings.patientIdCardRevealEnabled) {
+    revealedIdCards.value.clear()
+  }
 }
 
 async function loadIdCardSettings() {
@@ -91,7 +101,9 @@ async function loadIdCardSettings() {
 
 function handleSystemSettingsUpdated(event: Event) {
   const settings = (event as CustomEvent<EffectiveSystemSettings>).detail
-  if (settings) applyIdCardSettings(settings)
+  if (settings) {
+    applyIdCardSettings(settings)
+  }
 }
 
 onMounted(() => {
@@ -215,7 +227,7 @@ onUnmounted(() => {
 <style scoped>
 .page-shell { display: grid; gap: 16px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.header-actions { display: flex; align-items: center; gap: 10px; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
 .eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: #64748b; }
@@ -225,8 +237,9 @@ h2 { margin: 0; font-size: 28px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }
 .bah-link:hover { text-decoration: underline; }
-@media (max-width: 760px) {
+
+@media (width <= 760px) {
   .page-header { flex-direction: column; }
-  .header-actions { width: 100%; flex-wrap: wrap; }
+  .header-actions { flex-wrap: wrap; width: 100%; }
 }
 </style>

@@ -12,6 +12,8 @@ export const PERMISSION_HIERARCHY: Record<string, string[]> = {
   'record:read': ['record:read'],
   'role:manage': ['role:manage', 'role:read'],
   'role:read': ['role:read'],
+  'system:manage': ['system:manage', 'system:read'],
+  'system:read': ['system:read'],
 }
 
 export function resolvePermissions(perms: string[]): string[] {

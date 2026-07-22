@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import com.zjcxph.imgapi.security.TokenBlacklist;
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -42,13 +43,16 @@ public class LoginInterceptor implements HandlerInterceptor {
     private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
     private final DeveloperModeService developerModeService;
+    private final DeveloperApiAccessService developerApiAccessService;
 
     public LoginInterceptor(TokenBlacklist tokenBlacklist,
                             AuthUserMapper authUserMapper,
-                            DeveloperModeService developerModeService) {
+                            DeveloperModeService developerModeService,
+                            DeveloperApiAccessService developerApiAccessService) {
         this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
         this.developerModeService = developerModeService;
+        this.developerApiAccessService = developerApiAccessService;
     }
 
     @Override
@@ -123,7 +127,9 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        installSession(request, toCurrentSession(currentUser));
+        AuthSession session = toCurrentSession(currentUser);
+        applyDeveloperPermissionBypass(request, response, session);
+        installSession(request, session);
         return true;
     }
 
@@ -158,6 +164,23 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         writeUnauthorized(response, "请先登录", "UNAUTHORIZED");
         return false;
+    }
+
+    private void applyDeveloperPermissionBypass(HttpServletRequest request,
+                                                HttpServletResponse response,
+                                                AuthSession session) {
+        if (!developerApiAccessService.isPermissionBypassAllowed(request)) {
+            return;
+        }
+        session.setPermissions(new ArrayList<>(PermissionResolver.resolve(Permissions.ALL_PERMISSIONS)));
+        request.setAttribute(DEVELOPER_MODE_ATTRIBUTE, Boolean.TRUE);
+        request.setAttribute(DEVELOPER_MODE_REASON_ATTRIBUTE, "authenticated_api_permission_bypass");
+        request.setAttribute(ACCESS_MODE_ATTRIBUTE, DeveloperApiAccessService.API_PERMISSION_BYPASS_MODE);
+        response.setHeader("X-MRR-Developer-Mode", "enabled");
+        response.setHeader("X-MRR-Access-Mode", DeveloperApiAccessService.API_PERMISSION_BYPASS_MODE);
+        logger.warn("Developer API permission bypass: user={}, userId={}, method={}, path={}, remoteIp={}",
+                session.getUsername(), session.getId(), request.getMethod(),
+                request.getRequestURI(), request.getRemoteAddr());
     }
 
     private void installDeveloperSession(HttpServletRequest request,

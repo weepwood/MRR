@@ -204,6 +204,14 @@ function changeServer() {
   void loadDirectory('')
 }
 
+function selectServer(server: NginxBrowserServer) {
+  if (!server.configured || server.key === selectedServer.value) {
+    return
+  }
+  selectedServer.value = server.key
+  changeServer()
+}
+
 function selectEntry(entry?: NginxBrowserEntry) {
   selectedEntry.value = entry
 }
@@ -346,13 +354,15 @@ onBeforeUnmount(revokePreviewUrl)
 <template>
   <div class="page-shell">
     <header class="page-header">
-      <div>
-        <p class="eyebrow">Nginx Static Resource Browser</p>
-        <h2>Nginx 文件浏览</h2>
-        <p class="subtitle">
-          浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
-        </p>
-      </div>
+      <p class="eyebrow">
+        Nginx Static Resource Browser
+      </p>
+      <h2>
+        Nginx 文件浏览
+      </h2>
+      <p class="subtitle">
+        浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
+      </p>
     </header>
 
     <el-alert
@@ -367,8 +377,12 @@ onBeforeUnmount(revokePreviewUrl)
       <template #header>
         <div class="browser-header">
           <div>
-            <strong>Nginx 静态资源管理器</strong>
-            <p>所有路径均限制在所选服务器的配置根目录内。</p>
+            <strong>
+              Nginx 静态资源管理器
+            </strong>
+            <p>
+              所有路径均限制在所选服务器的配置根目录内。
+            </p>
           </div>
           <div class="header-actions">
             <el-select v-model="selectedServer" class="server-select" @change="changeServer">
@@ -379,7 +393,9 @@ onBeforeUnmount(revokePreviewUrl)
                 :value="server.key"
                 :disabled="!server.configured"
               >
-                <span>{{ server.name }}</span>
+                <span>
+                  {{ server.name }}
+                </span>
                 <el-tag class="server-option-tag" size="small" :type="server.configured ? 'success' : 'info'">
                   {{ server.configured ? '已配置' : '未配置' }}
                 </el-tag>
@@ -397,24 +413,44 @@ onBeforeUnmount(revokePreviewUrl)
 
       <div class="summary-grid">
         <div class="summary-item summary-wide">
-          <span>静态资源根地址</span>
-          <strong>{{ page?.baseUrl || currentServer?.baseUrl || '-' }}</strong>
+          <span>
+            静态资源根地址
+          </span>
+          <strong>
+            {{ page?.baseUrl || currentServer?.baseUrl || '-' }}
+          </strong>
         </div>
         <div class="summary-item">
-          <span>当前页目录</span>
-          <strong>{{ page?.loadedDirectories ?? 0 }}</strong>
+          <span>
+            当前页目录
+          </span>
+          <strong>
+            {{ page?.loadedDirectories ?? 0 }}
+          </strong>
         </div>
         <div class="summary-item">
-          <span>当前页文件</span>
-          <strong>{{ page?.loadedFiles ?? 0 }}</strong>
+          <span>
+            当前页文件
+          </span>
+          <strong>
+            {{ page?.loadedFiles ?? 0 }}
+          </strong>
         </div>
         <div class="summary-item">
-          <span>目录总条目</span>
-          <strong>{{ page?.totalEntries ?? 0 }}</strong>
+          <span>
+            目录总条目
+          </span>
+          <strong>
+            {{ page?.totalEntries ?? 0 }}
+          </strong>
         </div>
         <div class="summary-item">
-          <span>当前页大小</span>
-          <strong>{{ formatFileSize(page?.loadedBytes) }}</strong>
+          <span>
+            当前页大小
+          </span>
+          <strong>
+            {{ formatFileSize(page?.loadedBytes) }}
+          </strong>
         </div>
       </div>
 
@@ -458,30 +494,38 @@ onBeforeUnmount(revokePreviewUrl)
 
       <div v-loading="loading" class="explorer-layout">
         <aside class="folder-pane">
-          <div class="pane-title">服务器</div>
+          <div class="pane-title">
+            服务器
+          </div>
           <button
             v-for="server in servers"
             :key="server.key"
             type="button"
-            class="tree-item"
+            class="tree-button"
             :class="{ active: server.key === selectedServer }"
             :disabled="!server.configured"
-            @click="selectedServer = server.key; changeServer()"
+            @click="selectServer(server)"
           >
             <el-icon><Folder /></el-icon>
-            <span>{{ server.name }}</span>
+            <span>
+              {{ server.name }}
+            </span>
           </button>
-          <div class="pane-title folder-title">当前目录</div>
+          <div class="pane-title folder-title">
+            当前目录
+          </div>
           <button
             v-for="folder in quickFolders"
             :key="folder.path"
             type="button"
-            class="tree-item"
-            @dblclick="openFolder(folder)"
+            class="tree-button"
             @click="selectEntry(folder)"
+            @dblclick="openFolder(folder)"
           >
             <el-icon><Folder /></el-icon>
-            <span>{{ folder.name }}</span>
+            <span>
+              {{ folder.name }}
+            </span>
           </button>
         </aside>
 
@@ -493,7 +537,7 @@ onBeforeUnmount(revokePreviewUrl)
               v-for="entry in visibleEntries"
               :key="entry.path"
               type="button"
-              class="file-tile"
+              class="file-card"
               :class="{ selected: selectedEntry?.path === entry.path }"
               @click="selectEntry(entry)"
               @dblclick="handleEntryDoubleClick(entry)"
@@ -501,8 +545,12 @@ onBeforeUnmount(revokePreviewUrl)
               <el-icon class="file-icon" :class="{ folder: entry.directory }">
                 <component :is="entryIcon(entry)" />
               </el-icon>
-              <span class="file-name" :title="entry.name">{{ entry.name }}</span>
-              <small>{{ entry.directory ? '文件夹' : formatFileSize(entry.size) }}</small>
+              <span class="file-name" :title="entry.name">
+                {{ entry.name }}
+              </span>
+              <small>
+                {{ entry.directory ? '文件夹' : formatFileSize(entry.size) }}
+              </small>
             </button>
           </div>
 
@@ -520,7 +568,9 @@ onBeforeUnmount(revokePreviewUrl)
                   <el-icon :class="{ folder: scope.row.directory }">
                     <component :is="entryIcon(scope.row)" />
                   </el-icon>
-                  <span>{{ scope.row.name }}</span>
+                  <span>
+                    {{ scope.row.name }}
+                  </span>
                 </div>
               </template>
             </el-table-column>
@@ -535,36 +585,66 @@ onBeforeUnmount(revokePreviewUrl)
               </template>
             </el-table-column>
             <el-table-column label="修改时间" width="190">
-              <template #default="scope">{{ formatDate(scope.row.lastModified) }}</template>
+              <template #default="scope">
+                {{ formatDate(scope.row.lastModified) }}
+              </template>
             </el-table-column>
           </el-table>
         </main>
 
         <aside class="detail-pane">
-          <div class="pane-title">详细信息</div>
+          <div class="pane-title">
+            详细信息
+          </div>
           <template v-if="selectedEntry">
             <el-icon class="detail-icon" :class="{ folder: selectedEntry.directory }">
               <component :is="entryIcon(selectedEntry)" />
             </el-icon>
-            <h3>{{ selectedEntry.name }}</h3>
+            <h3>
+              {{ selectedEntry.name }}
+            </h3>
             <dl>
-              <dt>类型</dt>
-              <dd>{{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}</dd>
-              <dt>大小</dt>
-              <dd>{{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}</dd>
-              <dt>修改时间</dt>
-              <dd>{{ formatDate(selectedEntry.lastModified) }}</dd>
-              <dt>相对路径</dt>
-              <dd class="path-value">{{ selectedEntry.path }}</dd>
-              <dt>服务器</dt>
-              <dd>{{ currentServer?.name || '-' }}</dd>
+              <dt>
+                类型
+              </dt>
+              <dd>
+                {{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}
+              </dd>
+              <dt>
+                大小
+              </dt>
+              <dd>
+                {{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}
+              </dd>
+              <dt>
+                修改时间
+              </dt>
+              <dd>
+                {{ formatDate(selectedEntry.lastModified) }}
+              </dd>
+              <dt>
+                相对路径
+              </dt>
+              <dd class="path-value">
+                {{ selectedEntry.path }}
+              </dd>
+              <dt>
+                服务器
+              </dt>
+              <dd>
+                {{ currentServer?.name || '-' }}
+              </dd>
             </dl>
             <div v-if="!selectedEntry.directory" class="detail-actions">
-              <el-button :icon="View" :loading="fileLoading" @click="openFile()">打开</el-button>
+              <el-button :icon="View" :loading="fileLoading" @click="openFile()">
+                打开
+              </el-button>
               <el-button v-if="selectedIsImage" :icon="Picture" :loading="fileLoading" @click="previewFile()">
                 预览
               </el-button>
-              <el-button :icon="Download" :loading="fileLoading" @click="downloadFile()">下载</el-button>
+              <el-button :icon="Download" :loading="fileLoading" @click="downloadFile()">
+                下载
+              </el-button>
             </div>
           </template>
           <el-empty v-else description="选择一个文件或目录" :image-size="72" />
@@ -572,8 +652,12 @@ onBeforeUnmount(revokePreviewUrl)
       </div>
 
       <div class="pagination-bar">
-        <el-button :icon="ArrowLeft" :disabled="!canPreviousPage" @click="previousPage">上一页</el-button>
-        <el-button :icon="ArrowRight" :disabled="!canNextPage" @click="nextPage">下一页</el-button>
+        <el-button :icon="ArrowLeft" :disabled="!canPreviousPage" @click="previousPage">
+          上一页
+        </el-button>
+        <el-button :icon="ArrowRight" :disabled="!canNextPage" @click="nextPage">
+          下一页
+        </el-button>
       </div>
     </el-card>
 
@@ -638,8 +722,8 @@ onBeforeUnmount(revokePreviewUrl)
 
 .browser-header,
 .breadcrumb-row {
-  justify-content: space-between;
   gap: 16px;
+  justify-content: space-between;
 }
 
 .header-actions,
@@ -667,9 +751,9 @@ onBeforeUnmount(revokePreviewUrl)
 .summary-item {
   min-width: 0;
   padding: 12px 14px;
+  background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
-  background: var(--el-fill-color-extra-light);
 }
 
 .summary-item span,
@@ -705,16 +789,16 @@ onBeforeUnmount(revokePreviewUrl)
 .breadcrumb-row {
   min-height: 36px;
   padding: 0 4px 10px;
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .breadcrumb-button {
   padding: 0;
-  border: 0;
   color: inherit;
-  background: transparent;
   cursor: pointer;
+  background: transparent;
+  border: 0;
 }
 
 .explorer-layout {
@@ -722,6 +806,7 @@ onBeforeUnmount(revokePreviewUrl)
   grid-template-columns: 210px minmax(0, 1fr) 280px;
   min-height: 560px;
   overflow: hidden;
+  background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 12px;
 }
@@ -756,41 +841,41 @@ onBeforeUnmount(revokePreviewUrl)
   margin-top: 18px;
 }
 
-.tree-item {
+.tree-button {
   display: flex;
   align-items: center;
-  width: 100%;
   gap: 8px;
+  width: 100%;
   padding: 8px 9px;
-  border: 0;
-  border-radius: 7px;
+  overflow: hidden;
   color: var(--el-text-color-primary);
   text-align: left;
-  background: transparent;
   cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
 }
 
-.tree-item span {
+.tree-button span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tree-item:hover,
-.tree-item.active {
+.tree-button:hover,
+.tree-button.active {
   background: var(--el-color-primary-light-9);
 }
 
-.tree-item:disabled {
-  opacity: 0.45;
+.tree-button:disabled {
   cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .file-pane {
   min-width: 0;
   padding: 12px;
   overflow: auto;
-  background: var(--el-bg-color);
 }
 
 .icon-grid {
@@ -799,23 +884,23 @@ onBeforeUnmount(revokePreviewUrl)
   gap: 10px;
 }
 
-.file-tile {
+.file-card {
   display: flex;
-  align-items: center;
   flex-direction: column;
+  align-items: center;
   min-height: 122px;
   padding: 14px 8px 10px;
+  color: var(--el-text-color-primary);
+  cursor: default;
+  background: transparent;
   border: 1px solid transparent;
   border-radius: 9px;
-  color: var(--el-text-color-primary);
-  background: transparent;
-  cursor: default;
 }
 
-.file-tile:hover,
-.file-tile.selected {
-  border-color: var(--el-color-primary-light-5);
+.file-card:hover,
+.file-card.selected {
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
 }
 
 .file-icon,
@@ -838,12 +923,12 @@ onBeforeUnmount(revokePreviewUrl)
   width: 100%;
   overflow: hidden;
   font-size: 13px;
-  text-align: center;
   text-overflow: ellipsis;
+  text-align: center;
   white-space: nowrap;
 }
 
-.file-tile small {
+.file-card small {
   margin-top: 4px;
   color: var(--el-text-color-secondary);
 }
@@ -887,20 +972,20 @@ onBeforeUnmount(revokePreviewUrl)
 }
 
 .detail-actions {
-  justify-content: center;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .pagination-bar {
+  gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
-  gap: 8px;
 }
 
 .preview-stage {
   display: grid;
-  min-height: 320px;
   place-items: center;
+  min-height: 320px;
   overflow: auto;
   background: var(--el-fill-color-dark);
 }
@@ -911,7 +996,7 @@ onBeforeUnmount(revokePreviewUrl)
   object-fit: contain;
 }
 
-@media (max-width: 1180px) {
+@media (width <= 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -929,13 +1014,13 @@ onBeforeUnmount(revokePreviewUrl)
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .browser-header,
   .header-actions,
   .toolbar,
   .breadcrumb-row {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .server-select,

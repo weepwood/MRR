@@ -86,6 +86,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Generate lint autofix source
+        if: failure()
+        env:
+          LINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LINT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/lint-changed.mjs --fix
+
+      - name: Upload lint autofix source
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lint-autofix-source
+          path: frontend-fantastic-admin/src
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Build
         run: pnpm build
 

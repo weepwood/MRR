@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate script encoding contract
+      - name: Validate script encoding and CMD entry
         run: python -m unittest scripts.tests.test_windows_one_click_manager -v
 
       - name: Parse scripts with Windows PowerShell 5.1
@@ -75,13 +75,6 @@ jobs:
       - name: Run manager self-test with Windows PowerShell 5.1
         shell: powershell
         run: .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
-
-      - name: Run CMD launcher self-test
-        shell: powershell
-        run: |
-          $root = $PWD.Path
-          & .\deploy\windows\MRR-Manager.cmd -SelfTest -Root $root
-          if ($LASTEXITCODE -ne 0) { throw 'CMD 管理入口自检失败。' }
 
   frontend-gate:
     runs-on: ubuntu-latest

@@ -27,7 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @MybatisTest
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = "mybatis.mapper-locations=classpath*:mapper/*.xml")
+@TestPropertySource(properties = {
+        "mybatis.mapper-locations=classpath*:mapper/*.xml",
+        "mybatis.configuration.map-underscore-to-camel-case=true"
+})
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("ScanMapper PostgreSQL 16 + Flyway 集成测试")
 class ScanMapperPostgresqlIT {

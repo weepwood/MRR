@@ -30,10 +30,11 @@ export const useUserStore = defineStore('user', () => {
   const avatar = ref(initialSession.avatar)
   const permissions = ref<string[]>(initialSession.permissions)
   const profile = ref<AuthProfile>(initialSession.profile)
+  const developerApiSession = ref(false)
   const sessionStatus = ref<AuthSessionStatus>(initialSession.token ? 'candidate' : 'anonymous')
 
-  const isLogin = computed(() => Boolean(token.value))
-  const isSessionVerified = computed(() => Boolean(token.value) && sessionStatus.value === 'verified')
+  const isLogin = computed(() => Boolean(token.value) || developerApiSession.value)
+  const isSessionVerified = computed(() => isLogin.value && sessionStatus.value === 'verified')
   const mustChangePassword = computed(() => isSessionVerified.value && Boolean(profile.value.mustChangePassword))
 
   function persistProfile(nextProfile: AuthProfile) {
@@ -41,7 +42,9 @@ export const useUserStore = defineStore('user', () => {
     permissions.value = Array.isArray(nextProfile.permissions) ? nextProfile.permissions : []
     account.value = nextProfile.displayName || nextProfile.username || account.value || ''
     avatar.value = typeof nextProfile.avatar === 'string' ? nextProfile.avatar : avatar.value
-    writeAuthProfile(nextProfile, account.value, permissions.value)
+    if (!developerApiSession.value) {
+      writeAuthProfile(nextProfile, account.value, permissions.value)
+    }
   }
 
   function setSession(session: { token: string, user: AuthProfile }) {
@@ -50,8 +53,8 @@ export const useUserStore = defineStore('user', () => {
       clearSession()
       return
     }
-
     const user = session.user || {}
+    developerApiSession.value = false
     token.value = nextToken
     avatar.value = typeof user.avatar === 'string' ? user.avatar : ''
     account.value = user.displayName || user.username || ''
@@ -65,6 +68,22 @@ export const useUserStore = defineStore('user', () => {
       profile: profile.value,
       permissions: permissions.value,
     })
+  }
+
+  function setDeveloperSession(user: AuthProfile) {
+    clearAuthSessionStorage()
+    developerApiSession.value = true
+    token.value = ''
+    avatar.value = ''
+    account.value = user.displayName || user.username || 'Developer API'
+    profile.value = {
+      ...user,
+      roleCode: 'DEVELOPER_API',
+      status: 'active',
+      mustChangePassword: false,
+    }
+    permissions.value = Array.isArray(user.permissions) ? [...user.permissions] : []
+    sessionStatus.value = 'verified'
   }
 
   async function login(data: { account: string, password: string }) {
@@ -82,8 +101,6 @@ export const useUserStore = defineStore('user', () => {
   async function logout(redirect = router.currentRoute.value.fullPath) {
     const redirectTarget = redirect
     const shouldRevokeToken = !isDemoMode && Boolean(token.value)
-
-    // 必须先携带当前 Bearer Token 请求后端撤销，再清理本地会话。
     if (shouldRevokeToken) {
       try {
         await apiUser.logout()
@@ -92,7 +109,6 @@ export const useUserStore = defineStore('user', () => {
         // 即使服务端不可达，也要保证本地会话可以退出。
       }
     }
-
     clearSession()
     await router.push({
       name: 'login',
@@ -109,6 +125,7 @@ export const useUserStore = defineStore('user', () => {
 
   function clearSession() {
     clearAuthSessionStorage()
+    developerApiSession.value = false
     token.value = ''
     account.value = ''
     avatar.value = ''
@@ -122,6 +139,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function refreshProfile() {
+    if (developerApiSession.value) {
+      sessionStatus.value = 'verified'
+      return
+    }
     const res = await apiUser.permission()
     const nextProfile: AuthProfile = (res.data || {}) as AuthProfile
     persistProfile(nextProfile)
@@ -129,6 +150,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function verifySession() {
+    if (developerApiSession.value) {
+      sessionStatus.value = 'verified'
+      return true
+    }
     if (!token.value) {
       sessionStatus.value = 'anonymous'
       return false
@@ -152,12 +177,12 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function markSessionVerified() {
-    if (token.value) sessionStatus.value = 'verified'
+    if (token.value || developerApiSession.value) sessionStatus.value = 'verified'
   }
 
   function markPasswordChangeRequired() {
     const nextProfile = { ...profile.value, mustChangePassword: true }
-    sessionStatus.value = token.value ? 'verified' : 'anonymous'
+    sessionStatus.value = isLogin.value ? 'verified' : 'anonymous'
     persistProfile(nextProfile)
   }
 
@@ -171,12 +196,14 @@ export const useUserStore = defineStore('user', () => {
     avatar,
     permissions,
     profile,
+    developerApiSession,
     sessionStatus,
     isLogin,
     isSessionVerified,
     mustChangePassword,
     login,
     setSession,
+    setDeveloperSession,
     logout,
     requestLogout,
     clearSession,

@@ -74,16 +74,19 @@ jobs:
         shell: powershell
         run: |
           $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD 2>&1
-          if ($LASTEXITCODE -ne 0) {
-            $output | Write-Host
-            exit $LASTEXITCODE
-          }
+          $exitCode = $LASTEXITCODE
+          $output | Write-Host
+          if ($exitCode -ne 0) { exit $exitCode }
           $text = $output | Out-String
-          $text | Write-Host
-          if ($text -notmatch 'MRR 一键管理中心') {
-            throw '管理中心自检未返回正确中文标题。'
+          if ($text -notmatch 'PowerShellEdition' -or $text -notmatch 'Desktop') {
+            throw '管理中心未在 Windows PowerShell 5.1 Desktop Edition 下完成自检。'
           }
-          & cmd.exe /d /c "deploy\windows\MRR-Manager.cmd -SelfTest -Root `"$PWD`""
+
+      - name: Run CMD launcher self-test
+        shell: powershell
+        run: |
+          $root = $PWD.Path
+          & cmd.exe /d /c "call deploy\windows\MRR-Manager.cmd -SelfTest -Root $root"
           if ($LASTEXITCODE -ne 0) { throw 'CMD 管理入口自检失败。' }
 
   frontend-gate:

@@ -31,6 +31,9 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
+        if (ApiAccessPolicy.isPublicApiPath(normalizeRequestPath(request))) {
+            return true;
+        }
 
         AccessDeclaration declaration = resolveDeclaration(request, handlerMethod);
         if (!declaration.isDeclared()) {
@@ -73,8 +76,21 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    private String normalizeRequestPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isBlank() && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        while (path.length() > 1 && path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path;
+    }
+
     private AccessDeclaration resolveDeclaration(HttpServletRequest request, HandlerMethod handlerMethod) {
-        String[] override = ApiAccessPolicy.requiredPermissionOverride(request.getMethod(), request.getRequestURI());
+        String[] override = ApiAccessPolicy.requiredPermissionOverride(
+                request.getMethod(), normalizeRequestPath(request));
         if (override != null) {
             return AccessDeclaration.forOverride(override);
         }

@@ -800,8 +800,8 @@ onBeforeUnmount(stopPolling)
 .eyebrow {
   font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
   color: var(--el-color-primary);
+  text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 

@@ -52,8 +52,8 @@ defineOptions({ name: 'OssBrowserPage' })
   font-size: 12px;
   font-weight: 700;
   color: var(--el-color-primary);
-  letter-spacing: 0.12em;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .subtitle {

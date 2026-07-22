@@ -18,8 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -183,15 +182,20 @@ public class PatientController {
             logger.warn("患者导出达到上限 {} 条，数据可能不完整", exportLimit);
         }
 
-        try (Workbook workbook = new XSSFWorkbook()) {
+        SXSSFWorkbook workbook = new SXSSFWorkbook(200);
+        workbook.setCompressTempFiles(true);
+        try (workbook) {
             Sheet sheet = workbook.createSheet("患者列表");
             Row header = sheet.createRow(0);
             header.createCell(0).setCellValue("ID");
             header.createCell(1).setCellValue("病案号");
             header.createCell(2).setCellValue("姓名");
             header.createCell(3).setCellValue("身份证号");
-            header.createCell(4).setCellValue("科室");
+            header.createCell(4).setCellValue("入院日期");
             header.createCell(5).setCellValue("入院时间");
+            header.createCell(6).setCellValue("科室");
+            header.createCell(7).setCellValue("病区");
+            header.createCell(8).setCellValue("床位");
 
             for (int i = 0; i < patients.size(); i++) {
                 Patient patient = patients.get(i);
@@ -200,17 +204,23 @@ public class PatientController {
                 row.createCell(1).setCellValue(patient.getBah() != null ? patient.getBah() : "");
                 row.createCell(2).setCellValue(patient.getName() != null ? patient.getName() : "");
                 row.createCell(3).setCellValue(patient.getIdCard() != null ? patient.getIdCard() : "");
-                row.createCell(4).setCellValue(patient.getDepartment() != null ? patient.getDepartment() : "");
+                row.createCell(4).setCellValue(patient.getRuyuan() != null ? patient.getRuyuan().toString() : "");
                 row.createCell(5).setCellValue(patient.getAdmissiontime() != null ? patient.getAdmissiontime() : "");
+                row.createCell(6).setCellValue(patient.getDepartment() != null ? patient.getDepartment() : "");
+                row.createCell(7).setCellValue(patient.getBingqu() != null ? patient.getBingqu() : "");
+                row.createCell(8).setCellValue(patient.getChuangwei() != null ? patient.getChuangwei() : "");
             }
 
-            for (int i = 0; i < 6; i++) {
-                sheet.autoSizeColumn(i);
+            int[] widths = {12, 18, 14, 24, 14, 22, 20, 18, 14};
+            for (int i = 0; i < widths.length; i++) {
+                sheet.setColumnWidth(i, widths[i] * 256);
             }
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename=patients.xlsx");
             workbook.write(response.getOutputStream());
+        } finally {
+            workbook.dispose();
         }
     }
 

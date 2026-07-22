@@ -84,6 +84,28 @@ class PatientImportServiceTest {
         verifyNoInteractions(jdbcTemplate);
     }
 
+    @Test
+    @DisplayName("错误超过展示上限时仍按真实错误行计数")
+    void countsErrorsBeyondDisplayLimit() throws Exception {
+        StringBuilder content = new StringBuilder(
+                "bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\n"
+        );
+        for (int i = 0; i < 205; i++) {
+            content.append(",错误行,,,,,,\n");
+        }
+        content.append("00789508,有效患者,,,,,,\n");
+        MockMultipartFile file = csv(content.toString(), StandardCharsets.UTF_8);
+
+        PatientImportResult result = patientImportService.importPatients(file, true);
+
+        assertThat(result.canImport()).isFalse();
+        assertThat(result.errorRows()).isEqualTo(205);
+        assertThat(result.validRows()).isEqualTo(1);
+        assertThat(result.errors()).hasSize(200);
+        assertThat(result.errorsTruncated()).isTrue();
+        verifyNoInteractions(jdbcTemplate);
+    }
+
     private MockMultipartFile csv(String content, Charset charset) {
         return new MockMultipartFile(
                 "file",

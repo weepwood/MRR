@@ -121,8 +121,7 @@ async function commitImport() {
 
 function downloadTemplate() {
   const header = requiredFields.map(field => field.name).join(',')
-  const example = '00789124,示例患者,330000199001011234,2026-07-01,2026-07-01 08:30,内科,一病区,12A'
-  const blob = new Blob([`\uFEFF${header}\r\n${example}\r\n`], { type: 'text/csv;charset=utf-8' })
+  const blob = new Blob([`\uFEFF${header}\r\n`], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url

@@ -287,7 +287,7 @@ public class PatientImportService {
         if (errors.size() > before) {
             return null;
         }
-        return new PatientRow(bah, name, idCard, ruyuan, admissionTime, department, bingqu, chuangwei);
+        return new PatientRow(rowNumber, bah, name, idCard, ruyuan, admissionTime, department, bingqu, chuangwei);
     }
 
     private LocalDate parseDate(int rowNumber, String rawValue, ErrorCollector errors) {
@@ -623,9 +623,11 @@ public class PatientImportService {
     private static final class ErrorCollector {
         private final List<PatientImportError> errors = new ArrayList<>();
         private final Set<Integer> errorRows = new LinkedHashSet<>();
+        private int errorCount;
         private boolean truncated;
 
         void add(int rowNumber, String field, String message, String rawValue) {
+            errorCount++;
             errorRows.add(rowNumber);
             if (errors.size() >= MAX_REPORTED_ERRORS) {
                 truncated = true;
@@ -635,7 +637,7 @@ public class PatientImportService {
         }
 
         int size() {
-            return errors.size();
+            return errorCount;
         }
 
         boolean hasErrors() {
@@ -679,6 +681,7 @@ public class PatientImportService {
     }
 
     private record PatientRow(
+            int sequence,
             String bah,
             String name,
             String idCard,
@@ -688,15 +691,6 @@ public class PatientImportService {
             String bingqu,
             String chuangwei
     ) {
-        private static int nextSequence = 0;
-        private final static Object SEQUENCE_LOCK = new Object();
-
-        int sequence() {
-            synchronized (SEQUENCE_LOCK) {
-                return ++nextSequence;
-            }
-        }
-
         String fingerprint() {
             return String.join("\u0001", Arrays.asList(
                     value(bah), value(name), value(idCard), value(ruyuan), value(admissionTime),

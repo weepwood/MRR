@@ -52,7 +52,7 @@ test.describe('用户凭据生命周期', () => {
     await expect(page.getByRole('heading', { name: '首次登录，请设置新密码' })).toBeVisible()
 
     await page.getByPlaceholder('输入当前使用的初始密码').fill('TemporaryPassword123')
-    await page.getByPlaceholder('至少 12 位，建议使用较长的易记口令').fill('A brand new password 123')
+    await page.getByPlaceholder('至少 6 位，建议使用更长的易记口令').fill('A brand new password 123')
     await page.getByPlaceholder('再次输入新密码').fill('A brand new password 123')
     await page.getByRole('button', { name: '保存新密码并重新登录' }).click()
     await expect(page).toHaveURL(/\/login/)

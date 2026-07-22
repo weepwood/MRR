@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Result;
@@ -51,6 +52,7 @@ public class ArchiveExportJobController {
 
     @Operation(summary = "创建异步导出任务")
     @PostMapping
+    @AuthenticatedOnly
     public Result<ArchiveExportJobResponse> create(
             @RequestBody ArchiveExportJobRequest request,
             HttpServletRequest servletRequest) {
@@ -79,6 +81,7 @@ public class ArchiveExportJobController {
 
     @Operation(summary = "取消异步导出任务")
     @PostMapping("/{id}/cancel")
+    @AuthenticatedOnly
     public Result<ArchiveExportJobResponse> cancel(
             @PathVariable String id,
             HttpServletRequest request) {

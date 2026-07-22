@@ -1538,8 +1538,8 @@ onBeforeUnmount(() => {
 
 .check-item {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   justify-content: space-between;
   padding: 14px;
   background: var(--el-color-warning-light-9);

@@ -12,13 +12,49 @@ on:
       - '*.*.*'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: quality-gate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  apply-windows-script-encoding-patch:
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/windows-one-click-manager-20260722'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply encoding patch
+        run: python scripts/apply_windows_script_encoding_patch.py
+
+      - name: Run encoding regression tests
+        run: python -m unittest scripts.tests.test_windows_one_click_manager -v
+
+      - name: Validate repository files
+        run: |
+          python scripts/release_baseline.py validate
+          python scripts/check_main_branch_references.py
+          git diff --check
+
+      - name: Commit encoding patch
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Encoding patch already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deploy/windows scripts/tests/test_windows_one_click_manager.py scripts/apply_windows_script_encoding_patch.py
+          git commit -m '修复：兼容 Windows PowerShell 5.1 脚本编码'
+          git push origin HEAD:feat/windows-one-click-manager-20260722
+
   release-baseline-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -39,6 +75,52 @@ jobs:
 
       - name: Validate main branch references
         run: python scripts/check_main_branch_references.py
+
+  windows-management-gate:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate script encoding contract
+        run: python -m unittest scripts.tests.test_windows_one_click_manager -v
+
+      - name: Parse scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem deploy/windows -Filter *.ps1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Error "Windows PowerShell 5.1 syntax error in $($_.FullName): $($errors -join '; ')"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Run manager self-test with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            $output | Write-Host
+            exit $LASTEXITCODE
+          }
+          $text = $output | Out-String
+          $text | Write-Host
+          if ($text -notmatch 'MRR 一键管理中心') {
+            throw '管理中心自检未返回正确中文标题。'
+          }
+          & cmd.exe /d /c "deploy\windows\MRR-Manager.cmd -SelfTest -Root `"$PWD`""
+          if ($LASTEXITCODE -ne 0) { throw 'CMD 管理入口自检失败。' }
 
   frontend-gate:
     runs-on: ubuntu-latest

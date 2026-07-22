@@ -100,7 +100,7 @@ class DeveloperModeServiceTest {
     }
 
     @Test
-    void shouldAllowOnlyReadOnlyArchivePaths() {
+    void shouldAllowOnlyAuditedReadOnlyArchivePaths() {
         DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
         service.refreshFromValue("true");
         service.refreshAllowedSourcesFromValue("192.168.10.0/24");
@@ -109,15 +109,16 @@ class DeveloperModeServiceTest {
                 proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
         assertThat(service.isArchiveLegacyRequestAllowed(
-                proxiedRequest("GET", "/api/v1/img/12345678", "127.0.0.1", "192.168.10.25")))
-                .isTrue();
-        assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/img/image/123/1/folder/1.jpg", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/search/patient/12345678", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
 
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/12345678", "127.0.0.1", "192.168.10.25")))
+                .as("直接按病案号接口不执行 userid/IP 绑定，必须拒绝匿名兼容访问")
+                .isFalse();
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/settings", "127.0.0.1", "192.168.10.25")))
                 .isFalse();

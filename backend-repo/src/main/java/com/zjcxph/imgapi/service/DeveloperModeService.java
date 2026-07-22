@@ -43,7 +43,7 @@ public class DeveloperModeService {
     private static final Pattern IMAGE_CONTENT = Pattern.compile("^/api/v1/img/image/[^/]+/[^/]+/[^/]+/[^/]+$");
     private static final Pattern IMAGE_URL = Pattern.compile("^/api/v1/img/url/\\d+$");
     private static final Pattern OSS_IMAGE = Pattern.compile("^/api/v1/img/oss-image/\\d+$");
-    private static final Pattern PATIENT_BY_BAH = Pattern.compile("^/api/v1/search/patient/\\d{1,8}$");
+    private static final Pattern PATIENT_BY_BAH = Pattern.compile("^/api/v1/search/patient/\\d{1,7}$");
     private static final Pattern NUMERIC_ADDRESS = Pattern.compile("^[0-9a-fA-F:.]+$");
 
     private final SystemSettingMapper systemSettingMapper;
@@ -197,7 +197,7 @@ public class DeveloperModeService {
             String configuredSources = sourcesSetting == null
                     ? DEFAULT_ALLOWED_SOURCES
                     : sourcesSetting.getSettingValue();
-            cachedAllowedSourceRules = List.copyOf(parseAllowedSourceRules(configuredSources, false));
+            cachedAllowedSourceRules = List.copyOf(parseAllowedSourceRules(configuredSources, true));
 
             if (cachedDatabaseEnabled && !startupAllowed) {
                 logger.warn("数据库中的开发者模式开关已开启，但启动配置未允许，兼容模式保持关闭");

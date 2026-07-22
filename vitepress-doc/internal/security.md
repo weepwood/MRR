@@ -111,7 +111,7 @@ MRR_DEVELOPER_MODE_TRUSTED_PROXY_ADDRESSES=127.0.0.1,::1
 - 不加载或展示内部账号的“最近查询”和收藏记录；
 - 只显示外部 Session 或旧接口参数指定的病案；
 - 不允许修改图片类型；
-- Ticket 下载仅在 `allowDownload=true` 时显示并调用外部下载接口；
+- Ticket 下载请求只有在 `allowDownload=true` 时才由外部下载接口执行，未授权时必须拒绝；
 - 外部 Ticket 不提供内部 PDF 导出入口；
 - Ticket 前端 Session 丢失时必须重新调用外部 Context 验证，不能回退到开发者兼容模式。
 

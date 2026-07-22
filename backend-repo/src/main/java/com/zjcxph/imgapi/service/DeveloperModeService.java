@@ -5,10 +5,12 @@ import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -46,10 +48,19 @@ public class DeveloperModeService {
     private volatile boolean cachedDatabaseEnabled;
     private volatile long cacheExpiresAtNanos;
 
+    @Autowired
     public DeveloperModeService(
             SystemSettingMapper systemSettingMapper,
             @Value("${mrr.developer-mode.allowed:false}") boolean startupAllowed,
-            @Value("${mrr.developer-mode.allowed-remote-addresses:127.0.0.1,::1}") List<String> allowedRemoteAddresses
+            @Value("${mrr.developer-mode.allowed-remote-addresses:127.0.0.1,::1}") String allowedRemoteAddresses
+    ) {
+        this(systemSettingMapper, startupAllowed, parseAllowedRemoteAddresses(allowedRemoteAddresses));
+    }
+
+    DeveloperModeService(
+            SystemSettingMapper systemSettingMapper,
+            boolean startupAllowed,
+            List<String> allowedRemoteAddresses
     ) {
         this.systemSettingMapper = systemSettingMapper;
         this.startupAllowed = startupAllowed;
@@ -165,6 +176,16 @@ public class DeveloperModeService {
             logger.error("读取开发者模式设置失败，已按关闭处理", exception);
             return false;
         }
+    }
+
+    private static List<String> parseAllowedRemoteAddresses(String configured) {
+        if (!StringUtils.hasText(configured)) {
+            return List.of();
+        }
+        return Arrays.stream(configured.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 
     static boolean parseEnabled(String value) {

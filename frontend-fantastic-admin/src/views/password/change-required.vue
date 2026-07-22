@@ -8,6 +8,7 @@ meta:
 </route>
 
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import apiUser from '@/api/modules/user'
 import ColorScheme from '@/layouts/components/Topbar/Toolbar/ColorScheme/index.vue'
@@ -25,7 +26,7 @@ const rules = {
   currentPassword: [{ required: true, message: '请输入当前使用的初始密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 12, max: 64, message: '新密码长度应为 12 到 64 位', trigger: 'blur' },
+    { min: 6, max: 64, message: '新密码长度应为 6 到 64 位', trigger: 'blur' },
   ],
   confirmPassword: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
@@ -41,12 +42,12 @@ const rules = {
 const passwordStrength = computed(() => {
   const value = form.newPassword
   let score = 0
-  if (value.length >= 12) score += 1
-  if (value.length >= 16) score += 1
+  if (value.length >= 6) score += 1
+  if (value.length >= 10) score += 1
+  if (value.length >= 14) score += 1
   if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1
-  if (/\d/.test(value)) score += 1
-  if (/[^\w\s]/.test(value)) score += 1
-  if (score >= 4) return { label: '较强', type: 'success' as const, percent: 100 }
+  if (/\d/.test(value) && /[^\w\s]/.test(value)) score += 1
+  if (value.length >= 12 && score >= 4) return { label: '较强', type: 'success' as const, percent: 100 }
   if (score >= 2) return { label: '一般', type: 'warning' as const, percent: 58 }
   return { label: '较弱', type: 'exception' as const, percent: value ? 28 : 0 }
 })
@@ -123,7 +124,7 @@ async function logout() {
             v-model="form.newPassword"
             :type="showNewPassword ? 'text' : 'password'"
             autocomplete="new-password"
-            placeholder="至少 12 位，建议使用较长的易记口令"
+            placeholder="至少 6 位，建议使用更长的易记口令"
           >
             <template #suffix>
               <button type="button" class="visibility-button" @click="showNewPassword = !showNewPassword">
@@ -150,7 +151,7 @@ async function logout() {
 
       <div class="password-rules">
         <strong>密码要求</strong>
-        <span>长度 12–64 位；不能与当前密码相同；建议使用多个无关词语组成长口令。</span>
+        <span>长度 6–64 位；不能与当前密码相同；建议使用多个无关词语组成更长的口令。</span>
       </div>
 
       <div class="card-actions">
@@ -162,6 +163,7 @@ async function logout() {
 </template>
 
 <style scoped>
+/* stylelint-disable order/properties-order, at-rule-empty-line-before */
 .password-page {
   display: grid;
   grid-template-rows: auto 1fr;

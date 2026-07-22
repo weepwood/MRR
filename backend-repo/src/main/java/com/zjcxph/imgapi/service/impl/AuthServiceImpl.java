@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%".toCharArray();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{3,40}$");
     private static final int TEMPORARY_PASSWORD_LENGTH = 16;
-    private static final int MIN_PASSWORD_LENGTH = 12;
+    private static final int MIN_PASSWORD_LENGTH = 6;
     private static final int MAX_PASSWORD_LENGTH = 64;
     private static final String DEFAULT_REGISTER_ROLE = "DOCTOR";
 
@@ -554,7 +554,7 @@ public class AuthServiceImpl implements AuthService {
 
     private void validatePassword(String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH || password.length() > MAX_PASSWORD_LENGTH) {
-            throw new IllegalArgumentException("密码长度应为 12 到 64 位");
+            throw new IllegalArgumentException("密码长度应为 6 到 64 位");
         }
     }
 

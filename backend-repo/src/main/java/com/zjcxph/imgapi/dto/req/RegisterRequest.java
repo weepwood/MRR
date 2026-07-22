@@ -14,8 +14,8 @@ public class RegisterRequest {
     private String username;
 
     @NotBlank(message = "密码不能为空")
-    @Size(min = 12, max = 64, message = "密码长度应为12到64位")
-    @Schema(description = "密码", example = "Password123!")
+    @Size(min = 6, max = 64, message = "密码长度应为6到64位")
+    @Schema(description = "密码", example = "Mrr2026")
     private String password;
 
     @NotBlank(message = "显示名称不能为空")

@@ -31,6 +31,43 @@ test.describe('登录页统一设计', () => {
     await expect(page.getByText('忘记密码了?', { exact: true })).toHaveCount(0)
   })
 
+  test('匿名用户可以直接提交注册申请', async ({ page }) => {
+    let registrationRequested = false
+    await page.route('**/api/v1/auth/register', async (route) => {
+      registrationRequested = true
+      expect(route.request().method()).toBe('POST')
+      expect(route.request().headers().authorization).toBeUndefined()
+      expect(route.request().postDataJSON()).toMatchObject({
+        username: 'doctor.apply',
+        password: '123456',
+        displayName: '申请医生',
+        contactInfo: '内线 6123',
+      })
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 200,
+          message: '注册申请已提交，请等待管理员审核',
+          data: { username: 'doctor.apply', status: 'pending' },
+        }),
+      })
+    })
+
+    await page.goto('/login?mode=register', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { name: '申请系统账号' })).toBeVisible()
+    await page.getByLabel('用户名').fill('doctor.apply')
+    await page.getByLabel('显示名称').fill('申请医生')
+    await page.getByLabel('联系方式').fill('内线 6123')
+    await page.locator('#register-password').fill('123456')
+    await page.locator('#register-password-confirm').fill('123456')
+    await page.getByRole('button', { name: '提交注册申请' }).click()
+
+    await expect.poll(() => registrationRequested).toBe(true)
+    await expect(page.getByText('注册申请已提交，请等待管理员审核。审核通过后即可登录。')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '登录 MRR' })).toBeVisible()
+  })
+
   test('匿名读取系统标识并悬停显示管理员联系方式', async ({ page }) => {
     await page.route('**/api/v1/public/config/login-page', async (route) => {
       await route.fulfill({

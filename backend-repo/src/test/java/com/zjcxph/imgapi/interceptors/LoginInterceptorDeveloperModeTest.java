@@ -43,6 +43,43 @@ class LoginInterceptorDeveloperModeTest {
     }
 
     @Test
+    void shouldAllowAnonymousRegistrationRequest() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/register");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = loginInterceptor.preHandle(request, response, new Object());
+
+        assertThat(allowed).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
+    }
+
+    @Test
+    void shouldAllowAnonymousRegistrationWithContextPathAndTrailingSlash() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/mrr/api/v1/auth/register/");
+        request.setContextPath("/mrr");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = loginInterceptor.preHandle(request, response, new Object());
+
+        assertThat(allowed).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(developerModeService, never()).isArchiveLegacyRequestAllowed(request);
+    }
+
+    @Test
+    void shouldNotExposePublicRegistrationByGetRequest() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/auth/register");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(developerModeService.isArchiveLegacyRequestAllowed(request)).thenReturn(false);
+
+        boolean allowed = loginInterceptor.preHandle(request, response, new Object());
+
+        assertThat(allowed).isFalse();
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
     void shouldAllowAnonymousReadOnlyArchiveRequestWhenLegacyModeIsAllowed() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/search");
         request.setRemoteAddr("127.0.0.1");

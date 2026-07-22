@@ -1,9 +1,9 @@
 name: prepare-release-0.6.1-once
 
 on:
-  push:
+  pull_request:
     branches:
-      - release/0.6.1
+      - main
     paths:
       - '.github/workflows/prepare-release-0.6.1-once.yml'
 
@@ -12,12 +12,13 @@ permissions:
 
 jobs:
   prepare:
+    if: github.head_ref == 'release/0.6.1'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release branch
         uses: actions/checkout@v4
         with:
-          ref: release/0.6.1
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Update version and release documents

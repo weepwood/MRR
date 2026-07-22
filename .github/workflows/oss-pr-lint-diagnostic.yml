@@ -1,9 +1,15 @@
 name: oss-pr-lint-diagnostic
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/oss-migration-management-20260722
+      - dev-no-login
+    paths:
+      - frontend-fantastic-admin/src/api/modules/oss.ts
+      - frontend-fantastic-admin/src/api/types.ts
+      - frontend-fantastic-admin/src/mock/oss-migration.ts
+      - frontend-fantastic-admin/src/views/oss-migration/index.vue
+      - .github/workflows/oss-pr-lint-diagnostic.yml
 
 permissions:
   contents: read

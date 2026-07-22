@@ -230,7 +230,7 @@ Process.Start(new ProcessStartInfo
 - 不加载或展示内部账号的最近查询和收藏记录；
 - 不允许修改图片类型；
 - 不提供内部 PDF 导出入口；
-- 下载按钮只在 Ticket 的 `allowDownload=true` 时可用。
+- 下载请求仅在 Ticket 的 `allowDownload=true` 时由外部接口执行，未授权时会拒绝。
 
 浏览器刷新后若前端保存的外部 Session 已丢失，页面会重新请求外部 Context。Context 无效时直接显示外部访问错误，不会回退到开发者兼容模式。
 

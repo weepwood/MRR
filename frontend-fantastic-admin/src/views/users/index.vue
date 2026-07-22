@@ -16,6 +16,7 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 defineOptions({ name: 'UsersPage' })
 
 type MetricTone = 'blue' | 'green' | 'danger' | 'violet'
+type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
 
 const { auth } = useAuth()
 const userStore = useUserStore()
@@ -30,6 +31,12 @@ const size = ref(20)
 const filters = reactive({ keyword: '', roleCode: '', status: '' })
 
 const statusOptions = [
+  { label: '待审核', value: 'pending' },
+  { label: '启用', value: 'active' },
+  { label: '已拒绝', value: 'rejected' },
+  { label: '禁用', value: 'disabled' },
+]
+const editableStatusOptions = [
   { label: '启用', value: 'active' },
   { label: '禁用', value: 'disabled' },
 ]
@@ -50,6 +57,12 @@ const createForm = reactive({
   temporaryPasswordValidHours: 24,
 })
 
+const approveVisible = ref(false)
+const approveSaving = ref(false)
+const approveTarget = ref<CredentialAwareUser | null>(null)
+const approveFormRef = ref()
+const approveForm = reactive({ roleCode: '' })
+
 const resetVisible = ref(false)
 const resetSaving = ref(false)
 const resetTarget = ref<CredentialAwareUser | null>(null)
@@ -61,25 +74,30 @@ const credentialAcknowledged = ref(false)
 const credentialTitle = ref('')
 const credentialResult = ref<UserCredentialResult | null>(null)
 
+const approvableRoles = computed(() => {
+  const nonAdminRoles = roles.value.filter(role => String(role.code || '').toUpperCase() !== 'ADMIN')
+  return nonAdminRoles.length ? nonAdminRoles : roles.value
+})
+
 const summaryCards = computed(() => [
   {
-    label: '当前页用户', value: users.value.length,
-    note: `系统共 ${total.value.toLocaleString('zh-CN')} 个账号`, tone: 'blue' as MetricTone,
-    icon: 'i-ant-design:user-outlined',
+    label: '待审核', value: users.value.filter(item => normalizeStatus(item.status) === 'pending').length,
+    note: '当前页等待管理员处理的注册申请', tone: 'violet' as MetricTone,
+    icon: 'i-ri:user-received-2-line',
   },
   {
     label: '已启用', value: users.value.filter(item => normalizeStatus(item.status) === 'active').length,
-    note: '当前页可正常登录账号', tone: 'green' as MetricTone,
+    note: `系统共 ${total.value.toLocaleString('zh-CN')} 个账号`, tone: 'green' as MetricTone,
     icon: 'i-ant-design:check-circle-outlined',
   },
   {
-    label: '待修改密码', value: users.value.filter(item => item.mustChangePassword).length,
-    note: '首次登录或管理员重置后待处理', tone: 'violet' as MetricTone,
-    icon: 'i-ri:key-2-line',
+    label: '已拒绝', value: users.value.filter(item => normalizeStatus(item.status) === 'rejected').length,
+    note: '当前页审核未通过的申请', tone: 'danger' as MetricTone,
+    icon: 'i-ri:user-unfollow-line',
   },
   {
     label: '已禁用', value: users.value.filter(item => normalizeStatus(item.status) === 'disabled').length,
-    note: '当前页已停止登录账号', tone: 'danger' as MetricTone,
+    note: '当前页已停止登录的账号', tone: 'blue' as MetricTone,
     icon: 'i-ant-design:stop-outlined',
   },
 ])
@@ -96,6 +114,10 @@ const createRules = {
     { pattern: /^[A-Za-z0-9._-]+$/, message: '只能包含字母、数字、点、下划线和短横线', trigger: 'blur' },
   ],
   roleCode: [{ required: true, message: '请选择角色', trigger: 'change' }],
+}
+
+const approveRules = {
+  roleCode: [{ required: true, message: '请选择审核通过后授予的角色', trigger: 'change' }],
 }
 
 const resetRules = {
@@ -132,6 +154,24 @@ async function loadData() {
 
 function normalizeStatus(status?: string) {
   return String(status || '').toLowerCase()
+}
+
+function isPending(row: CredentialAwareUser) {
+  return normalizeStatus(row.status) === 'pending'
+}
+
+function isActive(row: CredentialAwareUser) {
+  return normalizeStatus(row.status) === 'active'
+}
+
+function statusDisplay(status?: string): { label: string, tone: StatusTone } {
+  switch (normalizeStatus(status)) {
+    case 'pending': return { label: '待审核', tone: 'warning' }
+    case 'active': return { label: '启用', tone: 'success' }
+    case 'rejected': return { label: '已拒绝', tone: 'danger' }
+    case 'disabled': return { label: '禁用', tone: 'neutral' }
+    default: return { label: status || '未知', tone: 'neutral' }
+  }
 }
 
 function handleSearch() {
@@ -183,11 +223,68 @@ async function handleCreate() {
   }
 }
 
+function openApprove(row: CredentialAwareUser) {
+  if (!isPending(row)) return
+  approveTarget.value = row
+  approveForm.roleCode = approvableRoles.value[0]?.code || ''
+  approveVisible.value = true
+}
+
+async function handleApprove() {
+  await approveFormRef.value?.validate()
+  if (!approveTarget.value?.id) return
+  approveSaving.value = true
+  try {
+    const response = await apiUser.approveRegistration(approveTarget.value.id, { roleCode: approveForm.roleCode })
+    const index = users.value.findIndex(item => item.id === approveTarget.value!.id)
+    if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
+    approveVisible.value = false
+    ElMessage.success('注册申请已通过，用户现在可以登录')
+  }
+  catch (err: any) {
+    ElMessage.error(err?.response?.data?.message || err?.message || '审核通过操作失败')
+  }
+  finally {
+    approveSaving.value = false
+  }
+}
+
+async function handleReject(row: CredentialAwareUser) {
+  if (!row.id || !isPending(row)) return
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `请输入拒绝「${row.displayName || row.username}」注册申请的原因。`,
+      '拒绝注册申请',
+      {
+        confirmButtonText: '确认拒绝',
+        cancelButtonText: '取消',
+        type: 'warning',
+        inputType: 'textarea',
+        inputPlaceholder: '拒绝原因将保存在审核记录中',
+        inputValidator: value => Boolean(value?.trim()) || '拒绝原因不能为空',
+      },
+    )
+    const response = await apiUser.rejectRegistration(row.id, { rejectReason: value.trim() })
+    const index = users.value.findIndex(item => item.id === row.id)
+    if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
+    ElMessage.success('注册申请已拒绝')
+  }
+  catch (err: any) {
+    if (err === 'cancel' || err === 'close') return
+    ElMessage.error(err?.response?.data?.message || err?.message || '拒绝操作失败')
+  }
+}
+
 function openEdit(row: CredentialAwareUser) {
+  const status = normalizeStatus(row.status)
+  if (!['active', 'disabled'].includes(status)) {
+    ElMessage.warning('待审核或已拒绝账号不能通过编辑直接启用')
+    return
+  }
   editTarget.value = row
   editForm.displayName = row.displayName ?? ''
   editForm.roleCode = row.roleCode ?? ''
-  editForm.status = normalizeStatus(row.status) || 'active'
+  editForm.status = status
   editVisible.value = true
 }
 
@@ -219,6 +316,7 @@ async function handleSaveEdit() {
 }
 
 function openReset(row: CredentialAwareUser) {
+  if (!isActive(row)) return
   resetTarget.value = row
   resetForm.administratorPassword = ''
   resetForm.temporaryPasswordValidHours = 24
@@ -286,7 +384,7 @@ function closeCredentialResult() {
 }
 
 async function handleDisable(row: CredentialAwareUser) {
-  if (!row.id || isSelf(row.id)) return
+  if (!row.id || isSelf(row.id) || !isActive(row)) return
   try {
     await ElMessageBox.confirm(
       `确认禁用用户「${row.displayName || row.username}」吗？禁用后该用户将无法登录。`,
@@ -305,7 +403,10 @@ async function handleDisable(row: CredentialAwareUser) {
 }
 
 function credentialStatus(row: CredentialAwareUser) {
-  if (normalizeStatus(row.status) === 'disabled') return { label: '已禁用', type: 'info' as const }
+  const status = normalizeStatus(row.status)
+  if (status === 'pending') return { label: '等待审核', type: 'warning' as const }
+  if (status === 'rejected') return { label: '申请未通过', type: 'danger' as const }
+  if (status === 'disabled') return { label: '账号已禁用', type: 'info' as const }
   if (!row.mustChangePassword) return { label: '正常', type: 'success' as const }
   const expiresAt = row.temporaryPasswordExpiresAt ? new Date(row.temporaryPasswordExpiresAt) : null
   if (expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
@@ -328,7 +429,7 @@ onMounted(loadData)
     <MrrPageHeader
       eyebrow="User Management"
       title="用户管理"
-      description="管理系统账号、角色、凭据状态、启停状态与最近登录信息。"
+      description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
     >
       <template #actions>
         <el-button :loading="loading" @click="loadData"><FaIcon name="i-ri:refresh-line" />刷新数据</el-button>
@@ -341,7 +442,7 @@ onMounted(loadData)
     </section>
 
     <MrrFilterBar class="users-filter-bar">
-      <el-input v-model="filters.keyword" class="users-filter__keyword" clearable placeholder="搜索用户名、显示名或角色…" @keyup.enter="handleSearch" />
+      <el-input v-model="filters.keyword" class="users-filter__keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
       <el-select v-model="filters.roleCode" class="users-filter__select" clearable placeholder="全部角色">
         <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
       </el-select>
@@ -354,7 +455,7 @@ onMounted(loadData)
       </template>
     </MrrFilterBar>
 
-    <MrrDataTablePanel title="账号列表" description="临时密码只在创建或重置成功时展示一次。" icon="i-ant-design:unordered-list-outlined" :count="total">
+    <MrrDataTablePanel title="账号与注册申请" description="待审核账号必须由管理员明确通过后才能登录；注册时填写的密码不会展示给管理员。" icon="i-ant-design:unordered-list-outlined" :count="total">
       <div v-if="loading" class="users-state"><AppLoading type="table" :rows="8" /></div>
       <div v-else-if="error" class="users-state"><AppError :message="error" @retry="loadData" /></div>
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
@@ -363,17 +464,35 @@ onMounted(loadData)
         <el-table-column prop="username" label="用户名" min-width="150">
           <template #default="{ row }"><div class="user-identity"><span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span><strong>{{ row.username }}</strong></div></template>
         </el-table-column>
-        <el-table-column prop="displayName" label="显示名称" min-width="140" />
-        <el-table-column label="角色" min-width="130"><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
-        <el-table-column label="凭据状态" min-width="170"><template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template></el-table-column>
-        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" min-width="180"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
-        <el-table-column label="操作" width="245" fixed="right" align="right">
+        <el-table-column prop="displayName" label="显示名称" min-width="130" />
+        <el-table-column label="申请信息" min-width="230">
+          <template #default="{ row }">
+            <div v-if="row.appliedAt || row.contactInfo || row.applyRemark" class="application-info">
+              <span v-if="row.contactInfo">{{ row.contactInfo }}</span>
+              <small v-if="row.applyRemark">{{ row.applyRemark }}</small>
+              <small v-if="row.appliedAt">申请于 {{ formatDateTime(row.appliedAt) }}</small>
+              <small v-if="row.rejectReason" class="reject-reason">拒绝原因：{{ row.rejectReason }}</small>
+            </div>
+            <span v-else class="no-perm">管理员创建</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="角色" min-width="120"><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
+        <el-table-column label="凭据状态" min-width="150"><template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template></el-table-column>
+        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" min-width="165"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
+        <el-table-column label="操作" width="290" fixed="right" align="right">
           <template #default="{ row }">
             <div v-if="canManage" class="row-actions">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-button link type="warning" :disabled="isSelf(row.id) || normalizeStatus(row.status) === 'disabled'" @click="openReset(row)">重置密码</el-button>
-              <el-button link type="danger" :disabled="normalizeStatus(row.status) === 'disabled' || isSelf(row.id)" @click="handleDisable(row)">禁用</el-button>
+              <template v-if="isPending(row)">
+                <el-button link type="success" @click="openApprove(row)">审核通过</el-button>
+                <el-button link type="danger" @click="handleReject(row)">拒绝</el-button>
+              </template>
+              <template v-else-if="['active', 'disabled'].includes(normalizeStatus(row.status))">
+                <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+                <el-button link type="warning" :disabled="!isActive(row) || isSelf(row.id)" @click="openReset(row)">重置密码</el-button>
+                <el-button link type="danger" :disabled="!isActive(row) || isSelf(row.id)" @click="handleDisable(row)">禁用</el-button>
+              </template>
+              <span v-else class="no-perm">审核已结束</span>
             </div>
             <span v-else class="no-perm">无操作权限</span>
           </template>
@@ -386,7 +505,7 @@ onMounted(loadData)
     </MrrDataTablePanel>
 
     <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
-      <el-alert type="info" :closable="false" show-icon title="新用户默认启用。系统将生成一次性临时密码，首次登录后必须修改；如暂不使用账号，可创建后再禁用。" />
+      <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="createForm.displayName" placeholder="例如 张三" /></el-form-item>
@@ -396,12 +515,31 @@ onMounted(loadData)
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
     </el-dialog>
 
+    <el-dialog v-model="approveVisible" title="审核注册申请" width="540px" :close-on-click-modal="false">
+      <el-alert type="warning" :closable="false" show-icon title="审核通过后账号立即变为启用状态，用户可使用注册时设置的密码登录。" />
+      <div class="review-summary">
+        <div><span>用户名</span><strong>{{ approveTarget?.username }}</strong></div>
+        <div><span>显示名称</span><strong>{{ approveTarget?.displayName }}</strong></div>
+        <div><span>联系方式</span><strong>{{ approveTarget?.contactInfo || '-' }}</strong></div>
+        <div><span>申请说明</span><p>{{ approveTarget?.applyRemark || '-' }}</p></div>
+        <div><span>申请时间</span><strong>{{ formatDateTime(approveTarget?.appliedAt) }}</strong></div>
+      </div>
+      <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-position="top" class="dialog-form">
+        <el-form-item label="授予角色" prop="roleCode">
+          <el-select v-model="approveForm.roleCode" class="full-width">
+            <el-option v-for="role in approvableRoles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer><el-button @click="approveVisible = false">取消</el-button><el-button type="success" :loading="approveSaving" @click="handleApprove">确认通过</el-button></template>
+    </el-dialog>
+
     <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名"><div class="readonly-field">{{ editTarget?.username }}</div></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="editForm.displayName" /></el-form-item>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="editForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
-        <el-form-item label="状态" prop="status"><el-select v-model="editForm.status" class="full-width"><el-option v-for="option in statusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
+        <el-form-item label="状态" prop="status"><el-select v-model="editForm.status" class="full-width"><el-option v-for="option in editableStatusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
       </el-form>
       <template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="editSaving" @click="handleSaveEdit">保存修改</el-button></template>
     </el-dialog>
@@ -435,15 +573,20 @@ onMounted(loadData)
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.application-info { display: grid; gap: 3px; min-width: 0; }
+.application-info span { font-size: 12px; color: var(--mrr-foreground); }
+.application-info small { overflow: hidden; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
+.application-info .reject-reason { color: var(--mrr-destructive); }
 .row-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .no-perm, .unit { margin-left: 8px; font-size: 12px; color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: 18px; }
 .readonly-field { width: 100%; min-height: var(--mrr-control-height); padding: 9px 12px; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
-.credential-panel { display: grid; gap: 10px; padding: 18px; margin-top: 18px; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: center; }
-.credential-panel span { font-size: 12px; color: var(--mrr-muted-foreground); }
+.review-summary, .credential-panel { display: grid; gap: 10px; padding: 18px; margin-top: 18px; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: start; }
+.review-summary span, .credential-panel span { font-size: 12px; color: var(--mrr-muted-foreground); }
+.review-summary p { margin: 0; line-height: 1.6; white-space: pre-wrap; }
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
 .acknowledge { margin-top: 16px; }

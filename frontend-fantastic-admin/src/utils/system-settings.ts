@@ -45,6 +45,7 @@ export interface EffectiveSystemSettings {
   patientIdCardRevealEnabled: boolean
   patientIdCardCopyEnabled: boolean
   developerModeEnabled: boolean
+  developerModeAllowedSources: string
 }
 
 export function createDefaultSystemSettings(): EffectiveSystemSettings {
@@ -87,6 +88,7 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     patientIdCardRevealEnabled: false,
     patientIdCardCopyEnabled: false,
     developerModeEnabled: false,
+    developerModeAllowedSources: '127.0.0.1\n::1',
   }
 }
 
@@ -110,6 +112,11 @@ function parseNumber(value: unknown, fallback: number, min: number, max: number)
 function parseText(value: unknown, fallback = ''): string {
   const text = String(value ?? '').trim()
   return text || fallback
+}
+
+function parseOptionalText(value: unknown, fallback = ''): string {
+  if (value === undefined || value === null) return fallback
+  return String(value).trim()
 }
 
 export function parseSystemSettings(values?: Record<string, unknown> | null): EffectiveSystemSettings {
@@ -158,6 +165,10 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
     patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
     developerModeEnabled: parseBoolean(source.developerModeEnabled, defaults.developerModeEnabled),
+    developerModeAllowedSources: parseOptionalText(
+      source.developerModeAllowedSources,
+      defaults.developerModeAllowedSources,
+    ),
   }
 }
 

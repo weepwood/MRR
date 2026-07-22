@@ -5,10 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import {
   createDefaultSystemSettings,
-
   loadEffectiveSystemSettings,
   serializeSystemSettings,
-
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
@@ -42,6 +40,20 @@ function isValidDeveloperSourceShape(value: string): boolean {
   const prefix = Number(parts[1])
   const maxPrefix = address.includes(':') ? 128 : 32
   return Number.isInteger(prefix) && prefix >= 0 && prefix <= maxPrefix
+}
+
+function isValidEmailAddress(value: string): boolean {
+  const email = value.trim()
+  if (!email || /\s/.test(email)) { return false }
+
+  const atIndex = email.indexOf('@')
+  if (atIndex <= 0 || atIndex !== email.lastIndexOf('@')) { return false }
+
+  const domain = email.slice(atIndex + 1)
+  if (!domain || domain.startsWith('.') || domain.endsWith('.')) { return false }
+
+  const labels = domain.split('.')
+  return labels.length >= 2 && labels.every(label => label.length > 0)
 }
 
 export function useUnifiedSettings() {
@@ -105,7 +117,7 @@ export function useUnifiedSettings() {
       ElMessage.warning('系统名称、简称和英文名称不能为空')
       return false
     }
-    if (value.systemAdminEmail && !/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(value.systemAdminEmail)) {
+    if (value.systemAdminEmail && !isValidEmailAddress(value.systemAdminEmail)) {
       ElMessage.warning('系统管理员邮箱格式不正确')
       return false
     }

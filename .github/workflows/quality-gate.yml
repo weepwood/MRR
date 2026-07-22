@@ -80,7 +80,7 @@ jobs:
         shell: powershell
         run: |
           $root = $PWD.Path
-          & cmd.exe /d /c "call deploy\windows\MRR-Manager.cmd -SelfTest -Root $root"
+          & .\deploy\windows\MRR-Manager.cmd -SelfTest -Root $root
           if ($LASTEXITCODE -ne 0) { throw 'CMD 管理入口自检失败。' }
 
   frontend-gate:

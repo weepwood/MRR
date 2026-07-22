@@ -111,7 +111,7 @@ jobs:
           IDENTITY_DIR="build/backend-identity"
           mkdir -p "${IDENTITY_DIR}"
           unzip -l "${BACKEND_JAR}" > "${IDENTITY_DIR}/jar-entries.txt"
-          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/META-INF/build-info.properties > "${IDENTITY_DIR}/build-info.properties" || true
+          unzip -p "${BACKEND_JAR}" META-INF/build-info.properties > "${IDENTITY_DIR}/build-info.properties" || true
           unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties > "${IDENTITY_DIR}/git.properties" || true
           printf 'source.sha=%s\njar.path=%s\n' "${SOURCE_SHA}" "${BACKEND_JAR}" > "${IDENTITY_DIR}/expected.properties"
           echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"

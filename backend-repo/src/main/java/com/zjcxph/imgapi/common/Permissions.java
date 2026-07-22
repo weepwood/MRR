@@ -17,6 +17,7 @@ public final class Permissions {
             "role:manage",
             "role:read",
             "log:read",
+            "system:manage",
             "system:read",
             "test:read"
     );

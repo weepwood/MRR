@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.NginxBrowserPageDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -50,6 +51,7 @@ public class NginxBrowserService {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
+    @Autowired
     public NginxBrowserService(ImageProperties imageProperties,
                                ArchiveImageSourceProperties sourceProperties,
                                ObjectMapper objectMapper) {

@@ -315,9 +315,9 @@ const generatedAsyncRoutes = generatedRoutes.filter(
     '/monitoring',
     '/monitoring-dashboard',
   ].includes(item.path)
-    && item.meta?.enabled !== false
-    && item.meta?.constant !== true
-    && item.meta?.layout !== false,
+  && item.meta?.enabled !== false
+  && item.meta?.constant !== true
+  && item.meta?.layout !== false,
 )
 const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),

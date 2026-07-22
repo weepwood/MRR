@@ -247,10 +247,14 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>build-info</id>
+                        <id>generate-build-info</id>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>build-info</goal>
                         </goals>
+                        <configuration>
+                            <outputFile>${project.build.outputDirectory}/META-INF/build-info.properties</outputFile>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>repackage</id>

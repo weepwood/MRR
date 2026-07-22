@@ -3,7 +3,7 @@ name: backend-normalization-check
 on:
   pull_request:
     branches:
-      - dev-no-login
+      - main
     paths:
       - 'backend-repo/**'
       - '.github/workflows/backend-normalization-check.yml'

@@ -77,9 +77,12 @@ test.describe('无后端 Mock 模式', () => {
   test('页面标题可在页面同级与卡片风格之间切换', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(() => {
-      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
-        app: { enablePermission: false, pageTitleStyle: 'plain', radius: 0.75 },
-      }))
+      const storageKey = 'MRR-ADMIN:app-settings'
+      if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          app: { enablePermission: false, pageTitleStyle: 'plain', radius: 0.75 },
+        }))
+      }
     })
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })

@@ -23,7 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MybatisTest
+@MybatisTest(properties = "mybatis.mapper-locations=classpath*:mapper/*.xml")
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers(disabledWithoutDocker = true)
@@ -39,7 +39,8 @@ class ScanMapperPostgresqlIT {
 
     @DynamicPropertySource
     static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "?currentSchema=app");
+        registry.add("spring.datasource.url", () -> appendJdbcParameter(
+                POSTGRES.getJdbcUrl(), "currentSchema=app"));
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
@@ -47,6 +48,10 @@ class ScanMapperPostgresqlIT {
         registry.add("spring.flyway.schemas", () -> "app");
         registry.add("spring.flyway.default-schema", () -> "app");
         registry.add("spring.sql.init.mode", () -> "never");
+    }
+
+    private static String appendJdbcParameter(String jdbcUrl, String parameter) {
+        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + parameter;
     }
 
     @Autowired

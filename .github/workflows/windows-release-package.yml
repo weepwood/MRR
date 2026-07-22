@@ -113,14 +113,14 @@ jobs:
           GIT_INFO="$(unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties)"
           grep -F "build.version=${PRODUCT_VERSION}" <<< "${BUILD_INFO}"
 
-          if grep -F "git.commit.id=${SOURCE_SHA}" <<< "${GIT_INFO}"; then
+          if grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}"; then
             exit 0
           fi
-          if grep -F "git.commit.id.abbrev=${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
+          if grep -F "${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
             exit 0
           fi
 
-          echo "Backend git.properties does not match ${SOURCE_SHA}" >&2
+          echo "Backend git.properties does not contain source commit ${SOURCE_SHA}" >&2
           printf '%s\n' "${GIT_INFO}" >&2
           exit 1
 

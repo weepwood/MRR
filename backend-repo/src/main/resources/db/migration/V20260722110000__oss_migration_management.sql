@@ -36,9 +36,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_migration_job_single_active
     ON app.migration_job ((1))
     WHERE status IN ('pending', 'running', 'cancelling');
 
-CREATE INDEX IF NOT EXISTS idx_mr_scan_migration_retry
-    ON app.mr_scan (migration_next_retry_at)
-    WHERE migration_status = 'retry_wait';
+-- 不为三千万级 mr_scan 新建额外重试索引。现有 migration_status 索引足以支撑
+-- 少量 retry_wait 记录，避免首次部署时进行一次不必要的全表索引扫描。
 
 COMMENT ON COLUMN app.mr_scan.migration_attempts IS 'OSS 迁移尝试次数，成功或人工重置后清零';
 COMMENT ON COLUMN app.mr_scan.migration_error_code IS '最近一次迁移错误分类，不保存敏感凭据';

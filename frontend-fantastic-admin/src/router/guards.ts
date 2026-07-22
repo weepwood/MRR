@@ -41,6 +41,12 @@ function firstQueryValue(value: unknown): string {
   return String(Array.isArray(value) ? value[0] : value ?? '').trim()
 }
 
+function isExternalTicketArchiveRoute(name: unknown, query: Record<string, unknown>): boolean {
+  return name === 'archive'
+    && (firstQueryValue(query.external) === 'ticket'
+      || firstQueryValue(query.id) === EXTERNAL_TICKET_ACCESS_MODE)
+}
+
 function setupRoutes(router: Router) {
   router.beforeEach(async (to) => {
     setArchiveDomAccessMode()
@@ -49,9 +55,7 @@ function setupRoutes(router: Router) {
       return true
     }
 
-    if (to.name === 'archive'
-      && firstQueryValue(to.query.external) === 'ticket'
-      && hasStoredExternalArchiveSession()) {
+    if (isExternalTicketArchiveRoute(to.name, to.query) && hasStoredExternalArchiveSession()) {
       setArchiveDomAccessMode(EXTERNAL_TICKET_ACCESS_MODE)
       return true
     }
@@ -269,7 +273,7 @@ function setupKeepAlive(router: Router) {
               shouldClearCache = to.meta.noCache === from.name
             }
             else if (Array.isArray(to.meta.noCache)) {
-              shouldClearCache = to.meta.noCache.includes(from.name as string)
+              shouldClearCache = !to.meta.noCache.includes(from.name as string)
             }
           }
           if (from.name === 'reload') {

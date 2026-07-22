@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExternalArchivePage from '../external-archive.vue'
 
 const api = vi.hoisted(() => ({
+  clearExternalArchiveSession: vi.fn(),
   exchangeExternalArchiveTicket: vi.fn(),
   getExternalArchiveContext: vi.fn(),
+  setExternalArchiveSession: vi.fn(),
 }))
 
 const router = vi.hoisted(() => ({
@@ -56,10 +58,11 @@ function mountPage() {
 
 describe('external archive timeout recovery', () => {
   beforeEach(() => {
-    sessionStorage.clear()
     route.query = { ticket: 'ticket-123' }
+    api.clearExternalArchiveSession.mockReset()
     api.exchangeExternalArchiveTicket.mockReset()
     api.getExternalArchiveContext.mockReset()
+    api.setExternalArchiveSession.mockReset()
     router.back.mockReset()
     router.replace.mockReset().mockResolvedValue(undefined)
   })
@@ -70,18 +73,15 @@ describe('external archive timeout recovery', () => {
     mountPage()
     await flushPromises()
 
+    expect(api.setExternalArchiveSession).toHaveBeenCalledWith(session)
     expect(router.replace).toHaveBeenCalledWith({
       path: '/archive',
       query: { external: 'ticket', bah: '123456' },
     })
-    expect(JSON.parse(sessionStorage.getItem('MRR-EXTERNAL-ARCHIVE:session') || '{}')).toMatchObject({
-      clientId: 'his',
-      externalUserId: 'doctor-1',
-    })
+    expect(sessionStorage.getItem('MRR-EXTERNAL-ARCHIVE:session')).toBeNull()
   })
 
-  it('keeps the session and offers recovery actions after a timeout', async () => {
-    sessionStorage.setItem('MRR-EXTERNAL-ARCHIVE:session', JSON.stringify(session))
+  it('clears unverified memory state and offers recovery actions after a timeout', async () => {
     api.exchangeExternalArchiveTicket.mockRejectedValue({
       code: 'ECONNABORTED',
       message: 'timeout of 60000ms exceeded',
@@ -94,10 +94,11 @@ describe('external archive timeout recovery', () => {
     expect(wrapper.text()).toContain('继续等待')
     expect(wrapper.text()).toContain('重新尝试')
     expect(wrapper.text()).toContain('返回上一页')
-    expect(sessionStorage.getItem('MRR-EXTERNAL-ARCHIVE:session')).not.toBeNull()
+    expect(api.clearExternalArchiveSession).toHaveBeenCalled()
+    expect(api.setExternalArchiveSession).not.toHaveBeenCalled()
   })
 
-  it('continues with a longer timeout and reuses a server session when available', async () => {
+  it('continues with a longer timeout and reuses a verified server session when available', async () => {
     api.exchangeExternalArchiveTicket.mockRejectedValueOnce({
       code: 'ETIMEDOUT',
       message: 'request timed out',
@@ -114,6 +115,7 @@ describe('external archive timeout recovery', () => {
     await wrapper.vm.$nextTick()
 
     expect(api.getExternalArchiveContext).toHaveBeenCalledWith({ timeout: 180_000 })
+    expect(api.setExternalArchiveSession).toHaveBeenCalledWith(session)
     expect(router.replace).toHaveBeenCalledWith({
       path: '/archive',
       query: { external: 'ticket', bah: '123456' },
@@ -121,7 +123,6 @@ describe('external archive timeout recovery', () => {
   })
 
   it('still treats explicit authorization rejection as a terminal error', async () => {
-    sessionStorage.setItem('MRR-EXTERNAL-ARCHIVE:session', JSON.stringify(session))
     api.exchangeExternalArchiveTicket.mockRejectedValue({
       message: '外部影像访问票据无效或已过期',
       response: { status: 403 },
@@ -132,6 +133,7 @@ describe('external archive timeout recovery', () => {
 
     expect(wrapper.text()).toContain('无法访问影像档案袋')
     expect(wrapper.text()).not.toContain('继续等待')
-    expect(sessionStorage.getItem('MRR-EXTERNAL-ARCHIVE:session')).toBeNull()
+    expect(api.clearExternalArchiveSession).toHaveBeenCalled()
+    expect(api.setExternalArchiveSession).not.toHaveBeenCalled()
   })
 })

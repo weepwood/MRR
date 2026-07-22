@@ -217,7 +217,8 @@ public class OssController {
     public Result<Map<String, Object>> retryFailedScans(@RequestBody MigrationRetryRequest request) {
         try {
             int updated = migrationService.retryFailedScans(request == null ? null : request.getScanIds());
-            return Result.success(Map.of("updated", updated)).message("失败记录已重置，可重新创建试迁移或批次任务");
+            return Result.success(Map.<String, Object>of("updated", updated))
+                    .message("失败记录已重置，可重新创建试迁移或批次任务");
         } catch (IllegalArgumentException | IllegalStateException e) {
             return Result.fail(e.getMessage());
         }

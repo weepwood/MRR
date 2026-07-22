@@ -1,0 +1,96 @@
+name: 临时提交 OSS 上架号迁移实现
+
+on:
+  push:
+    branches:
+      - feat/oss-migration-management-20260722
+    paths:
+      - '.github/workflows/tmp-oss-route-implementation-v2.yml'
+
+concurrency:
+  group: oss-route-implementation
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/oss-migration-management-20260722
+
+      - name: Extract implementation scripts
+        shell: bash
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          workflow = yaml.safe_load(Path('.github/workflows/tmp-oss-route-implementation.yml').read_text(encoding='utf-8'))
+          steps = workflow['jobs']['implement']['steps']
+          selected = {
+              step.get('name'): step.get('run')
+              for step in steps
+              if step.get('name') in {'写入新路线测试', '实施 Nginx 与上架号迁移路线'}
+          }
+          for name in ('写入新路线测试', '实施 Nginx 与上架号迁移路线'):
+              script = selected.get(name)
+              if not script:
+                  raise SystemExit(f'未找到原实施流程步骤：{name}')
+          Path('/tmp/write-tests.sh').write_text(selected['写入新路线测试'], encoding='utf-8')
+          Path('/tmp/implement.sh').write_text(selected['实施 Nginx 与上架号迁移路线'], encoding='utf-8')
+          PY
+
+      - name: Apply tests and implementation
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          bash /tmp/write-tests.sh > /tmp/oss-route-apply.log 2>&1
+          test_status=$?
+          if [ $test_status -eq 0 ]; then
+            bash /tmp/implement.sh >> /tmp/oss-route-apply.log 2>&1
+            impl_status=$?
+          else
+            impl_status=1
+          fi
+          cat /tmp/oss-route-apply.log
+          if [ $test_status -ne 0 ] || [ $impl_status -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend-repo frontend-fantastic-admin vitepress-doc
+          git commit -m "功能：按上架号实施 Nginx 到 OSS 迁移路线"
+          git push origin HEAD:feat/oss-migration-management-20260722
+
+      - name: Report failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo 'OSS 新迁移路线自动实施失败。最后日志：'
+            echo
+            echo '```text'
+            if [ -f /tmp/oss-route-apply.log ]; then
+              tail -n 120 /tmp/oss-route-apply.log
+            else
+              echo '实施脚本尚未生成日志，请检查脚本提取步骤。'
+            fi
+            echo '```'
+          } > /tmp/comment.md
+          gh api repos/${GITHUB_REPOSITORY}/issues/182/comments -f body="$(cat /tmp/comment.md)"

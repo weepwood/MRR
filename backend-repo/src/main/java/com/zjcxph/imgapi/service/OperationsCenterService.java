@@ -152,24 +152,24 @@ public class OperationsCenterService {
     }
 
     static Map<String, Object> redactOverviewForReport(Map<String, Object> source) {
-    Map<String, Object> result = new LinkedHashMap<>(source);
-    Object latestOperation = source.get("latestOperation");
-    if (latestOperation instanceof Map<?, ?> latestMap && !latestMap.isEmpty()) {
-        Map<String, Object> normalized = new LinkedHashMap<>();
-        latestMap.forEach((key, value) -> normalized.put(String.valueOf(key), value));
-        result.put("latestOperation", redactOperationForReport(normalized));
+        Map<String, Object> result = new LinkedHashMap<>(source);
+        Object latestOperation = source.get("latestOperation");
+        if (latestOperation instanceof Map<?, ?> latestMap && !latestMap.isEmpty()) {
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            latestMap.forEach((key, value) -> normalized.put(String.valueOf(key), value));
+            result.put("latestOperation", redactOperationForReport(normalized));
+        }
+        return Map.copyOf(result);
     }
-    return Map.copyOf(result);
-}
 
     static Map<String, Object> redactIntegrityForReport(Map<String, Object> source) {
-    Map<String, Object> result = new LinkedHashMap<>(source);
-    Object lastError = source.get("lastError");
-    if (lastError != null && !String.valueOf(lastError).isBlank()) {
-        result.put("lastError", "[REDACTED]");
+        Map<String, Object> result = new LinkedHashMap<>(source);
+        Object lastError = source.get("lastError");
+        if (lastError != null && !String.valueOf(lastError).isBlank()) {
+            result.put("lastError", "[REDACTED]");
+        }
+        return Map.copyOf(result);
     }
-    return Map.copyOf(result);
-}
 
     static Map<String, Object> redactOperationForReport(Map<String, Object> source) {
         Map<String, Object> result = new LinkedHashMap<>();

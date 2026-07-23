@@ -6,9 +6,11 @@ import com.zjcxph.imgapi.service.DataExchangeExportService;
 import com.zjcxph.imgapi.service.ScanDataExchangeService;
 import com.zjcxph.imgapi.service.StatisticsDataExchangeService;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -45,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("核心数据交换 PostgreSQL 16 + Flyway 集成测试")
@@ -93,6 +96,17 @@ class CoreDataExchangePostgresqlIT {
                                app.mr_statistics, app.mr_archive
                 restart identity cascade
                 """);
+    }
+
+    @AfterAll
+    void shutdownTestResources() throws Exception {
+        Object dataSource = jdbcTemplate.getDataSource();
+        if (dataSource instanceof AutoCloseable closeable) {
+            closeable.close();
+        }
+        if (POSTGRES.isRunning()) {
+            POSTGRES.stop();
+        }
     }
 
     @Test

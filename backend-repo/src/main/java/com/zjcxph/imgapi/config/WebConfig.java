@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
 import com.zjcxph.imgapi.interceptors.PasswordChangeRequiredInterceptor;
 import com.zjcxph.imgapi.interceptors.RateLimitInterceptor;
+import com.zjcxph.imgapi.interceptors.ReadOnlyDegradationInterceptor;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -26,19 +27,22 @@ public class WebConfig implements WebMvcConfigurer {
     private final DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor;
     private final LogInterceptor logInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final ReadOnlyDegradationInterceptor readOnlyDegradationInterceptor;
 
     public WebConfig(LoginInterceptor loginInterceptor,
                      PasswordChangeRequiredInterceptor passwordChangeRequiredInterceptor,
                      AuthorizationInterceptor authorizationInterceptor,
                      DocumentationSessionCleanupInterceptor documentationSessionCleanupInterceptor,
                      LogInterceptor logInterceptor,
-                     RateLimitInterceptor rateLimitInterceptor) {
+                     RateLimitInterceptor rateLimitInterceptor,
+                     ReadOnlyDegradationInterceptor readOnlyDegradationInterceptor) {
         this.loginInterceptor = loginInterceptor;
         this.passwordChangeRequiredInterceptor = passwordChangeRequiredInterceptor;
         this.authorizationInterceptor = authorizationInterceptor;
         this.documentationSessionCleanupInterceptor = documentationSessionCleanupInterceptor;
         this.logInterceptor = logInterceptor;
         this.rateLimitInterceptor = rateLimitInterceptor;
+        this.readOnlyDegradationInterceptor = readOnlyDegradationInterceptor;
     }
 
     @Override
@@ -96,5 +100,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(baseExcludes)
                 .excludePathPatterns(authenticationExcludes);
+
+        registry.addInterceptor(readOnlyDegradationInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(baseExcludes);
     }
 }

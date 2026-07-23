@@ -1,0 +1,112 @@
+package com.zjcxph.imgapi.controller;
+
+import com.zjcxph.imgapi.annotation.RequirePermissions;
+import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.service.DeploymentReadinessService;
+import com.zjcxph.imgapi.service.ImageSourceDiagnosticsService;
+import com.zjcxph.imgapi.service.IntegrityDiagnosticsService;
+import com.zjcxph.imgapi.service.OperationsDiagnosticsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/operations")
+@Tag(name = "Operations Diagnostics", description = "图片来源、数据完整性、权限和部署就绪诊断")
+@RequirePermissions({"system:read"})
+public class OperationsDiagnosticsController {
+
+    private final OperationsDiagnosticsService diagnosticsService;
+    private final ImageSourceDiagnosticsService imageSourceDiagnosticsService;
+    private final IntegrityDiagnosticsService integrityDiagnosticsService;
+    private final DeploymentReadinessService readinessService;
+
+    public OperationsDiagnosticsController(
+            OperationsDiagnosticsService diagnosticsService,
+            ImageSourceDiagnosticsService imageSourceDiagnosticsService,
+            IntegrityDiagnosticsService integrityDiagnosticsService,
+            DeploymentReadinessService readinessService
+    ) {
+        this.diagnosticsService = diagnosticsService;
+        this.imageSourceDiagnosticsService = imageSourceDiagnosticsService;
+        this.integrityDiagnosticsService = integrityDiagnosticsService;
+        this.readinessService = readinessService;
+    }
+
+    @GetMapping("/image-source")
+    @RequirePermissions({"system:read", "record:read"})
+    @Operation(summary = "诊断单张图片的来源解析与回退过程")
+    public Result<Map<String, Object>> diagnoseImageSource(
+            @RequestParam(required = false) String bah,
+            @RequestParam(required = false) String sjh,
+            @RequestParam(required = false) Integer imageId
+    ) {
+        return Result.success(imageSourceDiagnosticsService.diagnose(bah, sjh, imageId));
+    }
+
+    @GetMapping("/integrity")
+    @Operation(summary = "读取最近一次后台生成的病案数据完整性快照")
+    public Result<Map<String, Object>> integrity() {
+        return Result.success(integrityDiagnosticsService.getSnapshot());
+    }
+
+    @GetMapping("/exports")
+    @RequirePermissions({"system:read", "record:read"})
+    @Operation(summary = "获取导出文件中心任务")
+    public Result<List<Map<String, Object>>> exports(
+            @RequestParam(defaultValue = "100") int limit
+    ) {
+        return Result.success(diagnosticsService.exportCenter(limit));
+    }
+
+    @GetMapping("/permission-matrix")
+    @RequirePermissions({"system:read", "role:read"})
+    @Operation(summary = "获取角色、接口与操作权限矩阵")
+    public Result<Map<String, Object>> permissionMatrix(
+            @RequestParam(defaultValue = "true") boolean comparePrevious
+    ) {
+        return Result.success(diagnosticsService.permissionMatrix(comparePrevious));
+    }
+
+    @PostMapping("/permission-matrix/snapshots")
+    @RequirePermissions({"system:manage", "role:read"})
+    @Operation(summary = "保存当前权限矩阵为版本快照")
+    public Result<Map<String, Object>> savePermissionSnapshot(
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String version = body == null ? null : body.get("version");
+        return Result.success("权限矩阵快照已保存", diagnosticsService.savePermissionSnapshot(version));
+    }
+
+    @GetMapping("/readiness")
+    @Operation(summary = "读取最近一次部署就绪检查结果")
+    public Result<Map<String, Object>> readiness() {
+        return Result.success(diagnosticsService.readiness());
+    }
+
+    @PostMapping("/readiness/refresh")
+    @RequirePermissions({"system:manage"})
+    @Operation(summary = "由管理员显式刷新部署就绪检查")
+    public Result<Map<String, Object>> refreshReadiness() {
+        return Result.success(readinessService.refreshSnapshot());
+    }
+
+    @GetMapping("/read-only")
+    @Operation(summary = "获取当前读写模式")
+    public Result<Map<String, Object>> readOnly() {
+        Map<String, Object> snapshot = diagnosticsService.readiness();
+        return Result.success(Map.of(
+                "readOnly", snapshot.getOrDefault("readOnly", true),
+                "mode", snapshot.getOrDefault("mode", "READ_ONLY_DEGRADED"),
+                "checkedAt", snapshot.getOrDefault("checkedAt", "")
+        ));
+    }
+}

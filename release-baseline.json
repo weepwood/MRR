@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260723011000",
+    "maximumCompatibleMigration": "20260723090000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "在 0.6.3 基线上增加核心业务数据交换中心，将病案主档来源统计外键调整为事务级延迟校验，并为扫描路径定位增加并发复合索引；尚未完成旧应用连接升级后数据库的完整回滚演练，回滚前必须恢复发布前数据库与配置备份并重新验证。"
+    "reason": "在 0.6.3 基线上增加核心业务数据交换中心、运维诊断中心、权限矩阵快照与导出下载统计；同时调整病案主档来源统计外键并增加扫描路径并发索引。升级后旧应用无法识别新增数据结构，回滚前必须恢复发布前数据库和配置备份并重新验证。"
   },
   "configuration": {
     "schemaVersion": 1

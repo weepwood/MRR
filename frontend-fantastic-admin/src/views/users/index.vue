@@ -81,7 +81,7 @@ const credentialResult = ref<UserCredentialResult | null>(null)
 const {
   maxInlineActions: userResponsiveInlineActions,
   actionColumnWidth: userActionColumnWidth,
-} = useTableActionLayout(3, 1)
+} = useTableActionLayout(2, 2)
 
 const approvableRoles = computed(() => {
   const nonAdminRoles = roles.value.filter(role => String(role.code || '').toUpperCase() !== 'ADMIN')
@@ -262,11 +262,14 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
   return []
 }
 
+function userHasActions(row: CredentialAwareUser) {
+  return ['pending', 'active', 'disabled'].includes(normalizeStatus(row.status))
+}
+
 function userInlineLimit(row: CredentialAwareUser) {
-  if (userResponsiveInlineActions.value === 0) {
-    return 0
-  }
-  return isPending(row) ? 2 : 1
+  return isPending(row)
+    ? userResponsiveInlineActions.value
+    : Math.min(userResponsiveInlineActions.value, 1)
 }
 
 function handleUserAction(action: string, row: CredentialAwareUser) {
@@ -588,10 +591,12 @@ onMounted(loadData)
         >
           <template #default="{ row }">
             <MrrTableActions
+              v-if="userHasActions(row)"
               :actions="userActions(row)"
               :max-inline="userInlineLimit(row)"
               @select="handleUserAction($event, row)"
             />
+            <span v-else class="no-perm">审核已结束</span>
           </template>
         </el-table-column>
       </el-table>

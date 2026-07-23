@@ -1,0 +1,61 @@
+name: 一次性诊断 0.7.0 正式资产验证
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-verification-0.7.0-once.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 获取验证任务状态和失败日志
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow verify-release-0.7.0-once.yml \
+            --branch main \
+            --limit 5 \
+            --json databaseId,status,conclusion,headSha,createdAt,updatedAt,url \
+            > .release-verification-status-0.7.0.json
+          cat .release-verification-status-0.7.0.json
+
+          run_id="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          runs = json.loads(Path('.release-verification-status-0.7.0.json').read_text(encoding='utf-8'))
+          print(runs[0]['databaseId'] if runs else '')
+          PY
+          )"
+          if [ -n "$run_id" ]; then
+            gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json jobs > .release-verification-jobs-0.7.0.json
+            gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed > .release-verification-failed-0.7.0.log || true
+          fi
+
+      - name: 提交诊断结果并清理任务
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/diagnose-verification-0.7.0-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .release-verification-status-0.7.0.json
+          if [ -f .release-verification-jobs-0.7.0.json ]; then git add .release-verification-jobs-0.7.0.json; fi
+          if [ -s .release-verification-failed-0.7.0.log ]; then git add .release-verification-failed-0.7.0.log; fi
+          git commit -m "发布：记录 0.7.0 资产验证诊断"
+          git push origin main

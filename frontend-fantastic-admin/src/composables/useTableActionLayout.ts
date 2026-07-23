@@ -1,6 +1,8 @@
 import { useMediaQuery } from '@vueuse/core'
 import { computed } from 'vue'
 
+const DESKTOP_INLINE_LIMIT = 3
+
 export function useTableActionLayout(maxActionCount: number, desktopInline = 2) {
   const mediumScreen = useMediaQuery('(max-width: 1279px)')
   const narrowScreen = useMediaQuery('(max-width: 899px)')
@@ -12,7 +14,7 @@ export function useTableActionLayout(maxActionCount: number, desktopInline = 2) 
     if (mediumScreen.value) {
       return Math.min(desktopInline, 1)
     }
-    return desktopInline
+    return Math.max(desktopInline, DESKTOP_INLINE_LIMIT)
   })
 
   const actionColumnWidth = computed(() => {

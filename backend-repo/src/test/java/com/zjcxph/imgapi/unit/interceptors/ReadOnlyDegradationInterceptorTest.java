@@ -58,6 +58,18 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
+    void readinessRefreshRemainsAvailableInReadOnlyMode() throws Exception {
+        when(readinessService.isReadOnly()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST",
+                "/api/v1/operations/readiness/refresh"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(interceptor.preHandle(request, response, new Object()));
+    }
+
+    @Test
     void businessWriteIsRejectedInReadOnlyMode() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(true);
         when(readinessService.getSnapshot()).thenReturn(Map.of(

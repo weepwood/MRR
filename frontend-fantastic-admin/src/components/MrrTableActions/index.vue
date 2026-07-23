@@ -130,6 +130,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
   align-items: center;
   justify-content: center;
   min-width: 0;
+  margin-inline: -10px;
   white-space: nowrap;
 }
 

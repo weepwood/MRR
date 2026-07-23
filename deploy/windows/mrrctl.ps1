@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('status','start','stop','restart','maintenance','deploy','rollback','version','versions','logs','doctor')]
+    [ValidateSet('status','start','stop','restart','maintenance','frontend','deploy','rollback','version','versions','logs','doctor')]
     [string]$Command,
     [Parameter(Position = 1)][string]$Target = 'all',
     [string]$Root = 'C:\MRR',
@@ -20,6 +20,7 @@ $P = @{
     Releases = Join-Path $Root 'releases'; Staging = Join-Path $Root 'staging'
     Maintenance = Join-Path $Root 'config\nginx\maintenance.inc'
     MaintenancePage = Join-Path $Root 'shared\maintenance.html'
+    FrontendMode = Join-Path $Root 'config\nginx\frontend-mode.inc'
     Nginx = Join-Path $Root 'runtime\nginx\nginx.exe'
     NginxHome = Join-Path $Root 'runtime\nginx'
     NginxConfig = Join-Path $Root 'config\nginx\nginx.conf'
@@ -160,6 +161,80 @@ function Invoke-Nginx([ValidateSet('test','reload','quit')][string]$Action) {
     if ($LASTEXITCODE -ne 0) { throw "Nginx 操作失败：$Action" }
 }
 
+function Get-FrontendMode {
+    if (-not (Test-Path -LiteralPath $P.FrontendMode -PathType Leaf)) { return 'unknown' }
+    $content = Get-Content -LiteralPath $P.FrontendMode -Raw -Encoding UTF8
+    if ($content -match 'frontend mode:\s*embedded' -or $content -match 'proxy_pass\s+http://mrr_backend') { return 'embedded' }
+    if ($content -match 'frontend mode:\s*external' -or $content -match 'current/frontend') { return 'external' }
+    return 'custom'
+}
+
+function Assert-BundledFrontendJar([string]$JarPath) {
+    if (-not (Test-Path -LiteralPath $JarPath -PathType Leaf)) { throw "后端 JAR 不存在：$JarPath" }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($JarPath)
+    try {
+        $index = $archive.GetEntry('BOOT-INF/classes/static/index.html')
+        if ($null -eq $index -or $index.Length -le 0) {
+            throw '后端 JAR 未包含 BOOT-INF/classes/static/index.html。'
+        }
+        $asset = $archive.Entries | Where-Object {
+            $_.FullName.StartsWith('BOOT-INF/classes/static/assets/', [StringComparison]::Ordinal) -and $_.Length -gt 0
+        } | Select-Object -First 1
+        if ($null -eq $asset) { throw '后端 JAR 未包含前端 assets 资源。' }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
+function Set-FrontendMode([string]$Mode) {
+    Assert-Admin
+    if ($Mode -notin @('embedded','external')) { throw 'frontend 后必须指定 embedded 或 external。' }
+    if (-not ((Get-Content -LiteralPath $P.NginxConfig -Raw -Encoding UTF8) -match 'frontend-mode\.inc')) {
+        throw '当前 Nginx 配置尚未支持前端模式切换，请先应用新版 deploy/windows/templates/nginx.conf。'
+    }
+
+    if ($Mode -eq 'embedded') {
+        Assert-BundledFrontendJar (Join-Path $P.Current 'backend\mrr-backend.jar')
+    }
+    else {
+        $externalIndex = Join-Path $P.Current 'frontend\index.html'
+        if (-not (Test-Path -LiteralPath $externalIndex -PathType Leaf)) {
+            throw "外置前端不存在：$externalIndex"
+        }
+    }
+
+    $rootUri = $Root.Replace('\', '/')
+    $content = if ($Mode -eq 'embedded') {
+        "# MRR frontend mode: embedded`r`nproxy_pass http://mrr_backend;`r`ninclude $rootUri/config/nginx/proxy.inc;`r`n"
+    }
+    else {
+        "# MRR frontend mode: external`r`nroot $rootUri/current/frontend;`r`ntry_files `$uri `$uri/ /index.html;`r`n"
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $P.FrontendMode) -Force | Out-Null
+    $previous = if (Test-Path -LiteralPath $P.FrontendMode) {
+        Get-Content -LiteralPath $P.FrontendMode -Raw -Encoding UTF8
+    } else { $null }
+    Set-Content -LiteralPath $P.FrontendMode -Value $content -Encoding UTF8
+    try {
+        Invoke-Nginx test
+        $gateway = Get-Service $S.Gateway -ErrorAction SilentlyContinue
+        if ($gateway -and $gateway.Status -eq 'Running') { Invoke-Nginx reload }
+    }
+    catch {
+        if ($null -eq $previous) {
+            Remove-Item -LiteralPath $P.FrontendMode -Force -ErrorAction SilentlyContinue
+        }
+        else {
+            Set-Content -LiteralPath $P.FrontendMode -Value $previous -Encoding UTF8
+        }
+        throw
+    }
+    Write-Host "前端模式已切换为：$Mode" -ForegroundColor Green
+}
+
 function Set-Maintenance([bool]$Enabled, [string]$Text = $Message) {
     Assert-Admin
     New-Item -ItemType Directory -Path (Split-Path -Parent $P.Maintenance) -Force | Out-Null
@@ -196,6 +271,7 @@ function Assert-Release([string]$Release) {
     foreach ($required in 'manifest.json','VERSION','release-baseline.json','backend\mrr-backend.jar','frontend\index.html') {
         if (-not (Test-Path (Join-Path $Release $required))) { throw "发布包缺少：$required" }
     }
+    Assert-BundledFrontendJar (Join-Path $Release 'backend\mrr-backend.jar')
 
     $manifest = Get-Manifest $Release
     if (-not $manifest -or -not (Test-ObjectProperty $manifest 'productVersion') -or -not (Test-ObjectProperty $manifest 'gitCommit')) {
@@ -361,6 +437,7 @@ function Status {
         } else { 'unknown' }
         RollbackAllowed = if ($manifest) { Get-RollbackAllowed $manifest } else { $false }
         ConfigSchema = if ($manifest -and (Test-ObjectProperty $manifest 'configuration')) { $manifest.configuration.schemaVersion } else { 'unknown' }
+        FrontendMode = Get-FrontendMode
         Current = Get-LinkTarget $P.Current
         BackendService = if ($backend) { $backend.Status } else { 'NotInstalled' }
         GatewayService = if ($gateway) { $gateway.Status } else { 'NotInstalled' }
@@ -424,6 +501,10 @@ function Show-Versions {
 function Doctor {
     Status
     Invoke-Nginx test
+    if ((Get-FrontendMode) -eq 'embedded') {
+        Assert-BundledFrontendJar (Join-Path $P.Current 'backend\mrr-backend.jar')
+        Write-Host 'JAR 内嵌前端校验通过。' -ForegroundColor Green
+    }
     $rows = foreach ($port in 80,18045,18046,5432) {
         $connection = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
         $ids = ($connection | Select-Object -ExpandProperty OwningProcess -Unique -ErrorAction SilentlyContinue) -join ','
@@ -451,6 +532,7 @@ switch ($Command) {
         elseif ($Target -eq 'off') { Set-Maintenance $false }
         else { throw 'maintenance 后必须指定 on 或 off。' }
     }
+    frontend { Set-FrontendMode $Target }
     deploy { Deploy $Target }
     rollback { Rollback $Target }
     version { $manifest = Get-Manifest; if ($manifest) { $manifest | ConvertTo-Json -Depth 8 } else { Write-Host '没有当前版本信息。' } }

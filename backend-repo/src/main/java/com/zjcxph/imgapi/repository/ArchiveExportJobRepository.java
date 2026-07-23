@@ -45,10 +45,6 @@ public class ArchiveExportJobRepository {
         return queryOne("SELECT * FROM app.archive_export_job WHERE id = CAST(? AS UUID)", id);
     }
 
-    /**
-     * 新任务以不可变用户 ID 隔离。仅对迁移前 owner_user_id 为空的历史任务，
-     * 临时使用用户名兼容，避免用户名变更或复用后读取他人导出文件。
-     */
     public Optional<ArchiveExportJob> findByIdempotency(
             Long ownerUserId,
             String ownerUsername,
@@ -192,6 +188,16 @@ public class ArchiveExportJobRepository {
                 """, id);
     }
 
+    public void recordDownload(String id) {
+        jdbcTemplate.update("""
+                UPDATE app.archive_export_job
+                SET download_count = COALESCE(download_count, 0) + 1,
+                    last_downloaded_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'SUCCESS'
+                """, id);
+    }
+
     private Optional<ArchiveExportJob> queryOne(String sql, Object... args) {
         List<ArchiveExportJob> rows = jdbcTemplate.query(sql, ROW_MAPPER, args);
         return rows.stream().findFirst();
@@ -233,6 +239,8 @@ public class ArchiveExportJobRepository {
             job.setCancelRequested(rs.getBoolean("cancel_requested"));
             job.setErrorMessage(rs.getString("error_message"));
             job.setIdempotencyKey(rs.getString("idempotency_key"));
+            job.setDownloadCount(nullableInteger(rs, "download_count"));
+            job.setLastDownloadedAt(localDateTime(rs, "last_downloaded_at"));
             job.setExpiresAt(localDateTime(rs, "expires_at"));
             job.setCreatedAt(localDateTime(rs, "created_at"));
             job.setStartedAt(localDateTime(rs, "started_at"));
@@ -243,6 +251,11 @@ public class ArchiveExportJobRepository {
 
         private static Long nullableLong(ResultSet rs, String column) throws SQLException {
             long value = rs.getLong(column);
+            return rs.wasNull() ? null : value;
+        }
+
+        private static Integer nullableInteger(ResultSet rs, String column) throws SQLException {
+            int value = rs.getInt(column);
             return rs.wasNull() ? null : value;
         }
 

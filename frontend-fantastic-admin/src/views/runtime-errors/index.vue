@@ -6,7 +6,7 @@ import type {
 } from '@/api/modules/system-errors'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   getSystemErrorDetail,
   getSystemErrorOverview,
@@ -16,9 +16,13 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import { useUserStore } from '@/store/modules/user'
+import { checkPermission } from '@/utils/permission'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
 
+const userStore = useUserStore()
+const canManage = computed(() => checkPermission(userStore.permissions, 'system:error:manage'))
 const loading = ref(false)
 const error = ref('')
 const list = ref<SystemErrorEvent[]>([])
@@ -108,6 +112,9 @@ async function openDetail(row: SystemErrorEvent) {
 }
 
 async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
+  if (!canManage.value) {
+    return
+  }
   updatingId.value = row.id
   try {
     await updateSystemErrorStatus(row.id, status)
@@ -245,36 +252,38 @@ onMounted(loadData)
             <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right" align="center">
+        <el-table-column label="操作" :width="canManage ? 250 : 90" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button
-              v-if="row.status === 'OPEN'"
-              link
-              type="warning"
-              :loading="updatingId === row.id"
-              @click="changeStatus(row, 'ACKNOWLEDGED')"
-            >
-              标记处理中
-            </el-button>
-            <el-button
-              v-if="row.status !== 'RESOLVED'"
-              link
-              type="success"
-              :loading="updatingId === row.id"
-              @click="changeStatus(row, 'RESOLVED')"
-            >
-              解决
-            </el-button>
-            <el-button
-              v-else
-              link
-              type="danger"
-              :loading="updatingId === row.id"
-              @click="changeStatus(row, 'OPEN')"
-            >
-              重新打开
-            </el-button>
+            <template v-if="canManage">
+              <el-button
+                v-if="row.status === 'OPEN'"
+                link
+                type="warning"
+                :loading="updatingId === row.id"
+                @click="changeStatus(row, 'ACKNOWLEDGED')"
+              >
+                标记处理中
+              </el-button>
+              <el-button
+                v-if="row.status !== 'RESOLVED'"
+                link
+                type="success"
+                :loading="updatingId === row.id"
+                @click="changeStatus(row, 'RESOLVED')"
+              >
+                解决
+              </el-button>
+              <el-button
+                v-else
+                link
+                type="danger"
+                :loading="updatingId === row.id"
+                @click="changeStatus(row, 'OPEN')"
+              >
+                重新打开
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -293,7 +302,7 @@ onMounted(loadData)
     </el-card>
 
     <el-drawer v-model="detailVisible" title="运行错误详情" size="70%">
-      <AppLoading v-if="detailLoading" type="detail" />
+      <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <el-descriptions v-else-if="current" :column="2" border>
         <el-descriptions-item label="错误编号">{{ current.errorId }}</el-descriptions-item>
         <el-descriptions-item label="状态">

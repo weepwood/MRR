@@ -35,6 +35,12 @@ const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
 const externalAccess = computed(() => isExternalArchiveAccessMode(archiveAccessMode.value))
+const accessModeLabel = computed(() => {
+  if (archiveAccessMode.value === 'external-ticket') {
+    return '外部访问'
+  }
+  return archiveAccessMode.value === 'archive-legacy' ? '开发者模式' : ''
+})
 const searchHistory = ref<ArchiveSearchHistoryItem[]>([])
 const historyVisible = ref(false)
 const allHistoryVisible = ref(false)
@@ -148,6 +154,7 @@ onUnmounted(() => {
     <div class="archive-heading">
       <div class="archive-title">
         <h2>住院病案</h2>
+        <span v-if="accessModeLabel" class="access-mode-label">{{ accessModeLabel }}</span>
       </div>
       <div class="heading-actions">
         <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
@@ -426,12 +433,28 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
+.archive-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .archive-title h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
+}
+
+.access-mode-label {
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--el-color-primary-dark-2);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-5);
+  border-radius: 999px;
 }
 
 @media (prefers-reduced-motion: reduce) {

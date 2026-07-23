@@ -178,8 +178,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       return
     }
 
-    const requestBah = lookup.requestBah || ''
-    const requestSjh = lookup.requestSjh || ''
+    // 外部 Ticket 授权以 bah + sjh 精确匹配。普通档案查询会对小于
+    // 10000000 的 bah 省略 sjh，但那会使外部接口无法匹配已授权的组合。
+    const requestBah = externalSession ? bah : lookup.requestBah || ''
+    const requestSjh = externalSession ? sjh : lookup.requestSjh || ''
     if (externalSession && !findExternalCase(bah, sjh)) {
       images.value = []
       patientList.value = []
@@ -210,7 +212,13 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         ...item,
         bah: normalizeMedicalRecordCode(item.bah),
         sjh: normalizeMedicalRecordCode(item.sjh),
-        imageUrl: resolveImageUrl(item, cacheBuster),
+        imageUrl: resolveImageUrl(
+          item,
+          cacheBuster,
+          externalSession
+            ? (import.meta.env.DEV ? '/proxy' : import.meta.env.VITE_APP_API_BASEURL)
+            : undefined,
+        ),
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah, requestSjh || sjh)

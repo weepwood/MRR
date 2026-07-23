@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
   index: number
   total: number
   isSelected: boolean
+  showSelectionStatus?: boolean
   savingType?: boolean
   loading?: boolean
   fitMode?: ArchiveFitMode
@@ -24,6 +25,7 @@ const props = withDefaults(defineProps<{
   emptyDescription?: string
 }>(), {
   savingType: false,
+  showSelectionStatus: true,
   loading: false,
   fitMode: 'height',
   previewScale: 100,
@@ -180,7 +182,7 @@ onUnmounted(() => {
 <template>
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
-      <div class="preview-toolbar">
+      <div class="preview-toolbar" :class="{ 'preview-toolbar--navigation-only': !props.showSelectionStatus }">
         <el-select
           v-model="pendingType"
           class="preview-type-select"
@@ -192,12 +194,15 @@ onUnmounted(() => {
           <el-option v-for="item in TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
 
-        <div class="preview-controls">
+        <div
+          class="preview-controls"
+          :class="{ 'preview-controls--navigation-only': !props.showSelectionStatus }"
+        >
           <div class="page-navigation" aria-label="影像翻页">
             <el-button circle size="small" :icon="ArrowLeft" :disabled="props.index === 0" aria-label="上一张影像" @click="emit('navigate', -1)" />
             <el-button circle size="small" :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
           </div>
-          <el-button size="small" type="primary" :plain="!props.isSelected" @click="emit('toggle')">
+          <el-button v-if="props.showSelectionStatus" size="small" type="primary" :plain="!props.isSelected" @click="emit('toggle')">
             P{{ props.image.pages ?? '-' }} {{ props.isSelected ? '已选' : '选中' }}
           </el-button>
         </div>
@@ -421,6 +426,18 @@ onUnmounted(() => {
   gap: 6px;
   justify-content: space-between;
   width: 100%;
+}
+
+.preview-controls--navigation-only {
+  justify-content: flex-start;
+}
+
+.preview-toolbar--navigation-only {
+  width: auto;
+}
+
+.preview-toolbar--navigation-only .preview-controls {
+  width: auto;
 }
 
 .page-navigation {

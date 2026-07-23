@@ -92,6 +92,12 @@ export default defineConfig(({ mode, command }) => {
               target: env.VITE_APP_API_BASEURL,
               changeOrigin: command === 'serve' && env.VITE_OPEN_PROXY === 'true',
               rewrite: path => path.replace(/\/proxy/, ''),
+              // 外部影像会话 Cookie 由后端限制在 /api/v1/external/archive。
+              // 开发环境经 /proxy 转发时，浏览器请求路径包含 /proxy，必须同步
+              // 改写 Cookie Path，否则兑换成功后后续 context/images 请求不会携带会话。
+              cookiePathRewrite: {
+                '/api/v1/external/archive': '/proxy/api/v1/external/archive',
+              },
               configure(proxy) {
                 // 浏览器访问的是 http://localhost:9200/proxy，Vite 使用 changeOrigin
                 // 转发后 Host 会变成后端地址，但原始 Origin 仍是 9200。Spring CORS

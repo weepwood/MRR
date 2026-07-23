@@ -31,6 +31,7 @@ import {
 } from './archive/composables/useArchiveLocalPreferences'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
+import { archiveAccessMode } from './archive/access-mode'
 import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
@@ -126,6 +127,8 @@ const archiveWorkspaceStyle = computed(() => ({
 }))
 const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/embed' : '/archive')
 const showBackToStatisticsDetail = computed(() => route.query.from === 'statistics-detail')
+const isExternalTicketMode = computed(() => archiveAccessMode.value === 'external-ticket')
+const showSelectionStatus = computed(() => archiveAccessMode.value === 'internal')
 
 const downloadButtonLoading = computed(() =>
   downloading.value || downloadJobDownloading.value || downloadJobCancelling.value,
@@ -743,6 +746,7 @@ onUnmounted(() => {
 
         <div v-if="images.length > 0" class="archive-bottom-actions">
           <el-button
+            v-if="!isExternalTicketMode"
             class="download-action"
             :type="downloadButtonType || undefined"
             :icon="Download"
@@ -751,12 +755,13 @@ onUnmounted(() => {
           >
             {{ downloadButtonLabel }}
           </el-button>
-          <el-button :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
+          <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
             打印选中<template v-if="selectedCount">
               ({{ selectedCount }})
             </template>
           </el-button>
           <el-button
+            v-if="!isExternalTicketMode"
             :type="pdfButtonType || undefined"
             :icon="Document"
             :loading="pdfButtonLoading"
@@ -790,6 +795,7 @@ onUnmounted(() => {
         :index="selectedImageIndex"
         :total="filteredImages.length"
         :is-selected="currentImage ? isSelected(currentImage) : false"
+        :show-selection-status="showSelectionStatus"
         :saving-type="savingType"
         :loading="loading"
         :fit-mode="archiveDisplaySettings.archiveFitMode"

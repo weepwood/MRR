@@ -94,12 +94,15 @@ public class DeveloperModeService {
         if (!isArchiveLegacyRequestAvailable(request)) {
             return false;
         }
-        if (!"GET".equalsIgnoreCase(request.getMethod())) {
-            return false;
-        }
-
         String path = request.getRequestURI();
         if (!StringUtils.hasText(path)) {
+            return false;
+        }
+        if ("/api/v1/search/archive-cases".equals(path)) {
+            return "GET".equalsIgnoreCase(request.getMethod())
+                    || "POST".equalsIgnoreCase(request.getMethod());
+        }
+        if (!"GET".equalsIgnoreCase(request.getMethod())) {
             return false;
         }
         if ("/api/v1/img/search".equals(path)) {

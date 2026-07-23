@@ -18,4 +18,12 @@ describe('archive image source resolution', () => {
     expect(resolveImageUrl({ img_url: 'https://oss/image.jpg?signature=1' }, 123))
       .toBe('https://oss/image.jpg?signature=1&_=123')
   })
+
+  it('routes protected relative image URLs through the supplied API base URL', () => {
+    expect(resolveImageUrl(
+      { img_url: '/api/v1/external/archive/image/123' },
+      undefined,
+      '/proxy',
+    )).toBe('/proxy/api/v1/external/archive/image/123')
+  })
 })

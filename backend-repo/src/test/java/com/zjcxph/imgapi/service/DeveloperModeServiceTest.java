@@ -132,6 +132,14 @@ class DeveloperModeServiceTest {
                 proxiedRequest("GET", "/api/v1/search/patient/1234567", "127.0.0.1", "192.168.10.25")))
                 .isTrue();
         assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("POST", "/api/v1/search/archive-cases", "127.0.0.1", "192.168.10.25")))
+                .as("身份证病案定位仅允许调用受控的 archive-cases 接口")
+                .isTrue();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/search/archive-cases", "127.0.0.1", "192.168.10.25")))
+                .as("允许通过加密令牌恢复已定位的身份证病案")
+                .isTrue();
+        assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/search/patient/12345678", "127.0.0.1", "192.168.10.25")))
                 .as("1000 万及以上病案必须携带上架号，不能匿名调用仅按病案号查询患者接口")
                 .isFalse();
@@ -148,6 +156,9 @@ class DeveloperModeServiceTest {
                 .isFalse();
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("PUT", "/api/v1/img/updateImageType/1", "127.0.0.1", "192.168.10.25")))
+                .isFalse();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("POST", "/api/v1/search/getBAHByID/123456789012345678", "127.0.0.1", "192.168.10.25")))
                 .isFalse();
     }
 

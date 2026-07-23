@@ -46,12 +46,19 @@ export function buildTypeStats(images: { btype?: number | null }[]): TypeStatIte
 /**
  * img_url 由后端按照系统 imageSource 设置生成；ossUrl 仅作为旧响应兼容兜底。
  */
-export function resolveImageUrl(item: { ossUrl?: string, img_url?: string }, cacheBuster?: number): string {
+export function resolveImageUrl(
+  item: { ossUrl?: string, img_url?: string },
+  cacheBuster?: number,
+  apiBaseUrl?: string,
+): string {
   const url = item.img_url || item.ossUrl || ''
-  if (!url || !cacheBuster) {
-    return url
+  const resolvedUrl = apiBaseUrl && url.startsWith('/api/')
+    ? `${apiBaseUrl.replace(/\/$/, '')}${url}`
+    : url
+  if (!resolvedUrl || !cacheBuster) {
+    return resolvedUrl
   }
-  return `${url}${url.includes('?') ? '&' : '?'}_=${cacheBuster}`
+  return `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}_=${cacheBuster}`
 }
 
 function imageVersionKey(bah: string, sjh: string): string {

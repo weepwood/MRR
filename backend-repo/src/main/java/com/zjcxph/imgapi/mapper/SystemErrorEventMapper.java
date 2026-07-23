@@ -13,15 +13,20 @@ public interface SystemErrorEventMapper {
 
     @Insert("""
             INSERT INTO system_error_event (
-                error_id, fingerprint, level, module, logger_name, exception_type,
+                error_id, error_ids, fingerprint, level, module, logger_name, exception_type,
                 message_summary, stack_trace, request_id, thread_name,
                 first_seen_at, last_seen_at, occurrence_count, status
             ) VALUES (
-                #{errorId}, #{fingerprint}, #{level}, #{module}, #{loggerName}, #{exceptionType},
+                #{errorId}, ARRAY[#{errorId}]::VARCHAR(32)[], #{fingerprint}, #{level}, #{module}, #{loggerName}, #{exceptionType},
                 #{messageSummary}, #{stackTrace}, #{requestId}, #{threadName},
                 #{firstSeenAt}, #{lastSeenAt}, 1, 'OPEN'
             )
             ON CONFLICT (fingerprint) DO UPDATE SET
+                error_ids = CASE
+                    WHEN CARDINALITY(system_error_event.error_ids) >= 50
+                        THEN system_error_event.error_ids[2:50] || EXCLUDED.error_ids
+                    ELSE system_error_event.error_ids || EXCLUDED.error_ids
+                END,
                 level = EXCLUDED.level,
                 module = EXCLUDED.module,
                 logger_name = EXCLUDED.logger_name,
@@ -74,6 +79,11 @@ public interface SystemErrorEventMapper {
                 <if test="keyword != null">
                     AND (
                         error_id ILIKE '%' || #{keyword} || '%'
+                        OR EXISTS (
+                            SELECT 1
+                            FROM UNNEST(error_ids) AS error_alias
+                            WHERE error_alias ILIKE '%' || #{keyword} || '%'
+                        )
                         OR logger_name ILIKE '%' || #{keyword} || '%'
                         OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
                         OR message_summary ILIKE '%' || #{keyword} || '%'
@@ -105,6 +115,11 @@ public interface SystemErrorEventMapper {
                 <if test="keyword != null">
                     AND (
                         error_id ILIKE '%' || #{keyword} || '%'
+                        OR EXISTS (
+                            SELECT 1
+                            FROM UNNEST(error_ids) AS error_alias
+                            WHERE error_alias ILIKE '%' || #{keyword} || '%'
+                        )
                         OR logger_name ILIKE '%' || #{keyword} || '%'
                         OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
                         OR message_summary ILIKE '%' || #{keyword} || '%'

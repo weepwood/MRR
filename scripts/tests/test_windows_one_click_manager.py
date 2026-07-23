@@ -131,12 +131,26 @@ class WindowsOneClickManagerTest(unittest.TestCase):
 
         self.assertIn("'frontend'", controller)
         self.assertIn('Assert-BundledFrontendJar', controller)
+        self.assertIn('Test-BundledFrontendJar', controller)
         self.assertIn('BOOT-INF/classes/static/index.html', controller)
         self.assertIn('Set-FrontendMode $Target', controller)
+        self.assertIn('Assert-Release $source $true', controller)
+        self.assertIn('Assert-Release $release', controller)
+        self.assertIn('请先执行 frontend external，再进行回滚', controller)
         self.assertIn('frontend-mode.inc', nginx)
         self.assertIn('proxy_pass http://mrr_backend', embedded)
         self.assertIn('current/frontend', external)
         self.assertIn('try_files $uri $uri/ /index.html', external)
+
+    def test_existing_server_migration_validates_current_jar_before_switch(self):
+        migration = (WINDOWS_DEPLOY / 'migrate-embedded-frontend.ps1').read_text(encoding='utf-8-sig')
+
+        self.assertIn('Assert-BundledFrontendJar', migration)
+        self.assertIn("current\\backend\\mrr-backend.jar", migration)
+        self.assertLess(
+            migration.index('Assert-BundledFrontendJar $currentJar'),
+            migration.index('Set-Content -LiteralPath $nginxConfig'),
+        )
 
     def test_release_workflow_embeds_frontend_and_keeps_external_fallback(self):
         workflow = (ROOT / '.github/workflows/windows-release-package.yml').read_text(encoding='utf-8')

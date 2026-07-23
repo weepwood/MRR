@@ -26,6 +26,7 @@ public class ReadOnlyDegradationInterceptor implements HandlerInterceptor {
             "/api/v1/search/**",
             "/api/v1/scan/page/condition",
             "/api/v1/archive-exports/plan/**",
+            "/api/v1/integration/archive/tickets",
             "/api/v1/external/archive/session",
             "/api/v1/external/archive/logout"
     );

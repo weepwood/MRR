@@ -23,13 +23,16 @@ src/composables/useTableActionLayout.ts
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import useAuth from '@/utils/composables/useAuth'
 
+const { auth } = useAuth()
 const actions: MrrTableAction[] = [
   {
     key: 'edit',
     label: '编辑',
     icon: 'i-ri:edit-line',
     tone: 'primary',
+    permission: 'record:edit',
     placement: 'inline',
   },
   {
@@ -37,6 +40,7 @@ const actions: MrrTableAction[] = [
     label: '删除',
     icon: 'i-ri:delete-bin-line',
     tone: 'danger',
+    permission: 'record:edit',
   },
 ]
 
@@ -54,6 +58,7 @@ const { maxInlineActions, actionColumnWidth } = useTableActionLayout(actions.len
       <MrrTableActions
         :actions="actions"
         :max-inline="maxInlineActions"
+        :permission-checker="auth"
         @select="handleAction($event, row)"
       />
     </template>
@@ -87,7 +92,9 @@ interface MrrTableAction {
 }
 ```
 
-组件会通过现有 `useAuth()` 处理 `permission`。页面已有计算权限时，也可以直接通过 `visible` 或条件渲染操作列控制。
+组件不直接读取路由、用户 Store 或权限状态。操作声明了 `permission` 时，页面必须通过 `permissionChecker` 显式传入现有 `useAuth().auth`；未提供检查器时，这类操作默认隐藏。页面已经提前计算权限时，也可以通过 `visible` 或条件渲染整个操作列控制。
+
+这种设计避免通用展示组件与路由初始化耦合，同时保持权限判断默认拒绝。
 
 ## 交互边界
 

@@ -32,4 +32,26 @@ class OperationsCenterServiceRedactionTest {
         assertThat(result.get("request_id")).isEqualTo("req-123");
         assertThat(result.toString()).doesNotContain("3301", "secret", "administrator", "10.0.0.8");
     }
+
+    @Test
+    void redactsNestedLatestOperationAndIntegrityError() {
+        Map<String, Object> operation = new LinkedHashMap<>();
+        operation.put("username", "administrator");
+        operation.put("client_ip", "10.0.0.8");
+        operation.put("request_uri", "/api/v1/operations/diagnostics/run?token=secret");
+        operation.put("error_message", "database password leaked");
+
+        Map<String, Object> overview = OperationsCenterService.redactOverviewForReport(
+      Map.of("mode", "READ_WRITE", "latestOperation", operation)
+        );
+        Map<String, Object> integrity = OperationsCenterService.redactIntegrityForReport(
+      Map.of("status", "ERROR", "lastError", "jdbc:postgresql://internal?password=secret")
+        );
+
+        assertThat(overview.toString())
+      .contains("[REDACTED]")
+      .doesNotContain("administrator", "10.0.0.8", "token=secret", "password leaked");
+        assertThat(integrity.get("lastError")).isEqualTo("[REDACTED]");
+        assertThat(integrity.toString()).doesNotContain("postgresql", "password=secret");
+    }
 }

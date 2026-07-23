@@ -147,18 +147,57 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  backend-gate:
+  backend-scope:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      backend_changed: ${{ steps.scope.outputs.backend_changed }}
+      integration_changed: ${{ steps.scope.outputs.integration_changed }}
+      reason: ${{ steps.scope.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect backend test scope
+        id: scope
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != 'pull_request' ]; then
+            {
+              echo 'backend_changed=true'
+              echo 'integration_changed=true'
+              echo 'reason=push-or-tag'
+            } >> "${GITHUB_OUTPUT}"
+            echo 'Push/tag execution: run the complete backend verification.'
+            exit 0
+          fi
+
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-files.txt
+          echo 'Changed files:'
+          cat changed-files.txt
+          python scripts/backend_test_scope.py \
+            --github-output "${GITHUB_OUTPUT}" \
+            changed-files.txt
+
+  backend-unit-tests:
+    needs: backend-scope
+    if: >-
+      needs.backend-scope.outputs.backend_changed == 'true' &&
+      needs.backend-scope.outputs.integration_changed != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend-repo
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Verify Docker
-        run: docker info
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -167,17 +206,108 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Unit and integration tests
+      - name: Unit tests
+        run: mvn -B -ntp test
+
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-unit-test-reports
+          path: |
+            backend-repo/target/surefire-reports
+            backend-repo/target/site/jacoco
+          if-no-files-found: ignore
+          retention-days: 7
+
+  backend-integration-tests:
+    needs: backend-scope
+    if: needs.backend-scope.outputs.integration_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: imgapi
+          POSTGRES_USER: imgapi
+          POSTGRES_PASSWORD: imgapi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U imgapi -d imgapi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MRR_TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/imgapi
+      MRR_TEST_POSTGRES_USERNAME: imgapi
+      MRR_TEST_POSTGRES_PASSWORD: imgapi
+    defaults:
+      run:
+        working-directory: backend-repo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Unit and PostgreSQL integration tests
         run: mvn -B -ntp verify
 
       - name: Upload backend test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-reports
+          name: backend-integration-test-reports
           path: |
             backend-repo/target/surefire-reports
             backend-repo/target/failsafe-reports
             backend-repo/target/site/jacoco
           if-no-files-found: ignore
           retention-days: 7
+
+  backend-gate:
+    needs:
+      - backend-scope
+      - backend-unit-tests
+      - backend-integration-tests
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate selected backend gate
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.backend-scope.result }}
+          BACKEND_CHANGED: ${{ needs.backend-scope.outputs.backend_changed }}
+          INTEGRATION_CHANGED: ${{ needs.backend-scope.outputs.integration_changed }}
+          SCOPE_REASON: ${{ needs.backend-scope.outputs.reason }}
+          UNIT_RESULT: ${{ needs.backend-unit-tests.result }}
+          INTEGRATION_RESULT: ${{ needs.backend-integration-tests.result }}
+        run: |
+          set -euo pipefail
+          echo "scope=${SCOPE_RESULT} backend=${BACKEND_CHANGED} integration=${INTEGRATION_CHANGED} reason=${SCOPE_REASON}"
+          echo "unit=${UNIT_RESULT} integration_job=${INTEGRATION_RESULT}"
+
+          if [ "${SCOPE_RESULT}" != 'success' ]; then
+            echo 'Backend test scope detection failed.' >&2
+            exit 1
+          fi
+
+          if [ "${BACKEND_CHANGED}" != 'true' ]; then
+            echo 'No backend-related files changed; backend tests were intentionally skipped.'
+            exit 0
+          fi
+
+          if [ "${INTEGRATION_CHANGED}" = 'true' ]; then
+            test "${INTEGRATION_RESULT}" = 'success'
+            exit 0
+          fi
+
+          test "${UNIT_RESULT}" = 'success'

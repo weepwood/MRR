@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,7 +17,7 @@ class FlywayConfigurationDefaultsTest {
     @Test
     @DisplayName("生产默认禁止乱序并且不忽略缺失或未来迁移")
     void productionDefaultsAreStrict() throws IOException {
-        Properties properties = load("/application.properties");
+        Properties properties = loadMainResource("application.properties");
 
         assertThat(properties.getProperty("spring.flyway.out-of-order"))
                 .isEqualTo("${SPRING_FLYWAY_OUT_OF_ORDER:false}");
@@ -28,16 +30,17 @@ class FlywayConfigurationDefaultsTest {
     @Test
     @DisplayName("历史库兼容只在本地模板中显式开启")
     void localTemplateOptsIntoCompatibility() throws IOException {
-        Properties properties = load("/application-local.template.properties");
+        Properties properties = loadMainResource("application-local.template.properties");
 
         assertThat(properties.getProperty("spring.flyway.out-of-order")).isEqualTo("true");
         assertThat(properties.getProperty("spring.flyway.ignore-migration-patterns"))
                 .isEqualTo("*:missing,*:future");
     }
 
-    private Properties load(String resource) throws IOException {
-        try (InputStream input = FlywayConfigurationDefaultsTest.class.getResourceAsStream(resource)) {
-            assertThat(input).as("配置资源 %s 应存在", resource).isNotNull();
+    private Properties loadMainResource(String fileName) throws IOException {
+        Path path = Path.of("src", "main", "resources", fileName);
+        assertThat(path).as("主配置资源 %s 应存在", path).exists();
+        try (InputStream input = Files.newInputStream(path)) {
             Properties properties = new Properties();
             properties.load(input);
             return properties;

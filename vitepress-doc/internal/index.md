@@ -1,6 +1,6 @@
 # MRR 内部文档
 
-> 面向开发、测试、数据库、部署和运维人员。本文档对应 `main` 当前版本 **v0.6.3**，以当前代码、实际 Flyway 迁移、`application.properties`、`VERSION` 和 `release-baseline.json` 为事实来源。
+> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.7.0**；`main` 已包含 `v0.7.0` 之后的未发布变更。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
 
 ## 按任务查找文档
 
@@ -9,6 +9,7 @@
 | 文档 | 说明 |
 | --- | --- |
 | [系统架构](./architecture.md) | 运行边界、模块、数据流、存储和部署拓扑 |
+| [最新代码审查](./code-review.md) | `v0.7.0` 到当前 `main` 的审查范围、风险和处理优先级 |
 | [前端工程](./frontend.md) | Vue、路由、权限、设计系统、图表和浏览器兼容 |
 | [后端工程](./backend.md) | Spring Boot 分层、认证、存储、导出任务和 Flyway |
 | [数据库](./database.md) | PostgreSQL、病案主档、关联、编号、约束和索引 |
@@ -36,8 +37,10 @@
 
 | 文档 | 说明 |
 | --- | --- |
-| [部署](./deployment.md) | 非 Docker 正式部署、Nginx、文档和图片服务 |
-| [Windows Server 部署](./windows-deployment.md) | Windows 原生 JAR、Nginx、脚本和服务管理 |
+| [部署总览](./deployment.md) | Windows 离线包、单体 JAR、内嵌前端、端口和升级验证 |
+| [Windows Server 部署](./windows-deployment.md) | Nginx、WinSW、脚本、服务管理和外置前端回退 |
+| [单体 JAR 部署](./standalone-jar.md) | Release JAR 下载、SHA-256、8002 端口和直接运行 |
+| [运行错误中心](./runtime-errors.md) | WARN/ERROR 采集、权限、指纹、错误编号、脱敏和降级边界 |
 | [运维与监控](./operations.md) | Actuator、Prometheus、状态历史和数据质量 |
 | [生产运行手册](./runbook.md) | 日常检查、发布、故障处置和回滚 |
 | [故障排查](./troubleshooting.md) | 启动、数据库、图片、导出、文档和监控问题 |
@@ -63,6 +66,7 @@ MRR 管理：
 - ZIP/PDF 异步导出任务和临时文件；
 - OSS 迁移任务与只读文件浏览；
 - 用户、角色、注册审核、日志、访问审计和运行状态；
+- 后端运行错误聚合、错误编号和处理状态；
 - 外部系统一次性影像调阅。
 
 系统不是 DICOM 诊断工作站，不承担医学诊断、影像测量和诊断报告生成。
@@ -77,7 +81,8 @@ MRR 管理：
 - 上架号允许为空，非空时应唯一；
 - 病案号不保证全局唯一；
 - 编号保留原始格式，不自动补零；
-- 新迁移使用 `VyyyyMMddHHmmss__description.sql`。
+- 新迁移使用 `VyyyyMMddHHmmss__description.sql`；
+- 当前兼容迁移上限为 `20260723163000`。
 
 ### 大表
 
@@ -94,17 +99,25 @@ MRR 管理：
 - ZIP/PDF 由后端统一生成；
 - 大病案、多来源或超阈值任务转为后台执行；
 - 临时文件受总配额、单文件上限和保留期控制；
-- 下载支持取消、重新下载和可恢复写入。
+- 下载支持取消、重新下载和 Range 续传。
+
+### 部署
+
+- Windows 离线包默认由 Nginx 将页面和 API 转发到内嵌前端 JAR `18045`；
+- 外置前端目录只作为受管理回退；
+- Release 单体 JAR默认业务端口为 `8002`；
+- Actuator 默认只监听 `127.0.0.1:18046`；
+- 两种业务端口都可通过 `SERVER_PORT` 覆盖。
 
 ### 权限
 
 - 管理端 API 使用 JWT 与 RBAC；
 - `record:download` 与 `record:pdf:export` 独立；
 - `record:manage` 包含读取、编辑、ZIP 和 PDF；
+- `system:error:read` 查看运行错误，`system:error:manage` 修改处理状态；
 - 用户手册要求登录；
 - 内部文档和实时 API 要求管理员或 `system:read`；
-- `/status` 公开但只返回脱敏状态；
-- Actuator 默认只监听 `127.0.0.1:18046`。
+- `/status` 公开但只返回脱敏状态。
 
 ### 账号
 
@@ -118,7 +131,7 @@ MRR 管理：
 ## 文档维护原则
 
 1. 代码、迁移和当前配置优先于历史说明；
-2. 只描述已进入当前分支的能力；
+2. 只描述已进入当前分支的能力，并区分正式标签与未发布主分支变更；
 3. 新增页面、接口、权限、配置、迁移或脚本时，同一 PR 更新文档；
 4. 用户手册描述可见操作，内部文档记录实现、限制、风险和恢复步骤；
 5. API 字段优先查阅运行中的 Springdoc，不复制容易过期的完整接口清单；
@@ -131,20 +144,22 @@ MRR 管理：
 ## 快速验证
 
 ```bash
+python -m unittest discover -s scripts/tests -p 'test_*.py' -v
 python scripts/release_baseline.py validate
 
 cd backend-repo
-mvn test
-mvn package
+mvn -B -ntp verify
 
 cd ../frontend-fantastic-admin
 corepack pnpm@10.33.0 install --frozen-lockfile
 pnpm lint:tsc
 pnpm test:run
 pnpm build
+pnpm test:e2e
 
 cd ../vitepress-doc
 npm ci
+npm run docs:changelog:test
 npm run docs:build
 ```
 

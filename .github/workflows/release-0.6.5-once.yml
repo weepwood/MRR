@@ -101,21 +101,35 @@ jobs:
           git tag -a "${RELEASE_TAG}" "${SOURCE_SHA}" -m 'MRR 0.6.5'
           git push origin "refs/tags/${RELEASE_TAG}"
 
-      - name: Wait for formal Windows release build
+      - name: Ensure formal Windows release build
         shell: bash
         run: |
           set -euo pipefail
-          run_id=''
-          for attempt in $(seq 1 60); do
-            run_id="$(gh run list --workflow windows-release-package.yml --event push --limit 50 \
-              --json databaseId,headSha,headBranch,status,createdAt \
-              --jq '.[] | select(.headSha == env.SOURCE_SHA and .headBranch == env.RELEASE_TAG) | .databaseId' \
-              | head -n 1)"
-            if [ -n "${run_id}" ]; then break; fi
-            sleep 3
-          done
+          asset_count='0'
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            asset_count="$(gh release view "${RELEASE_TAG}" --json assets --jq "[.assets[] | select(.name == env.RELEASE_ASSET)] | length")"
+          fi
+          if [ "${asset_count}" = '1' ]; then
+            exit 0
+          fi
+
+          run_id="$(gh run list --workflow windows-release-package.yml --event workflow_dispatch --limit 30 \
+            --json databaseId,headSha,status \
+            --jq '.[] | select(.headSha == env.SOURCE_SHA and (.status == "queued" or .status == "in_progress")) | .databaseId' \
+            | head -n 1)"
           if [ -z "${run_id}" ]; then
-            echo 'Unable to locate formal Windows tag build.' >&2
+            gh workflow run windows-release-package.yml --ref "${RELEASE_TAG}"
+            for attempt in $(seq 1 30); do
+              run_id="$(gh run list --workflow windows-release-package.yml --event workflow_dispatch --limit 30 \
+                --json databaseId,headSha,status,createdAt \
+                --jq '.[] | select(.headSha == env.SOURCE_SHA) | .databaseId' \
+                | head -n 1)"
+              if [ -n "${run_id}" ]; then break; fi
+              sleep 2
+            done
+          fi
+          if [ -z "${run_id}" ]; then
+            echo 'Unable to locate formal Windows release workflow.' >&2
             exit 1
           fi
           gh run watch "${run_id}" --exit-status

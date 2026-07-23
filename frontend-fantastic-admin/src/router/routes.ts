@@ -269,6 +269,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: { title: '日志管理', icon: 'i-ant-design:file-search-outlined', auth: ['log:read'], cache: true },
       },
       {
+        path: '/runtime-errors',
+        component: () => import('@/views/runtime-errors/index.vue'),
+        meta: {
+          title: '运行错误中心',
+          icon: 'i-ant-design:bug-twotone',
+          auth: ['system:error:read'],
+          cache: true,
+        },
+      },
+      {
         path: '/audit-images',
         component: () => import('@/views/audit-images/index.vue'),
         meta: { title: '病案图片访问审计', icon: 'i-ant-design:security-scan-outlined', auth: ['log:read'], cache: true },

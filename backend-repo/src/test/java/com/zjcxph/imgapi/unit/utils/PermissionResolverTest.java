@@ -63,10 +63,15 @@ class PermissionResolverTest {
     }
 
     @Test
-    @DisplayName("resolve — system:manage 展开为 manage+read")
+    @DisplayName("resolve — system:manage 包含系统查看与运行错误管理")
     void resolve_systemManage() {
         Set<String> result = PermissionResolver.resolve(List.of("system:manage"));
-        assertThat(result).containsExactlyInAnyOrder("system:manage", "system:read");
+        assertThat(result).containsExactlyInAnyOrder(
+                "system:manage",
+                "system:read",
+                "system:error:manage",
+                "system:error:read"
+        );
     }
 
     @Test

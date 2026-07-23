@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260723090000",
+    "maximumCompatibleMigration": "20260723163000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "0.7.0 增加主动维护闭环、运维总览与全面体检，默认将正式前端内嵌到后端 JAR，同时保留 Nginx 统一入口和外置前端紧急回退；并优化后端测试分级、表格操作布局、SPA 保留路径边界与诊断报告脱敏。数据库兼容上限保持不变，但发布制品和部署拓扑已调整，不允许仅替换回旧应用文件；回滚前必须恢复发布前数据库、配置、Nginx 配置和完整发布目录备份。"
+    "reason": "0.7.0 后续增加结构化运行错误中心、错误编号、WARN/ERROR 聚合与独立错误权限，并新增 system_error_event 表。旧应用不了解新权限与错误状态流转；回滚前必须恢复发布前数据库、配置和完整发布目录备份，不能仅替换旧 JAR。"
   },
   "configuration": {
     "schemaVersion": 1

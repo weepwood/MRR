@@ -3,9 +3,11 @@ package com.zjcxph.imgapi.handler;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.common.ResultCode;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.utils.ErrorReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,11 +59,14 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldNotExposeInternalExceptionMessage() {
         ResponseEntity<Result<Void>> response = handler.handleException(
-                new IllegalStateException("JWT_SECRET_KEY=/internal/secret"));
+                new IllegalStateException("JWT_SECRET_KEY=/internal/secret"),
+                new MockHttpServletRequest());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getMessage()).isEqualTo("服务器内部错误，请联系管理员");
+        assertThat(response.getBody().getMessage()).startsWith("服务器内部错误，请联系管理员（错误编号：ERR-");
+        assertThat(response.getBody().getMessage()).doesNotContain("JWT_SECRET_KEY", "/internal/secret");
+        assertThat(response.getHeaders().getFirst(ErrorReference.RESPONSE_HEADER)).isNotBlank();
         assertThat(response.getBody().getData()).isNull();
     }
 }

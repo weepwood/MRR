@@ -3,8 +3,11 @@ package com.zjcxph.imgapi.handler;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.common.ResultCode;
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.utils.ErrorReference;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -55,10 +58,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Result<Void>> handleException(Exception e) {
-        // 完整异常仅写入服务端日志，响应不得回传数据库、JWT、路径或配置等内部细节。
-        logger.error("未处理异常", e);
+    public ResponseEntity<Result<Void>> handleException(Exception e, HttpServletRequest request) {
+        String errorId = ErrorReference.ensure(request);
+        MDC.put("errorId", errorId);
+        try {
+            // 错误编号通过 MDC 传递，日志消息保持稳定，便于同类异常聚合。
+            logger.error("未处理异常", e);
+        } finally {
+            MDC.remove("errorId");
+        }
+        String message = "服务器内部错误，请联系管理员（错误编号：" + errorId + "）";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "服务器内部错误，请联系管理员"));
+                .header(ErrorReference.RESPONSE_HEADER, errorId)
+                .body(Result.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), message));
     }
 }

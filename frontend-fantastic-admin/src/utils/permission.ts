@@ -27,7 +27,21 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { value: 'role:manage', label: '修改角色及角色权限', shortLabel: '角色管理', category: '账号权限', children: ['role:read'] },
   { value: 'role:read', label: '查看角色与权限配置', shortLabel: '角色查看', category: '账号权限', children: [] },
   { value: 'log:read', label: '查看日志与审计记录', shortLabel: '日志审计', category: '系统运维', children: [] },
-  { value: 'system:manage', label: '修改系统设置并执行维护任务', shortLabel: '系统管理', category: '系统运维', children: ['system:read'] },
+  {
+    value: 'system:error:manage',
+    label: '确认、解决和重新打开运行错误',
+    shortLabel: '错误管理',
+    category: '系统运维',
+    children: ['system:error:read'],
+  },
+  { value: 'system:error:read', label: '查看脱敏运行错误与堆栈', shortLabel: '错误查看', category: '系统运维', children: [] },
+  {
+    value: 'system:manage',
+    label: '修改系统设置并执行维护任务',
+    shortLabel: '系统管理',
+    category: '系统运维',
+    children: ['system:read', 'system:error:manage'],
+  },
   { value: 'system:read', label: '查看系统设置、状态和监控', shortLabel: '系统查看', category: '系统运维', children: [] },
   { value: 'test:read', label: '访问测试中心', shortLabel: '测试中心', category: '系统运维', children: [] },
 ]

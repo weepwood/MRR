@@ -12,22 +12,32 @@ import java.util.Set;
  */
 public final class PermissionResolver {
 
-    private static final Map<String, Set<String>> HIERARCHY = Map.of(
-            Permissions.RECORD_MANAGE, Set.of(
+    private static final Map<String, Set<String>> HIERARCHY = Map.ofEntries(
+            Map.entry(Permissions.RECORD_MANAGE, Set.of(
                     Permissions.RECORD_MANAGE,
                     Permissions.RECORD_EDIT,
                     Permissions.RECORD_READ,
                     Permissions.RECORD_DOWNLOAD,
                     Permissions.RECORD_PDF_EXPORT
-            ),
-            Permissions.RECORD_EDIT, Set.of(Permissions.RECORD_EDIT, Permissions.RECORD_READ),
-            Permissions.RECORD_DOWNLOAD, Set.of(Permissions.RECORD_DOWNLOAD, Permissions.RECORD_READ),
-            Permissions.RECORD_PDF_EXPORT, Set.of(Permissions.RECORD_PDF_EXPORT, Permissions.RECORD_READ),
-            Permissions.RECORD_READ, Set.of(Permissions.RECORD_READ),
-            Permissions.ROLE_MANAGE, Set.of(Permissions.ROLE_MANAGE, Permissions.ROLE_READ),
-            Permissions.ROLE_READ, Set.of(Permissions.ROLE_READ),
-            Permissions.SYSTEM_MANAGE, Set.of(Permissions.SYSTEM_MANAGE, Permissions.SYSTEM_READ),
-            Permissions.SYSTEM_READ, Set.of(Permissions.SYSTEM_READ)
+            )),
+            Map.entry(Permissions.RECORD_EDIT, Set.of(Permissions.RECORD_EDIT, Permissions.RECORD_READ)),
+            Map.entry(Permissions.RECORD_DOWNLOAD, Set.of(Permissions.RECORD_DOWNLOAD, Permissions.RECORD_READ)),
+            Map.entry(Permissions.RECORD_PDF_EXPORT, Set.of(Permissions.RECORD_PDF_EXPORT, Permissions.RECORD_READ)),
+            Map.entry(Permissions.RECORD_READ, Set.of(Permissions.RECORD_READ)),
+            Map.entry(Permissions.ROLE_MANAGE, Set.of(Permissions.ROLE_MANAGE, Permissions.ROLE_READ)),
+            Map.entry(Permissions.ROLE_READ, Set.of(Permissions.ROLE_READ)),
+            Map.entry(Permissions.SYSTEM_ERROR_MANAGE, Set.of(
+                    Permissions.SYSTEM_ERROR_MANAGE,
+                    Permissions.SYSTEM_ERROR_READ
+            )),
+            Map.entry(Permissions.SYSTEM_ERROR_READ, Set.of(Permissions.SYSTEM_ERROR_READ)),
+            Map.entry(Permissions.SYSTEM_MANAGE, Set.of(
+                    Permissions.SYSTEM_MANAGE,
+                    Permissions.SYSTEM_READ,
+                    Permissions.SYSTEM_ERROR_MANAGE,
+                    Permissions.SYSTEM_ERROR_READ
+            )),
+            Map.entry(Permissions.SYSTEM_READ, Set.of(Permissions.SYSTEM_READ))
     );
 
     private PermissionResolver() {

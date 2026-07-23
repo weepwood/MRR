@@ -3,13 +3,7 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MrrTableActions from '../MrrTableActions/index.vue'
 
-const { mockAuth } = vi.hoisted(() => ({
-  mockAuth: vi.fn((permission: string | string[]) => permission !== 'denied'),
-}))
-
-vi.mock('@/utils/composables/useAuth', () => ({
-  default: () => ({ auth: mockAuth }),
-}))
+const mockPermissionChecker = vi.fn((permission: string | string[]) => permission !== 'denied')
 
 const stubs = {
   'FaIcon': {
@@ -48,6 +42,7 @@ function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$
     props: {
       actions,
       maxInline: 1,
+      permissionChecker: mockPermissionChecker,
       ...overrides,
     },
     global: { stubs },
@@ -56,8 +51,8 @@ function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$
 
 describe('mrrTableActions', () => {
   beforeEach(() => {
-    mockAuth.mockClear()
-    mockAuth.mockImplementation((permission: string | string[]) => permission !== 'denied')
+    mockPermissionChecker.mockClear()
+    mockPermissionChecker.mockImplementation((permission: string | string[]) => permission !== 'denied')
   })
 
   it('按照最大直显数量拆分图标与更多操作', () => {
@@ -78,7 +73,7 @@ describe('mrrTableActions', () => {
     expect(wrapper.emitted('select')).toEqual([['edit']])
   })
 
-  it('过滤不可见和无权限操作', () => {
+  it('通过显式检查器过滤不可见和无权限操作', () => {
     const wrapper = mountActions({
       actions: [
         { key: 'hidden', label: '隐藏', icon: 'i-ri:eye-off-line', visible: false },
@@ -89,8 +84,17 @@ describe('mrrTableActions', () => {
     const exposed = wrapper.vm as unknown as { availableActions: MrrTableAction[] }
 
     expect(exposed.availableActions.map(item => item.key)).toEqual(['view'])
-    expect(mockAuth).toHaveBeenCalledWith('denied')
-    expect(mockAuth).toHaveBeenCalledWith('record:read')
+    expect(mockPermissionChecker).toHaveBeenCalledWith('denied')
+    expect(mockPermissionChecker).toHaveBeenCalledWith('record:read')
+  })
+
+  it('未提供权限检查器时默认隐藏声明权限的操作', () => {
+    const wrapper = mountActions({
+      permissionChecker: undefined,
+      actions: [{ key: 'edit', label: '编辑', icon: 'i-ri:edit-line', permission: 'record:edit' }],
+    })
+
+    expect(wrapper.find('.mrr-table-actions').exists()).toBe(false)
   })
 
   it('禁用操作不会触发事件并保留可访问名称', async () => {

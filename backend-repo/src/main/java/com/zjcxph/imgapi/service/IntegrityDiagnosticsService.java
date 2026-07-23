@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.atomic.AtomicBoolean;
 
 /**
  * 大规模病案完整性统计快照。
@@ -106,10 +106,21 @@ public class IntegrityDiagnosticsService {
                     COUNT(*) FILTER (WHERE NULLIF(BTRIM(oss_url), '') IS NOT NULL) AS oss_linked,
                     COUNT(*) FILTER (
                         WHERE NULLIF(BTRIM(sjh), '') IS NULL
-                          AND COALESCE(app.normalize_medical_record_code(bah), '') >= '10000000'
+                          AND CASE
+                              WHEN normalized_bah ~ '^[0-9]+$'
+                                  THEN normalized_bah::NUMERIC >= 10000000
+                              ELSE FALSE
+                          END
                     ) AS missing_sjh
-                FROM app.mr_scan
-                WHERE uploadflag <> 0
+                FROM (
+                    SELECT
+                        archive_id,
+                        oss_url,
+                        sjh,
+                        app.normalize_medical_record_code(bah) AS normalized_bah
+                    FROM app.mr_scan
+                    WHERE uploadflag <> 0
+                ) active_scans
                 """);
 
         long totalScans = number(scans.get("total"));
@@ -126,24 +137,37 @@ public class IntegrityDiagnosticsService {
                 """);
 
         Map<String, Object> duplicateGroups = queryForMap("""
+                WITH normalized_archive AS MATERIALIZED (
+                    SELECT
+                        app.normalize_medical_record_code(bah) AS normalized_bah,
+                        app.normalize_medical_record_code(sjh) AS normalized_sjh
+                    FROM app.mr_archive
+                )
                 SELECT
                     (
                         SELECT COUNT(*) FROM (
-                            SELECT app.normalize_medical_record_code(bah) AS normalized_bah
-                            FROM app.mr_archive
-                            WHERE app.normalize_medical_record_code(bah) IS NOT NULL
-                              AND app.normalize_medical_record_code(bah) < '10000000'
-                            GROUP BY app.normalize_medical_record_code(bah)
+                            SELECT normalized_bah
+                            FROM normalized_archive
+                            WHERE CASE
+                                WHEN normalized_bah ~ '^[0-9]+$'
+                                    THEN normalized_bah::NUMERIC < 10000000
+                                ELSE FALSE
+                            END
+                            GROUP BY normalized_bah
                             HAVING COUNT(*) > 1
                         ) old_duplicates
                     ) AS old_bah_duplicates,
                     (
                         SELECT COUNT(*) FROM (
-                            SELECT app.normalize_medical_record_code(sjh) AS normalized_sjh
-                            FROM app.mr_archive
-                            WHERE app.normalize_medical_record_code(bah) >= '10000000'
-                              AND app.normalize_medical_record_code(sjh) IS NOT NULL
-                            GROUP BY app.normalize_medical_record_code(sjh)
+                            SELECT normalized_sjh
+                            FROM normalized_archive
+                            WHERE CASE
+                                WHEN normalized_bah ~ '^[0-9]+$'
+                                    THEN normalized_bah::NUMERIC >= 10000000
+                                ELSE FALSE
+                            END
+                              AND normalized_sjh IS NOT NULL
+                            GROUP BY normalized_sjh
                             HAVING COUNT(*) > 1
                         ) new_duplicates
                     ) AS new_sjh_duplicates
@@ -156,10 +180,11 @@ public class IntegrityDiagnosticsService {
         tables.add(loadCoverage("mr_statistics", "TRUE"));
         tables.add(loadCoverage("mr_archive_box_record", "TRUE"));
 
+        String generatedAt = Instant.now().toString();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "READY");
-        result.put("generatedAt", Instant.now().toString());
-        result.put("lastAttemptAt", Instant.now().toString());
+        result.put("generatedAt", generatedAt);
+        result.put("lastAttemptAt", generatedAt);
         result.put("lastError", "");
         result.put("archiveCoverage", ratio(scanArchiveLinked, totalScans));
         result.put("ossCoverage", ratio(ossLinked, totalScans));

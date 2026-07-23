@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class SystemErrorEventService {
@@ -31,6 +32,9 @@ public class SystemErrorEventService {
 
     private final SystemErrorEventMapper mapper;
     private final BlockingQueue<SystemErrorEvent> pending = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+    private final AtomicLong droppedEvents = new AtomicLong();
+    private final ThreadLocal<Boolean> persistenceInProgress = ThreadLocal.withInitial(() -> false);
+    private volatile boolean accepting = true;
 
     public SystemErrorEventService(SystemErrorEventMapper mapper) {
         this.mapper = mapper;
@@ -40,7 +44,10 @@ public class SystemErrorEventService {
      * 日志线程只做脱敏、指纹计算和入队，不在业务线程同步访问数据库。
      */
     public void capture(ILoggingEvent loggingEvent) {
-        if (loggingEvent == null || loggingEvent.getLevel().toInt() < Level.WARN_INT) {
+        if (!accepting
+                || Boolean.TRUE.equals(persistenceInProgress.get())
+                || loggingEvent == null
+                || loggingEvent.getLevel().toInt() < Level.WARN_INT) {
             return;
         }
         String loggerName = loggingEvent.getLoggerName();
@@ -80,23 +87,35 @@ public class SystemErrorEventService {
         event.setFingerprint(RuntimeErrorSanitizer.fingerprint(
                 event.getLevel(), event.getLoggerName(), event.getExceptionType(), event.getMessageSummary()
         ));
-        pending.offer(event);
+        if (!pending.offer(event)) {
+            droppedEvents.incrementAndGet();
+        }
     }
 
     @Scheduled(fixedDelayString = "${app.runtime-errors.flush-interval-ms:2000}")
     public void flushPending() {
-        List<SystemErrorEvent> batch = new ArrayList<>(MAX_FLUSH_SIZE);
-        pending.drainTo(batch, MAX_FLUSH_SIZE);
-        if (batch.isEmpty()) {
+        if (Boolean.TRUE.equals(persistenceInProgress.get())) {
             return;
         }
-        for (SystemErrorEvent event : batch) {
-            try {
-                mapper.upsert(event);
-            } catch (RuntimeException exception) {
-                // 避免通过日志框架再次触发本采集器形成递归；原始文件日志仍由 Logback 负责。
-                System.err.println("运行错误事件持久化失败: " + exception.getMessage());
+        persistenceInProgress.set(true);
+        try {
+            long dropped = droppedEvents.getAndSet(0);
+            if (dropped > 0) {
+                System.err.println("运行错误事件队列已满，丢弃事件数量: " + dropped);
             }
+
+            List<SystemErrorEvent> batch = new ArrayList<>(MAX_FLUSH_SIZE);
+            pending.drainTo(batch, MAX_FLUSH_SIZE);
+            for (SystemErrorEvent event : batch) {
+                try {
+                    mapper.upsert(event);
+                } catch (RuntimeException exception) {
+                    // 不输出异常消息，避免数据库连接串或配置细节进入控制台。
+                    System.err.println("运行错误事件持久化失败: " + exception.getClass().getSimpleName());
+                }
+            }
+        } finally {
+            persistenceInProgress.remove();
         }
     }
 
@@ -142,6 +161,7 @@ public class SystemErrorEventService {
 
     @PreDestroy
     public void destroy() {
+        accepting = false;
         while (!pending.isEmpty()) {
             flushPending();
         }

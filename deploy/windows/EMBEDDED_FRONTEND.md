@@ -36,13 +36,14 @@ C:\MRR\current\deploy\windows\migrate-embedded-frontend.ps1 -Root C:\MRR
 
 迁移脚本会：
 
-1. 备份现有 Nginx 配置；
-2. 写入支持双模式切换的新配置；
-3. 默认启用 JAR 内嵌前端；
-4. 校验 Nginx 配置；
-5. 更新 `ops` 目录中的管理脚本；
-6. Nginx 正在运行时执行平滑重载；
-7. 任一步骤失败时恢复原配置。
+1. 检查当前后端 JAR 已包含完整前端；
+2. 备份现有 Nginx 配置；
+3. 写入支持双模式切换的新配置；
+4. 默认启用 JAR 内嵌前端；
+5. 校验 Nginx 配置；
+6. 更新 `ops` 目录中的管理脚本；
+7. Nginx 正在运行时执行平滑重载；
+8. 任一步骤失败时恢复原配置。
 
 迁移不会修改数据库配置、JWT/HMAC 密钥、OSS 凭据或图片目录。
 
@@ -68,6 +69,19 @@ C:\MRR\ops\mrrctl.ps1 frontend external
 - `BOOT-INF/classes/static/assets/` 至少包含一个资源文件。
 
 切换到外置模式前，脚本会检查 `current/frontend/index.html`。每次切换都会先执行 `nginx -t`，验证失败会自动恢复原模式。
+
+## 回滚到尚未内嵌前端的旧版本
+
+新版发布包必须包含内嵌前端，部署时会强制检查。但第一阶段仍允许回滚到此前只包含外置前端的受管理版本。
+
+回滚前先切换到外置模式：
+
+```powershell
+C:\MRR\ops\mrrctl.ps1 frontend external
+C:\MRR\ops\mrrctl.ps1 rollback previous
+```
+
+如果当前仍处于 `embedded`，而目标旧 JAR 没有内嵌前端，回滚脚本会拒绝切换并给出上述提示，避免回滚后页面直接变成 404。数据库兼容性和 `applicationRollback.allowed` 规则仍然照常执行。
 
 ## 缓存策略
 

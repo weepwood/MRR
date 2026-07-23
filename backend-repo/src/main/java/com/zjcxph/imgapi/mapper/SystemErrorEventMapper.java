@@ -62,7 +62,6 @@ public interface SystemErrorEventMapper {
                    logger_name AS loggerName,
                    exception_type AS exceptionType,
                    message_summary AS messageSummary,
-                   stack_trace AS stackTrace,
                    request_id AS requestId,
                    thread_name AS threadName,
                    first_seen_at AS firstSeenAt,
@@ -167,7 +166,7 @@ public interface SystemErrorEventMapper {
                    COUNT(*) FILTER (WHERE status = 'RESOLVED') AS "resolvedGroups",
                    COUNT(*) FILTER (WHERE level = 'ERROR') AS "errorGroups",
                    COUNT(*) FILTER (WHERE level = 'WARN') AS "warnGroups",
-                   COALESCE(SUM(occurrence_count) FILTER (WHERE last_seen_at >= NOW() - INTERVAL '24 hours'), 0)
+                   COUNT(*) FILTER (WHERE last_seen_at >= NOW() - INTERVAL '24 hours')
                        AS "recentOccurrences"
             FROM system_error_event
             """)

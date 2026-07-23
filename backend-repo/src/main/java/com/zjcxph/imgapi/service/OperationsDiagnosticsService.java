@@ -5,13 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.entity.AuthRole;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.PermissionResolver;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.method.HandlerMethod;
@@ -34,7 +37,16 @@ import java.util.Set;
 @Service
 public class OperationsDiagnosticsService {
 
+    private static final int MAX_SNAPSHOT_VERSION_LENGTH = 128;
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final List<ConditionalPermissionRule> CONDITIONAL_PERMISSION_RULES = List.of(
+            conditional("GET", "/api/v1/archive-exports/jobs", "record:download", "record:pdf:export"),
+            conditional("POST", "/api/v1/archive-exports/jobs", "record:download", "record:pdf:export"),
+            conditional("GET", "/api/v1/archive-exports/jobs/*", "record:download", "record:pdf:export"),
+            conditional("POST", "/api/v1/archive-exports/jobs/*/cancel", "record:download", "record:pdf:export"),
+            conditional("GET", "/api/v1/archive-exports/jobs/*/download", "record:download", "record:pdf:export")
+    );
 
     private final JdbcTemplate jdbcTemplate;
     private final AuthRoleMapper authRoleMapper;
@@ -84,9 +96,7 @@ public class OperationsDiagnosticsService {
     }
 
     public Map<String, Object> savePermissionSnapshot(String version) {
-        String normalizedVersion = StringUtils.hasText(version)
-                ? version.trim()
-                : "snapshot-" + Instant.now();
+        String normalizedVersion = normalizeSnapshotVersion(version);
         Map<String, Object> matrix = currentPermissionMatrix();
         String actor = AuthContext.getCurrentUser() == null
                 ? "unknown"
@@ -96,8 +106,10 @@ public class OperationsDiagnosticsService {
                     INSERT INTO app.permission_matrix_snapshot(version, matrix_json, created_by)
                     VALUES (?, CAST(? AS jsonb), ?)
                     """, normalizedVersion, objectMapper.writeValueAsString(matrix), actor);
+        } catch (DuplicateKeyException exception) {
+            throw new BusinessException(409, "权限矩阵版本名称已存在");
         } catch (Exception exception) {
-            throw new IllegalStateException("保存权限矩阵快照失败: " + exception.getMessage(), exception);
+            throw new IllegalStateException("保存权限矩阵快照失败", exception);
         }
         return Map.of("version", normalizedVersion, "createdBy", actor, "saved", true);
     }
@@ -120,35 +132,14 @@ public class OperationsDiagnosticsService {
             List<String> methods = mappedMethods.isEmpty()
                     ? List.of("ANY")
                     : mappedMethods.stream().map(Enum::name).sorted().toList();
-
-            RequirePermissions permission = AnnotatedElementUtils.findMergedAnnotation(
-                    handler.getMethod(), RequirePermissions.class);
-            if (permission == null) {
-                permission = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), RequirePermissions.class);
-            }
-            AuthenticatedOnly authenticatedOnly = AnnotatedElementUtils.findMergedAnnotation(
-                    handler.getMethod(), AuthenticatedOnly.class);
-            if (authenticatedOnly == null) {
-                authenticatedOnly = AnnotatedElementUtils.findMergedAnnotation(
-                        handler.getBeanType(), AuthenticatedOnly.class);
-            }
+            DeclaredAccess declaredAccess = resolveDeclaredAccess(handler);
 
             for (String path : patterns) {
                 for (String method : methods) {
-                    String[] override = "ANY".equals(method)
-                            ? null
-                            : ApiAccessPolicy.requiredPermissionOverride(method, path);
-                    List<String> required = override != null
-                            ? Arrays.asList(override)
-                            : permission == null ? List.of() : Arrays.asList(permission.value());
-                    String policy = ApiAccessPolicy.isPublicApiPath(path)
-                            ? "PUBLIC"
-                            : authenticatedOnly != null ? "AUTHENTICATED_ONLY"
-                            : required.isEmpty() ? "UNDECLARED" : "PERMISSION";
-
+                    ResolvedAccess access = resolveAccess(method, path, declaredAccess);
                     Map<String, Boolean> roleAccess = new LinkedHashMap<>();
                     for (AuthRole role : roles) {
-                        roleAccess.put(role.getCode(), roleAllows(role, policy, required));
+                        roleAccess.put(role.getCode(), roleAllows(role, access));
                     }
                     Map<String, Object> endpoint = new LinkedHashMap<>();
                     endpoint.put("key", method + " " + path);
@@ -158,8 +149,9 @@ public class OperationsDiagnosticsService {
                             "operation",
                             handler.getBeanType().getSimpleName() + "." + handler.getMethod().getName()
                     );
-                    endpoint.put("policy", policy);
-                    endpoint.put("requiredPermissions", required);
+                    endpoint.put("policy", access.policy());
+                    endpoint.put("permissionMode", access.permissionMode());
+                    endpoint.put("requiredPermissions", access.requiredPermissions());
                     endpoint.put("roleAccess", roleAccess);
                     endpoints.add(endpoint);
                 }
@@ -182,18 +174,84 @@ public class OperationsDiagnosticsService {
         return result;
     }
 
-    private boolean roleAllows(AuthRole role, String policy, List<String> required) {
-        if ("PUBLIC".equals(policy) || "AUTHENTICATED_ONLY".equals(policy)) {
+    private DeclaredAccess resolveDeclaredAccess(HandlerMethod handler) {
+        RequirePermissions methodPermission = AnnotatedElementUtils.findMergedAnnotation(
+                handler.getMethod(), RequirePermissions.class);
+        boolean methodAuthenticated = AnnotatedElementUtils.hasAnnotation(
+                handler.getMethod(), AuthenticatedOnly.class);
+        if (methodPermission != null || methodAuthenticated) {
+            return new DeclaredAccess(methodPermission, methodAuthenticated);
+        }
+        RequirePermissions classPermission = AnnotatedElementUtils.findMergedAnnotation(
+                handler.getBeanType(), RequirePermissions.class);
+        boolean classAuthenticated = AnnotatedElementUtils.hasAnnotation(
+                handler.getBeanType(), AuthenticatedOnly.class);
+        return new DeclaredAccess(classPermission, classAuthenticated);
+    }
+
+    private ResolvedAccess resolveAccess(String method, String path, DeclaredAccess declaredAccess) {
+        if (ApiAccessPolicy.isPublicApiPath(path)) {
+            return new ResolvedAccess("PUBLIC", "NONE", List.of());
+        }
+
+        ConditionalPermissionRule conditional = findConditionalPermissionRule(method, path);
+        if (conditional != null) {
+            return new ResolvedAccess("CONDITIONAL_PERMISSION", "ANY", conditional.permissions());
+        }
+
+        String[] override = "ANY".equals(method)
+                ? null
+                : ApiAccessPolicy.requiredPermissionOverride(method, path);
+        if (override != null) {
+            return new ResolvedAccess("PERMISSION", "ALL", Arrays.asList(override));
+        }
+
+        if (declaredAccess.permission() != null && declaredAccess.authenticatedOnly()) {
+            return new ResolvedAccess("INVALID", "NONE", List.of());
+        }
+        if (declaredAccess.authenticatedOnly()) {
+            return new ResolvedAccess("AUTHENTICATED_ONLY", "NONE", List.of());
+        }
+        if (declaredAccess.permission() != null) {
+            return new ResolvedAccess(
+                    "PERMISSION",
+                    "ALL",
+                    Arrays.asList(declaredAccess.permission().value())
+            );
+        }
+        return new ResolvedAccess("UNDECLARED", "NONE", List.of());
+    }
+
+    private ConditionalPermissionRule findConditionalPermissionRule(String method, String path) {
+        if ("ANY".equals(method)) {
+            return null;
+        }
+        return CONDITIONAL_PERMISSION_RULES.stream()
+                .filter(rule -> rule.method().equalsIgnoreCase(method)
+                        && PATH_MATCHER.match(rule.pathPattern(), path))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean roleAllows(AuthRole role, ResolvedAccess access) {
+        if ("PUBLIC".equals(access.policy()) || "AUTHENTICATED_ONLY".equals(access.policy())) {
             return true;
         }
-        if (!"PERMISSION".equals(policy)) {
-            return false;
-        }
-        if ("ADMIN".equalsIgnoreCase(role.getCode())) {
+        if ("ADMIN".equalsIgnoreCase(role.getCode())
+                && ("PERMISSION".equals(access.policy())
+                || "CONDITIONAL_PERMISSION".equals(access.policy()))) {
             return true;
         }
         List<String> permissions = resolvedPermissions(role);
-        return required.stream().allMatch(permission -> PermissionResolver.hasPermission(permissions, permission));
+        if ("PERMISSION".equals(access.policy())) {
+            return access.requiredPermissions().stream()
+                    .allMatch(permission -> PermissionResolver.hasPermission(permissions, permission));
+        }
+        if ("CONDITIONAL_PERMISSION".equals(access.policy())) {
+            return access.requiredPermissions().stream()
+                    .anyMatch(permission -> PermissionResolver.hasPermission(permissions, permission));
+        }
+        return false;
     }
 
     private List<String> resolvedPermissions(AuthRole role) {
@@ -206,6 +264,19 @@ public class OperationsDiagnosticsService {
                 .distinct()
                 .toList();
         return new ArrayList<>(PermissionResolver.resolve(configured));
+    }
+
+    private String normalizeSnapshotVersion(String version) {
+        String normalized = StringUtils.hasText(version)
+                ? version.trim()
+                : "snapshot-" + Instant.now();
+        if (normalized.length() > MAX_SNAPSHOT_VERSION_LENGTH) {
+            throw new BusinessException(400, "权限矩阵版本名称不能超过 128 个字符");
+        }
+        if (normalized.chars().anyMatch(Character::isISOControl)) {
+            throw new BusinessException(400, "权限矩阵版本名称不能包含控制字符");
+        }
+        return normalized;
     }
 
     private Map<String, Object> latestPermissionSnapshot() {
@@ -255,6 +326,7 @@ public class OperationsDiagnosticsService {
     private Map<String, Object> permissionComparable(Map<String, Object> value) {
         return Map.of(
                 "policy", value.getOrDefault("policy", ""),
+                "permissionMode", value.getOrDefault("permissionMode", "ALL"),
                 "requiredPermissions", value.getOrDefault("requiredPermissions", List.of()),
                 "roleAccess", value.getOrDefault("roleAccess", Map.of())
         );
@@ -281,5 +353,22 @@ public class OperationsDiagnosticsService {
         Map<String, Object> result = new LinkedHashMap<>();
         value.forEach((key, item) -> result.put(String.valueOf(key), item));
         return result;
+    }
+
+    private static ConditionalPermissionRule conditional(
+            String method,
+            String pathPattern,
+            String... permissions
+    ) {
+        return new ConditionalPermissionRule(method, pathPattern, List.of(permissions));
+    }
+
+    private record DeclaredAccess(RequirePermissions permission, boolean authenticatedOnly) {
+    }
+
+    private record ResolvedAccess(String policy, String permissionMode, List<String> requiredPermissions) {
+    }
+
+    private record ConditionalPermissionRule(String method, String pathPattern, List<String> permissions) {
     }
 }

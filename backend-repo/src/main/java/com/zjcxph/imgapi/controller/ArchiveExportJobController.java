@@ -9,6 +9,7 @@ import com.zjcxph.imgapi.dto.resp.ArchiveExportJobResponse;
 import com.zjcxph.imgapi.entity.ArchiveExportJob;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
+import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.service.ArchiveExportJobService;
 import com.zjcxph.imgapi.utils.HttpByteRange;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,9 +46,14 @@ public class ArchiveExportJobController {
     private static final String PRIVATE_NO_STORE = "private, no-store, max-age=0";
 
     private final ArchiveExportJobService jobService;
+    private final ArchiveExportJobRepository jobRepository;
 
-    public ArchiveExportJobController(ArchiveExportJobService jobService) {
+    public ArchiveExportJobController(
+            ArchiveExportJobService jobService,
+            ArchiveExportJobRepository jobRepository
+    ) {
         this.jobService = jobService;
+        this.jobRepository = jobRepository;
     }
 
     @Operation(summary = "创建异步导出任务")
@@ -101,6 +107,7 @@ public class ArchiveExportJobController {
         ArchiveExportJob job = jobService.requireOwned(session, id);
         requireJobPermission(session, job);
         Path file = jobService.requireDownloadFile(session, id);
+        jobRepository.recordDownload(id);
         long total = Files.size(file);
         MediaType contentType = "PDF".equals(job.getFormat())
                 ? MediaType.APPLICATION_PDF

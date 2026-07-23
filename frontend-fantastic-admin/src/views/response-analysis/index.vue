@@ -402,8 +402,8 @@ h2 {
   }
 
   .response-trend-card {
-    width: max-content;
     justify-self: start;
+    width: max-content;
     max-width: 100%;
   }
 

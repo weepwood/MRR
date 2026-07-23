@@ -12,8 +12,10 @@ MRR 使用 VitePress 同时构建两套文档：
 ```text
 vitepress-doc/
 ├── .vitepress/
+│   ├── config.mts               # 按 MRR_DOCS_MODE 选择站点配置
 │   ├── config.user.mts          # 用户手册配置
-│   ├── config.full.mts          # 内部完整站点配置
+│   ├── config.internal.mts      # 内部站点入口、base 与输出目录
+│   ├── config.full.mts          # 内部完整站点导航与主题配置
 │   └── theme/                   # 主题和样式
 ├── user-guide/                  # 用户手册正文
 ├── internal/                    # 内部工程文档
@@ -66,10 +68,12 @@ npm run docs:dev:internal
 
 内部站点使用：
 
-- 配置：`.vitepress/config.full.mts`；
+- 入口配置：`.vitepress/config.internal.mts`；
+- 完整导航和主题配置：`.vitepress/config.full.mts`；
 - 源目录：`vitepress-doc/`；
 - 包含 `internal/`、`user-guide/` 和 `getting-started/`；
-- 构建目录由运行脚本和 VitePress 配置决定。
+- 基础路径：`/docs/internal/`；
+- 构建目录：`.vitepress/dist-internal`。
 
 开发命令支持继续传递端口参数：
 
@@ -95,7 +99,7 @@ npm run docs:build:user
 npm run docs:build:internal
 ```
 
-构建前运行脚本会刷新 Git 更新记录。`ignoreDeadLinks` 已关闭，死链会导致构建失败。
+构建前运行脚本会刷新 Git 更新记录。两套站点均使用 `ignoreDeadLinks: false`，发现死链时构建会失败。
 
 ## 预览
 

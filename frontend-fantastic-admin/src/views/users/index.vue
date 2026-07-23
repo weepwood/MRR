@@ -2,6 +2,7 @@
 /* eslint-disable antfu/consistent-list-newline, antfu/if-newline, curly, regexp/prefer-w, regexp/use-ignore-case, vue/singleline-html-element-content-newline */
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -13,6 +14,8 @@ import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -74,6 +77,11 @@ const credentialVisible = ref(false)
 const credentialAcknowledged = ref(false)
 const credentialTitle = ref('')
 const credentialResult = ref<UserCredentialResult | null>(null)
+
+const {
+  maxInlineActions: userResponsiveInlineActions,
+  actionColumnWidth: userActionColumnWidth,
+} = useTableActionLayout(3, 1)
 
 const approvableRoles = computed(() => {
   const nonAdminRoles = roles.value.filter(role => String(role.code || '').toUpperCase() !== 'ADMIN')
@@ -189,6 +197,96 @@ function resetFilters() {
 
 function isSelf(rowId?: number | string) {
   return rowId != null && userStore.profile.id != null && Number(rowId) === Number(userStore.profile.id)
+}
+
+function userActions(row: CredentialAwareUser): MrrTableAction[] {
+  const status = normalizeStatus(row.status)
+  if (status === 'pending') {
+    return [
+      {
+        key: 'approve',
+        label: '审核通过',
+        icon: 'i-ri:check-line',
+        tone: 'success',
+        placement: 'inline',
+      },
+      {
+        key: 'reject',
+        label: '拒绝申请',
+        icon: 'i-ri:close-line',
+        tone: 'danger',
+      },
+    ]
+  }
+  if (status === 'active') {
+    const self = isSelf(row.id)
+    return [
+      {
+        key: 'edit',
+        label: '编辑用户',
+        icon: 'i-ri:edit-line',
+        tone: 'primary',
+        placement: 'inline',
+      },
+      {
+        key: 'reset-password',
+        label: '重置密码',
+        icon: 'i-ri:key-2-line',
+        tone: 'warning',
+        placement: 'overflow',
+        disabled: self,
+        disabledReason: self ? '请通过个人设置修改自己的密码' : undefined,
+      },
+      {
+        key: 'disable',
+        label: '禁用用户',
+        icon: 'i-ri:forbid-line',
+        tone: 'danger',
+        placement: 'overflow',
+        disabled: self,
+        disabledReason: self ? '不能禁用当前登录账号' : undefined,
+      },
+    ]
+  }
+  if (status === 'disabled') {
+    return [
+      {
+        key: 'edit',
+        label: '编辑用户',
+        icon: 'i-ri:edit-line',
+        tone: 'primary',
+        placement: 'inline',
+      },
+    ]
+  }
+  return []
+}
+
+function userInlineLimit(row: CredentialAwareUser) {
+  if (userResponsiveInlineActions.value === 0) {
+    return 0
+  }
+  return isPending(row) ? 2 : 1
+}
+
+function handleUserAction(action: string, row: CredentialAwareUser) {
+  switch (action) {
+    case 'approve':
+      openApprove(row)
+      break
+    case 'reject':
+      void handleReject(row)
+      break
+    case 'edit':
+      openEdit(row)
+      break
+    case 'reset-password':
+      openReset(row)
+      break
+    case 'disable':
+      void handleDisable(row)
+      break
+  }
 }
 
 function openCreate() {
@@ -481,21 +579,19 @@ onMounted(loadData)
         <el-table-column label="凭据状态" min-width="150"><template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template></el-table-column>
         <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" min-width="165"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
-        <el-table-column label="操作" width="290" fixed="right" align="right">
+        <el-table-column
+          v-if="canManage"
+          label="操作"
+          :width="userActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <div v-if="canManage" class="row-actions">
-              <template v-if="isPending(row)">
-                <el-button link type="success" @click="openApprove(row)">审核通过</el-button>
-                <el-button link type="danger" @click="handleReject(row)">拒绝</el-button>
-              </template>
-              <template v-else-if="['active', 'disabled'].includes(normalizeStatus(row.status))">
-                <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-                <el-button link type="warning" :disabled="!isActive(row) || isSelf(row.id)" @click="openReset(row)">重置密码</el-button>
-                <el-button link type="danger" :disabled="!isActive(row) || isSelf(row.id)" @click="handleDisable(row)">禁用</el-button>
-              </template>
-              <span v-else class="no-perm">审核已结束</span>
-            </div>
-            <span v-else class="no-perm">无操作权限</span>
+            <MrrTableActions
+              :actions="userActions(row)"
+              :max-inline="userInlineLimit(row)"
+              @select="handleUserAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -579,8 +675,6 @@ onMounted(loadData)
 .application-info span { font-size: 12px; color: var(--mrr-foreground); }
 .application-info small { overflow: hidden; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
 .application-info .reject-reason { color: var(--mrr-destructive); }
-.row-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
-.row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .no-perm, .unit { margin-left: 8px; font-size: 12px; color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: 18px; }
 .readonly-field { width: 100%; min-height: var(--mrr-control-height); padding: 9px 12px; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }

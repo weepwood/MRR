@@ -1,14 +1,18 @@
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, style/indent-binary-ops, vue/singleline-html-element-content-newline */
 import type { ImageAuditFilterParams } from '@/api/modules/logs'
 import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
-import { Download, Refresh, Search, View } from '@element-plus/icons-vue'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
@@ -19,6 +23,18 @@ const error = ref('')
 const analyticsError = ref('')
 const analyticsLoading = ref(true)
 const exportLoading = ref(false)
+
+const detailActions: MrrTableAction[] = [{
+  key: 'detail',
+  label: '查看审计详情',
+  icon: 'i-ri:eye-line',
+  tone: 'primary',
+  placement: 'inline',
+}]
+const {
+  maxInlineActions: detailMaxInlineActions,
+  actionColumnWidth: detailActionColumnWidth,
+} = useTableActionLayout(detailActions.length, 1)
 
 function createEmptyAnalytics(): ImageAuditAnalytics {
   return {
@@ -229,6 +245,12 @@ async function openDetail(row: LogRecord) {
   }
 }
 
+function handleDetailAction(action: string, row: LogRecord) {
+  if (action === 'detail') {
+    void openDetail(row)
+  }
+}
+
 async function exportAudit(scope: 'all' | 'user' | 'target', value?: string) {
   exportLoading.value = true
   try {
@@ -327,7 +349,15 @@ onMounted(loadData)
         <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
         <el-table-column prop="responseStatus" label="状态码" width="100"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
         <el-table-column prop="executeTime" label="耗时(ms)" width="105" />
-        <el-table-column label="操作" width="110" fixed="right"><template #default="{ row }"><el-button size="small" type="primary" text @click="openDetail(row)"><el-icon><View /></el-icon>详情</el-button></template></el-table-column>
+        <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
+          <template #default="{ row }">
+            <MrrTableActions
+              :actions="detailActions"
+              :max-inline="detailMaxInlineActions"
+              @select="handleDetailAction($event, row)"
+            />
+          </template>
+        </el-table-column>
       </el-table>
       <div class="pager"><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="loadListData" /></div>
     </el-card>
@@ -353,6 +383,7 @@ onMounted(loadData)
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, @stylistic/number-leading-zero, at-rule-empty-line-before, media-feature-range-notation */
 .page-shell { display: grid; gap: 18px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .header-actions, .section-actions { display: flex; gap: 10px; align-items: center; }

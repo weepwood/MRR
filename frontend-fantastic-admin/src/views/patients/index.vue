@@ -1,23 +1,26 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Download, Edit, Refresh, Search, Upload } from '@element-plus/icons-vue'
+import { Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
+import { useRouter } from 'vue-router'
+import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
 import PatientEditDialog from './components/PatientEditDialog.vue'
-import PatientImportDialog from './components/PatientImportDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
+const router = useRouter()
 const loading = ref(false)
-const exporting = ref(false)
 const tableData = ref<PatientRecord[]>([])
 const error = ref('')
 const page = ref(1)
@@ -26,15 +29,26 @@ const total = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
-const importDialogVisible = ref(false)
 const editDialogVisible = ref(false)
 const editingPatient = ref<PatientRecord>()
 const analyticsRefreshKey = ref(0)
 const { auth } = useAuth()
-const canImportPatients = computed(() => auth('record:edit'))
 const canEditPatients = computed(() => auth('record:edit'))
 
 const filters = reactive({ keyword: '' })
+const patientActions: MrrTableAction[] = [
+  {
+    key: 'edit',
+    label: '编辑患者',
+    icon: 'i-ri:edit-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+]
+const {
+  maxInlineActions: patientMaxInlineActions,
+  actionColumnWidth: patientActionColumnWidth,
+} = useTableActionLayout(patientActions.length, 1)
 
 async function loadData() {
   loading.value = true
@@ -83,14 +97,19 @@ function handleSizeChange(nextSize: number) {
   void loadData()
 }
 
-function handleImported() {
-  page.value = 1
-  refreshAll()
+function openDataExchange() {
+  void router.push({ path: '/data-exchange', query: { dataset: 'patients' } })
 }
 
 function handleEdit(row: PatientRecord) {
   editingPatient.value = { ...row }
   editDialogVisible.value = true
+}
+
+function handlePatientAction(action: string, row: PatientRecord) {
+  if (action === 'edit') {
+    handleEdit(row)
+  }
 }
 
 function handlePatientSaved(updated: PatientRecord) {
@@ -99,31 +118,6 @@ function handlePatientSaved(updated: PatientRecord) {
     tableData.value[index] = updated
   }
   refreshAll()
-}
-
-async function handleExport() {
-  exporting.value = true
-  try {
-    const response = await exportPatientsExcel(filters.keyword.trim() || undefined)
-    const blob = response.data instanceof Blob
-      ? response.data
-      : new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `患者数据-${new Date().toISOString().slice(0, 10)}.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-    ElMessage.success('患者数据导出完成')
-  }
-  catch {
-    ElMessage.error('患者数据导出失败')
-  }
-  finally {
-    exporting.value = false
-  }
 }
 
 function maskIdCard(value?: string) {
@@ -203,20 +197,12 @@ onUnmounted(() => {
         </p>
         <h2>患者管理</h2>
         <p class="subtitle">
-          查询、编辑、导入和导出患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。
+          查询和编辑患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。数据导入导出统一在数据交换中心执行。
         </p>
       </div>
       <div class="header-actions">
-        <el-button
-          v-if="canImportPatients"
-          type="primary"
-          :icon="Upload"
-          @click="importDialogVisible = true"
-        >
-          导入患者数据
-        </el-button>
-        <el-button :icon="Download" :loading="exporting" @click="handleExport">
-          导出当前结果
+        <el-button type="primary" :icon="Upload" @click="openDataExchange">
+          数据导入导出
         </el-button>
         <el-button :loading="loading" :icon="Refresh" @click="refreshAll">
           刷新
@@ -287,11 +273,19 @@ onUnmounted(() => {
         <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-        <el-table-column v-if="canEditPatients" label="操作" width="96" fixed="right">
+        <el-table-column
+          v-if="canEditPatients"
+          label="操作"
+          :width="patientActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">
-              编辑
-            </el-button>
+            <MrrTableActions
+              :actions="patientActions"
+              :max-inline="patientMaxInlineActions"
+              @select="handlePatientAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -309,7 +303,6 @@ onUnmounted(() => {
       </div>
     </el-card>
 
-    <PatientImportDialog v-model="importDialogVisible" @imported="handleImported" />
     <PatientEditDialog
       v-model="editDialogVisible"
       :patient="editingPatient"

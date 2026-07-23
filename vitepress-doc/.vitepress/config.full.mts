@@ -10,7 +10,7 @@ const productVersion = fs.readFileSync(
 
 export default defineConfig({
   title: `MRR 内部文档 v${productVersion}`,
-  description: 'MRR管理系统开发、部署与运维文档',
+  description: 'MRR 医疗病案文件管理系统开发、部署与运维文档',
   lang: 'zh-CN',
   srcExclude: [
     'ai-generation/**',
@@ -25,7 +25,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#0a7c42' }],
     ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
     ['meta', { property: 'og:title', content: `MRR 内部文档 v${productVersion}` }],
-    ['meta', { property: 'og:description', content: 'MRR 开发、架构、部署与运维文档' }],
+    ['meta', { property: 'og:description', content: 'MRR 架构、配置、数据、部署、安全与运维文档' }],
     ['meta', { property: 'og:type', content: 'website' }],
   ],
 
@@ -37,17 +37,25 @@ export default defineConfig({
       { text: '内部文档', link: '/internal/' },
       { text: '系统架构', link: '/internal/architecture' },
       {
-        text: '工程指南',
+        text: '工程与配置',
         items: [
           { text: '前端工程', link: '/internal/frontend' },
           { text: '后端工程', link: '/internal/backend' },
           { text: '数据库', link: '/internal/database' },
+          { text: 'API 与权限', link: '/internal/api' },
+          { text: '配置参考', link: '/internal/configuration-reference' },
+          { text: '开发流程', link: '/internal/development' },
+          { text: '文档维护规范', link: '/internal/documentation' },
+        ],
+      },
+      {
+        text: '数据与接入',
+        items: [
           { text: '数据导入与迁移', link: '/internal/data-migration' },
           { text: '逐表导入教程', link: '/internal/data-import/' },
-          { text: 'API 与权限', link: '/internal/api' },
           { text: '外部系统影像接入', link: '/internal/external-archive-integration' },
-          { text: '开发流程', link: '/internal/development' },
-          { text: '更新日志工作流', link: '/internal/changelog-workflow' },
+          { text: 'OSS 迁移管理', link: '/user-guide/oss-migration' },
+          { text: '存储与文件浏览', link: '/user-guide/storage-browser' },
         ],
       },
       {
@@ -62,7 +70,6 @@ export default defineConfig({
           { text: '发布流程', link: '/internal/release' },
         ],
       },
-      { text: '安装配置', link: '/getting-started/installation' },
       { text: '用户手册', link: '/user-guide/' },
       { text: '更新记录', link: '/user-guide/changelog' },
       { text: `v${productVersion}`, link: '/internal/release' },
@@ -71,24 +78,38 @@ export default defineConfig({
     sidebar: {
       '/internal/': [
         {
-          text: '架构与工程',
+          text: '总览',
           collapsed: false,
           items: [
-            { text: '文档首页', link: '/internal/' },
+            { text: '内部文档首页', link: '/internal/' },
             { text: '系统架构', link: '/internal/architecture' },
+            { text: '配置参考', link: '/internal/configuration-reference' },
+          ],
+        },
+        {
+          text: '工程开发',
+          collapsed: false,
+          items: [
             { text: '前端工程', link: '/internal/frontend' },
             { text: '后端工程', link: '/internal/backend' },
             { text: '数据库', link: '/internal/database' },
+            { text: 'API 与权限', link: '/internal/api' },
+            { text: '开发流程', link: '/internal/development' },
+            { text: '文档维护规范', link: '/internal/documentation' },
+            { text: '更新日志工作流', link: '/internal/changelog-workflow' },
+          ],
+        },
+        {
+          text: '数据与集成',
+          collapsed: false,
+          items: [
             { text: '数据导入与迁移', link: '/internal/data-migration' },
             { text: '逐表导入教程', link: '/internal/data-import/' },
             { text: '患者数据导入', link: '/internal/data-import/mr-patient' },
             { text: '统计数据导入', link: '/internal/data-import/mr-statistics' },
             { text: '装箱数据导入', link: '/internal/data-import/mr-archive-box-record' },
             { text: '扫描影像导入', link: '/internal/data-import/mr-scan' },
-            { text: 'API 与权限', link: '/internal/api' },
             { text: '外部系统影像接入', link: '/internal/external-archive-integration' },
-            { text: '开发流程', link: '/internal/development' },
-            { text: '更新日志工作流', link: '/internal/changelog-workflow' },
           ],
         },
         {
@@ -112,24 +133,47 @@ export default defineConfig({
           items: [
             { text: '安装指南', link: '/getting-started/installation' },
             { text: '配置说明', link: '/getting-started/configuration' },
+            { text: '完整配置参考', link: '/internal/configuration-reference' },
           ],
         },
       ],
       '/user-guide/': [
         {
-          text: '用户手册',
+          text: '开始使用',
           collapsed: false,
           items: [
             { text: '用户指南', link: '/user-guide/' },
             { text: '快速上手', link: '/user-guide/getting-started' },
+            { text: '账号、注册与登录', link: '/user-guide/accounts' },
+            { text: '常见问题', link: '/user-guide/faq' },
+          ],
+        },
+        {
+          text: '业务操作',
+          collapsed: false,
+          items: [
             { text: '病案与记录', link: '/user-guide/patients' },
             { text: '影像档案袋', link: '/user-guide/images' },
             { text: '病案类型', link: '/user-guide/medical-record-types' },
             { text: '统计分析', link: '/user-guide/statistics' },
             { text: '界面示例', link: '/user-guide/screenshots' },
+          ],
+        },
+        {
+          text: '存储与治理',
+          collapsed: false,
+          items: [
+            { text: 'OSS 迁移管理', link: '/user-guide/oss-migration' },
+            { text: '存储与文件浏览', link: '/user-guide/storage-browser' },
+            { text: '数据关系工作台', link: '/user-guide/data-relation-workbench' },
+          ],
+        },
+        {
+          text: '系统管理',
+          collapsed: false,
+          items: [
             { text: '系统管理', link: '/user-guide/admin' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
-            { text: '常见问题', link: '/user-guide/faq' },
             { text: '更新说明', link: '/user-guide/release-notes' },
             { text: 'Git 更新记录', link: '/user-guide/changelog' },
           ],
@@ -141,7 +185,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/weepwood/MRR' },
     ],
     footer: {
-      message: `内部文档以 VERSION、release-baseline.json 与当前代码为准（v${productVersion}）`,
+      message: `内部文档以 VERSION、release-baseline.json 与 main 当前代码为准（v${productVersion}）`,
       copyright: `Copyright © 2024-${new Date().getFullYear()} MRR Team`,
     },
     search: {

@@ -1,9 +1,13 @@
 <script setup lang="ts">
+/* eslint-disable vue/singleline-html-element-content-newline */
 import type { ImageAuditAnalytics } from '@/api/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { MrrLineSeries } from '@/types/chart'
 import { DataAnalysis, Files, Timer, User, Warning } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { MrrChartCard, MrrLineChart } from '@/components/charts'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'AuditAnalytics' })
 
@@ -16,6 +20,25 @@ const emit = defineEmits<{
   exportUser: [username: string]
   exportTarget: [target: string]
 }>()
+
+const userActions: MrrTableAction[] = [{
+  key: 'export-user',
+  label: '导出访问明细',
+  icon: 'i-ri:download-line',
+  tone: 'primary',
+  placement: 'inline',
+}]
+const targetActions: MrrTableAction[] = [{
+  key: 'export-target',
+  label: '导出访问人员',
+  icon: 'i-ri:download-line',
+  tone: 'success',
+  placement: 'inline',
+}]
+const {
+  maxInlineActions,
+  actionColumnWidth,
+} = useTableActionLayout(1, 1)
 
 const topTargets = computed(() => ((props.analytics as ImageAuditAnalytics & { topTargets?: { label: string, count: number }[] }).topTargets ?? []))
 const maxUserCount = computed(() => Math.max(1, ...props.analytics.topUsers.map(item => item.count)))
@@ -39,6 +62,18 @@ function formatNumber(value: number, digits = 0) {
 function formatDate(value: string) {
   const parts = value.split('-')
   return parts.length === 3 ? `${parts[1]}-${parts[2]}` : value
+}
+
+function handleUserAction(action: string, username: string) {
+  if (action === 'export-user') {
+    emit('exportUser', username)
+  }
+}
+
+function handleTargetAction(action: string, target: string) {
+  if (action === 'export-target') {
+    emit('exportTarget', target)
+  }
 }
 </script>
 
@@ -80,8 +115,14 @@ function formatDate(value: string) {
               <div class="count-cell"><div class="bar-track"><span :style="{ width: `${row.count / maxUserCount * 100}%` }" /></div><b>{{ formatNumber(row.count) }}</b></div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="150" align="right">
-            <template #default="{ row }"><el-button size="small" type="primary" plain @click="emit('exportUser', row.label)">导出访问明细</el-button></template>
+          <el-table-column label="操作" :width="actionColumnWidth" align="center">
+            <template #default="{ row }">
+              <MrrTableActions
+                :actions="userActions"
+                :max-inline="maxInlineActions"
+                @select="handleUserAction($event, row.label)"
+              />
+            </template>
           </el-table-column>
         </el-table>
       </el-card>
@@ -98,8 +139,14 @@ function formatDate(value: string) {
               <div class="count-cell"><div class="bar-track bar-track--teal"><span :style="{ width: `${row.count / maxTargetCount * 100}%` }" /></div><b>{{ formatNumber(row.count) }}</b></div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="150" align="right">
-            <template #default="{ row }"><el-button size="small" type="success" plain @click="emit('exportTarget', row.label)">导出访问人员</el-button></template>
+          <el-table-column label="操作" :width="actionColumnWidth" align="center">
+            <template #default="{ row }">
+              <MrrTableActions
+                :actions="targetActions"
+                :max-inline="maxInlineActions"
+                @select="handleTargetAction($event, row.label)"
+              />
+            </template>
           </el-table-column>
         </el-table>
       </el-card>
@@ -117,6 +164,7 @@ function formatDate(value: string) {
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
 .analytics-shell { display: grid; gap: 16px; }
 .metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .metric-card :deep(.el-card__body) { display: flex; gap: 14px; align-items: center; min-height: 92px; }

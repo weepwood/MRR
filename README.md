@@ -1,4 +1,4 @@
-# MRR 管理系统
+# MRR 医疗病案文件管理系统
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen)](https://spring.io/projects/spring-boot)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)
@@ -6,55 +6,98 @@
 [![VitePress](https://img.shields.io/badge/VitePress-1.5-646CFF)](https://vitepress.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-MRR 是面向医疗机构病案扫描、归档、查询与审计场景的管理系统。项目以病案号、上架号和患者信息为核心，管理病案扫描记录及图片文件，并提供统计分析、档案装箱、访问审计、系统监控、权限控制和外部系统调阅能力。
+MRR 是面向医疗机构病案扫描、归档、检索、调阅、导出、统计和审计场景的管理系统。系统以病案主档、患者、扫描图片和实体档案位置为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、数据治理与 Windows 单机运维能力。
 
-> 当前产品版本由根目录 [`VERSION`](VERSION) 唯一决定。正式环境采用 PostgreSQL、Spring Boot、Vue 与 Nginx 的单服务器原生部署方式，不依赖 Docker；仓库容器配置仅用于开发、测试或演示。
+> 当前主分支产品版本为 **0.6.3**。版本号以根目录 [`VERSION`](VERSION) 为唯一事实来源；数据库兼容、配置结构与回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
-## 当前版本与发布基线
+## 项目定位
 
-当前 `VERSION`：`0.6.0`。
+MRR 适用于病案室、档案管理部门、信息科和受控外部业务系统，重点解决以下问题：
 
-同一次发布中的以下位置必须保持一致：
+- 将患者、病案、扫描记录和图片文件建立稳定关联；
+- 在数千万级扫描图片元数据规模下完成检索与导出；
+- 同时兼容本地/NAS、Nginx 静态资源和 OSS 图片来源；
+- 对病案查看、下载、PDF 导出、修改和管理操作进行权限控制与审计；
+- 通过 HMAC 一次性票据向 HIS、EMR 等外部系统提供受控调阅入口；
+- 在 Windows Server 内网环境中完成部署、升级、回滚和日常运维。
 
-- 后端 `/actuator/info` 的 `build.version`；
-- 前端系统信息面板的产品版本；
-- 用户手册和内部文档标题；
-- Windows 发布 ZIP 名称；
-- 发布包 `manifest.json`；
-- Git Tag `v<VERSION>`。
+MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧诊断播放或自动医学结论。
 
-数据库兼容范围、应用回滚许可和配置结构版本由 [`release-baseline.json`](release-baseline.json) 描述。执行以下命令可检查版本与迁移基线是否漂移：
+## 当前能力
 
-```bash
-python scripts/release_baseline.py validate
-```
-
-详细流程见 [发布流程与版本基线](vitepress-doc/internal/release.md)。
-
-## 核心功能
-
-| 模块 | 当前能力 |
-|------|----------|
-| 记录与患者 | 查询扫描记录、患者和关联病案，查看明细并批量打包下载 |
-| 影像档案袋 | 按病案号、上架号或身份证查询，浏览、选择、打印和前端导出 PDF |
-| 外部系统调阅 | HIS/EMR 后端使用 HMAC-SHA256 申请一次性票据，按外部用户身份审计访问 |
-| 统计分析 | 扫描规模、趋势、统计明细和病案统计，图表统一使用 ECharts |
-| 档案装箱 | 管理箱号、箱内病案、预期位置和异常状态 |
-| OSS 迁移 | 管理图片迁移任务、进度、校验和对象地址 |
-| 权限与审计 | 用户、角色权限、密码生命周期、操作日志和图片访问审计 |
-| 运维与状态 | Actuator、内置状态历史、数据库诊断、备份与 Windows 运维脚本 |
-| 文档中心 | 用户手册、内部工程文档和受保护的 Springdoc 实时 API |
+| 领域 | 当前主分支能力 |
+| --- | --- |
+| 患者与病案 | 患者查询、编辑、CSV/Excel 导入、条件导出、年度/科室/身份证缺失与疑似同人统计 |
+| 扫描记录 | 记录查询、病案类型管理、统计明细和大表分页 |
+| 影像档案袋 | 按病案号、上架号或身份证查询，分类浏览、全屏预览、选择、打印、ZIP/PDF 导出 |
+| 大文件导出 | 后台异步生成 ZIP/PDF，展示进度，支持取消、重新下载、临时文件过期清理和断点下载 |
+| 多来源图片 | OSS 优先或本地优先；OSS 缺失时按 Nginx、NAS/HTTP、本地目录降级读取 |
+| OSS 迁移 | 从 Nginx 原图迁移到 OSS，按上架号分组，支持等待补齐、失败重试、校验与迁移任务管理 |
+| 文件浏览 | 只读 OSS 文件浏览器；只读 Nginx 文件浏览器，支持 default、BA01、BA02、BA03 节点 |
+| 外部调阅 | HMAC-SHA256 一次性 Ticket、有效期、nonce、来源 IP 校验和外部用户审计 |
+| 权限与账号 | JWT、RBAC、管理员建号、自助注册后管理员审核、首次改密、密码重置和账号状态管理 |
+| 审计与监控 | 操作日志、图片访问审计、接口响应分析、Actuator、服务状态历史和数据库诊断 |
+| 部署运维 | Windows 原生 JAR + Nginx，离线发布包、校验清单、服务控制脚本和版本基线 |
+| 文档 | 登录后用户手册、受权限保护的内部文档和 Springdoc 实时 API 文档 |
 
 ## 技术基线
 
 | 层次 | 技术 |
-|------|------|
+| --- | --- |
 | 后端 | Java 21、Spring Boot 4.0.5、MyBatis 4、Flyway、Springdoc、Micrometer |
-| 前端 | Vue 3.5、TypeScript 5.9、Vite 8、Element Plus 2.13、Pinia 3、ECharts 6 |
+| 前端 | Vue 3.5、TypeScript 5.9、Vite 8、Element Plus、Pinia、ECharts |
 | 数据库 | PostgreSQL 16，业务 Schema 为 `app` |
-| 文档 | VitePress 1.5、Mermaid |
-| 认证 | JWT、bcrypt、AES-GCM、HMAC 外部调阅票据 |
-| 部署 | Windows Server、JAR、Nginx、静态前端与文档 |
+| 认证安全 | JWT、bcrypt、AES-GCM、RBAC、HMAC 外部调阅票据 |
+| 对象存储 | S3 兼容 OSS，后端使用 SDK 读取和签名 |
+| 文档 | VitePress、Mermaid |
+| 正式部署 | Windows Server、Spring Boot JAR、Nginx、PostgreSQL |
+
+## 业务规则摘要
+
+### 病案号与上架号
+
+- `bah`、`sjh` 保留数据库原始格式，不自动补零；
+- 病案号小于 `10000000` 时可以单独查询；
+- 病案号大于或等于 `10000000` 时必须同时提供上架号；
+- 非空且唯一的上架号可以单独查询；
+- 身份证首次查询可使用 `/archive?id=<身份证号>`，成功后 URL 会替换为不透明令牌。
+
+### 图片降级顺序
+
+图片读取由后端统一解析。具体顺序取决于系统设置和 `archive.image-source.prefer-oss`：
+
+1. 优先来源（OSS 或非 OSS）；
+2. 非 OSS 图片优先通过配置的 Nginx 节点读取；
+3. 再尝试 NAS/HTTP 节点；
+4. 后端可直接访问文件时，最后回退本地目录；
+5. 单个病案允许同时存在已迁移和未迁移图片。
+
+### 记录类权限
+
+| 权限 | 当前主分支能力 |
+| --- | --- |
+| `record:read` | 查看病案和图片；v0.6.3 的图片类型修改接口当前也继承此权限 |
+| `record:edit` | 已定义的记录编辑权限，并包含读取；当前主分支尚未将全部写接口切换到该权限 |
+| `record:download` | 生成和下载 ZIP，并包含读取 |
+| `record:pdf:export` | 生成和下载 PDF，并包含读取 |
+| `record:manage` | 包含读取、编辑、下载和 PDF 导出 |
+
+具体接口的最终权限边界以当前后端 Controller、自动化测试和运行中的 OpenAPI 为准，不应仅根据权限名称推断。
+
+## 访问入口
+
+| 入口 | 路由 | 访问要求 |
+| --- | --- | --- |
+| 管理端 | `/` | 登录及相应业务权限 |
+| 影像档案袋 | `/archive` 或 `/archive/embed` | `record:read` |
+| 外部影像调阅 | `/archive/external?ticket=...` | 有效的一次性 Ticket |
+| Nginx 文件浏览 | `/nginx-browser` | `record:read` |
+| OSS 文件浏览 | `/oss-browser` | `record:read` |
+| 服务状态 | `/status` | 公开脱敏信息 |
+| 系统监控 | `/monitoring` | `system:read` |
+| 用户手册 | `/docs/` | 已登录账号 |
+| 内部文档 | `/docs/internal/` | 管理员或 `system:read` |
+| 实时 API | `/api-docs/` | 管理员或 `system:read` |
 
 ## 本地开发
 
@@ -65,7 +108,7 @@ python scripts/release_baseline.py validate
 - PostgreSQL 16+
 - Node.js `^20.19.0` 或 `>=22.12.0`
 - pnpm 10.33.0
-- Python 3.10+，仅用于发布基线校验和 manifest 生成
+- Python 3.10+（发布基线、清单和文档辅助脚本）
 
 ### 获取代码
 
@@ -77,15 +120,19 @@ git switch main
 
 ### 数据库
 
-新数据库由 `backend-repo/src/main/resources/db/migration` 中的日期时间版本迁移链初始化：
+正式迁移位于：
+
+```text
+backend-repo/src/main/resources/db/migration
+```
+
+迁移文件统一采用：
 
 ```text
 VyyyyMMddHHmmss__description.sql
 ```
 
-当前基线从 `V20260715113552__baseline_schema.sql` 开始。旧迁移保存在 `db/migration-legacy`，只用于审计和历史映射，不参与正式启动迁移链。
-
-本地可以只启动仓库提供的 PostgreSQL 容器：
+本地开发可以只启动仓库提供的 PostgreSQL 容器；正式部署不依赖 Docker：
 
 ```bash
 docker compose up -d postgres
@@ -97,18 +144,18 @@ docker compose up -d postgres
 Copy-Item backend-repo/src/main/resources/application-local.template.properties `
   backend-repo/src/main/resources/application-local.properties
 
-$env:JWT_SECRET_KEY = '本地签名密钥'
+$env:SPRING_DATASOURCE_PASSWORD = '本地数据库密码'
+$env:JWT_SECRET_KEY = '本地 JWT 密钥'
 $env:AES_SECRET_KEY = '本地 AES 密钥'
 
 cd backend-repo
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-默认业务端口为 `18045`，Actuator 管理端口为仅本机监听的 `18046`。
-
-运行中的构建身份：
+默认业务端口为 `18045`，管理端口为仅本机监听的 `18046`：
 
 ```text
+http://127.0.0.1:18046/actuator/health
 http://127.0.0.1:18046/actuator/info
 ```
 
@@ -120,8 +167,6 @@ corepack pnpm@10.33.0 install --frozen-lockfile
 pnpm dev
 ```
 
-默认开发端口以 Vite 控制台输出为准。系统信息面板会读取根目录 `VERSION`、当前 Git Commit 和 `release-baseline.json`。
-
 ### 文档
 
 ```bash
@@ -132,90 +177,82 @@ npm run docs:dev:internal
 npm run docs:build
 ```
 
-两个文档站点的标题和导航会直接显示根目录产品版本。
+用户手册和内部文档分别构建，避免内部工程资料进入普通用户的搜索索引。
 
-## 影像查询规则
+## 生产部署摘要
 
-影像档案袋使用具名参数：
+正式环境推荐单台 Windows Server 原生部署：
 
-```text
-/archive?bah=9999999
-/archive?sjh=456
-/archive?bah=10000000&sjh=456
-```
+1. PostgreSQL 16 保存业务数据；
+2. Spring Boot JAR 监听业务端口 `18045`；
+3. Actuator 监听 `127.0.0.1:18046`；
+4. Nginx 托管前端、文档和静态图片，并反向代理后端 API；
+5. 密钥、数据库密码和 OSS 凭据通过环境变量或外部配置提供；
+6. 使用发布包中的 `manifest.json`、`release-baseline.json` 和 `SHA256SUMS` 校验版本与兼容性；
+7. 部署前保留数据库备份、配置快照和上一版本发布包。
 
-- 病案号和上架号保留数据库原始格式，不再全局补齐固定长度；
-- 病案号小于 `10000000` 时可单独查询；
-- 病案号大于或等于 `10000000` 时必须同时提供上架号；
-- 唯一上架号可单独查询；
-- 首次可使用 `/archive?id=<身份证号>`，查询成功后 URL 中的明文会替换为服务端不透明令牌。
-
-## 访问入口
-
-| 入口 | 路由 | 权限 |
-|------|------|------|
-| 管理端 | `/` | 登录与业务权限 |
-| 外部影像调阅 | `/archive/external?ticket=...` | 一次性 HMAC 票据 |
-| 服务状态 | `/status` | 公开脱敏信息 |
-| 系统监控 | `/monitoring` | `system:read` |
-| 帮助中心 | `/help` | 登录用户 |
-| 用户手册 | `/docs/` | 已登录账号 |
-| 内部文档 | `/docs/internal/` | 管理员或 `system:read` |
-| 实时 API | `/api-docs/` | 管理员或 `system:read` |
-
-## 生产部署要点
-
-1. 使用 PostgreSQL 16，并按正式日期时间迁移链初始化或升级数据库；
-2. 通过外部配置文件或环境变量提供数据库密码、JWT、AES、HMAC 和 OSS 密钥；
-3. 以 JAR 运行后端，限制 `18046` 只允许本机访问；
-4. 使用 Nginx 托管前端和文档，并反向代理 API；
-5. 使用 Windows 离线发布包中的 `manifest.json` 判断版本、数据库兼容和回滚条件；
-6. 部署前校验 `SHA256SUMS`，并保留上一发布包、配置快照和数据库备份；
-7. 图片服务需要为浏览器端 PDF 配置精确的 CORS 来源。
+详细步骤见 [Windows Server 部署](vitepress-doc/internal/windows-deployment.md)。
 
 ## 项目结构
 
 ```text
 MRR/
-├── VERSION                     # 唯一产品版本
-├── release-baseline.json       # 数据库、回滚和配置兼容基线
-├── scripts/release_baseline.py # 基线校验与 manifest 生成
-├── backend-repo/               # Spring Boot 后端和 Flyway 迁移
-├── frontend-fantastic-admin/   # Vue 管理端与影像调阅端
-├── vitepress-doc/              # 用户手册与内部工程文档
-├── deploy/windows/             # 单服务器 Windows 部署与运维脚本
-├── mrr-db/                     # 数据库辅助脚本与开发参考
-├── monitoring/                 # 可选的扩展监控配置
+├── VERSION                       # 唯一产品版本
+├── release-baseline.json         # 数据库、配置与回滚兼容基线
+├── backend-repo/                 # Spring Boot 后端与 Flyway 迁移
+├── frontend-fantastic-admin/     # Vue 管理端与影像调阅端
+├── vitepress-doc/                # 用户手册与内部文档
+├── deploy/windows/               # Windows 部署和服务管理脚本
+├── scripts/                      # 发布、校验、迁移和文档辅助脚本
+├── mrr-db/                       # 数据库辅助脚本与参考资料
+├── monitoring/                   # 可选扩展监控配置
 ├── CHANGELOG.md
 └── README.md
 ```
 
-## 验证
+## 验证命令
 
 ```bash
 python scripts/release_baseline.py validate
-cd backend-repo && mvn test && mvn package
-cd ../frontend-fantastic-admin && pnpm lint:tsc && pnpm test:run && pnpm build
-cd ../vitepress-doc && npm run docs:build
+
+cd backend-repo
+mvn test
+mvn package
+
+cd ../frontend-fantastic-admin
+pnpm lint:tsc
+pnpm test:run
+pnpm build
+
+cd ../vitepress-doc
+npm run docs:build
 ```
 
-GitHub Actions 会进一步校验：
+涉及 PostgreSQL、Nginx、OSS、文件系统或大数据导入的修改，还应在隔离环境完成集成验证；仅有单元测试通过不能替代真实部署验证。
 
-- 标签与 `VERSION` 一致；
-- 后端 JAR 内的产品版本与 Git SHA；
-- 前端产物内的产品版本与 Git SHA；
-- 文档产物内的产品版本；
-- 发布 ZIP 的 manifest 和 SHA256 清单。
+## 文档入口
 
-## 文档
-
+- [用户手册](vitepress-doc/user-guide/index.md)
+- [系统管理](vitepress-doc/user-guide/admin.md)
+- [影像档案袋](vitepress-doc/user-guide/images.md)
+- [OSS 迁移管理](vitepress-doc/user-guide/oss-migration.md)
 - [内部文档首页](vitepress-doc/internal/index.md)
 - [系统架构](vitepress-doc/internal/architecture.md)
-- [发布流程与版本基线](vitepress-doc/internal/release.md)
+- [配置参考](vitepress-doc/internal/configuration-reference.md)
 - [Windows Server 部署](vitepress-doc/internal/windows-deployment.md)
 - [外部系统影像接入](vitepress-doc/internal/external-archive-integration.md)
-- [用户手册](vitepress-doc/user-guide/index.md)
+- [发布流程与版本基线](vitepress-doc/internal/release.md)
 - [更新日志](CHANGELOG.md)
+
+## 文档与代码一致性
+
+文档只描述已进入 `main` 的能力。尚未合并的 Issue、PR 或实验分支不视为当前功能。发生冲突时，事实来源优先级为：
+
+1. 当前 `main` 代码与 Flyway 迁移；
+2. `application.properties`、`VERSION`、`release-baseline.json`；
+3. 自动化测试和运行中的 OpenAPI；
+4. 内部文档；
+5. 用户手册和历史更新日志。
 
 ## 贡献与许可
 

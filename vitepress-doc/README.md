@@ -1,269 +1,223 @@
 # MRR 文档系统
 
-基于 VitePress 构建的现代化文档系统，用于统一管理 MRR 医疗影像记录管理系统的项目文档。
+MRR 使用 VitePress 同时构建两套文档：
 
-## 📁 文档结构
+- **用户手册**：面向普通用户和管理员，部署到 `/docs/`；
+- **内部文档**：面向开发、测试、数据库、部署和运维人员，部署到 `/docs/internal/`。
 
-```
+两套站点独立构建和搜索，避免配置、架构、数据库和运维内容进入普通用户的搜索索引。站点标题中的产品版本从仓库根目录 `VERSION` 自动读取。
+
+## 目录结构
+
+```text
 vitepress-doc/
-├── .vitepress/              # VitePress 配置目录
-│   ├── config.mts          # 主配置文件
-│   └── theme/              # 主题定制
-│       ├── index.ts        # 主题入口
-│       └── custom.css      # 自定义样式
-├── public/                  # 静态资源
-│   └── logo.svg            # 站点 Logo
-├── getting-started/         # 快速开始
-│   ├── installation.md     # 安装指南
-│   └── configuration.md    # 配置说明
-├── ai-generation/           # 核心文档目录
-│   ├── 项目概览/           # 项目介绍
-│   ├── 系统架构/           # 架构设计
-│   ├── 前端组件/           # 前端组件文档
-│   ├── 后端API文档/        # API 文档
-│   ├── 数据库设计/         # 数据库设计
-│   ├── 开发指南/           # 开发规范
-│   ├── 认证授权/           # 认证授权
-│   ├── 日志审计与监控/     # 日志监控
-│   ├── 部署运维/           # 部署运维
-│   ├── guide/              # 使用指南
-│   └── imgs/               # 文档图片
-├── index.md                 # 首页
-├── package.json            # 项目配置
-└── DEPLOY.md               # 部署指南
+├── .vitepress/
+│   ├── config.mts               # 按 MRR_DOCS_MODE 选择站点配置
+│   ├── config.user.mts          # 用户手册配置
+│   ├── config.internal.mts      # 内部站点入口、base 与输出目录
+│   ├── config.full.mts          # 内部完整站点导航与主题配置
+│   └── theme/                   # 主题和样式
+├── user-guide/                  # 用户手册正文
+├── internal/                    # 内部工程文档
+├── getting-started/             # 安装与基础配置
+├── public/                      # Logo、图片等静态资源
+├── scripts/
+│   ├── run-docs.mjs             # 双站点启动/构建入口
+│   └── generate-git-changelog.mjs
+├── package.json
+└── README.md
 ```
 
-## 🚀 快速开始
+`ai-generation/` 等历史自动生成目录不属于当前内部文档导航，并在完整站点配置中排除。新增正式文档应优先放入 `user-guide/`、`internal/` 或 `getting-started/`。
 
-### 方式一：使用启动脚本（推荐）
+## 环境要求
 
-在仓库根目录运行。
+- Node.js `^20.19.0` 或 `>=22.12.0`；
+- npm；
+- 仓库根目录必须存在 `VERSION`；
+- 生成 Git 更新记录时需要可用的 Git 历史。
 
-**Windows:**
-```bash
-start-docs.bat
-```
+## 安装依赖
 
-**Linux/macOS:**
-```bash
-chmod +x start-docs.sh
-./start-docs.sh
-```
-
-### 方式二：手动启动
-
-1. **进入文档目录**
-```bash
-cd vitepress-doc
-```
-
-2. **安装依赖**
-```bash
-npm install
-```
-
-3. **启动开发服务器**
-```bash
-npm run docs:dev
-```
-
-4. **访问文档**
-```
-http://localhost:5173
-```
-
-## 📖 文档内容
-
-### 核心文档模块
-
-| 模块 | 说明 | 路径 |
-|------|------|------|
-| **项目概览** | 项目介绍、技术架构、核心功能 | `/ai-generation/项目概览/` |
-| **系统架构** | 前后端架构、数据架构、部署架构 | `/ai-generation/系统架构/` |
-| **前端组件** | Vue 组件库、UI 设计规范 | `/ai-generation/前端组件/` |
-| **后端 API** | RESTful API 文档、接口说明 | `/ai-generation/后端API文档/` |
-| **数据库设计** | 表结构设计、索引优化 | `/ai-generation/数据库设计/` |
-| **开发指南** | 编码规范、开发流程、测试策略 | `/ai-generation/开发指南/` |
-| **认证授权** | JWT 认证、权限控制 | `/ai-generation/认证授权/` |
-| **日志监控** | 日志管理、审计追踪、监控告警 | `/ai-generation/日志审计与监控/` |
-| **部署运维** | 容器化部署、CI/CD、备份恢复 | `/ai-generation/部署运维/` |
-
-### 快速开始指南
-
-- [安装指南](getting-started/installation.md) - 系统安装和部署
-- [配置说明](getting-started/configuration.md) - 详细配置参数
-- [开发环境](./internal/development.md) - 本地启动、密钥与验证流程
-
-## 🛠️ 开发命令
+在 `vitepress-doc` 目录执行：
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器（热重载）
-npm run docs:dev
-
-# 构建生产版本
-npm run docs:build
-
-# 预览构建结果
-npm run docs:preview
+npm ci
 ```
 
-## 📝 文档编写指南
+开发过程中依赖未锁定或锁文件需要更新时才使用 `npm install`。CI 和发布构建优先使用 `npm ci`。
 
-### 添加新文档
+## 启动用户手册
 
-1. 在对应目录创建 Markdown 文件
-2. 在 `.vitepress/config.mts` 中添加侧边栏配置
-3. 文档会自动出现在侧边栏中
-
-### 文档格式规范
-
-```markdown
-# 文档标题
-
-> 文档简介
-
-## 一级标题
-
-### 二级标题
-
-#### 三级标题
-
-**粗体文本**
-*斜体文本*
-
-- 无序列表项 1
-- 无序列表项 2
-
-1. 有序列表项 1
-2. 有序列表项 2
-
-`行内代码`
-
-```语言
-代码块
+```bash
+npm run docs:dev:user
 ```
 
-[链接文本](https://example.com/link)
+用户手册使用：
 
-```markdown
-![图片描述](https://example.com/image.png)
+- 配置：`.vitepress/config.user.mts`；
+- 源目录：`user-guide/`；
+- 基础路径：`/docs/`；
+- 构建目录：`.vitepress/dist-user`。
+
+## 启动内部文档
+
+```bash
+npm run docs:dev:internal
 ```
 
-::: tip 提示
-提示内容
-:::
+内部站点使用：
 
-::: warning 警告
-警告内容
-:::
+- 入口配置：`.vitepress/config.internal.mts`；
+- 完整导航和主题配置：`.vitepress/config.full.mts`；
+- 源目录：`vitepress-doc/`；
+- 包含 `internal/`、`user-guide/` 和 `getting-started/`；
+- 基础路径：`/docs/internal/`；
+- 构建目录：`.vitepress/dist-internal`。
 
-::: danger 危险
-危险内容
-:::
+开发命令支持继续传递端口参数：
+
+```bash
+npm run docs:dev:user -- --port 5174
+npm run docs:dev:internal -- --port 5175
 ```
 
-### 图片资源
+Windows 出现 `listen EACCES` 时，通常是端口被占用、被系统保留或安全软件拦截。更换端口后重试，不要直接关闭系统安全策略。
 
-- 放置在 `vitepress-doc/public/` 目录下
-- 使用绝对路径引用：`/images/example.png`
-- 示例：`![系统截图](/ai-generation/imgs/v0.0.9_imgs/登录界面.png)`
+## 构建
 
-## 🎨 主题定制
-
-### 自定义样式
-
-编辑 `.vitepress/theme/custom.css` 文件：
-
-```css
-:root {
-  --vp-c-brand-1: #3eaf7c;      /* 主题色 */
-  --vp-c-brand-2: #42b883;      /* 主题色变体 */
-  --vp-c-brand-3: #35a06c;      /* 主题色深色 */
-  --vp-c-brand-soft: rgba(62, 175, 124, 0.14); /* 主题色透明 */
-}
-```
-
-### 自定义配置
-
-编辑 `.vitepress/config.mts` 文件：
-
-```typescript
-export default defineConfig({
-  title: "你的标题",
-  description: "你的描述",
-  themeConfig: {
-    nav: [...],      // 顶部导航
-    sidebar: {...},  // 侧边栏配置
-    footer: {...}    // 页脚配置
-  }
-})
-```
-
-## 📦 构建部署
-
-### 构建静态网站
+构建两套站点：
 
 ```bash
 npm run docs:build
 ```
 
-构建产物位于 `.vitepress/dist` 目录。
+单独构建：
 
-### 部署选项
+```bash
+npm run docs:build:user
+npm run docs:build:internal
+```
 
-详细部署步骤请参考 [DEPLOY.md](./DEPLOY.md)
+构建前运行脚本会刷新 Git 更新记录。两套站点均使用 `ignoreDeadLinks: false`，发现死链时构建会失败。
 
-- **GitHub Pages** - 免费，适合开源项目
-- **Netlify** - 自动部署，支持自定义域名
-- **Vercel** - 全球 CDN，性能优秀
-- **Docker** - 容器化部署，适合企业环境
+## 预览
 
-## 🔍 搜索功能
+```bash
+npm run docs:preview:user
+npm run docs:preview:internal
+```
 
-VitePress 内置本地搜索功能，支持：
+预览的是静态构建产物，不等同于 MRR 正式部署中的登录和文档 Cookie 保护。
 
-- 全文搜索
-- 中文分词
-- 实时搜索建议
-- 快捷键支持（按 `/` 或 `Ctrl+K`）
+## 更新日志
 
-## 📱 响应式设计
+生成当前分支的 Git 更新记录：
 
-文档系统完全响应式，支持：
+```bash
+npm run docs:changelog
+```
 
-- 桌面端优化布局
-- 平板端自适应
-- 移动端友好界面
-- 深色模式切换
+测试生成脚本：
 
-## 🌐 国际化
+```bash
+npm run docs:changelog:test
+```
 
-当前支持中文（简体），如需添加其他语言：
+自动更新记录按第一父级提交历史生成，适合追踪合并后的主线变化。面向发布者的重要新增、修复和限制仍需人工维护根目录 `CHANGELOG.md` 和 `user-guide/release-notes.md`。
 
-1. 在 `config.mts` 中配置 `locales`
-2. 创建对应语言的文档目录
-3. 添加语言切换器
+## 文档分层
 
-## 🤝 贡献指南
+### 用户手册
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+写入 `user-guide/`，只描述用户可以看到和执行的操作：
 
-## 📄 许可证
+- 登录、注册、审核和密码；
+- 患者、记录、统计和装箱；
+- 影像档案袋、ZIP/PDF 导出；
+- OSS 迁移和文件浏览；
+- 系统设置、权限、日志和常见问题。
 
-本项目基于 MIT 许可证开源。
+不要在用户手册中写入生产密钥、数据库内部结构、真实内网地址或破坏性运维命令。
 
-## 📞 联系方式
+### 内部文档
 
-- **问题反馈**: [GitHub Issues](https://github.com/your-repo/mrr/issues)
-- **功能建议**: [GitHub Discussions](https://github.com/your-repo/mrr/discussions)
+写入 `internal/`，记录：
 
----
+- 架构和模块边界；
+- 配置与环境变量；
+- 数据库和迁移；
+- 开发、测试和发布流程；
+- Windows 部署、Nginx、监控和故障恢复；
+- 安全边界和外部系统接入。
 
-**Made with ❤️ by MRR Team**
+### 实时 API
+
+接口字段、请求和响应模型优先维护在 Springdoc/OpenAPI 注解中。VitePress 只记录认证方式、接口分组、权限和接入流程，避免复制整套容易过期的接口清单。
+
+## 新增文档
+
+1. 确定读者和目录；
+2. 创建 Markdown 文件；
+3. 更新 `config.user.mts` 或 `config.full.mts` 的导航；
+4. 在相关页面增加交叉链接；
+5. 更新发布说明或 README；
+6. 执行 `npm run docs:build`；
+7. 检查用户站点没有包含内部资料。
+
+完整规范见 [内部文档维护规范](./internal/documentation.md)。
+
+## Markdown 约定
+
+- 页面只使用一个一级标题；
+- 主要章节使用二级标题；
+- 命令注明操作系统和执行目录；
+- 风险操作使用警告块；
+- 示例数据必须是虚构数据；
+- 不复制真实身份证号、患者姓名、Token、Cookie、签名 URL 或密钥；
+- Mermaid 主要用于内部架构和流程图；
+- 图片放在 `public/` 下并使用与部署基础路径兼容的地址。
+
+示例：
+
+```markdown
+# 页面标题
+
+> 适用版本、读者或风险说明。
+
+## 操作步骤
+
+1. 第一步；
+2. 第二步。
+
+::: warning 风险
+此操作会修改生产数据，必须先备份。
+:::
+```
+
+## 构建前检查
+
+```bash
+npm ci
+npm run test
+npm run docs:build
+```
+
+人工检查：
+
+- 用户和内部导航是否完整；
+- 新增页面能否被搜索；
+- 相对链接和静态资源是否正确；
+- 用户站点是否泄漏内部内容；
+- 版本号是否与根 `VERSION` 一致；
+- 更新说明是否只描述已进入当前分支的功能。
+
+## 正式部署
+
+文档通常由 MRR 发布流程构建后交给 Nginx 托管，并通过后端签发的短期 HttpOnly Cookie 控制访问：
+
+- 用户手册：登录用户；
+- 内部文档：管理员或 `system:read`；
+- 实时 API：管理员或 `system:read`。
+
+不要把内部站点单独部署到无认证的公开静态托管平台。正式部署步骤见 [Windows Server 部署](./internal/windows-deployment.md) 和 [发布流程](./internal/release.md)。

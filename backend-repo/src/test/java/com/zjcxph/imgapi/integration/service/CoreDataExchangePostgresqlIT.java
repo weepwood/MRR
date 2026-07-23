@@ -24,8 +24,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -49,16 +47,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("核心数据交换 PostgreSQL 16 + Flyway 集成测试")
 class CoreDataExchangePostgresqlIT {
 
-    @Container
     private static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("imgapi")
                     .withUsername("imgapi")
                     .withPassword("imgapi");
+
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void configurePostgresql(DynamicPropertyRegistry registry) {

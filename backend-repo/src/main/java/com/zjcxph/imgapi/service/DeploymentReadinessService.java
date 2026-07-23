@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * 汇总部署前置条件，并在关键依赖异常时提供自动只读降级判定。
@@ -49,6 +50,7 @@ public class DeploymentReadinessService {
     private volatile Map<String, Object> cachedSnapshot = Map.of(
             "ready", false,
             "readOnly", true,
+            "mode", "READ_ONLY_DEGRADED",
             "checkedAt", Instant.EPOCH.toString(),
             "checks", List.of()
     );
@@ -131,7 +133,7 @@ public class DeploymentReadinessService {
             Integer value = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             return check("database", "数据库连接", true, "CRITICAL", "数据库连接正常", value);
         } catch (Exception exception) {
-            return failed("database", "数据库连接", "CRITICAL", safeMessage(exception));
+            return failed("database", "数据库连接", "CRITICAL", exception);
         }
     }
 
@@ -155,7 +157,7 @@ public class DeploymentReadinessService {
                     Map.of("failedMigrations", failed == null ? -1 : failed, "latestVersion", latest == null ? "" : latest)
             );
         } catch (Exception exception) {
-            return failed("flyway", "数据库迁移", "CRITICAL", safeMessage(exception));
+            return failed("flyway", "数据库迁移", "CRITICAL", exception);
         }
     }
 
@@ -182,7 +184,7 @@ public class DeploymentReadinessService {
                     Map.of("expected", 3, "found", rows.size(), "notValidated", invalid)
             );
         } catch (Exception exception) {
-            return failed("archive-foreign-keys", "病案主数据外键", "WARNING", safeMessage(exception));
+            return failed("archive-foreign-keys", "病案主数据外键", "WARNING", exception);
         }
     }
 
@@ -208,20 +210,24 @@ public class DeploymentReadinessService {
                     )
             );
         } catch (Exception exception) {
-            return failed("temporary-directory", "导出临时目录", "CRITICAL", safeMessage(exception));
+            return failed("temporary-directory", "导出临时目录", "CRITICAL", exception);
         }
     }
 
     private Map<String, Object> checkNginxSources() {
-        List<String> configured = List.of(
-                imageProperties.getServerUrlDefault(),
-                imageProperties.getServerUrlBa01(),
-                imageProperties.getServerUrlBa02(),
-                imageProperties.getServerUrlBa03()
-        ).stream().filter(StringUtils::hasText).distinct().toList();
+        List<String> configured = Stream.of(
+                        imageProperties.getServerUrlDefault(),
+                        imageProperties.getServerUrlBa01(),
+                        imageProperties.getServerUrlBa02(),
+                        imageProperties.getServerUrlBa03()
+                )
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        boolean localPreferred = "local".equalsIgnoreCase(imageUrlService.getEffectiveImageSource());
 
         if (configured.isEmpty()) {
-            boolean localPreferred = "local".equalsIgnoreCase(imageUrlService.getEffectiveImageSource());
             return check(
                     "nginx-images",
                     "Nginx 图片源",
@@ -241,7 +247,6 @@ public class DeploymentReadinessService {
             }
             sources.add(Map.of("url", url, "reachable", available));
         }
-        boolean localPreferred = "local".equalsIgnoreCase(imageUrlService.getEffectiveImageSource());
         boolean passed = reachable > 0 || !localPreferred;
         return check(
                 "nginx-images",
@@ -267,7 +272,7 @@ public class DeploymentReadinessService {
                     Map.of("preferred", ossPreferred, "configured", configured)
             );
         } catch (Exception exception) {
-            return failed("oss", "OSS 连接", ossPreferred ? "CRITICAL" : "WARNING", safeMessage(exception));
+            return failed("oss", "OSS 连接", ossPreferred ? "CRITICAL" : "WARNING", exception);
         }
     }
 
@@ -293,15 +298,21 @@ public class DeploymentReadinessService {
                     passed,
                     "WARNING",
                     passed ? "最近备份时间在允许范围内" : "最近备份已经超过允许时间",
-                    Map.of("lastSuccessfulBackupAt", lastBackup.toString(), "ageHours", ageHours,
-                            "maximumAgeHours", maximumBackupAgeHours)
+                    Map.of(
+                            "lastSuccessfulBackupAt", lastBackup.toString(),
+                            "ageHours", ageHours,
+                            "maximumAgeHours", maximumBackupAgeHours
+                    )
             );
         } catch (Exception exception) {
-            return failed("backup", "最近备份", "WARNING", safeMessage(exception));
+            return failed("backup", "最近备份", "WARNING", exception);
         }
     }
 
     private boolean probe(String rawUrl) {
+        if (!StringUtils.hasText(rawUrl)) {
+            return false;
+        }
         try {
             URI uri = URI.create(rawUrl.endsWith("/") ? rawUrl : rawUrl + "/");
             HttpRequest request = HttpRequest.newBuilder(uri)
@@ -324,8 +335,8 @@ public class DeploymentReadinessService {
         }
     }
 
-    private Map<String, Object> failed(String code, String name, String severity, String message) {
-        return check(code, name, false, severity, message, Map.of());
+    private Map<String, Object> failed(String code, String name, String severity, Exception exception) {
+        return check(code, name, false, severity, safeMessage(exception), Map.of());
     }
 
     private Map<String, Object> check(
@@ -342,7 +353,7 @@ public class DeploymentReadinessService {
         result.put("passed", passed);
         result.put("severity", severity);
         result.put("message", message);
-        result.put("details", details);
+        result.put("details", details == null ? Map.of() : details);
         return result;
     }
 

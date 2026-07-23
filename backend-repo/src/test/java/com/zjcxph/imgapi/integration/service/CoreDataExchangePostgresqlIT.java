@@ -6,9 +6,11 @@ import com.zjcxph.imgapi.service.DataExchangeExportService;
 import com.zjcxph.imgapi.service.ScanDataExchangeService;
 import com.zjcxph.imgapi.service.StatisticsDataExchangeService;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -17,12 +19,11 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -44,16 +45,20 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @DisplayName("核心数据交换 PostgreSQL 16 + Flyway 集成测试")
 class CoreDataExchangePostgresqlIT {
 
-    @Container
     private static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("imgapi")
                     .withUsername("imgapi")
                     .withPassword("imgapi");
+
+    static {
+        POSTGRES.start();
+    }
 
     @DynamicPropertySource
     static void configurePostgresql(DynamicPropertyRegistry registry) {
@@ -91,6 +96,14 @@ class CoreDataExchangePostgresqlIT {
                                app.mr_statistics, app.mr_archive
                 restart identity cascade
                 """);
+    }
+
+    @AfterAll
+    void shutdownDataSource() throws Exception {
+        Object dataSource = jdbcTemplate.getDataSource();
+        if (dataSource instanceof AutoCloseable closeable) {
+            closeable.close();
+        }
     }
 
     @Test

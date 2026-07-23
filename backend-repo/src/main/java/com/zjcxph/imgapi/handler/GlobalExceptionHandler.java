@@ -62,8 +62,8 @@ public class GlobalExceptionHandler {
         String errorId = ErrorReference.ensure(request);
         MDC.put("errorId", errorId);
         try {
-            // 完整异常只进入服务端文件日志和受权限保护的运行错误中心。
-            logger.error("未处理异常: errorId={}", errorId, e);
+            // 错误编号通过 MDC 传递，日志消息保持稳定，便于同类异常聚合。
+            logger.error("未处理异常", e);
         } finally {
             MDC.remove("errorId");
         }

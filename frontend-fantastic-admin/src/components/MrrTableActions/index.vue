@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { MrrTableAction } from './types'
 import { computed } from 'vue'
-import useAuth from '@/utils/composables/useAuth'
 
 const props = withDefaults(defineProps<{
   actions: MrrTableAction[]
   maxInline?: number
   moreLabel?: string
+  permissionChecker?: (permission: string | string[]) => boolean
 }>(), {
   maxInline: 2,
   moreLabel: '更多操作',
@@ -16,13 +16,14 @@ const emit = defineEmits<{
   select: [key: string]
 }>()
 
-const { auth } = useAuth()
-
 const availableActions = computed(() => props.actions.filter((action) => {
   if (action.visible === false) {
     return false
   }
-  return action.permission ? auth(action.permission) : true
+  if (!action.permission) {
+    return true
+  }
+  return Boolean(props.permissionChecker?.(action.permission))
 }))
 
 const orderedActions = computed(() => {

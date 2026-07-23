@@ -6,6 +6,9 @@ from zipfile import ZIP_STORED, ZipFile
 from scripts.embed_frontend_in_jar import embed_frontend, verify_frontend
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 class EmbedFrontendInJarTest(unittest.TestCase):
 
     def test_embeds_vite_distribution_into_spring_boot_classes(self):
@@ -114,6 +117,18 @@ class EmbedFrontendInJarTest(unittest.TestCase):
                     archive.read("BOOT-INF/classes/static/assets/app.js"),
                     b"second",
                 )
+
+    def test_docker_build_replaces_static_before_maven_package(self):
+        dockerfile = (ROOT / "backend-repo/Dockerfile").read_text(encoding="utf-8")
+
+        remove_index = dockerfile.index("rm -rf src/main/resources/static")
+        copy_index = dockerfile.index("cp -a /workspace/frontend-dist/. src/main/resources/static/")
+        package_index = dockerfile.index("mvn -q -B -ntp -DskipTests package")
+
+        self.assertLess(remove_index, copy_index)
+        self.assertLess(copy_index, package_index)
+        self.assertNotIn("jar uf", dockerfile)
+        self.assertIn("grep -c '^BOOT-INF/classes/static/index.html$'", dockerfile)
 
 
 if __name__ == "__main__":

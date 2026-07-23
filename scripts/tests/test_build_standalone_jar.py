@@ -103,8 +103,13 @@ class BuildStandaloneJarTest(unittest.TestCase):
         self.assertIn("--default-port 8002", workflow)
         self.assertIn("MRR-v${PRODUCT_VERSION}-standalone.jar", workflow)
         self.assertIn("steps.standalone.outputs.jar", workflow)
+        self.assertIn("actions/download-artifact@v4", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("Waiting for GitHub Release", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("publish:\n    if: startsWith", workflow)
+        self.assertIn("permissions:\n      contents: write", workflow)
+        self.assertIn('sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256"', workflow)
 
 
 if __name__ == "__main__":

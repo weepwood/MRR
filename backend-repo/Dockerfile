@@ -17,16 +17,15 @@ WORKDIR /workspace/backend-repo
 COPY backend-repo/pom.xml ./
 RUN mvn -q -B -ntp dependency:go-offline
 COPY backend-repo/src ./src
-RUN mvn -q -B -ntp -DskipTests package
-
 COPY --from=frontend-build /workspace/frontend-fantastic-admin/dist /workspace/frontend-dist
 RUN set -eux; \
+    rm -rf src/main/resources/static; \
+    mkdir -p src/main/resources/static; \
+    cp -a /workspace/frontend-dist/. src/main/resources/static/; \
+    mvn -q -B -ntp -DskipTests package; \
     JAR="$(find target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"; \
     test -n "${JAR}"; \
-    mkdir -p /tmp/mrr-frontend/BOOT-INF/classes/static; \
-    cp -a /workspace/frontend-dist/. /tmp/mrr-frontend/BOOT-INF/classes/static/; \
-    jar uf "${JAR}" -C /tmp/mrr-frontend BOOT-INF/classes/static; \
-    jar tf "${JAR}" | grep -q '^BOOT-INF/classes/static/index.html$'; \
+    test "$(jar tf "${JAR}" | grep -c '^BOOT-INF/classes/static/index.html$')" -eq 1; \
     jar tf "${JAR}" | grep -q '^BOOT-INF/classes/static/assets/'
 
 FROM eclipse-temurin:21-jre

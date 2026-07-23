@@ -67,13 +67,17 @@ const exportStatus = ref('')
 const filteredEndpoints = computed(() => {
   const endpoints = permissionMatrix.value?.endpoints || []
   const keyword = endpointKeyword.value.trim().toLowerCase()
-  if (!keyword) return endpoints
+  if (!keyword) {
+    return endpoints
+  }
   return endpoints.filter(item => [item.key, item.operation, item.requiredPermissions.join(',')]
     .some(value => value.toLowerCase().includes(keyword)))
 })
 
 const filteredExportJobs = computed(() => {
-  if (!exportStatus.value) return exportJobs.value
+  if (!exportStatus.value) {
+    return exportJobs.value
+  }
   return exportJobs.value.filter(item => item.status === exportStatus.value)
 })
 
@@ -95,14 +99,18 @@ function formatNumber(value?: number) {
 
 function formatBytes(value?: number) {
   const bytes = Number(value || 0)
-  if (!bytes) return '0 B'
+  if (!bytes) {
+    return '0 B'
+  }
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   return `${(bytes / 1024 ** index).toFixed(index > 1 ? 2 : 1)} ${units[index]}`
 }
 
 function formatTime(value?: string) {
-  if (!value) return '-'
+  if (!value) {
+    return '-'
+  }
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
@@ -116,29 +124,51 @@ function formatDuration(milliseconds?: number) {
 }
 
 function modeLabel(mode?: ReadinessSnapshot['mode']) {
-  if (mode === 'READ_WRITE') return '正常读写'
-  if (mode === 'READ_ONLY_MAINTENANCE') return '主动维护只读'
+  if (mode === 'READ_WRITE') {
+    return '正常读写'
+  }
+  if (mode === 'READ_ONLY_MAINTENANCE') {
+    return '主动维护只读'
+  }
   return '自动只读降级'
 }
 
 function modeType(mode?: ReadinessSnapshot['mode']): 'success' | 'danger' | 'warning' {
-  if (mode === 'READ_WRITE') return 'success'
-  if (mode === 'READ_ONLY_MAINTENANCE') return 'warning'
+  if (mode === 'READ_WRITE') {
+    return 'success'
+  }
+  if (mode === 'READ_ONLY_MAINTENANCE') {
+    return 'warning'
+  }
   return 'danger'
 }
 
 function statusType(status: string): 'success' | 'danger' | 'warning' | 'info' {
-  if (status === 'SUCCESS') return 'success'
-  if (status === 'FAILED' || status === 'EXPIRED') return 'danger'
-  if (status === 'PROCESSING' || status === 'PENDING') return 'warning'
+  if (status === 'SUCCESS') {
+    return 'success'
+  }
+  if (status === 'FAILED' || status === 'EXPIRED') {
+    return 'danger'
+  }
+  if (status === 'PROCESSING' || status === 'PENDING') {
+    return 'warning'
+  }
   return 'info'
 }
 
 function responseType(status?: string): 'success' | 'danger' | 'warning' | 'info' {
-  if (!status) return 'info'
-  if (status.startsWith('2') || status.startsWith('3')) return 'success'
-  if (status.startsWith('5')) return 'danger'
-  if (status.startsWith('4')) return 'warning'
+  if (!status) {
+    return 'info'
+  }
+  if (status.startsWith('2') || status.startsWith('3')) {
+    return 'success'
+  }
+  if (status.startsWith('5')) {
+    return 'danger'
+  }
+  if (status.startsWith('4')) {
+    return 'warning'
+  }
   return 'info'
 }
 
@@ -219,7 +249,9 @@ async function loadTasks() {
   loading.tasks = true
   try {
     exportJobs.value = await getExportCenter(200)
-    if (!overview.value) await loadOverview()
+    if (!overview.value) {
+      await loadOverview()
+    }
   }
   finally {
     loading.tasks = false
@@ -243,7 +275,9 @@ async function savePermissionSnapshot() {
     inputPlaceholder: '例如 v0.7.0-before',
     inputValidator: value => Boolean(value && value.trim()) || '版本名称不能为空',
   }).then(result => result.value).catch(() => '')
-  if (!version) return
+  if (!version) {
+    return
+  }
   await savePermissionMatrixSnapshot(version.trim())
   ElMessage.success('权限矩阵快照已保存')
   await loadPermissions()
@@ -272,7 +306,9 @@ async function enableMaintenance() {
     inputValidator: value => Boolean(value && value.trim()) || '维护原因不能为空',
     type: 'warning',
   }).then(result => result.value).catch(() => '')
-  if (!reason) return
+  if (!reason) {
+    return
+  }
   loading.maintenance = true
   try {
     maintenance.value = await enableMaintenanceMode(reason.trim())
@@ -315,21 +351,39 @@ async function navigate(path: string) {
   await router.push(path)
 }
 
+async function selectTab(tab: string) {
+  activeTab.value = tab
+  await handleTabChange(tab)
+}
+
 async function handleTabChange(name: string | number) {
   const tab = String(name)
   await router.replace({ query: { ...route.query, tab } })
-  if (tab === 'overview') await loadOverview()
-  if (tab === 'diagnostics' && !diagnosticRun.value) await runFullDiagnostic()
-  if (tab === 'integrity' && !integrity.value) await loadIntegrity()
-  if (tab === 'tasks' && exportJobs.value.length === 0) await loadTasks()
-  if (tab === 'permissions' && !permissionMatrix.value) await loadPermissions()
-  if (tab === 'maintenance') await loadMaintenance()
-  if (tab === 'audit' && auditEntries.value.length === 0) await loadAudit()
+  if (tab === 'overview') {
+    await loadOverview()
+  }
+  if (tab === 'integrity' && !integrity.value) {
+    await loadIntegrity()
+  }
+  if (tab === 'tasks' && exportJobs.value.length === 0) {
+    await loadTasks()
+  }
+  if (tab === 'permissions' && !permissionMatrix.value) {
+    await loadPermissions()
+  }
+  if (tab === 'maintenance') {
+    await loadMaintenance()
+  }
+  if (tab === 'audit' && auditEntries.value.length === 0) {
+    await loadAudit()
+  }
 }
 
 onMounted(async () => {
   await loadOverview()
-  if (activeTab.value !== 'overview') await handleTabChange(activeTab.value)
+  if (activeTab.value !== 'overview') {
+    await handleTabChange(activeTab.value)
+  }
 })
 </script>
 
@@ -421,7 +475,7 @@ onMounted(async () => {
                     <strong>当前需要处理</strong>
                     <p>部署就绪检查中的未通过项目</p>
                   </div>
-                  <el-button text type="primary" @click="activeTab = 'diagnostics'; handleTabChange('diagnostics')">
+                  <el-button text type="primary" @click="selectTab('diagnostics')">
                     查看完整体检
                   </el-button>
                 </div>
@@ -479,10 +533,11 @@ onMounted(async () => {
         <div class="toolbar-row">
           <span>执行数据库、迁移、存储、备份、运行时、任务和错误检查，并给出处理入口。</span>
           <el-button type="primary" :loading="loading.diagnostics" @click="runFullDiagnostic">
-            重新体检
+            {{ diagnosticRun ? '重新体检' : '开始全面体检' }}
           </el-button>
         </div>
-        <template v-if="diagnosticRun">
+        <el-empty v-if="!diagnosticRun" description="点击“开始全面体检”执行实时检查" :image-size="96" />
+        <template v-else>
           <section class="summary-grid compact-grid">
             <el-card shadow="never"><span class="metric-label">检查总数</span><strong class="metric-value">{{ diagnosticRun.summary.total }}</strong></el-card>
             <el-card shadow="never"><span class="metric-label">通过</span><strong class="metric-value success-text">{{ diagnosticRun.summary.passed }}</strong></el-card>
@@ -737,7 +792,7 @@ onMounted(async () => {
   color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -832,7 +887,7 @@ onMounted(async () => {
 
 .two-column-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 16px;
 }
 

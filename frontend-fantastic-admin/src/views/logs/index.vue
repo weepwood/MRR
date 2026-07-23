@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { Refresh, Search, View } from '@element-plus/icons-vue'
+import type { LogRecord, PaginatedResult } from '@/api/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { Refresh, Search } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
-import { useCrudList } from '@/composables/useCrudList'
-import type { LogRecord, PaginatedResult } from '@/api/types'
-import AppLoading from '@/components/AppLoading/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -26,6 +29,20 @@ const statusOptions = [
   { label: '404', value: '404' },
   { label: '500', value: '500' },
 ]
+
+const logActions: MrrTableAction[] = [
+  {
+    key: 'detail',
+    label: '查看详情',
+    icon: 'i-ri:eye-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+]
+const {
+  maxInlineActions: logMaxInlineActions,
+  actionColumnWidth: logActionColumnWidth,
+} = useTableActionLayout(logActions.length, 1)
 
 interface LogsQuery {
   keyword: string
@@ -77,6 +94,12 @@ async function openDetail(row: LogRecord) {
   }
   finally {
     detailVisible.value = true
+  }
+}
+
+function handleLogAction(action: string, row: LogRecord) {
+  if (action === 'detail') {
+    void openDetail(row)
   }
 }
 
@@ -200,12 +223,18 @@ function statusTagType(status: string | number) {
         <el-table-column prop="executeTime" label="耗时" width="100">
           <template #default="{ row }">{{ formatExecuteTime(row.executeTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column
+          label="操作"
+          :width="logActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openDetail(row)">
-              <el-icon><View /></el-icon>
-              详情
-            </el-button>
+            <MrrTableActions
+              :actions="logActions"
+              :max-inline="logMaxInlineActions"
+              @select="handleLogAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>

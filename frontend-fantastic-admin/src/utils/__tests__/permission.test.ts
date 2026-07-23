@@ -8,11 +8,13 @@ import {
 } from '../permission'
 
 describe('permission catalog', () => {
-  it('权限代码唯一且包含系统管理权限', () => {
+  it('权限代码唯一且包含系统管理与运行错误权限', () => {
     const values = PERMISSION_DEFINITIONS.map(item => item.value)
     expect(new Set(values).size).toBe(values.length)
     expect(values).toContain('system:manage')
     expect(values).toContain('system:read')
+    expect(values).toContain('system:error:manage')
+    expect(values).toContain('system:error:read')
   })
 
   it('record:manage 包含管理、编辑、查看与导出权限', () => {
@@ -30,9 +32,15 @@ describe('permission catalog', () => {
     expect(PERMISSION_HIERARCHY['record:pdf:export']).toEqual(['record:pdf:export', 'record:read'])
   })
 
-  it('角色与系统管理权限继承对应查看权限', () => {
+  it('角色、系统和运行错误管理权限继承对应查看权限', () => {
     expect(PERMISSION_HIERARCHY['role:manage']).toEqual(['role:manage', 'role:read'])
-    expect(PERMISSION_HIERARCHY['system:manage']).toEqual(['system:manage', 'system:read'])
+    expect(PERMISSION_HIERARCHY['system:error:manage']).toEqual(['system:error:manage', 'system:error:read'])
+    expect(PERMISSION_HIERARCHY['system:manage']).toEqual([
+      'system:manage',
+      'system:read',
+      'system:error:manage',
+      'system:error:read',
+    ])
   })
 })
 
@@ -87,6 +95,7 @@ describe('permission — checkPermission', () => {
   it('系统查看不能执行系统管理操作', () => {
     expect(checkPermission(['system:read'], 'system:manage')).toBe(false)
     expect(checkPermission(['system:manage'], 'system:read')).toBe(true)
+    expect(checkPermission(['system:manage'], 'system:error:manage')).toBe(true)
   })
 
   it('拥有精确权限通过检查', () => {

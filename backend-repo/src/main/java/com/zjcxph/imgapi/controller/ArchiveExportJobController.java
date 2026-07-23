@@ -11,10 +11,13 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.service.ArchiveExportJobService;
+import com.zjcxph.imgapi.service.DeploymentReadinessService;
 import com.zjcxph.imgapi.utils.HttpByteRange;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -42,18 +45,22 @@ import java.util.Locale;
 @RequirePermissions({"record:read"})
 public class ArchiveExportJobController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ArchiveExportJobController.class);
     private static final int BUFFER_SIZE = 64 * 1024;
     private static final String PRIVATE_NO_STORE = "private, no-store, max-age=0";
 
     private final ArchiveExportJobService jobService;
     private final ArchiveExportJobRepository jobRepository;
+    private final DeploymentReadinessService readinessService;
 
     public ArchiveExportJobController(
             ArchiveExportJobService jobService,
-            ArchiveExportJobRepository jobRepository
+            ArchiveExportJobRepository jobRepository,
+            DeploymentReadinessService readinessService
     ) {
         this.jobService = jobService;
         this.jobRepository = jobRepository;
+        this.readinessService = readinessService;
     }
 
     @Operation(summary = "创建异步导出任务")
@@ -107,7 +114,6 @@ public class ArchiveExportJobController {
         ArchiveExportJob job = jobService.requireOwned(session, id);
         requireJobPermission(session, job);
         Path file = jobService.requireDownloadFile(session, id);
-        jobRepository.recordDownload(id);
         long total = Files.size(file);
         MediaType contentType = "PDF".equals(job.getFormat())
                 ? MediaType.APPLICATION_PDF
@@ -121,6 +127,7 @@ public class ArchiveExportJobController {
                 : "\"" + job.getSha256() + "\"";
 
         if (rangeHeader == null || rangeHeader.isBlank()) {
+            recordDownloadIfWritable(id);
             StreamingResponseBody body = output -> {
                 try (InputStream input = Files.newInputStream(file)) {
                     input.transferTo(output);
@@ -144,6 +151,7 @@ public class ArchiveExportJobController {
                     .<StreamingResponseBody>build();
         }
 
+        recordDownloadIfWritable(id);
         StreamingResponseBody body = output -> {
             try (RandomAccessFile input = new RandomAccessFile(file.toFile(), "r")) {
                 input.seek(range.start());
@@ -166,6 +174,17 @@ public class ArchiveExportJobController {
         return builder.contentType(contentType)
                 .contentLength(range.length())
                 .body(body);
+    }
+
+    private void recordDownloadIfWritable(String id) {
+        if (readinessService.isReadOnly()) {
+            return;
+        }
+        try {
+            jobRepository.recordDownload(id);
+        } catch (RuntimeException exception) {
+            logger.warn("记录导出下载次数失败，不影响文件下载: job={}, reason={}", id, exception.getMessage());
+        }
     }
 
     private ResponseEntity.BodyBuilder baseHeaders(

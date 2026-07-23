@@ -1,24 +1,40 @@
-name: source-snapshot
+name: apply-table-actions
 
 on:
   pull_request:
     paths:
       - '.github/workflows/source-snapshot.yml'
-      - 'frontend-fantastic-admin/src/**'
+      - 'scripts/apply-table-actions-second-stage.py'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  snapshot:
+  apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout pull request branch
         uses: actions/checkout@v4
-
-      - name: Upload frontend source snapshot
-        uses: actions/upload-artifact@v4
         with:
-          name: frontend-source-snapshot
-          path: frontend-fantastic-admin/src
-          retention-days: 1
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply table action migrations
+        run: python scripts/apply-table-actions-second-stage.py
+
+      - name: Commit generated changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            frontend-fantastic-admin/src/views/oss-migration/index.vue \
+            frontend-fantastic-admin/src/views/data-relations/index.vue \
+            frontend-fantastic-admin/src/views/statistics-detail/ArchiveDetailContent.vue
+          git commit -m "重构：统一剩余表格操作列"
+          git push origin HEAD:${{ github.head_ref }}

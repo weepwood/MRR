@@ -44,9 +44,9 @@ CREATE INDEX IF NOT EXISTS idx_system_error_event_error_ids
 UPDATE app.mr_auth_role
 SET permissions = CONCAT_WS(',', NULLIF(TRIM(permissions), ''), 'system:error:read')
 WHERE (code = 'ADMIN' OR permissions LIKE '%system:read%' OR permissions LIKE '%system:manage%' OR permissions LIKE '%log:read%')
-  AND NOT ('system:error:read' = ANY(STRING_TO_ARRAY(REPLACE(permissions, ' ', ''), ',')));
+  AND NOT ('system:error:read' = ANY(STRING_TO_ARRAY(REPLACE(COALESCE(permissions, ''), ' ', ''), ',')));
 
 UPDATE app.mr_auth_role
 SET permissions = CONCAT_WS(',', NULLIF(TRIM(permissions), ''), 'system:error:manage')
 WHERE (code = 'ADMIN' OR permissions LIKE '%system:manage%')
-  AND NOT ('system:error:manage' = ANY(STRING_TO_ARRAY(REPLACE(permissions, ' ', ''), ',')));
+  AND NOT ('system:error:manage' = ANY(STRING_TO_ARRAY(REPLACE(COALESCE(permissions, ''), ' ', ''), ',')));

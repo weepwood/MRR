@@ -65,6 +65,7 @@ export default defineConfig({
           { text: '部署总览', link: '/internal/deployment' },
           { text: '单体 JAR 部署', link: '/internal/standalone-jar' },
           { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
+          { text: '运维诊断中心', link: '/user-guide/operations-center' },
           { text: '运行错误中心', link: '/internal/runtime-errors' },
           { text: '运维与监控', link: '/internal/operations' },
           { text: '生产运行手册', link: '/internal/runbook' },
@@ -123,6 +124,7 @@ export default defineConfig({
             { text: '部署总览', link: '/internal/deployment' },
             { text: '单体 JAR 部署', link: '/internal/standalone-jar' },
             { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
+            { text: '运维诊断中心', link: '/user-guide/operations-center' },
             { text: '运行错误中心', link: '/internal/runtime-errors' },
             { text: '运维与监控', link: '/internal/operations' },
             { text: '生产运行手册', link: '/internal/runbook' },
@@ -179,6 +181,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: '系统管理', link: '/user-guide/admin' },
+            { text: '运维诊断中心', link: '/user-guide/operations-center' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
             { text: '运行错误中心', link: '/user-guide/logs#运行错误中心' },
             { text: '更新说明', link: '/user-guide/release-notes' },

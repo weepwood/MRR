@@ -1,5 +1,7 @@
 <script setup lang="ts">
+/* eslint-disable vue/first-attribute-linebreak, vue/html-closing-bracket-newline, vue/html-indent */
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -10,6 +12,8 @@ import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -62,6 +66,18 @@ const archiveShelfRef = ref<HTMLElement | null>(null)
 const archiveDisplayMode = ref<ArchiveDisplayMode>('folder')
 const selectedArchive = ref<ArchiveItem | null>(null)
 const selectedArchiveKey = ref('')
+
+const archiveActions: MrrTableAction[] = [{
+  key: 'view',
+  label: '查看影像',
+  icon: 'i-ri:eye-line',
+  tone: 'primary',
+  placement: 'inline',
+}]
+const {
+  maxInlineActions: archiveMaxInlineActions,
+  actionColumnWidth: archiveActionColumnWidth,
+} = useTableActionLayout(archiveActions.length, 1)
 
 let resizeObserver: ResizeObserver | null = null
 let archiveListRequestId = 0
@@ -337,6 +353,12 @@ function openArchive(item = selectedArchive.value) {
       sjh: item.sjh || '',
     },
   })
+}
+
+function handleArchiveAction(action: string, item: ArchiveItem) {
+  if (action === 'view') {
+    openArchive(item)
+  }
 }
 
 function goBackToStatistics() {
@@ -616,11 +638,18 @@ onBeforeUnmount(() => {
                 {{ normalizeText(row.openerNo) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="96" fixed="right" align="center">
+            <el-table-column
+              label="操作"
+              :width="archiveActionColumnWidth"
+              fixed="right"
+              align="center"
+            >
               <template #default="{ row }">
-                <el-button link type="primary" @click.stop="openArchive(row)">
-                  查看影像
-                </el-button>
+                <MrrTableActions
+                  :actions="archiveActions"
+                  :max-inline="archiveMaxInlineActions"
+                  @select="handleArchiveAction($event, row)"
+                />
               </template>
             </el-table-column>
           </el-table>
@@ -1071,7 +1100,6 @@ h2 {
 .folder-code-block-full .folder-code-value {
   flex: 1;
   min-width: 0;
-  text-align: right;
   font-size: clamp(18px, 3.2vw, 20px);
   line-height: 1.1;
   color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
@@ -1129,7 +1157,6 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .archive-folder-card,
   .folder-layer,
   .folder-card-body,
@@ -1146,7 +1173,7 @@ h2 {
   }
 }
 
-@media (width <=720px) {
+@media (width <= 720px) {
   .page-header {
     flex-direction: column;
   }
@@ -1173,7 +1200,7 @@ h2 {
   }
 }
 
-@media (width <=480px) {
+@media (width <= 480px) {
   .archive-grid {
     grid-template-columns: minmax(0, 1fr);
   }

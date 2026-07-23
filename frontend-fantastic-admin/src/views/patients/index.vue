@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { PatientRecord } from '@/api/modules/patients'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Download, Edit, Refresh, Search, Upload } from '@element-plus/icons-vue'
+import { Download, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { exportPatientsExcel, getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
@@ -35,6 +38,19 @@ const canImportPatients = computed(() => auth('record:edit'))
 const canEditPatients = computed(() => auth('record:edit'))
 
 const filters = reactive({ keyword: '' })
+const patientActions: MrrTableAction[] = [
+  {
+    key: 'edit',
+    label: '编辑患者',
+    icon: 'i-ri:edit-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+]
+const {
+  maxInlineActions: patientMaxInlineActions,
+  actionColumnWidth: patientActionColumnWidth,
+} = useTableActionLayout(patientActions.length, 1)
 
 async function loadData() {
   loading.value = true
@@ -91,6 +107,12 @@ function handleImported() {
 function handleEdit(row: PatientRecord) {
   editingPatient.value = { ...row }
   editDialogVisible.value = true
+}
+
+function handlePatientAction(action: string, row: PatientRecord) {
+  if (action === 'edit') {
+    handleEdit(row)
+  }
 }
 
 function handlePatientSaved(updated: PatientRecord) {
@@ -287,11 +309,19 @@ onUnmounted(() => {
         <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
         <el-table-column prop="ruyuan" label="入院日期" width="120" />
         <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-        <el-table-column v-if="canEditPatients" label="操作" width="96" fixed="right">
+        <el-table-column
+          v-if="canEditPatients"
+          label="操作"
+          :width="patientActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">
-              编辑
-            </el-button>
+            <MrrTableActions
+              :actions="patientActions"
+              :max-inline="patientMaxInlineActions"
+              @select="handlePatientAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>

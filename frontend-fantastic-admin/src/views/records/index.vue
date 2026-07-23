@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import type { PaginatedResult, ScanRecord } from '@/api/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { batchDownloadRecords, getScanByCondition, getScanList } from '@/api/modules/records'
-import type { PaginatedResult, ScanRecord } from '@/api/types'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
-import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -33,6 +36,20 @@ const typeOptions = [
     value: String(item.value),
   })),
 ]
+
+const recordActions: MrrTableAction[] = [
+  {
+    key: 'detail',
+    label: '查看详情',
+    icon: 'i-ri:eye-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+]
+const {
+  maxInlineActions: recordMaxInlineActions,
+  actionColumnWidth: recordActionColumnWidth,
+} = useTableActionLayout(recordActions.length, 1)
 
 // CRUD 列表逻辑：复用 useCrudList composable，消除重复的分页/查询/重置代码
 interface RecordsQuery {
@@ -88,6 +105,12 @@ function handleSelectionChange(rows: ScanRecord[]) {
 function openDetail(row: ScanRecord) {
   currentRecord.value = row
   detailVisible.value = true
+}
+
+function handleRecordAction(action: string, row: ScanRecord) {
+  if (action === 'detail') {
+    openDetail(row)
+  }
 }
 
 async function handleBatchDownload() {
@@ -218,11 +241,18 @@ function typeLabel(value: unknown) {
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column
+          label="操作"
+          :width="recordActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="openDetail(row)">
-              详情
-            </el-button>
+            <MrrTableActions
+              :actions="recordActions"
+              :max-inline="recordMaxInlineActions"
+              @select="handleRecordAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>

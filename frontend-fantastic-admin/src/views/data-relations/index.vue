@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -10,6 +11,7 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import {
@@ -21,6 +23,8 @@ import {
   runDataQualityChecks,
   searchDataRelationArchives,
 } from '@/api/modules/data-relations'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
 
@@ -42,6 +46,26 @@ const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
 const repairPreview = ref<RepairPreview | null>(null)
 const previewVisible = ref(false)
+
+const issueActions: MrrTableAction[] = [
+  {
+    key: 'locate',
+    label: '定位病案',
+    icon: 'i-ri:map-pin-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+  {
+    key: 'preview',
+    label: '修复预览',
+    icon: 'i-ri:tools-line',
+    tone: 'warning',
+  },
+]
+const {
+  maxInlineActions: issueMaxInlineActions,
+  actionColumnWidth: issueActionColumnWidth,
+} = useTableActionLayout(issueActions.length, 2)
 
 const latestRun = computed(() => qualitySummary.value?.latestRun ?? overview.value?.latestQualityRun ?? null)
 const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? overview.value?.relationChecks ?? [])
@@ -239,6 +263,15 @@ async function locateIssueArchive(issue: DataQualityIssue) {
   searchValue.value = sjh || bah
   activeTab.value = 'archive'
   await searchArchives()
+}
+
+function handleIssueAction(action: string, issue: DataQualityIssue) {
+  if (action === 'locate') {
+    void locateIssueArchive(issue)
+  }
+  else if (action === 'preview') {
+    void showRepairPreview(issue)
+  }
 }
 
 onMounted(loadDashboard)
@@ -643,14 +676,18 @@ onMounted(loadDashboard)
               <el-table-column prop="bah" label="BAH" width="120" />
               <el-table-column prop="sjh" label="SJH" width="120" />
               <el-table-column prop="detail" label="说明" min-width="300" show-overflow-tooltip />
-              <el-table-column label="操作" width="210" fixed="right">
+              <el-table-column
+                label="操作"
+                :width="issueActionColumnWidth"
+                fixed="right"
+                align="center"
+              >
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="locateIssueArchive(row)">
-                    定位病案
-                  </el-button>
-                  <el-button link type="warning" @click="showRepairPreview(row)">
-                    修复预览
-                  </el-button>
+                  <MrrTableActions
+                    :actions="issueActions"
+                    :max-inline="issueMaxInlineActions"
+                    @select="handleIssueAction($event, row)"
+                  />
                 </template>
               </el-table-column>
             </el-table>
@@ -922,8 +959,8 @@ h2 {
 }
 
 .preview-content pre {
-  overflow: auto;
   padding: 12px;
+  overflow: auto;
   font-size: 12px;
   line-height: 1.6;
   background: var(--el-fill-color-light);
@@ -945,14 +982,14 @@ h2 {
   .page-header,
   .issue-header,
   .search-row {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .page-actions,
   .issue-filters {
-    width: 100%;
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .metric-grid,

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.LongSupplier;
 
 /**
  * 登录/注册频率限制器 — 基于内存的简单滑动窗口。
@@ -34,12 +35,14 @@ public class LoginRateLimiter {
 
     private final Cache<String, LinkedList<Long>> loginFailures;
     private final Cache<String, LinkedList<Long>> registerAttempts;
+    private final LongSupplier currentTimeMillis;
 
     public LoginRateLimiter() {
-        this(Ticker.systemTicker());
+        this(Ticker.systemTicker(), System::currentTimeMillis);
     }
 
-    LoginRateLimiter(Ticker ticker) {
+    LoginRateLimiter(Ticker ticker, LongSupplier currentTimeMillis) {
+        this.currentTimeMillis = currentTimeMillis;
         loginFailures = Caffeine.newBuilder()
                 .maximumSize(MAX_LOGIN_KEYS)
                 .expireAfterAccess(Duration.ofMinutes(30))
@@ -99,7 +102,7 @@ public class LoginRateLimiter {
         cache.asMap().compute(key, (ignored, timestamps) -> {
             LinkedList<Long> values = timestamps == null ? new LinkedList<>() : timestamps;
             synchronized (values) {
-                values.add(System.currentTimeMillis());
+                values.add(currentTimeMillis.getAsLong());
             }
             return values;
         });
@@ -114,7 +117,7 @@ public class LoginRateLimiter {
         }
 
         AtomicBoolean blocked = new AtomicBoolean(false);
-        long cutoff = System.currentTimeMillis() - windowMillis;
+        long cutoff = currentTimeMillis.getAsLong() - windowMillis;
         cache.asMap().computeIfPresent(key, (ignored, timestamps) -> {
             synchronized (timestamps) {
                 timestamps.removeIf(timestamp -> timestamp < cutoff);

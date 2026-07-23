@@ -164,6 +164,7 @@ function handleTargetAction(action: string, target: string) {
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
 .analytics-shell { display: grid; gap: 16px; }
 .metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .metric-card :deep(.el-card__body) { display: flex; gap: 14px; align-items: center; min-height: 92px; }

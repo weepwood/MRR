@@ -146,41 +146,41 @@ public class OperationsCenterService {
     }
 
     private List<Map<String, Object>> redactedRecentOperations(int limit) {
-    return recentOperations(limit).stream()
-  .map(OperationsCenterService::redactOperationForReport)
-  .toList();
-}
+        return recentOperations(limit).stream()
+                .map(OperationsCenterService::redactOperationForReport)
+                .toList();
+    }
 
     static Map<String, Object> redactOperationForReport(Map<String, Object> source) {
-    Map<String, Object> result = new LinkedHashMap<>();
-    for (String key : List.of("id", "request_id", "method", "response_status", "execute_time", "access_time")) {
-        if (source.containsKey(key) && source.get(key) != null) {
-  result.put(key, source.get(key));
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (String key : List.of("id", "request_id", "method", "response_status", "execute_time", "access_time")) {
+            if (source.containsKey(key) && source.get(key) != null) {
+                result.put(key, source.get(key));
+            }
         }
+        result.put("request_uri", stripQueryAndFragment(String.valueOf(source.getOrDefault("request_uri", ""))));
+        result.put("username", redactIfPresent(source.get("username")));
+        result.put("client_ip", redactIfPresent(source.get("client_ip")));
+        result.put("error_message", redactIfPresent(source.get("error_message")));
+        return Map.copyOf(result);
     }
-    result.put("request_uri", stripQueryAndFragment(String.valueOf(source.getOrDefault("request_uri", ""))));
-    result.put("username", redactIfPresent(source.get("username")));
-    result.put("client_ip", redactIfPresent(source.get("client_ip")));
-    result.put("error_message", redactIfPresent(source.get("error_message")));
-    return Map.copyOf(result);
-}
 
     private static String stripQueryAndFragment(String value) {
-    int query = value.indexOf('?');
-    int fragment = value.indexOf('#');
-    int end = value.length();
-    if (query >= 0) {
-        end = Math.min(end, query);
+        int query = value.indexOf('?');
+        int fragment = value.indexOf('#');
+        int end = value.length();
+        if (query >= 0) {
+            end = Math.min(end, query);
+        }
+        if (fragment >= 0) {
+            end = Math.min(end, fragment);
+        }
+        return value.substring(0, end);
     }
-    if (fragment >= 0) {
-        end = Math.min(end, fragment);
-    }
-    return value.substring(0, end);
-}
 
     private static String redactIfPresent(Object value) {
-    return value == null || String.valueOf(value).isBlank() ? "" : "[REDACTED]";
-}
+        return value == null || String.valueOf(value).isBlank() ? "" : "[REDACTED]";
+    }
 
     private Map<String, Object> effectiveReadiness(Map<String, Object> base) {
         boolean automaticReadOnly = Boolean.TRUE.equals(base.get("readOnly"));

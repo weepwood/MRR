@@ -49,8 +49,8 @@ final class SpaPathResourceResolver extends PathResourceResolver {
     }
 
     private static boolean isSameOrChild(String resourcePath, String reservedPath) {
-    return resourcePath.equals(reservedPath) || resourcePath.startsWith(reservedPath + "/");
-}
+        return resourcePath.equals(reservedPath) || resourcePath.startsWith(reservedPath + "/");
+    }
 
     private static String normalize(String resourcePath) {
         if (resourcePath == null) {

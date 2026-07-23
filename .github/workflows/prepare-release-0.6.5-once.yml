@@ -1,0 +1,309 @@
+name: prepare-release-0.6.5-once
+
+on:
+  push:
+    branches:
+      - release/0.6.5
+    paths:
+      - '.github/workflows/prepare-release-0.6.5-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/0.6.5
+          fetch-depth: 0
+
+      - name: Update release metadata and notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          version = '0.6.5'
+          date = '2026-07-23'
+
+          Path('VERSION').write_text(version + '\n', encoding='utf-8')
+
+          pom_path = Path('backend-repo/pom.xml')
+          pom = pom_path.read_text(encoding='utf-8')
+          old_revision = '<revision>0.6.3</revision>'
+          new_revision = f'<revision>{version}</revision>'
+          if old_revision not in pom:
+              raise SystemExit('backend revision 0.6.3 not found')
+          pom_path.write_text(pom.replace(old_revision, new_revision, 1), encoding='utf-8')
+
+          baseline_path = Path('release-baseline.json')
+          baseline = json.loads(baseline_path.read_text(encoding='utf-8'))
+          baseline['applicationRollback']['reason'] = (
+              '0.6.5 增加核心业务数据交换中心、患者数据治理、Nginx/OSS 文件浏览、OSS 迁移管理、'
+              '开发者 API 权限控制、运维诊断中心、权限矩阵快照、只读降级模式与导出下载统计；'
+              '同时调整病案主档来源统计外键并增加扫描路径并发索引。升级后旧应用无法识别新增数据结构，'
+              '回滚前必须恢复发布前数据库和配置备份并重新验证。'
+          )
+          baseline_path.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          readme = readme.replace('当前主分支产品版本为 **0.6.3**', '当前主分支产品版本为 **0.6.5**')
+          readme = readme.replace('v0.6.3 的图片类型修改接口当前也继承此权限', 'v0.6.5 的图片类型修改接口当前也继承此权限')
+          readme_path.write_text(readme, encoding='utf-8')
+
+          changelog_path = Path('CHANGELOG.md')
+          changelog = changelog_path.read_text(encoding='utf-8')
+          marker = '## [Unreleased]\n'
+          if marker not in changelog:
+              raise SystemExit('Unreleased section not found')
+          section = f'''## [0.6.5] - {date}
+
+### 新增
+
+- 新增核心业务数据交换中心，统一提供患者、统计、档案装箱和扫描记录的模板下载、文件校验、导入与条件导出。
+- 新增患者编辑、CSV/XLSX/XLS 导入和数据分析，展示身份证缺失、疑似同人、年度病案与科室分布。
+- 新增 OSS 迁移管理，支持从 Nginx 原图迁移、上架号缺失等待、分组路由、失败重试、校验和任务统计。
+- 新增只读 Nginx 文件浏览器和 OSS 文件浏览器，用于受控排障与资源核对。
+- 新增运维诊断中心，包含图片来源诊断、病案完整性快照、导出文件中心、权限矩阵、部署就绪检查和只读降级状态。
+- 新增开发者模式 API 权限控制，可在受控开发环境中按设置开放兼容接口。
+- 新增表格操作图标与溢出菜单组件，在窄屏和操作较多时自动收纳次要操作。
+
+### 变更
+
+- 写请求只读取后台生成的部署就绪快照；数据库、Flyway、Nginx、OSS、临时目录与备份状态由后台定时检查。
+- 病案完整性统计改为独立后台任务，避免页面直接对约三千万行扫描表执行多轮同步全表统计。
+- 权限矩阵与真实授权拦截器保持相同优先级，并表达 ZIP/PDF 等按请求内容动态判断的条件权限。
+- ZIP/PDF 导出继续使用独立权限，下载次数、最后下载时间、Range 续传和过期状态纳入任务记录。
+- OSS 目录统一按“上架号前 4 位 / 上架号-病案号”组织；上架号为空的病案暂缓迁移，补齐后再执行。
+
+### 修复
+
+- 修复匿名注册被登录拦截器拒绝、注册页面布局不合理以及密码规则不一致的问题。
+- 修复 Nginx 根路径返回 404/405 时被错误判定为节点离线的问题，并区分服务器连通与图片对象存在。
+- 修复 OSS 使用 GET 预签名地址执行 HEAD 探测导致误判的问题，改为对象存储 API 检查 Object Key。
+- 修复病案号阈值使用字符串比较、非数字脏数据误分类，以及缺失上架号和重复病案统计不符合 1000 万规则的问题。
+- 修复只读降级模式下 GET 下载仍写入统计、无效 Range 请求被计数和统计失败阻断下载的问题。
+- 修复多来源图片、Nginx 静态资源和 OSS 混合病案在导出与迁移过程中的回退边界。
+
+### 发布与兼容性
+
+- 数据库兼容范围更新为 `20260715113552` 至 `20260723090000`。
+- 配置结构版本保持 `1`。
+- 本版本包含新增表、字段、索引和权限相关数据结构，不允许仅替换回旧应用文件；回滚前必须恢复发布前数据库和配置备份。
+
+'''
+          changelog_path.write_text(changelog.replace(marker, marker + '\n' + section, 1), encoding='utf-8')
+
+          release_notes = f'''# MRR {version}
+
+发布日期：{date}
+
+## 发布重点
+
+### 核心业务数据交换中心
+
+- 将患者、统计、档案装箱和扫描记录的导入导出统一到“数据交换中心”；
+- 提供标准 CSV 模板、字段校验、编码识别、重复数据处理和逐行错误明细；
+- 支持仅校验与正式导入两阶段流程；
+- 导出文件可重新导入，减少不同页面各自维护导入导出逻辑的问题。
+
+### 运维诊断与只读降级
+
+- 新增图片来源诊断、病案数据完整性、导出文件中心、权限矩阵和部署就绪检查；
+- 数据库迁移、首选图片源、OSS 或临时目录出现关键故障时自动进入只读降级；
+- 只读模式阻止业务写入、导入、迁移和新建导出任务，同时保留登录、查询、外部调阅和诊断；
+- 管理员可以显式重新检查状态，故障恢复后解除降级。
+
+### OSS 迁移与文件浏览
+
+- OSS 迁移按照“上架号前 4 位 / 上架号-病案号”保存；
+- 原图从受控 Nginx 节点读取并上传到 OSS；
+- 上架号为空的病案进入等待状态，补齐后再迁移；
+- 支持任务创建、批次处理、取消、失败重试、完整性校验和进度统计；
+- 新增只读 OSS 与 Nginx 文件浏览器，方便核对目录、对象和图片来源。
+
+### 患者管理与数据治理
+
+- 患者管理支持编辑、导入和条件导出；
+- 展示身份证号为空的病案、疑似同一患者的多份病案、年度病案数量和科室分布；
+- 导入支持 CSV、XLSX、XLS，处理 UTF-8/GBK 等编码、字段缺失、格式错误和重复数据；
+- 大量数据导出采用流式处理，避免一次性加载全部记录。
+
+### 权限与开发者模式
+
+- 图片诊断和导出中心同时要求系统查看与病案读取权限；
+- 权限矩阵同时要求角色查看权限，保存快照需要系统管理权限；
+- ZIP 与 PDF 导出继续使用 `record:download` 和 `record:pdf:export` 独立权限；
+- 开发者模式可以在受控环境中开放兼容 API，但真实患者数据环境应保持关闭。
+
+### 表格操作体验
+
+- 表格操作统一使用图标按钮；
+- 页面空间不足或操作数量较多时，将次要操作收纳到“更多”菜单；
+- 患者、用户、日志、审计、OSS 迁移、档案装箱等页面统一操作布局。
+
+## 数据库与回滚
+
+- 最低兼容迁移：`20260715113552`；
+- 最高兼容迁移：`20260723090000`；
+- 配置结构版本：`1`；
+- 本版本包含数据交换、运维诊断、OSS 迁移与导出统计相关的新表、字段和索引；不允许只替换回旧应用文件。
+
+## 升级前准备
+
+1. 备份 PostgreSQL 数据库；
+2. 备份外部配置、密钥、Nginx 配置和当前发布目录；
+3. 保留 0.6.3 发布包与当前运行版本清单；
+4. 确认数据库账户具备执行 Flyway 迁移和创建索引的权限；
+5. 选择业务低峰期执行升级。
+
+## 升级后核对
+
+1. 确认 `/actuator/info`、管理端和发布清单均显示 `0.6.5`；
+2. 核对 Flyway 已执行到 `20260723090000`；
+3. 验证登录、注册审核、权限和首次改密；
+4. 验证病案号、上架号和身份证查询，以及 OSS/本地混合图片读取；
+5. 在数据交换中心下载模板并完成一次仅校验导入；
+6. 检查患者编辑、身份证缺失和年度/科室统计；
+7. 检查 OSS 迁移任务、Nginx/OSS 文件浏览和失败重试；
+8. 打开运维诊断中心，核对数据库、Flyway、Nginx、OSS、临时目录与只读状态；
+9. 验证 ZIP/PDF 权限、后台任务、Range 下载和下载统计；
+10. 校验正式 ZIP 顶层 `SHA256SUMS` 与 `runtime/SHA256SUMS`。
+'''
+          Path('release-notes').mkdir(exist_ok=True)
+          Path(f'release-notes/{version}.md').write_text(release_notes, encoding='utf-8')
+
+          user_notes = f'''# 更新说明
+
+> 本页对应 `main` 当前产品版本 **v{version}**。完整提交历史见 [Git 更新记录](./changelog)，数据库和回滚条件见内部文档中的发布基线。
+
+## {version} 重点变化
+
+### 核心业务数据交换中心
+
+- 统一患者、统计、档案装箱和扫描记录的模板、校验、导入和导出；
+- 支持 CSV、XLSX、XLS 与常见中文编码；
+- 导入前可以先执行仅校验，错误会定位到行、字段和原始值；
+- 导出采用可重新导入的字段格式，并限制单次大批量范围。
+
+### 运维诊断中心
+
+- 图片来源诊断展示本地、Nginx、OSS、Object Key 与回退过程；
+- 病案完整性统计由后台生成快照，不在页面请求中直接扫描大表；
+- 导出文件中心汇总 ZIP/PDF 条件、进度、大小、校验值、过期与下载次数；
+- 权限矩阵展示角色与接口的实际访问关系，并可保存版本快照；
+- 部署就绪检查覆盖数据库、Flyway、Nginx、OSS、临时目录和备份时间；
+- 关键依赖故障时自动进入只读降级，避免继续写入不完整数据。
+
+### OSS 迁移与文件浏览
+
+- 按“上架号前 4 位 / 上架号-病案号”组织 OSS 目录；
+- 从 Nginx 获取原图并上传 OSS；
+- 上架号为空的病案进入等待补齐状态；
+- 支持分阶段任务、失败重试、校验和进度展示；
+- 提供只读 OSS 与 Nginx 文件浏览器用于排障。
+
+### 患者管理
+
+- 支持编辑患者信息；
+- 支持 CSV、XLSX、XLS 导入和条件导出；
+- 增加身份证为空、疑似同一患者、年度病案和科室分布统计；
+- 导入流程处理字段、编码、格式、重复数据和错误明细。
+
+### 权限、导出与开发者模式
+
+- ZIP 和 PDF 使用独立权限：`record:download`、`record:pdf:export`；
+- 大病案使用后台任务生成，支持取消、过期清理和断点下载；
+- 下载次数和最后下载时间纳入任务记录；
+- 开发者模式可按设置开放兼容 API，真实患者数据环境必须关闭；
+- 图片诊断、导出中心和权限矩阵增加更严格的组合权限。
+
+### 表格操作
+
+- 表格操作按钮统一使用图标；
+- 空间不足时将次要操作收纳到“更多”菜单；
+- 患者、用户、日志、审计、OSS 迁移和档案装箱等页面保持一致。
+
+## 当前主要功能
+
+### 影像档案袋
+
+- 按病案号、上架号或身份证查询；
+- 高位病案号必须结合上架号；
+- 身份证明文在查询成功后替换为不透明令牌；
+- 支持缩略图/列表、单页/连续滚动、全屏、打印、ZIP 和 PDF；
+- 同一病案支持 OSS 与非 OSS 图片混合读取和降级；
+- 支持外部 HMAC Ticket 调阅和访问审计。
+
+### 权限与管理
+
+- 用户、角色和权限管理；
+- 管理员创建账号、重置密码和审核注册申请；
+- 首次登录强制改密；
+- 系统设置、菜单显示、图片来源、访问安全和开发者模式；
+- 日志、图片访问审计、接口响应分析和运维诊断。
+
+### 数据与存储
+
+- 患者、统计、扫描、病案主档和装箱关系；
+- Local/NAS/HTTP/Nginx/OSS 多来源读取；
+- 数据交换中心、OSS 迁移任务和对象浏览；
+- Nginx 静态资源浏览；
+- 数据关系工作台和数据质量检查。
+
+## 使用前注意
+
+### 前后端版本必须一致
+
+升级后若仍出现旧行为，检查页面版本、`/actuator/info`、Nginx 静态缓存、后端 JAR 和浏览器缓存。
+
+### 导出依赖后端网络
+
+图片在浏览器中可以预览，不代表后端一定可以访问。ZIP/PDF 失败时重点检查后端到 Nginx、NAS、HTTP 和 OSS 的网络、凭据和路径。
+
+### 文件浏览器是只读排障工具
+
+OSS/Nginx 文件浏览器不替代影像档案袋，不提供上传、删除、移动和重命名，也不应向无业务需要的账号开放。
+
+### 只读降级需要先修复依赖
+
+进入只读模式后，应先修复数据库迁移、图片源、OSS 或临时目录问题，再由管理员重新检查；不要绕过降级继续写入。
+
+## 已知边界
+
+- 正式环境以 Windows Server 原生部署为主，不依赖 Docker；
+- `mr_scan` 为数千万级大表，大范围修复、统计和迁移必须使用后台任务或分批执行；
+- Token 撤销黑名单依赖后端进程内存，重启后仍需依赖密码版本和 Token 有效期；
+- 菜单隐藏不等于撤销权限；
+- 开发者模式只能用于受控联调，真实患者数据环境必须关闭；
+- 尚未合并的 PR 和 Issue 不属于当前版本能力。
+
+## 完整变更
+
+- [Git 更新记录](./changelog)：构建时按第一父级提交历史生成；
+- 根目录 `CHANGELOG.md`：按新增、变更、修复和兼容性整理；
+- 根目录 `VERSION`：唯一产品版本；
+- `release-baseline.json`：数据库、配置与回滚兼容基线。
+'''
+          Path('vitepress-doc/user-guide/release-notes.md').write_text(user_notes, encoding='utf-8')
+          PY
+
+          rm .github/workflows/prepare-release-0.6.5-once.yml
+
+      - name: Commit prepared release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERSION backend-repo/pom.xml release-baseline.json README.md CHANGELOG.md \
+            release-notes/0.6.5.md vitepress-doc/user-guide/release-notes.md \
+            .github/workflows/prepare-release-0.6.5-once.yml
+          git commit -m '发布：准备 MRR 0.6.5'
+          git push origin HEAD:release/0.6.5

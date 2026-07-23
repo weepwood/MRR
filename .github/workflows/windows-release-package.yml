@@ -8,6 +8,7 @@ on:
       - 'VERSION'
       - 'release-baseline.json'
       - 'scripts/release_baseline.py'
+      - 'scripts/embed_frontend_in_jar.py'
       - 'backend-repo/**'
       - 'frontend-fantastic-admin/**'
       - 'vitepress-doc/**'
@@ -194,7 +195,7 @@ jobs:
           printf '%s\n' "${GIT_INFO}" >&2
           exit 1
 
-      - name: Test and build frontend
+      - name: Test, build and embed frontend
         working-directory: frontend-fantastic-admin
         run: |
           pnpm install --frozen-lockfile
@@ -203,6 +204,11 @@ jobs:
           pnpm build
           grep -R --fixed-strings "${PRODUCT_VERSION}" dist >/dev/null
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
+          python ../scripts/embed_frontend_in_jar.py embed \
+            --jar "../${BACKEND_JAR}" \
+            --dist dist
+          python ../scripts/embed_frontend_in_jar.py verify \
+            --jar "../${BACKEND_JAR}"
 
       - name: Build documentation
         shell: bash
@@ -261,6 +267,8 @@ jobs:
           test -f "${PACKAGE_DIR}/runtime/SHA256SUMS"
           test -f "${PACKAGE_DIR}/deploy/windows/nginxctl.ps1"
           test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"
+          python scripts/embed_frontend_in_jar.py verify \
+            --jar "${PACKAGE_DIR}/backend/mrr-backend.jar"
 
           python scripts/release_baseline.py manifest \
             --git-commit "${SOURCE_SHA}" \

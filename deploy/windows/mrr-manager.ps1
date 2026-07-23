@@ -62,6 +62,7 @@ if ($SelfTest) {
 
 $manifestPath = Join-Path $Root 'current\manifest.json'
 $maintenancePath = Join-Path $Root 'config\nginx\maintenance.inc'
+$frontendModePath = Join-Path $Root 'config\nginx\frontend-mode.inc'
 $logsPath = Join-Path $Root 'logs'
 $configPath = Join-Path $Root 'config'
 $packagesPath = Join-Path $Root 'packages'
@@ -119,6 +120,23 @@ function Get-DashboardSnapshot {
         catch {}
     }
 
+    $frontendMode = '未知'
+    if (Test-Path -LiteralPath $frontendModePath -PathType Leaf) {
+        try {
+            $modeContent = Get-Content -LiteralPath $frontendModePath -Raw -Encoding UTF8
+            if ($modeContent -match 'frontend mode:\s*embedded' -or $modeContent -match 'proxy_pass\s+http://mrr_backend') {
+                $frontendMode = 'JAR 内嵌'
+            }
+            elseif ($modeContent -match 'frontend mode:\s*external' -or $modeContent -match 'current/frontend') {
+                $frontendMode = '外置回退'
+            }
+            else {
+                $frontendMode = '自定义'
+            }
+        }
+        catch {}
+    }
+
     $freeDisk = '未知'
     try {
         $driveName = [IO.Path]::GetPathRoot($Root).TrimEnd('\').TrimEnd(':')
@@ -134,6 +152,7 @@ function Get-DashboardSnapshot {
         Gateway = Get-ServiceStateText 'MRR-Gateway'
         Health = $health
         Maintenance = $maintenance
+        FrontendMode = $frontendMode
         FreeDisk = $freeDisk
     }
 }
@@ -242,6 +261,19 @@ $commitValue.AutoSize = $true
 $commitValue.Location = New-Object System.Drawing.Point(75, 95)
 $statusGroup.Controls.Add($commitValue)
 
+$frontendModeCaption = New-Object System.Windows.Forms.Label
+$frontendModeCaption.Text = '前端模式：'
+$frontendModeCaption.ForeColor = [System.Drawing.Color]::DimGray
+$frontendModeCaption.AutoSize = $true
+$frontendModeCaption.Location = New-Object System.Drawing.Point(260, 95)
+$statusGroup.Controls.Add($frontendModeCaption)
+
+$frontendModeValue = New-Object System.Windows.Forms.Label
+$frontendModeValue.Text = '未知'
+$frontendModeValue.AutoSize = $true
+$frontendModeValue.Location = New-Object System.Drawing.Point(330, 95)
+$statusGroup.Controls.Add($frontendModeValue)
+
 $actionsGroup = New-Object System.Windows.Forms.GroupBox
 $actionsGroup.Text = '常用操作'
 $actionsGroup.Location = New-Object System.Drawing.Point(18, 226)
@@ -301,13 +333,13 @@ function Set-StatusColor {
         [Parameter(Mandatory)][string]$Text
     )
 
-    if ($Text -in @('运行中', 'UP', '关闭')) {
+    if ($Text -in @('运行中', 'UP', '关闭', 'JAR 内嵌')) {
         $Label.ForeColor = [System.Drawing.Color]::FromArgb(22, 120, 75)
     }
     elseif ($Text -in @('已停止', 'DOWN', '未安装', '清单异常')) {
         $Label.ForeColor = [System.Drawing.Color]::Firebrick
     }
-    elseif ($Text -in @('开启', '正在启动', '正在停止')) {
+    elseif ($Text -in @('开启', '正在启动', '正在停止', '外置回退')) {
         $Label.ForeColor = [System.Drawing.Color]::DarkOrange
     }
     else {
@@ -324,6 +356,8 @@ function Refresh-Dashboard {
             Set-StatusColor -Label $statusValueLabels[$key] -Text $text
         }
         $commitValue.Text = [string]$snapshot.Commit
+        $frontendModeValue.Text = [string]$snapshot.FrontendMode
+        Set-StatusColor -Label $frontendModeValue -Text ([string]$snapshot.FrontendMode)
     }
     catch {
         Append-Output "刷新状态失败：$($_.Exception.Message)"
@@ -463,6 +497,15 @@ Add-ActionButton -Text '暂停访问（维护）' -BackColor ([System.Drawing.Co
 }
 Add-ActionButton -Text '恢复正常访问' -BackColor ([System.Drawing.Color]::FromArgb(220, 252, 231)) -Handler {
     Start-MrrCtl -Arguments @('maintenance', 'off') -Description '关闭维护模式'
+}
+Add-ActionButton -Text '使用 JAR 内嵌前端' -BackColor ([System.Drawing.Color]::FromArgb(220, 252, 231)) -Handler {
+    Start-MrrCtl -Arguments @('frontend', 'embedded') -Description '切换到 JAR 内嵌前端'
+}
+Add-ActionButton -Text '使用外置前端回退' -BackColor ([System.Drawing.Color]::FromArgb(255, 237, 213)) -Handler {
+    $answer = [System.Windows.Forms.MessageBox]::Show('确认临时切回发布包中的外置前端吗？', '切换前端模式', 'YesNo', 'Warning')
+    if ($answer -eq 'Yes') {
+        Start-MrrCtl -Arguments @('frontend', 'external') -Description '切换到外置前端回退模式'
+    }
 }
 Add-ActionButton -Text '部署发布 ZIP' -Handler {
     $dialog = New-Object System.Windows.Forms.OpenFileDialog

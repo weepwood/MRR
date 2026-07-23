@@ -39,6 +39,17 @@ function errorRate(errorCount: number, requestCount: number) {
   return requestCount > 0 ? errorCount / requestCount * 100 : 0
 }
 
+function updateSpotlight(event: PointerEvent) {
+  if (event.pointerType === 'touch' || !(event.currentTarget instanceof HTMLElement)) {
+    return
+  }
+
+  const card = event.currentTarget
+  const rect = card.getBoundingClientRect()
+  card.style.setProperty('--spotlight-x', `${event.clientX - rect.left}px`)
+  card.style.setProperty('--spotlight-y', `${event.clientY - rect.top}px`)
+}
+
 async function loadData() {
   loading.value = true
   error.value = ''
@@ -90,7 +101,11 @@ onMounted(loadData)
 
     <template v-else>
       <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
-        <el-card shadow="never" class="mrr-metric-card">
+        <el-card
+          shadow="never"
+          class="mrr-metric-card spotlight-card spotlight-card--blue"
+          @pointermove="updateSpotlight"
+        >
           <div class="mrr-metric-card__icon">
             <i class="i-ant-design:api-twotone" />
           </div>
@@ -102,7 +117,11 @@ onMounted(loadData)
             </p>
           </div>
         </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
+        <el-card
+          shadow="never"
+          class="mrr-metric-card mrr-metric-card--green spotlight-card spotlight-card--green"
+          @pointermove="updateSpotlight"
+        >
           <div class="mrr-metric-card__icon">
             <i class="i-ant-design:check-circle-twotone" />
           </div>
@@ -114,7 +133,11 @@ onMounted(loadData)
             </p>
           </div>
         </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
+        <el-card
+          shadow="never"
+          class="mrr-metric-card mrr-metric-card--violet spotlight-card spotlight-card--violet"
+          @pointermove="updateSpotlight"
+        >
           <div class="mrr-metric-card__icon">
             <i class="i-ant-design:field-time-outlined" />
           </div>
@@ -126,7 +149,11 @@ onMounted(loadData)
             </p>
           </div>
         </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
+        <el-card
+          shadow="never"
+          class="mrr-metric-card mrr-metric-card--amber spotlight-card spotlight-card--amber"
+          @pointermove="updateSpotlight"
+        >
           <div class="mrr-metric-card__icon">
             <i class="i-ant-design:dashboard-twotone" />
           </div>
@@ -141,7 +168,12 @@ onMounted(loadData)
       </section>
 
       <div class="analysis-stack">
-        <el-card v-loading="loading" shadow="never" class="analysis-card response-trend-card">
+        <el-card
+          v-loading="loading"
+          shadow="never"
+          class="analysis-card response-trend-card spotlight-card spotlight-card--soft"
+          @pointermove="updateSpotlight"
+        >
           <template #header>
             <div class="card-header">
               <div>
@@ -154,7 +186,12 @@ onMounted(loadData)
           <el-empty v-else description="近一年暂无趋势数据" :image-size="64" />
         </el-card>
 
-        <el-card v-loading="loading" shadow="never" class="analysis-card slow-endpoint-card">
+        <el-card
+          v-loading="loading"
+          shadow="never"
+          class="analysis-card slow-endpoint-card spotlight-card spotlight-card--soft"
+          @pointermove="updateSpotlight"
+        >
           <template #header>
             <div class="card-header">
               <div>
@@ -248,6 +285,58 @@ h2 {
   align-items: center;
 }
 
+.spotlight-card {
+  --spotlight-x: 50%;
+  --spotlight-y: 50%;
+  --spotlight-color: rgb(9 127 232 / 16%);
+
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(
+    circle at var(--spotlight-x) var(--spotlight-y),
+    var(--spotlight-color) 0%,
+    transparent 72%
+  );
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+.spotlight-card:hover::before,
+.spotlight-card:focus-within::before {
+  opacity: 1;
+}
+
+.spotlight-card :deep(.el-card__header),
+.spotlight-card :deep(.el-card__body) {
+  position: relative;
+  z-index: 1;
+}
+
+.spotlight-card--green {
+  --spotlight-color: rgb(22 128 60 / 16%);
+}
+
+.spotlight-card--violet {
+  --spotlight-color: rgb(124 58 237 / 16%);
+}
+
+.spotlight-card--amber {
+  --spotlight-color: rgb(180 95 6 / 16%);
+}
+
+.spotlight-card--soft {
+  --spotlight-color: rgb(9 127 232 / 11%);
+}
+
 .analysis-card {
   min-width: 0;
   border: 1px solid rgb(0 0 0 / 10%);
@@ -330,6 +419,12 @@ h2 {
 
   .page-actions {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-card::before {
+    transition: none;
   }
 }
 </style>

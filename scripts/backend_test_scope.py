@@ -47,7 +47,10 @@ class BackendTestScope:
 
 
 def _normalize(path: str) -> str:
-    return path.strip().replace("\\", "/").lstrip("./")
+    normalized = path.strip().replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
 
 
 def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:

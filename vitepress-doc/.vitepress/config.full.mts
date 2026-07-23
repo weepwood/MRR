@@ -39,6 +39,7 @@ export default defineConfig({
       {
         text: '工程与配置',
         items: [
+          { text: '最新代码审查', link: '/internal/code-review' },
           { text: '前端工程', link: '/internal/frontend' },
           { text: '后端工程', link: '/internal/backend' },
           { text: '数据库', link: '/internal/database' },
@@ -61,8 +62,10 @@ export default defineConfig({
       {
         text: '部署与运维',
         items: [
-          { text: '部署', link: '/internal/deployment' },
+          { text: '部署总览', link: '/internal/deployment' },
+          { text: '单体 JAR 部署', link: '/internal/standalone-jar' },
           { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
+          { text: '运行错误中心', link: '/internal/runtime-errors' },
           { text: '运维与监控', link: '/internal/operations' },
           { text: '生产运行手册', link: '/internal/runbook' },
           { text: '安全', link: '/internal/security' },
@@ -84,6 +87,7 @@ export default defineConfig({
             { text: '内部文档首页', link: '/internal/' },
             { text: '系统架构', link: '/internal/architecture' },
             { text: '配置参考', link: '/internal/configuration-reference' },
+            { text: '最新代码审查', link: '/internal/code-review' },
           ],
         },
         {
@@ -116,8 +120,10 @@ export default defineConfig({
           text: '交付与运行',
           collapsed: false,
           items: [
-            { text: '部署', link: '/internal/deployment' },
+            { text: '部署总览', link: '/internal/deployment' },
+            { text: '单体 JAR 部署', link: '/internal/standalone-jar' },
             { text: 'Windows Server 部署', link: '/internal/windows-deployment' },
+            { text: '运行错误中心', link: '/internal/runtime-errors' },
             { text: '运维与监控', link: '/internal/operations' },
             { text: '生产运行手册', link: '/internal/runbook' },
             { text: '安全', link: '/internal/security' },
@@ -174,6 +180,7 @@ export default defineConfig({
           items: [
             { text: '系统管理', link: '/user-guide/admin' },
             { text: '日志、审计与监控', link: '/user-guide/logs' },
+            { text: '运行错误中心', link: '/user-guide/logs#运行错误中心' },
             { text: '更新说明', link: '/user-guide/release-notes' },
             { text: 'Git 更新记录', link: '/user-guide/changelog' },
           ],

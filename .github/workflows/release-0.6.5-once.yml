@@ -149,6 +149,7 @@ jobs:
           python - <<'PY'
           import hashlib
           import json
+          import os
           import re
           from pathlib import Path
 
@@ -171,7 +172,7 @@ jobs:
 
           manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
           assert manifest['productVersion'] == '0.6.5'
-          assert manifest['gitCommit'] == '${{ env.SOURCE_SHA }}'
+          assert manifest['gitCommit'] == os.environ['SOURCE_SHA']
           assert manifest['database']['minimumCompatibleMigration'] == '20260715113552'
           assert manifest['database']['maximumCompatibleMigration'] == '20260723090000'
           assert manifest['configuration']['schemaVersion'] == 1

@@ -405,12 +405,15 @@ public class DeploymentReadinessService {
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
                     .build();
             int status = httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
-            boolean reachable = (status >= 200 && status < 400) || status == 401 || status == 403;
-            return new HttpProbe(reachable, status);
+            return new HttpProbe(isServerReachableStatus(status), status);
         } catch (Exception exception) {
             logger.debug("部署就绪检查无法访问图片源 {}: {}", rawUrl, exception.getMessage());
             return new HttpProbe(false, 0);
         }
+    }
+
+    static boolean isServerReachableStatus(int status) {
+        return status >= 100 && status < 500;
     }
 
     private Instant parseInstant(String value) {

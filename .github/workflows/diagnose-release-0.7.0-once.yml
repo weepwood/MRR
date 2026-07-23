@@ -1,0 +1,70 @@
+name: 一次性诊断 MRR 0.7.0 正式构建
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-release-0.7.0-once.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Capture official workflow status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow windows-release-package.yml \
+            --branch v0.7.0 \
+            --event workflow_dispatch \
+            --limit 5 \
+            --json databaseId,status,conclusion,headSha,createdAt,updatedAt,url \
+            > .release-status-0.7.0.json
+          cat .release-status-0.7.0.json
+
+          run_id="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          runs = json.loads(Path('.release-status-0.7.0.json').read_text(encoding='utf-8'))
+          print(runs[0]['databaseId'] if runs else '')
+          PY
+          )"
+          if [ -n "$run_id" ]; then
+            gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json jobs > .release-jobs-0.7.0.json
+            if python3 - <<'PY'
+          import json
+          from pathlib import Path
+          runs = json.loads(Path('.release-status-0.7.0.json').read_text(encoding='utf-8'))
+          raise SystemExit(0 if runs and runs[0].get('conclusion') == 'failure' else 1)
+          PY
+            then
+              gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed > .release-failed-0.7.0.log || true
+            fi
+          fi
+
+      - name: Commit diagnostic snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/diagnose-release-0.7.0-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .release-status-0.7.0.json
+          if [ -f .release-jobs-0.7.0.json ]; then git add .release-jobs-0.7.0.json; fi
+          if [ -f .release-failed-0.7.0.log ]; then git add .release-failed-0.7.0.log; fi
+          git commit -m "发布：记录 0.7.0 正式构建诊断"
+          git push origin main

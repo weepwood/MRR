@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/first-attribute-linebreak, vue/html-closing-bracket-newline, vue/html-indent */
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
@@ -359,7 +360,6 @@ function handleArchiveAction(action: string, item: ArchiveItem) {
     openArchive(item)
   }
 }
-
 
 function goBackToStatistics() {
   router.push('/statistics')
@@ -1100,7 +1100,6 @@ h2 {
 .folder-code-block-full .folder-code-value {
   flex: 1;
   min-width: 0;
-  text-align: right;
   font-size: clamp(18px, 3.2vw, 20px);
   line-height: 1.1;
   color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
@@ -1158,7 +1157,6 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .archive-folder-card,
   .folder-layer,
   .folder-card-body,
@@ -1175,7 +1173,7 @@ h2 {
   }
 }
 
-@media (width <=720px) {
+@media (width <= 720px) {
   .page-header {
     flex-direction: column;
   }
@@ -1202,7 +1200,7 @@ h2 {
   }
 }
 
-@media (width <=480px) {
+@media (width <= 480px) {
   .archive-grid {
     grid-template-columns: minmax(0, 1fr);
   }

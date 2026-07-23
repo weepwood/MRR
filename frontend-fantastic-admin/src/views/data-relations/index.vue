@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -272,7 +273,6 @@ function handleIssueAction(action: string, issue: DataQualityIssue) {
     void showRepairPreview(issue)
   }
 }
-
 
 onMounted(loadDashboard)
 </script>
@@ -959,8 +959,8 @@ h2 {
 }
 
 .preview-content pre {
-  overflow: auto;
   padding: 12px;
+  overflow: auto;
   font-size: 12px;
   line-height: 1.6;
   background: var(--el-fill-color-light);
@@ -982,14 +982,14 @@ h2 {
   .page-header,
   .issue-header,
   .search-row {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .page-actions,
   .issue-filters {
-    width: 100%;
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .metric-grid,

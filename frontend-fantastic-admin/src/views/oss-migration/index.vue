@@ -767,7 +767,6 @@ function handleLogAction(action: string, row: MigrationLogRecord) {
   }
 }
 
-
 onMounted(() => {
   void refreshAll()
   startOverviewRefresh()

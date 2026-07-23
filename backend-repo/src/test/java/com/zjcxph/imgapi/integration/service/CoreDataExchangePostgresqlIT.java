@@ -99,13 +99,10 @@ class CoreDataExchangePostgresqlIT {
     }
 
     @AfterAll
-    void shutdownTestResources() throws Exception {
+    void shutdownDataSource() throws Exception {
         Object dataSource = jdbcTemplate.getDataSource();
         if (dataSource instanceof AutoCloseable closeable) {
             closeable.close();
-        }
-        if (POSTGRES.isRunning()) {
-            POSTGRES.stop();
         }
     }
 

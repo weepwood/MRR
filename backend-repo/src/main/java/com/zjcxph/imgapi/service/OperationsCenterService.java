@@ -114,11 +114,11 @@ public class OperationsCenterService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("reportVersion", 1);
         result.put("generatedAt", Instant.now().toString());
-        result.put("overview", overview());
+        result.put("overview", redactOverviewForReport(overview()));
         result.put("diagnostics", runFullDiagnostics());
-        result.put("integrity", integrityDiagnosticsService.getSnapshot());
+        result.put("integrity", redactIntegrityForReport(integrityDiagnosticsService.getSnapshot()));
         result.put("permissionSummary", Map.copyOf(permissionSummary));
-        result.put("recentOperations", recentOperations(50));
+        result.put("recentOperations", redactedRecentOperations(50));
         result.put("environment", environmentInfo());
         result.put("privacy", Map.of(
                 "patientDataIncluded", false,
@@ -143,6 +143,63 @@ public class OperationsCenterService {
         } catch (Exception ignored) {
             return List.of();
         }
+    }
+
+    private List<Map<String, Object>> redactedRecentOperations(int limit) {
+        return recentOperations(limit).stream()
+                .map(OperationsCenterService::redactOperationForReport)
+                .toList();
+    }
+
+    static Map<String, Object> redactOverviewForReport(Map<String, Object> source) {
+        Map<String, Object> result = new LinkedHashMap<>(source);
+        Object latestOperation = source.get("latestOperation");
+        if (latestOperation instanceof Map<?, ?> latestMap && !latestMap.isEmpty()) {
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            latestMap.forEach((key, value) -> normalized.put(String.valueOf(key), value));
+            result.put("latestOperation", redactOperationForReport(normalized));
+        }
+        return Map.copyOf(result);
+    }
+
+    static Map<String, Object> redactIntegrityForReport(Map<String, Object> source) {
+        Map<String, Object> result = new LinkedHashMap<>(source);
+        Object lastError = source.get("lastError");
+        if (lastError != null && !String.valueOf(lastError).isBlank()) {
+            result.put("lastError", "[REDACTED]");
+        }
+        return Map.copyOf(result);
+    }
+
+    static Map<String, Object> redactOperationForReport(Map<String, Object> source) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (String key : List.of("id", "request_id", "method", "response_status", "execute_time", "access_time")) {
+            if (source.containsKey(key) && source.get(key) != null) {
+                result.put(key, source.get(key));
+            }
+        }
+        result.put("request_uri", stripQueryAndFragment(String.valueOf(source.getOrDefault("request_uri", ""))));
+        result.put("username", redactIfPresent(source.get("username")));
+        result.put("client_ip", redactIfPresent(source.get("client_ip")));
+        result.put("error_message", redactIfPresent(source.get("error_message")));
+        return Map.copyOf(result);
+    }
+
+    private static String stripQueryAndFragment(String value) {
+        int query = value.indexOf('?');
+        int fragment = value.indexOf('#');
+        int end = value.length();
+        if (query >= 0) {
+            end = Math.min(end, query);
+        }
+        if (fragment >= 0) {
+            end = Math.min(end, fragment);
+        }
+        return value.substring(0, end);
+    }
+
+    private static String redactIfPresent(Object value) {
+        return value == null || String.valueOf(value).isBlank() ? "" : "[REDACTED]";
     }
 
     private Map<String, Object> effectiveReadiness(Map<String, Object> base) {

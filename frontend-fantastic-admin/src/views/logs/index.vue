@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Refresh, Search } from '@element-plus/icons-vue'
@@ -334,7 +335,6 @@ h2 {
 .detail-value,
 .detail-pre {
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .detail-pre {

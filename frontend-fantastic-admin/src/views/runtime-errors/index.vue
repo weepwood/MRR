@@ -175,9 +175,9 @@ onMounted(loadData)
         <small>ERROR {{ overview.errorGroups }} 组</small>
       </el-card>
       <el-card shadow="never" class="overview-card">
-        <span>近 24 小时发生次数</span>
+        <span>近 24 小时活跃错误组</span>
         <strong>{{ overview.recentOccurrences }}</strong>
-        <small>重复事件合并计数</small>
+        <small>按最后发生时间统计</small>
       </el-card>
       <el-card shadow="never" class="overview-card">
         <span>累计错误组</span>

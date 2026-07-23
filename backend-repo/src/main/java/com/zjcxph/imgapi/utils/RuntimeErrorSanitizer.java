@@ -14,14 +14,18 @@ public final class RuntimeErrorSanitizer {
 
     private static final int MAX_SUMMARY_LENGTH = 2_000;
     private static final int MAX_STACK_LENGTH = 16_000;
-    private static final Pattern SENSITIVE_ASSIGNMENT = Pattern.compile(
-            "(?i)(password|passwd|token|authorization|secret|signature|ticket|access[-_]?key|private[-_]?key)"
-                    + "(\\s*[:=]\\s*)([^,;\\s\\]}]+|\"[^\"]*\")"
-    );
-    private static final Pattern JWT = Pattern.compile(
+    private static final Pattern BEARER_OR_JWT = Pattern.compile(
             "(?i)\\bBearer\\s+[A-Za-z0-9._~+/-]+=*|\\beyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
     );
+    private static final Pattern SENSITIVE_ASSIGNMENT = Pattern.compile(
+            "(?i)([\"']?(?:password|passwd|token|authorization|secret|signature|ticket|access[-_]?key|private[-_]?key)[\"']?"
+                    + "\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^,;\\s\\]}]+)"
+    );
     private static final Pattern LONG_ID_NUMBER = Pattern.compile("(?<!\\d)\\d{15,18}[0-9Xx](?!\\d)");
+    private static final Pattern ERROR_ID = Pattern.compile("(?i)ERR-\\d{8}-[A-F0-9]{8}");
+    private static final Pattern UUID_VALUE = Pattern.compile(
+            "(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b"
+    );
     private static final Pattern VARIABLE_NUMBER = Pattern.compile("\\b\\d{2,}\\b");
     private static final Pattern VARIABLE_HEX = Pattern.compile("\\b[0-9a-fA-F]{16,}\\b");
     private static final DateTimeFormatter ERROR_DATE = DateTimeFormatter.BASIC_ISO_DATE;
@@ -38,8 +42,10 @@ public final class RuntimeErrorSanitizer {
     }
 
     public static String fingerprint(String level, String loggerName, String exceptionType, String message) {
-        String normalizedMessage = VARIABLE_HEX.matcher(VARIABLE_NUMBER.matcher(nullToEmpty(message)).replaceAll("#"))
-                .replaceAll("#");
+        String normalizedMessage = ERROR_ID.matcher(nullToEmpty(message)).replaceAll("ERR-*");
+        normalizedMessage = UUID_VALUE.matcher(normalizedMessage).replaceAll("UUID");
+        normalizedMessage = VARIABLE_NUMBER.matcher(normalizedMessage).replaceAll("#");
+        normalizedMessage = VARIABLE_HEX.matcher(normalizedMessage).replaceAll("#");
         String source = String.join("|",
                 nullToEmpty(level).toUpperCase(Locale.ROOT),
                 nullToEmpty(loggerName),
@@ -63,8 +69,8 @@ public final class RuntimeErrorSanitizer {
         if (value == null || value.isBlank()) {
             return "";
         }
-        String sanitized = SENSITIVE_ASSIGNMENT.matcher(value).replaceAll("$1$2[REDACTED]");
-        sanitized = JWT.matcher(sanitized).replaceAll("[REDACTED_TOKEN]");
+        String sanitized = BEARER_OR_JWT.matcher(value).replaceAll("[REDACTED_TOKEN]");
+        sanitized = SENSITIVE_ASSIGNMENT.matcher(sanitized).replaceAll("$1[REDACTED]");
         sanitized = LONG_ID_NUMBER.matcher(sanitized).replaceAll("[REDACTED_ID]");
         return sanitized;
     }

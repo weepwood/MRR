@@ -42,6 +42,7 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/image-source")
+    @RequirePermissions({"system:read", "record:read"})
     @Operation(summary = "诊断单张图片的来源解析与回退过程")
     public Result<Map<String, Object>> diagnoseImageSource(
             @RequestParam(required = false) String bah,
@@ -58,6 +59,7 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/exports")
+    @RequirePermissions({"system:read", "record:read"})
     @Operation(summary = "获取导出文件中心任务")
     public Result<List<Map<String, Object>>> exports(
             @RequestParam(defaultValue = "100") int limit
@@ -66,6 +68,7 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/permission-matrix")
+    @RequirePermissions({"system:read", "role:read"})
     @Operation(summary = "获取角色、接口与操作权限矩阵")
     public Result<Map<String, Object>> permissionMatrix(
             @RequestParam(defaultValue = "true") boolean comparePrevious
@@ -74,7 +77,7 @@ public class OperationsDiagnosticsController {
     }
 
     @PostMapping("/permission-matrix/snapshots")
-    @RequirePermissions({"system:manage"})
+    @RequirePermissions({"system:manage", "role:read"})
     @Operation(summary = "保存当前权限矩阵为版本快照")
     public Result<Map<String, Object>> savePermissionSnapshot(
             @RequestBody(required = false) Map<String, String> body

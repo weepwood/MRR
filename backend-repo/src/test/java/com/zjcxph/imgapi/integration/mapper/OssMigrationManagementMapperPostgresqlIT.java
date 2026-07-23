@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.integration.mapper;
 
 import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.mapper.OssMigrationManagementMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,11 +12,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
@@ -31,27 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("OSS 迁移管理 Mapper PostgreSQL 16 集成测试")
-class OssMigrationManagementMapperPostgresqlIT {
-
-    @Container
-    private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("imgapi")
-                    .withUsername("imgapi")
-                    .withPassword("imgapi");
-
-    @DynamicPropertySource
-    static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "?currentSchema=app");
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.datasource.hikari.connection-init-sql", () -> "SET search_path TO app, public");
-        registry.add("spring.flyway.enabled", () -> true);
-        registry.add("spring.flyway.schemas", () -> "app");
-        registry.add("spring.flyway.default-schema", () -> "app");
-        registry.add("spring.sql.init.mode", () -> "never");
-    }
+class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

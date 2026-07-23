@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.integration.service;
 import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientMultiRecordGroup;
 import com.zjcxph.imgapi.entity.Patient;
+import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.service.PatientAnalyticsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,11 +15,7 @@ import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
@@ -35,27 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("患者统计 PostgreSQL 16 + Flyway 集成测试")
-class PatientAnalyticsServicePostgresqlIT {
-
-    @Container
-    private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("imgapi")
-                    .withUsername("imgapi")
-                    .withPassword("imgapi");
-
-    @DynamicPropertySource
-    static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "?currentSchema=app");
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.datasource.hikari.connection-init-sql", () -> "SET search_path TO app, public");
-        registry.add("spring.flyway.enabled", () -> true);
-        registry.add("spring.flyway.schemas", () -> "app");
-        registry.add("spring.flyway.default-schema", () -> "app");
-        registry.add("spring.sql.init.mode", () -> "never");
-    }
+class PatientAnalyticsServicePostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

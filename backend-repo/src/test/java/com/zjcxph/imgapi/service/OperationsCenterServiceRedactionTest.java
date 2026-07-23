@@ -42,15 +42,15 @@ class OperationsCenterServiceRedactionTest {
         operation.put("error_message", "database password leaked");
 
         Map<String, Object> overview = OperationsCenterService.redactOverviewForReport(
-      Map.of("mode", "READ_WRITE", "latestOperation", operation)
+                Map.of("mode", "READ_WRITE", "latestOperation", operation)
         );
         Map<String, Object> integrity = OperationsCenterService.redactIntegrityForReport(
-      Map.of("status", "ERROR", "lastError", "jdbc:postgresql://internal?password=secret")
+                Map.of("status", "ERROR", "lastError", "jdbc:postgresql://internal?password=secret")
         );
 
         assertThat(overview.toString())
-      .contains("[REDACTED]")
-      .doesNotContain("administrator", "10.0.0.8", "token=secret", "password leaked");
+                .contains("[REDACTED]")
+                .doesNotContain("administrator", "10.0.0.8", "token=secret", "password leaked");
         assertThat(integrity.get("lastError")).isEqualTo("[REDACTED]");
         assertThat(integrity.toString()).doesNotContain("postgresql", "password=secret");
     }

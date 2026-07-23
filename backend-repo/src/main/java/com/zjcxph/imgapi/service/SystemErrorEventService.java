@@ -66,7 +66,7 @@ public class SystemErrorEventService {
 
         SystemErrorEvent event = new SystemErrorEvent();
         event.setErrorId(resolveErrorId(loggingEvent));
-        event.setLevel(loggingEvent.getLevel().levelStr);
+        event.setLevel(loggingEvent.getLevel().toString());
         event.setModule(resolveModule(loggerName));
         event.setLoggerName(loggerName == null ? "unknown" : loggerName);
         event.setExceptionType(exceptionType);

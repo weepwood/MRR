@@ -27,12 +27,20 @@ export interface IntegrityTableCoverage {
 }
 
 export interface IntegritySummary {
+  status?: 'PENDING' | 'READY' | 'ERROR'
   generatedAt: string
+  lastAttemptAt?: string
+  lastError?: string
+  refreshing?: boolean
   archiveCoverage: number
   ossCoverage: number
   missingSjh: number
   brokenLinks: number
   duplicateArchiveGroups: number
+  duplicateArchiveDetails?: {
+    legacyBahGroups: number
+    modernSjhGroups: number
+  }
   totalActiveScans: number
   tables: IntegrityTableCoverage[]
 }
@@ -166,8 +174,8 @@ export function savePermissionMatrixSnapshot(version?: string) {
 }
 
 export function getDeploymentReadiness(refresh = false) {
-  return unwrap(
-    getRequest<ReadinessSnapshot>('/api/v1/operations/readiness', { params: { refresh } }),
-    '部署就绪检查',
-  )
+  const request = refresh
+    ? postRequest<ReadinessSnapshot>('/api/v1/operations/readiness/refresh')
+    : getRequest<ReadinessSnapshot>('/api/v1/operations/readiness')
+  return unwrap(request, '部署就绪检查')
 }

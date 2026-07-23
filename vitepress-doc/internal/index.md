@@ -40,6 +40,7 @@
 | [部署总览](./deployment.md) | Windows 离线包、单体 JAR、内嵌前端、端口和升级验证 |
 | [Windows Server 部署](./windows-deployment.md) | Nginx、WinSW、脚本、服务管理和外置前端回退 |
 | [单体 JAR 部署](./standalone-jar.md) | Release JAR 下载、SHA-256、8002 端口和直接运行 |
+| [运维诊断中心](../user-guide/operations-center.md) | 部署体检、图片诊断、完整性、任务、权限矩阵和维护模式 |
 | [运行错误中心](./runtime-errors.md) | WARN/ERROR 采集、权限、指纹、错误编号、脱敏和降级边界 |
 | [运维与监控](./operations.md) | Actuator、Prometheus、状态历史和数据质量 |
 | [生产运行手册](./runbook.md) | 日常检查、发布、故障处置和回滚 |
@@ -66,6 +67,7 @@ MRR 管理：
 - ZIP/PDF 异步导出任务和临时文件；
 - OSS 迁移任务与只读文件浏览；
 - 用户、角色、注册审核、日志、访问审计和运行状态；
+- 部署就绪、图片来源、完整性、权限矩阵和维护模式；
 - 后端运行错误聚合、错误编号和处理状态；
 - 外部系统一次性影像调阅。
 
@@ -105,7 +107,7 @@ MRR 管理：
 
 - Windows 离线包默认由 Nginx 将页面和 API 转发到内嵌前端 JAR `18045`；
 - 外置前端目录只作为受管理回退；
-- Release 单体 JAR默认业务端口为 `8002`；
+- Release 单体 JAR 默认业务端口为 `8002`；
 - Actuator 默认只监听 `127.0.0.1:18046`；
 - 两种业务端口都可通过 `SERVER_PORT` 覆盖。
 
@@ -114,6 +116,7 @@ MRR 管理：
 - 管理端 API 使用 JWT 与 RBAC；
 - `record:download` 与 `record:pdf:export` 独立；
 - `record:manage` 包含读取、编辑、ZIP 和 PDF；
+- `system:read` 可进入运维诊断中心；
 - `system:error:read` 查看运行错误，`system:error:manage` 修改处理状态；
 - 用户手册要求登录；
 - 内部文档和实时 API 要求管理员或 `system:read`；
@@ -137,7 +140,8 @@ MRR 管理：
 5. API 字段优先查阅运行中的 Springdoc，不复制容易过期的完整接口清单；
 6. 用户站点和内部站点独立构建，避免内部内容进入用户搜索；
 7. 已执行迁移不可为了让文档一致而修改；
-8. 命令必须说明平台、目录和风险边界。
+8. 命令必须说明平台、目录和风险边界；
+9. 同一主题只保留一个规范入口，旧目录使用指向规范文档的说明，避免重复维护。
 
 完整要求见 [文档维护规范](./documentation.md)。
 

@@ -27,6 +27,8 @@ public class ArchiveExportJob {
     private Boolean cancelRequested;
     private String errorMessage;
     private String idempotencyKey;
+    private Integer downloadCount;
+    private LocalDateTime lastDownloadedAt;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;

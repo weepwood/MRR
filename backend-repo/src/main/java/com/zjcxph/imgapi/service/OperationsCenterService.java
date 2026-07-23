@@ -238,7 +238,7 @@ public class OperationsCenterService {
 
     private Map<String, Object> latestOperation() {
         List<Map<String, Object>> rows = recentOperations(1);
-        return rows.isEmpty() ? Map.of() : Map.copyOf(rows.getFirst());
+        return rows.isEmpty() ? Map.of() : new LinkedHashMap<>(rows.getFirst());
     }
 
     private Map<String, Object> runtimeCheck() {

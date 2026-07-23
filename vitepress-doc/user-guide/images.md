@@ -85,7 +85,7 @@ HIS、EMR 等系统通过一次性 Ticket 打开：
 
 “暂未分类”与“14-其它”不同：前者尚未确认，后者已经确认属于其它资料。
 
-修改图片类型需要 `record:edit` 或上级权限，只有 `record:read` 的账号不能修改。
+当前 v0.6.3 中，图片类型修改接口仍继承 `record:read`。`record:edit` 已在权限体系中定义，但尚未应用到该接口；权限边界以后端当前实现和运行中的 OpenAPI 为准。
 
 ## 图片来源与降级
 
@@ -145,15 +145,15 @@ HIS、EMR 等系统通过一次性 Ticket 打开：
 
 ## 权限
 
-| 操作 | 权限 |
+| 操作 | 当前 v0.6.3 权限 |
 | --- | --- |
 | 查看图片 | `record:read` |
-| 修改图片类型 | `record:edit` |
+| 修改图片类型 | `record:read`（当前接口仍继承读取权限） |
 | 下载 ZIP | `record:download` |
 | 导出 PDF | `record:pdf:export` |
 | 全部记录操作 | `record:manage` |
 
-`record:download` 和 `record:pdf:export` 都包含读取能力，但彼此独立。可以允许用户下载 ZIP 而禁止导出 PDF，反之亦然。
+`record:download` 和 `record:pdf:export` 都包含读取能力，但彼此独立。可以允许用户下载 ZIP 而禁止导出 PDF，反之亦然。`record:edit` 已定义为记录编辑权限，但当前不能假定所有写接口都已经使用该权限。
 
 ## 下载 ZIP
 
@@ -203,7 +203,7 @@ PDF 导出不再依赖浏览器直接读取全部图片，因此通常不受浏�
 
 | 状态 | 含义 |
 | --- | --- |
-| `QUEUED` | 等待执行 |
+| `PENDING` | 已创建并等待执行，界面通常显示为排队 |
 | `PROCESSING` | 正在读取图片并生成文件 |
 | `SUCCESS` | 文件可下载 |
 | `FAILED` | 生成失败，查看错误信息 |

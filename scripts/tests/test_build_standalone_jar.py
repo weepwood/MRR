@@ -66,7 +66,7 @@ class BuildStandaloneJarTest(unittest.TestCase):
             with ZipFile(source, "w") as archive:
                 archive.writestr(APPLICATION_PROPERTIES, "server.port=${SERVER_PORT:18045}\n")
 
-            with self.assertRaisesRegex(ValueError, "frontend"):
+            with self.assertRaisesRegex(ValueError, "static/index.html"):
                 build_standalone_jar(source, output)
 
     def test_rejects_missing_or_duplicated_port_configuration(self):

@@ -31,6 +31,7 @@ export default defineConfig({
       { text: '用户手册', link: '/' },
       { text: '影像档案袋', link: '/images' },
       { text: '系统管理', link: '/admin' },
+      { text: '运维诊断中心', link: '/operations-center' },
       { text: '运行错误中心', link: '/logs#运行错误中心' },
       { text: '常见问题', link: '/faq' },
       { text: '更新说明', link: '/release-notes' },
@@ -72,6 +73,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: '系统管理', link: '/admin' },
+          { text: '运维诊断中心', link: '/operations-center' },
           { text: '日志、审计与监控', link: '/logs' },
           { text: '运行错误中心', link: '/logs#运行错误中心' },
         ],

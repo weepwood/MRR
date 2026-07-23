@@ -65,6 +65,20 @@ describe('mrrTableActions', () => {
     expect(exposed.inlineActions.map(item => item.key)).toEqual(['edit'])
     expect(exposed.overflowActions.map(item => item.key)).toEqual(['disable', 'reset'])
     expect(wrapper.find('[aria-label="更多操作"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="更多操作"] [data-icon="i-ri:more-fill"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('更多操作')
+  })
+
+  it('空间足够时低优先级操作也直接显示', () => {
+    const wrapper = mountActions({ maxInline: 3 })
+    const exposed = wrapper.vm as unknown as {
+      inlineActions: MrrTableAction[]
+      overflowActions: MrrTableAction[]
+    }
+
+    expect(exposed.inlineActions.map(item => item.key)).toEqual(['edit', 'disable', 'reset'])
+    expect(exposed.overflowActions).toEqual([])
+    expect(wrapper.find('[aria-label="更多操作"]').exists()).toBe(false)
   })
 
   it('点击直显操作时发出 select 事件', async () => {

@@ -1,0 +1,24 @@
+name: source-snapshot
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/source-snapshot.yml'
+      - 'frontend-fantastic-admin/src/**'
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload frontend source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-source-snapshot
+          path: frontend-fantastic-admin/src
+          retention-days: 1

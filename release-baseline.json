@@ -7,7 +7,7 @@
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "0.7.0 后续增加结构化运行错误中心、错误编号、WARN/ERROR 聚合与独立错误权限，并新增 system_error_event 表。旧应用不了解新权限与错误状态流转；回滚前必须恢复发布前数据库、配置和完整发布目录备份，不能仅替换旧 JAR。"
+    "reason": "0.7.2 新增结构化运行错误中心、错误编号、WARN/ERROR 聚合、独立错误权限和 system_error_event 表，并正式提供单体 JAR 发布资产。旧应用不了解新的权限与错误状态流转；回滚前必须恢复发布前数据库、配置和完整发布目录备份，不能仅替换旧 JAR。"
   },
   "configuration": {
     "schemaVersion": 1

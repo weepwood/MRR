@@ -1,6 +1,6 @@
 # MRR 内部文档
 
-> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.7.0**；`main` 已包含 `v0.7.0` 之后的未发布变更。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
+> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.7.2**，正式标签为 `v0.7.2`。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
 
 ## 按任务查找文档
 

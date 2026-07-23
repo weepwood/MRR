@@ -8,7 +8,7 @@
 
 MRR 面向医疗机构的病案扫描、归档、检索、调阅、导出、统计、数据治理和运维场景。系统以患者、病案主档、扫描图片、实体档案位置和多来源文件为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、运行诊断与 Windows 原生部署能力。
 
-> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.7.0**。`main` 已包含 `v0.7.0` 标签之后的未发布变更，包括运行错误中心和单体 JAR Release；正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
+> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.7.2**，正式标签为 `v0.7.2`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
 ## 项目定位
 

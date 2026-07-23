@@ -21,11 +21,14 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn("@('restart', 'all')", manager)
         self.assertIn("@('maintenance', 'on'", manager)
         self.assertIn("@('maintenance', 'off')", manager)
+        self.assertIn("@('frontend', 'embedded')", manager)
+        self.assertIn("@('frontend', 'external')", manager)
         self.assertIn("@('deploy', $dialog.FileName)", manager)
         self.assertIn("@('doctor')", manager)
         self.assertIn("@('versions')", manager)
         self.assertIn("@('test')", manager)
         self.assertIn("@('reload')", manager)
+        self.assertIn('前端模式：', manager)
 
     def test_background_invocation_splats_each_argument(self):
         manager = (WINDOWS_DEPLOY / 'mrr-manager.ps1').read_text(encoding='utf-8-sig')
@@ -49,7 +52,7 @@ class WindowsOneClickManagerTest(unittest.TestCase):
 
     def test_windows_powershell_scripts_use_utf8_bom(self):
         scripts = sorted(WINDOWS_DEPLOY.rglob('*.ps1'))
-        self.assertGreaterEqual(len(scripts), 4)
+        self.assertGreaterEqual(len(scripts), 5)
 
         for script in scripts:
             raw = script.read_bytes()
@@ -109,7 +112,7 @@ class WindowsOneClickManagerTest(unittest.TestCase):
             f'stderr:\n{completed.stderr}',
         )
 
-    def test_installer_copies_manager_to_ops(self):
+    def test_installer_copies_manager_and_enables_embedded_frontend(self):
         installer = (WINDOWS_DEPLOY / 'install.ps1').read_text(encoding='utf-8-sig')
 
         self.assertIn("Join-Path $scriptDir 'mrr-manager.ps1'", installer)
@@ -117,10 +120,30 @@ class WindowsOneClickManagerTest(unittest.TestCase):
         self.assertIn("Join-Path $scriptDir 'MRR-Manager.cmd'", installer)
         self.assertIn("Join-Path $Root 'ops\\MRR-Manager.cmd'", installer)
         self.assertIn("Join-Path $Root 'ops\\MRR-管理中心.cmd'", installer)
+        self.assertIn("templates\\frontend-mode-embedded.inc", installer)
+        self.assertIn("config\\nginx\\frontend-mode.inc", installer)
 
-    def test_release_workflow_packages_entire_windows_deployment_directory(self):
+    def test_frontend_mode_controller_validates_bundled_jar_and_keeps_external_fallback(self):
+        controller = (WINDOWS_DEPLOY / 'mrrctl.ps1').read_text(encoding='utf-8-sig')
+        nginx = (WINDOWS_DEPLOY / 'templates/nginx.conf').read_text(encoding='utf-8')
+        embedded = (WINDOWS_DEPLOY / 'templates/frontend-mode-embedded.inc').read_text(encoding='utf-8')
+        external = (WINDOWS_DEPLOY / 'templates/frontend-mode-external.inc').read_text(encoding='utf-8')
+
+        self.assertIn("'frontend'", controller)
+        self.assertIn('Assert-BundledFrontendJar', controller)
+        self.assertIn('BOOT-INF/classes/static/index.html', controller)
+        self.assertIn('Set-FrontendMode $Target', controller)
+        self.assertIn('frontend-mode.inc', nginx)
+        self.assertIn('proxy_pass http://mrr_backend', embedded)
+        self.assertIn('current/frontend', external)
+        self.assertIn('try_files $uri $uri/ /index.html', external)
+
+    def test_release_workflow_embeds_frontend_and_keeps_external_fallback(self):
         workflow = (ROOT / '.github/workflows/windows-release-package.yml').read_text(encoding='utf-8')
 
+        self.assertIn('embed_frontend_in_jar.py embed', workflow)
+        self.assertIn('embed_frontend_in_jar.py verify', workflow)
+        self.assertIn('cp -a frontend-fantastic-admin/dist/. "${PACKAGE_DIR}/frontend/"', workflow)
         self.assertIn('cp -a deploy/windows/. "${PACKAGE_DIR}/deploy/windows/"', workflow)
         self.assertIn('find backend frontend docs deploy runtime', workflow)
 

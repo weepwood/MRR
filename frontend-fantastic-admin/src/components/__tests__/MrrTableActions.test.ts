@@ -54,7 +54,7 @@ function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$
   })
 }
 
-describe('MrrTableActions', () => {
+describe('mrrTableActions', () => {
   beforeEach(() => {
     mockAuth.mockClear()
     mockAuth.mockImplementation((permission: string | string[]) => permission !== 'denied')

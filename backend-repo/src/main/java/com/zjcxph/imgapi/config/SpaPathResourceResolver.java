@@ -13,14 +13,14 @@ import java.util.List;
  */
 final class SpaPathResourceResolver extends PathResourceResolver {
 
-    private static final List<String> RESERVED_PREFIXES = List.of(
-            "api/",
-            "actuator/",
-            "swagger-ui/",
+    private static final List<String> RESERVED_PATHS = List.of(
+            "api",
+            "actuator",
+            "swagger-ui",
             "v3/api-docs",
-            "api-docs/",
-            "docs/",
-            "webjars/",
+            "api-docs",
+            "docs",
+            "webjars",
             "error"
     );
 
@@ -45,8 +45,12 @@ final class SpaPathResourceResolver extends PathResourceResolver {
         if (normalizedPath.contains(".") || normalizedPath.contains("\\")) {
             return false;
         }
-        return RESERVED_PREFIXES.stream().noneMatch(normalizedPath::startsWith);
+        return RESERVED_PATHS.stream().noneMatch(path -> isSameOrChild(normalizedPath, path));
     }
+
+    private static boolean isSameOrChild(String resourcePath, String reservedPath) {
+    return resourcePath.equals(reservedPath) || resourcePath.startsWith(reservedPath + "/");
+}
 
     private static String normalize(String resourcePath) {
         if (resourcePath == null) {

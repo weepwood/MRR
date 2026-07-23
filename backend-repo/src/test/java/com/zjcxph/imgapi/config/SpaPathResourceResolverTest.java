@@ -43,6 +43,14 @@ class SpaPathResourceResolverTest {
         SpaPathResourceResolver resolver = new SpaPathResourceResolver();
         Resource location = new FileSystemResource(tempDir + File.separator);
 
+        assertThat(resolver.getResource("api", location)).isNull();
+        assertThat(resolver.getResource("actuator", location)).isNull();
+        assertThat(resolver.getResource("swagger-ui", location)).isNull();
+        assertThat(resolver.getResource("v3/api-docs", location)).isNull();
+        assertThat(resolver.getResource("api-docs", location)).isNull();
+        assertThat(resolver.getResource("docs", location)).isNull();
+        assertThat(resolver.getResource("webjars", location)).isNull();
+        assertThat(resolver.getResource("error", location)).isNull();
         assertThat(resolver.getResource("api/v1/missing", location)).isNull();
         assertThat(resolver.getResource("actuator/missing", location)).isNull();
         assertThat(resolver.getResource("swagger-ui/missing", location)).isNull();

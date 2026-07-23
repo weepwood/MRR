@@ -8,7 +8,7 @@
 
 MRR 是面向医疗机构病案扫描、归档、检索、调阅、导出、统计和审计场景的管理系统。系统以病案主档、患者、扫描图片和实体档案位置为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、数据治理与 Windows 单机运维能力。
 
-> 当前主分支产品版本为 **0.6.3**。版本号以根目录 [`VERSION`](VERSION) 为唯一事实来源；数据库兼容、配置结构与回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
+> 当前主分支产品版本为 **0.6.5**。版本号以根目录 [`VERSION`](VERSION) 为唯一事实来源；数据库兼容、配置结构与回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
 ## 项目定位
 
@@ -76,7 +76,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 
 | 权限 | 当前主分支能力 |
 | --- | --- |
-| `record:read` | 查看病案和图片；v0.6.3 的图片类型修改接口当前也继承此权限 |
+| `record:read` | 查看病案和图片；v0.6.5 的图片类型修改接口当前也继承此权限 |
 | `record:edit` | 已定义的记录编辑权限，并包含读取；当前主分支尚未将全部写接口切换到该权限 |
 | `record:download` | 生成和下载 ZIP，并包含读取 |
 | `record:pdf:export` | 生成和下载 PDF，并包含读取 |
@@ -218,42 +218,4 @@ python scripts/release_baseline.py validate
 cd backend-repo
 mvn test
 mvn package
-
-cd ../frontend-fantastic-admin
-pnpm lint:tsc
-pnpm test:run
-pnpm build
-
-cd ../vitepress-doc
-npm run docs:build
 ```
-
-涉及 PostgreSQL、Nginx、OSS、文件系统或大数据导入的修改，还应在隔离环境完成集成验证；仅有单元测试通过不能替代真实部署验证。
-
-## 文档入口
-
-- [用户手册](vitepress-doc/user-guide/index.md)
-- [系统管理](vitepress-doc/user-guide/admin.md)
-- [影像档案袋](vitepress-doc/user-guide/images.md)
-- [OSS 迁移管理](vitepress-doc/user-guide/oss-migration.md)
-- [内部文档首页](vitepress-doc/internal/index.md)
-- [系统架构](vitepress-doc/internal/architecture.md)
-- [配置参考](vitepress-doc/internal/configuration-reference.md)
-- [Windows Server 部署](vitepress-doc/internal/windows-deployment.md)
-- [外部系统影像接入](vitepress-doc/internal/external-archive-integration.md)
-- [发布流程与版本基线](vitepress-doc/internal/release.md)
-- [更新日志](CHANGELOG.md)
-
-## 文档与代码一致性
-
-文档只描述已进入 `main` 的能力。尚未合并的 Issue、PR 或实验分支不视为当前功能。发生冲突时，事实来源优先级为：
-
-1. 当前 `main` 代码与 Flyway 迁移；
-2. `application.properties`、`VERSION`、`release-baseline.json`；
-3. 自动化测试和运行中的 OpenAPI；
-4. 内部文档；
-5. 用户手册和历史更新日志。
-
-## 贡献与许可
-
-提交变更前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。项目基于 [MIT License](LICENSE) 发布。

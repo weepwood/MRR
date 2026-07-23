@@ -83,6 +83,10 @@ C:\MRR\ops\mrrctl.ps1 rollback previous
 
 如果当前仍处于 `embedded`，而目标旧 JAR 没有内嵌前端，回滚脚本会拒绝切换并给出上述提示，避免回滚后页面直接变成 404。数据库兼容性和 `applicationRollback.allowed` 规则仍然照常执行。
 
+## 与运维诊断中心的关系
+
+前端部署模式只决定主页面由 JAR 还是外置目录提供，不改变运维诊断中心的后端接口、维护模式状态或只读降级逻辑。诊断中心仍通过同源 `/api/**` 调用后端；切换前端模式时不会修改其数据库记录和运行状态。
+
 ## 缓存策略
 
 - `index.html` 和 Vue 浏览器路由：`Cache-Control: no-cache`；

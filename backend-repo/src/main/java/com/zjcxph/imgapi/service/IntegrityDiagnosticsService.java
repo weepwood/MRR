@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -29,6 +32,7 @@ public class IntegrityDiagnosticsService {
     private final JdbcTemplate jdbcTemplate;
     private final int queryTimeoutSeconds;
     private final AtomicBoolean refreshing = new AtomicBoolean(false);
+    private final ExecutorService refreshExecutor;
 
     private volatile Map<String, Object> cachedSnapshot = pendingSnapshot();
 
@@ -38,6 +42,11 @@ public class IntegrityDiagnosticsService {
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.queryTimeoutSeconds = Math.max(10, queryTimeoutSeconds);
+        this.refreshExecutor = Executors.newSingleThreadExecutor(task -> {
+            Thread thread = new Thread(task, "mrr-integrity-refresh");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     /**
@@ -54,20 +63,29 @@ public class IntegrityDiagnosticsService {
             initialDelayString = "${app.operations.integrity-initial-delay-ms:10000}"
     )
     public void refreshScheduled() {
-        refreshSnapshot();
+        requestRefresh();
     }
 
     /**
-     * 单实例互斥刷新。即使调度重叠，也只有一个统计任务能够运行。
+     * 向专用单线程执行器提交刷新任务，调度线程立即返回。
      */
-    public boolean refreshSnapshot() {
+    public boolean requestRefresh() {
         if (!refreshing.compareAndSet(false, true)) {
             return false;
         }
+        refreshExecutor.execute(this::refreshSnapshot);
+        return true;
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        refreshExecutor.shutdownNow();
+    }
+
+    private void refreshSnapshot() {
         String attemptAt = Instant.now().toString();
         try {
             cachedSnapshot = buildSnapshot();
-            return true;
         } catch (Exception exception) {
             logger.error("刷新病案完整性快照失败", exception);
             Map<String, Object> failed = new LinkedHashMap<>(cachedSnapshot);
@@ -75,7 +93,6 @@ public class IntegrityDiagnosticsService {
             failed.put("lastAttemptAt", attemptAt);
             failed.put("lastError", safeMessage(exception));
             cachedSnapshot = Map.copyOf(failed);
-            return false;
         } finally {
             refreshing.set(false);
         }

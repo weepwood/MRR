@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260723002000",
+    "maximumCompatibleMigration": "20260723090000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "0.6.3 增加用户注册审核数据结构、Windows 一键管理中心和开发者 API 权限设置，并调整运维脚本编码、入口和质量门禁；尚未完成旧应用连接升级后环境的完整回滚演练，回滚前必须恢复发布前数据库与配置备份并重新验证。"
+    "reason": "0.6.3 增加用户注册审核、Windows 一键管理、开发者 API 权限、运维诊断中心、权限矩阵快照和导出下载统计数据结构；升级后旧应用无法识别新增的诊断状态与导出元数据，回滚前必须恢复发布前数据库和配置备份并重新验证。"
   },
   "configuration": {
     "schemaVersion": 1

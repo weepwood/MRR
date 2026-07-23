@@ -1,0 +1,75 @@
+name: 一次性调度 MRR 0.7.0 正式构建
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/dispatch-release-0.7.0-once.yml
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RELEASE_VERSION: 0.7.0
+      RELEASE_TAG: v0.7.0
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Validate and clean one-time workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "$RELEASE_VERSION"
+          test -f "release-notes/${RELEASE_VERSION}.md"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/dispatch-release-0.7.0-once.yml
+          if [ -f .github/workflows/publish-0.7.0-once.yml ]; then
+            git rm .github/workflows/publish-0.7.0-once.yml
+          fi
+          git commit -m "发布：清理 0.7.0 一次性发布任务"
+          git push origin main
+
+      - name: Create immutable release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          target_sha="$(git rev-parse origin/main)"
+          if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            remote_sha="$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG}^{}" | awk '{print $1}')"
+            if [ -z "$remote_sha" ]; then
+              remote_sha="$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+            fi
+            echo "标签 ${RELEASE_TAG} 已存在：${remote_sha}"
+          else
+            git tag -a "$RELEASE_TAG" "$target_sha" -m "MRR ${RELEASE_VERSION}"
+            git push origin "refs/tags/${RELEASE_TAG}"
+            echo "已创建标签 ${RELEASE_TAG} -> ${target_sha}"
+          fi
+
+      - name: Dispatch official Windows release workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} 已存在，无需重复调度"
+            exit 0
+          fi
+          gh workflow run windows-release-package.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$RELEASE_TAG"
+          echo "已调度 Windows release package，ref=${RELEASE_TAG}"

@@ -107,54 +107,42 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p build
-          {
-            python -m unittest scripts.tests.test_build_standalone_jar
+          python -m unittest scripts.tests.test_build_standalone_jar
 
-            if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-              JAR_NAME="MRR-v${PRODUCT_VERSION}-standalone.jar"
-            else
-              JAR_NAME="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}-standalone.jar"
-            fi
-            JAR_PATH="build/${JAR_NAME}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            JAR_NAME="MRR-v${PRODUCT_VERSION}-standalone.jar"
+          else
+            JAR_NAME="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}-standalone.jar"
+          fi
+          JAR_PATH="build/${JAR_NAME}"
 
-            python scripts/build_standalone_jar.py build \
-              --source "${BACKEND_JAR}" \
-              --output "${JAR_PATH}" \
-              --default-port 8002
-            python scripts/build_standalone_jar.py verify \
-              --jar "${JAR_PATH}" \
-              --default-port 8002
+          python scripts/build_standalone_jar.py build \
+            --source "${BACKEND_JAR}" \
+            --output "${JAR_PATH}" \
+            --default-port 8002
+          python scripts/build_standalone_jar.py verify \
+            --jar "${JAR_PATH}" \
+            --default-port 8002
 
-            unzip -p "${JAR_PATH}" BOOT-INF/classes/application.properties \
-              | grep -F 'server.port=${SERVER_PORT:8002}'
-            unzip -p "${JAR_PATH}" META-INF/build-info.properties \
-              | grep -F "build.version=${PRODUCT_VERSION}"
+          unzip -p "${JAR_PATH}" BOOT-INF/classes/application.properties \
+            | grep -F 'server.port=${SERVER_PORT:8002}'
+          unzip -p "${JAR_PATH}" META-INF/build-info.properties \
+            | grep -F "build.version=${PRODUCT_VERSION}"
 
-            GIT_INFO="$(unzip -p "${JAR_PATH}" BOOT-INF/classes/git.properties || true)"
-            if ! grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}" \
-              && ! grep -F "${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
-              echo "Standalone JAR git.properties does not contain ${SOURCE_SHA}" >&2
-              printf '%s\n' "${GIT_INFO}" >&2
-              exit 1
-            fi
+          GIT_INFO="$(unzip -p "${JAR_PATH}" BOOT-INF/classes/git.properties || true)"
+          if ! grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}" \
+            && ! grep -F "${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
+            echo "Standalone JAR git.properties does not contain ${SOURCE_SHA}" >&2
+            printf '%s\n' "${GIT_INFO}" >&2
+            exit 1
+          fi
 
-            (
-              cd build
-              sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256"
-            )
-            echo "jar=${JAR_PATH}" >> "${GITHUB_OUTPUT}"
-            echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
-          } 2>&1 | tee build/standalone-build.log
-
-      - name: Upload standalone build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: standalone-build-log
-          path: build/standalone-build.log
-          if-no-files-found: ignore
-          retention-days: 7
+          (
+            cd build
+            sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256"
+          )
+          echo "jar=${JAR_PATH}" >> "${GITHUB_OUTPUT}"
+          echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload standalone JAR artifact
         uses: actions/upload-artifact@v4

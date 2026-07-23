@@ -8,6 +8,7 @@ import type {
   OssUploadBatchResult,
 } from '@/api/modules/oss'
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult } from '@/api/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import {
   CircleClose,
   Document,
@@ -33,6 +34,8 @@ import {
   uploadByBah,
   uploadToOss,
 } from '@/api/modules/oss'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -69,6 +72,29 @@ const TERMINAL_STATUSES = new Set([
 ])
 const AUTO_REFRESH_INTERVAL = 15_000
 const JOB_POLL_INTERVAL = 2_000
+
+const jobActions: MrrTableAction[] = [{
+  key: 'detail',
+  label: '查看任务详情',
+  icon: 'i-ri:eye-line',
+  tone: 'primary',
+  placement: 'inline',
+}]
+const logViewAction: MrrTableAction = {
+  key: 'view-image',
+  label: '查看 OSS 图片',
+  icon: 'i-ri:image-line',
+  tone: 'primary',
+  placement: 'inline',
+}
+const {
+  maxInlineActions: jobMaxInlineActions,
+  actionColumnWidth: jobActionColumnWidth,
+} = useTableActionLayout(jobActions.length, 1)
+const {
+  maxInlineActions: logMaxInlineActions,
+  actionColumnWidth: logActionColumnWidth,
+} = useTableActionLayout(1, 1)
 
 const MODE_LABELS: Record<string, string> = {
   pilot: '试迁移',
@@ -725,6 +751,23 @@ function openOssUrl(url?: string) {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+function logActions(row: MigrationLogRecord): MrrTableAction[] {
+  return row.ossUrl ? [logViewAction] : []
+}
+
+function handleJobAction(action: string, row: MigrationJob) {
+  if (action === 'detail') {
+    void showJobDetail(row)
+  }
+}
+
+function handleLogAction(action: string, row: MigrationLogRecord) {
+  if (action === 'view-image' && row.ossUrl) {
+    openOssUrl(row.ossUrl)
+  }
+}
+
+
 onMounted(() => {
   void refreshAll()
   startOverviewRefresh()
@@ -1188,11 +1231,18 @@ onBeforeUnmount(() => {
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column
+          label="操作"
+          :width="jobActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button link type="primary" @click="showJobDetail(row)">
-              详情
-            </el-button>
+            <MrrTableActions
+              :actions="jobActions"
+              :max-inline="jobMaxInlineActions"
+              @select="handleJobAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -1288,17 +1338,18 @@ onBeforeUnmount(() => {
             {{ formatDate(row.migratedAt || row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column
+          label="操作"
+          :width="logActionColumnWidth"
+          fixed="right"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-button
-              v-if="row.ossUrl"
-              link
-              type="primary"
-              @click="openOssUrl(row.ossUrl)"
-            >
-              查看图片
-            </el-button>
-            <span v-else>-</span>
+            <MrrTableActions
+              :actions="logActions(row)"
+              :max-inline="logMaxInlineActions"
+              @select="handleLogAction($event, row)"
+            />
           </template>
         </el-table-column>
       </el-table>

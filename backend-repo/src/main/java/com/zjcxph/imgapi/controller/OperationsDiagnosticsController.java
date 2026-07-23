@@ -84,14 +84,16 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/readiness")
-    @Operation(summary = "获取部署就绪状态，可由运维人员显式刷新")
-    public Result<Map<String, Object>> readiness(
-            @RequestParam(defaultValue = "false") boolean refresh
-    ) {
-        Map<String, Object> snapshot = refresh
-                ? readinessService.refreshSnapshot()
-                : diagnosticsService.readiness();
-        return Result.success(snapshot);
+    @Operation(summary = "读取最近一次部署就绪检查结果")
+    public Result<Map<String, Object>> readiness() {
+        return Result.success(diagnosticsService.readiness());
+    }
+
+    @PostMapping("/readiness/refresh")
+    @RequirePermissions({"system:manage"})
+    @Operation(summary = "由管理员显式刷新部署就绪检查")
+    public Result<Map<String, Object>> refreshReadiness() {
+        return Result.success(readinessService.refreshSnapshot());
     }
 
     @GetMapping("/read-only")

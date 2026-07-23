@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.unit.interceptors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.interceptors.ReadOnlyDegradationInterceptor;
 import com.zjcxph.imgapi.service.DeploymentReadinessService;
+import com.zjcxph.imgapi.service.MaintenanceModeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -19,12 +20,24 @@ import static org.mockito.Mockito.when;
 class ReadOnlyDegradationInterceptorTest {
 
     private DeploymentReadinessService readinessService;
+    private MaintenanceModeService maintenanceModeService;
     private ReadOnlyDegradationInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
         readinessService = mock(DeploymentReadinessService.class);
-        interceptor = new ReadOnlyDegradationInterceptor(readinessService, new ObjectMapper());
+        maintenanceModeService = mock(MaintenanceModeService.class);
+        when(maintenanceModeService.getStatus()).thenReturn(Map.of(
+                "enabled", false,
+                "reason", "",
+                "updatedAt", "",
+                "updatedBy", ""
+        ));
+        interceptor = new ReadOnlyDegradationInterceptor(
+                readinessService,
+                maintenanceModeService,
+                new ObjectMapper()
+        );
     }
 
     @Test
@@ -70,7 +83,19 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
-    void businessWriteIsRejectedInReadOnlyMode() throws Exception {
+    void maintenanceDisableRemainsAvailableDuringMaintenance() throws Exception {
+        when(maintenanceModeService.isEnabled()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST",
+                "/api/v1/operations/maintenance/disable"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(interceptor.preHandle(request, response, new Object()));
+    }
+
+    @Test
+    void businessWriteIsRejectedInAutomaticReadOnlyMode() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(true);
         when(readinessService.getSnapshot()).thenReturn(Map.of(
                 "mode", "READ_ONLY_DEGRADED",
@@ -85,8 +110,29 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
+    void businessWriteIsRejectedInMaintenanceMode() throws Exception {
+        when(readinessService.isReadOnly()).thenReturn(false);
+        when(readinessService.getSnapshot()).thenReturn(Map.of("checkedAt", "2026-07-23T00:00:00Z"));
+        when(maintenanceModeService.isEnabled()).thenReturn(true);
+        when(maintenanceModeService.getStatus()).thenReturn(Map.of(
+                "enabled", true,
+                "reason", "数据库维护",
+                "updatedAt", "2026-07-23T00:00:00Z",
+                "updatedBy", "admin"
+        ));
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/patients/import");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertFalse(interceptor.preHandle(request, response, new Object()));
+        assertEquals(503, response.getStatus());
+        assertTrue(response.getContentAsString().contains("MAINTENANCE_MODE"));
+        assertTrue(response.getContentAsString().contains("数据库维护"));
+    }
+
+    @Test
     void writeRemainsAvailableWhenSystemIsHealthy() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(false);
+        when(maintenanceModeService.isEnabled()).thenReturn(false);
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/api/v1/img/updateImageType/1");
         MockHttpServletResponse response = new MockHttpServletResponse();
 

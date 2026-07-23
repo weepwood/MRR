@@ -108,6 +108,13 @@ export interface PermissionMatrix {
   }
 }
 
+export interface MaintenanceStatus {
+  enabled: boolean
+  reason: string
+  updatedAt: string
+  updatedBy: string
+}
+
 export interface ReadinessCheck {
   code: string
   name: string
@@ -120,9 +127,79 @@ export interface ReadinessCheck {
 export interface ReadinessSnapshot {
   ready: boolean
   readOnly: boolean
-  mode: 'READ_WRITE' | 'READ_ONLY_DEGRADED'
+  automaticReadOnly?: boolean
+  maintenanceReadOnly?: boolean
+  mode: 'READ_WRITE' | 'READ_ONLY_DEGRADED' | 'READ_ONLY_MAINTENANCE'
   checkedAt: string
+  maintenance?: MaintenanceStatus
   checks: ReadinessCheck[]
+}
+
+export interface OperationsRuntime {
+  uptimeMs: number
+  startedAt: string
+  javaVersion: string
+  processors: number
+  heapUsedBytes: number
+  heapCommittedBytes: number
+  heapMaxBytes: number
+  applicationVersion: string
+}
+
+export interface OperationsTaskSummary {
+  counts: Record<string, number>
+  active: number
+  failed: number
+}
+
+export interface OperationsQuickLink {
+  label: string
+  path: string
+}
+
+export interface OperationsOverview {
+  generatedAt: string
+  readiness: ReadinessSnapshot
+  maintenance: MaintenanceStatus
+  runtime: OperationsRuntime
+  taskSummary: OperationsTaskSummary
+  recentServerErrors: number
+  latestOperation: Record<string, unknown>
+  quickLinks: OperationsQuickLink[]
+}
+
+export interface OperationsDiagnosticCheck extends ReadinessCheck {
+  suggestion: string
+  actionLabel: string
+  actionPath: string
+}
+
+export interface OperationsDiagnosticRun {
+  startedAt: string
+  completedAt: string
+  mode: ReadinessSnapshot['mode']
+  readOnly: boolean
+  summary: {
+    total: number
+    passed: number
+    failed: number
+    critical: number
+    warnings: number
+  }
+  checks: OperationsDiagnosticCheck[]
+}
+
+export interface OperationAuditEntry {
+  id: number
+  request_id?: string
+  username?: string
+  client_ip?: string
+  request_uri?: string
+  method?: string
+  response_status?: string
+  execute_time?: number
+  access_time?: string
+  error_message?: string
 }
 
 async function unwrap<T>(request: Promise<ApiResult<T>>, action: string): Promise<T> {
@@ -131,6 +208,55 @@ async function unwrap<T>(request: Promise<ApiResult<T>>, action: string): Promis
     throw new Error(`${action}未返回数据`)
   }
   return response.data
+}
+
+export function getOperationsOverview() {
+  return unwrap(
+    getRequest<OperationsOverview>('/api/v1/operations/overview'),
+    '运维总览查询',
+  )
+}
+
+export function runOperationsDiagnostics() {
+  return unwrap(
+    postRequest<OperationsDiagnosticRun>('/api/v1/operations/diagnostics/run'),
+    '全面体检',
+  )
+}
+
+export function getOperationsDiagnosticReport() {
+  return unwrap(
+    getRequest<Record<string, unknown>>('/api/v1/operations/diagnostic-report'),
+    '诊断报告生成',
+  )
+}
+
+export function getOperationAudit(limit = 50) {
+  return unwrap(
+    getRequest<OperationAuditEntry[]>('/api/v1/operations/operation-audit', { params: { limit } }),
+    '运维操作审计查询',
+  )
+}
+
+export function getMaintenanceStatus() {
+  return unwrap(
+    getRequest<MaintenanceStatus>('/api/v1/operations/maintenance'),
+    '维护模式查询',
+  )
+}
+
+export function enableMaintenanceMode(reason: string) {
+  return unwrap(
+    postRequest<MaintenanceStatus>('/api/v1/operations/maintenance/enable', { reason }),
+    '进入维护模式',
+  )
+}
+
+export function disableMaintenanceMode() {
+  return unwrap(
+    postRequest<MaintenanceStatus>('/api/v1/operations/maintenance/disable'),
+    '退出维护模式',
+  )
 }
 
 export function diagnoseImageSource(params: { bah?: string, sjh?: string, imageId?: number }) {

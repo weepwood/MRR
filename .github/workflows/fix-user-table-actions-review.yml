@@ -1,0 +1,37 @@
+name: fix-user-table-actions-review
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/fix-user-table-actions-review.yml'
+      - 'scripts/fix-user-table-actions-review.py'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply review fixes
+        run: python scripts/fix-user-table-actions-review.py
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No review fixes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend-fantastic-admin/src/views/users/index.vue
+          git commit -m "修复：完善用户操作列响应式与状态提示"
+          git push origin HEAD:${{ github.head_ref }}

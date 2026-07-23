@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import sys
 from pathlib import Path, PurePosixPath
-from zipfile import ZIP_DEFLATED, ZipFile
+from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 STATIC_PREFIX = PurePosixPath("BOOT-INF/classes/static")
+STATIC_PREFIX_TEXT = f"{STATIC_PREFIX}/"
 INDEX_ENTRY = str(STATIC_PREFIX / "index.html")
 
 
@@ -22,22 +26,46 @@ def _frontend_files(dist: Path) -> list[Path]:
     return sorted(path for path in dist.rglob("*") if path.is_file())
 
 
+def _is_static_entry(name: str) -> bool:
+    return name == str(STATIC_PREFIX) or name.startswith(STATIC_PREFIX_TEXT)
+
+
+def _copy_entry(source: ZipFile, target: ZipFile, info: ZipInfo) -> None:
+    if info.is_dir():
+        target.writestr(info, b"")
+        return
+    with source.open(info, "r") as reader:
+        with target.open(info, "w", force_zip64=True) as writer:
+            shutil.copyfileobj(reader, writer, length=1024 * 1024)
+
+
 def embed_frontend(jar: Path, dist: Path) -> int:
     if not jar.is_file():
         raise ValueError(f"Backend JAR does not exist: {jar}")
 
     files = _frontend_files(dist)
-    with ZipFile(jar, "a", compression=ZIP_DEFLATED, compresslevel=9) as archive:
-        existing = set(archive.namelist())
-        embedded = [name for name in existing if name.startswith(f"{STATIC_PREFIX}/")]
-        if embedded:
-            raise ValueError(
-                "Backend JAR already contains bundled frontend resources; "
-                "rebuild the JAR before embedding again"
-            )
-        for source in files:
-            relative = PurePosixPath(source.relative_to(dist).as_posix())
-            archive.write(source, str(STATIC_PREFIX / relative))
+    temporary = jar.with_name(f".{jar.name}.frontend-{uuid4().hex}.tmp")
+    try:
+        with ZipFile(jar, "r") as source:
+            with ZipFile(temporary, "w", allowZip64=True) as target:
+                target.comment = source.comment
+                for info in source.infolist():
+                    if _is_static_entry(info.filename):
+                        continue
+                    _copy_entry(source, target, info)
+
+                for frontend_file in files:
+                    relative = PurePosixPath(frontend_file.relative_to(dist).as_posix())
+                    target.write(
+                        frontend_file,
+                        str(STATIC_PREFIX / relative),
+                        compress_type=ZIP_DEFLATED,
+                        compresslevel=9,
+                    )
+
+        os.replace(temporary, jar)
+    finally:
+        temporary.unlink(missing_ok=True)
 
     verify_frontend(jar)
     return len(files)
@@ -48,15 +76,26 @@ def verify_frontend(jar: Path) -> tuple[int, int]:
         raise ValueError(f"Backend JAR does not exist: {jar}")
     with ZipFile(jar) as archive:
         names = archive.namelist()
-        if INDEX_ENTRY not in names:
-            raise ValueError(f"Backend JAR is missing {INDEX_ENTRY}")
-        static_entries = [name for name in names if name.startswith(f"{STATIC_PREFIX}/")]
+        if names.count(INDEX_ENTRY) != 1:
+            raise ValueError(
+                f"Backend JAR must contain exactly one {INDEX_ENTRY}; "
+                f"found {names.count(INDEX_ENTRY)}"
+            )
+        static_entries = [name for name in names if name.startswith(STATIC_PREFIX_TEXT)]
         asset_entries = [
             name for name in static_entries
             if name.startswith(f"{STATIC_PREFIX}/assets/") and not name.endswith("/")
         ]
         if not asset_entries:
             raise ValueError("Backend JAR contains index.html but no generated frontend assets")
+        duplicate_entries = {
+            name for name in static_entries if static_entries.count(name) > 1
+        }
+        if duplicate_entries:
+            raise ValueError(
+                "Backend JAR contains duplicate frontend entries: "
+                + ", ".join(sorted(duplicate_entries)[:10])
+            )
         index = archive.read(INDEX_ENTRY)
         if b"<html" not in index.lower():
             raise ValueError("Bundled index.html does not look like an HTML document")

@@ -94,8 +94,8 @@ class BuildStandaloneJarTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "different"):
                 build_standalone_jar(source, source)
 
-    def test_release_workflow_contains_standalone_jar_steps(self):
-        workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(
+    def test_release_workflow_builds_and_uploads_standalone_jar(self):
+        workflow = (ROOT / ".github/workflows/standalone-jar-release.yml").read_text(
             encoding="utf-8"
         )
 
@@ -103,7 +103,8 @@ class BuildStandaloneJarTest(unittest.TestCase):
         self.assertIn("--default-port 8002", workflow)
         self.assertIn("MRR-v${PRODUCT_VERSION}-standalone.jar", workflow)
         self.assertIn("steps.standalone.outputs.jar", workflow)
-        self.assertIn("steps.package.outputs.archive", workflow)
+        self.assertIn("gh release upload", workflow)
+        self.assertIn("Waiting for GitHub Release", workflow)
 
 
 if __name__ == "__main__":

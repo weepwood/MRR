@@ -5,11 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.entity.AuthRole;
-import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import com.zjcxph.imgapi.utils.AuthContext;
-import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PermissionResolver;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,11 +18,6 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 运维诊断中心的只读聚合服务。
+ * 运维诊断中心的导出、权限与就绪状态聚合服务。
  */
 @Service
 public class OperationsDiagnosticsService {
@@ -44,162 +37,23 @@ public class OperationsDiagnosticsService {
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
 
     private final JdbcTemplate jdbcTemplate;
-    private final ScanService scanService;
-    private final ImageUrlService imageUrlService;
     private final AuthRoleMapper authRoleMapper;
     private final RequestMappingHandlerMapping handlerMapping;
     private final ObjectMapper objectMapper;
     private final DeploymentReadinessService readinessService;
-    private final HttpClient httpClient;
 
     public OperationsDiagnosticsService(
             JdbcTemplate jdbcTemplate,
-            ScanService scanService,
-            ImageUrlService imageUrlService,
             AuthRoleMapper authRoleMapper,
             RequestMappingHandlerMapping handlerMapping,
             ObjectMapper objectMapper,
             DeploymentReadinessService readinessService
     ) {
         this.jdbcTemplate = jdbcTemplate;
-        this.scanService = scanService;
-        this.imageUrlService = imageUrlService;
         this.authRoleMapper = authRoleMapper;
         this.handlerMapping = handlerMapping;
         this.objectMapper = objectMapper;
         this.readinessService = readinessService;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3))
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
-    }
-
-    public Map<String, Object> diagnoseImageSource(String bah, String sjh, Integer imageId) {
-        List<Map<String, Object>> steps = new ArrayList<>();
-        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
-        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
-
-        steps.add(step("INPUT_NORMALIZE", true, "输入编号已规范化", Map.of(
-                "bah", normalizedBah,
-                "sjh", normalizedSjh,
-                "imageId", imageId == null ? "" : imageId
-        )));
-
-        if (imageId == null && normalizedBah.isBlank() && normalizedSjh.isBlank()) {
-            steps.add(step("INPUT_VALIDATE", false, "病案号、上架号、图片 ID 至少填写一项", Map.of()));
-            return diagnosisResult(null, steps, null, null, null);
-        }
-        if (imageId == null && MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)
-                && normalizedSjh.isBlank()) {
-            steps.add(step("ARCHIVE_RULE", false, "病案号达到 10000000 后必须同时提供上架号", Map.of()));
-            return diagnosisResult(null, steps, null, null, null);
-        }
-
-        Scan scan;
-        if (imageId != null) {
-            scan = scanService.findById(imageId);
-            steps.add(step("IMAGE_LOOKUP", scan != null,
-                    scan == null ? "未找到指定图片" : "已按图片 ID 找到扫描记录",
-                    scan == null ? Map.of("imageId", imageId) : scanDetails(scan)));
-        } else {
-            List<Scan> scans = scanService.getImageListByCode(
-                    normalizedBah,
-                    MedicalRecordCodeUtils.toSearchTerm(bah),
-                    normalizedSjh,
-                    MedicalRecordCodeUtils.toSearchTerm(sjh)
-            );
-            scan = scans.isEmpty() ? null : scans.getFirst();
-            steps.add(step("ARCHIVE_LOOKUP", scan != null,
-                    scan == null ? "未找到匹配的有效图片" : "已找到病案图片，默认诊断第一页",
-                    Map.of("matchedImages", scans.size())));
-        }
-
-        if (scan == null) {
-            return diagnosisResult(null, steps, null, null, null);
-        }
-
-        boolean archiveLinked = scan.getArchiveId() != null;
-        steps.add(step("ARCHIVE_LINK", archiveLinked,
-                archiveLinked ? "图片已关联病案主档" : "图片尚未关联 archive_id，将依赖兼容查询",
-                Map.of("archiveId", scan.getArchiveId() == null ? "" : scan.getArchiveId())));
-
-        String localUrl = imageUrlService.buildImageUrl(scan);
-        boolean localReachable = probe(localUrl);
-        steps.add(step("LOCAL_SOURCE", StringUtils.hasText(localUrl),
-                StringUtils.hasText(localUrl) ? "已构造本地/Nginx 图片地址" : "无法构造本地图片地址",
-                Map.of("url", localUrl == null ? "" : localUrl, "reachable", localReachable)));
-
-        String preferredSource = imageUrlService.getEffectiveImageSource();
-        String selectedUrl = imageUrlService.buildPreferredImageUrl(scan);
-        boolean selectedReachable = probe(selectedUrl);
-        boolean hasOss = StringUtils.hasText(scan.getOssUrl());
-        steps.add(step("OSS_SOURCE", hasOss,
-                hasOss ? "扫描记录包含 OSS Key" : "扫描记录没有 OSS Key，将使用本地来源",
-                Map.of(
-                        "ossKey", scan.getOssUrl() == null ? "" : scan.getOssUrl(),
-                        "migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus()
-                )));
-
-        String selectedType = selectedUrl != null && selectedUrl.equals(localUrl) ? "LOCAL" : "OSS";
-        String fallbackReason = null;
-        if ("oss".equalsIgnoreCase(preferredSource) && "LOCAL".equals(selectedType)) {
-            fallbackReason = hasOss ? "OSS_SIGNING_FAILED_OR_EMPTY" : "OSS_KEY_MISSING";
-        }
-        steps.add(step("FINAL_SELECTION", StringUtils.hasText(selectedUrl),
-                StringUtils.hasText(selectedUrl) ? "已确定最终图片来源" : "没有可用的最终图片地址",
-                Map.of(
-                        "preferredSource", preferredSource,
-                        "selectedSource", selectedType,
-                        "selectedUrl", selectedUrl == null ? "" : selectedUrl,
-                        "reachable", selectedReachable,
-                        "fallbackReason", fallbackReason == null ? "" : fallbackReason
-                )));
-
-        return diagnosisResult(scan, steps, selectedType, selectedUrl, fallbackReason);
-    }
-
-    public Map<String, Object> integritySummary() {
-        Map<String, Object> result = new LinkedHashMap<>();
-        List<Map<String, Object>> tables = new ArrayList<>();
-        tables.add(coverage("mr_scan", "uploadflag <> 0"));
-        tables.add(coverage("mr_statistics", "TRUE"));
-        tables.add(coverage("mr_archive_box_record", "TRUE"));
-
-        Map<String, Object> scans = jdbcTemplate.queryForMap("""
-                SELECT
-                    COUNT(*) FILTER (WHERE uploadflag <> 0) AS total,
-                    COUNT(*) FILTER (WHERE uploadflag <> 0 AND archive_id IS NOT NULL) AS archive_linked,
-                    COUNT(*) FILTER (WHERE uploadflag <> 0 AND NULLIF(BTRIM(oss_url), '') IS NOT NULL) AS oss_linked,
-                    COUNT(*) FILTER (WHERE uploadflag <> 0 AND NULLIF(BTRIM(sjh), '') IS NULL) AS missing_sjh
-                FROM app.mr_scan
-                """);
-        long brokenLinks = number(jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM app.mr_scan s
-                LEFT JOIN app.mr_archive a ON a.id = s.archive_id
-                WHERE s.uploadflag <> 0 AND s.archive_id IS NOT NULL AND a.id IS NULL
-                """, Long.class));
-        long duplicateArchiveGroups = number(jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM (
-                    SELECT bah, COALESCE(sjh, ''), COUNT(*)
-                    FROM app.mr_archive
-                    GROUP BY bah, COALESCE(sjh, '')
-                    HAVING COUNT(*) > 1
-                ) duplicate_groups
-                """, Long.class));
-        long totalScans = number(scans.get("total"));
-        long archiveLinked = number(scans.get("archive_linked"));
-        long ossLinked = number(scans.get("oss_linked"));
-
-        result.put("generatedAt", Instant.now().toString());
-        result.put("archiveCoverage", ratio(archiveLinked, totalScans));
-        result.put("ossCoverage", ratio(ossLinked, totalScans));
-        result.put("missingSjh", number(scans.get("missing_sjh")));
-        result.put("brokenLinks", brokenLinks);
-        result.put("duplicateArchiveGroups", duplicateArchiveGroups);
-        result.put("totalActiveScans", totalScans);
-        result.put("tables", tables);
-        return result;
     }
 
     public List<Map<String, Object>> exportCenter(int limit) {
@@ -275,7 +129,8 @@ public class OperationsDiagnosticsService {
             AuthenticatedOnly authenticatedOnly = AnnotatedElementUtils.findMergedAnnotation(
                     handler.getMethod(), AuthenticatedOnly.class);
             if (authenticatedOnly == null) {
-                authenticatedOnly = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), AuthenticatedOnly.class);
+                authenticatedOnly = AnnotatedElementUtils.findMergedAnnotation(
+                        handler.getBeanType(), AuthenticatedOnly.class);
             }
 
             for (String path : patterns) {
@@ -299,7 +154,10 @@ public class OperationsDiagnosticsService {
                     endpoint.put("key", method + " " + path);
                     endpoint.put("method", method);
                     endpoint.put("path", path);
-                    endpoint.put("operation", handler.getBeanType().getSimpleName() + "." + handler.getMethod().getName());
+                    endpoint.put(
+                            "operation",
+                            handler.getBeanType().getSimpleName() + "." + handler.getMethod().getName()
+                    );
                     endpoint.put("policy", policy);
                     endpoint.put("requiredPermissions", required);
                     endpoint.put("roleAccess", roleAccess);
@@ -423,91 +281,5 @@ public class OperationsDiagnosticsService {
         Map<String, Object> result = new LinkedHashMap<>();
         value.forEach((key, item) -> result.put(String.valueOf(key), item));
         return result;
-    }
-
-    private Map<String, Object> coverage(String table, String filter) {
-        Map<String, Object> row = jdbcTemplate.queryForMap(
-                "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE archive_id IS NOT NULL) AS linked "
-                        + "FROM app." + table + " WHERE " + filter
-        );
-        long total = number(row.get("total"));
-        long linked = number(row.get("linked"));
-        return Map.of(
-                "table", table,
-                "total", total,
-                "linked", linked,
-                "unlinked", Math.max(0L, total - linked),
-                "coverage", ratio(linked, total)
-        );
-    }
-
-    private Map<String, Object> diagnosisResult(
-            Scan scan,
-            List<Map<String, Object>> steps,
-            String selectedSource,
-            String selectedUrl,
-            String fallbackReason
-    ) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("diagnosedAt", Instant.now().toString());
-        result.put("found", scan != null);
-        result.put("scan", scan == null ? Map.of() : scanDetails(scan));
-        result.put("selectedSource", selectedSource == null ? "" : selectedSource);
-        result.put("selectedUrl", selectedUrl == null ? "" : selectedUrl);
-        result.put("fallbackReason", fallbackReason == null ? "" : fallbackReason);
-        result.put("steps", steps);
-        return result;
-    }
-
-    private Map<String, Object> scanDetails(Scan scan) {
-        Map<String, Object> details = new LinkedHashMap<>();
-        details.put("id", scan.getId());
-        details.put("archiveId", scan.getArchiveId() == null ? "" : scan.getArchiveId());
-        details.put("bah", scan.getBah() == null ? "" : scan.getBah());
-        details.put("sjh", scan.getSjh() == null ? "" : scan.getSjh());
-        details.put("folder", scan.getFolder() == null ? "" : scan.getFolder());
-        details.put("filename", scan.getFilename() == null ? "" : scan.getFilename());
-        details.put("sourceType", scan.getSourceType() == null ? "" : scan.getSourceType());
-        details.put("sourceNode", scan.getSourceNode() == null ? "" : scan.getSourceNode());
-        details.put("sourceRef", scan.getSourceRef() == null ? "" : scan.getSourceRef());
-        details.put("ossKey", scan.getOssUrl() == null ? "" : scan.getOssUrl());
-        details.put("migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus());
-        return details;
-    }
-
-    private Map<String, Object> step(String code, boolean success, String message, Object details) {
-        Map<String, Object> step = new LinkedHashMap<>();
-        step.put("code", code);
-        step.put("success", success);
-        step.put("message", message);
-        step.put("details", details);
-        return step;
-    }
-
-    private boolean probe(String url) {
-        if (!StringUtils.hasText(url)) {
-            return false;
-        }
-        try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(5))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .build();
-            int status = httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
-            return status >= 200 && status < 500;
-        } catch (Exception exception) {
-            return false;
-        }
-    }
-
-    private double ratio(long value, long total) {
-        if (total <= 0) {
-            return 1.0d;
-        }
-        return Math.round((value * 10000.0d / total)) / 10000.0d;
-    }
-
-    private long number(Object value) {
-        return value instanceof Number number ? number.longValue() : 0L;
     }
 }

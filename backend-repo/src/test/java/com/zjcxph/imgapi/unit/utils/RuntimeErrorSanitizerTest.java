@@ -23,12 +23,29 @@ class RuntimeErrorSanitizerTest {
     }
 
     @Test
-    void shouldGroupMessagesThatOnlyDifferByVariableNumbers() {
+    void shouldRedactQuotedJsonSecrets() {
+        String sanitized = RuntimeErrorSanitizer.sanitizeSummary(
+                "{\"password\":\"plain-secret\",\"access_key\":\"key-value\"}"
+        );
+
+        assertFalse(sanitized.contains("plain-secret"));
+        assertFalse(sanitized.contains("key-value"));
+        assertTrue(sanitized.contains("[REDACTED]"));
+    }
+
+    @Test
+    void shouldGroupMessagesThatOnlyDifferByVariableValues() {
         String first = RuntimeErrorSanitizer.fingerprint(
-                "ERROR", "com.zjcxph.imgapi.storage.Reader", "java.io.IOException", "读取图片 123456 失败"
+                "ERROR",
+                "com.zjcxph.imgapi.storage.Reader",
+                "java.io.IOException",
+                "读取图片 123456 失败 ERR-20260723-ABCDEF12"
         );
         String second = RuntimeErrorSanitizer.fingerprint(
-                "ERROR", "com.zjcxph.imgapi.storage.Reader", "java.io.IOException", "读取图片 987654 失败"
+                "ERROR",
+                "com.zjcxph.imgapi.storage.Reader",
+                "java.io.IOException",
+                "读取图片 987654 失败 ERR-20260723-1234ABCD"
         );
 
         assertEquals(first, second);

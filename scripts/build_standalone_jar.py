@@ -7,6 +7,7 @@ import argparse
 import os
 import shutil
 import sys
+from collections import Counter
 from pathlib import Path
 from uuid import uuid4
 from zipfile import ZipFile, ZipInfo
@@ -17,7 +18,12 @@ FRONTEND_ASSET_PREFIX = "BOOT-INF/classes/static/assets/"
 PORT_PROPERTY_PREFIX = "server.port=${SERVER_PORT:"
 
 
-def _copy_entry(source: ZipFile, target: ZipFile, info: ZipInfo, data: bytes | None = None) -> None:
+def _copy_entry(
+    source: ZipFile,
+    target: ZipFile,
+    info: ZipInfo,
+    data: bytes | None = None,
+) -> None:
     if info.is_dir():
         target.writestr(info, b"")
         return
@@ -29,21 +35,38 @@ def _copy_entry(source: ZipFile, target: ZipFile, info: ZipInfo, data: bytes | N
             shutil.copyfileobj(reader, writer, length=1024 * 1024)
 
 
+def _duplicate_entries(names: list[str]) -> set[str]:
+    return {name for name, count in Counter(names).items() if count > 1}
+
+
 def _replace_default_port(properties: str, default_port: int) -> str:
     lines = properties.splitlines(keepends=True)
-    matches = [index for index, line in enumerate(lines) if line.startswith(PORT_PROPERTY_PREFIX)]
+    matches = [
+        index
+        for index, line in enumerate(lines)
+        if line.startswith(PORT_PROPERTY_PREFIX)
+    ]
     if len(matches) != 1:
         raise ValueError(
-            "application.properties must contain exactly one configurable server.port entry; "
-            f"found {len(matches)}"
+            "application.properties must contain exactly one configurable "
+            f"server.port entry; found {len(matches)}"
         )
     index = matches[0]
-    line_ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
+    if lines[index].endswith("\r\n"):
+        line_ending = "\r\n"
+    elif lines[index].endswith("\n"):
+        line_ending = "\n"
+    else:
+        line_ending = ""
     lines[index] = f"server.port=${{SERVER_PORT:{default_port}}}{line_ending}"
     return "".join(lines)
 
 
-def build_standalone_jar(source_jar: Path, output_jar: Path, default_port: int = 8002) -> None:
+def build_standalone_jar(
+    source_jar: Path,
+    output_jar: Path,
+    default_port: int = 8002,
+) -> None:
     if not source_jar.is_file():
         raise ValueError(f"Source JAR does not exist: {source_jar}")
     if not 1 <= default_port <= 65535:
@@ -56,22 +79,31 @@ def build_standalone_jar(source_jar: Path, output_jar: Path, default_port: int =
     try:
         with ZipFile(source_jar, "r") as source:
             names = source.namelist()
-            duplicates = {name for name in names if names.count(name) > 1}
+            duplicates = _duplicate_entries(names)
             if duplicates:
                 raise ValueError(
                     "Source JAR contains duplicate entries: "
                     + ", ".join(sorted(duplicates)[:10])
                 )
             if names.count(APPLICATION_PROPERTIES) != 1:
-                raise ValueError(f"Source JAR must contain exactly one {APPLICATION_PROPERTIES}")
+                raise ValueError(
+                    f"Source JAR must contain exactly one {APPLICATION_PROPERTIES}"
+                )
 
             properties = source.read(APPLICATION_PROPERTIES).decode("utf-8")
-            updated_properties = _replace_default_port(properties, default_port).encode("utf-8")
+            updated_properties = _replace_default_port(
+                properties,
+                default_port,
+            ).encode("utf-8")
 
             with ZipFile(temporary, "w", allowZip64=True) as target:
                 target.comment = source.comment
                 for info in source.infolist():
-                    replacement = updated_properties if info.filename == APPLICATION_PROPERTIES else None
+                    replacement = (
+                        updated_properties
+                        if info.filename == APPLICATION_PROPERTIES
+                        else None
+                    )
                     _copy_entry(source, target, info, replacement)
 
         os.replace(temporary, output_jar)
@@ -81,7 +113,10 @@ def build_standalone_jar(source_jar: Path, output_jar: Path, default_port: int =
     verify_standalone_jar(output_jar, default_port)
 
 
-def verify_standalone_jar(jar: Path, default_port: int = 8002) -> tuple[int, int]:
+def verify_standalone_jar(
+    jar: Path,
+    default_port: int = 8002,
+) -> tuple[int, int]:
     if not jar.is_file():
         raise ValueError(f"Standalone JAR does not exist: {jar}")
     if not 1 <= default_port <= 65535:
@@ -89,25 +124,35 @@ def verify_standalone_jar(jar: Path, default_port: int = 8002) -> tuple[int, int
 
     with ZipFile(jar, "r") as archive:
         names = archive.namelist()
-        duplicates = {name for name in names if names.count(name) > 1}
+        duplicates = _duplicate_entries(names)
         if duplicates:
             raise ValueError(
                 "Standalone JAR contains duplicate entries: "
                 + ", ".join(sorted(duplicates)[:10])
             )
         if names.count(APPLICATION_PROPERTIES) != 1:
-            raise ValueError(f"Standalone JAR must contain exactly one {APPLICATION_PROPERTIES}")
+            raise ValueError(
+                f"Standalone JAR must contain exactly one {APPLICATION_PROPERTIES}"
+            )
         properties = archive.read(APPLICATION_PROPERTIES).decode("utf-8")
         expected = f"server.port=${{SERVER_PORT:{default_port}}}"
-        matching_lines = [line for line in properties.splitlines() if line.startswith(PORT_PROPERTY_PREFIX)]
+        matching_lines = [
+            line
+            for line in properties.splitlines()
+            if line.startswith(PORT_PROPERTY_PREFIX)
+        ]
         if matching_lines != [expected]:
             raise ValueError(
-                f"Standalone JAR default port must be {default_port}; found {matching_lines or 'none'}"
+                f"Standalone JAR default port must be {default_port}; "
+                f"found {matching_lines or 'none'}"
             )
         if names.count(FRONTEND_INDEX) != 1:
-            raise ValueError(f"Standalone JAR must contain exactly one {FRONTEND_INDEX}")
+            raise ValueError(
+                f"Standalone JAR must contain exactly one {FRONTEND_INDEX}"
+            )
         asset_entries = [
-            name for name in names
+            name
+            for name in names
             if name.startswith(FRONTEND_ASSET_PREFIX) and not name.endswith("/")
         ]
         if not asset_entries:
@@ -140,7 +185,10 @@ def main() -> int:
                 args.output.resolve(),
                 args.default_port,
             )
-            print(f"Built standalone JAR: {args.output} (default port {args.default_port})")
+            print(
+                f"Built standalone JAR: {args.output} "
+                f"(default port {args.default_port})"
+            )
         else:
             entry_count, asset_count = verify_standalone_jar(
                 args.jar.resolve(),

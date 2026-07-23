@@ -44,6 +44,7 @@ public interface SystemErrorEventMapper {
     int upsert(SystemErrorEvent event);
 
     @Select("""
+            <script>
             SELECT id,
                    error_id AS errorId,
                    fingerprint,
@@ -62,18 +63,23 @@ public interface SystemErrorEventMapper {
                    acknowledged_by AS acknowledgedBy,
                    resolved_at AS resolvedAt
             FROM system_error_event
-            WHERE (#{level} IS NULL OR level = #{level})
-              AND (#{status} IS NULL OR status = #{status})
-              AND (#{module} IS NULL OR module ILIKE '%' || #{module} || '%')
-              AND (#{keyword} IS NULL OR (
-                    error_id ILIKE '%' || #{keyword} || '%'
-                    OR logger_name ILIKE '%' || #{keyword} || '%'
-                    OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
-                    OR message_summary ILIKE '%' || #{keyword} || '%'
-                    OR COALESCE(request_id, '') ILIKE '%' || #{keyword} || '%'
-              ))
+            <where>
+                <if test="level != null">AND level = #{level}</if>
+                <if test="status != null">AND status = #{status}</if>
+                <if test="module != null">AND module ILIKE '%' || #{module} || '%'</if>
+                <if test="keyword != null">
+                    AND (
+                        error_id ILIKE '%' || #{keyword} || '%'
+                        OR logger_name ILIKE '%' || #{keyword} || '%'
+                        OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
+                        OR message_summary ILIKE '%' || #{keyword} || '%'
+                        OR COALESCE(request_id, '') ILIKE '%' || #{keyword} || '%'
+                    )
+                </if>
+            </where>
             ORDER BY last_seen_at DESC, id DESC
             LIMIT #{limit} OFFSET #{offset}
+            </script>
             """)
     List<SystemErrorEvent> search(
             @Param("keyword") String keyword,
@@ -85,18 +91,24 @@ public interface SystemErrorEventMapper {
     );
 
     @Select("""
+            <script>
             SELECT COUNT(*)
             FROM system_error_event
-            WHERE (#{level} IS NULL OR level = #{level})
-              AND (#{status} IS NULL OR status = #{status})
-              AND (#{module} IS NULL OR module ILIKE '%' || #{module} || '%')
-              AND (#{keyword} IS NULL OR (
-                    error_id ILIKE '%' || #{keyword} || '%'
-                    OR logger_name ILIKE '%' || #{keyword} || '%'
-                    OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
-                    OR message_summary ILIKE '%' || #{keyword} || '%'
-                    OR COALESCE(request_id, '') ILIKE '%' || #{keyword} || '%'
-              ))
+            <where>
+                <if test="level != null">AND level = #{level}</if>
+                <if test="status != null">AND status = #{status}</if>
+                <if test="module != null">AND module ILIKE '%' || #{module} || '%'</if>
+                <if test="keyword != null">
+                    AND (
+                        error_id ILIKE '%' || #{keyword} || '%'
+                        OR logger_name ILIKE '%' || #{keyword} || '%'
+                        OR COALESCE(exception_type, '') ILIKE '%' || #{keyword} || '%'
+                        OR message_summary ILIKE '%' || #{keyword} || '%'
+                        OR COALESCE(request_id, '') ILIKE '%' || #{keyword} || '%'
+                    )
+                </if>
+            </where>
+            </script>
             """)
     long count(
             @Param("keyword") String keyword,

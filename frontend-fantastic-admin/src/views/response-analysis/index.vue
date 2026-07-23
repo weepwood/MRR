@@ -300,11 +300,12 @@ h2 {
   z-index: 0;
   pointer-events: none;
   content: "";
-  background: radial-gradient(
-    circle at var(--spotlight-x) var(--spotlight-y),
-    var(--spotlight-color) 0%,
-    transparent 72%
-  );
+  background:
+    radial-gradient(
+      circle at var(--spotlight-x) var(--spotlight-y),
+      var(--spotlight-color) 0%,
+      transparent 72%
+    );
   border-radius: inherit;
   opacity: 0;
   transition: opacity 320ms ease;
@@ -402,8 +403,8 @@ h2 {
 
   .response-trend-card {
     width: max-content;
-    max-width: 100%;
     justify-self: start;
+    max-width: 100%;
   }
 
   .response-trend-card :deep(.el-card__body) {

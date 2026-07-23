@@ -1,0 +1,402 @@
+name: 一次性准备 MRR 0.7.0
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/prepare-release-0.7.0-once.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare release changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin release/0.7.0 >/dev/null 2>&1; then
+            echo "release/0.7.0 already exists" >&2
+            exit 1
+          fi
+          git switch -c release/0.7.0
+
+          python3 <<'PY'
+          from __future__ import annotations
+
+          import json
+          from pathlib import Path
+
+          ROOT = Path('.')
+
+          def read(path: str) -> str:
+              return (ROOT / path).read_text(encoding='utf-8')
+
+          def write(path: str, content: str) -> None:
+              target = ROOT / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(content, encoding='utf-8')
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              content = read(path)
+              count = content.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{path}: expected one occurrence, found {count}: {old!r}')
+              write(path, content.replace(old, new, 1))
+
+          write('VERSION', '0.7.0\n')
+          replace_once('backend-repo/pom.xml', '<revision>0.6.5</revision>', '<revision>0.7.0</revision>')
+
+          baseline_path = ROOT / 'release-baseline.json'
+          baseline = json.loads(baseline_path.read_text(encoding='utf-8'))
+          baseline['applicationRollback']['allowed'] = False
+          baseline['applicationRollback']['reason'] = (
+              '0.7.0 增加主动维护闭环、运维总览与全面体检，默认将正式前端内嵌到后端 JAR，'
+              '同时保留 Nginx 统一入口和外置前端紧急回退；并优化后端测试分级、表格操作布局、'
+              'SPA 保留路径边界与诊断报告脱敏。数据库兼容上限保持不变，但发布制品和部署拓扑已调整，'
+              '不允许仅替换回旧应用文件；回滚前必须恢复发布前数据库、配置、Nginx 配置和完整发布目录备份。'
+          )
+          baseline_path.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          replace_once('README.md', '当前主分支产品版本为 **0.6.5**', '当前主分支产品版本为 **0.7.0**')
+          replace_once('README.md', 'v0.6.5 的图片类型修改接口当前也继承此权限', 'v0.7.0 的图片类型修改接口当前也继承此权限')
+          replace_once(
+              'README.md',
+              '| 部署运维 | Windows 原生 JAR + Nginx，离线发布包、校验清单、服务控制脚本和版本基线 |',
+              '| 部署运维 | Windows 原生 JAR 内嵌前端 + Nginx 统一入口，支持外置前端回退、离线发布包、校验清单、服务控制和版本基线 |'
+          )
+          replace_once(
+              'README.md',
+              '2. Spring Boot JAR 监听业务端口 `18045`；\n3. Actuator 监听 `127.0.0.1:18046`；\n4. Nginx 托管前端、文档和静态图片，并反向代理后端 API；',
+              '2. Spring Boot JAR 内嵌管理端前端并监听业务端口 `18045`；\n3. Actuator 监听 `127.0.0.1:18046`；\n4. Nginx 作为统一入口，代理 JAR 前端与后端 API，托管文档和静态图片；外置前端仅用于紧急回退；'
+          )
+
+          changelog_section = '''## [0.7.0] - 2026-07-23
+
+          ### 新增
+
+          - 运维诊断中心增加统一总览、一键全面体检、问题处理建议、快捷入口和最近运维操作。
+          - 新增管理员主动维护只读模式，状态持久化到系统设置，并与自动只读降级共同生效。
+          - 正式前端构建产物默认内嵌到 Spring Boot 可执行 JAR，形成前后端统一业务制品。
+          - Windows 运维工具支持在内嵌前端与外置前端回退模式之间安全切换。
+
+          ### 变更
+
+          - Nginx 保留统一入口、维护模式、访问审计、文档、图片和 API 代理职责，默认将页面请求转发到 JAR 内嵌前端。
+          - 后端门禁按变更范围分级执行，PostgreSQL 集成测试复用单一服务，完整验证恢复到分钟级。
+          - 表格操作根据可用空间显示常用图标，只有实际溢出时才显示水平省略号菜单。
+          - 发布包继续保留外置前端目录，作为第一阶段紧急回退方案。
+
+          ### 修复
+
+          - 修复表格操作区域长期显示省略号、“更多操作”提示异常及单元格内边距挤压图标的问题。
+          - 修复 SPA 路由回退可能把 `/api`、`/actuator`、`/swagger-ui` 等保留路径根节点错误返回为前端页面的问题。
+          - 修复脱敏诊断报告仍可能包含运维账号、客户端 IP 和原始错误文本的问题。
+          - 修复 JAR 重写时残留旧前端静态资源或产生重复 ZIP 条目的风险。
+
+          ### 发布与兼容性
+
+          - 数据库兼容范围保持 `20260715113552` 至 `20260723090000`，本版本不新增 Flyway 迁移。
+          - 配置结构版本保持 `1`。
+          - 部署拓扑和发布制品发生调整，不允许只替换回 0.6.5 应用文件；回滚前必须恢复完整发布目录、Nginx 配置和发布前备份。
+
+          '''
+          replace_once('CHANGELOG.md', '## [Unreleased]\n\n', '## [Unreleased]\n\n' + changelog_section)
+
+          release_notes = '''# MRR 0.7.0 发布说明
+
+          发布日期：2026-07-23
+
+          ## 版本定位
+
+          0.7.0 将运维诊断、部署制品和日常管理能力收敛为可正式交付的 Windows 内网版本。前端默认内嵌到后端 JAR，Nginx 继续作为统一入口，并保留外置前端紧急回退。
+
+          ## 重点更新
+
+          - 运维诊断中心新增总览、一键全面体检、处理建议、快捷跳转和运维操作记录；
+          - 支持管理员主动开启维护只读模式，并与数据库、OSS、图片源和磁盘故障触发的自动降级取并集；
+          - Vite 正式产物写入 Spring Boot 可执行 JAR，前端、后端、版本和 Git Commit 形成统一制品；
+          - Windows 管理中心和 `mrrctl.ps1` 支持 `embedded` / `external` 前端模式切换，失败自动恢复；
+          - 后端 CI 按变更范围执行单元或完整 PostgreSQL 验证，集成测试复用 PostgreSQL 16；
+          - 表格操作只在空间不足时显示水平省略号菜单，桌面端优先直接显示常用图标。
+
+          ## 发布前审查修复
+
+          - 保留路径根节点 `/api`、`/actuator`、`/swagger-ui`、`/v3/api-docs`、`/api-docs`、`/docs`、`/webjars` 和 `/error` 不再进入 SPA 回退；
+          - 诊断报告中的账号、客户端 IP 和错误文本统一脱敏，查询参数和片段不会进入报告；
+          - README 的生产部署说明同步为“JAR 内嵌前端 + Nginx 统一入口 + 外置回退”。
+
+          ## 数据库与回滚
+
+          - 最低兼容迁移：`20260715113552`；
+          - 最高兼容迁移：`20260723090000`；
+          - 本版本不新增 Flyway 迁移；
+          - 不允许只替换回旧 JAR 或旧前端目录。升级前应备份数据库、外部配置、密钥、Nginx 配置和当前发布目录。
+
+          ## 正式资产
+
+          正式标签：`v0.7.0`
+
+          Windows 离线包：`MRR-v0.7.0.zip`
+          '''
+          write('release-notes/0.7.0.md', release_notes.replace('\n          ', '\n').lstrip())
+
+          user_notes = read('vitepress-doc/user-guide/release-notes.md')
+          user_notes = user_notes.replace('当前产品版本 **v0.6.5**', '当前产品版本 **v0.7.0**', 1)
+          marker = '## 0.6.5 重点变化\n'
+          if marker not in user_notes:
+              raise RuntimeError('vitepress release notes marker missing')
+          user_section = '''## 0.7.0 重点变化
+
+          ### 运维与维护模式
+
+          - 运维诊断中心增加统一总览、一键全面体检、处理建议和快捷入口；
+          - 管理员可主动开启维护只读模式，维护状态不会覆盖关键依赖触发的自动降级；
+          - 诊断报告默认隐藏账号、客户端 IP 和原始错误文本。
+
+          ### 统一发布制品
+
+          - 管理端前端默认内嵌到后端 JAR；
+          - Nginx 继续提供统一入口、维护模式、文档、图片与 API 代理；
+          - 保留外置前端回退，Windows 管理工具可以安全切换模式。
+
+          ### 界面与质量
+
+          - 表格操作只在空间不足时显示水平省略号；
+          - 后端测试按变更范围分级，完整 PostgreSQL 验证显著提速；
+          - SPA 保留路径和诊断报告脱敏边界进一步收紧。
+
+          '''
+          user_notes = user_notes.replace(marker, user_section.replace('\n          ', '\n') + marker, 1)
+          write('vitepress-doc/user-guide/release-notes.md', user_notes)
+
+          spa_path = 'backend-repo/src/main/java/com/zjcxph/imgapi/config/SpaPathResourceResolver.java'
+          spa = read(spa_path)
+          spa = spa.replace(
+              '''    private static final List<String> RESERVED_PREFIXES = List.of(
+                      "api/",
+                      "actuator/",
+                      "swagger-ui/",
+                      "v3/api-docs",
+                      "api-docs/",
+                      "docs/",
+                      "webjars/",
+                      "error"
+              );''',
+              '''    private static final List<String> RESERVED_PATHS = List.of(
+                      "api",
+                      "actuator",
+                      "swagger-ui",
+                      "v3/api-docs",
+                      "api-docs",
+                      "docs",
+                      "webjars",
+                      "error"
+              );'''
+          )
+          spa = spa.replace(
+              '        return RESERVED_PREFIXES.stream().noneMatch(normalizedPath::startsWith);',
+              '        return RESERVED_PATHS.stream().noneMatch(path -> isSameOrChild(normalizedPath, path));'
+          )
+          anchor = '''    private static String normalize(String resourcePath) {'''
+          helper = '''    private static boolean isSameOrChild(String resourcePath, String reservedPath) {
+              return resourcePath.equals(reservedPath) || resourcePath.startsWith(reservedPath + "/");
+          }
+
+          '''
+          if helper.strip() not in spa:
+              spa = spa.replace(anchor, helper + anchor, 1)
+          write(spa_path, spa)
+
+          spa_test_path = 'backend-repo/src/test/java/com/zjcxph/imgapi/config/SpaPathResourceResolverTest.java'
+          spa_test = read(spa_test_path)
+          exact_assertions = '''        assertThat(resolver.getResource("api", location)).isNull();
+                  assertThat(resolver.getResource("actuator", location)).isNull();
+                  assertThat(resolver.getResource("swagger-ui", location)).isNull();
+                  assertThat(resolver.getResource("v3/api-docs", location)).isNull();
+                  assertThat(resolver.getResource("api-docs", location)).isNull();
+                  assertThat(resolver.getResource("docs", location)).isNull();
+                  assertThat(resolver.getResource("webjars", location)).isNull();
+                  assertThat(resolver.getResource("error", location)).isNull();
+          '''.replace('\n          ', '\n')
+          marker_assert = '        assertThat(resolver.getResource("api/v1/missing", location)).isNull();\n'
+          if exact_assertions not in spa_test:
+              spa_test = spa_test.replace(marker_assert, exact_assertions + marker_assert, 1)
+          write(spa_test_path, spa_test)
+
+          operations_path = 'backend-repo/src/main/java/com/zjcxph/imgapi/service/OperationsCenterService.java'
+          operations = read(operations_path)
+          operations = operations.replace(
+              '        result.put("recentOperations", recentOperations(50));',
+              '        result.put("recentOperations", redactedRecentOperations(50));',
+              1
+          )
+          insertion_anchor = '''    private Map<String, Object> effectiveReadiness(Map<String, Object> base) {'''
+          redaction_methods = '''    private List<Map<String, Object>> redactedRecentOperations(int limit) {
+              return recentOperations(limit).stream()
+                      .map(OperationsCenterService::redactOperationForReport)
+                      .toList();
+          }
+
+              static Map<String, Object> redactOperationForReport(Map<String, Object> source) {
+              Map<String, Object> result = new LinkedHashMap<>();
+              for (String key : List.of("id", "request_id", "method", "response_status", "execute_time", "access_time")) {
+                  if (source.containsKey(key) && source.get(key) != null) {
+                      result.put(key, source.get(key));
+                  }
+              }
+              result.put("request_uri", stripQueryAndFragment(String.valueOf(source.getOrDefault("request_uri", ""))));
+              result.put("username", redactIfPresent(source.get("username")));
+              result.put("client_ip", redactIfPresent(source.get("client_ip")));
+              result.put("error_message", redactIfPresent(source.get("error_message")));
+              return Map.copyOf(result);
+          }
+
+              private static String stripQueryAndFragment(String value) {
+              int query = value.indexOf('?');
+              int fragment = value.indexOf('#');
+              int end = value.length();
+              if (query >= 0) {
+                  end = Math.min(end, query);
+              }
+              if (fragment >= 0) {
+                  end = Math.min(end, fragment);
+              }
+              return value.substring(0, end);
+          }
+
+              private static String redactIfPresent(Object value) {
+              return value == null || String.valueOf(value).isBlank() ? "" : "[REDACTED]";
+          }
+
+          '''.replace('\n          ', '\n')
+          if 'redactOperationForReport' not in operations:
+              operations = operations.replace(insertion_anchor, redaction_methods + insertion_anchor, 1)
+          write(operations_path, operations)
+
+          redaction_test = '''package com.zjcxph.imgapi.service;
+
+          import org.junit.jupiter.api.Test;
+
+          import java.util.LinkedHashMap;
+          import java.util.Map;
+
+          import static org.assertj.core.api.Assertions.assertThat;
+
+          class OperationsCenterServiceRedactionTest {
+
+              @Test
+              void redactsIdentityNetworkAndErrorDetailsFromDiagnosticReport() {
+                  Map<String, Object> source = new LinkedHashMap<>();
+                  source.put("id", 12L);
+                  source.put("request_id", "req-123");
+                  source.put("username", "administrator");
+                  source.put("client_ip", "10.0.0.8");
+                  source.put("request_uri", "/api/v1/operations/image-source?bah=123456&idcard=3301#detail");
+                  source.put("method", "GET");
+                  source.put("response_status", "500");
+                  source.put("execute_time", 25L);
+                  source.put("access_time", "2026-07-23T00:00:00Z");
+                  source.put("error_message", "patient 3301 failed with token secret");
+
+                  Map<String, Object> result = OperationsCenterService.redactOperationForReport(source);
+
+                  assertThat(result.get("username")).isEqualTo("[REDACTED]");
+                  assertThat(result.get("client_ip")).isEqualTo("[REDACTED]");
+                  assertThat(result.get("error_message")).isEqualTo("[REDACTED]");
+                  assertThat(result.get("request_uri")).isEqualTo("/api/v1/operations/image-source");
+                  assertThat(result.get("request_id")).isEqualTo("req-123");
+                  assertThat(result.toString()).doesNotContain("3301", "secret", "administrator", "10.0.0.8");
+              }
+          }
+          '''
+          write(
+              'backend-repo/src/test/java/com/zjcxph/imgapi/service/OperationsCenterServiceRedactionTest.java',
+              redaction_test.replace('\n          ', '\n').lstrip()
+          )
+          PY
+
+          python3 scripts/release_baseline.py validate
+          git diff --check
+          git add VERSION release-baseline.json README.md CHANGELOG.md release-notes/0.7.0.md \
+            backend-repo/pom.xml \
+            backend-repo/src/main/java/com/zjcxph/imgapi/config/SpaPathResourceResolver.java \
+            backend-repo/src/main/java/com/zjcxph/imgapi/service/OperationsCenterService.java \
+            backend-repo/src/test/java/com/zjcxph/imgapi/config/SpaPathResourceResolverTest.java \
+            backend-repo/src/test/java/com/zjcxph/imgapi/service/OperationsCenterServiceRedactionTest.java \
+            vitepress-doc/user-guide/release-notes.md
+          git commit -m "发布：准备 MRR 0.7.0 并修复审查问题"
+          git push origin release/0.7.0
+
+      - name: Open release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/pr-body.md <<'EOF'
+          ## 发布目标
+
+          发布 MRR `0.7.0`，正式标签为 `v0.7.0`，Windows 离线包为 `MRR-v0.7.0.zip`。
+
+          ## 代码审查结论
+
+          审查范围为 v0.6.5 之后进入 `main` 的 25 个提交，重点覆盖运维诊断中心、主动维护模式、CI 分级、表格操作与前端内嵌 JAR。
+
+          发布前发现并修复：
+
+          1. SPA 回退未阻止 `/api`、`/actuator` 等保留路径根节点；
+          2. 脱敏诊断报告仍可能携带账号、客户端 IP、查询参数和原始错误文本；
+          3. README 的生产部署拓扑仍描述为 Nginx 直接托管正式前端，与当前 JAR 内嵌实现不一致。
+
+          ## 0.7.0 主要内容
+
+          - 运维总览、一键全面体检、建议与快捷处理入口；
+          - 管理员主动维护只读模式，与自动只读降级共同生效；
+          - 正式前端内嵌 Spring Boot JAR，保留外置前端紧急回退；
+          - Windows 管理中心支持内嵌/外置前端模式安全切换；
+          - 后端测试按变更范围分级并复用 PostgreSQL 16；
+          - 表格操作省略号、更多菜单和图标空间修复。
+
+          ## 兼容性
+
+          - 数据库迁移范围保持 `20260715113552` 至 `20260723090000`；
+          - 本版本不新增 Flyway 迁移；
+          - 配置结构版本保持 `1`；
+          - 不允许只替换回旧应用文件，回滚需要恢复完整发布目录、Nginx 配置和发布前备份。
+
+          ## 发布门禁
+
+          合并前必须通过：发布基线、后端完整测试、前端类型检查/单元测试/构建/Chromium E2E、Windows PowerShell 5.1、文档构建、监控检查与 Windows 离线包构建。
+          EOF
+          gh pr create \
+            --base main \
+            --head release/0.7.0 \
+            --title "发布：MRR 0.7.0" \
+            --body-file /tmp/pr-body.md
+
+      - name: Remove one-time workflow from main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch main
+          git pull --ff-only origin main
+          git rm .github/workflows/prepare-release-0.7.0-once.yml
+          git commit -m "发布：清理 0.7.0 一次性准备任务"
+          git push origin main

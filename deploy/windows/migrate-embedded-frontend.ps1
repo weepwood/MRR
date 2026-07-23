@@ -14,6 +14,31 @@ function Assert-Administrator {
     }
 }
 
+function Assert-BundledFrontendJar {
+    param([Parameter(Mandatory)][string]$JarPath)
+
+    if (-not (Test-Path -LiteralPath $JarPath -PathType Leaf)) {
+        throw "当前发布目录中找不到后端 JAR：$JarPath"
+    }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($JarPath)
+    try {
+        $index = $archive.GetEntry('BOOT-INF/classes/static/index.html')
+        if ($null -eq $index -or $index.Length -le 0) {
+            throw '当前后端 JAR 尚未包含内嵌前端，不能切换 Nginx。'
+        }
+        $asset = $archive.Entries | Where-Object {
+            $_.FullName.StartsWith('BOOT-INF/classes/static/assets/', [StringComparison]::Ordinal) -and $_.Length -gt 0
+        } | Select-Object -First 1
+        if ($null -eq $asset) {
+            throw '当前后端 JAR 缺少内嵌前端 assets，不能切换 Nginx。'
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 function Render-Template {
     param(
         [Parameter(Mandatory)][string]$Source,
@@ -32,6 +57,7 @@ $nginxConfig = Join-Path $Root 'config\nginx\nginx.conf'
 $frontendMode = Join-Path $Root 'config\nginx\frontend-mode.inc'
 $nginxExe = Join-Path $Root 'runtime\nginx\nginx.exe'
 $nginxHome = Join-Path $Root 'runtime\nginx'
+$currentJar = Join-Path $Root 'current\backend\mrr-backend.jar'
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $nginxBackup = "$nginxConfig.pre-embedded-$timestamp.bak"
 $modeBackup = "$frontendMode.pre-embedded-$timestamp.bak"
@@ -42,6 +68,7 @@ foreach ($required in $nginxTemplate,$frontendTemplate,$nginxExe) {
         throw "迁移所需文件不存在：$required"
     }
 }
+Assert-BundledFrontendJar $currentJar
 
 if (Test-Path -LiteralPath $nginxConfig -PathType Leaf) {
     Copy-Item -LiteralPath $nginxConfig -Destination $nginxBackup -Force

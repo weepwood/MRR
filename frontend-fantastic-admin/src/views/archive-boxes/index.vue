@@ -7,6 +7,7 @@ import type {
   ArchiveBoxStatus,
   ArchiveBoxSummary,
 } from '@/api/modules/archive-boxes'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -21,6 +22,8 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineOptions({ name: 'ArchiveBoxesPage' })
 
@@ -79,6 +82,39 @@ const form = reactive<ArchiveBoxRecordPayload>({
   status: 'NORMAL',
   remark: '',
 })
+
+const recordActions: MrrTableAction[] = [
+  {
+    key: 'edit',
+    label: '编辑装箱记录',
+    icon: 'i-ri:edit-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+  {
+    key: 'delete',
+    label: '删除装箱记录',
+    icon: 'i-ri:delete-bin-line',
+    tone: 'danger',
+  },
+]
+const boxActions: MrrTableAction[] = [
+  {
+    key: 'view',
+    label: '查看箱内病案',
+    icon: 'i-ri:folder-open-line',
+    tone: 'primary',
+    placement: 'inline',
+  },
+]
+const {
+  maxInlineActions: recordMaxInlineActions,
+  actionColumnWidth: recordActionColumnWidth,
+} = useTableActionLayout(recordActions.length, 2)
+const {
+  maxInlineActions: boxMaxInlineActions,
+  actionColumnWidth: boxActionColumnWidth,
+} = useTableActionLayout(boxActions.length, 1)
 
 const dialogTitle = computed(() => editingId.value ? '编辑装箱记录' : '新增装箱记录')
 const isMissing = computed(() => form.status === 'MISSING')
@@ -332,6 +368,21 @@ async function removeRecord(row: ArchiveBoxRecord) {
   await refreshAll()
 }
 
+function handleRecordAction(action: string, row: ArchiveBoxRecord) {
+  if (action === 'edit') {
+    openEdit(row)
+  }
+  else if (action === 'delete') {
+    void removeRecord(row)
+  }
+}
+
+function handleBoxAction(action: string, row: ArchiveBoxGroup) {
+  if (action === 'view') {
+    openBox(row.boxNo)
+  }
+}
+
 function handleViewChange(value: string | number | boolean | undefined) {
   const view: ViewMode = value === 'boxes' ? 'boxes' : 'records'
   activeView.value = view
@@ -521,14 +572,18 @@ onMounted(refreshAll)
               {{ formatDateTime(row.updatedAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column
+            label="操作"
+            :width="recordActionColumnWidth"
+            fixed="right"
+            align="center"
+          >
             <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">
-                编辑
-              </el-button>
-              <el-button link type="danger" @click="removeRecord(row)">
-                删除
-              </el-button>
+              <MrrTableActions
+                :actions="recordActions"
+                :max-inline="recordMaxInlineActions"
+                @select="handleRecordAction($event, row)"
+              />
             </template>
           </el-table-column>
         </el-table>
@@ -595,11 +650,18 @@ onMounted(refreshAll)
               {{ formatDateTime(row.updatedAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" fixed="right">
+          <el-table-column
+            label="操作"
+            :width="boxActionColumnWidth"
+            fixed="right"
+            align="center"
+          >
             <template #default="{ row }">
-              <el-button link type="primary" @click="openBox(row.boxNo)">
-                查看箱内病案
-              </el-button>
+              <MrrTableActions
+                :actions="boxActions"
+                :max-inline="boxMaxInlineActions"
+                @select="handleBoxAction($event, row)"
+              />
             </template>
           </el-table-column>
         </el-table>

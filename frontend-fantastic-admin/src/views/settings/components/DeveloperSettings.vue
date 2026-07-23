@@ -10,16 +10,38 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
       type="warning"
       :closable="false"
       show-icon
-      title="开发者模式仅允许旧系统以无 Token 方式只读打开影像档案袋，不会绕过后台登录或放宽跨域策略。"
+      title="开发者模式只在启动参数允许、请求经过可信本机 Nginx 且客户端命中白名单时生效；无效或过期 Token 始终会被拒绝。"
     />
 
     <div class="setting-row">
       <div>
         <strong>兼容旧版影像档案袋调用</strong>
-        <p>还必须通过启动配置 MRR_DEVELOPER_MODE_ALLOWED=true 明确允许；关闭任一开关都会立即停止兼容访问。</p>
+        <p>允许白名单中的旧系统无 Token 读取影像档案袋；不会开放其他后台接口。</p>
       </div>
       <el-switch v-model="settings.developerModeEnabled" inline-prompt active-text="启用" inactive-text="关闭" />
     </div>
+
+    <div class="setting-row danger-row">
+      <div>
+        <strong>登录后跳过 API 业务权限</strong>
+        <p>白名单来源中的已登录用户可调用受保护 API；仍需有效账号和 Token，审计记录继续使用真实用户身份。</p>
+      </div>
+      <el-switch
+        v-model="settings.developerModeApiAccessEnabled"
+        :disabled="!settings.developerModeEnabled"
+        inline-prompt
+        active-text="启用"
+        inactive-text="关闭"
+      />
+    </div>
+
+    <el-alert
+      v-if="settings.developerModeApiAccessEnabled"
+      type="error"
+      :closable="false"
+      show-icon
+      title="此开关会跳过角色业务权限，包括病案修改、OSS 迁移、用户角色和系统设置等操作，仅应在受控开发或联调环境短时开启。"
+    />
 
     <div class="trusted-sources-card">
       <div class="trusted-sources-heading">
@@ -60,11 +82,11 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
     <div class="developer-grid">
       <article>
         <span><FaIcon name="i-ri:folder-shield-2-line" /></span>
-        <div><strong>只读档案袋</strong><p>仅允许病案号、上架号查询以及本地、Nginx、OSS 影像读取，不提供后台管理身份。</p></div>
+        <div><strong>匿名只读范围</strong><p>无 Token 只允许影像档案袋查询和图片读取，不能进入后台管理 API。</p></div>
       </article>
       <article>
         <span><FaIcon name="i-ri:shield-keyhole-line" /></span>
-        <div><strong>双层来源校验</strong><p>先验证后端连接来自本机 Nginx，再验证真实客户端 IP 是否命中上方单 IP 或 CIDR 白名单。</p></div>
+        <div><strong>真实账号审计</strong><p>API 权限旁路仍使用登录账号，用户 ID、操作日志和数据关联不会变成虚拟身份。</p></div>
       </article>
     </div>
   </section>
@@ -72,27 +94,41 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
+
 .setting-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid color-mix(in srgb, var(--color-warning) 25%, var(--mrr-border)); border-radius: var(--mrr-radius-xl); }
+
+.danger-row { border-color: color-mix(in srgb, var(--el-color-danger) 35%, var(--mrr-border)); }
 
 .setting-row strong,
 .trusted-sources-card strong { font-size: 13px; }
 
 .setting-row p,
 .trusted-sources-card p { margin: 3px 0 0; font-size: 10px; line-height: 1.6; color: var(--mrr-muted-foreground); }
+
 .trusted-sources-card { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+
 .trusted-sources-heading { display: flex; gap: var(--mrr-space-4); align-items: flex-start; justify-content: space-between; }
+
 .trusted-sources-card :deep(.el-textarea__inner) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.6; }
+
 .source-examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 11px; color: var(--mrr-muted-foreground); }
+
 .source-examples span { min-width: 0; }
+
 .source-examples code { padding: 2px 5px; margin-right: 4px; font-size: 10px; color: var(--el-color-primary); background: var(--mrr-muted); border-radius: 4px; }
+
 .developer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+
 .developer-grid article { display: flex; gap: var(--mrr-space-3); padding: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+
 .developer-grid article > span { color: var(--color-warning); }
+
 .developer-grid p { margin: 4px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
 
 @media (width <= 680px) {
   .developer-grid,
   .source-examples { grid-template-columns: 1fr; }
+
   .trusted-sources-heading { flex-direction: column; align-items: stretch; }
 }
 </style>

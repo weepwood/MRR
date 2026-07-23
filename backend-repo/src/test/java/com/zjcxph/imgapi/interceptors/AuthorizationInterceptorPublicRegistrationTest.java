@@ -28,8 +28,9 @@ class AuthorizationInterceptorPublicRegistrationTest {
         HandlerMethod handlerMethod = new HandlerMethod(controller, method);
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/register");
         MockHttpServletResponse response = new MockHttpServletResponse();
+        AuthorizationInterceptor interceptor = new AuthorizationInterceptor();
 
-        boolean allowed = new AuthorizationInterceptor().preHandle(request, response, handlerMethod);
+        boolean allowed = interceptor.preHandle(request, response, handlerMethod);
 
         assertThat(allowed).isTrue();
         assertThat(response.getStatus()).isEqualTo(200);

@@ -3,11 +3,13 @@ import axios from 'axios'
 export interface DeveloperModeStatus {
   enabled: boolean
   accessMode: 'ARCHIVE_LEGACY' | 'DISABLED'
+  apiPermissionBypassEnabled: boolean
 }
 
 const DISABLED_STATUS: DeveloperModeStatus = {
   enabled: false,
   accessMode: 'DISABLED',
+  apiPermissionBypassEnabled: false,
 }
 
 const developerModeProbeApi = axios.create({
@@ -44,10 +46,13 @@ function unwrapStatus(payload: unknown): DeveloperModeStatus {
     ? root.data as Record<string, unknown>
     : root
   const enabled = parseEnabled(source.enabled)
-  const accessMode = source.accessMode === 'ARCHIVE_LEGACY' && enabled
-    ? 'ARCHIVE_LEGACY'
-    : 'DISABLED'
-  return { enabled: accessMode === 'ARCHIVE_LEGACY', accessMode }
+  return {
+    enabled,
+    accessMode: enabled && source.accessMode === 'ARCHIVE_LEGACY'
+      ? 'ARCHIVE_LEGACY'
+      : 'DISABLED',
+    apiPermissionBypassEnabled: parseEnabled(source.apiPermissionBypassEnabled),
+  }
 }
 
 async function executeProbe(): Promise<DeveloperModeStatus> {
@@ -63,18 +68,12 @@ async function executeProbe(): Promise<DeveloperModeStatus> {
   }
 }
 
-/**
- * 只有独立档案袋路由可以使用匿名旧接口兼容模式。
- */
 export function canUseArchiveLegacyRoute(routeName: unknown, status: DeveloperModeStatus): boolean {
   return routeName === 'archive'
     && status.enabled
     && status.accessMode === 'ARCHIVE_LEGACY'
 }
 
-/**
- * 匿名路由跳转前读取最小化公共状态，仅用于判断旧版档案袋是否可用。
- */
 export async function getRuntimeDeveloperModeStatus(force = false): Promise<DeveloperModeStatus> {
   const now = Date.now()
   if (!force && now < cacheExpiresAt) {
@@ -87,7 +86,7 @@ export async function getRuntimeDeveloperModeStatus(force = false): Promise<Deve
   pendingProbe = executeProbe()
     .then((status) => {
       cachedStatus = status
-      cacheExpiresAt = Date.now() + (status.enabled ? 5000 : 2000)
+      cacheExpiresAt = Date.now() + (status.enabled || status.apiPermissionBypassEnabled ? 5000 : 2000)
       return status
     })
     .finally(() => {
@@ -98,7 +97,7 @@ export async function getRuntimeDeveloperModeStatus(force = false): Promise<Deve
 
 export async function isRuntimeDeveloperModeEnabled(force = false): Promise<boolean> {
   const status = await getRuntimeDeveloperModeStatus(force)
-  return status.enabled && status.accessMode === 'ARCHIVE_LEGACY'
+  return status.enabled
 }
 
 export function clearDeveloperModeProbeCache(): void {
@@ -108,7 +107,5 @@ export function clearDeveloperModeProbeCache(): void {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('mrr:system-settings-updated', () => {
-    clearDeveloperModeProbeCache()
-  })
+  window.addEventListener('mrr:system-settings-updated', clearDeveloperModeProbeCache)
 }

@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.controller;
 
+import com.zjcxph.imgapi.annotation.AuthenticatedOnly;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Result;
@@ -86,6 +87,7 @@ public class UserController {
     }
 
     @Operation(summary = "当前用户")
+    @AuthenticatedOnly
     @GetMapping("/me")
     public Result<AuthSession> currentUser() {
         AuthSession session = authService.currentUser();
@@ -156,6 +158,7 @@ public class UserController {
     }
 
     @Operation(summary = "首次登录或重置后强制修改密码")
+    @AuthenticatedOnly
     @PostMapping("/password/required-change")
     public Result<Void> changeRequiredPassword(@Valid @RequestBody RequiredPasswordChangeRequest request,
                                                 HttpServletRequest httpRequest) {
@@ -215,6 +218,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户登出")
+    @AuthenticatedOnly
     @PostMapping("/logout")
     public Result<String> logout(HttpServletRequest request) {
         revokeCurrentToken(request);
@@ -223,6 +227,7 @@ public class UserController {
     }
 
     @Operation(summary = "修改当前用户密码")
+    @AuthenticatedOnly
     @PostMapping("/password/edit")
     public Result<Void> changePassword(@RequestBody Map<String, String> body,
                                        HttpServletRequest httpRequest) {

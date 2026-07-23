@@ -1,8 +1,8 @@
+import type { AuthProfile } from '@/utils/auth-storage'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import router from '@/router'
-import type { AuthProfile } from '@/utils/auth-storage'
 import {
   clearAuthSessionStorage,
   readAuthStorage,
@@ -33,7 +33,7 @@ export const useUserStore = defineStore('user', () => {
   const sessionStatus = ref<AuthSessionStatus>(initialSession.token ? 'candidate' : 'anonymous')
 
   const isLogin = computed(() => Boolean(token.value))
-  const isSessionVerified = computed(() => Boolean(token.value) && sessionStatus.value === 'verified')
+  const isSessionVerified = computed(() => isLogin.value && sessionStatus.value === 'verified')
   const mustChangePassword = computed(() => isSessionVerified.value && Boolean(profile.value.mustChangePassword))
 
   function persistProfile(nextProfile: AuthProfile) {
@@ -50,7 +50,6 @@ export const useUserStore = defineStore('user', () => {
       clearSession()
       return
     }
-
     const user = session.user || {}
     token.value = nextToken
     avatar.value = typeof user.avatar === 'string' ? user.avatar : ''
@@ -82,8 +81,6 @@ export const useUserStore = defineStore('user', () => {
   async function logout(redirect = router.currentRoute.value.fullPath) {
     const redirectTarget = redirect
     const shouldRevokeToken = !isDemoMode && Boolean(token.value)
-
-    // 必须先携带当前 Bearer Token 请求后端撤销，再清理本地会话。
     if (shouldRevokeToken) {
       try {
         await apiUser.logout()
@@ -92,7 +89,6 @@ export const useUserStore = defineStore('user', () => {
         // 即使服务端不可达，也要保证本地会话可以退出。
       }
     }
-
     clearSession()
     await router.push({
       name: 'login',
@@ -133,7 +129,9 @@ export const useUserStore = defineStore('user', () => {
       sessionStatus.value = 'anonymous'
       return false
     }
-    if (sessionStatus.value === 'verified') return true
+    if (sessionStatus.value === 'verified') {
+      return true
+    }
 
     sessionStatus.value = 'verifying'
     try {
@@ -141,8 +139,12 @@ export const useUserStore = defineStore('user', () => {
       return true
     }
     catch (error: any) {
-      if (!token.value || error?.response?.status === 401) sessionStatus.value = 'anonymous'
-      else sessionStatus.value = 'unavailable'
+      if (!token.value || error?.response?.status === 401) {
+        sessionStatus.value = 'anonymous'
+      }
+      else {
+        sessionStatus.value = 'unavailable'
+      }
       throw error
     }
   }
@@ -152,12 +154,14 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function markSessionVerified() {
-    if (token.value) sessionStatus.value = 'verified'
+    if (token.value) {
+      sessionStatus.value = 'verified'
+    }
   }
 
   function markPasswordChangeRequired() {
     const nextProfile = { ...profile.value, mustChangePassword: true }
-    sessionStatus.value = token.value ? 'verified' : 'anonymous'
+    sessionStatus.value = isLogin.value ? 'verified' : 'anonymous'
     persistProfile(nextProfile)
   }
 

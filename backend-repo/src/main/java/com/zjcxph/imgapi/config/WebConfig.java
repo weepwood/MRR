@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.interceptors.LogInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
 import com.zjcxph.imgapi.interceptors.PasswordChangeRequiredInterceptor;
 import com.zjcxph.imgapi.interceptors.RateLimitInterceptor;
+import com.zjcxph.imgapi.security.ApiAccessPolicy;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -65,20 +66,8 @@ public class WebConfig implements WebMvcConfigurer {
         String[] staticExcludes = {
                 "/assets/**", "/browser_upgrade/**", "/favicon.*", "/*.html", "/*.br", "/*.gz"
         };
-        String[] baseExcludes = {
-                "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs.yaml",
-                "/v3/api-docs/**", "/docs/**", "/api/v1/documentation/access",
-                "/api/v1/public/status/**", "/api/v1/public/config/**", "/error", "/actuator/**"
-        };
-        // 登录和注册是公开入口。LoginInterceptor 内部保留同一白名单，避免上下文路径、
-        // 尾斜杠或反向代理转发方式导致 Spring 路径排除规则未命中。
-        String[] authenticationExcludes = {
-                "/api/v1/auth/login",
-                "/api/v1/auth/register",
-                "/api/v1/img/hello",
-                "/api/v1/integration/archive/tickets",
-                "/api/v1/external/archive/**"
-        };
+        String[] baseExcludes = ApiAccessPolicy.generalExcludes();
+        String[] authenticationExcludes = ApiAccessPolicy.authenticationExcludes();
 
         registry.addInterceptor(documentationSessionCleanupInterceptor)
                 .addPathPatterns("/api/v1/auth/logout");

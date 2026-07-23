@@ -39,6 +39,7 @@ public class ArchiveSearchHistoryController {
 
     @Operation(summary = "保存病案搜索记录")
     @PostMapping
+    @RequirePermissions({"record:read"})
     public Result<ArchiveSearchHistory> create(@RequestBody ArchiveSearchHistory history) {
         if (history == null || (isBlank(history.getBah()) && isBlank(history.getSjh()))) {
             return Result.fail("病案号和上架号不能同时为空");
@@ -54,6 +55,7 @@ public class ArchiveSearchHistoryController {
 
     @Operation(summary = "更新病案收藏状态")
     @PutMapping("/{id}/favorite")
+    @RequirePermissions({"record:read"})
     public Result<String> updateFavorite(@PathVariable Long id, @RequestBody ArchiveSearchHistory history) {
         if (id == null || history == null) {
             return Result.fail("收藏记录不能为空");

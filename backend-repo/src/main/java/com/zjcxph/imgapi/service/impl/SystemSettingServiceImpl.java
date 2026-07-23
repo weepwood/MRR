@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
+import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.SystemSettingService;
 import com.zjcxph.imgapi.utils.AuthContext;
@@ -15,13 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 系统设置服务实现。
- * <p>
- * 读取时将所有设置项转换为 Map 返回，写入时支持批量 UPSERT。
- * 所有写操作记录设置来源（当前登录用户名或系统默认值）。
- * </p>
- */
 @Service
 public class SystemSettingServiceImpl implements SystemSettingService {
 
@@ -29,11 +23,14 @@ public class SystemSettingServiceImpl implements SystemSettingService {
 
     private final SystemSettingMapper systemSettingMapper;
     private final DeveloperModeService developerModeService;
+    private final DeveloperApiAccessService developerApiAccessService;
 
     public SystemSettingServiceImpl(SystemSettingMapper systemSettingMapper,
-                                    DeveloperModeService developerModeService) {
+                                    DeveloperModeService developerModeService,
+                                    DeveloperApiAccessService developerApiAccessService) {
         this.systemSettingMapper = systemSettingMapper;
         this.developerModeService = developerModeService;
+        this.developerApiAccessService = developerApiAccessService;
     }
 
     @Override
@@ -80,8 +77,13 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         systemSettingMapper.upsert(setting);
         if (DeveloperModeService.SETTING_KEY.equals(key)) {
             developerModeService.refreshFromValue(value);
+            if (!developerModeService.isEnabled()) {
+                developerApiAccessService.disableImmediately();
+            }
         } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
             developerModeService.refreshAllowedSourcesFromValue(value);
+        } else if (DeveloperApiAccessService.SETTING_KEY.equals(key)) {
+            developerApiAccessService.refreshFromValue(value);
         }
         logger.info("系统设置已更新: {} = ..., 操作者: {}", key, operator);
     }
@@ -91,8 +93,11 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         systemSettingMapper.deleteByKey(key);
         if (DeveloperModeService.SETTING_KEY.equals(key)) {
             developerModeService.disableImmediately();
+            developerApiAccessService.disableImmediately();
         } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
             developerModeService.refreshAllowedSourcesFromValue("");
+        } else if (DeveloperApiAccessService.SETTING_KEY.equals(key)) {
+            developerApiAccessService.disableImmediately();
         }
         logger.info("系统设置已删除: {}", key);
     }
@@ -107,10 +112,17 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     private void refreshRuntimeSettings(Map<String, String> settings) {
         if (settings.containsKey(DeveloperModeService.SETTING_KEY)) {
             developerModeService.refreshFromValue(settings.get(DeveloperModeService.SETTING_KEY));
+            if (!developerModeService.isEnabled()) {
+                developerApiAccessService.disableImmediately();
+            }
         }
         if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {
             developerModeService.refreshAllowedSourcesFromValue(
                     settings.get(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY));
+        }
+        if (settings.containsKey(DeveloperApiAccessService.SETTING_KEY)) {
+            developerApiAccessService.refreshFromValue(
+                    settings.get(DeveloperApiAccessService.SETTING_KEY));
         }
     }
 

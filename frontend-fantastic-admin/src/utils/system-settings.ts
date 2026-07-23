@@ -45,6 +45,7 @@ export interface EffectiveSystemSettings {
   patientIdCardRevealEnabled: boolean
   patientIdCardCopyEnabled: boolean
   developerModeEnabled: boolean
+  developerModeApiAccessEnabled: boolean
   developerModeAllowedSources: string
 }
 
@@ -88,6 +89,7 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     patientIdCardRevealEnabled: false,
     patientIdCardCopyEnabled: false,
     developerModeEnabled: false,
+    developerModeApiAccessEnabled: false,
     developerModeAllowedSources: '127.0.0.1\n::1',
   }
 }
@@ -165,6 +167,10 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     patientIdCardRevealEnabled: parseBoolean(source.patientIdCardRevealEnabled, defaults.patientIdCardRevealEnabled),
     patientIdCardCopyEnabled: parseBoolean(source.patientIdCardCopyEnabled, defaults.patientIdCardCopyEnabled),
     developerModeEnabled: parseBoolean(source.developerModeEnabled, defaults.developerModeEnabled),
+    developerModeApiAccessEnabled: parseBoolean(
+      source.developerModeApiAccessEnabled,
+      defaults.developerModeApiAccessEnabled,
+    ),
     developerModeAllowedSources: parseOptionalText(
       source.developerModeAllowedSources,
       defaults.developerModeAllowedSources,

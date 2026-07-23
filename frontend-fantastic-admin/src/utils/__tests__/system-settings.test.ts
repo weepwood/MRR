@@ -29,6 +29,7 @@ describe('effective system settings', () => {
       patientIdCardRevealEnabled: 'true',
       patientIdCardCopyEnabled: '1',
       developerModeEnabled: 'enabled',
+      developerModeApiAccessEnabled: 'true',
       developerModeAllowedSources: '192.168.10.25\n192.168.20.0/24',
     })
 
@@ -53,6 +54,7 @@ describe('effective system settings', () => {
     expect(settings.patientIdCardRevealEnabled).toBe(true)
     expect(settings.patientIdCardCopyEnabled).toBe(true)
     expect(settings.developerModeEnabled).toBe(true)
+    expect(settings.developerModeApiAccessEnabled).toBe(true)
     expect(settings.developerModeAllowedSources).toBe('192.168.10.25\n192.168.20.0/24')
   })
 
@@ -67,6 +69,7 @@ describe('effective system settings', () => {
       archiveIpMaxChanges: 99,
       systemAdminPublicVisible: 'unexpected',
       developerModeEnabled: 'unexpected',
+      developerModeApiAccessEnabled: 'unexpected',
     })
 
     expect(settings.imageSource).toBe('local')
@@ -79,6 +82,7 @@ describe('effective system settings', () => {
     expect(settings.systemAdminContactEnabled).toBe(false)
     expect(settings.systemAdminPublicVisible).toBe(false)
     expect(settings.developerModeEnabled).toBe(false)
+    expect(settings.developerModeApiAccessEnabled).toBe(false)
     expect(settings.developerModeAllowedSources).toBe('127.0.0.1\n::1')
   })
 
@@ -87,18 +91,21 @@ describe('effective system settings', () => {
     const serialized = serializeSystemSettings({
       ...defaults,
       developerModeEnabled: true,
+      developerModeApiAccessEnabled: true,
       developerModeAllowedSources: '192.168.10.25\n192.168.20.0/24',
     })
 
     expect(defaults.imageSource).toBe('local')
     expect(defaults.systemAdminContactEnabled).toBe(false)
     expect(defaults.systemAdminPublicVisible).toBe(false)
+    expect(defaults.developerModeApiAccessEnabled).toBe(false)
     expect(serialized.systemName).toBe('MRR 病案文件管理系统')
     expect(serialized.loginFeatureEnabled).toBe('true')
     expect(serialized.systemAdminContactEnabled).toBe('false')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(serialized.developerModeEnabled).toBe('true')
+    expect(serialized.developerModeApiAccessEnabled).toBe('true')
     expect(serialized.developerModeAllowedSources).toBe('192.168.10.25\n192.168.20.0/24')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
   })

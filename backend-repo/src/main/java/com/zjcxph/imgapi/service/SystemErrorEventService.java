@@ -33,7 +33,7 @@ public class SystemErrorEventService {
     private final SystemErrorEventMapper mapper;
     private final BlockingQueue<SystemErrorEvent> pending = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     private final AtomicLong droppedEvents = new AtomicLong();
-    private final ThreadLocal<Boolean> persistenceInProgress = ThreadLocal.withInitial(() -> false);
+    private final ThreadLocal<Boolean> persistenceInProgress = new ThreadLocal<>();
     private volatile boolean accepting = true;
 
     public SystemErrorEventService(SystemErrorEventMapper mapper) {

@@ -205,6 +205,10 @@ Write-TemplateIfMissing `
     -Destination (Join-Path $Root 'config\nginx\nginx.conf') `
     -Tokens $templateTokens
 Write-TemplateIfMissing `
+    -Source (Join-Path $scriptDir 'templates\frontend-mode-embedded.inc') `
+    -Destination (Join-Path $Root 'config\nginx\frontend-mode.inc') `
+    -Tokens $templateTokens
+Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\proxy.inc') `
     -Destination (Join-Path $Root 'config\nginx\proxy.inc')
 Write-TemplateIfMissing `
@@ -258,5 +262,6 @@ Write-Host "1. 编辑 $Root\config\application-prod.properties"
 Write-Host "2. 编辑 $Root\secrets\application-secrets.properties"
 Write-Host "3. 将发布包放入 $Root\packages"
 Write-Host "4. 执行：$Root\ops\mrrctl.ps1 deploy <发布包路径>"
-Write-Host "5. Nginx 控制：$Root\ops\nginx-control.cmd status|start|stop|restart|reload|test|pause|resume"
-Write-Host "6. 一键管理中心：双击 $Root\ops\MRR-管理中心.cmd（或 MRR-Manager.cmd）"
+Write-Host "5. 默认使用 JAR 内嵌前端；可执行 mrrctl.ps1 frontend external 临时切回外置前端。"
+Write-Host "6. Nginx 控制：$Root\ops\nginx-control.cmd status|start|stop|restart|reload|test|pause|resume"
+Write-Host "7. 一键管理中心：双击 $Root\ops\MRR-管理中心.cmd（或 MRR-Manager.cmd）"

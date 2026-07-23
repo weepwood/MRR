@@ -1,12 +1,32 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM node:22-alpine AS frontend-build
 WORKDIR /workspace
 
-COPY pom.xml ./
+RUN corepack enable
+COPY VERSION release-baseline.json ./
+COPY frontend-fantastic-admin/package.json \
+     frontend-fantastic-admin/pnpm-lock.yaml \
+     frontend-fantastic-admin/.npmrc ./frontend-fantastic-admin/
+WORKDIR /workspace/frontend-fantastic-admin
+RUN pnpm install --frozen-lockfile
+COPY frontend-fantastic-admin/ ./
+RUN pnpm build
+
+FROM maven:3.9.9-eclipse-temurin-21 AS backend-build
+WORKDIR /workspace/backend-repo
+
+COPY backend-repo/pom.xml ./
 RUN mvn -q -B -ntp dependency:go-offline
-
-COPY src ./src
-
-RUN mvn -q -B -ntp -DskipTests package
+COPY backend-repo/src ./src
+COPY --from=frontend-build /workspace/frontend-fantastic-admin/dist /workspace/frontend-dist
+RUN set -eux; \
+    rm -rf src/main/resources/static; \
+    mkdir -p src/main/resources/static; \
+    cp -a /workspace/frontend-dist/. src/main/resources/static/; \
+    mvn -q -B -ntp -DskipTests package; \
+    JAR="$(find target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"; \
+    test -n "${JAR}"; \
+    test "$(jar tf "${JAR}" | grep -c '^BOOT-INF/classes/static/index.html$')" -eq 1; \
+    jar tf "${JAR}" | grep -q '^BOOT-INF/classes/static/assets/'
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
@@ -14,7 +34,7 @@ WORKDIR /app
 # 创建非 root 用户运行应用
 RUN groupadd -r app && useradd -r -g app appuser
 
-COPY --from=build /workspace/target/*.jar /app/app.jar
+COPY --from=backend-build /workspace/backend-repo/target/*.jar /app/app.jar
 
 USER appuser
 

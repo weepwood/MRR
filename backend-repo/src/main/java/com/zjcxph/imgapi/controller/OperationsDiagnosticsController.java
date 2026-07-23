@@ -3,6 +3,8 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.DeploymentReadinessService;
+import com.zjcxph.imgapi.service.ImageSourceDiagnosticsService;
+import com.zjcxph.imgapi.service.IntegrityDiagnosticsService;
 import com.zjcxph.imgapi.service.OperationsDiagnosticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,13 +25,19 @@ import java.util.Map;
 public class OperationsDiagnosticsController {
 
     private final OperationsDiagnosticsService diagnosticsService;
+    private final ImageSourceDiagnosticsService imageSourceDiagnosticsService;
+    private final IntegrityDiagnosticsService integrityDiagnosticsService;
     private final DeploymentReadinessService readinessService;
 
     public OperationsDiagnosticsController(
             OperationsDiagnosticsService diagnosticsService,
+            ImageSourceDiagnosticsService imageSourceDiagnosticsService,
+            IntegrityDiagnosticsService integrityDiagnosticsService,
             DeploymentReadinessService readinessService
     ) {
         this.diagnosticsService = diagnosticsService;
+        this.imageSourceDiagnosticsService = imageSourceDiagnosticsService;
+        this.integrityDiagnosticsService = integrityDiagnosticsService;
         this.readinessService = readinessService;
     }
 
@@ -40,13 +48,13 @@ public class OperationsDiagnosticsController {
             @RequestParam(required = false) String sjh,
             @RequestParam(required = false) Integer imageId
     ) {
-        return Result.success(diagnosticsService.diagnoseImageSource(bah, sjh, imageId));
+        return Result.success(imageSourceDiagnosticsService.diagnose(bah, sjh, imageId));
     }
 
     @GetMapping("/integrity")
-    @Operation(summary = "获取病案数据完整性指标")
+    @Operation(summary = "读取最近一次后台生成的病案数据完整性快照")
     public Result<Map<String, Object>> integrity() {
-        return Result.success(diagnosticsService.integritySummary());
+        return Result.success(integrityDiagnosticsService.getSnapshot());
     }
 
     @GetMapping("/exports")
@@ -76,14 +84,14 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/readiness")
-    @Operation(summary = "执行部署就绪检查并返回只读降级状态")
+    @Operation(summary = "获取部署就绪状态，可由运维人员显式刷新")
     public Result<Map<String, Object>> readiness(
             @RequestParam(defaultValue = "false") boolean refresh
     ) {
-        if (refresh) {
-            readinessService.invalidate();
-        }
-        return Result.success(diagnosticsService.readiness());
+        Map<String, Object> snapshot = refresh
+                ? readinessService.refreshSnapshot()
+                : diagnosticsService.readiness();
+        return Result.success(snapshot);
     }
 
     @GetMapping("/read-only")

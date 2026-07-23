@@ -188,6 +188,16 @@ function Assert-BundledFrontendJar([string]$JarPath) {
     }
 }
 
+function Test-BundledFrontendJar([string]$JarPath) {
+    try {
+        Assert-BundledFrontendJar $JarPath
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
 function Set-FrontendMode([string]$Mode) {
     Assert-Admin
     if ($Mode -notin @('embedded','external')) { throw 'frontend 后必须指定 embedded 或 external。' }
@@ -267,11 +277,13 @@ function Assert-Checksums([string]$Release) {
     }
 }
 
-function Assert-Release([string]$Release) {
+function Assert-Release([string]$Release, [bool]$RequireBundledFrontend = $false) {
     foreach ($required in 'manifest.json','VERSION','release-baseline.json','backend\mrr-backend.jar','frontend\index.html') {
         if (-not (Test-Path (Join-Path $Release $required))) { throw "发布包缺少：$required" }
     }
-    Assert-BundledFrontendJar (Join-Path $Release 'backend\mrr-backend.jar')
+    if ($RequireBundledFrontend) {
+        Assert-BundledFrontendJar (Join-Path $Release 'backend\mrr-backend.jar')
+    }
 
     $manifest = Get-Manifest $Release
     if (-not $manifest -or -not (Test-ObjectProperty $manifest 'productVersion') -or -not (Test-ObjectProperty $manifest 'gitCommit')) {
@@ -333,7 +345,7 @@ function Deploy([string]$Zip) {
     try {
         Expand-Archive $Zip $stage -Force
         $source = Resolve-PackageRoot $stage
-        Assert-Release $source
+        Assert-Release $source $true
         $newManifest = Get-Manifest $source
         $commit = ([string]$newManifest.gitCommit -replace '[^0-9A-Za-z]','')
         if ($commit.Length -gt 8) { $commit = $commit.Substring(0,8) }
@@ -401,6 +413,10 @@ function Rollback([string]$Value) {
 
     $release = Resolve-Version $Value
     Assert-Release $release
+    $targetJar = Join-Path $release 'backend\mrr-backend.jar'
+    if ((Get-FrontendMode) -eq 'embedded' -and -not (Test-BundledFrontendJar $targetJar)) {
+        throw '目标旧版本没有内嵌前端。请先执行 frontend external，再进行回滚。'
+    }
     if ([IO.Path]::GetFullPath($release) -eq [IO.Path]::GetFullPath($old)) { throw '目标已经是当前版本。' }
     Set-Maintenance $true '系统正在回滚，请稍后再试。'
     Stop-Service $S.Backend -ErrorAction SilentlyContinue

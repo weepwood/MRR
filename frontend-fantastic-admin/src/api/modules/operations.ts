@@ -1,3 +1,4 @@
+import type { ApiResult } from '../types'
 import { getRequest, postRequest } from '../index'
 
 export interface DiagnosticStep {
@@ -116,31 +117,57 @@ export interface ReadinessSnapshot {
   checks: ReadinessCheck[]
 }
 
+async function unwrap<T>(request: Promise<ApiResult<T>>, action: string): Promise<T> {
+  const response = await request
+  if (response.data === undefined) {
+    throw new Error(`${action}未返回数据`)
+  }
+  return response.data
+}
+
 export function diagnoseImageSource(params: { bah?: string, sjh?: string, imageId?: number }) {
-  return getRequest<ImageSourceDiagnosis>('/api/v1/operations/image-source', { params })
+  return unwrap(
+    getRequest<ImageSourceDiagnosis>('/api/v1/operations/image-source', { params }),
+    '图片来源诊断',
+  )
 }
 
 export function getIntegritySummary() {
-  return getRequest<IntegritySummary>('/api/v1/operations/integrity')
+  return unwrap(
+    getRequest<IntegritySummary>('/api/v1/operations/integrity'),
+    '病案完整性查询',
+  )
 }
 
 export function getExportCenter(limit = 100) {
-  return getRequest<ExportCenterJob[]>('/api/v1/operations/exports', { params: { limit } })
+  return unwrap(
+    getRequest<ExportCenterJob[]>('/api/v1/operations/exports', { params: { limit } }),
+    '导出文件中心查询',
+  )
 }
 
 export function getPermissionMatrix(comparePrevious = true) {
-  return getRequest<PermissionMatrix>('/api/v1/operations/permission-matrix', {
-    params: { comparePrevious },
-  })
+  return unwrap(
+    getRequest<PermissionMatrix>('/api/v1/operations/permission-matrix', {
+      params: { comparePrevious },
+    }),
+    '权限矩阵查询',
+  )
 }
 
 export function savePermissionMatrixSnapshot(version?: string) {
-  return postRequest<{ version: string, createdBy: string, saved: boolean }>(
-    '/api/v1/operations/permission-matrix/snapshots',
-    { version },
+  return unwrap(
+    postRequest<{ version: string, createdBy: string, saved: boolean }>(
+      '/api/v1/operations/permission-matrix/snapshots',
+      { version },
+    ),
+    '权限矩阵快照保存',
   )
 }
 
 export function getDeploymentReadiness(refresh = false) {
-  return getRequest<ReadinessSnapshot>('/api/v1/operations/readiness', { params: { refresh } })
+  return unwrap(
+    getRequest<ReadinessSnapshot>('/api/v1/operations/readiness', { params: { refresh } }),
+    '部署就绪检查',
+  )
 }

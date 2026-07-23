@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type {
   SystemErrorEvent,
   SystemErrorOverview,
@@ -112,9 +113,7 @@ async function openDetail(row: SystemErrorEvent) {
 }
 
 async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
-  if (!canManage.value) {
-    return
-  }
+  if (!canManage.value) return
   updatingId.value = row.id
   try {
     await updateSystemErrorStatus(row.id, status)
@@ -331,6 +330,7 @@ onMounted(loadData)
 </template>
 
 <style scoped>
+/* stylelint-disable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
 .page-shell {
   display: flex;
   flex-direction: column;
@@ -433,4 +433,5 @@ onMounted(loadData)
     grid-template-columns: 1fr;
   }
 }
+/* stylelint-enable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
 </style>

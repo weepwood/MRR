@@ -36,6 +36,10 @@ public interface SystemErrorEventMapper {
                     WHEN system_error_event.status = 'RESOLVED' THEN 'OPEN'
                     ELSE system_error_event.status
                 END,
+                acknowledged_by = CASE
+                    WHEN system_error_event.status = 'RESOLVED' THEN NULL
+                    ELSE system_error_event.acknowledged_by
+                END,
                 resolved_at = CASE
                     WHEN system_error_event.status = 'RESOLVED' THEN NULL
                     ELSE system_error_event.resolved_at
@@ -157,7 +161,7 @@ public interface SystemErrorEventMapper {
     @Update("""
             UPDATE system_error_event
             SET status = #{status},
-                acknowledged_by = #{username},
+                acknowledged_by = CASE WHEN #{status} = 'OPEN' THEN NULL ELSE #{username} END,
                 resolved_at = CASE WHEN #{status} = 'RESOLVED' THEN NOW() ELSE NULL END
             WHERE id = #{id}
             """)

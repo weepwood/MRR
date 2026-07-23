@@ -254,6 +254,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
     meta: { title: '运维', icon: 'i-ant-design:control-twotone' },
     children: [
       {
+        path: '/operations-center',
+        component: () => import('@/views/operations-center/index.vue'),
+        meta: {
+          title: '运维诊断中心',
+          icon: 'i-ant-design:deployment-unit-outlined',
+          auth: ['system:read'],
+          cache: true,
+        },
+      },
+      {
         path: '/logs',
         component: () => import('@/views/logs/index.vue'),
         meta: { title: '日志管理', icon: 'i-ant-design:file-search-outlined', auth: ['log:read'], cache: true },
@@ -324,6 +334,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
     '/auth-test',
     '/data-relations',
     '/nginx-browser',
+    '/operations-center',
     ...externalArchiveGeneratedPaths,
     '/statistics/archive',
     '/monitoring',

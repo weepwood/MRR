@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
+/* eslint-disable antfu/if-newline, curly, style/indent-binary-ops, vue/singleline-html-element-content-newline */
 import type { ImageAuditFilterParams } from '@/api/modules/logs'
 import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
@@ -383,6 +383,7 @@ onMounted(loadData)
 </template>
 
 <style scoped>
+/* stylelint-disable @stylistic/selector-list-comma-newline-after, @stylistic/number-leading-zero, at-rule-empty-line-before, media-feature-range-notation */
 .page-shell { display: grid; gap: 18px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .header-actions, .section-actions { display: flex; gap: 10px; align-items: center; }

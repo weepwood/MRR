@@ -34,7 +34,6 @@ const orderedActions = computed(() => {
 })
 
 const inlineActions = computed(() => orderedActions.value
-  .filter(action => action.placement !== 'overflow')
   .slice(0, Math.max(0, props.maxInline)))
 
 const inlineKeys = computed(() => new Set(inlineActions.value.map(action => action.key)))
@@ -91,19 +90,18 @@ defineExpose({ availableActions, inlineActions, overflowActions })
       trigger="click"
       placement="bottom-end"
       :teleported="true"
+      :hide-on-click="true"
       @command="handleOverflowCommand"
     >
-      <el-tooltip :content="moreLabel" placement="top" :show-after="250">
-        <el-button
-          text
-          circle
-          :aria-label="moreLabel"
-          class="mrr-table-actions__button mrr-table-actions__button--more"
-          @click.stop
-        >
-          <FaIcon name="i-ri:more-2-fill" />
-        </el-button>
-      </el-tooltip>
+      <el-button
+        text
+        circle
+        :aria-label="moreLabel"
+        class="mrr-table-actions__button mrr-table-actions__button--more"
+        @click.stop
+      >
+        <FaIcon name="i-ri:more-fill" />
+      </el-button>
 
       <template #dropdown>
         <el-dropdown-menu class="mrr-table-actions__menu">
@@ -128,10 +126,12 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 <style scoped>
 .mrr-table-actions {
   display: inline-flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   min-width: 0;
+  margin-inline: -10px;
+  white-space: nowrap;
 }
 
 .mrr-table-actions__button-wrap {
@@ -139,14 +139,14 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 .mrr-table-actions__button {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--mrr-muted-foreground);
   background: color-mix(in srgb, var(--mrr-muted) 68%, transparent);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .mrr-table-actions__button:hover,
@@ -195,7 +195,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 :global(.mrr-table-actions__menu) {
-  min-width: 176px;
+  min-width: 168px;
   padding: 8px;
 }
 

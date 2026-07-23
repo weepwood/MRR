@@ -25,8 +25,7 @@ public class DeploymentReadinessStartupCheck {
 
     @EventListener(ApplicationReadyEvent.class)
     public void evaluateAfterStartup() {
-        readinessService.invalidate();
-        Map<String, Object> snapshot = readinessService.getSnapshot();
+        Map<String, Object> snapshot = readinessService.refreshSnapshot();
         logger.warn(
                 "部署就绪检查完成: ready={}, mode={}, checkedAt={}",
                 snapshot.get("ready"),

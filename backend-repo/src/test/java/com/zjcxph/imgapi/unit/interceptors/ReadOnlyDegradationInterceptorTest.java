@@ -46,6 +46,18 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
+    void externalArchiveTicketRemainsAvailableInReadOnlyMode() throws Exception {
+        when(readinessService.isReadOnly()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST",
+                "/api/v1/integration/archive/tickets"
+        );
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertTrue(interceptor.preHandle(request, response, new Object()));
+    }
+
+    @Test
     void businessWriteIsRejectedInReadOnlyMode() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(true);
         when(readinessService.getSnapshot()).thenReturn(Map.of(

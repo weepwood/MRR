@@ -33,13 +33,17 @@ const loading = ref(false)
 const saving = ref(false)
 
 function parseBoolean(value: unknown, fallback: boolean) {
-  if (value === undefined || value === null || value === '') return fallback
+  if (value === undefined || value === null || value === '') {
+    return fallback
+  }
   return ['true', '1', 'yes', 'on'].includes(String(value).trim().toLowerCase())
 }
 
 function parseNumber(value: unknown, fallback: number, min: number, max: number) {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return fallback
+  if (!Number.isFinite(parsed)) {
+    return fallback
+  }
   return Math.min(max, Math.max(min, parsed))
 }
 
@@ -97,7 +101,7 @@ function validate() {
     ElMessage.warning('启用 OCR 前必须填写服务端白名单配置名称')
     return false
   }
-  if (!/^[A-Za-z0-9_+,-]{1,64}$/.test(settings.ocrLanguages.trim())) {
+  if (!/^[\w+,-]{1,64}$/.test(settings.ocrLanguages.trim())) {
     ElMessage.warning('OCR 识别语言格式不正确')
     return false
   }
@@ -109,7 +113,9 @@ function validate() {
 }
 
 async function saveSettings() {
-  if (!validate()) return false
+  if (!validate()) {
+    return false
+  }
   saving.value = true
   try {
     await saveSystemSettings(serialize())
@@ -146,17 +152,26 @@ onMounted(loadSettings)
 
     <div class="switch-list">
       <div class="switch-row">
-        <div><strong>启用本地 OCR</strong><p>默认关闭。启用后才允许创建单病案 OCR 和智能分类任务。</p></div>
+        <div>
+          <strong>启用本地 OCR</strong>
+          <p>默认关闭。启用后才允许创建单病案 OCR 和智能分类任务。</p>
+        </div>
         <el-switch v-model="settings.ocrEnabled" />
       </div>
       <div class="switch-row">
-        <div><strong>新扫描自动 OCR</strong><p>仅影响后续接入的新图片，不会启动历史图片全量识别。</p></div>
+        <div>
+          <strong>新扫描自动 OCR</strong>
+          <p>仅影响后续接入的新图片，不会启动历史图片全量识别。</p>
+        </div>
         <el-switch v-model="settings.ocrAutoProcessNewScans" :disabled="!settings.ocrEnabled" />
       </div>
     </div>
 
     <div class="setting-group">
-      <div class="group-heading"><strong>OCR 引擎与资源限制</strong><p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p></div>
+      <div class="group-heading">
+        <strong>OCR 引擎与资源限制</strong>
+        <p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p>
+      </div>
       <div class="control-grid">
         <el-form-item label="白名单配置名称">
           <el-input v-model="settings.ocrProfile" placeholder="例如 tesseract-local" maxlength="64" />
@@ -168,25 +183,48 @@ onMounted(loadSettings)
           <el-input-number v-model="settings.ocrMaxConcurrency" :min="1" :max="4" controls-position="right" />
         </el-form-item>
         <el-form-item label="单页超时">
-          <div class="number-control"><el-input-number v-model="settings.ocrPageTimeoutSeconds" :min="5" :max="300" controls-position="right" /><span>秒</span></div>
+          <div class="number-control">
+            <el-input-number v-model="settings.ocrPageTimeoutSeconds" :min="5" :max="300" controls-position="right" />
+            <span>秒</span>
+          </div>
         </el-form-item>
         <el-form-item label="最大输出">
-          <div class="number-control"><el-input-number v-model="outputMegabytes" :min="1" :max="16" controls-position="right" /><span>MB</span></div>
+          <div class="number-control">
+            <el-input-number v-model="outputMegabytes" :min="1" :max="16" controls-position="right" />
+            <span>MB</span>
+          </div>
         </el-form-item>
         <el-form-item label="OCR 低质量阈值">
-          <div class="number-control"><el-input-number v-model="settings.ocrLowConfidenceThreshold" :min="0" :max="1" :step="0.05" :precision="2" controls-position="right" /><span>{{ Math.round(settings.ocrLowConfidenceThreshold * 100) }}%</span></div>
+          <div class="number-control">
+            <el-input-number v-model="settings.ocrLowConfidenceThreshold" :min="0" :max="1" :step="0.05" :precision="2" controls-position="right" />
+            <span>{{ Math.round(settings.ocrLowConfidenceThreshold * 100) }}%</span>
+          </div>
         </el-form-item>
         <el-form-item label="批量确认最低阈值">
-          <div class="number-control"><el-input-number v-model="settings.classificationBatchReviewThreshold" :min="0.9" :max="1" :step="0.01" :precision="2" controls-position="right" /><span>{{ Math.round(settings.classificationBatchReviewThreshold * 100) }}%</span></div>
+          <div class="number-control">
+            <el-input-number v-model="settings.classificationBatchReviewThreshold" :min="0.9" :max="1" :step="0.01" :precision="2" controls-position="right" />
+            <span>{{ Math.round(settings.classificationBatchReviewThreshold * 100) }}%</span>
+          </div>
         </el-form-item>
       </div>
     </div>
 
     <div class="setting-group">
-      <div class="group-heading"><strong>OCR 字典与分类规则</strong><p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p></div>
+      <div class="group-heading">
+        <strong>OCR 字典与分类规则</strong>
+        <p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p>
+      </div>
       <div class="foundation-grid">
-        <div class="foundation-card"><span>OCR 识别词库</span><strong>数据表已建立</strong><small>术语、别名和常见 OCR 错字管理界面将在下一阶段接入。</small></div>
-        <div class="foundation-card"><span>分类规则字典</span><strong>数据表已建立</strong><small>支持标题、正文、排除词、权重和优先级的规则管理界面将在下一阶段接入。</small></div>
+        <div class="foundation-card">
+          <span>OCR 识别词库</span>
+          <strong>数据表已建立</strong>
+          <small>术语、别名和常见 OCR 错字管理界面将在下一阶段接入。</small>
+        </div>
+        <div class="foundation-card">
+          <span>分类规则字典</span>
+          <strong>数据表已建立</strong>
+          <small>支持标题、正文、排除词、权重和优先级的规则管理界面将在下一阶段接入。</small>
+        </div>
       </div>
     </div>
   </section>
@@ -194,7 +232,8 @@ onMounted(loadSettings)
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
-.setting-group, .switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+.setting-group,
+.switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 .group-heading { margin-bottom: var(--mrr-space-5); }
 .group-heading strong { font-size: 15px; }
 .group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
@@ -207,9 +246,12 @@ onMounted(loadSettings)
 .switch-row p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
 .foundation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .foundation-card { display: grid; gap: 6px; padding: var(--mrr-space-4); border: 1px dashed var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.foundation-card span, .foundation-card small { color: var(--mrr-muted-foreground); }
+.foundation-card span,
+.foundation-card small { color: var(--mrr-muted-foreground); }
 .foundation-card small { line-height: 1.6; }
-@media (max-width: 680px) {
-  .control-grid, .foundation-grid { grid-template-columns: 1fr; }
+
+@media (width <= 680px) {
+  .control-grid,
+  .foundation-grid { grid-template-columns: 1fr; }
 }
 </style>

@@ -79,7 +79,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^7.7.3",
     "@clack/prompts": "^1.1.0",
-    "@commitlint/cli": "^19.8.1",
+    "@commitlint/cli": "^21.2.1",
     "@faker-js/faker": "^10.4.0",
     "@iconify/json": "^2.2.456",
     "@iconify/vue": "^5.0.0",

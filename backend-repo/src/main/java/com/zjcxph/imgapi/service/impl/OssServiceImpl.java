@@ -99,7 +99,7 @@ public class OssServiceImpl implements OssService {
                             new AwsClientBuilder.EndpointConfiguration(endpoint, ossProperties.getRegion()))
                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
                     .withClientConfiguration(clientConfig)
-                    .withPathStyleAccessEnabled(false)
+                    .withPathStyleAccessEnabled(ossProperties.isPathStyleAccess())
                     .build();
 
             String maskedKeyId = accessKeyId.length() > 8
@@ -108,9 +108,10 @@ public class OssServiceImpl implements OssService {
                     + accessKeyId.substring(accessKeyId.length() - 4)
                     : "****";
             logger.info(
-                    "OSS client initialized successfully: endpoint={}, bucket={}, accessKeyId={}",
+                    "OSS client initialized successfully: endpoint={}, bucket={}, pathStyleAccess={}, accessKeyId={}",
                     ossProperties.getEndpoint(),
                     ossProperties.getBucket(),
+                    ossProperties.isPathStyleAccess(),
                     maskedKeyId
             );
         } catch (Exception exception) {

@@ -18,12 +18,59 @@ jobs:
     env:
       RELEASE_TAG: v0.7.3
       RELEASE_VERSION: 0.7.3
+      STATUS_FILE: release-notes/0.7.3-verification-status.txt
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: main
+
+      - name: Record current release state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_sha="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          {
+            printf 'checked_at=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            printf 'release_tag=%s\n' "${RELEASE_TAG}"
+            printf 'release_sha=%s\n\n' "${release_sha}"
+
+            echo '[release]'
+            gh release view "${RELEASE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json tagName,name,isDraft,isPrerelease,publishedAt,assets,body \
+              --jq '{tagName,name,isDraft,isPrerelease,publishedAt,assets:[.assets[] | {name,size,downloadCount}],body}' \
+              || true
+
+            echo
+            echo '[windows-release-package]'
+            gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow windows-release-package.yml \
+              --commit "${release_sha}" \
+              --limit 5 \
+              --json databaseId,workflowName,status,conclusion,event,headSha,createdAt,updatedAt,url \
+              || true
+
+            echo
+            echo '[standalone-jar-release]'
+            gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow standalone-jar-release.yml \
+              --commit "${release_sha}" \
+              --limit 5 \
+              --json databaseId,workflowName,status,conclusion,event,headSha,createdAt,updatedAt,url \
+              || true
+          } > "${STATUS_FILE}"
+
+          git add "${STATUS_FILE}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "诊断：记录 MRR 0.7.3 发布状态"
+          git push origin main
 
       - name: Recover and verify formal assets
         shell: bash
@@ -108,12 +155,10 @@ jobs:
           echo "${RELEASE_TAG} 正式资产未在规定时间内完整生成" >&2
           exit 1
 
-      - name: Remove verification task and record success
+      - name: Remove verification task and diagnostic state
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/verify-release-0.7.3-once.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/verify-release-0.7.3-once.yml "${STATUS_FILE}"
           git commit -m "发布：确认 MRR 0.7.3 正式资产"
           git push origin main

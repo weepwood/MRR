@@ -4,6 +4,7 @@ import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
 import DeveloperSettings from './DeveloperSettings.vue'
+import DocumentationSettings from './DocumentationSettings.vue'
 import ExternalLinksSettings from './ExternalLinksSettings.vue'
 import LoginSupportSettings from './LoginSupportSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
@@ -124,7 +125,7 @@ void shellRef
               开发者模式已启用
             </el-tag>
           </div>
-          <p>统一管理系统标识、登录支持、档案浏览、安全策略与界面外观。</p>
+          <p>统一管理系统标识、登录支持、帮助文档、档案浏览、安全策略与界面外观。</p>
         </div>
       </div>
       <div v-if="isServerSettingSection" class="header-actions">
@@ -250,6 +251,7 @@ void shellRef
             <el-form :model="settings" label-position="top">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
               <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
+              <DocumentationSettings v-else-if="activeSection === 'documentation'" v-model="settings" />
               <ArchiveSettings v-else-if="activeSection === 'archive'" v-model="settings" />
               <SecuritySettings v-else-if="activeSection === 'security'" v-model="settings" />
               <DeveloperSettings v-else v-model="settings" />

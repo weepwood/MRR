@@ -48,11 +48,18 @@ class BackendTestScopeTest(unittest.TestCase):
                 self.assertEqual(scope.reason, "release-change")
 
     def test_gate_control_change_tests_the_gate_itself(self):
-        scope = classify_paths([".github/workflows/quality-gate.yml"])
-
-        self.assertTrue(scope.backend_changed)
-        self.assertTrue(scope.integration_changed)
-        self.assertEqual(scope.reason, "backend-gate-control")
+        for path in (
+            ".github/workflows/quality-gate.yml",
+            ".github/workflows/coverage-baseline.yml",
+            "quality/coverage-baseline.json",
+            "scripts/jacoco_coverage.py",
+            "scripts/tests/test_jacoco_coverage.py",
+        ):
+            with self.subTest(path=path):
+                scope = classify_paths([path])
+                self.assertTrue(scope.backend_changed)
+                self.assertTrue(scope.integration_changed)
+                self.assertEqual(scope.reason, "backend-gate-control")
 
     def test_empty_path_list_is_safe(self):
         scope = classify_paths([])

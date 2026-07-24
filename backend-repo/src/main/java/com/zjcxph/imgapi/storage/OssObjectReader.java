@@ -78,7 +78,7 @@ public class OssObjectReader {
                 .withCredentials(new AWSStaticCredentialsProvider(
                         new BasicAWSCredentials(accessKeyId, accessKeySecret)))
                 .withClientConfiguration(configuration)
-                .withPathStyleAccessEnabled(false)
+                .withPathStyleAccessEnabled(properties.isPathStyleAccess())
                 .build();
     }
 

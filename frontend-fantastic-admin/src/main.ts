@@ -5,6 +5,7 @@ import { installArchiveUserIdRouting } from '@/utils/archive-userid-routing'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
+import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
@@ -42,6 +43,7 @@ installArchiveWatermark(router, pinia)
 directive(app)
 installRequestErrorFallback(app)
 app.mount('#app')
+installPwa()
 
 async function installOfflineIcons() {
   const { downloadAndInstall } = await import('@/iconify')

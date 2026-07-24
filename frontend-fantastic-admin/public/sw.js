@@ -4,7 +4,7 @@ const version = rawVersion.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 64)
 const STATIC_CACHE = `${CACHE_PREFIX}static-${version}`
 const APP_SHELL = [
   '/offline.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
   '/favicon.svg',
   '/pwa/icon-192.svg',
   '/pwa/icon-512.svg',
@@ -28,7 +28,7 @@ function isStaticApplicationAsset(pathname) {
     || pathname.startsWith('/browser_upgrade/')
     || pathname.startsWith('/pwa/')
     || pathname === '/favicon.svg'
-    || pathname === '/manifest.webmanifest'
+    || pathname === '/manifest.json'
 }
 
 async function precacheAppShell() {

@@ -2,12 +2,13 @@
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
 import { Download, UploadFilled } from '@element-plus/icons-vue'
-import { ElMessage, genFileId } from 'element-plus'
+import { ElMessage, ElMessageBox, genFileId } from 'element-plus'
 import { computed, ref } from 'vue'
 import {
   downloadDataExchangeTemplate,
   importDataExchangeFile,
 } from '@/api/modules/data-exchange'
+import { createCsvBlob, downloadBlob, downloadResponseBlob } from '@/utils/file-download'
 
 interface FieldDefinition {
   name: string
@@ -39,6 +40,10 @@ const canCommit = computed(() => {
     && !!result.value?.canImport
     && result.value.dryRun
     && result.value.errorRows === 0
+})
+
+const errorReportLabel = computed(() => {
+  return result.value?.errorsTruncated ? '下载当前错误明细' : '下载错误报告'
 })
 
 function resetResult() {
@@ -85,9 +90,25 @@ async function validateFile() {
 }
 
 async function commitImport() {
-  if (!selectedFile.value || !canCommit.value) {
+  if (!selectedFile.value || !canCommit.value || !result.value) {
     return
   }
+
+  try {
+    await ElMessageBox.confirm(
+      `将写入“${props.title}”：预计新增 ${result.value.insertedRows} 条、更新 ${result.value.updatedRows} 条、跳过重复 ${result.value.duplicateRows} 条。系统会在写入前再次执行完整校验。`,
+      '确认正式导入',
+      {
+        confirmButtonText: '确认写入',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  }
+  catch {
+    return
+  }
+
   importing.value = true
   try {
     const response = await importDataExchangeFile(props.dataset, selectedFile.value, false)
@@ -95,6 +116,10 @@ async function commitImport() {
       return
     }
     result.value = response.data
+    if (!response.data.canImport || response.data.errorRows > 0) {
+      ElMessage.warning('正式导入前的再次校验未通过，本次未写入数据库')
+      return
+    }
     ElMessage.success(
       `导入完成：新增 ${response.data.insertedRows} 条，更新 ${response.data.updatedRows} 条，跳过重复 ${response.data.duplicateRows} 条`,
     )
@@ -109,23 +134,32 @@ async function downloadTemplate() {
   downloadingTemplate.value = true
   try {
     const response = await downloadDataExchangeTemplate(props.dataset)
-    downloadBlob(response.data, `${props.dataset}-template.csv`)
+    downloadResponseBlob(response, `${props.dataset}-template.csv`)
   }
   finally {
     downloadingTemplate.value = false
   }
 }
 
-function downloadBlob(blobValue: Blob, fileName: string) {
-  const blob = blobValue instanceof Blob ? blobValue : new Blob([blobValue])
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = fileName
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+function downloadErrorReport() {
+  if (!result.value?.errors.length) {
+    return
+  }
+
+  const report = createCsvBlob(
+    ['rowNumber', 'field', 'message', 'value'],
+    result.value.errors.map(error => [
+      error.rowNumber,
+      error.field,
+      error.message,
+      error.value,
+    ]),
+  )
+  downloadBlob(report, `${props.dataset}-validation-errors-${today()}.csv`)
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10)
 }
 </script>
 
@@ -263,6 +297,12 @@ function downloadBlob(blobValue: Blob, fileName: string) {
           </template>
         </el-alert>
 
+        <div v-if="result.errors.length" class="result-actions">
+          <el-button :icon="Download" @click="downloadErrorReport">
+            {{ errorReportLabel }}
+          </el-button>
+        </div>
+
         <el-table v-if="result.errors.length" :data="result.errors" max-height="280" border>
           <el-table-column prop="rowNumber" label="行号" width="80" />
           <el-table-column prop="field" label="字段" width="150" />
@@ -270,7 +310,7 @@ function downloadBlob(blobValue: Blob, fileName: string) {
           <el-table-column prop="value" label="原值（敏感值已脱敏）" min-width="190" show-overflow-tooltip />
         </el-table>
         <p v-if="result.errorsTruncated" class="truncated-tip">
-          错误较多，仅展示前 200 条。请先修复当前错误后重新校验。
+          错误较多，页面与下载文件仅包含后端返回的前 200 条脱敏明细；请先修复当前错误后重新校验。
         </p>
       </section>
     </div>
@@ -336,7 +376,8 @@ function downloadBlob(blobValue: Blob, fileName: string) {
   color: var(--el-text-color-secondary);
 }
 
-.action-row {
+.action-row,
+.result-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;

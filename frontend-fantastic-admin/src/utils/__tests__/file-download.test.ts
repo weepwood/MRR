@@ -54,8 +54,8 @@ describe('file download utilities', () => {
     expect(text.startsWith('rowNumber,message,value\r\n')).toBe(true)
     expect(text).toContain('"字段包含,逗号","\'=SUM(1,1)"')
     expect(text).toContain('"包含""引号""",普通值')
-    expect(text).toContain("4,保留前导零,'001234")
-    expect(text).toContain("5,保留长整数,'1234567890123456")
+    expect(text).toContain('4,保留前导零,\'001234')
+    expect(text).toContain('5,保留长整数,\'1234567890123456')
   })
 
   it('defers object URL cleanup until after the click', () => {

@@ -11,6 +11,7 @@ on:
       - 'scripts/embed_frontend_in_jar.py'
       - 'scripts/build_standalone_jar.py'
       - 'scripts/tests/test_embed_frontend_in_jar.py'
+      - 'scripts/tests/test_documentation_packaging_policy.py'
       - 'scripts/tests/test_build_standalone_jar.py'
       - 'backend-repo/**'
       - 'frontend-fantastic-admin/**'
@@ -76,8 +77,11 @@ jobs:
           echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
           echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
-      - name: Test frontend JAR embedder
-        run: python -m unittest scripts.tests.test_embed_frontend_in_jar
+      - name: Test frontend JAR packaging policy
+        run: |
+          python -m unittest \
+            scripts.tests.test_embed_frontend_in_jar \
+            scripts.tests.test_documentation_packaging_policy
 
       - name: Test and package backend
         working-directory: backend-repo

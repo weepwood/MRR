@@ -180,8 +180,33 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Unit Test
-        run: pnpm test:run
+      - name: Unit Test with coverage
+        run: pnpm test:coverage
+
+      - name: Summarize frontend coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline_args=()
+          if [ -f ../quality/frontend-coverage-baseline.json ]; then
+            baseline_args+=(--baseline ../quality/frontend-coverage-baseline.json)
+          fi
+          python3 ../scripts/vitest_coverage.py \
+            --summary coverage/coverage-summary.json \
+            "${baseline_args[@]}" \
+            --max-regression 0.50 \
+            --output-json coverage/coverage-comparison.json \
+            --output-markdown coverage/coverage-comparison.md \
+            --github-summary "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage-report
+          path: frontend-fantastic-admin/coverage
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Install Chromium
         if: needs.frontend-scope.outputs.e2e_changed == 'true'

@@ -1,0 +1,11 @@
+checked_at=2026-07-24T01:29:59Z
+release_tag=v0.7.3
+release_sha=06e25b9a7b3427231101f1f07e85a45596869cc7
+
+[release]
+
+[windows-release-package]
+[]
+
+[standalone-jar-release]
+[]

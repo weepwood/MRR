@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
 import DepartmentThemeSettings from './DepartmentThemeSettings.vue'
@@ -9,7 +10,6 @@ import ExternalLinksSettings from './ExternalLinksSettings.vue'
 import LoginSupportSettings from './LoginSupportSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
-import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 
 defineOptions({ name: 'UnifiedSettingsPage' })
 
@@ -85,29 +85,43 @@ function showDepartmentSavedFeedback() {
 
 async function handleServerSave() {
   clearSavedFeedback()
-  if (await handleSave()) showSavedFeedback()
+  if (await handleSave()) {
+    showSavedFeedback()
+  }
 }
 
 async function handleDepartmentSave() {
   clearDepartmentSavedFeedback()
   const panel = departmentThemeRef.value
-  if (!panel) return
+  if (!panel) {
+    return
+  }
   await panel.saveThemes()
   await nextTick()
-  if (!panel.isDirty) showDepartmentSavedFeedback()
+  if (!panel.isDirty) {
+    showDepartmentSavedFeedback()
+  }
 }
 
 watch(isDirty, (dirty) => {
-  if (dirty) clearSavedFeedback()
+  if (dirty) {
+    clearSavedFeedback()
+  }
 })
 
 watch(() => departmentThemeRef.value?.isDirty, (dirty) => {
-  if (dirty) clearDepartmentSavedFeedback()
+  if (dirty) {
+    clearDepartmentSavedFeedback()
+  }
 })
 
 onUnmounted(() => {
-  if (saveFeedbackTimer !== undefined) window.clearTimeout(saveFeedbackTimer)
-  if (departmentFeedbackTimer !== undefined) window.clearTimeout(departmentFeedbackTimer)
+  if (saveFeedbackTimer !== undefined) {
+    window.clearTimeout(saveFeedbackTimer)
+  }
+  if (departmentFeedbackTimer !== undefined) {
+    window.clearTimeout(departmentFeedbackTimer)
+  }
 })
 
 void shellRef
@@ -230,7 +244,9 @@ void shellRef
           <div class="sidebar-status">
             <div>
               <span>配置状态</span>
-              <el-tag :type="sourceMeta.type" effect="light" round size="small">{{ sourceMeta.label }}</el-tag>
+              <el-tag :type="sourceMeta.type" effect="light" round size="small">
+                {{ sourceMeta.label }}
+              </el-tag>
             </div>
             <p>最近同步：{{ lastSyncedAt || '尚未同步' }}</p>
           </div>

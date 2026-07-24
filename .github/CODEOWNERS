@@ -1,0 +1,10 @@
+# 默认由仓库维护者负责最终审查。
+* @weepwood
+
+# 分层所有权，便于未来增加领域维护者。
+/backend-repo/ @weepwood
+/frontend-fantastic-admin/ @weepwood
+/vitepress-doc/ @weepwood
+/deploy/ @weepwood
+/.github/ @weepwood
+/scripts/ @weepwood

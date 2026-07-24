@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createCsvBlob,
   downloadBlob,
@@ -12,6 +12,11 @@ describe('file download utilities', () => {
       createObjectURL: vi.fn(() => 'blob:test-download'),
       revokeObjectURL: vi.fn(),
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('reads axios-style headers and resolves RFC 5987 filenames', () => {
@@ -54,7 +59,6 @@ describe('file download utilities', () => {
     expect(URL.revokeObjectURL).not.toHaveBeenCalled()
     vi.runAllTimers()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test-download')
-    vi.useRealTimers()
   })
 })
 

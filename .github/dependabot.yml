@@ -1,36 +1,62 @@
 version: 2
 updates:
+  # GitHub Actions 的主版本升级通常会改变运行时或输入参数，保持每个 Action 独立审查。
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
-      time: '08:00'
+      time: "08:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - ci
-    groups:
-      github-actions:
-        patterns:
-          - '*'
 
   - package-ecosystem: maven
     directory: /backend-repo
     schedule:
       interval: weekly
       day: monday
-      time: '08:30'
+      time: "08:30"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - backend
     groups:
-      backend-minor-patch:
+      # Spring Boot 与 MyBatis 需要一起验证，但主版本升级仍保持独立 PR。
+      spring-platform:
+        applies-to: version-updates
+        patterns:
+          - "org.springframework.boot:*"
+          - "org.mybatis.spring.boot:*"
         update-types:
           - minor
+          - patch
+
+      # iText 模块必须保持相同版本，避免 PDF 运行时不兼容。
+      pdf-stack:
+        applies-to: version-updates
+        patterns:
+          - "com.itextpdf:*"
+        update-types:
+          - minor
+          - patch
+
+      # 仅聚合低风险补丁；框架、日志、文档导出和 OSS 依赖继续独立审查。
+      backend-safe-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "org.springframework.boot:*"
+          - "org.mybatis.spring.boot:*"
+          - "net.logstash.logback:*"
+          - "com.itextpdf:*"
+          - "org.apache.poi:*"
+          - "com.amazonaws:*"
+        update-types:
           - patch
 
   - package-ecosystem: npm
@@ -38,29 +64,113 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: '09:00'
+      time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - frontend
     groups:
-      frontend-minor-patch:
+      # Vue Router 单独升级；Vue、Pinia 与 VueUse 可作为运行时生态共同验证。
+      vue-runtime:
+        applies-to: version-updates
+        patterns:
+          - vue
+          - pinia
+          - "@pinia/*"
+          - "@vueuse/*"
         update-types:
           - minor
+          - patch
+
+      # 构建工具作为一个专项验证，主版本升级仍保持独立 PR。
+      vite-toolchain:
+        applies-to: version-updates
+        patterns:
+          - vite
+          - "@vitejs/*"
+          - "vite-plugin-*"
+        update-types:
+          - minor
+          - patch
+
+      unocss-toolchain:
+        applies-to: version-updates
+        patterns:
+          - unocss
+          - "@unocss/*"
+        update-types:
+          - minor
+          - patch
+
+      lint-toolchain:
+        applies-to: version-updates
+        patterns:
+          - eslint
+          - "@antfu/eslint-config"
+          - stylelint
+          - "stylelint-*"
+          - "@stylistic/stylelint-config"
+        update-types:
+          - minor
+          - patch
+
+      test-toolchain:
+        applies-to: version-updates
+        patterns:
+          - vitest
+          - "@vitest/*"
+          - "@vue/test-utils"
+          - "@playwright/test"
+          - jsdom
+        update-types:
+          - minor
+          - patch
+
+      # 生产依赖和开发依赖分别聚合补丁，便于定位回归来源。
+      frontend-production-patch:
+        applies-to: version-updates
+        dependency-type: production
+        patterns:
+          - "*"
+        exclude-patterns:
+          - vue-router
+          - element-plus
+          - typescript
+          - vue-tsc
+        update-types:
+          - patch
+
+      frontend-development-patch:
+        applies-to: version-updates
+        dependency-type: development
+        patterns:
+          - "*"
+        exclude-patterns:
+          - vue-router
+          - element-plus
+          - typescript
+          - vue-tsc
+          - "@commitlint/*"
+          - bumpp
+        update-types:
           - patch
 
   - package-ecosystem: npm
     directory: /vitepress-doc
     schedule:
       interval: monthly
-      time: '09:30'
+      time: "09:30"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     labels:
       - dependencies
       - documentation
     groups:
-      documentation-dependencies:
+      documentation-minor-patch:
+        applies-to: version-updates
         patterns:
-          - '*'
+          - "*"
+        update-types:
+          - minor
+          - patch

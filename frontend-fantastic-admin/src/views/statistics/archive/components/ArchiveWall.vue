@@ -321,8 +321,8 @@ onUnmounted(() => {
   box-sizing: border-box;
   min-width: 0;
   overflow: hidden;
-  background: var(--surface);
   outline: none;
+  background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 9px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;

@@ -34,7 +34,7 @@ const wallScroller = ref<HTMLElement | null>(null)
 const loadSentinel = ref<HTMLElement | null>(null)
 const cardRefs = ref<(HTMLElement | null)[]>([])
 const failedImageKeys = ref<Set<string>>(new Set())
-const visibleCount = ref(INITIAL_VISIBLE_COUNT)
+const visibleCount = ref(Math.max(INITIAL_VISIBLE_COUNT, props.selectedIndex + 1))
 const columnCount = ref(1)
 const isImageViewerOpen = ref(false)
 const imageViewerIndex = ref(0)
@@ -97,8 +97,8 @@ function handleImageViewerSwitch(index: number) {
   selectImage(index)
 }
 
-function toggleImage(image: GalleryImage, index: number) {
-  if (!props.selectionEnabled) {
+function toggleImage(image: GalleryImage | undefined, index: number) {
+  if (!image || !props.selectionEnabled) {
     return
   }
   selectImage(index)
@@ -114,6 +114,9 @@ function updateColumnCount() {
 }
 
 function focusCard(index: number) {
+  if (!props.images.length) {
+    return
+  }
   const nextIndex = Math.min(props.images.length - 1, Math.max(0, index))
   ensureVisible(nextIndex)
   selectImage(nextIndex)
@@ -126,29 +129,21 @@ function focusCard(index: number) {
 function onItemKeydown(index: number, event: KeyboardEvent) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    if (props.selectionEnabled) {
-      toggleImage(props.images[index], index)
-    }
+    toggleImage(props.images[index], index)
     return
   }
 
-  const movement = {
-    ArrowLeft: -1,
-    ArrowRight: 1,
-    ArrowUp: -columnCount.value,
-    ArrowDown: columnCount.value,
-  }[event.key]
-  if (movement !== undefined) {
+  let nextIndex: number | null = null
+  if (event.key === 'ArrowLeft') nextIndex = index - 1
+  else if (event.key === 'ArrowRight') nextIndex = index + 1
+  else if (event.key === 'ArrowUp') nextIndex = index - columnCount.value
+  else if (event.key === 'ArrowDown') nextIndex = index + columnCount.value
+  else if (event.key === 'Home') nextIndex = 0
+  else if (event.key === 'End') nextIndex = props.images.length - 1
+
+  if (nextIndex !== null) {
     event.preventDefault()
-    focusCard(index + movement)
-  }
-  else if (event.key === 'Home') {
-    event.preventDefault()
-    focusCard(0)
-  }
-  else if (event.key === 'End') {
-    event.preventDefault()
-    focusCard(props.images.length - 1)
+    focusCard(nextIndex)
   }
 }
 

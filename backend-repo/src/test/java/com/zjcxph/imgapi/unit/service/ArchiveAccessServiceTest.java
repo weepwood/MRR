@@ -43,8 +43,6 @@ class ArchiveAccessServiceTest {
     }
 
     private void stubExternalUserAccess() {
-        when(request.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(request.getHeader("X-Real-IP")).thenReturn(null);
         when(request.getRemoteAddr()).thenReturn("10.20.30.11");
         when(systemSettingService.getSetting(ArchiveAccessService.MAX_IP_CHANGES_SETTING)).thenReturn("3");
     }

@@ -31,6 +31,7 @@ class ExternalArchiveIntegrationStatusControllerTest {
         properties.setClients(List.of(client));
 
         HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(request.getHeader("X-Forwarded-For")).thenReturn("10.10.20.15, 10.10.20.1");
 
         ExternalArchiveIntegrationStatusController controller =

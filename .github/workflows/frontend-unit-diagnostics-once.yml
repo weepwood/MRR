@@ -1,9 +1,9 @@
 name: 一次性前端单元测试诊断
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/configurable-documentation-links
+      - main
     paths:
       - .github/workflows/frontend-unit-diagnostics-once.yml
       - frontend-fantastic-admin/**

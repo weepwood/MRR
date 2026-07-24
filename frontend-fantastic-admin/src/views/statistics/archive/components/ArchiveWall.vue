@@ -134,12 +134,24 @@ function onItemKeydown(index: number, event: KeyboardEvent) {
   }
 
   let nextIndex: number | null = null
-  if (event.key === 'ArrowLeft') nextIndex = index - 1
-  else if (event.key === 'ArrowRight') nextIndex = index + 1
-  else if (event.key === 'ArrowUp') nextIndex = index - columnCount.value
-  else if (event.key === 'ArrowDown') nextIndex = index + columnCount.value
-  else if (event.key === 'Home') nextIndex = 0
-  else if (event.key === 'End') nextIndex = props.images.length - 1
+  if (event.key === 'ArrowLeft') {
+    nextIndex = index - 1
+  }
+  else if (event.key === 'ArrowRight') {
+    nextIndex = index + 1
+  }
+  else if (event.key === 'ArrowUp') {
+    nextIndex = index - columnCount.value
+  }
+  else if (event.key === 'ArrowDown') {
+    nextIndex = index + columnCount.value
+  }
+  else if (event.key === 'Home') {
+    nextIndex = 0
+  }
+  else if (event.key === 'End') {
+    nextIndex = props.images.length - 1
+  }
 
   if (nextIndex !== null) {
     event.preventDefault()
@@ -168,7 +180,7 @@ watch(() => props.images, () => {
   nextTick(observeLoadSentinel)
 })
 
-watch(() => props.selectedIndex, (index) => ensureVisible(index))
+watch(() => props.selectedIndex, index => ensureVisible(index))
 watch([() => props.cardWidth, () => props.density], () => nextTick(updateColumnCount))
 watch(displayedImages, () => nextTick(observeLoadSentinel))
 
@@ -267,7 +279,7 @@ onUnmounted(() => {
       正在加载更多（{{ displayedImages.length }}/{{ props.images.length }}）
     </div>
 
-    <el-image-viewer
+    <ElImageViewer
       v-if="isImageViewerOpen"
       :url-list="previewList"
       :initial-index="imageViewerIndex"
@@ -311,8 +323,8 @@ onUnmounted(() => {
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 9px;
   outline: none;
+  border-radius: 9px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 

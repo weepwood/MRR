@@ -31,8 +31,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Test release baseline tooling
+      - name: Test repository tooling
         run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
+      - name: Generate test inventory
+        run: |
+          python scripts/test_inventory.py \
+            --fail-on-focused \
+            --output test-inventory.md \
+            --github-summary "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload test inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-inventory
+          path: test-inventory.md
+          retention-days: 30
 
       - name: Validate repository release baseline
         run: python scripts/release_baseline.py validate
@@ -76,7 +90,47 @@ jobs:
         shell: powershell
         run: .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
 
-  frontend-gate:
+  frontend-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      frontend_changed: ${{ steps.scope.outputs.frontend_changed }}
+      e2e_changed: ${{ steps.scope.outputs.e2e_changed }}
+      reason: ${{ steps.scope.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect frontend test scope
+        id: scope
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != 'pull_request' ]; then
+            {
+              echo 'frontend_changed=true'
+              echo 'e2e_changed=true'
+              echo 'reason=push-or-tag'
+            } >> "${GITHUB_OUTPUT}"
+            echo 'Push/tag execution: run the complete frontend verification.'
+            exit 0
+          fi
+
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-files.txt
+          echo 'Changed files:'
+          cat changed-files.txt
+          python scripts/frontend_test_scope.py \
+            --github-output "${GITHUB_OUTPUT}" \
+            changed-files.txt
+
+  frontend-tests:
+    needs: frontend-scope
+    if: needs.frontend-scope.outputs.frontend_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -130,14 +184,16 @@ jobs:
         run: pnpm test:run
 
       - name: Install Chromium
+        if: needs.frontend-scope.outputs.e2e_changed == 'true'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: End-to-End Test
+        if: needs.frontend-scope.outputs.e2e_changed == 'true'
         timeout-minutes: 15
         run: pnpm test:e2e
 
       - name: Upload Playwright report
-        if: always()
+        if: ${{ always() && needs.frontend-scope.outputs.e2e_changed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -146,6 +202,39 @@ jobs:
             frontend-fantastic-admin/test-results
           if-no-files-found: ignore
           retention-days: 7
+
+  frontend-gate:
+    needs:
+      - frontend-scope
+      - frontend-tests
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate selected frontend gate
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.frontend-scope.result }}
+          FRONTEND_CHANGED: ${{ needs.frontend-scope.outputs.frontend_changed }}
+          E2E_CHANGED: ${{ needs.frontend-scope.outputs.e2e_changed }}
+          SCOPE_REASON: ${{ needs.frontend-scope.outputs.reason }}
+          TEST_RESULT: ${{ needs.frontend-tests.result }}
+        run: |
+          set -euo pipefail
+          echo "scope=${SCOPE_RESULT} frontend=${FRONTEND_CHANGED} e2e=${E2E_CHANGED} reason=${SCOPE_REASON}"
+          echo "frontend_tests=${TEST_RESULT}"
+
+          if [ "${SCOPE_RESULT}" != 'success' ]; then
+            echo 'Frontend test scope detection failed.' >&2
+            exit 1
+          fi
+
+          if [ "${FRONTEND_CHANGED}" != 'true' ]; then
+            echo 'No frontend-related files changed; frontend tests were intentionally skipped.'
+            exit 0
+          fi
+
+          test "${TEST_RESULT}" = 'success'
 
   backend-scope:
     runs-on: ubuntu-latest

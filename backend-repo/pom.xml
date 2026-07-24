@@ -28,7 +28,7 @@
         <!-- Dependency versions -->
         <mybatis.version>4.0.1</mybatis.version>
         <java-jwt.version>4.5.1</java-jwt.version>
-        <springdoc.version>3.0.2</springdoc.version>
+        <springdoc.version>3.0.3</springdoc.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.5.0</itextpdf.version>
         <commons-codec.version>1.21.0</commons-codec.version>

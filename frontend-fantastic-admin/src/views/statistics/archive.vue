@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
-import type { IdCardArchiveCase } from '@/api/modules/search'
-import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
+import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import type { GalleryImage, ViewMode } from './archive/types'
+import type { IdCardArchiveCase } from '@/api/modules/search'
 import { Document, Download, Printer } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'

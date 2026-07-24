@@ -32,7 +32,7 @@ jobs:
       SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
     steps:
       - name: Checkout coverage tooling
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v5

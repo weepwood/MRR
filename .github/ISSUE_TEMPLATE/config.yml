@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用与部署文档
+    url: https://github.com/weepwood/MRR/tree/main/vitepress-doc
+    about: 部署、配置和使用问题请先检查项目文档。
+  - name: 安全问题
+    url: https://github.com/weepwood/MRR/security/advisories/new
+    about: 涉及漏洞、凭据或患者数据风险时，请使用私密安全报告。

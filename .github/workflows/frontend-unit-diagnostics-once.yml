@@ -1,0 +1,56 @@
+name: 一次性前端单元测试诊断
+
+on:
+  push:
+    branches:
+      - feature/configurable-documentation-links
+    paths:
+      - .github/workflows/frontend-unit-diagnostics-once.yml
+      - frontend-fantastic-admin/**
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests with diagnostic report
+        id: tests
+        continue-on-error: true
+        working-directory: frontend-fantastic-admin
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm test:run --reporter=verbose 2>&1 | tee ../frontend-unit-test-diagnostics.log
+
+      - name: Upload diagnostic log
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-unit-test-diagnostics
+          path: frontend-unit-test-diagnostics.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Preserve test failure status
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

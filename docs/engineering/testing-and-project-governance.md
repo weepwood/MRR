@@ -10,8 +10,8 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 2. 保留稳定的 `frontend-gate` 与 `backend-gate` 汇总状态，便于设置分支保护；
 3. 在每次质量门禁中生成测试资产清单，并阻止 `.only` 与 `@Disabled` 混入主分支；
 4. 统一 Issue、PR、依赖更新和代码所有权入口；
-5. 让测试失败时保留可下载的 Surefire、Failsafe、JaCoCo、Playwright、JUnit XML 和测试清单；
-6. 建立可追踪的后端覆盖率基线，先观察趋势，再逐步启用阻塞门禁。
+5. 让测试失败时保留可下载的 Surefire、Failsafe、JaCoCo、Vitest Coverage、Playwright、JUnit XML 和测试清单；
+6. 建立可追踪的前后端覆盖率基线，先观察趋势，再逐步启用阻塞门禁。
 
 ## 2. 测试分层
 
@@ -19,7 +19,7 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 | --- | --- | --- | --- |
 | 后端单元/切片 | `backend-repo/src/test/java` 非 `integration` 目录 | 业务规则、权限、工具类、Controller/Service 隔离测试 | 普通后端代码变更 |
 | 后端 PostgreSQL 集成 | `backend-repo/src/test/java/**/integration/**`，类名建议 `*IT` | Mapper、Flyway、SQL、事务与 PostgreSQL 行为 | Mapper、实体、配置、资源、迁移、POM 变更 |
-| 前端单元/组件 | `frontend-fantastic-admin/src/**/*.test.ts(x)` | Utils、Store、API 封装、组件行为 | 任意前端源码或配置变更 |
+| 前端单元/组件 | `frontend-fantastic-admin/src/**/*.test.ts(x)` | Utils、Store、API 封装、组件行为与覆盖率趋势 | 任意前端源码或配置变更 |
 | 前端 E2E | `frontend-fantastic-admin/e2e/*.spec.ts` | 登录、权限、路由、核心业务流程和兼容性 | 页面、路由、API、Store、布局、组件、Mock、E2E 配置变更 |
 | 发布与运维 | `scripts/tests`、Windows 自检 | 版本一致性、发布基线、脚本编码和 PowerShell 5.1 | 每个 PR 与 main/tag |
 
@@ -30,8 +30,9 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 `scripts/frontend_test_scope.py` 根据 PR 文件变化输出：
 
 - `frontend_changed=false`：后端或纯文档变更，跳过 Node 安装和前端测试；
-- `frontend_changed=true, e2e_changed=false`：执行类型检查、变更文件 lint、构建和 Vitest；
-- `e2e_changed=true`：在上述检查后安装 Chromium 并执行 Playwright。
+- `frontend_changed=true, e2e_changed=false`：执行类型检查、变更文件 lint、构建、Vitest 和覆盖率报告；
+- `e2e_changed=true`：在上述检查后安装 Chromium 并执行 Playwright；
+- 覆盖率脚本、基线或质量门禁变更：执行完整前端验证。
 
 `frontend-gate` 始终产生最终状态，因此分支保护只需要依赖该汇总 Job，而不必依赖会被跳过的内部 Job。
 
@@ -93,7 +94,47 @@ python scripts/jacoco_coverage.py \
   --output-markdown backend-repo/target/coverage-summary.md
 ```
 
-## 6. 本地提交前检查
+## 6. 前端覆盖率基线
+
+前端使用与 Vitest `3.2.4` 匹配的 `@vitest/coverage-v8`。初始基线来自 `quality-gate` 的完整前端测试，记录在 `quality/frontend-coverage-baseline.json`：
+
+| 指标 | 当前基线 |
+| --- | ---: |
+| 行覆盖率 | 19.46% |
+| 语句覆盖率 | 19.46% |
+| 函数覆盖率 | 76.33% |
+| 分支覆盖率 | 77.47% |
+
+行和语句覆盖率较低，主要原因是大量页面与应用入口尚未被单元测试执行；函数和分支覆盖率较高，说明当前测试集中于工具、Store、API 封装和业务逻辑。该数字按真实源码范围记录，不通过排除业务页面来提高表面覆盖率。
+
+执行：
+
+```bash
+cd frontend-fantastic-admin
+pnpm test:coverage
+```
+
+报告输出到 `frontend-fantastic-admin/coverage/`：
+
+- 控制台 text 报告；
+- `coverage-summary.json`；
+- `lcov.info`；
+- HTML 报告；
+- `coverage-comparison.json` 与 `coverage-comparison.md`。
+
+覆盖范围包含 `src/**/*.{ts,tsx,vue}`，排除测试文件、类型声明、Mock 数据及纯路由元数据。CI 使用 `scripts/vitest_coverage.py` 将总行、语句、函数和分支覆盖率写入 GitHub Actions Summary，并上传完整 Coverage Artifact。
+
+当前策略同样为 `report-only`：先记录稳定基线和正常波动，再考虑启用 `--fail-on-regression`。本地解析：
+
+```bash
+python ../scripts/vitest_coverage.py \
+  --summary coverage/coverage-summary.json \
+  --baseline ../quality/frontend-coverage-baseline.json \
+  --output-json coverage/coverage-comparison.json \
+  --output-markdown coverage/coverage-comparison.md
+```
+
+## 7. 本地提交前检查
 
 ### 后端普通改动
 
@@ -115,7 +156,7 @@ mvn -B -ntp verify
 cd frontend-fantastic-admin
 pnpm lint:tsc
 pnpm build
-pnpm test:run
+pnpm test:coverage
 ```
 
 涉及登录、权限、路由、页面、API、Store、布局或核心交互时：
@@ -132,7 +173,7 @@ python scripts/test_inventory.py --fail-on-focused
 python scripts/release_baseline.py validate
 ```
 
-## 7. 分支保护建议
+## 8. 分支保护建议
 
 为 `main` 设置：
 
@@ -145,12 +186,13 @@ python scripts/release_baseline.py validate
 - 禁止直接推送和强制推送；
 - 建议使用 squash merge，并保留中文、可追踪的提交说明。
 
-仓库设置无法通过本次代码 PR 自动强制，需在 GitHub Branch protection rules 中配置。
+仓库设置无法通过代码 PR 自动强制，需在 GitHub Branch protection rules 中配置。
 
-## 8. 后续测试债务
+## 9. 后续测试债务
 
-1. **覆盖率门禁处于观察阶段。** 后端已建立可追踪基线，但尚未阻塞下降；前端 `test:coverage` 还需要补充与锁文件一致的 coverage provider。应先观察波动，再分阶段提高约束，避免用低价值测试机械追求数字。
-2. **数据库集成测试仍偏少。** 优先覆盖复杂查询、Flyway 迁移、病案号/上架号规则、导入导出事务和大数据分页。
-3. **E2E 应保持少而关键。** 重点保护登录、首次改密、权限拒绝、影像调阅、外部 Ticket、ZIP/PDF 导出和设置持久化；不应把所有视觉细节都放入 E2E。
-4. **性能测试应与功能门禁分离。** 三千万级数据、OSS/NAS、超大 ZIP/PDF 使用定时或手动基准测试，避免阻塞每个普通 PR。
-5. **测试数据必须脱敏。** 任何夹具、日志、截图和 CI Artifact 都不得包含真实患者信息或生产凭据。
+1. **覆盖率门禁处于观察阶段。** 前后端已建立报告工具和真实基线，仍需积累稳定报告并确定正常波动；不应机械追求全仓库高数字。
+2. **数据库集成测试仍需扩展。** 已覆盖空库迁移、重复启动、病案号边界和事务回滚；下一步关注复杂查询、唯一性、权限审计与大分页。
+3. **前端页面测试仍需扩展。** 优先补充认证、权限拒绝、影像调阅、设置持久化和导入导出等高风险流程的组件或逻辑测试，而不是为提升数字批量编写低价值快照。
+4. **E2E 应保持少而关键。** 重点保护登录、首次改密、权限拒绝、影像调阅、外部 Ticket、ZIP/PDF 导出和设置持久化；不应把所有视觉细节都放入 E2E。
+5. **性能测试应与功能门禁分离。** 三千万级数据、OSS/NAS、超大 ZIP/PDF 使用定时或手动基准测试，避免阻塞每个普通 PR。
+6. **测试数据必须脱敏。** 任何夹具、日志、截图和 CI Artifact 都不得包含真实患者信息或生产凭据。

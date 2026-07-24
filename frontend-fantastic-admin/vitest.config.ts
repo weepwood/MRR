@@ -22,5 +22,20 @@ export default defineConfig({
     globals: true,
     restoreMocks: true,
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: 'coverage',
+      reporter: ['text', 'json-summary', 'lcov', 'html'],
+      include: ['src/**/*.{ts,tsx,vue}'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/*.test.{ts,tsx}',
+        'src/**/__mocks__/**',
+        'src/mock/**',
+        'src/types/**',
+        'src/router/routes/**',
+        'src/router/generated/**',
+      ],
+    },
   },
 })

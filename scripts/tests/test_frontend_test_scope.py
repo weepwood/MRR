@@ -49,11 +49,17 @@ class FrontendTestScopeTest(unittest.TestCase):
                 self.assertEqual(scope.reason, "release-change")
 
     def test_gate_control_change_tests_the_gate_itself(self):
-        scope = classify_paths([".github/workflows/quality-gate.yml"])
-
-        self.assertTrue(scope.frontend_changed)
-        self.assertTrue(scope.e2e_changed)
-        self.assertEqual(scope.reason, "frontend-gate-control")
+        for path in (
+            ".github/workflows/quality-gate.yml",
+            "quality/frontend-coverage-baseline.json",
+            "scripts/vitest_coverage.py",
+            "scripts/tests/test_vitest_coverage.py",
+        ):
+            with self.subTest(path=path):
+                scope = classify_paths([path])
+                self.assertTrue(scope.frontend_changed)
+                self.assertTrue(scope.e2e_changed)
+                self.assertEqual(scope.reason, "frontend-gate-control")
 
     def test_empty_path_list_is_safe(self):
         scope = classify_paths([])

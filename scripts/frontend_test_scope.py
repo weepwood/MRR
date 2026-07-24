@@ -11,8 +11,11 @@ from typing import Iterable
 
 CI_CONTROL_PATHS = {
     ".github/workflows/quality-gate.yml",
+    "quality/frontend-coverage-baseline.json",
     "scripts/frontend_test_scope.py",
     "scripts/tests/test_frontend_test_scope.py",
+    "scripts/vitest_coverage.py",
+    "scripts/tests/test_vitest_coverage.py",
 }
 
 RELEASE_EXACT_PATHS = {

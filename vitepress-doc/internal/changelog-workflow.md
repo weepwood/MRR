@@ -166,7 +166,6 @@ git push
 | `GITHUB_TOKEN` / `GH_TOKEN` | 无 | GitHub API 访问令牌 |
 | `MRR_CHANGELOG_GITHUB` | 自动 | `true` 强制启用，`false` 强制禁用 |
 | `MRR_CHANGELOG_BASE_BRANCH` | 远程默认分支 | 获取已合并 PR 的目标分支 |
-| `MRR_CHANGELOG_LIMIT` | `1000` | 第一父级 Git 提交数量，最大 1000 |
 | `MRR_CHANGELOG_CACHE_TTL` | `1800` | GitHub 缓存有效期，单位为秒 |
 | `MRR_CHANGELOG_GITHUB_PAGES` | `10` | GitHub API 最大分页数，最大 20 |
 | `MRR_GITHUB_REPOSITORY` | 从 `origin` 推导 | 仓库名称，例如 `weepwood/MRR` |

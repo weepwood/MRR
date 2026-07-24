@@ -6,509 +6,2628 @@ outline: [2, 3]
 
 # 更新记录
 
-> 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。GitHub 数据不可用时会自动降级为本地 Git 提交历史。
+> 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。默认刷新并读取远程 `main` 提交；远程不可用时才降级为已有远程引用或本地 Git 历史。
 
 - 当前分支：`main`
 - GitHub 目标分支：`main`
-- 更新至：2026-07-21 · `eef2ac7`
-- 记录范围：最近 415 条第一父级提交（上限 1000 条）
+- Git 提交来源：远程 `origin/main`（已刷新）
+- 更新至：2026-07-24 · `eb3aca34`
+- 记录范围：完整提交历史，共 2521 条提交
 - GitHub 增强：未启用（仅 Git 提交）
+
+## 2026-07-24
+
+- `13:25` merge 修复 VitePress 更新日志读取远程 main 提交（[`eb3aca34`](https://github.com/weepwood/MRR/commit/eb3aca34dd033cae2bc0d8608167bc1c3b1e6f02) · [PR #234](https://github.com/weepwood/MRR/pull/234)）
+- `13:21` 测试：覆盖远程 main 提交来源选择（[`9108fa9b`](https://github.com/weepwood/MRR/commit/9108fa9bbfd0c2d91d357fdaeaa607e26b21c143)）
+- `13:21` 修复：更新日志读取远程 main 提交（[`5c7ee573`](https://github.com/weepwood/MRR/commit/5c7ee573c8e0ddf7e23f6a73dd162744af2ab277)）
+- `03:02` 发布：确认 MRR 0.7.4 正式资产（[`c4fbe0f6`](https://github.com/weepwood/MRR/commit/c4fbe0f6dc7a91fda889599cb711249d20541f48)）
+- `11:01` 发布：增加 MRR 0.7.4 正式资产验收任务（[`f2d43f46`](https://github.com/weepwood/MRR/commit/f2d43f463c344357624263e0dd78df1a742de939)）
+- `02:58` 清理：移除 MRR 0.7.4 一次性发布任务（[`163e64c9`](https://github.com/weepwood/MRR/commit/163e64c9a6344efd24d3a2f91839bd82e7cd7fc5)）
+- `02:58` 发布：建立 MRR 0.7.4 版本基线（[`57e0831a`](https://github.com/weepwood/MRR/commit/57e0831a6fa6e8447e956e4d554949a722f3e32c)）
+- `10:58` 发布：准备 MRR v0.7.4（[`4cdf8238`](https://github.com/weepwood/MRR/commit/4cdf8238f3a2eac7b412f64c49399967d121fe1c)）
+- `10:43` 合并 PR #231：文档链接可配置并移除 JAR 内嵌文档（[`0694fcb7`](https://github.com/weepwood/MRR/commit/0694fcb7c7eb11f0498e79e63f567e807c1be859)）
+- `10:33` 测试：将文档外置策略加入单体 JAR 门禁（[`a60f85bc`](https://github.com/weepwood/MRR/commit/a60f85bcba3eb8f20b3561e5b8a9785713e7da5b)）
+- `10:29` 文档：说明文档外置与链接配置策略（[`fb2727c6`](https://github.com/weepwood/MRR/commit/fb2727c6261624f02762a816978b23af95cb78fa)）
+- `10:27` 清理：移除一次性前端测试诊断任务（[`6c12ad43`](https://github.com/weepwood/MRR/commit/6c12ad437a2f03a54e0291797761ecaf426ecff3)）
+- `10:27` 测试：隔离文档设置 API 客户端依赖（[`cde149ef`](https://github.com/weepwood/MRR/commit/cde149ef6f1b477fdadcd03a9e3816df8055726d)）
+- `10:24` 诊断：在 PR 中上传前端单元测试日志（[`c6400aa9`](https://github.com/weepwood/MRR/commit/c6400aa982a7a6a1f8ce28969fa037f63663ea4d)）
+- `10:23` 诊断：记录前端单元测试失败详情（[`803286ee`](https://github.com/weepwood/MRR/commit/803286ee24ad63877936b8003a159f6a31f6dfbf)）
+- `10:20` 测试：移除文档配置结果的顺序依赖（[`b6f94d2b`](https://github.com/weepwood/MRR/commit/b6f94d2b7e2d0db0c94da28d15376296b366ea10)）
+- `10:15` 修复：整理统一设置页面格式（[`a023d21e`](https://github.com/weepwood/MRR/commit/a023d21ea0e1a9a8a4fd0396a6ebfc8ae4eb3716)）
+- `10:14` 修复：调整文档设置模块导入顺序（[`458e9daf`](https://github.com/weepwood/MRR/commit/458e9daf3e66603f44a0a558539c769560dd6d64)）
+- `10:09` 测试：覆盖关闭文档入口的场景（[`e07e6036`](https://github.com/weepwood/MRR/commit/e07e603699dcc542033fb6c36e493026260abcfb)）
+- `10:08` 测试：锁定文档不内嵌 JAR 的打包策略（[`4f63b9d7`](https://github.com/weepwood/MRR/commit/4f63b9d73289d94e0229b6a8f0b4fc4122a879fa)）
+- `10:07` 构建：文档仅作为 Windows 外置资源打包（[`63b91b1f`](https://github.com/weepwood/MRR/commit/63b91b1f794905542d7e67994dc1c7b0380868f4)）
+- `10:06` 构建：单体 JAR 不再内嵌帮助文档（[`05145e69`](https://github.com/weepwood/MRR/commit/05145e699a7cc67d4723cc32f4ee54d15d967ba2)）
+- `10:05` 功能：帮助中心读取可配置文档链接（[`7abbd874`](https://github.com/weepwood/MRR/commit/7abbd874b5059277927087ebca3cf445fe6fceda)）
+- `10:04` 功能：在系统设置中展示文档链接配置（[`443a9542`](https://github.com/weepwood/MRR/commit/443a9542d428bf1690c34d8bb5fd3b68b8a709bd)）
+- `10:03` 功能：将文档入口纳入统一设置（[`7aad809a`](https://github.com/weepwood/MRR/commit/7aad809a73d6863bf599e98090388647ea352f35)）
+- `10:02` 功能：增加帮助文档链接设置面板（[`aa155dad`](https://github.com/weepwood/MRR/commit/aa155dad75b69bc663206d6446de2772adcaabbc)）
+- `10:01` 测试：覆盖帮助中心文档链接解析（[`5982756c`](https://github.com/weepwood/MRR/commit/5982756cd6c259ff3d1c9516008ef003639c2d47)）
+- `10:00` 功能：增加帮助中心文档链接配置客户端（[`0c9c0a2f`](https://github.com/weepwood/MRR/commit/0c9c0a2ff056f2612897b425014d8a11f48c4c79)）
+- `10:00` 修复：允许关闭单个文档入口（[`50fd6893`](https://github.com/weepwood/MRR/commit/50fd6893c6e6b8db907da2b5d5b52df8a0db2b25)）
+- `10:00` 测试：覆盖文档链接设置与校验（[`fa4b4db8`](https://github.com/weepwood/MRR/commit/fa4b4db8333bf43bf7745da98d1ad7627a7545ef)）
+- `09:59` 功能：扩展系统设置文档链接字段（[`5c6c03e0`](https://github.com/weepwood/MRR/commit/5c6c03e029bf3d9dcdce68b963311f1bb4c67f52)）
+- `09:57` 测试：覆盖文档链接公开配置（[`333243dd`](https://github.com/weepwood/MRR/commit/333243ddd37d54ee6305a2c7182b86f33e81d80c)）
+- `09:57` 功能：增加文档链接公开配置接口（[`0cd85e8a`](https://github.com/weepwood/MRR/commit/0cd85e8af7282d7d80c13bfd3fc558bd883bd144)）
+- `01:37` 发布：确认 MRR 0.7.3 正式资产（[`fc77e78b`](https://github.com/weepwood/MRR/commit/fc77e78ba82fc26b3862cd68969c1f0e377b6b10)）
+- `01:33` 诊断：记录 MRR 0.7.3 发布状态（[`33469ac0`](https://github.com/weepwood/MRR/commit/33469ac05370a765a239bd6b73d5c595c58694df)）
+- `09:33` 修复：显式调度 MRR 0.7.3 正式构建（[`1f50ee5f`](https://github.com/weepwood/MRR/commit/1f50ee5fd748ca87a2be13fca778592636e45711) · [PR #229](https://github.com/weepwood/MRR/pull/229)）
+- `01:30` 诊断：记录 MRR 0.7.3 发布状态（[`e600f511`](https://github.com/weepwood/MRR/commit/e600f511155aea4f3442fc58cd5d63dbdf7ff7fe)）
+- `09:29` 诊断：记录 MRR 0.7.3 发布状态（[`07330571`](https://github.com/weepwood/MRR/commit/073305711c4f628d45b989027027a7244c554e80) · [PR #228](https://github.com/weepwood/MRR/pull/228)）
+- `09:21` 修复：恢复 MRR 0.7.3 Windows 正式资产（[`9a5e4cc9`](https://github.com/weepwood/MRR/commit/9a5e4cc9cbf5ceb3e93460ceee97b7d0de63ca92) · [PR #227](https://github.com/weepwood/MRR/pull/227)）
+- `09:11` 发布：验收 MRR 0.7.3 正式资产（[`3d7c19ac`](https://github.com/weepwood/MRR/commit/3d7c19ac4dd7ae238d82f316e96719f5e99a4319) · [PR #225](https://github.com/weepwood/MRR/pull/225)）
+- `01:04` 发布：MRR 0.7.3（[`06e25b9a`](https://github.com/weepwood/MRR/commit/06e25b9a7b3427231101f1f07e85a45596869cc7)）
+- `09:04` 修复：恢复 MRR 0.7.3 自动发布（[`6dec6164`](https://github.com/weepwood/MRR/commit/6dec6164f6b50060e35cdf934b8caae78dcfd051) · [PR #224](https://github.com/weepwood/MRR/pull/224)）
+- `08:58` 发布：MRR 0.7.3（[`ce3c5821`](https://github.com/weepwood/MRR/commit/ce3c5821bdb77df9be4fe5053b73625d0ea15b82) · [PR #223](https://github.com/weepwood/MRR/pull/223)）
+- `08:50` 构建：将帮助与文档打包进单体 JAR（[`800103fd`](https://github.com/weepwood/MRR/commit/800103fd82a810bcd183c145b6d29466d0745bf4) · [PR #222](https://github.com/weepwood/MRR/pull/222)）
+- `00:48` 修复：恢复 0.7.2 单体 JAR 发布资产（#220）（[`cddd6bc6`](https://github.com/weepwood/MRR/commit/cddd6bc648d20b8299cd86c9f004d7715035b6dc)）
+- `00:47` 修复：增加 0.7.2 单体 JAR 资产恢复任务（[`afaf08a9`](https://github.com/weepwood/MRR/commit/afaf08a9ec99e9660947245c4c781c0a2a538a7f)）
+- `00:47` 修复：显式指定单体 JAR 发布仓库（[`d2f314f1`](https://github.com/weepwood/MRR/commit/d2f314f1716aaa7406c2b89354e973e212e0ffd0)）
+- `00:41` 发布：诊断 MRR 0.7.2 构建状态（#218）（[`fc38d217`](https://github.com/weepwood/MRR/commit/fc38d217c508c167e4fa198268c96b51a3bf9fd7)）
+- `00:40` 发布：增加 0.7.2 构建状态诊断任务（[`15f5fc81`](https://github.com/weepwood/MRR/commit/15f5fc81063438f9c8778ca8fb187a118b92da2c)）
+- `00:36` 发布：确保 MRR 0.7.2 正式资产完整（#217）（[`3ab8ed99`](https://github.com/weepwood/MRR/commit/3ab8ed9918e14d065a3cfe1d1ff5dd336052da0f)）
+- `00:36` 发布：增加 0.7.2 资产构建自愈任务（[`09c809a4`](https://github.com/weepwood/MRR/commit/09c809a4e4316f1dbe1e279c494712496c08acd3)）
+- `00:23` 发布：验收 MRR 0.7.2 正式资产（#216）（[`fbc8f449`](https://github.com/weepwood/MRR/commit/fbc8f449550d1b797c434f661c6ff77aa961484a)）
+- `00:23` 发布：增加 0.7.2 正式资产验收任务（[`4598caac`](https://github.com/weepwood/MRR/commit/4598caacfc6ac8ed9ea1da0306f20652c4f923d7)）
+- `00:21` 发布：触发 MRR 0.7.2 正式版本（#215）（[`e8110b9e`](https://github.com/weepwood/MRR/commit/e8110b9ecbd7f21fe78900af3194606a0c0a53e8)）
+- `00:19` 发布：增加 0.7.2 合并触发任务（[`8eeb32eb`](https://github.com/weepwood/MRR/commit/8eeb32eb70ef842151de3a0b6e880fcaf24bd108)）
+- `00:19` 发布：增加 0.7.2 一次性发布脚本（[`0939f404`](https://github.com/weepwood/MRR/commit/0939f4048491d396c1f6c426991374129c825251)）
+- `00:17` 发布：启动 MRR 0.7.2 正式发布（[`2f5b011b`](https://github.com/weepwood/MRR/commit/2f5b011bb3965d06a357b29678d2bea06cdb3575)）
+- `00:09` 文档：完善运维诊断、版本边界与影像排障指南（#213）（[`52adb5e1`](https://github.com/weepwood/MRR/commit/52adb5e153a74e334069549cc5a51a7d5b890a91)）
+- `00:05` 文档：补充运维诊断中心组合权限边界（[`f2690869`](https://github.com/weepwood/MRR/commit/f26908698eee1d048ced96403ec5f138be43ddea)）
+- `00:03` 文档：区分 0.7.0 与主分支未发布变化（[`833b21e9`](https://github.com/weepwood/MRR/commit/833b21e9fa052120f76d60f7039717bcb728d148)）
+
+## 2026-07-23
+
+- `16:48` 发布：确认 MRR 0.7.2 正式资产并修复单体 JAR 发布（[`cfe83bb3`](https://github.com/weepwood/MRR/commit/cfe83bb33623804c61d3cbf28f07bd8e96d2bbf4)）
+- `16:41` 发布：完成 MRR 0.7.2 构建状态诊断（[`d09dfdf2`](https://github.com/weepwood/MRR/commit/d09dfdf2595e657c012ab0a6ed04b3c0b1eb181c)）
+- `16:21` 发布：MRR 0.7.2（[`8e133a0d`](https://github.com/weepwood/MRR/commit/8e133a0dd773cd3f28d58cda0a00ed93e2bd2e8c)）
+- `23:18` 文档：将旧运维说明指向规范文档（[`31e9fde3`](https://github.com/weepwood/MRR/commit/31e9fde3525a0ece29406397da66ba2ca68aa53b)）
+- `23:18` 文档：完善内部文档索引与运维边界（[`4f54879d`](https://github.com/weepwood/MRR/commit/4f54879d53e729f804d687e996c9e37c07bccbbc)）
+- `23:17` 文档：修正影像档案袋版本与诊断说明（[`73a3ee88`](https://github.com/weepwood/MRR/commit/73a3ee882366985e9a068bf12b1817722df4c906)）
+- `23:16` 文档：更新权限、维护模式与系统管理说明（[`dba7530c`](https://github.com/weepwood/MRR/commit/dba7530c919cf8a7bdf4e68a310ec4e56b0306b6)）
+- `23:15` 文档：修正用户手册版本并补充运维入口（[`6eb942d7`](https://github.com/weepwood/MRR/commit/6eb942d7e982ac1088dd1e00c21e4bade956389a)）
+- `23:15` 文档：补充内部文档中的运维诊断入口（[`f9be904f`](https://github.com/weepwood/MRR/commit/f9be904f206a6c1f62e147033bf0a3d90b13b004)）
+- `23:14` 文档：将运维诊断中心加入用户手册导航（[`7d1686a0`](https://github.com/weepwood/MRR/commit/7d1686a0923423baa67974d046fa4261c3a9d506)）
+- `23:13` 文档：新增运维诊断中心完整用户指南（[`0d546742`](https://github.com/weepwood/MRR/commit/0d546742cad9179f7bab29a95acff888b5d14b07)）
+- `23:10` 文档：基于最新主分支重审并更新部署与运维说明（[`6dade3d3`](https://github.com/weepwood/MRR/commit/6dade3d3e650096f947da6c19b5c21c3cc8db7e0) · [PR #212](https://github.com/weepwood/MRR/pull/212)）
+- `19:35` 功能：新增后端运行错误中心与前端诊断页面（[`f04cd6a7`](https://github.com/weepwood/MRR/commit/f04cd6a786e28a53ada3731972b9f170152d7132)）
+- `18:58` 发布：正式版本同时提供单体 JAR（[`887dda30`](https://github.com/weepwood/MRR/commit/887dda30897108aa9257190d69be8e7c872f8ef9)）
+- `18:24` 维护：撤回误提交到主分支的单体 JAR 工具（[`c53c9fa6`](https://github.com/weepwood/MRR/commit/c53c9fa6d634fc334d28756d3bb6e07431df6e53)）
+- `18:23` 发布：新增单体 JAR 构建工具（[`1e2cd1c2`](https://github.com/weepwood/MRR/commit/1e2cd1c2a536c98ccc5803c1daf7949476474e9a)）
+- `17:57` 发布：清理 0.7.0 正式构建任务快照（[`778c90fd`](https://github.com/weepwood/MRR/commit/778c90fdfce1d1326d1e717eb726a71778ea8f0e)）
+- `17:57` 发布：清理 0.7.0 正式构建状态快照（[`952a2fc0`](https://github.com/weepwood/MRR/commit/952a2fc08644666413502096aefbf9b99addd2ae)）
+- `17:56` 发布：清理 0.7.0 正式资产验证任务（[`96045053`](https://github.com/weepwood/MRR/commit/96045053633c0b6a573df5c74b0aa74978ffa837)）
+- `17:56` 发布：清理 0.7.0 资产验证诊断任务（[`d46237a1`](https://github.com/weepwood/MRR/commit/d46237a1cfea81ada95cf3dcc1048e1c8a323673)）
+- `17:53` 发布：诊断 0.7.0 正式资产验证（[`69b281f3`](https://github.com/weepwood/MRR/commit/69b281f30ca1c7be1c7e0825057f487a39fe7b17)）
+- `09:50` 发布：记录 0.7.0 正式构建诊断（[`af7c13c2`](https://github.com/weepwood/MRR/commit/af7c13c2c2449793cd1132e741c0dbb8a5a220e7)）
+- `17:50` 发布：诊断 MRR 0.7.0 正式构建状态（[`3ae4ea9b`](https://github.com/weepwood/MRR/commit/3ae4ea9b384e818382cc2658e35f1985c821fc04)）
+- `17:46` 发布：验证 MRR 0.7.0 正式资产（[`f7509f60`](https://github.com/weepwood/MRR/commit/f7509f6046d7010687500e50edf676e6a2f25c30)）
+- `17:45` merge Merge branch 'main' of `https://github.com/weepwood/MRR`（[`6c60a39e`](https://github.com/weepwood/MRR/commit/6c60a39e8259aa46e4236721c05bf0bf895b6c1f)）
+- `09:43` 发布：清理 0.7.0 一次性发布任务（[`ce6ffbc2`](https://github.com/weepwood/MRR/commit/ce6ffbc2e7877fd2499f611d0976501e2188dad9)）
+- `17:43` 发布：调度 MRR 0.7.0 正式构建（[`e1ac1228`](https://github.com/weepwood/MRR/commit/e1ac1228889ce2bb728a82e6b1f2b8d00b6889ad)）
+- `17:34` 发布：执行 MRR 0.7.0 正式发布（[`3004585e`](https://github.com/weepwood/MRR/commit/3004585e7fc4c224b627545f59159a9b2914d5e7)）
+- `17:31` 发布：MRR 0.7.0（[`7edc6d10`](https://github.com/weepwood/MRR/commit/7edc6d10aada640379d47292a43dfd5b442157da)）
+- `17:27` 文档：固定 0.7.0 最终候选验证要求（[`d1e54a7c`](https://github.com/weepwood/MRR/commit/d1e54a7c1770042496a6d553a38cb91d046d8265)）
+- `09:26` 维护：完成 0.7.0 Java 代码格式整理（[`a3e2b808`](https://github.com/weepwood/MRR/commit/a3e2b8085144a16bf76e2a204176c444438445bc)）
+- `17:26` 维护：最终修正 0.7.0 Java 缩进（[`5a8277be`](https://github.com/weepwood/MRR/commit/5a8277bea6dda6763ef135d4beaeed22d4579c98)）
+- `17:25` 测试：整理并完善 0.7.0 诊断报告脱敏用例（[`15d2e8a1`](https://github.com/weepwood/MRR/commit/15d2e8a189c09af16a1b79ecb9aab5bf47a8b827)）
+- `09:24` 维护：完成 0.7.0 脱敏代码格式整理（[`1167e4fe`](https://github.com/weepwood/MRR/commit/1167e4fe4c1bec831737d5acccb8bd46579fdadc)）
+- `17:24` 维护：最终整理 0.7.0 脱敏代码格式（[`2818a3f1`](https://github.com/weepwood/MRR/commit/2818a3f1beeb7576d15eacc2da849909c5050935)）
+- `17:23` 维护：整理 0.7.0 脱敏辅助方法格式（[`2ae6aa6a`](https://github.com/weepwood/MRR/commit/2ae6aa6ab376521a510beb87e72fb3f3460bc97b)）
+- `17:22` merge integrate external archive auth fix（[`d324c500`](https://github.com/weepwood/MRR/commit/d324c50077874d0d3c34b013d9af4349487acb7f)）
+- `17:22` 文档：明确 0.7.0 诊断报告完整脱敏范围（[`b74700f1`](https://github.com/weepwood/MRR/commit/b74700f18c7c5ba7b4f3222f1d0bf4db8081f336)）
+- `09:20` 修复：完整脱敏 0.7.0 诊断报告（[`c43cbf90`](https://github.com/weepwood/MRR/commit/c43cbf904e0308647561cf0acb6d24f8a6a08ae8)）
+- `17:20` 修复：完善 0.7.0 诊断报告嵌套脱敏（[`7cde10d7`](https://github.com/weepwood/MRR/commit/7cde10d792a413a9a7d17d1f11eeca759cc369f9)）
+- `17:17` 文档：补充 0.7.0 升级前检查（[`5acbd9b8`](https://github.com/weepwood/MRR/commit/5acbd9b867d9a71a16d1ba74a79209541414ea64)）
+- `09:16` 维护：规范 0.7.0 审查修复代码格式（[`0355d896`](https://github.com/weepwood/MRR/commit/0355d896b4f296dd0d5e06e9915218e0514981db)）
+- `17:16` 维护：整理 0.7.0 审查修复代码格式（[`52911e99`](https://github.com/weepwood/MRR/commit/52911e991cba77ad115eb759b299107a89274f1a)）
+- `17:12` 发布：清理 0.7.0 一次性准备任务（[`bcb83d19`](https://github.com/weepwood/MRR/commit/bcb83d199510fded75c4403101ef7539d560e63d)）
+- `09:05` 发布：准备 MRR 0.7.0 并修复审查问题（[`a9d1e1eb`](https://github.com/weepwood/MRR/commit/a9d1e1eb5a42fde738c351e8183175b4dc0b0ae2)）
+- `17:05` 发布：启动 0.7.0 审查修复与版本准备（[`93b9205c`](https://github.com/weepwood/MRR/commit/93b9205c224c0246356c04d180e33626926ec90c)）
+- `16:53` merge Merge branch 'main' of `https://github.com/weepwood/MRR`（[`bceeb9df`](https://github.com/weepwood/MRR/commit/bceeb9df0feb77f619fc8e79ffa12a4ee1105200)）
+- `16:49` 维护：移除一次性分支清理任务（[`38342d40`](https://github.com/weepwood/MRR/commit/38342d40318ea8c6cfd9c4f6a21fdd4e9713ee1b)）
+- `16:47` 维护：执行一次性旧分支清理（[`3be3af05`](https://github.com/weepwood/MRR/commit/3be3af058e60bdf46557850e6c6fba170dc8783c)）
+- `16:39` merge Merge branch 'main' of `https://github.com/weepwood/MRR`（[`fcac92c3`](https://github.com/weepwood/MRR/commit/fcac92c349388c50440297e474b19f3a4ad7fa29)）
+- `16:12` 部署：将前端内嵌到后端 JAR 并保留回退模式（[`7955fda3`](https://github.com/weepwood/MRR/commit/7955fda3baa1ac15e4878c6c5f72d663a957ce7a)）
+- `16:06` merge Merge origin/main into main（[`418fb812`](https://github.com/weepwood/MRR/commit/418fb812238312a36b90cde18545ae34839ec77c)）
+- `15:52` 合并 PR #204：修复表格操作省略号与更多菜单显示异常（[`39d3c445`](https://github.com/weepwood/MRR/commit/39d3c445049294736a9b9612446fbc056ebae004)）
+- `15:46` merge Merge branch 'main' of `https://github.com/weepwood/MRR`（[`bf5dbeea`](https://github.com/weepwood/MRR/commit/bf5dbeea132ded3ce89a32d950269da2d6b969c5)）
+- `15:32` fix polish external archive access（[`66df0e46`](https://github.com/weepwood/MRR/commit/66df0e4692c7a2ac4ad2cc6e85064e665702344d)）
+- `15:29` 运维：完善诊断中心与主动维护闭环（[`839d90b6`](https://github.com/weepwood/MRR/commit/839d90b6560320fdd713c3891dd64d018d871da3)）
+- `14:52` CI：合并后端测试分级与 PostgreSQL 复用优化（[`6e49b348`](https://github.com/weepwood/MRR/commit/6e49b3482256d097c720ed2e37a8f14e1f864cb4)）
+- `14:41` 修复：保留点开头的 GitHub 工作流路径（[`10ea0586`](https://github.com/weepwood/MRR/commit/10ea0586b0f67f3122a4930122f3b986fe1233ba)）
+- `14:37` 测试：数据交换复用共享 PostgreSQL 并移除手动回收（[`b4d4c6e7`](https://github.com/weepwood/MRR/commit/b4d4c6e755bd21c07b0a62878995f8d7cd352d2b)）
+- `14:36` 测试：ScanMapper 复用共享 PostgreSQL（[`5776edcb`](https://github.com/weepwood/MRR/commit/5776edcbd5f73f1fac63855c3afafcc82c5e703e)）
+- `14:35` 测试：OSS 迁移复用共享 PostgreSQL（[`26892cec`](https://github.com/weepwood/MRR/commit/26892cec5fd3eb07a84604c80ea101bc4577e1bd)）
+- `14:34` 测试：患者统计复用共享 PostgreSQL（[`def0029b`](https://github.com/weepwood/MRR/commit/def0029bf5cbdf3c1370c9471d657ab8879b964f)）
+- `14:34` 测试：复用共享 PostgreSQL 集成环境（[`0d489dd9`](https://github.com/weepwood/MRR/commit/0d489dd9ef9e08a1c3ab217ce1c24fa5fcf38650)）
+- `14:33` CI：按变更范围分级执行后端门禁（[`31938202`](https://github.com/weepwood/MRR/commit/31938202e29e518a81bb2c20d47763be37bc0a73)）
+- `14:32` 测试：共享 PostgreSQL 集成测试数据库（[`8c319c00`](https://github.com/weepwood/MRR/commit/8c319c0033edbf162578f37bf8d091473e63c105)）
+- `14:32` 测试：覆盖后端门禁范围分级（[`cdec9658`](https://github.com/weepwood/MRR/commit/cdec965810bdc9c63ef8bfc1fe6eb5ac76dc960d)）
+- `14:32` CI：新增后端测试范围判定器（[`90b1ee30`](https://github.com/weepwood/MRR/commit/90b1ee304981fa1924b2ca8ee598b6575e8e2960)）
+- `14:12` 修复：避免表格单元格内边距挤压操作图标（[`8972a521`](https://github.com/weepwood/MRR/commit/8972a521f9283fb512409b64b11e64dea7ce141e)）
+- `14:10` 文档：明确表格操作按空间折叠规则（[`937bb9b1`](https://github.com/weepwood/MRR/commit/937bb9b156272ed5e7c4e1356f76f334f6369114)）
+- `14:10` 测试：覆盖表格操作按空间折叠行为（[`6a5bd908`](https://github.com/weepwood/MRR/commit/6a5bd90827f50670a13b82120fbc482f086220ee)）
+- `14:09` 修复：桌面端优先直显表格操作图标（[`356a4ade`](https://github.com/weepwood/MRR/commit/356a4adedb75801eeebe9657efcf77886d915bbf)）
+- `14:09` 修复：仅在空间不足时显示表格更多操作（[`3c8d5918`](https://github.com/weepwood/MRR/commit/3c8d591848d70dc7c238b1f19563c63afa30a6fe)）
+- `14:06` 维护：清理误建占位文件（[`f8372b2b`](https://github.com/weepwood/MRR/commit/f8372b2b4b81e51385c829a8c447646e15947d23)）
+- `14:05` noop（[`d64b6f5c`](https://github.com/weepwood/MRR/commit/d64b6f5cc919f0ca11b3855d64040191baf7f1e5)）
+- `05:58` 发布：确认 v0.6.5 正式 Release 并清理验证任务（[`5019747b`](https://github.com/weepwood/MRR/commit/5019747b35e2007ebd964657fe517d8cbc9d7924)）
+- `13:58` 发布：执行 v0.6.5 正式资产确认（[`89ae81db`](https://github.com/weepwood/MRR/commit/89ae81db0d42a6b90df5c888abaeb1feed0b535b)）
+- `13:57` 发布：增加 0.6.5 正式资产确认任务（[`54c32a6a`](https://github.com/weepwood/MRR/commit/54c32a6abe96f34316798c31664291145d2a734a)）
+- `05:53` 发布：定稿 MRR 0.6.5 并清理一次性任务（[`b6fc7869`](https://github.com/weepwood/MRR/commit/b6fc7869ce57bbd331cebd5433de0d9cdf81d1cd)）
+- `13:53` 发布：合并 MRR 0.6.5（[`a60f7432`](https://github.com/weepwood/MRR/commit/a60f743248f80ec356994b4ade12979b37ef7b8e)）
+- `13:36` 修复：由 Ryuk 回收数据交换测试容器（[`883234bc`](https://github.com/weepwood/MRR/commit/883234bc5b44aa39b57e5fa4c5f0e3ff3b7acb46)）
+- `13:29` 修复：改为手动管理数据交换测试容器（[`6a333076`](https://github.com/weepwood/MRR/commit/6a3330769c827406fbb63c977bc834e0d5d35860)）
+- `13:17` 修复：显式释放 PostgreSQL 集成测试资源（[`8c290332`](https://github.com/weepwood/MRR/commit/8c29033296045f39e2130293077abec0628876c0)）
+- `13:03` 修复：关闭数据交换集成测试上下文（[`1b4135bb`](https://github.com/weepwood/MRR/commit/1b4135bbec13eb56fc3f2156f282f6bdb9de909e)）
+- `12:59` 修复：显式触发 0.6.5 正式发布构建（[`36df167d`](https://github.com/weepwood/MRR/commit/36df167d5a091cdbd6b950521bc0f590b21410c0)）
+- `12:18` 修复：使用运行时环境校验发布提交（[`fb3fd233`](https://github.com/weepwood/MRR/commit/fb3fd2330663a69265e8fc67f244f4cff870b26b)）
+- `12:16` 发布：增加 0.6.5 一次性正式发布任务（[`9954cf93`](https://github.com/weepwood/MRR/commit/9954cf938d3c4e7ced377a982032dc6c0480134c)）
+- `12:14` 文档：恢复完整 README 内容（[`9929a67a`](https://github.com/weepwood/MRR/commit/9929a67addc8863cdeb0c39c4bd76619262eff0d)）
+- `12:11` 文档：更新 0.6.5 用户发布说明（[`1b5b6513`](https://github.com/weepwood/MRR/commit/1b5b65136f2ac65ae9195c4d4f6c8a6eafe5e372)）
+- `12:11` 文档：新增 0.6.5 发布说明（[`971da699`](https://github.com/weepwood/MRR/commit/971da699be694947afd2b235d8ce6cf8012fb167)）
+- `12:11` 文档：补充 0.6.5 更新日志（[`e27ff5e3`](https://github.com/weepwood/MRR/commit/e27ff5e3374f6c41513e5809d334678eb8e50a2c)）
+- `12:09` 文档：更新主分支版本为 0.6.5（[`0e046b7a`](https://github.com/weepwood/MRR/commit/0e046b7af25144a7bac27d9e232552130841b4e1)）
+- `12:08` 发布：更新 0.6.5 兼容基线说明（[`df1b89db`](https://github.com/weepwood/MRR/commit/df1b89db1c07ecea6aa4cadb7d5154bdfb4bb38c)）
+- `12:08` 发布：同步后端版本至 0.6.5（[`7fd8d02e`](https://github.com/weepwood/MRR/commit/7fd8d02e561bb95b15a095b069757812085a64aa)）
+- `12:07` 发布：更新产品版本至 0.6.5（[`0448b32c`](https://github.com/weepwood/MRR/commit/0448b32c74b0a079d05fb14777387ff62fa91a75)）
+- `12:07` 发布：清理未触发的分支资料任务（[`942a12b0`](https://github.com/weepwood/MRR/commit/942a12b0204b55077582028d12f08a25fccd9604)）
+- `12:06` 发布：清理未触发的 0.6.5 资料任务（[`94b651de`](https://github.com/weepwood/MRR/commit/94b651de03a0392493bc232d887bbd2dff5a299c)）
+- `12:06` 发布：启动 0.6.5 资料整理任务（[`9ca37539`](https://github.com/weepwood/MRR/commit/9ca3753996e30d8031e69abdbdc984165960df0b)）
+- `12:03` 发布：准备 0.6.5 版本资料（[`e9add4fd`](https://github.com/weepwood/MRR/commit/e9add4fd7fab0aa5cb5225c217b4a61f6730d002)）
+- `11:27` 合并 PR #200：增加运维诊断中心与只读降级模式（[`6e9a74a5`](https://github.com/weepwood/MRR/commit/6e9a74a54ff9ad89cad0f7434d04793ffeda8d03)）
+- `11:17` 测试：清理 PR #200 检查触发文件（[`524f56cd`](https://github.com/weepwood/MRR/commit/524f56cd43e4a512e3c5a0c8964565419d766fab)）
+- `11:17` 测试：重新触发 PR #200 合并检查（[`26a00091`](https://github.com/weepwood/MRR/commit/26a0009127129dd118d0150fdddff6c9102736e0)）
+- `03:16` 合并：同步 main 并解决 PR #200 冲突（[`e1d1536e`](https://github.com/weepwood/MRR/commit/e1d1536eccfc0462dc6256571f02532a1bd4e69b)）
+- `10:57` 合并：统一核心业务数据导入导出中心（[`9346427f`](https://github.com/weepwood/MRR/commit/9346427fe4319f7f0f9baea22573ff85097545f2)）
+- `10:51` 文档：记录主线冲突合并结果（[`003fb698`](https://github.com/weepwood/MRR/commit/003fb698576e5b0a9030ad575c9fb3ec0c0ca6a7)）
+- `02:50` 合并：同步最新主线并解决患者页面冲突（[`7b696dd9`](https://github.com/weepwood/MRR/commit/7b696dd9a0183b20cb1d510f72f4567d12ab00af)）
+- `10:49` 运维：同步 PR 194 与最新主线（[`67ee90bd`](https://github.com/weepwood/MRR/commit/67ee90bda89f2662727b394a79f06ea179b2e723)）
+- `10:46` 修复：只读模式不写入下载统计（[`64a78d3e`](https://github.com/weepwood/MRR/commit/64a78d3e0560cd390b1067bc36c03f9a3883edd6)）
+- `10:44` 测试：覆盖权限矩阵真实授权优先级（[`e86f10f8`](https://github.com/weepwood/MRR/commit/e86f10f844c1aa779f8213d8b8751aacb1e272a3)）
+- `10:42` 测试：覆盖 Nginx 节点状态判断（[`401256d9`](https://github.com/weepwood/MRR/commit/401256d9b82adecfdc4b9d10b2ef195df33c3237)）
+- `10:41` 修复：正确识别 Nginx 节点连通状态（[`957747d8`](https://github.com/weepwood/MRR/commit/957747d8d364295abd11e7ee94b223f9e293f09c)）
+- `10:40` 前端：统一表格图标与更多操作（[`04ab369d`](https://github.com/weepwood/MRR/commit/04ab369dc1acd8e019a825398b3ca62dba8b1561)）
+- `10:39` 修复：更正完整性任务原子状态导入（[`55fb372f`](https://github.com/weepwood/MRR/commit/55fb372fd9a74cfcafd32003dac46432af4881f3)）
+- `10:36` 修复：使权限矩阵与真实授权规则一致（[`1b6836b1`](https://github.com/weepwood/MRR/commit/1b6836b1bf6b545c87af247324543fee0bd3c773)）
+- `10:34` 修复：按数值规则统计病案完整性（[`7b5231e7`](https://github.com/weepwood/MRR/commit/7b5231e7e4db5da9893885f683224df764cb5c67)）
+- `10:33` 修复：收紧运维诊断接口权限边界（[`d781c7ed`](https://github.com/weepwood/MRR/commit/d781c7eddd4c65683e9be2aca312f09e5b842157)）
+- `10:11` 修复：使用管理员接口刷新部署状态（[`5e76a819`](https://github.com/weepwood/MRR/commit/5e76a81937d58e29a4551213477f3a53e100905f)）
+- `10:11` 测试：覆盖只读模式部署状态刷新（[`571e8fe2`](https://github.com/weepwood/MRR/commit/571e8fe205618579ddfd79bb44fc7a649782d699)）
+- `10:11` 修复：允许只读模式刷新部署状态（[`75aad037`](https://github.com/weepwood/MRR/commit/75aad037765ff53b56063c013de60cd60d415ada)）
+- `10:09` 修复：限制部署就绪手动刷新权限（[`732071cb`](https://github.com/weepwood/MRR/commit/732071cb57260c50e9325f42d4fbe7024d0b7e45)）
+- `10:08` 优化：隔离后台定时任务调度线程（[`fc0b4fe9`](https://github.com/weepwood/MRR/commit/fc0b4fe9cc9d5d654484179237414aa8fc787fc6)）
+- `10:07` 优化：隔离完整性统计后台线程（[`646e130a`](https://github.com/weepwood/MRR/commit/646e130a7136ab0d0ccdedfbf2f0820418e2938c)）
+- `10:02` 测试：验证只读判断不触发外部检查（[`2750b26a`](https://github.com/weepwood/MRR/commit/2750b26a4d36d95cb329f281e15f8a829215ea8b)）
+- `10:02` 修复：启动后显式刷新就绪快照（[`c64514d1`](https://github.com/weepwood/MRR/commit/c64514d1e499e1df5a2bef92d99c1a2e691b1114)）
+- `10:01` 修复：接入后台诊断快照服务（[`4ecc9390`](https://github.com/weepwood/MRR/commit/4ecc939072e61d4aaf4f6a584b4a7c110e7b4e75)）
+- `10:01` 修复：将完整性统计改为后台快照（[`6654f285`](https://github.com/weepwood/MRR/commit/6654f2859fc032472bab521121ff90cf8d6e0295)）
+- `10:00` 修复：区分本地文件与OSS对象可达性（[`5fc1f1f9`](https://github.com/weepwood/MRR/commit/5fc1f1f9a148c9ea4221835b1556d7b72cf773fa)）
+- `09:59` 重构：拆分运维诊断聚合职责（[`ca5b054f`](https://github.com/weepwood/MRR/commit/ca5b054f0115e40b142ec7be883e37621adac6c5)）
+- `09:58` 修复：将部署就绪检查改为后台快照（[`ad2a9118`](https://github.com/weepwood/MRR/commit/ad2a91184737b0b47b061b3c08e8362cfa07bdaa)）
+- `09:07` 测试：覆盖只读模式外部票据入口（[`a3ec1393`](https://github.com/weepwood/MRR/commit/a3ec13934f7847199b1a10a0a8d2a120dccf5c2f)）
+- `09:06` 修复：只读模式保留外部影像票据入口（[`b15f0ef8`](https://github.com/weepwood/MRR/commit/b15f0ef80720001c65792538fa9a8b949b30cede)）
+- `09:05` 功能：应用启动后预热部署就绪状态（[`054dca06`](https://github.com/weepwood/MRR/commit/054dca06e011fd8580f9b77237f755f7b8e349bc)）
+- `09:04` 修复：统一运维诊断页面代码风格（[`64e0868b`](https://github.com/weepwood/MRR/commit/64e0868bba1f39b668bdbcbc546a4070c89a5712)）
+- `09:00` 修复：统一解包运维诊断接口响应（[`db5ffb55`](https://github.com/weepwood/MRR/commit/db5ffb5525820547419546491daceaa2857b8c82)）
+- `08:57` 发布：更新运维诊断数据库兼容基线（[`e079f1a4`](https://github.com/weepwood/MRR/commit/e079f1a4dde2cca3844af93de70cbdd2ea506f82)）
+- `08:55` 修复：提高部署就绪检查的空配置兼容性（[`a0434ac7`](https://github.com/weepwood/MRR/commit/a0434ac7e79cb970c6171c41615c5dc923a00aa9)）
+- `08:53` 测试：覆盖只读降级写操作守卫（[`9f2e5ef7`](https://github.com/weepwood/MRR/commit/9f2e5ef7f8095fb7d504dfebea4d52c1a2beab66)）
+- `08:52` 前端：增加运维诊断中心菜单路由（[`36dc41c3`](https://github.com/weepwood/MRR/commit/36dc41c3b2c92cc6ec5f7c3dacbc96bfd60e9644)）
+- `08:51` 前端：增加运维诊断中心页面（[`8eb004d2`](https://github.com/weepwood/MRR/commit/8eb004d23d1725de463fa38707cbabbf8bf3f1fe)）
+- `08:49` 前端：增加运维诊断中心接口（[`556b0262`](https://github.com/weepwood/MRR/commit/556b026287bc091f4dc311ec35c2977a04b16d98)）
+- `08:48` 功能：导出任务响应增加下载统计（[`b6925709`](https://github.com/weepwood/MRR/commit/b6925709eb2783f3dbc2dac28178b7f8de8d30a3)）
+- `08:47` 功能：统计导出文件下载次数（[`3bd9e3a2`](https://github.com/weepwood/MRR/commit/3bd9e3a261f631e5ffb3258eb1fb692516ebc60d)）
+- `08:47` 功能：持久化导出文件下载统计（[`b33e5dfb`](https://github.com/weepwood/MRR/commit/b33e5dfb22379eaad40cabcbc21119499fd83bca)）
+- `08:46` 文档：基于 v0.6.3 重构项目文档体系（[`822f53bc`](https://github.com/weepwood/MRR/commit/822f53bcc892c01834749fbd69e6bfcbcbdc12bd) · [PR #199](https://github.com/weepwood/MRR/pull/199)）
+- `08:46` 功能：记录导出文件下载次数与时间（[`bc17644b`](https://github.com/weepwood/MRR/commit/bc17644be026ddbdabf393b88fd38f380e189528)）
+- `08:46` 数据库：增加权限快照与导出下载统计（[`5a1f638a`](https://github.com/weepwood/MRR/commit/5a1f638a49edc12d05c5227a99fd5f48a4410ea5)）
+- `08:45` 功能：接入只读降级拦截器（[`adcbf4e3`](https://github.com/weepwood/MRR/commit/adcbf4e3adf41d0a87fdceb8d788f549e0cdb474)）
+- `08:45` 功能：增加只读降级写操作守卫（[`815ff8ec`](https://github.com/weepwood/MRR/commit/815ff8ec31b6b899e70d45db489262ab157314e6)）
+- `08:44` 功能：增加运维诊断中心接口（[`c7a2069c`](https://github.com/weepwood/MRR/commit/c7a2069cf7abc8535a6782964144b46b2dff225a)）
+- `08:44` 功能：增加图片诊断、完整性、导出与权限矩阵服务（[`c1fe1644`](https://github.com/weepwood/MRR/commit/c1fe16441a67fd026c7adaa354344a6e9947e872)）
+- `08:42` 功能：增加部署就绪检查与只读降级判定（[`5914de0f`](https://github.com/weepwood/MRR/commit/5914de0f7d308bd5c6ef852a8c96ce1b7c1eaaac)）
+- `08:32` 合并：简化 API 权限模型并默认拒绝未声明接口（#197）（[`51a4cbfb`](https://github.com/weepwood/MRR/commit/51a4cbfb513c45e3719bbcb574c78dfe2514a0ec)）
+- `02:31` 测试：同步开发者模式简化后的界面文案（[`8d9fe305`](https://github.com/weepwood/MRR/commit/8d9fe30590a997d5783b6a40fdbea4a8fc82b07c)）
+- `02:26` 样式：补齐权限页面样式分隔（[`2316a51c`](https://github.com/weepwood/MRR/commit/2316a51c9de01824a0ee70b2e46db3861d4df816)）
+- `02:23` 修复：开发者权限旁路兼容应用上下文路径（[`522e0b05`](https://github.com/weepwood/MRR/commit/522e0b05e2c2bcdfd27e74ef7d7008bd476786f4)）
+- `02:22` 测试：开发者权限旁路保留真实登录身份（[`787049ff`](https://github.com/weepwood/MRR/commit/787049ffceeb94802754922e499d0564f9c249bd)）
+- `02:21` 测试：权限拦截器恢复无状态构造（[`378e77e2`](https://github.com/weepwood/MRR/commit/378e77e28343a8932fb3eb02905b473af847e109)）
+- `02:21` 测试：权限拦截器只验证统一会话权限（[`e042f387`](https://github.com/weepwood/MRR/commit/e042f387e0670227d266f08a32615a79b1630ca3)）
+- `02:20` 权限：拦截器只负责统一权限判断（[`b384c08f`](https://github.com/weepwood/MRR/commit/b384c08f5969bf89e1e8f276a5217d2ed308b8bd)）
+- `02:19` 安全：开发者模式为真实登录会话补齐权限（[`1d6f267b`](https://github.com/weepwood/MRR/commit/1d6f267bcd58d2f8117f8ed446a122e1982d7454)）
+- `02:17` 修复：统一权限测试导入顺序（[`ed618f1e`](https://github.com/weepwood/MRR/commit/ed618f1e22005c6a96f25438c90e7a849d8a61f6)）
+- `02:17` 修复：统一开发者模式测试标题格式（[`91d52f46`](https://github.com/weepwood/MRR/commit/91d52f4603593695f82c4bcf7292cede7ccc44eb)）
+- `02:16` 样式：整理权限管理页面代码结构（[`4a7ce336`](https://github.com/weepwood/MRR/commit/4a7ce336616fd659f4d1ad8ca3a480319019a388)）
+- `02:13` 数据库：明确开发者 API 权限旁路仍需登录（[`a94aacbc`](https://github.com/weepwood/MRR/commit/a94aacbc5bfdafcc7fa7db5c367b9134343ddf83)）
+- `02:12` 测试：适配开发者权限旁路依赖（[`35f50e08`](https://github.com/weepwood/MRR/commit/35f50e08b03fbedb38cb3cfb7a8f2542e0966c67)）
+- `02:11` 测试：覆盖统一权限目录与系统管理权限（[`5198b6cf`](https://github.com/weepwood/MRR/commit/5198b6cf82bb1e274f3e64f50ba319d915daf9e7)）
+- `02:11` 测试：开发者模式不再创建虚拟会话（[`0aefee0c`](https://github.com/weepwood/MRR/commit/0aefee0c93e03cfc3035f97edc5d382f58b003b9)）
+- `02:11` 测试：开发者状态不再返回虚拟用户（[`2ab860e7`](https://github.com/weepwood/MRR/commit/2ab860e7c016f7befbfd32280a80f02c9ac23d2c)）
+- `02:10` 测试：覆盖登录后开发者权限旁路边界（[`79d199e3`](https://github.com/weepwood/MRR/commit/79d199e38fa9eba2cd3166a7a44d9b46366b6a22)）
+- `02:10` 测试：覆盖真实登录用户开发者权限旁路（[`c9fe0b8b`](https://github.com/weepwood/MRR/commit/c9fe0b8bc125741120ab09178f1e0d5ee7482d81)）
+- `02:09` 测试：开发者匿名访问仅保留档案袋（[`79854b33`](https://github.com/weepwood/MRR/commit/79854b33ea482ab0d416a86bbbd945c51a6fda46)）
+- `02:08` 设置：明确开发者 API 仍需真实登录（[`f953408b`](https://github.com/weepwood/MRR/commit/f953408bdc4455fa50469ec8b5abd4e47c0a45da)）
+- `02:07` 认证：路由守卫移除虚拟开发者会话（[`b5a1efe2`](https://github.com/weepwood/MRR/commit/b5a1efe29032d8647afac8b0f5bfda11c00a2716)）
+- `02:07` 认证：移除前端虚拟开发者用户（[`559e3f95`](https://github.com/weepwood/MRR/commit/559e3f951af2ca8ee3ed1093352b155d686b90a1)）
+- `02:06` 功能：简化开发者模式前端状态（[`887fb646`](https://github.com/weepwood/MRR/commit/887fb646b085c5abe6c02f9f1732c9be7aa4acc3)）
+- `02:05` 功能：简化开发者模式状态响应（[`0200d8ae`](https://github.com/weepwood/MRR/commit/0200d8ae47358c60d918c6e6459ce9dc603d72eb)）
+- `02:05` 安全：开发者模式仅跳过已登录用户业务权限（[`ef5b6d6c`](https://github.com/weepwood/MRR/commit/ef5b6d6cf1b190eaebed5cea70b4260a0c4cc537)）
+- `02:03` 安全：登录拦截器仅保留档案袋匿名兼容（[`564ac1ff`](https://github.com/weepwood/MRR/commit/564ac1ff514d9a3a59e33e62345e91292e15cd7a)）
+- `02:03` 安全：开发者 API 改为登录后权限旁路（[`b40f3270`](https://github.com/weepwood/MRR/commit/b40f327005143ef5dc9f0d76872a5686e9e503a5)）
+- `02:00` 修复：保持方法级权限策略优先（[`8b4663b7`](https://github.com/weepwood/MRR/commit/8b4663b75807fd12231e49425a5322577c4a8069)）
+- `01:59` 权限：权限页面使用统一权限目录（[`ded86fb6`](https://github.com/weepwood/MRR/commit/ded86fb6280cf104df66acdbdceecdb185255c10)）
+- `01:58` 权限：统一前端权限目录与继承关系（[`0315dd9c`](https://github.com/weepwood/MRR/commit/0315dd9cea1eecb48a14f14300155499b336a38a)）
+- `01:57` 权限：简化权限拦截器判断流程（[`12380116`](https://github.com/weepwood/MRR/commit/12380116944506ffc903a7b99bd90810f8f80bc0)）
+- `01:57` 权限：简化公开路径与遗留权限配置（[`4a3b1df0`](https://github.com/weepwood/MRR/commit/4a3b1df02df6e7aad977f2a9218f2ed7ddfa2bae)）
+- `01:56` 权限：数据质量执行直接声明系统管理权限（[`87ca584e`](https://github.com/weepwood/MRR/commit/87ca584e69b8826427f04290aab15e7a8c34837a)）
+- `01:56` 权限：异步导出接口直接声明动态权限入口（[`aea45eb2`](https://github.com/weepwood/MRR/commit/aea45eb2c0958db5a528392ba25f8fb911486d03)）
+- `01:55` 权限：搜索记录接口直接声明读取权限（[`5ff6174b`](https://github.com/weepwood/MRR/commit/5ff6174bafc4930de8187c39d22cff42d90685f8)）
+- `01:54` 权限：搜索接口直接声明读取权限（[`ad14882d`](https://github.com/weepwood/MRR/commit/ad14882d893fd504ede26df4acb3a9ced9671c5d)）
+- `01:54` 权限：扫描查询接口直接声明权限（[`411786b3`](https://github.com/weepwood/MRR/commit/411786b3ee343fe395c0a17f6595a2407aa1c306)）
+- `01:52` 权限：简化权限继承解析（[`29b4dcdd`](https://github.com/weepwood/MRR/commit/29b4dcdd74ea737cf6b4fd458541820d67acb598)）
+- `01:52` 权限：集中定义权限常量（[`92e0ea1d`](https://github.com/weepwood/MRR/commit/92e0ea1d2cde378c89c8d314187e340dfddbc9e0)）
+- `01:44` fix (backend) resolve nginx browser service injection（[`9d6c1c8f`](https://github.com/weepwood/MRR/commit/9d6c1c8f885fa86d731b87130cb448d366d042ea)）
+- `01:38` 功能：增加 Nginx 静态资源文件浏览（[`81fa6bc8`](https://github.com/weepwood/MRR/commit/81fa6bc81ae41335d23694dc5d8ebfe11e4d6cc5) · [PR #198](https://github.com/weepwood/MRR/pull/198)）
+- `01:20` 权限：保持权限页面主线实现（[`679bc4c3`](https://github.com/weepwood/MRR/commit/679bc4c32d3845f649125dd45aff91e84d398ea3)）
+- `01:19` 修复：补齐开发者设置样式分隔（[`9db832f9`](https://github.com/weepwood/MRR/commit/9db832f933d2f1cd02917441b1facf1871bd39d7)）
+- `01:15` 测试：覆盖系统管理权限继承（[`b3eb2f43`](https://github.com/weepwood/MRR/commit/b3eb2f43818ee9ff5dca17bc64e02e8cd67ed849)）
+- `01:14` 权限：权限管理页面增加系统管理权限（[`8ed67b99`](https://github.com/weepwood/MRR/commit/8ed67b997c8fb8dbefdb540b630416dc744404f6)）
+- `01:13` 测试：覆盖开发者 API 设置序列化（[`2b217eac`](https://github.com/weepwood/MRR/commit/2b217eac02bfb9873e53fa6cf0670f21de268ba4)）
+- `01:12` 测试：覆盖开发者完整 API 状态（[`28750e98`](https://github.com/weepwood/MRR/commit/28750e985ed9114be44126b9a5a2c2ac1383ebfc)）
+- `01:12` 修复：统一开发者设置页面格式（[`a68af466`](https://github.com/weepwood/MRR/commit/a68af466d364b82d9e7f3c4b3c5353707791c535)）
+- `01:11` 修复：统一开发者会话状态代码格式（[`0ea0845e`](https://github.com/weepwood/MRR/commit/0ea0845eee82602de2e6154498edbc2c10a90ab2)）
+- `01:11` 修复：统一路由守卫代码格式（[`00640049`](https://github.com/weepwood/MRR/commit/0064004959cd897966b4d82690a83134ad1b7e6d)）
+- `01:10` 修复：统一开发者模式代码格式（[`c51cec75`](https://github.com/weepwood/MRR/commit/c51cec754877332b6148673af634bd4afb645265)）
+- `01:09` 测试：更新默认拒绝与公开接口行为（[`e6adfe58`](https://github.com/weepwood/MRR/commit/e6adfe589eef7c5b7f45803cad41efb73a9c6874)）
+- `01:09` 安全：公开接口在权限拦截器中显式放行（[`f1113791`](https://github.com/weepwood/MRR/commit/f1113791458e0c9863b7d3f029815aa576883ccf)）
+- `01:05` 测试：覆盖开发者完整 API 开关安全边界（[`06821d8c`](https://github.com/weepwood/MRR/commit/06821d8c4387c596bfaf6a618c35a24f54a8a064)）
+- `01:04` 测试：覆盖开发者 API 设置刷新（[`93632750`](https://github.com/weepwood/MRR/commit/936327503ca94fcf480690909e2bf67ac35c4ab5)）
+- `01:04` 测试：覆盖开发者 API 公共状态（[`2b6fda15`](https://github.com/weepwood/MRR/commit/2b6fda15c896a96d45177d735c22e917403cd1d2)）
+- `01:03` 测试：覆盖注册放行与开发者完整 API 边界（[`87ad268b`](https://github.com/weepwood/MRR/commit/87ad268b910c31015146e39dee317fb6e161dc44)）
+- `01:02` 权限：补齐遗留接口的显式权限策略（[`67d3c4ff`](https://github.com/weepwood/MRR/commit/67d3c4fff56422e35828768feeed2027f3104694)）
+- `01:02` 功能：路由守卫接入开发者 API 身份（[`080aa724`](https://github.com/weepwood/MRR/commit/080aa724e70cc60093ea309046a79ff64cc9fe00)）
+- `01:01` 功能：前端支持无 Token 开发者 API 会话（[`798f1482`](https://github.com/weepwood/MRR/commit/798f1482053921e5ab6495e66044708e79c969c0)）
+- `01:00` 功能：解析开发者完整 API 会话（[`860a361b`](https://github.com/weepwood/MRR/commit/860a361b1c37ba5ddf41cc85366f55cb3dfb6d77)）
+- `01:00` 权限：前端补充系统管理继承关系（[`d4be38a5`](https://github.com/weepwood/MRR/commit/d4be38a5f9417022dffcb1fa1882ff041926a762)）
+- `00:59` 设置：开发者模式增加完整 API 权限开关（[`3e1c3af6`](https://github.com/weepwood/MRR/commit/3e1c3af614176a5508ef1ee9cd69428239f60ae0)）
+- `00:58` 设置：增加开发者 API 权限开关（[`dcfe50c7`](https://github.com/weepwood/MRR/commit/dcfe50c7f1edc7a22d26dbd7e089673a70f65114)）
+- `00:57` 发布：同步开发者 API 设置迁移基线（[`2365bed0`](https://github.com/weepwood/MRR/commit/2365bed03b5ab564b7995648c000c3f5ec2facb2)）
+- `00:56` 测试：扫描所有 Controller 的访问策略（[`771493f4`](https://github.com/weepwood/MRR/commit/771493f47f20e541c9a3443822e6d70ebebae0d9)）
+- `00:56` 权限：响应指标上报显式要求登录（[`6011b54b`](https://github.com/weepwood/MRR/commit/6011b54b7f6d19dce5c97c97ef6c181394a73381)）
+- `00:55` 权限：文档会话显式要求登录（[`3cca9bbc`](https://github.com/weepwood/MRR/commit/3cca9bbc435cc34fb609a5b42353ac3329911822)）
+- `00:54` 设置：实时刷新开发者 API 权限开关（[`5dfc4d85`](https://github.com/weepwood/MRR/commit/5dfc4d857e3d2a65bdb3c262c2aecbe2ab45828d)）
+- `00:54` 功能：患者管理支持编辑、导入导出与数据统计分析（[`158bef87`](https://github.com/weepwood/MRR/commit/158bef877604ca0d2e83ec3145b47f619a932bc6) · [PR #190](https://github.com/weepwood/MRR/pull/190)）
+- `00:54` 功能：公开开发者 API 运行状态（[`64917b26`](https://github.com/weepwood/MRR/commit/64917b263d4cd26f9e8fa076773185a585758f2d)）
+- `00:53` 权限：显式标记仅登录认证接口（[`81e7fdfc`](https://github.com/weepwood/MRR/commit/81e7fdfc76a7dda06923069aff5ec7955cc7226f)）
+- `00:52` 权限：建立系统管理继承关系（[`20e4a367`](https://github.com/weepwood/MRR/commit/20e4a3679a5eb13056e54d48746da235c4641769)）
+- `00:52` 权限：补充系统管理权限（[`36b9061c`](https://github.com/weepwood/MRR/commit/36b9061c32f16a4cfcdfc26f277e680b0ba52317)）
+- `00:51` 安全：开发者模式可选开放完整 API 权限（[`3b5e32a0`](https://github.com/weepwood/MRR/commit/3b5e32a0c2932fd53782c1aebe605612896947c0)）
+- `00:51` 安全：未声明 API 访问策略时默认拒绝（[`259d7a67`](https://github.com/weepwood/MRR/commit/259d7a674e29b65cc82050085669d0c9e2cbbcf9)）
+- `00:50` 安全：统一 API 公开路径配置（[`c6a71fe9`](https://github.com/weepwood/MRR/commit/c6a71fe9e3e5ae8a37d624e05282fcbfd935849e)）
+- `00:49` 数据库：增加开发者 API 权限开关（[`769b4b85`](https://github.com/weepwood/MRR/commit/769b4b85213bb340d8b4fed3c9f4232c5c5933c3)）
+- `00:49` 安全：增加受控开发者 API 访问服务（[`686fed6d`](https://github.com/weepwood/MRR/commit/686fed6d5908d6fda8a2b82a7fc566c5ddc8c047)）
+- `00:49` 安全：集中管理 API 公开路径与特殊权限（[`d3a68a81`](https://github.com/weepwood/MRR/commit/d3a68a819cf4ef959514490ced4e77220953c316)）
+- `00:49` 安全：增加仅登录访问标记（[`bbfb457f`](https://github.com/weepwood/MRR/commit/bbfb457fcccea39a0d5221af86b360dc91bd2bcf)）
+- `00:42` 合并：OSS 分阶段迁移管理与文件浏览（[`e28dfd4a`](https://github.com/weepwood/MRR/commit/e28dfd4a7557656c7f344a481e0b54f61d124817)）
+- `00:36` 维护：清理 OSS 浏览缓存修复临时工作流（[`7b7618b5`](https://github.com/weepwood/MRR/commit/7b7618b5355b8c5b61b377a12c4fe7c1d9057493)）
+- `00:36` 维护：恢复后端规范化检查工作流（[`6d7f1e55`](https://github.com/weepwood/MRR/commit/6d7f1e55d02ae5d3f2490b9f0f875bcbec1cab8e)）
+- `00:35` 测试：覆盖 OSS 浏览签名缓存前置校验（[`adfc40a5`](https://github.com/weepwood/MRR/commit/adfc40a5dca48a9ab88ec7ba680ff35a82626327)）
+- `00:35` 修复：在 OSS 浏览签名前强制校验受管路径（[`da30f4a4`](https://github.com/weepwood/MRR/commit/da30f4a4b9ff129579c34f0e19b0c5c6bac19b90)）
+- `00:33` 修复匿名注册并优化密码与注册页面（[`a4a24ba7`](https://github.com/weepwood/MRR/commit/a4a24ba7db6d645cd1772970baad533d80975f29)）
+- `00:29` 维护：再次触发 OSS 浏览缓存边界修复（[`ae25907b`](https://github.com/weepwood/MRR/commit/ae25907b1c7f79210003bac7ce3d883e763f86fd)）
+- `00:26` 维护：触发 OSS 浏览缓存边界修复（[`f4371ef9`](https://github.com/weepwood/MRR/commit/f4371ef945a03181f0098dcaaa4516be39d5d806)）
+- `00:22` 维护：触发 OSS 浏览缓存边界修复任务（[`8684349e`](https://github.com/weepwood/MRR/commit/8684349e39d91aa9f3a5dda9b6e60278f80a2a1d)）
+- `00:13` 测试：增加 OSS 浏览签名缓存边界回归（[`3fe2f8f3`](https://github.com/weepwood/MRR/commit/3fe2f8f3cda8d978eba499b6c51bf90927091e83)）
+
+## 2026-07-22
+
+- `23:46` 维护：删除同步 main 0.6.3 临时流程（[`1eed26b9`](https://github.com/weepwood/MRR/commit/1eed26b976915bd67fc1dbe5b2ccf5764317c5bf)）
+- `23:44` 维护：触发同步 main 0.6.3 流程（[`e87bbf9e`](https://github.com/weepwood/MRR/commit/e87bbf9e80c291f32e2d03850f730c80f335c0db)）
+- `15:44` 合并：同步 main 0.6.3 到 OSS 迁移与文件浏览分支（[`435d1cef`](https://github.com/weepwood/MRR/commit/435d1cef1e71c6ad95e359871df9d07ef7c2796c)）
+- `23:43` 维护：创建同步 main 0.6.3 临时流程（[`6cbfb7cd`](https://github.com/weepwood/MRR/commit/6cbfb7cd85a9b3fe260a1910558587c7d6379077)）
+- `23:39` 修复：完成 OSS 文件浏览器最终样式排序（[`9b512399`](https://github.com/weepwood/MRR/commit/9b5123991c19a8e4fda202a0de93373548288414)）
+- `23:35` 修复：调整 OSS 文件浏览路由格式（[`a074e542`](https://github.com/weepwood/MRR/commit/a074e5424b0df789099c057d23f0c031d96b70bd)）
+- `23:34` 修复：完成 OSS 文件浏览器样式规范调整（[`012d651f`](https://github.com/weepwood/MRR/commit/012d651f8395250bc7151543149d3f8f0f04b9da)）
+- `23:32` 修复：调整 OSS 文件浏览页面样式顺序（[`0568f293`](https://github.com/weepwood/MRR/commit/0568f293ed3266ddcd1863ccde5c5963e4a3541c)）
+- `23:31` 测试：修正 OSS 虚拟目录分页场景（[`902eed5d`](https://github.com/weepwood/MRR/commit/902eed5dca80b44fd8752b595be5a4d5c67d7d07)）
+- `23:27` 文档：补充 OSS 文件资源管理器使用说明（[`c7710058`](https://github.com/weepwood/MRR/commit/c771005874fdd5c3cee73a3691dd069747b8d3e4)）
+- `23:25` 功能：增加 OSS 文件浏览菜单入口（[`247c6508`](https://github.com/weepwood/MRR/commit/247c6508bc7c7fe1800271d6d32159eecaf51165)）
+- `23:24` 功能：增加独立 OSS 文件浏览页面（[`15067fd0`](https://github.com/weepwood/MRR/commit/15067fd0683b0325792a15e9800d81abc18952a4)）
+- `23:24` 修复：整理 OSS 文件浏览器样式与模板（[`73690f7a`](https://github.com/weepwood/MRR/commit/73690f7a6dae1a9c0783d7ebe65d02e5e0005829)）
+- `23:21` 维护：删除 OSS 浏览器临时集成流程（[`18579e29`](https://github.com/weepwood/MRR/commit/18579e29daa8eeffd6d67b91db2cbfe46e008039)）
+- `23:19` 修复：调整 OSS 浏览测试构造方式（[`756aef41`](https://github.com/weepwood/MRR/commit/756aef41fd5d412f57aaaa210cd41153cfaa4b84)）
+- `23:17` 维护：补充 OSS 浏览器集成修复流程（[`b02a0fb9`](https://github.com/weepwood/MRR/commit/b02a0fb9e6c59cd2afe545048e30e94743e24fda)）
+- `23:12` 维护：触发 OSS 浏览器页面集成流程（[`7c23fdef`](https://github.com/weepwood/MRR/commit/7c23fdef59545cc3f62d047328e87ba2c5127a7f)）
+- `23:11` 维护：创建 OSS 浏览器页面集成流程（[`f1bab334`](https://github.com/weepwood/MRR/commit/f1bab33485f4bad3a0b35f2983bd1d886419f2fb)）
+- `23:11` 功能：补充 OSS 文件资源管理器 Mock 数据（[`24fb3ae9`](https://github.com/weepwood/MRR/commit/24fb3ae9433f3e91b98cd6ccb586d5788437d1e0)）
+- `23:09` 功能：增加 Windows 风格 OSS 文件资源管理器（[`e48f3e80`](https://github.com/weepwood/MRR/commit/e48f3e80993b6193b04075f9f6b4ff944deb5c4a)）
+- `23:07` 功能：增加 OSS 文件浏览前端接口（[`99fc0a31`](https://github.com/weepwood/MRR/commit/99fc0a31fb62582e0bb2b8057256dad6d832d3c9)）
+- `23:06` 测试：覆盖 OSS 文件浏览和路径限制（[`544783ec`](https://github.com/weepwood/MRR/commit/544783ecebc02d24c93de6f14e24cbadd814d619)）
+- `23:05` 功能：增加 OSS 文件资源管理器接口（[`409e6e92`](https://github.com/weepwood/MRR/commit/409e6e9225e37eefd7a8b6ec9a6f597866716e8f)）
+- `15:05` 发布：验证 v0.6.3 并删除一次性任务（[`99df988b`](https://github.com/weepwood/MRR/commit/99df988b5f51750a4890ad652abef23480eb8016)）
+- `23:04` 功能：实现 OSS 只读文件浏览与游标分页（[`97985d47`](https://github.com/weepwood/MRR/commit/97985d47b13bad7f56831dd6a14a9c7950f84ebb)）
+- `23:02` 功能：扩展 OSS 文件浏览服务（[`8f632c82`](https://github.com/weepwood/MRR/commit/8f632c826d5f103a67c5459e43615892821e17ff)）
+- `23:02` 功能：增加 OSS 文件浏览分页模型（[`4a372b9a`](https://github.com/weepwood/MRR/commit/4a372b9ab82c58cc855610c196f3b900e44e3aa0)）
+- `23:01` 功能：增加 OSS 文件浏览条目模型（[`c0c70073`](https://github.com/weepwood/MRR/commit/c0c700736bc8b5f639bb6ff0bff54925330e7e4d)）
+- `23:00` 发布：MRR 0.6.3（[`360d8280`](https://github.com/weepwood/MRR/commit/360d8280338401170ca17f7f7e3d3751ac73f930)）
+- `22:42` 实现用户注册与管理员审核机制（[`40caf208`](https://github.com/weepwood/MRR/commit/40caf208b09ff929ad9271f4bca7076e22549840)）
+- `22:42` 功能：增加 Windows MRR 一键管理中心（[`1b601539`](https://github.com/weepwood/MRR/commit/1b6015397e117c91c877798f328ff6367400ed31)）
+- `22:36` 维护：清理 main 0.6.2 同步临时流程（[`0f9f03b7`](https://github.com/weepwood/MRR/commit/0f9f03b7f176df58dd835312ffe5d26b1970e497)）
+- `22:34` 维护：触发同步 main 0.6.2（[`9c3ce949`](https://github.com/weepwood/MRR/commit/9c3ce94932972268a6f9a6a524cb6ead657d13e7)）
+- `14:34` 合并：同步 main 0.6.2 到 OSS 迁移管理分支（[`7ac9257f`](https://github.com/weepwood/MRR/commit/7ac9257f7e41d53ce8590725f4b12eaad5f77eb8)）
+- `22:34` 维护：准备同步 main 0.6.2（[`1c475514`](https://github.com/weepwood/MRR/commit/1c475514e81c34b3f811f2e4518cc0a2c12c8baf)）
+- `22:27` 维护：清理 OSS 页面样式临时流程（[`f79fdea6`](https://github.com/weepwood/MRR/commit/f79fdea65b1956e1ff761d18a8b3eca9e820cc36)）
+- `22:19` 维护：触发 OSS 页面样式微调流程（[`16840d5f`](https://github.com/weepwood/MRR/commit/16840d5f23b24637a78ba450071fa897dfe6abba)）
+- `14:19` 修复：调整 OSS 页面 Flex 属性顺序（[`fdc638f8`](https://github.com/weepwood/MRR/commit/fdc638f881fff3db76ee18e134686f0d69574162)）
+- `22:18` 维护：准备 OSS 页面样式微调流程（[`bf8e3825`](https://github.com/weepwood/MRR/commit/bf8e38255b113ee810d2bfaa859985a6bf04f625)）
+- `22:17` 修复：补齐 OSS 管理日志动态 SQL 空格（[`511c09fc`](https://github.com/weepwood/MRR/commit/511c09fca4d181edf35f5bb2416688d8aec83049)）
+- `22:13` 修复：调整 OSS 迁移页面样式规范（[`a654baa1`](https://github.com/weepwood/MRR/commit/a654baa1ace72d80d474f08b72f82c0d5bbce30b)）
+- `22:07` 测试：修复迁移日志外键测试数据（[`818917d0`](https://github.com/weepwood/MRR/commit/818917d06bcc051d5ba8c679681ec87d6e583ef4)）
+- `22:03` 功能：完善 OSS 迁移管理完整操作页面（[`0d639891`](https://github.com/weepwood/MRR/commit/0d639891cbee9e4dc62bbf9bdb39373d0d65a2f2)）
+- `21:58` 功能：完善 OSS 迁移管理 Mock 数据（[`ec6a42c3`](https://github.com/weepwood/MRR/commit/ec6a42c397fea25c1500e1ec1d96b0b8e3fac9ca)）
+- `21:57` 功能：扩展 OSS 迁移管理前端接口（[`775639e9`](https://github.com/weepwood/MRR/commit/775639e90bfd2276a986936fcfc52bf295f19314)）
+- `21:56` 测试：验证 OSS 迁移管理 PostgreSQL 查询（[`86f655a5`](https://github.com/weepwood/MRR/commit/86f655a51ba45f18fccf35fdb44ae13924b24081)）
+- `21:55` 测试：覆盖 OSS 迁移管理查询接口（[`cb720c70`](https://github.com/weepwood/MRR/commit/cb720c701bcbc36a8826d57f3c047b963d629e1d)）
+- `21:55` 功能：新增 OSS 迁移管理页面查询接口（[`e4e39c1f`](https://github.com/weepwood/MRR/commit/e4e39c1f7e1df90b4bbf43461de67f0a526aa7d8)）
+- `21:54` 功能：新增 OSS 迁移管理查询服务（[`c3bf450f`](https://github.com/weepwood/MRR/commit/c3bf450f5652af98f12b0963023623f5c285d055)）
+- `21:54` 功能：新增 OSS 迁移管理查询 Mapper（[`228d4836`](https://github.com/weepwood/MRR/commit/228d4836da4aecd7ee277b2b2e853fa412e4e8e7)）
+- `21:53` 维护：清理未使用的 OSS 页面实施脚本（[`18d89ffc`](https://github.com/weepwood/MRR/commit/18d89ffc199f58b77f66e01840e0b2706af9ceaf)）
+- `21:53` 维护：清理未使用的 OSS 页面临时流程（[`9337e832`](https://github.com/weepwood/MRR/commit/9337e832491ef3395a69979a00e0cce2221d6991)）
+- `21:46` 维护：启动 OSS 页面完善验证（[`8f06e5f7`](https://github.com/weepwood/MRR/commit/8f06e5f7e2483ba89242c21b94b9ca78a259886d)）
+- `21:45` 维护：加入 OSS 页面实施脚本（[`8c65e9f0`](https://github.com/weepwood/MRR/commit/8c65e9f061afd85d8be9cacc2763b753ee6facc9)）
+- `20:49` 维护：删除 OSS 统计测试辅助流程（[`5c74e5de`](https://github.com/weepwood/MRR/commit/5c74e5de846f717140e1b45e4540501821f3c8e9)）
+- `12:49` 测试：校正到期重试的待迁移统计（[`9fb95f5b`](https://github.com/weepwood/MRR/commit/9fb95f5b9317e6b1b71d90ecf2026fba4f06cf3f)）
+- `20:48` 测试：校正到期重试的待迁移统计（[`01b09a20`](https://github.com/weepwood/MRR/commit/01b09a2000542a7b8100c61ef17e4f8b4aa63407)）
+- `12:47` 发布：验证 v0.6.2 并删除一次性任务（[`96833958`](https://github.com/weepwood/MRR/commit/96833958130db26626bf0455ce66a263ff33508d)）
+- `20:45` 维护：删除 OSS 测试修复辅助流程（[`9f91da6e`](https://github.com/weepwood/MRR/commit/9f91da6e51330d677e28c73d35d2a1c938418bc4)）
+- `12:44` 测试：修正等待上架号用例异常声明（[`dcdfbc10`](https://github.com/weepwood/MRR/commit/dcdfbc10413b708de6c05b4f8040f605c5e62b87)）
+- `20:44` 测试：修正等待上架号测试签名（[`d50f5fb5`](https://github.com/weepwood/MRR/commit/d50f5fb5c541fbac7ff3fa07be3a1677c057b686)）
+- `20:43` 发布：MRR 0.6.2（[`d49c7be6`](https://github.com/weepwood/MRR/commit/d49c7be6717657d122731a315503f6d4d6b941c5)）
+- `20:40` 维护：删除主分支合并辅助流程（[`2f007091`](https://github.com/weepwood/MRR/commit/2f00709151ad96e2667e590cd7d077a25d70cf27)）
+- `12:39` 合并：同步 main 的 0.6.1 与 Windows Nginx 发布更新（[`4ab0f36d`](https://github.com/weepwood/MRR/commit/4ab0f36d2e0836d5037dfb9d72ed86610191e599)）
+- `20:39` 维护：准备合并最新主分支（[`d23484e5`](https://github.com/weepwood/MRR/commit/d23484e50a69b1cfed44255a9644e638ddbd045d)）
+- `20:35` 修复：校正 Nginx 迁移源文本转义（[`bdb30451`](https://github.com/weepwood/MRR/commit/bdb30451e287916a3652c1760056cce9650e8beb)）
+- `20:35` 修复：校正 OSS 路由路径字符校验（[`e53c0f28`](https://github.com/weepwood/MRR/commit/e53c0f2815fc53cd914f8b2049ef9362ecfd9ecc)）
+- `20:33` 维护：清理 OSS 路线辅助流程（[`4380ee6f`](https://github.com/weepwood/MRR/commit/4380ee6f8a78c4413ff7e905e9472d9f2a3e094f)）
+- `20:33` 维护：删除 OSS 路线临时实施流程（[`a2411f2e`](https://github.com/weepwood/MRR/commit/a2411f2e2273c4c81f20dc4ab11b60285916f410)）
+- `12:33` 功能：按上架号实施 Nginx 到 OSS 迁移路线（[`f163876f`](https://github.com/weepwood/MRR/commit/f163876f2a9c6eed3198ac47ec17c1913ce7da47)）
+- `20:32` 维护：保留实施脚本字符串缩进（[`f9ddcdbd`](https://github.com/weepwood/MRR/commit/f9ddcdbdbd94dfb1be7573f9fe53bde6a1c61307)）
+- `20:29` 维护：修复实施脚本缩进（[`2c13540c`](https://github.com/weepwood/MRR/commit/2c13540c87f57143f74bfecc2064e63eabeba82e)）
+- `20:28` 维护：修复 OSS 路线脚本提取（[`14cc2d1f`](https://github.com/weepwood/MRR/commit/14cc2d1ff137e284687ad7114b884301ef951198)）
+- `20:26` 维护：修正 OSS 路线实施流程（[`f6784c38`](https://github.com/weepwood/MRR/commit/f6784c38f37def0772fb4c8be010df8406b1682b)）
+- `20:23` 功能：Windows 离线包内置 Nginx 与控制命令（[`d8cf30a8`](https://github.com/weepwood/MRR/commit/d8cf30a85dc979bf904b795991ee72718806145d)）
+- `20:20` 测试：先验证新的 OSS 迁移路线（[`36021250`](https://github.com/weepwood/MRR/commit/3602125071d25a9be1834ae10f7816af4237ea0a)）
+- `11:17` 发布：验证 v0.6.1 并删除一次性任务（[`6eed2bbf`](https://github.com/weepwood/MRR/commit/6eed2bbf3fbb30482f8ab2cdeb3bcf0908349eb2)）
+- `19:17` 发布：幂等验证 0.6.1 并自动清理任务（[`93c7edcc`](https://github.com/weepwood/MRR/commit/93c7edcc1c61104c2b833ef82983164868cec4c3)）
+- `19:11` 发布：MRR 0.6.1（[`6d9d9aed`](https://github.com/weepwood/MRR/commit/6d9d9aed4943600ee8f11276ae1ccec83284944c)）
+- `19:02` chore (合并) 同步 main 发布工作流分支配置（[`3eac3d97`](https://github.com/weepwood/MRR/commit/3eac3d9756ea011abe75f39fd3a79189aff7e71f)）
+- `18:56` fix (检查) 跳过合并快照中不存在的变更文件（[`74ca5092`](https://github.com/weepwood/MRR/commit/74ca5092f24de98a0aedebde768b7ed4438ec1a8)）
+- `18:53` chore (合并) 同步开发者模式数据库迁移（[`50f3a350`](https://github.com/weepwood/MRR/commit/50f3a35076c6543829de2c6bccd1a87dce4161f9)）
+- `18:52` chore (合并) 对齐内部发布基线文档（[`9d648923`](https://github.com/weepwood/MRR/commit/9d648923bbf24f7bdc6d6d43fe394089d0dcefa9)）
+- `18:51` chore (合并) 合并扫描迁移 PostgreSQL 测试（[`a0d10c20`](https://github.com/weepwood/MRR/commit/a0d10c2037ce51f9e52c715016b95641d2b23f92)）
+- `18:49` chore (合并) 对齐日志映射集成测试（[`66715f05`](https://github.com/weepwood/MRR/commit/66715f059523da114a462e8eee5ea8236e23edf9)）
+- `18:49` chore (合并) 更新数据库发布基线（[`a1e953d5`](https://github.com/weepwood/MRR/commit/a1e953d5e5c8a9b4427cd75804c9b7e043c3cecd)）
+- `18:49` chore (合并) 保留最新 Windows 发布工作流（[`4eb39a1a`](https://github.com/weepwood/MRR/commit/4eb39a1a93ddfafda9cda7dbc94d44fc75c32529)）
+- `18:44` 维护：清理 dev-no-login 分支残留（#183）（[`1edc7854`](https://github.com/weepwood/MRR/commit/1edc78544067e5af2c96244bd9cc12ae65c9d07e)）
+- `15:55` 修复：收紧开发者模式并统一外部影像档案袋入口（[`a0bb6a5a`](https://github.com/weepwood/MRR/commit/a0bb6a5a005d4b70ca1862f5fd1e712291e71ff9) · [PR #181](https://github.com/weepwood/MRR/pull/181)）
+- `15:19` test 修复迁移服务测试编译错误（[`d0d7e246`](https://github.com/weepwood/MRR/commit/d0d7e2461623407f48e30bccbe2a6f24f31087fb)）
+- `15:11` docs 说明 OSS 迁移重试与大表策略（[`1c0c89bd`](https://github.com/weepwood/MRR/commit/1c0c89bde3ab48caa80ba714af3c2ea79f38652d)）
+- `15:10` test 验证 PostgreSQL 迁移状态与取消竞态（[`3bf05104`](https://github.com/weepwood/MRR/commit/3bf05104cb6f9d23f6115d16fd4556c875122bc4)）
+- `15:09` test 覆盖 OSS 迁移状态机关键竞态（[`cc45d050`](https://github.com/weepwood/MRR/commit/cc45d05052c669c536594bb4a4a4c634b79c117a)）
+- `15:07` test 验证 OSS 上传复用预计算 MD5（[`02094a3c`](https://github.com/weepwood/MRR/commit/02094a3c6c02ec8860be431d44659420d974f9e7)）
+- `15:06` test 覆盖多来源迁移错误分类（[`10a1e379`](https://github.com/weepwood/MRR/commit/10a1e3795de91e37c667ac8c9acafefc40fb335a)）
+- `15:06` fix 修正 OSS 迁移任务状态机与大表查询（[`8eb3c64e`](https://github.com/weepwood/MRR/commit/8eb3c64e387bcff71337056b3c5f03a093d0f715)）
+- `15:03` fix 避免 OSS 上传重复计算文件 MD5（[`c516113e`](https://github.com/weepwood/MRR/commit/c516113ecf5f7a2c9960b50d4cbd9464c819029b)）
+- `15:02` fix 复用迁移阶段已计算的文件校验值（[`dac55713`](https://github.com/weepwood/MRR/commit/dac5571347f5ee9577b7b021e3dc613a25f186cb)）
+- `15:02` fix 使用类型化来源错误判断重试（[`2ff954db`](https://github.com/weepwood/MRR/commit/2ff954db7d6e955f85fd5eda087e1078af9a54e6)）
+- `15:01` fix 统一 OSS 迁移领取与统计口径（[`aa05ecff`](https://github.com/weepwood/MRR/commit/aa05ecffb432a032f7b72882428456e0690a3ba5)）
+- `14:59` fix 隔离迁移任务进度与取消状态（[`9f7f2e5c`](https://github.com/weepwood/MRR/commit/9f7f2e5ca594d80fa531e014d43d2e34b7648993)）
+- `14:59` fix 为 OSS 迁移使用独立执行器（[`ee6486cf`](https://github.com/weepwood/MRR/commit/ee6486cf467476ebf6f3e6570be6864b1c905283)）
+- `13:51` chore (诊断) 删除临时文档构建诊断工作流（[`aa246dfb`](https://github.com/weepwood/MRR/commit/aa246dfbbe5b8ebb5286781f61fd5fe214e22ffe)）
+- `13:51` fix (文档) 修复内部发布文档死链与构建元数据说明（[`968830bc`](https://github.com/weepwood/MRR/commit/968830bceb15be4e8cd3df7548934a3e6982bee8)）
+- `13:48` chore (诊断) 收集 Windows 发布文档构建结果（[`7d9bcff7`](https://github.com/weepwood/MRR/commit/7d9bcff7c27bbde59120c3012ce3cfd5a59174f9)）
+- `13:44` fix (构建) 动态定位 JAR 版本元数据（[`ef598cdb`](https://github.com/weepwood/MRR/commit/ef598cdb969569c03257f92e8244ba25944269f7)）
+- `13:42` chore (诊断) 删除临时构建身份诊断工作流（[`f817f902`](https://github.com/weepwood/MRR/commit/f817f902fcee69055658e5e89fb2589bb6ba9439)）
+- `13:41` chore (诊断) 删除临时构建身份修复工作流（[`a093208e`](https://github.com/weepwood/MRR/commit/a093208e0061baafae3729ba6cc90217ef97a4b5)）
+- `13:41` revert (构建) 撤销无效的 build-info execution 调整（[`8b912d10`](https://github.com/weepwood/MRR/commit/8b912d1065bfcf8a3bb1b958df7c32d79e96f4ad)）
+- `13:40` fix (构建) 使用 JAR Maven 元数据校验后端版本（[`18e0b200`](https://github.com/weepwood/MRR/commit/18e0b200695a3244addbb019911e7a49b8bd1587)）
+- `13:37` fix (构建) 确保后端生成构建身份信息（[`ecc74d29`](https://github.com/weepwood/MRR/commit/ecc74d29b34abe30c06130d9e3eaaf6734035be2)）
+- `13:34` chore (诊断) 触发后端构建身份修复（[`92d208d9`](https://github.com/weepwood/MRR/commit/92d208d958c44cf79bf6bfb5c1957b312901075b)）
+- `13:31` chore (诊断) 临时修复后端构建身份生成（[`cf5797b5`](https://github.com/weepwood/MRR/commit/cf5797b5ac036c49cec154e26c4a388e8161e064)）
+- `13:28` chore (诊断) 收集 PR 发布包构建身份信息（[`59d8ad4a`](https://github.com/weepwood/MRR/commit/59d8ad4a77d7de35b7e5a9c435d31df664bcf8ad)）
+- `13:17` chore (诊断) 删除临时后端修复工作流（[`5b9d87e5`](https://github.com/weepwood/MRR/commit/5b9d87e5c93a4f9112c8a5dc8d3bcbb2daada4ee)）
+- `05:16` fix (测试) 修复审计排行与扫描映射验证（[`0fc8e03a`](https://github.com/weepwood/MRR/commit/0fc8e03a6754fc481eb62879b1ff03c214e989c8)）
+- `13:16` chore (诊断) 临时修复后端集成测试问题（[`5243fa55`](https://github.com/weepwood/MRR/commit/5243fa55bd47b32ca1f7065a3d83014cd940ea7b)）
+- `13:16` fix (测试) 使用 PostgreSQL 验证审计聚合 SQL（[`b6d265f8`](https://github.com/weepwood/MRR/commit/b6d265f8825297fde58c494bd3eb680eee01c9df)）
+- `13:11` fix (测试) 显式加载 H2 集成测试 Mapper XML（[`1262d5ac`](https://github.com/weepwood/MRR/commit/1262d5acb26845bc7d0d48d76804288e4ea08b6a)）
+- `13:10` fix (测试) 修复 PostgreSQL 集成测试 schema 与 Mapper 配置（[`b5736d23`](https://github.com/weepwood/MRR/commit/b5736d23b28f982dc64ba21e009bc7ff77e655a9)）
+- `13:05` chore (诊断) 删除最终临时 lint 诊断工作流（[`56942a92`](https://github.com/weepwood/MRR/commit/56942a9285b268a76a3394c6e55ec4f26cedd162)）
+- `13:04` chore (诊断) 删除最终临时样式修复工作流（[`8940e7d1`](https://github.com/weepwood/MRR/commit/8940e7d1d3f4195fc82f5e2c445fb2494d8377e2)）
+- `05:04` fix (OSS迁移) 修复最后一个样式排序错误（[`b19012fc`](https://github.com/weepwood/MRR/commit/b19012fcbbe6dec0479a6dbcc4ead872f1838caf)）
+- `13:04` chore (诊断) 临时修复最后一个样式排序错误（[`55b1199f`](https://github.com/weepwood/MRR/commit/55b1199fb8d66493f6c37e9551018a572ce13bc5)）
+- `13:03` chore (诊断) 收集最终前端 lint 输出（[`ad62eace`](https://github.com/weepwood/MRR/commit/ad62eaced586d6ae71aa566d30eb4b534f0843fc)）
+- `13:01` chore (诊断) 删除临时 ESLint 修复工作流（[`04617303`](https://github.com/weepwood/MRR/commit/0461730343dcaf08f1e3b3a01ea760656589cd28)）
+- `05:00` fix (OSS迁移) 修复迁移控制台模板格式（[`509e4625`](https://github.com/weepwood/MRR/commit/509e4625f3241cbcdeeec9e226b0c8dd0aa71d34)）
+- `12:59` chore (诊断) 临时执行 OSS 页面 ESLint 自动修复（[`1129cf38`](https://github.com/weepwood/MRR/commit/1129cf38565798ceb6121964972f411ea54d9dbd)）
+- `12:57` chore (诊断) 删除第二次临时 lint 诊断工作流（[`5c1be332`](https://github.com/weepwood/MRR/commit/5c1be332878db3cadf8e62268cf967fd31f70ff7)）
+- `12:57` chore (诊断) 删除第二次临时样式修复工作流（[`891a5d80`](https://github.com/weepwood/MRR/commit/891a5d801b28e317d817abd252e6841fa266f0b0)）
+- `04:56` fix (OSS迁移) 完成迁移控制台样式排序修复（[`0cd8a266`](https://github.com/weepwood/MRR/commit/0cd8a2661999121ad6b04ca18b85d0b699b59882)）
+- `12:55` chore (诊断) 临时修复剩余样式排序（[`ce6e8384`](https://github.com/weepwood/MRR/commit/ce6e8384d148e1b4b5046d775e18dad0b2bbd075)）
+- `12:54` chore (诊断) 重新收集当前前端 lint 输出（[`25621243`](https://github.com/weepwood/MRR/commit/256212437af54911b8b15f456f031eda968bd10d)）
+- `12:53` chore (诊断) 删除临时 lint 诊断工作流（[`d24e7de7`](https://github.com/weepwood/MRR/commit/d24e7de79d06fc8078d33f2e4310bff8da731313)）
+- `12:53` chore (诊断) 删除临时样式修复工作流（[`5b95da3b`](https://github.com/weepwood/MRR/commit/5b95da3b810944f1bccc26391547e7c38cb2fdd0)）
+- `04:52` fix (OSS迁移) 修复迁移控制台样式检查（[`edd5f724`](https://github.com/weepwood/MRR/commit/edd5f72494b7b9d37c88cc7efb9dca0394a0ff96)）
+- `12:52` chore (诊断) 临时自动修复 OSS 页面样式规则（[`256cae6a`](https://github.com/weepwood/MRR/commit/256cae6a818df0d940bea88b1ff679ea38c635d3)）
+- `12:49` chore (诊断) 让临时 lint 检查关联当前 PR（[`b0537503`](https://github.com/weepwood/MRR/commit/b05375035cf6ae6d991a68329e37c58178cd05b6)）
+- `12:48` chore (诊断) 临时收集 OSS 迁移前端 lint 输出（[`f155c546`](https://github.com/weepwood/MRR/commit/f155c5468cbb1b23e23914458008f599c3a1b439)）
+- `12:47` fix (OSS迁移) 修复失败重置接口泛型编译错误（[`7e2a8f73`](https://github.com/weepwood/MRR/commit/7e2a8f73be29c29589705d77a67a440d20e2e46c)）
+- `12:25` fix (类型) 恢复被截断的既有监控与统计类型（[`514ef124`](https://github.com/weepwood/MRR/commit/514ef124c23327e37a1e415cb15ef8b3f0acb998)）
+- `12:22` test (OSS) 覆盖对象检查异常与完整性元数据（[`c12c58d3`](https://github.com/weepwood/MRR/commit/c12c58d3a994efb5c417ba0018283238748e4e2d)）
+- `12:22` fix (OSS) 修复内容类型判断并兼容 MD5 编码（[`5c23d552`](https://github.com/weepwood/MRR/commit/5c23d5529ecdee003aa9c036cf5a3f58d2ae7961)）
+- `12:21` fix (OSS) 禁止存在性检查失败后继续覆盖对象（[`9ced3584`](https://github.com/weepwood/MRR/commit/9ced3584e0b850f324bd693bf4c9b5f5443d0abb)）
+- `12:18` docs (迁移) 补充多来源迁移前提与临时文件说明（[`c933eb23`](https://github.com/weepwood/MRR/commit/c933eb23894658e911106d2a7e3e5166a61ece73)）
+- `12:17` fix (迁移) 清理遗留临时文件且不污染成功状态（[`3d98be5e`](https://github.com/weepwood/MRR/commit/3d98be5e4735f536b92ab2f899775aebade2263d)）
+- `12:14` feat (类型) 补充 OSS 等待重试与迁移中统计（[`d84ebfe8`](https://github.com/weepwood/MRR/commit/d84ebfe83703ea5199d8bfb45ddda26fddcead87)）
+- `12:13` fix (模拟) 修复 OSS 迁移接口严格类型（[`e8bdde19`](https://github.com/weepwood/MRR/commit/e8bdde19e5434106070b90ab43d05c961b3c93a4)）
+- `12:11` perf (数据库) 避免部署时扫描三千万级迁移重试索引（[`d7aebe52`](https://github.com/weepwood/MRR/commit/d7aebe525f81da8a07da60d34bbb0e93654e9e22)）
+- `12:11` test (迁移) 覆盖本地与 Nginx 多来源物化（[`78832388`](https://github.com/weepwood/MRR/commit/788323882ab850a58c59e58898592aa68372511d)）
+- `12:10` test (迁移) 覆盖多来源读取与提交后启动任务（[`43552eba`](https://github.com/weepwood/MRR/commit/43552eba98c476c8b7483a7e02aa6f528d0331d3)）
+- `12:08` fix (迁移) 复用多来源读取并消除任务启动竞态（[`83614f4c`](https://github.com/weepwood/MRR/commit/83614f4c006db04a87cdffd128683be5c89b2391)）
+- `12:05` feat (迁移) 复用多来源图片解析并安全物化临时文件（[`35888a35`](https://github.com/weepwood/MRR/commit/35888a359a47f57586f1ee9c48e7dc21053c9d6b)）
+- `12:02` fix (迁移) 修复 MyBatis 动态 SQL 比较表达式（[`04c7ab29`](https://github.com/weepwood/MRR/commit/04c7ab29892c075636b2b57364da400b47f1f286)）
+- `12:01` fix (前端) 收敛迁移控制台类型与交互状态（[`8b00a892`](https://github.com/weepwood/MRR/commit/8b00a892d1b7357f04fb34acb4afa046f7e54a25)）
+- `11:54` feat (模拟) 补充 OSS 迁移控制台接口（[`0b78667a`](https://github.com/weepwood/MRR/commit/0b78667a333a6e06e0ac0f6f5043d0068769a741)）
+- `11:53` docs (导航) 增加 OSS 迁移管理入口（[`a6d67bd9`](https://github.com/weepwood/MRR/commit/a6d67bd9ec8fad20dc4d29822057a5e870f178ff)）
+- `11:53` docs (迁移) 增加 OSS 首次迁移操作手册（[`2dd0ceee`](https://github.com/weepwood/MRR/commit/2dd0ceee3c043c36e6bb58d72186f05c91d4f76a)）
+- `11:50` chore (发布) 更新数据库最高兼容迁移版本（[`7482eda5`](https://github.com/weepwood/MRR/commit/7482eda568c06845ddc97181638ead295adc719b)）
+- `11:49` fix (数据库) 创建唯一任务约束前清理遗留状态（[`5c1c6fa5`](https://github.com/weepwood/MRR/commit/5c1c6fa5b5f2c2bf2bb31742407731fbaf6c25bc)）
+- `11:45` feat (前端) 重构 OSS 分阶段迁移管理控制台（[`8203f4bb`](https://github.com/weepwood/MRR/commit/8203f4bb9a9dad67840c9358dc7f4e9041303b97)）
+- `11:43` feat (前端) 增加分阶段迁移与任务控制接口（[`a3e25693`](https://github.com/weepwood/MRR/commit/a3e2569346079ab5aea627697c762753b62f5875)）
+- `11:42` test (迁移) 覆盖迁移前检查与任务控制接口（[`6a85d72c`](https://github.com/weepwood/MRR/commit/6a85d72c55b311e92b18d73eb13bd4b03fe372ee)）
+- `11:42` test (迁移) 覆盖试迁移、失败退出与任务复用（[`6de3c172`](https://github.com/weepwood/MRR/commit/6de3c172c969c0a3a6a350a891252fc2c8333ba7)）
+- `11:40` feat (迁移) 增加迁移前检查、取消与失败重试接口（[`240cede5`](https://github.com/weepwood/MRR/commit/240cede5a68913e34f09058ee17ed6357e3282f3)）
+- `11:39` fix (迁移) 释放应用重启遗留的迁移中记录（[`a3ffc315`](https://github.com/weepwood/MRR/commit/a3ffc315f8fde40becb4ec9a594442c0710fad14)）
+- `11:38` feat (迁移) 实现分阶段任务、失败退出与安全取消（[`9c669c88`](https://github.com/weepwood/MRR/commit/9c669c880d9746757448d208ebeee45629a1c196)）
+- `11:34` feat (迁移) 扩展迁移前检查与任务控制接口（[`323112ad`](https://github.com/weepwood/MRR/commit/323112add522cee39e72200d33c67ce51e754474)）
+- `11:34` feat (迁移) 加固单任务、取消与重启恢复（[`c60efa6c`](https://github.com/weepwood/MRR/commit/c60efa6cf3fb5d455ae90c0e73ecb7942f727533)）
+- `11:33` feat (迁移) 增加可恢复的待迁移查询与状态更新（[`8d283783`](https://github.com/weepwood/MRR/commit/8d2837836e08ae6703e03f41dca92b033d8f0d3b)）
+- `11:32` feat (迁移) 补充等待重试与迁移中统计（[`a0ad07ed`](https://github.com/weepwood/MRR/commit/a0ad07ed1a840fee344e55137c5bd309273199b9)）
+- `11:32` feat (迁移) 扩展迁移任务阶段与取消字段（[`bdef3170`](https://github.com/weepwood/MRR/commit/bdef317053b1f2dbe0ac26b0218035b46e91f22f)）
+- `11:32` feat (迁移) 补充扫描记录迁移状态字段（[`deb87e83`](https://github.com/weepwood/MRR/commit/deb87e834787f2b567f66a1fe9aef333ddd3ac77)）
+- `11:32` feat (迁移) 增加迁移前检查响应模型（[`9dcaef42`](https://github.com/weepwood/MRR/commit/9dcaef425be6577759576750c4d7e4f4c59a60fb)）
+- `11:31` feat (迁移) 增加失败记录重试请求模型（[`ebdb4499`](https://github.com/weepwood/MRR/commit/ebdb4499b97fbf107231f7c4b02ee31615173f97)）
+- `11:31` feat (迁移) 增加分阶段迁移任务请求模型（[`e3b7c59f`](https://github.com/weepwood/MRR/commit/e3b7c59fb56050bcf57a07e953636938b4d94a9e)）
+- `11:31` feat (数据库) 增加 OSS 分阶段迁移控制字段（[`f1e43bdd`](https://github.com/weepwood/MRR/commit/f1e43bdd3858198df2e78905eaa58ceef917a6f5)）
+- `00:12` chore (release) prepare v0.6.0（[`df90607a`](https://github.com/weepwood/MRR/commit/df90607ac1330c65584b18f62ce637c787969683)）
 
 ## 2026-07-21
 
-- **合并** Merge commit '22b3983c31e242ff663f671a48c8b7fd544899de' into dev-no-login（[`eef2ac7`](https://github.com/weepwood/MRR/commit/eef2ac73aea2f7acabfe23a0212a2e0eb7d3f1c4)） — weepwood
-- **维护** 清理 v0.5.0 临时发布引导（[`32f6ded`](https://github.com/weepwood/MRR/commit/32f6dedbd1270cece26393eaf999750fbe6e37cb)） — weepwood
-- **CI** 启动 v0.5.0 正式发布（[`e690d45`](https://github.com/weepwood/MRR/commit/e690d45f27767db859fd63e8fa8fc02ffd73fa49)） — weepwood
-- **维护** 同步后端版本号为 0.5.0（[`41605ee`](https://github.com/weepwood/MRR/commit/41605eec58dd15006d655677b822b6fcf13fd5cc)） — weepwood
-- **维护** 将产品版本更新为 0.5.0（[`3d99907`](https://github.com/weepwood/MRR/commit/3d99907c773c0bc81ae0409defc739d0ae0aac4c)） — weepwood
-- **其他** 合并 PR #177：将管理概览升级为可编辑小组件仪表盘（[`908a0c6`](https://github.com/weepwood/MRR/commit/908a0c6920932e652bdf315d3ff4eed643052b59)） — weepwood
-- **新增** `docs` 更新日志集成 GitHub PR 与 Issue（[`abd6f48`](https://github.com/weepwood/MRR/commit/abd6f484ddd8386491167b1080ba9aa2acc4119d) · [PR #170](https://github.com/weepwood/MRR/pull/170)） — weepwood
-- **其他** 统一管理概览页面与全局设计系统（[`52955cc`](https://github.com/weepwood/MRR/commit/52955cc55f9e8d7c2ae58289cb7451fdf615a78c) · [PR #176](https://github.com/weepwood/MRR/pull/176)） — weepwood
-- **重构** 将管理概览重构为模块快捷入口（[`c1e2fc5`](https://github.com/weepwood/MRR/commit/c1e2fc57cedcb19ed91bfd3a1f61e3029372d109) · [PR #175](https://github.com/weepwood/MRR/pull/175)） — weepwood
-- **修复** `settings` 修复系统设置工作区样式回归（[`44e19cc`](https://github.com/weepwood/MRR/commit/44e19ccc8d3b869093cca2e2cf10b2b4c6012be5) · [PR #174](https://github.com/weepwood/MRR/pull/174)） — weepwood
-- **新增** add simple CSS interaction feedback（[`40e62f8`](https://github.com/weepwood/MRR/commit/40e62f89157cfd1471d711e79a21138dbaa7f687) · [PR #169](https://github.com/weepwood/MRR/pull/169)） — weepwood
-- **维护** remove accidental dummy file（[`fb7012a`](https://github.com/weepwood/MRR/commit/fb7012a0e5a34d8003bef1bfc313782f384ef927)） — weepwood
-- **其他** dummy（[`5c42a44`](https://github.com/weepwood/MRR/commit/5c42a4436a6d09cccaf8e0a417288d07dff34323)） — weepwood
-- **维护** remove accidental placeholder file（[`c449324`](https://github.com/weepwood/MRR/commit/c449324785c7cd7d2b9226b6986682cad5365849)） — weepwood
-- **其他** x（[`01917c4`](https://github.com/weepwood/MRR/commit/01917c48d74c93cf960a7d876417b4d3b3ee4a07)） — weepwood
-- **修复** `ui` 统一下拉框与输入框样式及圆角（[`3cbf0b6`](https://github.com/weepwood/MRR/commit/3cbf0b6e250359037763669490636efba421c4df) · [PR #163](https://github.com/weepwood/MRR/pull/163)） — weepwood
-- **修复** 慢网络启动超时改为可继续等待（[`174ab1b`](https://github.com/weepwood/MRR/commit/174ab1be08261232516639c9827cb0898c76a1c7) · [PR #164](https://github.com/weepwood/MRR/pull/164)） — weepwood
-- **修复** 外部影像访问超时时提供恢复选项（[`9c9fdd1`](https://github.com/weepwood/MRR/commit/9c9fdd11c38104f1ca38b1dbdc49d99454e11d36) · [PR #160](https://github.com/weepwood/MRR/pull/160)） — weepwood
-- **新增** `data-governance` 增加数据关系工作台与关联一致性检查（[`b879b39`](https://github.com/weepwood/MRR/commit/b879b39ec3eb1bff1a0b00c2e91f5775f240b029) · [PR #158](https://github.com/weepwood/MRR/pull/158)） — weepwood
-- **新增** add low-risk Motion feedback with Chrome 109 safeguards（[`2cc7bb8`](https://github.com/weepwood/MRR/commit/2cc7bb8c24fd0e8db37759b9975d2d4d4dcab7ee) · [PR #149](https://github.com/weepwood/MRR/pull/149)） — weepwood
-- **新增** `scan` 优先通过 archive\_id 查询影像并兼容回退（[`caa5305`](https://github.com/weepwood/MRR/commit/caa5305fbfde081c941ff8b3744a7e0362bc4298) · [PR #152](https://github.com/weepwood/MRR/pull/152)） — weepwood
-- **文档** add editable MRR system architecture diagrams（[`38ac8d0`](https://github.com/weepwood/MRR/commit/38ac8d011fca3bd2b02373e028d14db197ff539f) · [PR #151](https://github.com/weepwood/MRR/pull/151)） — weepwood
-- **新增** 导航栏增加可配置外部链接分组（[`30851b2`](https://github.com/weepwood/MRR/commit/30851b27c8f4a798642825187f06ce4259d699ab) · [PR #150](https://github.com/weepwood/MRR/pull/150)） — weepwood
-- **文档** `档案袋` 说明用户名与 ID 水印规则（[`649f236`](https://github.com/weepwood/MRR/commit/649f236f71ba186b4c47f2dde1a96ffa50e9b477)） — weepwood
-- **新增** `档案袋` 使用用户名与 ID 生成水印（[`1c75f7b`](https://github.com/weepwood/MRR/commit/1c75f7b3edec685c88718c3b64f07025bb4dc171)） — weepwood
-- **文档** `档案袋` 添加用户名与 ID 水印实现计划（[`26cf3c4`](https://github.com/weepwood/MRR/commit/26cf3c4dc87b2e004230e09e19dd53d79c1867bf)） — weepwood
-- **文档** `档案袋` 添加用户名与 ID 水印设计（[`6d3f1d8`](https://github.com/weepwood/MRR/commit/6d3f1d823b16d43a6368536441be73dabbf72042)） — weepwood
+- `23:50` merge archive export and theme settings（[`fa2c3cc3`](https://github.com/weepwood/MRR/commit/fa2c3cc3303ac2913d9fb116b84dc681b6392736)）
+- `23:49` feat (ui) add configurable theme color（[`f88ce40b`](https://github.com/weepwood/MRR/commit/f88ce40b08c2b2a69742a2fbab9d733adfbf8ab0)）
+- `23:24` feat (archive) auto-download completed exports（[`6f7a3c13`](https://github.com/weepwood/MRR/commit/6f7a3c13f36a68777bac08b680c4948829e29efb)）
+- `23:08` feat (backend) 添加Nginx归档图片源的自动装配支持（[`6600dd07`](https://github.com/weepwood/MRR/commit/6600dd0754fc08e905a51511f4976b1bf605bf6a)）
+- `22:59` 修复批量ZIP测试路径对象匹配（[`d86a7e2d`](https://github.com/weepwood/MRR/commit/d86a7e2da1fb4800faf7f5e95d04f251e3b6eb86)）
+- `22:57` 增加HTTP高位病案目录测试（[`6354f679`](https://github.com/weepwood/MRR/commit/6354f679a7bd53a990aae41e5c2f2112605adf96)）
+- `22:56` 补充NAS高位病案目录测试（[`e356a9a6`](https://github.com/weepwood/MRR/commit/e356a9a6c21ddb0bc3cfd9aa391b6497af532bbc)）
+- `22:56` 补充本地高位病案目录测试（[`25a4ddb6`](https://github.com/weepwood/MRR/commit/25a4ddb6984a6e4fe3cb8a9aa4a241e67ac0707d)）
+- `22:54` 验证取消状态保持到任务终态（[`88d04b33`](https://github.com/weepwood/MRR/commit/88d04b33e270f1012b916f2eb0bf71cd0bec78ca)）
+- `22:53` 保持导出任务取消中的按钮状态（[`bff1d63b`](https://github.com/weepwood/MRR/commit/bff1d63ba2d859d1bad61447348e22394dcd490e)）
+- `22:51` 补充空图片与来源错误测试（[`88bb6cd6`](https://github.com/weepwood/MRR/commit/88bb6cd6a2205bea0b3c0dea90316675a766db4e)）
+- `22:50` 更新断点下载文件保护测试（[`9bb6935c`](https://github.com/weepwood/MRR/commit/9bb6935c10a5aaba4e8f7c226aefe009d61dfbfa)）
+- `22:49` 增加导出任务轮询竞态测试（[`3721b859`](https://github.com/weepwood/MRR/commit/3721b859e1800c7a084036488176384b3f48b14d)）
+- `22:48` 更新选中图片PDF前端测试（[`b265320b`](https://github.com/weepwood/MRR/commit/b265320b3da8b16ec3d09e6cec92e06add298816)）
+- `22:47` 补充PDF规划边界测试（[`7ada6e94`](https://github.com/weepwood/MRR/commit/7ada6e9478a9fd06ca3377ab68b74a24b4e889a9)）
+- `22:46` 增加导出任务用户隔离测试（[`ac789502`](https://github.com/weepwood/MRR/commit/ac7895022893bc040e3667e28cd78f9842b41a82)）
+- `22:46` 补充高位病案路径回归测试（[`46a6a00b`](https://github.com/weepwood/MRR/commit/46a6a00ba01d112fae2c44b686a4e5b1f08298aa)）
+- `22:45` 更新Nginx来源任务策略测试（[`853a2586`](https://github.com/weepwood/MRR/commit/853a25868660a8e2239e0d19f43e012398502704)）
+- `22:45` 复用HTTP图片节点连接池（[`2c3ad7bc`](https://github.com/weepwood/MRR/commit/2c3ad7bc4828fad0aa65bfcac7485078c09e2d42)）
+- `22:44` 拒绝空影像并保留来源错误（[`18cad005`](https://github.com/weepwood/MRR/commit/18cad005c786a6b80fc673bc77cdef3e278e6daa)）
+- `22:44` 保留安全的图片来源失败原因（[`8a3575e5`](https://github.com/weepwood/MRR/commit/8a3575e5ec1c4aec41532a23347ea18209514c1a)）
+- `22:43` 修正导出任务实际来源统计（[`690822a9`](https://github.com/weepwood/MRR/commit/690822a915027d95e9b8ea87b02fc1f26c50b683)）
+- `22:43` 保护断点下载失败时的本地文件（[`a505cbc3`](https://github.com/weepwood/MRR/commit/a505cbc398be88287248719c5e3638b8fb078cda)）
+- `22:42` 固定PDF导出选中图片集合（[`55973bca`](https://github.com/weepwood/MRR/commit/55973bca694269abd5e0897bdbbc75c4ba1ef8a1)）
+- `22:42` 修复选中图片PDF规划与边界（[`46c86328`](https://github.com/weepwood/MRR/commit/46c863288556a65609be4dc5bdc6f09c72ad587e)）
+- `22:41` 按选中图片规划PDF导出（[`ff6e91a5`](https://github.com/weepwood/MRR/commit/ff6e91a503caadacead27e17e3090e568eab2acb)）
+- `22:40` 修复导出任务轮询竞态与取消状态（[`20f48ec0`](https://github.com/weepwood/MRR/commit/20f48ec0981c7c5294b64cb9df5e0d543837ce3f)）
+- `22:39` 复用统一图片路径解析规则（[`a972adae`](https://github.com/weepwood/MRR/commit/a972adae7d794f7a33b4056a4cc26a19b67032c3)）
+- `22:38` 统一高位病案图片目录规则（[`83800380`](https://github.com/weepwood/MRR/commit/838003800a5dcadde04acad6d206aaf1de5d76e3)）
+- `22:38` 迁移导出任务所有权索引到用户ID（[`b0b62b12`](https://github.com/weepwood/MRR/commit/b0b62b12b863abb4ae364344cca32e471cd58baf)）
+- `22:38` 修复导出任务列表用户隔离（[`5cb7ad38`](https://github.com/weepwood/MRR/commit/5cb7ad38bf39935c8122d351f3554db607cc232f)）
+- `22:37` 修复导出任务所有权与错误链（[`03a01326`](https://github.com/weepwood/MRR/commit/03a0132610fe269910e3c2355760cedd6f7d2abd)）
+- `22:35` 修复导出任务按用户ID隔离（[`4def9ee5`](https://github.com/weepwood/MRR/commit/4def9ee5ce661827778fb25dbadcebc685a2053c)）
+- `22:12` 修复：高位病案号使用上架号构建图片路径（[`a234fe20`](https://github.com/weepwood/MRR/commit/a234fe20474a2b1698d6e68ba1d3559eb0943e3b)）
+- `22:10` 改进：记录各图片来源失败原因（[`d17ddfa7`](https://github.com/weepwood/MRR/commit/d17ddfa72adc2fef6e8a5292c82e3bc2233f3789)）
+- `22:09` 安全：限制 Nginx 导出图片路径字段（[`3c915763`](https://github.com/weepwood/MRR/commit/3c915763800bc4bd16e8209b9bb2c0538849daf5)）
+- `22:08` 测试：修正 Nginx HTTP 客户端泛型桩（[`e7c2dc0d`](https://github.com/weepwood/MRR/commit/e7c2dc0d91e8201365db9210ab7e1f3854c8549e)）
+- `22:07` 测试：覆盖 Nginx 静态影像读取与本地降级（[`64ccb01e`](https://github.com/weepwood/MRR/commit/64ccb01e82f9b3c9fb02afb4cf5bb2c07a9a8731)）
+- `22:07` 测试：覆盖后台导出使用的 Nginx 图片路径（[`3af169b3`](https://github.com/weepwood/MRR/commit/3af169b3eed38e45c31da13d0f09845f9c327ce4)）
+- `22:06` 重构：增强 Nginx 图片来源校验与可测试性（[`62335ab5`](https://github.com/weepwood/MRR/commit/62335ab50f13b52e7bd0fc0f177460e88ab19c09)）
+- `22:04` 配置：补充 Nginx 图片读取参数（[`fde97161`](https://github.com/weepwood/MRR/commit/fde97161af7c3d1295ce7f494138631c869ead73)）
+- `22:03` 修复：通过 Nginx 静态服务读取非 OSS 影像（[`c565eb9a`](https://github.com/weepwood/MRR/commit/c565eb9aff4ed526c7c207d44519218b32334ac2)）
+- `22:02` 配置：增加 Nginx 图片读取并发与超时（[`29dd1fae`](https://github.com/weepwood/MRR/commit/29dd1faeed8acc6821125e0cee5ae21fcbbf9fe2)）
+- `22:02` 修复：复用图片服务规则构建导出地址（[`1a300a51`](https://github.com/weepwood/MRR/commit/1a300a516e7a00a5f7ded86848b04f7530c58de7)）
+- `21:34` test 锁定实际 OSS 对象键格式（[`efd31be7`](https://github.com/weepwood/MRR/commit/efd31be79e6f006a0e05ba02888571d34e6e2a66)）
+- `21:31` fix (export) 切换病案时取消旧 ZIP 任务（[`567f25b2`](https://github.com/weepwood/MRR/commit/567f25b2f984701c5a0c4e437299e9bd5d5b261d)）
+- `21:29` fix (export) 选中图片变化时取消旧 PDF 任务（[`13ccc89a`](https://github.com/weepwood/MRR/commit/13ccc89a62dc63b6e46889688fbd3b28cf8d9876)）
+- `21:29` fix (export) 失效旧任务时同步取消后台生成（[`70edfd00`](https://github.com/weepwood/MRR/commit/70edfd00c392d599d8607c1acdf68f2fd063290e)）
+- `21:25` test (export) 拒绝绝对 OSS 对象引用（[`2a17104f`](https://github.com/weepwood/MRR/commit/2a17104f98e230f48ae1cd1f6d57e321495992ac)）
+- `21:21` test (export) 固定 ZIP 使用后台完整性任务（[`76c84257`](https://github.com/weepwood/MRR/commit/76c842572cce4c163a6efe3a6f1757889118222f)）
+- `21:20` fix (export) ZIP 下载统一使用完整性校验任务（[`cfd74c9a`](https://github.com/weepwood/MRR/commit/cfd74c9ae31d265f0871ca79492de6cedde44f7c)）
+- `21:18` test (export) 覆盖活动任务配额不重复计数（[`f4a2cb78`](https://github.com/weepwood/MRR/commit/f4a2cb78de69713f3e8572f36b2668601cba4c4f)）
+- `21:18` fix (export) 避免临时文件配额重复计数（[`8bf9215f`](https://github.com/weepwood/MRR/commit/8bf9215f963f7dff74080b0dfa1f28056bab88e9)）
+- `21:17` test (export) 覆盖 Range 失败后的整文件回退（[`79dcd256`](https://github.com/weepwood/MRR/commit/79dcd2568a366cd4cb202b759166c9552b776559)）
+- `21:16` test (export) 覆盖 PDF 选择变化后旧任务失效（[`ebbb26d0`](https://github.com/weepwood/MRR/commit/ebbb26d04e115e1d02634b4af429703ee797c1eb)）
+- `21:15` fix (export) 清理 PDF 选择状态实现（[`9f19f0ac`](https://github.com/weepwood/MRR/commit/9f19f0ac91727910f79a68f3d1996d8082f2afe5)）
+- `21:14` fix (export) 收紧 OSS 对象键解析边界（[`2288e5e2`](https://github.com/weepwood/MRR/commit/2288e5e2c1eb785121f29db35b8d3037e865f107)）
+- `21:12` test (export) 更新混合来源降级测试配置（[`4b4e10f0`](https://github.com/weepwood/MRR/commit/4b4e10f0d4d1f8e953ff21b1b612303845caeef0)）
+- `21:12` test (export) 覆盖完整 OSS 地址解析（[`50043e83`](https://github.com/weepwood/MRR/commit/50043e83b67487876b6fb62f7a1eee40e5312b10)）
+- `21:11` fix (export) 将完整 OSS 地址解析为对象键（[`ab0125d6`](https://github.com/weepwood/MRR/commit/ab0125d6a8513d45cc1f6639248effd4b711461f)）
+- `21:10` fix (export) 断点下载失败时回退整文件下载（[`09328bcc`](https://github.com/weepwood/MRR/commit/09328bcc5d780a7f21b3ecbcb0abed5f24aecd3e)）
+- `21:10` fix (export) 直接下载失败时转为后台任务（[`de0cfadb`](https://github.com/weepwood/MRR/commit/de0cfadb9c6429a9aa8d590688dcedebe7e1ab0c)）
+- `21:09` fix (export) 让 PDF 任务绑定当前图片选择（[`6364257e`](https://github.com/weepwood/MRR/commit/6364257eb9e07305ff87301fc3e345f2cbc55a02)）
+- `21:08` fix (export) 在图片选择变化时失效旧 PDF 任务（[`b603f31f`](https://github.com/weepwood/MRR/commit/b603f31fe1167a6964a180edd317c0161c50b1dd)）
+- `21:07` fix (export) 避免按格式恢复旧导出任务（[`af48219b`](https://github.com/weepwood/MRR/commit/af48219b649dc7eb233a78dcaf3da63c878c4c46)）
+- `20:43` test 同步导出任务恢复接口测试桩（[`157bbbe4`](https://github.com/weepwood/MRR/commit/157bbbe4822f584234837afcd9188083d6124553)）
+- `20:40` test 覆盖同一病案部分 OSS 部分本地的任务路由（[`2cf59b5f`](https://github.com/weepwood/MRR/commit/2cf59b5fc1cad1e7f5432649e6906eda1116a5a9)）
+- `20:38` refactor 删除独立导出任务通知面板（[`332eecf2`](https://github.com/weepwood/MRR/commit/332eecf2eb70879f9c2b3a99d2e0267b428e35db)）
+- `20:38` feat 在导出按钮中展示任务状态和文件信息（[`850b5b2d`](https://github.com/weepwood/MRR/commit/850b5b2d33d54a9d06afc1dc02de586df274849d)）
+- `20:34` refactor 将导出任务状态交由页面按钮展示（[`49923077`](https://github.com/weepwood/MRR/commit/49923077a047d3394b6b13d0138d9e657c2a8508)）
+- `20:33` test 覆盖同一病案 OSS 与本地图片混合读取（[`b04f77bf`](https://github.com/weepwood/MRR/commit/b04f77bf0e302f94009a7372cb42402d9c221cb1)）
+- `20:33` fix 按图片实际可用来源统计混合病案（[`70a44755`](https://github.com/weepwood/MRR/commit/70a4475528e270547916a1800378909c80def61f)）
+- `20:32` fix 支持 OSS 图片缺失时降级读取本地文件（[`3308ef29`](https://github.com/weepwood/MRR/commit/3308ef2961fb5e79a176e58483fb90b6d82e1aa4)）
+- `19:57` test 覆盖部分图片大小未知时的保守异步路由（[`7af8d577`](https://github.com/weepwood/MRR/commit/7af8d5774049ad744c9ea3f9f12944f570760e9c)）
+- `19:57` fix 图片大小不完整时使用保守异步估算（[`633c562f`](https://github.com/weepwood/MRR/commit/633c562f5f300062c61a141e125bbb780e12eeba)）
+- `19:56` fix 刷新页面时恢复未过期的已完成任务（[`95a7ef8b`](https://github.com/weepwood/MRR/commit/95a7ef8b2942ea74b570fc687ff2afab724a9a1b)）
+- `19:55` test 覆盖本地影像符号链接越界拒绝（[`b98a3e98`](https://github.com/weepwood/MRR/commit/b98a3e984ad9041d103ab692ab355ca5edfa581a)）
+- `19:54` fix 阻止本地影像符号链接越过配置根目录（[`9f0b93fa`](https://github.com/weepwood/MRR/commit/9f0b93fa23c22a4eef17e5eec6c964002a87e076)）
+- `19:54` test 覆盖 NAS 符号链接越界拒绝（[`537a5b04`](https://github.com/weepwood/MRR/commit/537a5b04262780c5226efe695ed187ae3aac6493)）
+- `19:53` fix 阻止 NAS 符号链接越过受控根目录（[`2e26e408`](https://github.com/weepwood/MRR/commit/2e26e408f45f461179bc284960a2cda26649239a)）
+- `19:52` test 覆盖断点文件前缀校验（[`0f477e97`](https://github.com/weepwood/MRR/commit/0f477e9739a3660b2a61ea004ad8b6a53a1cbc56)）
+- `19:52` fix 断点续传前校验本地文件前缀（[`b877178c`](https://github.com/weepwood/MRR/commit/b877178cd248ffa955d85aac47bb4e827c5f2199)）
+- `19:50` test 验证运行任务按单文件上限预留配额（[`6ea0cabd`](https://github.com/weepwood/MRR/commit/6ea0cabd028bfc71e132cdfc658dd48e51b6cbf2)）
+- `19:50` feat 页面刷新后恢复 PDF 导出任务（[`ec3c534d`](https://github.com/weepwood/MRR/commit/ec3c534dbc69b9e2ff0b0ec9c016c6140a42300c)）
+- `19:49` feat 页面刷新后恢复 ZIP 导出任务（[`12bcb287`](https://github.com/weepwood/MRR/commit/12bcb2878989452eae04bd32c481871262208f9e)）
+- `19:48` feat 页面刷新后恢复当前活动导出任务（[`fafab00c`](https://github.com/weepwood/MRR/commit/fafab00c276cc771ac7e5497b27aefea3410bd56)）
+- `19:47` feat 增加活动导出任务恢复接口（[`0c16a2da`](https://github.com/weepwood/MRR/commit/0c16a2da9810b57c801db66f446c802334ce8567)）
+- `19:46` feat 增加当前用户活动导出任务查询（[`ede99a41`](https://github.com/weepwood/MRR/commit/ede99a41ee4f70c4c9606bb826fadea3961146eb)）
+- `19:46` feat 支持恢复当前用户的活动导出任务（[`7b8bab1c`](https://github.com/weepwood/MRR/commit/7b8bab1caf9d37ff3bd186b4833bd2a4e64b1912)）
+- `19:45` fix 以单文件上限保守预留全局临时配额（[`66810313`](https://github.com/weepwood/MRR/commit/66810313ceb5c4325bd7ca1065d501d2247134b1)）
+- `19:41` fix 幂等查询忽略已过期导出任务（[`01fda90b`](https://github.com/weepwood/MRR/commit/01fda90b14492687284960c50df39f76d6051134)）
+- `19:40` fix 完善异步导出断点下载响应头（[`897cff5d`](https://github.com/weepwood/MRR/commit/897cff5d78242380337b6cee97efe942d4bf1f08)）
+- `19:38` feat 在权限管理中支持独立病案导出权限（[`94326b19`](https://github.com/weepwood/MRR/commit/94326b190a1ed4e6bda2177ebf4d716c49aefad6)）
+- `19:34` fix 清理异步导出测试轮询任务（[`ed056fb3`](https://github.com/weepwood/MRR/commit/ed056fb3ea35a1e48f751ffd4ca3ab545bba4b87)）
+- `19:33` fix 稳定异步任务通知并清理轮询定时器（[`e83f33d3`](https://github.com/weepwood/MRR/commit/e83f33d3ec7ffa70d6d96954a07b3e75305a2aa6)）
+- `19:32` test 覆盖异步导出断点续传分块（[`cb4ee88b`](https://github.com/weepwood/MRR/commit/cb4ee88b034061480aa414f78c08a5f1c9ff0f10)）
+- `19:32` fix 为断点下载文件名加入任务标识（[`58cbf32e`](https://github.com/weepwood/MRR/commit/58cbf32ee5fbfca2e2b4d63155389241b4d532e0)）
+- `19:31` feat 异步任务下载使用分块断点写入（[`190365af`](https://github.com/weepwood/MRR/commit/190365af4e026624eb08552161e93e45df6af61b)）
+- `19:30` feat 增加异步导出文件分块断点下载（[`a8a4af56`](https://github.com/weepwood/MRR/commit/a8a4af56010dfeff201b15c4acad1530b689db2b)）
+- `19:29` test 覆盖 AUTO 来源的 OSS 到本地回退（[`8fd953d4`](https://github.com/weepwood/MRR/commit/8fd953d4ef58514305bf69f4b66a3fee1aeb1274)）
+- `19:28` fix 修正临时文件配额测试任务编号（[`8401b836`](https://github.com/weepwood/MRR/commit/8401b836e9e04273016b1bf5ffaba28cb675c2e1)）
+- `19:28` fix 优化异步任务取消热路径与重启恢复（[`8977d926`](https://github.com/weepwood/MRR/commit/8977d9261881421047bc0d8036d0222f783647cb)）
+- `19:27` fix 允许过期任务释放幂等键（[`dce6add0`](https://github.com/weepwood/MRR/commit/dce6add0a3604643763271f6ecc9d2a1708e64f6)）
+- `19:26` fix 加固导出临时目录与配额校验（[`901f92a2`](https://github.com/weepwood/MRR/commit/901f92a29ceac2db5230a2fa849bf4e334e21667)）
+- `19:26` fix 防止空图片流导致来源并发许可泄漏（[`0481b906`](https://github.com/weepwood/MRR/commit/0481b906bbdd82832911816a456c5d946d902364)）
+- `19:25` feat 实现 AUTO 来源失败回退与指标（[`140a2a97`](https://github.com/weepwood/MRR/commit/140a2a9700ce1807c583c54e0fa15c5b7a412e60)）
+- `19:25` feat 允许 AUTO 来源回退到本地图片（[`2650adf3`](https://github.com/weepwood/MRR/commit/2650adf3110cf86e58347fbc530a326e049cc47c)）
+- `19:25` feat 支持 AUTO 来源的受控回退顺序（[`99a6ff41`](https://github.com/weepwood/MRR/commit/99a6ff4195c394822aec4964ec3124c31b9c37cc)）
+- `19:23` fix 恢复现有 OSS 服务接口文档（[`9a3b9e9c`](https://github.com/weepwood/MRR/commit/9a3b9e9c7b591f083fa4fa5ae6006875c99b000b)）
+- `19:22` fix 收紧异步任务面板状态类型（[`169b1ff5`](https://github.com/weepwood/MRR/commit/169b1ff55411b86709cc3e451cfa84c2c89ec12f)）
+- `19:22` test 覆盖异步导出权限与病案编号校验（[`9c869773`](https://github.com/weepwood/MRR/commit/9c869773d2aae162052e7302ffda1e8f41f9adf7)）
+- `19:21` test 覆盖来源路径穿越和任意 URL 拒绝（[`92ab06d1`](https://github.com/weepwood/MRR/commit/92ab06d15fc24d782c33d144723ab7ca494156d2)）
+- `19:21` test 覆盖 OSS SDK 图片读取来源（[`c8c0138e`](https://github.com/weepwood/MRR/commit/c8c0138e670bb98567007b5f9ac9ddd8ec3e06aa)）
+- `19:21` test 覆盖超大病案异步路由策略（[`7b3b6645`](https://github.com/weepwood/MRR/commit/7b3b6645ddfe94cd284d9e5f5ba8d044a7ef7487)）
+- `19:20` test 覆盖 PDF 异步任务路由（[`113b5c7f`](https://github.com/weepwood/MRR/commit/113b5c7f928b09a34f497042e3210c3002e3c0c4)）
+- `19:19` fix 统一异步任务编号权限与幂等校验（[`f4cf7557`](https://github.com/weepwood/MRR/commit/f4cf7557fdfeca99f0e52f4aaeec0d6477cd7642)）
+- `19:18` feat 增加多来源与异步导出运行配置（[`8b9800d7`](https://github.com/weepwood/MRR/commit/8b9800d726e9dcf7f37787da642b781063dcb035)）
+- `19:17` feat 以持久通知展示异步导出进度（[`55e0e8d3`](https://github.com/weepwood/MRR/commit/55e0e8d34c23bb450671d96e754e21fdf429d35a)）
+- `19:15` feat 大病案 PDF 自动切换异步任务（[`b4a7b244`](https://github.com/weepwood/MRR/commit/b4a7b244e480f96a5c234eeeceb1c409a3946cc5)）
+- `19:14` feat 大病案 ZIP 自动切换异步任务（[`a25bcd3f`](https://github.com/weepwood/MRR/commit/a25bcd3fadc611f9174b0e22c81fcd21731c89bc)）
+- `19:14` feat 增加异步导出任务面板（[`d50f87eb`](https://github.com/weepwood/MRR/commit/d50f87eb7cda3aa39bb3158fcba293bbbd80b7e5)）
+- `19:13` feat 增加病案异步导出任务状态管理（[`0fb03a22`](https://github.com/weepwood/MRR/commit/0fb03a22e9eaa84b3c2c009b3628c5df8a48d324)）
+- `19:12` fix 修正断点下载无效区间响应类型（[`b710997a`](https://github.com/weepwood/MRR/commit/b710997acc2b2fe9dfb775b94884afbeb321e3c6)）
+- `19:12` fix 稳定导出来源汇总并防止大小溢出（[`04cbc1e8`](https://github.com/weepwood/MRR/commit/04cbc1e8bd92c73282c3ededc0a157303e71a29d)）
+- `19:12` fix 加强跨平台图片来源路径校验（[`63f792b2`](https://github.com/weepwood/MRR/commit/63f792b28e7dad25ce0ab24361f041be7f38ba35)）
+- `19:10` feat 增加异步导出任务前端 API（[`1235baac`](https://github.com/weepwood/MRR/commit/1235baac2ed1c74c7157962fb63e508494744aa8)）
+- `19:09` feat 为超大病案自动规划异步导出（[`b2df7143`](https://github.com/weepwood/MRR/commit/b2df71430447ac884456a0af9542276c162de739)）
+- `19:08` feat 扩展导出计划的异步与来源信息（[`c40ddf39`](https://github.com/weepwood/MRR/commit/c40ddf39887fea70c9b30b446ca47ad3cf45651a)）
+- `19:08` feat 查询和维护图片来源字段（[`0016007c`](https://github.com/weepwood/MRR/commit/0016007c245bcfe17351a4caad6023ce4484e873)）
+- `19:07` feat 增加异步导出任务与断点下载接口（[`c451df8d`](https://github.com/weepwood/MRR/commit/c451df8dbd94f3ddd7192021fb47eb4f71cd03d1)）
+- `19:06` feat 实现超大病案异步导出任务（[`d8aadf9c`](https://github.com/weepwood/MRR/commit/d8aadf9c09225872b93738e90bc5b8817f3c6c74)）
+- `19:05` feat 增加异步导出任务仓储（[`102629e3`](https://github.com/weepwood/MRR/commit/102629e3a2118652b0eba02b9bd03f9d243a72c4)）
+- `19:04` feat 增加异步导出任务响应模型（[`5f957e50`](https://github.com/weepwood/MRR/commit/5f957e50efd9db187b7ab32186051ae9e74a5e49)）
+- `19:04` feat 增加异步导出任务请求模型（[`4e65852f`](https://github.com/weepwood/MRR/commit/4e65852fb4e47a8edc985fec1e9723d326ac5dcb)）
+- `19:04` feat 增加异步导出任务实体（[`0c52b14b`](https://github.com/weepwood/MRR/commit/0c52b14b0f5c8b3e6910d8774cd22b74196c86d9)）
+- `19:03` feat 增加单区间断点下载解析（[`99d7851c`](https://github.com/weepwood/MRR/commit/99d7851cf64b7cc75ef8aa11e13286040c353285)）
+- `19:03` feat 实现导出临时文件配额管理（[`31816d9a`](https://github.com/weepwood/MRR/commit/31816d9a09e1651e28c5ddd761721c38f7972f72)）
+- `19:03` feat 增加有界异步导出线程池（[`af2520cf`](https://github.com/weepwood/MRR/commit/af2520cf2063d736797a8f000c3f3a50a1552629)）
+- `19:02` feat 增加异步导出配置（[`fd5a839b`](https://github.com/weepwood/MRR/commit/fd5a839b1d599152444f7c4f3a2475bf62cadbe1)）
+- `19:02` feat 增加图片来源与异步导出任务表（[`939ea39a`](https://github.com/weepwood/MRR/commit/939ea39aac6f03209aa56943dca66c190d893289)）
+- `19:02` feat 接入多来源元数据与异步导出进度（[`e1dd73f3`](https://github.com/weepwood/MRR/commit/e1dd73f3569b2dec0da446557f823fa1ab3f9d35)）
+- `19:01` feat 增加异步导出取消异常（[`1b8f778c`](https://github.com/weepwood/MRR/commit/1b8f778c427161fe8c0754569a687e96a664c804)）
+- `19:01` feat 增加异步导出进度与大小估算契约（[`845cbd2e`](https://github.com/weepwood/MRR/commit/845cbd2e88e4e4a15c06a11b53b2a43e62bfdc75)）
+- `19:00` refactor 复用 OSS SDK 对象读取器（[`32811b37`](https://github.com/weepwood/MRR/commit/32811b37a8bb93b5add0e794f84cb1388a6d9a0f)）
+- `19:00` feat 使用 OSS SDK 直接读取图片对象（[`6d535737`](https://github.com/weepwood/MRR/commit/6d535737502e3c0ac9d12241935084751dd95746)）
+- `19:00` refactor 保持现有 OSS 服务接口兼容（[`c02bb9b2`](https://github.com/weepwood/MRR/commit/c02bb9b2c61071bb17e37af22203a2554e00a7bc)）
+- `18:59` feat 扩展 OSS SDK 直接读取能力（[`06cb52be`](https://github.com/weepwood/MRR/commit/06cb52beeb8319fb7c1ba3cb164292a9cf869de4)）
+- `18:59` feat 增加图片来源定位字段（[`2069bfef`](https://github.com/weepwood/MRR/commit/2069bfef66beee5753d42ed4cd89c02de9e8f48b)）
+- `18:59` feat 扩展图片来源元数据（[`a597ef4f`](https://github.com/weepwood/MRR/commit/a597ef4fdee5b0a74bb2896be1a1461be499a677)）
+- `18:59` feat 统一业务层图片存储入口（[`3ac818b4`](https://github.com/weepwood/MRR/commit/3ac818b48441c56d14147417b6b4d9513c1ebf9c)）
+- `18:58` feat 增加 OSS SDK 图片来源实现（[`548e9efe`](https://github.com/weepwood/MRR/commit/548e9efee14a3a2bba514feafe48fb9d701179a2)）
+- `18:58` feat 增加受控 HTTP 图片来源实现（[`ea34ac82`](https://github.com/weepwood/MRR/commit/ea34ac8252f8398cf842c562b18f7711de7c73b9)）
+- `18:58` feat 增加 NAS 图片来源实现（[`df99d7d5`](https://github.com/weepwood/MRR/commit/df99d7d588c4da6228c633f2f35b566b59f3a078)）
+- `18:57` feat 增加受控图片相对路径工具（[`24c27057`](https://github.com/weepwood/MRR/commit/24c27057491c4e927aa65d764c3239bac2bc2438)）
+- `18:57` feat 增加本地图片来源实现（[`4f30a22d`](https://github.com/weepwood/MRR/commit/4f30a22d6cfdb67a9555d4e21806e9c08dd5e426)）
+- `18:57` feat 增加图片来源并发保护（[`e3c3da6c`](https://github.com/weepwood/MRR/commit/e3c3da6c3cac3fe4ae2d3fcae597fe445061d47b)）
+- `18:57` feat 增加统一图片来源解析器（[`9722c5b6`](https://github.com/weepwood/MRR/commit/9722c5b6d77e4d10a7f321e96ed5061b289d54dc)）
+- `18:57` feat 定义统一图片来源读取接口（[`49b778c9`](https://github.com/weepwood/MRR/commit/49b778c9c7b2b8424a8d300c8ad93752b9a5ed32)）
+- `18:56` feat 增加多来源图片节点配置（[`edb48254`](https://github.com/weepwood/MRR/commit/edb48254593a66227039ebe745a1ea6672723b83)）
+- `18:56` test 增加断点下载区间解析测试（[`3cae0d27`](https://github.com/weepwood/MRR/commit/3cae0d27aa11234c3579586ac2498ed40254201a)）
+- `18:55` test 增加导出临时文件配额测试（[`db740ae7`](https://github.com/weepwood/MRR/commit/db740ae75a78931ba92338aab6c18b02cde94ac2)）
+- `18:55` test 增加多来源图片解析器契约测试（[`c98265f4`](https://github.com/weepwood/MRR/commit/c98265f4b36a41eb2aac55d4e02f8eb517b46b34)）
+- `18:31` feat (export) 建立 ZIP/PDF 自适应病案导出基础（[`b8dd7b52`](https://github.com/weepwood/MRR/commit/b8dd7b5200fa1369a571a07573dc4be132cf36f7) · [PR #173](https://github.com/weepwood/MRR/pull/173)）
+- `18:29` feat (types) 添加Element Plus组件类型声明（[`4e750c50`](https://github.com/weepwood/MRR/commit/4e750c50fc358e59405efe62c24aa2e24ea387e2)）
+- `18:24` merge Merge commit '22b3983c31e242ff663f671a48c8b7fd544899de' into dev-no-login（[`eef2ac73`](https://github.com/weepwood/MRR/commit/eef2ac73aea2f7acabfe23a0212a2e0eb7d3f1c4)）
+- `16:15` fix (export) 拒绝超限的部分 PDF 选择（[`0ba232a6`](https://github.com/weepwood/MRR/commit/0ba232a6d4c2a50d7847f5107ac5bd4183b321b0)）
+- `16:14` test (export) 覆盖大量部分选择的规划上限（[`961b6812`](https://github.com/weepwood/MRR/commit/961b681236e0f25127ca797b457922221aad4805)）
+- `16:14` test (export) 覆盖重复 ID 与高位病案隔离（[`02a50104`](https://github.com/weepwood/MRR/commit/02a5010415eb0cf0487f880b11799b13e1ad4406)）
+- `16:09` test (auth) 锁定旧下载入口的独立权限（[`91137395`](https://github.com/weepwood/MRR/commit/9113739504b26d9332399e9a7fbc6697c6132e37)）
+- `16:07` chore 同步最新 dev-no-login 到自适应导出分支（[`1bc5a8ff`](https://github.com/weepwood/MRR/commit/1bc5a8ff1224d65210d2eee4a95339e9b8cdc429)）
+- `16:05` fix (auth) 恢复图片控制器并仅保护下载接口（[`89b6d3d2`](https://github.com/weepwood/MRR/commit/89b6d3d216659c1e5e1334fbd06db50872cc8db1)）
+- `16:02` fix (export) 保持导出记录列表可排序并处理空查询（[`262153a7`](https://github.com/weepwood/MRR/commit/262153a74d3a470853272e2d112312cfc3b00bb9)）
+- `16:01` test (export) 删除重复阈值测试（[`4fee0e02`](https://github.com/weepwood/MRR/commit/4fee0e02776f6a42851327758616169ac27118be)）
+- `16:01` refactor (export) 移除重复的前端导出阈值（[`5d821a39`](https://github.com/weepwood/MRR/commit/5d821a39bd8e8a625aa963b24c318677f5aa9c31)）
+- `16:01` fix (auth) 前端阻止无权限病案下载（[`6ceef87f`](https://github.com/weepwood/MRR/commit/6ceef87f87d7411a29e6c9d310dfaf49628923a5)）
+- `16:00` test (export) 模拟 PDF 导出权限（[`f81b1d32`](https://github.com/weepwood/MRR/commit/f81b1d3278c65299b579cc2c0955fc4e7f763dd9)）
+- `15:59` chore 清理 v0.5.0 临时发布引导（[`32f6dedb`](https://github.com/weepwood/MRR/commit/32f6dedbd1270cece26393eaf999750fbe6e37cb)）
+- `15:59` fix (auth) 前端阻止无权限 PDF 导出（[`70d52e4e`](https://github.com/weepwood/MRR/commit/70d52e4e7d34672f2b61b058e8054c652b3347fe)）
+- `15:58` fix (export) 禁止 PDF 规划失败后本地回退（[`c29fe597`](https://github.com/weepwood/MRR/commit/c29fe5974e093cff927d20804a528e0fae7e3b6a)）
+- `15:58` ci 启动 v0.5.0 正式发布（[`e690d45f`](https://github.com/weepwood/MRR/commit/e690d45f27767db859fd63e8fa8fc02ffd73fa49)）
+- `15:57` feat (auth) 同步前端病案导出权限层级（[`b6697f20`](https://github.com/weepwood/MRR/commit/b6697f20032c29bf2f47a8f3072333d2c6490ebf)）
+- `15:56` test (auth) 覆盖前端病案导出权限（[`a7cdd412`](https://github.com/weepwood/MRR/commit/a7cdd412d6a4ce12475e90847792eda38d22bac1)）
+- `15:56` fix (auth) 保护旧病案 ZIP 下载入口（[`80e8af29`](https://github.com/weepwood/MRR/commit/80e8af29cff62380e001bf684c3d2314df0b1598)）
+- `15:55` chore 同步后端版本号为 0.5.0（[`41605eec`](https://github.com/weepwood/MRR/commit/41605eec58dd15006d655677b822b6fcf13fd5cc)）
+- `15:55` fix (auth) 保护旧批量下载入口（[`eeff51b6`](https://github.com/weepwood/MRR/commit/eeff51b67b7e3887e4e5149f0571590f8639b877)）
+- `15:54` feat (auth) 增加病案下载与 PDF 导出权限（[`39f06c85`](https://github.com/weepwood/MRR/commit/39f06c85c38d77e78a21d004379faf4e0861523f)）
+- `15:53` test (export) 覆盖导出权限与受控选择接口（[`a6a4c958`](https://github.com/weepwood/MRR/commit/a6a4c95855ac089812e7ab57c8a79bdf3216ef73)）
+- `15:53` chore 将产品版本更新为 0.5.0（[`3d99907c`](https://github.com/weepwood/MRR/commit/3d99907c773c0bc81ae0409defc739d0ae0aac4c)）
+- `15:53` fix (export) 分离 ZIP 与 PDF 导出权限（[`b991f7a6`](https://github.com/weepwood/MRR/commit/b991f7a6f05d0e43f6487d1f4ad1b9fb8cf46918)）
+- `15:52` feat (export) 实现有效影像批量查询（[`8183a94c`](https://github.com/weepwood/MRR/commit/8183a94cccbf9d2f89afd2a3bb65cb7b1406c933)）
+- `15:51` fix (export) 强制导出完整性并校验病案范围（[`473dc07d`](https://github.com/weepwood/MRR/commit/473dc07d7b59164b084649bd3f597e7aacdb3353)）
+- `15:50` feat (export) 增加受控病案选择导出计划（[`d7f19672`](https://github.com/weepwood/MRR/commit/d7f19672ad8fa965713139c11f6e84612f8114d5)）
+- `15:49` feat (export) 限制批量导出只查询有效影像（[`27fcc7f4`](https://github.com/weepwood/MRR/commit/27fcc7f473efb100ae1a3b6091b1478a786805ca)）
+- `15:48` feat (export) 增加有效扫描记录批量查询（[`d638ac2c`](https://github.com/weepwood/MRR/commit/d638ac2c271d6de7ad424f4aac85f3ddddddf12c)）
+- `15:47` feat (export) 增加有效影像批量查询能力（[`526dd528`](https://github.com/weepwood/MRR/commit/526dd52841197e0a5a85c84d7bf6c2da12e3b1d9)）
+- `15:47` test (export) 禁止 PDF 规划失败后绕过服务端（[`74ffc916`](https://github.com/weepwood/MRR/commit/74ffc9160c3b1b0745ca8b0d140be2a70a46dcd1)）
+- `15:47` test (auth) 增加病案导出权限层级测试（[`e60566c5`](https://github.com/weepwood/MRR/commit/e60566c51680078340a737eb5bb6dfb13e876e25)）
+- `15:46` test (export) 增加导出完整性与病案范围测试（[`81b9c6f7`](https://github.com/weepwood/MRR/commit/81b9c6f776857bd9c112476d6321a63f1c749997)）
+- `15:45` 合并 PR #177：将管理概览升级为可编辑小组件仪表盘（[`908a0c69`](https://github.com/weepwood/MRR/commit/908a0c6920932e652bdf315d3ff4eed643052b59)）
+- `15:36` style 简化小组件页面并支持颜色配置（[`22b3983c`](https://github.com/weepwood/MRR/commit/22b3983c31e242ff663f671a48c8b7fd544899de)）
+- `15:32` feat 增加小组件颜色配置模型（[`83ab37c3`](https://github.com/weepwood/MRR/commit/83ab37c3d302c9325fa8ae0185c9c6e68a90da7d)）
+- `15:32` test 补充小组件颜色配置测试（[`2b251eec`](https://github.com/weepwood/MRR/commit/2b251eec942a324a386d236b1e8149c035fa0970)）
+- `15:23` style 修复小组件工作台的代码规范（[`ec0a7e37`](https://github.com/weepwood/MRR/commit/ec0a7e37a24bb14b688133a9534586a3021675a6)）
+- `15:20` style 修复小组件布局工具的 ESLint 规则（[`4f35ad16`](https://github.com/weepwood/MRR/commit/4f35ad160b70ce7a3d3ee6f7615b13bbd8d4e1a7)）
+- `15:16` refactor 简化管理概览页面入口（[`2f752152`](https://github.com/weepwood/MRR/commit/2f752152282c9b70d8efb7a13ca6bc9676fa800a)）
+- `15:16` refactor 拆分管理概览小组件工作台（[`431a7f2f`](https://github.com/weepwood/MRR/commit/431a7f2fe528fa24a723d67404f95ccce6495beb)）
+- `15:10` feat 将管理概览升级为可编辑小组件仪表盘（[`d9c2947f`](https://github.com/weepwood/MRR/commit/d9c2947f6a831ac86323c0e5395fe390a8deb9ff)）
+- `15:06` feat 实现管理概览小组件布局模型（[`c2123795`](https://github.com/weepwood/MRR/commit/c21237951cb88dfe86365092f7fa1825070afb3b)）
+- `15:05` test 明确默认置顶小组件（[`622ffb66`](https://github.com/weepwood/MRR/commit/622ffb66854281f5b91245ad862bcb79a810f03f)）
+- `15:04` test 增加管理概览小组件布局测试（[`ca011630`](https://github.com/weepwood/MRR/commit/ca0116305cedca6a813779ccb88f07293d624ab8)）
+- `15:02` feat (docs) 更新日志集成 GitHub PR 与 Issue（[`abd6f484`](https://github.com/weepwood/MRR/commit/abd6f484ddd8386491167b1080ba9aa2acc4119d) · [PR #170](https://github.com/weepwood/MRR/pull/170)）
+- `14:59` style 统一管理概览页面与全局设计系统（[`52955cc5`](https://github.com/weepwood/MRR/commit/52955cc55f9e8d7c2ae58289cb7451fdf615a78c) · [PR #176](https://github.com/weepwood/MRR/pull/176)）
+- `14:57` style 统一管理概览页面设计规范（[`028b062f`](https://github.com/weepwood/MRR/commit/028b062f58d4582e05826a19fba9695a064c6ee0)）
+- `14:52` refactor 将管理概览重构为模块快捷入口（[`c1e2fc57`](https://github.com/weepwood/MRR/commit/c1e2fc57cedcb19ed91bfd3a1f61e3029372d109) · [PR #175](https://github.com/weepwood/MRR/pull/175)）
+- `14:48` feat 将管理概览重构为模块快捷入口（[`7b85f9da`](https://github.com/weepwood/MRR/commit/7b85f9da017be8beb70188710a8292342ff603cc)）
+- `14:43` fix (settings) 修复系统设置工作区样式回归（[`44e19ccc`](https://github.com/weepwood/MRR/commit/44e19ccc8d3b869093cca2e2cf10b2b4c6012be5) · [PR #174](https://github.com/weepwood/MRR/pull/174)）
+- `14:40` fix (settings) 恢复移动端自然高度布局（[`1d515153`](https://github.com/weepwood/MRR/commit/1d515153bdfbae23020d1ae9fae514f994607ac9)）
+- `14:39` test (settings) 覆盖工作区框架聚焦与上下间距（[`c6dac0f2`](https://github.com/weepwood/MRR/commit/c6dac0f21a13afdd27f1fb5522f2b8de0443ad68)）
+- `14:39` fix (settings) 统一工作区响应式断点（[`e059b00a`](https://github.com/weepwood/MRR/commit/e059b00a1370471f1513ce0fa5273da4aae632e0)）
+- `14:38` fix (settings) 修复工作区点击聚焦选择器（[`534f00ff`](https://github.com/weepwood/MRR/commit/534f00fff87a5178040feb915fb081ce826148fc)）
+- `14:38` fix (settings) 统一工作区框架高度职责（[`13302ce1`](https://github.com/weepwood/MRR/commit/13302ce1e4f8fa12aa328c603864b117c7b39215)）
+- `14:28` chore sync dev-no-login into adaptive export branch（[`3a35bfde`](https://github.com/weepwood/MRR/commit/3a35bfde1e7baabd03da575ac0a6eba766e68589)）
+- `14:27` perf (export) flush PDF pages after each image（[`0e5b211a`](https://github.com/weepwood/MRR/commit/0e5b211abee14dc4cdff71d7c5c526370e63a59c)）
+- `14:26` fix (export) save backend PDF Blob payloads directly（[`7bacd51c`](https://github.com/weepwood/MRR/commit/7bacd51cc4587f7d306c152f3778bcb9a4502e36)）
+- `14:25` fix (export) save backend ZIP Blob payload directly（[`6a363ae7`](https://github.com/weepwood/MRR/commit/6a363ae7f41bac0c43f3143af37e1ccb8f3df4ac)）
+- `14:25` feat add simple CSS interaction feedback（[`40e62f89`](https://github.com/weepwood/MRR/commit/40e62f89157cfd1471d711e79a21138dbaa7f687) · [PR #169](https://github.com/weepwood/MRR/pull/169)）
+- `14:24` fix (export) use Blob payload contract from API interceptor（[`416cdb98`](https://github.com/weepwood/MRR/commit/416cdb98e04e1455af74d401aba98b12ac53128d)）
+- `14:22` test (export) cover backend PDF planning boundaries（[`f8032f16`](https://github.com/weepwood/MRR/commit/f8032f16b5653683eef57746ffa6b90fbd81b7ae)）
+- `14:21` refactor (export) use typed request helper directly（[`a3f716f9`](https://github.com/weepwood/MRR/commit/a3f716f93993a86435d3f436c120668654169186)）
+- `14:21` fix (export) avoid duplicate archive view audit during PDF planning（[`5a76c725`](https://github.com/weepwood/MRR/commit/5a76c7255ffcda7fa20b96f755146e2b773498c3)）
+- `14:20` feat (export) request backend PDF export plans（[`0edc286a`](https://github.com/weepwood/MRR/commit/0edc286ae3fbf9b44120e59174ccdb14a89b5b4d)）
+- `14:19` feat (export) centralize PDF routing plan on backend（[`1b629a24`](https://github.com/weepwood/MRR/commit/1b629a24f96590f2caeff6c1d8ac794712aad3c3)）
+- `14:19` feat (export) add PDF export plan response（[`9fc4de40`](https://github.com/weepwood/MRR/commit/9fc4de40248c1241e2a49be19e0d39e214f14f3b)）
+- `14:17` feat (export) route whole and large PDF exports to backend（[`5568c6c5`](https://github.com/weepwood/MRR/commit/5568c6c5590896d901a299f1b362043687aefc34)）
+- `14:15` feat (export) route internal archive ZIP through backend（[`523fac7a`](https://github.com/weepwood/MRR/commit/523fac7a2068021b4a845bbd11ee0aac86fcd419)）
+- `14:15` feat (export) add frontend adaptive export API（[`37fcd819`](https://github.com/weepwood/MRR/commit/37fcd819bc4ac06faf4af17971c8d803074a1e40)）
+- `14:14` feat (export) add unified ZIP and PDF streaming endpoints（[`48192fa6`](https://github.com/weepwood/MRR/commit/48192fa6afe8bcad822c2013cdb80799322ede5c)）
+- `14:13` test (export) define unified export controller contract（[`0dce4737`](https://github.com/weepwood/MRR/commit/0dce47375ded384f9b59c1187bbb12ec840397e9)）
+- `14:13` feat (export) stream archive PDFs from backend storage（[`21a914ea`](https://github.com/weepwood/MRR/commit/21a914ea064e4572ab7a1b4af5f971c6e40e343a)）
+- `14:12` feat (export) extend archive service with PDF streaming（[`9ebfe5b1`](https://github.com/weepwood/MRR/commit/9ebfe5b12beb935ff17b76c019cb90c96bf675d9)）
+- `14:12` feat (export) add adaptive export routing policy（[`f69bf561`](https://github.com/weepwood/MRR/commit/f69bf5618c322a92c36fe3560967c36c758641a1)）
+- `14:11` test (export) require backend PDF streaming（[`f24d573d`](https://github.com/weepwood/MRR/commit/f24d573d889441d8d1e227dfe832231f214c3953)）
+- `14:11` test (export) define adaptive ZIP and PDF routing（[`28b21c75`](https://github.com/weepwood/MRR/commit/28b21c7543e373ab3d5abcbfe3b5771299b52874)）
+- `14:10` fix 修复设置初始化导致的类型丢失（[`d38f4dca`](https://github.com/weepwood/MRR/commit/d38f4dca4fb3ab6d49a76baa59d92439990509cb)）
+- `14:09` chore remove accidental placeholder（[`5aff0594`](https://github.com/weepwood/MRR/commit/5aff05949dc1053f20e17c008e8d4f7b49d292c5)）
+- `14:09` x（[`85ea6cac`](https://github.com/weepwood/MRR/commit/85ea6cac288803f474e73bccd24c7af93dd5d676)）
+- `14:09` chore remove accidental placeholder（[`10c8271c`](https://github.com/weepwood/MRR/commit/10c8271cb6ebea105c8ef2810793c16a1854db58)）
+- `14:09` temp（[`fddb502c`](https://github.com/weepwood/MRR/commit/fddb502c31a3ebed34687b3a99ca3b52000a6af2)）
+- `14:03` docs link changelog workflow in internal navigation（[`6281a037`](https://github.com/weepwood/MRR/commit/6281a037a972ff7e0db217b581b8a978e56a55c2)）
+- `14:03` docs document local GitHub changelog workflow（[`67abf194`](https://github.com/weepwood/MRR/commit/67abf194af9ed669432ec92fd53f3f0aededfe86)）
+- `14:01` ci (docs) test and enrich generated changelog（[`fb10dd65`](https://github.com/weepwood/MRR/commit/fb10dd658cbeeb8b78a3b134db2a459fa7882993)）
+- `14:00` chore (docs) ignore changelog API cache（[`33440ec8`](https://github.com/weepwood/MRR/commit/33440ec80d26d211f80e471ec94faac5c19357ff)）
+- `14:00` test (docs) expose changelog test command（[`00eeb76b`](https://github.com/weepwood/MRR/commit/00eeb76b0891e27c4057894b98eb6efa0d0a24cc)）
+- `14:00` feat (docs) add Windows changelog update workflow（[`1e8069e2`](https://github.com/weepwood/MRR/commit/1e8069e2b4ab0c517b429127ffc4e8cad0582d99)）
+- `13:59` test (docs) cover GitHub changelog enrichment（[`b2e8bac1`](https://github.com/weepwood/MRR/commit/b2e8bac178ef67fcc844b542cedc6300b6f08830)）
+- `13:58` feat (docs) enrich changelog with GitHub PRs and issues（[`d5672a0a`](https://github.com/weepwood/MRR/commit/d5672a0a9416dfe4f0e0eed1c2a65d6170ce5998)）
+- `13:55` fix (settings) only show feedback after confirmed saves（[`d5be408b`](https://github.com/weepwood/MRR/commit/d5be408bf21733216c50298d89ff4c037dfe26bf)）
+- `13:54` fix (settings) report save success explicitly（[`2237ab1a`](https://github.com/weepwood/MRR/commit/2237ab1a16d85391ece0ff9f1c878286c94238e1)）
+- `13:52` fix (toolbar) cancel pending refresh feedback work（[`59efc57a`](https://github.com/weepwood/MRR/commit/59efc57ad6755bf2f6c6d54f6884b9fa789c6ab4)）
+- `13:52` fix (navigation) disable icon transforms for reduced motion（[`969297af`](https://github.com/weepwood/MRR/commit/969297af45d23d62ed270a51cdd2d59e6c92295f)）
+- `13:52` chore remove accidental dummy file（[`fb7012a0`](https://github.com/weepwood/MRR/commit/fb7012a0e5a34d8003bef1bfc313782f384ef927)）
+- `13:51` dummy（[`5c42a443`](https://github.com/weepwood/MRR/commit/5c42a4436a6d09cccaf8e0a417288d07dff34323)）
+- `13:51` fix (ui) fully respect reduced-motion preferences（[`2501e52d`](https://github.com/weepwood/MRR/commit/2501e52d5b641da974c89f7b9544ad53b721c65d)）
+- `13:51` chore remove accidental placeholder file（[`c4493247`](https://github.com/weepwood/MRR/commit/c449324785c7cd7d2b9226b6986682cad5365849)）
+- `13:51` x（[`01917c48`](https://github.com/weepwood/MRR/commit/01917c48d74c93cf960a7d876417b4d3b3ee4a07)）
+- `13:47` fix (toolbar) reset refresh feedback without animation events（[`188283ff`](https://github.com/weepwood/MRR/commit/188283ffde9de3a13f19f67a22b4cb9a367540ee)）
+- `13:46` refactor (ui) reuse shared loading-state motion（[`375a9541`](https://github.com/weepwood/MRR/commit/375a954152325149db06a84d87f1103a6ef37614)）
+- `13:46` refactor (ui) reuse shared error-state motion（[`e8b8a161`](https://github.com/weepwood/MRR/commit/e8b8a16186af03e0f6f42244b139632ebeaae6be)）
+- `13:45` refactor (ui) reuse shared empty-state motion（[`61e3f371`](https://github.com/weepwood/MRR/commit/61e3f371c50504857ca763c280309c60ed3a5a9e)）
+- `13:45` refactor (toolbar) use shared refresh feedback（[`013d40c1`](https://github.com/weepwood/MRR/commit/013d40c118b813b4b383eacb12b0b199efd14bb3)）
+- `13:45` feat (navigation) add subtle icon interaction feedback（[`d52dba3f`](https://github.com/weepwood/MRR/commit/d52dba3f552311ed7fa90d29a9214d9065b58d65)）
+- `13:44` feat (archive) add lightweight favorite feedback（[`b178f22a`](https://github.com/weepwood/MRR/commit/b178f22aad68bd5ebbb83488c94e53592cbd68af)）
+- `13:43` feat (archive) add simple record-number switch feedback（[`6188e4d7`](https://github.com/weepwood/MRR/commit/6188e4d7a6179337a7d47cf86644377578830093)）
+- `13:42` feat (settings) add lightweight navigation feedback（[`aa5690f6`](https://github.com/weepwood/MRR/commit/aa5690f64e12515d2371974e3e38101b77533a19)）
+- `13:42` feat (settings) add simple icon and save feedback（[`fb2d7145`](https://github.com/weepwood/MRR/commit/fb2d714562927fd73d292d7a19808059459c4cc4)）
+- `13:41` refactor (ui) remove unused Motion presets（[`ef39e0cc`](https://github.com/weepwood/MRR/commit/ef39e0cca9e75359dd497c1366c80f474bbfee6f)）
+- `13:40` refactor (ui) remove Motion runtime dependency（[`f2422de5`](https://github.com/weepwood/MRR/commit/f2422de5d9d15f7e9cc16098c414631bc4462d72)）
+- `13:40` feat (ui) load shared motion utilities（[`25dde79e`](https://github.com/weepwood/MRR/commit/25dde79e062044447e199494049dadd55be5f99e)）
+- `13:39` feat (ui) add shared lightweight motion styles（[`f658b702`](https://github.com/weepwood/MRR/commit/f658b702bcb586711eb7637adb0c101a9bb4339f)）
+- `13:35` fix (ui) 统一下拉框与输入框样式及圆角（[`3cbf0b6e`](https://github.com/weepwood/MRR/commit/3cbf0b6e250359037763669490636efba421c4df) · [PR #163](https://github.com/weepwood/MRR/pull/163)）
+- `13:29` chore (ui) finalize form control review fixes（[`bfdf25fc`](https://github.com/weepwood/MRR/commit/bfdf25fc617d6641203212c033fa084404462c69)）
+- `13:29` docs (css) clarify form control responsibilities（[`660cbfa1`](https://github.com/weepwood/MRR/commit/660cbfa1a7a5c55f0550f1012642cc76fad95340)）
+- `13:28` docs (css) clarify form control style ownership（[`7e5216ca`](https://github.com/weepwood/MRR/commit/7e5216caa2eaf0df028a1da3ae01196028ca75d1)）
+- `13:27` fix (ui) align numeric control radius by size（[`59803e6c`](https://github.com/weepwood/MRR/commit/59803e6c330631e24522d6ffaffb114b2e50b2e2)）
+- `13:26` test (ui) cover control sizes and workspace frame（[`b0ff794b`](https://github.com/weepwood/MRR/commit/b0ff794b52bb74722f5f268ec5f597bc398a6724)）
+- `13:25` fix (ui) scope select chevron rotation（[`765fa10f`](https://github.com/weepwood/MRR/commit/765fa10fc2325eefeba6b1f04071938bdcacc774)）
+- `13:24` fix (ui) remove duplicate form control overrides（[`0a451192`](https://github.com/weepwood/MRR/commit/0a4511921991bd1bd961729e51a17a025efe762f)）
+- `13:09` fix (settings) focus padded workspace frame directly（[`64ce9032`](https://github.com/weepwood/MRR/commit/64ce9032a4f1701f87e426897b76906f3ec8b3d8)）
+- `13:08` fix (settings) use layout padding for workspace edge gap（[`2bcd9084`](https://github.com/weepwood/MRR/commit/2bcd9084a4b4da13c27814507cec73397177f00b)）
+- `13:07` fix (settings) add real workspace card padding frame（[`beb4878a`](https://github.com/weepwood/MRR/commit/beb4878a47ffe913035376c564f71a998c1e5ecc)）
+- `13:02` fix (settings) explicitly preserve viewport edge gap（[`2a2f736e`](https://github.com/weepwood/MRR/commit/2a2f736e38cfe27429ea6bcae6eff1363cae8b9f)）
+- `13:01` fix (settings) avoid scroll margin double counting（[`0465e05f`](https://github.com/weepwood/MRR/commit/0465e05f6882f0aed8737da0d9d8efc4e98438cf)）
+- `12:57` test (settings) verify workspace viewport edge spacing（[`0ea5586d`](https://github.com/weepwood/MRR/commit/0ea5586d90b8856d9153b1424d672bb864fa3b0e)）
+- `12:56` fix (settings) keep viewport edge spacing around workspace（[`a02019d6`](https://github.com/weepwood/MRR/commit/a02019d66ae3638e9afc2f6a2023bab1b607a2a5)）
+- `12:51` fix (ui) bind input and select radius to global setting（[`8dca2be0`](https://github.com/weepwood/MRR/commit/8dca2be0d2d187f6c6d7ec248c4749ae3d56bb70)）
+- `12:50` test (ui) keep original settings behavior and verify unified controls（[`18c7a57e`](https://github.com/weepwood/MRR/commit/18c7a57e40ae6e550c96be6c0aad5d3f9eb9662c)）
+- `12:50` revert (settings) restore original settings page sizing（[`1f193978`](https://github.com/weepwood/MRR/commit/1f193978435c4d7cc22fcd6a08cfbfdcf3a8c532)）
+- `12:49` revert (settings) restore original settings header layout（[`c6844e7a`](https://github.com/weepwood/MRR/commit/c6844e7ac16a7c789bfe4ff75bafc923eaebffb3)）
+- `12:49` revert (settings) restore original workspace focus behavior（[`de3bae04`](https://github.com/weepwood/MRR/commit/de3bae046489f39da8f8c873079cc394810f42b4)）
+- `12:45` fix 慢网络启动超时改为可继续等待（[`174ab1be`](https://github.com/weepwood/MRR/commit/174ab1be08261232516639c9827cb0898c76a1c7) · [PR #164](https://github.com/weepwood/MRR/pull/164)）
+- `12:40` test cover slow startup recovery controls（[`c5b1f658`](https://github.com/weepwood/MRR/commit/c5b1f6580c7a7ad38f455006ce150a6f56575115)）
+- `12:40` test (forms) compare input and select in shared filter bar（[`64a4a6a3`](https://github.com/weepwood/MRR/commit/64a4a6a3ac38c2923a08b91ac2945cbf399ea9cb)）
+- `12:40` style add slow startup recovery actions（[`58eb5d8f`](https://github.com/weepwood/MRR/commit/58eb5d8fb034857e5f2254008bd36db813c698fa)）
+- `12:40` fix make slow application startup recoverable（[`7513aaf8`](https://github.com/weepwood/MRR/commit/7513aaf8287e96a47d52423cfa7542f955b453da)）
+- `12:39` fix (settings) fit compact workspace in short viewports（[`d13bdb37`](https://github.com/weepwood/MRR/commit/d13bdb3740628a016d1f004ba1abb769dd99c541)）
+- `12:38` fix (forms) keep input number height aligned（[`a59b399d`](https://github.com/weepwood/MRR/commit/a59b399d97cece7b0504e4435ffd8488f9f5fc94)）
+- `12:37` test (settings) cover compact header and unified controls（[`fcb9b275`](https://github.com/weepwood/MRR/commit/fcb9b275d7fbd65b5b3de1ab83ac10f32139134d)）
+- `12:36` style (forms) align FaSelect trigger height（[`6a22ec23`](https://github.com/weepwood/MRR/commit/6a22ec23c048c85e282cf249771d75e06af86d84)）
+- `12:36` style (forms) align FaInput with global control tokens（[`62045487`](https://github.com/weepwood/MRR/commit/62045487a1b946e25d04c8e57f18add94109f93e)）
+- `12:36` style (forms) load unified form control styles（[`6097370f`](https://github.com/weepwood/MRR/commit/6097370f1733fe6b5dcdb9d2d0b7a98669b328bd)）
+- `12:36` style (forms) unify input and select control contract（[`180546b2`](https://github.com/weepwood/MRR/commit/180546b2397c2699b70d7dc25a7c74a2f566e716)）
+- `12:35` style (settings) keep compact header visible above workspace（[`52874241`](https://github.com/weepwood/MRR/commit/528742414e1a9fb7efd59ae20d35f0e757a58783)）
+- `12:34` feat (settings) add compact header controls（[`6572c5d8`](https://github.com/weepwood/MRR/commit/6572c5d85f6b29621f330d6ae0938b71893b5ea5)）
+- `12:34` feat (settings) compact header when focusing sections（[`9b7032e0`](https://github.com/weepwood/MRR/commit/9b7032e0e366af86109b3eba5ecac7341a612023)）
+- `12:31` fix 外部影像访问超时时提供恢复选项（[`9c9fdd11`](https://github.com/weepwood/MRR/commit/9c9fdd11c38104f1ca38b1dbdc49d99454e11d36) · [PR #160](https://github.com/weepwood/MRR/pull/160)）
+- `12:29` feat (data-governance) 增加数据关系工作台与关联一致性检查（[`b879b39e`](https://github.com/weepwood/MRR/commit/b879b39ec3eb1bff1a0b00c2e91f5775f240b029) · [PR #158](https://github.com/weepwood/MRR/pull/158)）
+- `12:24` fix make external archive timeouts recoverable（[`11138581`](https://github.com/weepwood/MRR/commit/11138581f40b067d46bea21be666a560eca944ed)）
+- `12:24` fix allow external archive retry timeout overrides（[`3646e068`](https://github.com/weepwood/MRR/commit/3646e06883ddf7ed98a2d2ab6c6a332ca5429478)）
+- `12:23` test cover external archive timeout recovery（[`121665f2`](https://github.com/weepwood/MRR/commit/121665f24a531d938691746455085d73df2e6de0)）
+- `12:18` feat add low-risk Motion feedback with Chrome 109 safeguards（[`2cc7bb8c`](https://github.com/weepwood/MRR/commit/2cc7bb8c24fd0e8db37759b9975d2d4d4dcab7ee) · [PR #149](https://github.com/weepwood/MRR/pull/149)）
+- `11:55` fix (data-governance) type nullable scan lookup parameters（[`c4fb2e87`](https://github.com/weepwood/MRR/commit/c4fb2e872794a7c9637b1ad8c75b67b0c373b163)）
+- `11:50` docs (data-governance) fix data quality rule wording（[`8e8417f1`](https://github.com/weepwood/MRR/commit/8e8417f1f024cddb7e903a42562d91fd54247d9d)）
+- `11:50` docs (data-governance) link relation workbench in user manual（[`f91b714c`](https://github.com/weepwood/MRR/commit/f91b714caa16a8d19127675ce33bf5384d082fdf)）
+- `11:48` chore sync latest dev-no-login into data relation workbench（[`bed4ed01`](https://github.com/weepwood/MRR/commit/bed4ed019dd182970242098d79d852c5aa9f1f15)）
+- `11:47` docs (data-governance) document relation workbench and checks（[`4f298c78`](https://github.com/weepwood/MRR/commit/4f298c78ed8d6c71d19e8794b0bf0f9ff32b3e54)）
+- `11:45` test (data-governance) verify shared code match key migration（[`abccf23a`](https://github.com/weepwood/MRR/commit/abccf23aa42dc80787d3b5719456c26c8b65d144)）
+- `11:43` refactor (data-quality) execute bounded catalog checks（[`2b485a51`](https://github.com/weepwood/MRR/commit/2b485a510f7bb99f9a40fe8eab54629cfe4fb1d6)）
+- `11:42` refactor (data-quality) centralize bounded consistency checks（[`08c9e1f3`](https://github.com/weepwood/MRR/commit/08c9e1f33f5c1c57de1f92bcb0869b030cbaf27d)）
+- `11:41` refactor (motion) preserve original settings styles（[`d74c00b8`](https://github.com/weepwood/MRR/commit/d74c00b8a71d3799964172517629daf15817dbc7)）
+- `11:41` refactor (motion) limit settings motion to active icon feedback（[`313cdc6f`](https://github.com/weepwood/MRR/commit/313cdc6f2d2ed953f648d9907c4ed91735efa099)）
+- `11:41` refactor (data-quality) define reusable check descriptor（[`ca138735`](https://github.com/weepwood/MRR/commit/ca1387354b78f1f6ed02357e2ef085a206488937)）
+- `11:40` test (data-governance) adapt relation service tests to repository boundary（[`f2529a93`](https://github.com/weepwood/MRR/commit/f2529a935b0e754035efddc795aed874c1f34f5a)）
+- `11:40` refactor (data-governance) keep relation service focused on business composition（[`79dd6f5c`](https://github.com/weepwood/MRR/commit/79dd6f5c591552cc95986117230732d44731cbd2)）
+- `11:39` refactor (data-governance) isolate bounded relation queries（[`361e1cbf`](https://github.com/weepwood/MRR/commit/361e1cbfa5e52dd568154a91b77c2ab1abd5b140)）
+- `11:37` refactor (motion) keep only used settings presets（[`701805ed`](https://github.com/weepwood/MRR/commit/701805ed9848f16d4813ba27578fa87781f95d61)）
+- `11:37` feat (data-governance) add shared medical record match key（[`e91b13c6`](https://github.com/weepwood/MRR/commit/e91b13c63f6744e3e3c66f9808c3b840c7deb751)）
+- `11:37` fix (motion) preserve active settings fallback styles（[`5bc89d70`](https://github.com/weepwood/MRR/commit/5bc89d70fa5d7703b74bd0337f3a6294848b19f1)）
+- `11:36` refactor (motion) preserve settings content lifecycle（[`6e4d19e7`](https://github.com/weepwood/MRR/commit/6e4d19e754cb28cd7b93ce92e170d2b43857bbdc)）
+- `11:35` refactor (motion) keep archive workflow unchanged（[`86ae7c39`](https://github.com/weepwood/MRR/commit/86ae7c3946d3f837b9c035720d9423384f32de69)）
+- `11:35` fix (data-governance) tighten legacy relation matching（[`af9dfece`](https://github.com/weepwood/MRR/commit/af9dfece4680e41843342ec38125af907f028209)）
+- `11:34` refactor (motion) remove unused layout presets（[`051081d3`](https://github.com/weepwood/MRR/commit/051081d39edc4ebd94ab410f7ddbe541739ff247)）
+- `11:33` fix (motion) respect reduced motion in patient card（[`6e4312c9`](https://github.com/weepwood/MRR/commit/6e4312c966bcfc957ffa5a5a6ba33f85887640fe)）
+- `11:33` test (data-governance) cover relation workbench overview（[`2e71d5a9`](https://github.com/weepwood/MRR/commit/2e71d5a98bfaa16a9c057c07eaddd6902c16546a)）
+- `11:32` fix (motion) respect reduced motion in settings interactions（[`a8ad2dbf`](https://github.com/weepwood/MRR/commit/a8ad2dbf4d1c3cf0c37db60e4933e70f92197522)）
+- `11:31` refactor (motion) remove high-cost page and list animations（[`bcb4e77c`](https://github.com/weepwood/MRR/commit/bcb4e77cac1bb595fad6f1261c38876fc9b8ff30)）
+- `11:31` chore remove temporary review placeholder（[`5ded2167`](https://github.com/weepwood/MRR/commit/5ded21677befb6df5cbeb271573c5f47e20a4e07)）
+- `11:30` chore temporary review placeholder（[`9229bfdf`](https://github.com/weepwood/MRR/commit/9229bfdfe5fedca6c501a93debe559199a8689c0)）
+- `11:30` chore remove temporary review placeholder（[`a90efb8b`](https://github.com/weepwood/MRR/commit/a90efb8be19f59085ad75e426ce923531ecc4596)）
+- `11:30` chore temporary review placeholder（[`2b15cfdd`](https://github.com/weepwood/MRR/commit/2b15cfdd778b2c9490a74852eff0b9346546eb4c)）
+- `11:29` feat (data-governance) add data governance navigation（[`d7c5a9c1`](https://github.com/weepwood/MRR/commit/d7c5a9c1c207e7dab19f70b7d2ca625182179c3e)）
+- `11:28` feat (data-governance) add visual data relation workbench（[`37f7f46c`](https://github.com/weepwood/MRR/commit/37f7f46cc53dc38c95cb5c63f705db41aa2eafca)）
+- `11:25` feat (data-governance) add relation workbench api client（[`3feba002`](https://github.com/weepwood/MRR/commit/3feba00259788e9def1b6b6f8dcc3791a19c9b94)）
+- `11:24` test (data-quality) verify relation checks and issue lookup（[`8599657b`](https://github.com/weepwood/MRR/commit/8599657b4c232edda1be82edc73f7587cb269567)）
+- `11:23` test (data-quality) cover issue drilldown endpoints（[`92155f8c`](https://github.com/weepwood/MRR/commit/92155f8cc80352b3e1dcd052b2ace9c223335f69)）
+- `11:23` test (data-governance) cover relation controller responses（[`6fe67ae9`](https://github.com/weepwood/MRR/commit/6fe67ae96d847af06996ddb503a0fbf5bcb9bc53)）
+- `11:23` perf (motion) avoid settings navigation layout measurements（[`c9ab04e0`](https://github.com/weepwood/MRR/commit/c9ab04e0680019fee8a56dd4393be4c2a4808a75)）
+- `11:23` test (data-governance) cover relation search validation（[`8868454f`](https://github.com/weepwood/MRR/commit/8868454fd194541b2c1358031df2c8d53e913927)）
+- `11:22` test (data-governance) cover relation comparison semantics（[`13d688df`](https://github.com/weepwood/MRR/commit/13d688df246523745e2b57389a41b8839d4400c9)）
+- `11:22` refactor (motion) keep loading state animation in CSS（[`65db3bde`](https://github.com/weepwood/MRR/commit/65db3bdeb506f73218469a022b90297b7d227003)）
+- `11:22` feat (data-quality) check archive links and provide repair previews（[`c4cad078`](https://github.com/weepwood/MRR/commit/c4cad0780610f2c65f74628f64ad2dde05d6b68b)）
+- `11:21` refactor (motion) keep simple error state animation in CSS（[`fb781700`](https://github.com/weepwood/MRR/commit/fb781700ec1260369098c7fd25bb19c0841cd8e2)）
+- `11:21` refactor (motion) keep simple empty state animation in CSS（[`46908820`](https://github.com/weepwood/MRR/commit/469088202a606d87c5682bd7bdfe5476860126db)）
+- `11:18` feat (data-quality) add issue detail and repair preview endpoints（[`c1f3065c`](https://github.com/weepwood/MRR/commit/c1f3065cddddc02aaad45a5f998f6c68c88ed3d0)）
+- `11:18` feat (data-quality) expose issue drilldown and repair preview（[`5422bc12`](https://github.com/weepwood/MRR/commit/5422bc128b078bdc1166ec3a0f09b6b1f7861679)）
+- `11:17` feat (data-governance) expose relation workbench APIs（[`e80b9c98`](https://github.com/weepwood/MRR/commit/e80b9c9867cb668327e62cc6490e2bd708222bf6)）
+- `11:17` feat (data-governance) implement relation overview and archive drilldown（[`17c29e5a`](https://github.com/weepwood/MRR/commit/17c29e5afff5228a6ec1e17d3f558e98b69db280)）
+- `11:14` feat (data-governance) add relation comparison helpers（[`2d3a4990`](https://github.com/weepwood/MRR/commit/2d3a499023805905c4f5ab1c870abd9a745032ed)）
+- `11:14` feat (data-governance) define data relation service（[`a8f0bab8`](https://github.com/weepwood/MRR/commit/a8f0bab800d649f208fa8174be67559427937960)）
+- `11:10` feat (scan) 优先通过 archive\_id 查询影像并兼容回退（[`caa5305f`](https://github.com/weepwood/MRR/commit/caa5305fbfde081c941ff8b3744a7e0362bc4298) · [PR #152](https://github.com/weepwood/MRR/pull/152)）
+- `11:10` docs add editable MRR system architecture diagrams（[`38ac8d01`](https://github.com/weepwood/MRR/commit/38ac8d011fca3bd2b02373e028d14db197ff539f) · [PR #151](https://github.com/weepwood/MRR/pull/151)）
+- `11:09` feat 导航栏增加可配置外部链接分组（[`30851b27`](https://github.com/weepwood/MRR/commit/30851b27c8f4a798642825187f06ce4259d699ab) · [PR #150](https://github.com/weepwood/MRR/pull/150)）
+- `10:26` feat (frontend) unify loading-state motion and reduced-motion fallback（[`f462fa3b`](https://github.com/weepwood/MRR/commit/f462fa3b417f7c35c07ea07137427c7758e9d6fd)）
+- `10:25` fix (frontend) preserve chart content width through motion wrapper（[`a1954548`](https://github.com/weepwood/MRR/commit/a195454844e7a290a982845ea2cca97a326d28e5)）
+- `10:21` feat (frontend) animate response analysis state changes（[`218d92b2`](https://github.com/weepwood/MRR/commit/218d92b20fc950c9ba5b3793195e5521424686ef)）
+- `10:20` feat (frontend) animate archive history filters and favorites（[`aae6a373`](https://github.com/weepwood/MRR/commit/aae6a373bf94ba85dc0cc2eb7b88954200f26683)）
+- `10:18` feat (frontend) animate chart empty and content states（[`a60681ba`](https://github.com/weepwood/MRR/commit/a60681ba88f76324bcba4bcda0f2c4494257210a)）
+- `10:17` feat (frontend) add restrained error-state motion（[`617d857d`](https://github.com/weepwood/MRR/commit/617d857d3938904d86f8a316cd018dc0df264a01)）
+- `10:17` feat (frontend) add subtle empty-state motion（[`b8f7c97f`](https://github.com/weepwood/MRR/commit/b8f7c97f6824f6f0b5377a73b39530cf89ad0765)）
+- `10:16` feat (frontend) animate archive record number switching（[`f94d5883`](https://github.com/weepwood/MRR/commit/f94d588390a91a940f642efbd8343625db1a024e)）
+- `10:15` test (cache) preserve lookup metadata across cache hits（[`14d398ad`](https://github.com/weepwood/MRR/commit/14d398ade3cb02bd1d49bf74d3c883fd69ca85f9)）
+- `10:14` test (controller) adapt image controller tests to lookup metadata（[`a27a220a`](https://github.com/weepwood/MRR/commit/a27a220aa5d39717475cb0ce7a2c34c05ac951dd)）
+- `10:13` feat (api) expose archive lookup strategy in response headers（[`3d7f186a`](https://github.com/weepwood/MRR/commit/3d7f186a070cace8db5c9df5469d7ec242fc45dd)）
+- `10:11` feat (cache) cache archive lookup metadata（[`fdc6c5ac`](https://github.com/weepwood/MRR/commit/fdc6c5ac5edd4dff5e3ea75fb5d7896c76c3df23)）
+- `10:11` feat (scan) return cached lookup strategy metadata（[`3960f762`](https://github.com/weepwood/MRR/commit/3960f76224ee38616f3c26dd9b01530764eb04e3)）
+- `10:10` feat (scan) expose lookup metadata from scan service（[`867534d4`](https://github.com/weepwood/MRR/commit/867534d451f550cb299c5e33fcd9c7bd1c1164d3)）
+- `10:09` feat (scan) add archive lookup result metadata（[`4f2b610c`](https://github.com/weepwood/MRR/commit/4f2b610c0ca30f477cc034174d06cf0fe67bab30)）
+- `10:09` test (controller) require lookup strategy response headers（[`3e8f9e76`](https://github.com/weepwood/MRR/commit/3e8f9e7698dea07d22382e2b046d5b35db9c828f)）
+- `10:08` test (scan) define archive lookup metadata behavior（[`7d99f10b`](https://github.com/weepwood/MRR/commit/7d99f10b1d26f3236d35068ab9eba49b34ece176)）
+- `09:45` test (scan) cover legacy bah endpoint fast path（[`abcc2beb`](https://github.com/weepwood/MRR/commit/abcc2beb7847ada7374c7983ca347e03808f6a8f)）
+- `09:44` refactor (scan) share archive fast path across image endpoints（[`f9eb15f2`](https://github.com/weepwood/MRR/commit/f9eb15f28de22b67d5c065b4cf2c188aa74229be)）
+- `09:42` test (scan) verify mixed-format archive lookup in PostgreSQL（[`6687604f`](https://github.com/weepwood/MRR/commit/6687604fc5591c6a16601a2046ff3b534f59e992)）
+- `09:41` test (scan) cover mixed-format archive fast lookup（[`eaf92fa2`](https://github.com/weepwood/MRR/commit/eaf92fa22d916d7eb88469aa1b6c060a88136565)）
+- `09:40` fix (scan) use compatibility archive resolver only on exact miss（[`49f8b80f`](https://github.com/weepwood/MRR/commit/49f8b80fe3d63089a02c977edc8007c37fe9ad5d)）
+- `09:39` fix (scan) resolve mixed-format archive codes on fast path（[`bde4e8e0`](https://github.com/weepwood/MRR/commit/bde4e8e0bdbd9ae7431634bdca27cdcdae939920)）
+- `09:33` test (scan) cover archive-id lookup and active legacy fallback（[`17664129`](https://github.com/weepwood/MRR/commit/17664129e72a8f7c2e4951370f42c5fafdc68ed6)）
+- `09:32` feat (scan) prefer archive-id lookup with legacy fallback（[`5c8aa295`](https://github.com/weepwood/MRR/commit/5c8aa29587f1ef6e68d1901090e827fa45e7f212)）
+- `09:32` feat (scan) add archive-id fast lookup queries（[`485f75fc`](https://github.com/weepwood/MRR/commit/485f75fcfd7fae2d4606d1183e2b70fe9bcb5609)）
+- `09:31` test (scan) define archive-id fast path and fallback behavior（[`4349877b`](https://github.com/weepwood/MRR/commit/4349877b2c28a21b21a480ddc3d73d3af676a1c6)）
+- `08:51` docs document MRR architecture diagram（[`6bdddcc8`](https://github.com/weepwood/MRR/commit/6bdddcc84f932396d99aef97d9befe4ccbfe7d3a)）
+- `08:51` docs add MRR architecture SVG overview（[`4763e646`](https://github.com/weepwood/MRR/commit/4763e646c789ddbcefba36290b71b9cd048a1adc)）
+- `08:47` docs add editable MRR architecture drawio（[`227fbdbd`](https://github.com/weepwood/MRR/commit/227fbdbd8351c256c6c0030f02bee4ae286872ef)）
+- `00:58` docs (档案袋) 说明用户名与 ID 水印规则（[`649f236f`](https://github.com/weepwood/MRR/commit/649f236f71ba186b4c47f2dde1a96ffa50e9b477)）
+- `00:58` feat (档案袋) 使用用户名与 ID 生成水印（[`1c75f7b3`](https://github.com/weepwood/MRR/commit/1c75f7b3edec685c88718c3b64f07025bb4dc171)）
+- `00:54` docs (档案袋) 添加用户名与 ID 水印实现计划（[`26cf3c4d`](https://github.com/weepwood/MRR/commit/26cf3c4dc87b2e004230e09e19dd53d79c1867bf)）
+- `00:48` docs (档案袋) 添加用户名与 ID 水印设计（[`6d3f1d82`](https://github.com/weepwood/MRR/commit/6d3f1d823b16d43a6368536441be73dabbf72042)）
 
 ## 2026-07-20
 
-- **修复** `frontend` 收紧请求重试并限制错误与指标队列（[`6838f36`](https://github.com/weepwood/MRR/commit/6838f364b8c501d1bdc6b5d2b64a3643c8c6ef62) · [PR #141](https://github.com/weepwood/MRR/pull/141)） — weepwood
-- **新增** 左侧导航增加分组多级菜单模式（[`91bb330`](https://github.com/weepwood/MRR/commit/91bb3306b1b907c9b2a127a2f2e7c45e8693d5ac) · [PR #148](https://github.com/weepwood/MRR/pull/148)） — weepwood
-- **修复** `archive` 取消统计明细跳转后的返回按钮（[`8e049c8`](https://github.com/weepwood/MRR/commit/8e049c81371cdf852f119e516a1e91afbd2d6374) · [PR #136](https://github.com/weepwood/MRR/pull/136)） — weepwood
-- **维护** remove accidental temporary file（[`f471161`](https://github.com/weepwood/MRR/commit/f471161b294389877127e526730e279e67805c60)） — weepwood
-- **维护** placeholder（[`85e6d35`](https://github.com/weepwood/MRR/commit/85e6d35c3edcdfd05d37a27f7bca238af48e807a)） — weepwood
-- **维护** remove accidental temporary file（[`d0a3d07`](https://github.com/weepwood/MRR/commit/d0a3d0756bb59a3e7e3d40a0a0a21f283d18a422)） — weepwood
-- **维护** placeholder（[`22d19b8`](https://github.com/weepwood/MRR/commit/22d19b83e9b68d8f44cfc21918abba666da36330)） — weepwood
-- **合并** Feat/restore runtime developer mode 20260720（[`fac557c`](https://github.com/weepwood/MRR/commit/fac557ceb6a4472877ed684f5ce79ec88ac9e46c) · [PR #134](https://github.com/weepwood/MRR/pull/134)） — weepwood
-- **修复** `archive` 修复统计明细跳转后的布局与查询规则（[`04d5358`](https://github.com/weepwood/MRR/commit/04d5358c5a81fd75b2d5327adf4f925bf5072026) · [PR #133](https://github.com/weepwood/MRR/pull/133)） — weepwood
-- **重构** 将开发者模式提示改为标题旁标识（[`13b30c4`](https://github.com/weepwood/MRR/commit/13b30c43f0a2bee8549e29a915ebfe18d48e7ee3) · [PR #131](https://github.com/weepwood/MRR/pull/131)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`6829ae3`](https://github.com/weepwood/MRR/commit/6829ae3ca0a7ebfc87b7cd3ed568b4bea5864b74)） — weepwood
-- **合并** Merge commit 'c3f375d5c6e032d3f6af76e53b5705ff09129a76' into dev-no-login（[`441ea49`](https://github.com/weepwood/MRR/commit/441ea49ecd283eb09d5b53144ce3dec1a86c1e13)） — weepwood
-- **新增** 病案扫描统计增加年份快捷筛选与表格导出（[`64ae0ab`](https://github.com/weepwood/MRR/commit/64ae0abae42e2d2918c397de89362f05169f2b83) · [PR #127](https://github.com/weepwood/MRR/pull/127)） — weepwood
-- **新增** `audit` 优化 /audit-images 双向审计与导出（[`4a8b769`](https://github.com/weepwood/MRR/commit/4a8b769ba3dbf385ebf8b1141561aa2416253bf7) · [PR #125](https://github.com/weepwood/MRR/pull/125)） — weepwood
-- **新增** `audit` 完善全接口访问审计并保留可追溯参数（[`d530cb5`](https://github.com/weepwood/MRR/commit/d530cb5ee6ba80a9e3bf35a27d9fa955ee230a2e) · [PR #123](https://github.com/weepwood/MRR/pull/123)） — weepwood
-- **修复** `api` 统一 Result 失败响应与 HTTP 状态码（[`ab544f2`](https://github.com/weepwood/MRR/commit/ab544f23fe48a20da1728a7b23d57a5d14719d3a) · [PR #119](https://github.com/weepwood/MRR/pull/119)） — weepwood
-- **维护** 清理前端遗留品牌信息（[`f875f5b`](https://github.com/weepwood/MRR/commit/f875f5bb59961b980ed7ff07db8270c68c45f159)） — weepwood
-- **测试** 完善核心测试与质量门禁（[`e87311a`](https://github.com/weepwood/MRR/commit/e87311a1fed3825888051c3d5b4c45549ce23bfc) · [PR #107](https://github.com/weepwood/MRR/pull/107)） — weepwood
-- **修复** `auth` 迁移并自愈旧版前端登录状态（[`15bb8d4`](https://github.com/weepwood/MRR/commit/15bb8d456c6560f72be88bb2622db3f014d45e3f) · [PR #118](https://github.com/weepwood/MRR/pull/118)） — weepwood
-- **修复** `security` 阻断系统设置开发者模式权限提升链（[`ad69283`](https://github.com/weepwood/MRR/commit/ad69283f203ab29b86ba4e3b2a0aff8760f94245) · [PR #103](https://github.com/weepwood/MRR/pull/103)） — weepwood
-- **修复** `frontend` 支持 Chrome 109 基础操作（[`3b19b68`](https://github.com/weepwood/MRR/commit/3b19b687204b17ca220ac91a2dd00e7035c6f1c8) · [PR #105](https://github.com/weepwood/MRR/pull/105)） — weepwood
-- **新增** 建立唯一产品版本与发布基线（[`e7d2103`](https://github.com/weepwood/MRR/commit/e7d210394543fc73791f3edf43c4d479dd2294a5) · [PR #93](https://github.com/weepwood/MRR/pull/93)） — weepwood
-- **修复** `interceptor` 修复登录拦截器中的方法引用错误（[`00204ab`](https://github.com/weepwood/MRR/commit/00204ab4631452651b2257f323859acd0ffecd64)） — weepwood
-- **新增** `components` 添加Element Plus组件类型声明和更新.gitignore（[`f6c0cc8`](https://github.com/weepwood/MRR/commit/f6c0cc875fb334d4d5370261cb0fff7eef47cbf4)） — weepwood
+- `22:47` refactor (frontend) remove global DOM motion scanner（[`3481fa9c`](https://github.com/weepwood/MRR/commit/3481fa9c25c01caf912271522a9a863c742f282c)）
+- `22:47` refactor (frontend) remove global motion styles（[`1e0c842c`](https://github.com/weepwood/MRR/commit/1e0c842c59ab11f669033da426c5a9acc14b39ac)）
+- `22:47` refactor (frontend) keep Motion scoped to components（[`57338a29`](https://github.com/weepwood/MRR/commit/57338a2917c5e98402139297ed6cd311e457c6d5)）
+- `22:46` feat (frontend) add restrained dashboard motion（[`94ad5d05`](https://github.com/weepwood/MRR/commit/94ad5d05ee67a4cb5d979a984910cf6862fbd8b5)）
+- `22:44` style (frontend) support shared settings indicator（[`a37436a1`](https://github.com/weepwood/MRR/commit/a37436a18d9bf82161ee8318204ba6c249f07d2c)）
+- `22:43` feat (frontend) animate settings navigation state（[`664075a4`](https://github.com/weepwood/MRR/commit/664075a4e490120dab79e510091ed2b091520587)）
+- `22:43` refactor (frontend) make motion presets component-friendly（[`712bce03`](https://github.com/weepwood/MRR/commit/712bce03c7d78d77a65e9c0230e98478a2a5dd0b)）
+- `22:35` chore (ci) restore standard quality gate（[`04e6d854`](https://github.com/weepwood/MRR/commit/04e6d854135d7ef2d4e8d7eb85ef54852591b352)）
+- `22:34` chore (ci) remove temporary lockfile workflow（[`6998d697`](https://github.com/weepwood/MRR/commit/6998d69707bd3740cc3b7b9aa8440d53fb4f05c0)）
+- `22:34` chore (frontend) remove abandoned vendored Motion runtime（[`75a3a484`](https://github.com/weepwood/MRR/commit/75a3a484f7754f64b3d5ee1cbe7072a8500d70d8)）
+- `22:34` chore (frontend) remove abandoned vendored Motion runtime（[`2653dd61`](https://github.com/weepwood/MRR/commit/2653dd6186aefdcc26d4733bf6b1a57b809ce17f)）
+- `22:34` chore (frontend) remove abandoned vendored Motion runtime（[`7e412ef6`](https://github.com/weepwood/MRR/commit/7e412ef69e7c12b840090a8ebcb5ad70d0ed0937)）
+- `22:32` vendor (frontend) add Motion runtime part 03（[`a440452f`](https://github.com/weepwood/MRR/commit/a440452f4e13b3efa077362cae0b786859410dee)）
+- `22:28` feat expose external links management in settings（[`c1f97986`](https://github.com/weepwood/MRR/commit/c1f979862ad43d996fae64c66961ac50406c0d76)）
+- `22:28` vendor (frontend) add Motion runtime part 02（[`9b7314a9`](https://github.com/weepwood/MRR/commit/9b7314a903939542bae5d554e27fea3f386c0f0a)）
+- `22:28` feat add external links settings section（[`6d93f35c`](https://github.com/weepwood/MRR/commit/6d93f35cd780bf257457ba0b26a38975c834f60a)）
+- `22:27` feat add configurable external links to single sidebar（[`6f84808e`](https://github.com/weepwood/MRR/commit/6f84808ed99f902f60fcde432662e3e02b2a5475)）
+- `22:26` feat initialize custom external navigation links（[`66a3d0f8`](https://github.com/weepwood/MRR/commit/66a3d0f8ca42c61f7ef43466c65be467f6d60c70)）
+- `22:26` feat add custom external links settings panel（[`7419be19`](https://github.com/weepwood/MRR/commit/7419be192e7e51aa01e59c98676a200b839354e3)）
+- `22:25` feat add external link validation helpers（[`e1d5149f`](https://github.com/weepwood/MRR/commit/e1d5149f03ba7c4483a6b26a249434f38f3c0dd2)）
+- `22:25` feat add external navigation link settings types（[`48b7fdce`](https://github.com/weepwood/MRR/commit/48b7fdce93316c0fe4f7d0d0abe1935b8362f60c)）
+- `22:22` vendor (frontend) add Motion runtime part 01（[`aa7d9d12`](https://github.com/weepwood/MRR/commit/aa7d9d12aad5feb8a27f602be567bb29be3c1e10)）
+- `22:15` chore (ci) allow PR lockfile bootstrap（[`3f397150`](https://github.com/weepwood/MRR/commit/3f397150695344c5be9a095dc2396fa317f62be3)）
+- `22:14` docs (frontend) document restrained motion timing（[`f4d66fc7`](https://github.com/weepwood/MRR/commit/f4d66fc711130c9d7d63eadeb7b5dead332b4270)）
+- `22:14` chore (ci) bootstrap Motion lockfile on feature branch（[`69356b25`](https://github.com/weepwood/MRR/commit/69356b251ce28146f451e2e88473593d24aae3b0)）
+- `22:04` chore (ci) trigger Motion lock bootstrap on branch push（[`9635003c`](https://github.com/weepwood/MRR/commit/9635003ce13a6b86cc3739983b1d2aa5a5bbf842)）
+- `22:03` chore (ci) bootstrap Motion lockfile on feature branch（[`99460ad5`](https://github.com/weepwood/MRR/commit/99460ad58dff87b75845f7213ab00247f1e0089c)）
+- `22:03` feat (frontend) respect reduced motion globally（[`4e3c0d58`](https://github.com/weepwood/MRR/commit/4e3c0d58ebaa57bd78397955c10700018ad9d83e)）
+- `22:02` feat (frontend) enable scoped motion enhancements（[`8198bdd8`](https://github.com/weepwood/MRR/commit/8198bdd82d5af05e4c2c94a76c6c79026d2ba0e7)）
+- `22:02` feat (frontend) add scoped motion enhancement styles（[`1acfbbfe`](https://github.com/weepwood/MRR/commit/1acfbbfe89d41984e56effb8ed950b496d48ad88)）
+- `22:02` feat (frontend) install scoped Motion interactions（[`28c6bb85`](https://github.com/weepwood/MRR/commit/28c6bb858713e7bc7573a0de13ea6b587ea2b119)）
+- `22:01` feat (frontend) add shared motion presets（[`3293a2ad`](https://github.com/weepwood/MRR/commit/3293a2ad3b4ff1412d540d2539724abbc69ea6b2)）
+- `21:59` feat (frontend) add Motion for Vue dependency（[`5b41cb27`](https://github.com/weepwood/MRR/commit/5b41cb2759334bf3bf81f64f056cdb42c7071850)）
+- `21:49` fix (frontend) 收紧请求重试并限制错误与指标队列（[`6838f364`](https://github.com/weepwood/MRR/commit/6838f364b8c501d1bdc6b5d2b64a3643c8c6ef62) · [PR #141](https://github.com/weepwood/MRR/pull/141)）
+- `21:49` feat 左侧导航增加分组多级菜单模式（[`91bb3306`](https://github.com/weepwood/MRR/commit/91bb3306b1b907c9b2a127a2f2e7c45e8693d5ac) · [PR #148](https://github.com/weepwood/MRR/pull/148)）
+- `21:46` style remove default background from nested menu items（[`e65ae20c`](https://github.com/weepwood/MRR/commit/e65ae20cdf25caa84c9cd9793c3a56602ef78899)）
+- `21:27` style unify menu backgrounds and move group arrow to icon（[`37deb8aa`](https://github.com/weepwood/MRR/commit/37deb8aa39be6f332a8413435878535333131435)）
+- `21:27` feat swap group icon for expand arrow on hover（[`3e954b26`](https://github.com/weepwood/MRR/commit/3e954b26eadc70079e65a014e92d1e7b9bbbea5c)）
+- `21:26` feat expose leading expand indicator option（[`30a6bf82`](https://github.com/weepwood/MRR/commit/30a6bf82c8d6b6e15c4b9d9a470b9323f015fa7c)）
+- `21:25` feat support leading submenu expand indicator（[`1ba0c3db`](https://github.com/weepwood/MRR/commit/1ba0c3db8fcc7827da2058d2b13ab42b555e1bc4)）
+- `21:17` style distinguish navigation levels with background shades（[`1f1a9d36`](https://github.com/weepwood/MRR/commit/1f1a9d368018607642e0cfb3ced2f9a2516e192c)）
+- `21:10` style remove submenu hierarchy guide line（[`4ce1125b`](https://github.com/weepwood/MRR/commit/4ce1125b07e94137b24647792791ef6cd6cc6391)）
+- `20:56` fix use scoped-safe selectors for grouped sidebar（[`333d33e9`](https://github.com/weepwood/MRR/commit/333d33e91cc846d991156eb205f2455080bbd498)）
+- `20:52` feat style single-column navigation as grouped multilevel menu（[`1c32afa8`](https://github.com/weepwood/MRR/commit/1c32afa8828775dbf9a7c0d8174b9ab342eef8f8)）
+- `20:52` feat preserve grouped routes in single-column navigation（[`22dbbb66`](https://github.com/weepwood/MRR/commit/22dbbb663830882835c6694ad9de78a767bb0787)）
+- `20:51` chore remove temporary navigation patch workflow（[`a1c1f7e0`](https://github.com/weepwood/MRR/commit/a1c1f7e0f3c8a64f9f180ad18846621eaf28921b)）
+- `20:48` chore apply multilevel navigation implementation（[`d00a75ab`](https://github.com/weepwood/MRR/commit/d00a75ab2ae7b3413ed687de152b282ec2dc6a61)）
+- `19:14` fix (metrics) suppress telemetry delivery errors（[`7562efb5`](https://github.com/weepwood/MRR/commit/7562efb5114276919c37419f43b2f5a774e6ebc6)）
+- `19:13` fix (frontend) preserve typed OSS legacy response compatibility（[`e624b830`](https://github.com/weepwood/MRR/commit/e624b8305cf10cf3f6b7021aae9e95b144ad8f46)）
+- `19:12` fix (frontend) type OSS request helper responses（[`7855d1c5`](https://github.com/weepwood/MRR/commit/7855d1c57c91a78934b72c748423bf33be9a0c92)）
+- `19:11` fix (frontend) satisfy strict axios interceptor typing（[`5cb54cc0`](https://github.com/weepwood/MRR/commit/5cb54cc0abdb2969f502fb731c85ac5ab753deb6)）
+- `19:08` fix (frontend) remove unused request error helper（[`4620b161`](https://github.com/weepwood/MRR/commit/4620b161c3901111758e6c0e322ec3f301851e23)）
+- `19:07` fix (frontend) retain request interceptor config typing（[`60ef4d7c`](https://github.com/weepwood/MRR/commit/60ef4d7c65d44368bf9e96010f4db266f41b560a)）
+- `19:00` fix (frontend) avoid plaintext data in error cache keys（[`d819e739`](https://github.com/weepwood/MRR/commit/d819e739728424416ff0a08aa30e94f5ef31c54e)）
+- `18:59` test (metrics) verify retry metadata persistence（[`3ae282ae`](https://github.com/weepwood/MRR/commit/3ae282ae503216dc35fdf82e5c51efd055f14d26)）
+- `18:59` test (frontend) avoid automatic flush in unload coverage（[`f57237f2`](https://github.com/weepwood/MRR/commit/f57237f2003c0dd9f548cf1af4c7a597b890a569)）
+- `18:58` test (frontend) use valid Retry-After HTTP date（[`a3c896f2`](https://github.com/weepwood/MRR/commit/a3c896f2df7c2088ac1f7cf1e4fd03719770328f)）
+- `18:58` fix (frontend) accept axios abort signal during retry delay（[`4d04c71f`](https://github.com/weepwood/MRR/commit/4d04c71f0ac69f18cc07daa94d41b035c7c6ba5f)）
+- `18:56` fix (frontend) preserve guarded generic response errors（[`09f15cd4`](https://github.com/weepwood/MRR/commit/09f15cd4ced14ff99b61566b3317d5ca52824327)）
+- `18:56` feat (metrics) insert retry metadata（[`4f4d00a7`](https://github.com/weepwood/MRR/commit/4f4d00a7e5c7d0e5c22c69c49b7a2bef2647f7b1)）
+- `18:55` feat (metrics) store frontend retry result（[`ef1c252f`](https://github.com/weepwood/MRR/commit/ef1c252fb56aace9cc1e48b334fdf9158df4c10d)）
+- `18:55` feat (metrics) add retry metadata to entity（[`723e3f2e`](https://github.com/weepwood/MRR/commit/723e3f2e6b7b0a6d740f76b175700ad00c90ab6e)）
+- `18:55` feat (metrics) validate frontend retry metadata（[`d5730a86`](https://github.com/weepwood/MRR/commit/d5730a86c0c3b3eda8d5b5bcb627e5211048e3d9)）
+- `18:55` feat (metrics) persist frontend retry outcome（[`76af17ed`](https://github.com/weepwood/MRR/commit/76af17edab4dc787d053ea4a8af7b8456a2f7df3)）
+- `18:55` fix (frontend) integrate safe retry and bounded telemetry（[`e8f73776`](https://github.com/weepwood/MRR/commit/e8f73776a5ecaf1ae5530f0f6eb86993e95888f1)）
+- `18:53` refactor (frontend) type retry-aware response metrics（[`56e11676`](https://github.com/weepwood/MRR/commit/56e116761a16d244e634ef85892cd143db6ab7c4)）
+- `18:53` refactor (frontend) handle request errors as unknown（[`2d965ffc`](https://github.com/weepwood/MRR/commit/2d965ffc2ee2b83936e4e2a8fb28d36bb265458f)）
+- `18:52` test (frontend) cover bounded metric queue behavior（[`4b60a3a5`](https://github.com/weepwood/MRR/commit/4b60a3a59e45864ca8d3a153152052c7f62d51ae)）
+- `18:52` fix (frontend) bound and retry response metric queue（[`445feda8`](https://github.com/weepwood/MRR/commit/445feda8b5b1a4cb11bb8c5839bbde58faf0b5cb)）
+- `18:51` test (frontend) cover error dedupe ttl and capacity（[`bf763c6a`](https://github.com/weepwood/MRR/commit/bf763c6a74e1402b9d3e8f5259fa30e9209be9bf)）
+- `18:51` fix (frontend) bound global error notification cache（[`2f4b5616`](https://github.com/weepwood/MRR/commit/2f4b5616da576040240ea3e6c62f9f8fbe0c5d06)）
+- `18:50` test (frontend) cover bounded request retry decisions（[`3dc8a449`](https://github.com/weepwood/MRR/commit/3dc8a44934febca6df3d7d4800991140fe3ca46c)）
+- `18:50` fix (frontend) enforce idempotent bounded request retries（[`25667bc9`](https://github.com/weepwood/MRR/commit/25667bc9e3bb564f628d1f681062206784799d0d)）
+- `18:04` fix (archive) 取消统计明细跳转后的返回按钮（[`8e049c81`](https://github.com/weepwood/MRR/commit/8e049c81371cdf852f119e516a1e91afbd2d6374) · [PR #136](https://github.com/weepwood/MRR/pull/136)）
+- `18:02` fix (archive) hide statistics detail return button（[`b571d3cb`](https://github.com/weepwood/MRR/commit/b571d3cbe6e9d40dae13605205860badc30aab60)）
+- `17:56` chore remove accidental temporary file（[`f471161b`](https://github.com/weepwood/MRR/commit/f471161b294389877127e526730e279e67805c60)）
+- `17:56` chore placeholder（[`85e6d35c`](https://github.com/weepwood/MRR/commit/85e6d35c3edcdfd05d37a27f7bca238af48e807a)）
+- `17:56` chore remove accidental temporary file（[`d0a3d075`](https://github.com/weepwood/MRR/commit/d0a3d0756bb59a3e7e3d40a0a0a21f283d18a422)）
+- `17:56` chore placeholder（[`22d19b83`](https://github.com/weepwood/MRR/commit/22d19b83e9b68d8f44cfc21918abba666da36330)）
+- `17:46` merge Feat/restore runtime developer mode 20260720（[`fac557ce`](https://github.com/weepwood/MRR/commit/fac557ceb6a4472877ed684f5ce79ec88ac9e46c) · [PR #134](https://github.com/weepwood/MRR/pull/134)）
+- `17:46` fix (archive) 修复统计明细跳转后的布局与查询规则（[`04d5358c`](https://github.com/weepwood/MRR/commit/04d5358c5a81fd75b2d5327adf4f925bf5072026) · [PR #133](https://github.com/weepwood/MRR/pull/133)）
+- `17:41` test (archive) avoid unused strict Mockito stubs（[`e3c6ae65`](https://github.com/weepwood/MRR/commit/e3c6ae652f7a37697aa9cc29f71dca10f91498d0)）
+- `17:39` test (archive) verify backend lookup key selection（[`c0a54f31`](https://github.com/weepwood/MRR/commit/c0a54f31e0d54617847663e2f70eab3b6984656c)）
+- `17:39` test (archive) cover unified lookup boundary rules（[`d52f640f`](https://github.com/weepwood/MRR/commit/d52f640f9bc79aaba018ab0c097977d7410d2e95)）
+- `17:39` fix (archive) keep header readable in narrow workspace（[`3a6c796e`](https://github.com/weepwood/MRR/commit/3a6c796efff976259ffa3157ef9120c8777cab12)）
+- `17:38` fix (archive) enforce lookup key selection on backend（[`fc3f317f`](https://github.com/weepwood/MRR/commit/fc3f317ffd124fc585b7b554fd126fc7651a3a83)）
+- `17:36` fix (archive) query by the resolved archive key（[`7333fcad`](https://github.com/weepwood/MRR/commit/7333fcade1c98621859ea9e81f4ad19b16e594f5)）
+- `17:35` fix (archive) unify bah and sjh lookup resolution（[`9915e9eb`](https://github.com/weepwood/MRR/commit/9915e9eb879e82bba8407aac1828bc573ef272c8)）
+- `17:28` refactor 将开发者模式提示改为标题旁标识（[`13b30c43`](https://github.com/weepwood/MRR/commit/13b30c43f0a2bee8549e29a915ebfe18d48e7ee3) · [PR #131](https://github.com/weepwood/MRR/pull/131)）
+- `17:15` refactor (frontend) remove obsolete developer mode banner component（[`d1a86a60`](https://github.com/weepwood/MRR/commit/d1a86a60bf52061d19805ab6235ed7033383a850)）
+- `17:15` test (frontend) replace developer mode banner coverage（[`a0566189`](https://github.com/weepwood/MRR/commit/a0566189b02f3be9abed6e9e24e55ec5366b5196)）
+- `17:14` test (frontend) cover compact developer mode badge（[`e91ceb75`](https://github.com/weepwood/MRR/commit/e91ceb758596c00a7f408ba8dc9ca0a23037c4c6)）
+- `17:14` refactor (frontend) remove global developer mode banner（[`880c024e`](https://github.com/weepwood/MRR/commit/880c024ec4fb8c787456e776551d5eaed5694c22)）
+- `17:14` refactor (frontend) show developer mode badge beside app title（[`84cb8792`](https://github.com/weepwood/MRR/commit/84cb8792e43a4250f4af56166d3e29202dbdbb77)）
+- `17:13` refactor (frontend) remove obsolete developer mode banner component（[`9067f404`](https://github.com/weepwood/MRR/commit/9067f404ffc7bac6cc9f66d366a7d1b409275209)）
+- `17:13` test (frontend) replace developer mode banner coverage（[`d5cab3f8`](https://github.com/weepwood/MRR/commit/d5cab3f823bb81a3770e37ebcc2a8c5b57b948ca)）
+- `17:13` test (frontend) cover compact developer mode badge（[`fe2b267d`](https://github.com/weepwood/MRR/commit/fe2b267dd1c7c8f446d647d92717628a4c02652d)）
+- `17:12` refactor (frontend) remove global developer mode banner（[`db7d54fa`](https://github.com/weepwood/MRR/commit/db7d54faee6f94b90bff743e35f65eca1b6716f8)）
+- `17:12` refactor (frontend) show developer mode badge beside app title（[`800c3283`](https://github.com/weepwood/MRR/commit/800c328300a011b184a2746bddaf22378e9f557e)）
+- `16:44` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`6829ae3c`](https://github.com/weepwood/MRR/commit/6829ae3ca0a7ebfc87b7cd3ed568b4bea5864b74)）
+- `16:44` feat 恢复可在打包产物中启用的开发者模式（[`081aabf2`](https://github.com/weepwood/MRR/commit/081aabf2b23e58946e2e460e3c32be41ab8a7767) · [PR #130](https://github.com/weepwood/MRR/pull/130)）
+- `16:43` fix 修复病案扫描统计 CSV 导出 400 错误（[`a644efe4`](https://github.com/weepwood/MRR/commit/a644efe4b24e6dffe34fc528c0551683b9b3f1f1) · [PR #129](https://github.com/weepwood/MRR/pull/129)）
+- `16:42` merge Merge commit 'c3f375d5c6e032d3f6af76e53b5705ff09129a76' into dev-no-login（[`441ea49e`](https://github.com/weepwood/MRR/commit/441ea49ecd283eb09d5b53144ce3dec1a86c1e13)）
+- `16:40` test persist developer mode in frontend settings（[`8f09a495`](https://github.com/weepwood/MRR/commit/8f09a4956f65c23ed997a5d92a26d6af9c902ae6)）
+- `16:40` style (statistics) normalize export service formatting（[`700b969c`](https://github.com/weepwood/MRR/commit/700b969cec5e01c75f390e620384a208f698ace0)）
+- `16:40` test allow managed developer mode setting mutations（[`3fcdfb7e`](https://github.com/weepwood/MRR/commit/3fcdfb7e8a7613d2b83dafa5d453d52549d540e0)）
+- `16:40` test expose restored developer mode status（[`be712397`](https://github.com/weepwood/MRR/commit/be7123973670178f4b46256e7ff9e7c462d95b68)）
+- `16:39` test (statistics) verify CSV export uses export service（[`d6a84ba5`](https://github.com/weepwood/MRR/commit/d6a84ba58155f3e2b2cc775446f5ee92dc695a94)）
+- `16:39` test restore developer mode authentication coverage（[`e1816f74`](https://github.com/weepwood/MRR/commit/e1816f7493a193da175b80a3c57760753122a89a)）
+- `16:39` test cover restored runtime developer mode service（[`f30fb2b6`](https://github.com/weepwood/MRR/commit/f30fb2b68c4fef54a04d4e7ca3ef0749f3e196f1)）
+- `16:39` test (statistics) cover dedicated export query（[`62d34828`](https://github.com/weepwood/MRR/commit/62d34828b950c44dae46e2ff89beeac2a58c2828)）
+- `16:39` feat restore packaged developer mode toggle UI（[`98e2955a`](https://github.com/weepwood/MRR/commit/98e2955a4069b43293b9ef8d138d6b53f636015e)）
+- `16:38` feat persist developer mode in packaged frontend settings（[`b6d75b57`](https://github.com/weepwood/MRR/commit/b6d75b57fc95ff43f6c587e2b1c7b4aca356fbe1)）
+- `16:38` fix (statistics) use dedicated export query（[`705d8243`](https://github.com/weepwood/MRR/commit/705d824374e8e3b08378c4481afdcb7290fff47b)）
+- `16:38` feat restore developer mode CORS behavior（[`077248fa`](https://github.com/weepwood/MRR/commit/077248fa48a23177a24de91b2da42b4c4ef45f22)）
+- `16:37` feat restore developer mode authentication fallback（[`c943005b`](https://github.com/weepwood/MRR/commit/c943005b9e73920e9ad3b50ae12bc2f05952ca24)）
+- `16:37` fix (statistics) bypass page-size validation for exports（[`333b0bab`](https://github.com/weepwood/MRR/commit/333b0baba86d37ac07ad23e099e5b869fabc2b04)）
+- `16:37` fix (statistics) add dedicated export query service（[`850c83ee`](https://github.com/weepwood/MRR/commit/850c83ee8fe0d4ce60f8a7776f0ed74c88cd8e09)）
+- `16:37` feat allow managed developer mode setting updates（[`f22621b9`](https://github.com/weepwood/MRR/commit/f22621b97ee8f1ba631d8389d7346fd8c97ebf0a)）
+- `16:36` feat restore runtime developer mode service（[`46fa366d`](https://github.com/weepwood/MRR/commit/46fa366dcf86b9abc3324ffc0d3b839ee8c0e037)）
+- `16:28` feat 病案扫描统计增加年份快捷筛选与表格导出（[`64ae0aba`](https://github.com/weepwood/MRR/commit/64ae0abae42e2d2918c397de89362f05169f2b83) · [PR #127](https://github.com/weepwood/MRR/pull/127)）
+- `16:25` feat (audit) 优化 /audit-images 双向审计与导出（[`4a8b769b`](https://github.com/weepwood/MRR/commit/4a8b769ba3dbf385ebf8b1141561aa2416253bf7) · [PR #125](https://github.com/weepwood/MRR/pull/125)）
+- `15:51` fix 修复前端生产构建（[`c3f375d5`](https://github.com/weepwood/MRR/commit/c3f375d5c6e032d3f6af76e53b5705ff09129a76)）
+- `14:05` fix (audit) avoid duplicate top-target mapper statement（[`630e9b1b`](https://github.com/weepwood/MRR/commit/630e9b1b75e19a260ea505d8f8565ba7957d2f83)）
+- `14:04` fix (audit) prefer server-resolved archive identifiers（[`1d3834d1`](https://github.com/weepwood/MRR/commit/1d3834d1ea66e9b6339ffa3d0f9e70124b564c9b)）
+- `14:03` feat (statistics) add year filter and table export（[`5b55492e`](https://github.com/weepwood/MRR/commit/5b55492ee222f20260b3b25f470c2e4bf1f0f69b)）
+- `14:01` fix (audit) declare derived audit identifier fields（[`37b84011`](https://github.com/weepwood/MRR/commit/37b8401176f04b29691231ed4e93c94460961017)）
+- `14:01` feat (audit) derive separate archive identifiers and patient ID（[`8131b42f`](https://github.com/weepwood/MRR/commit/8131b42f9b2a691b309a4fbe62943d2eea9c3547)）
+- `13:59` feat (audit) expose separated archive identifiers（[`61f05ff7`](https://github.com/weepwood/MRR/commit/61f05ff79a3fb7b35b24358d447f3eb12017fb54)）
+- `13:59` fix (audit) split identifiers in audit CSV export（[`cc28e938`](https://github.com/weepwood/MRR/commit/cc28e9380b6ce40f2c62767a32b66729dde29af8)）
+- `13:58` fix (audit) split medical record identifiers in recent access table（[`4beb226a`](https://github.com/weepwood/MRR/commit/4beb226a63140403f5c90c111906d366bb0acfcf)）
+- `13:48` fix (audit) 修正 PostgreSQL 正则分组（[`9d415cc9`](https://github.com/weepwood/MRR/commit/9d415cc9c6716b8eaa98597f01f581e148573ca7)）
+- `13:48` fix (audit) 回填历史 search 审计对象（[`99da7413`](https://github.com/weepwood/MRR/commit/99da7413137297800b8e13e2b89a83fca2c22f7b)）
+- `13:47` test (audit) 覆盖内部查询病历号审计（[`166ac878`](https://github.com/weepwood/MRR/commit/166ac878029a32a33aebb000d423064aa1804690)）
+- `13:46` fix (audit) 记录内部病历查询的真实审计对象（[`e0b6bbb0`](https://github.com/weepwood/MRR/commit/e0b6bbb0fa8c82396ec8e480dc3f5bb54f3ae253)）
+- `13:41` fix (audit) normalize blob export response（[`b92e9f39`](https://github.com/weepwood/MRR/commit/b92e9f39f06af1937a0d71092800f74994cb2c95)）
+- `13:26` feat (audit) optimize audit images dashboard and exports（[`6eb84806`](https://github.com/weepwood/MRR/commit/6eb84806557c7ccb4ee592fb051d0ae4caf97dcc)）
+- `13:25` feat (audit) redesign analytics as dual exportable rankings（[`2a572bcb`](https://github.com/weepwood/MRR/commit/2a572bcb9844424ed3460a7357992ef1e4aa8d49)）
+- `13:24` feat (audit) add image audit CSV export API（[`5a4fc1e5`](https://github.com/weepwood/MRR/commit/5a4fc1e5e63ba6cd418343587e1f463a646cc765)）
+- `13:23` feat (audit) add filtered image audit CSV exports（[`47eb138a`](https://github.com/weepwood/MRR/commit/47eb138a7730cc6f3607654602db88b095deba3c)）
+- `13:23` feat (audit) include top accessed records in analytics（[`f42ce37e`](https://github.com/weepwood/MRR/commit/f42ce37e470790b2ca2e5cde7270a43839787003)）
+- `13:22` fix (audit) implement top record aggregation query（[`ca828f49`](https://github.com/weepwood/MRR/commit/ca828f490ade78f542d29b63392ec7e7b31bd1db)）
+- `13:21` feat (audit) query top accessed records（[`a9952a1d`](https://github.com/weepwood/MRR/commit/a9952a1dcf16d72c3f419edb5cfefc13de97acf0)）
+- `13:21` feat (audit) add top accessed records analytics（[`cb827414`](https://github.com/weepwood/MRR/commit/cb8274141287a7392ed53818db1b53a4687a9253)）
+- `13:07` feat (audit) 完善全接口访问审计并保留可追溯参数（[`d530cb5e`](https://github.com/weepwood/MRR/commit/d530cb5ee6ba80a9e3bf35a27d9fa955ee230a2e) · [PR #123](https://github.com/weepwood/MRR/pull/123)）
+- `12:55` docs (audit) document layered access tracing workflow（[`a2b20503`](https://github.com/weepwood/MRR/commit/a2b20503dce2963af4ade0553c00b794eebb1eef)）
+- `12:54` fix (audit) prevent credentials leaking through nginx logs（[`e0496d14`](https://github.com/weepwood/MRR/commit/e0496d1481831e034b99af56ff78c6d525cdf6a4)）
+- `12:53` feat (audit) add structured nginx edge access log（[`b7a6215e`](https://github.com/weepwood/MRR/commit/b7a6215e052b875519fb07d9603a4188b7eca54d)）
+- `12:47` test (audit) align integration schema with access log fields（[`2b6def0f`](https://github.com/weepwood/MRR/commit/2b6def0ffa678e0db8cc7c4c4a0e1ef66cdff2fa)）
+- `12:47` feat (audit) display complete request trace details（[`ddee5a53`](https://github.com/weepwood/MRR/commit/ddee5a5343995d959652915efc4b9694e2b93ec5)）
+- `12:45` fix (audit) preserve complete frontend type definitions（[`ae9bf5be`](https://github.com/weepwood/MRR/commit/ae9bf5be0f8ba00910838f850aa0ea12ea865a3e)）
+- `12:44` feat (audit) type extended access log details（[`d5437ae2`](https://github.com/weepwood/MRR/commit/d5437ae2f2ba00e48163a12985681b0594eb496e)）
+- `12:44` test (audit) verify traceability and credential protection（[`bf8e233a`](https://github.com/weepwood/MRR/commit/bf8e233a66c5757a17817847a6e27c551a55f170)）
+- `12:43` feat (audit) add full request trace columns（[`54e896e6`](https://github.com/weepwood/MRR/commit/54e896e616b0841c7d7e80e797b0bac8c798358a)）
+- `12:43` feat (audit) expose extended audit fields in searches（[`6aaa19a8`](https://github.com/weepwood/MRR/commit/6aaa19a873f16c30e5008598668cb5c432b5d988)）
+- `12:42` feat (audit) persist extended request audit fields（[`ae51b532`](https://github.com/weepwood/MRR/commit/ae51b532cc50439843f40c98932d7790d76b24aa)）
+- `12:40` feat (audit) cache auditable text request bodies（[`f51da375`](https://github.com/weepwood/MRR/commit/f51da375de99ffd9dc2592dcd2f0fb2c435409b3)）
+- `12:39` feat (audit) preserve traceable request details safely（[`3ca9892b`](https://github.com/weepwood/MRR/commit/3ca9892b2414673acebc0c314369ce72979d4e2a)）
+- `12:38` feat (audit) extend access log model（[`01c0f219`](https://github.com/weepwood/MRR/commit/01c0f2190dc9753594d9f5b184bc916c5c0d15da)）
+- `12:27` fix (api) 统一 Result 失败响应与 HTTP 状态码（[`ab544f23`](https://github.com/weepwood/MRR/commit/ab544f23fe48a20da1728a7b23d57a5d14719d3a) · [PR #119](https://github.com/weepwood/MRR/pull/119)）
+- `12:26` chore 清理前端遗留品牌信息（[`f875f5bb`](https://github.com/weepwood/MRR/commit/f875f5bb59961b980ed7ff07db8270c68c45f159)）
+- `11:57` test 完善核心测试与质量门禁（[`e87311a1`](https://github.com/weepwood/MRR/commit/e87311a1fed3825888051c3d5b4c45549ce23bfc) · [PR #107](https://github.com/weepwood/MRR/pull/107)）
+- `11:53` fix (auth) 迁移并自愈旧版前端登录状态（[`15bb8d45`](https://github.com/weepwood/MRR/commit/15bb8d456c6560f72be88bb2622db3f014d45e3f) · [PR #118](https://github.com/weepwood/MRR/pull/118)）
+- `11:53` test (api) verify Result HTTP statuses through MockMvc（[`75f7677e`](https://github.com/weepwood/MRR/commit/75f7677e190aa922fbe9f81fed63a1189083882a)）
+- `11:52` test (api) call ResponseBodyAdvice beforeBodyWrite（[`9f298a5f`](https://github.com/weepwood/MRR/commit/9f298a5f171f44205c5395e99360fa1efb5b9076)）
+- `11:52` fix (api) implement ResponseBodyAdvice contract correctly（[`00927ec7`](https://github.com/weepwood/MRR/commit/00927ec7ec1b2dd859847bfcd345ab655c4bee5c)）
+- `11:51` test (auth) cover credential exception translation to 401（[`8ef98ffe`](https://github.com/weepwood/MRR/commit/8ef98ffe58bdfcd747fe5bce1a4d0b461c2e5cf3)）
+- `11:50` fix (auth) translate credential rejection to unauthorized（[`574b9565`](https://github.com/weepwood/MRR/commit/574b9565135a63ce76b3b246f767afc51dd5f23b)）
+- `11:48` refactor (auth) make login redirect query construction explicit（[`87c155a1`](https://github.com/weepwood/MRR/commit/87c155a1d99ef4806df6201b88782e4a14243210)）
+- `11:48` fix (frontend) accept all 2xx business response codes（[`f5e2fd30`](https://github.com/weepwood/MRR/commit/f5e2fd301f80f2338f8a976b6e4630a44055004c)）
+- `11:46` fix (auth) keep avatar cache synchronized after session refresh（[`443a7819`](https://github.com/weepwood/MRR/commit/443a7819a96964c1dd87a2d4f00de037be5e3879)）
+- `11:45` test (api) cover business exception HTTP status mapping（[`592d621c`](https://github.com/weepwood/MRR/commit/592d621cf0c30a7d9010bff091a0e805a0946933)）
+- `11:45` test (auth) assert semantic authentication and not-found codes（[`6d8cb484`](https://github.com/weepwood/MRR/commit/6d8cb4847808878dd8c03d177fcc24e8568500a0)）
+- `11:44` feat (auth) show recoverable session verification notice（[`dd9b7807`](https://github.com/weepwood/MRR/commit/dd9b7807cdce46ee7c846266d831d0f6548c2de0)）
+- `11:44` test (api) verify Result response HTTP status alignment（[`21c9b9ab`](https://github.com/weepwood/MRR/commit/21c9b9abf6e481b9f6f7c0deaca1be9727f1d8d5)）
+- `11:44` test (api) verify result code HTTP mappings（[`7685f1bd`](https://github.com/weepwood/MRR/commit/7685f1bdbaa481a41c4f3723eb774c9a12d8ce0f)）
+- `11:43` test (api) cover 2xx result success semantics（[`03d54796`](https://github.com/weepwood/MRR/commit/03d5479603a8a9e24ab857770632ab1f25aa40c1)）
+- `11:42` fix (auth) return semantic HTTP error codes（[`6793d0d3`](https://github.com/weepwood/MRR/commit/6793d0d30592b39fcd2ee5bd55e4dc92d2e3f8b0)）
+- `11:42` docs (auth) document local session migration and recovery（[`cb8409c7`](https://github.com/weepwood/MRR/commit/cb8409c7bd84d372ce15cc2782667fa9a5bdce7a)）
+- `11:42` fix (api) align Result failures with HTTP response status（[`e62f8f51`](https://github.com/weepwood/MRR/commit/e62f8f51acefe725a1fb7b131a631eef6ca20d29)）
+- `11:41` fix (auth) harden partial storage migrations and profile typing（[`25701acb`](https://github.com/weepwood/MRR/commit/25701acb7b408d84806381607422368eb6a83a47)）
+- `11:41` fix (api) reuse unified HTTP status resolver（[`eeefc46a`](https://github.com/weepwood/MRR/commit/eeefc46a3e95806283e7e65206a0e33a84273168)）
+- `11:41` fix (api) treat all 2xx result codes as success（[`7b5272d9`](https://github.com/weepwood/MRR/commit/7b5272d94e594d4624ba659344dba25242fc8819)）
+- `11:40` fix (api) add HTTP status mapping for result codes（[`991e88d4`](https://github.com/weepwood/MRR/commit/991e88d4dc409151193057c8add77a73d6fb5197)）
+- `11:40` test (auth) mark mocked permission sessions as verified（[`7621e15b`](https://github.com/weepwood/MRR/commit/7621e15bba2a169e8dcfc5ca9cff1a3b3e9f54fd)）
+- `11:40` fix (auth) expose only verified user session data（[`945034e9`](https://github.com/weepwood/MRR/commit/945034e931bf282830e53311293b3ea9708c8cc5)）
+- `11:40` fix (auth) reject stale permissions before session verification（[`4bbe7d37`](https://github.com/weepwood/MRR/commit/4bbe7d378bfb91730bd496c74d47f12c41a20917)）
+- `11:38` test (auth) verify restored session healing in browser flows（[`3b6eb9a1`](https://github.com/weepwood/MRR/commit/3b6eb9a18e147f13197c81e004a878b5fc42e974)）
+- `11:36` test (auth) cover legacy session migration and self-healing（[`7d9d71b0`](https://github.com/weepwood/MRR/commit/7d9d71b005c0960b5738167a9cefac288b8fe3e3)）
+- `11:36` refactor (auth) migrate remembered login account storage（[`611d72d7`](https://github.com/weepwood/MRR/commit/611d72d7d500fc3690791b3cd5f7542dbb3c2037)）
+- `11:35` refactor (auth) persist password-change state through user store（[`7328d9a7`](https://github.com/weepwood/MRR/commit/7328d9a769f7cbef8c285628ca0c3b4ddc09e88d)）
+- `11:34` fix (auth) verify restored session before protected routing（[`cf929c5b`](https://github.com/weepwood/MRR/commit/cf929c5b0d013944e3b0db529eebc4fc5ed29df7)）
+- `11:33` refactor (auth) centralize session persistence and verification（[`824ee525`](https://github.com/weepwood/MRR/commit/824ee52593615fb0b6b68f4098fcb2f80d5bc585)）
+- `11:33` feat (auth) add versioned local session storage migration（[`30955622`](https://github.com/weepwood/MRR/commit/30955622d83490ff3f5957374a6d183c028605c8)）
+- `11:20` test (backend) avoid ambiguous JdbcTemplate matcher overload（[`96e3fb16`](https://github.com/weepwood/MRR/commit/96e3fb16d58df373517bb299dbd140a2324d0987)）
+- `11:17` ci (test) run quality gates on pull requests and execute integration tests（[`254c1b05`](https://github.com/weepwood/MRR/commit/254c1b058868657b9fe53517e91563cd00180a76)）
+- `11:17` test (backend) rename H2 integration test for Failsafe（[`f93c49a2`](https://github.com/weepwood/MRR/commit/f93c49a29087659866440d4d49a183121f3cffbf)）
+- `11:16` test (backend) make H2 mapper test discoverable by Failsafe（[`fd0e8117`](https://github.com/weepwood/MRR/commit/fd0e8117dc2c4ee198d450b0d511fcae99cd45c0)）
+- `11:16` test (backend) rename PostgreSQL integration test for Failsafe（[`afabafba`](https://github.com/weepwood/MRR/commit/afabafba8db971eb9bf829fe0e210f9c79c889d9)）
+- `11:16` test (backend) make PostgreSQL mapper test discoverable by Failsafe（[`3ddc4bd5`](https://github.com/weepwood/MRR/commit/3ddc4bd5a2279795c49d56f0201aac9d02773b0f)）
+- `11:14` test (release) add release baseline contract tests（[`e7ea59da`](https://github.com/weepwood/MRR/commit/e7ea59daf93375f06ce09198a6fad47ce78fd12b)）
+- `11:14` test (backend) cover data quality service edge cases（[`adfda5bd`](https://github.com/weepwood/MRR/commit/adfda5bd7e7d6245900a08ef22cc317ec320634f)）
+- `11:13` test (backend) cover data quality controller（[`75f17f12`](https://github.com/weepwood/MRR/commit/75f17f129a8e8b3dd9bc38fe48092ce9f3af95dd)）
+- `11:05` fix (security) 阻断系统设置开发者模式权限提升链（[`ad69283f`](https://github.com/weepwood/MRR/commit/ad69283f203ab29b86ba4e3b2a0aff8760f94245) · [PR #103](https://github.com/weepwood/MRR/pull/103)）
+- `11:04` fix (frontend) 支持 Chrome 109 基础操作（[`3b19b687`](https://github.com/weepwood/MRR/commit/3b19b687204b17ca220ac91a2dd00e7035c6f1c8) · [PR #105](https://github.com/weepwood/MRR/pull/105)）
+- `11:00` feat 建立唯一产品版本与发布基线（[`e7d21039`](https://github.com/weepwood/MRR/commit/e7d210394543fc73791f3edf43c4d479dd2294a5) · [PR #93](https://github.com/weepwood/MRR/pull/93)）
+- `10:36` style (docs) normalize frontend guide formatting（[`09db1e7d`](https://github.com/weepwood/MRR/commit/09db1e7d79a025a926df51bb0b08860112246279)）
+- `10:35` style (frontend) normalize browser bootstrap formatting（[`0b107b07`](https://github.com/weepwood/MRR/commit/0b107b07d39c19c378bd22ee223199806f230eda)）
+- `10:35` style (frontend) normalize package manifest formatting（[`833a4840`](https://github.com/weepwood/MRR/commit/833a48405162a571bf5b2ab9914477ad5d82fc63)）
+- `10:34` style (frontend) normalize global stylesheet formatting（[`cb87a66d`](https://github.com/weepwood/MRR/commit/cb87a66dbe439be0f294fbb34fafc3a43879b049)）
+- `10:34` style (frontend) normalize compatibility stylesheet formatting（[`cb449cc2`](https://github.com/weepwood/MRR/commit/cb449cc257d7753dad4595af41e268e59edb02c2)）
+- `10:32` docs (install) remove unrelated wording change（[`c5968e35`](https://github.com/weepwood/MRR/commit/c5968e356239ce542af9767c9d384e6b11ecd4f4)）
+- `10:31` docs (install) declare Chrome 109 minimum version（[`663029af`](https://github.com/weepwood/MRR/commit/663029af58722179063595b54a3f3409b928c3e0)）
+- `10:30` docs (frontend) document Chrome 109 compatibility baseline（[`0e04a12e`](https://github.com/weepwood/MRR/commit/0e04a12ed647a81ff1acc6f6e6f770be19f1d004)）
+- `10:29` fix (frontend) load browser compatibility styles（[`f37adcfc`](https://github.com/weepwood/MRR/commit/f37adcfc3d29635c9a92365198167b3f287ec1e6)）
+- `10:29` fix (frontend) add Chrome 109 visual fallbacks（[`18dec8c5`](https://github.com/weepwood/MRR/commit/18dec8c501bc3b0e221873be3cb4f7d47b18b882)）
+- `10:28` fix (frontend) allow Chrome 109 to start the application（[`17be23f2`](https://github.com/weepwood/MRR/commit/17be23f262f81b7c0b84d12cc8eee8dc6bdbce37)）
+- `10:28` fix (frontend) compile production assets for Chrome 109（[`b05c6999`](https://github.com/weepwood/MRR/commit/b05c6999e44416005b39ee5749220fe157aa9144)）
+- `10:27` fix (frontend) lower Chrome compatibility baseline to 109（[`1f557fab`](https://github.com/weepwood/MRR/commit/1f557fab2c3eb16d6d8e5b03ce440b28a4734c64)）
+- `10:23` fix (interceptor) 修复登录拦截器中的方法引用错误（[`00204ab4`](https://github.com/weepwood/MRR/commit/00204ab4631452651b2257f323859acd0ffecd64)）
+- `10:21` feat (components) 添加Element Plus组件类型声明和更新.gitignore（[`f6c0cc87`](https://github.com/weepwood/MRR/commit/f6c0cc875fb334d4d5370261cb0fff7eef47cbf4)）
+- `09:54` fix (security) hide retired runtime security settings（[`ba8dba3f`](https://github.com/weepwood/MRR/commit/ba8dba3ff029eca5c123cf00863140491b108b1a)）
+- `09:53` test (security) reject runtime developer mode mutations（[`bc713023`](https://github.com/weepwood/MRR/commit/bc713023ae06c54cd24672f0b35294da6a179ca5)）
+- `09:52` test (security) ignore legacy developer mode values（[`c0091022`](https://github.com/weepwood/MRR/commit/c00910229a62014a7a68d3a6f9e9707ec0ad25bc)）
+- `09:52` fix (security) ignore legacy developer mode setting（[`5f20b120`](https://github.com/weepwood/MRR/commit/5f20b120afeef9e819c44aab57fea46d0d2f777d)）
+- `09:51` refactor (settings) remove legacy developer state binding（[`6d5aefbb`](https://github.com/weepwood/MRR/commit/6d5aefbb8ea2d0af6f09a361422023cabbdf6d9d)）
+- `09:50` fix (security) disable legacy developer mode setting UI（[`f541237c`](https://github.com/weepwood/MRR/commit/f541237cea56534bf072b69030876959752adbee)）
+- `09:50` fix (security) ignore legacy security keys in bulk settings（[`29878467`](https://github.com/weepwood/MRR/commit/2987846730f64c71ee6a0188c53ee807ee0e98c3)）
+- `09:49` test (security) lock settings permission boundary（[`14015c5a`](https://github.com/weepwood/MRR/commit/14015c5af70ba96225439a59774fa995662839f5)）
+- `09:48` test (security) expose developer mode as disabled（[`925604a8`](https://github.com/weepwood/MRR/commit/925604a8d66e2fef48fb0adf28bec2b75420e1d8)）
+- `09:48` test (security) ensure developer mode cannot be enabled（[`246503b4`](https://github.com/weepwood/MRR/commit/246503b496f258c385e1c97e432c47a00db86a97)）
+- `09:48` test (security) cover blocked developer auth bypass（[`2cd39198`](https://github.com/weepwood/MRR/commit/2cd39198d32917c4614e036d2cf982d3a2752bc5)）
+- `09:48` fix (security) never relax CORS from runtime settings（[`c41f8f69`](https://github.com/weepwood/MRR/commit/c41f8f69d5e8500ae6b4a75db8d764663f2553e7)）
+- `09:47` fix (security) reject legacy developer auth bypass（[`b9571a5c`](https://github.com/weepwood/MRR/commit/b9571a5c815c011923d93907164ad9d596188b15)）
+- `09:46` fix (security) hard-disable legacy developer mode（[`53c04f31`](https://github.com/weepwood/MRR/commit/53c04f31683b29737dd594b993f925c4716adb3f)）
+- `09:46` fix (security) require manage permission for settings writes（[`5cf5a28d`](https://github.com/weepwood/MRR/commit/5cf5a28d9e7c3501a6ef4866a54a92e9e1274a3d)）
 
 ## 2026-07-19
 
-- **新增** 完善认证、用户凭据与外部影像安全访问（[`3e1303d`](https://github.com/weepwood/MRR/commit/3e1303d50a8f637f302e21446713903354a77e0d) · [PR #84](https://github.com/weepwood/MRR/pull/84)） — weepwood
+- `22:22` docs 明确基线前旧包不进入受管理回滚（[`413a9a2c`](https://github.com/weepwood/MRR/commit/413a9a2c8c2c2c73d2d89d314cc2d3bcd39839cd)）
+- `22:22` docs 明确只支持受管理发布包回滚（[`1fe53636`](https://github.com/weepwood/MRR/commit/1fe536368eea1cb6d599708209348a0ee71b7f65)）
+- `22:14` build 使用 Spring Boot 管理的 Git 信息插件版本（[`ee16fbea`](https://github.com/weepwood/MRR/commit/ee16fbea077727390ee8706b2f60f316120524e7)）
+- `22:13` build 强制发布清单使用完整 Git SHA 与 UTC 时间（[`0b84297a`](https://github.com/weepwood/MRR/commit/0b84297a3be2bce08924108913032e1a8f25f1b8)）
+- `22:09` fix 校验可执行 JAR 内的构建信息路径（[`b55224c3`](https://github.com/weepwood/MRR/commit/b55224c31163475d24c3106b692328cc357f015b)）
+- `22:07` docs Windows 运维说明对齐唯一版本与发布清单（[`5dff7623`](https://github.com/weepwood/MRR/commit/5dff7623f5c1e8b31a00156c9b920b87f94ddef2)）
+- `22:06` feat 登录页显示统一产品版本（[`b42e025a`](https://github.com/weepwood/MRR/commit/b42e025a0232c5f60f0a365ef2fdc4cd54df815b)）
+- `22:04` feat Windows 运维按发布基线校验版本与回滚（[`bc90cc7f`](https://github.com/weepwood/MRR/commit/bc90cc7f608897a492050130d2e49f3613b3b8e8)）
+- `22:00` docs Windows 部署对齐统一版本和 manifest（[`08664c8c`](https://github.com/weepwood/MRR/commit/08664c8c1a9da0aa49108288819913df5fd1b2c3)）
+- `21:59` docs 内部首页对齐唯一版本和日期迁移链（[`b7935d59`](https://github.com/weepwood/MRR/commit/b7935d59870b80236677f8307d9c7e0286dcf6e2)）
+- `21:58` docs 更新统一版本与发布基线日志（[`e4c60bf2`](https://github.com/weepwood/MRR/commit/e4c60bf255c554621a0208ea131d1f7448480275)）
+- `21:58` docs README 对齐唯一产品版本与发布基线（[`4613f7f2`](https://github.com/weepwood/MRR/commit/4613f7f2c44f68029df7f470614c448b75684d3c)）
+- `21:57` docs 重写唯一版本与发布基线流程（[`d410c2e2`](https://github.com/weepwood/MRR/commit/d410c2e24429a04d9418b1a639049ab472032f82)）
+- `21:56` docs 内部文档显示统一产品版本（[`f53eed4e`](https://github.com/weepwood/MRR/commit/f53eed4e33ce607cf004f6439ef3fa8f93fa189c)）
+- `21:55` docs 用户手册显示统一产品版本（[`7d580739`](https://github.com/weepwood/MRR/commit/7d580739099b3860bb5aaec82b915fe56b430a11)）
+- `21:55` ci 发布包统一读取产品版本和兼容基线（[`bb9e49d7`](https://github.com/weepwood/MRR/commit/bb9e49d7916ab42e7f695514883b3769216a3118)）
+- `21:54` feat 系统信息展示统一版本与回滚基线（[`36523013`](https://github.com/weepwood/MRR/commit/365230130ecf58ff8a40096b78c7ae8b9806d200)）
+- `21:53` build 更新前端发布元数据类型（[`4cdc121f`](https://github.com/weepwood/MRR/commit/4cdc121f9e972042f67f92cc244f3141c899a64e)）
+- `21:53` build 前端从根版本和发布基线生成系统信息（[`f18c75cb`](https://github.com/weepwood/MRR/commit/f18c75cbaf8c59f3adac082de38d82f5aa022e29)）
+- `21:53` build 在 Actuator 暴露产品构建与 Git 信息（[`61581341`](https://github.com/weepwood/MRR/commit/6158134112bfe267881e14c3d07125cb0a8e980e)）
+- `21:52` build 后端使用统一产品版本并写入构建信息（[`f3f46c4e`](https://github.com/weepwood/MRR/commit/f3f46c4eeafb48b11a62d076a7fdaba1aa5b84a8)）
+- `21:50` build 增加发布基线校验与清单生成器（[`07d096f0`](https://github.com/weepwood/MRR/commit/07d096f0b379c18141bf1f2dfc6a7a560a9c8dd4)）
+- `21:49` build 增加发布兼容性基线（[`d34ae1ef`](https://github.com/weepwood/MRR/commit/d34ae1efbb61cb144e321fdccf4529744d1f3b85)）
+- `21:49` build 建立唯一产品版本文件（[`a1997aaa`](https://github.com/weepwood/MRR/commit/a1997aaac7969bcceca42ab8e7fdd79cd2b61936)）
+- `17:47` fix (auth) correct permission filter method reference（[`1134382b`](https://github.com/weepwood/MRR/commit/1134382b991c7ddcfcce94768fd3d0b0127d787f)）
+- `17:16` feat 完善认证、用户凭据与外部影像安全访问（[`3e1303d5`](https://github.com/weepwood/MRR/commit/3e1303d50a8f637f302e21446713903354a77e0d) · [PR #84](https://github.com/weepwood/MRR/pull/84)）
+- `17:12` test (auth) 避免控制器测试无关桩严格校验失败（[`84bb53fa`](https://github.com/weepwood/MRR/commit/84bb53fa7b04fb093ea77ff6560be60b7c704749)）
+- `17:10` test (auth) 更新登录控制器客户端 IP 签名（[`218b1977`](https://github.com/weepwood/MRR/commit/218b1977015a3713e9d268bcf18cd3487c90da7d)）
+- `17:09` test (auth) 更新禁用账号登录安全测试（[`1cbdaec1`](https://github.com/weepwood/MRR/commit/1cbdaec16d33924f6c078c9bc27afa114aa42513)）
+- `17:07` test (auth) 覆盖账号与 IP 组合登录限流（[`2c06a73f`](https://github.com/weepwood/MRR/commit/2c06a73fdf4a325b204b9c74e11e4150a7875fe4)）
+- `17:05` fix (auth) 登录失败计数绑定来源 IP（[`8ef382ae`](https://github.com/weepwood/MRR/commit/8ef382aeeaad7085bb1d3993afe0252040f3348b)）
+- `17:05` fix (auth) 登录锁定按账号与来源 IP 隔离（[`8d82e411`](https://github.com/weepwood/MRR/commit/8d82e411a20288be1fd4f319aa33e0a51573fdea)）
+- `17:03` refactor (auth) 登录失败按用户名和来源 IP 组合计数（[`86ad52e5`](https://github.com/weepwood/MRR/commit/86ad52e574369043a6e710893780ef452d675700)）
+- `17:02` test (auth) 验证开发者模式数据库故障失败关闭（[`87ca8596`](https://github.com/weepwood/MRR/commit/87ca85968485163e1329545dc859438c4f2992ae)）
+- `17:01` fix (auth) 数据库故障时认证失败关闭（[`2725ee8f`](https://github.com/weepwood/MRR/commit/2725ee8fe42e130f54234324c6fb1f28523d44c4)）
+- `16:58` docs (auth) 说明默认账号强制改密（[`8fe7d2a8`](https://github.com/weepwood/MRR/commit/8fe7d2a8328fdf550084520f715df8f12c19a7e9)）
+- `16:58` test (auth) 更新强制改密字段文案（[`49123c58`](https://github.com/weepwood/MRR/commit/49123c587bdbc75f908195fad5f686b747a6bd01)）
+- `16:57` fix (auth) 兼容种子账号与临时密码改密提示（[`7c696081`](https://github.com/weepwood/MRR/commit/7c696081f95aebbbe4a65aa720604e4854b7b2b7)）
+- `16:56` fix (auth) 强制公开默认凭据首次改密（[`75e0991f`](https://github.com/weepwood/MRR/commit/75e0991f20a12dbc970daae1a065c35084c41aad)）
+- `16:53` test (auth) 覆盖敏感认证接口限流路径（[`dbd4a4ea`](https://github.com/weepwood/MRR/commit/dbd4a4ea071a7285f5b7d4505329ba772587206d)）
+- `16:53` fix (auth) 将改密与重置密码纳入限流（[`3e5144c7`](https://github.com/weepwood/MRR/commit/3e5144c7e27da84e0f4b5b499cc4c722b3cdb76e)）
+- `16:50` test (auth) 更新真实认证控制器测试（[`c46713cb`](https://github.com/weepwood/MRR/commit/c46713cb2b35deb62acb4c6bf6ef396b7462bc41)）
+- `16:48` fix (auth) 为停用注册接口返回 HTTP 410（[`1a1541b0`](https://github.com/weepwood/MRR/commit/1a1541b08826caa7fd59b456b32f18701934de28)）
+- `16:48` fix (auth) 停用可直接签发 JWT 的旧注册接口（[`2afeedfd`](https://github.com/weepwood/MRR/commit/2afeedfde8ff097fce63ec9fc0e65884907b6d72)）
+- `16:46` docs (auth) 更新登录与凭据安全说明（[`2f0f6e48`](https://github.com/weepwood/MRR/commit/2f0f6e480aaf183676879c131cfa3dfdd3b8baa2)）
+- `16:44` test (auth) 验证创建账号固定启用（[`479ff721`](https://github.com/weepwood/MRR/commit/479ff721229a69822ae91b5fe9e2c60eb90f3b7d)）
+- `16:44` test (auth) 覆盖初始禁用账号凭据边界（[`35ef4fa4`](https://github.com/weepwood/MRR/commit/35ef4fa48021d59b380c94cfd2cc34d60d8eb00f)）
+- `16:43` test (auth) 防止禁用账号状态枚举（[`f05e36c9`](https://github.com/weepwood/MRR/commit/f05e36c9414930d1fbf5dcf6e7bce43dfde23a03)）
+- `16:43` test (security) 验证内部异常不对外泄露（[`80dd85e9`](https://github.com/weepwood/MRR/commit/80dd85e9b125b3b8eaec0dbc7ece80616f99e2bc)）
+- `16:42` fix (security) 不向客户端泄露内部异常消息（[`e9337a3c`](https://github.com/weepwood/MRR/commit/e9337a3c16545b350b664c8461b7f5cc752e521b)）
+- `16:41` fix (auth) 移除创建用户初始禁用选项（[`c35f12e8`](https://github.com/weepwood/MRR/commit/c35f12e8430d1f6205aa19ec17ede540a5307555)）
+- `16:39` fix (auth) 创建用户仅允许启用状态（[`c17f4d6e`](https://github.com/weepwood/MRR/commit/c17f4d6e585ec75af6497a0fac81fc623a70afd2)）
+- `16:35` fix (auth) 收紧登录状态与初始凭据边界（[`d4c1f46a`](https://github.com/weepwood/MRR/commit/d4c1f46af5ee4bcb898187c7b0dd9a35fe016550)）
+- `16:33` fix (auth) 退出前先撤销当前 JWT（[`b822fd58`](https://github.com/weepwood/MRR/commit/b822fd581eca9d350a0d0e6c385b9f4a1fe3812d)）
+- `16:33` fix (auth) 统一个人改密密码规则（[`2eb4ff10`](https://github.com/weepwood/MRR/commit/2eb4ff102a780a95ee883e195f60711acce50d85)）
+- `15:18` test (settings) 覆盖滑块可见宽度（[`5635f08b`](https://github.com/weepwood/MRR/commit/5635f08b62ec24a90e8dad3f4deea420514b1daa)）
+- `15:18` fix (settings) 恢复水印透明度滑块显示（[`a1ebd65e`](https://github.com/weepwood/MRR/commit/a1ebd65ea178fcdb70c1fbda0bb2097a509824c0)）
+- `15:17` fix (settings) 恢复缩略图宽度滑块显示（[`2337bd93`](https://github.com/weepwood/MRR/commit/2337bd93c158adf1ebaa31f9890a740d919d68c6)）
+- `15:00` fix 限定统一系统设置样式作用域（[`2f03c870`](https://github.com/weepwood/MRR/commit/2f03c8703d8e4a54aff8fc5d0ff1054b270e41be)）
+- `14:59` docs 更新系统标识和管理员支持配置说明（[`d67bd11b`](https://github.com/weepwood/MRR/commit/d67bd11b1ace09ce70f27b0999b5cf303c3e4e77)）
+- `14:58` fix 同步登录页管理员公开状态（[`31df83ba`](https://github.com/weepwood/MRR/commit/31df83ba70ed2bcc5f9f823b21f276fe7117d9ce)）
+- `14:56` fix 避免管理员信息浮层点击重复切换（[`0fd718cb`](https://github.com/weepwood/MRR/commit/0fd718cb59d648e729bb6863537a8f55144db6bc)）
+- `14:55` test 更新统一系统设置分类布局（[`627489f7`](https://github.com/weepwood/MRR/commit/627489f716e78f5f94657849a80cfd1132ccf7c9)）
+- `14:54` test 覆盖登录页系统标识和管理员信息浮层（[`a7fc35f2`](https://github.com/weepwood/MRR/commit/a7fc35f25b8de14ee0b689406be2d1cbe3ea3eba)）
+- `14:53` test 更新公开登录与管理员信息解析测试（[`3f3d4820`](https://github.com/weepwood/MRR/commit/3f3d48205bd6eb0ff40c6e7879effc24b4fd0e68)）
+- `14:53` test 覆盖系统标识与管理员支持设置解析（[`565207e1`](https://github.com/weepwood/MRR/commit/565207e11b469a3516e1b97ef17f4e4319caada5)）
+- `14:52` test 覆盖公开管理员支持信息隐私边界（[`827644a1`](https://github.com/weepwood/MRR/commit/827644a197d793f2fb900a1c6aa4ec2909f048bf)）
+- `14:52` refactor 旧登录文案页面改为隐藏兼容跳转（[`002d2c3d`](https://github.com/weepwood/MRR/commit/002d2c3d61097dd748d79284525b6e64698aa4ab)）
+- `14:51` refactor 隐藏独立登录文案菜单并保留兼容入口（[`68b8233d`](https://github.com/weepwood/MRR/commit/68b8233dee762b7e5fbc0ec2a99f49d12e9c3f54)）
+- `14:50` refactor 使用统一系统设置页面（[`269d3ede`](https://github.com/weepwood/MRR/commit/269d3ede441f3a7f0939abc3fe58223d72e65827)）
+- `14:50` feat 新增统一系统设置页面（[`0b36da12`](https://github.com/weepwood/MRR/commit/0b36da12b6867fbeece6a19fb8bb007864aab4fb)）
+- `14:50` refactor 提取统一设置页状态逻辑（[`47c6f2bc`](https://github.com/weepwood/MRR/commit/47c6f2bc05db4746fb2bc3bd170384ce5d187b1e)）
+- `14:49` style 新增统一系统设置布局样式（[`f0dcd674`](https://github.com/weepwood/MRR/commit/f0dcd67429985a3c421f66c7d0a92b072f039d0b)）
+- `14:47` refactor 拆分开发者模式设置组件（[`6e8aae03`](https://github.com/weepwood/MRR/commit/6e8aae0387861e8f59dbb395e7dd3cc84e563c84)）
+- `14:47` refactor 拆分访问安全设置组件（[`8fd447fb`](https://github.com/weepwood/MRR/commit/8fd447fba2e2521c94dc7f9b20359f37e52e31ba)）
+- `14:47` refactor 拆分档案浏览设置组件（[`33f15a60`](https://github.com/weepwood/MRR/commit/33f15a60868d6029d5acc917f9e84a2af331dfed)）
+- `14:46` feat 新增登录展示与管理员支持设置（[`3542c433`](https://github.com/weepwood/MRR/commit/3542c43357fc1e40c1e3c444365873c0f7636c0b)）
+- `14:46` feat 新增系统信息设置组件（[`6dcabb3b`](https://github.com/weepwood/MRR/commit/6dcabb3b37648a5d5b4c8c515f4ab17df1d9d286)）
+- `14:43` feat 登录页展示系统管理员联系信息（[`d95134c4`](https://github.com/weepwood/MRR/commit/d95134c472f20207bdaca5442b3e9a4a2b3f9399)）
+- `14:42` feat 新增系统管理员联系信息浮层（[`6bc9e574`](https://github.com/weepwood/MRR/commit/6bc9e57403b47f9d13f5b20602b7e3b416425d8e)）
+- `14:41` feat 公开登录品牌与管理员支持信息（[`6b8a7b04`](https://github.com/weepwood/MRR/commit/6b8a7b0439353e9f759bfbb4377f3af9abe44575)）
+- `14:41` feat 扩展系统标识和管理员支持设置（[`1afeeef5`](https://github.com/weepwood/MRR/commit/1afeeef54ee31d120f062d465ae0482dfea90b3e)）
+- `14:40` refactor 收敛登录展示与管理员联系配置（[`2fd5baf8`](https://github.com/weepwood/MRR/commit/2fd5baf8df5ce009994f893fa231846420324592)）
+- `14:27` docs 补充登录页文案配置说明（[`63fd23c4`](https://github.com/weepwood/MRR/commit/63fd23c4655c9e81135e7b8fb28156f27cb8f156)）
+- `14:26` refactor 登录页文案 API 改为按需加载（[`b5b56529`](https://github.com/weepwood/MRR/commit/b5b565299c76dfaf92213a46f060db9fec4515e5)）
+- `14:25` test 覆盖登录页简化与文案配置（[`f7754202`](https://github.com/weepwood/MRR/commit/f7754202a28335bab306d05a5bb8c4e78b6aa533)）
+- `14:25` test 覆盖登录页文案配置解析（[`e5c38b85`](https://github.com/weepwood/MRR/commit/e5c38b8558983bb74f1fe07578ec8cc068c9db62)）
+- `14:25` test 覆盖登录页公开文案白名单（[`12f58266`](https://github.com/weepwood/MRR/commit/12f582667da878ecd028e1a8e39d9466814f428b)）
+- `14:24` fix 使用有效的页面宽度配置（[`a9694d76`](https://github.com/weepwood/MRR/commit/a9694d765dc46456d5badf7961070c0cab98caff)）
+- `14:23` fix 修正登录页文案设置模板类型（[`1451ed42`](https://github.com/weepwood/MRR/commit/1451ed4235051dbda3538135010e76329aa3e9b0)）
+- `14:22` feat 简化登录页并接入可配置文案（[`5a8163bc`](https://github.com/weepwood/MRR/commit/5a8163bccfa000a2d4a0dd063b2aa799807e66c3)）
+- `14:21` feat 增加登录页文案配置菜单（[`fb50f72b`](https://github.com/weepwood/MRR/commit/fb50f72b530e705a45a53bab7207fc3c5ef1b3dc)）
+- `14:20` feat 增加登录页文案设置页面（[`e68a9709`](https://github.com/weepwood/MRR/commit/e68a97091f3bee40215ecc231d67ca02be3cebee)）
+- `14:20` feat 增加登录页文案配置模型（[`36efba80`](https://github.com/weepwood/MRR/commit/36efba80ad11834f3f0ee1b41adb326be7e8e0f2)）
+- `14:19` feat 开放登录页公开配置读取（[`45846305`](https://github.com/weepwood/MRR/commit/45846305a3b1c61981f0cd2c2378b4c9d82a76f6)）
+- `14:19` feat 增加登录页公开文案配置接口（[`87951863`](https://github.com/weepwood/MRR/commit/87951863a52e5dc2927323aa347cbdb50e650cb9)）
+- `14:07` test 覆盖登录错误前端提示（[`7d51916a`](https://github.com/weepwood/MRR/commit/7d51916aae9daab1fa988c18d10b6db9c9859eb1)）
+- `14:07` test 覆盖登录凭据错误响应（[`4aa425a4`](https://github.com/weepwood/MRR/commit/4aa425a4285541b6bd5f976f7988997f7821114e)）
+- `14:07` fix 正确返回登录凭据错误信息（[`5cea7dc6`](https://github.com/weepwood/MRR/commit/5cea7dc62b3a7d6d71a383bc8bfc59c07647c710)）
+- `13:54` feat (audit) 记录用户创建重置和首次改密事件（[`ab78169d`](https://github.com/weepwood/MRR/commit/ab78169dae38c6f24824f5ebcac32f922ec30735)）
+- `13:51` feat (auth) 对齐前端用户凭据响应类型（[`84249f83`](https://github.com/weepwood/MRR/commit/84249f832e11a79ce8dfb9150ad572c58a20a1c7)）
+- `13:51` test (auth) 覆盖 JWT 凭据版本状态（[`bf0b96c3`](https://github.com/weepwood/MRR/commit/bf0b96c3a724c57150711547d69941ba27559f89)）
+- `13:49` fix (test) 模拟创建用户的有效管理员（[`92c436d7`](https://github.com/weepwood/MRR/commit/92c436d7712e73a3ae30a27569a3bab3186b3085)）
+- `13:47` fix (auth) 收紧管理员凭据操作校验（[`1503165c`](https://github.com/weepwood/MRR/commit/1503165cbac4017c849c43129d6cd86b8dca0065)）
+- `13:44` docs (users) 记录用户创建重置和首次改密流程（[`72ee57f9`](https://github.com/weepwood/MRR/commit/72ee57f9fd07febb50deb1cfbffe9f72bcd6543f)）
+- `13:43` fix (auth) 明确强制改密路由类型（[`8de1b169`](https://github.com/weepwood/MRR/commit/8de1b16923773c822910e141fa466558d7f8bd3e)）
+- `13:43` test (users) 覆盖创建用户和首次改密流程（[`3239a814`](https://github.com/weepwood/MRR/commit/3239a814a8f82dbc27d6240d06514104c0b32521)）
+- `13:42` test (auth) 覆盖用户凭据生命周期（[`d024527c`](https://github.com/weepwood/MRR/commit/d024527c32a1920621411a8b40c73944d0c2f0f9)）
+- `13:41` test (auth) 覆盖后端强制改密拦截（[`9c22ce8c`](https://github.com/weepwood/MRR/commit/9c22ce8c22ce50eccfef6179f3d484ba2e566124)）
+- `13:40` fix (auth) 在前端路由模式注册强制改密页（[`8a34d6ca`](https://github.com/weepwood/MRR/commit/8a34d6ca4483f74ae1ee3a17c4faf714e9d6c748)）
+- `13:40` fix (auth) 修正密码强度状态类型（[`703ad7e0`](https://github.com/weepwood/MRR/commit/703ad7e0db9ec74a47a960144b24e301878fc060)）
+- `13:39` fix (auth) 兼容扩展登录响应类型（[`6a6cfb15`](https://github.com/weepwood/MRR/commit/6a6cfb157aab1868be4de4fb3d9084a4e3b056b2)）
+- `13:38` feat (auth) 全局处理后端强制改密响应（[`694d14f1`](https://github.com/weepwood/MRR/commit/694d14f13492c1ed7cfda2dfdf29a8a3658cc83f)）
+- `13:37` feat (users) 增加创建用户和密码重置交互（[`88e75dbd`](https://github.com/weepwood/MRR/commit/88e75dbdbbe56583def84a30b16b6cba7d7a1119)）
+- `13:35` feat (auth) 路由强制进入首次改密页面（[`21aaec7a`](https://github.com/weepwood/MRR/commit/21aaec7a61afa4052838da02d314de9a27736b9d)）
+- `13:34` feat (auth) 增加首次登录强制改密页面（[`10665589`](https://github.com/weepwood/MRR/commit/10665589c38df3a371e6bc0a8d28b26ef3512612)）
+- `13:33` feat (auth) 前端会话保存强制改密状态（[`ceca8289`](https://github.com/weepwood/MRR/commit/ceca8289c9523e0f2ae71bc7ebb4e7badfe53a08)）
+- `13:33` feat (users) 增加创建重置与强制改密 API（[`1899e815`](https://github.com/weepwood/MRR/commit/1899e815be20ce0291045998ce061b51c2e41ced)）
+- `13:32` feat (users) 增加用户凭据前端类型（[`4c66247b`](https://github.com/weepwood/MRR/commit/4c66247bdb12e43d43adb8b7508ccf682f5f0dfd)）
+- `13:31` feat (auth) 注册强制改密拦截器（[`8f9bcfd7`](https://github.com/weepwood/MRR/commit/8f9bcfd7bdc05b2a0de0011ec53675065e38b533)）
+- `13:31` feat (auth) 后端强制首次登录修改密码（[`b3128143`](https://github.com/weepwood/MRR/commit/b31281431d56881bfeb4716311854a6e5bfb230a)）
+- `13:31` feat (auth) 校验 JWT 密码版本（[`415d668b`](https://github.com/weepwood/MRR/commit/415d668bc2cb9df6dd0ec40e80a342405c155461)）
+- `13:30` feat (auth) 增加管理员创建重置和首次改密接口（[`96bd0468`](https://github.com/weepwood/MRR/commit/96bd0468c90683ca2137ecf51dae4c938b0dcfab)）
+- `13:29` feat (auth) 实现用户创建重置与强制改密（[`957fd254`](https://github.com/weepwood/MRR/commit/957fd2548c4d633eec62523f630a1fdb6c9003a9)）
+- `13:28` feat (auth) 扩展用户凭据服务接口（[`4fbcabb8`](https://github.com/weepwood/MRR/commit/4fbcabb8ba1100305859ff837b6e1d0a9da1e468)）
+- `13:27` feat (auth) 持久化用户凭据生命周期（[`453e0c11`](https://github.com/weepwood/MRR/commit/453e0c1140d9c15253474502536e78a61a29fa3f)）
+- `13:27` feat (auth) JWT 携带密码版本与强制改密状态（[`550b0ac7`](https://github.com/weepwood/MRR/commit/550b0ac7623e3b2d011ff6e64fcb5c4f1f10ce68)）
+- `13:26` feat (auth) 登录响应增加下一步操作（[`cda72a20`](https://github.com/weepwood/MRR/commit/cda72a201483750a14e5605100bd999ddc0d4ba7)）
+- `13:26` feat (auth) 返回用户凭据状态（[`3e0bec2a`](https://github.com/weepwood/MRR/commit/3e0bec2a5cc77c9cb01dbde29dbf3ecc4c6c9937)）
+- `13:26` feat (auth) 在会话中携带凭据状态（[`43f3c262`](https://github.com/weepwood/MRR/commit/43f3c262736f0f30ab6fa3605500604d4af51614)）
+- `13:25` feat (auth) 扩展用户凭据状态（[`c4081241`](https://github.com/weepwood/MRR/commit/c4081241de6c8fd30ac702a13d6f5e7fefa04897)）
+- `13:25` feat (auth) 增加临时凭据响应模型（[`0c8303c7`](https://github.com/weepwood/MRR/commit/0c8303c7c840a886a34b06c2b97be34002971530)）
+- `13:25` feat (auth) 增加强制改密请求（[`073630a6`](https://github.com/weepwood/MRR/commit/073630a6aba4556824eb9dbbfd66bc1c1cba573f)）
+- `13:25` feat (auth) 增加管理员密码重置请求（[`70e2abf3`](https://github.com/weepwood/MRR/commit/70e2abf386cda7dbc99058144189fa37c314bc4d)）
+- `13:25` feat (auth) 增加管理员用户凭据请求模型（[`1d678ade`](https://github.com/weepwood/MRR/commit/1d678ade8eba7a12a3ed6bde83c4019036e437d4)）
+- `13:24` feat (auth) 增加用户凭据生命周期字段（[`d6b09ed0`](https://github.com/weepwood/MRR/commit/d6b09ed00aff68d7a2a9076a14b3bdcf4e06f928)）
+- `12:58` fix (frontend) align developer warning design tokens（[`0eb94808`](https://github.com/weepwood/MRR/commit/0eb94808024c84fcc14ba4b3772e34f9598b8428)）
+- `12:56` docs document global developer mode warning（[`52c4a7c9`](https://github.com/weepwood/MRR/commit/52c4a7c9cfca9128cd7317c7eb6cc26b3b390c55)）
+- `12:55` test (frontend) align developer warning action（[`6feabd74`](https://github.com/weepwood/MRR/commit/6feabd7430c1a2a6b7b5d8cd01b2957509c2ed79)）
+- `12:54` fix (frontend) simplify developer warning settings action（[`59923b66`](https://github.com/weepwood/MRR/commit/59923b66f3dc161725cba23dcc44bd6ff0e2dd75)）
+- `12:54` test (frontend) cover global developer mode warning（[`813ab5cf`](https://github.com/weepwood/MRR/commit/813ab5cf2b862416e8e1b6d749da1d262da336e3)）
+- `12:53` feat (frontend) mount developer mode warning globally（[`ec0b8753`](https://github.com/weepwood/MRR/commit/ec0b875397f462b3d45c930271d87ebe1499ceb2)）
+- `12:52` feat (frontend) add global developer mode warning banner（[`5e3d483c`](https://github.com/weepwood/MRR/commit/5e3d483c8e5e5bbc554e54cf8f83d6261a35bef0)）
+- `12:37` docs document production frontend and API proxy deployment（[`eed358fb`](https://github.com/weepwood/MRR/commit/eed358fb3adb2698d82e18d0d3041a8b10d3168f)）
+- `12:36` docs explain Vite proxy and production API routing（[`4e7db2f0`](https://github.com/weepwood/MRR/commit/4e7db2f01ac6c23dc9d697a57d4d5f3301e48b9f)）
+- `12:29` fix 修复开发代理登录请求被 CORS 拒绝（[`1a3becd2`](https://github.com/weepwood/MRR/commit/1a3becd21938f9672b50f026aafd95a0b6422f5a)）
+- `02:21` fix invalidate developer mode probe after settings save（[`2cceaa01`](https://github.com/weepwood/MRR/commit/2cceaa01841095361eeece6bb6f2251843f232fd)）
+- `02:20` test cover public developer mode status（[`19d9f6f1`](https://github.com/weepwood/MRR/commit/19d9f6f19835f63154e7adaf90687aef88aa85a5)）
+- `02:20` refactor use public developer mode status endpoint（[`8d95844a`](https://github.com/weepwood/MRR/commit/8d95844a23f188bcf43b47926e57855106d6d2a8)）
+- `02:20` feat expose minimal public developer mode status（[`d15eca44`](https://github.com/weepwood/MRR/commit/d15eca44ad18ad317dbc2a148eac224b8713d3ae)）
+- `02:18` fix keep password input spacing when visible（[`953ef146`](https://github.com/weepwood/MRR/commit/953ef1465895ea691f2f00fdda71ff1637ce85b7)）
+- `02:16` docs define developer mode security boundary（[`8ac66f14`](https://github.com/weepwood/MRR/commit/8ac66f14f0b6bfacbf3860b700977dd70f62ac66)）
+- `02:15` docs document developer mode and login changes（[`6eba7dae`](https://github.com/weepwood/MRR/commit/6eba7daebdbab688a5fe8db82046aa7ccfbbaecd)）
+- `02:14` perf keep developer mode route probe fast（[`9299f9bb`](https://github.com/weepwood/MRR/commit/9299f9bb776ffb85d7815fdc93e96cf16d58ff78)）
+- `02:13` test make narrow login layout assertion resilient（[`5f1f740f`](https://github.com/weepwood/MRR/commit/5f1f740f2dd3eddd2f391d82a8b31cf5ff26d8b2)）
+- `02:13` test cover redesigned login page（[`a563f692`](https://github.com/weepwood/MRR/commit/a563f692ed8738e552ee62feda7dc4b608fa7f0c)）
+- `02:13` feat allow route access in runtime developer mode（[`2bfbaafa`](https://github.com/weepwood/MRR/commit/2bfbaafa8f7186a795e60c7434aabfacd339eabf)）
+- `02:12` feat probe runtime developer mode before login（[`3f372aea`](https://github.com/weepwood/MRR/commit/3f372aeaab107e55b3f74987738fd460b57a8b56)）
+- `02:12` refactor use framework cors filter registration（[`275a7e42`](https://github.com/weepwood/MRR/commit/275a7e42f2e56a382b00f840448468d8cde0368f)）
+- `02:11` style redesign login page to match mrr console（[`00336b42`](https://github.com/weepwood/MRR/commit/00336b4266351c19b9d3d44f11f6975fa952bdb0)）
+- `02:10` test adapt system settings service to developer mode（[`51e2c718`](https://github.com/weepwood/MRR/commit/51e2c718b2be2c53556b2467cc4bc22ce05830c5)）
+- `02:08` style align login form with mrr design system（[`dbf287e3`](https://github.com/weepwood/MRR/commit/dbf287e30808ac24368cd927b2bc2ec2cea23916)）
+- `02:07` test include developer mode settings section（[`ab0d25a4`](https://github.com/weepwood/MRR/commit/ab0d25a4edc89afcd4d4f9ab7545ac044bf5988e)）
+- `02:07` test cover developer mode system setting（[`46ead856`](https://github.com/weepwood/MRR/commit/46ead856d5e9a9b3b8e06e174a3f68ad4a9cd207)）
+- `02:07` feat add developer mode to system settings（[`7dfdb369`](https://github.com/weepwood/MRR/commit/7dfdb3695f411483ae6924a2446ef80202b54ae3)）
+- `02:03` feat add developer mode to system settings model（[`0676ce09`](https://github.com/weepwood/MRR/commit/0676ce09b48d33513d66a470de10f474a92ee2d8)）
+- `02:03` test cover developer mode authentication bypass（[`082f278c`](https://github.com/weepwood/MRR/commit/082f278ce5b55e3c943233485df55e2a6f085fc0)）
+- `02:02` test cover developer mode setting cache（[`a54695b9`](https://github.com/weepwood/MRR/commit/a54695b95f4bdfddaeddcca74d823ca20a019b1f)）
+- `02:02` feat seed developer mode setting（[`5623d158`](https://github.com/weepwood/MRR/commit/5623d15822aee8ee2b7bd420778857105ec78fa6)）
+- `02:02` refactor move cors handling to dynamic filter（[`116f75d9`](https://github.com/weepwood/MRR/commit/116f75d90e9174e72c5e275b339a2a23c6cc532b)）
+- `02:02` feat make cors follow developer mode at runtime（[`90ab3928`](https://github.com/weepwood/MRR/commit/90ab3928edeeb5f5f43d3e479d79ddd01860b339)）
+- `02:01` feat restore legacy api access in developer mode（[`30be6f65`](https://github.com/weepwood/MRR/commit/30be6f6589bc0e839e3ef14c4b08043cb031b887)）
+- `02:01` feat refresh developer mode after settings changes（[`9eab9448`](https://github.com/weepwood/MRR/commit/9eab94483e2215238d2347c069f5d45dfd708bec)）
+- `02:00` feat add runtime developer mode service（[`d5f99203`](https://github.com/weepwood/MRR/commit/d5f99203e0c0b666eb074a82c928f7d2d3b8d5f1)）
+- `01:51` docs no-op synchronization marker（[`5444d467`](https://github.com/weepwood/MRR/commit/5444d467a820e65d2d9e69b6ff190c5817428402)）
+- `01:50` docs keep HIS guide synchronized（[`9ec1a042`](https://github.com/weepwood/MRR/commit/9ec1a04256565fa18c9f935ce13cc9a2aa85258b)）
+- `01:49` docs keep HIS examples validation commands（[`b3539a05`](https://github.com/weepwood/MRR/commit/b3539a05b00ace053538d084fb79e06a0a0b2319)）
+- `01:49` docs clarify HIS integration example validation（[`bc91daaa`](https://github.com/weepwood/MRR/commit/bc91daaa17186e8321fa319febb180b1ce8f22e8)）
+- `01:48` docs link HIS integration from internal index（[`a2e84577`](https://github.com/weepwood/MRR/commit/a2e84577241213a70ef02316f2669f8d53c86474)）
+- `01:48` docs add external archive integration to internal navigation（[`eb78ba75`](https://github.com/weepwood/MRR/commit/eb78ba757c5cc59149bc2a86c3a31f0b8107917c)）
+- `01:47` docs add internal HIS archive integration page（[`ede79f80`](https://github.com/weepwood/MRR/commit/ede79f80b72811cdda9d6dc3c01d0c7c178bade5)）
+- `01:46` docs refine HIS integration guide and C# registration（[`ee30ced1`](https://github.com/weepwood/MRR/commit/ee30ced18c43a4a4a50c28f165152ba52411198f)）
+- `01:44` docs harden C# HIS integration example（[`159e0e07`](https://github.com/weepwood/MRR/commit/159e0e077ed87a1dfe9cc99d5cc90a973f1ee476)）
+- `01:43` docs reorganize external archive integration reference（[`b0d2ad90`](https://github.com/weepwood/MRR/commit/b0d2ad90ad758fd5b4bb5744d423af5ac2ff9fd2)）
+- `01:42` docs add HIS integration examples readme（[`13f50189`](https://github.com/weepwood/MRR/commit/13f501894a11339e23e01300802969252de8f3d2)）
+- `01:42` docs add Python Java C# HIS archive integration guide（[`b9e7743f`](https://github.com/weepwood/MRR/commit/b9e7743fdcc9de1719918b2280ad806e931f6b43)）
+- `01:40` docs add Python HIS archive ticket client example（[`7232395b`](https://github.com/weepwood/MRR/commit/7232395b9e4c7a509437300a2b9f8e0da34398fe)）
+- `01:39` docs add Java HIS integration usage example（[`47785fac`](https://github.com/weepwood/MRR/commit/47785facdb129532275cc465f2b746d71b1925e0)）
+- `01:39` docs add runnable Java HIS integration project（[`397ba6f6`](https://github.com/weepwood/MRR/commit/397ba6f6ce86f62cbc12b75b1d444e830657a7bb)）
+- `01:39` docs add C# HIS integration usage example（[`bd48a0a4`](https://github.com/weepwood/MRR/commit/bd48a0a46d5943d64bbfa197b813e06d4e8f2d17)）
+- `01:39` docs add runnable C# HIS integration project（[`671d2f4b`](https://github.com/weepwood/MRR/commit/671d2f4ba18fee6d69ca09498b76d456314360d9)）
+- `01:39` docs add C# HIS archive ticket client example（[`0555c3aa`](https://github.com/weepwood/MRR/commit/0555c3aac3b94546b5df75ecc349d570e52e0284)）
+- `01:38` docs add Java HIS archive ticket client example（[`15f7990f`](https://github.com/weepwood/MRR/commit/15f7990f069e56ee74d4ae5755dc6691c6aced09)）
+- `01:17` fix (auth-test) handle incomplete integration client bindings（[`da4b956e`](https://github.com/weepwood/MRR/commit/da4b956e0aab7ed62f14e03b4ff6efcef865b5b8)）
+- `01:16` docs (auth-test) add guided external ticket troubleshooting（[`4b17f807`](https://github.com/weepwood/MRR/commit/4b17f807c9b3a3d217e42d5ab21b85af5c29a648)）
+- `01:15` test (auth-test) cover external integration diagnostics（[`aadc3427`](https://github.com/weepwood/MRR/commit/aadc34271762a594af08201dce2141f6d186106f)）
+- `01:14` refactor (auth-test) split authentication testers into components（[`f05822b4`](https://github.com/weepwood/MRR/commit/f05822b48b92fe913bc7adb84c3b241f8b774035)）
+- `01:14` refactor (auth-test) extract guided external ticket simulator（[`ea928ace`](https://github.com/weepwood/MRR/commit/ea928acec4512352403233fcd62bf8262861e02d)）
+- `01:12` refactor (auth-test) extract protected api tester（[`642c4163`](https://github.com/weepwood/MRR/commit/642c4163beb40ed6ef169dfab10435f9c4fd7632)）
+- `01:12` refactor (auth-test) extract jwt login tester（[`c164cf2b`](https://github.com/weepwood/MRR/commit/c164cf2b18ce698ad46e5e00493c1322a473d6c1)）
+- `01:11` refactor (auth-test) add shared tester types（[`6e18559b`](https://github.com/weepwood/MRR/commit/6e18559bb97d35a05a05a521013d5dc2169bb42b)）
+- `01:06` feat (auth-test) add guided external ticket simulation setup（[`0a9c987d`](https://github.com/weepwood/MRR/commit/0a9c987d3b507b1da55d299e74bb63078ff1121b)）
+- `01:03` test (auth-test) cover external integration setup guidance（[`ec6e916a`](https://github.com/weepwood/MRR/commit/ec6e916afeef68fe9752a6a17142ba8254c8a6e8)）
+- `01:02` feat (auth-test) add external integration setup guide helpers（[`d3302709`](https://github.com/weepwood/MRR/commit/d33027094b0dc776619231ce42ed54097bbae822)）
+- `01:02` feat (auth-test) expose safe external integration diagnostics（[`907a6d7d`](https://github.com/weepwood/MRR/commit/907a6d7de0122c3f45881c10cfb344f8d1aecdaa)）
+- `01:02` feat (auth-test) add external integration status dto（[`511e93eb`](https://github.com/weepwood/MRR/commit/511e93eb05a065433ce312f5583a24207c2d9ca2)）
+- `00:24` docs document authentication API test console（[`b113ba35`](https://github.com/weepwood/MRR/commit/b113ba350bdadac3e9c09aa1261164c9a954418f)）
+- `00:22` test (frontend) verify HTTP-compatible HMAC fallback（[`86c3c2a0`](https://github.com/weepwood/MRR/commit/86c3c2a08b2af59d31e01ce2702e230a7ae1f755)）
+- `00:22` fix (frontend) support HMAC signing on internal HTTP deployments（[`05c59da4`](https://github.com/weepwood/MRR/commit/05c59da4ca318ce6f6b3f9085c5db70f06f95282)）
+- `00:20` test (frontend) cover external archive HMAC signature（[`22a48558`](https://github.com/weepwood/MRR/commit/22a4855857cb8cc334663b049f96175574548afe)）
+- `00:19` fix (frontend) harden authentication test console interactions（[`85741144`](https://github.com/weepwood/MRR/commit/8574114474c29f5187642b5e593d6899771a4eab)）
+- `00:17` feat (frontend) expose authentication test console route（[`fe6ee962`](https://github.com/weepwood/MRR/commit/fe6ee96286100e370e385a39fb15f3b8351c2f03)）
+- `00:15` feat (frontend) add visual authentication API test console（[`6e643cb4`](https://github.com/weepwood/MRR/commit/6e643cb4d31ffb5f1cf7fa29282e84aa99957719)）
+- `00:12` feat (frontend) add isolated authentication test client（[`321de187`](https://github.com/weepwood/MRR/commit/321de1871ff18684539947aee37b2f08d7333887)）
+- `00:12` feat (frontend) add external archive signature helpers（[`10639bc5`](https://github.com/weepwood/MRR/commit/10639bc55dd613cc6e2f80cee8ada35a32402164)）
+- `00:08` feat (backend) add external archive integration simulator（[`44f9837e`](https://github.com/weepwood/MRR/commit/44f9837e0bb8ae2982ba20f50b1572c8a55d8e79)）
+
+## 2026-07-18
+
+- `22:45` feat (integration) add dependency-free external ticket test client（[`04d70b63`](https://github.com/weepwood/MRR/commit/04d70b6393e7a69350a7bbd48cb89a9c399e38e3)）
+- `22:42` feat (auth) refresh account status role and permissions on each request（[`52942396`](https://github.com/weepwood/MRR/commit/52942396a078540c003bc8f87be1823a0794acf7)）
+- `22:40` docs (integration) document persistent grants download enforcement and CORS（[`9fb49c41`](https://github.com/weepwood/MRR/commit/9fb49c4181890befc1e0919bc6a963b7ca920cf7)）
+- `22:40` feat (integration) clean expired external credentials（[`c0bef876`](https://github.com/weepwood/MRR/commit/c0bef87610c036bbb2357e8fb327ec02e51757f9)）
+- `22:39` test (auth) provide JWT secret for Spring context tests（[`866d815d`](https://github.com/weepwood/MRR/commit/866d815d86456091914344325c18a7bc68af0387)）
+- `22:39` test (auth) configure an explicit JWT secret（[`f613fd88`](https://github.com/weepwood/MRR/commit/f613fd88dd7e84f0e61c3916fa094bd56044f991)）
+- `22:39` feat (auth) initialize JWT secret from Spring environment（[`9f5737a0`](https://github.com/weepwood/MRR/commit/9f5737a059bccf46643df82a435f67005b578d8d)）
+- `22:38` fix (auth) support Spring-configured JWT secrets（[`31c7ac5e`](https://github.com/weepwood/MRR/commit/31c7ac5e66af6be7c9f707a24e93a9a154a63611)）
+- `22:37` fix (security) replace wildcard credentialed CORS with allowlist（[`6871d3b6`](https://github.com/weepwood/MRR/commit/6871d3b6e85aa85dfa1945ad2e70f07d92f5415c)）
+- `22:37` feat (security) add explicit CORS allowlist properties（[`c33db4c8`](https://github.com/weepwood/MRR/commit/c33db4c89d71b9cc9355fc9efc772ede5a8ca919)）
+- `22:36` fix (frontend) exclude external archive components from file routes（[`78a179a6`](https://github.com/weepwood/MRR/commit/78a179a67643089411dd7e427b2fa5bedb3f43c6)）
+- `22:34` feat (integration) add permission-checked external archive export（[`feb5f908`](https://github.com/weepwood/MRR/commit/feb5f908433d7d4526dc6a16607156e43253dd89)）
+- `22:33` feat (frontend) use authorized server-side archive export（[`dea8cf5e`](https://github.com/weepwood/MRR/commit/dea8cf5e7d47e2f7b241dff9dbf5eb50d0acd821)）
+- `22:32` feat (frontend) add server-side external archive download client（[`852c09e3`](https://github.com/weepwood/MRR/commit/852c09e377d96cc3fadbef245acec763627d9290)）
+- `22:31` test (integration) allow shared persistence stubs across focused cases（[`89912743`](https://github.com/weepwood/MRR/commit/89912743eab8a5ba16146373b385106f8326dad4)）
+- `22:30` refactor (integration) remove unused launch path setting（[`5ec2ea3b`](https://github.com/weepwood/MRR/commit/5ec2ea3b7f447fd67c5cd608f1f2021d24f61a1e)）
+- `22:29` test (integration) cover database-backed external archive grants（[`a3bc8e44`](https://github.com/weepwood/MRR/commit/a3bc8e442c12bba70b91edc4d8aab1bcc2d92941)）
+- `22:28` feat (integration) audit and revoke persistent external archive sessions（[`92db497b`](https://github.com/weepwood/MRR/commit/92db497bc7610dfe6d5b12e17a11f290e5f5b00a)）
+- `22:27` feat (integration) persist scoped external tickets and sessions（[`d01f0393`](https://github.com/weepwood/MRR/commit/d01f0393518a788f9ab227e9a99090cba1dba85a)）
+- `22:25` feat (integration) add persistent external archive access mapper（[`55094162`](https://github.com/weepwood/MRR/commit/5509416236dd81657379b14ea3fb6cfee3d6b6c6)）
+- `22:24` feat (integration) add stored external archive grant entity（[`7130a214`](https://github.com/weepwood/MRR/commit/7130a2142602fc3c85b5223d6a07435445acf0c4)）
+- `22:24` feat (integration) persist external tickets sessions nonces and audit logs（[`8695a854`](https://github.com/weepwood/MRR/commit/8695a8541ed8e46da298de437d76fefa090fefa6)）
+- `22:23` fix (frontend) harden external viewer type and style checks（[`3c23cd3b`](https://github.com/weepwood/MRR/commit/3c23cd3bb92f8ca6e5401cee3872e95940d737eb)）
+- `22:22` refactor (frontend) keep internal archive composable isolated（[`16673b60`](https://github.com/weepwood/MRR/commit/16673b605c7e0e197320952a468167fa5e3d7333)）
+- `22:18` fix (auth) restrict account registration to user managers（[`894874cc`](https://github.com/weepwood/MRR/commit/894874cc2a78889ec362696a9373e28d0384d656)）
+- `22:17` test (integration) cover multi-selector tickets, one-time use and nonce replay（[`ac345464`](https://github.com/weepwood/MRR/commit/ac345464c4038a06c9cdfd91f368a903420631fe)）
+- `22:16` docs (integration) document multi-selector external archive access（[`44f56b03`](https://github.com/weepwood/MRR/commit/44f56b03ee8e9f4494541fe34bd20dbf7029d2a3)）
+- `22:15` docs (deploy) add external archive integration secrets template（[`a8f60cd1`](https://github.com/weepwood/MRR/commit/a8f60cd11e8e1aae17db6f807f4e4b67a149908b)）
+- `22:15` feat (auth) use real login during backend development（[`93b234d8`](https://github.com/weepwood/MRR/commit/93b234d82cbe4ea30399d35a9e3e55526506a53c)）
+- `22:15` feat (auth) enable real login in production frontend（[`88737729`](https://github.com/weepwood/MRR/commit/88737729bcba70d2db7606dd85ad1a65a3446634)）
+- `22:14` feat (frontend) render scoped external archive viewer after ticket exchange（[`545f14d1`](https://github.com/weepwood/MRR/commit/545f14d1aa6c24cbfd01d04f615d084ec10a26b2)）
+- `22:14` feat (frontend) add read-only multi-case external archive viewer（[`66567c2d`](https://github.com/weepwood/MRR/commit/66567c2df2d6a0673d5e7c7d4f5e008a0f65dd5d)）
+- `22:12` feat (frontend) load scoped external archive cases and images（[`6a1e571b`](https://github.com/weepwood/MRR/commit/6a1e571be6bb8d7096c939f9041ac795da1809ca)）
+- `22:11` feat (frontend) allow external archive route without internal login（[`f4a8e9f2`](https://github.com/weepwood/MRR/commit/f4a8e9f240ebd40f61b7a335cd2c6925f873341b)）
+- `22:10` feat (frontend) register public external archive route（[`19fcb779`](https://github.com/weepwood/MRR/commit/19fcb779db88523f5c466298fca9dd4d878efd46)）
+- `22:09` feat (frontend) add external archive ticket exchange entry（[`91f9a76b`](https://github.com/weepwood/MRR/commit/91f9a76b97e122500548112853c5eecdc4372ebd)）
+- `22:09` feat (frontend) add isolated external archive API client（[`c2bf20d4`](https://github.com/weepwood/MRR/commit/c2bf20d422ca97234e9fd49711806ef6d7dbf1a9)）
+- `22:08` feat (auth) protect APIs while allowing SPA and external archive entry（[`38251888`](https://github.com/weepwood/MRR/commit/3825188863870054bd097400a1d95d7dcf0d5c78)）
+- `22:07` feat (integration) expose signed ticket and external archive session APIs（[`504d7be7`](https://github.com/weepwood/MRR/commit/504d7be73e7e9a4cc385d6d2b6e825c53beaeab2)）
+- `22:06` feat (integration) implement signed external archive tickets and scoped sessions（[`689af42b`](https://github.com/weepwood/MRR/commit/689af42b6b6242848b9d0f459d8b4d753f35926c)）
+- `22:05` feat (integration) add scoped external archive grant（[`3f5a88b6`](https://github.com/weepwood/MRR/commit/3f5a88b6922077051188d50fd82f5fabaca4573f)）
+- `22:04` feat (integration) add external archive session response（[`d3edfc25`](https://github.com/weepwood/MRR/commit/d3edfc25af64c3864b029b836883680a3eca27a6)）
+- `22:04` feat (integration) add external archive ticket response（[`2f8ac72b`](https://github.com/weepwood/MRR/commit/2f8ac72b3d0cf948f317de3ed8d3d0db4575dd52)）
+- `22:03` feat (integration) add external archive case DTO（[`89e9e339`](https://github.com/weepwood/MRR/commit/89e9e33993504d2c30d622a03239a9835540636d)）
+- `22:03` feat (integration) add external archive ticket request（[`4193605e`](https://github.com/weepwood/MRR/commit/4193605e9cd445283a9a9b0729f64e8599baadb0)）
+- `22:03` feat (integration) add external integration properties（[`076c4bc2`](https://github.com/weepwood/MRR/commit/076c4bc2155a0f7f0d372d3b8e258c5fc8a30ba9)）
+- `22:03` feat (auth) restore JWT authentication interceptor（[`f0f2b983`](https://github.com/weepwood/MRR/commit/f0f2b983c81840b8b9ad0361e92f6d00944cb015)）
 
 ## 2026-07-17
 
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`8149342`](https://github.com/weepwood/MRR/commit/81493429d5ba0c417023669a705ec78fe9e33f3a)） — weepwood
-- **维护** `pom` 升级后端项目版本号从0.3.0到0.3.1（[`93f9b3a`](https://github.com/weepwood/MRR/commit/93f9b3a62d99e74b8f14f193fb7afbac8481552d)） — weepwood
-- **新增** `archive` add scroll preview scaling（[`a85fcbb`](https://github.com/weepwood/MRR/commit/a85fcbb6e35587bb5d1739a0fdeb9fe6376a7e44)） — weepwood
-- **新增** `archive` refine display preferences（[`43fcb60`](https://github.com/weepwood/MRR/commit/43fcb604fe7a4411b86ed2dc5eea1a6e95e5a016)） — weepwood
-- **合并** sync fullscreen image navigation（[`57b4d52`](https://github.com/weepwood/MRR/commit/57b4d52f5b1f01026475d2ca46f7efcb0fd43d28)） — weepwood
-- **修复** `frontend` add startup fallback and restore image preview（[`32c1595`](https://github.com/weepwood/MRR/commit/32c15953a03211fe817d384fff3a25eac91176c0)） — weepwood
-- **修复** `archive` improve preview and display controls（[`967c093`](https://github.com/weepwood/MRR/commit/967c093b52b87ea1764b943ba3f6be677a1260a7)） — weepwood
-- **其他** `ui` align card and drawer layouts（[`4eccbb6`](https://github.com/weepwood/MRR/commit/4eccbb64f2415b1e8036f21c22eed811686768c8)） — weepwood
-- **修复** `settings` expose id card access controls（[`a329662`](https://github.com/weepwood/MRR/commit/a3296629014b2426dd36704903941b0d803a1c0a)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`fdd1646`](https://github.com/weepwood/MRR/commit/fdd1646608ccfb309aceddd4b89031100e7cc7ae)） — weepwood
-- **新增** `settings` 统一配置保存入口（[`c8cd0a3`](https://github.com/weepwood/MRR/commit/c8cd0a3abcd67e6c9a036fdb0316b120984d2fac)） — weepwood
-- **合并** Merge commit 'e268c09fdee295d1808c595f448e5316e6449003' into dev-no-login（[`674f2e4`](https://github.com/weepwood/MRR/commit/674f2e49f51b27e0ed91164d1fbc8d58247b9cbb)） — weepwood
-- **修复** `settings` 固定设置导航栏（[`eb9aaf5`](https://github.com/weepwood/MRR/commit/eb9aaf5d3875367515f7dc4e1772b2bd6da31ea6)） — weepwood
-- **合并** # Conflicts:（[`84c0be6`](https://github.com/weepwood/MRR/commit/84c0be67b44c0d1782a7bfab2b9349824acb45e2)） — weepwood
-- **新增** `patients` add id card access controls（[`18acba1`](https://github.com/weepwood/MRR/commit/18acba15c097be1779d7e64404217ecf423e0284)） — weepwood
-- **修复** `frontend` 在新标签页打开帮助文档（[`6c21e95`](https://github.com/weepwood/MRR/commit/6c21e9519ccd6e525da4d46991c56c6a9597b7cf)） — weepwood
-- **文档** `internal` 移除架构文档中的非目标章节（[`36005b2`](https://github.com/weepwood/MRR/commit/36005b2e55c05fabaaf3bc163b03f498ce60d597)） — weepwood
-- **文档** add module screenshot gallery（[`1cfc3db`](https://github.com/weepwood/MRR/commit/1cfc3dbea27b9c65647ff27b6d9bde89001c8ca7)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`0b7c1d5`](https://github.com/weepwood/MRR/commit/0b7c1d53521e49e2cdfabe92e7f258adf4349865)） — weepwood
-- **维护** `pom` 升级项目版本号从0.2.0到0.3.0（[`1f1bb82`](https://github.com/weepwood/MRR/commit/1f1bb82de7deaaf14b18c630b7ccbeda1e100961)） — weepwood
-- **新增** `status` refine current-day availability view（[`7dad9f0`](https://github.com/weepwood/MRR/commit/7dad9f0f538d26c4448108366ba8f67f35a81f68)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`118f594`](https://github.com/weepwood/MRR/commit/118f5940bb971cb2f8d4599baac6f0cdb7139559)） — weepwood
-- **新增** refine system status and settings views（[`0315bbd`](https://github.com/weepwood/MRR/commit/0315bbdd3787828c75b29fa8a5f9d0f336317389)） — weepwood
-- **文档** 完善 VitePress 用户手册与内部文档（[`f33dd5e`](https://github.com/weepwood/MRR/commit/f33dd5e707a430b86e70189eba581e7477f16490) · [PR #77](https://github.com/weepwood/MRR/pull/77)） — weepwood
-- **合并** Feat/mr patient ward fields 20260716（[`516b205`](https://github.com/weepwood/MRR/commit/516b205e301d55200fadf3976b7e49cf2d0dd51b) · [PR #76](https://github.com/weepwood/MRR/pull/76)） — weepwood
-- **修复** `patient` 将病区字段 binqu 更正为 bingqu（[`f3782b0`](https://github.com/weepwood/MRR/commit/f3782b051c61be25c5acd0e7fb4130560e23e525) · [PR #75](https://github.com/weepwood/MRR/pull/75)） — weepwood
-- **修复** `archive` preserve search counts and favorites（[`b3fcc78`](https://github.com/weepwood/MRR/commit/b3fcc78488b0a2fc88901ce0f8bcb18e6490263c)） — weepwood
+- `16:01` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`81493429`](https://github.com/weepwood/MRR/commit/81493429d5ba0c417023669a705ec78fe9e33f3a)）
+- `16:00` chore (pom) 升级后端项目版本号从0.3.0到0.3.1（[`93f9b3a6`](https://github.com/weepwood/MRR/commit/93f9b3a62d99e74b8f14f193fb7afbac8481552d)）
+- `15:59` feat (archive) add scroll preview scaling（[`a85fcbb6`](https://github.com/weepwood/MRR/commit/a85fcbb6e35587bb5d1739a0fdeb9fe6376a7e44)）
+- `15:43` feat (archive) refine display preferences（[`43fcb604`](https://github.com/weepwood/MRR/commit/43fcb604fe7a4411b86ed2dc5eea1a6e95e5a016)）
+- `15:25` merge sync fullscreen image navigation（[`57b4d52f`](https://github.com/weepwood/MRR/commit/57b4d52f5b1f01026475d2ca46f7efcb0fd43d28)）
+- `15:25` fix (archive) sync fullscreen image navigation（[`53ecf512`](https://github.com/weepwood/MRR/commit/53ecf5127c239f9fd67087d07f473b52aee8a80b)）
+- `15:19` fix (frontend) add startup fallback and restore image preview（[`32c15953`](https://github.com/weepwood/MRR/commit/32c15953a03211fe817d384fff3a25eac91176c0)）
+- `14:57` fix (archive) improve preview and display controls（[`967c093b`](https://github.com/weepwood/MRR/commit/967c093b52b87ea1764b943ba3f6be677a1260a7)）
+- `14:56` perf (cache) 将影像档案搜索缓存延长至一天（[`7b5bb780`](https://github.com/weepwood/MRR/commit/7b5bb780586d57d97aa28f0479ff8d4c1ced99d2) · [PR #83](https://github.com/weepwood/MRR/pull/83)）
+- `14:54` perf (cache) 将档案搜索缓存延长至一天（[`97de8138`](https://github.com/weepwood/MRR/commit/97de81389a4c64fbba42074a52f7e06bf08b2e1f)）
+- `14:37` style (ui) align card and drawer layouts（[`4eccbb64`](https://github.com/weepwood/MRR/commit/4eccbb64f2415b1e8036f21c22eed811686768c8)）
+- `14:24` fix (settings) expose id card access controls（[`a3296629`](https://github.com/weepwood/MRR/commit/a3296629014b2426dd36704903941b0d803a1c0a)）
+- `14:15` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`fdd16466`](https://github.com/weepwood/MRR/commit/fdd1646608ccfb309aceddd4b89031100e7cc7ae)）
+- `14:15` perf (search) 为影像档案袋组合查询增加本地缓存（[`9b8626ee`](https://github.com/weepwood/MRR/commit/9b8626ee45154d28040fa516a9cc1ef61ae62b1e) · [PR #82](https://github.com/weepwood/MRR/pull/82)）
+- `14:13` feat (settings) 统一配置保存入口（[`c8cd0a3a`](https://github.com/weepwood/MRR/commit/c8cd0a3abcd67e6c9a036fdb0316b120984d2fac)）
+- `14:03` merge Merge commit 'e268c09fdee295d1808c595f448e5316e6449003' into dev-no-login（[`674f2e49`](https://github.com/weepwood/MRR/commit/674f2e49f51b27e0ed91164d1fbc8d58247b9cbb)）
+- `14:00` fix (settings) 点击工作区后自动填满桌面视口（[`e268c09f`](https://github.com/weepwood/MRR/commit/e268c09fdee295d1808c595f448e5316e6449003) · [PR #81](https://github.com/weepwood/MRR/pull/81)）
+- `13:52` chore (settings) document workspace focus behavior（[`7090cf5b`](https://github.com/weepwood/MRR/commit/7090cf5b4b7e586b625013af00b1ff5bca5e47d9)）
+- `13:52` test (settings) verify workspace click fills viewport（[`b11e16db`](https://github.com/weepwood/MRR/commit/b11e16db726008a8266424d8ad984919d719c140)）
+- `13:51` test (cache) verify archive search caching（[`2fab31f5`](https://github.com/weepwood/MRR/commit/2fab31f54eea1ce31db55be15803f916b1abbd0a)）
+- `13:51` feat (settings) install workspace focus behavior（[`878e82ff`](https://github.com/weepwood/MRR/commit/878e82fffba1ccc030f3f72574c5ee3733fbe6f0)）
+- `13:51` feat (settings) focus full-height workspace on desktop click（[`c2a6bf99`](https://github.com/weepwood/MRR/commit/c2a6bf9972a93e5bc2cd2d91e2e011b277b13cb3)）
+- `13:51` perf (search) cache archive image lookups（[`f9209de7`](https://github.com/weepwood/MRR/commit/f9209de787a6ab22f98a4f23d07e10e7192c703f)）
+- `13:50` perf (cache) register archive search cache（[`aac08edc`](https://github.com/weepwood/MRR/commit/aac08edc3aef7ad441d19f93bf10204209e4e538)）
+- `13:47` test (settings) verify full viewport workspace height（[`57f3d0d8`](https://github.com/weepwood/MRR/commit/57f3d0d81b2b94fd136dc883969d50169f0f2018)）
+- `13:47` fix (settings) use full viewport height for settings workspace（[`3748d73b`](https://github.com/weepwood/MRR/commit/3748d73b71b3dd9f72710e8841dac7226c55f509)）
+- `13:31` test (settings) verify independent right pane scrolling（[`5690f32b`](https://github.com/weepwood/MRR/commit/5690f32b460f06681208094da3b828cf8f0b5608)）
+- `13:30` fix (settings) use independent content scrolling for fixed sidebar（[`fd8cfce4`](https://github.com/weepwood/MRR/commit/fd8cfce47e2c035f5196b4221fe4c68f4bfba1b2)）
+- `13:22` test (settings) use supported scroll behavior（[`5c35cb9a`](https://github.com/weepwood/MRR/commit/5c35cb9a306a46922448054c37bd4964dc839215)）
+- `13:21` test (settings) verify sidebar remains in viewport（[`f1f17ba5`](https://github.com/weepwood/MRR/commit/f1f17ba55af3fb615274ab62475953222b96ff76)）
+- `13:20` style (settings) load sticky navigation styles（[`55c75ecf`](https://github.com/weepwood/MRR/commit/55c75ecf4b4bf80518428b8488087105120a6429)）
+- `13:20` fix (settings) keep category sidebar visible while scrolling（[`2db32f12`](https://github.com/weepwood/MRR/commit/2db32f1246cc738c61cb87546f0e06305d1a0e97)）
+- `13:14` fix (settings) 固定设置导航栏（[`eb9aaf5d`](https://github.com/weepwood/MRR/commit/eb9aaf5d3875367515f7dc4e1772b2bd6da31ea6)）
+- `13:13` merge # Conflicts:（[`84c0be67`](https://github.com/weepwood/MRR/commit/84c0be67b44c0d1782a7bfab2b9349824acb45e2)）
+- `13:10` refactor (settings) 重构设置页面为清晰分类布局（[`1a9dd4cf`](https://github.com/weepwood/MRR/commit/1a9dd4cf1f35514ebf35d2be7858e71f5960d3ea) · [PR #80](https://github.com/weepwood/MRR/pull/80)）
+- `12:48` style (settings) include new settings surfaces in radius system（[`63c475e0`](https://github.com/weepwood/MRR/commit/63c475e076b61e263759cb82de6ab37c57266057)）
+- `12:47` test (settings) cover categorized settings layout（[`cd5af046`](https://github.com/weepwood/MRR/commit/cd5af0462262b8928975c08cf7c4afa6bbc3de82)）
+- `12:46` refactor (settings) organize appearance options into clear groups（[`58a2b2ee`](https://github.com/weepwood/MRR/commit/58a2b2ee959dd1c5c4ac671ab99b05fd245368bf)）
+- `12:45` refactor (settings) simplify settings page layout（[`bb517b74`](https://github.com/weepwood/MRR/commit/bb517b74a257c811e658eb2bbe22791aa79076f4)）
+- `12:39` feat (patients) add id card access controls（[`18acba15`](https://github.com/weepwood/MRR/commit/18acba15c097be1779d7e64404217ecf423e0284)）
+- `11:52` fix (frontend) 在新标签页打开帮助文档（[`6c21e951`](https://github.com/weepwood/MRR/commit/6c21e9519ccd6e525da4d46991c56c6a9597b7cf)）
+- `08:36` docs (internal) 移除架构文档中的非目标章节（[`36005b2e`](https://github.com/weepwood/MRR/commit/36005b2e55c05fabaaf3bc163b03f498ce60d597)）
+- `08:35` docs add module screenshot gallery（[`1cfc3dbe`](https://github.com/weepwood/MRR/commit/1cfc3dbea27b9c65647ff27b6d9bde89001c8ca7)）
+- `08:02` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`0b7c1d53`](https://github.com/weepwood/MRR/commit/0b7c1d53521e49e2cdfabe92e7f258adf4349865)）
+- `08:02` chore (pom) 升级项目版本号从0.2.0到0.3.0（[`1f1bb82d`](https://github.com/weepwood/MRR/commit/1f1bb82de7deaaf14b18c630b7ccbeda1e100961)）
+- `08:02` feat (status) refine current-day availability view（[`7dad9f0f`](https://github.com/weepwood/MRR/commit/7dad9f0f538d26c4448108366ba8f67f35a81f68)）
+- `07:40` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`118f5940`](https://github.com/weepwood/MRR/commit/118f5940bb971cb2f8d4599baac6f0cdb7139559)）
+- `07:27` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`165750b1`](https://github.com/weepwood/MRR/commit/165750b1d72a98f0c190274779bc07c4b3252c1f)）
+- `07:27` docs 补全 PostgreSQL 数据表导入教程（[`cec358e8`](https://github.com/weepwood/MRR/commit/cec358e857fc15fbeb5566ddacaaf7c7c88e16c4) · [PR #79](https://github.com/weepwood/MRR/pull/79)）
+- `07:27` feat refine system status and settings views（[`0315bbdd`](https://github.com/weepwood/MRR/commit/0315bbdd3787828c75b29fa8a5f9d0f336317389)）
+- `07:20` docs add PostgreSQL table import tutorials（[`6c93ff65`](https://github.com/weepwood/MRR/commit/6c93ff6594eb00a1ba04d227d1ade9777851dd2b)）
+- `07:06` docs 完善 VitePress 用户手册与内部文档（[`f33dd5e7`](https://github.com/weepwood/MRR/commit/f33dd5e707a430b86e70189eba581e7477f16490) · [PR #77](https://github.com/weepwood/MRR/pull/77)）
+- `07:05` feat (generate-git-changelog) 增加变更日志生成限制到1000条（[`af9bf0a8`](https://github.com/weepwood/MRR/commit/af9bf0a8b8366fb0b84b62fc2f94ab6ad550fe87)）
+- `07:05` fix (frontend-docs) localize request errors and refine docs visuals（[`dc1b857a`](https://github.com/weepwood/MRR/commit/dc1b857a171aa83d6b306ed014ccc97f1f2f9257)）
+- `06:05` docs (user) 补充图片来源与管理设置（[`a7105599`](https://github.com/weepwood/MRR/commit/a7105599b4a9918a2b84ce189fe8a474dff6637a)）
+- `06:04` docs (install) 校正安装与数据库迁移流程（[`d5971d83`](https://github.com/weepwood/MRR/commit/d5971d83f5e61a92b03619dcb93715d17deb2e48)）
+- `06:04` docs (internal) 完善内部文档导航（[`fa972e62`](https://github.com/weepwood/MRR/commit/fa972e62904c2326317f82ca2c83cd070e5b22fd)）
+- `06:03` docs (user) 完善用户手册导航（[`ef1825f6`](https://github.com/weepwood/MRR/commit/ef1825f67aef0be79fbb44ec1ad3ec59f615ecb9)）
+- `06:03` docs (internal) 更新内部文档首页（[`778f07af`](https://github.com/weepwood/MRR/commit/778f07afbaa43c2686595c602f6070ba22f4649d)）
+- `06:02` docs (internal) 更新系统架构与存储边界（[`939bb91f`](https://github.com/weepwood/MRR/commit/939bb91f5bebd00e05514bd801e9d274a0097d3e)）
+- `06:02` docs (internal) 增加生产运行手册（[`a6da2675`](https://github.com/weepwood/MRR/commit/a6da267513d434328de039e0a4253c851606f5ad)）
+- `06:01` docs (internal) 增加数据导入与迁移指南（[`3a702e9d`](https://github.com/weepwood/MRR/commit/3a702e9d8bf13c6dd1351557a242907ebeaea0e2)）
+- `06:01` docs (internal) 重写数据库模型与迁移说明（[`0293f2d4`](https://github.com/weepwood/MRR/commit/0293f2d422d5c30b6783d591336de1da010d20ef)）
+- `06:00` docs (internal) 校正后端、编号与 Flyway 规则（[`af04acfa`](https://github.com/weepwood/MRR/commit/af04acfadfe830a929d9333b016ce19ab7675eb5)）
+- `05:59` docs (user) 完善患者与记录说明（[`97383f2e`](https://github.com/weepwood/MRR/commit/97383f2e9d12b2fa19472f974e74670bb14844ec)）
+- `05:59` docs (user) 完善影像档案袋说明（[`6809e643`](https://github.com/weepwood/MRR/commit/6809e643ade9bad71f1bcaf4d1437f5256e086b2)）
+- `05:58` docs (user) 校正统计分析页面说明（[`6f9a1ed5`](https://github.com/weepwood/MRR/commit/6f9a1ed56eb72db40c373e08e6e6969ad485f4ab)）
+- `05:58` docs (user) 增加用户常见问题（[`21d29e6a`](https://github.com/weepwood/MRR/commit/21d29e6a497d3315829a495caf2a3ab5b7568571)）
+- `05:58` docs (user) 增加病案类型说明（[`aeff54ab`](https://github.com/weepwood/MRR/commit/aeff54abc702de3b3a38b33f75cde140dbda2596)）
+- `05:57` docs (user) 更新用户手册首页与编号规则（[`74cb2f75`](https://github.com/weepwood/MRR/commit/74cb2f75445b126cc0cada21a8f2946d466a5f9e)）
+- `02:02` docs link release notes to git changelog（[`e54b3c2e`](https://github.com/weepwood/MRR/commit/e54b3c2ef59d578e61c3b92d82c5b05cfeedc4dc)）
+- `02:02` docs add generated changelog snapshot（[`98b2a042`](https://github.com/weepwood/MRR/commit/98b2a0428b5d11d5ea4708bbad121b8c4d50d8dd)）
+- `02:01` docs expose changelog in internal docs（[`18b79ee2`](https://github.com/weepwood/MRR/commit/18b79ee2d052a626c2ef61ee78baddb05bfdf2c1)）
+- `02:01` docs add changelog navigation（[`65c27860`](https://github.com/weepwood/MRR/commit/65c27860f66e859dc3a980cc318ef3ca6a804b41)）
+- `02:00` docs expose changelog generation command（[`dfeb17d0`](https://github.com/weepwood/MRR/commit/dfeb17d035ce6efb50e40a0a1e707080d374aa62)）
+- `02:00` docs refresh git changelog before build（[`c2c1c986`](https://github.com/weepwood/MRR/commit/c2c1c9866640bebc9a576fe78e4e2d79b19149dd)）
+- `02:00` docs add git changelog generator（[`df123edd`](https://github.com/weepwood/MRR/commit/df123eddd1942296bd2746b8991de41c5f4ca722)）
+- `01:58` merge Feat/mr patient ward fields 20260716（[`516b205e`](https://github.com/weepwood/MRR/commit/516b205e301d55200fadf3976b7e49cf2d0dd51b) · [PR #76](https://github.com/weepwood/MRR/pull/76)）
+- `01:26` fix (patient) 将病区字段 binqu 更正为 bingqu（[`f3782b05`](https://github.com/weepwood/MRR/commit/f3782b051c61be25c5acd0e7fb4130560e23e525) · [PR #75](https://github.com/weepwood/MRR/pull/75)）
+- `01:12` fix (frontend) bind patient ward column to bingqu（[`8260598a`](https://github.com/weepwood/MRR/commit/8260598a67c388d362b4126327f07281ac19428b)）
+- `01:12` fix (frontend) expose bingqu in search response types（[`6f206c05`](https://github.com/weepwood/MRR/commit/6f206c053c938e8a79766f2c842cce163a377eaf)）
+- `01:12` fix (frontend) rename patient binqu type to bingqu（[`a3d0bc67`](https://github.com/weepwood/MRR/commit/a3d0bc67c17ae6de7ab272b1dd781f824fa99825)）
+- `01:12` test (patient) assert bingqu field propagation（[`b201e81d`](https://github.com/weepwood/MRR/commit/b201e81d61f70d3379b16288773195c5a99b2f72)）
+- `01:11` fix (patient) map bingqu in archive search service（[`3f0ba78d`](https://github.com/weepwood/MRR/commit/3f0ba78d4a74d72124b4f2f67f00e73daea953cf)）
+- `01:11` fix (patient) rename archive response field to bingqu（[`c6eb65e4`](https://github.com/weepwood/MRR/commit/c6eb65e4749f7cfb014a753892416b529d554c4a)）
+- `01:11` fix (patient) query bingqu column consistently（[`10256334`](https://github.com/weepwood/MRR/commit/1025633401048acd3ef364a6392b271428686252)）
+- `01:11` fix (patient) rename Patient binqu property to bingqu（[`d35b647e`](https://github.com/weepwood/MRR/commit/d35b647ef85171ccd8f23fa05a83254518389f76)）
+- `01:10` fix (patient) add migration to rename binqu to bingqu（[`7e4d716b`](https://github.com/weepwood/MRR/commit/7e4d716b92721f125a5fbc53448e7194cb259d91)）
+- `01:09` fix (frontend) bind patient ward column to bingqu（[`e86fde2f`](https://github.com/weepwood/MRR/commit/e86fde2f3982bfff71989f24aa19fd95d4e8fd41)）
+- `01:09` fix (frontend) expose bingqu in search response types（[`4d851285`](https://github.com/weepwood/MRR/commit/4d851285a432efeca9516dc261a0408e3852a3ff)）
+- `01:09` fix (frontend) rename patient binqu type to bingqu（[`7db1800a`](https://github.com/weepwood/MRR/commit/7db1800a44d67a2ecec6bcb02856cd5b5c5e6d54)）
+- `01:08` test (patient) assert bingqu field propagation（[`f2f78544`](https://github.com/weepwood/MRR/commit/f2f7854422c5fed54a9fb4fe8156731cd5de5597)）
+- `01:08` fix (patient) map bingqu in archive search service（[`733c2262`](https://github.com/weepwood/MRR/commit/733c2262381884511c50806bff763112e4a858ea)）
+- `01:08` fix (patient) rename archive response field to bingqu（[`2e3760ce`](https://github.com/weepwood/MRR/commit/2e3760cea15a25a17ec2fe0c62800f51c8bf7511)）
+- `01:08` fix (patient) query bingqu column consistently（[`01497dbf`](https://github.com/weepwood/MRR/commit/01497dbf85e51ce3a7392d4a1039981a56f34891)）
+- `01:07` fix (patient) rename Patient binqu property to bingqu（[`318fe1d7`](https://github.com/weepwood/MRR/commit/318fe1d78a8e9ab9dfa65871a3b715b00784c347)）
+- `01:07` fix (patient) remove old binqu migration name（[`5612b521`](https://github.com/weepwood/MRR/commit/5612b521dcb9088f6e37107d897782823320ed75)）
+- `01:07` fix (patient) rename binqu field to bingqu（[`ad2b3042`](https://github.com/weepwood/MRR/commit/ad2b3042115a7070081cad32e16649a915d3c609)）
+- `00:32` fix (archive) preserve search counts and favorites（[`b3fcc784`](https://github.com/weepwood/MRR/commit/b3fcc78488b0a2fc88901ce0f8bcb18e6490263c)）
 
 ## 2026-07-16
 
-- **修复** 支持图片类型 0 表示暂未分类（[`0877fa6`](https://github.com/weepwood/MRR/commit/0877fa61dbb6000f53ec9f91c8e5ec0e74a9735f) · [PR #73](https://github.com/weepwood/MRR/pull/73)） — weepwood
-- **新增** `patient` 增加入院日期、病区和床位字段（[`bd764a9`](https://github.com/weepwood/MRR/commit/bd764a9e36ad0fe84bd7e536fd2b1b320df7be1d) · [PR #72](https://github.com/weepwood/MRR/pull/72)） — weepwood
-- **新增** 影像档案袋增加本地搜索记录（[`2858cd2`](https://github.com/weepwood/MRR/commit/2858cd2241643af815b57397d0df784d1c3cb876) · [PR #68](https://github.com/weepwood/MRR/pull/68)） — weepwood
-- **新增** 全局统一病案类型为 1-15（[`09a2be9`](https://github.com/weepwood/MRR/commit/09a2be915813c02fa4e469cd056e93d096f8da66) · [PR #71](https://github.com/weepwood/MRR/pull/71)） — weepwood
-- **新增** `browser` 支持Chromium内核浏览器版本检测和兼容性提示（[`bbf5134`](https://github.com/weepwood/MRR/commit/bbf513401cca1a39fc4da54d3ea804c0f444c7f6)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`3b8d577`](https://github.com/weepwood/MRR/commit/3b8d5779815a855c40aa294d27a3aeeac6b9a830)） — weepwood
-- **修复** `frontend` update documentation links（[`6c5898a`](https://github.com/weepwood/MRR/commit/6c5898a3aa39a441d45a8d2cfad1b9287fb4d4e7)） — weepwood
-- **维护** `release` prepare v0.2.0（[`d5ab725`](https://github.com/weepwood/MRR/commit/d5ab725123849b42c1f1d870e994d93200699f11)） — weepwood
-- **修复** `watermark` omit seconds from timestamp（[`0cb3a8e`](https://github.com/weepwood/MRR/commit/0cb3a8e16b14ec19122cdd4a2301cf98c6b8b073)） — weepwood
-- **合并** # Conflicts:（[`2e55d35`](https://github.com/weepwood/MRR/commit/2e55d35fbfa70e5cf8459e8b15b89799600e920a)） — weepwood
-- **CI** `frontend` run E2E across supported browser engines（[`0657b42`](https://github.com/weepwood/MRR/commit/0657b42cac0ef1eceebddd0de0739fd5eb02e8fc)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login # Please enter a commit message to explain why this merge is necessary, # especially if it merges an updated upstream into a topic branch. # # Lines starting with '#' will be ignored, and an empty message aborts # the commit.（[`da57d45`](https://github.com/weepwood/MRR/commit/da57d456edbbf176d71abb2a69c23c9795fc5895)） — weepwood
-- **性能** `watermark` refresh archive overlay every minute（[`8d36e0f`](https://github.com/weepwood/MRR/commit/8d36e0ffc9c9ad25941960e4adfcdf04860a8c49)） — weepwood
-- **修复** `image` fall back when segment URL is blank（[`53a6587`](https://github.com/weepwood/MRR/commit/53a65877b7e5ddd9ea4854fefae47359d960ebe8)） — weepwood
-- **修复** `db` tolerate future Flyway migrations（[`1997307`](https://github.com/weepwood/MRR/commit/19973074e19f5f56aacd04fbde3e740f35336334)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`3126552`](https://github.com/weepwood/MRR/commit/312655240e9e3f667f8030c5e385badd6f739293)） — weepwood
-- **合并** sync latest Flyway fixes（[`367af5d`](https://github.com/weepwood/MRR/commit/367af5d10f4bbcd4d69b96fbc0c09d9d5b760bf0)） — weepwood
-- **新增** `ops` 增加 Windows Server 原生部署运维体系（[`65eb188`](https://github.com/weepwood/MRR/commit/65eb188a62880e839185726664adb7389ca412f9) · [PR #57](https://github.com/weepwood/MRR/pull/57)） — weepwood
-- **重构** `architecture` 落地存储边界与图片来源切换（[`09e08a4`](https://github.com/weepwood/MRR/commit/09e08a4a1f0db6d79f181fbf3b944763ffac2147) · [PR #61](https://github.com/weepwood/MRR/pull/61)） — weepwood
-- **新增** 优化病案扫描趋势图交互（[`a3db81d`](https://github.com/weepwood/MRR/commit/a3db81ddd990eda5f101070cc5de1c028097f804) · [PR #62](https://github.com/weepwood/MRR/pull/62)） — weepwood
-- **重构** `db` 建立病案主数据模型并同步后端（[`e9b158a`](https://github.com/weepwood/MRR/commit/e9b158a1d7b689cede532cdd8753048daca05b3e) · [PR #59](https://github.com/weepwood/MRR/pull/59)） — weepwood
+- `23:54` fix 支持图片类型 0 表示暂未分类（[`0877fa61`](https://github.com/weepwood/MRR/commit/0877fa61dbb6000f53ec9f91c8e5ec0e74a9735f) · [PR #73](https://github.com/weepwood/MRR/pull/73)）
+- `23:48` test cover uncategorized image type zero（[`ad443601`](https://github.com/weepwood/MRR/commit/ad443601d151b53b062562c90a7dbfc71f29794c)）
+- `23:48` fix allow uncategorized image type zero（[`3af823b7`](https://github.com/weepwood/MRR/commit/3af823b75edf8c0ed309ea16a82e88411efd653f)）
+- `23:46` feat (patient) 增加入院日期、病区和床位字段（[`bd764a9e`](https://github.com/weepwood/MRR/commit/bd764a9e36ad0fe84bd7e536fd2b1b320df7be1d) · [PR #72](https://github.com/weepwood/MRR/pull/72)）
+- `23:45` feat 影像档案袋增加本地搜索记录（[`2858cd22`](https://github.com/weepwood/MRR/commit/2858cd2241643af815b57397d0df784d1c3cb876) · [PR #68](https://github.com/weepwood/MRR/pull/68)）
+- `23:43` feat (archive) persist search records and favorites（[`e65b4420`](https://github.com/weepwood/MRR/commit/e65b4420f2c064e86059ff6a63c5b544cc844aba)）
+- `23:37` fix (test) match normalized patient record code（[`428cac03`](https://github.com/weepwood/MRR/commit/428cac035d78474500b6c299cd82da47820262a4)）
+- `23:36` feat (frontend) show ward and bed in archive cases（[`7ac429d3`](https://github.com/weepwood/MRR/commit/7ac429d36596f4c2af6f35e6c688a83cb775e341)）
+- `23:35` feat 全局统一病案类型为 1-15（[`09a2be91`](https://github.com/weepwood/MRR/commit/09a2be915813c02fa4e469cd056e93d096f8da66) · [PR #71](https://github.com/weepwood/MRR/pull/71)）
+- `23:35` test cover mr\_patient ward fields（[`c84f00fc`](https://github.com/weepwood/MRR/commit/c84f00fc68cd441def77e0ac1c551bc678fcdf15)）
+- `23:35` refactor (frontend) type patient search ward fields（[`67ed10db`](https://github.com/weepwood/MRR/commit/67ed10dbe49e4395fea330c69e4d46a0938c847c)）
+- `23:33` feat (frontend) display patient ward and bed（[`5531d4ed`](https://github.com/weepwood/MRR/commit/5531d4ed0fda2a1387f64e12741ddca9964f7dc4)）
+- `23:33` feat (frontend) expose archive ward fields（[`80682492`](https://github.com/weepwood/MRR/commit/80682492f216c6833644060c69e3205a370f8753)）
+- `23:33` feat (frontend) type mr\_patient ward fields（[`a664fd35`](https://github.com/weepwood/MRR/commit/a664fd357c5a0b0efc4bd62a91184b31905f64e9)）
+- `23:33` feat (service) map mr\_patient ward fields（[`e7646e5c`](https://github.com/weepwood/MRR/commit/e7646e5c970ba2a10e1da2d61410519926b6229f)）
+- `23:32` feat (api) include ward fields in archive cases（[`8477abd7`](https://github.com/weepwood/MRR/commit/8477abd74faa17de2e7e5e3e2db053bb0e8e863f)）
+- `23:32` feat (backend) query mr\_patient ward fields（[`78845d78`](https://github.com/weepwood/MRR/commit/78845d78d202d31c248a9a8701ec1e5cae7aa56c)）
+- `23:32` feat (backend) expose mr\_patient ward fields（[`24312298`](https://github.com/weepwood/MRR/commit/2431229876ec9e0d116d10191282fb427f83dd87)）
+- `23:32` feat (db) add admission date ward and bed to mr\_patient（[`c856e59d`](https://github.com/weepwood/MRR/commit/c856e59d8441831121348ce51dfb6a1864133b7b)）
+- `23:28` refactor use global medical record types in mock API（[`ae583b52`](https://github.com/weepwood/MRR/commit/ae583b52591747b7e910e4a0f6670770bbfe1305)）
+- `23:24` test cover medical record image type range（[`f7f3f87b`](https://github.com/weepwood/MRR/commit/f7f3f87bf9ba2af69edcf1e7c105998acfe1953d)）
+- `23:23` test cover global medical record type dictionary（[`225c96e8`](https://github.com/weepwood/MRR/commit/225c96e87dd07ef9bba7c97dddc0363fc6af67f3)）
+- `23:23` fix keep medical record type map tuple-safe（[`959b9d02`](https://github.com/weepwood/MRR/commit/959b9d02856510782657f0766b1d60abc87ead82)）
+- `23:22` fix allow medical record image types 1 through 15（[`3267e2fe`](https://github.com/weepwood/MRR/commit/3267e2fe888c1a029295dda7c5fbdc6c03b53616)）
+- `23:21` refactor use global medical record types in ID-card viewer（[`a2dfca37`](https://github.com/weepwood/MRR/commit/a2dfca37119d99a0630d3a5d349ba9db849c4921)）
+- `23:17` refactor use all medical record types in records page（[`ce19ea31`](https://github.com/weepwood/MRR/commit/ce19ea312d26b3123c37eaa93817b2ffff0432aa)）
+- `23:16` refactor use global medical record types in archive（[`7f1158f0`](https://github.com/weepwood/MRR/commit/7f1158f05bf61acc044c01506d538f9caa15051f)）
+- `23:16` feat add global medical record type dictionary（[`ae56a3f4`](https://github.com/weepwood/MRR/commit/ae56a3f4a122820bf905e6a31ccd39be3b278e43)）
+- `22:11` style (archive) align history panel with stylelint order（[`2dad8623`](https://github.com/weepwood/MRR/commit/2dad862358b37acf320c31a3ddebbb6621f28cee)）
+- `22:07` test (archive) use deterministic system time（[`f4e7ef04`](https://github.com/weepwood/MRR/commit/f4e7ef043686357470874a0679d1ce8e8b327752)）
+- `22:05` fix (archive) avoid clipped history popover and sync tabs（[`9a7a4831`](https://github.com/weepwood/MRR/commit/9a7a4831960e4b3184d20ec9e32aededca6d259f)）
+- `22:03` test (archive) align history fixtures with code normalization（[`837ce293`](https://github.com/weepwood/MRR/commit/837ce293cc9754f76b4cf1706555fa75f9411358)）
+- `22:02` feat (archive) add recent search history UI（[`6c757763`](https://github.com/weepwood/MRR/commit/6c757763354195944a2680395965110225e6d8c1)）
+- `22:01` feat (archive) record successful local searches（[`73a33b33`](https://github.com/weepwood/MRR/commit/73a33b337c682b5f89abf5ea61db1029953a2abd)）
+- `22:00` test (archive) cover local search history（[`e0cb8f4f`](https://github.com/weepwood/MRR/commit/e0cb8f4f5b39077f882d9682b61e281f9d5f12c3)）
+- `21:59` feat (archive) add local search history storage（[`b65c63b6`](https://github.com/weepwood/MRR/commit/b65c63b6d01b847eaa5dcd85a93dd7e49909ce2e)）
+- `17:40` feat (browser) 支持Chromium内核浏览器版本检测和兼容性提示（[`bbf51340`](https://github.com/weepwood/MRR/commit/bbf513401cca1a39fc4da54d3ea804c0f444c7f6)）
+- `17:39` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`3b8d5779`](https://github.com/weepwood/MRR/commit/3b8d5779815a855c40aa294d27a3aeeac6b9a830)）
+- `17:39` fix (db) 保留病案号和上架号原始格式（[`8938fc4d`](https://github.com/weepwood/MRR/commit/8938fc4dee4507db4292b51b1193b85b8ef139f5) · [PR #67](https://github.com/weepwood/MRR/pull/67)）
+- `17:29` fix (db) preserve medical record code formatting（[`25e42620`](https://github.com/weepwood/MRR/commit/25e42620df9f0821e3574a54e32b1b37a2b1c9df)）
+- `14:38` fix (frontend) update documentation links（[`6c5898a3`](https://github.com/weepwood/MRR/commit/6c5898a3aa39a441d45a8d2cfad1b9287fb4d4e7)）
+- `12:14` chore (release) prepare v0.2.0（[`d5ab7251`](https://github.com/weepwood/MRR/commit/d5ab725123849b42c1f1d870e994d93200699f11)）
+- `11:38` fix (watermark) omit seconds from timestamp（[`0cb3a8e1`](https://github.com/weepwood/MRR/commit/0cb3a8e16b14ec19122cdd4a2301cf98c6b8b073)）
+- `11:34` merge # Conflicts:（[`2e55d35f`](https://github.com/weepwood/MRR/commit/2e55d35fbfa70e5cf8459e8b15b89799600e920a)）
+- `11:32` ci (frontend) run E2E across supported browser engines（[`0657b42c`](https://github.com/weepwood/MRR/commit/0657b42cac0ef1eceebddd0de0739fd5eb02e8fc)）
+- `11:29` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login # Please enter a commit message to explain why this merge is necessary, # especially if it merges an updated upstream into a topic branch. # # Lines starting with '#' will be ignored, and an empty message aborts # the commit.（[`da57d456`](https://github.com/weepwood/MRR/commit/da57d456edbbf176d71abb2a69c23c9795fc5895)）
+- `11:28` feat (frontend) 合并病案扫描统计页面（[`0043a688`](https://github.com/weepwood/MRR/commit/0043a6889bc640c3a88db579c1f20b0437d85b42) · [PR #66](https://github.com/weepwood/MRR/pull/66)）
+- `11:27` feat 按 userid 绑定病案访问 IP 并支持切换次数设置（[`bc8c6f43`](https://github.com/weepwood/MRR/commit/bc8c6f43f3051842d509412831114caac48e4456) · [PR #64](https://github.com/weepwood/MRR/pull/64)）
+- `11:26` perf (watermark) refresh archive overlay every minute（[`8d36e0ff`](https://github.com/weepwood/MRR/commit/8d36e0ffc9c9ad25941960e4adfcdf04860a8c49)）
+- `11:20` fix (image) fall back when segment URL is blank（[`53a65877`](https://github.com/weepwood/MRR/commit/53a65877b7e5ddd9ea4854fefae47359d960ebe8)）
+- `11:20` fix (db) tolerate future Flyway migrations（[`19973074`](https://github.com/weepwood/MRR/commit/19973074e19f5f56aacd04fbde3e740f35336334)）
+- `11:09` fix (frontend) preserve legacy statistics route redirect（[`53660529`](https://github.com/weepwood/MRR/commit/536605299e54923547726617d64d43cf1a8d6360)）
+- `11:09` refactor (frontend) remove duplicate records statistics page（[`8e5db6ef`](https://github.com/weepwood/MRR/commit/8e5db6ef3023bb4d8aac97134ff4788a78b8804e)）
+- `11:09` refactor (frontend) keep one statistics menu entry（[`7ca5b0d4`](https://github.com/weepwood/MRR/commit/7ca5b0d4a0d96a1c06c1966d4e99b7d21627c499)）
+- `11:08` feat (frontend) merge records statistics into statistics page（[`24486df4`](https://github.com/weepwood/MRR/commit/24486df41966826c9cbd62bcd7d688ff4c1a7be3)）
+- `11:06` test 覆盖 IP 绑定存储异常临时放行（[`2033db15`](https://github.com/weepwood/MRR/commit/2033db1527011b4b948369b64ce0ce679a461e52)）
+- `11:05` fix 避免 IP 绑定存储异常阻断图片访问（[`aff45f66`](https://github.com/weepwood/MRR/commit/aff45f66e2217b18cdbdd4429c8523f94f31563f)）
+- `10:57` ci (frontend) run E2E across supported browser engines（[`b745c8d3`](https://github.com/weepwood/MRR/commit/b745c8d3eaea4ad6caaf4ad5003792a856cc83a4)）
+- `10:57` ci (frontend) install all Playwright browser engines（[`a767026e`](https://github.com/weepwood/MRR/commit/a767026ef61dd64a36ffd8aa8f92fcc5381c1fed)）
+- `10:56` docs (frontend) document browser compatibility contract（[`c311980c`](https://github.com/weepwood/MRR/commit/c311980ca46a887bdfb2629e69e3f34ba070469f)）
+- `10:55` test (frontend) verify outdated browser notice behavior（[`7299d6f2`](https://github.com/weepwood/MRR/commit/7299d6f22c4a61c896e225fa83279a6c208ead3a)）
+- `10:55` fix (frontend) install clipboard fallback at startup（[`168f4465`](https://github.com/weepwood/MRR/commit/168f4465f04e48a8b771dc42ea4d95d8e3801c94)）
+- `10:54` fix (frontend) add clipboard fallback for intranet HTTP（[`523c827f`](https://github.com/weepwood/MRR/commit/523c827f1c0cc85a311830bea115e712c7aa0d4e)）
+- `10:54` chore (frontend) rename modern polyfill option（[`76fabb88`](https://github.com/weepwood/MRR/commit/76fabb88a3f020435f9cdf15f2e29fe3875a679f)）
+- `10:54` refactor (frontend) clarify modern polyfill build option（[`50bbb577`](https://github.com/weepwood/MRR/commit/50bbb577edb4a658c28e8eac5c3064e29af556ba)）
+- `10:53` test (frontend) cover Chromium Firefox and WebKit（[`91e6da69`](https://github.com/weepwood/MRR/commit/91e6da69f1fcd4d30854f4c813cbbf3574382027)）
+- `10:53` fix (frontend) guard scrollbar compensation by feature support（[`b3257564`](https://github.com/weepwood/MRR/commit/b3257564509ef90ec6f98576e9d34281779053bc)）
+- `10:52` style (frontend) redesign browser compatibility notice（[`cfb06f26`](https://github.com/weepwood/MRR/commit/cfb06f26a807b7a07f575e08446763610d082759)）
+- `10:52` feat (frontend) show dismissible unsupported browser notice（[`fee55b93`](https://github.com/weepwood/MRR/commit/fee55b9351a08aace84f9716fb21f0bd58a71e60)）
+- `10:51` fix (frontend) lock Vite browser targets（[`2d9733a6`](https://github.com/weepwood/MRR/commit/2d9733a626bd42e9cbe5de8c5337db3999a23629)）
+- `10:50` fix (frontend) pin supported browser range（[`bd58609c`](https://github.com/weepwood/MRR/commit/bd58609cf11313fa5677b8a1e765dd0f186b971a)）
+- `10:44` fix avoid reusing userid after leaving archive page（[`ecfc11ea`](https://github.com/weepwood/MRR/commit/ecfc11ea9cf24c6f49e3ff9de77743c4837856c6)）
+- `10:44` feat install archive userid route preservation（[`12eb8bc4`](https://github.com/weepwood/MRR/commit/12eb8bc479280f7d6c4484d055c18f914c5f9b21)）
+- `10:44` feat preserve archive userid within archive routes（[`60103962`](https://github.com/weepwood/MRR/commit/60103962fc7cf1072d70d081c694177f9030247c)）
+- `10:42` test cover archive userid IP binding rules（[`03dac65c`](https://github.com/weepwood/MRR/commit/03dac65c703b2a739528fe804845a66101a5f7f4)）
+- `10:41` feat prefer archive URL userid in watermark（[`96156667`](https://github.com/weepwood/MRR/commit/961566677239bc532e1dcbd7c7d2481ed3277535)）
+- `10:40` feat expose archive IP switch limit in settings page（[`d0dfc892`](https://github.com/weepwood/MRR/commit/d0dfc892f805a4f9770859c122822c59b2992865)）
+- `10:36` test cover archive IP change limit setting（[`2bdbdc2d`](https://github.com/weepwood/MRR/commit/2bdbdc2d065c806918d539f5f6bb5bb25dfca74d)）
+- `10:35` feat add archive IP change limit setting（[`99c84ba3`](https://github.com/weepwood/MRR/commit/99c84ba3c098a707fb17de8d0d6611ad7205689c)）
+- `10:35` fix retain archive userid from entry URL（[`22548a64`](https://github.com/weepwood/MRR/commit/22548a64fe4c619517649bb086cca2cdab6ffe78)）
+- `10:34` feat track archive userid during image loading（[`5d56f758`](https://github.com/weepwood/MRR/commit/5d56f7582da7c2834a23879153babf62a8755243)）
+- `10:33` feat send archive userid with image search（[`78f0f7b8`](https://github.com/weepwood/MRR/commit/78f0f7b8e495d5e6df437edda1734ce3bc430c14)）
+- `10:33` test inject archive access service into image controller（[`af14023c`](https://github.com/weepwood/MRR/commit/af14023cfead6577afec1b5232804a0755432df0)）
+- `10:32` feat bind archive userid to client IP on image search（[`0d1d2d92`](https://github.com/weepwood/MRR/commit/0d1d2d92d39e04a511333d7590ec40e3b64e4a27)）
+- `10:30` feat record archive userid and IP binding changes in audit log（[`6a86de9f`](https://github.com/weepwood/MRR/commit/6a86de9fef23f15f4e659efa371b599b2c9f9bbd)）
+- `10:29` fix normalize forwarded client IP（[`021232f4`](https://github.com/weepwood/MRR/commit/021232f4e0fb2aa4b00385239d8353e348c2e027)）
+- `10:29` feat enforce daily archive user IP binding（[`bfb693d7`](https://github.com/weepwood/MRR/commit/bfb693d721cc6418687bbfa34389735e7a342e2e)）
+- `10:28` feat add archive IP binding mapper（[`051a2d15`](https://github.com/weepwood/MRR/commit/051a2d1508668c259780eb0542fb9a3c97869efb)）
+- `10:28` feat add archive access request attributes（[`191ac1fb`](https://github.com/weepwood/MRR/commit/191ac1fb8739a703fd795602416046f2d6f4c824)）
+- `10:27` feat add archive IP binding entity（[`bc222c94`](https://github.com/weepwood/MRR/commit/bc222c945e52cec6f27f34b19aa3ebc19931893b)）
+- `10:27` feat add archive user IP binding schema（[`b3f23c77`](https://github.com/weepwood/MRR/commit/b3f23c770be7fdc01ebce17e03c4704b32ca613c)）
+- `10:12` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`31265524`](https://github.com/weepwood/MRR/commit/312655240e9e3f667f8030c5e385badd6f739293)）
+- `10:12` merge sync latest Flyway fixes（[`367af5d1`](https://github.com/weepwood/MRR/commit/367af5d10f4bbcd4d69b96fbc0c09d9d5b760bf0)）
+- `10:09` fix (db) support legacy Flyway histories（[`01f1eb89`](https://github.com/weepwood/MRR/commit/01f1eb8923cddfb97a9dc400a42836776a16bee7)）
+- `10:08` docs (db) 同步 Flyway 日期时间版本说明（[`8f5cdbb7`](https://github.com/weepwood/MRR/commit/8f5cdbb74e9cc5baf33091b6cbe18bae519e378a) · [PR #63](https://github.com/weepwood/MRR/pull/63)）
+- `09:55` docs (db) align archive docs with datetime Flyway versions（[`b0e5973f`](https://github.com/weepwood/MRR/commit/b0e5973f87ba2e643c84bf9234af328ad98fa1a1)）
+- `09:54` feat (ops) 增加 Windows Server 原生部署运维体系（[`65eb188a`](https://github.com/weepwood/MRR/commit/65eb188a62880e839185726664adb7389ca412f9) · [PR #57](https://github.com/weepwood/MRR/pull/57)）
+- `09:53` refactor (architecture) 落地存储边界与图片来源切换（[`09e08a4a`](https://github.com/weepwood/MRR/commit/09e08a4a1f0db6d79f181fbf3b944763ffac2147) · [PR #61](https://github.com/weepwood/MRR/pull/61)）
+- `09:51` refactor (db) use datetime Flyway migration versions（[`d03c3a50`](https://github.com/weepwood/MRR/commit/d03c3a50e994410cb98285620334c419b30f8d59)）
+- `09:49` feat 优化病案扫描趋势图交互（[`a3db81dd`](https://github.com/weepwood/MRR/commit/a3db81ddd990eda5f101070cc5de1c028097f804) · [PR #62](https://github.com/weepwood/MRR/pull/62)）
+- `09:48` fix 默认展示近 90 日扫描趋势（[`0c739040`](https://github.com/weepwood/MRR/commit/0c7390402fc6e81681825b86dde4bd8a17bc38dd)）
+- `09:40` feat (statistics) replace type distribution with wheel-zoom trend（[`d83b6692`](https://github.com/weepwood/MRR/commit/d83b66926d56c8416d0e2680f55f88f87676f540)）
+- `09:39` feat (charts) support configurable wheel zoom window（[`72aaf139`](https://github.com/weepwood/MRR/commit/72aaf139d1b724ca95a003f13f8e4a72601a7400)）
+- `09:25` fix (settings) 兼容大小写图片来源值（[`b7380ec5`](https://github.com/weepwood/MRR/commit/b7380ec5781980087f7ff95fef3f010633d5f283)）
+- `09:24` docs (settings) 补充图片来源切换说明（[`71de3cef`](https://github.com/weepwood/MRR/commit/71de3cef27f78f8d35fcaf67e8acfb362e77b3c8)）
+- `09:24` test (image) 校验单条 URL 遵循图片来源设置（[`cdc95258`](https://github.com/weepwood/MRR/commit/cdc95258b55ef48fabb27926a282ea0b752f1cd9)）
+- `09:23` fix (settings) 图片来源读取异常时回退本地（[`dda84725`](https://github.com/weepwood/MRR/commit/dda847252950cd1572f337aceabc10a33c487ee2)）
+- `09:21` test (archive) 校验后端选定图片 URL 优先级（[`5bbc62db`](https://github.com/weepwood/MRR/commit/5bbc62dbbe75c482f437c92c2326a5baf7e1cf8b)）
+- `09:21` test (settings) 将图片来源测试加入本地验收（[`e791fa4e`](https://github.com/weepwood/MRR/commit/e791fa4e33bd4c880d189d332a30e7852532fb12)）
+- `09:20` feat (image) 单条图片 URL 遵循来源设置（[`9d1a071c`](https://github.com/weepwood/MRR/commit/9d1a071c3b73e31b24eca8645f2242d556e81504)）
+- `09:20` test (settings) 校验图片来源默认值与解析（[`208cf814`](https://github.com/weepwood/MRR/commit/208cf814e2c26055b474621eeb216052a26cfddc)）
+- `09:19` test (settings) 覆盖本地与 OSS 图片来源选择（[`9fc9fce6`](https://github.com/weepwood/MRR/commit/9fc9fce6bf7e04eafde417bf026ba835d5c29802)）
+- `09:19` feat (settings) 添加本地与 OSS 图片来源切换（[`92698a0a`](https://github.com/weepwood/MRR/commit/92698a0a96d1c0229b01f08ccfa74a3d3661b826)）
+- `09:17` fix (archive) 使用后端选定的图片来源（[`4f2d319e`](https://github.com/weepwood/MRR/commit/4f2d319ec0215477911fbb3c9574f0cfee65bb84)）
+- `09:16` feat (settings) 增加图片来源系统设置（[`0aea19f3`](https://github.com/weepwood/MRR/commit/0aea19f307b2049e6c496c92ce91b3573edee170)）
+- `09:16` feat (settings) 支持按系统设置选择图片来源（[`f144680d`](https://github.com/weepwood/MRR/commit/f144680df98881aa5447b753e370b025eca9a344)）
+- `02:02` fix (image) 校验编号并安全编码下载响应头（[`5974dacf`](https://github.com/weepwood/MRR/commit/5974dacf2d36cdac3bfea08f294186923c05d034)）
+- `01:58` docs (architecture) 补充单图与整病案下载边界（[`9a9f2529`](https://github.com/weepwood/MRR/commit/9a9f25298186586e5342d7fe64983c9b6ddd91e7)）
+- `01:58` test (architecture) 纳入 H2 Mapper 集成测试（[`6dedcc42`](https://github.com/weepwood/MRR/commit/6dedcc42bcd990f1ce69435be7fc272c1fd0ddc6)）
+- `01:57` test (architecture) 纳入影像控制器验收（[`139756a1`](https://github.com/weepwood/MRR/commit/139756a16d3bea5648cb38bc9810319b177ab8a0)）
+- `01:56` test (image) 适配统一存储与流式下载边界（[`c9e0f465`](https://github.com/weepwood/MRR/commit/c9e0f4654a37c184118603a9ac12da9000c16399)）
+- `01:56` test (export) 覆盖按病案准备导出计划（[`e1079bd6`](https://github.com/weepwood/MRR/commit/e1079bd6e8be96498654e89907a9b9e5c91fdda0)）
+- `01:55` test (storage) 覆盖影像大小与错误分类（[`cb02787e`](https://github.com/weepwood/MRR/commit/cb02787ea3f3f60abef10d86250221bc939a9dbc)）
+- `01:55` refactor (image) 统一单图读取与病案流式下载边界（[`77a113c9`](https://github.com/weepwood/MRR/commit/77a113c94020876831691b4fa0db2ba6ddea2a12)）
+- `01:54` refactor (storage) 区分非法路径与存储故障（[`8ee9ee99`](https://github.com/weepwood/MRR/commit/8ee9ee99ff71cad0f98b14e797c28b864cb9119f)）
+- `01:54` refactor (storage) 增加非法影像路径异常（[`4714263d`](https://github.com/weepwood/MRR/commit/4714263d150a403553271890dc566e04915d5a77)）
+- `01:54` refactor (export) 将按病案下载接入统一导出服务（[`d1fc90fb`](https://github.com/weepwood/MRR/commit/d1fc90fbe324f8078c028007fe1fc06127db8c2e)）
+- `01:53` refactor (export) 支持按病案准备流式导出（[`4c27aea4`](https://github.com/weepwood/MRR/commit/4c27aea4e1ae14d9665928f047d1e53c319c23c9)）
+- `01:53` refactor (storage) 统一影像可读性与大小检查（[`ec56d73d`](https://github.com/weepwood/MRR/commit/ec56d73d852a13f7b78c358bf58909cf38117339)）
+- `01:53` refactor (storage) 补充影像大小查询能力（[`2a498d28`](https://github.com/weepwood/MRR/commit/2a498d287421ca14f644e7303f9d8dd60199565f)）
+- `01:51` test (export) 覆盖真实后缀文件名冲突（[`d481a827`](https://github.com/weepwood/MRR/commit/d481a827d3c8baaa3c87a635bb28ab7a074fd29f)）
+- `01:50` fix (export) 全局避免 ZIP 条目名称冲突（[`3d19f63f`](https://github.com/weepwood/MRR/commit/3d19f63f72590eea995742f33eb06050be632e2c)）
+- `01:50` fix (scan) 兼容空查询条件对象（[`cc6693f4`](https://github.com/weepwood/MRR/commit/cc6693f490893777f43e3761092f791fc6e17161)）
+- `01:48` test (mapper) 更新扫描计数为 long（[`d3c12313`](https://github.com/weepwood/MRR/commit/d3c12313d92640dd1277f109a69606005ea4ca4d)）
+- `01:47` fix (storage) 拒绝 Windows 保留路径字符（[`451dde1c`](https://github.com/weepwood/MRR/commit/451dde1c8ec287e7df201f8b3464a51d544da7cd)）
+- `01:46` refactor (export) 过滤导出计划中的空记录（[`ea567ebb`](https://github.com/weepwood/MRR/commit/ea567ebb8518c98f751149f0fdcb5aee5f604da3)）
+- `01:45` docs (architecture) 记录第一阶段落地边界（[`593b8010`](https://github.com/weepwood/MRR/commit/593b8010c95c5dcd4d0c10ade6213eff05d43ee9)）
+- `01:45` test (architecture) 增加本地验收脚本（[`e48ea284`](https://github.com/weepwood/MRR/commit/e48ea28498e6e191baee40a1ce221a7f0a4bf39a)）
+- `01:44` fix (export) 区分文件缺失与响应流写入失败（[`ed40d1cd`](https://github.com/weepwood/MRR/commit/ed40d1cd4df1e671561773b8daf09d907e71862d)）
+- `01:44` test (export) 使用兼容断言校验不可变快照（[`c3e6646b`](https://github.com/weepwood/MRR/commit/c3e6646b358e2bf39a7eac16cee1e68addc46ee7)）
+- `01:43` test (mapper) 适配有限查询并覆盖游标 SQL（[`30ba7bf5`](https://github.com/weepwood/MRR/commit/30ba7bf5828f9c16cef238602ae66dcfa2afd166)）
+- `01:42` test (export) 验证流式 ZIP 与重名处理（[`d57f0801`](https://github.com/weepwood/MRR/commit/d57f0801c528bad96d1162b2197c174ff97495ac)）
+- `01:42` test (storage) 验证本地影像路径边界（[`d1b25a83`](https://github.com/weepwood/MRR/commit/d1b25a835f005e5b736a4b1e217c4a95eedeee65)）
+- `01:42` test (scan) 更新控制器测试适配架构边界（[`e6998f0a`](https://github.com/weepwood/MRR/commit/e6998f0a57df8ebbd1fb9f8263c6b2bfde603171)）
+- `01:41` test (scan) 覆盖 SQL 限流与游标分页（[`6da160ec`](https://github.com/weepwood/MRR/commit/6da160ecd71b3c7ad7dc26ac3b2c2d79378a6af6)）
+- `01:41` refactor (scan) 控制器改用游标查询与导出服务（[`1652aa3f`](https://github.com/weepwood/MRR/commit/1652aa3f82127aa4a5c307438786284c3204b034)）
+- `01:40` refactor (scan) 增加游标分页并移除文件系统职责（[`3b038b0b`](https://github.com/weepwood/MRR/commit/3b038b0bfde74b53cc179fe922a4eee71e3483e4)）
+- `01:40` refactor (scan) 为旧条件查询增加 SQL 限流（[`7e28e0ea`](https://github.com/weepwood/MRR/commit/7e28e0ead788bfedecb06cad97a51615a1df0874)）
+- `01:39` refactor (scan) 在数据库层限制兼容查询并增加游标查询（[`689121d1`](https://github.com/weepwood/MRR/commit/689121d112f1e668d4936a3dec5e6dbd8604fa29)）
+- `01:39` refactor (scan) 收紧扫描查询服务契约（[`de5a5a0e`](https://github.com/weepwood/MRR/commit/de5a5a0e019d75c06af3691df776eac555ccb962)）
+- `01:39` feat (api) 增加通用游标分页响应（[`75456857`](https://github.com/weepwood/MRR/commit/75456857ce951650327fce7ec2f87084b2fc7e11)）
+- `01:38` refactor (export) 下沉 ZIP 流式导出逻辑（[`1c3d3d98`](https://github.com/weepwood/MRR/commit/1c3d3d98856f8b5c4ccd37b1802e065313031bc2)）
+- `01:38` refactor (export) 增加病案导出应用服务（[`fc4d9fa6`](https://github.com/weepwood/MRR/commit/fc4d9fa6d472253b26e8f116d12d4c38cbcc2704)）
+- `01:38` refactor (storage) 实现安全的本地影像存储（[`6e32db27`](https://github.com/weepwood/MRR/commit/6e32db2722bb8179f855c7b90000f52e5f0a16c8)）
+- `01:38` refactor (storage) 增加影像存储访问端口（[`51881ece`](https://github.com/weepwood/MRR/commit/51881ece27a7284d85d62d012fcffdd76190facb)）
+- `01:29` refactor (db) 建立病案主数据模型并同步后端（[`e9b158a1`](https://github.com/weepwood/MRR/commit/e9b158a1d7b689cede532cdd8753048daca05b3e) · [PR #59](https://github.com/weepwood/MRR/pull/59)）
 
 ## 2026-07-15
 
-- **新增** 接口响应分析增加年度请求热力图（[`1ac5c2f`](https://github.com/weepwood/MRR/commit/1ac5c2f4153c19b41c0b8ec3d75627c687d3b040) · [PR #58](https://github.com/weepwood/MRR/pull/58)） — weepwood
-- **新增** `index` 添加topUsers数据类型支持（[`3b41186`](https://github.com/weepwood/MRR/commit/3b41186e05a543cfc6aa0a2403ff22244d442626)） — weepwood
-- **合并** Merge branches 'dev-no-login' and 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`7c49c34`](https://github.com/weepwood/MRR/commit/7c49c349e010b163346bb752cb98fb0f03d73218)） — weepwood
-- **文档** 添加 .vitepress 到 git 忽略文件（[`9940625`](https://github.com/weepwood/MRR/commit/9940625a6cfa55f09f2b367845093060c14d4b57)） — weepwood
-- **维护** `db` reset flyway migrations to v0 baseline（[`ed30a6d`](https://github.com/weepwood/MRR/commit/ed30a6d089350b56dfeb1edc2e0a9a3fe8489d2b)） — weepwood
-- **维护** `release` 0.1.1（[`30614e9`](https://github.com/weepwood/MRR/commit/30614e9f8f0d7f19e3b6c88acd116938b98a77a1)） — weepwood
-- **新增** `archive` refine archive display settings（[`087f754`](https://github.com/weepwood/MRR/commit/087f754bf7f3d0de83bfa2fb8bd16580c86b0470)） — weepwood
-- **修复** `archive` persist refreshed image version（[`e00f3ef`](https://github.com/weepwood/MRR/commit/e00f3ef4596410eca3ad543ea35e3385d78345cd)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`f4c0839`](https://github.com/weepwood/MRR/commit/f4c08392d3e58af6b50abb15fe61dcafd5a41aab)） — weepwood
-- **其他** `archive` compact preview controls（[`9822749`](https://github.com/weepwood/MRR/commit/982274985b3dd3e479d400598fb51fc80d258229)） — weepwood
-- **新增** `archive` refine local viewer preferences（[`69e077e`](https://github.com/weepwood/MRR/commit/69e077e2a8f60bf8392eb8df5a54ebe3b2510774)） — weepwood
-- **新增** `archive` add local display settings（[`a156591`](https://github.com/weepwood/MRR/commit/a156591a2b3aebaec8ab6001ca749b3910a7008e)） — weepwood
-- **新增** `archive` add type selection toggles（[`a0ba4b4`](https://github.com/weepwood/MRR/commit/a0ba4b43170691aacc4cca72b29c5dbb997c30bc)） — weepwood
-- **新增** `archive` add embedded workspace mode（[`1c2a096`](https://github.com/weepwood/MRR/commit/1c2a096986fae39ea2b1e923aa73d7b35cde2df6)） — weepwood
-- **新增** `settings` add archive theme history（[`d3f42c1`](https://github.com/weepwood/MRR/commit/d3f42c180a53fd567e21672aab910c07ac70f4d8)） — weepwood
-- **修复** `archive` constrain wide images in scroll preview（[`4555ac1`](https://github.com/weepwood/MRR/commit/4555ac130d143874ac04baa2848f0ac9a01fa47b)） — weepwood
-- **新增** download archive bundles in browser（[`d5a742c`](https://github.com/weepwood/MRR/commit/d5a742cc3458b2e68c66a3f04dd06afcf3b97f55)） — weepwood
-- **新增** add status availability history and mask id cards（[`d3f4e98`](https://github.com/weepwood/MRR/commit/d3f4e981b72fb18dca4223e14947f94b1c40210a)） — weepwood
-- **新增** `vite` 修改开发服务器端口为9200（[`a230038`](https://github.com/weepwood/MRR/commit/a2300388d512330e92c52bd2810927dc8ae1d574)） — weepwood
-- **新增** `frontend` optimize dashboard user activity timeline（[`a9c1b03`](https://github.com/weepwood/MRR/commit/a9c1b03939febbb631776fe00c7e37d184954981)） — weepwood
-- **修复** `frontend` update brand logo assets（[`03b5b7d`](https://github.com/weepwood/MRR/commit/03b5b7de70ad0b1c889e2ce610338df36441a759)） — weepwood
-- **新增** `frontend` add toolbar appearance settings drawer（[`b387f94`](https://github.com/weepwood/MRR/commit/b387f94bd88357b1b4e6d137c6cf7aab9e476386)） — weepwood
-- **新增** 删除前端加载页面样式文件（[`1fdd7cb`](https://github.com/weepwood/MRR/commit/1fdd7cb757600c51d2ca82e8e655b9b325c71b41)） — weepwood
-- **维护** save local project updates（[`f06b874`](https://github.com/weepwood/MRR/commit/f06b8742aa5756f0f51d15c2ae8972dc4ec8a508)） — weepwood
-- **合并** Merge commit 'ceef925cbcd70a66d743cd8b35842ad80e72ea3e' into dev-no-login（[`25d6d34`](https://github.com/weepwood/MRR/commit/25d6d34975075f39fe63a525bc5f71fcbf45c688)） — weepwood
-- **文档** document deployment and ci limitations（[`b19dc5d`](https://github.com/weepwood/MRR/commit/b19dc5dff4febbc7c27fba0d9be941e779a6da73)） — weepwood
-- **修复** `frontend` optimize user search layout（[`dd1c003`](https://github.com/weepwood/MRR/commit/dd1c003156a947751b22a3edb9c2311f0a383dbe)） — weepwood
+- `23:53` docs (db) 补充迁移失败后的重试说明（[`fd1e07d8`](https://github.com/weepwood/MRR/commit/fd1e07d8edc1343b5b3e439b6c909d70a8a7bae8)）
+- `23:52` refactor (db) 避免新库重复创建统计表唯一索引（[`a246b838`](https://github.com/weepwood/MRR/commit/a246b838a2ad007f29a719b13b64f5b6545e9a6b)）
+- `23:51` docs (db) 说明旧统计表主键兼容迁移（[`c7be8ffc`](https://github.com/weepwood/MRR/commit/c7be8ffc180a40cde824fe946adb9e9ba68575ff)）
+- `23:51` test (db) 校验旧统计表主键兼容迁移（[`38745d26`](https://github.com/weepwood/MRR/commit/38745d26533849160b2f8a230834ff898d965b05)）
+- `23:49` fix (db) 兼容缺少统计表主键的旧数据库（[`b74766ce`](https://github.com/weepwood/MRR/commit/b74766cecaafb8ca3b800df26bd7940dfffa69ac)）
+- `23:44` docs (db) 说明 Flyway 补迁移启动策略（[`34f274bd`](https://github.com/weepwood/MRR/commit/34f274bd0c4569e4e7c6a410fbdb42efc0a9ab2f)）
+- `23:43` fix (config) 恢复健康检查环境变量名称（[`f4999794`](https://github.com/weepwood/MRR/commit/f4999794feda9e5df4505fd2b2f4438050936f09)）
+- `23:42` fix (flyway) 允许补执行病案重构迁移（[`e41983df`](https://github.com/weepwood/MRR/commit/e41983df7bdcd1d07c65baf3072953e31dd2954f)）
+- `23:34` fix (api) 明确大病案号必须携带上架号（[`a7e908c9`](https://github.com/weepwood/MRR/commit/a7e908c9c42e14535f168e91f9935280a4c62bdb)）
+- `23:33` fix (scripts) 兼容 JDBC 地址并安全传递 psql 参数（[`4cd71d22`](https://github.com/weepwood/MRR/commit/4cd71d22d988cfa50131444e2a74c60582d58f3b)）
+- `23:33` fix (scripts) 转换 JDBC 地址为 psql 连接串（[`b4f3dd6e`](https://github.com/weepwood/MRR/commit/b4f3dd6e2b4f0aa3e8b199545ad723a04c1babc5)）
+- `23:33` docs (db) 补充病案主数据重构与上线流程（[`4721fd2b`](https://github.com/weepwood/MRR/commit/4721fd2b62b24700fbf71f38cc195c6cc57c39a0)）
+- `23:32` chore (db) 增加大表病案关联分批回填脚本（[`9fb13065`](https://github.com/weepwood/MRR/commit/9fb130654d76366f95240326c76966049172754b)）
+- `23:32` perf (db) 优化扫描病案关联批量回填（[`69859c10`](https://github.com/weepwood/MRR/commit/69859c10ab293ca702dc5644532683a7ce4bee65)）
+- `23:30` fix (scripts) 避免覆盖 PowerShell 自动参数变量（[`c7e4f166`](https://github.com/weepwood/MRR/commit/c7e4f166e8b9dccd02ece84ed81c24f6b8ba6353)）
+- `23:30` test (backend) 覆盖大病案号必须提供上架号（[`63b3c29d`](https://github.com/weepwood/MRR/commit/63b3c29d90ea24eaa896fc0e75ea10ed0d6aa2ce)）
+- `23:29` chore 增加无 Actions 的本地检查脚本（[`f5e3f184`](https://github.com/weepwood/MRR/commit/f5e3f184deb67f9d60bc3ae6981ec2d9ae47aafe)）
+- `23:28` fix (db) 编号变更时重新解析病案关联（[`855e7a65`](https://github.com/weepwood/MRR/commit/855e7a651fecb813b7ed2ae3d3f36ce1d3bb4759)）
+- `23:28` fix (backend) 扫描写入后返回数据库最终关联状态（[`8cc623cf`](https://github.com/weepwood/MRR/commit/8cc623cf221f20a0b37469a58ae25d473c5a0de1)）
+- `23:27` chore (db) 增加病案重构验收脚本（[`30b340bc`](https://github.com/weepwood/MRR/commit/30b340bc779e1328487d925c68d7d283733dba9d)）
+- `23:26` fix (backend) 大病案号缺少上架号时拒绝解析（[`c554229e`](https://github.com/weepwood/MRR/commit/c554229e1c17cdb3107b1778d3fa6bbf7da25308)）
+- `23:26` fix (db) 强制大病案号使用上架号解析（[`078fb3b1`](https://github.com/weepwood/MRR/commit/078fb3b1448ffaa08f878ed5d4262bfe35842945)）
+- `23:25` test (backend) 覆盖病案编号解析逻辑（[`3d97680a`](https://github.com/weepwood/MRR/commit/3d97680a801d6f534a88aff7fdd04fbae506d3cc)）
+- `23:25` fix (backend) 完整映射病案主数据详情（[`ab0e331a`](https://github.com/weepwood/MRR/commit/ab0e331a974428257a9349fe84e1d4c259a76050)）
+- `23:24` refactor (config) 启用下划线字段映射并更新迁移说明（[`0fb7b92d`](https://github.com/weepwood/MRR/commit/0fb7b92d044b51ed6f41bb1f60c78bab85736b05)）
+- `23:24` refactor (backend) 统计记录暴露病案主键（[`4e627deb`](https://github.com/weepwood/MRR/commit/4e627deb0d59c18753a9216ccbacb265cac5e2b0)）
+- `23:24` refactor (backend) 扫描记录关联病案主键（[`e14d7cfd`](https://github.com/weepwood/MRR/commit/e14d7cfd5472bd6e94cf6a83f8e9d26b5103c213)）
+- `23:23` feat (api) 增加病案主数据查询接口（[`bf2a530a`](https://github.com/weepwood/MRR/commit/bf2a530a1e2406753d0260ccc6b61abd5cc0e335)）
+- `23:23` feat (backend) 实现病案主数据服务（[`17d1dd16`](https://github.com/weepwood/MRR/commit/17d1dd16125fc20d1c17282eacb7733cee9a279c)）
+- `23:23` feat (backend) 定义病案主数据服务（[`bfaba7ad`](https://github.com/weepwood/MRR/commit/bfaba7ad4f18b66eb5885897e04891e23720eec0)）
+- `23:23` feat (backend) 增加病案主数据 Mapper（[`c7eadd6b`](https://github.com/weepwood/MRR/commit/c7eadd6b2216600d240c213f3844c43af0189a9b)）
+- `23:22` feat (backend) 新增病案主数据实体（[`7497dd2d`](https://github.com/weepwood/MRR/commit/7497dd2df7ec8cfe2ad23ba1be0ac9b3fc92f6cd)）
+- `23:22` refactor (db) 新增病案主数据模型与兼容迁移（[`3361e236`](https://github.com/weepwood/MRR/commit/3361e236cb2f6da66e718ccfea906fad2c13eb4f)）
+- `23:09` feat 接口响应分析增加年度请求热力图（[`1ac5c2f4`](https://github.com/weepwood/MRR/commit/1ac5c2f4153c19b41c0b8ec3d75627c687d3b040) · [PR #58](https://github.com/weepwood/MRR/pull/58)）
+- `23:09` feat (pom) 升级项目版本并优化依赖配置（[`1d6cebe1`](https://github.com/weepwood/MRR/commit/1d6cebe111e0cd11d1d5787754753ab7969025e3)）
+- `23:07` style 缩短热力图提示框与方块距离（[`13f2faa9`](https://github.com/weepwood/MRR/commit/13f2faa95e941e2c7e2adee7e050618a56093344)）
+- `23:04` fix 避免热力图提示框触发滚动条闪烁（[`33ac4e06`](https://github.com/weepwood/MRR/commit/33ac4e06bbb24cf9f9f30444ee2c07239c4f9cbf)）
+- `22:52` style 对齐趋势卡与热力图自然宽度（[`5cde4e6e`](https://github.com/weepwood/MRR/commit/5cde4e6e5d2d4ccdd0923104681c8dbd5b65e9b5)）
+- `22:52` style 限制宽屏趋势卡按热力图自然宽度收缩（[`40ce74b8`](https://github.com/weepwood/MRR/commit/40ce74b8d181b7b8489a5d8b4a68c940b5b5e5de)）
+- `22:51` style 让响应趋势列按热力图自然宽度布局（[`1386b774`](https://github.com/weepwood/MRR/commit/1386b77466ee41c96155e321a52eb51f390865c3)）
+- `22:46` style 宽屏并排响应趋势与慢接口排行（[`84e611dc`](https://github.com/weepwood/MRR/commit/84e611dc6d6ab5a55056f5dbc96f1a8cce2a327b)）
+- `22:29` refactor 响应分析接口默认查询近一年（[`27de2f56`](https://github.com/weepwood/MRR/commit/27de2f56cf53d180072d3c844f5c674fa9d66c2b)）
+- `22:29` refactor 简化年度响应分析参数处理（[`09c27993`](https://github.com/weepwood/MRR/commit/09c279935c3903c8cfe444aa37ffd604ddeddd26)）
+- `22:28` refactor 移除旧方块堆叠趋势组件（[`e094161a`](https://github.com/weepwood/MRR/commit/e094161ad73a776012e319ae40d62f68c7c3b364)）
+- `22:28` feat 放宽响应分析查询范围至 365 天（[`750fd9a9`](https://github.com/weepwood/MRR/commit/750fd9a99954f24f402f364651abd792aa12bcb6)）
+- `22:27` feat 响应分析默认支持近一年范围（[`cfaa0ef9`](https://github.com/weepwood/MRR/commit/cfaa0ef972679d0816e3db04ef8f66baa2ac3b18)）
+- `22:26` refactor 接口响应分析默认展示近一年并移除范围切换（[`58f8e079`](https://github.com/weepwood/MRR/commit/58f8e079e9d1b547603826f0b80993ee8cc6d69c)）
+- `22:26` refactor 使用 GitHub 风格年度请求热力图（[`7c73d999`](https://github.com/weepwood/MRR/commit/7c73d999e4404750d6ee4f7ed7b86ec88f5077d1)）
+- `22:25` refactor 导出请求日历热力图组件（[`50a4eecd`](https://github.com/weepwood/MRR/commit/50a4eecd44f0e5d4a8ccc7bcf79108c9a939f1d2)）
+- `22:25` refactor 将方块趋势类型替换为请求热力图类型（[`df6ed41b`](https://github.com/weepwood/MRR/commit/df6ed41b29a18add4b15786e54648aebf2ecc476)）
+- `22:25` feat 新增年度请求日历热力图组件（[`026ec58c`](https://github.com/weepwood/MRR/commit/026ec58ca357ae87d252246fd35be7662aeca951)）
+- `22:07` fix 紧密排列方块趋势图时间列（[`f0cc48d5`](https://github.com/weepwood/MRR/commit/f0cc48d5cf2a885b00e50f54017f18f46e7e9e6c)）
+- `21:54` fix (charts) keep square trend columns on one row（[`0a26a48d`](https://github.com/weepwood/MRR/commit/0a26a48da22645c1ce55da9ab9a1655775c446cc)）
+- `21:52` feat (response-analysis) use square stack request trend（[`92f39293`](https://github.com/weepwood/MRR/commit/92f392930e20b4afcc4b5a2dff3d5aa113efab2e)）
+- `21:52` feat (charts) export square stack trend chart（[`6a906f18`](https://github.com/weepwood/MRR/commit/6a906f18ddaa883753f064a128ec43f0250ebcbb)）
+- `21:52` feat (charts) add reusable square stack trend chart（[`6110cd77`](https://github.com/weepwood/MRR/commit/6110cd777c9035f912f05b3b9d3d66a4da73e222)）
+- `21:50` feat (charts) add square stack trend data type（[`3ff57b22`](https://github.com/weepwood/MRR/commit/3ff57b225b212e7110ebf6b36c916f2fd4f102fd)）
+- `16:20` fix (ops) include release metadata in checksum verification（[`6829e92b`](https://github.com/weepwood/MRR/commit/6829e92b96111b13285c0cfdf21602f68076fc78)）
+- `16:12` ci (ops) validate Windows release package on pull requests（[`43ecd634`](https://github.com/weepwood/MRR/commit/43ecd6346bbfe293f8970109baa8821192ca3751)）
+- `16:09` feat (ops) add Windows native deployment management（[`abeb4dde`](https://github.com/weepwood/MRR/commit/abeb4dde86f5b63d5544684b9d9829292d85a85c)）
+- `13:36` feat (index) 添加topUsers数据类型支持（[`3b41186e`](https://github.com/weepwood/MRR/commit/3b41186e05a543cfc6aa0a2403ff22244d442626)）
+- `13:00` merge Merge branches 'dev-no-login' and 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`7c49c349`](https://github.com/weepwood/MRR/commit/7c49c349e010b163346bb752cb98fb0f03d73218)）
+- `13:00` docs 添加 .vitepress 到 git 忽略文件（[`9940625a`](https://github.com/weepwood/MRR/commit/9940625a6cfa55f09f2b367845093060c14d4b57)）
+- `12:58` docs 重写内部文档并完善 v0.1.1 项目说明（[`30a8a7ee`](https://github.com/weepwood/MRR/commit/30a8a7ee119f7a0ad7d53daa78843903a9c952ac) · [PR #54](https://github.com/weepwood/MRR/pull/54)）
+- `12:19` docs align configuration guide with current V0 baseline（[`6ae07aeb`](https://github.com/weepwood/MRR/commit/6ae07aeb62a295b46bc5e00995606819fc7f6c2d)）
+- `12:18` docs align installation guide with V0 database baseline（[`918e1e6d`](https://github.com/weepwood/MRR/commit/918e1e6d4e4f884942d773792fbc13a885d29c8d)）
+- `12:17` docs restore user guides and documentation tooling（[`5c6c0710`](https://github.com/weepwood/MRR/commit/5c6c07101188f981fc56c5ab7cb6a3008db646ec)）
+- `12:15` docs (internal) add release process（[`8ae8eb80`](https://github.com/weepwood/MRR/commit/8ae8eb8023eb8f2579cb0e686f6d180ccfc73252)）
+- `12:15` docs (internal) add troubleshooting guide（[`a1e6a6c0`](https://github.com/weepwood/MRR/commit/a1e6a6c0556415f4ac64420b277da86051dcecf6)）
+- `12:14` docs (internal) add security guide（[`fcd1b3de`](https://github.com/weepwood/MRR/commit/fcd1b3de4bf972de354a6f4d441464f80cda2f1c)）
+- `12:14` docs (internal) add operations and monitoring guide（[`089a230f`](https://github.com/weepwood/MRR/commit/089a230f3adb86051fd4a2b20f47e31f9d866f1b)）
+- `12:13` docs (internal) add non-docker deployment guide（[`791ff780`](https://github.com/weepwood/MRR/commit/791ff780fa5aa6a437a069378d524037e10e305a)）
+- `12:12` docs (internal) add development workflow（[`e9a0c01d`](https://github.com/weepwood/MRR/commit/e9a0c01d38350257fc3f5d3cba4a324b0129f898)）
+- `12:12` docs (internal) document API and permission conventions（[`0f8aca88`](https://github.com/weepwood/MRR/commit/0f8aca8815ccd9b8396b0041694b6664fb987f23)）
+- `12:11` docs (internal) document database baseline and data model（[`640a4692`](https://github.com/weepwood/MRR/commit/640a46928a633b57e12a84d2cb5911c664807e07)）
+- `12:11` docs (internal) document backend engineering（[`d2453724`](https://github.com/weepwood/MRR/commit/d24537249458ede8a6473c5667426d2503d820e4)）
+- `12:10` docs (internal) document frontend engineering（[`1e2eb2a5`](https://github.com/weepwood/MRR/commit/1e2eb2a550312162120c7b451451b9214419015e)）
+- `12:10` docs (internal) document current system architecture（[`8698f4c6`](https://github.com/weepwood/MRR/commit/8698f4c6c8ae02561eb753685f057528fa4de717)）
+- `12:10` docs (internal) add internal documentation home（[`8acab28a`](https://github.com/weepwood/MRR/commit/8acab28a4896460449008422ede2bdd73fcba09e)）
+- `12:09` docs (internal) rebuild documentation landing page（[`89528e68`](https://github.com/weepwood/MRR/commit/89528e68c68e90a1d2ed4120947df2d3578b1f6c)）
+- `12:09` docs (internal) replace legacy navigation with canonical docs（[`6c569555`](https://github.com/weepwood/MRR/commit/6c569555ef1a81d6f5a0a7548c093e939d4af829)）
+- `12:08` docs rewrite project overview for current version（[`b25f6b0c`](https://github.com/weepwood/MRR/commit/b25f6b0c16d3f7245238dd2ce26b7eca589ddc2d)）
+- `12:08` docs rewrite changelog for version 0.1.1（[`3f5c727b`](https://github.com/weepwood/MRR/commit/3f5c727bda8abd2b41ee5af7dd98e42fcc99f2e7)）
+- `11:35` chore (db) reset flyway migrations to v0 baseline（[`ed30a6d0`](https://github.com/weepwood/MRR/commit/ed30a6d089350b56dfeb1edc2e0a9a3fe8489d2b)）
+- `11:01` chore (release) 0.1.1（[`30614e9f`](https://github.com/weepwood/MRR/commit/30614e9f8f0d7f19e3b6c88acd116938b98a77a1)）
+- `10:51` feat (archive) refine archive display settings（[`087f754b`](https://github.com/weepwood/MRR/commit/087f754bf7f3d0de83bfa2fb8bd16580c86b0470)）
+- `10:25` fix (archive) persist refreshed image version（[`e00f3ef4`](https://github.com/weepwood/MRR/commit/e00f3ef4596410eca3ad543ea35e3385d78345cd)）
+- `10:04` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`f4c08392`](https://github.com/weepwood/MRR/commit/f4c08392d3e58af6b50abb15fe61dcafd5a41aab)）
+- `10:01` fix (frontend) 修复弹窗打开时页面横向抖动（[`cc316e0e`](https://github.com/weepwood/MRR/commit/cc316e0ef9e31e6f29817e432c96f179f0039405) · [PR #53](https://github.com/weepwood/MRR/pull/53)）
+- `09:51` fix (frontend) prevent modal scrollbar layout shift（[`845a0968`](https://github.com/weepwood/MRR/commit/845a09688590fbe8ced85b060a636edb7c29a78c)）
+- `09:38` style (archive) compact preview controls（[`98227498`](https://github.com/weepwood/MRR/commit/982274985b3dd3e479d400598fb51fc80d258229)）
+- `09:23` feat (archive) refine local viewer preferences（[`69e077e2`](https://github.com/weepwood/MRR/commit/69e077e2a8f60bf8392eb8df5a54ebe3b2510774)）
+- `09:14` feat (archive) add local display settings（[`a156591a`](https://github.com/weepwood/MRR/commit/a156591a2b3aebaec8ab6001ca749b3910a7008e)）
+- `08:38` feat (archive) add type selection toggles（[`a0ba4b43`](https://github.com/weepwood/MRR/commit/a0ba4b43170691aacc4cca72b29c5dbb997c30bc)）
+- `08:28` feat (archive) add embedded workspace mode（[`1c2a0969`](https://github.com/weepwood/MRR/commit/1c2a096986fae39ea2b1e923aa73d7b35cde2df6)）
+- `07:52` feat (settings) add archive theme history（[`d3f42c18`](https://github.com/weepwood/MRR/commit/d3f42c180a53fd567e21672aab910c07ac70f4d8)）
+- `07:41` fix (archive) constrain wide images in scroll preview（[`4555ac13`](https://github.com/weepwood/MRR/commit/4555ac130d143874ac04baa2848f0ac9a01fa47b)）
+- `07:38` feat download archive bundles in browser（[`d5a742cc`](https://github.com/weepwood/MRR/commit/d5a742cc3458b2e68c66a3f04dd06afcf3b97f55)）
+- `07:11` feat add status availability history and mask id cards（[`d3f4e981`](https://github.com/weepwood/MRR/commit/d3f4e981b72fb18dca4223e14947f94b1c40210a)）
+- `06:52` feat (vite) 修改开发服务器端口为9200（[`a2300388`](https://github.com/weepwood/MRR/commit/a2300388d512330e92c52bd2810927dc8ae1d574)）
+- `01:51` feat (frontend) optimize dashboard user activity timeline（[`a9c1b039`](https://github.com/weepwood/MRR/commit/a9c1b03939febbb631776fe00c7e37d184954981)）
+- `01:37` fix (frontend) update brand logo assets（[`03b5b7de`](https://github.com/weepwood/MRR/commit/03b5b7de70ad0b1c889e2ce610338df36441a759)）
+- `01:35` feat (frontend) add toolbar appearance settings drawer（[`b387f94b`](https://github.com/weepwood/MRR/commit/b387f94bd88357b1b4e6d137c6cf7aab9e476386)）
+- `01:00` feat 删除前端加载页面样式文件（[`1fdd7cb7`](https://github.com/weepwood/MRR/commit/1fdd7cb757600c51d2ca82e8e655b9b325c71b41)）
+- `00:59` chore save local project updates（[`f06b8742`](https://github.com/weepwood/MRR/commit/f06b8742aa5756f0f51d15c2ae8972dc4ec8a508)）
+- `00:52` merge Merge commit 'ceef925cbcd70a66d743cd8b35842ad80e72ea3e' into dev-no-login（[`25d6d349`](https://github.com/weepwood/MRR/commit/25d6d34975075f39fe63a525bc5f71fcbf45c688)）
+- `00:50` docs document deployment and ci limitations（[`b19dc5df`](https://github.com/weepwood/MRR/commit/b19dc5dff4febbc7c27fba0d9be941e779a6da73)）
+- `00:46` refactor (settings) 简化系统设置布局（[`ceef925c`](https://github.com/weepwood/MRR/commit/ceef925cbcd70a66d743cd8b35842ad80e72ea3e) · [PR #52](https://github.com/weepwood/MRR/pull/52)）
+- `00:44` fix (frontend) optimize user search layout（[`dd1c0031`](https://github.com/weepwood/MRR/commit/dd1c003156a947751b22a3edb9c2311f0a383dbe)）
+- `00:42` refactor (settings) simplify system settings layout（[`d85d478a`](https://github.com/weepwood/MRR/commit/d85d478a16527c2a3dfb25c088d63c0da55616c0)）
+- `00:36` refactor (charts) 统计分析与病案统计使用 ECharts（[`371e31fa`](https://github.com/weepwood/MRR/commit/371e31fa70d930811a9c9de2ab6caab866be017a) · [PR #51](https://github.com/weepwood/MRR/pull/51)）
+- `00:34` feat (status) 增加内置服务可用性状态页（[`7b0157e6`](https://github.com/weepwood/MRR/commit/7b0157e6e150488a1516e5d458507eab6d8c17c3) · [PR #50](https://github.com/weepwood/MRR/pull/50)）
+- `00:30` feat (status) 增加服务状态菜单入口（[`3a7c71a4`](https://github.com/weepwood/MRR/commit/3a7c71a46bdc82b3fedba764ebdcacde0a26a94e)）
+- `00:30` chore (ci) remove temporary statistics validation（[`e0377409`](https://github.com/weepwood/MRR/commit/e037740935564d103f41d7e9da940177747360e6)）
+- `00:27` fix (monitoring) support status embed in filesystem routes（[`f3e31330`](https://github.com/weepwood/MRR/commit/f3e31330a972e73ee7183833ac101603cf0dc112)）
+- `00:26` feat (monitoring) mount status embed wrapper（[`362e83ac`](https://github.com/weepwood/MRR/commit/362e83acd657d735b48465ea726b1ccea879966d)）
+- `00:26` feat (monitoring) embed public status page（[`d484ee0b`](https://github.com/weepwood/MRR/commit/d484ee0bbf54913e3d9ad514d00718e277120746)）
+- `00:26` chore (ci) validate statistics ECharts pages（[`2e080b44`](https://github.com/weepwood/MRR/commit/2e080b44a7d371aadff8f04e2198db4e43919526)）
+- `00:25` refactor (charts) migrate records statistics trend to ECharts（[`b608a5f6`](https://github.com/weepwood/MRR/commit/b608a5f6d239f8ca8a79677f095f12a3ddc27cef)）
+- `00:24` refactor (charts) migrate statistics overview to ECharts（[`4ff68c49`](https://github.com/weepwood/MRR/commit/4ff68c4956a98ad2d6e724c7f50e0ccf4dedfec2)）
+- `00:20` feat 统一页面标题并支持两种风格切换（[`56fb5e5f`](https://github.com/weepwood/MRR/commit/56fb5e5f130fa170f3c4d692b0fdac0f22cffa35) · [PR #48](https://github.com/weepwood/MRR/pull/48)）
+- `00:18` refactor (ui) 恢复通用页面标题组件（[`327988ea`](https://github.com/weepwood/MRR/commit/327988ea2f60b05e17bbbdfd0c532f79c5133704)）
+- `00:18` fix (ui) 补齐用户管理英文标题并移除页头图标（[`8b32735b`](https://github.com/weepwood/MRR/commit/8b32735b2d52a512f6c075a960b71daeb2012923)）
+- `00:17` feat (charts) 统一可复用数据图表体系（[`a917e210`](https://github.com/weepwood/MRR/commit/a917e2108840b01866a2292707be97de42fe0498) · [PR #49](https://github.com/weepwood/MRR/pull/49)）
+- `00:16` fix (ui) 使用模板条件处理用户管理页头（[`bc0efc0f`](https://github.com/weepwood/MRR/commit/bc0efc0f04eaed2287611f88f2fa07efe17f8b26)）
+- `00:13` chore (ci) 恢复前端验证工作流（[`1b1a1de8`](https://github.com/weepwood/MRR/commit/1b1a1de8bf85e1e5a4bd8d520422edbfcadd11d5)）
+- `00:12` chore (ci) 临时上传类型检查日志（[`8ec35da2`](https://github.com/weepwood/MRR/commit/8ec35da267cb19c8ea1ef87755d402021fa053ae)）
+- `00:10` fix (ui) 简化用户管理页头兼容逻辑（[`bbbba246`](https://github.com/weepwood/MRR/commit/bbbba246298f86c8c98c711919f62c875cef2b96)）
+- `00:09` test (status) cover uptime calculation and heartbeat gap recovery（[`8b15d238`](https://github.com/weepwood/MRR/commit/8b15d23807817cacccbf718423a813fe65a58502)）
+- `00:08` fix (status) retry heartbeat reconciliation after database recovery（[`c02fc1f0`](https://github.com/weepwood/MRR/commit/c02fc1f0b56a7eb06925e9c77b328e597f3cb067)）
+- `00:07` fix (status) use PostgreSQL-compatible timestamp parameters（[`876eb594`](https://github.com/weepwood/MRR/commit/876eb59449db2d59fa1804bac651812d876a4fe6)）
+- `00:06` feat (status) configure built-in availability history（[`8a2f5759`](https://github.com/weepwood/MRR/commit/8a2f57599f99603b0999976b5fa29a0bc60d2ac0)）
+- `00:06` feat (status) allow public status api without login（[`0ad4fdc9`](https://github.com/weepwood/MRR/commit/0ad4fdc9e4cfd1603b195d3e0fc58d4ce3166a23)）
+- `00:06` feat (status) register public status route（[`b02b9027`](https://github.com/weepwood/MRR/commit/b02b90277e845c2dfbfc397f8b06517d4a11c90b)）
+- `00:04` refactor (ui) 显式声明用户管理标题兼容说明（[`8a9a7eaa`](https://github.com/weepwood/MRR/commit/8a9a7eaaa6c06e60d14e80cd9bce392029cb40e1)）
+- `00:04` feat (status) allow public status route（[`34162250`](https://github.com/weepwood/MRR/commit/34162250d9fcb220dcd96350f34a172d5a732a4f)）
+- `00:04` test (ui) 同步系统设置英文标题选择器（[`fa2e2e5f`](https://github.com/weepwood/MRR/commit/fa2e2e5f834e4d217506cb3a48186ccc2c865624)）
+- `00:03` fix (ui) 修复设置页英文标题层级（[`dcb8f265`](https://github.com/weepwood/MRR/commit/dcb8f265538a39dc699e84679b48738ab96d7c24)）
+- `00:03` feat (status) add public availability history page（[`1f63aeb9`](https://github.com/weepwood/MRR/commit/1f63aeb993a4481ca8dd157d0d20036f949be5d2)）
+- `00:02` test (ui) 覆盖页面标题统一与用户管理页头（[`4a082845`](https://github.com/weepwood/MRR/commit/4a08284580dcd1b76ee260e5b0e01ba7e20eacd9)）
+- `00:02` feat (status) add status api client（[`6672b7cc`](https://github.com/weepwood/MRR/commit/6672b7ccfc4bc593fd417b363a326bfb46c1f09f)）
+- `00:02` feat (status) add frontend health marker（[`c71cbd13`](https://github.com/weepwood/MRR/commit/c71cbd13b27aa6d914700e1cb28418723e30c56f)）
+- `00:02` fix (ui) 统一设置帮助页头并校准简洁标题字号（[`6fe67cd3`](https://github.com/weepwood/MRR/commit/6fe67cd30912e34d6de84a02eda57d3f0aef85e9)）
+- `00:02` feat (status) expose public status history api（[`47619eea`](https://github.com/weepwood/MRR/commit/47619eea000142fe706abde0b74b15997ac92a85)）
+- `00:01` feat (status) record and query service availability（[`83bb438c`](https://github.com/weepwood/MRR/commit/83bb438cf9f68fe9a192c2da5b3d76c13b746545)）
+- `00:01` fix (ui) 补齐用户管理英文标题并移除页头图标（[`0e73321f`](https://github.com/weepwood/MRR/commit/0e73321f14406384ee5601688f54c574d40831b0)）
+- `00:00` feat (status) add availability repository（[`d68fbb9f`](https://github.com/weepwood/MRR/commit/d68fbb9f5729f13dfc10c3d03c5371daa0758dbd)）
+- `00:00` feat (status) add availability period storage（[`c768c490`](https://github.com/weepwood/MRR/commit/c768c4905fbbd71c4fdb1eabefee9ec0ef98be16)）
 
 ## 2026-07-14
 
-- **修复** 修复档案装箱指标图标遮挡文字（[`5197848`](https://github.com/weepwood/MRR/commit/519784823dc6e6990a716c9aed1723c734c053fb) · [PR #47](https://github.com/weepwood/MRR/pull/47)） — weepwood
-- **重构** 删除档案搜索页面（[`9659ad4`](https://github.com/weepwood/MRR/commit/9659ad410aa5367068a220f94749fb569ce2c0cd) · [PR #46](https://github.com/weepwood/MRR/pull/46)） — weepwood
-- **合并** 移除侧边栏 Workspace 业务导航描述（[`4cdaa75`](https://github.com/weepwood/MRR/commit/4cdaa75ef984e1985bdb84de783c9ce1a74cfc9f) · [PR #44](https://github.com/weepwood/MRR/pull/44)） — weepwood
-- **修复** 修复档案装箱指标图标显示与样式（[`012145a`](https://github.com/weepwood/MRR/commit/012145ad0f99d10074df7830ed56d249f8f88a0a) · [PR #43](https://github.com/weepwood/MRR/pull/43)） — weepwood
-- **修复** `settings` 删除前端哀悼模式设置（[`e4ec76b`](https://github.com/weepwood/MRR/commit/e4ec76bc6be42dd22d583f1d748b1b0d8d3be6ba) · [PR #45](https://github.com/weepwood/MRR/pull/45)） — weepwood
-- **新增** 重构现代 SaaS 界面并统一全局卡片圆角（[`aa27415`](https://github.com/weepwood/MRR/commit/aa27415a03bae3d66ab7b1503b8ea1f92bec872a) · [PR #42](https://github.com/weepwood/MRR/pull/42)） — weepwood
-- **修复** 修复页面切换时上一页内容残影闪烁（[`9faaeff`](https://github.com/weepwood/MRR/commit/9faaeffd6502a988cdebf458fd95729b2b921671) · [PR #41](https://github.com/weepwood/MRR/pull/41)） — weepwood
-- **新增** 影像档案袋支持身份证搜索与病案切换（[`afad897`](https://github.com/weepwood/MRR/commit/afad89758a16ab90bc492850805c76de33a91aae) · [PR #40](https://github.com/weepwood/MRR/pull/40)） — weepwood
-- **新增** `statistics-detail` 修改copyCode函数以显示原始值（[`5e9944b`](https://github.com/weepwood/MRR/commit/5e9944b7c5064fed0b5972cb858676102b64ea4e)） — weepwood
-- **修复** 修复数据质量迁移 Flyway 校验和不一致（[`9f08f86`](https://github.com/weepwood/MRR/commit/9f08f869c25c237ae4e3f3161dc66ccbd3feca09) · [PR #39](https://github.com/weepwood/MRR/pull/39)） — weepwood
-- **新增** `settings` 添加全屏和页面刷新配置选项（[`4b831b2`](https://github.com/weepwood/MRR/commit/4b831b2116bd326d93f8cdaa3c71b5a4c7f7ca8a)） — weepwood
-- **修复** 修复帮助与文档菜单图标（[`945752d`](https://github.com/weepwood/MRR/commit/945752d50dc9afe110697551208b85a2d2b8f930) · [PR #38](https://github.com/weepwood/MRR/pull/38)） — weepwood
-- **新增** 完成原生数据库监控与手动数据质量检查（[`e18d7ea`](https://github.com/weepwood/MRR/commit/e18d7eacd38df00b40ecc97e0f56071000696fed) · [PR #34](https://github.com/weepwood/MRR/pull/34)） — weepwood
-- **修复** 避免请求错误重复弹窗（[`ca04a8f`](https://github.com/weepwood/MRR/commit/ca04a8f88c61b45dd9225e1116b90b1d98d79ee5) · [PR #36](https://github.com/weepwood/MRR/pull/36)） — weepwood
-- **新增** 集成同域 VitePress 文档中心与受控 Springdoc（[`0b27c07`](https://github.com/weepwood/MRR/commit/0b27c07cae5273a6b4d288ee7a4c23a101c3ec54) · [PR #33](https://github.com/weepwood/MRR/pull/33)） — weepwood
-- **修复** 修复路由切换白屏与档案页布局样式残留（[`a5351ca`](https://github.com/weepwood/MRR/commit/a5351ca1dd39ac729f52fdb62df09aba24fe79e1) · [PR #35](https://github.com/weepwood/MRR/pull/35)） — weepwood
-- **新增** `settings` 重构设置层级并接入实际功能（[`327f6b7`](https://github.com/weepwood/MRR/commit/327f6b77b67717c40c60f1c8979734c7b821ce20) · [PR #32](https://github.com/weepwood/MRR/pull/32)） — weepwood
-- **新增** 影像档案袋添加用户水印与关闭设置（[`3457a38`](https://github.com/weepwood/MRR/commit/3457a38c16f030992200c7889a37415e3d4bbed7) · [PR #31](https://github.com/weepwood/MRR/pull/31)） — weepwood
-- **新增** 影像档案袋支持纯前端选中导出 PDF（[`23c237f`](https://github.com/weepwood/MRR/commit/23c237fa0fe764628407a1a540ee8254e2f21242) · [PR #30](https://github.com/weepwood/MRR/pull/30)） — weepwood
+- `23:58` chore remove temporary chart validation diagnostics（[`849fa5c3`](https://github.com/weepwood/MRR/commit/849fa5c3982051c164d5b4370c731d195ce5d6fd)）
+- `23:58` chore remove temporary chart fixes part 02（[`9fac0ecd`](https://github.com/weepwood/MRR/commit/9fac0ecd6bd0f8bd749e7460f1bc065c6cd7c519)）
+- `23:58` chore remove temporary chart fixes part 01（[`7042ef21`](https://github.com/weepwood/MRR/commit/7042ef2113b0d22cd681f08ae4e95aa652c5fd74)）
+- `23:58` chore remove temporary chart fixes part 00（[`c3da0cf1`](https://github.com/weepwood/MRR/commit/c3da0cf12d9b0a065c9c863ef856873b53b7527d)）
+- `23:58` chore remove temporary chart source part 04（[`99049637`](https://github.com/weepwood/MRR/commit/990496375aa77e3ae059de27422ae4e041ae4189)）
+- `23:57` chore remove temporary chart source part 03（[`a53e5c2a`](https://github.com/weepwood/MRR/commit/a53e5c2a0c7c5d616a46ad6f57043a38d1763c43)）
+- `23:57` chore remove temporary chart source part 02（[`f1871a30`](https://github.com/weepwood/MRR/commit/f1871a30d9d4585213d256e4fcd5ce730709796a)）
+- `23:57` chore remove temporary chart source part 01（[`f70b68ab`](https://github.com/weepwood/MRR/commit/f70b68ab0a1063d0b7d624585ff4481cfb75864d)）
+- `23:57` chore remove temporary chart source part 00（[`a75c6a81`](https://github.com/weepwood/MRR/commit/a75c6a81a83a2cec4cf08c8593c342d6acdbf334)）
+- `23:57` chore remove temporary chart source bundle（[`63fc6c56`](https://github.com/weepwood/MRR/commit/63fc6c567b7b353859d5a41a61c31df1bb83de70)）
+- `23:57` chore remove temporary chart validation workflow（[`68fc4a0b`](https://github.com/weepwood/MRR/commit/68fc4a0b58e114dab73282e51b2a3d507fae0b60)）
+- `15:55` feat (charts) unify reusable ECharts visualizations \[skip ci\]（[`6b809877`](https://github.com/weepwood/MRR/commit/6b809877faba94db09983d1bbe3b632c1a0f9e92)）
+- `23:53` ci commit validated unified chart implementation（[`0d8952ae`](https://github.com/weepwood/MRR/commit/0d8952ae41f427e7c737f339bc8b6a3f8edf9a44)）
+- `23:50` ci resolve final chart lint findings（[`6801a27f`](https://github.com/weepwood/MRR/commit/6801a27f4176a82b8295fa2148816e06341234b6)）
+- `23:48` ci apply chart fixes during validation（[`16f14ba3`](https://github.com/weepwood/MRR/commit/16f14ba307880c624ec42be4c57fd7261e997237)）
+- `23:46` ci validate only unified chart changes（[`155b2025`](https://github.com/weepwood/MRR/commit/155b2025c4124ed191c79de6fe85eb03da07caf5)）
+- `23:45` ci add chart fixes part 02（[`79c0096f`](https://github.com/weepwood/MRR/commit/79c0096ffbd4ee2bad27be5a0a601216af16cdd1)）
+- `23:45` ci add chart fixes part 01（[`620734f7`](https://github.com/weepwood/MRR/commit/620734f70d1162a24379ebc0a115c94e57d4861d)）
+- `23:44` ci add chart fixes part 00（[`c7be110b`](https://github.com/weepwood/MRR/commit/c7be110b00cc6e83d6c5b43ff3efeb098c46a4bf)）
+- `23:41` ci publish chart validation diagnostics（[`07f1c65f`](https://github.com/weepwood/MRR/commit/07f1c65fcbc905e2aa75452414e7330c50748bed)）
+- `23:40` test (ui) 避免导航时覆盖标题风格切换（[`085e961b`](https://github.com/weepwood/MRR/commit/085e961be7c5057b17dadeb86dfe89f3109af619)）
+- `15:40` ci capture chart validation diagnostics \[skip ci\]（[`e3778469`](https://github.com/weepwood/MRR/commit/e37784699450d75509fae3c99acbb0f80a7986a0)）
+- `23:39` test (ui) 覆盖页面标题卡片与页面同级切换（[`fb054d0a`](https://github.com/weepwood/MRR/commit/fb054d0a3eb110d95a469e7139f1b431503f3bc8)）
+- `23:38` ci capture detailed chart validation diagnostics（[`8e862c29`](https://github.com/weepwood/MRR/commit/8e862c29d64fa2d161765105a37c6533bda608dc)）
+- `23:37` fix (settings) 将标题选项改为页面同级与卡片展示（[`4bada6c6`](https://github.com/weepwood/MRR/commit/4bada6c69d20db1042206eb983f53f9edda86dcd)）
+- `23:36` fix (settings) 迁移旧标题布局配置到新容器风格（[`94dfaa9d`](https://github.com/weepwood/MRR/commit/94dfaa9d15fa0ef307e28c41116ba4e0eb023f29)）
+- `23:36` ci reconstruct chart bundle from verified parts（[`35137270`](https://github.com/weepwood/MRR/commit/351372700a2b1c4f5ec53a0cbfd6f43a752c0419)）
+- `23:36` ci split chart source bundle part 04（[`37e29bd9`](https://github.com/weepwood/MRR/commit/37e29bd96662da8bca76718d1beeec9cc9a81eb5)）
+- `23:36` ci split chart source bundle part 03（[`1ff38c1c`](https://github.com/weepwood/MRR/commit/1ff38c1c333849a7bc6e088d43eebaf8f9ba6c57)）
+- `23:36` fix (types) 使用页面同级与卡片标题风格类型（[`841a1e16`](https://github.com/weepwood/MRR/commit/841a1e16e932e74271cd2738f0e4eb88d1b999b2)）
+- `23:35` ci split chart source bundle part 02（[`e35a8674`](https://github.com/weepwood/MRR/commit/e35a8674d4a251a4419dcd8f0fba64cdabe7d588)）
+- `23:35` fix (settings) 将标题风格默认值改为卡片模式（[`f74f50ec`](https://github.com/weepwood/MRR/commit/f74f50eca407ee9f59d818562493f11fdce5ff30)）
+- `23:35` fix (ui) 将标题切换改为卡片与页面同级风格（[`dc59c6b9`](https://github.com/weepwood/MRR/commit/dc59c6b9ef233306ada08564c120b0426808d7b0)）
+- `23:35` ci split chart source bundle part 01（[`19bff325`](https://github.com/weepwood/MRR/commit/19bff325179feb4c0711d7f4ed1b0e368de4107a)）
+- `23:34` ci split chart source bundle part 00（[`496aa8c4`](https://github.com/weepwood/MRR/commit/496aa8c480d6e0f98f563b17dcc0d64927935004)）
+- `23:32` ci run chart validation for pull requests（[`b85d77d6`](https://github.com/weepwood/MRR/commit/b85d77d6f1698e2a301cdd4c0d23257424cfac6d)）
+- `23:31` ci validate unified chart migration（[`996ba0bd`](https://github.com/weepwood/MRR/commit/996ba0bd9ca843460a77259aa7932e9ff90e216c)）
+- `23:31` ci stage unified chart source bundle（[`e810f4ce`](https://github.com/weepwood/MRR/commit/e810f4ce1fa771e7274233fcda0825f876f1e0dd)）
+- `23:20` style 扩展统一标题对无英文眉题页面的兼容（[`304b53f3`](https://github.com/weepwood/MRR/commit/304b53f32440f442d49d987da5d3ca84b2b2d237)）
+- `23:17` style 优化紧凑标题说明文字自适应宽度（[`35f65ac0`](https://github.com/weepwood/MRR/commit/35f65ac02b5a46443d29dddd9f8cc7b73f94ccd9)）
+- `23:16` feat (settings) 增加页面标题风格切换选项（[`b9162556`](https://github.com/weepwood/MRR/commit/b9162556dde934e5c3c800151331d184f8d27dc9)）
+- `23:14` feat (ui) 扩展统一页面标题组件支持英文眉题（[`8110550c`](https://github.com/weepwood/MRR/commit/8110550c5fe09ad807619c56730812a43c2d897d)）
+- `23:13` style 加载统一页面标题样式（[`29e878d0`](https://github.com/weepwood/MRR/commit/29e878d06c77fe03ccc9c80be11a63f6aa6dc35a)）
+- `23:13` style 新增可切换的统一页面标题样式（[`7d5e4765`](https://github.com/weepwood/MRR/commit/7d5e47657c009bb933e1eb56da4b298da5f45ae3)）
+- `23:13` feat (settings) 将页面标题风格同步到文档根节点（[`106fffa5`](https://github.com/weepwood/MRR/commit/106fffa5233124b1fe7b890617c080b6e2a3cc0c)）
+- `23:11` feat (types) 增加页面标题风格配置类型（[`9533f285`](https://github.com/weepwood/MRR/commit/9533f2854b37349fba70970927cebb5f5397932c)）
+- `23:10` feat (settings) 添加页面标题风格默认配置（[`faeccabd`](https://github.com/weepwood/MRR/commit/faeccabd1ca9cff7ca721b9201de25e4751858b7)）
+- `23:00` fix 修复档案装箱指标图标遮挡文字（[`51978482`](https://github.com/weepwood/MRR/commit/519784823dc6e6990a716c9aed1723c734c053fb) · [PR #47](https://github.com/weepwood/MRR/pull/47)）
+- `22:56` fix prevent archive box metric icon overlap（[`f8c9881f`](https://github.com/weepwood/MRR/commit/f8c9881f1d5691f0b8965a8911fd07cb4099f684)）
+- `22:55` refactor 删除档案搜索页面（[`9659ad41`](https://github.com/weepwood/MRR/commit/9659ad410aa5367068a220f94749fb569ce2c0cd) · [PR #46](https://github.com/weepwood/MRR/pull/46)）
+- `22:54` merge 移除侧边栏 Workspace 业务导航描述（[`4cdaa75e`](https://github.com/weepwood/MRR/commit/4cdaa75ef984e1985bdb84de783c9ce1a74cfc9f) · [PR #44](https://github.com/weepwood/MRR/pull/44)）
+- `22:52` fix 修复档案装箱指标图标显示与样式（[`012145ad`](https://github.com/weepwood/MRR/commit/012145ad0f99d10074df7830ed56d249f8f88a0a) · [PR #43](https://github.com/weepwood/MRR/pull/43)）
+- `22:51` fix (settings) 删除前端哀悼模式设置（[`e4ec76bc`](https://github.com/weepwood/MRR/commit/e4ec76bc6be42dd22d583f1d748b1b0d8d3be6ba) · [PR #45](https://github.com/weepwood/MRR/pull/45)）
+- `22:50` refactor (frontend) remove archive search page（[`3611d8b6`](https://github.com/weepwood/MRR/commit/3611d8b65cba9eb78d3332aa25d889f8ff41b7fd)）
+- `22:50` refactor (frontend) remove archive search route（[`f437b917`](https://github.com/weepwood/MRR/commit/f437b91740427ae1d9db1416a6f5cd49b8f78f3d)）
+- `22:49` fix (ui) remove workspace navigation description（[`90b4f493`](https://github.com/weepwood/MRR/commit/90b4f493b72ee2df76dfc72d3d1d28d28f33279f)）
+- `22:49` fix (settings) remove mourning mode option（[`c3a28012`](https://github.com/weepwood/MRR/commit/c3a2801264ceb370cc5b790e8c98a4435c72e9f4)）
+- `22:47` fix (ui) load archive box metric icon styles（[`69ca925d`](https://github.com/weepwood/MRR/commit/69ca925dcca6f743bfc67e9361f869e98c6e6ac8)）
+- `22:46` fix (ui) normalize archive box metric icons（[`bff0f281`](https://github.com/weepwood/MRR/commit/bff0f2819f9b119240365816dacbee7a6740bb73)）
+- `22:46` feat 重构现代 SaaS 界面并统一全局卡片圆角（[`aa27415a`](https://github.com/weepwood/MRR/commit/aa27415a03bae3d66ab7b1503b8ea1f92bec872a) · [PR #42](https://github.com/weepwood/MRR/pull/42)）
+- `22:38` test (ui) cover adjustable radius across major pages（[`bc12f492`](https://github.com/weepwood/MRR/commit/bc12f49249d2fbec2fc2bbd06633541eac3d60e0)）
+- `22:38` fix (ui) narrow radius clipping to surfaced charts（[`0b23dc11`](https://github.com/weepwood/MRR/commit/0b23dc113ea3a1b3a506cb202e0b4362dca7b1c2)）
+- `22:37` fix (ui) load global surface radius compatibility layer（[`83c639d2`](https://github.com/weepwood/MRR/commit/83c639d2b3a4d539ad5acaa79cbf089e9b5016b6)）
+- `22:37` fix (ui) unify card and panel radius across legacy pages（[`9e6808ef`](https://github.com/weepwood/MRR/commit/9e6808ef7b3fe8ebd05c4eb99bf28c7d55e59f3d)）
+- `22:20` fix enforce archive immersive height chain（[`65c20bb1`](https://github.com/weepwood/MRR/commit/65c20bb1537ce49bbd56e786ebc24bea0390c289)）
+- `22:13` ci upload Playwright diagnostics on E2E failure（[`2d4e82e1`](https://github.com/weepwood/MRR/commit/2d4e82e1cebb2a1872d61bd94f7753822445f22d)）
+- `22:08` test disable permission filtering for archive UI check（[`6159b283`](https://github.com/weepwood/MRR/commit/6159b283fbe15d18debe4c24d14ec96ed1dff868)）
+- `22:04` test wait for archive route and immersive layout（[`2256bb7e`](https://github.com/weepwood/MRR/commit/2256bb7ec80a221bb9317b93e264429c118ab134)）
+- `21:58` test cover archive workspace visibility and radius（[`7e14b0de`](https://github.com/weepwood/MRR/commit/7e14b0de794965fe0aca71ce17007cd6a9e07315)）
+- `21:57` style use 12px default application radius（[`8e45b3b0`](https://github.com/weepwood/MRR/commit/8e45b3b0e113c19c4001cc60c7705a505b592667)）
+- `21:56` style load archive workspace overrides（[`3b0d081f`](https://github.com/weepwood/MRR/commit/3b0d081fe832e63e94c37bec86f92f8eaf3d435e)）
+- `21:56` fix restore archive workspace height and unify radii（[`1976de9e`](https://github.com/weepwood/MRR/commit/1976de9e3b7047a843eb495c31b146310eb89f59)）
+- `21:56` fix make SaaS radii follow application setting（[`eba1dca9`](https://github.com/weepwood/MRR/commit/eba1dca9de3768b1ff09e8c0c62eb3092532438e)）
+- `21:12` docs redefine MRR Console as modern SaaS design system（[`917bbd2c`](https://github.com/weepwood/MRR/commit/917bbd2cefc0c9330aaf6975babd04f859f9fc79)）
+- `21:11` style modernize navigation popup menus（[`cdfa52c3`](https://github.com/weepwood/MRR/commit/cdfa52c3c10ae6dd22230631918aa9ee52161748)）
+- `21:11` style unify navigation items with SaaS interaction states（[`4b578a7a`](https://github.com/weepwood/MRR/commit/4b578a7a4c97e983a8908f10fbc8283fa19e5786)）
+- `21:10` style polish SaaS data table panels（[`12490e37`](https://github.com/weepwood/MRR/commit/12490e37537afa0872eea48a27709466d1dac4a5)）
+- `21:10` style redesign filters as SaaS command bar（[`d859fb8f`](https://github.com/weepwood/MRR/commit/d859fb8fc74818a0115e891fc5f0e6e81b3cfebc)）
+- `21:09` style refine page headers for modern SaaS hierarchy（[`65ea858d`](https://github.com/weepwood/MRR/commit/65ea858de6ce40b70e348f0633a6d6b628984749)）
+- `21:09` style refine SaaS content cards and section headers（[`b0b27ab8`](https://github.com/weepwood/MRR/commit/b0b27ab8a250e43215d6bcf9f3dc941fbe6470a3)）
+- `21:09` style upgrade metric cards for modern SaaS dashboards（[`4bf61b5b`](https://github.com/weepwood/MRR/commit/4bf61b5b63555722f453e965eb6c6921301f49f0)）
+- `21:08` style redesign page tabs as compact SaaS workspace tabs（[`1a089e09`](https://github.com/weepwood/MRR/commit/1a089e09a731b48cd1cebdbde09b4fa51a849b01)）
+- `21:07` style refine SaaS toolbar spacing and hierarchy（[`4671346e`](https://github.com/weepwood/MRR/commit/4671346e5e07b2f8ab733d10058633b3acf3b1ff)）
+- `21:06` style turn topbar into translucent SaaS command surface（[`8453b836`](https://github.com/weepwood/MRR/commit/8453b8368f4fecf2ff59d98465b7f345953658e8)）
+- `21:06` style redesign top navigation for SaaS header mode（[`5268ae7e`](https://github.com/weepwood/MRR/commit/5268ae7e51e8ddd6b255f3abe6106f2021e2a64c)）
+- `21:06` style redesign secondary navigation as SaaS workspace panel（[`1ee08682`](https://github.com/weepwood/MRR/commit/1ee08682c8a1d3fbb103d53659afd4346a57ffda)）
+- `21:05` style modernize primary SaaS navigation rail（[`ff3238f1`](https://github.com/weepwood/MRR/commit/ff3238f13d71bd189370818d7d4561059fd66e7d)）
+- `21:04` style redesign application shell for modern SaaS layout（[`0b7933b0`](https://github.com/weepwood/MRR/commit/0b7933b08fd8fef68d93b976bf456d2df1d25029)）
+- `21:04` style use SaaS workspace background globally（[`4b7aba66`](https://github.com/weepwood/MRR/commit/4b7aba667a0d3a305dbe2b23f6a0d181503d74a7)）
+- `21:03` style add modern SaaS application shell tokens（[`f2567672`](https://github.com/weepwood/MRR/commit/f25676726abd0652e3821271e2ed22920228a815)）
+- `20:50` docs document shadcn-inspired MRR design rules（[`5f1cd54b`](https://github.com/weepwood/MRR/commit/5f1cd54b7cbb2152fc6c7eb38583baab4d9ff463)）
+- `20:50` style use shadcn background and text rendering（[`761fdc9a`](https://github.com/weepwood/MRR/commit/761fdc9af70c305ea57ba26d5c83475439e919d0)）
+- `20:49` style restyle status badges with shadcn semantics（[`ad4595c2`](https://github.com/weepwood/MRR/commit/ad4595c2760c606fd3f41ba7108e082bd3e893ac)）
+- `20:49` style refine data table panel with shadcn spacing（[`f31f35bb`](https://github.com/weepwood/MRR/commit/f31f35bbf5792ec7292cfe64c2a2f00d1f782da1)）
+- `20:49` style simplify filter bar in shadcn style（[`e80683a4`](https://github.com/weepwood/MRR/commit/e80683a43073be8c19416a1069bee0c6f1fa0203)）
+- `20:49` style align section cards with shadcn composition（[`bfb79ecf`](https://github.com/weepwood/MRR/commit/bfb79ecf646b418a2899b23b163f75f6f54bd1a7)）
+- `20:48` style align page header with shadcn hierarchy（[`ce2b796a`](https://github.com/weepwood/MRR/commit/ce2b796aa0479346cfffd0cf5ea077438ab0d058)）
+- `20:48` style simplify metric cards with shadcn surfaces（[`c91c4179`](https://github.com/weepwood/MRR/commit/c91c4179653a5e128920e3f6bbb85a7966d6123d)）
+- `20:47` style rebuild Element Plus controls in shadcn style（[`03c3a1b0`](https://github.com/weepwood/MRR/commit/03c3a1b06b98daf6c0de5c054b1b0e343a45dad5)）
+- `20:46` style align MRR tokens with shadcn semantics（[`0e9ee8bb`](https://github.com/weepwood/MRR/commit/0e9ee8bbaeb87aa732aa8d0d43f4b1e45cae650f)）
+- `20:37` docs (console) document professional control hierarchy（[`7a516dbe`](https://github.com/weepwood/MRR/commit/7a516dbe43f88c86ace9cf9682259ffc3ac66105)）
+- `20:36` style (console) polish filter toolbar composition（[`95282eaf`](https://github.com/weepwood/MRR/commit/95282eaf5f1b55f3f16fd4579b6b6268757bbab0)）
+- `20:36` style (console) redesign buttons and form controls（[`4298bc90`](https://github.com/weepwood/MRR/commit/4298bc9074dd9ee528378e38d4222fa0cda1a75d)）
+- `20:35` style (console) refine modern control design tokens（[`cfcd3434`](https://github.com/weepwood/MRR/commit/cfcd3434eb6dbf5f02ec71af3d0deef3593e4689)）
+- `20:22` chore (ui) name data table panel component（[`e9d24e3a`](https://github.com/weepwood/MRR/commit/e9d24e3a44cb264e5139a92c4e23428784088aed)）
+- `20:22` chore (ui) name status tag component（[`747def15`](https://github.com/weepwood/MRR/commit/747def1577c7e94f4bbcca7b58647c25d91562ec)）
+- `20:21` chore (ui) name filter bar component（[`8c1cce8d`](https://github.com/weepwood/MRR/commit/8c1cce8df202a1caac196db7424e571ef9ce3fcd)）
+- `20:21` chore (ui) name section card component（[`4f4b01d3`](https://github.com/weepwood/MRR/commit/4f4b01d38afb3dca6e10c0be48d22b198a7248c8)）
+- `20:21` chore (ui) name metric card component（[`c0593c7e`](https://github.com/weepwood/MRR/commit/c0593c7e2ce721ecee8e3f6c4bef70e4ee4df695)）
+- `20:20` chore (ui) name page header component（[`43298706`](https://github.com/weepwood/MRR/commit/4329870666cd00a7efd2b2dec65ef75830a12b1f)）
+- `20:20` chore (ui) name page shell component（[`21aa51df`](https://github.com/weepwood/MRR/commit/21aa51dfada6e3ffc9c88bd596476ff1baa43c20)）
+- `20:19` fix (ui) preserve Element Plus size variants（[`ca4afc69`](https://github.com/weepwood/MRR/commit/ca4afc69875ac81620802076e06cedba4fd9f7df)）
+- `20:17` fix (ui) harden table panel count rendering（[`ca055fab`](https://github.com/weepwood/MRR/commit/ca055fababc755b9a4abaf287a8faeefb0fdce8b)）
+- `20:17` fix (ui) apply status colors in dark mode（[`72a2c2eb`](https://github.com/weepwood/MRR/commit/72a2c2eb67a5c446302bf2c193250375abcd757e)）
+- `20:15` fix (ui) render page header actions only when provided（[`d4a29a87`](https://github.com/weepwood/MRR/commit/d4a29a87812da7a9f9128e8e2fd4620aa4e48fd2)）
+- `20:15` docs (ui) add MRR console implementation guide（[`fa16faea`](https://github.com/weepwood/MRR/commit/fa16faeaaf590e3899761b3ed369c308ab5514f8)）
+- `20:14` refactor (users) migrate to MRR console design system（[`8fdf86d6`](https://github.com/weepwood/MRR/commit/8fdf86d6c307d9d7d1164b4e9037a4efbce8274d)）
+- `20:13` feat (ui) load console component styles（[`548b4820`](https://github.com/weepwood/MRR/commit/548b4820b158edc025a218f903b772e04b32bde3)）
+- `20:13` feat (ui) unify Element Plus visual language（[`16ec3779`](https://github.com/weepwood/MRR/commit/16ec3779ce4a8329af53b7cf78a43c2ac6b205cd)）
+- `20:12` feat (ui) normalize console base styles（[`41e65b76`](https://github.com/weepwood/MRR/commit/41e65b76790c773aed853739531dcaf292336732)）
+- `20:12` feat (ui) extend console design tokens（[`74ab4d8f`](https://github.com/weepwood/MRR/commit/74ab4d8f1bfe96d56e12f9a02083871105aefd95)）
+- `20:12` feat (ui) add unified data table panel（[`00e677e0`](https://github.com/weepwood/MRR/commit/00e677e04a0afc6ea8ea895b148428e211825e8a)）
+- `20:12` feat (ui) add semantic status tag（[`626bc40b`](https://github.com/weepwood/MRR/commit/626bc40be2331d35e609a48f6b64c3cc550a16b7)）
+- `20:11` feat (ui) add reusable filter bar（[`0ee85901`](https://github.com/weepwood/MRR/commit/0ee85901f786b50d3d09376f6e0910809385c191)）
+- `20:11` feat (ui) add reusable section card（[`7770c3f0`](https://github.com/weepwood/MRR/commit/7770c3f0adae51885093480bbfe5664e859c788b)）
+- `20:11` feat (ui) add reusable metric card（[`b0b1ca48`](https://github.com/weepwood/MRR/commit/b0b1ca48a62bb4cb46e5264968b5972d69d513e1)）
+- `20:10` feat (ui) add unified page header（[`6e6c9c12`](https://github.com/weepwood/MRR/commit/6e6c9c12b23ce9368070606f79529f5ffe8fce83)）
+- `20:10` feat (ui) add unified page shell（[`b7b6a548`](https://github.com/weepwood/MRR/commit/b7b6a5486e794ea528e059d21833b061a5dc9413)）
+- `20:03` fix 修复页面切换时上一页内容残影闪烁（[`9faaeffd`](https://github.com/weepwood/MRR/commit/9faaeffd6502a988cdebf458fd95729b2b921671) · [PR #41](https://github.com/weepwood/MRR/pull/41)）
+- `20:01` fix (layout) remove overlapping route transition（[`9591f9fc`](https://github.com/weepwood/MRR/commit/9591f9fcebefc201f2c03f0ddeba6f1e15366c0a)）
+- `19:58` feat 影像档案袋支持身份证搜索与病案切换（[`afad8975`](https://github.com/weepwood/MRR/commit/afad89758a16ab90bc492850805c76de33a91aae) · [PR #40](https://github.com/weepwood/MRR/pull/40)）
+- `19:51` chore (ci) restore frontend workflow（[`4fd7e1e0`](https://github.com/weepwood/MRR/commit/4fd7e1e045ff4f07642b710b6ccbc680a076f304)）
+- `11:51` feat (archive) accept plaintext ID query and replace with token（[`15c4a8ac`](https://github.com/weepwood/MRR/commit/15c4a8ac04fe79e6960f35ac3e06f83a61dce569)）
+- `19:50` chore (ci) apply plaintext id route compatibility patch（[`bc3b7a46`](https://github.com/weepwood/MRR/commit/bc3b7a464f2b51d2f8792d7573049f7bf039d2dd)）
+- `19:30` chore (ci) restore frontend validation workflow（[`c1d48db2`](https://github.com/weepwood/MRR/commit/c1d48db2a41fce25599c05ccbc7ade4e0315686b)）
+- `11:30` fix (statistics-detail) allow optional copied source value（[`a247a34a`](https://github.com/weepwood/MRR/commit/a247a34a1ad4db4b2f06835bbd94d51ca4d5a694)）
+- `19:30` chore (ci) apply one-time type compatibility fix（[`ad5f971a`](https://github.com/weepwood/MRR/commit/ad5f971a590106f395f79b8788e3c1c37ce79a78)）
+- `19:28` chore (ci) temporarily export source for type fix（[`eda8576b`](https://github.com/weepwood/MRR/commit/eda8576b1cf81dd8ec066e9ad00437c414e5f3fd)）
+- `19:24` chore (ci) temporarily upload type-check diagnostics（[`1c390af2`](https://github.com/weepwood/MRR/commit/1c390af29b068c577278e8f8eb1d97e0baed88ec)）
+- `19:22` fix (archive) preserve existing search API type signatures（[`ce79913b`](https://github.com/weepwood/MRR/commit/ce79913b73cf943a6a2ccb14a4f32da89046f257)）
+- `19:19` test (search) harden id-card token tamper coverage（[`dfab4848`](https://github.com/weepwood/MRR/commit/dfab4848d993780e1eff8d13c35691e06e1d1448)）
+- `19:19` fix (search) make id-card masking length-aware（[`cd712b89`](https://github.com/weepwood/MRR/commit/cd712b892522209d85713ce06505141b1de4b24f)）
+- `19:18` test (search) cover id-card URL token behavior（[`c9e96dae`](https://github.com/weepwood/MRR/commit/c9e96dae7e59b749ef025632667261935be9639e)）
+- `19:17` feat (archive) support id-card route search and case switching（[`afca9569`](https://github.com/weepwood/MRR/commit/afca95691b5b0b4869c4d5533d3a9a62133942a7)）
+- `19:16` feat (archive) add id-card search field and privacy hint（[`7312760c`](https://github.com/weepwood/MRR/commit/7312760c17c1e5ac8be965ab2f97f2e753728d57)）
+- `19:15` feat (archive) add patient archive case switcher（[`3679eda8`](https://github.com/weepwood/MRR/commit/3679eda8f07fbe4876db35bce0d6389d0ecbc247)）
+- `19:15` feat (archive) manage id-card case search state（[`ca7afdc4`](https://github.com/weepwood/MRR/commit/ca7afdc4c7307e3ca51dc56ae03bac03f11fa110)）
+- `19:15` feat (archive) add id-card archive search API（[`aa31382d`](https://github.com/weepwood/MRR/commit/aa31382d61f31c6a900c77b566797fc46c956241)）
+- `19:14` feat (search) add id-card archive query and token restore endpoints（[`28735857`](https://github.com/weepwood/MRR/commit/2873585714e5a3b2b7262686fa3c0649579a24b2)）
+- `19:14` feat (search) build id-card archive case list（[`e03c3356`](https://github.com/weepwood/MRR/commit/e03c3356d4ba791b140db20ef188a2d68e809fa4)）
+- `19:14` feat (search) expose id-card archive case service（[`d8c6db5e`](https://github.com/weepwood/MRR/commit/d8c6db5e95822a2365f5cd20460043c550740880)）
+- `19:14` feat (search) resolve archive shelf numbers for id-card cases（[`151305ac`](https://github.com/weepwood/MRR/commit/151305ac0fe3f773b94cf083918c6e5ab5bdcb23)）
+- `19:13` feat (search) add secure id-card URL token utility（[`c3d452a4`](https://github.com/weepwood/MRR/commit/c3d452a4508f588447d4895158d46cba05679b88)）
+- `19:13` feat (search) add id-card archive response model（[`83c72af5`](https://github.com/weepwood/MRR/commit/83c72af500f8f73126e8bcc5153449d54bb7804f)）
+- `18:59` feat (statistics-detail) 修改copyCode函数以显示原始值（[`5e9944b7`](https://github.com/weepwood/MRR/commit/5e9944b7c5064fed0b5972cb858676102b64ea4e)）
+- `18:56` fix 修复数据质量迁移 Flyway 校验和不一致（[`9f08f869`](https://github.com/weepwood/MRR/commit/9f08f869c25c237ae4e3f3161dc66ccbd3feca09) · [PR #39](https://github.com/weepwood/MRR/pull/39)）
+- `18:56` feat (settings) 添加全屏和页面刷新配置选项（[`4b831b21`](https://github.com/weepwood/MRR/commit/4b831b2116bd326d93f8cdaa3c71b5a4c7f7ca8a)）
+- `18:52` test lock released Flyway migration checksum（[`3f01a1e5`](https://github.com/weepwood/MRR/commit/3f01a1e5f69c66521c30de82bc07b63e526b31ef)）
+- `18:50` fix move manual trigger default to a new migration（[`ca2e224e`](https://github.com/weepwood/MRR/commit/ca2e224e05ba74fc23d6fccb9b0cdd93463d76aa)）
+- `18:50` fix restore immutable data quality migration（[`7074ff66`](https://github.com/weepwood/MRR/commit/7074ff669955377f05ccd48a6f1a8ad574a0185e)）
+- `18:43` fix 修复帮助与文档菜单图标（[`945752d5`](https://github.com/weepwood/MRR/commit/945752d50dc9afe110697551208b85a2d2b8f930) · [PR #38](https://github.com/weepwood/MRR/pull/38)）
+- `18:41` feat 完成原生数据库监控与手动数据质量检查（[`e18d7eac`](https://github.com/weepwood/MRR/commit/e18d7eacd38df00b40ecc97e0f56071000696fed) · [PR #34](https://github.com/weepwood/MRR/pull/34)）
+- `18:40` fix replace invalid help documentation icon（[`5844fe1a`](https://github.com/weepwood/MRR/commit/5844fe1a4c041c0281e12a60d8d59ffe02f1b52c)）
+- `18:34` fix 避免请求错误重复弹窗（[`ca04a8f8`](https://github.com/weepwood/MRR/commit/ca04a8f88c61b45dd9225e1116b90b1d98d79ee5) · [PR #36](https://github.com/weepwood/MRR/pull/36)）
+- `18:27` test (image) preserve latest coverage and normalized BAH expectations（[`9d69acfd`](https://github.com/weepwood/MRR/commit/9d69acfd171e60f34f6bd923e34c3290dd3a69cb)）
+- `18:27` chore sync latest dev-no-login into monitoring branch（[`0d3fa656`](https://github.com/weepwood/MRR/commit/0d3fa656b30d7444ee4d2512f8da4ab511547a37)）
+- `18:27` test cover Vue and browser request error fallbacks（[`2ed73aeb`](https://github.com/weepwood/MRR/commit/2ed73aeb43bd15b83c937a7d635422e26920cd09)）
+- `18:26` fix preserve non-request Vue error handling（[`a13a72a5`](https://github.com/weepwood/MRR/commit/a13a72a5b5646ac7a9ebc715cfad2ef3d6a2cf90)）
+- `18:26` fix install request error fallback handler（[`2b0cf9df`](https://github.com/weepwood/MRR/commit/2b0cf9df9d4539485713db4810c8d98054827bf5)）
+- `18:26` refactor register request error fallbacks（[`f5185790`](https://github.com/weepwood/MRR/commit/f51857902f483bdfcb49403c63584c12f15de28c)）
+- `18:25` refactor integrate request fallback with Vue errors（[`6ce7e0f4`](https://github.com/weepwood/MRR/commit/6ce7e0f43849de7339da37f1d83c64943308e677)）
+- `18:25` docs (grafana) clarify manual data quality execution（[`b465f2a0`](https://github.com/weepwood/MRR/commit/b465f2a06f995a7334dab8dd863af9c1f5439219)）
+- `18:25` ci (monitoring) validate native monitoring configuration（[`08c3a82f`](https://github.com/weepwood/MRR/commit/08c3a82fb8d3f23fab374dbbbcb609f984d5f2a4)）
+- `18:24` docs (monitoring) replace Docker instructions with native deployment（[`2032fb64`](https://github.com/weepwood/MRR/commit/2032fb644b09822385f247df69430e02ecad0df2)）
+- `18:24` fix dedupe only displayed fallback errors（[`f993be51`](https://github.com/weepwood/MRR/commit/f993be5182349e7c8e6497db6bc371eda4fa967d)）
+- `18:24` refactor (grafana) make dashboard path configurable for native install（[`43635fd0`](https://github.com/weepwood/MRR/commit/43635fd03301068475a9b3517b664d256e63aea9)）
+- `18:23` test cover unhandled request error fallback（[`b8ba6fe5`](https://github.com/weepwood/MRR/commit/b8ba6fe563ebc4eb09917cf475c446c221fe5142)）
+- `18:23` refactor (grafana) point datasource to native Prometheus service（[`f327c5a4`](https://github.com/weepwood/MRR/commit/f327c5a4c3e1708b063249ef093e02a983ffe649)）
+- `18:23` refactor (alerts) support native hosts and manual quality checks（[`7914b4b8`](https://github.com/weepwood/MRR/commit/7914b4b8cd5b34a337cee97a9d27ef2a21d72542)）
+- `18:23` refactor register fallback for unhandled request errors（[`07c7e18e`](https://github.com/weepwood/MRR/commit/07c7e18eda4e19a439912f55fcc9f543715ae5b9)）
+- `18:23` refactor (monitoring) use native localhost scrape targets（[`0207c59d`](https://github.com/weepwood/MRR/commit/0207c59d98bb47078b0fb2085c082556cd992991)）
+- `18:23` refactor use unhandled rejection for error fallback（[`3635991a`](https://github.com/weepwood/MRR/commit/3635991ab835ab52f2e389f927a9481847dbc1ce)）
+- `18:23` feat (monitoring) add native PostgreSQL monitoring setup SQL（[`b331132a`](https://github.com/weepwood/MRR/commit/b331132a904f9dd92c45c8399da1dfbc3f40143c)）
+- `18:22` refactor (database) separate privileged monitoring setup from Flyway（[`45d19f86`](https://github.com/weepwood/MRR/commit/45d19f86b4e69825c6d88d985140790744cedcbb)）
+- `18:22` refactor (monitoring) remove container initialization script（[`05ed95bb`](https://github.com/weepwood/MRR/commit/05ed95bb1a40644affbcb567049d2495c25abaca)）
+- `18:22` refactor (monitoring) remove Docker-only monitoring stack（[`d4a99542`](https://github.com/weepwood/MRR/commit/d4a99542ed74d4e02fa91b8ec85cb5f6bd96c92a)）
+- `18:22` revert (deployment) remove Docker monitoring environment variables（[`e1a4977c`](https://github.com/weepwood/MRR/commit/e1a4977c47dee050df436d7e9df7d5b379a931a0)）
+- `18:22` revert (deployment) keep existing project deployment unchanged（[`15122639`](https://github.com/weepwood/MRR/commit/15122639b67f9d36d0d5bd17f5333da6bca32e5f)）
+- `18:22` refactor (monitoring) use native local endpoint and manual quality checks（[`e16c9656`](https://github.com/weepwood/MRR/commit/e16c965687be6a37f8421ccb2dda2b9fd13b64a9)）
+- `18:21` refactor (data-quality) remove automatic scheduling configuration（[`3c6a2e6c`](https://github.com/weepwood/MRR/commit/3c6a2e6c913913f2eab5945437d188f3d3fa8456)）
+- `18:21` fix deduplicate request error notifications（[`7c88aef8`](https://github.com/weepwood/MRR/commit/7c88aef8382d9838967ec28c913c38539635434e)）
+- `18:20` test cover request error notification deduplication（[`2f1c99b4`](https://github.com/weepwood/MRR/commit/2f1c99b46f9fc488acceb2403a8738596f102f4f)）
+- `18:20` fix add deferred request error fallback（[`3f04ad04`](https://github.com/weepwood/MRR/commit/3f04ad0472ab3a2ce0fa37315a3dfec693a8ab54)）
+- `18:11` feat 集成同域 VitePress 文档中心与受控 Springdoc（[`0b27c07c`](https://github.com/weepwood/MRR/commit/0b27c07cae5273a6b4d288ee7a4c23a101c3ec54) · [PR #33](https://github.com/weepwood/MRR/pull/33)）
+- `18:08` fix 修复路由切换白屏与档案页布局样式残留（[`a5351ca1`](https://github.com/weepwood/MRR/commit/a5351ca1dd39ac729f52fdb62df09aba24fe79e1) · [PR #35](https://github.com/weepwood/MRR/pull/35)）
+- `18:08` test (image) align BAH lookup stubs with normalized search term（[`b40c6fd7`](https://github.com/weepwood/MRR/commit/b40c6fd773d07cfca0a160c40748da225bef7479)）
+- `18:06` ci (monitoring) split backend compile and test diagnostics（[`7bb952c5`](https://github.com/weepwood/MRR/commit/7bb952c5f1761db866c13d0c311d23090b997eea)）
+- `18:05` feat (settings) 重构设置层级并接入实际功能（[`327f6b77`](https://github.com/weepwood/MRR/commit/327f6b77b67717c40c60f1c8979734c7b821ce20) · [PR #32](https://github.com/weepwood/MRR/pull/32)）
+- `18:04` build (docs) 分离用户手册与内部文档构建（[`b113bb1c`](https://github.com/weepwood/MRR/commit/b113bb1c4974094ec49f015191198f0087a13d55)）
+- `18:04` build (docs) 增加跨平台双模式启动脚本（[`3c1693d4`](https://github.com/weepwood/MRR/commit/3c1693d493c3371591379efb95e116c9c4fc7144)）
+- `18:04` refactor (docs) 按环境选择文档构建配置（[`4d4bda04`](https://github.com/weepwood/MRR/commit/4d4bda042ba9ac910ad350dc75e3d62ee366731a)）
+- `18:04` feat (docs) 增加独立内部文档构建配置（[`a5dce4df`](https://github.com/weepwood/MRR/commit/a5dce4dfb9aec9b16935d98e78324cdd19b6da0f)）
+- `18:03` feat (docs) 增加独立用户手册构建配置（[`55cd33ce`](https://github.com/weepwood/MRR/commit/55cd33ce49dd47ca5407df8f8130e5df0b92b61b)）
+- `18:03` refactor (docs) 提取完整内部文档配置（[`c557e564`](https://github.com/weepwood/MRR/commit/c557e56432da752a2caf68e6f983913b077a4591)）
+- `18:02` fix (ci) invoke promtool as prometheus container entrypoint（[`77a6f1fe`](https://github.com/weepwood/MRR/commit/77a6f1fe6baa059ab4a361a4902ddebe89afdcef)）
+- `18:02` fix (router) avoid caching immersive archive page（[`35a1d030`](https://github.com/weepwood/MRR/commit/35a1d03034297159af6a5eecbb6d332c35a9e5d2)）
+- `18:02` fix (layout) smooth route transitions and limit page cache（[`aa5e5e8b`](https://github.com/weepwood/MRR/commit/aa5e5e8b035e4342b7d3a8fb49f53e65f227bf2e)）
+- `18:02` feat (docs) 增加后台帮助文档中心（[`93ea827c`](https://github.com/weepwood/MRR/commit/93ea827c2afe64c427451955d7ba882cccf044d3)）
+- `18:01` ci (monitoring) validate monitoring stack and data quality module（[`2a07095f`](https://github.com/weepwood/MRR/commit/2a07095f171ee3d330625e8d7fc08e842631ff4f)）
+- `18:01` feat (docs) 在后台菜单增加帮助与文档入口（[`de9d22f0`](https://github.com/weepwood/MRR/commit/de9d22f0c6d11d79ed4bfade7cd2e41c4135873b)）
+- `18:00` fix (monitoring) install pg\_stat\_statements in public schema（[`6dbeee74`](https://github.com/weepwood/MRR/commit/6dbeee74bf5f55e5ef0f4f88f25ec0ddffe4f88a)）
+- `18:00` feat (docs) 增加文档访问会话前端接口（[`225bd7e0`](https://github.com/weepwood/MRR/commit/225bd7e0cc1d8f5e0d8aabbfeae562440279d166)）
+- `18:00` feat (docs) 配置同域文档与受保护的 Springdoc 代理（[`958bdcac`](https://github.com/weepwood/MRR/commit/958bdcacc72dc923ea65551d7316a1ce64eb49d1)）
+- `18:00` build (docs) 分别打包用户手册与内部文档（[`2066c81f`](https://github.com/weepwood/MRR/commit/2066c81f6f75c387b7883407ce3b236f07566f4c)）
+- `17:59` feat (docs) 使用仓库根目录构建前端与文档镜像（[`97b6d1f3`](https://github.com/weepwood/MRR/commit/97b6d1f3c61e0c9502c9a59b7eb40e1b497e97ed)）
+- `17:59` fix (types) restore existing api type definitions（[`fb909291`](https://github.com/weepwood/MRR/commit/fb909291177a1d7b2c804de9d3c8eb9a3fd90678)）
+- `17:59` build (docs) 缩小前端文档镜像构建上下文（[`a80a8271`](https://github.com/weepwood/MRR/commit/a80a8271eca2021103fddac54a22f036f11af18d)）
+- `17:59` test (docs) 覆盖文档访问权限分级（[`752930bf`](https://github.com/weepwood/MRR/commit/752930bf75fadbd731cf98e388464eb0eb7fe286)）
+- `17:59` feat (docs) 显式配置 Springdoc 实时 API 文档（[`bd487920`](https://github.com/weepwood/MRR/commit/bd487920860c53b5e404dfc6fc76d324091d9021)）
+- `17:58` feat (docs) 登出时清除文档访问会话（[`be0878a0`](https://github.com/weepwood/MRR/commit/be0878a095dbdc38fe990453c0da4a241adba1a4)）
+- `17:58` feat (docs) 保护 Springdoc 直接访问入口（[`81b4b2dc`](https://github.com/weepwood/MRR/commit/81b4b2dc424c48f83c6a83efc0f76b650e9c88b0)）
+- `17:58` docs (monitoring) document deployment and operating procedures（[`dbe93e18`](https://github.com/weepwood/MRR/commit/dbe93e18910c59fffe6ad857880383f4abd33a53)）
+- `17:58` feat (docs) 增加文档访问会话接口（[`f47265d5`](https://github.com/weepwood/MRR/commit/f47265d53d57a33f4efa0ab7e8b38c498be1d2e3)）
+- `17:58` feat (docs) 增加文档访问授权服务（[`0803f2de`](https://github.com/weepwood/MRR/commit/0803f2dea7bb57477869e976f116a74a1a0d7762)）
+- `17:57` feat (docs) 区分登录令牌与文档会话令牌（[`186de937`](https://github.com/weepwood/MRR/commit/186de93732845c9ddb1ef956e4d70c667a8c638a)）
+- `17:57` fix (types) restore system monitoring api types（[`117a3169`](https://github.com/weepwood/MRR/commit/117a31693194ceeb007cb71a53e83c638827520d)）
+- `17:57` feat (docs) 接入文档访问与登出清理拦截器（[`5f3dea7b`](https://github.com/weepwood/MRR/commit/5f3dea7b8be78f9dfaf6be1c0c65488445a964d2)）
+- `17:57` feat (monitoring) integrate database and data quality console（[`3d7ea95b`](https://github.com/weepwood/MRR/commit/3d7ea95b1e9708ae1e410317fdb61b345133bab7)）
+- `17:56` docs 说明同域文档入口与访问权限（[`8ede706c`](https://github.com/weepwood/MRR/commit/8ede706c91a91001176ed4c17e9d0ac52402343e)）
+- `17:55` feat (monitoring) add database and quality frontend api client（[`103256a1`](https://github.com/weepwood/MRR/commit/103256a14eb06d89187dd40da5d5f5ad41791858)）
+- `17:55` docs (monitoring) add monitoring environment variables（[`2721cedd`](https://github.com/weepwood/MRR/commit/2721ceddcf42010eac87205c70f9ae17a75b9a90)）
+- `17:55` feat (data-quality) add grafana quality monitoring dashboard（[`4caef16c`](https://github.com/weepwood/MRR/commit/4caef16c4213900ec36e78dc66197749f4a3afdb)）
+- `17:55` feat (monitoring) add postgresql grafana dashboard（[`e77106f8`](https://github.com/weepwood/MRR/commit/e77106f8400b9b6108b32a656879666dd5f400f5)）
+- `17:54` feat (monitoring) add mrr application grafana dashboard（[`7438d11c`](https://github.com/weepwood/MRR/commit/7438d11cd94cd9770745044f1ba8c31c05c1b69e)）
+- `17:54` feat (monitoring) provision grafana dashboard directory（[`a95e2945`](https://github.com/weepwood/MRR/commit/a95e29457a95fad75049744b7c5d1c02406c4afd)）
+- `17:54` feat (monitoring) provision grafana prometheus datasource（[`f6d8f332`](https://github.com/weepwood/MRR/commit/f6d8f3325fbaef5743251d63bf7083b8dcc2f25f)）
+- `17:54` feat (monitoring) configure alert grouping and local receiver（[`b447dad1`](https://github.com/weepwood/MRR/commit/b447dad1c29391efb28f63942c556f21ec47f5b3)）
+- `17:53` feat (monitoring) add database application and data quality alerts（[`94a32eb0`](https://github.com/weepwood/MRR/commit/94a32eb0b303baf53308c3554aaa59073b1733df)）
+- `17:53` feat (monitoring) configure prometheus scrape targets and alertmanager（[`5ef19190`](https://github.com/weepwood/MRR/commit/5ef1919023ef0d357c1312ca6ebc124447d14ae1)）
+- `17:53` test (settings) isolate pure settings helpers from router imports（[`21423816`](https://github.com/weepwood/MRR/commit/214238167a075d4b3b168046cee4021a65ef2fac)）
+- `17:53` feat (monitoring) provision least privilege postgres exporter user（[`28a93154`](https://github.com/weepwood/MRR/commit/28a93154800decf25bcaf989d43eaa2490d6029a)）
+- `17:53` feat (monitoring) add prometheus grafana and postgres exporter stack（[`967ab6e0`](https://github.com/weepwood/MRR/commit/967ab6e0df09f623578486f360650c4513f6cf78)）
+- `17:52` feat (monitoring) expose protected database monitoring endpoints（[`7d91e97f`](https://github.com/weepwood/MRR/commit/7d91e97f3489fd93806f21fd03c0dfdf36eff0db)）
+- `17:52` feat (monitoring) add database runtime and slow query service（[`75512ec5`](https://github.com/weepwood/MRR/commit/75512ec5a7c0c71b9720bd10ae54c23221b5028e)）
+- `17:52` feat (data-quality) expose protected monitoring endpoints（[`1ac82c7f`](https://github.com/weepwood/MRR/commit/1ac82c7fdd15be1c86d5fee10856ad1416908736)）
+- `17:51` feat (data-quality) enable scheduled quality checks（[`df6594d6`](https://github.com/weepwood/MRR/commit/df6594d66fe133d96baa5ce4332f18822d44efff)）
+- `17:51` feat (data-quality) implement scheduled checks and prometheus metrics（[`c95603d4`](https://github.com/weepwood/MRR/commit/c95603d45ae31c08ae55d25f84b336d2784a4004)）
+- `17:50` feat (data-quality) define data quality monitoring service（[`f3b34c6c`](https://github.com/weepwood/MRR/commit/f3b34c6cb210fe466b05e9552919981c2d0c07c3)）
+- `17:50` feat (data-quality) add monitoring extension and quality result schema（[`ffdd0c35`](https://github.com/weepwood/MRR/commit/ffdd0c35cd8b13a468f29edcf591e42d6a47283e)）
+- `17:50` feat (monitoring) isolate actuator and configure data quality checks（[`c9f2913b`](https://github.com/weepwood/MRR/commit/c9f2913b88caffe9df484a47f0fa7a1a991200da)）
+- `17:49` feat (monitoring) harden database and actuator runtime settings（[`7a2f2b3d`](https://github.com/weepwood/MRR/commit/7a2f2b3da5f6b14fea75e2a70a7b5dc06870b7c0)）
+- `17:49` test (settings) cover effective runtime settings parsing（[`f0a0acbf`](https://github.com/weepwood/MRR/commit/f0a0acbfed3149ae6541f58bc62504b7bca936a7)）
+- `17:49` test (settings) cover watermark opacity parsing（[`296f518f`](https://github.com/weepwood/MRR/commit/296f518f437d534437ffdb4d4bdd226704e535be)）
+- `17:48` feat (archive) connect system settings to archive behavior（[`04a7c336`](https://github.com/weepwood/MRR/commit/04a7c3365bcbe53f6ae6eae68300a792a83f4199)）
+- `17:47` feat (archive) apply preview mode and image fit settings（[`28086256`](https://github.com/weepwood/MRR/commit/280862562bc86c4e87f6975bf2cd2af951a02600)）
+- `17:46` feat (archive) consume thumbnail display settings（[`ebef48d4`](https://github.com/weepwood/MRR/commit/ebef48d4580c56540eb30b1ed02030254d097bd0)）
+- `17:45` feat (archive) apply thumbnail size and preload settings（[`02aa5bff`](https://github.com/weepwood/MRR/commit/02aa5bffb0206500424d11a76b45570af5e9f354)）
+- `17:45` refactor (settings) simplify hierarchy and keep effective options only（[`08ccfed7`](https://github.com/weepwood/MRR/commit/08ccfed7c43603ada2a97fd1e464d5b24536c60e)）
+- `17:44` feat (settings) refresh watermark when settings change（[`63660b56`](https://github.com/weepwood/MRR/commit/63660b5696c3baa4f35fd107b4321cd79edc8626)）
+- `17:44` feat (settings) apply configurable watermark opacity（[`083052f4`](https://github.com/weepwood/MRR/commit/083052f4c0aeb1965fb0d537d7bd5fa951edd18d)）
+- `17:43` feat (settings) apply runtime settings globally（[`5ce6bf27`](https://github.com/weepwood/MRR/commit/5ce6bf27b0a7248e4688985906084cd9f163cf33)）
+- `17:43` feat (settings) add runtime system settings model（[`1fd56ab7`](https://github.com/weepwood/MRR/commit/1fd56ab721704b7fe3fea392dc5dcf3836b0b941)）
+- `17:31` feat (settings) redesign system settings workspace（[`2db9c21e`](https://github.com/weepwood/MRR/commit/2db9c21ef38aac2748af683b9ede1b64810d3c69)）
+- `17:25` feat 影像档案袋添加用户水印与关闭设置（[`3457a38c`](https://github.com/weepwood/MRR/commit/3457a38c16f030992200c7889a37415e3d4bbed7) · [PR #31](https://github.com/weepwood/MRR/pull/31)）
+- `17:21` fix (archive) use broadly supported canvas watermark colors（[`866e0a9b`](https://github.com/weepwood/MRR/commit/866e0a9ba2e5416c9373a46d6a917bfe734f234f)）
+- `17:20` test (archive) cover watermark helpers（[`78c792c5`](https://github.com/weepwood/MRR/commit/78c792c5ed63ca263ecb6dd1e4e4c6845c7ea5dd)）
+- `17:20` feat (settings) add archive watermark switch（[`a00e84a4`](https://github.com/weepwood/MRR/commit/a00e84a40dc487d6249c93b57a73fc9573cf5be3)）
+- `17:20` feat (archive) enable page watermark on archive route（[`100abf9d`](https://github.com/weepwood/MRR/commit/100abf9d678793f73ac5c49e446ffd46b2025c8d)）
+- `17:19` feat (archive) install route watermark overlay（[`3a735030`](https://github.com/weepwood/MRR/commit/3a7350307222761de4b1f9d316f0cf2f138aab98)）
+- `17:19` feat (archive) add watermark helpers（[`6671f387`](https://github.com/weepwood/MRR/commit/6671f38799adc1315bd40d60b2ba78ea5d7e18a4)）
+- `17:14` feat 影像档案袋支持纯前端选中导出 PDF（[`23c237fa`](https://github.com/weepwood/MRR/commit/23c237fa0fe764628407a1a540ee8254e2f21242) · [PR #30](https://github.com/weepwood/MRR/pull/30)）
 
 ## 2026-07-13
 
-- **新增** 影像全屏预览支持左右切换（[`fd0b747`](https://github.com/weepwood/MRR/commit/fd0b7471200120cc54871ce8a6d06ec764a18a04) · [PR #29](https://github.com/weepwood/MRR/pull/29)） — weepwood
-- **新增** 显式传递病案号和上架号并约束唯一查询（[`bbb1b4f`](https://github.com/weepwood/MRR/commit/bbb1b4f2026593a0447fde089fd785d91e6dad88) · [PR #28](https://github.com/weepwood/MRR/pull/28)） — weepwood
-- **测试** `statistics-detail` 更新归档布局测试用例的断点值（[`8aa0d1f`](https://github.com/weepwood/MRR/commit/8aa0d1ff19de9598266093f404c7525d008d6fea)） — weepwood
-- **测试** `statistics-detail` cover actual archive grid breakpoints（[`a65bd65`](https://github.com/weepwood/MRR/commit/a65bd653e8a23594bf36de6f694b9e548a4dcd35)） — weepwood
-- **修复** `statistics-detail` align archive page size with card grid（[`885c59a`](https://github.com/weepwood/MRR/commit/885c59a90ab187db36e505794168a954f541a633)） — weepwood
-- **合并** 整理前端全局 CSS 结构（[`cc7fc92`](https://github.com/weepwood/MRR/commit/cc7fc927dac4de4d5dda2005161774da2e007026) · [PR #25](https://github.com/weepwood/MRR/pull/25)） — weepwood
-- **合并** 统一病案明细档案袋字体层级（[`9b3324a`](https://github.com/weepwood/MRR/commit/9b3324a979cc295407dce613f3f4be82724c7623) · [PR #26](https://github.com/weepwood/MRR/pull/26)） — weepwood
-- **其他** 优化病案档案卡信息图标与布局（[`9349df6`](https://github.com/weepwood/MRR/commit/9349df6964fe1f0f0348f4c2d68947f1b057e46b) · [PR #24](https://github.com/weepwood/MRR/pull/24)） — weepwood
-- **其他** Revert "Merge pull request #23 from weepwood/style/reference-medical-record-card-20260713"（[`1e4b01c`](https://github.com/weepwood/MRR/commit/1e4b01cd58ed154be7ea36c0ae28f8cb14d58beb)） — weepwood
-- **合并** 参考医疗信息卡重设计病案明细档案卡（[`993ae72`](https://github.com/weepwood/MRR/commit/993ae72cba5334f93344529782c22ee1703e67ce) · [PR #23](https://github.com/weepwood/MRR/pull/23)） — weepwood
-- **修复** `ci` 修复前端单测收集失败并增强 Actions 诊断（[`30a2221`](https://github.com/weepwood/MRR/commit/30a2221613a31093590bd92b8b57ceb05c56a27a) · [PR #22](https://github.com/weepwood/MRR/pull/22)） — weepwood
-- **修复** align Mockito stubbing with normalized BAH/SJH parameters（[`422f984`](https://github.com/weepwood/MRR/commit/422f984b6838fc7008670acbdd54f28026a1afc0)） — weepwood
-- **性能** simplify sjh matching to use direct equality for index usage（[`e203c0c`](https://github.com/weepwood/MRR/commit/e203c0c43f75d6b6abc32fdb582be2f8e5f57ac0)） — weepwood
-- **修复** remove unnecessary ORDER BY in archive box subquery（[`23ba5eb`](https://github.com/weepwood/MRR/commit/23ba5eb1295a83f7c6aae87c9772fb1de7429ff1)） — weepwood
-- **新增** `archive-box` sync SQLite schema and seed data（[`d8ed34e`](https://github.com/weepwood/MRR/commit/d8ed34e1762062b477f65072b7e42e9bdb49ec4c)） — weepwood
-- **新增** `archive-box` register business route（[`5e95e07`](https://github.com/weepwood/MRR/commit/5e95e075855ff82e1d308bdf9101634aa73f9ce0)） — weepwood
-- **新增** `archive-box` add management page（[`5ae3776`](https://github.com/weepwood/MRR/commit/5ae3776b85c4cdc200e8ba45ab87fd2d770dad25)） — weepwood
-- **新增** `archive-box` add frontend API client（[`c357a2b`](https://github.com/weepwood/MRR/commit/c357a2b9e13dd6d03d8473aed2f04543a8d53606)） — weepwood
-- **新增** `archive-box` create table and import initial box data（[`94fd5de`](https://github.com/weepwood/MRR/commit/94fd5de27a83775c669ce52d1c3ebd9ef44d44d3)） — weepwood
-- **新增** `archive-box` add filtered and grouped queries（[`6907017`](https://github.com/weepwood/MRR/commit/6907017e7660b8b09046909848655d93efc40110)） — weepwood
-- **新增** `archive-box` expose CRUD and lookup APIs（[`7d2208e`](https://github.com/weepwood/MRR/commit/7d2208e6056da9dabb047e310e6575b5cdc1108c)） — weepwood
-- **新增** `archive-box` implement CRUD and query service（[`28c898f`](https://github.com/weepwood/MRR/commit/28c898ff948fde95ff581f39ae0a9d74a638a4c3)） — weepwood
-- **新增** `archive-box` add service contract（[`ab7db22`](https://github.com/weepwood/MRR/commit/ab7db224b9914b9dc27788fd355bffa2877203eb)） — weepwood
-- **新增** `archive-box` add MyBatis mapper contract（[`584168b`](https://github.com/weepwood/MRR/commit/584168b929bb22ebcd2787fa4be4f5a3c9e062cd)） — weepwood
-- **新增** `archive-box` add box group DTO（[`329f894`](https://github.com/weepwood/MRR/commit/329f894f4c6c6b999d42c73521af5e1b510e0763)） — weepwood
-- **新增** `archive-box` add summary DTO（[`1166894`](https://github.com/weepwood/MRR/commit/116689454ede84d60beff0410df6d7a04b058e98)） — weepwood
-- **新增** `archive-box` add record request DTO（[`4cdea4e`](https://github.com/weepwood/MRR/commit/4cdea4eff5e4791f674144fd993738ca9e9536ec)） — weepwood
-- **新增** `archive-box` add archive box entity（[`19ae5da`](https://github.com/weepwood/MRR/commit/19ae5da446268c11b3635649f16c3d91b5d57117)） — weepwood
-- **修复** `ui` load message service styles（[`b75eba3`](https://github.com/weepwood/MRR/commit/b75eba3c066800c50976cb919f2ce46a9674992b)） — weepwood
-- **新增** `statistics` 新增住院科室列表API接口（[`08ed6ea`](https://github.com/weepwood/MRR/commit/08ed6eacb4fefc99d493074c8df40b3a552210c8)） — weepwood
-- **修复** sync archive themes across cached pages（[`7a59664`](https://github.com/weepwood/MRR/commit/7a59664910ce2681338e3303fbf14cd9bc568eb0)） — weepwood
-- **测试** cover department archive theme resolution（[`c695156`](https://github.com/weepwood/MRR/commit/c69515644b7d477817de46682131f7f072fc79c3)） — weepwood
-- **新增** add configurable department archive themes（[`32a85ea`](https://github.com/weepwood/MRR/commit/32a85ea73f07663a957fe4ee2ad95ada4ba744df)） — weepwood
-- **新增** add one-click copy for bah/sjh and refine card typography（[`ead4894`](https://github.com/weepwood/MRR/commit/ead4894f0df3abfe82c11af45d69186b82ca2da6)） — weepwood
-- **其他** restructure archive folder card layout and clean up（[`ad01e49`](https://github.com/weepwood/MRR/commit/ad01e49205c41501dbdb8a8382a8b3c0c7b7f8c5)） — weepwood
-- **合并** 扩展病案统计患者字段并优化档案袋展示（[`ee2d372`](https://github.com/weepwood/MRR/commit/ee2d372a0f27a840316ba2ac7a63711ddb0f4ddf) · [PR #17](https://github.com/weepwood/MRR/pull/17)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`278d4c7`](https://github.com/weepwood/MRR/commit/278d4c78553e1055bc0c40cb10418e8c6465f940)） — weepwood
-- **新增** `patients` 调整患者列表中ID列的宽度（[`f05384a`](https://github.com/weepwood/MRR/commit/f05384a9cda7152d880ad57a40855b3875fa34e6)） — weepwood
-- **其他** adjust folder card layout - stack bah/sjh vertically and remove compact meta（[`6e9eef9`](https://github.com/weepwood/MRR/commit/6e9eef9a162b05391e69c6433577f0c02bbfd159)） — weepwood
-- **其他** refine archive folder card hierarchy and hover（[`17ff6fd`](https://github.com/weepwood/MRR/commit/17ff6fd3b82728a6e8bbec671ec6657052bea796)） — weepwood
-- **修复** avoid logback appender not referenced warning for CONSOLE\_JSON（[`c87a7da`](https://github.com/weepwood/MRR/commit/c87a7daecc5532e62ed660adfa5c779d5a12e7af)） — weepwood
-- **合并** 统一病案号和上架号为 8 位并兼容无前导零搜索（[`cbf809f`](https://github.com/weepwood/MRR/commit/cbf809f65148220b85ab40274245c106a165c64a) · [PR #15](https://github.com/weepwood/MRR/pull/15)） — weepwood
-- **合并** Merge branch 'pr-14' into dev-no-login（[`561b824`](https://github.com/weepwood/MRR/commit/561b824526c012b094148bf2ac4dfa50152c2081)） — weepwood
-- **合并** Merge branch 'pr-13' into dev-no-login（[`fba0ef5`](https://github.com/weepwood/MRR/commit/fba0ef5d4ad0dd09fdb7405a8f6673e7e97fdd18)） — weepwood
-- **新增** remove high-frequency BAH section from statistics page（[`0966050`](https://github.com/weepwood/MRR/commit/09660506ef233b72cbd8fe585051e51752863032)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`0c4b95f`](https://github.com/weepwood/MRR/commit/0c4b95f4f0abdfda271209a141cfe0d1d965d818)） — weepwood
-- **新增** enable KeepAlive page caching for all business routes（[`7f8e1ed`](https://github.com/weepwood/MRR/commit/7f8e1ed4df05aa97052556bb002517023fbfb1a0)） — weepwood
-- **合并** Merge branch 'feat/frontend-mock-data-20260713' into dev-no-login（[`9efe5c0`](https://github.com/weepwood/MRR/commit/9efe5c098bdeeeb81b0d0115189ac2df94e4c9ed)） — weepwood
-- **合并** Merge branch 'style/beautify-records-statistics-20260713' into dev-no-login（[`7871a5c`](https://github.com/weepwood/MRR/commit/7871a5c7c73b80f2cfc16c22da8fe9692170dcd8)） — weepwood
-- **修复** `build` Surefire排除integration包避免CI中PostgreSQL集成测试失败（[`d8283aa`](https://github.com/weepwood/MRR/commit/d8283aab1d339bab4c518547a0cbc316e3011f4b)） — weepwood
-- **CI** `quality-gate` 移除PR触发，仅在版本tag推送时运行质量门禁（[`566214f`](https://github.com/weepwood/MRR/commit/566214fd5259ea6e8229e28d58a57864d212a2cc)） — weepwood
-- **合并** Merge branch 'style/soften-response-trend-chart-20260713' into dev-no-login（[`d026a32`](https://github.com/weepwood/MRR/commit/d026a3239768cb787a5db12af911566ca182326f)） — weepwood
-- **其他** `statistics-detail` 优化档案袋卡片样式 - 移除顶部渐变细条、folder-tab标签，病案号和上架号改为8位补零显示（[`faefe31`](https://github.com/weepwood/MRR/commit/faefe3162fac37a3382013a9057b149cea391b63)） — weepwood
-- **维护** remove archive card quality trigger（[`f458e51`](https://github.com/weepwood/MRR/commit/f458e51c86ff8ceea1db9a56d46afc6e8a675061)） — weepwood
-- **维护** trigger archive card quality gate（[`d0e2170`](https://github.com/weepwood/MRR/commit/d0e2170deab99e31dc1873bd0516a8c1404bac92)） — weepwood
-- **其他** `statistics` redesign archive folder cards（[`ff9a0ae`](https://github.com/weepwood/MRR/commit/ff9a0ae4a20675655832c8f5e82929d933090147)） — github-actions\[bot\]
-- **修复** normalize embedded patch indentation（[`9bdbafd`](https://github.com/weepwood/MRR/commit/9bdbafde91532be344281a179db320addfcba1be)） — weepwood
-- **维护** capture archive card patch error（[`f05cdc2`](https://github.com/weepwood/MRR/commit/f05cdc2e1bb34fd008e4c228e4419baa6ca18b99)） — github-actions\[bot\]
-- **维护** capture archive card patch diagnostics（[`417c527`](https://github.com/weepwood/MRR/commit/417c527598deb14a842cda83b75e6c0183cad419)） — weepwood
-- **修复** execute archive card patch directly（[`1ec2483`](https://github.com/weepwood/MRR/commit/1ec248319e16bf20e85e2f41e92ffe776747a2a7)） — weepwood
-- **维护** add temporary archive card PR runner（[`aa4758f`](https://github.com/weepwood/MRR/commit/aa4758f683d7364cda98c88ecfd7a04b0405cdef)） — weepwood
-- **维护** trigger archive card style workflow（[`0e9e3f8`](https://github.com/weepwood/MRR/commit/0e9e3f84e7120106a0ce94b537a4cff8a6e21b1c)） — weepwood
-- **维护** prepare archive card style update（[`1f09822`](https://github.com/weepwood/MRR/commit/1f098225b2b1ef6fdd1b3514a3c7707cea0b64db)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`f16a33b`](https://github.com/weepwood/MRR/commit/f16a33b7e66ec822fe406140f4c883467e2673a2)） — weepwood
-- **重构** `response-analysis` 移除时间范围选择功能并固定为7天（[`9f48497`](https://github.com/weepwood/MRR/commit/9f48497f081a41b9bd64e2e5e57b1e3dd35ff155)） — weepwood
-- **维护** `workflow` 修改质量门禁工作流触发条件（[`aefe158`](https://github.com/weepwood/MRR/commit/aefe1588062f83853cf0ee2c01084bbf1edf0937)） — weepwood
-- **新增** 添加图片审计分析功能和前端性能监控（[`d00dde7`](https://github.com/weepwood/MRR/commit/d00dde7fdf055c046c333ea341d072a1fae7d3ec)） — weepwood
-- **新增** `LogController` 添加游标分页功能支持（[`96be2f8`](https://github.com/weepwood/MRR/commit/96be2f8201f568c9b52ceba9f520655cf8825516)） — weepwood
-- **合并** Merge branch 'dev-no-login' of https://github.com/weepwood/MRR into dev-no-login（[`4df8387`](https://github.com/weepwood/MRR/commit/4df83870339596c2087fb69e4c2db3c5a9dbfb3e)） — weepwood
-- **文档** `agents` 添加AGENTS.md文件提供项目指导（[`bb848e7`](https://github.com/weepwood/MRR/commit/bb848e70ff62bbace2c488ecc3ed872dabde2250)） — weepwood
+- `21:45` test (archive) remove backend proxy mock（[`43cd0342`](https://github.com/weepwood/MRR/commit/43cd034242033aa026c1237dec12016d6bc06cee)）
+- `21:45` refactor (archive) restore direct frontend PDF export（[`99a65172`](https://github.com/weepwood/MRR/commit/99a6517230e826178a316512ae71d26e5c4d68a3)）
+- `21:44` refactor (archive) fetch PDF images directly in browser（[`acc638a0`](https://github.com/weepwood/MRR/commit/acc638a0c885670e9268d6abec30152e211e9d88)）
+- `21:44` refactor (archive) remove PDF image proxy API（[`71304e44`](https://github.com/weepwood/MRR/commit/71304e443a2bf0992c5db6487e5bf3c92b55f754)）
+- `21:44` refactor (archive) remove backend image proxy for PDF export（[`5e07fba4`](https://github.com/weepwood/MRR/commit/5e07fba41ed3c7e214d5dafb80066eab30a8895d)）
+- `21:09` chore (archive) keep PDF writer regression coverage（[`bab9261c`](https://github.com/weepwood/MRR/commit/bab9261c92156cc1308f6e9d189e2d5da224daea)）
+- `21:09` chore (archive) retain proxied image API contract（[`2436bf3a`](https://github.com/weepwood/MRR/commit/2436bf3a244379901db6c909de96b439b69804fd)）
+- `21:09` chore (archive) retain frontend PDF download behavior（[`2e475005`](https://github.com/weepwood/MRR/commit/2e47500557327dd43a49ef881763f0b0ff037843)）
+- `21:09` fix (archive) keep PDF synthesis frontend-only behind image proxy（[`dd7dfa0a`](https://github.com/weepwood/MRR/commit/dd7dfa0abbbf9127664f0eb6206f7f80446a0d23)）
+- `21:08` test (archive) keep PDF writer isolated from image proxy（[`087cc47d`](https://github.com/weepwood/MRR/commit/087cc47dd11c964c63c4e1b748ae58b4825143b8)）
+- `21:08` chore (archive) clarify proxied image loading errors（[`243b736a`](https://github.com/weepwood/MRR/commit/243b736ab227274f23908b0f2ff111e82149ffb4)）
+- `21:07` test (archive) mock proxied image API（[`81ee097f`](https://github.com/weepwood/MRR/commit/81ee097f3c631623670d460b91b936ec4088d7f6)）
+- `21:07` fix (archive) export PDF from backend-proxied image blobs（[`f778cc2d`](https://github.com/weepwood/MRR/commit/f778cc2d341108f2c2de906d35955f001f244d97)）
+- `21:06` fix (archive) avoid direct cross-origin image fetches（[`b37f4a24`](https://github.com/weepwood/MRR/commit/b37f4a24b554a8e16a727e2bacd5aaf2fffc8bce)）
+- `21:06` fix (archive) fetch PDF source images through app backend（[`6a687455`](https://github.com/weepwood/MRR/commit/6a687455bd810bc206f6117ce618ccd01c2d38b7)）
+- `21:05` fix (archive) proxy PDF source images through backend（[`ee3552ef`](https://github.com/weepwood/MRR/commit/ee3552ef966848c1ad94be5c2386ad3ee699c6c8)）
+- `20:57` test (archive) read PDF blob with FileReader（[`c6246699`](https://github.com/weepwood/MRR/commit/c6246699835fc515a7bbe28d1a70f4a93a061e63)）
+- `20:53` test (archive) isolate PDF writer API dependency（[`94faf224`](https://github.com/weepwood/MRR/commit/94faf224b0ef56db872c4b97f868e91cab830f64)）
+- `20:47` fix (archive) use ArrayBuffer PDF parts for strict typing（[`531a1493`](https://github.com/weepwood/MRR/commit/531a1493178f37660549ce0cc984f50de5bd50de)）
+- `20:45` test (archive) cover browser PDF writer（[`41183e3c`](https://github.com/weepwood/MRR/commit/41183e3cdca450688ecc0d2abeb01a2156b69582)）
+- `20:45` refactor (archive) remove backend PDF export endpoint（[`be8ba586`](https://github.com/weepwood/MRR/commit/be8ba586c3573bed198bb87d7a4f57d150bc79b9)）
+- `20:44` refactor (archive) remove server PDF export API（[`89c4b48b`](https://github.com/weepwood/MRR/commit/89c4b48b097981e62581b9b13a402f07de40abaa)）
+- `20:44` refactor (archive) compose selected PDF on frontend（[`1b3a8c14`](https://github.com/weepwood/MRR/commit/1b3a8c1463bfa377d5ebde2c05878fc2751f7a67)）
+- `20:44` feat (archive) build selected PDF in browser（[`d7851b1c`](https://github.com/weepwood/MRR/commit/d7851b1c18f0c047853ed51486ba57f3482769b2)）
+- `20:20` fix (archive) restore responsive archive layout styles（[`a5f488a5`](https://github.com/weepwood/MRR/commit/a5f488a567f9713790b3177416f896240ad53c84)）
+- `20:19` feat (archive) wire selected PDF export actions（[`06634124`](https://github.com/weepwood/MRR/commit/06634124a5316a0b4cca6557fbac5d90e0f15b99)）
+- `20:18` feat (archive) show archive actions only with results（[`923cb376`](https://github.com/weepwood/MRR/commit/923cb37629c67542dc1beea7506cd96618c85cd5)）
+- `20:18` feat (archive) export selected images as PDF（[`1ab76b1f`](https://github.com/weepwood/MRR/commit/1ab76b1f9ceb13049af72f7d91f160412d061235)）
+- `20:18` feat (archive) add selected PDF download API（[`3e4cb29e`](https://github.com/weepwood/MRR/commit/3e4cb29e11b4c0fae20ca7b36171bce5115c61db)）
+- `20:17` feat (archive) add selected image PDF export endpoint（[`33cded52`](https://github.com/weepwood/MRR/commit/33cded5240a338679335bed75a35a0d7f25861f3)）
+- `20:10` feat 影像全屏预览支持左右切换（[`fd0b7471`](https://github.com/weepwood/MRR/commit/fd0b7471200120cc54871ce8a6d06ec764a18a04) · [PR #29](https://github.com/weepwood/MRR/pull/29)）
+- `19:53` feat (archive) add navigation to fullscreen preview（[`99a0aa81`](https://github.com/weepwood/MRR/commit/99a0aa8133a02a24a2182c034bf7219e00eb892f)）
+- `19:47` feat 显式传递病案号和上架号并约束唯一查询（[`bbb1b4f2`](https://github.com/weepwood/MRR/commit/bbb1b4f2026593a0447fde089fd785d91e6dad88) · [PR #28](https://github.com/weepwood/MRR/pull/28)）
+- `19:30` fix (archive) avoid ambiguous patient lookup（[`a3b2f5b7`](https://github.com/weepwood/MRR/commit/a3b2f5b7cee977f4d1abe8def5d2382084ff2459)）
+- `19:26` fix (archive) validate and scope archive downloads（[`393eed12`](https://github.com/weepwood/MRR/commit/393eed1276c11745f3aae7c3090d83ec3777f4ae)）
+- `19:25` fix (archive) resolve download path by bah and sjh（[`087b196e`](https://github.com/weepwood/MRR/commit/087b196ea6be6a5fd6682dd001cf786c197276e9)）
+- `19:24` feat (archive) add scoped archive download service（[`b084f5a5`](https://github.com/weepwood/MRR/commit/b084f5a52cec6ef7ba8b1ab1e5ed3cdf6a28ba90)）
+- `19:24` fix (archive) scope downloads by sjh（[`46d96297`](https://github.com/weepwood/MRR/commit/46d9629738bddc43250078066c00e2248c4bb100)）
+- `19:23` feat (archive) pass sjh when downloading archive（[`777655a1`](https://github.com/weepwood/MRR/commit/777655a1580c486929a9ff3e5d0ce165fb982aea)）
+- `19:22` test (archive) cover backend bah uniqueness boundary（[`133ff4cb`](https://github.com/weepwood/MRR/commit/133ff4cb729dbe3a81f825bffb258396e7ab0087)）
+- `19:21` refactor (archive) reuse shared bah uniqueness rule（[`569204f3`](https://github.com/weepwood/MRR/commit/569204f3d2b4894b7d623fb726b847d22cf691b1)）
+- `19:21` feat (archive) centralize bah uniqueness rule（[`f6f8c825`](https://github.com/weepwood/MRR/commit/f6f8c825468511361db3e92a78d07e92010b1eab)）
+- `19:18` test (archive) cover bah uniqueness boundary（[`f1440107`](https://github.com/weepwood/MRR/commit/f1440107efee1558b7ffacd5eb1431495af91529)）
+- `19:18` fix (archive) match bah and sjh as a pair（[`b175e3f7`](https://github.com/weepwood/MRR/commit/b175e3f743a43bbc830d12c3e83fdc2d39f45f80)）
+- `19:17` fix (archive) validate non-unique bah lookups（[`c23b2079`](https://github.com/weepwood/MRR/commit/c23b2079622195d0a471e916cdad5a43a5d56340)）
+- `19:16` feat (archive) indicate required shelf number（[`00efa0ca`](https://github.com/weepwood/MRR/commit/00efa0caabd092becb4e252bd33453b3ad49d583)）
+- `19:16` feat (archive) use explicit bah and sjh URL params（[`67aaf188`](https://github.com/weepwood/MRR/commit/67aaf188311a929947af7ebb4c1318c91187ed46)）
+- `19:15` fix (archive) enforce bah and sjh lookup rules（[`1ac6c7c1`](https://github.com/weepwood/MRR/commit/1ac6c7c101cc9e7971ec209675e06602c1e1c5cc)）
+- `19:14` feat (archive) add lookup uniqueness rules（[`e2844aeb`](https://github.com/weepwood/MRR/commit/e2844aeb3d519faeb158925f5b4d129492125203)）
+- `19:01` feat (archive) sync search filters to URL（[`88b0bc8a`](https://github.com/weepwood/MRR/commit/88b0bc8a095f0f143a77db293b48424b74b5b0cb)）
+- `18:58` test (statistics-detail) 更新归档布局测试用例的断点值（[`8aa0d1ff`](https://github.com/weepwood/MRR/commit/8aa0d1ff19de9598266093f404c7525d008d6fea)）
+- `18:50` test (statistics-detail) cover actual archive grid breakpoints（[`a65bd653`](https://github.com/weepwood/MRR/commit/a65bd653e8a23594bf36de6f694b9e548a4dcd35)）
+- `18:50` fix (statistics-detail) align archive page size with card grid（[`885c59a9`](https://github.com/weepwood/MRR/commit/885c59a90ab187db36e505794168a954f541a633)）
+- `18:45` merge 整理前端全局 CSS 结构（[`cc7fc927`](https://github.com/weepwood/MRR/commit/cc7fc927dac4de4d5dda2005161774da2e007026) · [PR #25](https://github.com/weepwood/MRR/pull/25)）
+- `18:45` merge Merge branch 'dev-no-login' into refactor/organize-css-20260713（[`645c9906`](https://github.com/weepwood/MRR/commit/645c99066839b5c69eda33e7d5104009ac9b1659)）
+- `18:41` merge 统一病案明细档案袋字体层级（[`9b3324a9`](https://github.com/weepwood/MRR/commit/9b3324a979cc295407dce613f3f4be82724c7623) · [PR #26](https://github.com/weepwood/MRR/pull/26)）
+- `18:33` style (statistics-detail) load archive folder typography（[`4d275477`](https://github.com/weepwood/MRR/commit/4d27547721839a903760f38c54ebf10a50015f6a)）
+- `18:33` style (statistics-detail) add archive folder typography rules（[`5e8c916a`](https://github.com/weepwood/MRR/commit/5e8c916adda402dfd661b600768ed3e34098094f)）
+- `18:32` chore remove temporary archive typography workflow（[`16a2b102`](https://github.com/weepwood/MRR/commit/16a2b1022f6b2c63237eb35d41e7b494081ee134)）
+- `18:31` fix make archive typography migration robust（[`b881d7dd`](https://github.com/weepwood/MRR/commit/b881d7ddff88a8e573e205c626e5d50b0c13b2fc)）
+- `18:30` chore prepare archive folder typography update（[`504bf363`](https://github.com/weepwood/MRR/commit/504bf363dffbc62fc62ea4948dd141f8702ed2ce)）
+- `18:27` style 优化病案档案卡信息图标与布局（[`9349df69`](https://github.com/weepwood/MRR/commit/9349df6964fe1f0f0348f4c2d68947f1b057e46b) · [PR #24](https://github.com/weepwood/MRR/pull/24)）
+- `18:21` chore (ci) keep existing frontend workflow unchanged（[`7a0411a3`](https://github.com/weepwood/MRR/commit/7a0411a3effe7b4f27411554b8c0f94400f322b6)）
+- `10:19` style (css) apply stylelint fixes across frontend（[`a326a637`](https://github.com/weepwood/MRR/commit/a326a637f0659734523980d4e0362b3a0c281a00)）
+- `18:19` ci (css) add one-off stylelint autofix（[`d86acece`](https://github.com/weepwood/MRR/commit/d86acece712eeeb725c469eb99c101875b60445f)）
+- `18:17` ci (css) preserve stylelint diagnostics（[`3909deec`](https://github.com/weepwood/MRR/commit/3909deecbb2fe18697b63c40ca120c678f46799d)）
+- `18:15` ci (css) add stylelint to frontend checks（[`6a318687`](https://github.com/weepwood/MRR/commit/6a31868795067496108d59d17ecce51aac0f6a57)）
+- `18:14` style (css) preserve repository property order（[`0375e05a`](https://github.com/weepwood/MRR/commit/0375e05a00a5d7ac2c3ce820df36f5c0a98bd610)）
+- `18:13` refactor (css) organize global stylesheet entry（[`886d2089`](https://github.com/weepwood/MRR/commit/886d20898d791fc0975c6f2a92438821a18fe833)）
+- `18:13` refactor (css) extract shared metric card styles（[`a28e24ad`](https://github.com/weepwood/MRR/commit/a28e24ad2e50f218a202fb743b2e476a3ace7955)）
+- `18:12` refactor (css) extract global base rules（[`1803a001`](https://github.com/weepwood/MRR/commit/1803a0016b0903f04a7ca6599b0eb405fd920752)）
+- `18:12` refactor (css) split global design tokens（[`3a6e3020`](https://github.com/weepwood/MRR/commit/3a6e302035f28d44980564f682fcf040373e83f3)）
+- `18:04` refactor (ArchiveDetailContent) 优化组件代码格式和样式（[`5f9aa8de`](https://github.com/weepwood/MRR/commit/5f9aa8de35d76ca947c4fae547cea5cbb5f1494f)）
+- `17:51` style (statistics-detail) add archive card field icons（[`0c637e12`](https://github.com/weepwood/MRR/commit/0c637e12f66b01f32c9aaed078ad1422239de0d0)）
+- `17:45` Revert "Merge pull request #23 from weepwood/style/reference-medical-record-card-20260713"（[`1e4b01cd`](https://github.com/weepwood/MRR/commit/1e4b01cd58ed154be7ea36c0ae28f8cb14d58beb)）
+- `17:37` merge 参考医疗信息卡重设计病案明细档案卡（[`993ae72c`](https://github.com/weepwood/MRR/commit/993ae72cba5334f93344529782c22ee1703e67ce) · [PR #23](https://github.com/weepwood/MRR/pull/23)）
+- `17:33` style (statistics-detail) redesign archive cards from medical record reference（[`cabef4bc`](https://github.com/weepwood/MRR/commit/cabef4bc8bc1dc8790c3f40761a71a5ebd0602cb)）
+- `17:13` fix (ci) 修复前端单测收集失败并增强 Actions 诊断（[`30a22216`](https://github.com/weepwood/MRR/commit/30a2221613a31093590bd92b8b57ceb05c56a27a) · [PR #22](https://github.com/weepwood/MRR/pull/22)）
+- `17:08` ci upload Vitest logs only on failure（[`8861efbf`](https://github.com/weepwood/MRR/commit/8861efbf8501a02b8efe57362143efd50924d7b8)）
+- `17:05` test mock settings API in statistics detail suite（[`f99c6813`](https://github.com/weepwood/MRR/commit/f99c68138d0c9cf46f37a4e9510b951bf44dac53)）
+- `17:02` ci preserve frontend test logs for diagnosis（[`e5b3f4fa`](https://github.com/weepwood/MRR/commit/e5b3f4fa42da1b38ab7ae1b5d0672aa0298082f0)）
+- `16:50` fix align Mockito stubbing with normalized BAH/SJH parameters（[`422f984b`](https://github.com/weepwood/MRR/commit/422f984b6838fc7008670acbdd54f28026a1afc0)）
+- `15:38` perf simplify sjh matching to use direct equality for index usage（[`e203c0c4`](https://github.com/weepwood/MRR/commit/e203c0c43f75d6b6abc32fdb582be2f8e5f57ac0)）
+- `15:32` fix remove unnecessary ORDER BY in archive box subquery（[`23ba5eb1`](https://github.com/weepwood/MRR/commit/23ba5eb1295a83f7c6aae87c9772fb1de7429ff1)）
+- `15:11` feat (archive-box) sync SQLite schema and seed data（[`d8ed34e1`](https://github.com/weepwood/MRR/commit/d8ed34e1762062b477f65072b7e42e9bdb49ec4c)）
+- `15:10` feat (archive-box) register business route（[`5e95e075`](https://github.com/weepwood/MRR/commit/5e95e075855ff82e1d308bdf9101634aa73f9ce0)）
+- `15:09` feat (archive-box) add management page（[`5ae3776b`](https://github.com/weepwood/MRR/commit/5ae3776b85c4cdc200e8ba45ab87fd2d770dad25)）
+- `15:07` feat (archive-box) add frontend API client（[`c357a2b9`](https://github.com/weepwood/MRR/commit/c357a2b9e13dd6d03d8473aed2f04543a8d53606)）
+- `15:07` feat (archive-box) create table and import initial box data（[`94fd5de2`](https://github.com/weepwood/MRR/commit/94fd5de27a83775c669ce52d1c3ebd9ef44d44d3)）
+- `15:06` feat (archive-box) add filtered and grouped queries（[`6907017e`](https://github.com/weepwood/MRR/commit/6907017e7660b8b09046909848655d93efc40110)）
+- `15:06` feat (archive-box) expose CRUD and lookup APIs（[`7d2208e6`](https://github.com/weepwood/MRR/commit/7d2208e6056da9dabb047e310e6575b5cdc1108c)）
+- `15:05` feat (archive-box) implement CRUD and query service（[`28c898ff`](https://github.com/weepwood/MRR/commit/28c898ff948fde95ff581f39ae0a9d74a638a4c3)）
+- `15:05` feat (archive-box) add service contract（[`ab7db224`](https://github.com/weepwood/MRR/commit/ab7db224b9914b9dc27788fd355bffa2877203eb)）
+- `15:05` feat (archive-box) add MyBatis mapper contract（[`584168b9`](https://github.com/weepwood/MRR/commit/584168b929bb22ebcd2787fa4be4f5a3c9e062cd)）
+- `15:04` feat (archive-box) add box group DTO（[`329f894f`](https://github.com/weepwood/MRR/commit/329f894f4c6c6b999d42c73521af5e1b510e0763)）
+- `15:04` feat (archive-box) add summary DTO（[`11668945`](https://github.com/weepwood/MRR/commit/116689454ede84d60beff0410df6d7a04b058e98)）
+- `15:04` feat (archive-box) add record request DTO（[`4cdea4ef`](https://github.com/weepwood/MRR/commit/4cdea4eff5e4791f674144fd993738ca9e9536ec)）
+- `15:04` feat (archive-box) add archive box entity（[`19ae5da4`](https://github.com/weepwood/MRR/commit/19ae5da446268c11b3635649f16c3d91b5d57117)）
+- `14:35` fix (ui) load message service styles（[`b75eba3c`](https://github.com/weepwood/MRR/commit/b75eba3c066800c50976cb919f2ce46a9674992b)）
+- `14:24` feat (statistics) 新增住院科室列表API接口（[`08ed6eac`](https://github.com/weepwood/MRR/commit/08ed6eacb4fefc99d493074c8df40b3a552210c8)）
+- `13:46` fix sync archive themes across cached pages（[`7a596649`](https://github.com/weepwood/MRR/commit/7a59664910ce2681338e3303fbf14cd9bc568eb0)）
+- `13:45` test cover department archive theme resolution（[`c6951564`](https://github.com/weepwood/MRR/commit/c69515644b7d477817de46682131f7f072fc79c3)）
+- `13:43` feat add configurable department archive themes（[`32a85ea7`](https://github.com/weepwood/MRR/commit/32a85ea73f07663a957fe4ee2ad95ada4ba744df)）
+- `13:32` feat add one-click copy for bah/sjh and refine card typography（[`ead4894f`](https://github.com/weepwood/MRR/commit/ead4894f0df3abfe82c11af45d69186b82ca2da6)）
+- `13:21` style restructure archive folder card layout and clean up（[`ad01e492`](https://github.com/weepwood/MRR/commit/ad01e49205c41501dbdb8a8382a8b3c0c7b7f8c5)）
+- `13:06` merge 扩展病案统计患者字段并优化档案袋展示（[`ee2d372a`](https://github.com/weepwood/MRR/commit/ee2d372a0f27a840316ba2ac7a63711ddb0f4ddf) · [PR #17](https://github.com/weepwood/MRR/pull/17)）
+- `13:02` feat (backend) document and export statistics patient fields（[`e309d246`](https://github.com/weepwood/MRR/commit/e309d246f8853f01029e74e47427b1aea609a391)）
+- `13:01` feat (backend) support sorting statistics by patient fields（[`7457b582`](https://github.com/weepwood/MRR/commit/7457b582b2ee52291772e8f716e6bb015fafbbb4)）
+- `13:00` feat (frontend) show patient details in archive folders（[`2fc317ad`](https://github.com/weepwood/MRR/commit/2fc317ad86f914d471b7840adb675792dfae3093)）
+- `12:58` feat (backend) include patient fields in statistics queries（[`ac9f33e1`](https://github.com/weepwood/MRR/commit/ac9f33e1fc3ad6cf1b58c11b8e41c68d37a89ef2)）
+- `12:58` feat (backend) expose patient fields on statistics entity（[`433c4ec1`](https://github.com/weepwood/MRR/commit/433c4ec112791a2862879ddea467c1a431684717)）
+- `12:58` feat (db) extend local statistics schema with patient fields（[`e8f20b05`](https://github.com/weepwood/MRR/commit/e8f20b05166e9c7ccc1cf1f84d02a522bad9c2d7)）
+- `12:57` feat (db) add patient fields to mr\_statistics（[`b77a9be7`](https://github.com/weepwood/MRR/commit/b77a9be7323f2e1c6125e1a8a146ea146fd5bceb)）
+- `12:53` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`278d4c78`](https://github.com/weepwood/MRR/commit/278d4c78553e1055bc0c40cb10418e8c6465f940)）
+- `12:53` feat (patients) 调整患者列表中ID列的宽度（[`f05384a9`](https://github.com/weepwood/MRR/commit/f05384a9cda7152d880ad57a40855b3875fa34e6)）
+- `12:53` merge 优化病案明细档案袋信息层级与悬停样式（[`1f38679a`](https://github.com/weepwood/MRR/commit/1f38679ab265fa1632c4c4929f330b76fea25e33) · [PR #16](https://github.com/weepwood/MRR/pull/16)）
+- `12:46` style adjust folder card layout - stack bah/sjh vertically and remove compact meta（[`6e9eef9a`](https://github.com/weepwood/MRR/commit/6e9eef9a162b05391e69c6433577f0c02bbfd159)）
+- `12:46` style refine archive folder card hierarchy and hover（[`17ff6fd3`](https://github.com/weepwood/MRR/commit/17ff6fd3b82728a6e8bbec671ec6657052bea796)）
+- `12:46` fix avoid logback appender not referenced warning for CONSOLE\_JSON（[`c87a7dae`](https://github.com/weepwood/MRR/commit/c87a7daecc5532e62ed660adfa5c779d5a12e7af)）
+- `12:46` style adjust folder card layout - stack bah/sjh vertically and remove compact meta（[`d73237da`](https://github.com/weepwood/MRR/commit/d73237da2fe178e7074cc1703990a3b52d66e1c7)）
+- `12:38` merge 统一病案号和上架号为 8 位并兼容无前导零搜索（[`cbf809f6`](https://github.com/weepwood/MRR/commit/cbf809f65148220b85ab40274245c106a165c64a) · [PR #15](https://github.com/weepwood/MRR/pull/15)）
+- `12:35` style refine archive folder card hierarchy and hover（[`adfdd7f0`](https://github.com/weepwood/MRR/commit/adfdd7f0a0aa5cc01af52ebbf06a23cb9815639e)）
+- `12:20` merge Merge branch 'pr-14' into dev-no-login（[`561b8245`](https://github.com/weepwood/MRR/commit/561b824526c012b094148bf2ac4dfa50152c2081)）
+- `12:16` fix keep compatible statistics bah mapper lookup（[`0d93de18`](https://github.com/weepwood/MRR/commit/0d93de18525325391f36cac355fd960b50995779)）
+- `12:14` fix keep compatible patient bah mapper lookup（[`51379fd1`](https://github.com/weepwood/MRR/commit/51379fd107bfb2a65c2c4b82adfd1f3649311d83)）
+- `12:14` fix keep compatible single-argument bah mapper lookup（[`f73bfedc`](https://github.com/weepwood/MRR/commit/f73bfedccc9b0d43e8446efdcc89b592c6e1ef22)）
+- `12:12` fix update patient controller bah lookup（[`50442988`](https://github.com/weepwood/MRR/commit/50442988020cc16214442362c4603aca07a53633)）
+- `12:12` ci preserve concise backend failure logs（[`2b293ba8`](https://github.com/weepwood/MRR/commit/2b293ba8b84e7bf176007edec6315d24bb22b9ee)）
+- `12:10` fix normalize patient bah searches（[`5963bbcd`](https://github.com/weepwood/MRR/commit/5963bbcdf6bb123e9c6e3994c84f2536235e5697)）
+- `12:10` fix support padded and unpadded patient bah lookup（[`646f4ea9`](https://github.com/weepwood/MRR/commit/646f4ea97f7619084689f24f1ac1e823561af48b)）
+- `12:10` feat normalize patient bah values（[`61d62c32`](https://github.com/weepwood/MRR/commit/61d62c321f2b0d5f978a885fac259c7179bb2e0a)）
+- `12:09` ci validate backend code normalization changes（[`bb8d75df`](https://github.com/weepwood/MRR/commit/bb8d75dfe736ea7c38ac33bc7b5d14f7afeb4690)）
+- `12:07` fix preserve invalid and null codes in statistics queries（[`48a455ac`](https://github.com/weepwood/MRR/commit/48a455ac250a3bcdd3141fc50aec41508fad1f4f)）
+- `12:07` fix avoid matching null or invalid scan codes as zero（[`dd87ea5e`](https://github.com/weepwood/MRR/commit/dd87ea5ebbee1a57e6bacb7b9c6b039fff6bf6cb)）
+- `12:06` fix unify archive search and canonical code display（[`fef51589`](https://github.com/weepwood/MRR/commit/fef5158942466195a35412c51896dc5d6358fd03)）
+- `12:06` fix display archive bah and sjh as eight digits（[`9271fd8d`](https://github.com/weepwood/MRR/commit/9271fd8d1fc255f54635ad2c9b81910fd5e107f0)）
+- `12:06` refactor reuse shared archive code normalization（[`c8a3039e`](https://github.com/weepwood/MRR/commit/c8a3039ed87dd6a220ac46ca5c6056a93f873106)）
+- `12:06` test cover frontend medical record code normalization（[`8fd290a0`](https://github.com/weepwood/MRR/commit/8fd290a0f00e6637739830b15226b6bea7b97844)）
+- `12:04` feat install global medical record code interceptors（[`2a8ae091`](https://github.com/weepwood/MRR/commit/2a8ae091b6da6684436359af99c3fd0056114fc7)）
+- `12:04` feat normalize bah and sjh across frontend api traffic（[`3cda9798`](https://github.com/weepwood/MRR/commit/3cda9798d44a915c4202874bbb44d476b3d99b47)）
+- `12:04` feat add frontend bah and sjh normalization utilities（[`ad53a9d4`](https://github.com/weepwood/MRR/commit/ad53a9d4e66b62194a4f19f65f7297e751723b70)）
+- `12:04` chore remove metric card quality trigger（[`d0a764f7`](https://github.com/weepwood/MRR/commit/d0a764f7d7cb86bf5a0431c497a82a8eca4d1213)）
+- `12:04` fix normalize statistics filter search terms（[`645f8ff4`](https://github.com/weepwood/MRR/commit/645f8ff4697dcc776ae96734ab948f3875a12035)）
+- `12:04` chore trigger metric card quality gate（[`d5cf7347`](https://github.com/weepwood/MRR/commit/d5cf734793a593887647d0cad10974b3ed500767)）
+- `12:04` fix support padded and unpadded statistics lookup（[`1c9bd67c`](https://github.com/weepwood/MRR/commit/1c9bd67c1fa227ccf21ba8ad188f637b31289f26)）
+- `12:03` fix normalize statistics code grouping and lookup（[`dd34b736`](https://github.com/weepwood/MRR/commit/dd34b736fa78f2c321fbe2bd930a3d1ea3b3c647)）
+- `12:03` feat normalize bah in statistics summaries（[`513b48f7`](https://github.com/weepwood/MRR/commit/513b48f7e03cf4d2478fe690c4472eabdf9337a7)）
+- `12:03` feat normalize statistics bah and sjh values（[`877c760c`](https://github.com/weepwood/MRR/commit/877c760c1c4be6936f3e3f0d2b377097138e42a4)）
+- `12:03` fix normalize bah and sjh image searches（[`ba6df868`](https://github.com/weepwood/MRR/commit/ba6df868e203597263794f20fe3910a227e7af9e)）
+- `04:02` style (design) unify business metric cards（[`422f1c75`](https://github.com/weepwood/MRR/commit/422f1c758fbf7b24a939ea9316ac000baf0d1a85)）
+- `12:02` feat normalize scan codes on write and search（[`cf2c0745`](https://github.com/weepwood/MRR/commit/cf2c07458a6c0ef37f37f8ae4e6d302e46e9ca23)）
+- `12:02` fix query scan codes with or without leading zeros（[`756c9aaf`](https://github.com/weepwood/MRR/commit/756c9aaf3de220fdcae0eabc117b4cac3019867f)）
+- `12:01` refactor support padded and unpadded scan code lookup（[`bd01aa26`](https://github.com/weepwood/MRR/commit/bd01aa260babf0a74447ca9b292ec527de5e9193)）
+- `12:01` fix remove empty responsive card rules（[`a31bcda1`](https://github.com/weepwood/MRR/commit/a31bcda1ecf48eb596386241a940bcdfd9347ce6)）
+- `12:01` refactor reuse medical record code normalization（[`04592506`](https://github.com/weepwood/MRR/commit/0459250688d6f63b337cb86ad3fad1ddc7499cae)）
+- `12:01` test cover medical record code normalization（[`febe2e7d`](https://github.com/weepwood/MRR/commit/febe2e7de6680814357f268a5d7a5171e9c3af27)）
+- `12:01` feat add shared medical record code normalization（[`be148d7c`](https://github.com/weepwood/MRR/commit/be148d7c74ddf3c15f1ebab101aa1863e6ef8898)）
+- `04:00` chore capture metric card lint diagnostics（[`5387612e`](https://github.com/weepwood/MRR/commit/5387612ec077b73b25842a5d9a05c7824d44b411)）
+- `11:59` chore capture metric card lint diagnostics（[`5aeeb739`](https://github.com/weepwood/MRR/commit/5aeeb7392390a4adb7163e57abf06fb95868bc59)）
+- `11:57` fix correct semantic replacement script quoting（[`2516c308`](https://github.com/weepwood/MRR/commit/2516c308b8fbd8b50d2f70df7b360fed71bb82f9)）
+- `11:57` fix use semantic response card replacement（[`77b6d067`](https://github.com/weepwood/MRR/commit/77b6d067c8fc26643dc67eb90f116c3e6226ee28)）
+- `03:56` chore capture metric card migration error（[`0fc3a6ed`](https://github.com/weepwood/MRR/commit/0fc3a6edec8baca030cd91162d1717d8a4a2339d)）
+- `11:55` chore capture metric card migration errors（[`c8692fee`](https://github.com/weepwood/MRR/commit/c8692feeac17689b8580a0061ae3c94787ee2753)）
+- `11:53` chore trigger metric card migration on pull request（[`bf4e3d63`](https://github.com/weepwood/MRR/commit/bf4e3d6340c47837b6c3cd0bd793cdf5e400544f)）
+- `11:52` chore apply shared metric card design（[`8de34a00`](https://github.com/weepwood/MRR/commit/8de34a003d3618f47141b72c5dc29908cbf83e1f)）
+- `11:45` merge Merge branch 'pr-13' into dev-no-login（[`fba0ef5d`](https://github.com/weepwood/MRR/commit/fba0ef5d4ad0dd09fdb7405a8f6673e7e97fdd18)）
+- `11:41` feat remove high-frequency BAH section from statistics page（[`09660506`](https://github.com/weepwood/MRR/commit/09660506ef233b72cbd8fe585051e51752863032)）
+- `11:38` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`0c4b95f4`](https://github.com/weepwood/MRR/commit/0c4b95f4f0abdfda271209a141cfe0d1d965d818)）
+- `11:38` feat enable KeepAlive page caching for all business routes（[`7f8e1ed4`](https://github.com/weepwood/MRR/commit/7f8e1ed4df05aa97052556bb002517023fbfb1a0)）
+- `11:37` feat 前端增加无后端 Mock 数据模式（[`9b2b7334`](https://github.com/weepwood/MRR/commit/9b2b7334928d033e40f3d45c050c8391fc082889) · [PR #12](https://github.com/weepwood/MRR/pull/12)）
+- `11:37` docs (archive) keep source aspect ratio note（[`a78b5376`](https://github.com/weepwood/MRR/commit/a78b537608a816ce535b65bbcbd7655467de773f)）
+- `11:36` chore (archive) finalize variable-ratio thumbnail layout（[`dc3f49ed`](https://github.com/weepwood/MRR/commit/dc3f49edaeaadc3b256330205e0798eb3370409e)）
+- `11:36` merge Merge branch 'feat/frontend-mock-data-20260713' into dev-no-login（[`9efe5c09`](https://github.com/weepwood/MRR/commit/9efe5c098bdeeeb81b0d0115189ac2df94e4c9ed)）
+- `11:36` chore (archive) document original-ratio thumbnail behavior（[`b4ebf2eb`](https://github.com/weepwood/MRR/commit/b4ebf2eb978867b0821bd5941f64530d40f0a6be)）
+- `11:35` refactor (archive) use neutral height estimate for variable-ratio thumbnails（[`467c8b00`](https://github.com/weepwood/MRR/commit/467c8b0010056a8c03e22f59e2521cf30bccfd74)）
+- `11:35` fix (archive) preserve thumbnail source aspect ratio（[`f80828f8`](https://github.com/weepwood/MRR/commit/f80828f889a7dfb664547585b9d5392769acfab5)）
+- `11:27` fix (archive) enlarge thumbnails to match rail width（[`41448e42`](https://github.com/weepwood/MRR/commit/41448e423bedfd93df37aa6577c955593105f179)）
+- `11:27` fix (archive) let thumbnails fill the 200px rail（[`779bd305`](https://github.com/weepwood/MRR/commit/779bd3051f45adf5f72d5dc6655bb68279060aa4)）
+- `11:26` fix (archive) unify thumbnail and list rail width（[`9e73a3de`](https://github.com/weepwood/MRR/commit/9e73a3de8d90e1f8d74145159ccbec30fefa2746)）
+- `11:13` chore (mock) restore original type dependency version（[`1b3cfda9`](https://github.com/weepwood/MRR/commit/1b3cfda992d157c7d0a702291ad35236227208a6)）
+- `11:12` fix (archive) add image failure placeholders（[`5a8822ef`](https://github.com/weepwood/MRR/commit/5a8822ef902e0f20342d64062467d40ed9170098)）
+- `11:12` chore (mock) keep existing dependency versions（[`ef8f01d3`](https://github.com/weepwood/MRR/commit/ef8f01d389a93b8f85d3649a6b185f2c67b086be)）
+- `11:12` style (archive) widen thumbnail and list columns（[`d1715174`](https://github.com/weepwood/MRR/commit/d171517488a405e740a24c6de18415023e2db25e)）
+- `11:11` fix (archive) improve thumbnail placeholders and metadata layout（[`51b1dc15`](https://github.com/weepwood/MRR/commit/51b1dc153f5286374336e836038d02c865ed2f42)）
+- `11:11` style (archive) enlarge thumbnail sizing（[`8f53497f`](https://github.com/weepwood/MRR/commit/8f53497f344821b31bc004f3a1324909d91d9b54)）
+- `11:10` ci (mock) validate standalone frontend on pull requests（[`6b475909`](https://github.com/weepwood/MRR/commit/6b475909f062d8699e86c6e233e92fe0b896a6d8)）
+- `11:08` docs (mock) document standalone frontend workflow（[`5d9cbeba`](https://github.com/weepwood/MRR/commit/5d9cbeba933ec7041569ce554eaee56592f65b9f)）
+- `11:08` fix (mock) disable backend proxy when fake server is active（[`4fd68ebe`](https://github.com/weepwood/MRR/commit/4fd68ebee2e7584171fbbd4cfa9f2a74875c94f8)）
+- `11:07` test (mock) verify standalone API simulation（[`02fb724c`](https://github.com/weepwood/MRR/commit/02fb724cfd5742f76d74464d97ee39b8ad78c304)）
+- `11:06` test (e2e) run Playwright against mock mode（[`1a9a1e76`](https://github.com/weepwood/MRR/commit/1a9a1e76b401d420ac2e00e5f58c3f868f0d6d99)）
+- `11:06` feat (mock) intercept proxied API requests in mock mode（[`160e268c`](https://github.com/weepwood/MRR/commit/160e268c2e99a76610327f600548d52a3aa20230)）
+- `11:05` feat (mock) add mock development and build scripts（[`4cc8f483`](https://github.com/weepwood/MRR/commit/4cc8f4838456e98d2796ae4552d8a44296992b2e)）
+- `11:04` chore (mock) track safe mock environment file（[`ce8d1224`](https://github.com/weepwood/MRR/commit/ce8d12248dfad076411f7bc615e640d54ca0543f)）
+- `11:04` feat (mock) add mock environment mode（[`47f0ff9c`](https://github.com/weepwood/MRR/commit/47f0ff9c4c0618755cb311441b603433bfbe6c7e)）
+- `11:03` feat (mock) add deterministic frontend mock API（[`f2b470e5`](https://github.com/weepwood/MRR/commit/f2b470e54604cc0c506f8a89f5f5d4c4582e8861)）
+- `10:59` merge Merge branch 'style/beautify-records-statistics-20260713' into dev-no-login（[`7871a5c7`](https://github.com/weepwood/MRR/commit/7871a5c7c73b80f2cfc16c22da8fe9692170dcd8)）
+- `10:56` fix (build) Surefire排除integration包避免CI中PostgreSQL集成测试失败（[`d8283aab`](https://github.com/weepwood/MRR/commit/d8283aab1d339bab4c518547a0cbc316e3011f4b)）
+- `10:54` ci (quality-gate) 移除PR触发，仅在版本tag推送时运行质量门禁（[`566214fd`](https://github.com/weepwood/MRR/commit/566214fd5259ea6e8229e28d58a57864d212a2cc)）
+- `10:50` chore remove statistics quality trigger（[`73678826`](https://github.com/weepwood/MRR/commit/73678826bb0800c854cd5abf8d368f8d458aa626)）
+- `10:50` chore trigger statistics quality gate（[`a7706c6e`](https://github.com/weepwood/MRR/commit/a7706c6ed426c75a06bfe317d4c26a40f1eb0d62)）
+- `02:49` style (statistics) apply repository lint rules（[`be68eba2`](https://github.com/weepwood/MRR/commit/be68eba2d71eca74164694d7713b9a0c18ca3962)）
+- `10:48` ci temporarily apply statistics page lint fixes（[`c18505eb`](https://github.com/weepwood/MRR/commit/c18505eb62ea748b8bc49aed6255b91a9663db59)）
+- `10:46` style (statistics) redesign records statistics dashboard（[`579974f0`](https://github.com/weepwood/MRR/commit/579974f0ac6fc45f56b2d6cb38e515e29edbecfe)）
+- `10:32` merge Merge branch 'style/soften-response-trend-chart-20260713' into dev-no-login（[`d026a323`](https://github.com/weepwood/MRR/commit/d026a3239768cb787a5db12af911566ca182326f)）
+- `10:32` style (response-analysis) 优化响应分析页面布局和功能 - 响应趋势图宽屏宽度上限1200px - 响应趋势与慢接口排行改为左右双栏布局 - 新增7天/30天/全部时间范围切换 - API days参数类型放宽为number（[`42f22776`](https://github.com/weepwood/MRR/commit/42f227769383d41430c814c1fd00eba03b06731f)）
+- `10:20` style (statistics-detail) 优化档案袋卡片样式 - 移除顶部渐变细条、folder-tab标签，病案号和上架号改为8位补零显示（[`faefe316`](https://github.com/weepwood/MRR/commit/faefe3162fac37a3382013a9057b149cea391b63)）
+- `10:07` style (response-analysis) satisfy chart lint rules（[`9094d0a5`](https://github.com/weepwood/MRR/commit/9094d0a51579a6d2f35bc9ea441046c21ac5cf92)）
+- `10:01` style (response-analysis) soften response trend chart（[`d4100a66`](https://github.com/weepwood/MRR/commit/d4100a6626bdf2f173a36116ca3522184c689963)）
+- `10:01` chore remove archive card quality trigger（[`f458e51c`](https://github.com/weepwood/MRR/commit/f458e51c86ff8ceea1db9a56d46afc6e8a675061)）
+- `10:01` chore trigger archive card quality gate（[`d0e2170d`](https://github.com/weepwood/MRR/commit/d0e2170deab99e31dc1873bd0516a8c1404bac92)）
+- `01:59` style (statistics) redesign archive folder cards（[`ff9a0ae4`](https://github.com/weepwood/MRR/commit/ff9a0ae4a20675655832c8f5e82929d933090147)）
+- `09:59` fix normalize embedded patch indentation（[`9bdbafde`](https://github.com/weepwood/MRR/commit/9bdbafde91532be344281a179db320addfcba1be)）
+- `01:57` chore capture archive card patch error（[`f05cdc2e`](https://github.com/weepwood/MRR/commit/f05cdc2e1bb34fd008e4c228e4419baa6ca18b99)）
+- `09:57` chore capture archive card patch diagnostics（[`417c5275`](https://github.com/weepwood/MRR/commit/417c527598deb14a842cda83b75e6c0183cad419)）
+- `09:55` fix execute archive card patch directly（[`1ec24831`](https://github.com/weepwood/MRR/commit/1ec248319e16bf20e85e2f41e92ffe776747a2a7)）
+- `09:53` chore add temporary archive card PR runner（[`aa4758f6`](https://github.com/weepwood/MRR/commit/aa4758f683d7364cda98c88ecfd7a04b0405cdef)）
+- `09:53` chore trigger archive card style workflow（[`0e9e3f84`](https://github.com/weepwood/MRR/commit/0e9e3f84e7120106a0ce94b537a4cff8a6e21b1c)）
+- `09:51` chore prepare archive card style update（[`1f098225`](https://github.com/weepwood/MRR/commit/1f098225b2b1ef6fdd1b3514a3c7707cea0b64db)）
+- `09:47` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`f16a33b7`](https://github.com/weepwood/MRR/commit/f16a33b7e66ec822fe406140f4c883467e2673a2)）
+- `09:45` merge 优化接口响应与病案访问趋势图表（[`5457df3a`](https://github.com/weepwood/MRR/commit/5457df3a84aef951269d3ea00b3b098e72e1d149) · [PR #8](https://github.com/weepwood/MRR/pull/8)）
+- `09:00` ci remove temporary chart lint fixer（[`db6eb017`](https://github.com/weepwood/MRR/commit/db6eb0178cdc4d5269140a7eb70c655af4ce1d9a)）
+- `01:00` style (charts) apply repository lint rules（[`4f391234`](https://github.com/weepwood/MRR/commit/4f39123497bca57857acd20c3eb6e9e188f081e3)）
+- `08:59` ci temporarily apply chart lint fixes（[`cde2f50e`](https://github.com/weepwood/MRR/commit/cde2f50e07f1d255b31a1993c607cdf68e8f11e3)）
+- `08:55` style (charts) redesign image audit access trend（[`6f2fc0ef`](https://github.com/weepwood/MRR/commit/6f2fc0ef1ea7304b5cb190e31a7e362b62710819)）
+- `08:54` style (charts) redesign response trend visualization（[`2b63207b`](https://github.com/weepwood/MRR/commit/2b63207bccdd13ab7dfb88456a0eda785dc12e2a)）
+- `03:29` refactor (response-analysis) 移除时间范围选择功能并固定为7天（[`9f48497f`](https://github.com/weepwood/MRR/commit/9f48497f081a41b9bd64e2e5e57b1e3dd35ff155)）
+- `03:19` chore (workflow) 修改质量门禁工作流触发条件（[`aefe1588`](https://github.com/weepwood/MRR/commit/aefe1588062f83853cf0ee2c01084bbf1edf0937)）
+- `03:14` feat 添加图片审计分析功能和前端性能监控（[`d00dde7f`](https://github.com/weepwood/MRR/commit/d00dde7fdf055c046c333ea341d072a1fae7d3ec)）
+- `02:43` feat (LogController) 添加游标分页功能支持（[`96be2f82`](https://github.com/weepwood/MRR/commit/96be2f8201f568c9b52ceba9f520655cf8825516)）
+- `02:29` merge Merge branch 'dev-no-login' of `https://github.com/weepwood/MRR` into dev-no-login（[`4df83870`](https://github.com/weepwood/MRR/commit/4df83870339596c2087fb69e4c2db3c5a9dbfb3e)）
+- `02:29` docs (agents) 添加AGENTS.md文件提供项目指导（[`bb848e70`](https://github.com/weepwood/MRR/commit/bb848e70ff62bbace2c488ecc3ed872dabde2250)）
+- `02:23` perf (frontend) reduce critical-path loading and improve asset caching（[`cdcd89c8`](https://github.com/weepwood/MRR/commit/cdcd89c8a4b7956a10c24d30692b4bd6375cdf2a) · [PR #7](https://github.com/weepwood/MRR/pull/7)）
 
 ## 2026-07-12
 
-- **修复** harden configuration, CI, and archive thumbnail layout（[`3082614`](https://github.com/weepwood/MRR/commit/308261471f321f9634a3bf5852051e55eb906883) · [PR #5](https://github.com/weepwood/MRR/pull/5)） — weepwood
-- **维护** `config` 移除Claude本地设置配置文件（[`4416433`](https://github.com/weepwood/MRR/commit/44164330fd603e82d4b783af1a3224a038450bfc)） — weepwood
-- **新增** 更新影像归档页面布局并添加系统设置表（[`fc3df13`](https://github.com/weepwood/MRR/commit/fc3df13d478cddf43ad7c377f83c7438c23e1fd0)） — weepwood
-- **新增** `statistics` 添加档案列表展示模式切换功能（[`bc2c447`](https://github.com/weepwood/MRR/commit/bc2c44786b4c4bdf36574502662d04eb90086523)） — weepwood
-- **文档** 更新开发环境配置和分支规范（[`d289e70`](https://github.com/weepwood/MRR/commit/d289e7037d5e6ab66a90ed58ef50fca1d1b27afc)） — weepwood
-- **新增** `settings` 添加应用配置本地存储功能（[`9585ff4`](https://github.com/weepwood/MRR/commit/9585ff466a2d2494bbd964dee4623528cb7eaa23)） — weepwood
-- **重构** harden builds and demo mode（[`13d87ef`](https://github.com/weepwood/MRR/commit/13d87ef7168ff3c2f17e8dc16aae9cbec84268c5)） — weepwood
+- `23:39` style (frontend) keep defineOptions before runtime declarations（[`e0a13182`](https://github.com/weepwood/MRR/commit/e0a13182818277815f4e8a5701fb5369c87ca5b3)）
+- `23:36` ci remove temporary performance diagnostics（[`5bbe0241`](https://github.com/weepwood/MRR/commit/5bbe024145e5983455868fcc51e4162a615d80e7)）
+- `23:33` perf (routes) exclude tests and keep generated pages asynchronous（[`a3047588`](https://github.com/weepwood/MRR/commit/a3047588e277e30af1452bb1c8882545adb476f3)）
+- `23:28` ci validate optimized build and nginx configuration（[`e0885e51`](https://github.com/weepwood/MRR/commit/e0885e51f0ce679b2434e8a7ab1d6f20af414040)）
+- `23:28` refactor (frontend) isolate deferred icon bootstrap（[`c159cc27`](https://github.com/weepwood/MRR/commit/c159cc2760b1e94042b89ac0d0d614ab1c21daae)）
+- `23:28` fix (frontend) preserve dark theme loading on legacy browsers（[`e0d3f362`](https://github.com/weepwood/MRR/commit/e0d3f362d448418c1399cfc8146f58147630ac15)）
+- `23:25` ci capture performance lint diagnostics（[`ecb6712a`](https://github.com/weepwood/MRR/commit/ecb6712ab0f257e4d3dec7b854c63f663b5c4544)）
+- `23:21` perf (deploy) enable immutable asset caching and precompressed responses（[`6c12aafb`](https://github.com/weepwood/MRR/commit/6c12aafbf08a28d79b3b4db54c66e106afa4cc95)）
+- `23:21` perf (build) split stable vendor groups for better caching（[`c32e2c54`](https://github.com/weepwood/MRR/commit/c32e2c545bd35532c8fee9d2859d942face34f93)）
+- `23:21` perf (build) disable legacy polyfills for production by default（[`57f5fa9e`](https://github.com/weepwood/MRR/commit/57f5fa9ee8e98ca2b6de2428f21c6e7271b4a913)）
+- `23:20` perf (build) make legacy polyfills opt-in（[`9b2445ff`](https://github.com/weepwood/MRR/commit/9b2445ffc76f31a90a281faf94948fde2b12474f)）
+- `23:19` perf (frontend) lazy-load hidden layout utilities（[`7aae625c`](https://github.com/weepwood/MRR/commit/7aae625c3a1e64e154bf81e5673cf3b3458998af)）
+- `23:19` perf (frontend) make hotkey help modal lazy-loadable（[`8534e916`](https://github.com/weepwood/MRR/commit/8534e9169a95fc8222f0ef27a1754abb5fa81f0e)）
+- `23:18` perf (frontend) lazy-load system info and throttle resize work（[`c56b2fad`](https://github.com/weepwood/MRR/commit/c56b2fada3ec53329b24bbb62c19233931c46531)）
+- `23:18` perf (frontend) make system info drawer externally controlled（[`260c0540`](https://github.com/weepwood/MRR/commit/260c05404e6ebb97e8d7da08c5279d7a428a185a)）
+- `23:18` perf (frontend) load Element Plus dark variables on demand（[`36dd0c84`](https://github.com/weepwood/MRR/commit/36dd0c84812725a6bdd16b52ec9c86ff27422723)）
+- `23:17` perf (frontend) avoid eager dark theme stylesheet request（[`1febfd9a`](https://github.com/weepwood/MRR/commit/1febfd9a4c994339517fa868e084e506c28655c7)）
+- `23:17` perf (frontend) defer offline icon runtime until enabled（[`e97839d3`](https://github.com/weepwood/MRR/commit/e97839d31042028651c2a1eec7d4a0ef4a947420)）
+- `21:54` fix harden configuration, CI, and archive thumbnail layout（[`30826147`](https://github.com/weepwood/MRR/commit/308261471f321f9634a3bf5852051e55eb906883) · [PR #5](https://github.com/weepwood/MRR/pull/5)）
+- `21:49` ci enforce incremental frontend lint（[`69360b7f`](https://github.com/weepwood/MRR/commit/69360b7f0fbb2c763dafde4e478bb4ff88e82e98)）
+- `21:49` ci add incremental frontend lint runner（[`1d999314`](https://github.com/weepwood/MRR/commit/1d99931433411711eb16a07a80475af5e61fa1ad)）
+- `21:45` ci upload lint reports for actionable diagnostics（[`88655c5c`](https://github.com/weepwood/MRR/commit/88655c5c6952e1b69cdbde9a8bc5863ee6282ee6)）
+- `21:42` ci split frontend checks for actionable failures（[`0803e22f`](https://github.com/weepwood/MRR/commit/0803e22f998b55716211f3c7885721c7eec50a98)）
+- `21:39` fix (archive) fill thumbnail viewport after resize（[`d7694a38`](https://github.com/weepwood/MRR/commit/d7694a38781d7f75647379fc0aedc09e05f7a6d0)）
+- `21:38` fix (config) use safe actuator and devtools defaults（[`72bb681f`](https://github.com/weepwood/MRR/commit/72bb681f5f7f637618c2c1079f34d41d6abac896)）
+- `21:38` fix (config) remove committed local database password（[`8b622132`](https://github.com/weepwood/MRR/commit/8b622132aafb9c92c4a4af1a9ec99a35a92c9048)）
+- `21:38` ci harden and expand quality gate（[`c21ee27b`](https://github.com/weepwood/MRR/commit/c21ee27b918714933e37595a264c17c0427b3257)）
+- `21:38` chore (frontend) separate lint checks from autofix（[`23e36e4b`](https://github.com/weepwood/MRR/commit/23e36e4bc08c93f0ebcced9e36afa0150b51c9c9)）
+- `20:59` chore (config) 移除Claude本地设置配置文件（[`44164330`](https://github.com/weepwood/MRR/commit/44164330fd603e82d4b783af1a3224a038450bfc)）
+- `20:08` feat 更新影像归档页面布局并添加系统设置表（[`fc3df13d`](https://github.com/weepwood/MRR/commit/fc3df13d478cddf43ad7c377f83c7438c23e1fd0)）
+- `15:43` feat (statistics) 添加档案列表展示模式切换功能（[`bc2c4478`](https://github.com/weepwood/MRR/commit/bc2c44786b4c4bdf36574502662d04eb90086523)）
+- `15:21` docs 更新开发环境配置和分支规范（[`d289e703`](https://github.com/weepwood/MRR/commit/d289e7037d5e6ab66a90ed58ef50fca1d1b27afc)）
+- `15:13` feat (settings) 添加应用配置本地存储功能（[`9585ff46`](https://github.com/weepwood/MRR/commit/9585ff466a2d2494bbd964dee4623528cb7eaa23)）
+- `14:51` refactor harden builds and demo mode（[`13d87ef7`](https://github.com/weepwood/MRR/commit/13d87ef7168ff3c2f17e8dc16aae9cbec84268c5)）
 
 ## 2026-07-06
 
-- **修复** resolve Result.success(String) overload ambiguity and fix pre-existing test compilation errors（[`9b314e0`](https://github.com/weepwood/MRR/commit/9b314e01d2bfd970bef62fd8e0020a450f3c531e)） — weepwood
-- **维护** add Maven wrapper to backend .gitignore（[`5922704`](https://github.com/weepwood/MRR/commit/592270467999828e0edb179f56e2c4460f91ec99)） — weepwood
-- **维护** refine test and controller code（[`da53285`](https://github.com/weepwood/MRR/commit/da532858392bc7f5f658a973e2a00aa0d43dbe36)） — weepwood
-- **修复** `ux` clear error ref before retry in patients and users views（[`86f5343`](https://github.com/weepwood/MRR/commit/86f534389e2298deca597f11fd986940bc9b8194)） — weepwood
-- **测试** add PatientController unit tests (2 cases)（[`93d6a33`](https://github.com/weepwood/MRR/commit/93d6a334e52e9fde75ce45e08a4397e05e1a89dd)） — weepwood
-- **测试** add SystemInfoController unit tests (5 cases)（[`0088099`](https://github.com/weepwood/MRR/commit/00880990b609463a46c169802c7183214357142d)） — weepwood
-- **测试** add SystemInfoServiceImpl unit tests (5 cases)（[`35b040d`](https://github.com/weepwood/MRR/commit/35b040d610d3eca5bd14cb6d3b2a0c8450b891d2)） — weepwood
-- **测试** add OssServiceImpl unit tests (2 cases)（[`e54f1e5`](https://github.com/weepwood/MRR/commit/e54f1e5f01a72e251bc7329034bca1e5a3285bf5)） — weepwood
-- **测试** add records view smoke test（[`278cf6c`](https://github.com/weepwood/MRR/commit/278cf6c0a3c1ad6385e84ac19cc81d555bc8b8d2)） — weepwood
-- **测试** add SystemSettingController unit tests (6 cases)（[`fc80d00`](https://github.com/weepwood/MRR/commit/fc80d000eef6a527f2557384563c55c463ec6146)） — weepwood
-- **测试** add AppLoading/AppEmpty/AppError component tests (11 cases)（[`57c1eee`](https://github.com/weepwood/MRR/commit/57c1eeea0fc793d607bb1994c8f80fcd20fdd23a)） — weepwood
-- **新增** `ux` add loading/empty/error states to oss-migration view（[`6e8b3b7`](https://github.com/weepwood/MRR/commit/6e8b3b737dcc6ca427cd6f1f66a218ab6fc1b642)） — weepwood
-- **新增** `ux` add loading/empty/error states to statistics-detail view（[`4db5d32`](https://github.com/weepwood/MRR/commit/4db5d321f9ca154692b8498b09853579794192d5)） — weepwood
-- **新增** `ux` add loading/empty/error states to users view（[`98060db`](https://github.com/weepwood/MRR/commit/98060dbe27a19658ea5e4c58212061f4fa803617)） — weepwood
-- **新增** `ux` add loading/empty/error states to patients view（[`24b9197`](https://github.com/weepwood/MRR/commit/24b9197bb49ea9e349fba0965d845c6697c1698a)） — weepwood
-- **新增** `ux` add loading/empty/error states to audit-images view（[`8a6970d`](https://github.com/weepwood/MRR/commit/8a6970d3c3a429b88b20647b22840ded7499672c)） — weepwood
-- **新增** `ux` add loading/empty/error states to logs view（[`9178deb`](https://github.com/weepwood/MRR/commit/9178deb72b0180bb70e2e4631d6ecda3c982353f)） — weepwood
-- **新增** `ux` add loading/empty/error states to records view（[`76aa17c`](https://github.com/weepwood/MRR/commit/76aa17c429febb7c63fa7b67c9d300df452a1036)） — weepwood
-- **新增** `ui` add AppError component with retry button（[`b3054f1`](https://github.com/weepwood/MRR/commit/b3054f198b445442570ef4452b998c70f6107d18)） — weepwood
-- **新增** `ui` add AppEmpty component with optional action button（[`42132f0`](https://github.com/weepwood/MRR/commit/42132f0be278601b6109852fd1f644c3725d46cc)） — weepwood
-- **新增** `ui` add AppLoading skeleton component（[`f8eb920`](https://github.com/weepwood/MRR/commit/f8eb920122d7117dc562d053c4f29df2c0284026)） — weepwood
-- **文档** 前端 UX + 测试实施计划 (17 tasks)（[`68147ff`](https://github.com/weepwood/MRR/commit/68147ffe7f7e433d55dc4462928abe291cfa3731)） — weepwood
-- **文档** 前端 UX 组件 + 软件测试设计规格（[`dc1234a`](https://github.com/weepwood/MRR/commit/dc1234ab13bc2b6a79096821d28cf80fc53c730c)） — weepwood
-- **维护** 统一工程规范（[`ab49b5b`](https://github.com/weepwood/MRR/commit/ab49b5b86f0dd327da5a8c29b04725640555a4d7)） — weepwood
-- **测试** 补充 SystemSettingService 和 ImageUrlService 单元测试（[`0adc851`](https://github.com/weepwood/MRR/commit/0adc8514979f3eb6951046abad52b27bab0abf75)） — weepwood
-- **新增** 系统设置后端持久化（[`59e105b`](https://github.com/weepwood/MRR/commit/59e105b7cb0a0c95122f18dde9701065c0ea05d2)） — weepwood
-- **重构** `frontend` 完善 TypeScript 类型安全并统一行尾为 LF（[`1b3bb08`](https://github.com/weepwood/MRR/commit/1b3bb08be0f99679c347e5fd291f06642c558241)） — weepwood
-- **重构** 项目规范化重构（[`cacfc20`](https://github.com/weepwood/MRR/commit/cacfc2055491c23931c6e19b760fd744d81ab7d9)） — weepwood
+- `22:39` merge Dev no login（[`a8624600`](https://github.com/weepwood/MRR/commit/a862460091304722a4825d0cc0f1fea5f89cf575) · [PR #4](https://github.com/weepwood/MRR/pull/4)）
+- `22:17` fix resolve Result.success(String) overload ambiguity and fix pre-existing test compilation errors（[`9b314e01`](https://github.com/weepwood/MRR/commit/9b314e01d2bfd970bef62fd8e0020a450f3c531e)）
+- `22:09` chore add Maven wrapper to backend .gitignore（[`59227046`](https://github.com/weepwood/MRR/commit/592270467999828e0edb179f56e2c4460f91ec99)）
+- `22:09` chore refine test and controller code（[`da532858`](https://github.com/weepwood/MRR/commit/da532858392bc7f5f658a973e2a00aa0d43dbe36)）
+- `22:07` fix (ux) clear error ref before retry in patients and users views（[`86f53438`](https://github.com/weepwood/MRR/commit/86f534389e2298deca597f11fd986940bc9b8194)）
+- `22:02` test add PatientController unit tests (2 cases)（[`93d6a334`](https://github.com/weepwood/MRR/commit/93d6a334e52e9fde75ce45e08a4397e05e1a89dd)）
+- `22:01` test add SystemInfoController unit tests (5 cases)（[`00880990`](https://github.com/weepwood/MRR/commit/00880990b609463a46c169802c7183214357142d)）
+- `21:59` test add SystemInfoServiceImpl unit tests (5 cases)（[`35b040d6`](https://github.com/weepwood/MRR/commit/35b040d610d3eca5bd14cb6d3b2a0c8450b891d2)）
+- `21:59` test add OssServiceImpl unit tests (2 cases)（[`e54f1e5f`](https://github.com/weepwood/MRR/commit/e54f1e5f01a72e251bc7329034bca1e5a3285bf5)）
+- `21:56` test add records view smoke test（[`278cf6c0`](https://github.com/weepwood/MRR/commit/278cf6c0a3c1ad6385e84ac19cc81d555bc8b8d2)）
+- `21:52` test add SystemSettingController unit tests (6 cases)（[`fc80d000`](https://github.com/weepwood/MRR/commit/fc80d000eef6a527f2557384563c55c463ec6146)）
+- `21:51` test add AppLoading/AppEmpty/AppError component tests (11 cases)（[`57c1eeea`](https://github.com/weepwood/MRR/commit/57c1eeea0fc793d607bb1994c8f80fcd20fdd23a)）
+- `21:50` feat (ux) add loading/empty/error states to oss-migration view（[`6e8b3b73`](https://github.com/weepwood/MRR/commit/6e8b3b737dcc6ca427cd6f1f66a218ab6fc1b642)）
+- `21:50` feat (ux) add loading/empty/error states to statistics-detail view（[`4db5d321`](https://github.com/weepwood/MRR/commit/4db5d321f9ca154692b8498b09853579794192d5)）
+- `21:49` feat (ux) add loading/empty/error states to users view（[`98060dbe`](https://github.com/weepwood/MRR/commit/98060dbe27a19658ea5e4c58212061f4fa803617)）
+- `21:49` feat (ux) add loading/empty/error states to patients view（[`24b9197b`](https://github.com/weepwood/MRR/commit/24b9197bb49ea9e349fba0965d845c6697c1698a)）
+- `21:48` feat (ux) add loading/empty/error states to audit-images view（[`8a6970d3`](https://github.com/weepwood/MRR/commit/8a6970d3c3a429b88b20647b22840ded7499672c)）
+- `21:48` feat (ux) add loading/empty/error states to logs view（[`9178deb7`](https://github.com/weepwood/MRR/commit/9178deb72b0180bb70e2e4631d6ecda3c982353f)）
+- `21:48` feat (ux) add loading/empty/error states to records view（[`76aa17c4`](https://github.com/weepwood/MRR/commit/76aa17c429febb7c63fa7b67c9d300df452a1036)）
+- `21:45` feat (ui) add AppError component with retry button（[`b3054f19`](https://github.com/weepwood/MRR/commit/b3054f198b445442570ef4452b998c70f6107d18)）
+- `21:45` feat (ui) add AppEmpty component with optional action button（[`42132f0b`](https://github.com/weepwood/MRR/commit/42132f0be278601b6109852fd1f644c3725d46cc)）
+- `21:44` feat (ui) add AppLoading skeleton component（[`f8eb9201`](https://github.com/weepwood/MRR/commit/f8eb920122d7117dc562d053c4f29df2c0284026)）
+- `21:42` docs 前端 UX + 测试实施计划 (17 tasks)（[`68147ffe`](https://github.com/weepwood/MRR/commit/68147ffe7f7e433d55dc4462928abe291cfa3731)）
+- `21:36` docs 前端 UX 组件 + 软件测试设计规格（[`dc1234ab`](https://github.com/weepwood/MRR/commit/dc1234ab13bc2b6a79096821d28cf80fc53c730c)）
+- `21:15` chore 统一工程规范（[`ab49b5b8`](https://github.com/weepwood/MRR/commit/ab49b5b86f0dd327da5a8c29b04725640555a4d7)）
+- `21:03` test 补充 SystemSettingService 和 ImageUrlService 单元测试（[`0adc8514`](https://github.com/weepwood/MRR/commit/0adc8514979f3eb6951046abad52b27bab0abf75)）
+- `21:02` feat 系统设置后端持久化（[`59e105b7`](https://github.com/weepwood/MRR/commit/59e105b7cb0a0c95122f18dde9701065c0ea05d2)）
+- `20:59` refactor (frontend) 完善 TypeScript 类型安全并统一行尾为 LF（[`1b3bb08b`](https://github.com/weepwood/MRR/commit/1b3bb08be0f99679c347e5fd291f06642c558241)）
+- `20:42` refactor 项目规范化重构（[`cacfc205`](https://github.com/weepwood/MRR/commit/cacfc2055491c23931c6e19b760fd744d81ab7d9)）
 
 ## 2026-06-29
 
-- **新增** `layout` 添加媒体查询支持减少动画偏好设置（[`d7606e6`](https://github.com/weepwood/MRR/commit/d7606e640057ce616256dd9b95a0055b49cb55e1)） — weepwood
-- **新增** 添加数据库设计技能文档和配置服务器URL（[`342da01`](https://github.com/weepwood/MRR/commit/342da0140107fbf567d5d3dfa24fa07c48c76cfe)） — weepwood
-- **新增** 添加手机号字段和权限控制到扫描记录功能（[`4fde080`](https://github.com/weepwood/MRR/commit/4fde08022a5d11c445294557b2c7db61c06b48e8)） — weepwood
-- **新增** `database` 完善PostgreSQL数据库schema设计（[`8f26bd1`](https://github.com/weepwood/MRR/commit/8f26bd16f0c48106dcaae595c32fa0db62b8f746)） — weepwood
-- **修复** `handler` 优化全局异常处理器返回类型（[`368386e`](https://github.com/weepwood/MRR/commit/368386e9261a21d5fbdd8e0c7ab303a471546ccc)） — weepwood
+- `17:23` feat (layout) 添加媒体查询支持减少动画偏好设置（[`d7606e64`](https://github.com/weepwood/MRR/commit/d7606e640057ce616256dd9b95a0055b49cb55e1)）
+- `17:08` feat 添加数据库设计技能文档和配置服务器URL（[`342da014`](https://github.com/weepwood/MRR/commit/342da0140107fbf567d5d3dfa24fa07c48c76cfe)）
+- `13:57` feat 添加手机号字段和权限控制到扫描记录功能（[`4fde0802`](https://github.com/weepwood/MRR/commit/4fde08022a5d11c445294557b2c7db61c06b48e8)）
+- `13:24` feat (database) 完善PostgreSQL数据库schema设计（[`8f26bd16`](https://github.com/weepwood/MRR/commit/8f26bd16f0c48106dcaae595c32fa0db62b8f746)）
+- `13:14` fix (handler) 优化全局异常处理器返回类型（[`368386e9`](https://github.com/weepwood/MRR/commit/368386e9261a21d5fbdd8e0c7ab303a471546ccc)）
 
 ## 2026-06-28
 
-- **新增** 添加档案搜索页面和Nginx安全配置（[`ec3b3a9`](https://github.com/weepwood/MRR/commit/ec3b3a977f81af0cd5211e2773f79cc7f9114165)） — weepwood
-- **重构** `ImageController` 提取图片URL构建逻辑到独立方法（[`1472bb3`](https://github.com/weepwood/MRR/commit/1472bb32168e2f3a34e32e994fced07a48dc3b3b)） — weepwood
-- **新增** `ImageController` 优化图像URL构建逻辑并添加上架号支持（[`a5a9386`](https://github.com/weepwood/MRR/commit/a5a9386077d3f35c924b84731fade0be11854b9a)） — weepwood
-- **测试** `mapper` 修复集成测试配置并改进SQL脚本（[`5daad01`](https://github.com/weepwood/MRR/commit/5daad01d6dd82af5098862b73ae6ac3c12e70883)） — weepwood
-- **新增** `ImageController` 优化图像URL构建逻辑并添加空值检查（[`ce418a7`](https://github.com/weepwood/MRR/commit/ce418a75ae72f953df471694b4079ecf159ed7cb)） — weepwood
-- **新增** `ImageController` 支持6-8位病案号查询并优化数据检索逻辑（[`b4bf81c`](https://github.com/weepwood/MRR/commit/b4bf81c1b2dce4164d8ed0ea1ea720030ec9e7c5)） — weepwood
-- **新增** `ImageController` 优化图像URL动态确定逻辑（[`0732d47`](https://github.com/weepwood/MRR/commit/0732d473f31e957dabc6f53e48a6ba11fcd486a9)） — weepwood
+- `20:10` feat 添加档案搜索页面和Nginx安全配置（[`ec3b3a97`](https://github.com/weepwood/MRR/commit/ec3b3a977f81af0cd5211e2773f79cc7f9114165)）
+- `19:16` refactor (ImageController) 提取图片URL构建逻辑到独立方法（[`1472bb32`](https://github.com/weepwood/MRR/commit/1472bb32168e2f3a34e32e994fced07a48dc3b3b)）
+- `18:12` feat (ImageController) 优化图像URL构建逻辑并添加上架号支持（[`a5a93860`](https://github.com/weepwood/MRR/commit/a5a9386077d3f35c924b84731fade0be11854b9a)）
+- `17:28` test (mapper) 修复集成测试配置并改进SQL脚本（[`5daad01d`](https://github.com/weepwood/MRR/commit/5daad01d6dd82af5098862b73ae6ac3c12e70883)）
+- `17:17` feat (ImageController) 优化图像URL构建逻辑并添加空值检查（[`ce418a75`](https://github.com/weepwood/MRR/commit/ce418a75ae72f953df471694b4079ecf159ed7cb)）
+- `17:13` feat (ImageController) 支持6-8位病案号查询并优化数据检索逻辑（[`b4bf81c1`](https://github.com/weepwood/MRR/commit/b4bf81c1b2dce4164d8ed0ea1ea720030ec9e7c5)）
+- `17:07` feat (ImageController) 优化图像URL动态确定逻辑（[`0732d473`](https://github.com/weepwood/MRR/commit/0732d473f31e957dabc6f53e48a6ba11fcd486a9)）
 
 ## 2026-06-24
 
-- **新增** `patients` 移除患者列表导出Excel功能（[`7d222af`](https://github.com/weepwood/MRR/commit/7d222afe57118f963148a3fc522a37ad9b96cd42)） — weepwood
-- **新增** 添加IP工具类和集成测试（[`61bd1c4`](https://github.com/weepwood/MRR/commit/61bd1c493a38a807d1cda64c7d640f51c3e7f751)） — weepwood
-- **维护** 暂时取消登录认证，前后端均使用模拟管理员用户（[`c306764`](https://github.com/weepwood/MRR/commit/c3067640761256383a7871ab575bc4857e2bef6e)） — weepwood
-- **新增** `config` 添加CORS跨域配置支持（[`c8b74bd`](https://github.com/weepwood/MRR/commit/c8b74bddb946506ad7e8385475d403cfc3459c2b)） — weepwood
-- **维护** `version` bump to v0.0.8-alpha（[`16b4efa`](https://github.com/weepwood/MRR/commit/16b4efa3c121fe12635233679eb57cdec206dd5d)） — weepwood
-- **重构** `statistics/archive` 重构影像档案袋页面组件结构（[`396c485`](https://github.com/weepwood/MRR/commit/396c485ce1b49a546f96ad756eac13a1d75b4ec5)） — weepwood
-- **新增** `statistics-archive` 添加影像批量选择和打印功能（[`a3cfe0c`](https://github.com/weepwood/MRR/commit/a3cfe0c495fafc6e75de7fc7b86e6439ef91708b)） — weepwood
-- **新增** `permissions` 优化管理员角色权限提示样式（[`7769e99`](https://github.com/weepwood/MRR/commit/7769e9919162f339017bcbe095ddc1f7e8801f7d)） — weepwood
-- **新增** `permissions` 新增矩阵视图并优化权限管理界面（[`0a4a92d`](https://github.com/weepwood/MRR/commit/0a4a92dafc3ffb9e7701df7a56c58e97592c295a)） — weepwood
-- **新增** `patients` 新增患者列表导出Excel功能（[`d2208f6`](https://github.com/weepwood/MRR/commit/d2208f64cdbd17c8d78ed0f2c45b9e450693b054)） — weepwood
+- `18:53` feat (patients) 移除患者列表导出Excel功能（[`7d222afe`](https://github.com/weepwood/MRR/commit/7d222afe57118f963148a3fc522a37ad9b96cd42)）
+- `18:40` feat 添加IP工具类和集成测试（[`61bd1c49`](https://github.com/weepwood/MRR/commit/61bd1c493a38a807d1cda64c7d640f51c3e7f751)）
+- `14:09` chore 暂时取消登录认证，前后端均使用模拟管理员用户（[`c3067640`](https://github.com/weepwood/MRR/commit/c3067640761256383a7871ab575bc4857e2bef6e)）
+- `12:02` feat (config) 添加CORS跨域配置支持（[`c8b74bdd`](https://github.com/weepwood/MRR/commit/c8b74bddb946506ad7e8385475d403cfc3459c2b)）
+- `11:03` chore (version) bump to v0.0.8-alpha（[`16b4efa3`](https://github.com/weepwood/MRR/commit/16b4efa3c121fe12635233679eb57cdec206dd5d)）
+- `10:59` refactor (statistics/archive) 重构影像档案袋页面组件结构（[`396c485c`](https://github.com/weepwood/MRR/commit/396c485ce1b49a546f96ad756eac13a1d75b4ec5)）
+- `10:19` feat (statistics-archive) 添加影像批量选择和打印功能（[`a3cfe0c4`](https://github.com/weepwood/MRR/commit/a3cfe0c495fafc6e75de7fc7b86e6439ef91708b)）
+- `09:53` feat (permissions) 优化管理员角色权限提示样式（[`7769e991`](https://github.com/weepwood/MRR/commit/7769e9919162f339017bcbe095ddc1f7e8801f7d)）
+- `09:45` feat (permissions) 新增矩阵视图并优化权限管理界面（[`0a4a92da`](https://github.com/weepwood/MRR/commit/0a4a92dafc3ffb9e7701df7a56c58e97592c295a)）
+- `08:50` feat (patients) 新增患者列表导出Excel功能（[`d2208f64`](https://github.com/weepwood/MRR/commit/d2208f64cdbd17c8d78ed0f2c45b9e450693b054)）
 
 ## 2026-06-23
 
-- **新增** 添加数据库迁移和API限流功能（[`afe10a5`](https://github.com/weepwood/MRR/commit/afe10a574374ae5d5d7c83415688b34d53aaf003)） — weepwood
-- **新增** `auth` 实现管理员权限提升机制（[`e20e288`](https://github.com/weepwood/MRR/commit/e20e2888e8e502887c5b45cbecfc414b8609bda3)） — weepwood
-- **新增** 添加层级权限系统及用户自我保护机制（[`b7908cf`](https://github.com/weepwood/MRR/commit/b7908cfc09be0a19706c2390512c2226558ec5fc)） — weepwood
-- **新增** 更新首页界面并添加审计日志功能（[`c24efcd`](https://github.com/weepwood/MRR/commit/c24efcd104a51d5ed44a9330cd39e6cb892793ea)） — weepwood
-- **重构** `layout` 提取应用配置面板为独立组件（[`4c3266c`](https://github.com/weepwood/MRR/commit/4c3266c34b7da0ff65572ce50fc72d6eee258a03)） — weepwood
-- **新增** `testing` 新增测试中心功能模块（[`e969d91`](https://github.com/weepwood/MRR/commit/e969d91fc6ea242cdbf717d1352f7268514ea8ff)） — weepwood
-- **新增** `oss` 添加文件夹维度的OSS迁移功能（[`2d7fae4`](https://github.com/weepwood/MRR/commit/2d7fae4662eabc667255d6c96cf17392edda7dad)） — weepwood
-- **新增** `ImageController` 新增按病案号和上架号查询图片数据功能（[`e85b2a4`](https://github.com/weepwood/MRR/commit/e85b2a445fb6aa9a0120a118a6d82c4f187d308b)） — weepwood
-- **新增** `api` 新增病案号查询患者信息接口和统计导出功能（[`03d3c20`](https://github.com/weepwood/MRR/commit/03d3c20b0d04e69cdc1366d2d9dccd33b1806d20)） — weepwood
-- **新增** `statistics` 添加bah和sjh查询条件测试用例并优化数据库索引（[`a43e1e9`](https://github.com/weepwood/MRR/commit/a43e1e9e760676dc20dbb9434d54eadac862b2ea)） — weepwood
-- **新增** `statistics` 添加病案号和上架号的模糊匹配功能（[`ece4606`](https://github.com/weepwood/MRR/commit/ece46069c6def2b8a2a14d273ed7742cb7f3bc1f)） — weepwood
-- **新增** `scan` 新增上架号字段支持（[`c7b8dc7`](https://github.com/weepwood/MRR/commit/c7b8dc7024c993263ded16dd79be105acb3f2892)） — weepwood
-- **重构** `statistics-detail` 移除档案袋详情面板和下载功能（[`aa74258`](https://github.com/weepwood/MRR/commit/aa742583295bb91699142be9af8c6e9ac9f32c03)） — weepwood
-- **修复** `audit-images, logs` 添加下拉选择框宽度样式（[`c7d080d`](https://github.com/weepwood/MRR/commit/c7d080d27e6fa622ca9d20a8535f370dcea92187)） — weepwood
-- **合并** Merge codex-ou7vdm: 迁移前端工作流至pnpm（[`68cb13d`](https://github.com/weepwood/MRR/commit/68cb13d713f50e9d164b784131e19f2855092a29)） — weepwood
-- **新增** add medical image access audit page（[`2d7ee81`](https://github.com/weepwood/MRR/commit/2d7ee81571558b3504d327a920c399cf68a27549) · [PR #3](https://github.com/weepwood/MRR/pull/3)） — weepwood
-- **新增** `statistics-detail` 病案明细页面重构，新增档案袋详情面板和下载功能（[`88f3391`](https://github.com/weepwood/MRR/commit/88f3391f544a14857113a7f5a7ffd226587bedf2)） — weepwood
-- **新增** `auth` 用户管理增加筛选和分页功能（[`6ae2307`](https://github.com/weepwood/MRR/commit/6ae2307c1d6d274061fc3b75424e8fd2c3f3651e)） — weepwood
+- `16:47` feat 添加数据库迁移和API限流功能（[`afe10a57`](https://github.com/weepwood/MRR/commit/afe10a574374ae5d5d7c83415688b34d53aaf003)）
+- `15:42` feat (auth) 实现管理员权限提升机制（[`e20e2888`](https://github.com/weepwood/MRR/commit/e20e2888e8e502887c5b45cbecfc414b8609bda3)）
+- `15:07` feat 添加层级权限系统及用户自我保护机制（[`b7908cfc`](https://github.com/weepwood/MRR/commit/b7908cfc09be0a19706c2390512c2226558ec5fc)）
+- `14:13` feat 更新首页界面并添加审计日志功能（[`c24efcd1`](https://github.com/weepwood/MRR/commit/c24efcd104a51d5ed44a9330cd39e6cb892793ea)）
+- `14:01` refactor (layout) 提取应用配置面板为独立组件（[`4c3266c3`](https://github.com/weepwood/MRR/commit/4c3266c34b7da0ff65572ce50fc72d6eee258a03)）
+- `13:48` feat (testing) 新增测试中心功能模块（[`e969d91f`](https://github.com/weepwood/MRR/commit/e969d91fc6ea242cdbf717d1352f7268514ea8ff)）
+- `13:26` feat (oss) 添加文件夹维度的OSS迁移功能（[`2d7fae46`](https://github.com/weepwood/MRR/commit/2d7fae4662eabc667255d6c96cf17392edda7dad)）
+- `12:22` feat (ImageController) 新增按病案号和上架号查询图片数据功能（[`e85b2a44`](https://github.com/weepwood/MRR/commit/e85b2a445fb6aa9a0120a118a6d82c4f187d308b)）
+- `11:48` feat (api) 新增病案号查询患者信息接口和统计导出功能（[`03d3c20b`](https://github.com/weepwood/MRR/commit/03d3c20b0d04e69cdc1366d2d9dccd33b1806d20)）
+- `11:34` feat (statistics) 添加bah和sjh查询条件测试用例并优化数据库索引（[`a43e1e9e`](https://github.com/weepwood/MRR/commit/a43e1e9e760676dc20dbb9434d54eadac862b2ea)）
+- `11:27` feat (statistics) 添加病案号和上架号的模糊匹配功能（[`ece46069`](https://github.com/weepwood/MRR/commit/ece46069c6def2b8a2a14d273ed7742cb7f3bc1f)）
+- `11:14` feat (scan) 新增上架号字段支持（[`c7b8dc70`](https://github.com/weepwood/MRR/commit/c7b8dc7024c993263ded16dd79be105acb3f2892)）
+- `10:56` refactor (statistics-detail) 移除档案袋详情面板和下载功能（[`aa742583`](https://github.com/weepwood/MRR/commit/aa742583295bb91699142be9af8c6e9ac9f32c03)）
+- `10:52` fix (audit-images, logs) 添加下拉选择框宽度样式（[`c7d080d2`](https://github.com/weepwood/MRR/commit/c7d080d27e6fa622ca9d20a8535f370dcea92187)）
+- `10:37` merge Merge codex-ou7vdm: 迁移前端工作流至pnpm（[`68cb13d7`](https://github.com/weepwood/MRR/commit/68cb13d713f50e9d164b784131e19f2855092a29)）
+- `10:36` feat (workflow) 迁移前端项目构建工具从npm到pnpm（[`f65f3cff`](https://github.com/weepwood/MRR/commit/f65f3cffe671d6b1389ca9302d329d03bacac0dd)）
+- `10:31` feat add medical image access audit page（[`2d7ee815`](https://github.com/weepwood/MRR/commit/2d7ee81571558b3504d327a920c399cf68a27549) · [PR #3](https://github.com/weepwood/MRR/pull/3)）
+- `10:29` feat add medical image access audit logs（[`70b9ff07`](https://github.com/weepwood/MRR/commit/70b9ff072479ac83b27a67ef0a68aeddf9fbbf53)）
+- `09:31` feat (statistics-detail) 病案明细页面重构，新增档案袋详情面板和下载功能（[`88f3391f`](https://github.com/weepwood/MRR/commit/88f3391f544a14857113a7f5a7ffd226587bedf2)）
+- `09:07` feat (auth) 用户管理增加筛选和分页功能（[`6ae2307c`](https://github.com/weepwood/MRR/commit/6ae2307c1d6d274061fc3b75424e8fd2c3f3651e)）
 
 ## 2026-06-22
 
-- **新增** 添加Prometheus监控和告警配置（[`c5ac63b`](https://github.com/weepwood/MRR/commit/c5ac63b20e0484c4705b07c12078cde2c5e94a70)） — weepwood
-- **新增** `auth` 添加用户权限控制、登出功能和密码安全增强（[`b4edc8e`](https://github.com/weepwood/MRR/commit/b4edc8e19233d1f49db6232108685221affcdea7)） — weepwood
-- **新增** `cache` 更新缓存配置并添加缓存清除注解（[`9b4f4ab`](https://github.com/weepwood/MRR/commit/9b4f4ab325ef55c26a507c11039095aa407ef160)） — weepwood
+- `21:51` feat 添加Prometheus监控和告警配置（[`c5ac63b2`](https://github.com/weepwood/MRR/commit/c5ac63b20e0484c4705b07c12078cde2c5e94a70)）
+- `21:07` feat (auth) 添加用户权限控制、登出功能和密码安全增强（[`b4edc8e1`](https://github.com/weepwood/MRR/commit/b4edc8e19233d1f49db6232108685221affcdea7)）
+- `20:27` feat (cache) 更新缓存配置并添加缓存清除注解（[`9b4f4ab3`](https://github.com/weepwood/MRR/commit/9b4f4ab325ef55c26a507c11039095aa407ef160)）
 
 ## 2026-05-06
 
-- **新增** `log` 添加用户名字段到访问日志功能（[`75e2b25`](https://github.com/weepwood/MRR/commit/75e2b253aecb8dad74a96924fde112dc41d60aca)） — weepwood
-- **新增** `auth` 添加用户注册功能（[`c9f6563`](https://github.com/weepwood/MRR/commit/c9f65632d54072c594f3af27c49ae40478b2bd61)） — weepwood
+- `22:37` feat (log) 添加用户名字段到访问日志功能（[`75e2b253`](https://github.com/weepwood/MRR/commit/75e2b253aecb8dad74a96924fde112dc41d60aca)）
+- `21:42` feat (auth) 添加用户注册功能（[`c9f65632`](https://github.com/weepwood/MRR/commit/c9f65632d54072c594f3af27c49ae40478b2bd61)）
 
 ## 2026-05-01
 
-- **维护** `project` 更新 Claude AI 权限配置并添加项目文档（[`15e442b`](https://github.com/weepwood/MRR/commit/15e442b3500ac1ad471f61835e89907541199bde)） — weepwood
-- **新增** `.vitepress` 更新文档站点配置并添加自定义样式（[`21cbd3b`](https://github.com/weepwood/MRR/commit/21cbd3be8ab482cf10ee58a5f7990b75c963c0bf)） — weepwood
-- **文档** `DOCUMENTATION` 添加工程规范文档和更新设计文档（[`2a523a7`](https://github.com/weepwood/MRR/commit/2a523a74ee9d9b568eecaa0927d5ec1bd97038ef)） — weepwood
-- **新增** 新增项目文档和后端单元测试覆盖（[`136858a`](https://github.com/weepwood/MRR/commit/136858ae545959f4ab03a207bcb23ba73e6ccaec)） — weepwood
-- **重构** `auth` 移除用户认证服务中的缓存注解（[`ee2fe73`](https://github.com/weepwood/MRR/commit/ee2fe731a97d6b0c5adda656ae989570a94901bb)） — weepwood
-- **测试** `service` 完善AuthServiceImpl和Result测试用例（[`25a5fdd`](https://github.com/weepwood/MRR/commit/25a5fdd82a5db83c8cc383c529a632e972b6fbc4)） — weepwood
-- **文档** 添加MRR医疗影像记录管理系统产品需求文档（[`0c401ad`](https://github.com/weepwood/MRR/commit/0c401ad48acf03ca68500113eb6777efaf563119)） — weepwood
-- **文档** 添加项目文档和维护指南（[`afeec91`](https://github.com/weepwood/MRR/commit/afeec9151d7ec840c446bdd678cd0bac23334c10)） — weepwood
+- `22:14` chore (project) 更新 Claude AI 权限配置并添加项目文档（[`15e442b3`](https://github.com/weepwood/MRR/commit/15e442b3500ac1ad471f61835e89907541199bde)）
+- `21:27` feat (.vitepress) 更新文档站点配置并添加自定义样式（[`21cbd3be`](https://github.com/weepwood/MRR/commit/21cbd3be8ab482cf10ee58a5f7990b75c963c0bf)）
+- `19:58` docs (DOCUMENTATION) 添加工程规范文档和更新设计文档（[`2a523a74`](https://github.com/weepwood/MRR/commit/2a523a74ee9d9b568eecaa0927d5ec1bd97038ef)）
+- `18:38` feat 新增项目文档和后端单元测试覆盖（[`136858ae`](https://github.com/weepwood/MRR/commit/136858ae545959f4ab03a207bcb23ba73e6ccaec)）
+- `18:03` refactor (auth) 移除用户认证服务中的缓存注解（[`ee2fe731`](https://github.com/weepwood/MRR/commit/ee2fe731a97d6b0c5adda656ae989570a94901bb)）
+- `17:55` test (service) 完善AuthServiceImpl和Result测试用例（[`25a5fdd8`](https://github.com/weepwood/MRR/commit/25a5fdd82a5db83c8cc383c529a632e972b6fbc4)）
+- `17:44` docs 添加MRR医疗影像记录管理系统产品需求文档（[`0c401ad4`](https://github.com/weepwood/MRR/commit/0c401ad48acf03ca68500113eb6777efaf563119)）
+- `17:34` docs 添加项目文档和维护指南（[`afeec915`](https://github.com/weepwood/MRR/commit/afeec9151d7ec840c446bdd678cd0bac23334c10)）
 
 ## 2026-04-13
 
-- **新增** `ci` 添加CI/CD流水线和性能压测工作流（[`8f7a2bd`](https://github.com/weepwood/MRR/commit/8f7a2bdda5da39142d44bdb57e7eb4df73faaf5c)） — weepwood
-- **新增** 添加性能优化配置和缓存机制（[`edcf7ec`](https://github.com/weepwood/MRR/commit/edcf7ec7486116b96707e10f2cf210c3b2d31b9d)） — weepwood
-- **重构** `common` 优化Result类设计并移除分页功能（[`54545de`](https://github.com/weepwood/MRR/commit/54545deba44f7e51ca186267263cdbe429d3ed88)） — weepwood
+- `22:23` feat (ci) 添加CI/CD流水线和性能压测工作流（[`8f7a2bdd`](https://github.com/weepwood/MRR/commit/8f7a2bdda5da39142d44bdb57e7eb4df73faaf5c)）
+- `21:58` feat 添加性能优化配置和缓存机制（[`edcf7ec7`](https://github.com/weepwood/MRR/commit/edcf7ec7486116b96707e10f2cf210c3b2d31b9d)）
+- `21:45` refactor (common) 优化Result类设计并移除分页功能（[`54545deb`](https://github.com/weepwood/MRR/commit/54545deba44f7e51ca186267263cdbe429d3ed88)）
 
 ## 2026-04-12
 
-- **新增** `前端` 添加favicon和设计系统文档（[`b879866`](https://github.com/weepwood/MRR/commit/b879866ec770a0911bcc5a6a07e5a6e01ce3caaa)） — weepwood
+- `14:35` feat (前端) 添加favicon和设计系统文档（[`b879866e`](https://github.com/weepwood/MRR/commit/b879866ec770a0911bcc5a6a07e5a6e01ce3caaa)）
 
 ## 2026-04-10
 
-- **维护** `utils` 修正AES工具类注释中的数字格式（[`7a6670f`](https://github.com/weepwood/MRR/commit/7a6670f4cede9a9df9519f5310844d669cc10f18)） — weepwood
-- **重构** `components` 移除AccountButton中的eventBus依赖（[`1be0b1a`](https://github.com/weepwood/MRR/commit/1be0b1adf80cbee98c5f94a6846eba4119f23ec3)） — weepwood
-- **重构** `SearchController` 标记getBAHByID接口为废弃状态（[`b0901ae`](https://github.com/weepwood/MRR/commit/b0901aeabcb87d1f3ab06440aa5ce42cc65c22b7)） — weepwood
-- **文档** 添加集成测试文档和修复说明（[`3d67291`](https://github.com/weepwood/MRR/commit/3d672911543778907b14cc6b35f8e44da9dc5512)） — weepwood
-- **重构** `api` 统一API路由前缀并调整Java版本配置（[`27ac1f2`](https://github.com/weepwood/MRR/commit/27ac1f2a878411ae62fc3e75c68704b363d8dbdd)） — weepwood
-- **重构** `controller` 统一API响应类型并优化返回值结构（[`cb10094`](https://github.com/weepwood/MRR/commit/cb1009401e28454fb1de902c52a79b68a30f7831)） — weepwood
-- **新增** `filter` 添加请求缓存过滤器支持请求体日志记录（[`8bab1ea`](https://github.com/weepwood/MRR/commit/8bab1eacd95b1bf23494b48b4b793d247b7bc738)） — weepwood
-- **重构** `ImageController` 使用logger替换System.out.println（[`c09c29d`](https://github.com/weepwood/MRR/commit/c09c29df2aec53ccf16d4e887ba3ae631ab6367d)） — weepwood
-- **新增** 统一响应结果封装类增强及分页功能重构（[`1eaa1b4`](https://github.com/weepwood/MRR/commit/1eaa1b45f6cecaa924676c6e381649dddf50f5ba)） — weepwood
-- **重构** `dto` 移除多余的setter方法并优化数据传输对象（[`c94638d`](https://github.com/weepwood/MRR/commit/c94638d26ef9b862bab5cc41c1862f0fc3dc9263)） — weepwood
+- `23:37` chore (utils) 修正AES工具类注释中的数字格式（[`7a6670f4`](https://github.com/weepwood/MRR/commit/7a6670f4cede9a9df9519f5310844d669cc10f18)）
+- `23:20` refactor (components) 移除AccountButton中的eventBus依赖（[`1be0b1ad`](https://github.com/weepwood/MRR/commit/1be0b1adf80cbee98c5f94a6846eba4119f23ec3)）
+- `23:15` refactor (SearchController) 标记getBAHByID接口为废弃状态（[`b0901aea`](https://github.com/weepwood/MRR/commit/b0901aeabcb87d1f3ab06440aa5ce42cc65c22b7)）
+- `22:57` docs 添加集成测试文档和修复说明（[`3d672911`](https://github.com/weepwood/MRR/commit/3d672911543778907b14cc6b35f8e44da9dc5512)）
+- `22:07` refactor (api) 统一API路由前缀并调整Java版本配置（[`27ac1f2a`](https://github.com/weepwood/MRR/commit/27ac1f2a878411ae62fc3e75c68704b363d8dbdd)）
+- `21:32` refactor (controller) 统一API响应类型并优化返回值结构（[`cb100940`](https://github.com/weepwood/MRR/commit/cb1009401e28454fb1de902c52a79b68a30f7831)）
+- `21:15` feat (filter) 添加请求缓存过滤器支持请求体日志记录（[`8bab1eac`](https://github.com/weepwood/MRR/commit/8bab1eacd95b1bf23494b48b4b793d247b7bc738)）
+- `20:52` refactor (ImageController) 使用logger替换System.out.println（[`c09c29df`](https://github.com/weepwood/MRR/commit/c09c29df2aec53ccf16d4e887ba3ae631ab6367d)）
+- `20:35` feat 统一响应结果封装类增强及分页功能重构（[`1eaa1b45`](https://github.com/weepwood/MRR/commit/1eaa1b45f6cecaa924676c6e381649dddf50f5ba)）
+- `20:11` refactor (dto) 移除多余的setter方法并优化数据传输对象（[`c94638d2`](https://github.com/weepwood/MRR/commit/c94638d26ef9b862bab5cc41c1862f0fc3dc9263)）
 
 ## 2026-04-09
 
-- **重构** `java` 使用Lombok注解简化getter/setter方法（[`036b8c3`](https://github.com/weepwood/MRR/commit/036b8c3a7bcb0566a9e37dc33622496f473beaa1)） — weepwood
-- **新增** `pom` 升级Spring Boot版本并重构依赖管理（[`5a2adca`](https://github.com/weepwood/MRR/commit/5a2adca6d79e5ee42c03a77c3553f2e333f91ff3)） — weepwood
-- **重构** `api` 调整API模块导入顺序（[`e6345ac`](https://github.com/weepwood/MRR/commit/e6345acbeb3d0cf243c58a695dedc495b493f478)） — weepwood
+- `22:02` refactor (java) 使用Lombok注解简化getter/setter方法（[`036b8c3a`](https://github.com/weepwood/MRR/commit/036b8c3a7bcb0566a9e37dc33622496f473beaa1)）
+- `21:39` feat (pom) 升级Spring Boot版本并重构依赖管理（[`5a2adca6`](https://github.com/weepwood/MRR/commit/5a2adca6d79e5ee42c03a77c3553f2e333f91ff3)）
+- `21:34` refactor (api) 调整API模块导入顺序（[`e6345acb`](https://github.com/weepwood/MRR/commit/e6345acbeb3d0cf243c58a695dedc495b493f478)）
 
 ## 2026-04-04
 
-- **维护** `migration` clean up docs and config, add .qoder to gitignore（[`2348350`](https://github.com/weepwood/MRR/commit/23483507747afb4fa4c8c00539748cd63b3d13ac)） — weepwood
-- **维护** 移除前端项目及相关资源文件（[`2b3919d`](https://github.com/weepwood/MRR/commit/2b3919d9f41061af798fc73342cac9872e04539e)） — weepwood
-- **其他** `views` 调整多个视图的样式细节（[`a96a133`](https://github.com/weepwood/MRR/commit/a96a133dec34f324a00bb94a399509d2023ac73b)） — weepwood
-- **重构** `router` 优化路由标题简化显示（[`eb6878f`](https://github.com/weepwood/MRR/commit/eb6878f7ef6f6f24e2a60b009ac6cbe38e48589f)） — weepwood
-- **新增** `oss` 添加上传文件完整性验证功能（[`60c324a`](https://github.com/weepwood/MRR/commit/60c324ad614836d20bf3b2fc6f499bbacf027daf)） — weepwood
-- **新增** `oss` 为迁移成功记录生成预签名URL并优化显示（[`618ec3f`](https://github.com/weepwood/MRR/commit/618ec3f02c90b919006b6c93bb92ba75a0fe4226)） — weepwood
-- **文档** `database` 补充数据库初始化手动执行指南（[`ff7a226`](https://github.com/weepwood/MRR/commit/ff7a2265ee50b30d061f8c22cd25827687fae9d4)） — weepwood
-- **新增** implement OSS image migration system with database schema updates and management APIs（[`9d17bb3`](https://github.com/weepwood/MRR/commit/9d17bb36748694b1747bb8b611b0b9d390cebfdd)） — weepwood
-- **新增** implement scan entity, mapper, and controller for medical record management system（[`a8261e9`](https://github.com/weepwood/MRR/commit/a8261e94b500f3ad1ce300272dbd8ea599bd7f75)） — weepwood
-- **新增** `types` 添加.vue文件的模块声明（[`1b80b7f`](https://github.com/weepwood/MRR/commit/1b80b7f25403ef66247015620603c2fe9acbebd0)） — weepwood
-- **重构** `frontend` 优化接口调用和代码结构，调整类型定义及参数处理（[`b477402`](https://github.com/weepwood/MRR/commit/b477402fb1db4850104a85fbe742f8ad061de8aa)） — weepwood
-- **新增** `migration` 实现本地图片迁移到OSS的完整方案（[`19ac814`](https://github.com/weepwood/MRR/commit/19ac8149917fc66cbdc2a0ced0a4c84eac78af9d)） — weepwood
-- **文档** `rep-detail` 添加统计详情页面响应式设计文档（[`e27768a`](https://github.com/weepwood/MRR/commit/e27768ab002efb5156324cfb17f3a0c3eccad788)） — weepwood
-- **新增** `router` 添加病案统计页面路由（[`f5ecc75`](https://github.com/weepwood/MRR/commit/f5ecc756fa7097cdb20ef041e983b326ba2db6df)） — weepwood
-- **其他** `statistics-detail` 优化筛选栏布局与响应式样式（[`83d833d`](https://github.com/weepwood/MRR/commit/83d833dea9fec459daea9adfefd6ed848013b6c2)） — weepwood
-- **文档** `frontend` 添加前端组件与仪表板详细文档（[`27812c3`](https://github.com/weepwood/MRR/commit/27812c37c6703ee2fbda59b618075b0a649f1f6e)） — weepwood
-- **新增** `router` 将路由历史模式从hash改为history并添加病案查询功能（[`6bcf26e`](https://github.com/weepwood/MRR/commit/6bcf26ec45116fc5b102958f33b406998f417c04)） — weepwood
-- **新增** `scanImg` 新增病案图像查询页面及相关功能（[`5334597`](https://github.com/weepwood/MRR/commit/53345970c81d8d3c23fac1b8ef0ae98305315629)） — weepwood
-- **新增** `api` 新增病案记录查询和单张图片获取功能（[`d971f84`](https://github.com/weepwood/MRR/commit/d971f84012bcaaa6d8e1bfece642237828d3adf2)） — weepwood
-- **其他** `layouts` 添加页面主容器内边距（[`c851308`](https://github.com/weepwood/MRR/commit/c851308658b399613df0488b9cd0fcfacc9332c1)） — weepwood
-- **其他** `router` 修改路由图标样式为 outlined 版本（[`902c0aa`](https://github.com/weepwood/MRR/commit/902c0aa5778cf7863b17706426dc43f8947f65f7)） — weepwood
-- **新增** `statistics` 新增统计明细页面并重构路由配置（[`0d0dee7`](https://github.com/weepwood/MRR/commit/0d0dee7f716786302714bd551e892c0a127d4236)） — weepwood
-- **新增** `api` 新增及完善多个后端接口模块（[`6b47e53`](https://github.com/weepwood/MRR/commit/6b47e53d2da360458563b78e49de7d88c2a46960)） — weepwood
-- **其他** 统一代码格式并优化导入顺序（[`2de2731`](https://github.com/weepwood/MRR/commit/2de2731242d61e9f2da7e6db8660eee2797ec93c)） — weepwood
-- **维护** `project` 将项目从Fantastic-admin重命名为MRR-ADMIN（[`d96b5dd`](https://github.com/weepwood/MRR/commit/d96b5dd4d425d5511e3dcd8b5bed036357c085ce)） — weepwood
-- **新增** `api` 更新日志API端点并增强状态处理逻辑（[`b03b20b`](https://github.com/weepwood/MRR/commit/b03b20bbb42495fd02f464093daec51ae59c4c37)） — weepwood
-- **文档** 删除前端管理页面迁移上线部署方案文档（[`9de9532`](https://github.com/weepwood/MRR/commit/9de95326b420a58d410a0c26fec080f0a36deaca)） — weepwood
-- **新增** `api` 更新API基础URL配置和请求头认证方式（[`b996a4e`](https://github.com/weepwood/MRR/commit/b996a4e8e05df7fa471254ce1d2576f1804f5d30)） — weepwood
+- `20:19` chore (migration) clean up docs and config, add .qoder to gitignore（[`23483507`](https://github.com/weepwood/MRR/commit/23483507747afb4fa4c8c00539748cd63b3d13ac)）
+- `15:58` chore 移除前端项目及相关资源文件（[`2b3919d9`](https://github.com/weepwood/MRR/commit/2b3919d9f41061af798fc73342cac9872e04539e)）
+- `15:57` style (views) 调整多个视图的样式细节（[`a96a133d`](https://github.com/weepwood/MRR/commit/a96a133dec34f324a00bb94a399509d2023ac73b)）
+- `15:21` refactor (router) 优化路由标题简化显示（[`eb6878f7`](https://github.com/weepwood/MRR/commit/eb6878f7ef6f6f24e2a60b009ac6cbe38e48589f)）
+- `15:06` feat (oss) 添加上传文件完整性验证功能（[`60c324ad`](https://github.com/weepwood/MRR/commit/60c324ad614836d20bf3b2fc6f499bbacf027daf)）
+- `14:48` feat (oss) 为迁移成功记录生成预签名URL并优化显示（[`618ec3f0`](https://github.com/weepwood/MRR/commit/618ec3f02c90b919006b6c93bb92ba75a0fe4226)）
+- `14:02` docs (database) 补充数据库初始化手动执行指南（[`ff7a2265`](https://github.com/weepwood/MRR/commit/ff7a2265ee50b30d061f8c22cd25827687fae9d4)）
+- `13:55` feat implement OSS image migration system with database schema updates and management APIs（[`9d17bb36`](https://github.com/weepwood/MRR/commit/9d17bb36748694b1747bb8b611b0b9d390cebfdd)）
+- `13:32` feat implement scan entity, mapper, and controller for medical record management system（[`a8261e94`](https://github.com/weepwood/MRR/commit/a8261e94b500f3ad1ce300272dbd8ea599bd7f75)）
+- `13:12` feat (types) 添加.vue文件的模块声明（[`1b80b7f2`](https://github.com/weepwood/MRR/commit/1b80b7f25403ef66247015620603c2fe9acbebd0)）
+- `12:46` refactor (frontend) 优化接口调用和代码结构，调整类型定义及参数处理（[`b477402f`](https://github.com/weepwood/MRR/commit/b477402fb1db4850104a85fbe742f8ad061de8aa)）
+- `11:14` feat (migration) 实现本地图片迁移到OSS的完整方案（[`19ac8149`](https://github.com/weepwood/MRR/commit/19ac8149917fc66cbdc2a0ced0a4c84eac78af9d)）
+- `10:59` docs (rep-detail) 添加统计详情页面响应式设计文档（[`e27768ab`](https://github.com/weepwood/MRR/commit/e27768ab002efb5156324cfb17f3a0c3eccad788)）
+- `10:20` feat (router) 添加病案统计页面路由（[`f5ecc756`](https://github.com/weepwood/MRR/commit/f5ecc756fa7097cdb20ef041e983b326ba2db6df)）
+- `10:12` style (statistics-detail) 优化筛选栏布局与响应式样式（[`83d833de`](https://github.com/weepwood/MRR/commit/83d833dea9fec459daea9adfefd6ed848013b6c2)）
+- `10:08` docs (frontend) 添加前端组件与仪表板详细文档（[`27812c37`](https://github.com/weepwood/MRR/commit/27812c37c6703ee2fbda59b618075b0a649f1f6e)）
+- `09:56` feat (router) 将路由历史模式从hash改为history并添加病案查询功能（[`6bcf26ec`](https://github.com/weepwood/MRR/commit/6bcf26ec45116fc5b102958f33b406998f417c04)）
+- `09:49` feat (scanImg) 新增病案图像查询页面及相关功能（[`53345970`](https://github.com/weepwood/MRR/commit/53345970c81d8d3c23fac1b8ef0ae98305315629)）
+- `09:35` feat (api) 新增病案记录查询和单张图片获取功能（[`d971f840`](https://github.com/weepwood/MRR/commit/d971f84012bcaaa6d8e1bfece642237828d3adf2)）
+- `09:16` style (layouts) 添加页面主容器内边距（[`c8513086`](https://github.com/weepwood/MRR/commit/c851308658b399613df0488b9cd0fcfacc9332c1)）
+- `09:02` style (router) 修改路由图标样式为 outlined 版本（[`902c0aa5`](https://github.com/weepwood/MRR/commit/902c0aa5778cf7863b17706426dc43f8947f65f7)）
+- `08:58` feat (statistics) 新增统计明细页面并重构路由配置（[`0d0dee7f`](https://github.com/weepwood/MRR/commit/0d0dee7f716786302714bd551e892c0a127d4236)）
+- `08:42` feat (api) 新增及完善多个后端接口模块（[`6b47e53d`](https://github.com/weepwood/MRR/commit/6b47e53d2da360458563b78e49de7d88c2a46960)）
+- `01:45` style 统一代码格式并优化导入顺序（[`2de27312`](https://github.com/weepwood/MRR/commit/2de2731242d61e9f2da7e6db8660eee2797ec93c)）
+- `01:29` chore (project) 将项目从Fantastic-admin重命名为MRR-ADMIN（[`d96b5dd4`](https://github.com/weepwood/MRR/commit/d96b5dd4d425d5511e3dcd8b5bed036357c085ce)）
+- `01:07` feat (api) 更新日志API端点并增强状态处理逻辑（[`b03b20bb`](https://github.com/weepwood/MRR/commit/b03b20bbb42495fd02f464093daec51ae59c4c37)）
+- `00:59` docs 删除前端管理页面迁移上线部署方案文档（[`9de95326`](https://github.com/weepwood/MRR/commit/9de95326b420a58d410a0c26fec080f0a36deaca)）
+- `00:14` feat (api) 更新API基础URL配置和请求头认证方式（[`b996a4e8`](https://github.com/weepwood/MRR/commit/b996a4e8e05df7fa471254ce1d2576f1804f5d30)）
 
 ## 2026-04-03
 
-- **新增** overhaul frontend migration plan for improved clarity and structure（[`3ff039a`](https://github.com/weepwood/MRR/commit/3ff039add56ac3f8571aeeed7a9306815f40e298)） — weepwood
-- **新增** 初始化前端项目基础结构和功能模块（[`1a4b573`](https://github.com/weepwood/MRR/commit/1a4b573f985e85088f5a61f56bdcb30914067005)） — weepwood
-- **新增** 添加多个技能和规则文件，完善前端仓库组件类型声明（[`782e329`](https://github.com/weepwood/MRR/commit/782e32920130702b7e562ca9752dc56350d09ef1)） — weepwood
+- `23:23` feat overhaul frontend migration plan for improved clarity and structure（[`3ff039ad`](https://github.com/weepwood/MRR/commit/3ff039add56ac3f8571aeeed7a9306815f40e298)）
+- `22:48` feat 初始化前端项目基础结构和功能模块（[`1a4b573f`](https://github.com/weepwood/MRR/commit/1a4b573f985e85088f5a61f56bdcb30914067005)）
+- `21:34` feat 添加多个技能和规则文件，完善前端仓库组件类型声明（[`782e3292`](https://github.com/weepwood/MRR/commit/782e32920130702b7e562ca9752dc56350d09ef1)）
 
 ## 2026-03-30
 
-- **维护** `build` 添加 .DS\_Store 到忽略文件（[`1e372ee`](https://github.com/weepwood/MRR/commit/1e372eed7342002afb3cb21edb9aface9a447063)） — weepwood
-- **重构** `config` 移除未使用的ESLint配置并更新nginx端口（[`13a75e7`](https://github.com/weepwood/MRR/commit/13a75e73b311281bf5777fd39feb6307d037b4ac)） — weepwood
+- `22:40` chore (build) 添加 .DS\_Store 到忽略文件（[`1e372eed`](https://github.com/weepwood/MRR/commit/1e372eed7342002afb3cb21edb9aface9a447063)）
+- `22:23` refactor (config) 移除未使用的ESLint配置并更新nginx端口（[`13a75e73`](https://github.com/weepwood/MRR/commit/13a75e73b311281bf5777fd39feb6307d037b4ac)）
 
 ## 2026-03-29
 
-- **新增** implement Element Plus styling, session management utilities, and admin dashboard components（[`c771aa8`](https://github.com/weepwood/MRR/commit/c771aa855888c0d0e6f6f0b850c53803c4919418)） — weepwood
-- **新增** `admin-dashboard` 优化动画性能并精简过渡效果（[`e0c9025`](https://github.com/weepwood/MRR/commit/e0c90252450ec90060d7d3e350c921132afd1ebb)） — weepwood
-- **新增** implement admin dashboard and centralized backend testing suite with integrated diagnostic tools（[`a9ddab0`](https://github.com/weepwood/MRR/commit/a9ddab0cd887481d241cff90b45676511864983a)） — weepwood
-- **新增** implement core backend modules including search, statistics, pressure testing, and authentication services（[`188b6b9`](https://github.com/weepwood/MRR/commit/188b6b95f1f890eb38db1e123096f0e8f1e39d4c)） — weepwood
-- **新增** initialize frontend project with Vue 3, Vite, Pinia, Vue Router, and API service modules（[`70fed6f`](https://github.com/weepwood/MRR/commit/70fed6f53bdadf9a852f486278d15a1682930804)） — weepwood
-- **新增** implement admin dashboard layout with navigation, animation utilities, and testing view module（[`a69d3c8`](https://github.com/weepwood/MRR/commit/a69d3c88369833502c4188706b7cbdfc7b84bcff)） — weepwood
-- **新增** implement admin dashboard layout with navigation, statistics view, and animated counter components（[`7cbf62e`](https://github.com/weepwood/MRR/commit/7cbf62e6787c65540594ca5d51dbca7d92d6765b)） — weepwood
-- **新增** implement unified design token system and integrate with Element Plus theme variables（[`0da0135`](https://github.com/weepwood/MRR/commit/0da0135e97b171e70ec8c4b8fc8afa0b77b4e106)） — weepwood
-- **合并** Merge branch 'main' of https://github.com/weepwood/MRR（[`4ef61ac`](https://github.com/weepwood/MRR/commit/4ef61aceabfb49b1011af8d4f55567286f12a995)） — weepwood
-- **新增** initialize frontend project with Vue 3, Element Plus, and custom theme integration（[`328ed1f`](https://github.com/weepwood/MRR/commit/328ed1f17dfe65a5652aae3b7270a74082a065e5)） — weepwood
-- **CI** add GitHub Action to auto-build on version updates（[`61fac1f`](https://github.com/weepwood/MRR/commit/61fac1f19099d379c30188c2b84ad7043778ccc2) · [PR #1](https://github.com/weepwood/MRR/pull/1)） — weepwood
-- **新增** `login` 优化登录页面交互体验并修复按钮状态问题（[`0027f20`](https://github.com/weepwood/MRR/commit/0027f207cf0ae4dc3f2b4609a401d25a5f5a392d)） — weepwood
-- **新增** `login` 添加GSAP动画效果并升级依赖版本（[`9ee7085`](https://github.com/weepwood/MRR/commit/9ee7085996710ba5242ebe30ab952afff46688fb)） — weepwood
-- **新增** `Login` 添加登录页面背景效果和优化样式（[`8e2c014`](https://github.com/weepwood/MRR/commit/8e2c014fe241f327768bb2fde53aafe2a8d65f03)） — weepwood
-- **其他** `admin-dashboard` 移除侧边栏边框样式（[`7ad8f73`](https://github.com/weepwood/MRR/commit/7ad8f7303efdff3d7e8eda88ef2e91aef1f404d6)） — weepwood
-- **维护** `release` 升级版本号至0.0.7并移除过时的HTML文件（[`2827bb8`](https://github.com/weepwood/MRR/commit/2827bb8b0c9ff053fedcdfc7a31ac4d3de9bdbc6)） — weepwood
-- **新增** 添加 TypeScript 支持并配置 ESLint（[`0113b66`](https://github.com/weepwood/MRR/commit/0113b66726abd65e5dad62d45c8afe859363f2a3)） — weepwood
-- **新增** `config` 排除静态资源路径的日志记录（[`1302978`](https://github.com/weepwood/MRR/commit/130297848f0bc30fc162e5167175e71600287a66)） — weepwood
-- **新增** `css` 添加动画效果和悬停提升动效（[`8172f0f`](https://github.com/weepwood/MRR/commit/8172f0fd5b2a1b2f66db76ad84dea801ece8f7d5)） — weepwood
-- **文档** 更新文档描述和添加当前版本使用说明（[`09dd3db`](https://github.com/weepwood/MRR/commit/09dd3db1e2db4909783d9a56306f2078a308ee8c)） — weepwood
+- `16:28` feat implement Element Plus styling, session management utilities, and admin dashboard components（[`c771aa85`](https://github.com/weepwood/MRR/commit/c771aa855888c0d0e6f6f0b850c53803c4919418)）
+- `16:10` feat (admin-dashboard) 优化动画性能并精简过渡效果（[`e0c90252`](https://github.com/weepwood/MRR/commit/e0c90252450ec90060d7d3e350c921132afd1ebb)）
+- `16:02` feat implement admin dashboard and centralized backend testing suite with integrated diagnostic tools（[`a9ddab0c`](https://github.com/weepwood/MRR/commit/a9ddab0cd887481d241cff90b45676511864983a)）
+- `15:35` feat implement core backend modules including search, statistics, pressure testing, and authentication services（[`188b6b95`](https://github.com/weepwood/MRR/commit/188b6b95f1f890eb38db1e123096f0e8f1e39d4c)）
+- `15:12` feat initialize frontend project with Vue 3, Vite, Pinia, Vue Router, and API service modules（[`70fed6f5`](https://github.com/weepwood/MRR/commit/70fed6f53bdadf9a852f486278d15a1682930804)）
+- `14:53` feat implement admin dashboard layout with navigation, animation utilities, and testing view module（[`a69d3c88`](https://github.com/weepwood/MRR/commit/a69d3c88369833502c4188706b7cbdfc7b84bcff)）
+- `14:38` feat implement admin dashboard layout with navigation, statistics view, and animated counter components（[`7cbf62e6`](https://github.com/weepwood/MRR/commit/7cbf62e6787c65540594ca5d51dbca7d92d6765b)）
+- `14:20` feat implement unified design token system and integrate with Element Plus theme variables（[`0da0135e`](https://github.com/weepwood/MRR/commit/0da0135e97b171e70ec8c4b8fc8afa0b77b4e106)）
+- `14:13` merge Merge branch 'main' of `https://github.com/weepwood/MRR`（[`4ef61ace`](https://github.com/weepwood/MRR/commit/4ef61aceabfb49b1011af8d4f55567286f12a995)）
+- `14:13` feat initialize frontend project with Vue 3, Element Plus, and custom theme integration（[`328ed1f1`](https://github.com/weepwood/MRR/commit/328ed1f17dfe65a5652aae3b7270a74082a065e5)）
+- `12:45` 推送到 Assets（[`2b980c92`](https://github.com/weepwood/MRR/commit/2b980c92c980baf2410f73ade6b33a3958f70588)）
+- `12:33` ci add GitHub Action to auto-build on version updates（[`61fac1f1`](https://github.com/weepwood/MRR/commit/61fac1f19099d379c30188c2b84ad7043778ccc2) · [PR #1](https://github.com/weepwood/MRR/pull/1)）
+- `12:33` ci add version-triggered build workflow（[`7bdc603e`](https://github.com/weepwood/MRR/commit/7bdc603e8c6216a2d73ae249354ef4dd6ff376c8)）
+- `11:43` feat (login) 优化登录页面交互体验并修复按钮状态问题（[`0027f207`](https://github.com/weepwood/MRR/commit/0027f207cf0ae4dc3f2b4609a401d25a5f5a392d)）
+- `11:28` feat (login) 添加GSAP动画效果并升级依赖版本（[`9ee70859`](https://github.com/weepwood/MRR/commit/9ee7085996710ba5242ebe30ab952afff46688fb)）
+- `11:16` feat (Login) 添加登录页面背景效果和优化样式（[`8e2c014f`](https://github.com/weepwood/MRR/commit/8e2c014fe241f327768bb2fde53aafe2a8d65f03)）
+- `10:23` style (admin-dashboard) 移除侧边栏边框样式（[`7ad8f730`](https://github.com/weepwood/MRR/commit/7ad8f7303efdff3d7e8eda88ef2e91aef1f404d6)）
+- `10:16` chore (release) 升级版本号至0.0.7并移除过时的HTML文件（[`2827bb8b`](https://github.com/weepwood/MRR/commit/2827bb8b0c9ff053fedcdfc7a31ac4d3de9bdbc6)）
+- `00:50` feat 添加 TypeScript 支持并配置 ESLint（[`0113b667`](https://github.com/weepwood/MRR/commit/0113b66726abd65e5dad62d45c8afe859363f2a3)）
+- `00:31` feat (config) 排除静态资源路径的日志记录（[`13029784`](https://github.com/weepwood/MRR/commit/130297848f0bc30fc162e5167175e71600287a66)）
+- `00:19` feat (css) 添加动画效果和悬停提升动效（[`8172f0fd`](https://github.com/weepwood/MRR/commit/8172f0fd5b2a1b2f66db76ad84dea801ece8f7d5)）
+- `00:08` docs 更新文档描述和添加当前版本使用说明（[`09dd3db1`](https://github.com/weepwood/MRR/commit/09dd3db1e2db4909783d9a56306f2078a308ee8c)）
 
 ## 2026-03-28
 
-- **其他** \`\`\` feat(admin): 添加PDF导出功能并优化统计详情页面（[`7f7d7d9`](https://github.com/weepwood/MRR/commit/7f7d7d95633b33525bc114385f4e61f2efab5fcd)） — weepwood
-- **新增** `admin` 重构病案明细档案视图为仿真档案袋界面（[`eb1a7b7`](https://github.com/weepwood/MRR/commit/eb1a7b702380dc9b334cd4ccd52896e6bf413d03)） — weepwood
-- **新增** `admin` 添加身份证加解密测试功能到测试中心（[`09bc4a1`](https://github.com/weepwood/MRR/commit/09bc4a19de7e79dd6c6ca02cc8e069660582ad17)） — weepwood
-- **重构** `AdminDashboard` 移除顶部栏组件（[`8f75d83`](https://github.com/weepwood/MRR/commit/8f75d8375e155ceefd233d6b6760ca5719e2054f)） — weepwood
-- **新增** `admin` 重构管理面板菜单结构并优化界面布局（[`7cb500a`](https://github.com/weepwood/MRR/commit/7cb500ab2b12b1105a03f7c836fc3cefd0fef56a)） — weepwood
-- **新增** `admin` 新增病案明细页面并优化统计分析功能（[`77f40ec`](https://github.com/weepwood/MRR/commit/77f40ecc7dd75d6ff12d56917aa05b9f164c8d95)） — weepwood
-- **新增** `admin` 添加日志管理和监控中心功能（[`82d4335`](https://github.com/weepwood/MRR/commit/82d433528c347b922c747cf2bfd6ab9747d17217)） — weepwood
-- **文档** `backend` 更新后端README包含完整部署和配置说明（[`e19036c`](https://github.com/weepwood/MRR/commit/e19036c0654c15d1f69e7d373ee69652a3dc34f0)） — weepwood
-- **新增** `auth` 集成Spring Boot JDBC并配置MyBatis映射（[`e01a726`](https://github.com/weepwood/MRR/commit/e01a7268d352082ba212dcb3ac37ff59490d7fa6)） — weepwood
-- **新增** `admin` 添加权限管理、测试中心和系统设置功能（[`63b48e5`](https://github.com/weepwood/MRR/commit/63b48e531d8a6f868109a77e0e6939b069d6ff3c)） — weepwood
-- **新增** `auth` 移除用户表中不必要的时间字段并优化权限处理（[`3728580`](https://github.com/weepwood/MRR/commit/3728580ec78403a7172c55e7dc612b3470b2999b)） — weepwood
-- **新增** `auth` 实现基于权限的角色认证系统（[`838b5eb`](https://github.com/weepwood/MRR/commit/838b5ebff83346f8ca9dcaeb95d26551c3bc9fe9)） — weepwood
-- **新增** 添加系统架构文档和容器化部署配置（[`c6440ec`](https://github.com/weepwood/MRR/commit/c6440ec49e1e8fcf90eb537fe860da867f46f107)） — weepwood
-- **新增** `log` 添加日志导出功能并调整清理策略（[`ecefd4d`](https://github.com/weepwood/MRR/commit/ecefd4dd9b5f377c9a344c5e11d55d1e45833011)） — weepwood
-- **新增** `log` 添加日志保留期清理功能并移除手动删除操作（[`831256b`](https://github.com/weepwood/MRR/commit/831256b7af66fe76cc1df08683f37a2bb636e63d)） — weepwood
-- **新增** `mapper` 实现扫描记录逻辑删除功能（[`3c63c2f`](https://github.com/weepwood/MRR/commit/3c63c2f4a568acd1ddec75bc747def518e5750ed)） — weepwood
-- **修复** `ImageGalleryEl-3` 修复图片画廊组件高度问题（[`f7ead64`](https://github.com/weepwood/MRR/commit/f7ead64fca16df4204df5ee2e12ba5bccacdce55)） — weepwood
-- **新增** `SystemInfo` 添加系统负载平均值到系统信息接口（[`8e58998`](https://github.com/weepwood/MRR/commit/8e58998a01f007ad7a8b3d94fca2855f3996aec4)） — weepwood
-- **新增** `monitoring` 添加压测监控功能（[`18c9603`](https://github.com/weepwood/MRR/commit/18c960390b4c842295d90cd806c70e219cb46d55)） — weepwood
-- **重构** `backend` 使用构造函数注入替换字段注入并配置属性扫描（[`917b67d`](https://github.com/weepwood/MRR/commit/917b67d44c4fe263138fc4073d1829a6b6de4057)） — weepwood
-- **新增** `database` 将数据库从SQLite迁移至PostgreSQL（[`d8023e5`](https://github.com/weepwood/MRR/commit/d8023e587da41cd309dc5f5fb8b030a95b3dbdf3)） — weepwood
-- **新增** 添加页面布局类和更新样式主题（[`4a6e67d`](https://github.com/weepwood/MRR/commit/4a6e67d787ef229bc5e479c4626d047db659424f)） — weepwood
-- **其他** `admin` 移除按钮的plain样式并调整UI组件外观（[`4cfa340`](https://github.com/weepwood/MRR/commit/4cfa340dd1f5cae38365007c283151dc992d36fe)） — weepwood
-- **新增** 修改后台系统前端样式（[`4ceee57`](https://github.com/weepwood/MRR/commit/4ceee57f22cf56d2b0da806acba7b5f265dc4ddf)） — weepwood
-- **新增** 升级Java版本至25并更新后端依赖（[`d901455`](https://github.com/weepwood/MRR/commit/d9014554bdbb22990508bd4b5225ca443fdcb6c8)） — weepwood
-- **新增** `docs` 添加项目说明文档和前端Figma规范页面（[`d16e240`](https://github.com/weepwood/MRR/commit/d16e240f6b06cb6fe4b04ca80025a75fbed5aaee)） — weepwood
+- `23:56` \`\`\` feat(admin): 添加PDF导出功能并优化统计详情页面（[`7f7d7d95`](https://github.com/weepwood/MRR/commit/7f7d7d95633b33525bc114385f4e61f2efab5fcd)）
+- `23:25` feat (admin) 重构病案明细档案视图为仿真档案袋界面（[`eb1a7b70`](https://github.com/weepwood/MRR/commit/eb1a7b702380dc9b334cd4ccd52896e6bf413d03)）
+- `22:43` feat (admin) 添加身份证加解密测试功能到测试中心（[`09bc4a19`](https://github.com/weepwood/MRR/commit/09bc4a19de7e79dd6c6ca02cc8e069660582ad17)）
+- `22:28` refactor (AdminDashboard) 移除顶部栏组件（[`8f75d837`](https://github.com/weepwood/MRR/commit/8f75d8375e155ceefd233d6b6760ca5719e2054f)）
+- `22:26` feat (admin) 重构管理面板菜单结构并优化界面布局（[`7cb500ab`](https://github.com/weepwood/MRR/commit/7cb500ab2b12b1105a03f7c836fc3cefd0fef56a)）
+- `22:03` feat (admin) 新增病案明细页面并优化统计分析功能（[`77f40ecc`](https://github.com/weepwood/MRR/commit/77f40ecc7dd75d6ff12d56917aa05b9f164c8d95)）
+- `21:46` feat (admin) 添加日志管理和监控中心功能（[`82d43352`](https://github.com/weepwood/MRR/commit/82d433528c347b922c747cf2bfd6ab9747d17217)）
+- `21:36` docs (backend) 更新后端README包含完整部署和配置说明（[`e19036c0`](https://github.com/weepwood/MRR/commit/e19036c0654c15d1f69e7d373ee69652a3dc34f0)）
+- `21:16` feat (auth) 集成Spring Boot JDBC并配置MyBatis映射（[`e01a7268`](https://github.com/weepwood/MRR/commit/e01a7268d352082ba212dcb3ac37ff59490d7fa6)）
+- `20:53` feat (admin) 添加权限管理、测试中心和系统设置功能（[`63b48e53`](https://github.com/weepwood/MRR/commit/63b48e531d8a6f868109a77e0e6939b069d6ff3c)）
+- `20:43` feat (auth) 移除用户表中不必要的时间字段并优化权限处理（[`3728580e`](https://github.com/weepwood/MRR/commit/3728580ec78403a7172c55e7dc612b3470b2999b)）
+- `20:43` feat (auth) 实现基于权限的角色认证系统（[`838b5ebf`](https://github.com/weepwood/MRR/commit/838b5ebff83346f8ca9dcaeb95d26551c3bc9fe9)）
+- `20:00` feat 添加系统架构文档和容器化部署配置（[`c6440ec4`](https://github.com/weepwood/MRR/commit/c6440ec49e1e8fcf90eb537fe860da867f46f107)）
+- `19:43` feat (log) 添加日志导出功能并调整清理策略（[`ecefd4dd`](https://github.com/weepwood/MRR/commit/ecefd4dd9b5f377c9a344c5e11d55d1e45833011)）
+- `19:36` feat (log) 添加日志保留期清理功能并移除手动删除操作（[`831256b7`](https://github.com/weepwood/MRR/commit/831256b7af66fe76cc1df08683f37a2bb636e63d)）
+- `19:08` feat (mapper) 实现扫描记录逻辑删除功能（[`3c63c2f4`](https://github.com/weepwood/MRR/commit/3c63c2f4a568acd1ddec75bc747def518e5750ed)）
+- `18:51` fix (ImageGalleryEl-3) 修复图片画廊组件高度问题（[`f7ead64f`](https://github.com/weepwood/MRR/commit/f7ead64fca16df4204df5ee2e12ba5bccacdce55)）
+- `18:47` feat (SystemInfo) 添加系统负载平均值到系统信息接口（[`8e58998a`](https://github.com/weepwood/MRR/commit/8e58998a01f007ad7a8b3d94fca2855f3996aec4)）
+- `18:32` feat (monitoring) 添加压测监控功能（[`18c96039`](https://github.com/weepwood/MRR/commit/18c960390b4c842295d90cd806c70e219cb46d55)）
+- `18:04` refactor (backend) 使用构造函数注入替换字段注入并配置属性扫描（[`917b67d4`](https://github.com/weepwood/MRR/commit/917b67d44c4fe263138fc4073d1829a6b6de4057)）
+- `17:45` feat (database) 将数据库从SQLite迁移至PostgreSQL（[`d8023e58`](https://github.com/weepwood/MRR/commit/d8023e587da41cd309dc5f5fb8b030a95b3dbdf3)）
+- `17:09` feat 添加页面布局类和更新样式主题（[`4a6e67d7`](https://github.com/weepwood/MRR/commit/4a6e67d787ef229bc5e479c4626d047db659424f)）
+- `16:52` style (admin) 移除按钮的plain样式并调整UI组件外观（[`4cfa340d`](https://github.com/weepwood/MRR/commit/4cfa340dd1f5cae38365007c283151dc992d36fe)）
+- `16:45` feat 修改后台系统前端样式（[`4ceee57f`](https://github.com/weepwood/MRR/commit/4ceee57f22cf56d2b0da806acba7b5f265dc4ddf)）
+- `16:26` feat 升级Java版本至25并更新后端依赖（[`d9014554`](https://github.com/weepwood/MRR/commit/d9014554bdbb22990508bd4b5225ca443fdcb6c8)）
+- `15:21` feat (docs) 添加项目说明文档和前端Figma规范页面（[`d16e240f`](https://github.com/weepwood/MRR/commit/d16e240f6b06cb6fe4b04ca80025a75fbed5aaee)）
 
 ## 2026-03-23
 
-- **新增** `admin` 优化病案统计页面搜索功能和样式（[`6219e5c`](https://github.com/weepwood/MRR/commit/6219e5c9ac7583073fa5b8dceea3a0779b5dd457)） — weepwood
-- **新增** `admin` 添加表格布局固定和内容溢出提示功能（[`ecce0bd`](https://github.com/weepwood/MRR/commit/ecce0bd594b4cfa9202f2ac33676d2e0798a92f3)） — weepwood
-- **新增** `statistics` 添加统计列表的排序功能（[`6ea46fc`](https://github.com/weepwood/MRR/commit/6ea46fc3c3836d4141e0789ebc49bbd69f88b231)） — weepwood
-- **新增** `admin` 优化记录统计表格功能（[`755ba93`](https://github.com/weepwood/MRR/commit/755ba93f7d64efe014e6598579a8e72513236f44)） — weepwood
-- **新增** `statistics` 添加条件查询功能支持（[`2efb733`](https://github.com/weepwood/MRR/commit/2efb7330e546f167a5321863e286d4132c9d0692)） — weepwood
-- **重构** `utils` 重命名JwtUtil类名（[`38deb9e`](https://github.com/weepwood/MRR/commit/38deb9edd076c4b16c30c22439b63b8d1719db9e)） — weepwood
-- **文档** 完善文档站点配置和导航结构（[`1e277e4`](https://github.com/weepwood/MRR/commit/1e277e48c2728f5aaccfcf84c8dd8bbb44433bd2)） — weepwood
-- **新增** `api` 添加系统日志搜索功能并优化前端界面（[`f753773`](https://github.com/weepwood/MRR/commit/f753773fd8f6db355e316f799b69b05e741aeb46)） — weepwood
-- **新增** 添加 VitePress 文档站点（[`31792d3`](https://github.com/weepwood/MRR/commit/31792d3df2d21e382187da9cc140edf4874f51c9)） — weepwood
-- **新增** 添加质量门禁流程和前端代码规范配置（[`bd0cee6`](https://github.com/weepwood/MRR/commit/bd0cee6dd64d235237e7608e9618e6d5ae8b7133)） — weepwood
-- **新增** `scan` 添加批量下载功能支持ZIP压缩（[`5277d79`](https://github.com/weepwood/MRR/commit/5277d795312c6c1a0388864ddaa9d7cb708cf754)） — weepwood
-- **重构** `ImageGalleryEl-3` 移除加密身份证号相关功能并优化API调用（[`131b39e`](https://github.com/weepwood/MRR/commit/131b39e82ad8dff73b32108fb6e40da6e0929d2c)） — weepwood
-- **文档** `backend` 更新后端仓库README文档和配置（[`b403599`](https://github.com/weepwood/MRR/commit/b403599671361c02f38090cdf4fedf4bc0048046)） — weepwood
-- **新增** 初始化图片病历管理系统后端项目（[`bcc8c11`](https://github.com/weepwood/MRR/commit/bcc8c11b53520cb082782fe9b895e99685b422d9)） — weepwood
-- **其他** 初始化提交（[`2f38212`](https://github.com/weepwood/MRR/commit/2f38212040df1c1b599a11975b0a0d82d5593976)） — weepwood
+- `23:51` feat (admin) 优化病案统计页面搜索功能和样式（[`6219e5c9`](https://github.com/weepwood/MRR/commit/6219e5c9ac7583073fa5b8dceea3a0779b5dd457)）
+- `23:20` feat (admin) 添加表格布局固定和内容溢出提示功能（[`ecce0bd5`](https://github.com/weepwood/MRR/commit/ecce0bd594b4cfa9202f2ac33676d2e0798a92f3)）
+- `23:17` feat (statistics) 添加统计列表的排序功能（[`6ea46fc3`](https://github.com/weepwood/MRR/commit/6ea46fc3c3836d4141e0789ebc49bbd69f88b231)）
+- `23:09` feat (admin) 优化记录统计表格功能（[`755ba93f`](https://github.com/weepwood/MRR/commit/755ba93f7d64efe014e6598579a8e72513236f44)）
+- `22:58` feat (statistics) 添加条件查询功能支持（[`2efb7330`](https://github.com/weepwood/MRR/commit/2efb7330e546f167a5321863e286d4132c9d0692)）
+- `22:44` refactor (utils) 重命名JwtUtil类名（[`38deb9ed`](https://github.com/weepwood/MRR/commit/38deb9edd076c4b16c30c22439b63b8d1719db9e)）
+- `22:41` docs 完善文档站点配置和导航结构（[`1e277e48`](https://github.com/weepwood/MRR/commit/1e277e48c2728f5aaccfcf84c8dd8bbb44433bd2)）
+- `22:31` feat (api) 添加系统日志搜索功能并优化前端界面（[`f753773f`](https://github.com/weepwood/MRR/commit/f753773fd8f6db355e316f799b69b05e741aeb46)）
+- `22:12` feat 添加 VitePress 文档站点（[`31792d3d`](https://github.com/weepwood/MRR/commit/31792d3df2d21e382187da9cc140edf4874f51c9)）
+- `21:25` feat 添加质量门禁流程和前端代码规范配置（[`bd0cee6d`](https://github.com/weepwood/MRR/commit/bd0cee6dd64d235237e7608e9618e6d5ae8b7133)）
+- `20:48` feat (scan) 添加批量下载功能支持ZIP压缩（[`5277d795`](https://github.com/weepwood/MRR/commit/5277d795312c6c1a0388864ddaa9d7cb708cf754)）
+- `20:33` refactor (ImageGalleryEl-3) 移除加密身份证号相关功能并优化API调用（[`131b39e8`](https://github.com/weepwood/MRR/commit/131b39e82ad8dff73b32108fb6e40da6e0929d2c)）
+- `20:18` docs (backend) 更新后端仓库README文档和配置（[`b4035996`](https://github.com/weepwood/MRR/commit/b403599671361c02f38090cdf4fedf4bc0048046)）
+- `19:50` feat 初始化图片病历管理系统后端项目（[`bcc8c11b`](https://github.com/weepwood/MRR/commit/bcc8c11b53520cb082782fe9b895e99685b422d9)）
+- `19:40` 初始化提交（[`2f382120`](https://github.com/weepwood/MRR/commit/2f38212040df1c1b599a11975b0a0d82d5593976)）
 
 ## 生成方式
 
@@ -520,7 +2639,7 @@ outline: [2, 3]
 .\update-changelog.ps1
 ```
 
-脚本会执行 `git pull --ff-only`，优先通过 GitHub CLI 获取令牌，生成更新日志并显示文件差异。使用 `-SkipPull` 可跳过拉取，使用 `-GitOnly` 可禁用 GitHub 增强。
+脚本会刷新远程目标分支，优先通过 GitHub CLI 获取令牌，生成更新日志并显示文件差异。使用 `-SkipPull` 可跳过额外的当前分支拉取，使用 `-GitOnly` 可禁用 GitHub PR/Issue 增强。
 
 ### 通用方式
 
@@ -533,9 +2652,9 @@ npm run docs:changelog
 可用环境变量：
 
 - `GITHUB_TOKEN` 或 `GH_TOKEN`：访问私有仓库的 GitHub 令牌；
-- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub 增强；
-- `MRR_CHANGELOG_BASE_BRANCH`：指定获取 PR 的目标分支；
-- `MRR_CHANGELOG_LIMIT`：Git 提交数量，允许范围为 1～1000；
+- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub PR/Issue 增强；
+- `MRR_CHANGELOG_BASE_BRANCH`：指定提交记录和 PR 的远程目标分支，默认 `main`；
+- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；
 - `MRR_CHANGELOG_CACHE_TTL`：GitHub 本地缓存秒数，默认 1800；
 - `MRR_CHANGELOG_GITHUB_PAGES`：GitHub 分页上限，默认 10，最大 20。
 

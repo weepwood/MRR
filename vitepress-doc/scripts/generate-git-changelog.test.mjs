@@ -8,6 +8,7 @@ import {
   normalizeBranchName,
   normalizeRepositorySlug,
   parseConventionalSubject,
+  parseLog,
   renderDocument,
 } from './generate-git-changelog.mjs'
 
@@ -60,11 +61,19 @@ test('falls back to the current local branch only when no remote ref exists', ()
 test('parses squash PR numbers and removes the suffix from descriptions', () => {
   assert.deepEqual(parseConventionalSubject('fix(startup): allow slow startup (#164)'), {
     type: 'fix',
+    rawType: 'fix',
     scope: 'startup',
     breaking: false,
     description: 'allow slow startup',
     pullRequest: '164',
   })
+})
+
+test('keeps the committer timestamp while parsing Git log records', () => {
+  const commits = parseLog('abc123\x1fabc123\x1f2026-07-18\x1f2026-07-18T09:10:11+08:00\x1fweepwood\x1ffix: retain commit time\x1f\x1fparent123\x1e')
+
+  assert.equal(commits[0].date, '2026-07-18')
+  assert.equal(commits[0].committedAt, '2026-07-18T09:10:11+08:00')
 })
 
 test('extracts closing and related issue references with closing taking priority', () => {
@@ -154,8 +163,37 @@ test('renders remote commit source with PR and Issue information', () => {
   })
 
   assert.match(rendered, /PR #164/)
+  assert.match(rendered, /fix \(startup\) 慢网络启动超时改为可继续等待/)
   assert.match(rendered, /完成 \[#162：慢网络启动超时恢复\]/)
   assert.match(rendered, /GitHub 增强：已启用/)
   assert.match(rendered, /Git 提交来源：远程 `origin\/main`（已刷新）/)
+  assert.match(rendered, /记录范围：完整提交历史，共 1 条提交/)
   assert.match(rendered, /\\update-changelog\.ps1/)
+})
+
+test('renders URLs in commit subjects as code so they do not become competing links', () => {
+  const commits = [{
+    kind: 'commit',
+    hash: 'fcac92c349388c50440297e474b19f3a4ad7fa29',
+    shortHash: 'fcac92c3',
+    date: '2026-07-18',
+    committedAt: '2026-07-18T09:10:11+08:00',
+    author: 'weepwood',
+    type: 'merge',
+    scope: '',
+    breaking: false,
+    description: "Merge branch 'main' of https://github.com/weepwood/MRR",
+  }]
+
+  const rendered = renderDocument({
+    commits,
+    entries: commits,
+    branch: 'main',
+    githubBranch: 'main',
+    repositorySlug: 'weepwood/MRR',
+    githubStatus: { enabled: false },
+    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
+  })
+
+  assert.match(rendered, /`09:10` merge Merge branch 'main' of `https:\/\/github\.com\/weepwood\/MRR`（\[`fcac92c3`\]/)
 })

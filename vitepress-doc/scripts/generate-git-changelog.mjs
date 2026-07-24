@@ -9,25 +9,9 @@ const repositoryRoot = path.resolve(docsRoot, '..')
 const outputPath = path.join(docsRoot, 'user-guide', 'changelog.md')
 const cachePath = path.join(docsRoot, '.cache', 'github-changelog.json')
 
-const parsedLimit = Number.parseInt(process.env.MRR_CHANGELOG_LIMIT ?? '1000', 10)
-const commitLimit = Number.isInteger(parsedLimit) && parsedLimit > 0
-  ? Math.min(parsedLimit, 1000)
-  : 1000
-
-const TYPE_META = {
-  feat: { label: '新增', order: 10 },
-  fix: { label: '修复', order: 20 },
-  perf: { label: '性能', order: 30 },
-  refactor: { label: '重构', order: 40 },
-  docs: { label: '文档', order: 50 },
-  test: { label: '测试', order: 60 },
-  build: { label: '构建', order: 70 },
-  ci: { label: 'CI', order: 80 },
-  chore: { label: '维护', order: 90 },
-  revert: { label: '回退', order: 100 },
-  merge: { label: '合并', order: 110 },
-  other: { label: '其他', order: 120 },
-}
+const CONVENTIONAL_TYPES = new Set([
+  'feat', 'fix', 'perf', 'refactor', 'docs', 'test', 'build', 'ci', 'chore', 'revert', 'merge',
+])
 
 function parseBoundedInteger(rawValue, fallback, maximum) {
   const parsed = Number.parseInt(rawValue ?? '', 10)
@@ -60,6 +44,18 @@ function escapeMarkdown(value = '') {
     .replace(/\\/g, '\\\\')
     .replace(/([`*_\[\]<>])/g, '\\$1')
     .replace(/\r?\n/g, ' ')
+}
+
+function escapeMarkdownWithCodeUrls(value = '') {
+  const urlPattern = /(https?:\/\/[^\s<>()`]+)/g
+  return String(value)
+    .split(urlPattern)
+    .map((part, index) => index % 2 === 1 ? `\`${part}\`` : escapeMarkdown(part))
+    .join('')
+}
+
+function formatCommitTime(committedAt = '') {
+  return String(committedAt).match(/T(\d{2}:\d{2})/)?.[1] ?? ''
 }
 
 export function normalizeRepositorySlug(remoteUrl) {
@@ -161,7 +157,7 @@ function refreshRemoteBranch(branch) {
   const fetchArgs = ['fetch', '--quiet', '--prune', '--no-tags']
   const shallowResult = tryRunGit(['rev-parse', '--is-shallow-repository'])
   if (shallowResult.ok && shallowResult.output === 'true') {
-    fetchArgs.push(`--deepen=${commitLimit}`)
+    fetchArgs.push('--unshallow')
   }
   fetchArgs.push('origin', `+refs/heads/${branch}:refs/remotes/origin/${branch}`)
 
@@ -223,9 +219,10 @@ export function parseConventionalSubject(subject, originalSubject = subject) {
 
   if (conventionalMatch) {
     const rawType = conventionalMatch[1].toLowerCase()
-    const type = TYPE_META[rawType] ? rawType : 'other'
+    const type = CONVENTIONAL_TYPES.has(rawType) ? rawType : 'other'
     return {
       type,
+      rawType,
       scope: conventionalMatch[2]?.trim() ?? '',
       breaking: Boolean(conventionalMatch[3]),
       description: conventionalMatch[4].replace(/\s*\(#\d+\)\s*$/, '').trim(),
@@ -235,6 +232,7 @@ export function parseConventionalSubject(subject, originalSubject = subject) {
 
   return {
     type: /^Merge\b/i.test(originalSubject) ? 'merge' : 'other',
+    rawType: /^Merge\b/i.test(originalSubject) ? 'merge' : '',
     scope: '',
     breaking: false,
     description: subject.replace(/\s*\(#\d+\)\s*$/, '').trim(),
@@ -265,7 +263,7 @@ export function parseLog(rawLog) {
     .map(record => record.trim())
     .filter(Boolean)
     .map((record) => {
-      const [hash, shortHash, date, author, subject, body = '', parents = ''] = record.split('\x1f')
+      const [hash, shortHash, date, committedAt, author, subject, body = '', parents = ''] = record.split('\x1f')
       const displaySubject = effectiveSubject(subject, body)
       const parsedSubject = parseConventionalSubject(displaySubject, subject)
 
@@ -274,6 +272,7 @@ export function parseLog(rawLog) {
         hash,
         shortHash,
         date,
+        committedAt,
         author,
         parents: parents.trim().split(/\s+/).filter(Boolean),
         originalSubject: subject,
@@ -595,15 +594,21 @@ function groupByDate(entries) {
 function renderIssueReference(reference, repositorySlug) {
   const relationship = reference.relationship === 'closes' ? '完成' : '关联'
   const issueUrl = reference.url ?? `https://github.com/${repositorySlug}/issues/${reference.number}`
-  const title = reference.title ? `：${escapeMarkdown(reference.title)}` : ''
+  const title = reference.title ? `：${escapeMarkdownWithCodeUrls(reference.title)}` : ''
   return `${relationship} [#${reference.number}${title}](${issueUrl})`
 }
 
 function renderChangeEntry(entry, repositorySlug) {
-  const metadata = TYPE_META[entry.type] ?? TYPE_META.other
-  const scope = entry.scope ? ` \`${escapeMarkdown(entry.scope)}\`` : ''
+  const rawType = entry.rawType ?? (entry.type !== 'other' ? entry.type : '')
+  const commitType = rawType ? escapeMarkdown(rawType) : ''
+  const scope = entry.scope ? `(${escapeMarkdown(entry.scope)})` : ''
   const breaking = entry.breaking ? ' **BREAKING**' : ''
-  const description = escapeMarkdown(entry.description)
+  const description = escapeMarkdownWithCodeUrls(entry.description)
+  const commitTime = entry.kind === 'commit' ? formatCommitTime(entry.committedAt) : ''
+  const committedAt = commitTime
+    ? `\`${commitTime}\``
+    : ''
+  const content = [committedAt, commitType, scope, breaking.trim(), description].filter(Boolean).join(' ')
   const links = []
 
   if (entry.kind === 'commit') {
@@ -622,12 +627,11 @@ function renderChangeEntry(entry, repositorySlug) {
   }
 
   const linkText = links.length > 0 ? `（${links.join(' · ')}）` : ''
-  const author = entry.author ? `— ${escapeMarkdown(entry.author)}` : ''
-  return `- **${metadata.label}**${scope}${breaking} ${description}${linkText}${author ? ` ${author}` : ''}`
+  return `- ${content}${linkText}`
 }
 
 function renderIssueEntry(entry) {
-  return `- **Issue** 已完成 [#${entry.number}：${escapeMarkdown(entry.title)}](${entry.url})`
+  return `- **Issue** 已完成 [#${entry.number}：${escapeMarkdownWithCodeUrls(entry.title)}](${entry.url})`
 }
 
 function renderCommitSource(commitSource, branch) {
@@ -664,7 +668,7 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     `- GitHub 目标分支：${githubBranch ? `\`${escapeMarkdown(githubBranch)}\`` : '未指定'}`,
     `- Git 提交来源：${renderCommitSource(commitSource, branch)}`,
     `- 更新至：${latest ? `${latest.date} · \`${latest.shortHash}\`` : '暂无提交'}`,
-    `- 记录范围：最近 ${commits.length} 条第一父级提交（上限 ${commitLimit} 条）`,
+    `- 记录范围：完整提交历史，共 ${commits.length} 条提交`,
     `- GitHub 增强：${githubSummary}`,
     '',
   ]
@@ -711,7 +715,6 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub PR/Issue 增强；',
     '- `MRR_CHANGELOG_BASE_BRANCH`：指定提交记录和 PR 的远程目标分支，默认 `main`；',
     '- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；',
-    '- `MRR_CHANGELOG_LIMIT`：Git 提交数量，允许范围为 1～1000；',
     '- `MRR_CHANGELOG_CACHE_TTL`：GitHub 本地缓存秒数，默认 1800；',
     '- `MRR_CHANGELOG_GITHUB_PAGES`：GitHub 分页上限，默认 10，最大 20。',
     '',
@@ -755,12 +758,9 @@ export async function main() {
       console.warn(`Remote changelog source unavailable; falling back to ${commitSource.ref}: ${fetchStatus.reason}`)
     }
 
-    const prettyFormat = '%H%x1f%h%x1f%ad%x1f%an%x1f%s%x1f%b%x1f%P%x1e'
+    const prettyFormat = '%H%x1f%h%x1f%cs%x1f%cI%x1f%an%x1f%s%x1f%b%x1f%P%x1e'
     const rawLog = runGit([
       'log',
-      '--first-parent',
-      `--max-count=${commitLimit}`,
-      '--date=short',
       `--pretty=format:${prettyFormat}`,
       commitSource.ref,
     ])

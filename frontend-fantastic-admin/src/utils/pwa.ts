@@ -81,7 +81,6 @@ async function registerPwa(): Promise<void> {
   }
   catch (error) {
     // PWA 能力不能阻断病案系统主流程，注册失败时仅记录诊断信息。
-    // eslint-disable-next-line no-console
     console.warn('[MRR PWA] Service Worker 注册失败', error)
   }
 }

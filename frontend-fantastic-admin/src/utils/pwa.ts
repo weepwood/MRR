@@ -1,3 +1,6 @@
+import { ElMessageBox } from 'element-plus'
+import 'element-plus/es/components/message-box/style/css'
+
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
 
 let updatePromptVisible = false
@@ -15,19 +18,33 @@ function resolveBuildId(): string {
   return `${version}-${gitCommit}-${buildTime}`
 }
 
-function promptForUpdate(registration: ServiceWorkerRegistration): void {
+async function promptForUpdate(registration: ServiceWorkerRegistration): Promise<void> {
   const waitingWorker = registration.waiting
   if (!waitingWorker || updatePromptVisible) {
     return
   }
 
   updatePromptVisible = true
-  const accepted = window.confirm('MRR 已发布新版本。是否立即重新加载并更新应用？')
-  updatePromptVisible = false
-
-  if (accepted) {
+  try {
+    await ElMessageBox.confirm(
+      'MRR 已发布新版本，重新加载后即可完成更新。',
+      '应用更新',
+      {
+        confirmButtonText: '立即更新',
+        cancelButtonText: '稍后',
+        type: 'info',
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+      },
+    )
     reloadOnControllerChange = true
     waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+  }
+  catch {
+    // 用户选择稍后更新，保留当前页面和等待中的 Service Worker。
+  }
+  finally {
+    updatePromptVisible = false
   }
 }
 
@@ -40,14 +57,14 @@ async function registerPwa(): Promise<void> {
     })
 
     if (registration.waiting && navigator.serviceWorker.controller) {
-      promptForUpdate(registration)
+      void promptForUpdate(registration)
     }
 
     registration.addEventListener('updatefound', () => {
       const installingWorker = registration.installing
       installingWorker?.addEventListener('statechange', () => {
         if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          promptForUpdate(registration)
+          void promptForUpdate(registration)
         }
       })
     })

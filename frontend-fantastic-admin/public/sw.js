@@ -11,16 +11,16 @@ const APP_SHELL = [
   '/pwa/icon-maskable.svg',
 ]
 
-const SENSITIVE_PATH_PREFIXES = [
-  '/api/',
-  '/proxy/',
-  '/actuator/',
-  '/swagger-ui/',
+const SENSITIVE_PATHS = [
+  '/api',
+  '/proxy',
+  '/actuator',
+  '/swagger-ui',
   '/v3/api-docs',
 ]
 
 function isSensitivePath(pathname) {
-  return SENSITIVE_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))
+  return SENSITIVE_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`))
 }
 
 function isStaticApplicationAsset(pathname) {
@@ -29,6 +29,17 @@ function isStaticApplicationAsset(pathname) {
     || pathname.startsWith('/pwa/')
     || pathname === '/favicon.svg'
     || pathname === '/manifest.webmanifest'
+}
+
+async function precacheAppShell() {
+  const cache = await caches.open(STATIC_CACHE)
+  await Promise.all(APP_SHELL.map(async (path) => {
+    const response = await fetch(new Request(path, { cache: 'reload' }))
+    if (!response.ok) {
+      throw new Error(`Unable to precache ${path}: ${response.status}`)
+    }
+    await cache.put(path, response)
+  }))
 }
 
 async function staleWhileRevalidate(request, event) {
@@ -50,9 +61,7 @@ async function staleWhileRevalidate(request, event) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then(cache => cache.addAll(APP_SHELL)),
-  )
+  event.waitUntil(precacheAppShell())
 })
 
 self.addEventListener('activate', (event) => {

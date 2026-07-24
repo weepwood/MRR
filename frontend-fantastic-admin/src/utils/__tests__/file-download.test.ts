@@ -42,9 +42,11 @@ describe('file download utilities', () => {
       ['rowNumber', 'message', 'value'],
       [[2, '字段包含,逗号', '=SUM(1,1)'], [3, '包含"引号"', '普通值']],
     )
-    const text = await readBlob(blob)
+    const bytes = new Uint8Array(await readBlobBuffer(blob))
+    const text = await readBlobText(blob.slice(3))
 
-    expect(text.startsWith('\uFEFFrowNumber,message,value\r\n')).toBe(true)
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xEF, 0xBB, 0xBF])
+    expect(text.startsWith('rowNumber,message,value\r\n')).toBe(true)
     expect(text).toContain('"字段包含,逗号","\'=SUM(1,1)"')
     expect(text).toContain('"包含""引号""",普通值')
   })
@@ -62,11 +64,20 @@ describe('file download utilities', () => {
   })
 })
 
-function readBlob(blob: Blob) {
+function readBlobText(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(reader.error)
     reader.onload = () => resolve(String(reader.result ?? ''))
     reader.readAsText(blob)
+  })
+}
+
+function readBlobBuffer(blob: Blob) {
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => resolve(reader.result as ArrayBuffer)
+    reader.readAsArrayBuffer(blob)
   })
 }

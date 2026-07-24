@@ -80,7 +80,7 @@ jobs:
           echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
           echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
-      - name: Test static site JAR embedder
+      - name: Test frontend JAR embedder
         run: python -m unittest scripts.tests.test_embed_frontend_in_jar
 
       - name: Validate deployment sources
@@ -214,7 +214,7 @@ jobs:
           python ../scripts/embed_frontend_in_jar.py verify \
             --jar "../${BACKEND_JAR}"
 
-      - name: Build documentation
+      - name: Build documentation for external hosting
         shell: bash
         working-directory: vitepress-doc
         env:
@@ -230,27 +230,6 @@ jobs:
             grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
             grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
           } 2>&1 | tee docs-build.log
-
-      - name: Embed documentation in backend JAR
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/embed_frontend_in_jar.py embed \
-            --jar "${BACKEND_JAR}" \
-            --dist vitepress-doc/.vitepress/dist-user \
-            --mount docs
-          python scripts/embed_frontend_in_jar.py embed \
-            --jar "${BACKEND_JAR}" \
-            --dist vitepress-doc/.vitepress/dist-internal \
-            --mount docs/internal
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${BACKEND_JAR}"
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${BACKEND_JAR}" \
-            --mount docs
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${BACKEND_JAR}" \
-            --mount docs/internal
 
       - name: Upload documentation build log
         if: always()
@@ -292,14 +271,10 @@ jobs:
           test -f "${PACKAGE_DIR}/runtime/SHA256SUMS"
           test -f "${PACKAGE_DIR}/deploy/windows/nginxctl.ps1"
           test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"
+          test -f "${PACKAGE_DIR}/docs/user/index.html"
+          test -f "${PACKAGE_DIR}/docs/internal/index.html"
           python scripts/embed_frontend_in_jar.py verify \
             --jar "${PACKAGE_DIR}/backend/mrr-backend.jar"
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${PACKAGE_DIR}/backend/mrr-backend.jar" \
-            --mount docs
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${PACKAGE_DIR}/backend/mrr-backend.jar" \
-            --mount docs/internal
 
           python scripts/release_baseline.py manifest \
             --git-commit "${SOURCE_SHA}" \
@@ -336,8 +311,18 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            "${{ steps.package.outputs.archive }}" \
-            --title "MRR ${GITHUB_REF_NAME}" \
-            --generate-notes
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              "${{ steps.package.outputs.archive }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              "${{ steps.package.outputs.archive }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "MRR ${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi

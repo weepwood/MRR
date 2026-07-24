@@ -5,16 +5,18 @@ import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import {
   createDefaultSystemSettings,
+  isAllowedDocumentationUrl,
   loadEffectiveSystemSettings,
   serializeSystemSettings,
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
-export type SettingsSection = 'system' | 'login-support' | 'archive' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
+export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
 
 export const settingsNavItems = [
   { key: 'system', title: '系统信息', description: '名称、机构与系统简介', icon: 'i-ri:information-line' },
   { key: 'login-support', title: '登录与支持', description: '登录展示与管理员联系', icon: 'i-ri:customer-service-2-line' },
+  { key: 'documentation', title: '帮助与文档', description: '用户、开发与运维文档链接', icon: 'i-ri:book-open-line' },
   { key: 'archive', title: '档案浏览', description: '图片来源与加载策略', icon: 'i-ri:image-2-line' },
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
   { key: 'developer', title: '开发者模式', description: '旧接口与可信来源', icon: 'i-ri:code-box-line' },
@@ -69,7 +71,14 @@ export function useUnifiedSettings() {
   const settings = ref<EffectiveSystemSettings>(createDefaultSystemSettings())
 
   const activeMeta = computed(() => settingsNavItems.find(item => item.key === activeSection.value)!)
-  const isServerSettingSection = computed(() => ['system', 'login-support', 'archive', 'security', 'developer'].includes(activeSection.value))
+  const isServerSettingSection = computed(() => [
+    'system',
+    'login-support',
+    'documentation',
+    'archive',
+    'security',
+    'developer',
+  ].includes(activeSection.value))
   const sourceMeta = computed(() => ({
     server: { label: '服务器配置', type: 'success' as const },
     local: { label: '本地缓存', type: 'warning' as const },
@@ -125,6 +134,18 @@ export function useUnifiedSettings() {
       ElMessage.warning('公开管理员信息时至少填写联系电话或联系邮箱')
       return false
     }
+
+    const documentationLinks = [
+      ['用户使用手册', value.documentationUserGuideUrl],
+      ['开发文档', value.documentationDeveloperUrl],
+      ['运维指南', value.documentationOperationsUrl],
+    ] as const
+    const invalidDocumentationLink = documentationLinks.find(([, url]) => !isAllowedDocumentationUrl(url))
+    if (invalidDocumentationLink) {
+      ElMessage.warning(`${invalidDocumentationLink[0]}链接仅允许 HTTP(S) 地址或以 / 开头的站内路径`)
+      return false
+    }
+
     if (!Number.isInteger(value.archiveIpMaxChanges) || value.archiveIpMaxChanges < 0 || value.archiveIpMaxChanges > 20) {
       ElMessage.warning('每日 IP 切换次数必须是 0 到 20 之间的整数')
       return false

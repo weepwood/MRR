@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import type { IdCardArchiveCase } from '@/api/modules/search'
-import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
 import type { GalleryImage, ViewMode } from './archive/types'
+import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
 import { Document, Download, Printer } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
@@ -14,6 +14,7 @@ import {
   loadEffectiveSystemSettings,
   SYSTEM_SETTINGS_UPDATED_EVENT,
 } from '@/utils/system-settings'
+import { archiveAccessMode } from './archive/access-mode'
 import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
@@ -32,7 +33,6 @@ import {
 } from './archive/composables/useArchiveLocalPreferences'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
-import { archiveAccessMode } from './archive/access-mode'
 import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
@@ -185,7 +185,9 @@ function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
 
 function formatBytes(value: number | undefined): string {
   const bytes = Number(value || 0)
-  if (!Number.isFinite(bytes) || bytes <= 0) return '大小未知'
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '大小未知'
+  }
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let amount = bytes
   let index = 0
@@ -197,10 +199,18 @@ function formatBytes(value: number | undefined): string {
 }
 
 function resolveExportButtonType(job: ArchiveExportJob | null, idleType: '' | 'primary') {
-  if (!job) return idleType
-  if (job.status === 'SUCCESS') return 'success'
-  if (job.status === 'FAILED' || job.status === 'EXPIRED') return 'danger'
-  if (job.status === 'PENDING' || job.status === 'PROCESSING' || job.status === 'CANCELLED') return 'warning'
+  if (!job) {
+    return idleType
+  }
+  if (job.status === 'SUCCESS') {
+    return 'success'
+  }
+  if (job.status === 'FAILED' || job.status === 'EXPIRED') {
+    return 'danger'
+  }
+  if (job.status === 'PENDING' || job.status === 'PROCESSING' || job.status === 'CANCELLED') {
+    return 'warning'
+  }
   return idleType
 }
 
@@ -771,7 +781,10 @@ onUnmounted(() => {
                 {{ downloadButtonLabel }}
               </el-button>
               <el-button size="small" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-                打印选中<template v-if="selectedCount">（{{ selectedCount }}）</template>
+                打印选中
+                <template v-if="selectedCount">
+                  （{{ selectedCount }}）
+                </template>
               </el-button>
               <el-button
                 size="small"
@@ -942,8 +955,8 @@ onUnmounted(() => {
 .archive-page.scrollbars-semi-hidden :deep(.preview-stage),
 .archive-page.scrollbars-semi-hidden :deep(.archive-wall) {
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar),
@@ -1032,8 +1045,8 @@ onUnmounted(() => {
   border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
   border-radius: 14px;
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
-  transform: translateX(-50%);
   backdrop-filter: blur(14px);
+  transform: translateX(-50%);
 }
 
 .archive-wall-summary {
@@ -1053,7 +1066,7 @@ onUnmounted(() => {
 .archive-wall-summary span + span::before {
   margin-right: 9px;
   color: var(--divider);
-  content: '·';
+  content: "·";
 }
 
 .archive-wall-toolbar-controls,
@@ -1226,8 +1239,7 @@ onUnmounted(() => {
   }
 
   .archive-wall-summary {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     gap: 8px;
   }
 

@@ -39,7 +39,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 审计与监控 | 操作日志、图片访问审计、接口响应分析、Actuator、服务状态和数据库诊断 |
 | 运行错误中心 | 聚合后端 WARN/ERROR、错误编号、Request ID、基础脱敏堆栈和处理状态 |
 | 部署运维 | 内嵌前端 JAR、Nginx 统一入口、外置前端回退、Windows 离线包、一键管理和单体 JAR |
-| 文档 | 登录后用户手册、受权限保护的内部文档和 Springdoc 实时 API 文档 |
+| 文档 | 帮助中心文档链接可配置；Windows 包可提供外置 VitePress；Springdoc 提供实时 API 文档 |
 
 ## 技术基线
 
@@ -87,7 +87,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 
 ## 访问入口
 
-| 入口 | 路由 | 访问要求 |
+| 入口 | 路由或设置 | 访问要求 |
 | --- | --- | --- |
 | 管理端 | `/` | 登录及相应业务权限 |
 | 影像档案袋 | `/archive` 或 `/archive/embed` | `record:read` |
@@ -98,16 +98,17 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 运行错误中心 | `/runtime-errors` | `system:error:read` |
 | 服务状态 | `/status` | 公开脱敏信息 |
 | 系统监控 | `/monitoring` | `system:read` |
-| 用户手册 | `/docs/` | 已登录账号 |
-| 内部文档 | `/docs/internal/` | 管理员或 `system:read` |
-| 实时 API | `/api-docs/` | 管理员或 `system:read` |
+| 用户使用手册 | 系统设置 `documentationUserGuideUrl` | 已登录账号 |
+| 开发文档 | 系统设置 `documentationDeveloperUrl` | 由文档服务决定 |
+| 运维指南 | 系统设置 `documentationOperationsUrl` | 由文档服务决定 |
+| 实时 API | `/swagger-ui/index.html#/` | 管理员或 `system:read` |
 
 ## 发布制品与端口
 
 | 制品 | 默认业务端口 | 内容 | 适用场景 |
 | --- | ---: | --- | --- |
-| `MRR-vX.Y.Z.zip` | `18045` | JAR、Nginx、WinSW、文档、运维脚本和外置前端回退 | Windows Server 正式受管理部署 |
-| `MRR-vX.Y.Z-standalone.jar` | `8002` | 后端 + 内嵌 Vue 前端 + 用户手册 + 内部文档 | 直接运行、已有反向代理或轻量部署 |
+| `MRR-vX.Y.Z.zip` | `18045` | JAR、Nginx、WinSW、外置文档、运维脚本和外置前端回退 | Windows Server 正式受管理部署 |
+| `MRR-vX.Y.Z-standalone.jar` | `8002` | 后端 + 内嵌 Vue 前端 | 直接运行、已有反向代理或轻量部署 |
 | 源码直接运行 | `18045` | Spring Boot 开发实例 | 本地开发 |
 
 Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SERVER_PORT` 覆盖。
@@ -159,7 +160,7 @@ Copy-Item backend-repo/src/main/resources/application-local.template.properties 
 
 $env:SPRING_DATASOURCE_PASSWORD = '本地数据库密码'
 $env:JWT_SECRET_KEY = '本地 JWT 密钥'
-$env:AES_SECRET_KEY = '本地 AES 密钥'
+$env:AES_SECRET_KEY = 'AES随机密钥'
 
 cd backend-repo
 mvn spring-boot:run -Dspring-boot.run.profiles=local
@@ -191,7 +192,7 @@ npm run docs:dev:internal
 npm run docs:build
 ```
 
-用户手册和内部文档分别构建，避免内部工程资料进入普通用户搜索索引。
+用户手册和内部文档分别构建，避免内部工程资料进入普通用户搜索索引。构建产物不写入单体 JAR，可以由 Windows 离线包中的 Nginx、独立 Nginx 或其他文档平台托管。
 
 ## 生产部署
 
@@ -204,15 +205,15 @@ npm run docs:build
   → Nginx :80
       ├── /、/assets/** → Spring Boot 内嵌前端 :18045
       ├── /api/**       → Spring Boot API :18045
-      ├── /docs/**      → 用户手册
-      ├── /docs/internal/** → 内部文档
+      ├── /docs/**      → 外置用户手册
+      ├── /docs/internal/** → 外置内部文档
       └── /api-docs/**  → Springdoc
 
 Spring Boot → PostgreSQL / 图片源 / OSS
 Actuator    → 127.0.0.1:18046
 ```
 
-发布包保留外置前端目录，但默认由 Nginx 代理到 JAR 内嵌前端。外置模式只用于受管理回退。
+发布包保留外置前端目录，但默认由 Nginx 代理到 JAR 内嵌前端。用户手册与内部文档作为外置静态目录提供，不写入后端 JAR。
 
 ### 单体 JAR
 
@@ -232,7 +233,7 @@ java -jar .\MRR-vX.Y.Z-standalone.jar
 http://localhost:8002
 ```
 
-单体 JAR 已包含管理端、用户手册、内部文档和实时 API 文档入口；不包含数据库、Nginx、WinSW 或医院环境配置。
+单体 JAR 包含后端、Vue 管理端和 Springdoc 实时 API，不包含 VitePress 用户手册、开发文档、运维指南、数据库、Nginx、WinSW 或医院环境配置。三项文档入口可以在“系统设置 → 帮助与文档”中改为独立文档服务器地址，也可以清空停用。
 
 ## 项目结构
 
@@ -244,7 +245,7 @@ MRR/
 ├── frontend-fantastic-admin/     # Vue 管理端与影像调阅端
 ├── vitepress-doc/                # 用户手册与内部文档
 ├── deploy/windows/               # Windows 部署和服务管理脚本
-├── deploy/standalone/            # 单体 JAR说明
+├── deploy/standalone/            # 单体 JAR 说明
 ├── scripts/                      # 发布、校验、迁移和文档辅助脚本
 ├── mrr-db/                       # 数据库辅助脚本与参考资料
 ├── monitoring/                   # 可选扩展监控配置

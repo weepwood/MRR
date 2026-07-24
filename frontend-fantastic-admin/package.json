@@ -99,7 +99,7 @@
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.4.27",
     "boxen": "^8.0.1",
-    "bumpp": "^11.0.1",
+    "bumpp": "^12.0.0",
     "cz-git": "^1.12.0",
     "eslint": "^10.1.0",
     "fs-extra": "^11.3.4",

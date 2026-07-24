@@ -25,7 +25,8 @@ class OssPropertiesTest {
                 "oss.path-style-access", "true"
         )));
 
-        OssProperties properties = binder.bind("oss", Bindable.of(OssProperties.class)).orElseThrow();
+        OssProperties properties = binder.bind("oss", Bindable.of(OssProperties.class))
+                .orElseThrow(() -> new IllegalStateException("OSS 配置绑定失败"));
 
         assertTrue(properties.isPathStyleAccess());
     }

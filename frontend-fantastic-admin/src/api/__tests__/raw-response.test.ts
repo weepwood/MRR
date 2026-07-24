@@ -1,23 +1,16 @@
 import type { AxiosAdapter } from 'axios'
 import { AxiosHeaders } from 'axios'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { getRawRequest } from '../raw-response'
 
-const userStore = {
-  isLogin: false,
-  token: '',
-}
-
 vi.mock('@/store/modules/user', () => ({
-  useUserStore: () => userStore,
+  useUserStore: () => ({
+    isLogin: false,
+    token: '',
+  }),
 }))
 
 describe('raw API response requests', () => {
-  beforeEach(() => {
-    userStore.isLogin = false
-    userStore.token = ''
-  })
-
   it('preserves blob data and response headers through the global interceptor', async () => {
     const blob = new Blob(['bah,sjh\r\n001234,10001\r\n'], { type: 'text/csv' })
     const adapter: AxiosAdapter = async config => ({

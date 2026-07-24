@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   verify-release:
@@ -24,20 +25,49 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: Wait for and verify formal assets
+      - name: Recover and verify formal assets
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          expected_assets=(
-            "MRR-v${RELEASE_VERSION}.zip"
-            "MRR-v${RELEASE_VERSION}-standalone.jar"
-            "MRR-v${RELEASE_VERSION}-standalone.jar.sha256"
-          )
+          release_sha="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          zip_name="MRR-v${RELEASE_VERSION}.zip"
+          jar_name="MRR-v${RELEASE_VERSION}-standalone.jar"
+          sha_name="${jar_name}.sha256"
+          expected_assets=("${zip_name}" "${jar_name}" "${sha_name}")
 
           for attempt in $(seq 1 120); do
             if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              assets="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
+
+              if ! grep -Fxq "${zip_name}" <<< "${assets}"; then
+                run_id="$(gh run list \
+                  --repo "${GITHUB_REPOSITORY}" \
+                  --workflow windows-release-package.yml \
+                  --commit "${release_sha}" \
+                  --event push \
+                  --limit 10 \
+                  --json databaseId,status \
+                  --jq 'map(select(.status == "completed")) | .[0].databaseId // empty')"
+
+                if [[ -n "${run_id}" ]]; then
+                  rm -rf build/windows-asset-recovery
+                  mkdir -p build/windows-asset-recovery
+                  if gh run download "${run_id}" \
+                    --repo "${GITHUB_REPOSITORY}" \
+                    --name "${zip_name}" \
+                    --dir build/windows-asset-recovery; then
+                    zip_path="$(find build/windows-asset-recovery -type f -name "${zip_name}" | head -n 1)"
+                    if [[ -n "${zip_path}" ]]; then
+                      gh release upload "${RELEASE_TAG}" "${zip_path}" \
+                        --repo "${GITHUB_REPOSITORY}" \
+                        --clobber
+                    fi
+                  fi
+                fi
+              fi
+
               assets="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
               missing=0
               for asset in "${expected_assets[@]}"; do
@@ -48,6 +78,13 @@ jobs:
 
               if [[ "${missing}" -eq 0 ]]; then
                 body="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq '.body')"
+                if ! grep -Fq 'MRR 0.7.3 发布说明' <<< "${body}"; then
+                  gh release edit "${RELEASE_TAG}" \
+                    --repo "${GITHUB_REPOSITORY}" \
+                    --title "MRR ${RELEASE_TAG}" \
+                    --notes-file release-notes/0.7.3.md
+                  body="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq '.body')"
+                fi
                 grep -F 'MRR 0.7.3 发布说明' <<< "${body}"
                 grep -F 'MRR-v0.7.3-standalone.jar' <<< "${body}"
 
@@ -55,10 +92,9 @@ jobs:
                 mkdir -p build/release-verification
                 gh release download "${RELEASE_TAG}" \
                   --repo "${GITHUB_REPOSITORY}" \
-                  --pattern "MRR-v${RELEASE_VERSION}-standalone.jar.sha256" \
+                  --pattern "${sha_name}" \
                   --dir build/release-verification
-                grep -F "MRR-v${RELEASE_VERSION}-standalone.jar" \
-                  "build/release-verification/MRR-v${RELEASE_VERSION}-standalone.jar.sha256"
+                grep -F "${jar_name}" "build/release-verification/${sha_name}"
 
                 printf '%s\n' "${assets}"
                 exit 0

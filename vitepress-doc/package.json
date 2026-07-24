@@ -18,11 +18,11 @@
     "docs:preview:internal": "node scripts/run-docs.mjs internal preview"
   },
   "dependencies": {
-    "mermaid": "^11.14.0",
+    "mermaid": "^11.16.0",
     "vitepress": "^1.5.0",
     "vitepress-plugin-mermaid": "^2.0.17"
   },
   "devDependencies": {
-    "@vueuse/core": "^10.9.0"
+    "@vueuse/core": "^14.3.0"
   }
 }

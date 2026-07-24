@@ -34,6 +34,18 @@ class PublicDocumentationConfigControllerTest {
     }
 
     @Test
+    void shouldKeepAnExplicitlyClearedDocumentationLinkDisabled() {
+        SystemSettingService service = mock(SystemSettingService.class);
+        when(service.getSetting(PublicDocumentationConfigController.USER_GUIDE_KEY)).thenReturn("  ");
+
+        Map<String, String> data = new PublicDocumentationConfigController(service)
+                .getDocumentationConfig().getData();
+
+        assertThat(data.get(PublicDocumentationConfigController.USER_GUIDE_KEY)).isEmpty();
+        assertThat(data.get(PublicDocumentationConfigController.DEVELOPER_GUIDE_KEY)).isEqualTo("/docs/internal/");
+    }
+
+    @Test
     void shouldFallBackWhenConfiguredUrlIsUnsafeOrInvalid() {
         SystemSettingService service = mock(SystemSettingService.class);
         when(service.getSetting(PublicDocumentationConfigController.USER_GUIDE_KEY))

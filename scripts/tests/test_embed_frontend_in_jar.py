@@ -3,7 +3,12 @@ import unittest
 from pathlib import Path
 from zipfile import ZIP_STORED, ZipFile
 
-from scripts.embed_frontend_in_jar import embed_frontend, verify_frontend
+from scripts.embed_frontend_in_jar import (
+    embed_frontend,
+    embed_site,
+    verify_frontend,
+    verify_site,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -117,6 +122,70 @@ class EmbedFrontendInJarTest(unittest.TestCase):
                     archive.read("BOOT-INF/classes/static/assets/app.js"),
                     b"second",
                 )
+
+    def test_embeds_user_and_internal_docs_without_removing_frontend(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / "app.jar"
+            frontend = root / "frontend"
+            user_docs = root / "user-docs"
+            internal_docs = root / "internal-docs"
+
+            for dist, title, asset in (
+                (frontend, "frontend", "frontend.js"),
+                (user_docs, "user docs", "user.js"),
+                (internal_docs, "internal docs", "internal.js"),
+            ):
+                (dist / "assets").mkdir(parents=True)
+                (dist / "index.html").write_text(f"<html>{title}</html>", encoding="utf-8")
+                (dist / "assets" / asset).write_text(title, encoding="utf-8")
+
+            with ZipFile(jar, "w") as archive:
+                archive.writestr("BOOT-INF/classes/application.properties", "keep=true")
+
+            embed_frontend(jar, frontend)
+            embed_site(jar, user_docs, "docs")
+            embed_site(jar, internal_docs, "docs/internal")
+
+            verify_frontend(jar)
+            verify_site(jar, "docs")
+            verify_site(jar, "docs/internal")
+
+            with ZipFile(jar) as archive:
+                names = archive.namelist()
+                self.assertIn("BOOT-INF/classes/static/index.html", names)
+                self.assertIn("BOOT-INF/classes/static/docs/index.html", names)
+                self.assertIn("BOOT-INF/classes/static/docs/internal/index.html", names)
+                self.assertIn("BOOT-INF/classes/static/assets/frontend.js", names)
+                self.assertIn("BOOT-INF/classes/static/docs/assets/user.js", names)
+                self.assertIn("BOOT-INF/classes/static/docs/internal/assets/internal.js", names)
+
+            (internal_docs / "index.html").write_text("<html>updated internal docs</html>", encoding="utf-8")
+            embed_site(jar, internal_docs, "/docs/internal/")
+
+            with ZipFile(jar) as archive:
+                self.assertEqual(
+                    archive.read("BOOT-INF/classes/static/docs/index.html"),
+                    b"<html>user docs</html>",
+                )
+                self.assertEqual(
+                    archive.read("BOOT-INF/classes/static/docs/internal/index.html"),
+                    b"<html>updated internal docs</html>",
+                )
+
+    def test_rejects_unsafe_mount_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / "app.jar"
+            dist = root / "dist"
+            (dist / "assets").mkdir(parents=True)
+            (dist / "index.html").write_text("<html>docs</html>", encoding="utf-8")
+            (dist / "assets/app.js").write_text("docs", encoding="utf-8")
+            with ZipFile(jar, "w"):
+                pass
+
+            with self.assertRaisesRegex(ValueError, "Invalid static site mount path"):
+                embed_site(jar, dist, "docs/../internal")
 
     def test_docker_build_replaces_static_before_maven_package(self):
         dockerfile = (ROOT / "backend-repo/Dockerfile").read_text(encoding="utf-8")

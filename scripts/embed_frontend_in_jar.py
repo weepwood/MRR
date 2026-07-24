@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Embed a Vite distribution into a Spring Boot executable JAR."""
+"""Embed generated static sites into a Spring Boot executable JAR."""
 
 from __future__ import annotations
 
@@ -12,22 +12,32 @@ from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 STATIC_PREFIX = PurePosixPath("BOOT-INF/classes/static")
-STATIC_PREFIX_TEXT = f"{STATIC_PREFIX}/"
-INDEX_ENTRY = str(STATIC_PREFIX / "index.html")
 
 
-def _frontend_files(dist: Path) -> list[Path]:
+def _site_files(dist: Path) -> list[Path]:
     index = dist / "index.html"
     assets = dist / "assets"
     if not index.is_file():
-        raise ValueError(f"Frontend distribution is missing index.html: {index}")
+        raise ValueError(f"Static site distribution is missing index.html: {index}")
     if not assets.is_dir() or not any(path.is_file() for path in assets.rglob("*")):
-        raise ValueError(f"Frontend distribution has no generated assets: {assets}")
+        raise ValueError(f"Static site distribution has no generated assets: {assets}")
     return sorted(path for path in dist.rglob("*") if path.is_file())
 
 
-def _is_static_entry(name: str) -> bool:
-    return name == str(STATIC_PREFIX) or name.startswith(STATIC_PREFIX_TEXT)
+def _resolve_mount_prefix(mount: str) -> PurePosixPath:
+    normalized = mount.strip().replace("\\", "/").strip("/")
+    if not normalized:
+        return STATIC_PREFIX
+
+    parts = normalized.split("/")
+    if any(not part or part in {".", ".."} for part in parts):
+        raise ValueError(f"Invalid static site mount path: {mount}")
+    return STATIC_PREFIX.joinpath(*parts)
+
+
+def _is_site_entry(name: str, prefix: PurePosixPath) -> bool:
+    prefix_text = f"{prefix}/"
+    return name == str(prefix) or name.startswith(prefix_text)
 
 
 def _copy_entry(source: ZipFile, target: ZipFile, info: ZipInfo) -> None:
@@ -39,26 +49,27 @@ def _copy_entry(source: ZipFile, target: ZipFile, info: ZipInfo) -> None:
             shutil.copyfileobj(reader, writer, length=1024 * 1024)
 
 
-def embed_frontend(jar: Path, dist: Path) -> int:
+def embed_site(jar: Path, dist: Path, mount: str = "") -> int:
     if not jar.is_file():
         raise ValueError(f"Backend JAR does not exist: {jar}")
 
-    files = _frontend_files(dist)
-    temporary = jar.with_name(f".{jar.name}.frontend-{uuid4().hex}.tmp")
+    files = _site_files(dist)
+    mount_prefix = _resolve_mount_prefix(mount)
+    temporary = jar.with_name(f".{jar.name}.static-site-{uuid4().hex}.tmp")
     try:
         with ZipFile(jar, "r") as source:
             with ZipFile(temporary, "w", allowZip64=True) as target:
                 target.comment = source.comment
                 for info in source.infolist():
-                    if _is_static_entry(info.filename):
+                    if _is_site_entry(info.filename, mount_prefix):
                         continue
                     _copy_entry(source, target, info)
 
-                for frontend_file in files:
-                    relative = PurePosixPath(frontend_file.relative_to(dist).as_posix())
+                for site_file in files:
+                    relative = PurePosixPath(site_file.relative_to(dist).as_posix())
                     target.write(
-                        frontend_file,
-                        str(STATIC_PREFIX / relative),
+                        site_file,
+                        str(mount_prefix / relative),
                         compress_type=ZIP_DEFLATED,
                         compresslevel=9,
                     )
@@ -67,39 +78,55 @@ def embed_frontend(jar: Path, dist: Path) -> int:
     finally:
         temporary.unlink(missing_ok=True)
 
-    verify_frontend(jar)
+    verify_site(jar, mount)
     return len(files)
 
 
-def verify_frontend(jar: Path) -> tuple[int, int]:
+def verify_site(jar: Path, mount: str = "") -> tuple[int, int]:
     if not jar.is_file():
         raise ValueError(f"Backend JAR does not exist: {jar}")
+
+    mount_prefix = _resolve_mount_prefix(mount)
+    prefix_text = f"{mount_prefix}/"
+    index_entry = str(mount_prefix / "index.html")
+    assets_prefix = f"{mount_prefix}/assets/"
+
     with ZipFile(jar) as archive:
         names = archive.namelist()
-        if names.count(INDEX_ENTRY) != 1:
+        if names.count(index_entry) != 1:
             raise ValueError(
-                f"Backend JAR must contain exactly one {INDEX_ENTRY}; "
-                f"found {names.count(INDEX_ENTRY)}"
+                f"Backend JAR must contain exactly one {index_entry}; "
+                f"found {names.count(index_entry)}"
             )
-        static_entries = [name for name in names if name.startswith(STATIC_PREFIX_TEXT)]
+        site_entries = [name for name in names if name.startswith(prefix_text)]
         asset_entries = [
-            name for name in static_entries
-            if name.startswith(f"{STATIC_PREFIX}/assets/") and not name.endswith("/")
+            name for name in site_entries
+            if name.startswith(assets_prefix) and not name.endswith("/")
         ]
         if not asset_entries:
-            raise ValueError("Backend JAR contains index.html but no generated frontend assets")
+            raise ValueError(
+                f"Backend JAR contains {index_entry} but no generated assets under {assets_prefix}"
+            )
         duplicate_entries = {
-            name for name in static_entries if static_entries.count(name) > 1
+            name for name in site_entries if site_entries.count(name) > 1
         }
         if duplicate_entries:
             raise ValueError(
-                "Backend JAR contains duplicate frontend entries: "
+                "Backend JAR contains duplicate static site entries: "
                 + ", ".join(sorted(duplicate_entries)[:10])
             )
-        index = archive.read(INDEX_ENTRY)
+        index = archive.read(index_entry)
         if b"<html" not in index.lower():
-            raise ValueError("Bundled index.html does not look like an HTML document")
-    return len(static_entries), len(asset_entries)
+            raise ValueError(f"Bundled {index_entry} does not look like an HTML document")
+    return len(site_entries), len(asset_entries)
+
+
+def embed_frontend(jar: Path, dist: Path) -> int:
+    return embed_site(jar, dist)
+
+
+def verify_frontend(jar: Path) -> tuple[int, int]:
+    return verify_site(jar)
 
 
 def main() -> int:
@@ -109,19 +136,31 @@ def main() -> int:
     embed_parser = subparsers.add_parser("embed")
     embed_parser.add_argument("--jar", type=Path, required=True)
     embed_parser.add_argument("--dist", type=Path, required=True)
+    embed_parser.add_argument(
+        "--mount",
+        default="",
+        help="Path below BOOT-INF/classes/static, for example docs/internal",
+    )
 
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--jar", type=Path, required=True)
+    verify_parser.add_argument(
+        "--mount",
+        default="",
+        help="Path below BOOT-INF/classes/static, for example docs/internal",
+    )
 
     args = parser.parse_args()
     try:
         if args.command == "embed":
-            count = embed_frontend(args.jar.resolve(), args.dist.resolve())
-            print(f"Embedded {count} frontend files into {args.jar}")
+            count = embed_site(args.jar.resolve(), args.dist.resolve(), args.mount)
+            mount_label = f"/{args.mount.strip('/')}" if args.mount.strip("/") else "/"
+            print(f"Embedded {count} static site files at {mount_label} into {args.jar}")
         else:
-            static_count, asset_count = verify_frontend(args.jar.resolve())
+            static_count, asset_count = verify_site(args.jar.resolve(), args.mount)
+            mount_label = f"/{args.mount.strip('/')}" if args.mount.strip("/") else "/"
             print(
-                f"Verified bundled frontend: {static_count} static entries, "
+                f"Verified bundled static site at {mount_label}: {static_count} entries, "
                 f"{asset_count} asset entries"
             )
     except (OSError, ValueError) as error:

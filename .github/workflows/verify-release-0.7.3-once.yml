@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 jobs:
   verify-release:
@@ -72,6 +72,39 @@ jobs:
           git commit -m "诊断：记录 MRR 0.7.3 发布状态"
           git push origin main
 
+      - name: Dispatch formal release builds
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_sha="$(git rev-list -n 1 "${RELEASE_TAG}")"
+
+          dispatch_if_missing() {
+            local workflow="$1"
+            local active_or_successful
+            active_or_successful="$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow "${workflow}" \
+              --commit "${release_sha}" \
+              --limit 20 \
+              --json status,conclusion \
+              --jq '.[] | select(.status == "queued" or .status == "in_progress" or (.status == "completed" and .conclusion == "success")) | .status' \
+              || true)"
+
+            if [[ -z "${active_or_successful}" ]]; then
+              echo "Dispatching ${workflow} at ${RELEASE_TAG}"
+              gh workflow run "${workflow}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --ref "${RELEASE_TAG}"
+            else
+              echo "${workflow} already has an active or successful run for ${release_sha}"
+            fi
+          }
+
+          dispatch_if_missing windows-release-package.yml
+          dispatch_if_missing standalone-jar-release.yml
+
       - name: Recover and verify formal assets
         shell: bash
         env:
@@ -93,7 +126,6 @@ jobs:
                   --repo "${GITHUB_REPOSITORY}" \
                   --workflow windows-release-package.yml \
                   --commit "${release_sha}" \
-                  --event push \
                   --limit 10 \
                   --json databaseId,status \
                   --jq 'map(select(.status == "completed")) | .[0].databaseId // empty')"

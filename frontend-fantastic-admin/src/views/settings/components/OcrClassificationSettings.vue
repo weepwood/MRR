@@ -232,6 +232,7 @@ onMounted(loadSettings)
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
+
 .setting-group,
 .switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 .group-heading { margin-bottom: var(--mrr-space-5); }
@@ -244,6 +245,7 @@ onMounted(loadSettings)
 .switch-row:last-child { border-bottom: 0; }
 .switch-row strong { font-size: 13px; }
 .switch-row p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+
 .foundation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .foundation-card { display: grid; gap: 6px; padding: var(--mrr-space-4); border: 1px dashed var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .foundation-card span,

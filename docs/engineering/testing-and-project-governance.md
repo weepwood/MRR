@@ -10,7 +10,8 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 2. 保留稳定的 `frontend-gate` 与 `backend-gate` 汇总状态，便于设置分支保护；
 3. 在每次质量门禁中生成测试资产清单，并阻止 `.only` 与 `@Disabled` 混入主分支；
 4. 统一 Issue、PR、依赖更新和代码所有权入口；
-5. 让测试失败时保留可下载的 Surefire、Failsafe、JaCoCo、Playwright、JUnit XML 和测试清单。
+5. 让测试失败时保留可下载的 Surefire、Failsafe、JaCoCo、Playwright、JUnit XML 和测试清单；
+6. 建立可追踪的后端覆盖率基线，先观察趋势，再逐步启用阻塞门禁。
 
 ## 2. 测试分层
 
@@ -40,6 +41,7 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 
 - 普通 Java 业务代码：`mvn test`；
 - Mapper、实体、配置、资源、Flyway 或 POM：PostgreSQL 服务下执行 `mvn verify`；
+- 覆盖率脚本、基线或覆盖率工作流：执行完整 PostgreSQL 后端验证；
 - 后端无关变更：跳过 Maven 构建。
 
 `backend-gate` 负责汇总结果。
@@ -59,7 +61,39 @@ python scripts/test_inventory.py --fail-on-focused
 
 CI 会把清单写入 Job Summary，并上传 `test-inventory.md`。该清单反映测试资产数量，不等同于代码覆盖率或测试质量。
 
-## 5. 本地提交前检查
+## 5. 后端覆盖率基线
+
+当前基线来自 `quality-gate` 的完整 PostgreSQL `mvn verify`，记录在 `quality/coverage-baseline.json`：
+
+| 指标 | 当前基线 |
+| --- | ---: |
+| 指令覆盖率 | 50.04% |
+| 分支覆盖率 | 41.56% |
+| 行覆盖率 | 51.27% |
+| 复杂度覆盖率 | 35.67% |
+| 方法覆盖率 | 59.47% |
+| 类覆盖率 | 75.11% |
+
+`coverage-baseline` 工作流会在 `quality-gate` 成功后读取后端测试 Artifact，使用 `scripts/jacoco_coverage.py` 生成：
+
+- GitHub Actions Job Summary；
+- `coverage-summary.json`，便于后续趋势分析；
+- `coverage-summary.md`，便于人工审查；
+- 与基线相比的百分点变化和超过 `0.50` 个百分点的下降提示。
+
+当前 `enforcementMode` 为 `report-only`：下降会被标记，但不会阻塞 PR。建议至少观察若干轮稳定数据，再对行覆盖率、分支覆盖率或新增代码覆盖率启用 `--fail-on-regression`。
+
+本地解析已有 JaCoCo 报告：
+
+```bash
+python scripts/jacoco_coverage.py \
+  --xml backend-repo/target/site/jacoco/jacoco.xml \
+  --baseline quality/coverage-baseline.json \
+  --output-json backend-repo/target/coverage-summary.json \
+  --output-markdown backend-repo/target/coverage-summary.md
+```
+
+## 6. 本地提交前检查
 
 ### 后端普通改动
 
@@ -98,7 +132,7 @@ python scripts/test_inventory.py --fail-on-focused
 python scripts/release_baseline.py validate
 ```
 
-## 6. 分支保护建议
+## 7. 分支保护建议
 
 为 `main` 设置：
 
@@ -113,9 +147,9 @@ python scripts/release_baseline.py validate
 
 仓库设置无法通过本次代码 PR 自动强制，需在 GitHub Branch protection rules 中配置。
 
-## 7. 后续测试债务
+## 8. 后续测试债务
 
-1. **覆盖率门禁尚未启用。** 后端 JaCoCo 当前只生成报告；前端 `test:coverage` 还需要补充与锁文件一致的 coverage provider。应先记录当前基线，再分阶段提高阈值，避免用低价值测试机械追求数字。
+1. **覆盖率门禁处于观察阶段。** 后端已建立可追踪基线，但尚未阻塞下降；前端 `test:coverage` 还需要补充与锁文件一致的 coverage provider。应先观察波动，再分阶段提高约束，避免用低价值测试机械追求数字。
 2. **数据库集成测试仍偏少。** 优先覆盖复杂查询、Flyway 迁移、病案号/上架号规则、导入导出事务和大数据分页。
 3. **E2E 应保持少而关键。** 重点保护登录、首次改密、权限拒绝、影像调阅、外部 Ticket、ZIP/PDF 导出和设置持久化；不应把所有视觉细节都放入 E2E。
 4. **性能测试应与功能门禁分离。** 三千万级数据、OSS/NAS、超大 ZIP/PDF 使用定时或手动基准测试，避免阻塞每个普通 PR。

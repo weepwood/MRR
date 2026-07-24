@@ -22,7 +22,7 @@ describe('file download utilities', () => {
   it('reads axios-style headers and resolves RFC 5987 filenames', () => {
     const headers = {
       get: (name: string) => name === 'content-disposition'
-        ? "attachment; filename*=UTF-8''mr_%E7%97%85%E6%A1%88.csv"
+        ? 'attachment; filename*=UTF-8\'\'mr_%E7%97%85%E6%A1%88.csv'
         : undefined,
     }
 

@@ -24,8 +24,8 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
-import { downloadBlob, getResponseHeader } from '@/utils/file-download'
 import useAuth from '@/utils/composables/useAuth'
+import { downloadBlob, getResponseHeader } from '@/utils/file-download'
 import DatasetImportPanel from './components/DatasetImportPanel.vue'
 
 defineOptions({ name: 'DataExchangePage' })

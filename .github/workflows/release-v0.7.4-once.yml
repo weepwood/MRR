@@ -1,0 +1,173 @@
+name: 发布 MRR v0.7.4（一次性）
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-v0.7.4-once.yml'
+      - 'scripts/release_v0_7_4_once.py'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-mrr-v0.7.4
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'weepwood/MRR'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Prepare v0.7.4 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          python -m py_compile scripts/release_v0_7_4_once.py
+          python scripts/release_v0_7_4_once.py
+          python scripts/release_baseline.py validate
+          git diff --check
+
+          git add \
+            VERSION \
+            backend-repo/pom.xml \
+            release-baseline.json \
+            README.md \
+            CHANGELOG.md \
+            release-notes/0.7.4.md \
+            vitepress-doc/internal/index.md \
+            vitepress-doc/internal/deployment.md \
+            vitepress-doc/internal/standalone-jar.md \
+            vitepress-doc/user-guide/release-notes.md
+          git commit -m '发布：建立 MRR 0.7.4 版本基线'
+          git push origin HEAD:main
+
+      - name: Remove one-time release sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm \
+            .github/workflows/release-v0.7.4-once.yml \
+            scripts/release_v0_7_4_once.py
+          git commit -m '清理：移除 MRR 0.7.4 一次性发布任务'
+          git push origin HEAD:main
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "${GITHUB_ENV}"
+
+      - name: Create tag and Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG='v0.7.4'
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}" --force
+            TAG_SHA="$(git rev-list -n 1 "${TAG}")"
+            test "${TAG_SHA}" = "${RELEASE_SHA}"
+          else
+            git tag -a "${TAG}" "${RELEASE_SHA}" -m 'MRR v0.7.4'
+            git push origin "refs/tags/${TAG}"
+          fi
+
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title 'MRR v0.7.4' \
+              --notes-file release-notes/0.7.4.md
+          else
+            gh release create "${TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --title 'MRR v0.7.4' \
+              --notes-file release-notes/0.7.4.md
+          fi
+
+      - name: Dispatch formal builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run windows-release-package.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref v0.7.4
+          gh workflow run standalone-jar-release.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref v0.7.4
+
+      - name: Wait for formal builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find_run() {
+            local workflow="$1"
+            local run_id=''
+            for attempt in $(seq 1 40); do
+              run_id="$(gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?event=workflow_dispatch&per_page=30" \
+                --jq ".workflow_runs[] | select(.head_sha == \"${RELEASE_SHA}\") | .id" \
+                | head -n 1)"
+              if [[ -n "${run_id}" ]]; then
+                printf '%s' "${run_id}"
+                return 0
+              fi
+              echo "Waiting for ${workflow} run registration (${attempt}/40)..." >&2
+              sleep 5
+            done
+            return 1
+          }
+
+          WINDOWS_RUN_ID="$(find_run windows-release-package.yml)"
+          STANDALONE_RUN_ID="$(find_run standalone-jar-release.yml)"
+
+          echo "Windows run: ${WINDOWS_RUN_ID}"
+          echo "Standalone run: ${STANDALONE_RUN_ID}"
+          gh run watch "${WINDOWS_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --exit-status
+          gh run watch "${STANDALONE_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --exit-status
+
+      - name: Verify Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUIRED=(
+            'MRR-v0.7.4.zip'
+            'MRR-v0.7.4-standalone.jar'
+            'MRR-v0.7.4-standalone.jar.sha256'
+          )
+
+          ASSETS="$(gh release view v0.7.4 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json assets \
+            --jq '.assets[].name')"
+          printf '%s\n' "${ASSETS}"
+          for asset in "${REQUIRED[@]}"; do
+            grep -Fx "${asset}" <<< "${ASSETS}" >/dev/null
+          done
+
+          rm -rf build/release-verification
+          mkdir -p build/release-verification
+          gh release download v0.7.4 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern 'MRR-v0.7.4-standalone.jar*' \
+            --dir build/release-verification
+          (
+            cd build/release-verification
+            sha256sum -c MRR-v0.7.4-standalone.jar.sha256
+          )

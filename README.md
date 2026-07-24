@@ -8,7 +8,7 @@
 
 MRR 面向医疗机构的病案扫描、归档、检索、调阅、导出、统计、数据治理和运维场景。系统以患者、病案主档、扫描图片、实体档案位置和多来源文件为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、运行诊断与 Windows 原生部署能力。
 
-> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.7.2**，正式标签为 `v0.7.2`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
+> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.7.3**，正式标签为 `v0.7.3`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
 ## 项目定位
 
@@ -107,7 +107,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 制品 | 默认业务端口 | 内容 | 适用场景 |
 | --- | ---: | --- | --- |
 | `MRR-vX.Y.Z.zip` | `18045` | JAR、Nginx、WinSW、文档、运维脚本和外置前端回退 | Windows Server 正式受管理部署 |
-| `MRR-vX.Y.Z-standalone.jar` | `8002` | 后端 + 内嵌 Vue 前端 | 直接运行、已有反向代理或轻量部署 |
+| `MRR-vX.Y.Z-standalone.jar` | `8002` | 后端 + 内嵌 Vue 前端 + 用户手册 + 内部文档 | 直接运行、已有反向代理或轻量部署 |
 | 源码直接运行 | `18045` | Spring Boot 开发实例 | 本地开发 |
 
 Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SERVER_PORT` 覆盖。
@@ -232,7 +232,7 @@ java -jar .\MRR-vX.Y.Z-standalone.jar
 http://localhost:8002
 ```
 
-单体 JAR不包含数据库、Nginx、WinSW、文档或医院环境配置。
+单体 JAR 已包含管理端、用户手册、内部文档和实时 API 文档入口；不包含数据库、Nginx、WinSW 或医院环境配置。
 
 ## 项目结构
 

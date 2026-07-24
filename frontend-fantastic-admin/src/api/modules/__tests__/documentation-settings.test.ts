@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_DOCUMENTATION_SETTINGS,
   normalizeDocumentationSettings,
 } from '../documentation-settings'
+
+vi.mock('../../index', () => ({
+  getRequest: vi.fn(),
+}))
 
 describe('documentation settings', () => {
   it('normalizes safe configured links', () => {

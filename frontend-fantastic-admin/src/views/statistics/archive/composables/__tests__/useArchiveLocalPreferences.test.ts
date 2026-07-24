@@ -19,6 +19,10 @@ describe('archive local preferences', () => {
       archiveFitMode: 'width',
       archivePreviewScale: 125,
       archiveScrollbarMode: 'semi-hidden',
+      archiveLayoutMode: 'wall',
+      archiveWallCardWidth: 280,
+      archiveWallDensity: 'spacious',
+      archiveWallShowMeta: false,
     })
 
     expect(result).toEqual({
@@ -29,19 +33,36 @@ describe('archive local preferences', () => {
       archivePreviewScale: 125,
       archiveScrollbarMode: 'semi-hidden',
       archiveDepartmentColorsEnabled: false,
+      archiveLayoutMode: 'wall',
+      archiveWallCardWidth: 280,
+      archiveWallDensity: 'spacious',
+      archiveWallShowMeta: false,
     })
   })
 
   it('persists only valid local preferences', () => {
-    writeArchiveLocalPreferences({ archivePreviewMode: 'scroll', archiveTypeDisplayMode: 'single-column', archiveThumbnailSize: 999, archiveScrollbarMode: 'hidden' })
+    writeArchiveLocalPreferences({
+      archivePreviewMode: 'scroll',
+      archiveTypeDisplayMode: 'single-column',
+      archiveThumbnailSize: 999,
+      archiveScrollbarMode: 'hidden',
+      archiveLayoutMode: 'wall',
+      archiveWallCardWidth: 999,
+      archiveWallDensity: 'compact',
+      archiveWallShowMeta: true,
+    })
 
     expect(readArchiveLocalPreferences()).toEqual({
       archivePreviewMode: 'scroll',
       archiveTypeDisplayMode: 'single-column',
       archiveThumbnailSize: 480,
       archiveScrollbarMode: 'hidden',
+      archiveLayoutMode: 'wall',
+      archiveWallCardWidth: 420,
+      archiveWallDensity: 'compact',
+      archiveWallShowMeta: true,
     })
-    expect(localStorage.getItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY)).toContain('scroll')
+    expect(localStorage.getItem(ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY)).toContain('wall')
   })
 
   it('migrates legacy button and tree display preferences to column layouts', () => {
@@ -60,12 +81,22 @@ describe('archive local preferences', () => {
     expect(readArchiveLocalPreferences().archiveScrollbarMode).toBe('visible')
   })
 
+  it('uses stable wall defaults', () => {
+    const result = resolveArchiveDisplayPreferences(createDefaultSystemSettings(), {})
+    expect(result.archiveLayoutMode).toBe('standard')
+    expect(result.archiveWallCardWidth).toBe(240)
+    expect(result.archiveWallDensity).toBe('comfortable')
+    expect(result.archiveWallShowMeta).toBe(true)
+  })
+
   it('hides scrollbars by default', () => {
     expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), {}).archiveScrollbarMode).toBe('hidden')
   })
 
-  it('clamps the scroll preview scale', () => {
+  it('clamps the scroll preview scale and wall card width', () => {
     expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archivePreviewScale: 999 }).archivePreviewScale).toBe(150)
     expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archivePreviewScale: 1 }).archivePreviewScale).toBe(50)
+    expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archiveWallCardWidth: 999 }).archiveWallCardWidth).toBe(420)
+    expect(resolveArchiveDisplayPreferences(createDefaultSystemSettings(), { archiveWallCardWidth: 1 }).archiveWallCardWidth).toBe(160)
   })
 })

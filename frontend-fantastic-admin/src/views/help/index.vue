@@ -110,12 +110,12 @@ function openDocumentation(entry: DocumentationEntry) {
 
 .help-header {
   display: flex;
-  align-items: flex-start;
   gap: 24px;
+  align-items: flex-start;
   justify-content: space-between;
   padding: 28px;
-  border: 1px solid var(--el-border-color-light);
   background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
   border-radius: 16px;
 }
 
@@ -123,8 +123,8 @@ function openDocumentation(entry: DocumentationEntry) {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
   color: var(--el-color-primary);
+  letter-spacing: 0.16em;
 }
 
 .help-header h1 {
@@ -147,10 +147,10 @@ function openDocumentation(entry: DocumentationEntry) {
   gap: 8px;
   align-items: center;
   padding: 8px 12px;
-  border: 1px solid var(--el-border-color-lighter);
   font-size: 13px;
   color: var(--el-text-color-regular);
   background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 999px;
 }
 
@@ -171,8 +171,8 @@ function openDocumentation(entry: DocumentationEntry) {
 .documentation-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--el-border-color-light);
   background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
+  border: 1px solid var(--el-border-color-light);
   border-radius: 16px;
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
@@ -233,8 +233,8 @@ function openDocumentation(entry: DocumentationEntry) {
 .card-footer {
   display: flex;
   grid-column: 1 / -1;
-  align-items: center;
   gap: 16px;
+  align-items: center;
   justify-content: flex-end;
   padding-top: 14px;
   margin-top: 16px;

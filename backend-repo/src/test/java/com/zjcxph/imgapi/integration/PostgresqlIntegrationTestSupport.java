@@ -38,9 +38,9 @@ public abstract class PostgresqlIntegrationTestSupport {
 
     @DynamicPropertySource
     protected static void configurePostgresql(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", PostgresqlIntegrationTestSupport::jdbcUrl);
-        registry.add("spring.datasource.username", PostgresqlIntegrationTestSupport::username);
-        registry.add("spring.datasource.password", PostgresqlIntegrationTestSupport::password);
+        registry.add("spring.datasource.url", PostgresqlIntegrationTestSupport::postgresqlJdbcUrl);
+        registry.add("spring.datasource.username", PostgresqlIntegrationTestSupport::postgresqlUsername);
+        registry.add("spring.datasource.password", PostgresqlIntegrationTestSupport::postgresqlPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         registry.add(
                 "spring.datasource.hikari.connection-init-sql",
@@ -53,20 +53,26 @@ public abstract class PostgresqlIntegrationTestSupport {
         registry.add("spring.sql.init.mode", () -> "never");
     }
 
-    private static String jdbcUrl() {
+    /**
+     * Returns the effective JDBC URL used by PostgreSQL integration tests.
+     *
+     * <p>Subclasses may use this to create isolated temporary databases while
+     * reusing the same CI service or local Testcontainer credentials.</p>
+     */
+    protected static String postgresqlJdbcUrl() {
         if (EXTERNAL_URL != null) {
             return withCurrentSchema(EXTERNAL_URL);
         }
         return withCurrentSchema(LocalContainerHolder.INSTANCE.getJdbcUrl());
     }
 
-    private static String username() {
+    protected static String postgresqlUsername() {
         return EXTERNAL_URL != null
                 ? EXTERNAL_USERNAME
                 : LocalContainerHolder.INSTANCE.getUsername();
     }
 
-    private static String password() {
+    protected static String postgresqlPassword() {
         return EXTERNAL_URL != null
                 ? EXTERNAL_PASSWORD
                 : LocalContainerHolder.INSTANCE.getPassword();

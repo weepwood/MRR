@@ -1,0 +1,40 @@
+{
+  "id": "/",
+  "name": "MRR 病案文件管理系统",
+  "short_name": "MRR",
+  "description": "用于病案文件、影像档案、统计分析与系统管理的渐进式 Web 应用。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f7fa",
+  "theme_color": "#0b63ce",
+  "categories": [
+    "medical",
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/pwa/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "prefer_related_applications": false
+}

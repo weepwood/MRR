@@ -248,6 +248,7 @@ onMounted(loadSettings)
 
 .foundation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .foundation-card { display: grid; gap: 6px; padding: var(--mrr-space-4); border: 1px dashed var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+
 .foundation-card span,
 .foundation-card small { color: var(--mrr-muted-foreground); }
 .foundation-card small { line-height: 1.6; }

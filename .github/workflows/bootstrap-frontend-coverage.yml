@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bootstrap-frontend-coverage
+  cancel-in-progress: true
+
 jobs:
   patch-quality-gate:
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
@@ -35,11 +39,7 @@ jobs:
 
           path = Path('.github/workflows/quality-gate.yml')
           text = path.read_text(encoding='utf-8')
-          before = """      - name: Unit Test
-                  run: pnpm test:run
-
-                - name: Install Chromium
-          """
+          before = "      - name: Unit Test\n        run: pnpm test:run\n\n"
           after = """      - name: Unit Test with coverage
                   run: pnpm test:coverage
 
@@ -68,7 +68,6 @@ jobs:
                     if-no-files-found: ignore
                     retention-days: 30
 
-                - name: Install Chromium
           """
           if before not in text:
               raise SystemExit('Expected frontend unit test block was not found')

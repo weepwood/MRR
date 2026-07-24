@@ -25,12 +25,14 @@ class PublicDocumentationConfigControllerTest {
         Map<String, String> data = new PublicDocumentationConfigController(service)
                 .getDocumentationConfig().getData();
 
-        assertThat(data).containsExactly(
-                Map.entry(PublicDocumentationConfigController.USER_GUIDE_KEY, "https://docs.example.test/user/"),
-                Map.entry(PublicDocumentationConfigController.DEVELOPER_GUIDE_KEY, "/internal/development/"),
-                Map.entry(PublicDocumentationConfigController.OPERATIONS_GUIDE_KEY, "http://192.168.1.20:8080/operations")
-        );
-        assertThat(data).doesNotContainKey("developerModeEnabled");
+        assertThat(data).hasSize(3)
+                .containsEntry(PublicDocumentationConfigController.USER_GUIDE_KEY,
+                        "https://docs.example.test/user/")
+                .containsEntry(PublicDocumentationConfigController.DEVELOPER_GUIDE_KEY,
+                        "/internal/development/")
+                .containsEntry(PublicDocumentationConfigController.OPERATIONS_GUIDE_KEY,
+                        "http://192.168.1.20:8080/operations")
+                .doesNotContainKey("developerModeEnabled");
     }
 
     @Test

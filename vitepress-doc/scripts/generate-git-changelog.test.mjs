@@ -76,6 +76,13 @@ test('keeps the committer timestamp while parsing Git log records', () => {
   assert.equal(commits[0].committedAt, '2026-07-18T09:10:11+08:00')
 })
 
+test('uses the China Standard Time date for commits that cross midnight', () => {
+  const commits = parseLog('cfe83bb3\x1fcfe83bb3\x1f2026-07-23\x1f2026-07-23T16:48:57Z\x1fweepwood\x1f发布：确认 MRR 0.7.2 正式资产\x1f\x1fparent123\x1e')
+
+  assert.equal(commits[0].date, '2026-07-24')
+  assert.equal(commits[0].committedAt, '2026-07-23T16:48:57Z')
+})
+
 test('extracts closing and related issue references with closing taking priority', () => {
   assert.deepEqual(extractIssueReferences(`
 Closes #162 and #163
@@ -196,4 +203,30 @@ test('renders URLs in commit subjects as code so they do not become competing li
   })
 
   assert.match(rendered, /`09:10` merge Merge branch 'main' of `https:\/\/github\.com\/weepwood\/MRR`（\[`fcac92c3`\]/)
+})
+
+test('normalizes commit timestamps to China Standard Time', () => {
+  const commits = [{
+    kind: 'commit',
+    hash: 'c4fbe0f6dc7a91fda889599cb711249d20541f48',
+    shortHash: 'c4fbe0f6',
+    date: '2026-07-24',
+    committedAt: '2026-07-24T03:02:56Z',
+    type: 'other',
+    scope: '',
+    breaking: false,
+    description: '发布：确认 MRR 0.7.4 正式资产',
+  }]
+
+  const rendered = renderDocument({
+    commits,
+    entries: commits,
+    branch: 'main',
+    githubBranch: 'main',
+    repositorySlug: 'weepwood/MRR',
+    githubStatus: { enabled: false },
+    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
+  })
+
+  assert.match(rendered, /`11:02` 发布：确认 MRR 0\.7\.4 正式资产/)
 })

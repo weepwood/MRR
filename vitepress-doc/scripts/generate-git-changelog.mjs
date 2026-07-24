@@ -55,7 +55,33 @@ function escapeMarkdownWithCodeUrls(value = '') {
 }
 
 function formatCommitTime(committedAt = '') {
-  return String(committedAt).match(/T(\d{2}:\d{2})/)?.[1] ?? ''
+  const timestamp = new Date(committedAt)
+  if (Number.isNaN(timestamp.getTime())) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(timestamp)
+}
+
+function formatCommitDate(committedAt = '') {
+  const timestamp = new Date(committedAt)
+  if (Number.isNaN(timestamp.getTime())) {
+    return ''
+  }
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(timestamp)
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day}`
 }
 
 export function normalizeRepositorySlug(remoteUrl) {
@@ -263,7 +289,7 @@ export function parseLog(rawLog) {
     .map(record => record.trim())
     .filter(Boolean)
     .map((record) => {
-      const [hash, shortHash, date, committedAt, author, subject, body = '', parents = ''] = record.split('\x1f')
+      const [hash, shortHash, sourceDate, committedAt, author, subject, body = '', parents = ''] = record.split('\x1f')
       const displaySubject = effectiveSubject(subject, body)
       const parsedSubject = parseConventionalSubject(displaySubject, subject)
 
@@ -271,7 +297,7 @@ export function parseLog(rawLog) {
         kind: 'commit',
         hash,
         shortHash,
-        date,
+        date: formatCommitDate(committedAt) || sourceDate,
         committedAt,
         author,
         parents: parents.trim().split(/\s+/).filter(Boolean),

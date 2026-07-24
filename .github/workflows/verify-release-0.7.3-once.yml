@@ -1,0 +1,83 @@
+name: 一次性验收 MRR 0.7.3 正式资产
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/verify-release-0.7.3-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RELEASE_TAG: v0.7.3
+      RELEASE_VERSION: 0.7.3
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Wait for and verify formal assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected_assets=(
+            "MRR-v${RELEASE_VERSION}.zip"
+            "MRR-v${RELEASE_VERSION}-standalone.jar"
+            "MRR-v${RELEASE_VERSION}-standalone.jar.sha256"
+          )
+
+          for attempt in $(seq 1 120); do
+            if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              assets="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
+              missing=0
+              for asset in "${expected_assets[@]}"; do
+                if ! grep -Fxq "${asset}" <<< "${assets}"; then
+                  missing=1
+                fi
+              done
+
+              if [[ "${missing}" -eq 0 ]]; then
+                body="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq '.body')"
+                grep -F 'MRR 0.7.3 发布说明' <<< "${body}"
+                grep -F 'MRR-v0.7.3-standalone.jar' <<< "${body}"
+
+                rm -rf build/release-verification
+                mkdir -p build/release-verification
+                gh release download "${RELEASE_TAG}" \
+                  --repo "${GITHUB_REPOSITORY}" \
+                  --pattern "MRR-v${RELEASE_VERSION}-standalone.jar.sha256" \
+                  --dir build/release-verification
+                grep -F "MRR-v${RELEASE_VERSION}-standalone.jar" \
+                  "build/release-verification/MRR-v${RELEASE_VERSION}-standalone.jar.sha256"
+
+                printf '%s\n' "${assets}"
+                exit 0
+              fi
+            fi
+
+            echo "等待 ${RELEASE_TAG} 正式资产 (${attempt}/120)..."
+            sleep 15
+          done
+
+          echo "${RELEASE_TAG} 正式资产未在规定时间内完整生成" >&2
+          exit 1
+
+      - name: Remove verification task and record success
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/verify-release-0.7.3-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "发布：确认 MRR 0.7.3 正式资产"
+          git push origin main

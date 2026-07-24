@@ -6,19 +6,25 @@ on:
       - chore/frontend-coverage-baseline
     paths:
       - .github/workflows/bootstrap-frontend-coverage.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bootstrap-frontend-coverage.yml
 
 permissions:
   contents: write
 
 jobs:
   update-lockfile:
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend-fantastic-admin
     steps:
-      - name: Checkout
+      - name: Checkout coverage branch
         uses: actions/checkout@v7
         with:
           ref: chore/frontend-coverage-baseline

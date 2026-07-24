@@ -13,6 +13,7 @@ on:
       - .github/workflows/bootstrap-frontend-coverage.yml
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:

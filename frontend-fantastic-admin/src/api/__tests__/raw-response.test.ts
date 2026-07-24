@@ -1,12 +1,21 @@
 import type { AxiosAdapter } from 'axios'
 import { AxiosHeaders } from 'axios'
-import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getRawRequest } from '../raw-response'
+
+const userStore = {
+  isLogin: false,
+  token: '',
+}
+
+vi.mock('@/store/modules/user', () => ({
+  useUserStore: () => userStore,
+}))
 
 describe('raw API response requests', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    userStore.isLogin = false
+    userStore.token = ''
   })
 
   it('preserves blob data and response headers through the global interceptor', async () => {

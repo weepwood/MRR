@@ -1,5 +1,5 @@
-import { getRequest } from '../index'
 import { createDefaultSystemSettings, isAllowedDocumentationUrl } from '@/utils/system-settings'
+import { getRequest } from '../index'
 
 export interface DocumentationSettings {
   documentationUserGuideUrl: string

@@ -31,7 +31,7 @@
         <springdoc.version>3.0.3</springdoc.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.5.0</itextpdf.version>
-        <commons-codec.version>1.21.0</commons-codec.version>
+        <commons-codec.version>1.22.0</commons-codec.version>
         <aws-sdk.version>1.12.500</aws-sdk.version>
 
         <!-- Plugin versions not managed by the Spring Boot parent -->

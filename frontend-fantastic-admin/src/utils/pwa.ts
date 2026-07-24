@@ -1,5 +1,4 @@
 import { ElMessageBox } from 'element-plus'
-import 'element-plus/es/components/message-box/style/css'
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
 

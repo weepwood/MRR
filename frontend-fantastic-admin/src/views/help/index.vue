@@ -37,7 +37,7 @@ const entries: DocumentationEntry[] = [
   {
     title: '实时 API 文档',
     description: '打开由 Springdoc OpenAPI 实时生成的 Swagger UI。',
-    target: 'http://192.2.1.135:18045/swagger-ui/index.html#/',
+    target: 'http://192.2.1.135:8002/swagger-ui/index.html#/',
     icon: Connection,
     tone: 'info',
   },

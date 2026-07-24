@@ -46,6 +46,15 @@ function runGit(args) {
   }).trim()
 }
 
+function tryRunGit(args) {
+  try {
+    return { ok: true, output: runGit(args), error: null }
+  }
+  catch (error) {
+    return { ok: false, output: '', error }
+  }
+}
+
 function escapeMarkdown(value = '') {
   return String(value)
     .replace(/\\/g, '\\\\')
@@ -72,6 +81,14 @@ export function normalizeRepositorySlug(remoteUrl) {
   return null
 }
 
+export function normalizeBranchName(branch) {
+  return String(branch ?? '')
+    .trim()
+    .replace(/^refs\/heads\//, '')
+    .replace(/^refs\/remotes\/origin\//, '')
+    .replace(/^origin\//, '')
+}
+
 function resolveRepositorySlug() {
   const configured = process.env.MRR_GITHUB_REPOSITORY?.trim()
   if (configured) {
@@ -87,27 +104,97 @@ function resolveRepositorySlug() {
 }
 
 function resolveGitHubBranch(currentBranch) {
-  const configured = process.env.MRR_CHANGELOG_BASE_BRANCH?.trim()
+  const configured = normalizeBranchName(process.env.MRR_CHANGELOG_BASE_BRANCH)
   if (configured) {
     return configured
   }
 
-  const actionsBaseBranch = process.env.GITHUB_BASE_REF?.trim()
+  const actionsBaseBranch = normalizeBranchName(process.env.GITHUB_BASE_REF)
   if (actionsBaseBranch) {
     return actionsBaseBranch
   }
 
-  try {
-    const remoteHead = runGit(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])
-    if (remoteHead.startsWith('origin/')) {
-      return remoteHead.slice('origin/'.length)
+  const remoteHeadResult = tryRunGit(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])
+  if (remoteHeadResult.ok) {
+    const remoteHead = normalizeBranchName(remoteHeadResult.output)
+    if (remoteHead) {
+      return remoteHead
     }
   }
-  catch {
-    // A shallow checkout or a repository without origin/HEAD can still use the current branch.
+
+  return 'main'
+}
+
+function isRemoteFetchEnabled() {
+  const configured = process.env.MRR_CHANGELOG_FETCH_REMOTE?.trim().toLowerCase()
+  return configured !== 'false' && configured !== '0' && configured !== 'off'
+}
+
+function isValidBranchName(branch) {
+  if (!branch) {
+    return false
+  }
+  return tryRunGit(['check-ref-format', '--branch', branch]).ok
+}
+
+function gitRefExists(ref) {
+  if (!ref) {
+    return false
+  }
+  return tryRunGit(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).ok
+}
+
+function refreshRemoteBranch(branch) {
+  if (!branch) {
+    return { attempted: false, refreshed: false, reason: '未指定远程目标分支' }
+  }
+  if (!isRemoteFetchEnabled()) {
+    return { attempted: false, refreshed: false, reason: 'MRR_CHANGELOG_FETCH_REMOTE 已禁用' }
+  }
+  if (!isValidBranchName(branch)) {
+    return { attempted: false, refreshed: false, reason: `无效的远程分支名：${branch}` }
+  }
+  if (!tryRunGit(['remote', 'get-url', 'origin']).ok) {
+    return { attempted: false, refreshed: false, reason: '未配置 origin 远程仓库' }
   }
 
-  return currentBranch === 'HEAD' ? '' : currentBranch
+  const fetchArgs = ['fetch', '--quiet', '--prune', '--no-tags']
+  const shallowResult = tryRunGit(['rev-parse', '--is-shallow-repository'])
+  if (shallowResult.ok && shallowResult.output === 'true') {
+    fetchArgs.push(`--deepen=${commitLimit}`)
+  }
+  fetchArgs.push('origin', `+refs/heads/${branch}:refs/remotes/origin/${branch}`)
+
+  const fetchResult = tryRunGit(fetchArgs)
+  if (fetchResult.ok) {
+    return { attempted: true, refreshed: true, reason: '' }
+  }
+
+  const reason = fetchResult.error?.stderr?.trim()
+    || fetchResult.error?.message
+    || '未知 Git fetch 错误'
+  console.warn(`Unable to refresh origin/${branch}; using available Git refs: ${reason}`)
+  return { attempted: true, refreshed: false, reason }
+}
+
+export function chooseCommitRef({ currentBranch, targetBranch, remoteRefAvailable, remoteRefFresh }) {
+  const normalizedTargetBranch = normalizeBranchName(targetBranch)
+  if (normalizedTargetBranch && remoteRefAvailable) {
+    return {
+      ref: `refs/remotes/origin/${normalizedTargetBranch}`,
+      branch: normalizedTargetBranch,
+      source: remoteRefFresh ? 'remote' : 'remote-cache',
+    }
+  }
+
+  const normalizedCurrentBranch = normalizeBranchName(currentBranch)
+  return {
+    ref: normalizedCurrentBranch && normalizedCurrentBranch !== 'HEAD'
+      ? `refs/heads/${normalizedCurrentBranch}`
+      : 'HEAD',
+    branch: normalizedCurrentBranch || 'HEAD',
+    source: 'local',
+  }
 }
 
 function extractPullRequestNumber(...subjects) {
@@ -543,7 +630,17 @@ function renderIssueEntry(entry) {
   return `- **Issue** 已完成 [#${entry.number}：${escapeMarkdown(entry.title)}](${entry.url})`
 }
 
-export function renderDocument({ commits, entries, branch, githubBranch, repositorySlug, githubStatus }) {
+function renderCommitSource(commitSource, branch) {
+  if (commitSource?.source === 'remote') {
+    return `远程 \`origin/${escapeMarkdown(commitSource.branch)}\`（已刷新）`
+  }
+  if (commitSource?.source === 'remote-cache') {
+    return `远程 \`origin/${escapeMarkdown(commitSource.branch)}\`（使用现有远程引用）`
+  }
+  return `本地 \`${escapeMarkdown(commitSource?.branch ?? branch)}\`（远程分支不可用）`
+}
+
+export function renderDocument({ commits, entries, branch, githubBranch, repositorySlug, githubStatus, commitSource }) {
   const latest = commits[0]
   const groups = groupByDate(entries)
   const githubSummary = githubStatus.enabled
@@ -561,10 +658,11 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '',
     '# 更新记录',
     '',
-    '> 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。GitHub 数据不可用时会自动降级为本地 Git 提交历史。',
+    '> 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。默认刷新并读取远程 `main` 提交；远程不可用时才降级为已有远程引用或本地 Git 历史。',
     '',
     `- 当前分支：\`${escapeMarkdown(branch)}\``,
     `- GitHub 目标分支：${githubBranch ? `\`${escapeMarkdown(githubBranch)}\`` : '未指定'}`,
+    `- Git 提交来源：${renderCommitSource(commitSource, branch)}`,
     `- 更新至：${latest ? `${latest.date} · \`${latest.shortHash}\`` : '暂无提交'}`,
     `- 记录范围：最近 ${commits.length} 条第一父级提交（上限 ${commitLimit} 条）`,
     `- GitHub 增强：${githubSummary}`,
@@ -597,7 +695,7 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '.\\update-changelog.ps1',
     '```',
     '',
-    '脚本会执行 `git pull --ff-only`，优先通过 GitHub CLI 获取令牌，生成更新日志并显示文件差异。使用 `-SkipPull` 可跳过拉取，使用 `-GitOnly` 可禁用 GitHub 增强。',
+    '脚本会刷新远程目标分支，优先通过 GitHub CLI 获取令牌，生成更新日志并显示文件差异。使用 `-SkipPull` 可跳过额外的当前分支拉取，使用 `-GitOnly` 可禁用 GitHub PR/Issue 增强。',
     '',
     '### 通用方式',
     '',
@@ -610,8 +708,9 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '可用环境变量：',
     '',
     '- `GITHUB_TOKEN` 或 `GH_TOKEN`：访问私有仓库的 GitHub 令牌；',
-    '- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub 增强；',
-    '- `MRR_CHANGELOG_BASE_BRANCH`：指定获取 PR 的目标分支；',
+    '- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub PR/Issue 增强；',
+    '- `MRR_CHANGELOG_BASE_BRANCH`：指定提交记录和 PR 的远程目标分支，默认 `main`；',
+    '- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；',
     '- `MRR_CHANGELOG_LIMIT`：Git 提交数量，允许范围为 1～1000；',
     '- `MRR_CHANGELOG_CACHE_TTL`：GitHub 本地缓存秒数，默认 1800；',
     '- `MRR_CHANGELOG_GITHUB_PAGES`：GitHub 分页上限，默认 10，最大 20。',
@@ -640,6 +739,22 @@ export async function main() {
   try {
     runGit(['rev-parse', '--is-inside-work-tree'])
 
+    const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']) || 'HEAD'
+    const repositorySlug = resolveRepositorySlug()
+    const githubBranch = resolveGitHubBranch(branch)
+    const fetchStatus = refreshRemoteBranch(githubBranch)
+    const remoteRef = githubBranch ? `refs/remotes/origin/${githubBranch}` : ''
+    const commitSource = chooseCommitRef({
+      currentBranch: branch,
+      targetBranch: githubBranch,
+      remoteRefAvailable: gitRefExists(remoteRef),
+      remoteRefFresh: fetchStatus.refreshed,
+    })
+
+    if (commitSource.source === 'local' && fetchStatus.reason) {
+      console.warn(`Remote changelog source unavailable; falling back to ${commitSource.ref}: ${fetchStatus.reason}`)
+    }
+
     const prettyFormat = '%H%x1f%h%x1f%ad%x1f%an%x1f%s%x1f%b%x1f%P%x1e'
     const rawLog = runGit([
       'log',
@@ -647,12 +762,9 @@ export async function main() {
       `--max-count=${commitLimit}`,
       '--date=short',
       `--pretty=format:${prettyFormat}`,
+      commitSource.ref,
     ])
-
     const commits = parseLog(rawLog)
-    const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']) || 'HEAD'
-    const repositorySlug = resolveRepositorySlug()
-    const githubBranch = resolveGitHubBranch(branch)
     let githubData = null
     let githubStatus = { enabled: false }
 
@@ -685,8 +797,9 @@ export async function main() {
       githubBranch,
       repositorySlug,
       githubStatus,
+      commitSource,
     }), 'utf8')
-    console.log(`Generated ${path.relative(repositoryRoot, outputPath)} from ${commits.length} Git commits${githubData ? `, ${githubData.pullRequests.length} pull requests and ${githubData.issues.length} issues` : ''}.`)
+    console.log(`Generated ${path.relative(repositoryRoot, outputPath)} from ${commits.length} Git commits at ${commitSource.ref}${githubData ? `, ${githubData.pullRequests.length} pull requests and ${githubData.issues.length} issues` : ''}.`)
   }
   catch (error) {
     console.warn(`Unable to generate Git changelog: ${error.message}`)

@@ -86,7 +86,10 @@ function escapeCsvCell(value: string | number | null | undefined) {
 }
 
 function protectSpreadsheetValue(value: string) {
-  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+  const startsSpreadsheetFormula = /^[=+\-@\t\r]/.test(value)
+  const hasLeadingZero = /^0\d+$/.test(value)
+  const isLongInteger = /^\d{16,}$/.test(value)
+  return startsSpreadsheetFormula || hasLeadingZero || isLongInteger ? `'${value}` : value
 }
 
 function stripQuotes(value: string) {

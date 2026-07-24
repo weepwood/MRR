@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDefaultSystemSettings,
+  isAllowedDocumentationUrl,
   parseSystemSettings,
   serializeSystemSettings,
 } from '../system-settings'
 
 describe('effective system settings', () => {
-  it('restores supported branding, support and archive value types from server strings', () => {
+  it('restores supported branding, support, documentation and archive value types from server strings', () => {
     const settings = parseSystemSettings({
       systemName: '病案影像中心',
       systemShortName: '影像中心',
@@ -16,6 +17,9 @@ describe('effective system settings', () => {
       systemAdminContactEnabled: 'true',
       systemAdminPublicVisible: '1',
       systemAdminPhone: '0571-12345678',
+      documentationUserGuideUrl: ' https://docs.example.test/user/ ',
+      documentationDeveloperUrl: '/docs/development/',
+      documentationOperationsUrl: '',
       imageSource: 'oss',
       archiveDefaultView: 'list',
       archivePreviewMode: 'scroll',
@@ -41,6 +45,9 @@ describe('effective system settings', () => {
     expect(settings.systemAdminContactEnabled).toBe(true)
     expect(settings.systemAdminPublicVisible).toBe(true)
     expect(settings.systemAdminPhone).toBe('0571-12345678')
+    expect(settings.documentationUserGuideUrl).toBe('https://docs.example.test/user/')
+    expect(settings.documentationDeveloperUrl).toBe('/docs/development/')
+    expect(settings.documentationOperationsUrl).toBe('')
     expect(settings.imageSource).toBe('oss')
     expect(settings.archiveDefaultView).toBe('list')
     expect(settings.archivePreviewMode).toBe('scroll')
@@ -81,15 +88,19 @@ describe('effective system settings', () => {
     expect(settings.archiveIpMaxChanges).toBe(20)
     expect(settings.systemAdminContactEnabled).toBe(false)
     expect(settings.systemAdminPublicVisible).toBe(false)
+    expect(settings.documentationUserGuideUrl).toBe('/docs/')
+    expect(settings.documentationDeveloperUrl).toBe('/docs/internal/')
+    expect(settings.documentationOperationsUrl).toBe('/docs/internal/deployment.html')
     expect(settings.developerModeEnabled).toBe(false)
     expect(settings.developerModeApiAccessEnabled).toBe(false)
     expect(settings.developerModeAllowedSources).toBe('127.0.0.1\n::1')
   })
 
-  it('serializes developer mode for the key-value API', () => {
+  it('serializes documentation and developer mode for the key-value API', () => {
     const defaults = createDefaultSystemSettings()
     const serialized = serializeSystemSettings({
       ...defaults,
+      documentationUserGuideUrl: 'https://docs.example.test/user/',
       developerModeEnabled: true,
       developerModeApiAccessEnabled: true,
       developerModeAllowedSources: '192.168.10.25\n192.168.20.0/24',
@@ -102,11 +113,24 @@ describe('effective system settings', () => {
     expect(serialized.systemName).toBe('MRR 病案文件管理系统')
     expect(serialized.loginFeatureEnabled).toBe('true')
     expect(serialized.systemAdminContactEnabled).toBe('false')
+    expect(serialized.documentationUserGuideUrl).toBe('https://docs.example.test/user/')
+    expect(serialized.documentationDeveloperUrl).toBe('/docs/internal/')
     expect(serialized.archiveAutoFit).toBe('true')
     expect(serialized.archiveThumbnailSize).toBe('200')
     expect(serialized.developerModeEnabled).toBe('true')
     expect(serialized.developerModeApiAccessEnabled).toBe('true')
     expect(serialized.developerModeAllowedSources).toBe('192.168.10.25\n192.168.20.0/24')
     expect(Object.keys(serialized)).toHaveLength(Object.keys(defaults).length)
+  })
+
+  it('allows only http, https or root-relative documentation links', () => {
+    expect(isAllowedDocumentationUrl('')).toBe(true)
+    expect(isAllowedDocumentationUrl('/docs/')).toBe(true)
+    expect(isAllowedDocumentationUrl('http://192.168.1.20:8080/docs')).toBe(true)
+    expect(isAllowedDocumentationUrl('https://docs.example.test/guide')).toBe(true)
+    expect(isAllowedDocumentationUrl('//docs.example.test/guide')).toBe(false)
+    expect(isAllowedDocumentationUrl('javascript:alert(1)')).toBe(false)
+    expect(isAllowedDocumentationUrl('https://user:secret@example.test/docs')).toBe(false)
+    expect(isAllowedDocumentationUrl('/docs\\internal')).toBe(false)
   })
 })

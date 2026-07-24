@@ -40,7 +40,12 @@ describe('file download utilities', () => {
   it('creates spreadsheet-safe UTF-8 BOM CSV reports', async () => {
     const blob = createCsvBlob(
       ['rowNumber', 'message', 'value'],
-      [[2, '字段包含,逗号', '=SUM(1,1)'], [3, '包含"引号"', '普通值']],
+      [
+        [2, '字段包含,逗号', '=SUM(1,1)'],
+        [3, '包含"引号"', '普通值'],
+        [4, '保留前导零', '001234'],
+        [5, '保留长整数', '1234567890123456'],
+      ],
     )
     const bytes = new Uint8Array(await readBlobBuffer(blob))
     const text = await readBlobText(blob.slice(3))
@@ -49,6 +54,8 @@ describe('file download utilities', () => {
     expect(text.startsWith('rowNumber,message,value\r\n')).toBe(true)
     expect(text).toContain('"字段包含,逗号","\'=SUM(1,1)"')
     expect(text).toContain('"包含""引号""",普通值')
+    expect(text).toContain("4,保留前导零,'001234")
+    expect(text).toContain("5,保留长整数,'1234567890123456")
   })
 
   it('defers object URL cleanup until after the click', () => {

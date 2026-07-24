@@ -1,4 +1,5 @@
-import api, { postRequest } from '../index'
+import { postRequest } from '../index'
+import { getRawRequest } from '../raw-response'
 
 export type DataExchangeDataset = 'patients' | 'statistics' | 'archive-boxes' | 'scan'
 export type DataExchangeExportDataset = DataExchangeDataset | 'archives'
@@ -77,7 +78,7 @@ export function importDataExchangeFile(dataset: DataExchangeDataset, file: File,
 }
 
 export function downloadDataExchangeTemplate(dataset: DataExchangeDataset) {
-  return api.get<Blob>(`/api/v1/data-exchange/${dataset}/template`, {
+  return getRawRequest<Blob>(`/api/v1/data-exchange/${dataset}/template`, {
     responseType: 'blob',
   })
 }
@@ -86,7 +87,7 @@ export function exportDataExchangeCsv(
   dataset: DataExchangeExportDataset,
   params: Record<string, string | number | undefined>,
 ) {
-  return api.get<Blob>(`/api/v1/data-exchange/${dataset}/export/csv`, {
+  return getRawRequest<Blob>(`/api/v1/data-exchange/${dataset}/export/csv`, {
     params,
     responseType: 'blob',
     timeout: 5 * 60 * 1000,

@@ -32,6 +32,9 @@ export interface EffectiveSystemSettings {
   systemAdminEmail: string
   systemAdminServiceHours: string
   systemAdminDescription: string
+  documentationUserGuideUrl: string
+  documentationDeveloperUrl: string
+  documentationOperationsUrl: string
   imageSource: ImageSource
   archiveDefaultView: ArchiveDefaultView
   archivePreviewMode: ArchivePreviewMode
@@ -76,6 +79,9 @@ export function createDefaultSystemSettings(): EffectiveSystemSettings {
     systemAdminEmail: '',
     systemAdminServiceHours: '',
     systemAdminDescription: '',
+    documentationUserGuideUrl: '/docs/',
+    documentationDeveloperUrl: '/docs/internal/',
+    documentationOperationsUrl: '/docs/internal/deployment.html',
     imageSource: 'local',
     archiveDefaultView: 'thumb',
     archivePreviewMode: 'single',
@@ -121,6 +127,21 @@ function parseOptionalText(value: unknown, fallback = ''): string {
   return String(value).trim()
 }
 
+export function isAllowedDocumentationUrl(value: string): boolean {
+  const normalized = value.trim()
+  if (!normalized) { return true }
+  if (normalized.startsWith('/') && !normalized.startsWith('//')) {
+    return !normalized.includes('\\')
+  }
+  try {
+    const url = new URL(normalized)
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+  }
+  catch {
+    return false
+  }
+}
+
 export function parseSystemSettings(values?: Record<string, unknown> | null): EffectiveSystemSettings {
   const defaults = createDefaultSystemSettings()
   const source = values || {}
@@ -154,6 +175,18 @@ export function parseSystemSettings(values?: Record<string, unknown> | null): Ef
     systemAdminEmail: parseText(source.systemAdminEmail),
     systemAdminServiceHours: parseText(source.systemAdminServiceHours),
     systemAdminDescription: parseText(source.systemAdminDescription),
+    documentationUserGuideUrl: parseOptionalText(
+      source.documentationUserGuideUrl,
+      defaults.documentationUserGuideUrl,
+    ),
+    documentationDeveloperUrl: parseOptionalText(
+      source.documentationDeveloperUrl,
+      defaults.documentationDeveloperUrl,
+    ),
+    documentationOperationsUrl: parseOptionalText(
+      source.documentationOperationsUrl,
+      defaults.documentationOperationsUrl,
+    ),
     imageSource,
     archiveDefaultView,
     archivePreviewMode,

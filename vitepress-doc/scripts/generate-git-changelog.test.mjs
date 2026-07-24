@@ -2,8 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  chooseCommitRef,
   combineChangelogEntries,
   extractIssueReferences,
+  normalizeBranchName,
   normalizeRepositorySlug,
   parseConventionalSubject,
   renderDocument,
@@ -12,6 +14,47 @@ import {
 test('normalizes SSH and HTTPS GitHub remotes', () => {
   assert.equal(normalizeRepositorySlug('git@github.com:weepwood/MRR.git'), 'weepwood/MRR')
   assert.equal(normalizeRepositorySlug('https://github.com/weepwood/MRR.git'), 'weepwood/MRR')
+})
+
+test('normalizes local and remote branch refs', () => {
+  assert.equal(normalizeBranchName('refs/remotes/origin/main'), 'main')
+  assert.equal(normalizeBranchName('origin/main'), 'main')
+  assert.equal(normalizeBranchName('refs/heads/main'), 'main')
+})
+
+test('prefers the refreshed remote target branch over the local branch', () => {
+  assert.deepEqual(chooseCommitRef({
+    currentBranch: 'feature/docs',
+    targetBranch: 'main',
+    remoteRefAvailable: true,
+    remoteRefFresh: true,
+  }), {
+    ref: 'refs/remotes/origin/main',
+    branch: 'main',
+    source: 'remote',
+  })
+})
+
+test('uses an existing remote ref when fetch is unavailable', () => {
+  assert.equal(chooseCommitRef({
+    currentBranch: 'feature/docs',
+    targetBranch: 'main',
+    remoteRefAvailable: true,
+    remoteRefFresh: false,
+  }).source, 'remote-cache')
+})
+
+test('falls back to the current local branch only when no remote ref exists', () => {
+  assert.deepEqual(chooseCommitRef({
+    currentBranch: 'feature/docs',
+    targetBranch: 'main',
+    remoteRefAvailable: false,
+    remoteRefFresh: false,
+  }), {
+    ref: 'refs/heads/feature/docs',
+    branch: 'feature/docs',
+    source: 'local',
+  })
 })
 
 test('parses squash PR numbers and removes the suffix from descriptions', () => {
@@ -79,7 +122,7 @@ test('enriches commits with PR titles and linked issues without duplicating them
   ])
 })
 
-test('renders PR and Issue information in the generated document', () => {
+test('renders remote commit source with PR and Issue information', () => {
   const commits = [{
     kind: 'commit',
     hash: 'abc123',
@@ -103,14 +146,16 @@ test('renders PR and Issue information in the generated document', () => {
   const rendered = renderDocument({
     commits,
     entries: commits,
-    branch: 'main',
+    branch: 'feature/docs',
     githubBranch: 'main',
     repositorySlug: 'weepwood/MRR',
     githubStatus: { enabled: true, source: 'api', pullRequestCount: 1, issueCount: 1 },
+    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
   })
 
   assert.match(rendered, /PR #164/)
   assert.match(rendered, /完成 \[#162：慢网络启动超时恢复\]/)
   assert.match(rendered, /GitHub 增强：已启用/)
+  assert.match(rendered, /Git 提交来源：远程 `origin\/main`（已刷新）/)
   assert.match(rendered, /\\update-changelog\.ps1/)
 })

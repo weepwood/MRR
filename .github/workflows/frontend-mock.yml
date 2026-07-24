@@ -25,15 +25,15 @@ jobs:
         working-directory: frontend-fantastic-admin
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload failed unit test log
         if: steps.unit-tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-log-${{ github.run_id }}
           path: frontend-fantastic-admin/vitest.log
@@ -78,7 +78,7 @@ jobs:
 
       - name: Upload failed Playwright diagnostics
         if: steps.e2e-tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-diagnostics-${{ github.run_id }}
           path: |

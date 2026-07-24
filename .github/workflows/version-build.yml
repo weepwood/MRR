@@ -20,14 +20,14 @@ jobs:
         working-directory: frontend-fantastic-admin
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
         
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -40,7 +40,7 @@ jobs:
         run: pnpm build
         
       - name: Upload Frontend Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend-fantastic-admin/dist
@@ -52,10 +52,10 @@ jobs:
         working-directory: backend-repo
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -65,7 +65,7 @@ jobs:
         run: mvn -B -ntp -DskipTests package
         
       - name: Upload Backend Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-jar
           path: backend-repo/target/*.jar
@@ -81,13 +81,13 @@ jobs:
       contents: write
     steps:
       - name: Download Frontend Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: frontend-dist # 下载到当前目录的 frontend-dist 文件夹下
 
       - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: backend-jar
           path: backend-jar # 下载到当前目录的 backend-jar 文件夹下
@@ -97,7 +97,7 @@ jobs:
         run: zip -r frontend-dist.zip frontend-dist/
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         # Action 会自动识别当前触发的 Tag 并关联到对应的 Release 上
         with:
           files: |

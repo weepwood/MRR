@@ -42,10 +42,13 @@ public class PublicDocumentationConfigController {
 
     private String resolveUrl(String key, String fallback) {
         String value = systemSettingService.getSetting(key);
-        if (value == null || value.isBlank()) {
+        if (value == null) {
             return fallback;
         }
         String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return "";
+        }
         if (normalized.length() > MAX_URL_LENGTH || !isAllowedUrl(normalized)) {
             return fallback;
         }

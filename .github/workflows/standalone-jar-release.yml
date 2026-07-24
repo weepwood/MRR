@@ -14,7 +14,6 @@ on:
       - 'scripts/tests/test_build_standalone_jar.py'
       - 'backend-repo/**'
       - 'frontend-fantastic-admin/**'
-      - 'vitepress-doc/**'
       - '.github/workflows/standalone-jar-release.yml'
   workflow_dispatch:
   push:
@@ -50,8 +49,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: vitepress-doc/package-lock.json
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -79,7 +76,7 @@ jobs:
           echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
           echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
 
-      - name: Test static site JAR embedder
+      - name: Test frontend JAR embedder
         run: python -m unittest scripts.tests.test_embed_frontend_in_jar
 
       - name: Test and package backend
@@ -109,36 +106,6 @@ jobs:
           python ../scripts/embed_frontend_in_jar.py verify \
             --jar "../${BACKEND_JAR}"
 
-      - name: Build and embed documentation
-        working-directory: vitepress-doc
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          MRR_CHANGELOG_GITHUB: 'true'
-          MRR_CHANGELOG_BASE_BRANCH: 'main'
-        run: |
-          set -euo pipefail
-          npm ci
-          npm run docs:changelog:test
-          npm run docs:build
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
-          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
-          python ../scripts/embed_frontend_in_jar.py embed \
-            --jar "../${BACKEND_JAR}" \
-            --dist .vitepress/dist-user \
-            --mount docs
-          python ../scripts/embed_frontend_in_jar.py embed \
-            --jar "../${BACKEND_JAR}" \
-            --dist .vitepress/dist-internal \
-            --mount docs/internal
-          python ../scripts/embed_frontend_in_jar.py verify \
-            --jar "../${BACKEND_JAR}"
-          python ../scripts/embed_frontend_in_jar.py verify \
-            --jar "../${BACKEND_JAR}" \
-            --mount docs
-          python ../scripts/embed_frontend_in_jar.py verify \
-            --jar "../${BACKEND_JAR}" \
-            --mount docs/internal
-
       - name: Build standalone JAR
         id: standalone
         shell: bash
@@ -162,12 +129,6 @@ jobs:
             --default-port 8002
           python scripts/embed_frontend_in_jar.py verify \
             --jar "${JAR_PATH}"
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${JAR_PATH}" \
-            --mount docs
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${JAR_PATH}" \
-            --mount docs/internal
 
           unzip -p "${JAR_PATH}" BOOT-INF/classes/application.properties \
             | grep -F 'server.port=${SERVER_PORT:8002}'

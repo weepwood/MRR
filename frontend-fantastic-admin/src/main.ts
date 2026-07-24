@@ -1,10 +1,11 @@
 import iconConfig from '@/iconify/index.json'
-// 自定义指令
-import directive from '@/utils/directive'
 import { installArchiveUserIdRouting } from '@/utils/archive-userid-routing'
 import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
+// 自定义指令
+import directive from '@/utils/directive'
 import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
+import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
@@ -21,6 +22,7 @@ import 'virtual:svg-icons-register'
 import '@unocss/reset/tailwind-compat.css'
 import 'virtual:uno.css'
 // 全局样式
+import 'element-plus/es/components/message-box/style/css'
 import '@/assets/styles/globals.css'
 import '@/assets/styles/motion.css'
 import '@/assets/styles/pages/archive-boxes.css'
@@ -42,6 +44,7 @@ installArchiveWatermark(router, pinia)
 directive(app)
 installRequestErrorFallback(app)
 app.mount('#app')
+installPwa()
 
 async function installOfflineIcons() {
   const { downloadAndInstall } = await import('@/iconify')

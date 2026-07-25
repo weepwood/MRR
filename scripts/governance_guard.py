@@ -40,11 +40,25 @@ SENSITIVE_BASENAMES = {
     ".env",
     "application-local.properties",
     "application-prod.properties",
+    "application-production.properties",
     "credentials.json",
     "secrets.json",
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
 }
 SENSITIVE_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".jks", ".keystore"}
-ALLOWED_TEMPLATE_SUFFIXES = (".example", ".template", ".sample")
+TEMPLATE_MARKERS = (".example", ".template", ".sample")
+ENV_FILE_RE = re.compile(r"^\.env(?:\..+)?$", re.IGNORECASE)
+APPLICATION_CONFIG_RE = re.compile(
+    r"^application-(?:local|prod|production)(?:[-.].*)?\.(?:properties|ya?ml)$",
+    re.IGNORECASE,
+)
+SECRET_CONFIG_RE = re.compile(
+    r"^(?:credentials?|secrets?)(?:[-_.].*)?\.(?:json|ya?ml)$",
+    re.IGNORECASE,
+)
 
 DOMAIN_RULES = {
     "frontend": ("frontend-fantastic-admin/",),
@@ -160,12 +174,23 @@ def is_versioned_migration(path: str) -> bool:
     return path.startswith(MIGRATION_PREFIX) and bool(MIGRATION_RE.search(path))
 
 
+def is_template_path(path: str) -> bool:
+    basename = Path(path.lower()).name
+    return any(marker in basename for marker in TEMPLATE_MARKERS)
+
+
 def is_sensitive_path(path: str) -> bool:
     normalized = path.lower()
     basename = Path(normalized).name
-    if normalized.endswith(ALLOWED_TEMPLATE_SUFFIXES):
+    if is_template_path(normalized):
         return False
     if basename in SENSITIVE_BASENAMES:
+        return True
+    if ENV_FILE_RE.fullmatch(basename):
+        return True
+    if APPLICATION_CONFIG_RE.fullmatch(basename):
+        return True
+    if SECRET_CONFIG_RE.fullmatch(basename):
         return True
     return any(normalized.endswith(suffix) for suffix in SENSITIVE_SUFFIXES)
 
@@ -266,6 +291,12 @@ def load_event(path: str) -> dict:
         return json.load(file)
 
 
+def pull_request_author(event: dict) -> str:
+    """Return the PR author, not the user who triggered the current event."""
+    pull_request = event.get("pull_request") or {}
+    return ((pull_request.get("user") or {}).get("login") or "").strip()
+
+
 def render_markdown(report: Report, changes: Sequence[Change]) -> str:
     lines = ["# MRR AI 工程治理检查", ""]
     lines.append(f"- 变更文件：{len(changes)}")
@@ -301,7 +332,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     event = load_event(args.event)
     pr = event.get("pull_request") or {}
     body = pr.get("body") or ""
-    actor = (event.get("sender") or {}).get("login") or ""
+    author = pull_request_author(event)
     pr_number = int(pr.get("number") or event.get("number") or 0)
     enforce_body = pr_number == 0 or pr_number >= args.enforce_from_pr
 
@@ -313,7 +344,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     apply_numstat(changes, numstat)
 
     report = merge_reports(
-        validate_pr_body(body, actor, enforce_body), validate_changes(changes)
+        validate_pr_body(body, author, enforce_body), validate_changes(changes)
     )
     markdown = render_markdown(report, changes)
     print(markdown)

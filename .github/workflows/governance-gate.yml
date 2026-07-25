@@ -1,0 +1,48 @@
+name: governance-gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+
+permissions:
+  contents: read
+
+concurrency:
+  group: governance-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test governance tooling
+        run: python -m unittest scripts.tests.test_governance_guard -v
+
+      - name: Validate PR governance
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          python scripts/governance_guard.py \
+            --event "${GITHUB_EVENT_PATH}" \
+            --base "${BASE_REF}" \
+            --head HEAD \
+            --enforce-from-pr 280 \
+            --summary "${GITHUB_STEP_SUMMARY}"

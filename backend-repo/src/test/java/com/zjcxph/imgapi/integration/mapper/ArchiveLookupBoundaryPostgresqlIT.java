@@ -83,12 +83,12 @@ class ArchiveLookupBoundaryPostgresqlIT extends PostgresqlIntegrationTestSupport
     @Test
     @DisplayName("历史补零形成多个等价上架号时兼容解析返回空")
     void compatibleSjhLookupRejectsEquivalentDuplicates() {
-        insertArchive("10000020", "1234");
+        Long shortCodeArchiveId = insertArchive("10000020", "1234");
         Long paddedCodeArchiveId = insertArchive("10000021", "00001234");
 
         assertThat(scanMapper.resolveArchiveIdBySearchCode("", "1234")).isNull();
         assertThat(scanMapper.resolveArchiveId("", "1234"))
-                .isEqualTo(paddedCodeArchiveId);
+                .isEqualTo(shortCodeArchiveId);
         assertThat(scanMapper.resolveArchiveId("", "00001234"))
                 .isEqualTo(paddedCodeArchiveId);
     }

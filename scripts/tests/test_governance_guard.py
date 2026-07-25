@@ -45,6 +45,15 @@ class GovernanceGuardTest(unittest.TestCase):
         self.assertEqual([], report.errors)
         self.assertTrue(report.warnings)
 
+    def test_dependabot_author_does_not_change_with_event_sender(self):
+        event = {
+            "sender": {"login": "weepwood"},
+            "pull_request": {"user": {"login": "dependabot[bot]"}},
+        }
+        self.assertEqual("dependabot[bot]", MODULE.pull_request_author(event))
+        report = MODULE.validate_pr_body("", actor=MODULE.pull_request_author(event))
+        self.assertEqual([], report.errors)
+
     def test_missing_issue_reference_fails(self):
         body = VALID_BODY.replace("Closes #279", "本次没有事项")
         report = MODULE.validate_pr_body(body)
@@ -100,6 +109,26 @@ class GovernanceGuardTest(unittest.TestCase):
         )
         self.assertTrue(any("凭据" in item for item in bad.errors))
         self.assertEqual([], good.errors)
+
+    def test_extended_sensitive_config_patterns(self):
+        blocked = (
+            ".env.production",
+            "backend-repo/application-prod.yml",
+            "deploy/secrets.yaml",
+            "deploy/id_ed25519",
+        )
+        for path in blocked:
+            with self.subTest(path=path):
+                self.assertTrue(MODULE.is_sensitive_path(path))
+
+        allowed = (
+            ".env.example",
+            "backend-repo/application-prod.template.yml",
+            "deploy/secrets.sample.yaml",
+        )
+        for path in allowed:
+            with self.subTest(path=path):
+                self.assertFalse(MODULE.is_sensitive_path(path))
 
     def test_backend_code_without_tests_warns(self):
         report = MODULE.validate_changes(

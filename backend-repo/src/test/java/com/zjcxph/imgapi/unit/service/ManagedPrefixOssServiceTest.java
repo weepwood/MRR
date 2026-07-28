@@ -159,11 +159,11 @@ class ManagedPrefixOssServiceTest {
     @Test
     @DisplayName("未知远程失败映射为 OSS_OPERATION_FAILED")
     void mapsUnknownRemoteFailureToOperationFailed() {
-        when(delegate.deleteObject(MANAGED_KEY))
+        when(delegate.generatePresignedUrl(MANAGED_KEY))
                 .thenThrow(new RuntimeException("unexpected SDK detail for secret bucket"));
 
         assertMappedFailure(
-                () -> service.deleteObject(MANAGED_KEY),
+                () -> service.generatePresignedUrl(MANAGED_KEY),
                 OssErrorType.OSS_OPERATION_FAILED,
                 ResultCode.OSS_OPERATION_FAILED,
                 HttpStatus.BAD_GATEWAY

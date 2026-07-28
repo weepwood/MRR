@@ -112,7 +112,7 @@ function fileExtension(entry?: OssBrowserEntry) {
   return index >= 0 ? entry.name.slice(index + 1).toLocaleLowerCase() : ''
 }
 
-function isImage(entry?: OssBrowserEntry) {
+function isImage(entry?: OssBrowserEntry | null) {
   return Boolean(entry && !entry.directory && IMAGE_EXTENSIONS.has(fileExtension(entry)))
 }
 

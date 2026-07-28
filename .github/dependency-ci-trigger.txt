@@ -1,0 +1,1 @@
+最终验证 Vite 与 Spring/iText 最新主分支组合。

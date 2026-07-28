@@ -466,6 +466,7 @@ onUnmounted(() => {
   text-align: center;
 }
 
+/* stylelint-disable-next-line media-feature-range-notation -- Chrome 86 不支持范围媒体查询 */
 @media (max-width: 720px) {
   .archive-wall {
     padding: 8px 8px 112px;

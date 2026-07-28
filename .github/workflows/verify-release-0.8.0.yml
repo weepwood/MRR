@@ -1,0 +1,57 @@
+name: verify-release-0.8.0
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/verify-release-0.8.0.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for published release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: v0.8.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            'MRR-v0.8.0.zip'
+            'MRR-v0.8.0-standalone.jar'
+            'MRR-v0.8.0-standalone.jar.sha256'
+          )
+
+          for attempt in $(seq 1 80); do
+            if release_json="$(gh release view "${TAG_NAME}" --repo "${GITHUB_REPOSITORY}" --json isDraft,isPrerelease,assets 2>/dev/null)"; then
+              draft="$(jq -r '.isDraft' <<< "${release_json}")"
+              prerelease="$(jq -r '.isPrerelease' <<< "${release_json}")"
+              names="$(jq -r '.assets[].name' <<< "${release_json}")"
+
+              missing=0
+              for asset in "${required[@]}"; do
+                if ! grep -Fxq "${asset}" <<< "${names}"; then
+                  echo "Missing asset: ${asset}"
+                  missing=1
+                fi
+              done
+
+              if [[ "${draft}" == 'false' && "${prerelease}" == 'false' && "${missing}" -eq 0 ]]; then
+                echo "MRR ${TAG_NAME} release and all required assets are available."
+                printf '%s\n' "${names}"
+                exit 0
+              fi
+            fi
+
+            echo "Release assets are not complete yet (${attempt}/80)."
+            sleep 15
+          done
+
+          echo "MRR ${TAG_NAME} release assets were not completed within the verification window." >&2
+          exit 1

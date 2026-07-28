@@ -8,15 +8,42 @@ outline: [2, 3]
 
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。默认刷新并读取远程 `main` 提交；远程不可用时才降级为已有远程引用或本地 Git 历史。
 
-- 当前分支：`codex/changelog-full-history-format`
 - GitHub 目标分支：`main`
 - Git 提交来源：远程 `origin/main`（已刷新）
-- 更新至：2026-07-24 · `eb3aca34`
-- 记录范围：完整提交历史，共 2521 条提交
+- 更新至：2026-07-28 · `b4f28b93`
+- 记录范围：完整提交历史，共 2543 条提交
 - GitHub 增强：未启用（仅 Git 提交）
+
+## 2026-07-28
+
+- `11:33` 文档：完善外部系统接入与多语言示例（[`b4f28b93`](https://github.com/weepwood/MRR/commit/b4f28b93e655380689d6728813cfb1a0091a1fdd) · [PR #286](https://github.com/weepwood/MRR/pull/286)）
+- `10:47` 修复：完善更新日志生成兼容性（[`ab41b00c`](https://github.com/weepwood/MRR/commit/ab41b00c52f674399cf2ce22a4d23ca0050067e5) · [PR #284](https://github.com/weepwood/MRR/pull/284)）
+
+## 2026-07-25
+
+- `12:05` 测试：覆盖病案主档组合查询与 Mapper 边界（#281）（[`36a056c6`](https://github.com/weepwood/MRR/commit/36a056c6df5310e250dba0b9071d24e4a6d49e45)）
+- `12:05` 工程：建立 AI 辅助开发严格治理基线（[`3ae2e56a`](https://github.com/weepwood/MRR/commit/3ae2e56a355aee84d9af5b775f5d1eeb7d3f5a6d)）
+- `01:04` 工程：建立前端 Vitest 覆盖率基线（[`7e1f4c52`](https://github.com/weepwood/MRR/commit/7e1f4c526a607a8c245d3e113b4e40d3ac2884f1)）
+- `00:22` 依赖：升级 checkout 至 v7（[`cee89da5`](https://github.com/weepwood/MRR/commit/cee89da5ae296feadbb6394dc3491eb845176100)）
+- `00:20` 测试：补强 PostgreSQL 迁移与导入事务回归（[`ceb4fa78`](https://github.com/weepwood/MRR/commit/ceb4fa781c21959b5ef2703361a9a4a166ad162e)）
+- `00:16` 依赖：升级 Antfu ESLint Config 至 9.2.0（[`22f8849a`](https://github.com/weepwood/MRR/commit/22f8849aec3d12b8f84e6c166ea9af8121709c87)）
+- `00:14` 依赖：升级文档 VueUse 至 14.3.0（[`ad985b13`](https://github.com/weepwood/MRR/commit/ad985b136105d4f7f81ff21d39ec216504bc1294)）
+- `00:14` 依赖：升级 Mermaid 至 11.16.0（[`97404928`](https://github.com/weepwood/MRR/commit/97404928ddfed2a4cf25c2ba22e8f675bbd59be7)）
+- `00:13` 依赖：升级 Commons Codec 至 1.22.0（[`0b298a8e`](https://github.com/weepwood/MRR/commit/0b298a8e9ec5f4372fb3d2ad527cdfe7417e73dc)）
+- `00:12` 功能：将 MRR 前端改造为可安装的 PWA 应用（[`f7b63758`](https://github.com/weepwood/MRR/commit/f7b63758866439ffb043e2c4c21a6f732649d7c5) · [PR #243](https://github.com/weepwood/MRR/pull/243)）
+- `00:09` 依赖：升级 upload-artifact 至 v7（[`b98cde8f`](https://github.com/weepwood/MRR/commit/b98cde8f7b281c041192a0fd9435a4cdf873f66e)）
+- `00:00` 依赖：升级 Vue Test Utils 至 2.4.11（[`5061a9b6`](https://github.com/weepwood/MRR/commit/5061a9b6de2ec7fffae15b84a298874570d18d59)）
 
 ## 2026-07-24
 
+- `23:57` 依赖：升级 Springdoc OpenAPI 至 3.0.3（[`90d9812c`](https://github.com/weepwood/MRR/commit/90d9812c1e9bbb18fbc19495a7d7dcac351e70e8)）
+- `23:33` 工程：细化 Dependabot 依赖更新分组（#251）（[`37e21aba`](https://github.com/weepwood/MRR/commit/37e21abaedccc34680ac9e824dda81c3687ca945)）
+- `22:44` 工程：建立后端覆盖率基线与趋势报告（#242）（[`3daa557a`](https://github.com/weepwood/MRR/commit/3daa557aa7ef2125c733a29e5af6c630dab01241)）
+- `22:34` 工程：完善测试分层与项目治理基线（#237）（[`ed458217`](https://github.com/weepwood/MRR/commit/ed458217184dde97f73897649966a6c3db079eb5)）
+- `18:30` 完善：增强数据导入导出安全性与错误报告（#226）（[`d2f1f3cf`](https://github.com/weepwood/MRR/commit/d2f1f3cfc48a3cfac543e3e1dbdfe365ecb13b17)）
+- `18:07` 安全：收紧可信客户端 IP 并限制限流缓存容量（#219）（[`6a708ac8`](https://github.com/weepwood/MRR/commit/6a708ac8e918064ff3cc4617e466a9351c2b82ac)）
+- `18:01` 发布：恢复生产 Flyway 严格迁移默认值（[`1433fe20`](https://github.com/weepwood/MRR/commit/1433fe20d2e1c9175c18ce66c467ad1d52c3ffb6) · [PR #221](https://github.com/weepwood/MRR/pull/221)）
+- `18:01` 功能：兼容 aStor EDS 路径式 S3 访问（[`31e8628e`](https://github.com/weepwood/MRR/commit/31e8628e317090b336a5cc51a746d05c3550e98a)）
 - `13:25` merge 修复 VitePress 更新日志读取远程 main 提交（[`eb3aca34`](https://github.com/weepwood/MRR/commit/eb3aca34dd033cae2bc0d8608167bc1c3b1e6f02) · [PR #234](https://github.com/weepwood/MRR/pull/234)）
 - `13:21` 测试：覆盖远程 main 提交来源选择（[`9108fa9b`](https://github.com/weepwood/MRR/commit/9108fa9bbfd0c2d91d357fdaeaa607e26b21c143)）
 - `13:21` 修复：更新日志读取远程 main 提交（[`5c7ee573`](https://github.com/weepwood/MRR/commit/5c7ee573c8e0ddf7e23f6a73dd162744af2ab277)）
@@ -2654,7 +2681,7 @@ npm run docs:changelog
 - `GITHUB_TOKEN` 或 `GH_TOKEN`：访问私有仓库的 GitHub 令牌；
 - `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub PR/Issue 增强；
 - `MRR_CHANGELOG_BASE_BRANCH`：指定提交记录和 PR 的远程目标分支，默认 `main`；
-- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；
+- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；若浅克隆历史未补全，记录范围会明确标记为浅层历史；
 - `MRR_CHANGELOG_CACHE_TTL`：GitHub 本地缓存秒数，默认 1800；
 - `MRR_CHANGELOG_GITHUB_PAGES`：GitHub 分页上限，默认 10，最大 20。
 

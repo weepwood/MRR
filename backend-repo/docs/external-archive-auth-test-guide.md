@@ -185,7 +185,7 @@ mrr.integration.enabled=true
 mrr.integration.clients[0].allowed-ips[0]=实际请求IP
 ```
 
-经 Nginx 代理时，应正确传递 `X-Forwarded-For`，否则 MRR 看到的可能是代理服务器 IP。
+经正式的单层本机 Nginx 代理时，应把 `X-Forwarded-For` 覆盖为 `$remote_addr`。不要追加客户端自行提交的同名头，否则客户端可能伪造 MRR 用于白名单判断的来源 IP。
 
 ### 404 未定位到可访问病案
 

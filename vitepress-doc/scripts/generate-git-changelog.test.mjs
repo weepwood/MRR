@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 import {
   chooseCommitRef,
@@ -21,6 +22,12 @@ test('normalizes local and remote branch refs', () => {
   assert.equal(normalizeBranchName('refs/remotes/origin/main'), 'main')
   assert.equal(normalizeBranchName('origin/main'), 'main')
   assert.equal(normalizeBranchName('refs/heads/main'), 'main')
+})
+
+test('keeps the Windows update script encoded with a UTF-8 BOM', () => {
+  const scriptBytes = readFileSync(new URL('../update-changelog.ps1', import.meta.url))
+
+  assert.deepEqual([...scriptBytes.subarray(0, 3)], [0xEF, 0xBB, 0xBF])
 })
 
 test('prefers the refreshed remote target branch over the local branch', () => {
@@ -138,6 +145,49 @@ test('enriches commits with PR titles and linked issues without duplicating them
   ])
 })
 
+test('uses China Standard Time dates for unmatched pull requests and standalone issues', () => {
+  const commits = [{
+    kind: 'commit',
+    hash: 'commit-on-china-date',
+    shortHash: 'commit1',
+    date: '2026-07-24',
+    committedAt: '2026-07-23T16:10:00Z',
+    author: 'Local Author',
+    type: 'other',
+    scope: '',
+    breaking: false,
+    description: 'commit on China date',
+  }]
+  const githubData = {
+    pullRequests: [{
+      number: 999,
+      title: 'docs: same China date',
+      body: '',
+      url: 'https://github.com/weepwood/MRR/pull/999',
+      mergedAt: '2026-07-23T16:30:00Z',
+      mergeCommitSha: 'different-merge',
+      headSha: 'different-head',
+      author: 'weepwood',
+      labels: [],
+    }],
+    issues: [{
+      number: 998,
+      title: 'same China date issue',
+      url: 'https://github.com/weepwood/MRR/issues/998',
+      closedAt: '2026-07-23T16:45:00Z',
+      stateReason: 'completed',
+      author: 'weepwood',
+    }],
+  }
+
+  const entries = combineChangelogEntries(commits, githubData, 'weepwood/MRR')
+  const pullRequest = entries.find(entry => entry.kind === 'pull-request')
+  const issue = entries.find(entry => entry.kind === 'issue')
+
+  assert.equal(pullRequest?.date, '2026-07-24')
+  assert.equal(issue?.date, '2026-07-24')
+})
+
 test('renders remote commit source with PR and Issue information', () => {
   const commits = [{
     kind: 'commit',
@@ -166,7 +216,12 @@ test('renders remote commit source with PR and Issue information', () => {
     githubBranch: 'main',
     repositorySlug: 'weepwood/MRR',
     githubStatus: { enabled: true, source: 'api', pullRequestCount: 1, issueCount: 1 },
-    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
+    commitSource: {
+      ref: 'refs/remotes/origin/main',
+      branch: 'main',
+      source: 'remote',
+      historyComplete: true,
+    },
   })
 
   assert.match(rendered, /PR #164/)
@@ -175,7 +230,40 @@ test('renders remote commit source with PR and Issue information', () => {
   assert.match(rendered, /GitHub 增强：已启用/)
   assert.match(rendered, /Git 提交来源：远程 `origin\/main`（已刷新）/)
   assert.match(rendered, /记录范围：完整提交历史，共 1 条提交/)
+  assert.doesNotMatch(rendered, /^- 当前分支：/m)
   assert.match(rendered, /\\update-changelog\.ps1/)
+})
+
+test('labels shallow history as partial instead of complete', () => {
+  const commits = [{
+    kind: 'commit',
+    hash: 'abc123',
+    shortHash: 'abc123',
+    date: '2026-07-24',
+    committedAt: '2026-07-24T03:02:56Z',
+    type: 'other',
+    scope: '',
+    breaking: false,
+    description: 'shallow history entry',
+  }]
+
+  const rendered = renderDocument({
+    commits,
+    entries: commits,
+    branch: 'main',
+    githubBranch: 'main',
+    repositorySlug: 'weepwood/MRR',
+    githubStatus: { enabled: false },
+    commitSource: {
+      ref: 'refs/remotes/origin/main',
+      branch: 'main',
+      source: 'remote-cache',
+      historyComplete: false,
+    },
+  })
+
+  assert.match(rendered, /记录范围：当前可用的浅层历史，共 1 条提交/)
+  assert.doesNotMatch(rendered, /记录范围：完整提交历史/)
 })
 
 test('renders URLs in commit subjects as code so they do not become competing links', () => {
@@ -199,7 +287,12 @@ test('renders URLs in commit subjects as code so they do not become competing li
     githubBranch: 'main',
     repositorySlug: 'weepwood/MRR',
     githubStatus: { enabled: false },
-    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
+    commitSource: {
+      ref: 'refs/remotes/origin/main',
+      branch: 'main',
+      source: 'remote',
+      historyComplete: true,
+    },
   })
 
   assert.match(rendered, /`09:10` merge Merge branch 'main' of `https:\/\/github\.com\/weepwood\/MRR`（\[`fcac92c3`\]/)
@@ -225,7 +318,12 @@ test('normalizes commit timestamps to China Standard Time', () => {
     githubBranch: 'main',
     repositorySlug: 'weepwood/MRR',
     githubStatus: { enabled: false },
-    commitSource: { ref: 'refs/remotes/origin/main', branch: 'main', source: 'remote' },
+    commitSource: {
+      ref: 'refs/remotes/origin/main',
+      branch: 'main',
+      source: 'remote',
+      historyComplete: true,
+    },
   })
 
   assert.match(rendered, /`11:02` 发布：确认 MRR 0\.7\.4 正式资产/)

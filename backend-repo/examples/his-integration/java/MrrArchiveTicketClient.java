@@ -60,7 +60,7 @@ public final class MrrArchiveTicketClient {
         this.secret = requireNonBlank(secret, "secret");
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper").copy()
-                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+                .setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY);
     }
 
     public TicketResult createTicket(TicketRequest payload) throws Exception {

@@ -237,10 +237,11 @@ Flyway 创建：
 proxy_set_header Host $host;
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+# 单层本机 Nginx 必须覆盖客户端自行提交的同名头，防止伪造来源 IP。
+proxy_set_header X-Forwarded-For $remote_addr;
 ```
 
-生产环境应使用 HTTPS。
+不要使用 `$proxy_add_x_forwarded_for` 追加客户端自带的转发链。当前正式架构只有一层本机 Nginx，应以 TCP 直接来源 `$remote_addr` 覆盖该请求头。生产环境应使用 HTTPS。
 
 ## 11. 联调工具
 

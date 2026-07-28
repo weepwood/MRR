@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @DisplayName("ImageContentServiceImpl 内部影像内容服务测试")
@@ -102,7 +103,7 @@ class ImageContentServiceImplTest {
                     assertThat(exception.getMessage()).isEqualTo("影像不存在或已删除");
                 });
 
-        verify(imageStorage, never()).open(any());
+        verifyNoInteractions(imageStorage);
     }
 
     @Test

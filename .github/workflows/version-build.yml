@@ -97,7 +97,7 @@ jobs:
         run: zip -r frontend-dist.zip frontend-dist/
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         # Action 会自动识别当前触发的 Tag 并关联到对应的 Release 上
         with:
           files: |

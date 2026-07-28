@@ -1,0 +1,50 @@
+name: node24-workflow-alignment
+
+on:
+  push:
+    branches:
+      - chore/node24-jsdom30-20260728
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Align workflow Node versions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('.github/workflows/version-build.yml'),
+              Path('.github/workflows/standalone-jar-release.yml'),
+              Path('.github/workflows/windows-release-package.yml'),
+              Path('frontend-fantastic-admin/.github/workflows/ci.yml'),
+          ]
+          old = 'node-version: 22'
+          new = 'node-version-file: frontend-fantastic-admin/.node-version'
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected Node 22 marker not found: {path}')
+              path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+
+      - name: Commit alignment and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/version-build.yml
+          git add .github/workflows/standalone-jar-release.yml
+          git add .github/workflows/windows-release-package.yml
+          git add frontend-fantastic-admin/.github/workflows/ci.yml
+          git rm .github/workflows/node24-workflow-alignment.yml
+          git commit -m "工程：统一工作流 Node 版本来源"
+          git push

@@ -17,6 +17,10 @@ folder_summary*
 performance-report.md
 reports/
 
+# .NET HIS integration example build outputs
+examples/his-integration/csharp/bin/
+examples/his-integration/csharp/obj/
+
 # Maven wrapper (安装 mvn wrapper 后生成，不应提交)
 .mvn/
 mvnw

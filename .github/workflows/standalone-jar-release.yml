@@ -173,7 +173,7 @@ jobs:
 
     steps:
       - name: Download standalone JAR artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.jar_name }}
           path: build/release-assets

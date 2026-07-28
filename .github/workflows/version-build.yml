@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
           

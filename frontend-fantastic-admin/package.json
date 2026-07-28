@@ -3,7 +3,7 @@
   "version": "0.6.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^24.15.0 || >=26.0.0"
   },
   "browserslist": [
     "Chrome >= 86",
@@ -106,7 +106,7 @@
     "eslint": "^10.8.0",
     "fs-extra": "^11.3.4",
     "http-server": "^14.1.1",
-    "jsdom": "^26.1.0",
+    "jsdom": "^30.0.0",
     "lightningcss": "^1.32.0",
     "lint-staged": "^16.4.0",
     "npm-run-all2": "^8.0.4",

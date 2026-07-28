@@ -21,7 +21,13 @@ public enum ResultCode {
     USER_DISABLED(1002, "账号已被禁用", HttpStatus.FORBIDDEN),
     PASSWORD_WRONG(1003, "用户名或密码错误", HttpStatus.UNAUTHORIZED),
     OSS_UPLOAD_FAIL(2001, "OSS 上传失败", HttpStatus.INTERNAL_SERVER_ERROR),
-    MIGRATION_FAIL(2002, "迁移失败", HttpStatus.INTERNAL_SERVER_ERROR);
+    MIGRATION_FAIL(2002, "迁移失败", HttpStatus.INTERNAL_SERVER_ERROR),
+    OSS_NOT_CONFIGURED(2003, "OSS 尚未完成配置", HttpStatus.SERVICE_UNAVAILABLE),
+    OSS_UNAVAILABLE(2004, "OSS 服务暂不可用，请稍后重试", HttpStatus.SERVICE_UNAVAILABLE),
+    OSS_UNAUTHORIZED(2005, "OSS 访问凭据无效或权限不足", HttpStatus.BAD_GATEWAY),
+    OSS_OBJECT_NOT_FOUND(2006, "OSS 对象不存在", HttpStatus.NOT_FOUND),
+    OSS_INTEGRITY_MISMATCH(2007, "OSS 对象内容校验不一致", HttpStatus.CONFLICT),
+    OSS_OPERATION_FAILED(2008, "OSS 操作失败", HttpStatus.BAD_GATEWAY);
 
     private final int code;
     private final String message;

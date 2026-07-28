@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -26,7 +26,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
         <!-- Dependency versions -->
-        <mybatis.version>4.0.1</mybatis.version>
+        <mybatis.version>4.1.0</mybatis.version>
         <java-jwt.version>4.6.0</java-jwt.version>
         <springdoc.version>3.0.3</springdoc.version>
         <resilience4j.version>2.4.0</resilience4j.version>

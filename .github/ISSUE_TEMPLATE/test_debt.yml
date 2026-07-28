@@ -1,0 +1,47 @@
+name: 测试与工程债务
+description: 记录缺失测试、慢测试、脆弱 CI 或工程规范问题
+title: "[Test Debt] "
+labels:
+  - test
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: 类型
+      options:
+        - 缺失单元测试
+        - 缺失集成测试
+        - 缺失 E2E 测试
+        - 测试不稳定或偶发失败
+        - CI 耗时过长
+        - 覆盖率或质量门禁
+        - 工程文档或流程
+    validations:
+      required: true
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: 当前缺口
+      description: 指明模块、文件、用户流程或工作流。
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: 未解决的风险
+      description: 说明可能造成的回归、数据错误、安全风险或发布阻塞。
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: 完成标准
+      placeholder: |
+        - [ ] 新增……
+        - [ ] CI 在……时执行……
+        - [ ] 失败报告可定位到……
+    validations:
+      required: true

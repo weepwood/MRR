@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "enforcementMode": "report-only",
+  "source": {
+    "commit": "2a013cb5c8c2bff771ce08cb89cf861da112eecd",
+    "workflowRunId": 30110861874,
+    "capturedAt": "2026-07-24"
+  },
+  "maxRegressionPercentagePoints": 0.5,
+  "metrics": {
+    "lines": 19.46,
+    "statements": 19.46,
+    "functions": 76.33,
+    "branches": 77.47
+  }
+}

@@ -1,0 +1,93 @@
+name: 缺陷报告
+description: 报告可复现的功能、兼容性、数据或部署问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请勿提交真实患者姓名、身份证号、病案号、访问令牌、数据库口令或内网地址。必要时请先脱敏。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题概述
+      description: 一句话说明发生了什么，以及影响了谁。
+      placeholder: 例如：影像档案袋在 Chrome 109 中切换下一张图片后页面卡住。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 提供最小、稳定、可重复的步骤。
+      placeholder: |
+        1. 登录测试环境
+        2. 打开……
+        3. 点击……
+        4. 观察到……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为与错误信息
+      description: 可粘贴脱敏后的日志、Request ID、Trace ID 或截图。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      options:
+        - 前端界面
+        - 后端接口
+        - 数据库或迁移
+        - 图片、NAS、Nginx 或 OSS
+        - Windows 部署与脚本
+        - 权限、安全或审计
+        - 文档
+        - 尚不确定
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: MRR 版本或提交
+      placeholder: v0.7.4 / commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      placeholder: |
+        操作系统：
+        浏览器及版本：
+        JDK / Node / PostgreSQL：
+        部署方式：单体 JAR / Windows 离线包 / 源码
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: regression
+    attributes:
+      label: 回归信息
+      options:
+        - label: 该问题在旧版本中正常、升级后出现
+        - label: 我已确认问题可在最新 main 或最新正式版本复现
+        - label: 我已删除或脱敏所有敏感信息
+          required: true

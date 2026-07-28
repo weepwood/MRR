@@ -20,7 +20,7 @@ jobs:
         working-directory: frontend-fantastic-admin
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       - uses: pnpm/action-setup@v4
         with:
@@ -40,7 +40,7 @@ jobs:
         run: pnpm build
         
       - name: Upload Frontend Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend-fantastic-admin/dist
@@ -52,7 +52,7 @@ jobs:
         working-directory: backend-repo
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -65,7 +65,7 @@ jobs:
         run: mvn -B -ntp -DskipTests package
         
       - name: Upload Backend Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-jar
           path: backend-repo/target/*.jar

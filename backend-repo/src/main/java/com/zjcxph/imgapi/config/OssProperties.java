@@ -14,5 +14,6 @@ public class OssProperties {
     private String region;
     private String baseUrl;
     private int urlExpireSeconds = 3600;
+    private boolean pathStyleAccess = false;
 
 }

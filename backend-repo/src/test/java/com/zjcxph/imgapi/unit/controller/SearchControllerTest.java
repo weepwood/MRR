@@ -45,8 +45,6 @@ class SearchControllerTest {
         @Test
         @DisplayName("返回含 IP 的字符串")
         void returnsStringWithIp() {
-            when(mockRequest.getHeader("X-Forwarded-For")).thenReturn(null);
-            when(mockRequest.getHeader("X-Real-IP")).thenReturn(null);
             when(mockRequest.getRemoteAddr()).thenReturn("10.0.0.1");
 
             String result = controller.hello(mockRequest);

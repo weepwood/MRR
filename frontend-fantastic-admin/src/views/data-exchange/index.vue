@@ -25,6 +25,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
 import useAuth from '@/utils/composables/useAuth'
+import { downloadBlob, getResponseHeader } from '@/utils/file-download'
 import DatasetImportPanel from './components/DatasetImportPanel.vue'
 
 defineOptions({ name: 'DataExchangePage' })
@@ -109,7 +110,10 @@ const archiveFields = [
   { name: 'patient_id', description: '患者标识' },
   { name: 'patient_name', description: '患者姓名' },
   { name: 'inpatient_department', description: '住院科室' },
+  { name: 'device_id', description: '扫描设备 ID' },
+  { name: 'operator_no', description: '负责人或操作人编号' },
   { name: 'archive_date', description: '归档日期' },
+  { name: 'discharge_date', description: '出院日期' },
   { name: 'archive_type', description: '病案类型' },
   { name: 'page_count', description: '病案页数' },
   { name: 'source_statistics_id', description: '来源统计记录 ID' },
@@ -170,7 +174,10 @@ async function exportDataset(
   try {
     const response = await exportDataExchangeCsv(dataset, compactParams(params))
     downloadBlob(response.data, `${fileName}-${today()}.csv`)
-    ElMessage.success('数据导出完成')
+    const exportLimit = getResponseHeader(response.headers, 'x-export-row-limit')
+    ElMessage.success(exportLimit
+      ? `数据导出完成；接口单次最多返回 ${formatCount(exportLimit)} 行`
+      : '数据导出完成')
   }
   catch {
     ElMessage.error('数据导出失败')
@@ -261,16 +268,9 @@ function resetScanFilters() {
   })
 }
 
-function downloadBlob(blobValue: Blob, fileName: string) {
-  const blob = blobValue instanceof Blob ? blobValue : new Blob([blobValue])
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = fileName
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+function formatCount(value: string) {
+  const count = Number(value)
+  return Number.isFinite(count) && count >= 0 ? count.toLocaleString('zh-CN') : value
 }
 
 function today() {
@@ -304,6 +304,17 @@ function today() {
     >
       <template #default>
         可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。
+      </template>
+    </el-alert>
+
+    <el-alert
+      title="导出采用受控行数上限"
+      type="info"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
       </template>
     </el-alert>
 

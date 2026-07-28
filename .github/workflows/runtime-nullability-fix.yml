@@ -1,0 +1,42 @@
+name: runtime-nullability-fix
+
+on:
+  push:
+    branches:
+      - chore/dependabot-frontend-runtime-20260728
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Apply nullable selection fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('frontend-fantastic-admin/src/views/oss-migration/components/OssFileExplorer.vue')
+          text = path.read_text(encoding='utf-8')
+          old = 'function isImage(entry?: OssBrowserEntry) {'
+          new = 'function isImage(entry?: OssBrowserEntry | null) {'
+          if old not in text:
+              raise SystemExit('Expected isImage signature not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit fix and clean diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f runtime-typecheck-recheck.log
+          git rm .github/workflows/runtime-nullability-fix.yml
+          git add frontend-fantastic-admin/src/views/oss-migration/components/OssFileExplorer.vue
+          git commit -m "修复：兼容 OSS 当前行空值类型"
+          git push

@@ -94,14 +94,10 @@ public class ManagedPrefixOssService implements OssService {
 
     @Override
     public boolean verifyUploadIntegrity(String ossKey, String expectedMd5) {
-        boolean matches = executeRemote(
+        return executeRemote(
                 "verify-integrity",
                 () -> delegate.verifyUploadIntegrity(ossKey, expectedMd5)
         );
-        if (!matches) {
-            throw new OssOperationException(OssErrorType.OSS_INTEGRITY_MISMATCH, null);
-        }
-        return true;
     }
 
     private <T> T executeRemote(String operation, Supplier<T> action) {

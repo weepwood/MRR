@@ -20,7 +20,7 @@ class BuildStandaloneJarTest(unittest.TestCase):
             )
             archive.writestr(
                 "BOOT-INF/classes/static/index.html",
-                "<html><body>MRR</body></html>",
+                "<html><body>MRR</body></html",
             )
             archive.writestr(
                 "BOOT-INF/classes/static/assets/app.js",
@@ -103,7 +103,7 @@ class BuildStandaloneJarTest(unittest.TestCase):
         self.assertIn("--default-port 8002", workflow)
         self.assertIn("MRR-v${PRODUCT_VERSION}-standalone.jar", workflow)
         self.assertIn("steps.standalone.outputs.jar", workflow)
-        self.assertIn("actions/download-artifact@v4", workflow)
+        self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("Waiting for GitHub Release", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)

@@ -8,6 +8,7 @@ import DeveloperSettings from './DeveloperSettings.vue'
 import DocumentationSettings from './DocumentationSettings.vue'
 import ExternalLinksSettings from './ExternalLinksSettings.vue'
 import LoginSupportSettings from './LoginSupportSettings.vue'
+import OcrClassificationSettings from './OcrClassificationSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
 
@@ -19,16 +20,25 @@ interface DepartmentThemeSettingsRef {
   saveThemes: () => Promise<void>
 }
 
+interface OcrClassificationSettingsRef {
+  saving: boolean
+  isDirty: boolean
+  saveSettings: () => Promise<boolean>
+}
+
 interface AppConfigPanelRef {
   autoSaveLabel: string
 }
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
+const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
 const savedRecently = ref(false)
 const departmentSavedRecently = ref(false)
+const ocrSavedRecently = ref(false)
 let saveFeedbackTimer: number | undefined
 let departmentFeedbackTimer: number | undefined
+let ocrFeedbackTimer: number | undefined
 
 const {
   settingsNavItems,
@@ -65,6 +75,14 @@ function clearDepartmentSavedFeedback() {
   }
 }
 
+function clearOcrSavedFeedback() {
+  ocrSavedRecently.value = false
+  if (ocrFeedbackTimer !== undefined) {
+    window.clearTimeout(ocrFeedbackTimer)
+    ocrFeedbackTimer = undefined
+  }
+}
+
 function showSavedFeedback() {
   clearSavedFeedback()
   savedRecently.value = true
@@ -80,6 +98,15 @@ function showDepartmentSavedFeedback() {
   departmentFeedbackTimer = window.setTimeout(() => {
     departmentSavedRecently.value = false
     departmentFeedbackTimer = undefined
+  }, 1200)
+}
+
+function showOcrSavedFeedback() {
+  clearOcrSavedFeedback()
+  ocrSavedRecently.value = true
+  ocrFeedbackTimer = window.setTimeout(() => {
+    ocrSavedRecently.value = false
+    ocrFeedbackTimer = undefined
   }, 1200)
 }
 
@@ -103,6 +130,17 @@ async function handleDepartmentSave() {
   }
 }
 
+async function handleOcrSave() {
+  clearOcrSavedFeedback()
+  const panel = ocrSettingsRef.value
+  if (!panel) {
+    return
+  }
+  if (await panel.saveSettings()) {
+    showOcrSavedFeedback()
+  }
+}
+
 watch(isDirty, (dirty) => {
   if (dirty) {
     clearSavedFeedback()
@@ -115,12 +153,21 @@ watch(() => departmentThemeRef.value?.isDirty, (dirty) => {
   }
 })
 
+watch(() => ocrSettingsRef.value?.isDirty, (dirty) => {
+  if (dirty) {
+    clearOcrSavedFeedback()
+  }
+})
+
 onUnmounted(() => {
   if (saveFeedbackTimer !== undefined) {
     window.clearTimeout(saveFeedbackTimer)
   }
   if (departmentFeedbackTimer !== undefined) {
     window.clearTimeout(departmentFeedbackTimer)
+  }
+  if (ocrFeedbackTimer !== undefined) {
+    window.clearTimeout(ocrFeedbackTimer)
   }
 })
 
@@ -139,7 +186,7 @@ void shellRef
               开发者模式已启用
             </el-tag>
           </div>
-          <p>统一管理系统标识、登录支持、帮助文档、档案浏览、安全策略与界面外观。</p>
+          <p>统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。</p>
         </div>
       </div>
       <div v-if="isServerSettingSection" class="header-actions">
@@ -195,6 +242,29 @@ void shellRef
                 :class="{ 'mrr-status-pop': savedRecently }"
               />
               {{ savedRecently ? '已保存' : '保存设置' }}
+            </el-button>
+          </div>
+
+          <div v-else-if="activeSection === 'ocr'" class="sidebar-save-card" :class="{ dirty: ocrSettingsRef?.isDirty }">
+            <div class="save-status" :class="{ dirty: ocrSettingsRef?.isDirty }">
+              <span class="status-dot" />
+              <div>
+                <strong>{{ ocrSettingsRef?.isDirty ? 'OCR 配置修改待保存' : 'OCR 配置已保存' }}</strong>
+                <small>保存后写入系统数据库，并由后端再次校验安全阈值。</small>
+              </div>
+            </div>
+            <el-button
+              :type="ocrSavedRecently ? 'success' : 'primary'"
+              :loading="ocrSettingsRef?.saving"
+              :disabled="!ocrSettingsRef?.isDirty"
+              @click="handleOcrSave"
+            >
+              <FaIcon
+                :name="ocrSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': ocrSavedRecently }"
+              />
+              {{ ocrSavedRecently ? '已保存' : '保存 OCR 配置' }}
             </el-button>
           </div>
 
@@ -273,6 +343,7 @@ void shellRef
               <DeveloperSettings v-else v-model="settings" />
             </el-form>
           </div>
+          <OcrClassificationSettings v-else-if="activeSection === 'ocr'" ref="ocrSettingsRef" />
           <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
           <ExternalLinksSettings v-else-if="activeSection === 'external-links'" />
           <AppConfigPanel v-else ref="appConfigRef" />

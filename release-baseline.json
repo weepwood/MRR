@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260723163000",
+    "maximumCompatibleMigration": "20260724220200",
     "backwardCompatibleWithPreviousApplication": true
   },
   "applicationRollback": {
     "allowed": true,
-    "reason": "0.7.4 未新增数据库迁移或配置结构变更，可以回滚到 0.7.3。回滚后会恢复 0.7.3 的单体 JAR 文档内嵌行为；新增的三项文档链接仍保留在现有系统设置表中，但旧版本不会使用这些配置。回滚前仍应备份数据库、外部配置和完整发布目录。"
+    "reason": "OCR 与智能分类第一阶段仅新增独立表、索引、默认设置和管理员权限，未删除或改写现有业务字段。回滚到上一应用版本后，旧版会忽略这些新增结构；回滚前仍应备份数据库、外部配置和完整发布目录。"
   },
   "configuration": {
     "schemaVersion": 1

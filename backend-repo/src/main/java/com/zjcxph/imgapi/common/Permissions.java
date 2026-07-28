@@ -12,6 +12,13 @@ public final class Permissions {
     public static final String RECORD_READ = "record:read";
     public static final String RECORD_DOWNLOAD = "record:download";
     public static final String RECORD_PDF_EXPORT = "record:pdf:export";
+    public static final String OCR_READ = "ocr:read";
+    public static final String OCR_RUN = "ocr:run";
+    public static final String OCR_CONFIG = "ocr:config";
+    public static final String CLASSIFICATION_READ = "classification:read";
+    public static final String CLASSIFICATION_REVIEW = "classification:review";
+    public static final String CLASSIFICATION_BATCH_REVIEW = "classification:batch-review";
+    public static final String CLASSIFICATION_OVERRIDE = "classification:override";
     public static final String SEARCH_READ = "search:read";
     public static final String STATISTICS_READ = "statistics:read";
     public static final String USER_MANAGE = "user:manage";
@@ -30,6 +37,13 @@ public final class Permissions {
             RECORD_READ,
             RECORD_DOWNLOAD,
             RECORD_PDF_EXPORT,
+            OCR_READ,
+            OCR_RUN,
+            OCR_CONFIG,
+            CLASSIFICATION_READ,
+            CLASSIFICATION_REVIEW,
+            CLASSIFICATION_BATCH_REVIEW,
+            CLASSIFICATION_OVERRIDE,
             SEARCH_READ,
             STATISTICS_READ,
             USER_MANAGE,

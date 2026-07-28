@@ -11,13 +11,14 @@ import {
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
-export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
+export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'ocr' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
 
 export const settingsNavItems = [
   { key: 'system', title: '系统信息', description: '名称、机构与系统简介', icon: 'i-ri:information-line' },
   { key: 'login-support', title: '登录与支持', description: '登录展示与管理员联系', icon: 'i-ri:customer-service-2-line' },
   { key: 'documentation', title: '帮助与文档', description: '用户、开发与运维文档链接', icon: 'i-ri:book-open-line' },
   { key: 'archive', title: '档案浏览', description: '图片来源与加载策略', icon: 'i-ri:image-2-line' },
+  { key: 'ocr', title: 'OCR 与智能分类', description: '引擎、词库与分类安全阈值', icon: 'i-ri:scan-2-line' },
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
   { key: 'developer', title: '开发者模式', description: '旧接口与可信来源', icon: 'i-ri:code-box-line' },
   { key: 'department', title: '科室配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },

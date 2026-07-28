@@ -338,7 +338,7 @@ onUnmounted(() => {
 .archive-wall-card.active,
 .archive-wall-card.checked {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  box-shadow: 0 0 0 2px rgb(64 158 255 / 18%);
 }
 
 .archive-wall-check {
@@ -374,6 +374,7 @@ onUnmounted(() => {
   position: relative;
   display: grid;
   place-items: center;
+  min-height: 320px;
   aspect-ratio: 3 / 4;
   overflow: hidden;
   cursor: zoom-in;
@@ -465,7 +466,7 @@ onUnmounted(() => {
   text-align: center;
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .archive-wall {
     padding: 8px 8px 112px;
   }

@@ -566,7 +566,7 @@ onBeforeUnmount(revokePreviewUrl)
               <template #default="scope">
                 <div class="table-name">
                   <el-icon :class="{ folder: scope.row.directory }">
-                    <component :is="entryIcon(scope.row)" />
+                    <component :is="entryIcon(scope.row as NginxBrowserEntry)" />
                   </el-icon>
                   <span>
                     {{ scope.row.name }}
@@ -576,7 +576,7 @@ onBeforeUnmount(revokePreviewUrl)
             </el-table-column>
             <el-table-column label="类型" width="120">
               <template #default="scope">
-                {{ scope.row.directory ? '文件夹' : (fileExtension(scope.row).toUpperCase() || '文件') }}
+                {{ scope.row.directory ? '文件夹' : (fileExtension(scope.row as NginxBrowserEntry).toUpperCase() || '文件') }}
               </template>
             </el-table-column>
             <el-table-column label="大小" width="130">

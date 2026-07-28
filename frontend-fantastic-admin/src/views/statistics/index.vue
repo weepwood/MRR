@@ -283,7 +283,7 @@ function handleListSizeChange() {
   loadStatisticsList()
 }
 
-function handleSortChange({ prop, order }: { prop: string, order: string | null }) {
+function handleSortChange({ prop, order }: { prop: string | null, order: string | null }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
   loadStatisticsList()
 }

@@ -382,9 +382,9 @@ onMounted(loadDashboard)
             <el-table :data="overview?.relationChecks ?? []" stripe empty-text="尚无关联检查结果">
               <el-table-column label="检查项" min-width="260">
                 <template #default="{ row }">
-                  <strong>{{ checkName(row) }}</strong>
+                  <strong>{{ checkName(row as QualityCheck) }}</strong>
                   <div class="muted-code">
-                    {{ checkCode(row) }}
+                    {{ checkCode(row as QualityCheck) }}
                   </div>
                 </template>
               </el-table-column>
@@ -397,7 +397,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="异常数量" width="130">
                 <template #default="{ row }">
-                  {{ formatNumber(checkIssueCount(row)) }}
+                  {{ formatNumber(checkIssueCount(row as QualityCheck)) }}
                 </template>
               </el-table-column>
               <el-table-column label="检查时间" min-width="170">
@@ -604,9 +604,9 @@ onMounted(loadDashboard)
             <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
               <el-table-column label="规则" min-width="280">
                 <template #default="{ row }">
-                  <strong>{{ checkName(row) }}</strong>
+                  <strong>{{ checkName(row as QualityCheck) }}</strong>
                   <div class="muted-code">
-                    {{ checkCode(row) }}
+                    {{ checkCode(row as QualityCheck) }}
                   </div>
                 </template>
               </el-table-column>
@@ -619,7 +619,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="异常数" width="120">
                 <template #default="{ row }">
-                  {{ formatNumber(checkIssueCount(row)) }}
+                  {{ formatNumber(checkIssueCount(row as QualityCheck)) }}
                 </template>
               </el-table-column>
               <el-table-column label="样本数" width="110">
@@ -662,15 +662,15 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="规则" min-width="250">
                 <template #default="{ row }">
-                  <strong>{{ issueName(row) }}</strong>
+                  <strong>{{ issueName(row as DataQualityIssue) }}</strong>
                   <div class="muted-code">
-                    {{ issueCode(row) }}
+                    {{ issueCode(row as DataQualityIssue) }}
                   </div>
                 </template>
               </el-table-column>
               <el-table-column label="记录" min-width="180">
                 <template #default="{ row }">
-                  {{ issueEntityType(row) }} #{{ issueEntityId(row) }}
+                  {{ issueEntityType(row as DataQualityIssue) }} #{{ issueEntityId(row as DataQualityIssue) }}
                 </template>
               </el-table-column>
               <el-table-column prop="bah" label="BAH" width="120" />
@@ -686,7 +686,7 @@ onMounted(loadDashboard)
                   <MrrTableActions
                     :actions="issueActions"
                     :max-inline="issueMaxInlineActions"
-                    @select="handleIssueAction($event, row)"
+                    @select="handleIssueAction($event, row as DataQualityIssue)"
                   />
                 </template>
               </el-table-column>

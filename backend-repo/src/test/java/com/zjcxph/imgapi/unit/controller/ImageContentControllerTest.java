@@ -79,7 +79,7 @@ class ImageContentControllerTest {
 
         ResponseEntity<StreamingResponseBody> response = controller.getContent(13);
 
-        assertThat(response.getHeaders().containsKey(HttpHeaders.CONTENT_LENGTH)).isFalse();
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_LENGTH)).isNull();
     }
 
     private static final class TrackingInputStream extends ByteArrayInputStream {

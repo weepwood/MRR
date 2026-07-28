@@ -12,7 +12,7 @@
 
 ### 浏览器提示版本过低
 
-最低支持 Edge 111、Chrome 111、Firefox 114、Safari 16.4。不支持 Internet Explorer、Edge IE 模式和旧版 EdgeHTML。建议使用医院统一维护的最新版 Edge 或 Chrome。
+最低支持 Edge 111、Chrome 86、Firefox 114、Safari 16.4。不支持 Internet Explorer、Edge IE 模式和旧版 EdgeHTML。建议使用医院统一维护的最新版 Edge 或 Chrome。
 
 ## 病案号与上架号
 

@@ -180,6 +180,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Verify Chrome 86 production compatibility
+        run: pnpm test:compat:chrome86
+
       - name: Unit Test with coverage
         run: pnpm test:coverage
 

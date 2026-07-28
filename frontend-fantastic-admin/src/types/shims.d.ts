@@ -1,6 +1,7 @@
 declare interface Window {
   webkitDevicePixelRatio: any
   mozDevicePixelRatio: any
+  __MRR_APP_STARTUP_BLOCKED__?: boolean
 }
 
 declare const __SYSTEM_INFO__: {

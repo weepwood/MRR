@@ -9,8 +9,8 @@ import picocolors from 'picocolors'
 import Unocss from 'unocss/vite'
 import autoImport from 'unplugin-auto-import/vite'
 import TurboConsole from 'unplugin-turbo-console/vite'
-import components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import components from 'unplugin-vue-components/vite'
 import { loadEnv } from 'vite'
 import AppLoading from 'vite-plugin-app-loading'
 import Archiver from 'vite-plugin-archiver'
@@ -22,21 +22,20 @@ import Pages from 'vite-plugin-pages'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import VueDevTools from 'vite-plugin-vue-devtools'
 import Layouts from 'vite-plugin-vue-meta-layouts'
+import { browserPolyfillTargets } from './browser-targets'
 
 export default function createVitePlugins(mode: string, isBuild = false) {
   const viteEnv = parseLoadedEnv(loadEnv(mode, process.cwd()))
   const vitePlugins: (PluginOption | PluginOption[])[] = [
     vue(),
     vueJsx(),
-    // 该开关只为现代构建补充少量运行时 polyfill，不生成 IE/旧 Edge 所需的
-    // legacy chunk，避免配置名称让运维误以为项目支持旧浏览器。
-    viteEnv.VITE_BUILD_MODERN_POLYFILLS && vueLegacy({
+    // Chrome 86 已支持原生 ESM，不需要生成 IE/旧 Edge 的 legacy chunk。
+    // 生产构建仍需按实际用法补齐较新的 ECMAScript/Web API，并由同一组
+    // modernTargets 负责 JavaScript 语法降级，避免构建目标与 polyfill 漂移。
+    isBuild && vueLegacy({
       renderLegacyChunks: false,
-      modernPolyfills: [
-        'es.array.at',
-        'es.array.find-last',
-        'es.object.has-own',
-      ],
+      modernTargets: browserPolyfillTargets,
+      modernPolyfills: true,
     }),
 
     // https://github.com/vuejs/devtools

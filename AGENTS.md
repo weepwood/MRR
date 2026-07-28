@@ -127,7 +127,7 @@ MRR/
 
 - 执行过的命令与结果；
 - 失败路径、权限拒绝和边界条件；
-- PostgreSQL、Windows、Chrome 109 或真实存储验证（适用时）；
+- PostgreSQL、Windows、Chrome 86 或真实存储验证（适用时）；
 - 数据库迁移、日志、审计或性能证据；
 - 回滚或功能关闭验证；
 - 仍未确认的假设和剩余风险。
@@ -188,7 +188,7 @@ MRR/
 - 公共 UI 不依赖具体病案业务；
 - 新基础设施或改变依赖方向必须先写 ADR；
 - 正式部署以 Windows Server、Nginx、Spring Boot、PostgreSQL 为边界；
-- 前端关键流程必须兼容 Chrome 109；
+- 前端关键流程必须兼容 Chrome 86；
 - PowerShell 运维脚本必须兼容 Windows PowerShell 5.1。
 
 ## 7. 前端规则

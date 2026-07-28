@@ -6,7 +6,7 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "browserslist": [
-    "Chrome >= 109",
+    "Chrome >= 86",
     "Edge >= 111",
     "Firefox >= 114",
     "Safari >= 16.4"
@@ -36,6 +36,7 @@
     "test": "vitest",
     "test:run": "vitest --run",
     "test:coverage": "vitest run --coverage",
+    "test:compat:chrome86": "node ./scripts/verify-chrome86-build.mjs",
     "test:e2e": "playwright test",
     "commit": "git cz",
     "release": "bumpp"
@@ -106,6 +107,7 @@
     "fs-extra": "^11.3.4",
     "http-server": "^14.1.1",
     "jsdom": "^26.1.0",
+    "lightningcss": "^1.32.0",
     "lint-staged": "^16.4.0",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",

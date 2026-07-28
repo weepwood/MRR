@@ -1,7 +1,7 @@
 /*
- * Chrome 109 compatibility layer.
+ * Chrome 86 compatibility layer.
  *
- * Chrome 109 does not implement CSS color-mix(). Decorative color blending is
+ * Chrome 86 does not implement CSS color-mix(). Decorative color blending is
  * allowed to degrade, but core surfaces, controls and focus indicators must
  * remain visible and usable.
  */

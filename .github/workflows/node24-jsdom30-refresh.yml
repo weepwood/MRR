@@ -1,0 +1,88 @@
+name: node24-jsdom30-refresh
+
+on:
+  push:
+    branches:
+      - chore/node24-jsdom30-20260728
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: Upgrade Node baseline and jsdom
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          node_version = Path('frontend-fantastic-admin/.node-version')
+          node_version.write_text('24.15.0\n', encoding='utf-8')
+
+          package_path = Path('frontend-fantastic-admin/package.json')
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          package['engines']['node'] = '^24.15.0 || >=26.0.0'
+          package['devDependencies']['jsdom'] = '^30.0.0'
+          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          doc_paths = [
+              Path('README.md'),
+              Path('vitepress-doc/README.md'),
+              Path('vitepress-doc/internal/development.md'),
+              Path('vitepress-doc/internal/frontend.md'),
+              Path('vitepress-doc/getting-started/installation.md'),
+              Path('vitepress-doc/development/setup.md'),
+              Path('vitepress-doc/DEPLOY.md'),
+              Path('deploy/windows/README.md'),
+          ]
+          replacements = {
+              'Node.js 20.19.0+': 'Node.js 24.15.0+',
+              'Node.js 20.19+': 'Node.js 24.15+',
+              'Node 20.19.0+': 'Node 24.15.0+',
+              'Node 20.19+': 'Node 24.15+',
+              '^20.19.0 || >=22.12.0': '^24.15.0 || >=26.0.0',
+          }
+          for path in doc_paths:
+              if not path.exists():
+                  continue
+              text = path.read_text(encoding='utf-8')
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Refresh lockfile
+        working-directory: frontend-fantastic-admin
+        run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+
+      - name: Commit changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend-fantastic-admin/.node-version
+          git add frontend-fantastic-admin/package.json frontend-fantastic-admin/pnpm-lock.yaml
+          git add README.md vitepress-doc/README.md vitepress-doc/internal/development.md
+          git add vitepress-doc/internal/frontend.md vitepress-doc/getting-started/installation.md
+          git add vitepress-doc/development/setup.md vitepress-doc/DEPLOY.md deploy/windows/README.md
+          git rm .github/workflows/node24-jsdom30-refresh.yml
+          git commit -m "依赖：升级 Node 24 并适配 jsdom 30"
+          git push

@@ -269,6 +269,7 @@ defineExpose({ resetVisible, scrollToIndex })
   gap: 6px;
   align-items: center;
   justify-content: center;
+  min-height: 200px;
   aspect-ratio: 3 / 4;
   padding: 10px;
   font-size: 11px;
@@ -278,6 +279,12 @@ defineExpose({ resetVisible, scrollToIndex })
     linear-gradient(135deg, hsl(var(--primary) / 4%), transparent 60%),
     var(--surface-alt);
   border: 1px dashed var(--divider);
+}
+
+@supports (aspect-ratio: 3 / 4) {
+  .thumb-image-placeholder {
+    min-height: 0;
+  }
 }
 
 .thumb-image-placeholder svg {

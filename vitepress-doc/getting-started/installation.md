@@ -164,7 +164,7 @@ pnpm test:run
 pnpm build
 ```
 
-最低浏览器版本为 Edge 111、Chrome 109、Firefox 114 和 Safari 16.4。Chrome 109 以核心业务流程可用为兼容目标，部分较新的视觉效果会自动降级。
+最低浏览器版本为 Edge 111、Chrome 86、Firefox 114 和 Safari 16.4。Chrome 86 以核心业务流程可用为兼容目标，部分较新的视觉效果会自动降级。
 
 ## 构建文档
 

@@ -29,23 +29,6 @@ import '@/assets/styles/pages/archive-boxes.css'
 import '@/assets/styles/pages/settings-navigation.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
 
-installMedicalRecordCodeInterceptors()
-installSystemSettingsRuntime()
-installArchiveUserIdRouting(router)
-installClipboardFallback()
-// 点击完整高度的设置工作区时，将其对齐到桌面视口顶部。
-installSettingsWorkspaceFocus()
-
-const app = createApp(App)
-app.use(pinia)
-app.use(router)
-app.use(uiProvider)
-installArchiveWatermark(router, pinia)
-directive(app)
-installRequestErrorFallback(app)
-app.mount('#app')
-installPwa()
-
 async function installOfflineIcons() {
   const { downloadAndInstall } = await import('@/iconify')
   await Promise.allSettled(
@@ -53,8 +36,31 @@ async function installOfflineIcons() {
   )
 }
 
-// 离线 Iconify 集合体积较大，仅在配置启用时才加载运行时与图标数据，
-// 避免默认在线模式阻塞应用首屏启动。
-if (iconConfig.isOfflineUse) {
-  void installOfflineIcons()
+function startApplication() {
+  installMedicalRecordCodeInterceptors()
+  installSystemSettingsRuntime()
+  installArchiveUserIdRouting(router)
+  installClipboardFallback()
+  // 点击完整高度的设置工作区时，将其对齐到桌面视口顶部。
+  installSettingsWorkspaceFocus()
+
+  const app = createApp(App)
+  app.use(pinia)
+  app.use(router)
+  app.use(uiProvider)
+  installArchiveWatermark(router, pinia)
+  directive(app)
+  installRequestErrorFallback(app)
+  app.mount('#app')
+  installPwa()
+
+  // 离线 Iconify 集合体积较大，仅在配置启用时才加载运行时与图标数据，
+  // 避免默认在线模式阻塞应用首屏启动。
+  if (iconConfig.isOfflineUse) {
+    void installOfflineIcons()
+  }
+}
+
+if (!window.__MRR_APP_STARTUP_BLOCKED__) {
+  startApplication()
 }

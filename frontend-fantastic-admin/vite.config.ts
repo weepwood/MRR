@@ -4,6 +4,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { defineConfig, loadEnv } from 'vite'
 import pkg from './package.json'
+import { browserBuildTargets } from './vite/browser-targets'
 import createVitePlugins from './vite/plugins'
 
 interface ReleaseBaseline {
@@ -117,8 +118,11 @@ export default defineConfig(({ mode, command }) => {
     },
     // 构建选项 https://cn.vitejs.dev/config/build-options
     build: {
-      // Chrome 109 是内网终端的最低兼容基线；其余浏览器保持既有要求。
-      target: ['chrome109', 'edge111', 'firefox114', 'safari16.4'],
+      // JavaScript 目标和运行时 polyfill 由 @vitejs/plugin-legacy 的
+      // modernTargets 统一生成；CSS 单独固定目标并使用 Lightning CSS
+      // 降级媒体查询范围语法等 Chrome 86 不支持的写法。
+      cssTarget: browserBuildTargets,
+      cssMinify: 'lightningcss',
       outDir: mode === 'production' ? 'dist' : `dist-${mode}`,
       sourcemap: env.VITE_BUILD_SOURCEMAP === 'true',
       rolldownOptions: {

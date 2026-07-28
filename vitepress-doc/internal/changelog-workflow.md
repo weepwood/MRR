@@ -12,7 +12,7 @@ MRR 的更新日志由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动
 vitepress-doc/user-guide/changelog.md
 ```
 
-生成器始终以当前仓库的第一父级 Git 提交历史为基础。在提供 GitHub Token 时，还会补充：
+生成器默认刷新并读取远程主分支的全部可达 Git 提交历史。在浅克隆无法补全历史时，生成结果会明确标记为“当前可用的浅层历史”。在提供 GitHub Token 时，还会补充：
 
 - 已合并 Pull Request 的标题、作者和链接；
 - PR 正文中 `Closes`、`Fixes`、`Resolves`、`Related to` 等关联的 Issue；
@@ -166,6 +166,7 @@ git push
 | `GITHUB_TOKEN` / `GH_TOKEN` | 无 | GitHub API 访问令牌 |
 | `MRR_CHANGELOG_GITHUB` | 自动 | `true` 强制启用，`false` 强制禁用 |
 | `MRR_CHANGELOG_BASE_BRANCH` | 远程默认分支 | 获取已合并 PR 的目标分支 |
+| `MRR_CHANGELOG_FETCH_REMOTE` | `true` | `false` 禁止刷新远程分支；浅克隆未补全时会明确标记为浅层历史 |
 | `MRR_CHANGELOG_CACHE_TTL` | `1800` | GitHub 缓存有效期，单位为秒 |
 | `MRR_CHANGELOG_GITHUB_PAGES` | `10` | GitHub API 最大分页数，最大 20 |
 | `MRR_GITHUB_REPOSITORY` | 从 `origin` 推导 | 仓库名称，例如 `weepwood/MRR` |

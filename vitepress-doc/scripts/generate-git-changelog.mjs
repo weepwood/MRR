@@ -68,8 +68,8 @@ function formatCommitTime(committedAt = '') {
   }).format(timestamp)
 }
 
-function formatCommitDate(committedAt = '') {
-  const timestamp = new Date(committedAt)
+function formatChinaDate(timestampValue = '') {
+  const timestamp = new Date(timestampValue)
   if (Number.isNaN(timestamp.getTime())) {
     return ''
   }
@@ -164,6 +164,11 @@ function gitRefExists(ref) {
     return false
   }
   return tryRunGit(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).ok
+}
+
+function isHistoryComplete() {
+  const shallowResult = tryRunGit(['rev-parse', '--is-shallow-repository'])
+  return shallowResult.ok && shallowResult.output === 'false'
 }
 
 function refreshRemoteBranch(branch) {
@@ -297,7 +302,7 @@ export function parseLog(rawLog) {
         kind: 'commit',
         hash,
         shortHash,
-        date: formatCommitDate(committedAt) || sourceDate,
+        date: formatChinaDate(committedAt) || sourceDate,
         committedAt,
         author,
         parents: parents.trim().split(/\s+/).filter(Boolean),
@@ -558,11 +563,14 @@ export function combineChangelogEntries(commits, githubData, repositorySlug) {
   const unmatchedPullRequests = githubData.pullRequests
     .filter(pullRequest => !matchedPullRequests.has(pullRequest.number))
     .filter(pullRequest => pullRequest.mergedAt)
-    .filter((pullRequest) => {
-      const date = pullRequest.mergedAt.slice(0, 10)
+    .map(pullRequest => ({
+      pullRequest,
+      date: formatChinaDate(pullRequest.mergedAt),
+    }))
+    .filter(({ date }) => {
       return date >= oldestDate && date <= latestDate
     })
-    .map((pullRequest) => {
+    .map(({ pullRequest, date }) => {
       const parsedTitle = parseConventionalSubject(pullRequest.title, pullRequest.title)
       const issueReferences = extractIssueReferences(pullRequest.body).map((reference) => {
         referencedIssues.add(reference.number)
@@ -570,7 +578,7 @@ export function combineChangelogEntries(commits, githubData, repositorySlug) {
       })
       return {
         kind: 'pull-request',
-        date: pullRequest.mergedAt.slice(0, 10),
+        date,
         author: pullRequest.author,
         pullRequest: String(pullRequest.number),
         pullRequestUrl: pullRequest.url,
@@ -582,13 +590,16 @@ export function combineChangelogEntries(commits, githubData, repositorySlug) {
   const standaloneIssues = githubData.issues
     .filter(issue => !referencedIssues.has(issue.number))
     .filter(issue => issue.closedAt)
-    .filter((issue) => {
-      const date = issue.closedAt.slice(0, 10)
+    .map(issue => ({
+      issue,
+      date: formatChinaDate(issue.closedAt),
+    }))
+    .filter(({ date }) => {
       return date >= oldestDate && date <= latestDate
     })
-    .map(issue => ({
+    .map(({ issue, date }) => ({
       kind: 'issue',
-      date: issue.closedAt.slice(0, 10),
+      date,
       number: issue.number,
       title: issue.title,
       url: issue.url ?? `https://github.com/${repositorySlug}/issues/${issue.number}`,
@@ -673,6 +684,9 @@ function renderCommitSource(commitSource, branch) {
 export function renderDocument({ commits, entries, branch, githubBranch, repositorySlug, githubStatus, commitSource }) {
   const latest = commits[0]
   const groups = groupByDate(entries)
+  const historySummary = commitSource?.historyComplete
+    ? `完整提交历史，共 ${commits.length} 条提交`
+    : `当前可用的浅层历史，共 ${commits.length} 条提交`
   const githubSummary = githubStatus.enabled
     ? `已启用（${githubStatus.pullRequestCount} 个已合并 PR、${githubStatus.issueCount} 个已完成 Issue；来源：${githubStatus.source}）`
     : githubStatus.reason
@@ -690,11 +704,10 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '',
     '> 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。默认刷新并读取远程 `main` 提交；远程不可用时才降级为已有远程引用或本地 Git 历史。',
     '',
-    `- 当前分支：\`${escapeMarkdown(branch)}\``,
     `- GitHub 目标分支：${githubBranch ? `\`${escapeMarkdown(githubBranch)}\`` : '未指定'}`,
     `- Git 提交来源：${renderCommitSource(commitSource, branch)}`,
     `- 更新至：${latest ? `${latest.date} · \`${latest.shortHash}\`` : '暂无提交'}`,
-    `- 记录范围：完整提交历史，共 ${commits.length} 条提交`,
+    `- 记录范围：${historySummary}`,
     `- GitHub 增强：${githubSummary}`,
     '',
   ]
@@ -740,7 +753,7 @@ export function renderDocument({ commits, entries, branch, githubBranch, reposit
     '- `GITHUB_TOKEN` 或 `GH_TOKEN`：访问私有仓库的 GitHub 令牌；',
     '- `MRR_CHANGELOG_GITHUB`：设置为 `true`/`false` 强制启用或禁用 GitHub PR/Issue 增强；',
     '- `MRR_CHANGELOG_BASE_BRANCH`：指定提交记录和 PR 的远程目标分支，默认 `main`；',
-    '- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；',
+    '- `MRR_CHANGELOG_FETCH_REMOTE`：设置为 `false` 可禁止执行 `git fetch`，但仍优先使用已有 `origin/<目标分支>`；若浅克隆历史未补全，记录范围会明确标记为浅层历史；',
     '- `MRR_CHANGELOG_CACHE_TTL`：GitHub 本地缓存秒数，默认 1800；',
     '- `MRR_CHANGELOG_GITHUB_PAGES`：GitHub 分页上限，默认 10，最大 20。',
     '',
@@ -773,12 +786,15 @@ export async function main() {
     const githubBranch = resolveGitHubBranch(branch)
     const fetchStatus = refreshRemoteBranch(githubBranch)
     const remoteRef = githubBranch ? `refs/remotes/origin/${githubBranch}` : ''
-    const commitSource = chooseCommitRef({
-      currentBranch: branch,
-      targetBranch: githubBranch,
-      remoteRefAvailable: gitRefExists(remoteRef),
-      remoteRefFresh: fetchStatus.refreshed,
-    })
+    const commitSource = {
+      ...chooseCommitRef({
+        currentBranch: branch,
+        targetBranch: githubBranch,
+        remoteRefAvailable: gitRefExists(remoteRef),
+        remoteRefFresh: fetchStatus.refreshed,
+      }),
+      historyComplete: isHistoryComplete(),
+    }
 
     if (commitSource.source === 'local' && fetchStatus.reason) {
       console.warn(`Remote changelog source unavailable; falling back to ${commitSource.ref}: ${fetchStatus.reason}`)

@@ -1,0 +1,60 @@
+
+> @0.6.0 lint:tsc /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> vue-tsc -b
+
+src/views/archive-boxes/index.vue(585,53): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'ArchiveBoxRecord'.
+  Property 'status' is missing in type 'DefaultRow' but required in type 'ArchiveBoxRecord'.
+src/views/archive-boxes/index.vue(663,50): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'ArchiveBoxGroup'.
+  Type 'DefaultRow' is missing the following properties from type 'ArchiveBoxGroup': boxNo, recordCount, abnormalCount
+src/views/data-relations/index.vue(385,40): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(387,34): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(400,51): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(607,40): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(609,34): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(622,51): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'QualityCheck'.
+  Property 'severity' is missing in type 'DefaultRow' but required in type 'QualityCheck'.
+src/views/data-relations/index.vue(665,40): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'DataQualityIssue'.
+  Type 'DefaultRow' is missing the following properties from type 'DataQualityIssue': id, severity
+src/views/data-relations/index.vue(667,34): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'DataQualityIssue'.
+  Type 'DefaultRow' is missing the following properties from type 'DataQualityIssue': id, severity
+src/views/data-relations/index.vue(673,38): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'DataQualityIssue'.
+  Type 'DefaultRow' is missing the following properties from type 'DataQualityIssue': id, severity
+src/views/data-relations/index.vue(673,64): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'DataQualityIssue'.
+  Type 'DefaultRow' is missing the following properties from type 'DataQualityIssue': id, severity
+src/views/data-relations/index.vue(689,56): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'DataQualityIssue'.
+  Type 'DefaultRow' is missing the following properties from type 'DataQualityIssue': id, severity
+src/views/nginx-browser/index.vue(569,47): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'NginxBrowserEntry'.
+  Type 'DefaultRow' is missing the following properties from type 'NginxBrowserEntry': name, path, directory, size
+src/views/nginx-browser/index.vue(579,65): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'NginxBrowserEntry'.
+  Type 'DefaultRow' is missing the following properties from type 'NginxBrowserEntry': name, path, directory, size
+src/views/oss-migration/components/OssFileExplorer.vue(442,12): error TS2322: Type '(entry?: OssBrowserEntry | undefined) => void' is not assignable to type '(currentRow: OssBrowserEntry | null, oldCurrentRow: OssBrowserEntry | null) => void'.
+  Types of parameters 'entry' and 'currentRow' are incompatible.
+    Type 'OssBrowserEntry | null' is not assignable to type 'OssBrowserEntry | undefined'.
+      Type 'null' is not assignable to type 'OssBrowserEntry | undefined'.
+src/views/oss-migration/components/OssFileExplorer.vue(448,74): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'OssBrowserEntry'.
+  Type 'DefaultRow' is missing the following properties from type 'OssBrowserEntry': name, key, directory, size
+src/views/oss-migration/components/OssFileExplorer.vue(449,45): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'OssBrowserEntry'.
+  Type 'DefaultRow' is missing the following properties from type 'OssBrowserEntry': name, key, directory, size
+src/views/oss-migration/components/OssFileExplorer.vue(462,57): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'OssBrowserEntry'.
+  Type 'DefaultRow' is missing the following properties from type 'OssBrowserEntry': name, key, directory, size
+src/views/runtime-errors/index.vue(256,63): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'SystemErrorEvent'.
+  Type 'DefaultRow' is missing the following properties from type 'SystemErrorEvent': id, errorId, fingerprint, level, and 6 more.
+src/views/runtime-errors/index.vue(263,38): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'SystemErrorEvent'.
+  Type 'DefaultRow' is missing the following properties from type 'SystemErrorEvent': id, errorId, fingerprint, level, and 6 more.
+src/views/runtime-errors/index.vue(272,38): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'SystemErrorEvent'.
+  Type 'DefaultRow' is missing the following properties from type 'SystemErrorEvent': id, errorId, fingerprint, level, and 6 more.
+src/views/runtime-errors/index.vue(281,38): error TS2345: Argument of type 'DefaultRow' is not assignable to parameter of type 'SystemErrorEvent'.
+  Type 'DefaultRow' is missing the following properties from type 'SystemErrorEvent': id, errorId, fingerprint, level, and 6 more.
+src/views/statistics/index.vue(531,10): error TS2322: Type '({ prop, order }: { prop: string; order: string | null; }) => void' is not assignable to type '(data: { column: TableColumnCtx<{ bah?: string | undefined; cid?: string | undefined; openerNo?: string | undefined; date?: string | undefined; type?: string | undefined; pages?: number | undefined; sjh?: string | undefined; }>; prop: string | null; order: TableSortOrder | null; }) => void'.
+  Types of parameters '__0' and 'data' are incompatible.
+    Type '{ column: TableColumnCtx<{ bah?: string | undefined; cid?: string | undefined; openerNo?: string | undefined; date?: string | undefined; type?: string | undefined; pages?: number | undefined; sjh?: string | undefined; }>; prop: string | null; order: TableSortOrder | null; }' is not assignable to type '{ prop: string; order: string | null; }'.
+      Types of property 'prop' are incompatible.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+ ELIFECYCLE  Command failed with exit code 2.
+exit_code=2

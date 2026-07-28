@@ -4,9 +4,10 @@
   "description": "MRR 管理系统文档",
   "type": "module",
   "scripts": {
-    "test": "npm run docs:changelog:test",
+    "test": "npm run docs:changelog:test && npm run docs:external-integration:test",
     "docs:changelog": "node scripts/generate-git-changelog.mjs",
     "docs:changelog:test": "node --test scripts/generate-git-changelog.test.mjs",
+    "docs:external-integration:test": "node --test scripts/external-archive-integration.test.mjs",
     "docs:dev": "npm run docs:dev:user",
     "docs:dev:user": "node scripts/run-docs.mjs user dev",
     "docs:dev:internal": "node scripts/run-docs.mjs internal dev",

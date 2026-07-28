@@ -53,15 +53,18 @@ dotnet run -- DOC-10086 789508 123456
 
 输出最后一行是一次性 `launchUrl`。正式 HIS 后端应把该 URL 返回当前 HIS 前端，由前端立即使用系统浏览器或新窗口打开。
 
-## 本地验证说明
+## 验证命令
 
-当前工作环境可用 Python 3.13 和 Java 21，但没有安装 Maven 与 .NET SDK。因此本次只能对 Java、C# 示例做代码审查，不能声称已在本环境完成 Maven 或 `dotnet build`。在医院接入环境中应执行：
+修改示例或签名协议文档后，应分别执行语法检查和构建：
 
 ```powershell
+python -m py_compile python/mrr_archive_ticket_client.py
+
 cd java
-mvn test
-mvn package
+mvn -B -ntp package
 
 cd ..\csharp
 dotnet build
 ```
+
+上述命令不需要连接真实 MRR。端到端验证必须使用受控测试环境、虚构或脱敏病案，并额外覆盖错误签名、过期时间戳、重复 nonce、来源 IP 拒绝和未授权下载。

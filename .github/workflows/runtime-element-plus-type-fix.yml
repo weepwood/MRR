@@ -1,0 +1,88 @@
+name: runtime-element-plus-type-fix
+
+on:
+  push:
+    branches:
+      - chore/dependabot-frontend-runtime-20260728
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Apply Element Plus table type adaptations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'frontend-fantastic-admin/src/views/archive-boxes/index.vue': [
+                  ('@select="handleRecordAction($event, row)"', '@select="handleRecordAction($event, row as ArchiveBoxRecord)"'),
+                  ('@select="handleBoxAction($event, row)"', '@select="handleBoxAction($event, row as ArchiveBoxGroup)"'),
+              ],
+              'frontend-fantastic-admin/src/views/data-relations/index.vue': [
+                  ('checkName(row)', 'checkName(row as QualityCheck)'),
+                  ('checkCode(row)', 'checkCode(row as QualityCheck)'),
+                  ('checkIssueCount(row)', 'checkIssueCount(row as QualityCheck)'),
+                  ('issueName(row)', 'issueName(row as DataQualityIssue)'),
+                  ('issueCode(row)', 'issueCode(row as DataQualityIssue)'),
+                  ('issueEntityType(row)', 'issueEntityType(row as DataQualityIssue)'),
+                  ('issueEntityId(row)', 'issueEntityId(row as DataQualityIssue)'),
+                  ('@select="handleIssueAction($event, row)"', '@select="handleIssueAction($event, row as DataQualityIssue)"'),
+              ],
+              'frontend-fantastic-admin/src/views/nginx-browser/index.vue': [
+                  ('entryIcon(scope.row)', 'entryIcon(scope.row as NginxBrowserEntry)'),
+                  ('fileExtension(scope.row)', 'fileExtension(scope.row as NginxBrowserEntry)'),
+              ],
+              'frontend-fantastic-admin/src/views/oss-migration/components/OssFileExplorer.vue': [
+                  ('const selectedEntry = ref<OssBrowserEntry>()', 'const selectedEntry = ref<OssBrowserEntry | null>(null)'),
+                  ('selectedEntry.value = undefined', 'selectedEntry.value = null'),
+                  ('function selectEntry(entry?: OssBrowserEntry) {', 'function selectEntry(entry: OssBrowserEntry | null = null) {'),
+                  ('isImage(row)', 'isImage(row as OssBrowserEntry)'),
+                  ('entryIcon(row)', 'entryIcon(row as OssBrowserEntry)'),
+                  ('fileExtension(row)', 'fileExtension(row as OssBrowserEntry)'),
+              ],
+              'frontend-fantastic-admin/src/views/runtime-errors/index.vue': [
+                  ('@click="openDetail(row)"', '@click="openDetail(row as SystemErrorEvent)"'),
+                  ('@click="changeStatus(row, \'ACKNOWLEDGED\')"', '@click="changeStatus(row as SystemErrorEvent, \'ACKNOWLEDGED\')"'),
+                  ('@click="changeStatus(row, \'RESOLVED\')"', '@click="changeStatus(row as SystemErrorEvent, \'RESOLVED\')"'),
+                  ('@click="changeStatus(row, \'OPEN\')"', '@click="changeStatus(row as SystemErrorEvent, \'OPEN\')"'),
+              ],
+              'frontend-fantastic-admin/src/views/statistics/index.vue': [
+                  ('function handleSortChange({ prop, order }: { prop: string, order: string | null }) {',
+                   'function handleSortChange({ prop, order }: { prop: string | null, order: string | null }) {'),
+              ],
+          }
+
+          for filename, pairs in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding='utf-8')
+              for old, new in pairs:
+                  count = text.count(old)
+                  if count == 0:
+                      raise SystemExit(f'Expected text not found in {filename}: {old}')
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Remove diagnostics and temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f runtime-typecheck.log
+          git rm .github/workflows/runtime-element-plus-type-fix.yml
+          git add frontend-fantastic-admin/src/views/archive-boxes/index.vue
+          git add frontend-fantastic-admin/src/views/data-relations/index.vue
+          git add frontend-fantastic-admin/src/views/nginx-browser/index.vue
+          git add frontend-fantastic-admin/src/views/oss-migration/components/OssFileExplorer.vue
+          git add frontend-fantastic-admin/src/views/runtime-errors/index.vue
+          git add frontend-fantastic-admin/src/views/statistics/index.vue
+          git commit -m "修复：适配 Element Plus 2.14 表格类型"
+          git push

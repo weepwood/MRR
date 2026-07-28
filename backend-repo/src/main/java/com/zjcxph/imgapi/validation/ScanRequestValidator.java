@@ -25,11 +25,11 @@ public class ScanRequestValidator implements ConstraintValidator<ValidScanReques
         boolean valid = true;
         context.disableDefaultConstraintViolation();
 
-        valid &= validateSafeSegment(context, "brxh", request.getBrxh(), false);
-        valid &= validateSafeSegment(context, "bah", request.getBah(), false);
-        valid &= validateSafeSegment(context, "sjh", request.getSjh(), true);
-        valid &= validateSafeSegment(context, "folder", request.getFolder(), false);
-        valid &= validateSafeSegment(context, "filename", request.getFilename(), false);
+        valid &= validateSafeSegment(context, "brxh", request.getBrxh());
+        valid &= validateSafeSegment(context, "bah", request.getBah());
+        valid &= validateSafeSegment(context, "sjh", request.getSjh());
+        valid &= validateSafeSegment(context, "folder", request.getFolder());
+        valid &= validateSafeSegment(context, "filename", request.getFilename());
 
         if (MedicalRecordCodeUtils.requiresSjhForBah(request.getBah())
                 && (request.getSjh() == null || request.getSjh().isBlank())) {
@@ -42,10 +42,9 @@ public class ScanRequestValidator implements ConstraintValidator<ValidScanReques
 
     private boolean validateSafeSegment(ConstraintValidatorContext context,
                                         String field,
-                                        String value,
-                                        boolean optional) {
+                                        String value) {
         if (value == null || value.isEmpty()) {
-            return optional;
+            return true;
         }
         if (value.isBlank()) {
             addViolation(context, field, field + " 不能只包含空白");

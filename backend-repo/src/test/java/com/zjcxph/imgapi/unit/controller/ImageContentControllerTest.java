@@ -52,7 +52,7 @@ class ImageContentControllerTest {
         assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.IMAGE_JPEG);
         assertThat(response.getHeaders().getContentLength()).isEqualTo(payload.length);
         assertThat(response.getHeaders().getCacheControl()).isEqualTo("private, no-store");
-        assertThat(response.getHeaders().getPragma()).isEqualTo("no-cache");
+        assertThat(response.getHeaders().getFirst(HttpHeaders.PRAGMA)).isEqualTo("no-cache");
         assertThat(response.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
         assertThat(response.getHeaders().getFirst("Referrer-Policy")).isEqualTo("no-referrer");
         assertThat(response.getHeaders().getContentDisposition().getType()).isEqualTo("inline");

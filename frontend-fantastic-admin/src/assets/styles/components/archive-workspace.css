@@ -4,6 +4,7 @@
  */
 
 body.archive-immersive .layout .wrapper .main-container {
+  height: calc(100vh - var(--g-header-actual-height)) !important;
   height: calc(100dvh - var(--g-header-actual-height)) !important;
   min-height: 0 !important;
   overflow: hidden;
@@ -41,8 +42,8 @@ body.archive-immersive .archive-workspace {
  * 统计明细嵌入主布局后，可用宽度小于浏览器视口，不能只依赖 viewport 媒体查询。
  */
 .archive-page .archive-header .archive-heading {
-  min-width: 0;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .archive-page .archive-header .archive-title {
@@ -51,15 +52,15 @@ body.archive-immersive .archive-workspace {
 }
 
 .archive-page .archive-header .archive-title h2 {
-  white-space: nowrap;
   word-break: keep-all;
   overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .archive-page .archive-header .heading-actions {
-  min-width: min-content;
   flex-wrap: wrap;
   justify-content: flex-end;
+  min-width: min-content;
 }
 
 /* 档案袋主容器统一使用卡片圆角。 */
@@ -118,6 +119,7 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
 @media (width <= 1100px) {
   body.archive-immersive .layout .wrapper .main-container {
     height: auto !important;
+    min-height: calc(100vh - var(--g-header-actual-height)) !important;
     min-height: calc(100dvh - var(--g-header-actual-height)) !important;
     overflow: visible;
   }
@@ -128,11 +130,8 @@ body.archive-immersive .archive-page .archive-workspace.is-empty .archive-sideba
 
   body.archive-immersive .archive-page {
     height: auto !important;
-    min-height: calc(
-      100dvh
-      - var(--g-header-actual-height)
-      - var(--g-tabbar-actual-height)
-    );
+    min-height: calc(100vh - var(--g-header-actual-height) - var(--g-tabbar-actual-height));
+    min-height: calc(100dvh - var(--g-header-actual-height) - var(--g-tabbar-actual-height));
   }
 
   body.archive-immersive .archive-workspace {

@@ -9,10 +9,15 @@ outline: [2, 3]
 > 本页由 `vitepress-doc/scripts/generate-git-changelog.mjs` 自动生成，请勿手工维护更新条目。默认刷新并读取远程 `main` 提交；远程不可用时才降级为已有远程引用或本地 Git 历史。
 
 - GitHub 目标分支：`main`
-- Git 提交来源：远程 `origin/main`（使用现有远程引用）
-- 更新至：2026-07-25 · `36a056c6`
-- 记录范围：完整提交历史，共 2541 条提交
+- Git 提交来源：远程 `origin/main`（已刷新）
+- 更新至：2026-07-28 · `b4f28b93`
+- 记录范围：完整提交历史，共 2543 条提交
 - GitHub 增强：未启用（仅 Git 提交）
+
+## 2026-07-28
+
+- `11:33` 文档：完善外部系统接入与多语言示例（[`b4f28b93`](https://github.com/weepwood/MRR/commit/b4f28b93e655380689d6728813cfb1a0091a1fdd) · [PR #286](https://github.com/weepwood/MRR/pull/286)）
+- `10:47` 修复：完善更新日志生成兼容性（[`ab41b00c`](https://github.com/weepwood/MRR/commit/ab41b00c52f674399cf2ce22a4d23ca0050067e5) · [PR #284](https://github.com/weepwood/MRR/pull/284)）
 
 ## 2026-07-25
 

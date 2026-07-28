@@ -609,10 +609,10 @@ onBeforeUnmount(() => {
 .state-icon {
   display: grid;
   flex: 0 0 58px;
+  place-items: center;
   width: 58px;
   height: 58px;
   font-size: 34px;
-  place-items: center;
   background: currentcolor;
   border-radius: 18px;
 }
@@ -823,7 +823,14 @@ onBeforeUnmount(() => {
   grid-template-rows: repeat(24, minmax(0, 1fr));
   grid-template-columns: repeat(60, minmax(0, 1fr));
   gap: 2px;
+  height: 360px;
   aspect-ratio: 2.2;
+}
+
+@supports (aspect-ratio: 2.2) {
+  .minute-track {
+    height: auto;
+  }
 }
 
 .minute-cell {
@@ -851,12 +858,23 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (width <= 800px) {
+  .minute-track-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 0;
+  }
+
+  .minute-hour-labels {
+    display: none;
+  }
+}
+
 .day-cell {
-  padding: 0;
-  border: 0;
   min-width: 5px;
   height: 34px;
+  padding: 0;
   cursor: pointer;
+  border: 0;
   border-radius: 4px;
   transition: opacity 120ms ease, transform 120ms ease;
 }
@@ -884,10 +902,10 @@ onBeforeUnmount(() => {
   font: inherit;
   font-size: 12px;
   color: #2563eb;
+  cursor: pointer;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   border-radius: 7px;
-  cursor: pointer;
 }
 
 .incident-list {
@@ -977,7 +995,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
-  50% { transform: scale(0.8); opacity: 0.65; }
+  50% { opacity: 0.65; transform: scale(0.8); }
 }
 
 @media (width <= 760px) {

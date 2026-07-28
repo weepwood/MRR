@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.impl.SystemSettingServiceImpl;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SystemSettingServiceOcrValidationTest {
@@ -41,6 +43,49 @@ class SystemSettingServiceOcrValidationTest {
         assertThrows(BusinessException.class, () -> service.saveSettings(Map.of(
                 "ocrEnabled", "true",
                 "ocrProfile", ""
+        ), "admin"));
+
+        verify(mapper, never()).upsertAll(anyList());
+    }
+
+    @Test
+    void shouldRejectClearingProfileWhileOcrIsAlreadyEnabled() {
+        when(mapper.findByKey("ocrEnabled"))
+                .thenReturn(new SystemSetting("ocrEnabled", "true", null));
+
+        assertThrows(BusinessException.class, () -> service.saveSettings(Map.of(
+                "ocrProfile", ""
+        ), "admin"));
+
+        verify(mapper, never()).upsertAll(anyList());
+    }
+
+    @Test
+    void shouldAllowDisablingOcrAndClearingProfileTogether() {
+        assertDoesNotThrow(() -> service.saveSettings(Map.of(
+                "ocrEnabled", "false",
+                "ocrProfile", ""
+        ), "admin"));
+
+        verify(mapper).upsertAll(anyList());
+    }
+
+    @Test
+    void shouldAllowEnablingOcrWithStoredProfile() {
+        when(mapper.findByKey("ocrProfile"))
+                .thenReturn(new SystemSetting("ocrProfile", "tesseract-local", null));
+
+        assertDoesNotThrow(() -> service.saveSettings(Map.of(
+                "ocrEnabled", "true"
+        ), "admin"));
+
+        verify(mapper).upsertAll(anyList());
+    }
+
+    @Test
+    void shouldRejectInvalidOcrBoolean() {
+        assertThrows(BusinessException.class, () -> service.saveSettings(Map.of(
+                "ocrEnabled", "yes"
         ), "admin"));
 
         verify(mapper, never()).upsertAll(anyList());

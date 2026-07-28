@@ -28,13 +28,19 @@ jobs:
               Path('.github/workflows/windows-release-package.yml'),
               Path('frontend-fantastic-admin/.github/workflows/ci.yml'),
           ]
-          old = 'node-version: 22'
-          new = 'node-version-file: frontend-fantastic-admin/.node-version'
+          replacements = {
+              'node-version: 22': 'node-version-file: frontend-fantastic-admin/.node-version',
+              "node-version: '22'": 'node-version-file: frontend-fantastic-admin/.node-version',
+              'node-version: "22"': 'node-version-file: frontend-fantastic-admin/.node-version',
+          }
           for path in paths:
               text = path.read_text(encoding='utf-8')
-              if old not in text:
+              original = text
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              if text == original:
                   raise SystemExit(f'Expected Node 22 marker not found: {path}')
-              path.write_text(text.replace(old, new), encoding='utf-8')
+              path.write_text(text, encoding='utf-8')
           PY
 
       - name: Commit alignment and remove temporary workflow

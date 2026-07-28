@@ -153,9 +153,11 @@ class ImageContentServiceImplTest {
         when(imageStorage.open(any())).thenThrow(aggregate);
 
         assertThatThrownBy(() -> service.open(12))
-                .isSameAs(ossFailure)
-                .hasMessage("OSS 服务暂不可用，请稍后重试")
-                .doesNotHaveMessageContaining("10.0.0.10");
+                .isInstanceOfSatisfying(OssOperationException.class, exception -> {
+                    assertThat(exception).isSameAs(ossFailure);
+                    assertThat(exception.getMessage()).isEqualTo("OSS 服务暂不可用，请稍后重试");
+                    assertThat(exception.getMessage()).doesNotContain("10.0.0.10");
+                });
     }
 
     @Test

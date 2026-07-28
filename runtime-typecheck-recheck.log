@@ -1,0 +1,8 @@
+
+> @0.6.0 lint:tsc /home/runner/work/MRR/MRR/frontend-fantastic-admin
+> vue-tsc -b
+
+src/views/oss-migration/components/OssFileExplorer.vue(78,48): error TS2345: Argument of type '{ name: string; key: string; directory: boolean; size: number; lastModified?: string | null | undefined; etag?: string | null | undefined; storageClass?: string | null | undefined; } | null' is not assignable to parameter of type 'OssBrowserEntry | undefined'.
+  Type 'null' is not assignable to type 'OssBrowserEntry | undefined'.
+ ELIFECYCLE  Command failed with exit code 2.
+exit_code=2

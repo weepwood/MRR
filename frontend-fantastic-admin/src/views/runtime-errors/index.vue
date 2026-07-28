@@ -253,14 +253,14 @@ onMounted(loadData)
         </el-table-column>
         <el-table-column label="操作" :width="canManage ? 250 : 90" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button link type="primary" @click="openDetail(row as SystemErrorEvent)">详情</el-button>
             <template v-if="canManage">
               <el-button
                 v-if="row.status === 'OPEN'"
                 link
                 type="warning"
                 :loading="updatingId === row.id"
-                @click="changeStatus(row, 'ACKNOWLEDGED')"
+                @click="changeStatus(row as SystemErrorEvent, 'ACKNOWLEDGED')"
               >
                 标记处理中
               </el-button>
@@ -269,7 +269,7 @@ onMounted(loadData)
                 link
                 type="success"
                 :loading="updatingId === row.id"
-                @click="changeStatus(row, 'RESOLVED')"
+                @click="changeStatus(row as SystemErrorEvent, 'RESOLVED')"
               >
                 解决
               </el-button>
@@ -278,7 +278,7 @@ onMounted(loadData)
                 link
                 type="danger"
                 :loading="updatingId === row.id"
-                @click="changeStatus(row, 'OPEN')"
+                @click="changeStatus(row as SystemErrorEvent, 'OPEN')"
               >
                 重新打开
               </el-button>

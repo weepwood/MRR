@@ -582,7 +582,7 @@ onMounted(refreshAll)
               <MrrTableActions
                 :actions="recordActions"
                 :max-inline="recordMaxInlineActions"
-                @select="handleRecordAction($event, row)"
+                @select="handleRecordAction($event, row as ArchiveBoxRecord)"
               />
             </template>
           </el-table-column>
@@ -660,7 +660,7 @@ onMounted(refreshAll)
               <MrrTableActions
                 :actions="boxActions"
                 :max-inline="boxMaxInlineActions"
-                @select="handleBoxAction($event, row)"
+                @select="handleBoxAction($event, row as ArchiveBoxGroup)"
               />
             </template>
           </el-table-column>

@@ -36,7 +36,7 @@ const currentPrefix = ref(DEFAULT_ROOT_PREFIX)
 const addressInput = ref(DEFAULT_ROOT_PREFIX)
 const localFilter = ref('')
 const viewMode = ref<ViewMode>('icons')
-const selectedEntry = ref<OssBrowserEntry>()
+const selectedEntry = ref<OssBrowserEntry | null>(null)
 const previewEntry = ref<OssBrowserEntry>()
 const previewUrl = ref('')
 const previewVisible = ref(false)
@@ -112,7 +112,7 @@ function fileExtension(entry?: OssBrowserEntry) {
   return index >= 0 ? entry.name.slice(index + 1).toLocaleLowerCase() : ''
 }
 
-function isImage(entry?: OssBrowserEntry) {
+function isImage(entry?: OssBrowserEntry | null) {
   return Boolean(entry && !entry.directory && IMAGE_EXTENSIONS.has(fileExtension(entry)))
 }
 
@@ -151,7 +151,7 @@ async function loadDirectory(
   }
 
   loading.value = true
-  selectedEntry.value = undefined
+  selectedEntry.value = null
   localFilter.value = ''
   try {
     const response = await browseOssObjects({
@@ -182,7 +182,7 @@ function openFolder(entry: OssBrowserEntry) {
   void loadDirectory(entry.key, undefined, { rememberFolder: true })
 }
 
-function selectEntry(entry?: OssBrowserEntry) {
+function selectEntry(entry: OssBrowserEntry | null = null) {
   selectedEntry.value = entry
 }
 
@@ -445,8 +445,8 @@ onMounted(() => {
           <el-table-column label="名称" min-width="260">
             <template #default="{ row }">
               <div class="name-cell">
-                <el-icon :class="{ folder: row.directory, image: isImage(row) }">
-                  <component :is="entryIcon(row)" />
+                <el-icon :class="{ folder: row.directory, image: isImage(row as OssBrowserEntry) }">
+                  <component :is="entryIcon(row as OssBrowserEntry)" />
                 </el-icon>
                 <span>{{ row.name }}</span>
               </div>
@@ -459,7 +459,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="类型" width="120">
             <template #default="{ row }">
-              {{ row.directory ? '文件夹' : (fileExtension(row).toUpperCase() || '文件') }}
+              {{ row.directory ? '文件夹' : (fileExtension(row as OssBrowserEntry).toUpperCase() || '文件') }}
             </template>
           </el-table-column>
           <el-table-column label="大小" width="120" align="right">

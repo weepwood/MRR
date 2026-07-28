@@ -12,13 +12,13 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
-import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import {
   exportStatisticsCsv,
   getStatisticsDateSummary,
   getStatisticsList,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
+import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 
 defineOptions({ name: 'StatisticsPage' })
 
@@ -283,7 +283,7 @@ function handleListSizeChange() {
   loadStatisticsList()
 }
 
-function handleSortChange({ prop, order }: { prop: string, order: string | null }) {
+function handleSortChange({ prop, order }: { prop: string | null, order: string | null }) {
   tableSort.value = { prop: prop || 'date', order: order || 'descending' }
   loadStatisticsList()
 }

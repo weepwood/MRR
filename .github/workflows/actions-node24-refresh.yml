@@ -1,3 +1,4 @@
+# Temporary branch-only generator; removes itself after creating the dependency update commit.
 name: actions-node24-refresh
 
 on:

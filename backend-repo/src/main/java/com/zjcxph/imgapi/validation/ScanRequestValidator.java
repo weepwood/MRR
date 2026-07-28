@@ -7,7 +7,6 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.Locale;
 import java.util.Set;
-import java.util.function.Function;
 
 public class ScanRequestValidator implements ConstraintValidator<ValidScanRequest, ScanRequest> {
 
@@ -45,8 +44,12 @@ public class ScanRequestValidator implements ConstraintValidator<ValidScanReques
                                         String field,
                                         String value,
                                         boolean optional) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.isEmpty()) {
             return optional;
+        }
+        if (value.isBlank()) {
+            addViolation(context, field, field + " 不能只包含空白");
+            return false;
         }
         if (!value.equals(value.trim())) {
             addViolation(context, field, field + " 不能包含首尾空白");

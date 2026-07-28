@@ -81,13 +81,13 @@ jobs:
       contents: write
     steps:
       - name: Download Frontend Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: frontend-dist # 下载到当前目录的 frontend-dist 文件夹下
 
       - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: backend-jar
           path: backend-jar # 下载到当前目录的 backend-jar 文件夹下

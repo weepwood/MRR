@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
+import type { GalleryImage, ViewMode } from './archive/types'
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
-import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
-import type { GalleryImage, ViewMode } from './archive/types'
 import { Document, Download, Printer } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
@@ -14,10 +14,12 @@ import {
   loadEffectiveSystemSettings,
   SYSTEM_SETTINGS_UPDATED_EVENT,
 } from '@/utils/system-settings'
+import { archiveAccessMode } from './archive/access-mode'
 import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
+import ArchiveWall from './archive/components/ArchiveWall.vue'
 import PatientCard from './archive/components/PatientCard.vue'
 import PreviewPanel from './archive/components/PreviewPanel.vue'
 import ThumbStrip from './archive/components/ThumbStrip.vue'
@@ -31,7 +33,6 @@ import {
 } from './archive/composables/useArchiveLocalPreferences'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useSelection } from './archive/composables/useSelection'
-import { archiveAccessMode } from './archive/access-mode'
 import { buildTypeStats, padCode } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
@@ -115,6 +116,7 @@ const typeStats = computed(() => buildTypeStats(images.value))
 const patient = computed(() => patientList.value[0])
 const allImagesSelected = computed(() => images.value.length > 0 && images.value.every(isSelected))
 const allImagesIndeterminate = computed(() => images.value.some(isSelected) && !allImagesSelected.value)
+const filteredImagesSelected = computed(() => filteredImages.value.length > 0 && filteredImages.value.every(isSelected))
 const showViewer = computed(() => images.value.length > 0 || Boolean(
   sanitizeParam(route.query.id) || sanitizeParam(route.query.bah) || sanitizeParam(route.query.sjh),
 ))
@@ -122,6 +124,7 @@ const archiveDisplaySettings = computed(() => resolveArchiveDisplayPreferences(
   archiveSettings,
   archiveLocalPreferences.value,
 ))
+const isWallLayout = computed(() => archiveDisplaySettings.value.archiveLayoutMode === 'wall' && images.value.length > 0)
 const archiveWorkspaceStyle = computed(() => ({
   '--archive-thumb-column-width': `${archiveDisplaySettings.value.archiveThumbnailSize + 18}px`,
 }))
@@ -182,7 +185,9 @@ function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
 
 function formatBytes(value: number | undefined): string {
   const bytes = Number(value || 0)
-  if (!Number.isFinite(bytes) || bytes <= 0) return '大小未知'
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '大小未知'
+  }
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let amount = bytes
   let index = 0
@@ -194,10 +199,18 @@ function formatBytes(value: number | undefined): string {
 }
 
 function resolveExportButtonType(job: ArchiveExportJob | null, idleType: '' | 'primary') {
-  if (!job) return idleType
-  if (job.status === 'SUCCESS') return 'success'
-  if (job.status === 'FAILED' || job.status === 'EXPIRED') return 'danger'
-  if (job.status === 'PENDING' || job.status === 'PROCESSING' || job.status === 'CANCELLED') return 'warning'
+  if (!job) {
+    return idleType
+  }
+  if (job.status === 'SUCCESS') {
+    return 'success'
+  }
+  if (job.status === 'FAILED' || job.status === 'EXPIRED') {
+    return 'danger'
+  }
+  if (job.status === 'PENDING' || job.status === 'PROCESSING' || job.status === 'CANCELLED') {
+    return 'warning'
+  }
   return idleType
 }
 
@@ -499,6 +512,10 @@ function toggleAllSelection() {
   toggleItems(images.value)
 }
 
+function toggleFilteredSelection() {
+  toggleItems(filteredImages.value)
+}
+
 function toggleCurrent() {
   if (currentImage.value) {
     toggleSelect(currentImage.value)
@@ -587,10 +604,19 @@ function onKeydown(e: KeyboardEvent) {
   if (!filteredImages.value.length) {
     return
   }
-  if (isImagePreviewOpen() && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+
+  const previewOpen = isImagePreviewOpen()
+  if (previewOpen && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
     return
   }
-  if (e.key === 'ArrowLeft') {
+
+  if (isWallLayout.value && e.key === 'Enter') {
+    e.preventDefault()
+    if (showSelectionStatus.value) {
+      toggleCurrent()
+    }
+  }
+  else if (e.key === 'ArrowLeft') {
     e.preventDefault()
     navigate(-1)
   }
@@ -598,11 +624,11 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     navigate(1)
   }
-  else if (previewMode.value === 'single' && e.key === 'ArrowUp') {
+  else if ((previewMode.value === 'single' || isWallLayout.value) && e.key === 'ArrowUp') {
     e.preventDefault()
     navigate(-1)
   }
-  else if (previewMode.value === 'single' && e.key === 'ArrowDown') {
+  else if ((previewMode.value === 'single' || isWallLayout.value) && e.key === 'ArrowDown') {
     e.preventDefault()
     navigate(1)
   }
@@ -669,6 +695,10 @@ onUnmounted(() => {
       :preview-scale="archiveDisplaySettings.archivePreviewScale"
       :scrollbar-mode="archiveDisplaySettings.archiveScrollbarMode"
       :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
+      :layout-mode="archiveDisplaySettings.archiveLayoutMode"
+      :wall-card-width="archiveDisplaySettings.archiveWallCardWidth"
+      :wall-density="archiveDisplaySettings.archiveWallDensity"
+      :wall-show-meta="archiveDisplaySettings.archiveWallShowMeta"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
       @update:view-mode="viewMode = $event"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
@@ -678,6 +708,10 @@ onUnmounted(() => {
       @update:scrollbar-mode="updateArchiveLocalPreferences({ archiveScrollbarMode: $event })"
       @update:department-colors-enabled="updateArchiveLocalPreferences({ archiveDepartmentColorsEnabled: $event })"
       @update:thumbnail-size="updateArchiveLocalPreferences({ archiveThumbnailSize: $event })"
+      @update:layout-mode="updateArchiveLocalPreferences({ archiveLayoutMode: $event })"
+      @update:wall-card-width="updateArchiveLocalPreferences({ archiveWallCardWidth: $event })"
+      @update:wall-density="updateArchiveLocalPreferences({ archiveWallDensity: $event })"
+      @update:wall-show-meta="updateArchiveLocalPreferences({ archiveWallShowMeta: $event })"
       @reset="resetArchiveLocalPreferences"
     />
 
@@ -687,125 +721,204 @@ onUnmounted(() => {
         'has-viewer': showViewer,
         'is-empty': !showViewer,
         'is-list-mode': viewMode === 'list',
+        'is-wall-layout': isWallLayout,
       }"
       :style="archiveWorkspaceStyle"
     >
-      <section class="archive-sidebar">
-        <ArchiveHeader
-          v-model:search-id-card="searchIdCard"
-          v-model:search-bah="searchBah"
-          v-model:search-sjh="searchSjh"
-          :loading="loading || idCardLoading"
-          :show-back="showBackToStatisticsDetail"
-          @back="goBack"
-          @refresh="handleRefresh"
-          @search="handleSearch"
-        />
-
-        <ArchiveSearchBar
-          v-model:search-id-card="searchIdCard"
-          v-model:search-bah="searchBah"
-          v-model:search-sjh="searchSjh"
-          :loading="loading || idCardLoading"
-          @search="handleSearch"
-        />
-
-        <ArchiveCaseList
-          :cases="archiveCases"
-          :active-bah="searchBah"
-          :active-sjh="searchSjh"
-          :masked-id-card="maskedIdCard"
-          :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
-          :loading="idCardLoading"
-          @select="selectArchiveCase"
-        />
-
-        <PatientCard :patient="patient" :sjh="currentImage?.sjh || searchSjh" :loading="patientLoading" />
-
-        <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
-
-        <template v-if="images.length > 0">
-          <TypeFilterBar
-            v-model:selected-type="selectedType"
-            v-model:display-mode="typeDisplayMode"
-            :type-stats="typeStats"
-            :total-count="images.length"
-            :all-selected="allImagesSelected"
-            :all-indeterminate="allImagesIndeterminate"
-            :is-type-selected="isTypeSelected"
-            :is-type-indeterminate="isTypeIndeterminate"
-            @select-type="selectType"
-            @toggle-all-selection="toggleAllSelection"
-            @toggle-type-selection="toggleTypeSelection"
-          />
-        </template>
-
-        <div v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg" class="empty-state">
-          <el-empty description="输入身份证号、病案号或上架号查询影像" />
-        </div>
-
-        <div v-if="images.length > 0" class="archive-bottom-actions">
-          <el-button
-            v-if="!isExternalTicketMode"
-            class="download-action"
-            :type="downloadButtonType || undefined"
-            :icon="Download"
-            :loading="downloadButtonLoading"
-            @click="handleDownloadAction"
-          >
-            {{ downloadButtonLabel }}
-          </el-button>
-          <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-            打印选中<template v-if="selectedCount">
-              ({{ selectedCount }})
-            </template>
-          </el-button>
-          <el-button
-            v-if="!isExternalTicketMode"
-            :type="pdfButtonType || undefined"
-            :icon="Document"
-            :loading="pdfButtonLoading"
-            :disabled="!pdfJob && !selectedCount"
-            @click="handleExportPdfAction"
-          >
-            {{ pdfButtonLabel }}
-          </el-button>
-        </div>
-      </section>
-
-      <div v-if="showViewer" class="viewer-layout">
-        <ThumbStrip
-          ref="thumbStripRef"
-          v-model:view-mode="viewMode"
+      <section v-if="isWallLayout" class="archive-wall-shell">
+        <ArchiveWall
           :images="filteredImages"
           :selected-index="selectedImageIndex"
           :is-selected="isSelected"
-          :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
-          :preload-count="archiveSettings.archivePreloadCount"
+          :card-width="archiveDisplaySettings.archiveWallCardWidth"
+          :density="archiveDisplaySettings.archiveWallDensity"
+          :show-meta="archiveDisplaySettings.archiveWallShowMeta"
+          :selection-enabled="showSelectionStatus"
+          :loading="loading"
           @select="selectImage"
           @toggle="toggleSelect"
         />
-      </div>
 
-      <PreviewPanel
-        v-if="showViewer"
-        v-model:display-mode="previewMode"
-        :image="currentImage"
-        :preview-list="previewList"
-        :index="selectedImageIndex"
-        :total="filteredImages.length"
-        :is-selected="currentImage ? isSelected(currentImage) : false"
-        :show-selection-status="showSelectionStatus"
-        :saving-type="savingType"
-        :loading="loading"
-        :fit-mode="archiveDisplaySettings.archiveFitMode"
-        :preview-scale="archiveDisplaySettings.archivePreviewScale"
-        :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
-        @toggle="toggleCurrent"
-        @save-type="handleSaveType"
-        @navigate="navigate"
-        @select="selectImage"
-      />
+        <div class="archive-wall-toolbar" aria-label="全景平铺操作工具条">
+          <div class="archive-wall-summary">
+            <strong>病案号 {{ searchBah || '-' }}</strong>
+            <span v-if="currentImage?.sjh || searchSjh">上架号 {{ currentImage?.sjh || searchSjh }}</span>
+            <span>{{ filteredImages.length }} 张影像</span>
+          </div>
+
+          <div class="archive-wall-toolbar-controls">
+            <el-select
+              :model-value="selectedType"
+              class="archive-wall-type-select"
+              size="small"
+              aria-label="筛选影像分类"
+              @update:model-value="selectType($event as number | 'all')"
+            >
+              <el-option :label="`全部类型 (${images.length})`" value="all" />
+              <el-option
+                v-for="item in typeStats"
+                :key="item.value"
+                :label="`${item.label} (${item.count})`"
+                :value="item.value"
+              />
+            </el-select>
+
+            <template v-if="showSelectionStatus">
+              <el-button size="small" :type="filteredImagesSelected ? 'primary' : undefined" plain @click="toggleFilteredSelection">
+                {{ filteredImagesSelected ? '取消当前全选' : '全选当前类型' }}
+              </el-button>
+              <span class="archive-wall-selected-count">已选 {{ selectedCount }} 张</span>
+            </template>
+
+            <div v-if="!isExternalTicketMode" class="archive-wall-toolbar-actions">
+              <el-button
+                size="small"
+                :type="downloadButtonType || undefined"
+                :icon="Download"
+                :loading="downloadButtonLoading"
+                @click="handleDownloadAction"
+              >
+                {{ downloadButtonLabel }}
+              </el-button>
+              <el-button size="small" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
+                打印选中
+                <template v-if="selectedCount">
+                  （{{ selectedCount }}）
+                </template>
+              </el-button>
+              <el-button
+                size="small"
+                :type="pdfButtonType || undefined"
+                :icon="Document"
+                :loading="pdfButtonLoading"
+                :disabled="!pdfJob && !selectedCount"
+                @click="handleExportPdfAction"
+              >
+                {{ pdfButtonLabel }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <template v-else>
+        <section class="archive-sidebar">
+          <ArchiveHeader
+            v-model:search-id-card="searchIdCard"
+            v-model:search-bah="searchBah"
+            v-model:search-sjh="searchSjh"
+            :loading="loading || idCardLoading"
+            :show-back="showBackToStatisticsDetail"
+            @back="goBack"
+            @refresh="handleRefresh"
+            @search="handleSearch"
+          />
+
+          <ArchiveSearchBar
+            v-model:search-id-card="searchIdCard"
+            v-model:search-bah="searchBah"
+            v-model:search-sjh="searchSjh"
+            :loading="loading || idCardLoading"
+            @search="handleSearch"
+          />
+
+          <ArchiveCaseList
+            :cases="archiveCases"
+            :active-bah="searchBah"
+            :active-sjh="searchSjh"
+            :masked-id-card="maskedIdCard"
+            :department-colors-enabled="archiveDisplaySettings.archiveDepartmentColorsEnabled"
+            :loading="idCardLoading"
+            @select="selectArchiveCase"
+          />
+
+          <PatientCard :patient="patient" :sjh="currentImage?.sjh || searchSjh" :loading="patientLoading" />
+
+          <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
+
+          <template v-if="images.length > 0">
+            <TypeFilterBar
+              v-model:selected-type="selectedType"
+              v-model:display-mode="typeDisplayMode"
+              :type-stats="typeStats"
+              :total-count="images.length"
+              :all-selected="allImagesSelected"
+              :all-indeterminate="allImagesIndeterminate"
+              :is-type-selected="isTypeSelected"
+              :is-type-indeterminate="isTypeIndeterminate"
+              @select-type="selectType"
+              @toggle-all-selection="toggleAllSelection"
+              @toggle-type-selection="toggleTypeSelection"
+            />
+          </template>
+
+          <div v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg" class="empty-state">
+            <el-empty description="输入身份证号、病案号或上架号查询影像" />
+          </div>
+
+          <div v-if="images.length > 0" class="archive-bottom-actions">
+            <el-button
+              v-if="!isExternalTicketMode"
+              class="download-action"
+              :type="downloadButtonType || undefined"
+              :icon="Download"
+              :loading="downloadButtonLoading"
+              @click="handleDownloadAction"
+            >
+              {{ downloadButtonLabel }}
+            </el-button>
+            <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
+              打印选中<template v-if="selectedCount">
+                ({{ selectedCount }})
+              </template>
+            </el-button>
+            <el-button
+              v-if="!isExternalTicketMode"
+              :type="pdfButtonType || undefined"
+              :icon="Document"
+              :loading="pdfButtonLoading"
+              :disabled="!pdfJob && !selectedCount"
+              @click="handleExportPdfAction"
+            >
+              {{ pdfButtonLabel }}
+            </el-button>
+          </div>
+        </section>
+
+        <div v-if="showViewer" class="viewer-layout">
+          <ThumbStrip
+            ref="thumbStripRef"
+            v-model:view-mode="viewMode"
+            :images="filteredImages"
+            :selected-index="selectedImageIndex"
+            :is-selected="isSelected"
+            :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
+            :preload-count="archiveSettings.archivePreloadCount"
+            @select="selectImage"
+            @toggle="toggleSelect"
+          />
+        </div>
+
+        <PreviewPanel
+          v-if="showViewer"
+          v-model:display-mode="previewMode"
+          :image="currentImage"
+          :preview-list="previewList"
+          :index="selectedImageIndex"
+          :total="filteredImages.length"
+          :is-selected="currentImage ? isSelected(currentImage) : false"
+          :show-selection-status="showSelectionStatus"
+          :saving-type="savingType"
+          :loading="loading"
+          :fit-mode="archiveDisplaySettings.archiveFitMode"
+          :preview-scale="archiveDisplaySettings.archivePreviewScale"
+          :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
+          @toggle="toggleCurrent"
+          @save-type="handleSaveType"
+          @navigate="navigate"
+          @select="selectImage"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -823,30 +936,34 @@ onUnmounted(() => {
 .archive-page.scrollbars-hidden :deep(.case-list),
 .archive-page.scrollbars-hidden :deep(.archive-sidebar),
 .archive-page.scrollbars-hidden :deep(.thumb-strip),
-.archive-page.scrollbars-hidden :deep(.preview-stage) {
+.archive-page.scrollbars-hidden :deep(.preview-stage),
+.archive-page.scrollbars-hidden :deep(.archive-wall) {
   scrollbar-width: none;
 }
 
 .archive-page.scrollbars-hidden :deep(.case-list::-webkit-scrollbar),
 .archive-page.scrollbars-hidden :deep(.archive-sidebar::-webkit-scrollbar),
 .archive-page.scrollbars-hidden :deep(.thumb-strip::-webkit-scrollbar),
-.archive-page.scrollbars-hidden :deep(.preview-stage::-webkit-scrollbar) {
+.archive-page.scrollbars-hidden :deep(.preview-stage::-webkit-scrollbar),
+.archive-page.scrollbars-hidden :deep(.archive-wall::-webkit-scrollbar) {
   display: none;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list),
 .archive-page.scrollbars-semi-hidden :deep(.archive-sidebar),
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip),
-.archive-page.scrollbars-semi-hidden :deep(.preview-stage) {
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage),
+.archive-page.scrollbars-semi-hidden :deep(.archive-wall) {
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar),
 .archive-page.scrollbars-semi-hidden :deep(.archive-sidebar::-webkit-scrollbar),
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip::-webkit-scrollbar),
-.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar) {
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar),
+.archive-page.scrollbars-semi-hidden :deep(.archive-wall::-webkit-scrollbar) {
   display: block;
   width: 6px;
   height: 6px;
@@ -855,21 +972,24 @@ onUnmounted(() => {
 .archive-page.scrollbars-semi-hidden :deep(.case-list::-webkit-scrollbar-thumb),
 .archive-page.scrollbars-semi-hidden :deep(.archive-sidebar::-webkit-scrollbar-thumb),
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip::-webkit-scrollbar-thumb),
-.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar-thumb) {
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.archive-wall::-webkit-scrollbar-thumb) {
   background: transparent;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list:hover),
 .archive-page.scrollbars-semi-hidden :deep(.archive-sidebar:hover),
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip:hover),
-.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover) {
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover),
+.archive-page.scrollbars-semi-hidden :deep(.archive-wall:hover) {
   scrollbar-color: hsl(var(--scrollbar-color)) transparent;
 }
 
 .archive-page.scrollbars-semi-hidden :deep(.case-list:hover::-webkit-scrollbar-thumb),
 .archive-page.scrollbars-semi-hidden :deep(.archive-sidebar:hover::-webkit-scrollbar-thumb),
 .archive-page.scrollbars-semi-hidden :deep(.thumb-strip:hover::-webkit-scrollbar-thumb),
-.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover::-webkit-scrollbar-thumb) {
+.archive-page.scrollbars-semi-hidden :deep(.preview-stage:hover::-webkit-scrollbar-thumb),
+.archive-page.scrollbars-semi-hidden :deep(.archive-wall:hover::-webkit-scrollbar-thumb) {
   background: hsl(var(--scrollbar-color));
 }
 
@@ -895,6 +1015,84 @@ onUnmounted(() => {
 
 .archive-workspace.has-viewer.is-list-mode {
   grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
+}
+
+.archive-workspace.has-viewer.is-wall-layout {
+  display: block;
+}
+
+.archive-wall-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.archive-wall-toolbar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 20;
+  box-sizing: border-box;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  width: min(calc(100% - 32px), 1280px);
+  min-height: 56px;
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+}
+
+.archive-wall-summary {
+  display: flex;
+  flex: none;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.archive-wall-summary strong {
+  color: var(--text-primary);
+}
+
+.archive-wall-summary span + span::before {
+  margin-right: 9px;
+  color: var(--divider);
+  content: "·";
+}
+
+.archive-wall-toolbar-controls,
+.archive-wall-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.archive-wall-toolbar-controls {
+  justify-content: flex-end;
+}
+
+.archive-wall-type-select {
+  width: 168px;
+}
+
+.archive-wall-selected-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.archive-wall-toolbar :deep(.el-button) {
+  margin: 0;
 }
 
 .archive-sidebar {
@@ -982,6 +1180,26 @@ onUnmounted(() => {
   min-height: 240px;
 }
 
+@media (width <= 1280px) {
+  .archive-wall-toolbar {
+    align-items: flex-start;
+  }
+
+  .archive-wall-toolbar-controls {
+    flex-wrap: wrap;
+  }
+
+  .archive-wall-summary {
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+  }
+
+  .archive-wall-summary span + span::before {
+    display: none;
+  }
+}
+
 @media (width <= 1100px) {
   .archive-more-settings-float {
     top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 12px);
@@ -995,6 +1213,10 @@ onUnmounted(() => {
     min-height: initial;
   }
 
+  .archive-workspace.has-viewer.is-wall-layout {
+    height: 100%;
+  }
+
   .archive-workspace.is-empty {
     padding: 16px;
   }
@@ -1006,6 +1228,33 @@ onUnmounted(() => {
   .archive-workspace.has-viewer .preview-panel {
     height: min(68vh, 640px);
     min-height: 420px;
+  }
+
+  .archive-wall-toolbar {
+    bottom: 10px;
+    flex-direction: column;
+    gap: 7px;
+    align-items: stretch;
+    width: calc(100% - 20px);
+  }
+
+  .archive-wall-summary {
+    flex-flow: row wrap;
+    gap: 8px;
+  }
+
+  .archive-wall-toolbar-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (width <= 720px) {
+  .archive-wall-toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .archive-wall-type-select {
+    width: 148px;
   }
 }
 </style>

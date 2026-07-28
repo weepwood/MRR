@@ -5,6 +5,8 @@ export const ARCHIVE_LOCAL_PREFERENCES_STORAGE_KEY = 'MRR-ADMIN:archive-local-pr
 export type ArchiveTypeDisplayMode = 'double-column' | 'single-column'
 export type ArchiveFitMode = 'height' | 'width'
 export type ArchiveScrollbarMode = 'hidden' | 'semi-hidden' | 'visible'
+export type ArchiveLayoutMode = 'standard' | 'wall'
+export type ArchiveWallDensity = 'compact' | 'comfortable' | 'spacious'
 
 export interface ArchiveLocalPreferences {
   archivePreviewMode?: ArchivePreviewMode
@@ -14,6 +16,10 @@ export interface ArchiveLocalPreferences {
   archivePreviewScale?: number
   archiveScrollbarMode?: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled?: boolean
+  archiveLayoutMode?: ArchiveLayoutMode
+  archiveWallCardWidth?: number
+  archiveWallDensity?: ArchiveWallDensity
+  archiveWallShowMeta?: boolean
 }
 
 export interface ArchiveDisplayPreferences {
@@ -24,6 +30,10 @@ export interface ArchiveDisplayPreferences {
   archivePreviewScale: number
   archiveScrollbarMode: ArchiveScrollbarMode
   archiveDepartmentColorsEnabled: boolean
+  archiveLayoutMode: ArchiveLayoutMode
+  archiveWallCardWidth: number
+  archiveWallDensity: ArchiveWallDensity
+  archiveWallShowMeta: boolean
 }
 
 function parsePreferences(value: unknown): ArchiveLocalPreferences {
@@ -34,6 +44,7 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
   const source = value as Record<string, unknown>
   const thumbnailSize = Number(source.archiveThumbnailSize)
   const previewScale = Number(source.archivePreviewScale)
+  const wallCardWidth = Number(source.archiveWallCardWidth)
   const legacyAutoFit = typeof source.archiveAutoFit === 'boolean' ? source.archiveAutoFit : undefined
   return {
     archivePreviewMode: source.archivePreviewMode === 'scroll' || source.archivePreviewMode === 'single'
@@ -64,6 +75,20 @@ function parsePreferences(value: unknown): ArchiveLocalPreferences {
           : undefined,
     archiveDepartmentColorsEnabled: typeof source.archiveDepartmentColorsEnabled === 'boolean'
       ? source.archiveDepartmentColorsEnabled
+      : undefined,
+    archiveLayoutMode: source.archiveLayoutMode === 'wall' || source.archiveLayoutMode === 'standard'
+      ? source.archiveLayoutMode
+      : undefined,
+    archiveWallCardWidth: Number.isFinite(wallCardWidth)
+      ? Math.min(420, Math.max(160, wallCardWidth))
+      : undefined,
+    archiveWallDensity: source.archiveWallDensity === 'compact'
+      || source.archiveWallDensity === 'comfortable'
+      || source.archiveWallDensity === 'spacious'
+      ? source.archiveWallDensity
+      : undefined,
+    archiveWallShowMeta: typeof source.archiveWallShowMeta === 'boolean'
+      ? source.archiveWallShowMeta
       : undefined,
   }
 }
@@ -109,5 +134,9 @@ export function resolveArchiveDisplayPreferences(
     archivePreviewScale: preferences.archivePreviewScale ?? 100,
     archiveScrollbarMode: preferences.archiveScrollbarMode ?? 'hidden',
     archiveDepartmentColorsEnabled: preferences.archiveDepartmentColorsEnabled ?? false,
+    archiveLayoutMode: preferences.archiveLayoutMode ?? 'standard',
+    archiveWallCardWidth: preferences.archiveWallCardWidth ?? 240,
+    archiveWallDensity: preferences.archiveWallDensity ?? 'comfortable',
+    archiveWallShowMeta: preferences.archiveWallShowMeta ?? true,
   }
 }

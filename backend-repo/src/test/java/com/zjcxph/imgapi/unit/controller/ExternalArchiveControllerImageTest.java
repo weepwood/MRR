@@ -23,9 +23,11 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,28 +65,11 @@ class ExternalArchiveControllerImageTest {
     @Test
     @DisplayName("授权后直接返回私有禁缓存影像流且不再重定向到底层地址")
     void streamsAuthorizedImageWithoutRedirect() throws Exception {
-        ExternalArchiveGrant grant = new ExternalArchiveGrant(
-                "his-client",
-                "doctor-001",
-                false,
-                System.currentTimeMillis() + 60_000,
-                List.of()
-        );
-        Scan scan = new Scan();
-        scan.setId(42);
-        scan.setBah("123456");
-        scan.setSjh("A-001");
-
+        ExternalArchiveGrant grant = grant();
+        Scan scan = scan();
         byte[] payload = new byte[]{1, 3, 5, 7};
         TrackingInputStream input = new TrackingInputStream(payload);
-        when(request.getCookies()).thenReturn(new Cookie[]{
-                new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token")
-        });
-        when(request.getRemoteAddr()).thenReturn("10.0.0.8");
-        when(request.getHeader("User-Agent")).thenReturn("JUnit");
-        when(request.getHeader("X-Request-Id")).thenReturn("request-42");
-        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
-        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
+        prepareRequestAndAuthorization(grant, scan);
         when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
                 input,
                 "病案首页-01.jpg",
@@ -127,6 +112,70 @@ class ExternalArchiveControllerImageTest {
         );
     }
 
+    @Test
+    @DisplayName("上游读取失败时关闭流并记录失败审计")
+    void recordsFailedAuditWhenStreamingFails() {
+        ExternalArchiveGrant grant = grant();
+        Scan scan = scan();
+        FailingInputStream input = new FailingInputStream();
+        prepareRequestAndAuthorization(grant, scan);
+        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+                input,
+                "病案首页-01.jpg",
+                MediaType.IMAGE_JPEG,
+                null
+        ));
+
+        ResponseEntity<StreamingResponseBody> response = controller.image(42, request);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThatThrownBy(() -> response.getBody().writeTo(new ByteArrayOutputStream()))
+                .isInstanceOf(IOException.class)
+                .hasMessage("simulated read failure");
+        assertThat(input.isClosed()).isTrue();
+        verify(externalArchiveAccessService).recordAudit(
+                grant,
+                "123456",
+                "A-001",
+                "IMAGE_VIEW",
+                42,
+                "10.0.0.8",
+                "JUnit",
+                "request-42",
+                "FAILED",
+                null
+        );
+    }
+
+    private void prepareRequestAndAuthorization(ExternalArchiveGrant grant, Scan scan) {
+        when(request.getCookies()).thenReturn(new Cookie[]{
+                new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token")
+        });
+        when(request.getRemoteAddr()).thenReturn("10.0.0.8");
+        when(request.getHeader("User-Agent")).thenReturn("JUnit");
+        when(request.getHeader("X-Request-Id")).thenReturn("request-42");
+        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
+        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
+    }
+
+    private ExternalArchiveGrant grant() {
+        return new ExternalArchiveGrant(
+                "his-client",
+                "doctor-001",
+                false,
+                System.currentTimeMillis() + 60_000,
+                List.of()
+        );
+    }
+
+    private Scan scan() {
+        Scan scan = new Scan();
+        scan.setId(42);
+        scan.setBah("123456");
+        scan.setSjh("A-001");
+        return scan;
+    }
+
     private static final class TrackingInputStream extends ByteArrayInputStream {
         private boolean closed;
 
@@ -138,6 +187,24 @@ class ExternalArchiveControllerImageTest {
         public void close() throws IOException {
             closed = true;
             super.close();
+        }
+
+        private boolean isClosed() {
+            return closed;
+        }
+    }
+
+    private static final class FailingInputStream extends InputStream {
+        private boolean closed;
+
+        @Override
+        public int read() throws IOException {
+            throw new IOException("simulated read failure");
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
 
         private boolean isClosed() {

@@ -1,5 +1,5 @@
-import type { RecursiveRequired, Settings } from '#/global'
 import type { RouteMeta } from 'vue-router'
+import type { RecursiveRequired, Settings } from '#/global'
 import { cloneDeep } from 'es-toolkit'
 import settingsDefault from '@/settings'
 import { merge } from '@/utils/object'
@@ -36,7 +36,7 @@ const UI_SETTINGS_PICK: Record<string, readonly string[]> = {
 function pickKeys(source: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
   const picked: Record<string, unknown> = {}
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
+    if (Object.hasOwn(source, key)) {
       picked[key] = source[key]
     }
   }

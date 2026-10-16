@@ -1,9 +1,14 @@
 package com.zjcxph.imgapi.interceptors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.common.ArchiveAccessAttributes;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.AsyncLogService;
+import com.zjcxph.imgapi.setting.SettingDefinition;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.IpUtil;
 import io.micrometer.core.instrument.Counter;
@@ -24,8 +29,10 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -42,9 +49,14 @@ public class LogInterceptor implements HandlerInterceptor {
     private static final String REQUEST_ID_ATTR = "requestId";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ENDPOINT_TEMPLATE_HEADER = "X-Endpoint-Template";
+    private static final String SETTINGS_PATH = "/api/v1/settings";
+    private static final String SETTINGS_KEY_PREFIX = "/api/v1/settings/";
     private static final int MAX_REFERER_LENGTH = 4096;
     private static final int MAX_REQUEST_BODY_LENGTH = 16384;
     private static final int MAX_ERROR_MESSAGE_LENGTH = 2048;
+    private static final int MAX_AUDIT_TARGET_LENGTH = 512;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final Set<String> SENSITIVE_PARAMETER_NAMES = Set.of(
             "password", "oldpassword", "newpassword", "confirmpassword",
@@ -59,10 +71,13 @@ public class LogInterceptor implements HandlerInterceptor {
 
     private final AsyncLogService asyncLogService;
     private final MeterRegistry meterRegistry;
+    private final SettingRegistry settingRegistry;
 
-    public LogInterceptor(AsyncLogService asyncLogService, MeterRegistry meterRegistry) {
+    public LogInterceptor(AsyncLogService asyncLogService, MeterRegistry meterRegistry,
+                          SettingRegistry settingRegistry) {
         this.asyncLogService = asyncLogService;
         this.meterRegistry = meterRegistry;
+        this.settingRegistry = settingRegistry;
     }
 
     @Override
@@ -201,6 +216,82 @@ public class LogInterceptor implements HandlerInterceptor {
             log.setAuditDescription("修改当前用户密码");
         } else if (uri.startsWith("/api/v1/oss/") && ("POST".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method))) {
             enrichOssAudit(log, uri, method);
+        } else if (uri.startsWith(SETTINGS_PATH)) {
+            enrichSettingAudit(log, request, uri, method);
+        }
+    }
+
+    /**
+     * 运行参数变更审计。
+     *
+     * <p>只审计 {@link SettingRegistry} 中已注册的键。未注册的键（例如前端同步的
+     * {@code adminAppSettings} 界面外观配置）不产生审计记录，避免外观同步写满审计表；
+     * 这也与配置文档对「限流、会话与留存类参数写入运维审计」的承诺一致。</p>
+     *
+     * <p>敏感键数量单独计入描述，使「谁把登录失败上限从 5 改成 20」可以直接查证。</p>
+     */
+    private void enrichSettingAudit(Log log, HttpServletRequest request, String uri, String method) {
+        List<String> registeredKeys = resolveChangedSettingKeys(request, uri, method).stream()
+                .filter(key -> settingRegistry.find(key).isPresent())
+                .sorted()
+                .toList();
+        if (registeredKeys.isEmpty()) {
+            return;
+        }
+
+        long sensitiveCount = registeredKeys.stream()
+                .filter(key -> settingRegistry.find(key)
+                        .map(SettingDefinition::sensitive)
+                        .orElse(false))
+                .count();
+
+        log.setAuditAction("DELETE".equalsIgnoreCase(method) ? "SETTING_DELETE" : "SETTING_UPDATE");
+        log.setAuditTarget(truncate(String.join(",", registeredKeys), MAX_AUDIT_TARGET_LENGTH));
+        String scope = sensitiveCount > 0
+                ? "修改运行参数（含 " + sensitiveCount + " 项敏感参数）: "
+                : "修改运行参数: ";
+        log.setAuditDescription(truncate(
+                scope + String.join(", ", registeredKeys), MAX_ERROR_MESSAGE_LENGTH));
+    }
+
+    /**
+     * 解析本次请求涉及的设置键。
+     * 支持 {@code PUT /api/v1/settings}（批量，取请求体顶层键）与
+     * {@code PUT|DELETE /api/v1/settings/{key}}（单个）。
+     */
+    private List<String> resolveChangedSettingKeys(HttpServletRequest request, String uri, String method) {
+        if (uri.startsWith(SETTINGS_KEY_PREFIX)) {
+            String key = uri.substring(SETTINGS_KEY_PREFIX.length());
+            // 只有 {key} 这一层是设置键；更深的路径不参与审计。
+            return key.isBlank() || key.contains("/") ? List.of() : List.of(key);
+        }
+        if (SETTINGS_PATH.equals(uri) && "PUT".equalsIgnoreCase(method)) {
+            return extractTopLevelJsonKeys(rawRequestBody(request));
+        }
+        return List.of();
+    }
+
+    private String rawRequestBody(HttpServletRequest request) {
+        if (!(request instanceof ContentCachingRequestWrapper wrapper)) {
+            return "";
+        }
+        return new String(wrapper.getContentAsByteArray(), StandardCharsets.UTF_8);
+    }
+
+    private List<String> extractTopLevelJsonKeys(String body) {
+        if (body == null || body.isBlank()) {
+            return List.of();
+        }
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(body);
+            if (root == null || !root.isObject()) {
+                return List.of();
+            }
+            List<String> keys = new ArrayList<>();
+            root.fieldNames().forEachRemaining(keys::add);
+            return keys;
+        } catch (JsonProcessingException exception) {
+            return List.of();
         }
     }
 

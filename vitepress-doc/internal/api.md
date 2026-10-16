@@ -37,9 +37,14 @@ OpenAPI YAML：/v3/api-docs.yaml
 | 日志审计 | 访问日志、图片访问审计 | `log:read` |
 | 系统监控 | 数据库、连接池、运行指标 | `system:read` |
 | 数据质量 | 手动执行、批次和问题明细 | `system:read` 或管理员 |
-| 系统设置 | 读取和保存运行时设置 | `system:read` |
+| 系统设置 | 读取、保存和删除运行时设置 | 读 `system:read`，写与删 `system:manage` |
+| 界面外观设置 | 全局外观与导航外链 | 仅需登录（`GET /api/v1/settings/ui`） |
 | 文档会话 | 签发用户或内部文档 Cookie | 按目标文档校验 |
 | 公开状态 | 当前状态、每日可用率、异常区间 | 公开且脱敏 |
+
+关于界面外观设置的例外：`GET /api/v1/settings/ui` 由 `@AuthenticatedOnly` 保护，只要求登录会话，不要求 `system:read`。原因是它只承载需要被全体登录用户同步的展示型配置，且**仅返回 `adminAppSettings` 一个键**，不暴露任何安全或运维参数。写入仍走 `PUT /api/v1/settings`，需要 `system:manage`；因此无该权限的账号只能在本机生效，前端会明确提示生效范围。
+
+关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。`/docs/**` 由 Nginx 直接读取静态目录，不经过后端，需要限制时应在 Nginx 层配置。
 
 ## 认证与权限
 

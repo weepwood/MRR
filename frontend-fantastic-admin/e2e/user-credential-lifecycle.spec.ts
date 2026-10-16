@@ -48,14 +48,16 @@ test.describe('用户凭据生命周期', () => {
     })
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/password\/change-required/)
-    await expect(page.getByRole('heading', { name: '首次登录，请设置新密码' })).toBeVisible()
+    // 强制改密跳转发生在会话校验之后（GET /api/v1/auth/me），并行跑 dev server
+    // 时可能超过断言默认的 5s，故显式放宽到与同套件其他用例一致的量级。
+    await expect(page).toHaveURL(/\/password\/change-required/, { timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: '首次登录，请设置新密码' })).toBeVisible({ timeout: 20_000 })
 
     await page.getByPlaceholder('输入当前使用的初始密码').fill('TemporaryPassword123')
     await page.getByPlaceholder('至少 6 位，建议使用更长的易记口令').fill('A brand new password 123')
     await page.getByPlaceholder('再次输入新密码').fill('A brand new password 123')
     await page.getByRole('button', { name: '保存新密码并重新登录' }).click()
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/login/, { timeout: 20_000 })
   })
 
   test('管理员创建用户后只展示一次临时密码且账号固定启用', async ({ page }) => {

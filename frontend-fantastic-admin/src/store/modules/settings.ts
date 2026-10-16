@@ -1,14 +1,36 @@
 import type { RouteMeta } from 'vue-router'
 import type { RecursiveRequired, Settings } from '#/global'
 import { cloneDeep } from 'es-toolkit'
+import { toast } from 'vue-sonner'
 import settingsDefault from '@/settings'
+import { readAuthStorage } from '@/utils/auth-storage'
 import { merge } from '@/utils/object'
+import { checkSessionPermission } from '@/utils/permission'
 
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
 const DEFAULT_THEME_COLOR = '#2563EB'
 
 /** 服务端存储键：全局界面外观与导航外链。与后端 SystemSettingController.UI_SETTINGS_KEY 保持一致。 */
 const UI_SETTINGS_SERVER_KEY = 'adminAppSettings'
+
+/**
+ * 写入全站界面配置所需的权限。
+ * 与后端 {@code PUT /api/v1/settings} 的 {@code @RequirePermissions("system:manage")} 对齐。
+ */
+const UI_SETTINGS_SYNC_PERMISSION = 'system:manage'
+
+/**
+ * 全站界面配置的同步状态，供界面明确告知用户配置的实际生效范围。
+ */
+export type UiSettingsSyncState
+  /** 尚未判定，或未登录 */
+  = | 'idle'
+  /** 已写入服务端，对所有终端生效 */
+    | 'synced'
+  /** 当前账号无 system:manage 权限，配置仅在本机生效 */
+    | 'local-only'
+  /** 已保存在本机，但写入服务端失败 */
+    | 'failed'
 
 /** 推送到服务端的防抖间隔，避免连续调整滑块时产生大量请求。 */
 const UI_SETTINGS_PUSH_DELAY_MS = 800
@@ -143,14 +165,39 @@ function getInitialSettings(): RecursiveRequired<Settings.all> {
   }
 }
 
+/**
+ * 判断请求错误是否由权限不足引起。
+ * 后端以业务码 403 拒绝无权限写入（见 api/index.ts 的 BusinessRequestError）。
+ */
+function isForbiddenError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+  const { code, status } = error as { code?: unknown, status?: unknown }
+  return [code, status].some(value => String(value ?? '') === '403')
+}
+
 export const useSettingsStore = defineStore(
   // 唯一ID
   'settings',
   () => {
     const settings = ref(getInitialSettings())
 
+    /** 全站界面配置的同步状态，驱动界面上的生效范围提示。 */
+    const uiSettingsSyncState = ref<UiSettingsSyncState>('idle')
+
     /** 全站界面配置推送的防抖句柄 */
     let uiSettingsPushTimer: number | undefined
+
+    /** 当前登录会话是否具备把界面配置写入服务端的能力。 */
+    function canSyncUiSettingsToServer(): boolean {
+      const session = readAuthStorage()
+      return checkSessionPermission(
+        session.profile?.roleCode,
+        session.permissions,
+        UI_SETTINGS_SYNC_PERMISSION,
+      )
+    }
 
     const prefersColorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     watch(() => settings.value.app.colorScheme, (val) => {
@@ -320,17 +367,43 @@ export const useSettingsStore = defineStore(
 
     /**
      * 把全局界面外观与导航外链推送到服务端。
-     * 失败时静默保留本机配置：界面偏好不应因网络或权限问题阻塞用户操作。
+     * <p>
+     * 服务端写接口要求 {@code system:manage} 权限，而外观入口对所有登录用户开放，
+     * 因此必须区分三种结果，避免出现「看起来保存了、实际没有生效」：
+     * </p>
+     * <ul>
+     *   <li>无权限：不发请求，标记为仅本机生效，由界面明确告知用户；</li>
+     *   <li>成功：标记为已同步到全站；</li>
+     *   <li>失败：保留本机配置并显式提示，不再静默吞掉错误。</li>
+     * </ul>
      */
-    async function pushUiSettings() {
+    async function pushUiSettings(): Promise<boolean> {
+      const session = readAuthStorage()
+      if (!session.token) {
+        uiSettingsSyncState.value = 'idle'
+        return false
+      }
+      if (!canSyncUiSettingsToServer()) {
+        uiSettingsSyncState.value = 'local-only'
+        return false
+      }
       try {
         const { saveSystemSettings } = await import('@/api/modules/settings')
         await saveSystemSettings({
           [UI_SETTINGS_SERVER_KEY]: JSON.stringify(collectUiSettings(settings.value)),
         })
+        uiSettingsSyncState.value = 'synced'
+        return true
       }
-      catch {
-        // 服务端不可用或无 system:manage 权限时保留本机配置。
+      catch (error) {
+        if (isForbiddenError(error)) {
+          // 权限可能在会话期内被回收，此时同样降级为仅本机生效。
+          uiSettingsSyncState.value = 'local-only'
+          return false
+        }
+        uiSettingsSyncState.value = 'failed'
+        toast.error('界面外观已保存在本机，但同步到全站失败，请稍后重试')
+        return false
       }
     }
 
@@ -350,10 +423,23 @@ export const useSettingsStore = defineStore(
     /**
      * 从服务端拉取全局外观与外链并应用到当前会话。
      * 服务端值优先，本机未覆盖的其余配置保持不变（白名单之外的本机状态不受影响）。
+     * <p>
+     * 无 {@code system:manage} 权限的账号不参与全站同步：既不推送也不拉取，
+     * 否则其本机外观调整会在下次登录时被服务端值静默覆盖。
+     * </p>
      *
-     * @returns 请求是否成功。服务端尚无数据时同样返回 true，用于避免无意义的重复请求。
+     * @returns 请求是否已成功或无需请求。无权限与「服务端尚无数据」同样返回 true，
+     *          用于避免无意义的重复请求。
      */
     async function loadUiSettings(): Promise<boolean> {
+      const session = readAuthStorage()
+      if (!session.token) {
+        return false
+      }
+      if (!canSyncUiSettingsToServer()) {
+        uiSettingsSyncState.value = 'local-only'
+        return true
+      }
       try {
         const { getUiSettings } = await import('@/api/modules/settings')
         const response = await getUiSettings()
@@ -375,6 +461,7 @@ export const useSettingsStore = defineStore(
     }
 
     // 本机持久化 + 全站同步：界面偏好既保留在本机，也同步到服务端供其他终端使用。
+    // 无 system:manage 权限时 pushUiSettings 会降级为仅本机生效，并把结果写入 uiSettingsSyncState。
     function saveAppSettings() {
       writeLocalAppSettings()
       scheduleUiSettingsPush()
@@ -403,6 +490,7 @@ export const useSettingsStore = defineStore(
       saveAppSettings,
       resetAppSettings,
       loadUiSettings,
+      uiSettingsSyncState,
     }
   },
 )

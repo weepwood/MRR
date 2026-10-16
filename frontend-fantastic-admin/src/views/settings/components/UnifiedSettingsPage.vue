@@ -35,6 +35,7 @@ interface RuntimeSettingsRef {
 
 interface AppConfigPanelRef {
   autoSaveLabel: string
+  syncScopeDescription: string
 }
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
@@ -376,7 +377,7 @@ void shellRef
               <span class="status-dot" />
               <div>
                 <strong>{{ appConfigRef?.autoSaveLabel ?? '界面外观自动保存' }}</strong>
-                <small>界面外观同步到全站，本机折叠状态等个人偏好不受影响。</small>
+                <small>{{ appConfigRef?.syncScopeDescription ?? '界面外观同时保存在本机并同步到全站默认外观，本机折叠状态等个人偏好不受影响。' }}</small>
               </div>
             </div>
           </div>

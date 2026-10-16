@@ -2,6 +2,8 @@
 import type { Component } from 'vue'
 import type { DocumentationSettings } from '@/api/modules/documentation-settings'
 import { Connection, Document, Reading, Setting } from '@element-plus/icons-vue'
+import { toast } from 'vue-sonner'
+import { createDocumentationSession } from '@/api/modules/documentation'
 import {
   DEFAULT_DOCUMENTATION_SETTINGS,
   getPublicDocumentationSettings,
@@ -56,9 +58,38 @@ const entries = computed<DocumentationEntry[]>(() => [
   },
 ])
 
-function openDocumentation(entry: DocumentationEntry) {
+/**
+ * 判断入口是否由后端直接提供。
+ * 这些路径受后端文档访问拦截器保护，必须先建立短期文档会话。
+ */
+function isBackendServedDocument(target: string): boolean {
+  return target.startsWith('/swagger-ui') || target.startsWith('/v3/api-docs')
+}
+
+async function openDocumentation(entry: DocumentationEntry) {
   if (!entry.target) { return }
-  window.open(entry.target, '_blank', 'noopener')
+
+  if (!isBackendServedDocument(entry.target)) {
+    window.open(entry.target, '_blank', 'noopener')
+    return
+  }
+
+  // 弹窗必须在用户手势内同步打开，否则 await 之后会被浏览器拦截。
+  const popup = window.open('', '_blank')
+  try {
+    await createDocumentationSession(entry.target)
+    if (popup) {
+      popup.opener = null
+      popup.location.replace(entry.target)
+    }
+    else {
+      window.open(entry.target, '_blank', 'noopener')
+    }
+  }
+  catch {
+    popup?.close()
+    toast.error('打开实时 API 文档失败，请确认当前账号具备系统查看权限')
+  }
 }
 
 onMounted(async () => {

@@ -17,6 +17,13 @@ export default defineConfig({
       ]
     : 'list',
   outputDir: 'test-results',
+  // E2E 跑在 Vite dev server 上，断言默认的 5s 对「会话校验 + 路由守卫跳转」这类
+  // 需要等待接口返回的场景偏紧：并行 6 worker 时实测 1.6~2.3s 的跳转会被拉到 5s 以上，
+  // 从而出现「行为正确但超时」的假失败。这里统一放宽到 15s；对时延本身有要求的
+  // 用例仍在调用处显式指定更精确的 timeout 或使用 expect.poll。
+  expect: {
+    timeout: 15_000,
+  },
   use: {
     baseURL,
     storageState: 'e2e/.auth/admin.json',
@@ -26,8 +33,16 @@ export default defineConfig({
   },
   projects: [
     {
+      // 先预热冷启动的 Vite dev server，避免首批并发用例拿到空页面而假失败。
+      // setup project 与 webServer 的先后顺序由 Playwright 保证。
+      name: 'warmup',
+      testMatch: /warmup\.setup\.ts/,
+    },
+    {
       name: 'chromium',
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['warmup'],
     },
   ],
   webServer: {

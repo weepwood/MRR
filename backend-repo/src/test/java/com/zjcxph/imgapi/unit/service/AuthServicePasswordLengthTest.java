@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.LoginRateLimiter;
 import com.zjcxph.imgapi.service.impl.AuthServiceImpl;
+import com.zjcxph.imgapi.setting.RuntimeSettingStore;
 import com.zjcxph.imgapi.utils.PasswordUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,12 +34,14 @@ class AuthServicePasswordLengthTest {
     private AuthRoleMapper authRoleMapper;
     @Mock
     private LoginRateLimiter rateLimiter;
+    @Mock
+    private RuntimeSettingStore runtimeSettingStore;
 
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authUserMapper, authRoleMapper, rateLimiter);
+        authService = new AuthServiceImpl(authUserMapper, authRoleMapper, rateLimiter, runtimeSettingStore);
     }
 
     @Test

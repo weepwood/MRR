@@ -7,6 +7,55 @@ import { merge } from '@/utils/object'
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
 const DEFAULT_THEME_COLOR = '#2563EB'
 
+/** 服务端存储键：全局界面外观与导航外链。与后端 SystemSettingController.UI_SETTINGS_KEY 保持一致。 */
+const UI_SETTINGS_SERVER_KEY = 'adminAppSettings'
+
+/** 推送到服务端的防抖间隔，避免连续调整滑块时产生大量请求。 */
+const UI_SETTINGS_PUSH_DELAY_MS = 800
+
+/**
+ * 需要全站统一的界面配置白名单。
+ * <p>
+ * 刻意**不包含** {@code menu.subMenuCollapse} 这类本机状态，
+ * 避免把单个用户的折叠习惯推到全站；也不包含权限与路由来源等安全相关开关。
+ * </p>
+ */
+const UI_SETTINGS_PICK: Record<string, readonly string[]> = {
+  app: ['colorScheme', 'themeColor', 'radius', 'pageTitleStyle', 'enableMournMode', 'enableColorAmblyopiaMode', 'enableDynamicTitle', 'enableProgress'],
+  layout: ['enableMobileAdaptation'],
+  menu: ['mode', 'mainMenuClickMode', 'subMenuUniqueOpened', 'enableSubMenuCollapseButton', 'enableHotkeys', 'externalLinks'],
+  topbar: ['mode'],
+  tabbar: ['enable', 'enableIcon', 'enableHotkeys'],
+  toolbar: ['enable', 'breadcrumb', 'navSearch', 'fullscreen', 'pageReload', 'colorScheme'],
+  mainPage: ['enableHotkeys'],
+  navSearch: ['enableHotkeys'],
+  home: ['enable', 'title', 'fullPath'],
+  copyright: ['enable', 'dates', 'company', 'website', 'beian'],
+}
+
+function pickKeys(source: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
+  const picked: Record<string, unknown> = {}
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      picked[key] = source[key]
+    }
+  }
+  return picked
+}
+
+/** 抽取需要同步到服务端的界面配置切片。 */
+function collectUiSettings(source: RecursiveRequired<Settings.all>): Record<string, unknown> {
+  const raw = source as unknown as Record<string, unknown>
+  const collected: Record<string, unknown> = {}
+  for (const [section, keys] of Object.entries(UI_SETTINGS_PICK)) {
+    const sectionValue = raw[section]
+    if (sectionValue && typeof sectionValue === 'object' && !Array.isArray(sectionValue)) {
+      collected[section] = pickKeys(sectionValue as Record<string, unknown>, keys)
+    }
+  }
+  return collected
+}
+
 function normalizeThemeColor(value: unknown): string {
   const color = String(value || '').trim()
   return /^#[\dA-F]{6}$/i.test(color) ? color.toUpperCase() : DEFAULT_THEME_COLOR
@@ -99,6 +148,9 @@ export const useSettingsStore = defineStore(
   'settings',
   () => {
     const settings = ref(getInitialSettings())
+
+    /** 全站界面配置推送的防抖句柄 */
+    let uiSettingsPushTimer: number | undefined
 
     const prefersColorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     watch(() => settings.value.app.colorScheme, (val) => {
@@ -262,13 +314,76 @@ export const useSettingsStore = defineStore(
       settings.value = merge(data, fromBase ? getInitialSettings() : settings.value)
     }
 
-    function saveAppSettings() {
+    function writeLocalAppSettings() {
       localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(settings.value))
+    }
+
+    /**
+     * 把全局界面外观与导航外链推送到服务端。
+     * 失败时静默保留本机配置：界面偏好不应因网络或权限问题阻塞用户操作。
+     */
+    async function pushUiSettings() {
+      try {
+        const { saveSystemSettings } = await import('@/api/modules/settings')
+        await saveSystemSettings({
+          [UI_SETTINGS_SERVER_KEY]: JSON.stringify(collectUiSettings(settings.value)),
+        })
+      }
+      catch {
+        // 服务端不可用或无 system:manage 权限时保留本机配置。
+      }
+    }
+
+    function scheduleUiSettingsPush() {
+      if (typeof window === 'undefined') {
+        return
+      }
+      if (uiSettingsPushTimer !== undefined) {
+        window.clearTimeout(uiSettingsPushTimer)
+      }
+      uiSettingsPushTimer = window.setTimeout(() => {
+        uiSettingsPushTimer = undefined
+        void pushUiSettings()
+      }, UI_SETTINGS_PUSH_DELAY_MS)
+    }
+
+    /**
+     * 从服务端拉取全局外观与外链并应用到当前会话。
+     * 服务端值优先，本机未覆盖的其余配置保持不变（白名单之外的本机状态不受影响）。
+     *
+     * @returns 请求是否成功。服务端尚无数据时同样返回 true，用于避免无意义的重复请求。
+     */
+    async function loadUiSettings(): Promise<boolean> {
+      try {
+        const { getUiSettings } = await import('@/api/modules/settings')
+        const response = await getUiSettings()
+        const raw = response.data?.[UI_SETTINGS_SERVER_KEY]
+        if (!raw) {
+          return true
+        }
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          return true
+        }
+        settings.value = merge(parsed as Partial<Settings.all>, settings.value)
+        writeLocalAppSettings()
+        return true
+      }
+      catch {
+        return false
+      }
+    }
+
+    // 本机持久化 + 全站同步：界面偏好既保留在本机，也同步到服务端供其他终端使用。
+    function saveAppSettings() {
+      writeLocalAppSettings()
+      scheduleUiSettingsPush()
     }
 
     function resetAppSettings() {
       localStorage.removeItem(APP_SETTINGS_STORAGE_KEY)
       settings.value = cloneDeep(settingsDefault)
+      scheduleUiSettingsPush()
     }
 
     return {
@@ -287,6 +402,7 @@ export const useSettingsStore = defineStore(
       updateSettings,
       saveAppSettings,
       resetAppSettings,
+      loadUiSettings,
     }
   },
 )

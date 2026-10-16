@@ -144,7 +144,7 @@ function openExternalLink(url: string) {
         </div>
         <div class="header-copy">
           <h4>“其他”菜单</h4>
-          <p>这些链接只保存在当前浏览器，可通过界面配置导入和导出。</p>
+          <p>这些链接保存在系统数据库，并同步到全站的“其他”菜单。</p>
         </div>
         <el-tag effect="plain" round>
           {{ externalLinks.length }} / 30

@@ -9,6 +9,7 @@ import DocumentationSettings from './DocumentationSettings.vue'
 import ExternalLinksSettings from './ExternalLinksSettings.vue'
 import LoginSupportSettings from './LoginSupportSettings.vue'
 import OcrClassificationSettings from './OcrClassificationSettings.vue'
+import RuntimeSettings from './RuntimeSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
 
@@ -26,19 +27,28 @@ interface OcrClassificationSettingsRef {
   saveSettings: () => Promise<boolean>
 }
 
+interface RuntimeSettingsRef {
+  saving: boolean
+  isDirty: boolean
+  saveSettings: () => Promise<boolean>
+}
+
 interface AppConfigPanelRef {
   autoSaveLabel: string
 }
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
+const runtimeSettingsRef = ref<RuntimeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
 const savedRecently = ref(false)
 const departmentSavedRecently = ref(false)
 const ocrSavedRecently = ref(false)
+const runtimeSavedRecently = ref(false)
 let saveFeedbackTimer: number | undefined
 let departmentFeedbackTimer: number | undefined
 let ocrFeedbackTimer: number | undefined
+let runtimeFeedbackTimer: number | undefined
 
 const {
   settingsNavItems,
@@ -83,6 +93,14 @@ function clearOcrSavedFeedback() {
   }
 }
 
+function clearRuntimeSavedFeedback() {
+  runtimeSavedRecently.value = false
+  if (runtimeFeedbackTimer !== undefined) {
+    window.clearTimeout(runtimeFeedbackTimer)
+    runtimeFeedbackTimer = undefined
+  }
+}
+
 function showSavedFeedback() {
   clearSavedFeedback()
   savedRecently.value = true
@@ -107,6 +125,15 @@ function showOcrSavedFeedback() {
   ocrFeedbackTimer = window.setTimeout(() => {
     ocrSavedRecently.value = false
     ocrFeedbackTimer = undefined
+  }, 1200)
+}
+
+function showRuntimeSavedFeedback() {
+  clearRuntimeSavedFeedback()
+  runtimeSavedRecently.value = true
+  runtimeFeedbackTimer = window.setTimeout(() => {
+    runtimeSavedRecently.value = false
+    runtimeFeedbackTimer = undefined
   }, 1200)
 }
 
@@ -141,6 +168,17 @@ async function handleOcrSave() {
   }
 }
 
+async function handleRuntimeSave() {
+  clearRuntimeSavedFeedback()
+  const panel = runtimeSettingsRef.value
+  if (!panel) {
+    return
+  }
+  if (await panel.saveSettings()) {
+    showRuntimeSavedFeedback()
+  }
+}
+
 watch(isDirty, (dirty) => {
   if (dirty) {
     clearSavedFeedback()
@@ -159,6 +197,12 @@ watch(() => ocrSettingsRef.value?.isDirty, (dirty) => {
   }
 })
 
+watch(() => runtimeSettingsRef.value?.isDirty, (dirty) => {
+  if (dirty) {
+    clearRuntimeSavedFeedback()
+  }
+})
+
 onUnmounted(() => {
   if (saveFeedbackTimer !== undefined) {
     window.clearTimeout(saveFeedbackTimer)
@@ -168,6 +212,9 @@ onUnmounted(() => {
   }
   if (ocrFeedbackTimer !== undefined) {
     window.clearTimeout(ocrFeedbackTimer)
+  }
+  if (runtimeFeedbackTimer !== undefined) {
+    window.clearTimeout(runtimeFeedbackTimer)
   }
 })
 
@@ -268,6 +315,29 @@ void shellRef
             </el-button>
           </div>
 
+          <div v-else-if="activeSection === 'runtime'" class="sidebar-save-card" :class="{ dirty: runtimeSettingsRef?.isDirty }">
+            <div class="save-status" :class="{ dirty: runtimeSettingsRef?.isDirty }">
+              <span class="status-dot" />
+              <div>
+                <strong>{{ runtimeSettingsRef?.isDirty ? '运行参数修改待保存' : '运行参数已同步' }}</strong>
+                <small>保存后立即生效，不需要重启服务。</small>
+              </div>
+            </div>
+            <el-button
+              :type="runtimeSavedRecently ? 'success' : 'primary'"
+              :loading="runtimeSettingsRef?.saving"
+              :disabled="!runtimeSettingsRef?.isDirty"
+              @click="handleRuntimeSave"
+            >
+              <FaIcon
+                :name="runtimeSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': runtimeSavedRecently }"
+              />
+              {{ runtimeSavedRecently ? '已保存' : '保存运行参数' }}
+            </el-button>
+          </div>
+
           <div v-else-if="activeSection === 'department'" class="sidebar-save-card" :class="{ dirty: departmentThemeRef?.isDirty }">
             <div class="save-status">
               <span class="status-dot" />
@@ -296,7 +366,7 @@ void shellRef
               <span class="status-dot" />
               <div>
                 <strong>外链设置自动保存</strong>
-                <small>添加或移除后立即保存到当前浏览器。</small>
+                <small>添加或移除后立即保存，并同步到全站「其他」菜单。</small>
               </div>
             </div>
           </div>
@@ -306,7 +376,7 @@ void shellRef
               <span class="status-dot" />
               <div>
                 <strong>{{ appConfigRef?.autoSaveLabel ?? '界面外观自动保存' }}</strong>
-                <small>界面外观仅保存到当前浏览器。</small>
+                <small>界面外观同步到全站，本机折叠状态等个人偏好不受影响。</small>
               </div>
             </div>
           </div>
@@ -344,6 +414,7 @@ void shellRef
             </el-form>
           </div>
           <OcrClassificationSettings v-else-if="activeSection === 'ocr'" ref="ocrSettingsRef" />
+          <RuntimeSettings v-else-if="activeSection === 'runtime'" ref="runtimeSettingsRef" />
           <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
           <ExternalLinksSettings v-else-if="activeSection === 'external-links'" />
           <AppConfigPanel v-else ref="appConfigRef" />

@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.SystemSettingService;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import com.zjcxph.imgapi.utils.AuthContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +37,16 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     private final SystemSettingMapper systemSettingMapper;
     private final DeveloperModeService developerModeService;
     private final DeveloperApiAccessService developerApiAccessService;
+    private final SettingRegistry settingRegistry;
 
     public SystemSettingServiceImpl(SystemSettingMapper systemSettingMapper,
                                     DeveloperModeService developerModeService,
-                                    DeveloperApiAccessService developerApiAccessService) {
+                                    DeveloperApiAccessService developerApiAccessService,
+                                    SettingRegistry settingRegistry) {
         this.systemSettingMapper = systemSettingMapper;
         this.developerModeService = developerModeService;
         this.developerApiAccessService = developerApiAccessService;
+        this.settingRegistry = settingRegistry;
     }
 
     @Override
@@ -113,6 +117,11 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     }
 
     private void validateRuntimeSettings(Map<String, String> settings) {
+        // 注册表驱动的校验：负责类型与安全值域，未注册的键不受约束（保持既有设置键行为）。
+        for (Map.Entry<String, String> entry : settings.entrySet()) {
+            settingRegistry.validate(entry.getKey(), entry.getValue());
+        }
+
         if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {
             developerModeService.validateAllowedSourcesValue(
                     settings.get(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY));

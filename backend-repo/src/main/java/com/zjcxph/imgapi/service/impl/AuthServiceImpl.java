@@ -22,6 +22,8 @@ import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.LoginRateLimiter;
 import com.zjcxph.imgapi.service.AuthService;
+import com.zjcxph.imgapi.setting.RuntimeSettingStore;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import com.zjcxph.imgapi.utils.PasswordUtil;
@@ -59,12 +61,33 @@ public class AuthServiceImpl implements AuthService {
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;
     private final LoginRateLimiter rateLimiter;
+    private final RuntimeSettingStore settingStore;
 
     public AuthServiceImpl(AuthUserMapper authUserMapper, AuthRoleMapper authRoleMapper,
-                           LoginRateLimiter rateLimiter) {
+                           LoginRateLimiter rateLimiter, RuntimeSettingStore settingStore) {
         this.authUserMapper = authUserMapper;
         this.authRoleMapper = authRoleMapper;
         this.rateLimiter = rateLimiter;
+        this.settingStore = settingStore;
+    }
+
+    /**
+     * 登录令牌有效期（毫秒）。
+     * <p>
+     * 取自系统设置 {@code sessionExpireMinutes}，管理员可在后台调整；
+     * 设置不可用或取值非法时回落到 {@link JwtUtil#DEFAULT_ACCESS_TOKEN_EXPIRE_MILLIS}。
+     * 仅影响新签发的令牌，已签发令牌仍按原有效期有效。
+     * </p>
+     */
+    long accessTokenExpireMillis() {
+        if (settingStore == null) {
+            return JwtUtil.DEFAULT_ACCESS_TOKEN_EXPIRE_MILLIS;
+        }
+        int minutes = settingStore.intValue(SettingRegistry.SESSION_EXPIRE_MINUTES);
+        if (minutes <= 0) {
+            return JwtUtil.DEFAULT_ACCESS_TOKEN_EXPIRE_MILLIS;
+        }
+        return minutes * 60_000L;
     }
 
     @Override
@@ -79,7 +102,8 @@ public class AuthServiceImpl implements AuthService {
 
         String attemptKey = loginAttemptKey(username, clientIp);
         if (rateLimiter.isLoginBlocked(attemptKey)) {
-            throw new BusinessException(429, "登录尝试过于频繁，请15分钟后重试");
+            throw new BusinessException(429,
+                    "登录尝试过于频繁，请 " + rateLimiter.loginLockWindowMinutes() + " 分钟后重试");
         }
 
         AuthUser user = authUserMapper.findByUsername(username);
@@ -103,7 +127,8 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(now);
 
         AuthSession session = toSession(user);
-        return new LoginResponseDTO(JwtUtil.getToken(session), session);
+        return new LoginResponseDTO(
+                JwtUtil.getToken(session, accessTokenExpireMillis(), JwtUtil.ACCESS_TOKEN_TYPE), session);
     }
 
     @Override

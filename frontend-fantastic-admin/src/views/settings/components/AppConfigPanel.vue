@@ -41,7 +41,7 @@ watch(() => settingsStore.settings, () => {
 const autoSaveLabel = computed(() => {
   if (autoSaveState.value === 'saving') return '正在自动保存…'
   if (autoSaveState.value === 'saved') return '已自动保存'
-  return '修改后自动保存到当前浏览器'
+  return '修改后自动保存，并同步到全站'
 })
 
 defineExpose({ autoSaveLabel })
@@ -80,7 +80,7 @@ async function handleImport(event: Event) {
       throw new TypeError('配置文件必须是 JSON 对象')
     }
     settingsStore.updateSettings(data as Settings.all)
-    toast.success('界面外观配置已导入，将自动保存到当前浏览器')
+    toast.success('界面外观配置已导入，将同步到全站')
   }
   catch {
     toast.error('导入失败，请选择有效的配置 JSON 文件')
@@ -101,7 +101,7 @@ function handleReset() {
     <div class="config-summary">
       <div>
         <strong>浏览器外观配置</strong>
-        <p>这些选项只保存在当前浏览器，不会写入系统数据库。</p>
+        <p>这些选项同时保存在本机并同步到系统数据库，作为全站默认外观。</p>
       </div>
       <div class="config-summary-actions">
         <span class="autosave-state">

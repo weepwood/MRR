@@ -56,7 +56,14 @@ public class AuthServiceImpl implements AuthService {
     private static final int TEMPORARY_PASSWORD_LENGTH = 16;
     private static final int MIN_PASSWORD_LENGTH = 6;
     private static final int MAX_PASSWORD_LENGTH = 64;
-    private static final String DEFAULT_REGISTER_ROLE = "DOCTOR";
+    /**
+     * 自助注册账号的默认角色，由 {@code V20261016120000__self_registration_readonly_role.sql} 种入。
+     *
+     * <p>必须是最小权限角色（仅 {@code record:read}）。审核通过需要管理员显式指定角色，
+     * 但仅把 {@code pending} 改成 {@code active} 的操作会沿用既有 {@code role_code}，
+     * 因此这里若给高权限角色，等于绕过审核授予病历编辑与下载能力。</p>
+     */
+    private static final String DEFAULT_REGISTER_ROLE = "READER";
 
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;

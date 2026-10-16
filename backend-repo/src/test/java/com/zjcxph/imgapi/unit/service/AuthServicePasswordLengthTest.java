@@ -50,7 +50,7 @@ class AuthServicePasswordLengthTest {
         RegisterRequest request = registrationRequest("Ab1234");
         AuthUser created = pendingUser();
         when(authUserMapper.findByUsername("six.user")).thenReturn(null, created);
-        when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role());
+        when(authRoleMapper.findByCode("READER")).thenReturn(role());
 
         var result = authService.register(request, "10.0.0.8");
 
@@ -83,8 +83,8 @@ class AuthServicePasswordLengthTest {
         user.setId(6L);
         user.setUsername("six.user");
         user.setDisplayName("六位密码用户");
-        user.setRoleCode("DOCTOR");
-        user.setRoleName("医生");
+        user.setRoleCode("READER");
+        user.setRoleName("只读账号");
         user.setStatus("pending");
         user.setAppliedAt(LocalDateTime.now());
         user.setPasswordVersion(1);
@@ -93,8 +93,8 @@ class AuthServicePasswordLengthTest {
 
     private AuthRole role() {
         AuthRole role = new AuthRole();
-        role.setCode("DOCTOR");
-        role.setName("医生");
+        role.setCode("READER");
+        role.setName("只读账号");
         return role;
     }
 }

@@ -34,6 +34,7 @@ import java.util.Date;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -43,6 +44,10 @@ import java.util.stream.Stream;
 
 @Component
 public class LogInterceptor implements HandlerInterceptor {
+
+    /** MDC 键名，与 {@code logback-spring.xml} 的 {@code includeMdcKeyName} 一一对应。 */
+    public static final String MDC_USER_ID = "userId";
+    public static final String MDC_USER_ROLE = "userRole";
 
     private static final String AUTH_SESSION_ATTR = "AUTH_SESSION";
     private static final String START_TIME_ATTR = "startTime";
@@ -58,12 +63,32 @@ public class LogInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    /**
+     * 需要脱敏的字段名（比较前会去掉 {@code -}、{@code _}、{@code []} 并转小写）。
+     *
+     * <p>身份证明与联系方式类字段必须在此登记：{@code idCard} 曾以明文写入
+     * {@code app.access_log.request_body}，并随数据库备份、导出与保留期长期留存，
+     * 违反项目隐私红线。注意不要加入语义有歧义的短名（例如 {@code name}、{@code sjh}），
+     * 它们在部分 DTO 中表示角色名或上架号，脱敏后反而会降低审计可用性。</p>
+     */
     private static final Set<String> SENSITIVE_PARAMETER_NAMES = Set.of(
             "password", "oldpassword", "newpassword", "confirmpassword",
             "token", "accesstoken", "refreshtoken", "authorization",
             "secret", "clientsecret", "signature", "sign", "ticket",
-            "apikey", "api_key", "privatekey", "private_key"
+            "apikey", "api_key", "privatekey", "private_key",
+            "idcard", "idcardno", "idcardnumber", "idno", "idnumber", "idcode",
+            "identitycard", "identityno", "certno", "certificateno", "certificatenumber",
+            "patientid", "patientidcard", "contactinfo", "phone", "mobile", "telephone"
     );
+
+    /**
+     * 路径段中的身份证形态（15 位或 18 位）兜底识别。
+     *
+     * <p>{@code @PathVariable String idCard} 这类端点会把身份证号放进 URL，进而被
+     * {@code requestUri}、浏览器历史、{@code Referer} 与 Nginx access.log 记录。
+     * 变量名匹配是首选手段，本规则只作为「处理映射信息缺失」时的兜底。</p>
+     */
+    private static final Pattern ID_CARD_PATH_SEGMENT = Pattern.compile("\\d{15}|\\d{17}[\\dXx]");
 
     private static final Pattern JSON_STRING_FIELD = Pattern.compile(
             "(\"([^\"]+)\"\\s*:\\s*\")([^\"]*)(\")"
@@ -89,21 +114,34 @@ public class LogInterceptor implements HandlerInterceptor {
         String requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         MDC.put("requestId", requestId);
         MDC.put("clientIp", IpUtil.getClientIp(request));
-
-        String userId = request.getHeader("X-User-Id");
-        String userRole = request.getHeader("X-User-Role");
-        if (userId != null && !userId.isEmpty()) {
-            MDC.put("userId", userId);
-        }
-        if (userRole != null && !userRole.isEmpty()) {
-            MDC.put("userRole", userRole);
-        }
+        // 注意：这里刻意不读取 X-User-Id / X-User-Role。这两个请求头完全由客户端控制，
+        // 写入 MDC 会让调用方通过伪造请求头污染日志身份。日志身份统一由认证拦截器
+        // 在会话建立后通过 bindAuthenticatedUser 绑定。
 
         request.setAttribute(START_TIME_ATTR, System.currentTimeMillis());
         request.setAttribute(REQUEST_ID_ATTR, requestId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
         response.setHeader(ENDPOINT_TEMPLATE_HEADER, endpointTemplate(request));
         return true;
+    }
+
+    /**
+     * 把已认证会话写入 MDC，供 logback 的 {@code %X{userId}} / {@code %X{userRole}} 输出。
+     *
+     * <p>必须由认证拦截器在解析出会话后调用（见 {@code LoginInterceptor#installSession}）。
+     * 之所以放在此处而不是 {@link #preHandle}：{@code LogInterceptor} 注册在认证拦截器之前
+     * （这样认证失败的请求也会留痕），其 {@code preHandle} 执行时还没有会话可用。</p>
+     */
+    public static void bindAuthenticatedUser(AuthSession session) {
+        if (session == null) {
+            return;
+        }
+        if (session.getUsername() != null && !session.getUsername().isBlank()) {
+            MDC.put(MDC_USER_ID, session.getUsername());
+        }
+        if (session.getRoleCode() != null && !session.getRoleCode().isBlank()) {
+            MDC.put(MDC_USER_ROLE, session.getRoleCode());
+        }
     }
 
     @Override
@@ -138,7 +176,7 @@ public class LogInterceptor implements HandlerInterceptor {
 
         log.setRequestId(stringAttribute(request, REQUEST_ID_ATTR));
         log.setClientIp(IpUtil.getClientIp(request));
-        log.setRequestUri(request.getRequestURI());
+        log.setRequestUri(sanitizeRequestUri(request));
         log.setEndpointTemplate(endpointTemplate(request));
         log.setMethod(request.getMethod());
         log.setUserAgent(truncate(request.getHeader("User-Agent"), MAX_REFERER_LENGTH));
@@ -172,6 +210,55 @@ public class LogInterceptor implements HandlerInterceptor {
     private String endpointTemplate(HttpServletRequest request) {
         Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         return pattern == null ? "UNKNOWN" : pattern.toString();
+    }
+
+    /**
+     * 脱敏请求 URI 中的敏感路径变量。
+     *
+     * <p>查询串与请求体已经有脱敏逻辑，但路径参数此前会被原样落库。
+     * {@code GET /api/v1/search/getBAHByID/{idCard}} 这类端点会把身份证号写进
+     * {@code requestUri}，因此这里按两条规则处理：</p>
+     * <ol>
+     *   <li>优先用 Spring 解析出的路径变量名判断（变量名敏感即脱敏），精确且不会误伤；</li>
+     *   <li>再用身份证号形态兜底，覆盖映射信息缺失（例如路径未匹配到处理器）的场景。</li>
+     * </ol>
+     *
+     * <p>审计字段（{@code audit_target} 等）仍取自原始 URI，不在此处改写，
+     * 以免破坏病案号的可追溯性。</p>
+     */
+    private String sanitizeRequestUri(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri == null || uri.isEmpty()) {
+            return uri;
+        }
+
+        Set<String> sensitiveVariableValues = sensitivePathVariableValues(request);
+        String[] segments = uri.split("/", -1);
+        boolean masked = false;
+        for (int index = 0; index < segments.length; index += 1) {
+            String segment = segments[index];
+            if (segment.isEmpty()) {
+                continue;
+            }
+            if (sensitiveVariableValues.contains(segment)
+                    || ID_CARD_PATH_SEGMENT.matcher(segment).matches()) {
+                segments[index] = hashForAudit(segment);
+                masked = true;
+            }
+        }
+        return masked ? String.join("/", segments) : uri;
+    }
+
+    private Set<String> sensitivePathVariableValues(HttpServletRequest request) {
+        Object attribute = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (!(attribute instanceof Map<?, ?> variables) || variables.isEmpty()) {
+            return Set.of();
+        }
+        return variables.entrySet().stream()
+                .filter(entry -> isSensitiveName(String.valueOf(entry.getKey())))
+                .map(entry -> entry.getValue() == null ? null : String.valueOf(entry.getValue()))
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toSet());
     }
 
     private boolean shouldSkipLogging(HttpServletRequest request, Object handler) {

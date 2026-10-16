@@ -46,6 +46,16 @@ OpenAPI YAML：/v3/api-docs.yaml
 
 关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。`/docs/**` 由 Nginx 直接读取静态目录，不经过后端，需要限制时应在 Nginx 层配置。
 
+## 加密身份证查询的时间戳约束
+
+`GET /api/v1/search/getBAHByEncryptID` 的 `timestamp` 不只是密钥派生材料，还参与**新鲜度校验**：请求时间与服务器时间的偏差超过 `aes.id-card-query.timestamp-tolerance-seconds`（默认 300 秒）时直接用 400 拒绝，以限制密文被无限期重放。该参数接受秒或毫秒时间戳。
+
+- 关闭校验（`0` 或负数）仅用于临时兼容调用方时钟偏差，属于运维逃生阀，不应长期开启；
+- 校验只读取时间戳，不改变密钥派生输入，因此对调用方的加密实现**零影响**；
+- 解密或查询失败统一返回 `加密身份证查询失败`，不回显内部异常信息，避免形成区分性的错误响应；
+- 包含 `idCard` 的查询串、请求体与**请求路径参数**都会在写入 `app.access_log` 前做 SHA-256 脱敏。
+  注意 `GET /api/v1/search/getBAHByID/{idCard}`（已弃用）会把身份证号带入 URL，因而也会出现在浏览器历史、`Referer` 与 Nginx 的 `access.log` 中——新接入方应使用 POST 版本或加密查询。
+
 ## 认证与权限
 
 前端登录成功后在业务请求中携带 JWT。后端解析用户 ID、用户名、角色和权限集合。令牌签名密钥通过 `JWT_SECRET_KEY` 注入。

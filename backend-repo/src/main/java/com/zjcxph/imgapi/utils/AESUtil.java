@@ -22,8 +22,7 @@ public class AESUtil {
     
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/CBC/PKCS5Padding";
-    private static final String SECRET_KEY = "your-32-byte-secret-key-12345678"; // 默认密钥
-    
+
     /**
      * 根据用户ID和密钥生成用户特定的密钥（旧版本，不包含时间戳）
      * @param userId 用户ID
@@ -31,7 +30,7 @@ public class AESUtil {
      * @return 用户特定密钥（32 字节）
      */
     private static String generateUserSpecificKey(String userId, String key) {
-        return padOrTruncateTo32(userId + "_" + key);
+        return padOrTruncateTo32(userId + "_" + requireKey(key));
     }
 
     /**
@@ -42,7 +41,26 @@ public class AESUtil {
      * @return 用户特定密钥（32字节）
      */
     private static String generateUserSpecificKeyWithTimestamp(String userId, String timestamp, String key) {
-        return padOrTruncateTo32(userId + "_" + timestamp + "_" + key);
+        return padOrTruncateTo32(userId + "_" + timestamp + "_" + requireKey(key));
+    }
+
+    /**
+     * 校验密钥已配置。
+     *
+     * <p>历史缺陷：密钥缺失时 {@code padOrTruncateTo32(userId + "_" + "")} 会补零成
+     * 32 字节并正常解密，即配置漏配时静默降级为「完全由调用方传入的 userId 推导出的
+     * 可预测密钥」，与 {@link IdCardUrlTokenUtil#deriveKey} 的 fail-closed 行为相反。
+     * 这里统一为抛异常。</p>
+     *
+     * @param key 基础密钥
+     * @return 原样返回的密钥
+     * @throws IllegalArgumentException 密钥未配置时
+     */
+    private static String requireKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("身份证解密密钥未配置（aes.secret.key / AES_SECRET_KEY）");
+        }
+        return key;
     }
 
     /**
@@ -72,17 +90,6 @@ public class AESUtil {
     }
 
     /**
-     * 解密身份证号码（使用默认密钥）
-     * @param ciphertext 密文（十六进制字符串）
-     * @param iv 初始化向量（十六进制字符串）
-     * @param userId 用户ID
-     * @return 解密后的身份证号码
-     */
-    public static String decryptIdCard(String ciphertext, String iv, String userId) {
-        return decryptIdCard(ciphertext, iv, userId, SECRET_KEY);
-    }
-
-    /**
      * 解密身份证号码（新版本，包含时间戳）
      * @param ciphertext 密文（十六进制字符串）
      * @param iv 初始化向量（十六进制字符串）
@@ -94,18 +101,6 @@ public class AESUtil {
     public static String decryptIdCardWithTimestamp(String ciphertext, String iv, String userId, String timestamp, String key) {
         String userSpecificKey = generateUserSpecificKeyWithTimestamp(userId, timestamp, key);
         return doDecrypt(ciphertext, iv, userSpecificKey);
-    }
-
-    /**
-     * 解密身份证号码（新版本，包含时间戳，使用默认密钥）
-     * @param ciphertext 密文（十六进制字符串）
-     * @param iv 初始化向量（十六进制字符串）
-     * @param userId 用户ID
-     * @param timestamp 时间戳
-     * @return 解密后的身份证号码
-     */
-    public static String decryptIdCardWithTimestamp(String ciphertext, String iv, String userId, String timestamp) {
-        return decryptIdCardWithTimestamp(ciphertext, iv, userId, timestamp, SECRET_KEY);
     }
 
     /**

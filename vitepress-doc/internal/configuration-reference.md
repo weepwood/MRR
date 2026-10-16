@@ -69,12 +69,22 @@ Spring Boot 常见优先级从高到低为：
 | --- | --- | --- |
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL 密码 | 使用专用数据库账号，禁止默认空密码 |
 | `JWT_SECRET_KEY` | JWT 签名 | 使用高强度随机值，轮换会使旧 Token 失效 |
-| `AES_SECRET_KEY` | AES-GCM 加密 | 使用满足实现要求的随机密钥 |
+| `AES_SECRET_KEY` | 身份证解密与加密查询令牌 | 使用满足实现要求的随机密钥；**留空时后端 fail-closed 拒绝解密**，不会退化为可预测密钥 |
 | 外部调阅 HMAC 密钥 | HIS/EMR Ticket 签名 | 每个接入方独立管理，禁止写入前端 |
 | `OSS_ACCESS_KEY_ID` | OSS AccessKey ID | 使用最小权限账号 |
 | `OSS_ACCESS_KEY_SECRET` | OSS AccessKey Secret | 不写入仓库、日志或页面设置 |
 
 实际 HMAC 配置名称以外部调阅模块和当前配置类为准；升级前应核对运行环境已有配置。
+
+## 加密身份证查询
+
+| 配置 | 默认值 | 说明 |
+| --- | --- | --- |
+| `aes.id-card-query.timestamp-tolerance-seconds` | `300` | `GET /api/v1/search/getBAHByEncryptID` 允许的时间戳偏差（秒）。超窗直接拒绝，用于限制密文重放 |
+
+设 `0` 或负数会关闭该校验，仅作为临时兼容调用方时钟偏差的逃生阀；长期关闭等同于放弃重放防护。
+
+> 后端不再内置任何默认 AES 密钥。历史实现中存在一个 32 字符的硬编码兜底密钥，密钥漏配时会静默生效；现在密钥为空即拒绝解密（fail-closed）。
 
 ## 服务端口
 

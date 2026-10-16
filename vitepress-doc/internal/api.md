@@ -114,6 +114,20 @@ GET /api/v1/public/status/ping
 
 只返回当前状态、持续时间、可用率、每日状态和脱敏异常区间，不能返回数据库地址、堆栈、路径、用户名或监控凭证。
 
+## 公开登录页接口
+
+登录页在未认证状态下需要展示系统标识和当前接入环境，这两个接口都不需要令牌：
+
+```text
+GET /api/v1/public/config/login-page
+GET /api/v1/public/config/client-environment
+```
+
+- `login-page`：只返回白名单筛选后的系统标识、登录展示文案和管理员支持信息，单字段截断到 240 字符。管理员联系方式仅在 `systemAdminContactEnabled` 与 `systemAdminPublicVisible` 同时为真时返回。
+- `client-environment`：回显服务端在本次请求中观察到的客户端地址、地址类型（`IPV4` / `IPV6` / `UNKNOWN`）、有效地址是否来自转发头（`behindProxy`），以及服务器时间与时区。
+
+`client-environment` 用于让用户把地址报给管理员做接入排查，因此必须严格限于本次请求的观察结果：不得返回内网拓扑、代理地址列表、账号信息或其他系统配置。客户端地址一律通过 `IpUtil` 解析，仍遵循「仅当远端地址是回环地址时才采信 `X-Forwarded-For` / `X-Real-IP`」的既有规则。
+
 ## 数据质量接口
 
 手动触发：

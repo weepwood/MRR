@@ -41,14 +41,18 @@
     </sql>
 
     <sql id="logKeywordWithRefererPredicate">
+        <bind name="protectedKeyword" value="@com.zjcxph.imgapi.utils.AuditPayloadSanitizer@searchKey(keyword)"/>
         AND (
             <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
             OR referer LIKE '%' || #{keyword} || '%'
+            <if test="protectedKeyword != null">OR audit_target LIKE '%' || #{protectedKeyword} || '%'</if>
         )
     </sql>
 
     <sql id="logKeywordCommonPredicate">
-        AND <include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+        <bind name="protectedKeyword" value="@com.zjcxph.imgapi.utils.AuditPayloadSanitizer@searchKey(keyword)"/>
+        AND (<include refid="logKeywordCommonExpression"/> LIKE '%' || #{keyword} || '%'
+        <if test="protectedKeyword != null">OR audit_target LIKE '%' || #{protectedKeyword} || '%'</if>)
     </sql>
 
     <sql id="imageAuditFilters">
@@ -157,6 +161,7 @@
         ), identifiers AS (
             SELECT filtered.*,
                    CASE
+                       WHEN auditTarget LIKE 'hmac:%' OR auditTarget = '[REDACTED]' THEN NULL
                        WHEN auditTarget LIKE 'sjh:%' THEN NULL
                        WHEN POSITION(':' IN auditTarget) &gt; 0
                            THEN SUBSTRING(auditTarget, 1, POSITION(':' IN auditTarget) - 1)
@@ -164,6 +169,7 @@
                        ELSE auditTarget
                    END AS bah,
                    CASE
+                       WHEN auditTarget LIKE 'hmac:%' OR auditTarget = '[REDACTED]' THEN NULL
                        WHEN auditTarget LIKE 'sjh:%' THEN SUBSTRING(auditTarget FROM 5)
                        WHEN POSITION(':' IN auditTarget) &gt; 0
                            THEN SUBSTRING(auditTarget, POSITION(':' IN auditTarget) + 1)
@@ -196,7 +202,7 @@
     <select id="getImageAuditOverview" resultType="com.zjcxph.imgapi.dto.resp.ImageAuditAnalyticsDTO">
         SELECT COUNT(*) AS "totalAccesses",
                COUNT(DISTINCT NULLIF(TRIM(username), '')) AS "uniqueUsers",
-               COUNT(DISTINCT NULLIF(TRIM(audit_target), '')) AS "uniqueTargets",
+               COUNT(DISTINCT NULLIF(NULLIF(TRIM(audit_target), ''), '[REDACTED]')) AS "uniqueTargets",
                COALESCE(SUM(CASE WHEN response_status LIKE '4%' OR response_status LIKE '5%' THEN 1 ELSE 0 END), 0) AS "abnormalAccesses",
                ROUND(COALESCE(AVG(execute_time), 0), 1) AS "averageDurationMs"
         FROM access_log

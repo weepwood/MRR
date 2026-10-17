@@ -110,6 +110,9 @@ public class ImageAuditExportController {
     }
 
     private AuditIdentifiers parseIdentifiers(Log log) {
+        if (log.getAuditTarget() != null && (log.getAuditTarget().startsWith("hmac:") || log.getAuditTarget().equals("[REDACTED]"))) {
+            return new AuditIdentifiers("", "", "");
+        }
         String bah = queryValue(log.getQueryString(), "bah");
         String sjh = queryValue(log.getQueryString(), "sjh");
         String idCard = firstNonBlank(

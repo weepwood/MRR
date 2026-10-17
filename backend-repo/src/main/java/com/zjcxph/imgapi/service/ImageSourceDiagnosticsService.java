@@ -51,8 +51,8 @@ public class ImageSourceDiagnosticsService {
         String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
 
         steps.add(step("INPUT_NORMALIZE", true, "输入编号已规范化", Map.of(
-                "bah", normalizedBah,
-                "sjh", normalizedSjh,
+                "bah", com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedValue(normalizedBah),
+                "sjh", com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedValue(normalizedSjh),
                 "imageId", imageId == null ? "" : imageId
         )));
 
@@ -110,7 +110,7 @@ public class ImageSourceDiagnosticsService {
                 localProbe.resourceAvailable(),
                 localSourceMessage(localUrl, localProbe),
                 Map.of(
-                        "url", localUrl == null ? "" : localUrl,
+                        "url", "[REDACTED]",
                         "serverReachable", localProbe.serverReachable(),
                         "resourceAvailable", localProbe.resourceAvailable(),
                         "statusCode", localProbe.statusCode()
@@ -124,7 +124,7 @@ public class ImageSourceDiagnosticsService {
                 ossProbe.objectExists(),
                 ossSourceMessage(hasOssKey, ossProbe),
                 Map.of(
-                        "ossKey", scan.getOssUrl() == null ? "" : scan.getOssUrl(),
+                        "ossKey", "[REDACTED]",
                         "migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus(),
                         "objectExists", ossProbe.objectExists(),
                         "error", ossProbe.error()
@@ -159,7 +159,7 @@ public class ImageSourceDiagnosticsService {
                 Map.of(
                         "preferredSource", preferredSource,
                         "selectedSource", selectedType,
-                        "selectedUrl", selectedUrl == null ? "" : selectedUrl,
+                        "selectedUrl", "[REDACTED]",
                         "reachable", selectedReachable,
                         "fallbackReason", fallbackReason == null ? "" : fallbackReason
                 )
@@ -193,8 +193,7 @@ public class ImageSourceDiagnosticsService {
         try {
             return new OssProbe(ossService.doesObjectExist(ossKey), "");
         } catch (Exception exception) {
-            String message = exception.getMessage();
-            return new OssProbe(false, message == null ? exception.getClass().getSimpleName() : message);
+            return new OssProbe(false, "SOURCE_UNAVAILABLE");
         }
     }
 
@@ -233,7 +232,7 @@ public class ImageSourceDiagnosticsService {
         result.put("found", scan != null);
         result.put("scan", scan == null ? Map.of() : scanDetails(scan));
         result.put("selectedSource", selectedSource == null ? "" : selectedSource);
-        result.put("selectedUrl", selectedUrl == null ? "" : selectedUrl);
+        result.put("selectedUrl", "");
         result.put("fallbackReason", fallbackReason == null ? "" : fallbackReason);
         result.put("steps", steps);
         return result;
@@ -243,14 +242,14 @@ public class ImageSourceDiagnosticsService {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("id", scan.getId());
         details.put("archiveId", scan.getArchiveId() == null ? "" : scan.getArchiveId());
-        details.put("bah", scan.getBah() == null ? "" : scan.getBah());
-        details.put("sjh", scan.getSjh() == null ? "" : scan.getSjh());
-        details.put("folder", scan.getFolder() == null ? "" : scan.getFolder());
-        details.put("filename", scan.getFilename() == null ? "" : scan.getFilename());
+        details.put("bah", "[REDACTED]");
+        details.put("sjh", "[REDACTED]");
+        details.put("folder", "[REDACTED]");
+        details.put("filename", "[REDACTED]");
         details.put("sourceType", scan.getSourceType() == null ? "" : scan.getSourceType());
-        details.put("sourceNode", scan.getSourceNode() == null ? "" : scan.getSourceNode());
-        details.put("sourceRef", scan.getSourceRef() == null ? "" : scan.getSourceRef());
-        details.put("ossKey", scan.getOssUrl() == null ? "" : scan.getOssUrl());
+        details.put("sourceNode", "[REDACTED]");
+        details.put("sourceRef", "[REDACTED]");
+        details.put("ossKey", "[REDACTED]");
         details.put("migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus());
         return details;
     }

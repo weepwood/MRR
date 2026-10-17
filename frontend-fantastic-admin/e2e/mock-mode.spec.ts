@@ -126,10 +126,12 @@ test.describe('无后端 Mock 模式', () => {
       }))
     })
 
+    // 必须是真正带背景/边框的卡片表面。settings 页的 .setting-section 只是
+    // 布局网格（无背景无边框），圆角不可见，卡片是它内部的 .setting-group。
     const surfaces = [
       { path: '/', selector: '.dashboard-widget' },
       { path: '/archive', selector: '.search-card' },
-      { path: '/settings', selector: '.setting-section' },
+      { path: '/settings', selector: '.setting-group' },
     ]
 
     for (const surface of surfaces) {

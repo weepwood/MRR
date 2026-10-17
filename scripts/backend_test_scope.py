@@ -23,6 +23,9 @@ RELEASE_EXACT_PATHS = {
     "VERSION",
     "release-baseline.json",
     ".github/workflows/windows-release-package.yml",
+    # 该流水线同样消费后端 JAR 与前端 dist，改动它必须跑完整后端验证，
+    # 口径与 frontend_test_scope.RELEASE_EXACT_PATHS 保持一致。
+    ".github/workflows/standalone-jar-release.yml",
 }
 
 RELEASE_PREFIXES = (

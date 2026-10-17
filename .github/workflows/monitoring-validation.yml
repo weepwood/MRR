@@ -46,6 +46,7 @@ jobs:
           name: monitoring-backend-compile-log
           path: monitoring-backend-compile.log
           if-no-files-found: ignore
+          retention-days: 3
       - name: Run backend tests
         shell: bash
         env:
@@ -63,6 +64,7 @@ jobs:
           name: monitoring-backend-test-log
           path: monitoring-backend-test.log
           if-no-files-found: ignore
+          retention-days: 3
       - name: Package backend
         run: mvn -q -DskipTests package
 

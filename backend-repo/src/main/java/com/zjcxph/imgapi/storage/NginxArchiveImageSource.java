@@ -190,8 +190,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
         }
         ArchiveImagePathSupport.segment(image.getFilename(), "filename");
         ArchiveImagePathSupport.segment(image.getBah(), "bah");
-        String normalizedBah = ImageUrlService.normalizeCode(image.getBah());
-        if (normalizedBah.compareTo("10000000") >= 0) {
+        if (com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.requiresSjhForBah(image.getBah())) {
             ArchiveImagePathSupport.segment(image.getSjh(), "sjh");
         } else {
             ArchiveImagePathSupport.segment(image.getBrxh(), "brxh");

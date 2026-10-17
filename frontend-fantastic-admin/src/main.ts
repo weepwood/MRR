@@ -4,7 +4,6 @@ import { installArchiveWatermark } from '@/utils/archive-watermark-installer'
 import { installClipboardFallback } from '@/utils/clipboard-fallback'
 // 自定义指令
 import directive from '@/utils/directive'
-import { installMedicalRecordCodeInterceptors } from '@/utils/medical-record-code-interceptors'
 import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
@@ -37,7 +36,6 @@ async function installOfflineIcons() {
 }
 
 function startApplication() {
-  installMedicalRecordCodeInterceptors()
   installSystemSettingsRuntime()
   installArchiveUserIdRouting(router)
   installClipboardFallback()

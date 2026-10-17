@@ -96,10 +96,10 @@ class ExternalArchiveAccessServiceTest {
                 .thenAnswer(invocation -> {
                     String bah = invocation.getArgument(0);
                     String sjh = invocation.getArgument(2);
-                    if ("00000002".equals(bah)) {
+                    if ("2".equals(bah)) {
                         return List.of(scan(2, "2", "20"));
                     }
-                    if ("00000003".equals(sjh)) {
+                    if ("3".equals(sjh)) {
                         return List.of(scan(3, "3", "3"));
                     }
                     if ("10000001".equals(bah) && "20000001".equals(sjh)) {

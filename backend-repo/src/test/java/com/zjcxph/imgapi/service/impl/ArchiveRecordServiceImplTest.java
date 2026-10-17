@@ -27,12 +27,12 @@ class ArchiveRecordServiceImplTest {
     void findByCodeNormalizesBusinessCodes() {
         ArchiveRecord expected = new ArchiveRecord();
         expected.setId(10L);
-        when(archiveRecordMapper.findByCode("00000123", "00000456")).thenReturn(expected);
+        when(archiveRecordMapper.findByCode("123", "456")).thenReturn(expected);
 
         ArchiveRecord result = archiveRecordService.findByCode("123", "456");
 
         assertSame(expected, result);
-        verify(archiveRecordMapper).findByCode("00000123", "00000456");
+        verify(archiveRecordMapper).findByCode("123", "456");
     }
 
     @Test
@@ -55,6 +55,6 @@ class ArchiveRecordServiceImplTest {
     void resolveDoesNotCreateArchiveWithoutSjh() {
         archiveRecordService.resolveArchiveId("123", null, true);
 
-        verify(archiveRecordMapper).resolveArchiveId("00000123", null, false);
+        verify(archiveRecordMapper).resolveArchiveId("123", null, false);
     }
 }

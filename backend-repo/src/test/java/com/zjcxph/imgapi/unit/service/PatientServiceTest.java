@@ -59,7 +59,7 @@ class PatientServiceTest {
         ArgumentCaptor<Patient> captor = ArgumentCaptor.forClass(Patient.class);
         verify(searchMapper).updatePatient(captor.capture());
         Patient saved = captor.getValue();
-        assertThat(saved.getBah()).isEqualTo("00789508");
+        assertThat(saved.getBah()).isEqualTo("789508");
         assertThat(saved.getName()).isEqualTo("张三");
         assertThat(saved.getIdCard()).isNull();
         assertThat(saved.getAdmissiontime()).isEqualTo("2026-07-22 08:30:00");

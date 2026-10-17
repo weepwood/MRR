@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.service.ImageTypeService;
@@ -283,7 +284,20 @@ public class ScanServiceImpl implements ScanService {
         ArchiveLookupResult.FallbackReason fallbackReason = resolution.archiveId() == null
                 ? ARCHIVE_NOT_FOUND
                 : ARCHIVE_HAS_NO_LINKED_SCANS;
+        if (resolution.archiveId() != null && scanMapper.countArchiveCandidates(bahSearchCode, sjhSearchCode) > 1) {
+            throw new BusinessException(409, "编号匹配存在歧义，请使用准确上架号并联系管理员");
+        }
         List<Scan> fallbackScans = safeList(legacyQuery.get());
+        boolean belongsToOtherArchive = resolution.archiveId() != null && fallbackScans.stream()
+                .anyMatch(scan -> scan.getArchiveId() != null && !resolution.archiveId().equals(scan.getArchiveId()));
+        boolean ambiguousUnlinkedBah = fallbackScans.stream().filter(scan -> scan.getArchiveId() == null)
+                .map(Scan::getBah).filter(java.util.Objects::nonNull).map(String::trim).distinct().limit(2).count() > 1;
+        if (belongsToOtherArchive || ambiguousUnlinkedBah
+                || fallbackScans.stream().map(Scan::getArchiveId).filter(java.util.Objects::nonNull).distinct().limit(2).count() > 1
+                || fallbackScans.stream().map(Scan::getSjh).filter(java.util.Objects::nonNull)
+                .map(String::trim).filter(code -> !code.isEmpty()).distinct().limit(2).count() > 1) {
+            throw new BusinessException(409, "编号匹配存在歧义，请使用准确上架号并联系管理员");
+        }
         if (fallbackScans.isEmpty()) {
             return ArchiveLookupResult.notFound(fallbackReason, resolution.archiveId());
         }
@@ -301,8 +315,12 @@ public class ScanServiceImpl implements ScanService {
             return new ArchiveResolution(archiveId, ARCHIVE_ID_EXACT);
         }
 
+        if (scanMapper.countArchiveCandidates(bahSearchCode, sjhSearchCode) > 1) {
+            throw new BusinessException(409, "编号匹配存在歧义，请使用准确上架号并联系管理员");
+        }
+
         if (normalizedSjh != null && !normalizedSjh.isBlank()) {
-            if (!normalizedSjh.equals(sjhSearchCode)) {
+            if (sjhSearchCode != null && !sjhSearchCode.isBlank()) {
                 Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode("", sjhSearchCode);
                 return compatibleArchiveId == null
                         ? ArchiveResolution.unresolved()
@@ -313,8 +331,7 @@ public class ScanServiceImpl implements ScanService {
 
         if (normalizedBah != null
                 && !normalizedBah.isBlank()
-                && !MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)
-                && !normalizedBah.equals(bahSearchCode)) {
+                && !MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah)) {
             Long compatibleArchiveId = scanMapper.resolveArchiveIdBySearchCode(bahSearchCode, "");
             return compatibleArchiveId == null
                     ? ArchiveResolution.unresolved()
@@ -340,10 +357,10 @@ public class ScanServiceImpl implements ScanService {
             return;
         }
         if (scan.getBah() != null) {
-            scan.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
+            scan.setBah(MedicalRecordCodeUtils.normalizeOrEmpty(scan.getBah()));
         }
         if (scan.getSjh() != null) {
-            scan.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
+            scan.setSjh(MedicalRecordCodeUtils.normalizeOrEmpty(scan.getSjh()));
         }
     }
 

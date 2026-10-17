@@ -3,7 +3,7 @@ import {
   getMedicalRecordTypeLabel,
   MEDICAL_RECORD_TYPES,
 } from '@/constants/medical-record-types'
-import { MEDICAL_RECORD_CODE_LENGTH, normalizeMedicalRecordCode } from '@/utils/medical-record-code'
+import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 
 export const TYPE_OPTIONS: TypeOption[] = MEDICAL_RECORD_TYPES.map(item => ({ ...item }))
 
@@ -11,7 +11,7 @@ export const TYPE_OPTION_MAP = new Map<number, TypeOption>(
   TYPE_OPTIONS.map(item => [item.value, item]),
 )
 
-export const MIN_BAH_LENGTH = MEDICAL_RECORD_CODE_LENGTH
+export const MIN_BAH_LENGTH = 1
 const ARCHIVE_IMAGE_VERSION_STORAGE_KEY = 'MRR-ADMIN:archive-image-versions'
 
 export function getTypeLabel(type?: number | string | null): string {

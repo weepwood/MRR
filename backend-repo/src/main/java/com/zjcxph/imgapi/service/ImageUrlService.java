@@ -79,8 +79,7 @@ public class ImageUrlService {
         if (filename == null || filename.isBlank()) {
             return null;
         }
-        String paddedBah = normalizeCode(bah);
-        boolean useSjh = paddedBah.compareTo("10000000") >= 0;
+        boolean useSjh = MedicalRecordCodeUtils.requiresSjhForBah(bah);
         String folderKey = useSjh ? sjh : brxh;
         if (folderKey == null || folderKey.isBlank()) {
             return null;

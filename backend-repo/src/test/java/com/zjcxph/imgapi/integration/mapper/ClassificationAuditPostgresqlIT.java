@@ -48,7 +48,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         scan=jdbc.queryForObject("INSERT INTO app.mr_scan(archive_id,bah,sjh,filename,folder,btype,uploadflag) SELECT id,bah,sjh,'synthetic.jpg','synthetic',0,1 FROM app.mr_archive WHERE id=? RETURNING id",Integer.class,archive);
     }
     @AfterEach void clear() {
-        jdbc.update("UPDATE app.mr_smart_classification_job SET status='SUCCESS' WHERE archive_id=?",archive);
+        com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,transactionManager,archive,null);
         AuthContext.clear();
     }
     @Test void classificationFailureMustNotDiscardSuccessfulOcrFact() {
@@ -88,6 +88,37 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(mapper.scan(scan).getBtype()).isEqualTo(3);
         assertThat(jdbc.queryForObject("SELECT review_status FROM app.mr_image_classification_suggestion WHERE id=?",String.class,suggestion)).isEqualTo("ACCEPTED");
         assertThatThrownBy(()->service.review(actor,suggestion,"ACCEPT",null)).hasMessageContaining("已被处理");
+    }
+    @Test void ocrVersionReplacementMustWaitForReviewCommit() throws Exception {
+        Long suggestion=suggestion();
+        var access=mock(OcrAccess.class);
+        var writer=java.util.concurrent.Executors.newSingleThreadExecutor();
+        var pending=new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<?>>();
+        var started=new java.util.concurrent.CountDownLatch(1);
+        when(access.require(anyLong(),any(String[].class))).thenAnswer(call->{
+            if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+                var replacement=writer.submit(()->{started.countDown();jdbc.update("UPDATE app.mr_scan_ocr SET result_version=?,content_hash=? WHERE scan_id=?",UUID.randomUUID().toString(),"c".repeat(64),scan);});
+                pending.set(replacement);
+                assertThat(started.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                assertThatThrownBy(()->replacement.get(500,java.util.concurrent.TimeUnit.MILLISECONDS))
+                        .as("OCR version must remain stable until the audited type transaction commits")
+                        .isInstanceOf(java.util.concurrent.TimeoutException.class);
+            }
+            return actor;
+        });
+        var input=mock(OcrInput.class);
+        when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
+        var reviewer=new ImageTypeService(mapper,ocr,access,input,new TransactionTemplate(transactionManager),new ConcurrentMapCacheManager());
+        try {reviewer.review(actor,suggestion,"ACCEPT",null);}
+        finally {try {if(pending.get()!=null) pending.get().get(5,java.util.concurrent.TimeUnit.SECONDS);}finally{writer.shutdownNow();}}
+        assertThat(mapper.scan(scan).getBtype()).isEqualTo(3);
+    }
+    @Test void replacementCommittedBeforeReviewRejectsOldSuggestion() {
+        Long suggestion=suggestion();
+        jdbc.update("UPDATE app.mr_scan_ocr SET result_version=?,content_hash=? WHERE scan_id=?",UUID.randomUUID().toString(),"c".repeat(64),scan);
+        assertThatThrownBy(()->service.review(actor,suggestion,"ACCEPT",null)).hasMessageContaining("已变化");
+        assertThat(mapper.scan(scan).getBtype()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.mr_image_type_audit WHERE scan_id=?",Integer.class,scan)).isZero();
     }
     private Long suggestion() {
         var job=new OcrModels.Job();job.setId(UUID.randomUUID().toString());job.setArchiveId(archive);job.setCreatedBy(actor.getUsername());job.setOwnerUserId(actor.getId());job.setConfigSnapshot("{}");job.setRuleSetVersion("test");job.setLexiconVersion("test");ocr.insert(job);

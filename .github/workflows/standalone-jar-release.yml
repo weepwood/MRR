@@ -185,6 +185,7 @@ jobs:
       # PR 构建只保留体积与校验证明（KB 级），足以复核产物身份与完整性。
       - name: Upload standalone JAR evidence
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: standalone-jar-evidence-${{ github.run_id }}

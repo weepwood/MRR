@@ -193,6 +193,7 @@ jobs:
           echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
 
       - name: Upload backend build identity
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-build-identity
@@ -253,6 +254,7 @@ jobs:
 
       - name: Upload documentation build log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: documentation-build-log
@@ -336,6 +338,7 @@ jobs:
       # PR 构建只保留清单与校验和（KB 级），足以复核产物身份与完整性。
       - name: Upload package evidence
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: windows-package-evidence-${{ github.run_id }}

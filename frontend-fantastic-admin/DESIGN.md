@@ -261,13 +261,29 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 - **Content-first density**: Body text blocks are compact (line-height 1.50) but surrounded by ample margin, creating islands of readable content in a sea of white space.
 
 ### Border Radius Scale
-- Micro (4px): Buttons, inputs, functional interactive elements
-- Subtle (5px): Links, list items, menu items
-- Standard (8px): Small cards, containers, inline elements
-- Comfortable (12px): Standard cards, feature containers, image tops
-- Large (16px): Hero cards, featured content, promotional blocks
-- Full Pill (9999px): Badges, pills, status indicators
-- Circle (100%): Tab indicators, avatars
+
+圆角只有一个来源：`--radius`（系统设置 → 应用配置 → 全局界面圆角，默认 `0.75rem` = 12px）。
+下表为默认基准下的实际取值，**不要在组件里写字面量**。
+
+| 令牌 | 默认值 | 用途 |
+|------|--------|------|
+| `--mrr-radius-sm` | 6px | 标签、微型按钮、代码块 |
+| `--mrr-radius-md` | 8px | 控件、菜单项、块级内层 |
+| `--mrr-radius-lg` | 10px | 小卡片、内嵌面板、头像容器 |
+| `--mrr-radius-card` | 12px | **页面级表面：卡片、页头、分区、设置分组** |
+| `--mrr-radius-xl` | 14px | 卡片内的二级分组面板（见下方分层约定） |
+| `--mrr-radius-dialog` | 16px | 弹窗、抽屉 |
+| `--mrr-radius-2xl` | 18px | 全页容器、登录外壳 |
+| `--mrr-radius-pill` | 999px | 徽标、胶囊 |
+
+**分层约定（有意为之，非不一致）**：外层表面固定 `--mrr-radius-card`（12px），
+卡片**内部**的二级分组面板用 `--mrr-radius-xl`（14px）。两者相差 2px，形成「外紧内松」的
+套嵌暗示；若内外同值，嵌套层级会读不出来。允许使用 `--mrr-radius-xl` 的仅限：
+`settings/*` 的 `.setting-group` / `.switch-list` / `.trusted-sources-card`、
+`MrrSectionCard` 内层、首页 widget 内层、`statistics-detail` 档案袋内层。
+页面级卡片一律不得使用 `--mrr-radius-xl`。
+
+**保留字面量的例外**：≤6px 的微型形状（热力图格子 2px、进度条 3px）与圆形（`50%` / `100%`）。
 
 ## 6. Depth & Elevation
 
@@ -371,6 +387,64 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 6. The warm white (#f6f5f4) section background is essential for visual rhythm
 7. Pill badges (9999px) for status/tags, 4px radius for buttons and inputs
 8. Notion Blue (#0075de) is the only saturated color in core UI -- use it sparingly for CTAs and links
+
+---
+
+## 10. 浏览器兼容与降级边界
+
+目标浏览器基线是 **Chrome 86**。以下现代特性在 86 上会让**整条声明失效**（不是静默忽略某一段）：
+
+| 特性 | 最低版本 | 失效后果 |
+|------|----------|----------|
+| `color-mix()` | 111 | 整条 `background` / `border` / `color` 声明被丢弃 |
+| `@media` / `@container` 区间语法 `(width <= 760px)` | 104 / 105 | 查询恒不匹配，**整块规则静默生效为 0** |
+| `:has()` | 105 | 整条规则被丢弃 |
+| `:is()` / `:where()` / `:not(a, b)` | 88 | 整条规则被丢弃（列表形态） |
+| `@container` | 105 | 整块查询失效 |
+| `dvh` / `svh` / `lvh` | 108 | 整条声明失效，需 `vh` 兜底 |
+
+源码门禁：`scripts/verify-chrome86-build.mjs` 会扫描构建产物，源码里出现上述写法直接阻断构建
+（Lightning CSS / UnoCSS / Element Plus 的残留仅提示）。`:not(a, b)` 另由 stylelint
+`selector-not-notation: simple` 拦住，请改链式 `:not(.a):not(.b)`；区间语法由
+`media-feature-range-notation: prefix` 拦住，请改 `max-width` / `min-width`。
+
+> **区间语法是特别容易漏的一类**：它不报错、不影响其它规则，只是让那段 `@media` 从来
+> 没匹配过。项目里曾积累 77 处，等于目标浏览器上的折叠布局长期未生效。
+
+### color-mix() 降级策略
+
+**默认接受降级，不逐处补回退。** 当前 `src/` 里 200+ 处 `color-mix()` 绝大多数是色调底、
+hover 高亮、渐变光晕、文本微调色——在 Chrome 86 上退化成「无色」或「继承色」，信息不丢失，
+视觉只是变弱，属于可接受的装饰性损失。
+
+但下面四类**不属于装饰**，必须写静态回退，否则功能或可读性真的会坏：
+
+1. **数据编码**：图表色阶、热力图强度、进度条填充、状态点。整档透明等于数据消失。
+2. **浮层背景**：popover / tooltip / dropdown / dialog / 自定义弹层的底色。透明后文字直接
+   压在页面内容上。
+3. **承载分层或可读性的实色底**：尤其是 `background: <gradient>, var(--solid)` 这种简写——
+   渐变里夹了 `color-mix` 会让**实色一起丢**。必须把实色拆成独立的 `background-color`。
+4. **唯一视觉信号**：某个状态只靠 `color-mix` 背景区分、没有文字/图标/边框兜底时。
+
+回退写法是**相邻双声明**（前静态、后 `color-mix`，不支持则后者被丢弃）：
+
+```css
+.level-2 {
+  background: var(--el-color-primary-light-5);
+  background: color-mix(in srgb, var(--color-primary) 45%, var(--el-bg-color));
+}
+```
+
+静态值优先级：Element Plus 的 `--el-color-*-light-3/5/7/8`（由 `applyThemeColor()` 以 hex
+同步写入，主色变更时依然正确）> 语义实色令牌（`--mrr-card` / `--mrr-muted` / `--mrr-popover`）
+> 字面量（仅限万不得已，且不得是主题色）。
+
+stylelint 的 `declaration-block-no-duplicate-properties` 已允许
+`consecutive-duplicates-with-different-values`，双声明不会被判违规。
+
+**已知未覆盖**：`statistics-detail` 档案袋的五套分类色渐变、`page-header` 的渐变网格、
+指标卡的光晕背景，在 Chrome 86 上会退化为纯色底（底色仍在，仅失去层次）。这是明确接受的现状，
+若要改善，按上面第 3 条把实色拆成 `background-color` 即可，不必逐条复刻混色比例。
 
 ---
 

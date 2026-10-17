@@ -12,6 +12,7 @@ import {
   resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { hasKey } from '@/utils/object'
 import ArchiveDetailContent from './ArchiveDetailContent.vue'
 
 defineOptions({ name: 'StatisticsDetailThemePage' })
@@ -52,7 +53,7 @@ async function loadDepartmentThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.prototype.hasOwnProperty.call(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       nextThemes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(nextThemes)
     }
@@ -123,45 +124,45 @@ onBeforeUnmount(() => {
 
 .department-themed-archive :deep(.folder-code-block) {
   display: flex;
-  min-height: 78px;
-  padding: 12px 14px;
   flex-direction: column;
   gap: 7px;
   justify-content: center;
+  min-height: 78px;
+  padding: 12px 14px;
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .department-themed-archive :deep(.folder-code-block-full) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  min-height: 86px;
-  padding: 15px 16px;
   column-gap: 18px;
   align-items: center;
+  min-height: 86px;
+  padding: 15px 16px;
 }
 
 .department-themed-archive :deep(.folder-code-label) {
   display: inline-flex;
-  width: fit-content;
-  margin-bottom: 0;
   gap: 6px;
   align-items: center;
+  width: fit-content;
+  margin-bottom: 0;
   font-size: 11px;
   line-height: 1;
   letter-spacing: 0.04em;
 }
 
 .department-themed-archive :deep(.folder-code-label::before) {
+  flex: none;
   width: 15px;
   height: 15px;
-  flex: none;
   content: "";
   background: var(--folder-accent);
   opacity: 0.78;
-  -webkit-mask-position: center;
-  mask-position: center;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
   -webkit-mask-size: contain;
   mask-size: contain;
 }
@@ -196,8 +197,8 @@ onBeforeUnmount(() => {
 }
 
 .department-themed-archive :deep(.folder-code-block-full .folder-code-value) {
-  text-align: right;
   line-height: 1.15;
+  text-align: right;
 }
 
 .department-themed-archive :deep(.folder-code-grid .folder-code-block:nth-child(-n+2) .folder-code-value) {
@@ -209,7 +210,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--folder-accent) 9%, transparent);
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .department-themed-archive :deep(.folder-code-block-full) {
     grid-template-columns: minmax(0, 1fr);
     gap: 9px;

@@ -10,17 +10,45 @@
   gap: var(--mrr-space-3);
 }
 
+/* 6 张及以上的指标组使用固定三列，避免 auto-fit 在宽屏下出现「最后一行只剩一张」。
+ * 三列在两行内即可均衡排布，同时保留足够宽度让标签与说明不被截断。 */
+.mrr-metric-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .mrr-metric-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 7 张左右的指标组用更宽的最小列宽，得到 4+3 的均衡排布。 */
+.mrr-metric-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* 4 张指标组固定四列：用于设置、摘要这类需要与上方表格列宽对齐的页面，
+ * auto-fit 在中等宽度下会掉成 3+1，破坏视觉对称。 */
+.mrr-metric-grid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .mrr-metric-grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .mrr-metric-card {
-  --mrr-metric-accent: var(--mrr-primary);
+  --mrr-metric-accent: var(--mrr-tone-primary);
 
   position: relative;
   height: 100%;
   overflow: hidden;
   color: var(--mrr-card-foreground);
-  background:
-    linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
@@ -56,14 +84,18 @@
 
 .mrr-metric-card__icon {
   display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
   font-size: 26px;
   color: var(--mrr-metric-accent);
+
+  /* Chrome 86 不支持 color-mix()：先给中性底色，避免图标色块整块消失。 */
+  background: var(--mrr-muted);
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
+  border: 1px solid var(--mrr-border);
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
-  border-radius: 14px;
-  place-items: center;
+  border-radius: var(--mrr-radius-xl);
 }
 
 .mrr-metric-card__icon .el-icon {
@@ -74,15 +106,25 @@
   min-width: 0;
 }
 
+/* 无图标时文案区占满整行，不再保留 52px 空列。 */
+.mrr-metric-card--no-icon .el-card__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
+.mrr-metric-card__extra {
+  margin-top: 10px;
+}
+
 .mrr-metric-card__label {
   display: block;
   margin: 1px 0 6px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 550;
   line-height: 1.35;
   color: var(--mrr-muted-foreground);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -96,13 +138,13 @@
 .mrr-metric-card__value {
   display: block;
   margin: 0;
-  overflow-wrap: anywhere;
   font-size: 26px;
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   line-height: 1.16;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
 }
 
 .mrr-metric-card__value--compact {
@@ -118,48 +160,65 @@
   color: var(--mrr-muted-foreground);
 }
 
+/* 值语义色：只改变数字本身的颜色，不改变整张卡片的表面与边框，
+ * 避免同一业务含义在不同页面出现「整卡变色」与「仅数字变色」两种做法。 */
+.mrr-metric-card__value--success {
+  color: var(--mrr-tone-success);
+}
+
+.mrr-metric-card__value--warning {
+  color: var(--mrr-tone-warning);
+}
+
+.mrr-metric-card__value--danger {
+  color: var(--mrr-tone-danger);
+}
+
 .mrr-metric-card__note {
   margin: 7px 0 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   line-height: 1.45;
   color: var(--mrr-muted-foreground);
-  text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.84;
 }
 
 .mrr-metric-card--rose {
-  --mrr-metric-accent: #e11d48;
+  --mrr-metric-accent: var(--mrr-tone-rose);
 }
 
 .mrr-metric-card--green {
-  --mrr-metric-accent: #16803c;
+  --mrr-metric-accent: var(--mrr-tone-success);
 }
 
-.mrr-metric-card--amber {
-  --mrr-metric-accent: #b45f06;
+.mrr-metric-card--amber,
+.mrr-metric-card--warning {
+  --mrr-metric-accent: var(--mrr-tone-warning);
 }
 
 .mrr-metric-card--violet {
-  --mrr-metric-accent: #7c3aed;
+  --mrr-metric-accent: var(--mrr-tone-violet);
 }
 
 .mrr-metric-card--teal {
-  --mrr-metric-accent: #0f766e;
+  --mrr-metric-accent: var(--mrr-tone-teal);
 }
 
 .mrr-metric-card--slate {
-  --mrr-metric-accent: #64748b;
+  --mrr-metric-accent: var(--mrr-tone-neutral);
 }
 
 .mrr-metric-card--danger {
-  --mrr-metric-accent: var(--mrr-destructive);
+  --mrr-metric-accent: var(--mrr-tone-danger);
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .mrr-metric-grid,
-  .mrr-metric-grid--compact {
+  .mrr-metric-grid--compact,
+  .mrr-metric-grid--three,
+  .mrr-metric-grid--four {
     grid-template-columns: 1fr;
   }
 
@@ -171,7 +230,7 @@
     width: 46px;
     height: 46px;
     font-size: 23px;
-    border-radius: 12px;
+    border-radius: var(--mrr-radius-card);
   }
 }
 

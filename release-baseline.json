@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20260724220200",
+    "maximumCompatibleMigration": "20261016120000",
     "backwardCompatibleWithPreviousApplication": true
   },
   "applicationRollback": {
     "allowed": true,
-    "reason": "OCR 与智能分类第一阶段仅新增独立表、索引、默认设置和管理员权限，未删除或改写现有业务字段。回滚到上一应用版本后，旧版会忽略这些新增结构；回滚前仍应备份数据库、外部配置和完整发布目录。"
+    "reason": "最新迁移 V20261016120000 仅向 app.mr_auth_role 幂等插入一条只读角色记录（READER，权限 record:read），不涉及表结构变更，也不改写任何既有用户或角色数据。回滚到上一应用版本后，旧版会忽略该角色记录，自助注册默认角色回到 DOCTOR。回滚前仍应备份数据库、外部配置和完整发布目录。"
   },
   "configuration": {
     "schemaVersion": 1

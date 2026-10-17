@@ -191,17 +191,35 @@ class AuthServiceImplTest {
             RegisterRequest request = registrationRequest();
             AuthUser created = pendingUser();
             when(authUserMapper.findByUsername("new.doctor")).thenReturn(null, created);
-            when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role("DOCTOR"));
+            when(authRoleMapper.findByCode("READER")).thenReturn(role("READER"));
 
             RegistrationResultDTO result = authService.register(request, "10.0.0.8");
 
             ArgumentCaptor<AuthUser> insertedUser = ArgumentCaptor.forClass(AuthUser.class);
             verify(authUserMapper).insertUser(insertedUser.capture());
             assertThat(insertedUser.getValue().getStatus()).isEqualTo("pending");
-            assertThat(insertedUser.getValue().getRoleCode()).isEqualTo("DOCTOR");
+            assertThat(insertedUser.getValue().getRoleCode()).isEqualTo("READER");
             assertThat(insertedUser.getValue().getContactInfo()).isEqualTo("内线 6123");
             assertThat(result.getStatus()).isEqualTo("pending");
             assertThat(result.getUsername()).isEqualTo("new.doctor");
+        }
+
+        @Test
+        @DisplayName("自助注册不接受 DOCTOR 这类具备编辑能力的默认角色")
+        void register_doesNotGrantEditingRoleByDefault() {
+            RegisterRequest request = registrationRequest();
+            AuthUser created = pendingUser();
+            when(authUserMapper.findByUsername("new.doctor")).thenReturn(null, created);
+            when(authRoleMapper.findByCode("READER")).thenReturn(role("READER"));
+
+            authService.register(request, "10.0.0.8");
+
+            ArgumentCaptor<AuthUser> insertedUser = ArgumentCaptor.forClass(AuthUser.class);
+            verify(authUserMapper).insertUser(insertedUser.capture());
+            assertThat(insertedUser.getValue().getRoleCode())
+                    .isNotEqualTo("DOCTOR")
+                    .isNotEqualTo("ADMIN");
+            verify(authRoleMapper, org.mockito.Mockito.never()).findByCode("DOCTOR");
         }
 
         @Test
@@ -275,8 +293,8 @@ class AuthServiceImplTest {
             user.setUsername("new.doctor");
             user.setDisplayName("新医生");
             user.setPasswordHash(PasswordUtil.encode("Registration123!"));
-            user.setRoleCode("DOCTOR");
-            user.setRoleName("医生");
+            user.setRoleCode("READER");
+            user.setRoleName("只读账号");
             user.setPermissionsCsv("record:read");
             user.setStatus("pending");
             user.setContactInfo("内线 6123");

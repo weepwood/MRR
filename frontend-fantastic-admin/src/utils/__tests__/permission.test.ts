@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   checkAnyPermission,
   checkPermission,
+  checkSessionPermission,
   PERMISSION_DEFINITIONS,
   PERMISSION_HIERARCHY,
   resolvePermissions,
@@ -126,5 +127,26 @@ describe('permission — checkAnyPermission', () => {
 
   it('空用户权限返回 false', () => {
     expect(checkAnyPermission([], ['record:read'])).toBe(false)
+  })
+})
+
+describe('permission — checkSessionPermission', () => {
+  it('aDMIN 角色视为拥有全部权限，与后端放行保持一致', () => {
+    expect(checkSessionPermission('ADMIN', [], 'system:manage')).toBe(true)
+    expect(checkSessionPermission('admin', undefined, 'system:manage')).toBe(true)
+    expect(checkSessionPermission(' ADMIN ', null, 'record:download')).toBe(true)
+  })
+
+  it('非 ADMIN 角色按权限列表并继承上级权限判断', () => {
+    expect(checkSessionPermission('DOCTOR', ['record:manage'], 'record:download')).toBe(true)
+    expect(checkSessionPermission('USER', ['system:manage'], 'system:read')).toBe(true)
+    expect(checkSessionPermission('USER', ['system:read'], 'system:manage')).toBe(false)
+  })
+
+  it('权限列表缺失或为空时不通过', () => {
+    expect(checkSessionPermission('USER', [], 'system:manage')).toBe(false)
+    expect(checkSessionPermission('USER', undefined, 'system:manage')).toBe(false)
+    expect(checkSessionPermission(undefined, undefined, 'system:manage')).toBe(false)
+    expect(checkSessionPermission(null, null, 'system:manage')).toBe(false)
   })
 })

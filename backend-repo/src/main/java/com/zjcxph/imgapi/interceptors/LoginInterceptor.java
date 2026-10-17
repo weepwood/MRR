@@ -201,6 +201,9 @@ public class LoginInterceptor implements HandlerInterceptor {
     private void installSession(HttpServletRequest request, AuthSession session) {
         AuthContext.setCurrentUser(session);
         request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        // 日志身份以服务端解析出的会话为准。客户端可控的 X-User-Id / X-User-Role
+        // 请求头不再参与 MDC，避免伪造请求头污染日志身份。
+        LogInterceptor.bindAuthenticatedUser(session);
     }
 
     private AuthSession createArchiveLegacySession() {

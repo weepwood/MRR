@@ -318,7 +318,7 @@ function downloadTemplate() {
   padding: 8px 10px;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .field-item code {
@@ -343,7 +343,7 @@ function downloadTemplate() {
   gap: 4px;
   padding: 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .summary-item span {
@@ -365,7 +365,7 @@ function downloadTemplate() {
   color: var(--el-color-warning);
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .section-heading {
     flex-direction: column;
   }

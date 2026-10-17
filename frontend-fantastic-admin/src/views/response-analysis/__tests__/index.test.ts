@@ -41,6 +41,11 @@ function mountPage() {
         loading: {},
       },
       stubs: {
+        // 全局注册的指标卡在测试环境不会自动解析，用轻量 stub 暴露 label/value/note 供文本断言。
+        'MrrMetricCard': {
+          props: ['label', 'value', 'note', 'suffix'],
+          template: '<div class="mrr-metric-card">{{ label }}|{{ value }}|{{ note }}|{{ suffix }}</div>',
+        },
         'el-button': { template: '<button @click="$emit(\'click\')"><slot /></button>' },
         'el-card': { template: '<section class="el-card"><slot name="header" /><slot /></section>' },
         'el-empty': { props: ['description'], template: '<div class="el-empty">{{ description }}</div>' },

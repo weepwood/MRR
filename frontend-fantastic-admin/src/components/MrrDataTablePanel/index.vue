@@ -104,7 +104,7 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   width: 100%;
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .mrr-data-table-panel__filters {
     padding: var(--mrr-space-3) var(--mrr-space-3) 0;
   }

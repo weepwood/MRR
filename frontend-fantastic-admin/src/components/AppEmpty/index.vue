@@ -43,13 +43,13 @@ function handleAction() {
 .app-empty-icon {
   margin-bottom: 16px;
   font-size: 48px;
-  color: var(--el-text-color-placeholder, #c0c4cc);
+  color: var(--el-text-color-placeholder);
   transform-origin: center;
 }
 
 .app-empty-text {
   margin: 0 0 20px;
   font-size: 14px;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--el-text-color-secondary);
 }
 </style>

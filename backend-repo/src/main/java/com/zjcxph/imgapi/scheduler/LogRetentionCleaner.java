@@ -1,8 +1,9 @@
 package com.zjcxph.imgapi.scheduler;
 
-import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.mapper.LogMapper;
 import com.zjcxph.imgapi.dto.resp.LogRetentionCleanupResult;
+import com.zjcxph.imgapi.setting.RuntimeSettingStore;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,11 +17,33 @@ public class LogRetentionCleaner {
     private static final Logger logger = LoggerFactory.getLogger(LogRetentionCleaner.class);
 
     private final LogMapper logMapper;
-    private final LogRetentionProperties properties;
+    private final RuntimeSettingStore settingStore;
 
-    public LogRetentionCleaner(LogMapper logMapper, LogRetentionProperties properties) {
+    public LogRetentionCleaner(LogMapper logMapper, RuntimeSettingStore settingStore) {
         this.logMapper = logMapper;
-        this.properties = properties;
+        this.settingStore = settingStore;
+    }
+
+    /**
+     * 是否启用自动清理。取自系统设置，数据库留空时沿用 {@code app.log-retention.enabled}。
+     */
+    boolean isCleanupEnabled() {
+        return settingStore.booleanValue(SettingRegistry.ACCESS_LOG_RETENTION_ENABLED);
+    }
+
+    /** 保留天数。取自系统设置，数据库留空时沿用 {@code app.log-retention.retention-days}。 */
+    int retentionDays() {
+        return settingStore.intValue(SettingRegistry.ACCESS_LOG_RETENTION_DAYS);
+    }
+
+    /** 单批删除条数。 */
+    int batchSize() {
+        return settingStore.intValue(SettingRegistry.ACCESS_LOG_CLEANUP_BATCH_SIZE);
+    }
+
+    /** 单次最多批次数。 */
+    int maxBatchesPerRun() {
+        return settingStore.intValue(SettingRegistry.ACCESS_LOG_CLEANUP_MAX_BATCHES);
     }
 
     /**
@@ -28,6 +51,10 @@ public class LogRetentionCleaner {
      * <p>
      * 该方法由 Spring 调度器按照配置的 cron 表达式自动执行（默认每天凌晨 2:30 执行）。
      * 它会根据配置的保留天数自动删除超过保留期限的访问日志记录。
+     * </p>
+     * <p>
+     * 注意：cron 表达式由 {@code @Scheduled} 在启动时解析，**不支持运行时修改**，
+     * 因此未纳入系统设置（后台可配的是启用开关、保留天数、批大小与最大批次数）。
      * </p>
      *
      * @see #performCleanup(LocalDateTime, boolean) 实际执行清理逻辑的方法
@@ -73,19 +100,20 @@ public class LogRetentionCleaner {
      */
     private LogRetentionCleanupResult performCleanup(LocalDateTime providedCutoff, boolean forceWhenDisabled) {
         // 初始化结果对象并填充基本配置信息
+        boolean enabled = isCleanupEnabled();
         LogRetentionCleanupResult result = new LogRetentionCleanupResult();
-        result.setEnabled(properties.isEnabled());
+        result.setEnabled(enabled);
 
-        int retentionDays = properties.getRetentionDays();
-        int batchSize = Math.max(1, properties.getBatchSize());
-        int maxBatches = Math.max(1, properties.getMaxBatchesPerRun());
+        int retentionDays = retentionDays();
+        int batchSize = Math.max(1, batchSize());
+        int maxBatches = Math.max(1, maxBatchesPerRun());
         result.setRetentionDays(retentionDays);
         result.setBatchSize(batchSize);
         result.setMaxBatchesPerRun(maxBatches);
         result.setExecutedAt(LocalDateTime.now());
 
         // 检查功能是否被禁用且未设置强制执行
-        if (!properties.isEnabled() && !forceWhenDisabled) {
+        if (!enabled && !forceWhenDisabled) {
             result.setSkipped(true);
             result.setSuccess(true);
             result.setMessage("log retention cleanup is disabled");

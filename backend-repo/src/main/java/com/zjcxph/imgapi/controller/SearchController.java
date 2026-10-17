@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.resp.IdCardArchiveSearchResponse;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.service.SearchService;
 import com.zjcxph.imgapi.utils.AESUtil;
+import com.zjcxph.imgapi.utils.IdCardQueryTimestampValidator;
 import com.zjcxph.imgapi.utils.IdCardUrlTokenUtil;
 import com.zjcxph.imgapi.utils.IpUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -40,6 +42,16 @@ public class SearchController {
 
     @Value("${aes.secret.key}")
     private String secretKey;
+
+    /**
+     * 加密身份证查询允许的时间戳偏差（秒）。小于等于 0 表示关闭校验。
+     *
+     * <p>字段初始化值保证非 Spring 环境下（例如单元测试）仍采用安全默认值。
+     * 如需临时放宽以兼容调用方时钟偏差，可调整
+     * {@code aes.id-card-query.timestamp-tolerance-seconds}。</p>
+     */
+    @Value("${aes.id-card-query.timestamp-tolerance-seconds:300}")
+    private int timestampToleranceSeconds = IdCardQueryTimestampValidator.DEFAULT_TOLERANCE_SECONDS;
 
     public SearchController(SearchService searchService) {
         this.searchService = searchService;
@@ -59,14 +71,19 @@ public class SearchController {
             @RequestParam String iv,
             @RequestParam String timestamp) {
         try {
-            logger.info("Decrypt id-card for userId={}, timestamp={}", userId, timestamp);
+            IdCardQueryTimestampValidator.validate(
+                    timestamp, timestampToleranceSeconds, Instant.now().getEpochSecond());
+            logger.info("Decrypt id-card for external userId={}", userId);
             String decryptedIdCard = AESUtil.decryptIdCardWithTimestamp(EncryptID, iv, userId, timestamp, secretKey);
             List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
             logger.info("Found {} records for decrypted id-card", patients.size());
             return Result.success(patients);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Encrypted id-card query rejected: {}", e.getMessage());
+            return Result.fail("加密身份证查询参数无效");
         } catch (Exception e) {
-            logger.error("Decrypt id-card failed: {}", e.getMessage(), e);
-            return Result.fail("解密失败：" + e.getMessage());
+            logger.error("Encrypted id-card query failed: {}", e.getMessage());
+            return Result.fail("加密身份证查询失败");
         }
     }
 
@@ -77,14 +94,17 @@ public class SearchController {
             @RequestParam String userId,
             @RequestParam String iv) {
         try {
-            logger.info("Decrypt legacy id-card for userId={}", userId);
+            logger.info("Decrypt legacy id-card for external userId={}", userId);
             String decryptedIdCard = AESUtil.decryptIdCard(EncryptID, iv, userId, secretKey);
             List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
             logger.info("Found {} records for decrypted legacy id-card", patients.size());
             return Result.success(patients);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Legacy encrypted id-card query rejected: {}", e.getMessage());
+            return Result.fail("加密身份证查询参数无效");
         } catch (Exception e) {
-            logger.error("Decrypt legacy id-card failed: {}", e.getMessage(), e);
-            return Result.fail("解密失败：" + e.getMessage());
+            logger.error("Legacy encrypted id-card query failed: {}", e.getMessage());
+            return Result.fail("加密身份证查询失败");
         }
     }
 
@@ -128,11 +148,11 @@ public class SearchController {
     @Operation(summary = "根据病案号查询患者信息")
     @GetMapping("/patient/{bah}")
     public Result<List<Patient>> getPatientByBah(@PathVariable String bah) {
-        logger.info("查询病案号 {} 的患者信息", bah);
         if (bah == null || bah.isEmpty()) {
             return Result.fail("病案号不能为空");
         }
         List<Patient> patients = searchService.getPatientByBah(bah);
+        logger.info("Found {} patients for archive-number lookup", patients.size());
         return Result.success(patients);
     }
 
@@ -141,8 +161,7 @@ public class SearchController {
     @GetMapping("/getBAHByID/{idCard}")
     public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
         List<Patient> patients = searchService.getBAHByID(idCard);
-        String masked = idCard.length() > 4 ? idCard.substring(0, 4) + "***" : "***";
-        logger.info("Found {} records for idCard={}", patients.size(), masked);
+        logger.info("Found {} records for id-card path lookup", patients.size());
         return Result.success(patients);
     }
 
@@ -151,8 +170,7 @@ public class SearchController {
     @RequirePermissions({"search:read"})
     public Result<List<Patient>> getBAHByIdCard(@Valid @RequestBody IdCardQueryRequest request) {
         List<Patient> patients = searchService.getBAHByID(request.getIdCard());
-        logger.info("Found {} records for idCard={}***", patients.size(),
-                request.getIdCard().substring(0, 4));
+        logger.info("Found {} records for id-card lookup", patients.size());
         return Result.success(patients);
     }
 }

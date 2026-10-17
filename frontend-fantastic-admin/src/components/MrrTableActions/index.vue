@@ -146,7 +146,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
   font-size: 16px;
   color: var(--mrr-muted-foreground);
   background: color-mix(in srgb, var(--mrr-muted) 68%, transparent);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .mrr-table-actions__button:hover,
@@ -203,7 +203,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
   gap: 10px;
   min-height: 40px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 :global(.mrr-table-actions__menu-item--danger) {

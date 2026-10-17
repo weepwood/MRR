@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { merge, mergeWithoutUndefinedProps, diffTwoObj } from '../object'
+import { diffTwoObj, hasKey, merge, mergeWithoutUndefinedProps } from '../object'
+
+describe('hasKey', () => {
+  it('应识别自有属性', () => {
+    expect(hasKey({ archiveDepartmentThemes: '{}' }, 'archiveDepartmentThemes')).toBe(true)
+  })
+
+  it('不应把原型链上的属性判为自有属性', () => {
+    expect(hasKey({}, 'toString')).toBe(false)
+  })
+
+  it('应处理值为 undefined 的自有属性', () => {
+    expect(hasKey({ a: undefined }, 'a')).toBe(true)
+  })
+
+  it('不使用 Object.hasOwn（该 API 需要 Chrome 93+，基线为 Chrome 86）', () => {
+    const original = Object.hasOwn
+    // 模拟基线浏览器：删掉该 API 后仍应正常工作
+    ;(Object as any).hasOwn = undefined
+    try {
+      expect(hasKey({ a: 1 }, 'a')).toBe(true)
+      expect(hasKey({}, 'a')).toBe(false)
+    }
+    finally {
+      ;(Object as any).hasOwn = original
+    }
+  })
+})
 
 describe('merge', () => {
   it('应合并两个普通对象（第一参数优先级更高）', () => {

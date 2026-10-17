@@ -12,15 +12,18 @@ public class OcrScheduler {
     private final OcrJobService service;
     private final ExecutorService executor;
     private final Semaphore slots;
-    public OcrScheduler(OcrJobService service,OcrRuntimeProperties properties) {
+    private final OcrEngine engine;
+    public OcrScheduler(OcrJobService service,OcrRuntimeProperties properties,OcrEngine engine) {
         this.service=service;
+        this.engine=engine;
         int concurrency=Math.max(1,Math.min(4,properties.getMaxWorkers()));
         slots=new Semaphore(concurrency);
         executor=Executors.newFixedThreadPool(concurrency,r->{Thread t=new Thread(r,"ocr-page");t.setDaemon(true);return t;});
     }
     @Scheduled(fixedDelayString="${ocr.runtime.poll-millis:1000}")
     public void dispatch() {
-        if (!service.enabled() || !slots.tryAcquire()) return;
+        if (!service.enabled()) {engine.reset();return;}
+        if (!slots.tryAcquire()) return;
         try { executor.execute(()->{try { service.runOne(); } finally { slots.release(); }}); }
         catch(RejectedExecutionException e) { slots.release(); }
     }

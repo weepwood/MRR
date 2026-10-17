@@ -17,6 +17,7 @@ import java.util.function.BooleanSupplier;
 public class OcrEngine {
     private final OcrRuntimeProperties properties;
     private final Map<Long, Worker> workers = new ConcurrentHashMap<>();
+    private final AtomicLong generation = new AtomicLong();
     private final ExecutorService readers = Executors.newCachedThreadPool(r -> {
         Thread thread = new Thread(r, "ocr-protocol"); thread.setDaemon(true); return thread;
     });
@@ -39,10 +40,17 @@ public class OcrEngine {
     public OcrProtocol.Result recognize(String profile, Path input, int timeout, int maxOutput, BooleanSupplier cancelled) {
         String fingerprint = fingerprint(profile);
         long thread = Thread.currentThread().threadId();
-        Worker worker = workers.get(thread);
-        if (worker == null || !worker.profile.equals(profile) || !worker.fingerprint.equals(fingerprint) || !worker.process.isAlive()) {
-            if (worker != null) worker.close();
-            worker = start(profile, fingerprint); workers.put(thread, worker);
+        long version = generation.get();
+        if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) throw new OcrFailure("CANCELLED");
+        Worker worker;
+        // Only registration is serialized; reset must never wait for a page's inference timeout.
+        synchronized (workers) {
+            if (version != generation.get()) throw new OcrFailure("CANCELLED");
+            worker = workers.get(thread);
+            if (worker == null || !worker.profile.equals(profile) || !worker.fingerprint.equals(fingerprint) || !worker.process.isAlive()) {
+                if (worker != null) worker.close();
+                worker = start(profile, fingerprint); workers.put(thread, worker);
+            }
         }
         String id = java.util.UUID.randomUUID().toString();
         Worker current = worker;
@@ -101,5 +109,9 @@ public class OcrEngine {
         Worker(String profile, String fingerprint, Process process) { this(profile, fingerprint, process, new AtomicLong()); }
         void close() { process.descendants().forEach(ProcessHandle::destroyForcibly); process.destroyForcibly(); }
     }
-    @PreDestroy public void close() { workers.values().forEach(Worker::close); workers.clear(); readers.shutdownNow(); }
+    /** Release model memory on disable without closing the reusable protocol executor. */
+    public void reset() {
+        synchronized (workers) { generation.incrementAndGet(); workers.values().forEach(Worker::close); workers.clear(); }
+    }
+    @PreDestroy public void close() { reset(); readers.shutdownNow(); }
 }

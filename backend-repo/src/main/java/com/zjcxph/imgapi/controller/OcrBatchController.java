@@ -15,10 +15,13 @@ public class OcrBatchController {
     private final OcrBatchService service;
     public OcrBatchController(OcrBatchService service) {this.service=service;}
     @ModelAttribute public void privateResponse(HttpServletResponse response) {response.setHeader("Cache-Control","private, no-store");}
-    @PostMapping("/preview") public Result<Preview> preview(@RequestBody Request request) {return Result.success(service.preview(AuthContext.getCurrentUser(),request));}
-    @PostMapping public Result<View> create(@RequestBody Request request) {return Result.success(service.create(AuthContext.getCurrentUser(),request));}
+    @PostMapping("/preview") @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
+    public Result<Preview> preview(@RequestBody Request request) {return Result.success(service.preview(AuthContext.getCurrentUser(),request));}
+    @PostMapping @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
+    public Result<View> create(@RequestBody Request request) {return Result.success(service.create(AuthContext.getCurrentUser(),request));}
     @GetMapping public Result<List<View>> list(@RequestParam(defaultValue="") String after) {return Result.success(service.list(AuthContext.getCurrentUser(),after));}
     @GetMapping("/{id}") public Result<View> get(@PathVariable String id) {return Result.success(service.get(AuthContext.getCurrentUser(),id));}
     @GetMapping("/{id}/jobs") public Result<List<String>> children(@PathVariable String id,@RequestParam(defaultValue="") String after) {return Result.success(service.children(AuthContext.getCurrentUser(),id,after));}
-    @PostMapping("/{id}/{action:pause|resume|cancel}") public Result<View> action(@PathVariable String id,@PathVariable String action) {return Result.success(service.action(AuthContext.getCurrentUser(),id,action));}
+    @PostMapping("/{id}/{action:pause|resume|cancel}") @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
+    public Result<View> action(@PathVariable String id,@PathVariable String action) {return Result.success(service.action(AuthContext.getCurrentUser(),id,action));}
 }

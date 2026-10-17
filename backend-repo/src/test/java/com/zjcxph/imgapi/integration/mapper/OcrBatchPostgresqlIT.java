@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.*;
 @Transactional(propagation=Propagation.NOT_SUPPORTED)
 class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired OcrBatchMapper batches;@Autowired OcrMapper queue;@Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager manager;
-    OcrBatchService service;OcrLoadGuard guard;AuthSession actor;int first;int last;String batchId;
+    OcrBatchService service;OcrLoadGuard guard;AuthSession actor;int first;int last;String batchId;Long archive;
     @BeforeEach void setup() {
         actor=new AuthSession();actor.setId(888L);actor.setUsername("synthetic-batch-operator");actor.setRoleCode("ADMIN");
         var access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
@@ -35,12 +35,12 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
         when(jobs.configuration()).thenReturn(new OcrModels.Config("test","b".repeat(64),30,4194304,.7));
         guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);
         service=new OcrBatchService(batches,queue,access,jobs,guard,new TransactionTemplate(manager));
-        String code=UUID.randomUUID().toString();Long archive=jdbc.queryForObject("INSERT INTO app.mr_archive(bah,sjh) VALUES(?,?) RETURNING id",Long.class,code,code);
+        String code=UUID.randomUUID().toString();archive=jdbc.queryForObject("INSERT INTO app.mr_archive(bah,sjh) VALUES(?,?) RETURNING id",Long.class,code,code);
         var ids=jdbc.queryForList("INSERT INTO app.mr_scan(archive_id,bah,sjh,filename,folder,btype,uploadflag) SELECT a.id,a.bah,a.sjh,'synthetic-'||g||'.jpg','synthetic',0,1 FROM app.mr_archive a CROSS JOIN generate_series(1,205) g WHERE a.id=? RETURNING id",Integer.class,archive);
         first=ids.getFirst();last=ids.getLast();batchId=null;
     }
     @AfterEach void cleanup() {
-        if(batchId!=null) {jdbc.update("UPDATE app.mr_smart_classification_job SET status='CANCELLED' WHERE batch_id=?",batchId);batches.status(batchId,"CANCELLED",null);}
+        com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,manager,archive,batchId);
     }
     @Test void boundedCursorAndChildrenResumeWithoutDuplicates() {
         batchId=service.create(actor,new OcrBatchService.Request(first-1,last,201,UUID.randomUUID().toString(),false)).id();

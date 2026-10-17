@@ -11,7 +11,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.security.ExternalArchiveGrant;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ExternalArchiveAccessService;
-import com.zjcxph.imgapi.service.ImageUrlService;
+import com.zjcxph.imgapi.service.ImageContentService;
 import com.zjcxph.imgapi.utils.IpUtil;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import jakarta.servlet.http.Cookie;
@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
@@ -50,18 +50,18 @@ public class ExternalArchiveController {
     private final ObjectMapper objectMapper;
     private final ExternalArchiveAccessService externalArchiveAccessService;
     private final ArchiveExportService archiveExportService;
-    private final ImageUrlService imageUrlService;
+    private final ImageContentService imageContentService;
 
     public ExternalArchiveController(
             ObjectMapper objectMapper,
             ExternalArchiveAccessService externalArchiveAccessService,
             ArchiveExportService archiveExportService,
-            ImageUrlService imageUrlService
+            ImageContentService imageContentService
     ) {
         this.objectMapper = objectMapper;
         this.externalArchiveAccessService = externalArchiveAccessService;
         this.archiveExportService = archiveExportService;
-        this.imageUrlService = imageUrlService;
+        this.imageContentService = imageContentService;
     }
 
     @PostMapping("/api/v1/integration/archive/tickets")
@@ -223,26 +223,49 @@ public class ExternalArchiveController {
     }
 
     @GetMapping("/api/v1/external/archive/image/{id}")
-    public ResponseEntity<Void> image(
+    public ResponseEntity<StreamingResponseBody> image(
             @PathVariable Integer id,
             HttpServletRequest request
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
         Scan scan = externalArchiveAccessService.requireImage(grant, id);
-        String location = imageUrlService.buildPreferredImageUrl(scan);
-        if (!StringUtils.hasText(location)) {
-            throw new BusinessException(404, "无法构造影像地址");
+        ImageContentService.ImageContent content = imageContentService.open(id);
+        String clientIp = IpUtil.getClientIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        String currentRequestId = requestId(request);
+
+        StreamingResponseBody body = outputStream -> {
+            try (content) {
+                content.inputStream().transferTo(outputStream);
+                externalArchiveAccessService.recordAudit(
+                        grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                        clientIp, userAgent, currentRequestId, "SUCCESS", null
+                );
+            } catch (IOException | RuntimeException exception) {
+                externalArchiveAccessService.recordAudit(
+                        grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                        clientIp, userAgent, currentRequestId, "FAILED", null
+                );
+                throw exception;
+            }
+        };
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(content.mediaType());
+        headers.setContentDisposition(ContentDisposition.inline()
+                .filename(content.filename(), StandardCharsets.UTF_8)
+                .build());
+        headers.setCacheControl("private, no-store");
+        headers.setPragma("no-cache");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("Referrer-Policy", "no-referrer");
+        if (content.contentLength() != null && content.contentLength() > 0) {
+            headers.setContentLength(content.contentLength());
         }
-        externalArchiveAccessService.recordAudit(
-                grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
-                IpUtil.getClientIp(request), request.getHeader("User-Agent"), requestId(request),
-                "SUCCESS", null
-        );
-        return ResponseEntity.status(302)
-                .location(URI.create(location))
-                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=300")
-                .header("Referrer-Policy", "no-referrer")
-                .build();
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(body);
     }
 
     @PostMapping("/api/v1/external/archive/logout")

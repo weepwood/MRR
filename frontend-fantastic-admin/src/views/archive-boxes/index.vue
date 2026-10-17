@@ -878,13 +878,13 @@ h1 {
   width: 100%;
 }
 
-@media (width <= 1200px) {
+@media (max-width: 1200px) {
   .filter-grid {
     grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .page-header,
   .view-switcher,
   .header-actions,

@@ -73,7 +73,7 @@ body.archive-immersive .archive-workspace {
   --el-button-active-border-color: var(--color-primary-active);
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   body.archive-immersive .layout .wrapper .main-container {
     height: auto !important;
     min-height: calc(100vh - var(--g-header-actual-height)) !important;
@@ -96,7 +96,7 @@ body.archive-immersive .archive-workspace {
   }
 }
 
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .archive-page .archive-header .archive-heading {
     align-items: flex-start;
   }

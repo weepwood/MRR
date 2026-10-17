@@ -365,7 +365,7 @@ function downloadTemplate() {
   color: var(--el-color-warning);
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .section-heading {
     flex-direction: column;
   }

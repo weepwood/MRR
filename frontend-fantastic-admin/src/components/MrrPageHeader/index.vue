@@ -140,7 +140,7 @@ const hasAside = computed(() => Boolean(slots.actions))
   margin-left: 0;
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .mrr-page-header {
     flex-direction: column;
   }

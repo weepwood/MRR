@@ -284,7 +284,7 @@ h2 {
   color: var(--mrr-tone-warning);
 }
 
-@media (width >= 1440px) {
+@media (min-width: 1440px) {
   .analysis-stack {
     grid-template-columns: max-content minmax(520px, 1fr);
     align-items: start;
@@ -302,7 +302,7 @@ h2 {
   }
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .page-header {
     flex-direction: column;
   }

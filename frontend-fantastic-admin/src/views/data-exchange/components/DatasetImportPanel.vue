@@ -420,13 +420,13 @@ function today() {
   color: var(--el-color-warning);
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .result-summary {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .panel-heading {
     flex-direction: column;
   }

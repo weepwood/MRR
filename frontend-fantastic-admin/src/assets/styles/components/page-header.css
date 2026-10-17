@@ -248,7 +248,7 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
 
 /* ===== 5. 响应式 ===== */
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   html[data-page-title-style] .page-header,
   html[data-page-title-style] .help-center > .help-header,
   html[data-page-title-style] .mrr-page-header {
@@ -272,7 +272,7 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
   }
 }
 
-@media (width <= 560px) {
+@media (max-width: 560px) {
   html[data-page-title-style="card"] .page-header h1,
   html[data-page-title-style="card"] .page-header h2,
   html[data-page-title-style="card"] .help-center > .help-header h1,

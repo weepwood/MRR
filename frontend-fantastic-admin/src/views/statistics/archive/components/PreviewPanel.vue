@@ -455,7 +455,7 @@ onUnmounted(() => {
   min-height: 24px;
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .preview-stage {
     padding: 16px;
   }

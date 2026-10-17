@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .wrapper .main-container .main {
     padding: 16px;
   }

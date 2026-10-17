@@ -17,9 +17,11 @@ body .main .settings-page {
 
 body .main .settings-page .settings-workspace-frame {
   box-sizing: border-box;
+
+  /* dvh 需 Chrome 108+，vh 在前作兜底；成对相邻声明便于 lint 识别为刻意降级。 */
   min-height: 100vh;
-  height: 100vh;
   min-height: 100dvh;
+  height: 100vh;
   height: 100dvh;
 }
 
@@ -43,8 +45,7 @@ body .main .settings-page .settings-sidebar {
 body .main .settings-page .settings-content {
   min-height: 0;
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;

@@ -131,7 +131,7 @@ const hasHeader = computed(() => Boolean(
   margin-left: 0;
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .mrr-section-card__header {
     align-items: flex-start;
     flex-direction: column;

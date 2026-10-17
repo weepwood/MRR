@@ -1645,7 +1645,7 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .primary-grid {
     grid-template-columns: 1fr;
   }
@@ -1655,7 +1655,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .check-grid,
   .filter-grid {
     grid-template-columns: 1fr;

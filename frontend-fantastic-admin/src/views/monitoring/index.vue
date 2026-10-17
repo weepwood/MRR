@@ -537,7 +537,7 @@ onUnmounted(() => {
   color: var(--el-color-warning);
 }
 
-@media (width <= 900px) {
+@media (max-width: 900px) {
   .page-header,
   .card-header {
     flex-direction: column;

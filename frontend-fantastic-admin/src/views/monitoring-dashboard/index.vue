@@ -103,7 +103,7 @@ function openStatusPage() {
   border: 0;
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .embedded-status-section {
     padding: 0 12px 12px;
   }

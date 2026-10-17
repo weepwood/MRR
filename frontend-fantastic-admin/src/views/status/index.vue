@@ -859,7 +859,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (width <= 800px) {
+@media (max-width: 800px) {
   .minute-track-wrapper {
     grid-template-columns: minmax(0, 1fr);
     padding-right: 0;
@@ -999,7 +999,7 @@ onBeforeUnmount(() => {
   50% { opacity: 0.65; transform: scale(0.8); }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .status-page {
     padding: 24px 14px;
   }
@@ -1039,7 +1039,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .status-header,
   .incident-row,
   .status-footer {

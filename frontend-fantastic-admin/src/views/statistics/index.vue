@@ -659,7 +659,7 @@ onMounted(refreshAll)
   border-top: 1px solid rgb(0 0 0 / 5%);
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .page-header {
     flex-direction: column;
   }
@@ -669,7 +669,7 @@ onMounted(refreshAll)
   }
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .trend-summary {
     grid-template-columns: 1fr;
   }

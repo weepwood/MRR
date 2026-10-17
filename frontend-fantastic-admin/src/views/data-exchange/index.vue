@@ -728,7 +728,7 @@ h2 {
   color: var(--el-text-color-secondary);
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .dataset-overview {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -739,7 +739,7 @@ h2 {
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header,
   .panel-heading {
     flex-direction: column;

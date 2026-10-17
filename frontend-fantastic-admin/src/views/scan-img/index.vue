@@ -1252,25 +1252,25 @@ watch(idCardParam, async (newId) => {
 }
 
 /* ==================== 响应式 ==================== */
-@media (width <= 1200px) {
+@media (max-width: 1200px) {
   .split-layout { gap: 15px; }
   .left-pane { min-width: 250px; }
 }
 
-@media (width <= 992px) {
+@media (max-width: 992px) {
   .image-gallery { padding: 15px; }
   .split-layout { gap: 10px; }
   .left-pane { min-width: 220px; }
   .type-list { grid-template-columns: 1fr; }
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .split-layout { flex-direction: column; }
   .left-pane { width: 100%; }
   .thumbs { width: 100px; min-width: 100px; }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .image-gallery { padding: 10px; }
   .split-layout { gap: 8px; }
 

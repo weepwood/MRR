@@ -326,7 +326,7 @@ defineExpose({ resetVisible, scrollToIndex })
   text-align: center;
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .thumb-panel {
     max-height: 240px;
   }

@@ -1160,7 +1160,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   margin-top: 6px;
 }
 
-@media (width <= 1180px) {
+@media (max-width: 1180px) {
   .dashboard-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1174,7 +1174,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   }
 }
 
-@media (width <= 900px) {
+@media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1205,7 +1205,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   }
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-auto-rows: auto;

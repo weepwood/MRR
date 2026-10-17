@@ -450,7 +450,7 @@ h2 { margin: 0; font-size: 28px; }
 
 .legend.none { background: transparent; }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header { flex-direction: column; }
 
   .header-actions { justify-content: space-between; width: 100%; }

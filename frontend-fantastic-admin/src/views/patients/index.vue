@@ -325,7 +325,7 @@ h2 { margin: 0; font-size: 28px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }
 .bah-link:hover { text-decoration: underline; }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header { flex-direction: column; }
   .header-actions { flex-wrap: wrap; width: 100%; }
 }

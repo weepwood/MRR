@@ -171,7 +171,7 @@ function handleSearch() {
 }
 
 /* ===== 响应式 ===== */
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .search-card {
     padding: 36px 24px 32px;
   }

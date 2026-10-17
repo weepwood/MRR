@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<{
   gap: var(--mrr-space-4);
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .mrr-page-shell {
     gap: var(--mrr-space-4);
   }

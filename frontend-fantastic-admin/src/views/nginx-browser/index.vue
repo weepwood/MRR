@@ -984,7 +984,7 @@ onBeforeUnmount(revokePreviewUrl)
   object-fit: contain;
 }
 
-@media (width <= 1180px) {
+@media (max-width: 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1002,7 +1002,7 @@ onBeforeUnmount(revokePreviewUrl)
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .browser-header,
   .header-actions,
   .toolbar,

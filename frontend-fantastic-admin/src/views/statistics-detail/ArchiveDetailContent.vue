@@ -1157,7 +1157,7 @@ h2 {
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .page-header {
     flex-direction: column;
   }
@@ -1184,7 +1184,7 @@ h2 {
   }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .archive-grid {
     grid-template-columns: minmax(0, 1fr);
   }

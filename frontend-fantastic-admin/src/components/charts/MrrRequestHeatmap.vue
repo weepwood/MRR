@@ -589,7 +589,7 @@ function hideTooltip() {
   border-radius: var(--mrr-radius-md);
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .heatmap-header {
     align-items: flex-start;
   }

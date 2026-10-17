@@ -945,7 +945,7 @@ h2 {
   border-radius: var(--mrr-radius-md);
 }
 
-@media (width <= 1200px) {
+@media (max-width: 1200px) {
   .relation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -955,7 +955,7 @@ h2 {
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header,
   .issue-header,
   .search-row {

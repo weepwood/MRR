@@ -206,7 +206,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   gap: 2px;
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .case-item {
     grid-template-columns: 1fr;
   }

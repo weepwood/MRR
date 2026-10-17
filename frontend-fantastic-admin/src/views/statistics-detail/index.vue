@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--folder-accent) 9%, transparent);
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .department-themed-archive :deep(.folder-code-block-full) {
     grid-template-columns: minmax(0, 1fr);
     gap: 9px;

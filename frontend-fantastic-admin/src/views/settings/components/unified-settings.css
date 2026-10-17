@@ -52,7 +52,7 @@
 .section-icon.danger { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 9%, var(--mrr-card)); }
 .system-panel { min-height: 300px; }
 
-@media (width <= 980px) {
+@media (max-width: 980px) {
   .settings-workspace-frame { height: auto; min-height: 0; padding-block: 0; }
   .settings-shell { grid-template-columns: 1fr; height: auto; min-height: 0; overflow: visible; }
   .settings-sidebar { overflow: visible; border-right: 0; border-bottom: 1px solid var(--mrr-border); }
@@ -61,7 +61,7 @@
   .sidebar-save-card { margin-top: 0; }
 }
 
-@media (width <= 680px) {
+@media (max-width: 680px) {
   .header-actions { display: none; }
   .settings-nav { grid-template-columns: 1fr; }
   .settings-content { padding: var(--mrr-space-4); }

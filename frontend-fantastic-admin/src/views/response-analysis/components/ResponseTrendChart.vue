@@ -255,7 +255,7 @@ function formatBucket(bucket: string) {
   border-radius: var(--mrr-radius-pill);
 }
 
-@media (width <= 900px) {
+@media (max-width: 900px) {
   .chart-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 0;
@@ -267,7 +267,7 @@ function formatBucket(bucket: string) {
   }
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .chart-overview {
     grid-template-columns: 1fr;
     gap: 0;

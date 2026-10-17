@@ -283,7 +283,7 @@ onMounted(async () => {
   min-width: 116px;
 }
 
-@media (width <= 820px) {
+@media (max-width: 820px) {
   .help-header {
     flex-direction: column;
   }
@@ -293,7 +293,7 @@ onMounted(async () => {
   }
 }
 
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .help-header,
   .documentation-card :deep(.el-card__body) {
     padding: 18px;

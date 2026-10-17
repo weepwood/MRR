@@ -490,7 +490,7 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-@media (width <= 980px) {
+@media (max-width: 980px) {
   .theme-editor-head {
     display: none;
   }
@@ -504,7 +504,7 @@ onMounted(() => {
   }
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .department-theme-header {
     flex-direction: column;
   }

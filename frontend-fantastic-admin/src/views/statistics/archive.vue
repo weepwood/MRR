@@ -1180,7 +1180,7 @@ onUnmounted(() => {
   min-height: 240px;
 }
 
-@media (width <= 1280px) {
+@media (max-width: 1280px) {
   .archive-wall-toolbar {
     align-items: flex-start;
   }
@@ -1200,7 +1200,7 @@ onUnmounted(() => {
   }
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .archive-more-settings-float {
     top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 12px);
     right: 12px;
@@ -1248,7 +1248,7 @@ onUnmounted(() => {
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .archive-wall-toolbar-actions {
     flex-wrap: wrap;
   }

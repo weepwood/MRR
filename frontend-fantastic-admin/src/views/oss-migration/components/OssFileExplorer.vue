@@ -868,7 +868,7 @@ onMounted(() => {
   height: 70vh;
 }
 
-@media (width <= 1280px) {
+@media (max-width: 1280px) {
   .repository-summary {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
@@ -882,7 +882,7 @@ onMounted(() => {
   }
 }
 
-@media (width <= 860px) {
+@media (max-width: 860px) {
   .repository-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

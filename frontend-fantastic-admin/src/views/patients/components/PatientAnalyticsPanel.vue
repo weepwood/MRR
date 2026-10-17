@@ -493,13 +493,13 @@ onMounted(reloadAll)
   gap: 6px 12px;
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .chart-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .analytics-heading {
     flex-direction: column;
   }

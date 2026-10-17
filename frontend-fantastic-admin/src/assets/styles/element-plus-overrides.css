@@ -677,7 +677,7 @@ body .el-descriptions__table {
   background: var(--mrr-primary);
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .el-dialog {
     max-width: calc(100vw - 24px);
     margin-inline: 12px;

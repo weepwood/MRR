@@ -53,7 +53,9 @@ public class ImageTypeService {
             transactions.executeWithoutResult(tx->{
                 Suggestion current=mapper.lockSuggestion(suggestionId); requirePending(current);
                 TypeState scan=mapper.lockScan(current.getScanId()); requireActive(scan);
-                var fact=ocr.fact(current.getScanId());
+                // Same lock order as automatic application: suggestion -> scan -> OCR fact.
+                // Keep the verified OCR version stable through the type + audit commit.
+                var fact=ocr.lockFact(current.getScanId());
                 if(fact==null || !Objects.equals(fact.getResultVersion(),current.getOcrResultVersion())
                         || !source.hash().equals(current.getOcrContentHash()) || !ocr.belongs(scan.getId(),scan.getArchiveId())
                         || scan.getTypeVersion()!=current.getOriginalTypeVersion() || !Objects.equals(scan.getBtype(),current.getOriginalType()))

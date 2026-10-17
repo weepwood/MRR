@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { OcrBatch, OcrBatchPreview, OcrBatchRequest } from '@/api/modules/ocr-batches'
+import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/api/modules/ocr-batches'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch } from '@/api/modules/ocr-batches'
+import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import useAuth from '@/utils/composables/useAuth'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
@@ -20,7 +20,13 @@ const childJobs = ref<string[]>([])
 const selectedJob = ref('')
 const visibility = useDocumentVisibility()
 const scope = computed(() => `${form.afterId}:${form.upperId}:${form.maxPages}:${form.autoApply}`)
-const validPreview = computed(() => preview.value && previewScope.value === scope.value)
+const validPreview = computed(() => preview.value && previewScope.value === scope.value && (!form.autoApply || preview.value.autoAvailable))
+const autoAvailable = ref(false)
+const rollbackId = ref('')
+const rollbackOpen = ref(false)
+const rollbackAfter = ref(0)
+const rollbackRows = ref<OcrRevert[]>([])
+const rollbackMessage = ref('')
 let loading = false
 let generation = 0
 
@@ -58,13 +64,13 @@ async function inspect() {
     const requestedScope = scope.value
     form.idempotencyKey ||= `batch-${Date.now()}-${Math.random().toString(36).slice(2)}`
     const result = await previewOcrBatch({ ...form })
-    if (scope.value === requestedScope) { preview.value = result.data || null; previewScope.value = requestedScope }
+    if (scope.value === requestedScope) { preview.value = result.data || null; previewScope.value = requestedScope; autoAvailable.value = !!result.data?.autoAvailable }
   })
 }
 async function create() {
   if (!validPreview.value || !preview.value) { return }
   await attempt(async () => {
-    await createOcrBatch({ ...form, upperId: preview.value!.upperId })
+    await createOcrBatch({ ...form, upperId: preview.value!.upperId, policyChecksum: form.autoApply ? preview.value!.policyChecksum : undefined })
     preview.value = null
     form.idempotencyKey = ''
     after.value = ''
@@ -85,6 +91,30 @@ async function children(id: string, next = false) {
 }
 async function nextPage() { after.value = batches.value[batches.value.length - 1]?.id || ''; generation++; await reload() }
 onMounted(() => void reload())
+async function inspectRollback(id: string) {
+  await attempt(async () => {
+    rollbackId.value = id
+    rollbackAfter.value = 0
+    rollbackRows.value = (await previewOcrRollback(id)).data || []
+    rollbackMessage.value = ''
+    rollbackOpen.value = true
+  })
+}
+async function rollbackPage() {
+  await attempt(async () => {
+    const result = (await rollbackOcrBatchPage(rollbackId.value, rollbackAfter.value)).data
+    if (result) {
+      rollbackMessage.value = `已回退 ${result.reverted} 页，跳过 ${result.skipped} 页`
+      rollbackAfter.value = result.nextAfterAuditId
+      rollbackRows.value = (await previewOcrRollback(rollbackId.value, rollbackAfter.value)).data || []
+      await reload()
+    }
+  })
+}
+async function skipRollbackPage() {
+  rollbackAfter.value = rollbackRows.value[rollbackRows.value.length - 1]?.auditId || rollbackAfter.value
+  rollbackRows.value = (await previewOcrRollback(rollbackId.value, rollbackAfter.value)).data || []
+}
 </script>
 
 <template>
@@ -103,12 +133,21 @@ onMounted(() => void reload())
         <el-input-number v-model="form.maxPages" :min="1" :max="10000" />
       </el-form-item>
     </el-form>
+    <p v-if="auth('classification:auto-apply') && auth('classification:review')">
+      <el-checkbox v-model="form.autoApply" :disabled="!autoAvailable">
+        授权本批次仅对已验收类别自动归类，其余页面进入人工审核
+      </el-checkbox>
+      <span v-if="!autoAvailable">请先预览；没有对应模型、规则与类别的独立验收证据时不可开启。</span>
+    </p>
     <el-button @click="inspect">
       预览范围
     </el-button>
     <div v-if="validPreview && preview" class="batch-preview">
       <p>扫描上界 {{ preview.upperId }}；本次范围内最多处理 {{ preview.eligibleInLimit }} 页{{ preview.truncated ? '，仍有更多候选，后续批次继续处理' : '' }}。</p>
       <p>运行条件：{{ preview.readiness }}。未达到资源或延迟基线要求时保持等待。</p>
+      <p v-if="form.autoApply">
+        将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
+      </p>
       <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
         创建此范围的识别批次
       </el-button>
@@ -122,6 +161,7 @@ onMounted(() => void reload())
         </template>
       </el-table-column>
       <el-table-column prop="successCount" label="已识别" /><el-table-column prop="failedCount" label="失败" />
+      <el-table-column prop="autoAppliedCount" label="自动归类" /><el-table-column prop="reviewRequiredCount" label="待审核建议" />
       <el-table-column prop="cursorId" label="续跑游标" /><el-table-column prop="reasonCode" label="等待原因" />
       <el-table-column label="操作" min-width="260">
         <template #default="{ row }">
@@ -133,6 +173,9 @@ onMounted(() => void reload())
             取消
           </el-button><el-button @click="children(row.id)">
             查看明细与审核
+          </el-button>
+          <el-button v-if="row.autoApply && auth('classification:override')" @click="inspectRollback(row.id)">
+            回退预览
           </el-button>
         </template>
       </el-table-column>
@@ -152,6 +195,25 @@ onMounted(() => void reload())
       </el-button>
       <ClassificationReview v-if="selectedJob" :job-id="selectedJob" />
     </section>
+    <el-dialog v-model="rollbackOpen" title="自动归类回退预览" width="min(900px, 95vw)">
+      <p>先关闭自动归类总开关并暂停或取消批次。只撤销该批次仍为最后一次变更的自动归类，后续人工操作会跳过。</p>
+      <p aria-live="polite">
+        {{ rollbackMessage }}
+      </p>
+      <el-table :data="rollbackRows">
+        <el-table-column prop="scanId" label="影像 ID" /><el-table-column prop="newType" label="自动类型" /><el-table-column label="可回退">
+          <template #default="{ row }">
+            {{ row.eligible ? '可以恢复为未分类' : '已有后续变化，跳过' }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-button :disabled="!rollbackRows.some(row => row.eligible)" @click="rollbackPage">
+        回退本页可撤销项（最多 50 页）
+      </el-button>
+      <el-button :disabled="!rollbackRows.length" @click="skipRollbackPage">
+        跳过本页
+      </el-button>
+    </el-dialog>
   </div>
 </template>
 

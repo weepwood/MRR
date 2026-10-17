@@ -128,6 +128,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         }
 
         validateBoolean(settings, OCR_ENABLED, "是否启用 OCR");
+        validateBoolean(settings,"classificationAutoApplyEnabled","是否启用已验收类别自动归类");
         validateBoolean(settings, OCR_AUTO_PROCESS_NEW_SCANS, "新扫描自动 OCR");
         validateOcrProfile(settings.get(OCR_PROFILE));
         validateOcrLanguages(settings.get(OCR_LANGUAGES));

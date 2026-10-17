@@ -34,7 +34,7 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
         when(jobs.configuration()).thenReturn(new OcrModels.Config("test","b".repeat(64),30,4194304,.7));
         guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);
-        service=new OcrBatchService(batches,queue,access,jobs,guard,new TransactionTemplate(manager));
+        service=new OcrBatchService(batches,queue,access,jobs,guard,new TransactionTemplate(manager),mock(OcrQualityGate.class));
         String code=UUID.randomUUID().toString();Long archive=jdbc.queryForObject("INSERT INTO app.mr_archive(bah,sjh) VALUES(?,?) RETURNING id",Long.class,code,code);
         var ids=jdbc.queryForList("INSERT INTO app.mr_scan(archive_id,bah,sjh,filename,folder,btype,uploadflag) SELECT a.id,a.bah,a.sjh,'synthetic-'||g||'.jpg','synthetic',0,1 FROM app.mr_archive a CROSS JOIN generate_series(1,205) g WHERE a.id=? RETURNING id",Integer.class,archive);
         first=ids.getFirst();last=ids.getLast();batchId=null;

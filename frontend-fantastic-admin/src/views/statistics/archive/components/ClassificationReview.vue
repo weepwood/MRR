@@ -88,7 +88,11 @@ watch(() => props.jobId, () => void load(true))
       </el-table-column>
       <el-table-column prop="reasonCode" label="分类依据" />
       <el-table-column prop="ruleScore" label="规则分数" />
-      <el-table-column prop="reviewStatus" label="状态" />
+      <el-table-column label="状态">
+        <template #default="{ row }">
+          {{ row.autoStatus === 'APPLIED' ? '已自动归类' : row.reviewStatus }}
+        </template>
+      </el-table-column>
       <el-table-column label="原图">
         <template #default="{ row }">
           <el-button link @click="showImage(row.scanId)">

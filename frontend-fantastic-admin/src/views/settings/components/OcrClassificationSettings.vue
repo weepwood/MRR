@@ -14,6 +14,7 @@ interface OcrSettingsModel {
   ocrAutoProcessNewScans: boolean
   ocrLowConfidenceThreshold: number
   classificationBatchReviewThreshold: number
+  classificationAutoApplyEnabled: boolean
 }
 
 const defaults: OcrSettingsModel = {
@@ -26,6 +27,7 @@ const defaults: OcrSettingsModel = {
   ocrAutoProcessNewScans: false,
   ocrLowConfidenceThreshold: 0.7,
   classificationBatchReviewThreshold: 0.92,
+  classificationAutoApplyEnabled: false,
 }
 
 const settings = reactive<OcrSettingsModel>({ ...defaults })
@@ -59,6 +61,7 @@ function serialize() {
     ocrAutoProcessNewScans: String(settings.ocrAutoProcessNewScans),
     ocrLowConfidenceThreshold: settings.ocrLowConfidenceThreshold.toFixed(2),
     classificationBatchReviewThreshold: settings.classificationBatchReviewThreshold.toFixed(2),
+    classificationAutoApplyEnabled: String(settings.classificationAutoApplyEnabled),
   }
 }
 
@@ -80,6 +83,7 @@ async function loadSettings() {
     settings.ocrPageTimeoutSeconds = Math.round(parseNumber(values.ocrPageTimeoutSeconds, defaults.ocrPageTimeoutSeconds, 5, 300))
     settings.ocrMaxOutputBytes = Math.round(parseNumber(values.ocrMaxOutputBytes, defaults.ocrMaxOutputBytes, 65536, 16777216))
     settings.ocrAutoProcessNewScans = parseBoolean(values.ocrAutoProcessNewScans, defaults.ocrAutoProcessNewScans)
+    settings.classificationAutoApplyEnabled = parseBoolean(values.classificationAutoApplyEnabled, false)
     settings.ocrLowConfidenceThreshold = parseNumber(values.ocrLowConfidenceThreshold, defaults.ocrLowConfidenceThreshold, 0, 1)
     settings.classificationBatchReviewThreshold = parseNumber(
       values.classificationBatchReviewThreshold,
@@ -152,6 +156,13 @@ onMounted(loadSettings)
     />
 
     <div class="switch-list">
+      <div class="switch-row">
+        <div>
+          <strong>已验收类别自动归类总开关</strong>
+          <p>仅对已通过独立验收的类别生效，每个历史批次仍需单独授权。关闭后停止自动改类，文字识别可以继续。</p>
+        </div>
+        <el-switch v-model="settings.classificationAutoApplyEnabled" />
+      </div>
       <div class="switch-row">
         <div>
           <strong>启用本地 OCR</strong>

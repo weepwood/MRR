@@ -14,6 +14,7 @@ public interface OcrMapper {
     @Select("SELECT COUNT(*) FROM app.mr_smart_classification_job WHERE status IN ('PENDING','RUNNING','CANCEL_REQUESTED')")
     int queued();
     @Select("SELECT pg_try_advisory_xact_lock(1804518)") boolean creationLock();
+    @Select("SELECT pg_try_advisory_xact_lock_shared(1804519)") boolean ruleSnapshotLock();
     @Select("SELECT version FROM app.mr_classification_rule_set WHERE status='PUBLISHED'") String ruleVersion();
     @Select("SELECT version FROM app.mr_ocr_lexicon_set WHERE status='PUBLISHED'") String lexiconVersion();
     @Select("""
@@ -92,6 +93,9 @@ public interface OcrMapper {
         WHERE j.id=#{id} AND j.lease_token=#{token}
         """) void release(@Param("id") String id, @Param("token") String token);
     @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan}") Fact fact(Integer scan);
+    @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan} FOR UPDATE") Fact lockFact(Integer scan);
+    @Update("UPDATE app.mr_scan_ocr SET status='STALE',updated_at=NOW() WHERE scan_id=#{scan} AND content_hash=#{hash}")
+    void stale(@Param("scan") Integer scan,@Param("hash") String hash);
     @Insert("""
         INSERT INTO app.mr_scan_ocr_history(result_version,scan_id,archive_id,content_hash,engine_version,
           model_checksum,preprocessing_version,ocr_text,lines_json,confidence,image_width,image_height,processed_at)

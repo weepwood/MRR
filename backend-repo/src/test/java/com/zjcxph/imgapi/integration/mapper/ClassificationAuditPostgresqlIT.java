@@ -69,7 +69,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         service.manual(scan,15);
         assertThat(mapper.scan(scan).getTypeVersion()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT operator_user_id FROM app.mr_image_type_audit WHERE scan_id=?",Long.class,scan)).isEqualTo(actor.getId());
-        jdbc.execute("ALTER TABLE app.mr_image_type_audit ADD CONSTRAINT ck_test_classification_failure CHECK(new_type<>11)");
+        jdbc.execute("ALTER TABLE app.mr_image_type_audit ADD CONSTRAINT ck_test_classification_failure CHECK(new_type<>11) NOT VALID");
         try {
             assertThatThrownBy(()->service.manual(scan,11)).isInstanceOf(Exception.class);
             assertThat(mapper.scan(scan).getBtype()).isEqualTo(15);

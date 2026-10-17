@@ -253,7 +253,7 @@ onMounted(loadSettings)
 .foundation-card small { color: var(--mrr-muted-foreground); }
 .foundation-card small { line-height: 1.6; }
 
-@media (width <= 680px) {
+@media (max-width: 680px) {
   .control-grid,
   .foundation-grid { grid-template-columns: 1fr; }
 }

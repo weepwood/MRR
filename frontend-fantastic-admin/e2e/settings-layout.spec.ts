@@ -98,8 +98,10 @@ test.describe('系统设置分类布局', () => {
 
   test('旧登录文案地址跳转到系统设置内部分类', async ({ page }) => {
     await page.goto('/login-settings', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/settings\?section=login-support/)
-    await expect(page.locator('.section-header').getByRole('heading', { name: '登录与支持' })).toBeVisible()
+    // 旧地址是路由级 redirect，但要等守卫里的会话校验（GET /api/v1/auth/me）先完成，
+    // 并行跑 dev server 时这一步可能超过断言默认的 5s，故显式放宽。
+    await expect(page).toHaveURL(/\/settings\?section=login-support/, { timeout: 20_000 })
+    await expect(page.locator('.section-header').getByRole('heading', { name: '登录与支持' })).toBeVisible({ timeout: 20_000 })
   })
 
   test('桌面端仅滚动右侧内容并保持左侧分类导航可见', async ({ page }) => {

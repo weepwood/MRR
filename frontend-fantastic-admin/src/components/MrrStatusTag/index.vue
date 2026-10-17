@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrStatusTag' })
 
-type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
-
 const props = defineProps<{
   status?: string
   label?: string
   tone?: StatusTone
 }>()
+
+type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
 
 const normalizedStatus = computed(() => String(props.status || '').trim().toLowerCase())
 
@@ -67,15 +67,15 @@ const statusMeta = computed(() => {
 }
 
 .mrr-status-tag--success {
-  --mrr-status-color: #16803c;
+  --mrr-status-color: var(--mrr-tone-success);
 }
 
 .mrr-status-tag--info {
-  --mrr-status-color: #087ea4;
+  --mrr-status-color: var(--mrr-tone-info);
 }
 
 .mrr-status-tag--warning {
-  --mrr-status-color: #b45f06;
+  --mrr-status-color: var(--mrr-tone-warning);
 }
 
 .mrr-status-tag--danger {

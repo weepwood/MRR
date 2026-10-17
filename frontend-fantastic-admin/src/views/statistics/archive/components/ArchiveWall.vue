@@ -306,7 +306,7 @@ onUnmounted(() => {
     radial-gradient(circle at top right, hsl(var(--primary) / 5%), transparent 32%),
     var(--surface-muted);
   border: 1px solid var(--divider);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .archive-wall-grid {
@@ -324,7 +324,7 @@ onUnmounted(() => {
   outline: none;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-card);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
@@ -352,11 +352,11 @@ onUnmounted(() => {
   width: 22px;
   height: 22px;
   padding: 0;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   cursor: pointer;
   background: rgb(255 255 255 / 90%);
   border: 1.5px solid var(--divider);
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
   box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
@@ -401,10 +401,10 @@ onUnmounted(() => {
   bottom: 8px;
   padding: 4px 7px;
   font-size: 11px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   pointer-events: none;
   background: rgb(0 0 0 / 56%);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
   opacity: 0;
   transform: translateY(3px);
   transition: opacity 0.15s ease, transform 0.15s ease;

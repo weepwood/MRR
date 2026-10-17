@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.mapper.AuthRoleMapper;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.LoginRateLimiter;
 import com.zjcxph.imgapi.service.impl.AuthServiceImpl;
+import com.zjcxph.imgapi.setting.RuntimeSettingStore;
 import com.zjcxph.imgapi.utils.PasswordUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,12 +34,14 @@ class AuthServicePasswordLengthTest {
     private AuthRoleMapper authRoleMapper;
     @Mock
     private LoginRateLimiter rateLimiter;
+    @Mock
+    private RuntimeSettingStore runtimeSettingStore;
 
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(authUserMapper, authRoleMapper, rateLimiter);
+        authService = new AuthServiceImpl(authUserMapper, authRoleMapper, rateLimiter, runtimeSettingStore);
     }
 
     @Test
@@ -47,7 +50,7 @@ class AuthServicePasswordLengthTest {
         RegisterRequest request = registrationRequest("Ab1234");
         AuthUser created = pendingUser();
         when(authUserMapper.findByUsername("six.user")).thenReturn(null, created);
-        when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role());
+        when(authRoleMapper.findByCode("READER")).thenReturn(role());
 
         var result = authService.register(request, "10.0.0.8");
 
@@ -80,8 +83,8 @@ class AuthServicePasswordLengthTest {
         user.setId(6L);
         user.setUsername("six.user");
         user.setDisplayName("六位密码用户");
-        user.setRoleCode("DOCTOR");
-        user.setRoleName("医生");
+        user.setRoleCode("READER");
+        user.setRoleName("只读账号");
         user.setStatus("pending");
         user.setAppliedAt(LocalDateTime.now());
         user.setPasswordVersion(1);
@@ -90,8 +93,8 @@ class AuthServicePasswordLengthTest {
 
     private AuthRole role() {
         AuthRole role = new AuthRole();
-        role.setCode("DOCTOR");
-        role.setName("医生");
+        role.setCode("READER");
+        role.setName("只读账号");
         return role;
     }
 }

@@ -16,6 +16,7 @@ import {
   normalizeArchiveDepartmentThemes,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { hasKey } from '@/utils/object'
 
 defineOptions({ name: 'DepartmentThemeSettings' })
 
@@ -128,7 +129,7 @@ async function loadThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       themes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(themes)
     }
@@ -334,7 +335,7 @@ onMounted(() => {
 
 <style scoped>
 .department-theme-card {
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .department-theme-header {
@@ -395,7 +396,7 @@ onMounted(() => {
   padding: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .color-field {
@@ -406,9 +407,9 @@ onMounted(() => {
 }
 
 .archive-theme-preview {
-  --folder-accent: #2563eb;
-  --folder-strip: #1d4ed8;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary);
+  --folder-strip: var(--color-primary-hover);
+  --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
   display: grid;
@@ -419,7 +420,7 @@ onMounted(() => {
   color: var(--folder-accent);
   background: linear-gradient(155deg, var(--folder-tint), var(--surface) 68%);
   border: 1px solid color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .archive-theme-preview i {
@@ -459,7 +460,7 @@ onMounted(() => {
   padding: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .theme-history-summary {
@@ -490,7 +491,7 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-@media (width <= 980px) {
+@media (max-width: 980px) {
   .theme-editor-head {
     display: none;
   }
@@ -504,7 +505,7 @@ onMounted(() => {
   }
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .department-theme-header {
     flex-direction: column;
   }

@@ -90,54 +90,33 @@ onMounted(loadData)
 
     <template v-else>
       <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
-        <el-card shadow="never" class="mrr-metric-card">
-          <div class="mrr-metric-card__icon">
-            <i class="i-ant-design:api-twotone" />
-          </div>
-          <div class="mrr-metric-card__body">
-            <span class="mrr-metric-card__label">总请求数</span>
-            <strong class="mrr-metric-card__value">{{ formatNumber(analysis?.overview.totalRequests) }}</strong>
-            <p class="mrr-metric-card__note">
-              最近 365 天完成的请求总量
-            </p>
-          </div>
-        </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
-          <div class="mrr-metric-card__icon">
-            <i class="i-ant-design:check-circle-twotone" />
-          </div>
-          <div class="mrr-metric-card__body">
-            <span class="mrr-metric-card__label">HTTP 成功率</span>
-            <strong class="mrr-metric-card__value">{{ formatPercent(analysis?.overview.successRate) }}</strong>
-            <p class="mrr-metric-card__note">
-              HTTP 2xx 响应占近一年请求的比例
-            </p>
-          </div>
-        </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--violet">
-          <div class="mrr-metric-card__icon">
-            <i class="i-ant-design:field-time-outlined" />
-          </div>
-          <div class="mrr-metric-card__body">
-            <span class="mrr-metric-card__label">客户端 P95</span>
-            <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.p95ClientDurationMs) }}</strong>
-            <p class="mrr-metric-card__note">
-              包含网络与浏览器处理耗时
-            </p>
-          </div>
-        </el-card>
-        <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
-          <div class="mrr-metric-card__icon">
-            <i class="i-ant-design:dashboard-twotone" />
-          </div>
-          <div class="mrr-metric-card__body">
-            <span class="mrr-metric-card__label">服务端平均耗时</span>
-            <strong class="mrr-metric-card__value">{{ formatDuration(analysis?.overview.avgServerDurationMs) }}</strong>
-            <p class="mrr-metric-card__note">
-              最近一年服务端请求处理平均值
-            </p>
-          </div>
-        </el-card>
+        <MrrMetricCard
+          label="总请求数"
+          icon="i-ant-design:api-twotone"
+          note="最近 365 天完成的请求总量"
+          :value="formatNumber(analysis?.overview.totalRequests)"
+        />
+        <MrrMetricCard
+          label="HTTP 成功率"
+          icon="i-ant-design:check-circle-twotone"
+          tone="green"
+          note="HTTP 2xx 响应占近一年请求的比例"
+          :value="formatPercent(analysis?.overview.successRate)"
+        />
+        <MrrMetricCard
+          label="客户端 P95"
+          icon="i-ant-design:field-time-outlined"
+          tone="violet"
+          note="包含网络与浏览器处理耗时"
+          :value="formatDuration(analysis?.overview.p95ClientDurationMs)"
+        />
+        <MrrMetricCard
+          label="服务端平均耗时"
+          icon="i-ant-design:dashboard-twotone"
+          tone="amber"
+          note="最近一年服务端请求处理平均值"
+          :value="formatDuration(analysis?.overview.avgServerDurationMs)"
+        />
       </section>
 
       <div class="analysis-stack">
@@ -221,7 +200,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #097fe8;
+  color: var(--mrr-primary);
   text-transform: uppercase;
   letter-spacing: 0.125px;
 }
@@ -231,14 +210,14 @@ h2 {
   font-size: 26px;
   font-weight: 700;
   line-height: 1.23;
-  color: rgb(0 0 0 / 95%);
+  color: var(--mrr-foreground);
   letter-spacing: -0.625px;
 }
 
 .subtitle {
   max-width: 760px;
   margin: 8px 0 0;
-  color: #615d59;
+  color: var(--mrr-muted-foreground);
 }
 
 .page-actions {
@@ -250,8 +229,8 @@ h2 {
 
 .analysis-card {
   min-width: 0;
-  border: 1px solid rgb(0 0 0 / 10%);
-  border-radius: 12px;
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
 }
 
 .analysis-stack {
@@ -282,12 +261,12 @@ h2 {
 .card-header strong {
   font-size: 16px;
   font-weight: 600;
-  color: rgb(0 0 0 / 95%);
+  color: var(--mrr-foreground);
 }
 
 .card-header span {
   font-size: 12px;
-  color: #615d59;
+  color: var(--mrr-muted-foreground);
 }
 
 .state-panel {
@@ -295,26 +274,26 @@ h2 {
   gap: 10px;
   justify-items: start;
   padding: 24px;
-  color: #615d59;
-  background: #f6f5f4;
-  border: 1px solid rgb(0 0 0 / 10%);
-  border-radius: 12px;
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
 }
 
 .error-panel strong {
-  color: #dd5b00;
+  color: var(--mrr-tone-warning);
 }
 
-@media (width >= 1440px) {
+@media (min-width: 1440px) {
   .analysis-stack {
     grid-template-columns: max-content minmax(520px, 1fr);
     align-items: start;
   }
 
   .response-trend-card {
+    justify-self: start;
     width: max-content;
     max-width: 100%;
-    justify-self: start;
   }
 
   .response-trend-card :deep(.el-card__body) {
@@ -323,7 +302,7 @@ h2 {
   }
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .page-header {
     flex-direction: column;
   }

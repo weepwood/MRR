@@ -404,8 +404,7 @@ function hideTooltip() {
 
 .heatmap-scroll {
   padding: 3px 0 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -439,10 +438,10 @@ function hideTooltip() {
 
 .weekday-labels {
   display: grid;
+  flex: none;
   grid-template-rows: repeat(7, var(--heatmap-cell-size));
   row-gap: var(--heatmap-cell-gap);
   width: 28px;
-  flex: none;
   font-size: 9px;
   line-height: var(--heatmap-cell-size);
   color: var(--el-text-color-placeholder);
@@ -451,9 +450,9 @@ function hideTooltip() {
 
 .heatmap-grid {
   display: grid;
+  grid-template-rows: repeat(7, var(--heatmap-cell-size));
   grid-auto-columns: var(--heatmap-cell-size);
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, var(--heatmap-cell-size));
   gap: var(--heatmap-cell-gap);
   width: var(--heatmap-grid-width);
 }
@@ -465,9 +464,10 @@ function hideTooltip() {
   padding: 0;
   appearance: none;
   cursor: pointer;
+  outline: none;
+  border: 1px solid var(--el-border-color-lighter);
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
-  outline: none;
   transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
 }
 
@@ -485,28 +485,41 @@ function hideTooltip() {
   pointer-events: none;
 }
 
+/*
+ * 热力图色阶靠 background 编码数据强度，属于「信息」而非「装饰」：
+ * 一旦整条声明失效，除最高档外的所有格子都会变透明，图表在 Chrome 86 上失去意义。
+ * 因此每档前置一条静态回退（Element Plus 的 light-* 色阶由 applyThemeColor 以 hex 同步写入，
+ * 主色变化时依然正确）。其余纯装饰性混色不做回退，见 DESIGN.md「color-mix 降级边界」。
+ */
 .level-0 {
+  background: var(--el-fill-color-light);
   background: color-mix(in srgb, var(--el-fill-color-light) 88%, transparent);
 }
 
 .level-1 {
-  background: color-mix(in srgb, #2563eb 24%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 16%, var(--el-border-color-lighter));
+  background: var(--el-color-primary-light-8);
+  background: color-mix(in srgb, var(--color-primary) 24%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-5);
+  border-color: color-mix(in srgb, var(--color-primary) 16%, var(--el-border-color-lighter));
 }
 
 .level-2 {
-  background: color-mix(in srgb, #2563eb 45%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 30%, transparent);
+  background: var(--el-color-primary-light-5);
+  background: color-mix(in srgb, var(--color-primary) 45%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-5);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .level-3 {
-  background: color-mix(in srgb, #2563eb 70%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 48%, transparent);
+  background: var(--el-color-primary-light-3);
+  background: color-mix(in srgb, var(--color-primary) 70%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-3);
+  border-color: color-mix(in srgb, var(--color-primary) 48%, transparent);
 }
 
 .level-4 {
-  background: #2563eb;
-  border-color: #1d4ed8;
+  background: var(--color-primary);
+  border-color: var(--color-primary-hover);
 }
 
 .heatmap-tooltip {
@@ -515,11 +528,12 @@ function hideTooltip() {
   box-sizing: border-box;
   width: 236px;
   padding: 13px 14px;
-  pointer-events: none;
   color: var(--el-text-color-primary);
+  pointer-events: none;
+  background: var(--el-bg-color-overlay);
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
   backdrop-filter: blur(12px);
   will-change: left, top;
@@ -563,7 +577,7 @@ function hideTooltip() {
 }
 
 .heatmap-tooltip dd.is-error {
-  color: #ef4444;
+  color: var(--mrr-tone-danger);
 }
 
 .empty-hint {
@@ -572,17 +586,17 @@ function hideTooltip() {
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-extra-light);
   border: 1px dashed var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .heatmap-header {
     align-items: flex-start;
   }
 
   .heatmap-legend {
-    width: 100%;
     justify-content: flex-end;
+    width: 100%;
   }
 }
 </style>

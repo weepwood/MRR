@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,11 +79,45 @@ class SearchControllerTest {
     class GetBAHByEncryptID {
 
         @Test
-        @DisplayName("解密失败返回 fail")
-        void decryptFails() {
-            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "ts");
+        @DisplayName("时间戳超出窗口时拒绝，且不回显内部异常信息")
+        void rejectsStaleTimestamp() {
+            String stale = String.valueOf(Instant.now().minusSeconds(3600).getEpochSecond());
+
+            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", stale);
+
             assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).contains("解密失败");
+            assertThat(r.getMessage()).isEqualTo("加密身份证查询参数无效");
+        }
+
+        @Test
+        @DisplayName("非数字时间戳被拒绝，不再进入解密")
+        void rejectsNonNumericTimestamp() {
+            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "ts");
+
+            assertThat(r.getCode()).isEqualTo(400);
+            assertThat(r.getMessage()).isEqualTo("加密身份证查询参数无效");
+        }
+
+        @Test
+        @DisplayName("时间戳在窗口内时进入解密，失败信息为通用文案")
+        void decryptFailsWithGenericMessage() {
+            String fresh = String.valueOf(Instant.now().getEpochSecond());
+
+            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", fresh);
+
+            assertThat(r.getCode()).isEqualTo(400);
+            assertThat(r.getMessage()).isEqualTo("加密身份证查询失败");
+        }
+
+        @Test
+        @DisplayName("容差配置为 0 时关闭窗口校验")
+        void toleratesDisabledWindow() {
+            ReflectionTestUtils.setField(controller, "timestampToleranceSeconds", 0);
+
+            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "0");
+
+            assertThat(r.getCode()).isEqualTo(400);
+            assertThat(r.getMessage()).isEqualTo("加密身份证查询失败");
         }
     }
 }

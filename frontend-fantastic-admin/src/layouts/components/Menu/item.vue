@@ -166,9 +166,9 @@ defineExpose({
   width: 7px;
   height: 7px;
   color: currentcolor;
-  opacity: 0;
   border-right: 1.5px solid currentcolor;
   border-bottom: 1.5px solid currentcolor;
+  opacity: 0;
   transform: rotate(-45deg);
 }
 

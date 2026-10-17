@@ -11,9 +11,15 @@ on:
 permissions:
   contents: read
 
+# 同一分支连续 push 时取消旧运行，避免并行落盘多份构建日志。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend-repo
@@ -23,7 +29,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -41,11 +47,13 @@ jobs:
 
       - name: Upload compile failure log
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-compile-log
           path: backend-compile.log
           if-no-files-found: ignore
+          retention-days: 3
 
       - name: Compile tests and run normalization tests
         shell: bash
@@ -58,8 +66,10 @@ jobs:
 
       - name: Upload test failure log
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-test-log
           path: backend-test.log
           if-no-files-found: ignore
+          retention-days: 3

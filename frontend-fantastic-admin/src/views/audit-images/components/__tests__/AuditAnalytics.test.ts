@@ -9,6 +9,11 @@ const analyticsStubs = {
   'el-table': { template: '<div class="el-table"><slot/></div>' },
   'el-table-column': { template: '<div><slot :row="{ label: \'dev\', count: 1 }" /></div>' },
   'el-button': { template: '<button><slot/></button>' },
+  // 指标卡统一由 MrrMetricCard 渲染，这里只验证数据接线，不重复其外观实现。
+  'MrrMetricCard': {
+    props: ['label', 'value', 'note', 'suffix'],
+    template: '<article class="metric-card"><span>{{ label }}</span><strong>{{ value }}</strong><small>{{ note }}</small></article>',
+  },
   'MrrChartCard': {
     props: ['empty', 'emptyDescription'],
     template: '<section><span v-if="empty">{{ emptyDescription }}</span><slot v-else /></section>',

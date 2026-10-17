@@ -54,6 +54,16 @@ test.describe('登录状态迁移与自愈', () => {
 
     await expect(page).toHaveURL(/\/records/)
     await expect.poll(() => page.evaluate(() => localStorage.getItem('mrr:auth:token'))).toBe('legacy-token')
+    // 旧键迁移（写入 mrr:auth:token）与「服务端校验后用 /api/v1/auth/me 的结果覆盖
+    // profile 与权限」是两拍异步写入。只等迁移完成就断言 profile，会读到尚未被服务端
+    // 结果覆盖的旧值（mustChangePassword 仍为 true），因此这里等到服务端结果真正落盘。
+    await expect.poll(() => page.evaluate(() => {
+      const profile = JSON.parse(localStorage.getItem('mrr:auth:profile') || '{}')
+      return profile.mustChangePassword
+    })).toBe(false)
+    await expect.poll(
+      () => page.evaluate(() => JSON.parse(localStorage.getItem('mrr:auth:permissions') || '[]')),
+    ).toEqual(['record:read'])
     const state = await page.evaluate(() => ({
       token: localStorage.getItem('mrr:auth:token'),
       legacyToken: localStorage.getItem('token'),

@@ -5,10 +5,7 @@ import {
   Calendar,
   Document,
   Download,
-  Grid,
   Refresh,
-  Tickets,
-  TrendCharts,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
@@ -346,58 +343,30 @@ onMounted(refreshAll)
     </div>
 
     <section class="mrr-metric-grid" aria-label="核心统计指标">
-      <el-card shadow="never" class="mrr-metric-card">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Grid /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            总记录数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.total?.totalRecords ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--rose">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Tickets /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            总扫描页数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.total?.totalPages ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--green">
-        <div class="mrr-metric-card__icon">
-          <el-icon><Document /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            扫描病案数
-          </div>
-          <div class="mrr-metric-card__value">
-            {{ formatNumber(summaryData.uniqueBAHCount ?? 0) }}
-          </div>
-        </div>
-      </el-card>
-      <el-card shadow="never" class="mrr-metric-card mrr-metric-card--amber">
-        <div class="mrr-metric-card__icon">
-          <el-icon><TrendCharts /></el-icon>
-        </div>
-        <div class="mrr-metric-card__body">
-          <div class="mrr-metric-card__label">
-            统计时间范围
-          </div>
-          <div class="mrr-metric-card__value mrr-metric-card__value--compact">
-            {{ dateRange.start }} — {{ dateRange.end }}
-          </div>
-        </div>
-      </el-card>
+      <MrrMetricCard
+        label="总记录数"
+        icon="i-ep:grid"
+        :value="formatNumber(summaryData.total?.totalRecords ?? 0)"
+      />
+      <MrrMetricCard
+        label="总扫描页数"
+        icon="i-ep:tickets"
+        tone="rose"
+        :value="formatNumber(summaryData.total?.totalPages ?? 0)"
+      />
+      <MrrMetricCard
+        label="扫描病案数"
+        icon="i-ep:document"
+        tone="green"
+        :value="formatNumber(summaryData.uniqueBAHCount ?? 0)"
+      />
+      <MrrMetricCard
+        label="统计时间范围"
+        icon="i-ep:trend-charts"
+        tone="amber"
+        compact-value
+        :value="`${dateRange.start} — ${dateRange.end}`"
+      />
     </section>
 
     <MrrChartCard
@@ -621,7 +590,7 @@ onMounted(refreshAll)
   padding: 12px 14px;
   background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .trend-summary span,
@@ -649,7 +618,7 @@ onMounted(refreshAll)
   margin-bottom: 16px;
   background: var(--surface-muted);
   border: 1px solid rgb(0 0 0 / 4%);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .search-keyword {
@@ -690,7 +659,7 @@ onMounted(refreshAll)
   border-top: 1px solid rgb(0 0 0 / 5%);
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .page-header {
     flex-direction: column;
   }
@@ -700,7 +669,7 @@ onMounted(refreshAll)
   }
 }
 
-@media (width <= 600px) {
+@media (max-width: 600px) {
   .trend-summary {
     grid-template-columns: 1fr;
   }

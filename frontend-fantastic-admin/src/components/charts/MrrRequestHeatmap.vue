@@ -404,8 +404,7 @@ function hideTooltip() {
 
 .heatmap-scroll {
   padding: 3px 0 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -439,10 +438,10 @@ function hideTooltip() {
 
 .weekday-labels {
   display: grid;
+  flex: none;
   grid-template-rows: repeat(7, var(--heatmap-cell-size));
   row-gap: var(--heatmap-cell-gap);
   width: 28px;
-  flex: none;
   font-size: 9px;
   line-height: var(--heatmap-cell-size);
   color: var(--el-text-color-placeholder);
@@ -451,9 +450,9 @@ function hideTooltip() {
 
 .heatmap-grid {
   display: grid;
+  grid-template-rows: repeat(7, var(--heatmap-cell-size));
   grid-auto-columns: var(--heatmap-cell-size);
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, var(--heatmap-cell-size));
   gap: var(--heatmap-cell-gap);
   width: var(--heatmap-grid-width);
 }
@@ -465,9 +464,9 @@ function hideTooltip() {
   padding: 0;
   appearance: none;
   cursor: pointer;
+  outline: none;
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
-  outline: none;
   transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
 }
 
@@ -490,23 +489,23 @@ function hideTooltip() {
 }
 
 .level-1 {
-  background: color-mix(in srgb, #2563eb 24%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 16%, var(--el-border-color-lighter));
+  background: color-mix(in srgb, var(--color-primary) 24%, var(--el-bg-color));
+  border-color: color-mix(in srgb, var(--color-primary) 16%, var(--el-border-color-lighter));
 }
 
 .level-2 {
-  background: color-mix(in srgb, #2563eb 45%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 30%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 45%, var(--el-bg-color));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .level-3 {
-  background: color-mix(in srgb, #2563eb 70%, var(--el-bg-color));
-  border-color: color-mix(in srgb, #2563eb 48%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 70%, var(--el-bg-color));
+  border-color: color-mix(in srgb, var(--color-primary) 48%, transparent);
 }
 
 .level-4 {
-  background: #2563eb;
-  border-color: #1d4ed8;
+  background: var(--color-primary);
+  border-color: var(--color-primary-hover);
 }
 
 .heatmap-tooltip {
@@ -515,11 +514,11 @@ function hideTooltip() {
   box-sizing: border-box;
   width: 236px;
   padding: 13px 14px;
-  pointer-events: none;
   color: var(--el-text-color-primary);
+  pointer-events: none;
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
   backdrop-filter: blur(12px);
   will-change: left, top;
@@ -563,7 +562,7 @@ function hideTooltip() {
 }
 
 .heatmap-tooltip dd.is-error {
-  color: #ef4444;
+  color: var(--mrr-tone-danger);
 }
 
 .empty-hint {
@@ -572,7 +571,7 @@ function hideTooltip() {
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-extra-light);
   border: 1px dashed var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 @media (width <= 600px) {
@@ -581,8 +580,8 @@ function hideTooltip() {
   }
 
   .heatmap-legend {
-    width: 100%;
     justify-content: flex-end;
+    width: 100%;
   }
 }
 </style>

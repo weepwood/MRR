@@ -47,35 +47,33 @@
     --mrr-tone-info-soft: #f0f1f3;
     --mrr-tone-neutral-soft: #f0f1f3;
     --mrr-tone-primary-soft: #e9effd;
-
+    --mrr-tone-teal-soft: #e7efee;
+    --mrr-tone-violet-soft: #eee9fd;
+    --mrr-tone-rose-soft: #fce9ee;
     --mrr-tone-success-border: #b7d2c8;
     --mrr-tone-danger-border: #e0c3c8;
     --mrr-tone-warning-border: #dacbbd;
     --mrr-tone-info-border: #c9cfda;
     --mrr-tone-neutral-border: #c9cfda;
     --mrr-tone-primary-border: #bacbee;
-
     --el-color-success-light-3: #5ca676;
     --el-color-success-light-5: #8bc09e;
     --el-color-success-light-7: #b9d9c4;
     --el-color-success-light-8: #d0e6d8;
     --el-color-success-light-9: #e8f2ec;
     --el-color-success-dark-2: #126630;
-
     --el-color-danger-light-3: #df7777;
     --el-color-danger-light-5: #e89e9e;
     --el-color-danger-light-7: #f1c4c4;
     --el-color-danger-light-8: #f6d8d8;
     --el-color-danger-light-9: #faebeb;
     --el-color-danger-dark-2: #a73030;
-
     --el-color-warning-light-3: #cb8f51;
     --el-color-warning-light-5: #daaf83;
     --el-color-warning-light-7: #e9cfb4;
     --el-color-warning-light-8: #f0dfcd;
     --el-color-warning-light-9: #f8efe6;
     --el-color-warning-dark-2: #904c05;
-
     --el-color-info-light-3: #939ead;
     --el-color-info-light-5: #b1b9c5;
     --el-color-info-light-7: #d0d5dc;
@@ -92,35 +90,33 @@
     --mrr-tone-info-soft: #1d2430;
     --mrr-tone-neutral-soft: #1d2430;
     --mrr-tone-primary-soft: #172339;
-
+    --mrr-tone-teal-soft: #14252a;
+    --mrr-tone-violet-soft: #201d33;
+    --mrr-tone-rose-soft: #2b1a24;
     --mrr-tone-success-border: #1e3b31;
     --mrr-tone-danger-border: #3a2429;
     --mrr-tone-warning-border: #3a2c22;
     --mrr-tone-info-border: #2a3240;
     --mrr-tone-neutral-border: #2a3240;
     --mrr-tone-primary-border: #1f3355;
-
     --el-color-success-light-3: #16613a;
     --el-color-success-light-5: #164b31;
     --el-color-success-light-7: #163829;
     --el-color-success-light-8: #152f25;
     --el-color-success-light-9: #152527;
     --el-color-success-dark-2: #147041;
-
     --el-color-danger-light-3: #9a3a3f;
     --el-color-danger-light-5: #733034;
     --el-color-danger-light-7: #4b262a;
     --el-color-danger-light-8: #382125;
     --el-color-danger-light-9: #281e27;
     --el-color-danger-dark-2: #a83a3a;
-
     --el-color-warning-light-3: #854f14;
     --el-color-warning-light-5: #643f13;
     --el-color-warning-light-7: #432f12;
     --el-color-warning-light-8: #332711;
     --el-color-warning-light-9: #252222;
     --el-color-warning-dark-2: #98530a;
-
     --el-color-info-light-3: #4a5568;
     --el-color-info-light-5: #3c4553;
     --el-color-info-light-7: #2c333e;

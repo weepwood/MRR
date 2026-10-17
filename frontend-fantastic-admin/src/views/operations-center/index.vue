@@ -844,7 +844,7 @@ onMounted(async () => {
 .diagnostics-tabs {
   padding: 0 16px 16px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
   background: var(--el-bg-color);
 }
 
@@ -948,7 +948,7 @@ onMounted(async () => {
   gap: 4px;
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   font-size: 13px;
 }
@@ -968,7 +968,7 @@ onMounted(async () => {
   overflow: auto;
   margin: 10px 0 0;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
   font-size: 12px;

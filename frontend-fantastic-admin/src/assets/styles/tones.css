@@ -38,6 +38,9 @@
   --mrr-tone-info-soft: color-mix(in srgb, var(--mrr-tone-info) 10%, var(--mrr-card));
   --mrr-tone-neutral-soft: color-mix(in srgb, var(--mrr-tone-neutral) 10%, var(--mrr-card));
   --mrr-tone-primary-soft: color-mix(in srgb, var(--mrr-tone-primary) 10%, var(--mrr-card));
+  --mrr-tone-teal-soft: color-mix(in srgb, var(--mrr-tone-teal) 10%, var(--mrr-card));
+  --mrr-tone-violet-soft: color-mix(in srgb, var(--mrr-tone-violet) 10%, var(--mrr-card));
+  --mrr-tone-rose-soft: color-mix(in srgb, var(--mrr-tone-rose) 10%, var(--mrr-card));
 
   /* 低对比描边 */
   --mrr-tone-success-border: color-mix(in srgb, var(--mrr-tone-success) 22%, var(--mrr-border));
@@ -59,7 +62,6 @@
   --el-color-success-light-8: color-mix(in srgb, var(--mrr-tone-success) 20%, var(--mrr-card));
   --el-color-success-light-9: var(--mrr-tone-success-soft);
   --el-color-success-dark-2: color-mix(in srgb, var(--mrr-tone-success) 80%, #000);
-
   --el-color-danger: var(--mrr-tone-danger);
   --el-color-danger-light-3: color-mix(in srgb, var(--mrr-tone-danger) 70%, var(--mrr-card));
   --el-color-danger-light-5: color-mix(in srgb, var(--mrr-tone-danger) 50%, var(--mrr-card));
@@ -67,7 +69,6 @@
   --el-color-danger-light-8: color-mix(in srgb, var(--mrr-tone-danger) 20%, var(--mrr-card));
   --el-color-danger-light-9: var(--mrr-tone-danger-soft);
   --el-color-danger-dark-2: color-mix(in srgb, var(--mrr-tone-danger) 80%, #000);
-
   --el-color-warning: var(--mrr-tone-warning);
   --el-color-warning-light-3: color-mix(in srgb, var(--mrr-tone-warning) 70%, var(--mrr-card));
   --el-color-warning-light-5: color-mix(in srgb, var(--mrr-tone-warning) 50%, var(--mrr-card));
@@ -75,7 +76,6 @@
   --el-color-warning-light-8: color-mix(in srgb, var(--mrr-tone-warning) 20%, var(--mrr-card));
   --el-color-warning-light-9: var(--mrr-tone-warning-soft);
   --el-color-warning-dark-2: color-mix(in srgb, var(--mrr-tone-warning) 80%, #000);
-
   --el-color-info: var(--mrr-tone-neutral);
   --el-color-info-light-3: color-mix(in srgb, var(--mrr-tone-neutral) 70%, var(--mrr-card));
   --el-color-info-light-5: color-mix(in srgb, var(--mrr-tone-neutral) 50%, var(--mrr-card));

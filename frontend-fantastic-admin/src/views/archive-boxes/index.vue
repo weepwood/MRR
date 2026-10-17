@@ -791,7 +791,7 @@ h1 {
 .workspace-card,
 .filter-card,
 .table-card {
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .view-switcher {

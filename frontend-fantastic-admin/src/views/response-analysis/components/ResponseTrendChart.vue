@@ -3,6 +3,7 @@ import type { ResponseMetricTrendPoint } from '@/api/types'
 import type { MrrLineSeries, MrrRequestHeatmapItem } from '@/types/chart'
 import { computed } from 'vue'
 import { MrrLineChart, MrrRequestHeatmap } from '@/components/charts'
+import { mrrChartColor } from '@/config/chart-theme'
 
 defineOptions({ name: 'ResponseTrendChart' })
 
@@ -22,14 +23,14 @@ const durationSeries = computed<MrrLineSeries[]>(() => [
   {
     name: '客户端耗时',
     data: props.data.map(item => item.avgClientDurationMs ?? 0),
-    color: '#2563eb',
+    color: mrrChartColor('primary'),
     smooth: true,
     area: true,
   },
   {
     name: '服务端耗时',
     data: props.data.map(item => item.avgServerDurationMs ?? 0),
-    color: '#64748b',
+    color: mrrChartColor('neutral'),
     smooth: true,
     dashed: true,
   },
@@ -141,7 +142,7 @@ function formatBucket(bucket: string) {
 }
 
 .overview-item {
-  --series-color: #2563eb;
+  --series-color: var(--color-primary);
 
   display: grid;
   grid-template-columns: auto auto;
@@ -166,16 +167,16 @@ function formatBucket(bucket: string) {
   align-items: center;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--el-text-color-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .overview-item span::before {
+  flex: none;
   width: 7px;
   height: 7px;
-  flex: none;
   content: "";
   background: var(--series-color);
   border-radius: 2px;
@@ -184,11 +185,11 @@ function formatBucket(bucket: string) {
 .overview-item strong {
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 18px;
   font-weight: 650;
   line-height: 1.3;
   color: var(--el-text-color-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -196,17 +197,17 @@ function formatBucket(bucket: string) {
   align-self: end;
   padding-bottom: 2px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 10px;
   font-style: normal;
   color: var(--el-text-color-placeholder);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.request-overview { --series-color: #2563eb; }
-.error-overview { --series-color: #ef4444; }
-.client-overview { --series-color: #2563eb; }
-.server-overview { --series-color: #64748b; }
+.request-overview { --series-color: var(--color-primary); }
+.error-overview { --series-color: var(--mrr-tone-danger); }
+.client-overview { --series-color: var(--color-primary); }
+.server-overview { --series-color: var(--mrr-tone-neutral); }
 
 .trend-section,
 .duration-section {
@@ -248,10 +249,10 @@ function formatBucket(bucket: string) {
 .section-heading small {
   flex: none;
   padding: 4px 8px;
-  color: #2563eb;
-  background: color-mix(in srgb, #2563eb 8%, var(--el-bg-color));
-  border: 1px solid color-mix(in srgb, #2563eb 14%, transparent);
-  border-radius: 999px;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--el-bg-color));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent);
+  border-radius: var(--mrr-radius-pill);
 }
 
 @media (width <= 900px) {

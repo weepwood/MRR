@@ -783,7 +783,7 @@ h2 {
 .archive-list-wrap {
   overflow-x: auto;
   border: 1px solid var(--divider);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .archive-list {
@@ -825,8 +825,8 @@ h2 {
 }
 
 .archive-folder-card {
-  --folder-accent: #1d4ed8;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary-hover);
+  --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
   min-height: 412px;
@@ -847,7 +847,7 @@ h2 {
   position: absolute;
   pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
@@ -874,7 +874,7 @@ h2 {
   overflow: hidden;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
   border: 1px solid var(--divider);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
 }
@@ -954,44 +954,28 @@ h2 {
 }
 
 .tone-blue {
-  --folder-accent: #2563eb;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary);
+  --folder-tint: var(--mrr-tone-primary-soft);
 }
 
 .tone-green {
-  --folder-accent: #0f766e;
-  --folder-tint: #ecfdf7;
+  --folder-accent: var(--mrr-tone-teal);
+  --folder-tint: var(--mrr-tone-teal-soft);
 }
 
 .tone-amber {
-  --folder-accent: #b86b0b;
-  --folder-tint: #fff6e8;
+  --folder-accent: var(--mrr-tone-warning);
+  --folder-tint: var(--mrr-tone-warning-soft);
 }
 
 .tone-rose {
-  --folder-accent: #be185d;
-  --folder-tint: #fff0f5;
+  --folder-accent: var(--mrr-tone-rose);
+  --folder-tint: var(--mrr-tone-rose-soft);
 }
 
 .tone-slate {
-  --folder-accent: #64748b;
+  --folder-accent: var(--mrr-tone-neutral);
   --folder-tint: var(--surface-alt);
-}
-
-:global(.dark) .tone-blue {
-  --folder-tint: color-mix(in srgb, #2563eb 16%, var(--surface));
-}
-
-:global(.dark) .tone-green {
-  --folder-tint: color-mix(in srgb, #0f766e 16%, var(--surface));
-}
-
-:global(.dark) .tone-amber {
-  --folder-tint: color-mix(in srgb, #b86b0b 16%, var(--surface));
-}
-
-:global(.dark) .tone-rose {
-  --folder-tint: color-mix(in srgb, #be185d 16%, var(--surface));
 }
 
 .folder-top,
@@ -1028,7 +1012,7 @@ h2 {
   font-weight: 700;
   color: var(--folder-accent);
   background: color-mix(in srgb, var(--folder-accent) 9%, transparent);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .folder-selected-label i {
@@ -1053,7 +1037,7 @@ h2 {
   padding: 11px 12px;
   background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .folder-code-copyable {

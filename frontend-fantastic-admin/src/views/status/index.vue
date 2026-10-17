@@ -16,6 +16,7 @@ import {
 } from '@/api/modules/system-status'
 import serverLogo from '@/assets/images/server.svg'
 import MrrChart from '@/components/charts/MrrChart.vue'
+import { mrrChartColor } from '@/config/chart-theme'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
 
@@ -95,9 +96,9 @@ const hourlyAvailabilityChart = computed<ECOption>(() => ({
     showSymbol: true,
     symbol: 'circle',
     symbolSize: 6,
-    lineStyle: { width: 2.5, color: '#2563eb' },
-    itemStyle: { color: '#2563eb' },
-    areaStyle: { color: '#2563eb', opacity: 0.12 },
+    lineStyle: { width: 2.5, color: mrrChartColor('primary') },
+    itemStyle: { color: mrrChartColor('primary') },
+    areaStyle: { color: mrrChartColor('primary'), opacity: 0.12 },
   }],
 }))
 const statusCopy = computed(() => {
@@ -469,11 +470,11 @@ onBeforeUnmount(() => {
 .status-page {
   min-height: 100vh;
   padding: 36px 20px 28px;
-  color: #172033;
+  color: var(--mrr-foreground);
   background:
-    radial-gradient(circle at 12% 0%, rgb(37 99 235 / 9%), transparent 30%),
-    radial-gradient(circle at 90% 8%, rgb(20 184 166 / 8%), transparent 26%),
-    #f5f7fb;
+    radial-gradient(circle at 12% 0%, var(--mrr-tone-primary-soft), transparent 30%),
+    radial-gradient(circle at 90% 8%, var(--mrr-tone-teal-soft), transparent 26%),
+    var(--mrr-app-shell-bg);
 }
 
 .status-shell {
@@ -532,7 +533,7 @@ onBeforeUnmount(() => {
 .status-footer,
 .track-labels {
   font-size: 12px;
-  color: #7b879d;
+  color: var(--mrr-muted-foreground);
 }
 
 .refresh-button {
@@ -542,11 +543,11 @@ onBeforeUnmount(() => {
   padding: 9px 14px;
   font: inherit;
   font-size: 13px;
-  color: #344054;
+  color: var(--el-text-color-primary);
   cursor: pointer;
-  background: rgb(255 255 255 / 84%);
-  border: 1px solid #dfe5ef;
-  border-radius: 10px;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
   box-shadow: 0 5px 18px rgb(15 23 42 / 4%);
 }
 
@@ -565,9 +566,9 @@ onBeforeUnmount(() => {
 .minute-history-card,
 .incidents-card,
 .summary-card {
-  background: rgb(255 255 255 / 92%);
-  border: 1px solid #e1e7f0;
-  border-radius: 18px;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 18px 50px rgb(15 23 42 / 5%);
 }
 
@@ -593,17 +594,17 @@ onBeforeUnmount(() => {
 }
 
 .state-panel.is-up {
-  color: #07845f;
-  border-color: rgb(16 185 129 / 24%);
+  color: var(--mrr-tone-success);
+  border-color: var(--mrr-tone-success-border);
 }
 
 .state-panel.is-down {
-  color: #c2413a;
-  border-color: rgb(239 68 68 / 26%);
+  color: var(--mrr-tone-danger);
+  border-color: var(--mrr-tone-danger-border);
 }
 
 .state-panel.is-no-data {
-  color: #667085;
+  color: var(--mrr-muted-foreground);
 }
 
 .state-icon {
@@ -614,11 +615,11 @@ onBeforeUnmount(() => {
   height: 58px;
   font-size: 34px;
   background: currentcolor;
-  border-radius: 18px;
+  border-radius: var(--mrr-radius-2xl);
 }
 
 .state-icon i {
-  color: #fff;
+  color: var(--mrr-primary-foreground);
 }
 
 .state-copy {
@@ -631,7 +632,7 @@ onBeforeUnmount(() => {
   margin-bottom: 7px;
   font-size: 10px;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.14em;
 }
@@ -639,7 +640,7 @@ onBeforeUnmount(() => {
 .state-copy h1,
 .section-heading h2 {
   margin: 0;
-  color: #172033;
+  color: var(--mrr-foreground);
   letter-spacing: -0.025em;
 }
 
@@ -653,7 +654,7 @@ onBeforeUnmount(() => {
   margin: 7px 0 0;
   font-size: 13px;
   line-height: 1.65;
-  color: #68758b;
+  color: var(--mrr-muted-foreground);
 }
 
 .state-copy small {
@@ -666,22 +667,22 @@ onBeforeUnmount(() => {
   gap: 5px;
   min-width: 184px;
   padding-left: 22px;
-  border-left: 1px solid #e6eaf1;
+  border-left: 1px solid var(--mrr-border);
 }
 
 .state-meta span {
   font-size: 11px;
-  color: #8994a7;
+  color: var(--mrr-muted-foreground);
 }
 
 .state-meta strong {
   font-size: 13px;
-  color: #344054;
+  color: var(--el-text-color-primary);
 }
 
 .loading-panel {
   justify-content: flex-start;
-  color: #2563eb;
+  color: var(--color-primary);
 }
 
 .loading-dot {
@@ -689,24 +690,24 @@ onBeforeUnmount(() => {
   height: 16px;
   background: currentcolor;
   border-radius: 50%;
-  box-shadow: 0 0 0 8px rgb(37 99 235 / 10%);
+  box-shadow: 0 0 0 8px var(--mrr-tone-primary-soft);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
 .loading-panel p {
   margin: 5px 0 0;
   font-size: 13px;
-  color: #68758b;
+  color: var(--mrr-muted-foreground);
 }
 
 .inline-warning {
   padding: 10px 13px;
   margin: 12px 0 0;
   font-size: 12px;
-  color: #9a6700;
-  background: #fff8df;
-  border: 1px solid #f3df9a;
-  border-radius: 10px;
+  color: var(--mrr-tone-warning);
+  background: var(--mrr-tone-warning-soft);
+  border: 1px solid var(--mrr-tone-warning-border);
+  border-radius: var(--mrr-radius-lg);
 }
 
 .summary-grid {
@@ -724,12 +725,12 @@ onBeforeUnmount(() => {
 
 .summary-card > span {
   font-size: 12px;
-  color: #68758b;
+  color: var(--mrr-muted-foreground);
 }
 
 .summary-card strong {
   font-size: 24px;
-  color: #172033;
+  color: var(--mrr-foreground);
   letter-spacing: -0.03em;
 }
 
@@ -756,7 +757,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   justify-content: flex-end;
   font-size: 11px;
-  color: #68758b;
+  color: var(--mrr-muted-foreground);
 }
 
 .legend span {
@@ -774,23 +775,23 @@ onBeforeUnmount(() => {
 .legend .up,
 .day-cell.is-up,
 .minute-cell.is-up {
-  background: #20b486;
+  background: var(--mrr-tone-success);
 }
 
 .legend .down,
 .day-cell.is-down,
 .minute-cell.is-down {
-  background: #ef6b62;
+  background: var(--mrr-tone-danger);
 }
 
 .legend .no-data,
 .day-cell.is-no-data,
 .minute-cell.is-no-data {
-  background: #dce2eb;
+  background: var(--el-border-color-lighter);
 }
 
 .day-cell.is-down {
-  background-color: rgb(239 107 98 / var(--day-down-opacity, 1));
+  opacity: var(--day-down-opacity, 1);
 }
 
 .daily-track {
@@ -843,7 +844,7 @@ onBeforeUnmount(() => {
   gap: 2px;
   align-items: center;
   font-size: 10px;
-  color: #7b879d;
+  color: var(--mrr-muted-foreground);
   text-align: right;
 }
 
@@ -880,7 +881,7 @@ onBeforeUnmount(() => {
 }
 
 .day-cell.is-selected {
-  outline: 2px solid #172033;
+  outline: 2px solid var(--mrr-foreground);
   outline-offset: 2px;
 }
 
@@ -901,31 +902,31 @@ onBeforeUnmount(() => {
   padding: 7px 10px;
   font: inherit;
   font-size: 12px;
-  color: #2563eb;
+  color: var(--color-primary);
   cursor: pointer;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 7px;
+  background: var(--mrr-tone-primary-soft);
+  border: 1px solid var(--mrr-tone-primary-border);
+  border-radius: var(--mrr-radius-sm);
 }
 
 .incident-list {
   margin-top: 20px;
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--mrr-border);
 }
 
 .incident-row {
   gap: 14px;
   padding: 17px 2px;
-  border-bottom: 1px solid #edf0f5;
+  border-bottom: 1px solid var(--mrr-border);
 }
 
 .incident-marker {
   flex: 0 0 9px;
   width: 9px;
   height: 9px;
-  background: #ef6b62;
+  background: var(--mrr-tone-danger);
   border-radius: 50%;
-  box-shadow: 0 0 0 5px rgb(239 107 98 / 10%);
+  box-shadow: 0 0 0 5px var(--mrr-tone-danger-soft);
 }
 
 .incident-copy {
@@ -942,13 +943,13 @@ onBeforeUnmount(() => {
 .incident-copy strong,
 .incident-duration {
   font-size: 13px;
-  color: #344054;
+  color: var(--el-text-color-primary);
 }
 
 .incident-copy p {
   margin: 5px 0 0;
   font-size: 12px;
-  color: #8994a7;
+  color: var(--mrr-muted-foreground);
 }
 
 .incident-copy p span {
@@ -958,9 +959,9 @@ onBeforeUnmount(() => {
 .ongoing-tag {
   padding: 2px 7px;
   font-size: 10px;
-  color: #b42318;
-  background: #feeceb;
-  border-radius: 999px;
+  color: var(--mrr-tone-danger);
+  background: var(--mrr-tone-danger-soft);
+  border-radius: var(--mrr-radius-pill);
 }
 
 .incident-duration {
@@ -972,7 +973,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   justify-items: center;
   padding: 38px 20px 20px;
-  color: #20a477;
+  color: var(--mrr-tone-success);
   text-align: center;
 }
 
@@ -982,7 +983,7 @@ onBeforeUnmount(() => {
 }
 
 .empty-incidents strong {
-  color: #344054;
+  color: var(--el-text-color-primary);
 }
 
 .status-footer {
@@ -1017,7 +1018,7 @@ onBeforeUnmount(() => {
     width: 100%;
     padding: 15px 0 0;
     margin-left: 78px;
-    border-top: 1px solid #e6eaf1;
+    border-top: 1px solid var(--mrr-border);
     border-left: 0;
   }
 
@@ -1058,7 +1059,7 @@ onBeforeUnmount(() => {
     width: 48px;
     height: 48px;
     font-size: 28px;
-    border-radius: 15px;
+    border-radius: var(--mrr-radius-xl);
   }
 
   .state-meta {

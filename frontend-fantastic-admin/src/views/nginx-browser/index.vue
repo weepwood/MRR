@@ -796,7 +796,7 @@ onBeforeUnmount(revokePreviewUrl)
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .folder-pane,
@@ -841,7 +841,7 @@ onBeforeUnmount(revokePreviewUrl)
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .tree-button span {
@@ -882,7 +882,7 @@ onBeforeUnmount(revokePreviewUrl)
   cursor: default;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .file-card:hover,

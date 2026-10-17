@@ -590,7 +590,7 @@ onMounted(refreshAll)
   padding: 12px 14px;
   background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .trend-summary span,
@@ -618,7 +618,7 @@ onMounted(refreshAll)
   margin-bottom: 16px;
   background: var(--surface-muted);
   border: 1px solid rgb(0 0 0 / 4%);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .search-keyword {

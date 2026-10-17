@@ -505,7 +505,7 @@ function handleReset() {
   margin-bottom: 12px;
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .config-summary strong,
@@ -552,7 +552,7 @@ function handleReset() {
 
 .config-groups {
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .config-groups :deep(.el-collapse-item__header) {
@@ -586,7 +586,7 @@ function handleReset() {
   font-size: 16px;
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-md);
   place-items: center;
 }
 
@@ -610,11 +610,11 @@ function handleReset() {
 .config-section {
   overflow: hidden;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .config-section--nested {
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .setting-item {
@@ -714,7 +714,7 @@ function handleReset() {
   cursor: pointer;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 

@@ -831,7 +831,7 @@ h2 {
 
 .relation-card {
   min-width: 0;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .relation-card__header > div,
@@ -881,7 +881,7 @@ h2 {
 
 .section-card {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .search-row .el-input {
@@ -921,7 +921,7 @@ h2 {
 }
 
 .detail-tabs {
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .issue-header {
@@ -942,7 +942,7 @@ h2 {
   font-size: 12px;
   line-height: 1.6;
   background: var(--el-fill-color-light);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 @media (width <= 1200px) {

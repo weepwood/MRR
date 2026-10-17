@@ -61,7 +61,7 @@ function openStatusPage() {
 
 .embedded-status-card {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .embedded-status-card :deep(.el-card__body) {
@@ -109,8 +109,8 @@ function openStatusPage() {
   }
 
   .embedded-status-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .embedded-status-actions {

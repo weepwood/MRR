@@ -1043,7 +1043,7 @@ onUnmounted(() => {
   padding: 9px 12px;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
   backdrop-filter: blur(14px);
   transform: translateX(-50%);
@@ -1154,7 +1154,7 @@ onUnmounted(() => {
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 16px;
+  border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
 }
 

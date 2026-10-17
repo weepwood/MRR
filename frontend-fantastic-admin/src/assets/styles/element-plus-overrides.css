@@ -286,8 +286,8 @@
 }
 
 .el-textarea__inner:focus {
-  background: var(--mrr-background);
   outline: none;
+  background: var(--mrr-background);
   box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
 }
 
@@ -326,10 +326,10 @@
 .el-input__clear,
 .el-select__clear {
   display: grid;
+  place-items: center;
   width: 20px;
   height: 20px;
   border-radius: var(--mrr-radius-sm);
-  place-items: center;
 }
 
 .el-input__clear:hover,
@@ -455,8 +455,8 @@
 }
 
 .el-select-dropdown__item.is-selected {
-  color: var(--mrr-primary);
   font-weight: 500;
+  color: var(--mrr-primary);
   background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-popover));
 }
 
@@ -566,8 +566,8 @@
 }
 
 .el-switch__core {
-  border-color: transparent;
   background: var(--mrr-input);
+  border-color: transparent;
   box-shadow: none;
 }
 
@@ -596,6 +596,45 @@
   font-weight: 600;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.01em;
+}
+
+/*
+ * ===== 表面圆角 =====
+ *
+ * 这里显式列出 Element Plus 的「表面型」组件，替代原先 surface-radius.css 里
+ * `[class~="card"] / [class$="-panel"] / …` 的通配兜底。
+ *
+ * 两个关键点：
+ * 1. 选择器前置 `body`：Element Plus 的组件样式由 unplugin 按需注入，加载顺序
+ *    晚于本文件，同权重时会被它覆盖（实测 .el-card 会退回 4px）。前置元素选择器
+ *    把权重提到 (0,1,1)，不依赖顺序，也就不需要 !important。
+ * 2. 卡片用 --mrr-radius-card，表格式块级组件用 --mrr-radius-md，与兜底层原先
+ *    的实际渲染值一致，改造前后视觉不变。
+ */
+body .el-card {
+  border-radius: var(--mrr-radius-card);
+}
+
+body .el-table,
+body .el-alert,
+body .el-descriptions,
+body .el-segmented,
+body .el-collapse {
+  border-radius: var(--mrr-radius-md);
+}
+
+/* 需要按外层圆角裁剪内部背景、表头或图表内容的表面。 */
+body .el-card,
+body .el-table,
+body .el-descriptions,
+body .el-collapse {
+  overflow: hidden;
+}
+
+body .el-table__inner-wrapper,
+body .el-descriptions__body,
+body .el-descriptions__table {
+  border-radius: inherit;
 }
 
 .el-dialog__body {

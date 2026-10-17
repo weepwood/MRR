@@ -119,14 +119,14 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .case-header {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
 .case-main,
@@ -164,7 +164,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   cursor: pointer;
   background: var(--folder-tint, var(--surface-muted));
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
@@ -179,8 +179,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 }
 
 .case-main {
-  min-width: 0;
   gap: 3px;
+  min-width: 0;
 }
 
 .case-main strong,

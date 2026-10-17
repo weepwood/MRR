@@ -743,7 +743,7 @@ onMounted(() => {
   min-height: 126px;
   padding: 14px 10px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .file-tile:hover {

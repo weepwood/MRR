@@ -175,7 +175,7 @@ defineExpose({ resetVisible, scrollToIndex })
   scrollbar-gutter: stable;
   background: var(--surface-muted);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .thumb-strip.list {
@@ -205,7 +205,7 @@ defineExpose({ resetVisible, scrollToIndex })
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 7px;
+  border-radius: var(--mrr-radius-md);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -236,15 +236,15 @@ defineExpose({ resetVisible, scrollToIndex })
   justify-content: center;
   width: 18px;
   height: 18px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   background: rgb(255 255 255 / 88%);
   border: 1.5px solid var(--divider);
-  border-radius: 4px;
+  border-radius: var(--mrr-radius-sm);
   transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 
 .thumb-check.checked {
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   background: var(--color-primary);
   border-color: var(--color-primary);
 }
@@ -253,7 +253,7 @@ defineExpose({ resetVisible, scrollToIndex })
 .thumb-image-placeholder {
   box-sizing: border-box;
   width: 100%;
-  border-radius: 5px;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .thumb-item img {

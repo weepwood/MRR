@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { MrrChartCard, MrrLineChart } from '@/components/charts'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { mrrChartColor } from '@/config/chart-theme'
 
 defineOptions({ name: 'AuditAnalytics' })
 
@@ -49,7 +50,7 @@ const trendCategories = computed(() => props.analytics.trend.map(item => formatD
 const trendSeries = computed<MrrLineSeries[]>(() => [{
   name: '访问次数',
   data: props.analytics.trend.map(item => item.count),
-  color: '#2563eb',
+  color: mrrChartColor('primary'),
   area: true,
   smooth: true,
 }])
@@ -182,8 +183,8 @@ function handleTargetAction(action: string, target: string) {
 .section-title span { font-size: 12px; color: var(--el-text-color-secondary); }
 .count-cell { display: grid; grid-template-columns: minmax(90px, 1fr) 64px; gap: 12px; align-items: center; }
 .count-cell b { font-variant-numeric: tabular-nums; text-align: right; }
-.bar-track { height: 8px; overflow: hidden; background: var(--el-fill-color-light); border-radius: 999px; }
-.bar-track span { display: block; height: 100%; background: #2563eb; border-radius: inherit; }
-.bar-track--teal span { background: #14b8a6; }
+.bar-track { height: 8px; overflow: hidden; background: var(--el-fill-color-light); border-radius: var(--mrr-radius-pill); }
+.bar-track span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; }
+.bar-track--teal span { background: var(--mrr-tone-teal); }
 @media (max-width: 900px) { .ranking-grid, .trend-grid { grid-template-columns: 1fr; } }
 </style>

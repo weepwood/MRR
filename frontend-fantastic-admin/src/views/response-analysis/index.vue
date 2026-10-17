@@ -200,7 +200,7 @@ onMounted(loadData)
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #097fe8;
+  color: var(--mrr-primary);
   text-transform: uppercase;
   letter-spacing: 0.125px;
 }
@@ -210,14 +210,14 @@ h2 {
   font-size: 26px;
   font-weight: 700;
   line-height: 1.23;
-  color: rgb(0 0 0 / 95%);
+  color: var(--mrr-foreground);
   letter-spacing: -0.625px;
 }
 
 .subtitle {
   max-width: 760px;
   margin: 8px 0 0;
-  color: #615d59;
+  color: var(--mrr-muted-foreground);
 }
 
 .page-actions {
@@ -229,8 +229,8 @@ h2 {
 
 .analysis-card {
   min-width: 0;
-  border: 1px solid rgb(0 0 0 / 10%);
-  border-radius: 12px;
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
 }
 
 .analysis-stack {
@@ -261,12 +261,12 @@ h2 {
 .card-header strong {
   font-size: 16px;
   font-weight: 600;
-  color: rgb(0 0 0 / 95%);
+  color: var(--mrr-foreground);
 }
 
 .card-header span {
   font-size: 12px;
-  color: #615d59;
+  color: var(--mrr-muted-foreground);
 }
 
 .state-panel {
@@ -274,14 +274,14 @@ h2 {
   gap: 10px;
   justify-items: start;
   padding: 24px;
-  color: #615d59;
-  background: #f6f5f4;
-  border: 1px solid rgb(0 0 0 / 10%);
-  border-radius: 12px;
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
 }
 
 .error-panel strong {
-  color: #dd5b00;
+  color: var(--mrr-tone-warning);
 }
 
 @media (width >= 1440px) {

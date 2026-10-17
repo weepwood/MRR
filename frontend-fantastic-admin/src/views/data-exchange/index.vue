@@ -664,7 +664,7 @@ h2 {
   cursor: pointer;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .dataset-overview button:hover,
@@ -713,7 +713,7 @@ h2 {
   padding: 8px 10px;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .field-item code {

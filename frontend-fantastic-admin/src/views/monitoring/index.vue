@@ -485,7 +485,7 @@ onUnmounted(() => {
 
 .monitor-card {
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .card-header > div:first-child {
@@ -517,7 +517,7 @@ onUnmounted(() => {
   padding: 14px 16px;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .quality-summary span {

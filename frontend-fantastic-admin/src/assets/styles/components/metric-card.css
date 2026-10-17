@@ -48,7 +48,7 @@
   color: var(--mrr-card-foreground);
   background: linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
@@ -95,7 +95,7 @@
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
   border: 1px solid var(--mrr-border);
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
 }
 
 .mrr-metric-card__icon .el-icon {
@@ -230,7 +230,7 @@
     width: 46px;
     height: 46px;
     font-size: 23px;
-    border-radius: 12px;
+    border-radius: var(--mrr-radius-card);
   }
 }
 

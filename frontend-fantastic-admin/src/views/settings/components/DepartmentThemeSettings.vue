@@ -334,7 +334,7 @@ onMounted(() => {
 
 <style scoped>
 .department-theme-card {
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .department-theme-header {
@@ -395,7 +395,7 @@ onMounted(() => {
   padding: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .color-field {
@@ -406,9 +406,9 @@ onMounted(() => {
 }
 
 .archive-theme-preview {
-  --folder-accent: #2563eb;
-  --folder-strip: #1d4ed8;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary);
+  --folder-strip: var(--color-primary-hover);
+  --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
   display: grid;
@@ -419,7 +419,7 @@ onMounted(() => {
   color: var(--folder-accent);
   background: linear-gradient(155deg, var(--folder-tint), var(--surface) 68%);
   border: 1px solid color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .archive-theme-preview i {
@@ -459,7 +459,7 @@ onMounted(() => {
   padding: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .theme-history-summary {

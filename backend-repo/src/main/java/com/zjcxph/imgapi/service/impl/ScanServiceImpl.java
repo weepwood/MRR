@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.ScanMapper;
 import com.zjcxph.imgapi.service.ScanService;
+import com.zjcxph.imgapi.service.ImageTypeService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,9 +30,11 @@ public class ScanServiceImpl implements ScanService {
     private static final int MAX_LEGACY_QUERY_LIMIT = 1000;
 
     private final ScanMapper scanMapper;
+    private final ImageTypeService imageTypes;
 
-    public ScanServiceImpl(ScanMapper scanMapper) {
+    public ScanServiceImpl(ScanMapper scanMapper,ImageTypeService imageTypes) {
         this.scanMapper = scanMapper;
+        this.imageTypes=imageTypes;
     }
 
     @Override
@@ -137,7 +140,7 @@ public class ScanServiceImpl implements ScanService {
             @CacheEvict(value = "scanById", key = "#id")
     })
     public int updateImageType(Integer id, Integer type) {
-        return scanMapper.updateImageType(id, type);
+        return imageTypes.manual(id,type);
     }
 
     @Override
@@ -181,6 +184,7 @@ public class ScanServiceImpl implements ScanService {
     })
     public Scan update(Scan scan) {
         normalizeStoredCodes(scan);
+        if (scan.getBtype()!=null) imageTypes.manual(scan.getId(),scan.getBtype());
         if (scanMapper.update(scan) > 0) {
             // 数据库可能根据新的 BAH/SJH 更新 archive_id，返回持久化后的完整记录。
             return scanMapper.findById(scan.getId());

@@ -485,6 +485,10 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     private String getRequestBody(HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/api/v1/classification/")
+                || request.getRequestURI().startsWith("/api/v1/ocr/")) {
+            return "[OCR BODY OMITTED]";
+        }
         if (!(request instanceof ContentCachingRequestWrapper wrapper)) {
             return "";
         }

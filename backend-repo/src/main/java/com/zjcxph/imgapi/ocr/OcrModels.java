@@ -28,6 +28,7 @@ public final class OcrModels {
         private String jobId; private Integer scanId; private int originalType;
         private String status; private int attempts; private String failureCode;
         private String ocrResultVersion; private Integer suggestedType; private Double ruleScore;
+        private long originalTypeVersion;
         private Double ocrConfidence;
     }
     @Data public static class Fact {

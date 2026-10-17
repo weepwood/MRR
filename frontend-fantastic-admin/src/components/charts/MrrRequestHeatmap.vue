@@ -465,6 +465,7 @@ function hideTooltip() {
   appearance: none;
   cursor: pointer;
   outline: none;
+  border: 1px solid var(--el-border-color-lighter);
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
   transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
@@ -484,22 +485,35 @@ function hideTooltip() {
   pointer-events: none;
 }
 
+/*
+ * 热力图色阶靠 background 编码数据强度，属于「信息」而非「装饰」：
+ * 一旦整条声明失效，除最高档外的所有格子都会变透明，图表在 Chrome 86 上失去意义。
+ * 因此每档前置一条静态回退（Element Plus 的 light-* 色阶由 applyThemeColor 以 hex 同步写入，
+ * 主色变化时依然正确）。其余纯装饰性混色不做回退，见 DESIGN.md「color-mix 降级边界」。
+ */
 .level-0 {
+  background: var(--el-fill-color-light);
   background: color-mix(in srgb, var(--el-fill-color-light) 88%, transparent);
 }
 
 .level-1 {
+  background: var(--el-color-primary-light-8);
   background: color-mix(in srgb, var(--color-primary) 24%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-5);
   border-color: color-mix(in srgb, var(--color-primary) 16%, var(--el-border-color-lighter));
 }
 
 .level-2 {
+  background: var(--el-color-primary-light-5);
   background: color-mix(in srgb, var(--color-primary) 45%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-5);
   border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .level-3 {
+  background: var(--el-color-primary-light-3);
   background: color-mix(in srgb, var(--color-primary) 70%, var(--el-bg-color));
+  border-color: var(--el-color-primary-light-3);
   border-color: color-mix(in srgb, var(--color-primary) 48%, transparent);
 }
 
@@ -516,6 +530,7 @@ function hideTooltip() {
   padding: 13px 14px;
   color: var(--el-text-color-primary);
   pointer-events: none;
+  background: var(--el-bg-color-overlay);
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);

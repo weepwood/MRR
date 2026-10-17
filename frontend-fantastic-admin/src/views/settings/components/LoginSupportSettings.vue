@@ -103,7 +103,7 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 .advanced-heading span { font-size: 10px; color: var(--mrr-muted-foreground); }
 .feature-editor + .feature-editor { padding-top: var(--mrr-space-3); border-top: 1px solid var(--mrr-border); }
 .disabled { opacity: .62; }
-.login-preview { display: grid; gap: var(--mrr-space-2); background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--mrr-primary) 10%, transparent), transparent 38%), var(--mrr-muted); }
+.login-preview { display: grid; gap: var(--mrr-space-2); background-color: var(--mrr-muted); background-image: radial-gradient(circle at 0 0, color-mix(in srgb, var(--mrr-primary) 10%, transparent), transparent 38%); }
 .login-preview > span, .login-preview > small { font-size: 10px; color: var(--mrr-primary); text-transform: uppercase; letter-spacing: .08em; }
 .login-preview > strong { font-size: 25px; }
 .login-preview > p { margin: 0; color: var(--mrr-muted-foreground); }

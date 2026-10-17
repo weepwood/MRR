@@ -220,6 +220,9 @@ function handleMouseleave() {
 <style scoped>
 .saas-popup-menu {
   color: var(--mrr-popover-foreground);
+
+  /* 浮层底色不做「装饰性降级」：Chrome 86 丢掉 color-mix 后弹层会全透明，菜单文字直接压在页面内容上。 */
+  background: var(--mrr-popover);
   background: color-mix(in srgb, var(--mrr-popover) 96%, transparent);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);

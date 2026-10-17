@@ -167,7 +167,7 @@ public class DataExchangeController {
 
     @Operation(summary = "按条件导出患者 CSV")
     @GetMapping("/patients/export/csv")
-    @RequirePermissions({"record:read"})
+    @RequirePermissions({"record:download"})
     public void exportPatients(
             @RequestParam(required = false) String keyword,
             HttpServletResponse response
@@ -177,7 +177,7 @@ public class DataExchangeController {
 
     @Operation(summary = "按条件导出可重新导入的统计 CSV")
     @GetMapping("/statistics/export/csv")
-    @RequirePermissions({"statistics:read"})
+    @RequirePermissions({"record:download"})
     public void exportStatistics(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String bah,
@@ -193,7 +193,7 @@ public class DataExchangeController {
 
     @Operation(summary = "按条件导出病案主档 CSV")
     @GetMapping("/archives/export/csv")
-    @RequirePermissions({"record:read"})
+    @RequirePermissions({"record:download"})
     public void exportArchives(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String bah,
@@ -212,7 +212,7 @@ public class DataExchangeController {
 
     @Operation(summary = "按条件导出可重新导入的档案装箱 CSV")
     @GetMapping("/archive-boxes/export/csv")
-    @RequirePermissions({"record:read"})
+    @RequirePermissions({"record:download"})
     public void exportArchiveBoxes(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String bah,
@@ -227,7 +227,7 @@ public class DataExchangeController {
 
     @Operation(summary = "按条件导出扫描记录 CSV")
     @GetMapping("/scan/export/csv")
-    @RequirePermissions({"record:read"})
+    @RequirePermissions({"record:download"})
     public void exportScan(
             @RequestParam(required = false) String bah,
             @RequestParam(required = false) String sjh,

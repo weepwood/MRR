@@ -10,10 +10,15 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,6 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DataQualityServiceImpl implements DataQualityService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataQualityServiceImpl.class);
+    /** 检查项因超时未完成时写入的严重级别，不参与问题总数与告警统计。 */
+    private static final String SKIPPED_SEVERITY = "SKIPPED";
+    private static final String SQLSTATE_QUERY_CANCELED = "57014";
     private static final Set<String> LINKABLE_ENTITY_TYPES = Set.of(
             "mr_scan",
             "mr_statistics",
@@ -35,6 +43,7 @@ public class DataQualityServiceImpl implements DataQualityService {
     );
 
     private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate transactionTemplate;
     private final MultiGauge issuesGauge;
     private final AtomicLong totalIssuesGauge = new AtomicLong();
     private final AtomicLong lastSuccessTimestampGauge = new AtomicLong();
@@ -51,8 +60,20 @@ public class DataQualityServiceImpl implements DataQualityService {
     @Value("${app.data-quality.retention-days:90}")
     private int retentionDays;
 
-    public DataQualityServiceImpl(JdbcTemplate jdbcTemplate, MeterRegistry meterRegistry) {
+    /**
+     * 单个检查项的执行上限。部分检查在没有维护窗口的大表上属于全表统计，
+     * 必须由数据库侧超时兜底，避免一次巡检把连接池和 I/O 全部占满。
+     */
+    @Value("${app.data-quality.statement-timeout-seconds:120}")
+    private int statementTimeoutSeconds;
+
+    public DataQualityServiceImpl(
+            JdbcTemplate jdbcTemplate,
+            MeterRegistry meterRegistry,
+            PlatformTransactionManager transactionManager
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.issuesGauge = MultiGauge.builder("mrr.data.quality.issues")
                 .description("MRR data quality issue count grouped by check and severity")
                 .register(meterRegistry);
@@ -207,35 +228,56 @@ public class DataQualityServiceImpl implements DataQualityService {
             long criticalCount = 0;
             long warningCount = 0;
             int safeSampleLimit = Math.max(1, Math.min(sampleLimit, 1000));
+            List<String> skippedCodes = new ArrayList<>();
 
             for (DataQualityCheckDefinition check : checks) {
-                Long countValue = jdbcTemplate.queryForObject(check.countSql(), Long.class);
-                long issueCount = countValue == null ? 0 : countValue;
-                List<Map<String, Object>> samples = issueCount == 0
-                        ? List.of()
-                        : jdbcTemplate.queryForList(check.sampleSql() + " LIMIT ?", safeSampleLimit);
+                long checkStartedAt = System.nanoTime();
+                CheckOutcome outcome = executeCheck(check, safeSampleLimit);
+                long durationMillis = (System.nanoTime() - checkStartedAt) / 1_000_000L;
+                List<Map<String, Object>> samples = outcome.samples();
 
                 jdbcTemplate.update("""
                         INSERT INTO app.mrr_data_quality_check_result
                             (run_id, check_code, check_name, severity, issue_count, sampled_count)
                         VALUES (?, ?, ?, ?, ?, ?)
-                        """, runId, check.code(), check.name(), check.severity(), issueCount, samples.size());
+                        """,
+                        runId,
+                        check.code(),
+                        check.name(),
+                        outcome.skipped() ? SKIPPED_SEVERITY : check.severity(),
+                        outcome.issueCount(),
+                        samples.size());
 
                 saveSamples(runId, check, samples);
-                totalIssues += issueCount;
-                if ("CRITICAL".equals(check.severity())) {
-                    criticalCount += issueCount;
-                } else {
-                    warningCount += issueCount;
+
+                if (outcome.skipped()) {
+                    skippedCodes.add(check.code());
+                    logger.warn("数据质量检查 {} 超过 {} 秒被执行器取消，本轮记为 SKIPPED（耗时 {} ms）",
+                            check.code(), safeTimeoutSeconds(), durationMillis);
+                    continue;
                 }
+
+                totalIssues += outcome.issueCount();
+                if ("CRITICAL".equals(check.severity())) {
+                    criticalCount += outcome.issueCount();
+                } else {
+                    warningCount += outcome.issueCount();
+                }
+                logger.info("数据质量检查 {} 完成：问题 {} 条，样本 {} 条，耗时 {} ms",
+                        check.code(), outcome.issueCount(), samples.size(), durationMillis);
             }
+
+            String runNote = skippedCodes.isEmpty()
+                    ? null
+                    : abbreviate("以下检查项超时未完成，结果不可用于判定："
+                            + String.join(", ", skippedCodes), 2000);
 
             jdbcTemplate.update("""
                     UPDATE app.mrr_data_quality_run
                     SET status = 'SUCCESS', check_count = ?, total_issues = ?, critical_count = ?,
-                        warning_count = ?, completed_at = CURRENT_TIMESTAMP
+                        warning_count = ?, completed_at = CURRENT_TIMESTAMP, error_message = ?
                     WHERE id = ?
-                    """, checks.size(), totalIssues, criticalCount, warningCount, runId);
+                    """, checks.size(), totalIssues, criticalCount, warningCount, runNote, runId);
 
             cleanupExpiredRuns();
             refreshMetrics(runId);
@@ -273,6 +315,67 @@ public class DataQualityServiceImpl implements DataQualityService {
                     sample.get("sjh"),
                     sample.get("detail"));
         }
+    }
+
+    /**
+     * 在独立事务中执行单个检查项，并把数据库侧超时降级为 SKIPPED。
+     *
+     * <p>使用 {@code SET LOCAL statement_timeout} 而不是连接级设置，是因为连接来自
+     * HikariCP 池，任何连接级参数都会泄漏给后续业务请求。{@code SET LOCAL} 只在
+     * 当前事务内生效，事务结束自动恢复。</p>
+     *
+     * <p>超时不等于"没有异常"：把该检查记为 {@value #SKIPPED_SEVERITY}，
+     * 既不累加到问题总数，也不伪装成 0 问题，同时在批次 {@code error_message}
+     * 中留下清单，避免运维误读为"全部通过"。</p>
+     */
+    private CheckOutcome executeCheck(DataQualityCheckDefinition check, int safeSampleLimit) {
+        try {
+            CheckOutcome outcome = transactionTemplate.execute(status -> {
+                jdbcTemplate.execute("SET LOCAL statement_timeout = " + (safeTimeoutSeconds() * 1000L));
+                Long countValue = jdbcTemplate.queryForObject(check.countSql(), Long.class);
+                long issueCount = countValue == null ? 0 : countValue;
+                List<Map<String, Object>> samples = issueCount == 0
+                        ? List.of()
+                        : jdbcTemplate.queryForList(check.sampleSql() + " LIMIT ?", safeSampleLimit);
+                return new CheckOutcome(issueCount, samples, false);
+            });
+            return outcome == null ? new CheckOutcome(0, List.of(), false) : outcome;
+        } catch (DataAccessException exception) {
+            if (isStatementTimeout(exception)) {
+                return new CheckOutcome(0, List.of(), true);
+            }
+            throw exception;
+        }
+    }
+
+    private int safeTimeoutSeconds() {
+        return Math.max(5, statementTimeoutSeconds);
+    }
+
+    /**
+     * 识别 PostgreSQL 的 statement_timeout 取消（SQLSTATE 57014）。
+     *
+     * <p>Spring 会把该错误包成不同的 DataAccessException 子类，因此必须沿 cause 链查找，
+     * 不能只看最外层类型。</p>
+     */
+    private boolean isStatementTimeout(Throwable throwable) {
+        Throwable current = throwable;
+        int depth = 0;
+        while (current != null && depth < 10) {
+            if (current instanceof QueryTimeoutException) {
+                return true;
+            }
+            if (current instanceof SQLException sqlException
+                    && SQLSTATE_QUERY_CANCELED.equals(sqlException.getSQLState())) {
+                return true;
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return false;
+    }
+
+    private record CheckOutcome(long issueCount, List<Map<String, Object>> samples, boolean skipped) {
     }
 
     private List<Map<String, Object>> findArchiveCandidates(String bah, String sjh) {

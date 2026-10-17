@@ -266,9 +266,61 @@ C:\MRR\ops\nginx-control.cmd status
 & $ctl logs backend -Tail 300
 & $ctl logs backend-service -Tail 300
 & $ctl logs gateway -Tail 300
+
+# 数据库备份
+& $ctl backup
+& $ctl backup -KeepBackups 30
+& $ctl backup-status
 ```
 
 `-Force` 只跳过当前 manifest 的回滚许可判断，不会让旧格式 ZIP 变成受管理发布包。
+
+## 数据库备份与恢复演练
+
+备份脚本：`ops\backup-db.ps1`（由 `install.ps1` 复制）。恢复演练脚本：`ops\restore-db.ps1`。
+
+`backup-db.ps1` 每次执行会：
+
+1. 用 `pg_dump -Fc --compress=6 --no-owner --no-privileges` 生成 `backups\db\imgapi_yyyyMMdd_HHmmss.dump`；
+2. 计算 SHA256 并写 `.sha256` 同名校验文件；
+3. 用 `pg_restore --list` 确认归档可读且包含表数据，否则删除半成品并失败退出；
+4. 写出 `.json` 清单（含每张关键表的行数基线）与 `latest.json` 指针；
+5. 把 `lastSuccessfulBackupAt` / `lastSuccessfulBackupFile` / `lastSuccessfulBackupSizeBytes` 写入
+   `app.mr_system_settings`，供部署就绪检查（`app.readiness.maximum-backup-age-hours`）与
+   Prometheus 指标 `mrr_backup_last_success_timestamp` 使用；
+6. 按 `-Keep`（默认 14）轮转旧备份，同时删除对应 `.sha256` 与 `.json`。
+
+依赖 PostgreSQL 客户端：脚本依次在 `-PgBin`、`runtime\pgsql\bin`、`PATH`、`C:\Program Files\PostgreSQL\*\bin`
+中查找 `pg_dump` / `pg_restore` / `psql`。数据库口令取自 `secrets\application-secrets.properties`
+的 `spring.datasource.password`，脚本不会把口令写入日志或清单。
+
+### 注册每日备份
+
+```powershell
+schtasks /Create /TN MRR-Backup /SC DAILY /ST 01:30 /RU SYSTEM /RL HIGHEST `
+  /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\MRR\ops\backup-db.ps1"
+```
+
+`doctor` 与 `backup-status` 都会显示最近备份时间；超过 48 小时会给出告警。备份成功但
+时间戳没写进数据库时脚本会失败退出——避免"有 dump 文件、但系统以为没备份"或反之。
+
+### 恢复演练
+
+```powershell
+# 默认与备份清单记录的备份时行数比对；需要超级用户口令创建/删除演练库
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\MRR\ops\restore-db.ps1
+
+# 指定某份备份，保留演练库供人工检查
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\MRR\ops\restore-db.ps1 `
+  -DumpFile C:\MRR\backups\db\imgapi_20261017_013000.dump -KeepDatabase
+```
+
+演练会先校验 SHA256（缺失或不匹配直接拒绝恢复），再把备份恢复到 `imgapi_restorecheck`，
+比对 `mr_scan`、`mr_archive`、`mr_statistics`、`access_log`、`mr_archive_box_record` 的行数。
+默认与**备份清单**中的行数比对，因为生产环境在备份之后仍会继续写入；只有在停机窗口内紧接着
+备份执行时才使用 `-CompareWith live`。任一行数不一致即失败，并在关闭前保留错误输出。
+
+建议每月执行一次，并把结果记入运维记录。
 
 ## 部署过程
 

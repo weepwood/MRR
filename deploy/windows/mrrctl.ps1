@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
-    [ValidateSet('status','start','stop','restart','maintenance','frontend','deploy','rollback','version','versions','logs','doctor')]
+    [ValidateSet('status','start','stop','restart','maintenance','frontend','deploy','rollback','version','versions','logs','doctor','backup','backup-status')]
     [string]$Command,
     [Parameter(Position = 1)][string]$Target = 'all',
     [string]$Root = 'C:\MRR',
@@ -9,6 +9,7 @@ param(
     [int]$Tail = 200,
     [int]$HealthTimeoutSeconds = 90,
     [int]$KeepReleases = 5,
+    [int]$KeepBackups = 14,
     [switch]$Force
 )
 
@@ -521,6 +522,16 @@ function Doctor {
         Assert-BundledFrontendJar (Join-Path $P.Current 'backend\mrr-backend.jar')
         Write-Host 'JAR 内嵌前端校验通过。' -ForegroundColor Green
     }
+    $backup = Get-BackupSummary
+    if ($null -eq $backup) {
+        Write-Warning "尚无数据库备份记录：$(Join-Path $Root 'backups\db')"
+    }
+    elseif ($backup.AgeHours -gt 48) {
+        Write-Warning ("最近备份已超过 48 小时：{0}（{1} 小时前）" -f $backup.File, $backup.AgeHours)
+    }
+    else {
+        Write-Host ("最近备份：{0}（{1} 小时前，{2} MB）" -f $backup.File, $backup.AgeHours, $backup.SizeMB) -ForegroundColor Green
+    }
     $rows = foreach ($port in 80,18045,18046,5432) {
         $connection = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
         $ids = ($connection | Select-Object -ExpandProperty OwningProcess -Unique -ErrorAction SilentlyContinue) -join ','
@@ -535,6 +546,60 @@ function Doctor {
         } catch {
             Write-Warning $_.Exception.Message
         }
+    }
+}
+
+function Resolve-BackupScript {
+    foreach ($candidate in @((Join-Path $Root 'ops\backup-db.ps1'), (Join-Path $PSScriptRoot 'backup-db.ps1'))) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    throw '找不到 backup-db.ps1，请重新执行 install.ps1 部署运维脚本。'
+}
+
+function Get-BackupSummary {
+    $latest = Join-Path $Root 'backups\db\latest.json'
+    if (-not (Test-Path -LiteralPath $latest -PathType Leaf)) { return $null }
+    $info = Get-Content -LiteralPath $latest -Raw -Encoding UTF8 | ConvertFrom-Json
+    $finishedAt = [datetime]::Parse([string]$info.finishedAt, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AdjustToUniversal)
+    $ageHours = [Math]::Round(((Get-Date).ToUniversalTime() - $finishedAt).TotalHours, 1)
+    return [pscustomobject]@{
+        File = [string]$info.file
+        FinishedAt = $finishedAt.ToLocalTime()
+        AgeHours = $ageHours
+        SizeMB = [Math]::Round(([double]$info.sizeBytes) / 1MB, 1)
+        TableDataCount = $info.tableDataCount
+    }
+}
+
+function Invoke-Backup {
+    Assert-Admin
+    $script = Resolve-BackupScript
+    & $script -Root $Root -Keep $KeepBackups
+    if ($LASTEXITCODE -ne 0) { throw '数据库备份失败，请查看日志 logs\backup\backup.log。' }
+}
+
+function Show-BackupStatus {
+    $backupRoot = Join-Path $Root 'backups\db'
+    $summary = Get-BackupSummary
+    if ($null -eq $summary) {
+        Write-Warning "尚无数据库备份记录：$backupRoot"
+        return
+    }
+    $state = if ($summary.AgeHours -gt 48) { 'STALE' } else { 'OK' }
+    [pscustomobject]@{
+        File = $summary.File
+        FinishedAt = $summary.FinishedAt
+        AgeHours = $summary.AgeHours
+        SizeMB = $summary.SizeMB
+        TableDataCount = $summary.TableDataCount
+        State = $state
+    } | Format-List
+    Get-ChildItem -LiteralPath $backupRoot -Filter '*.dump' -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 5 Name, @{n = 'MB'; e = { [Math]::Round($_.Length / 1MB, 1) }}, LastWriteTime |
+        Format-Table -AutoSize
+    if ($state -eq 'STALE') {
+        Write-Warning '最近一次备份已超过 48 小时，请检查计划任务是否仍在执行。'
     }
 }
 
@@ -558,4 +623,6 @@ switch ($Command) {
         Get-Content $file -Tail $Tail -Encoding UTF8
     }
     doctor { Doctor }
+    backup { Invoke-Backup }
+    backup-status { Show-BackupStatus }
 }

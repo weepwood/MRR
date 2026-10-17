@@ -9,10 +9,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,10 +25,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -37,16 +44,21 @@ class DataQualityServiceImplTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     private SimpleMeterRegistry meterRegistry;
     private DataQualityServiceImpl service;
 
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        service = new DataQualityServiceImpl(jdbcTemplate, meterRegistry);
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        service = new DataQualityServiceImpl(jdbcTemplate, meterRegistry, transactionManager);
         ReflectionTestUtils.setField(service, "enabled", true);
         ReflectionTestUtils.setField(service, "sampleLimit", 200);
         ReflectionTestUtils.setField(service, "retentionDays", 90);
+        ReflectionTestUtils.setField(service, "statementTimeoutSeconds", 120);
     }
 
     @Test
@@ -200,5 +212,98 @@ class DataQualityServiceImplTest {
 
         assertThatCode(service::initializeMetrics).doesNotThrowAnyException();
         assertThat(meterRegistry.get("mrr.data.quality.total.issues").gauge().value()).isZero();
+    }
+
+    @Test
+    void everyCheckRunsWithDatabaseSideStatementTimeout() {
+        stubRunId(101L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class))).thenReturn(0L);
+
+        service.runChecks("manual");
+
+        verify(jdbcTemplate, atLeastOnce()).execute(contains("SET LOCAL statement_timeout"));
+    }
+
+    @Test
+    void statementTimeoutIsRecordedAsSkippedInsteadOfFailingWholeRun() {
+        stubRunId(102L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class)))
+                .thenThrow(statementTimeout());
+
+        Map<String, Object> result = service.runChecks("manual");
+
+        // runChecks 返回的是执行中的快照（running 仍为 true），这里只断言不抛异常。
+        assertThat(result).isNotNull();
+        // 18 个检查项全部超时，每一项都应单独记为 SKIPPED，而不是让整轮失败。
+        verify(jdbcTemplate, atLeastOnce()).update(
+                contains("INSERT INTO app.mrr_data_quality_check_result"),
+                eq(102L),
+                anyString(),
+                anyString(),
+                eq("SKIPPED"),
+                eq(0L),
+                eq(0)
+        );
+        // 超时项在批次上留痕，避免被误读为"全部通过"。
+        verify(jdbcTemplate).update(
+                contains("SET status = 'SUCCESS'"),
+                anyInt(),
+                eq(0L),
+                eq(0L),
+                eq(0L),
+                contains("超时未完成"),
+                eq(102L)
+        );
+        assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
+    }
+
+    @Test
+    void ordinaryCheckFailureStillFailsTheRun() {
+        stubRunId(103L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class)))
+                .thenThrow(new UncategorizedSQLException(
+                        "count",
+                        "SELECT COUNT(*)",
+                        new SQLException("relation does not exist", "42P01")
+                ));
+
+        assertThatThrownBy(() -> service.runChecks("manual"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("数据质量检查失败");
+
+        verify(jdbcTemplate).update(contains("SET status = 'FAILED'"), anyString(), eq(103L));
+    }
+
+    @Test
+    void successfulCheckKeepsDefinitionSeverity() {
+        stubRunId(104L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class))).thenReturn(2L);
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
+
+        service.runChecks("manual");
+
+        verify(jdbcTemplate, atLeastOnce()).update(
+                contains("INSERT INTO app.mrr_data_quality_check_result"),
+                eq(104L),
+                anyString(),
+                anyString(),
+                eq("CRITICAL"),
+                eq(2L),
+                anyInt()
+        );
+    }
+
+    private void stubRunId(long runId) {
+        when(jdbcTemplate.queryForObject(
+                contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
+                .thenReturn(runId);
+    }
+
+    private UncategorizedSQLException statementTimeout() {
+        return new UncategorizedSQLException(
+                "count",
+                "SELECT COUNT(*)",
+                new SQLException("canceling statement due to statement timeout", "57014")
+        );
     }
 }

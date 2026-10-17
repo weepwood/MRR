@@ -36,8 +36,8 @@ const route = useRoute()
 const router = useRouter()
 const { auth } = useAuth()
 const canImport = computed(() => auth('record:edit'))
-const canReadRecords = computed(() => auth('record:read'))
-const canReadStatistics = computed(() => auth('statistics:read'))
+// 批量导出与影像/PDF 下载同档权限：可查看不等于可整表导出。
+const canExport = computed(() => auth('record:download'))
 const activeTab = ref<ExchangeTab>(normalizeTab(route.query.dataset))
 const exporting = ref<Partial<Record<ExchangeTab, boolean>>>({})
 
@@ -296,14 +296,14 @@ function today() {
     </div>
 
     <el-alert
-      v-if="!canImport"
-      title="当前账号只有读取权限"
-      type="info"
+      v-if="!canExport || !canImport"
+      :title="canExport ? '当前账号只有查看与导出权限' : '当前账号没有批量导出权限'"
+      type="warning"
       show-icon
       :closable="false"
     >
       <template #default>
-        可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。
+        批量导出需要 record:download 权限（与影像下载、PDF 导出同档）；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。
       </template>
     </el-alert>
 
@@ -350,7 +350,7 @@ function today() {
                   type="primary"
                   :icon="Download"
                   :loading="exporting.patients"
-                  :disabled="!canReadRecords"
+                  :disabled="!canExport"
                   @click="exportPatients"
                 >
                   导出 CSV
@@ -399,7 +399,7 @@ function today() {
                   type="primary"
                   :icon="Download"
                   :loading="exporting.statistics"
-                  :disabled="!canReadStatistics"
+                  :disabled="!canExport"
                   @click="exportStatistics"
                 >
                   导出 CSV
@@ -460,7 +460,7 @@ function today() {
                   type="primary"
                   :icon="Download"
                   :loading="exporting.archives"
-                  :disabled="!canReadRecords"
+                  :disabled="!canExport"
                   @click="exportArchives"
                 >
                   导出 CSV
@@ -513,7 +513,7 @@ function today() {
                   type="primary"
                   :icon="Download"
                   :loading="exporting['archive-boxes']"
-                  :disabled="!canReadRecords"
+                  :disabled="!canExport"
                   @click="exportArchiveBoxes"
                 >
                   导出 CSV
@@ -573,7 +573,7 @@ function today() {
                   type="primary"
                   :icon="Download"
                   :loading="exporting.scan"
-                  :disabled="!canReadRecords"
+                  :disabled="!canExport"
                   @click="exportScans"
                 >
                   导出 CSV

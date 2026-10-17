@@ -160,7 +160,9 @@ $directories = @(
     'runtime',
     'shared',
     'state',
-    'backups'
+    'backups',
+    'backups\db',
+    'logs\backup'
 )
 foreach ($relative in $directories) {
     New-Item -ItemType Directory -Path (Join-Path $Root $relative) -Force | Out-Null
@@ -219,6 +221,8 @@ Set-Content -LiteralPath (Join-Path $Root 'config\nginx\maintenance.inc') -Value
 Set-Content -LiteralPath (Join-Path $Root 'shared\healthz.txt') -Value "ok`r`n" -Encoding ASCII
 Copy-Item -LiteralPath (Join-Path $scriptDir 'mrrctl.ps1') -Destination (Join-Path $Root 'ops\mrrctl.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $scriptDir 'nginxctl.ps1') -Destination (Join-Path $Root 'ops\nginxctl.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'backup-db.ps1') -Destination (Join-Path $Root 'ops\backup-db.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $scriptDir 'restore-db.ps1') -Destination (Join-Path $Root 'ops\restore-db.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $scriptDir 'nginx-control.cmd') -Destination (Join-Path $Root 'ops\nginx-control.cmd') -Force
 Copy-Item -LiteralPath (Join-Path $scriptDir 'mrr-manager.ps1') -Destination (Join-Path $Root 'ops\mrr-manager.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $scriptDir 'MRR-Manager.cmd') -Destination (Join-Path $Root 'ops\MRR-Manager.cmd') -Force
@@ -265,3 +269,7 @@ Write-Host "4. 执行：$Root\ops\mrrctl.ps1 deploy <发布包路径>"
 Write-Host "5. 默认使用 JAR 内嵌前端；可执行 mrrctl.ps1 frontend external 临时切回外置前端。"
 Write-Host "6. Nginx 控制：$Root\ops\nginx-control.cmd status|start|stop|restart|reload|test|pause|resume"
 Write-Host "7. 一键管理中心：双击 $Root\ops\MRR-管理中心.cmd（或 MRR-Manager.cmd）"
+Write-Host "8. 数据库备份：$Root\ops\mrrctl.ps1 backup（backup-status 查看最近备份）"
+Write-Host '9. 建议注册每日备份计划任务，并每月执行一次恢复演练：'
+Write-Host "   schtasks /Create /TN MRR-Backup /SC DAILY /ST 01:30 /RU SYSTEM /RL HIGHEST /TR `"powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Root\ops\backup-db.ps1`""
+Write-Host "   powershell -NoProfile -ExecutionPolicy Bypass -File $Root\ops\restore-db.ps1"

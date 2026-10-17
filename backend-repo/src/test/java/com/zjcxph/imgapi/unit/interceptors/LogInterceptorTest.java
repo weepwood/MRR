@@ -271,6 +271,45 @@ class LogInterceptorTest {
         assertThat(MDC.get(LogInterceptor.MDC_USER_ROLE)).isNull();
     }
 
+    @Test
+    void auditsDataExchangeExportWithDedicatedAction() throws Exception {
+        Log savedLog = captureSavedLog(
+                new MockHttpServletRequest("GET", "/api/v1/data-exchange/patients/export/csv"));
+
+        assertThat(savedLog.getAuditAction()).isEqualTo("EXPORT_CSV");
+        assertThat(savedLog.getAuditTarget()).isEqualTo("patients");
+        assertThat(savedLog.getAuditDescription()).contains("patients");
+    }
+
+    @Test
+    void auditsEveryDataExchangeExportDatasetName() throws Exception {
+        assertThat(exportAuditTarget("/api/v1/data-exchange/statistics/export/csv"))
+                .isEqualTo("statistics");
+        assertThat(exportAuditTarget("/api/v1/data-exchange/archives/export/csv"))
+                .isEqualTo("archives");
+        assertThat(exportAuditTarget("/api/v1/data-exchange/archive-boxes/export/csv"))
+                .isEqualTo("archive-boxes");
+        assertThat(exportAuditTarget("/api/v1/data-exchange/scan/export/csv"))
+                .isEqualTo("scan");
+    }
+
+    @Test
+    void doesNotMarkDataExchangeImportAsExport() throws Exception {
+        Log savedLog = captureSavedLog(
+                new MockHttpServletRequest("POST", "/api/v1/data-exchange/scan/import"));
+
+        assertThat(savedLog.getAuditAction()).isNull();
+    }
+
+    private String exportAuditTarget(String uri) throws Exception {
+        // captureSavedLog 使用 verify(1 次) 断言；同一测试内连续导出多个数据集时
+        // 必须先清空上一个请求留下的调用记录。
+        org.mockito.Mockito.clearInvocations(asyncLogService);
+        Log savedLog = captureSavedLog(new MockHttpServletRequest("GET", uri));
+        assertThat(savedLog.getAuditAction()).isEqualTo("EXPORT_CSV");
+        return savedLog.getAuditTarget();
+    }
+
     private Log captureSavedLog(HttpServletRequest request) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
         interceptor.preHandle(request, response, new Object());

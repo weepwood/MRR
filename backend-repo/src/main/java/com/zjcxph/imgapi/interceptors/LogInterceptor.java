@@ -56,6 +56,8 @@ public class LogInterceptor implements HandlerInterceptor {
     private static final String ENDPOINT_TEMPLATE_HEADER = "X-Endpoint-Template";
     private static final String SETTINGS_PATH = "/api/v1/settings";
     private static final String SETTINGS_KEY_PREFIX = "/api/v1/settings/";
+    private static final String DATA_EXCHANGE_PREFIX = "/api/v1/data-exchange";
+    private static final String DATA_EXCHANGE_EXPORT_MARKER = "/export/";
     private static final int MAX_REFERER_LENGTH = 4096;
     private static final int MAX_REQUEST_BODY_LENGTH = 16384;
     private static final int MAX_ERROR_MESSAGE_LENGTH = 2048;
@@ -303,9 +305,31 @@ public class LogInterceptor implements HandlerInterceptor {
             log.setAuditDescription("修改当前用户密码");
         } else if (uri.startsWith("/api/v1/oss/") && ("POST".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method))) {
             enrichOssAudit(log, uri, method);
+        } else if (uri.startsWith(DATA_EXCHANGE_PREFIX) && uri.contains(DATA_EXCHANGE_EXPORT_MARKER)) {
+            enrichDataExchangeExportAudit(log, uri);
         } else if (uri.startsWith(SETTINGS_PATH)) {
             enrichSettingAudit(log, request, uri, method);
         }
+    }
+
+    /**
+     * 批量数据导出审计。
+     *
+     * <p>数据交换导出会一次性输出至多十万行患者与病案数据，属于高敏感批量操作。
+     * 此前这类请求只落通用访问日志，无法按"导出"动作检索，事后回答不了
+     * "谁在什么时候导出了哪份数据集"。这里把动作固定为 {@code EXPORT_CSV}，
+     * 目标固定为数据集名，使审计查询可以按动作聚合。</p>
+     *
+     * <p>即使请求因权限不足被拒绝（403），审计仍会记录该动作，
+     * 因为被拒绝的批量导出尝试本身也是需要留痕的安全事件。</p>
+     */
+    private void enrichDataExchangeExportAudit(Log log, String uri) {
+        String remainder = uri.substring(DATA_EXCHANGE_PREFIX.length());
+        int markerIndex = remainder.indexOf(DATA_EXCHANGE_EXPORT_MARKER);
+        String dataset = markerIndex > 0 ? remainder.substring(1, markerIndex) : remainder;
+        log.setAuditAction("EXPORT_CSV");
+        log.setAuditTarget(truncate(dataset, MAX_AUDIT_TARGET_LENGTH));
+        log.setAuditDescription("导出数据集 " + dataset + " 为 CSV");
     }
 
     /**

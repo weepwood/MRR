@@ -2,6 +2,8 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PreDestroy;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
@@ -36,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 汇总部署前置条件，并在关键依赖异常时提供自动只读降级判定。
@@ -59,6 +62,13 @@ public class DeploymentReadinessService {
     private final ExecutorService ossHealthExecutor;
     private final long minimumFreeBytes;
     private final long maximumBackupAgeHours;
+
+    /**
+     * 备份时效指标：0 表示从未记录成功备份，直接暴露"备份从未跑过"这个事实。
+     * 由 backup-db.ps1 写入 {@code lastSuccessfulBackupAt} 后，下一次刷新快照时更新。
+     */
+    private final AtomicLong backupLastSuccessEpochSeconds = new AtomicLong(0);
+    private final AtomicLong backupAgeHoursGauge = new AtomicLong(-1);
     private final long ossHealthTimeoutSeconds;
 
     private volatile Map<String, Object> cachedSnapshot = Map.of(
@@ -77,6 +87,7 @@ public class DeploymentReadinessService {
             ImageUrlService imageUrlService,
             OssService ossService,
             SystemSettingService systemSettingService,
+            MeterRegistry meterRegistry,
             @Value("${app.readiness.minimum-free-bytes:5368709120}") long minimumFreeBytes,
             @Value("${app.readiness.maximum-backup-age-hours:48}") long maximumBackupAgeHours,
             @Value("${app.readiness.oss-health-timeout-seconds:5}") long ossHealthTimeoutSeconds
@@ -91,6 +102,12 @@ public class DeploymentReadinessService {
         this.minimumFreeBytes = Math.max(0L, minimumFreeBytes);
         this.maximumBackupAgeHours = Math.max(1L, maximumBackupAgeHours);
         this.ossHealthTimeoutSeconds = Math.max(1L, ossHealthTimeoutSeconds);
+        Gauge.builder("mrr.backup.last.success.timestamp", backupLastSuccessEpochSeconds, AtomicLong::get)
+                .description("Epoch seconds of the latest successful database backup, 0 when never recorded")
+                .register(meterRegistry);
+        Gauge.builder("mrr.backup.age.hours", backupAgeHoursGauge, AtomicLong::get)
+                .description("Hours since the latest successful database backup, -1 when never recorded")
+                .register(meterRegistry);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
                 .followRedirects(HttpClient.Redirect.NEVER)
@@ -366,6 +383,8 @@ public class DeploymentReadinessService {
             Instant lastBackup = parseInstant(raw);
             long ageHours = Math.max(0L, Duration.between(lastBackup, Instant.now()).toHours());
             boolean passed = ageHours <= maximumBackupAgeHours;
+            backupLastSuccessEpochSeconds.set(lastBackup.getEpochSecond());
+            backupAgeHoursGauge.set(ageHours);
             return check(
                     "backup",
                     "最近备份",

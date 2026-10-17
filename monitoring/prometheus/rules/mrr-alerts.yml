@@ -115,6 +115,28 @@ groups:
           summary: 主机磁盘可用空间低于 8%
           description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 即将耗尽。
 
+  - name: mrr-data-protection
+    rules:
+      # backup-db.ps1 成功后写入 lastSuccessfulBackupAt，后端刷新部署就绪快照时更新该指标。
+      # 0 表示从未记录成功备份，任何此类部署都不具备可恢复性。
+      - alert: MrrBackupNeverRecorded
+        expr: mrr_backup_last_success_timestamp == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 从未记录成功的数据库备份
+          description: 没有任何备份成功记录。请检查 backup-db.ps1 的计划任务是否已安装并成功执行。
+
+      - alert: MrrBackupStale
+        expr: mrr_backup_last_success_timestamp > 0 and (time() - mrr_backup_last_success_timestamp) > 172800
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 最近一次数据库备份已超过 48 小时
+          description: 最近备份距今 {{ $value | humanizeDuration }}。请检查备份任务和磁盘空间，并在恢复前确认备份文件完整。
+
   - name: mrr-data-quality
     rules:
       - alert: MrrDataQualityCriticalIssues
@@ -124,7 +146,7 @@ groups:
           severity: warning
         annotations:
           summary: MRR 数据质量检查发现严重问题
-          description: 最近一次手动检查中，{{ $labels.check_code }} 发现 {{ $value }} 条严重异常。
+          description: 最近一次检查中，{{ $labels.check_code }} 发现 {{ $value }} 条严重异常。
 
       - alert: MrrDataQualityRunStuck
         expr: mrr_data_quality_running == 1

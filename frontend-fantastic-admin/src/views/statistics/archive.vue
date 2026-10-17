@@ -20,6 +20,7 @@ import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import ArchiveWall from './archive/components/ArchiveWall.vue'
+import OcrPanel from './archive/components/OcrPanel.vue'
 import PatientCard from './archive/components/PatientCard.vue'
 import PreviewPanel from './archive/components/PreviewPanel.vue'
 import ThumbStrip from './archive/components/ThumbStrip.vue'
@@ -685,6 +686,9 @@ onUnmounted(() => {
 
 <template>
   <div class="archive-page" :class="`scrollbars-${archiveDisplaySettings.archiveScrollbarMode}`">
+    <div v-if="archiveAccessMode === 'internal' && currentImage?.id" class="archive-ocr-toolbar">
+      <OcrPanel :scan-id="currentImage.id" :image-url="currentImage.imageUrl" :unclassified="currentImage.btype === 0" />
+    </div>
     <ArchiveMoreSettings
       class="archive-more-settings-float"
       :view-mode="viewMode"

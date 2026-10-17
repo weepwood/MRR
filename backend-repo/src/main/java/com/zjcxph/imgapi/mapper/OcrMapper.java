@@ -89,6 +89,7 @@ public interface OcrMapper {
         WHERE j.id=#{id} AND j.lease_token=#{token}
         """) void release(@Param("id") String id, @Param("token") String token);
     @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan}") Fact fact(Integer scan);
+    @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan} FOR UPDATE") Fact lockFact(Integer scan);
     @Insert("""
         INSERT INTO app.mr_scan_ocr_history(result_version,scan_id,archive_id,content_hash,engine_version,
           model_checksum,preprocessing_version,ocr_text,lines_json,confidence,image_width,image_height,processed_at)

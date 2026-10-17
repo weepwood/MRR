@@ -40,10 +40,10 @@ public class AutomaticClassificationService {
         Target target=mapper.target(id);if(target==null) return;
         try {
             authorize(target.getOwnerUserId());
-            try(var prepared=input.prepare(target.getScanId(),()->!quality.enabled())) {
+            try(var prepared=input.prepare(target.getScanId(),()->!jobs.enabled()||!quality.enabled())) {
                 transactions.executeWithoutResult(tx->{
                     var batch=batches.lock(target.getBatchId());
-                    if(Thread.currentThread().isInterrupted()||batch==null||!"RUNNING".equals(batch.getStatus())||!batch.isAutoApply()||!quality.enabled()||!guard.allowed()) return;
+                    if(Thread.currentThread().isInterrupted()||batch==null||!"RUNNING".equals(batch.getStatus())||!batch.isAutoApply()||!jobs.enabled()||!quality.enabled()||!guard.allowed()) return;
                     AuthSession actor=authorize(batch.getOwnerUserId());
                     var suggestion=classifications.lockSuggestion(id);
                     if(suggestion==null||!"PENDING".equals(suggestion.getReviewStatus())||!"PENDING".equals(suggestion.getAutoStatus())) return;

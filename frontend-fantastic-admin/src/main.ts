@@ -9,6 +9,7 @@ import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
 import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
+import { installUiSettingsSync } from '@/utils/ui-settings-sync'
 
 import App from './App.vue'
 import router from './router'
@@ -48,6 +49,8 @@ function startApplication() {
   app.use(router)
   app.use(uiProvider)
   installArchiveWatermark(router, pinia)
+  // 全局界面外观与"其他"菜单外链改为服务端保存，登录后拉取并应用。
+  installUiSettingsSync(router, pinia)
   directive(app)
   installRequestErrorFallback(app)
   app.mount('#app')

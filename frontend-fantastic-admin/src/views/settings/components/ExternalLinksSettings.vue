@@ -13,6 +13,17 @@ const draft = reactive({
 
 const externalLinks = computed(() => settingsStore.settings.menu.externalLinks)
 
+/**
+ * 生效范围提示。外链属于全站界面配置，写入服务端需要 system:manage 权限；
+ * 无权限时只能保存在本机，必须在界面上如实说明，避免承诺未生效的同步。
+ */
+const linkScopeDescription = computed(() => {
+  if (settingsStore.uiSettingsSyncState === 'local-only') {
+    return '这些链接保存在本机浏览器。当前账号缺少系统管理权限，修改不会同步到全站。'
+  }
+  return '这些链接保存在系统数据库，并同步到全站的“其他”菜单。'
+})
+
 function persistSettings() {
   settingsStore.saveAppSettings()
 }
@@ -144,7 +155,7 @@ function openExternalLink(url: string) {
         </div>
         <div class="header-copy">
           <h4>“其他”菜单</h4>
-          <p>这些链接只保存在当前浏览器，可通过界面配置导入和导出。</p>
+          <p>{{ linkScopeDescription }}</p>
         </div>
         <el-tag effect="plain" round>
           {{ externalLinks.length }} / 30
@@ -334,7 +345,7 @@ function openExternalLink(url: string) {
   margin-left: 0;
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .link-form {
     grid-template-columns: 1fr;
   }

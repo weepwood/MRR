@@ -1,8 +1,12 @@
 package com.zjcxph.imgapi.unit.controller;
 
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.controller.SystemSettingController;
+import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.SystemSettingService;
+import com.zjcxph.imgapi.setting.RuntimeSettingStore;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,11 +30,18 @@ class SystemSettingControllerTest {
     @Mock
     private SystemSettingService systemSettingService;
 
+    @Mock
+    private SystemSettingMapper systemSettingMapper;
+
     private SystemSettingController systemSettingController;
 
     @BeforeEach
     void setUp() {
-        systemSettingController = new SystemSettingController(systemSettingService);
+        SettingRegistry registry = new SettingRegistry(new LogRetentionProperties());
+        systemSettingController = new SystemSettingController(
+                systemSettingService,
+                registry,
+                new RuntimeSettingStore(systemSettingMapper, registry));
     }
 
     @Test

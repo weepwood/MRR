@@ -83,8 +83,11 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 |------|------|------|
 | requestId | 请求唯一标识 | 自动生成 (UUID) |
 | clientIp | 客户端 IP | 从请求头提取 |
-| userId | 用户 ID | 从请求头 X-User-Id |
-| userRole | 用户角色 | 从请求头 X-User-Role |
+| userId | 已认证用户名 | 认证会话（`LoginInterceptor` 解析后绑定） |
+| userRole | 已认证角色编码 | 认证会话（`LoginInterceptor` 解析后绑定） |
+
+> 日志身份一律以服务端会话为准。`X-User-Id` / `X-User-Role` 请求头由客户端完全可控，
+> 不再写入 MDC，避免调用方伪造请求头污染日志身份。
 
 ### 日志级别配置
 

@@ -1,8 +1,7 @@
 .settings-page { --settings-workspace-edge-gap: 10px; display: grid; gap: var(--mrr-space-5); min-width: 0; }
-.page-header { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
-.header-title, .title-line, .header-actions { display: flex; gap: var(--mrr-space-3); align-items: center; }
-.header-icon, .section-icon, .nav-icon { display: grid; flex: 0 0 auto; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); place-items: center; }
-.header-icon { width: 42px; height: 42px; border-radius: var(--mrr-radius-lg); }
+/* 页头的外观与排版由全局 page-header.css 统一维护（plain / card 两种风格），此处不再重复声明。 */
+.title-line, .header-actions { display: flex; gap: var(--mrr-space-3); align-items: center; }
+.section-icon, .nav-icon { display: grid; flex: 0 0 auto; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); place-items: center; }
 .header-title h2, .section-header h3 { margin: 0; }
 .header-title p, .section-header p { margin: 4px 0 0; font-size: 12px; color: var(--mrr-muted-foreground); }
 .settings-workspace-frame { box-sizing: border-box; height: 100vh; min-height: min(640px, 100vh); padding-block: var(--settings-workspace-edge-gap); }
@@ -47,7 +46,6 @@
   .sidebar-save-card { margin-top: 0; }
 }
 @media (max-width: 680px) {
-  .page-header { align-items: flex-start; }
   .header-actions { display: none; }
   .settings-nav { grid-template-columns: 1fr; }
   .settings-content { padding: var(--mrr-space-4); }

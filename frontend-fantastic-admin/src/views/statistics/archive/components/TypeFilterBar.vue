@@ -146,7 +146,7 @@ function onSelection(value: number | 'all') {
   outline-offset: 2px;
 }
 
-.type-tab:hover:not(.disabled, .active) {
+.type-tab:hover:not(.disabled):not(.active) {
   background: var(--mrr-navigation-hover);
 }
 

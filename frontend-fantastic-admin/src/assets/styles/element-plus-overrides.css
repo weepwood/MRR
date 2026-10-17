@@ -212,7 +212,7 @@
   margin-left: 0;
 }
 
-.el-button-group .el-button:not(:first-child, :last-child) {
+.el-button-group .el-button:not(:first-child):not(:last-child) {
   border-radius: 0;
 }
 
@@ -360,7 +360,19 @@
   opacity: 0.62;
 }
 
-.el-input__wrapper:has(.el-input__inner[readonly]),
+/*
+ * 只读输入框的弱化外观。单行输入依赖 `:has()` 识别内层 input——Element Plus
+ * 不会为 readonly 状态的外层 wrapper 附加标记类。`:has()` 需要 Chrome 105+，
+ * 因此该条规则收进 `@supports selector()`，Chrome 86 跳过、退化为普通外观；
+ * 多行输入直接用属性选择器，所有支持范围内浏览器一致生效。
+ */
+@supports selector(:has(*)) {
+  .el-input__wrapper:has(.el-input__inner[readonly]) {
+    background: var(--mrr-muted);
+    box-shadow: 0 0 0 1px var(--mrr-border) inset;
+  }
+}
+
 .el-textarea__inner[readonly] {
   background: var(--mrr-muted);
   box-shadow: 0 0 0 1px var(--mrr-border) inset;

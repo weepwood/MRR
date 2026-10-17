@@ -178,15 +178,19 @@ void shellRef
   <div class="settings-page">
     <header class="page-header">
       <div class="header-title">
-        <span class="header-icon"><FaIcon name="i-ri:settings-4-line" /></span>
         <div>
+          <p class="eyebrow">
+            System Settings
+          </p>
           <div class="title-line">
             <h2>系统设置</h2>
             <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
               开发者模式已启用
             </el-tag>
           </div>
-          <p>统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。</p>
+          <p class="subtitle">
+            统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。
+          </p>
         </div>
       </div>
       <div v-if="isServerSettingSection" class="header-actions">

@@ -42,14 +42,18 @@ const hasAside = computed(() => Boolean(slots.actions))
 </template>
 
 <style scoped>
+/*
+ * 排版与容器的模式相关样式（plain / card）由全局 page-header.css 统一提供，
+ * 本组件只负责自身结构（图标、文案区、右侧操作区）。
+ * 下面保留的字号/字色取值与全局规范刻意保持一致：全局规则的选择器优先级更高，
+ * 若两处取值不同，组件内的声明就会变成永不生效的死代码。
+ */
 .mrr-page-header {
   display: flex;
   gap: var(--mrr-space-6);
   align-items: flex-start;
   justify-content: space-between;
   min-width: 0;
-  padding: 2px 2px 18px;
-  border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
 .mrr-page-header__main {
@@ -79,13 +83,13 @@ const hasAside = computed(() => Boolean(slots.actions))
 }
 
 .mrr-page-header__eyebrow {
-  margin: 0 0 4px;
+  margin: 0 0 18px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.5;
   color: var(--mrr-primary);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   opacity: 0.82;
 }
 
@@ -98,18 +102,18 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header h1 {
   margin: 0;
-  font-size: clamp(22px, 2vw, 25px);
-  font-weight: 680;
-  line-height: 1.24;
+  font-size: clamp(30px, 3vw, 40px);
+  font-weight: 650;
+  line-height: 1.18;
   color: var(--mrr-foreground);
-  letter-spacing: -0.035em;
+  letter-spacing: -0.045em;
 }
 
 .mrr-page-header__description {
   max-width: 780px;
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.55;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--mrr-muted-foreground);
 }
 
@@ -139,7 +143,6 @@ const hasAside = computed(() => Boolean(slots.actions))
 @media (width <= 760px) {
   .mrr-page-header {
     flex-direction: column;
-    padding-bottom: 16px;
   }
 
   .mrr-page-header__aside {

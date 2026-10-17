@@ -3,13 +3,15 @@
  *
  * 仅负责按依赖顺序加载样式模块：
  * 1. tokens.css：布局变量、主题与设计令牌
- * 2. browser-compatibility.css：最低浏览器版本的功能降级
- * 3. base.css：全局基础规则和视图过渡
- * 4. element-plus-overrides.css：Element Plus 统一外观与交互状态
- * 5. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
- * 6. 其余 components/：跨页面复用的业务组件样式
+ * 2. tones.css：语义色令牌与 Element Plus 语义色桥接
+ * 3. browser-compatibility.css：最低浏览器版本的功能降级
+ * 4. base.css：全局基础规则和视图过渡
+ * 5. element-plus-overrides.css：Element Plus 统一外观与交互状态
+ * 6. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
+ * 7. 其余 components/：跨页面复用的业务组件样式
  */
 @import "./tokens.css";
+@import "./tones.css";
 @import "./browser-compatibility.css";
 @import "./base.css";
 @import "./element-plus-overrides.css";

@@ -200,7 +200,7 @@ onUnmounted(() => {
                 <div class="tab-background" />
                 <FaTooltip :delay="1000" side="bottom">
                   <div class="tab-content">
-                    <div :key="element.tabId" class="title">
+                    <div :key="element.tabId" class="title" :class="{ 'title--has-action': tabbarStore.list.length > 1 }">
                       <FaIcon v-if="settingsStore.settings.tabbar.enableIcon && element.icon" :name="element.icon" class="icon" />
                       {{ typeof element?.title === 'function' ? element.title() : element.title }}
                     </div>
@@ -312,7 +312,9 @@ onUnmounted(() => {
               white-space: nowrap;
               transition: color 140ms ease, margin-right 140ms ease;
 
-              &:has(+ .action-icon) {
+              /* 存在关闭按钮时为其预留间距。原实现用 `:has(+ .action-icon)` 探测，
+                 需要 Chrome 105+；改为由模板显式声明状态类，基线浏览器行为一致。 */
+              &.title--has-action {
                 margin-right: 26px;
               }
 

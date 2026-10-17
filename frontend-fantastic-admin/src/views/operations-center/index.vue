@@ -398,7 +398,7 @@ onMounted(async () => {
             {{ modeLabel(readiness.mode) }}
           </el-tag>
         </div>
-        <p>集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。</p>
+        <p class="subtitle">集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。</p>
       </div>
       <div class="header-actions">
         <el-button :loading="loading.report" @click="downloadDiagnosticReport">

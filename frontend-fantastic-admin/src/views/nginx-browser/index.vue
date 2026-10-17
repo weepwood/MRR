@@ -354,15 +354,17 @@ onBeforeUnmount(revokePreviewUrl)
 <template>
   <div class="page-shell">
     <header class="page-header">
-      <p class="eyebrow">
-        Nginx Static Resource Browser
-      </p>
-      <h2>
-        Nginx 文件浏览
-      </h2>
-      <p class="subtitle">
-        浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
-      </p>
+      <div>
+        <p class="eyebrow">
+          Nginx Static Resource Browser
+        </p>
+        <h2>
+          Nginx 文件浏览
+        </h2>
+        <p class="subtitle">
+          浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
+        </p>
+      </div>
     </header>
 
     <el-alert
@@ -682,30 +684,14 @@ onBeforeUnmount(revokePreviewUrl)
   padding: var(--g-main-padding);
 }
 
-.page-header h2,
-.page-header p,
-.browser-header p,
+/* 页头排版由全局 page-header.css 统一维护，此处只保留页面内自有元素。 */
+.browser-header p {
+  margin: 6px 0 0;
+  color: var(--el-text-color-secondary);
+}
+
 .detail-pane h3 {
   margin: 0;
-}
-
-.page-header h2 {
-  margin-top: 4px;
-  font-size: 26px;
-}
-
-.eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.subtitle,
-.browser-header p {
-  margin-top: 6px !important;
-  color: var(--el-text-color-secondary);
 }
 
 .browser-header,

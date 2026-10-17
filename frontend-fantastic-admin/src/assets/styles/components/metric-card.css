@@ -11,7 +11,7 @@
 }
 
 .mrr-metric-card {
-  --mrr-metric-accent: var(--mrr-primary);
+  --mrr-metric-accent: var(--mrr-tone-primary);
 
   position: relative;
   height: 100%;
@@ -60,7 +60,10 @@
   height: 52px;
   font-size: 26px;
   color: var(--mrr-metric-accent);
+  /* Chrome 86 不支持 color-mix()：先给中性底色，避免图标色块整块消失。 */
+  background: var(--mrr-muted);
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
+  border: 1px solid var(--mrr-border);
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
   border-radius: 14px;
   place-items: center;
@@ -130,31 +133,31 @@
 }
 
 .mrr-metric-card--rose {
-  --mrr-metric-accent: #e11d48;
+  --mrr-metric-accent: var(--mrr-tone-rose);
 }
 
 .mrr-metric-card--green {
-  --mrr-metric-accent: #16803c;
+  --mrr-metric-accent: var(--mrr-tone-success);
 }
 
 .mrr-metric-card--amber {
-  --mrr-metric-accent: #b45f06;
+  --mrr-metric-accent: var(--mrr-tone-warning);
 }
 
 .mrr-metric-card--violet {
-  --mrr-metric-accent: #7c3aed;
+  --mrr-metric-accent: var(--mrr-tone-violet);
 }
 
 .mrr-metric-card--teal {
-  --mrr-metric-accent: #0f766e;
+  --mrr-metric-accent: var(--mrr-tone-teal);
 }
 
 .mrr-metric-card--slate {
-  --mrr-metric-accent: #64748b;
+  --mrr-metric-accent: var(--mrr-tone-neutral);
 }
 
 .mrr-metric-card--danger {
-  --mrr-metric-accent: var(--mrr-destructive);
+  --mrr-metric-accent: var(--mrr-tone-danger);
 }
 
 @media (width <= 600px) {

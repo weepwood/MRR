@@ -32,6 +32,7 @@
 | 仓库Python治理测试 | 78通过 |
 | test_inventory.py --fail-on-focused / release_baseline.py validate | 通过；未发现.only/@Disabled |
 | 四个中间阶段逐个检出的发布基线校验 | 全部通过，仍为产品v0.8.0 |
+| 六个实际PR正文及各自base/head的governance_guard.py检查 | 全部阻塞0；跨工程域/测试范围警告保留供独立审查 |
 
 本轮未修改前端和Python识别协议，未重复前端构建或重新生成模型包；此前相关证据见
 [实施验证记录](ocr-implementation-verification.md)。旧模型包校验值不因Java修复改变，应用JAR须使用本轮新构建。

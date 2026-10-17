@@ -88,7 +88,7 @@ function onSelection(value: number | 'all') {
   padding: 10px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .type-tabs {
@@ -116,7 +116,7 @@ function onSelection(value: number | 'all') {
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
   transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 
@@ -146,7 +146,7 @@ function onSelection(value: number | 'all') {
   outline-offset: 2px;
 }
 
-.type-tab:hover:not(.disabled, .active) {
+.type-tab:hover:not(.disabled):not(.active) {
   background: var(--mrr-navigation-hover);
 }
 
@@ -166,7 +166,7 @@ function onSelection(value: number | 'all') {
   font-weight: 600;
   color: var(--text-tertiary);
   background: var(--surface-alt);
-  border-radius: 9999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 @keyframes type-tab-selected {
@@ -192,5 +192,4 @@ function onSelection(value: number | 'all') {
     animation: none;
   }
 }
-
 </style>

@@ -295,7 +295,7 @@ onUnmounted(() => {
   line-height: 18px;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .history-panel {
@@ -364,7 +364,7 @@ onUnmounted(() => {
 .history-item {
   gap: 4px;
   padding: 4px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: background-color var(--mrr-motion-fast) ease;
 }
 
@@ -405,7 +405,7 @@ onUnmounted(() => {
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .history-main:focus-visible {
@@ -454,7 +454,7 @@ onUnmounted(() => {
   color: var(--el-color-primary-dark-2);
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-5);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 @media (prefers-reduced-motion: reduce) {

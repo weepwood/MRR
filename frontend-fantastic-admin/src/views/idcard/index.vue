@@ -92,7 +92,7 @@ function handleSearch() {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 60%, #f0f9ff 100%);
+  background: linear-gradient(135deg, var(--mrr-muted) 0%, var(--mrr-background) 60%, var(--mrr-muted) 100%);
 }
 
 .search-card {
@@ -100,7 +100,7 @@ function handleSearch() {
   max-width: 480px;
   padding: 48px 40px 40px;
   background: var(--surface);
-  border-radius: 20px;
+  border-radius: var(--mrr-radius-card);
   box-shadow: 0 8px 40px rgb(59 130 246 / 10%);
 }
 
@@ -119,15 +119,15 @@ function handleSearch() {
   margin-bottom: 20px;
   font-size: 32px;
   color: var(--surface);
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  border-radius: 16px;
+  background: linear-gradient(135deg, var(--color-primary), var(--mrr-tone-violet));
+  border-radius: var(--mrr-radius-2xl);
 }
 
 .search-title {
   margin: 0 0 8px;
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--mrr-foreground);
   letter-spacing: -0.3px;
 }
 
@@ -155,7 +155,7 @@ function handleSearch() {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 /* ===== 提示 ===== */
@@ -167,11 +167,11 @@ function handleSearch() {
 
 .search-error {
   margin-top: 16px;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 /* ===== 响应式 ===== */
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .search-card {
     padding: 36px 24px 32px;
   }

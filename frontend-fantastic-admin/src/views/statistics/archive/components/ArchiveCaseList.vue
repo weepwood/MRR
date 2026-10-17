@@ -12,6 +12,7 @@ import {
   resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { hasKey } from '@/utils/object'
 import { padCode } from '../constants'
 
 const props = defineProps<{
@@ -60,7 +61,7 @@ async function loadDepartmentThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       departmentThemes.value = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(departmentThemes.value)
     }
@@ -119,14 +120,14 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .case-header {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
 .case-main,
@@ -164,7 +165,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   cursor: pointer;
   background: var(--folder-tint, var(--surface-muted));
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
@@ -179,8 +180,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 }
 
 .case-main {
-  min-width: 0;
   gap: 3px;
+  min-width: 0;
 }
 
 .case-main strong,
@@ -206,7 +207,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   gap: 2px;
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .case-item {
     grid-template-columns: 1fr;
   }

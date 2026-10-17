@@ -65,7 +65,7 @@ function toggleRecordNumber() {
   padding: 14px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .patient-card-body {

@@ -186,8 +186,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     & > :deep(.sub-menu) {
-      margin: 2px 0 8px;
       padding-inline-start: 2px;
+      margin: 2px 0 8px;
     }
 
     :deep(.sub-menu .menu-item-container) {

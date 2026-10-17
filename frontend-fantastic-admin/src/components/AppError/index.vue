@@ -43,13 +43,13 @@ function handleRetry() {
 .app-error-icon {
   margin-bottom: 16px;
   font-size: 48px;
-  color: var(--el-color-warning, #e6a23c);
+  color: var(--el-color-warning);
   transform-origin: center;
 }
 
 .app-error-text {
   margin: 0 0 20px;
   font-size: 14px;
-  color: var(--el-text-color-regular, #606266);
+  color: var(--el-text-color-regular);
 }
 </style>

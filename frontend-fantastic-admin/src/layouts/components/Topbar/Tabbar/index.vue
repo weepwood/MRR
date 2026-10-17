@@ -200,7 +200,7 @@ onUnmounted(() => {
                 <div class="tab-background" />
                 <FaTooltip :delay="1000" side="bottom">
                   <div class="tab-content">
-                    <div :key="element.tabId" class="title">
+                    <div :key="element.tabId" class="title" :class="{ 'title--has-action': tabbarStore.list.length > 1 }">
                       <FaIcon v-if="settingsStore.settings.tabbar.enableIcon && element.icon" :name="element.icon" class="icon" />
                       {{ typeof element?.title === 'function' ? element.title() : element.title }}
                     </div>
@@ -242,8 +242,8 @@ onUnmounted(() => {
   .tabbar-container {
     position: relative;
     flex: 1;
-    height: 100%;
     min-width: 0;
+    height: 100%;
 
     .tabs {
       position: absolute;
@@ -301,18 +301,20 @@ onUnmounted(() => {
               flex: 1;
               gap: 6px;
               align-items: center;
-              height: 100%;
               min-width: 0;
+              height: 100%;
               padding: 0 10px;
               margin-right: 8px;
               overflow: hidden;
+              text-overflow: ellipsis;
               font-weight: 500;
               color: var(--text-secondary);
-              text-overflow: ellipsis;
               white-space: nowrap;
               transition: color 140ms ease, margin-right 140ms ease;
 
-              &:has(+ .action-icon) {
+              /* 存在关闭按钮时为其预留间距。原实现用 `:has(+ .action-icon)` 探测，
+                 需要 Chrome 105+；改为由模板显式声明状态类，基线浏览器行为一致。 */
+              &.title--has-action {
                 margin-right: 26px;
               }
 
@@ -331,6 +333,7 @@ onUnmounted(() => {
               top: 50%;
               z-index: 2;
               display: grid;
+              place-items: center;
               width: 20px;
               height: 20px;
               font-size: 11px;
@@ -338,7 +341,6 @@ onUnmounted(() => {
               background: transparent;
               border-radius: var(--mrr-radius-sm);
               opacity: 0;
-              place-items: center;
               transform: translateY(-50%);
               transition: color 140ms ease, background-color 140ms ease, opacity 140ms ease;
             }
@@ -350,9 +352,9 @@ onUnmounted(() => {
 
             .hotkey-number {
               font-weight: 650;
-              opacity: 1;
               background: var(--mrr-secondary);
               border: 1px solid var(--mrr-border);
+              opacity: 1;
             }
           }
 

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrSectionCard' })
 
-type BodyPadding = 'none' | 'compact' | 'normal'
-
 const props = withDefaults(defineProps<{
   title?: string
   description?: string
@@ -11,6 +9,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   bodyPadding: 'normal',
 })
+
+type BodyPadding = 'none' | 'compact' | 'normal'
 
 const slots = useSlots()
 const hasHeader = computed(() => Boolean(
@@ -93,6 +93,7 @@ const hasHeader = computed(() => Boolean(
 .mrr-section-card__icon {
   display: grid;
   flex: 0 0 32px;
+  place-items: center;
   width: 32px;
   height: 32px;
   font-size: 15px;
@@ -100,7 +101,6 @@ const hasHeader = computed(() => Boolean(
   background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 16%, var(--mrr-border));
   border-radius: var(--mrr-radius-md);
-  place-items: center;
 }
 
 .mrr-section-card h2 {
@@ -131,15 +131,15 @@ const hasHeader = computed(() => Boolean(
   margin-left: 0;
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .mrr-section-card__header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .mrr-section-card__actions {
-    width: 100%;
     justify-content: flex-start;
+    width: 100%;
   }
 }
 </style>

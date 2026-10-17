@@ -4,6 +4,9 @@ import com.zjcxph.imgapi.utils.AESUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -67,5 +70,28 @@ class AESUtilTest {
     void parseEncryptID_missingField() {
         assertThatThrownBy(() -> AESUtil.parseEncryptID("{\"foo\":\"bar\"}"))
                 .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("decryptIdCard — 密钥为空时 fail-closed 而不是静默补零")
+    void decryptIdCard_blankKeyFailsClosed() {
+        assertThatThrownBy(() -> AESUtil.decryptIdCard("00", "00", "1", "   "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("密钥未配置");
+    }
+
+    @Test
+    @DisplayName("decryptIdCardWithTimestamp — 密钥为空时 fail-closed 而不是静默补零")
+    void decryptIdCardWithTimestamp_blankKeyFailsClosed() {
+        assertThatThrownBy(() -> AESUtil.decryptIdCardWithTimestamp("00", "00", "1", "1700000000", null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("密钥未配置");
+    }
+
+    @Test
+    @DisplayName("不再保留可用的硬编码默认密钥常量")
+    void hasNoHardcodedDefaultKey() {
+        assertThat(Arrays.stream(AESUtil.class.getDeclaredFields()).map(Field::getName))
+                .doesNotContain("SECRET_KEY");
     }
 }

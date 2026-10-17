@@ -14,7 +14,15 @@ public final class JwtUtil {
     public static final String ACCESS_TOKEN_TYPE = "access";
     public static final String DOCUMENTATION_TOKEN_TYPE = "documentation";
 
-    private static final long EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
+    /**
+     * 登录令牌的默认有效期（24 小时）。
+     * <p>
+     * 实际签发的有效期来自系统设置 {@code sessionExpireMinutes}，由调用方显式传入；
+     * 该常量用于设置不可用时的兜底，以及不关心会话策略的调用点。
+     * </p>
+     */
+    public static final long DEFAULT_ACCESS_TOKEN_EXPIRE_MILLIS = 24L * 60L * 60L * 1000L;
+
     private static volatile String secret = normalizeSecret(System.getenv("JWT_SECRET_KEY"));
 
     private JwtUtil() {
@@ -41,7 +49,7 @@ public final class JwtUtil {
     }
 
     public static String getToken(AuthSession session) {
-        return getToken(session, EXPIRE_MILLIS, ACCESS_TOKEN_TYPE);
+        return getToken(session, DEFAULT_ACCESS_TOKEN_EXPIRE_MILLIS, ACCESS_TOKEN_TYPE);
     }
 
     public static String getToken(AuthSession session, long expireMillis) {

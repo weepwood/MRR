@@ -24,9 +24,16 @@ on:
 permissions:
   contents: read
 
+# PR 场景下同一分支连续 push 只保留最新一次；tag 构建永不互相取消，
+# 否则会打断正在进行的发布。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     outputs:
       jar_name: ${{ steps.standalone.outputs.jar_name }}
     env:
@@ -40,24 +47,29 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
+      # pnpm 必须先于 setup-node 安装，setup-node 的 pnpm 缓存依赖已就位的 pnpm。
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@10.33.0 --activate
 
       - name: Validate release identity
         shell: bash
@@ -154,7 +166,13 @@ jobs:
           echo "jar=${JAR_PATH}" >> "${GITHUB_OUTPUT}"
           echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
 
+      # 独立 JAR 约 60 MiB。只在真正需要交付/人工验收时落盘：
+      #   - tag 构建：publish job 需要跨 job 取用该制品；
+      #   - workflow_dispatch：供人工下载验收。
+      # PR 构建不落盘——免费私有仓库制品配额仅 500 MB，历史上有 11 个 PR 构建的
+      # 62 MiB JAR 累计占用 690 MiB，直接把配额撑爆导致全部 upload-artifact 失败。
       - name: Upload standalone JAR artifact
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.standalone.outputs.jar_name }}
@@ -162,12 +180,24 @@ jobs:
             ${{ steps.standalone.outputs.jar }}
             ${{ steps.standalone.outputs.jar }}.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
+
+      # PR 构建只保留体积与校验证明（KB 级），足以复核产物身份与完整性。
+      - name: Upload standalone JAR evidence
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: standalone-jar-evidence-${{ github.run_id }}
+          path: build/*.sha256
+          if-no-files-found: error
+          retention-days: 7
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
 

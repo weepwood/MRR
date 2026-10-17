@@ -191,7 +191,7 @@ async function logout() {
 .password-rules { display: grid; gap: 4px; padding: var(--mrr-space-4); font-size: 12px; line-height: 1.6; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .password-rules strong { color: var(--mrr-foreground); }
 .card-actions { display: flex; gap: var(--mrr-space-3); justify-content: flex-end; margin-top: var(--mrr-space-5); }
-@media (width <= 620px) {
+@media (max-width: 620px) {
   .password-page { padding: var(--mrr-space-3); }
   .password-card { padding: var(--mrr-space-5); }
   .card-actions { flex-direction: column-reverse; }

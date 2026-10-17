@@ -1,5 +1,5 @@
-import type { Route } from '#/global'
 import type { RouteRecordRaw } from 'vue-router'
+import type { Route } from '#/global'
 import generatedRoutes from 'virtual:generated-pages'
 import { setupLayouts } from 'virtual:meta-layouts'
 import { useSettingsStore } from '@/store/modules/settings'
@@ -193,6 +193,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         path: '/patients',
         component: () => import('@/views/patients/index.vue'),
         meta: { title: '患者管理', icon: 'i-ant-design:team-outlined', auth: ['record:read'], cache: true },
+      },
+      {
+        path: '/ocr-batches',
+        component: () => import('@/views/ocr-batches/index.vue'),
+        meta: { title: '历史影像识别', icon: 'i-ant-design:file-search-outlined', auth: ['ocr:batch-run'] },
       },
       {
         path: '/statistics',

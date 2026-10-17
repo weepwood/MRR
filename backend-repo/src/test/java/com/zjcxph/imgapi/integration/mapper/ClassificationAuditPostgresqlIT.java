@@ -58,9 +58,8 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         when(engine.recognize(anyString(),any(),anyInt(),anyInt(),any())).thenReturn(new OcrProtocol.Result("x",100,100,java.util.List.of(new OcrProtocol.Line("合成标题",.99,java.util.List.of(0.,0.,80.,20.))),"b".repeat(64)));
         var settings=mock(com.zjcxph.imgapi.service.SystemSettingService.class);when(settings.getSetting("ocrEnabled")).thenReturn("true");when(settings.getSetting("ocrProfile")).thenReturn("local");
         var classification=mock(com.zjcxph.imgapi.service.ClassificationService.class);doThrow(new OcrFailure("CLASSIFICATION_FAILED")).when(classification).classify(any(),any(),any());
-        var jobs=new com.zjcxph.imgapi.service.OcrJobService(ocr,mock(com.zjcxph.imgapi.mapper.ScanMapper.class),access,engine,input,settings,new TransactionTemplate(transactionManager),classification);
         var scans=mock(com.zjcxph.imgapi.mapper.ScanMapper.class);var image=new com.zjcxph.imgapi.entity.Scan();image.setId(scan);image.setBtype(0);when(scans.findById(scan)).thenReturn(image);
-        jobs=new com.zjcxph.imgapi.service.OcrJobService(ocr,scans,access,engine,input,settings,new TransactionTemplate(transactionManager),classification);
+        var jobs=new com.zjcxph.imgapi.service.OcrJobService(ocr,scans,access,engine,input,settings,new TransactionTemplate(transactionManager),classification,mock(OcrLoadGuard.class));
         var job=jobs.create(actor,archive,new OcrModels.Create(UUID.randomUUID().toString(),scan));jobs.runOne();
         assertThat(ocr.fact(scan)).isNotNull();
         assertThat(ocr.fact(scan).getOcrText()).isEqualTo("合成标题");

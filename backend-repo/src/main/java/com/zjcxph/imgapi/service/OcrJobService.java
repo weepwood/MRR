@@ -19,11 +19,13 @@ public class OcrJobService {
     private final OcrEngine engine; private final OcrInput input; private final SystemSettingService settings;
     private final TransactionTemplate transactions;
     private final ClassificationService classification;
+    private final OcrLoadGuard loadGuard;
     public OcrJobService(OcrMapper mapper, ScanMapper scans, OcrAccess access, OcrEngine engine,
-                         OcrInput input, SystemSettingService settings, TransactionTemplate transactions,ClassificationService classification) {
+                         OcrInput input, SystemSettingService settings, TransactionTemplate transactions,ClassificationService classification,OcrLoadGuard loadGuard) {
         this.mapper=mapper; this.scans=scans; this.access=access; this.engine=engine;
         this.input=input; this.settings=settings; this.transactions=transactions;
         this.classification=classification;
+        this.loadGuard=loadGuard;
     }
     public boolean enabled() { return "true".equalsIgnoreCase(settings.getSetting("ocrEnabled")); }
     public JobView create(AuthSession session, Long archive, Create request) {
@@ -31,9 +33,7 @@ public class OcrJobService {
         if (!enabled()) throw new BusinessException(409,"OCR 尚未启用");
         if (archive==null || archive<=0 || request==null || request.idempotencyKey()==null
                 || !request.idempotencyKey().matches("[A-Za-z0-9._:-]{1,128}")) throw new BusinessException(400,"OCR 任务参数无效");
-        String profile=settings.getSetting("ocrProfile");
-        Config config=new Config(profile,engine.fingerprint(profile),integer("ocrPageTimeoutSeconds",30,5,300),
-                integer("ocrMaxOutputBytes",4194304,65536,16777216),decimal("ocrLowConfidenceThreshold",0.7));
+        Config config=configuration();
         try {
             return transactions.execute(tx -> {
                 if (!mapper.creationLock()) throw new BusinessException(429,"OCR 队列繁忙，请稍后重试");
@@ -86,7 +86,7 @@ public class OcrJobService {
     /** Claims one page, keeping database transactions out of file IO and inference. */
     public void runOne() {
         if (!enabled()) return;
-        String token=UUID.randomUUID().toString(); Job job=mapper.claim(token);
+        String token=UUID.randomUUID().toString(); Job job=mapper.claimEligible(token,loadGuard.allowed());
         if (job==null) return;
         Item item=null;
         try {
@@ -121,6 +121,12 @@ public class OcrJobService {
             String code=failure instanceof OcrFailure f?f.code():failure instanceof BusinessException?"AUTH_REVOKED":"OCR_FAILED";
             finish(job,token,item,null,code);
         }
+    }
+    public Config configuration() {
+        if(!enabled()) throw new BusinessException(409,"OCR 尚未启用");
+        String profile=settings.getSetting("ocrProfile");
+        return new Config(profile,engine.fingerprint(profile),integer("ocrPageTimeoutSeconds",30,5,300),
+                integer("ocrMaxOutputBytes",4194304,65536,16777216),decimal("ocrLowConfidenceThreshold",0.7));
     }
     private void finish(Job job,String token,Item item,Fact fact,String failure) {
         if(fact!=null && item!=null && failure==null) { saveThenClassify(job,token,item,fact); return; }

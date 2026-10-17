@@ -1,5 +1,5 @@
 import { useUserStore } from '@/store/modules/user'
-import { checkAnyPermission, checkPermission } from './permission'
+import { checkAnyPermission, checkSessionPermission } from './permission'
 
 export function getCurrentUser() {
   const userStore = useUserStore()
@@ -8,34 +8,31 @@ export function getCurrentUser() {
 
 export function getUserDisplayName() {
   const userStore = useUserStore()
-  if (!userStore.isSessionVerified) return ''
+  if (!userStore.isSessionVerified) { return '' }
   return userStore.profile?.displayName || userStore.profile?.username || ''
 }
 
 export function getUserRoleName() {
   const userStore = useUserStore()
-  if (!userStore.isSessionVerified) return ''
+  if (!userStore.isSessionVerified) { return '' }
   return userStore.profile?.roleName || userStore.profile?.roleCode || ''
 }
 
 export function isAdminUser() {
   const userStore = useUserStore()
-  if (!userStore.isSessionVerified) return false
+  if (!userStore.isSessionVerified) { return false }
   return String(userStore.profile?.roleCode || '').toUpperCase() === 'ADMIN'
 }
 
 export function hasPermission(permission: string) {
   const userStore = useUserStore()
-  if (!userStore.isSessionVerified) return false
-  if (isAdminUser()) {
-    return true
-  }
-  return checkPermission(userStore.permissions || [], permission)
+  if (!userStore.isSessionVerified) { return false }
+  return checkSessionPermission(userStore.profile?.roleCode, userStore.permissions, permission)
 }
 
 export function hasAnyPermission(permissions: string[]) {
   const userStore = useUserStore()
-  if (!userStore.isSessionVerified) return false
+  if (!userStore.isSessionVerified) { return false }
   if (isAdminUser()) {
     return true
   }

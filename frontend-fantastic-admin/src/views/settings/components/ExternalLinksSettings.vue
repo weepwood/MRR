@@ -13,6 +13,17 @@ const draft = reactive({
 
 const externalLinks = computed(() => settingsStore.settings.menu.externalLinks)
 
+/**
+ * 生效范围提示。外链属于全站界面配置，写入服务端需要 system:manage 权限；
+ * 无权限时只能保存在本机，必须在界面上如实说明，避免承诺未生效的同步。
+ */
+const linkScopeDescription = computed(() => {
+  if (settingsStore.uiSettingsSyncState === 'local-only') {
+    return '这些链接保存在本机浏览器。当前账号缺少系统管理权限，修改不会同步到全站。'
+  }
+  return '这些链接保存在系统数据库，并同步到全站的“其他”菜单。'
+})
+
 function persistSettings() {
   settingsStore.saveAppSettings()
 }
@@ -144,7 +155,7 @@ function openExternalLink(url: string) {
         </div>
         <div class="header-copy">
           <h4>“其他”菜单</h4>
-          <p>这些链接只保存在当前浏览器，可通过界面配置导入和导出。</p>
+          <p>{{ linkScopeDescription }}</p>
         </div>
         <el-tag effect="plain" round>
           {{ externalLinks.length }} / 30
@@ -206,13 +217,13 @@ function openExternalLink(url: string) {
 .header-icon {
   display: grid;
   flex: 0 0 38px;
+  place-items: center;
   width: 38px;
   height: 38px;
   font-size: 18px;
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
   border-radius: 10px;
-  place-items: center;
 }
 
 .header-copy {
@@ -286,13 +297,13 @@ function openExternalLink(url: string) {
 .link-icon {
   display: grid;
   flex: 0 0 34px;
+  place-items: center;
   width: 34px;
   height: 34px;
   color: var(--el-color-primary);
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 9px;
-  place-items: center;
 }
 
 .link-copy {
@@ -307,18 +318,18 @@ function openExternalLink(url: string) {
 
 .link-copy strong {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   color: var(--el-text-color-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .link-copy small {
   margin-top: 3px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--el-text-color-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -334,7 +345,7 @@ function openExternalLink(url: string) {
   margin-left: 0;
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .link-form {
     grid-template-columns: 1fr;
   }
@@ -344,8 +355,8 @@ function openExternalLink(url: string) {
   }
 
   .external-link-item {
-    align-items: flex-start;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .link-actions {

@@ -3,7 +3,6 @@
 import type { ImageAuditAnalytics } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { MrrLineSeries } from '@/types/chart'
-import { DataAnalysis, Files, Timer, User, Warning } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { MrrChartCard, MrrLineChart } from '@/components/charts'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
@@ -79,28 +78,38 @@ function handleTargetAction(action: string, target: string) {
 
 <template>
   <section class="analytics-shell" :aria-busy="loading">
-    <div class="metric-grid">
-      <el-card shadow="never" class="metric-card metric-card--blue">
-        <el-icon><User /></el-icon>
-        <div><span>访问用户数</span><strong>{{ loading ? '—' : formatNumber(analytics.uniqueUsers) }}</strong></div>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--teal">
-        <el-icon><Files /></el-icon>
-        <div><span>被访问病历数</span><strong>{{ loading ? '—' : formatNumber(analytics.uniqueTargets) }}</strong></div>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--blue">
-        <el-icon><DataAnalysis /></el-icon>
-        <div><span>总访问次数</span><strong>{{ loading ? '—' : formatNumber(analytics.totalAccesses) }}</strong></div>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--danger">
-        <el-icon><Warning /></el-icon>
-        <div><span>异常访问告警</span><strong>{{ loading ? '—' : formatNumber(analytics.abnormalAccesses) }}</strong><small>{{ abnormalRate.toFixed(1) }}%</small></div>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--slate">
-        <el-icon><Timer /></el-icon>
-        <div><span>平均响应耗时</span><strong>{{ loading ? '—' : formatNumber(analytics.averageDurationMs, 1) }}</strong><small>ms</small></div>
-      </el-card>
-    </div>
+    <section class="mrr-metric-grid">
+      <MrrMetricCard
+        label="访问用户数"
+        icon="i-ep:user"
+        :value="loading ? '—' : formatNumber(analytics.uniqueUsers)"
+      />
+      <MrrMetricCard
+        label="被访问病历数"
+        icon="i-ep:files"
+        tone="teal"
+        :value="loading ? '—' : formatNumber(analytics.uniqueTargets)"
+      />
+      <MrrMetricCard
+        label="总访问次数"
+        icon="i-ep:data-analysis"
+        :value="loading ? '—' : formatNumber(analytics.totalAccesses)"
+      />
+      <MrrMetricCard
+        label="异常访问告警"
+        icon="i-ep:warning"
+        tone="danger"
+        :value="loading ? '—' : formatNumber(analytics.abnormalAccesses)"
+        :suffix="`${abnormalRate.toFixed(1)}%`"
+      />
+      <MrrMetricCard
+        label="平均响应耗时"
+        icon="i-ep:timer"
+        tone="slate"
+        :value="loading ? '—' : formatNumber(analytics.averageDurationMs, 1)"
+        suffix="ms"
+      />
+    </section>
 
     <div class="ranking-grid">
       <el-card shadow="never" class="ranking-card">
@@ -166,16 +175,6 @@ function handleTargetAction(action: string, target: string) {
 <style scoped>
 /* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
 .analytics-shell { display: grid; gap: 16px; }
-.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
-.metric-card :deep(.el-card__body) { display: flex; gap: 14px; align-items: center; min-height: 92px; }
-.metric-card .el-icon { display: grid; place-items: center; width: 48px; height: 48px; font-size: 24px; color: #2563eb; background: #eff6ff; border-radius: 50%; }
-.metric-card div { display: grid; gap: 3px; }
-.metric-card span { font-size: 13px; color: var(--el-text-color-secondary); }
-.metric-card strong { font-size: 26px; line-height: 1; color: var(--el-text-color-primary); }
-.metric-card small { font-size: 11px; color: var(--el-text-color-secondary); }
-.metric-card--teal .el-icon { color: #0f9f8f; background: #ecfdf5; }
-.metric-card--danger .el-icon { color: #ef4444; background: #fef2f2; }
-.metric-card--slate .el-icon { color: #64748b; background: #f1f5f9; }
 .ranking-grid, .trend-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .section-title > div { display: grid; gap: 4px; }
@@ -186,6 +185,5 @@ function handleTargetAction(action: string, target: string) {
 .bar-track { height: 8px; overflow: hidden; background: var(--el-fill-color-light); border-radius: 999px; }
 .bar-track span { display: block; height: 100%; background: #2563eb; border-radius: inherit; }
 .bar-track--teal span { background: #14b8a6; }
-@media (max-width: 1200px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 900px) { .metric-grid, .ranking-grid, .trend-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .ranking-grid, .trend-grid { grid-template-columns: 1fr; } }
 </style>

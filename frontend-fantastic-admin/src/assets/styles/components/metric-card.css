@@ -10,6 +10,23 @@
   gap: var(--mrr-space-3);
 }
 
+/* 6 张及以上的指标组使用固定三列，避免 auto-fit 在宽屏下出现「最后一行只剩一张」。
+ * 三列在两行内即可均衡排布，同时保留足够宽度让标签与说明不被截断。 */
+.mrr-metric-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (width <= 1100px) {
+  .mrr-metric-grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 7 张左右的指标组用更宽的最小列宽，得到 4+3 的均衡排布。 */
+.mrr-metric-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
 .mrr-metric-card {
   --mrr-metric-accent: var(--mrr-tone-primary);
 
@@ -77,6 +94,16 @@
   min-width: 0;
 }
 
+/* 无图标时文案区占满整行，不再保留 52px 空列。 */
+.mrr-metric-card--no-icon .el-card__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
+.mrr-metric-card__extra {
+  margin-top: 10px;
+}
+
 .mrr-metric-card__label {
   display: block;
   margin: 1px 0 6px;
@@ -121,6 +148,20 @@
   color: var(--mrr-muted-foreground);
 }
 
+/* 值语义色：只改变数字本身的颜色，不改变整张卡片的表面与边框，
+ * 避免同一业务含义在不同页面出现「整卡变色」与「仅数字变色」两种做法。 */
+.mrr-metric-card__value--success {
+  color: var(--mrr-tone-success);
+}
+
+.mrr-metric-card__value--warning {
+  color: var(--mrr-tone-warning);
+}
+
+.mrr-metric-card__value--danger {
+  color: var(--mrr-tone-danger);
+}
+
 .mrr-metric-card__note {
   margin: 7px 0 0;
   overflow: hidden;
@@ -140,7 +181,8 @@
   --mrr-metric-accent: var(--mrr-tone-success);
 }
 
-.mrr-metric-card--amber {
+.mrr-metric-card--amber,
+.mrr-metric-card--warning {
   --mrr-metric-accent: var(--mrr-tone-warning);
 }
 
@@ -162,7 +204,8 @@
 
 @media (width <= 600px) {
   .mrr-metric-grid,
-  .mrr-metric-grid--compact {
+  .mrr-metric-grid--compact,
+  .mrr-metric-grid--three {
     grid-template-columns: 1fr;
   }
 

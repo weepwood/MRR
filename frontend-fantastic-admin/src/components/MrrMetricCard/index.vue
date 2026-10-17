@@ -1,7 +1,8 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrMetricCard' })
 
-type MetricTone = 'blue' | 'green' | 'amber' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
+type MetricTone = 'blue' | 'green' | 'amber' | 'warning' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
+type MetricValueTone = 'default' | 'success' | 'warning' | 'danger'
 
 const props = withDefaults(defineProps<{
   label: string
@@ -10,27 +11,36 @@ const props = withDefaults(defineProps<{
   suffix?: string
   icon?: string
   tone?: MetricTone
+  valueTone?: MetricValueTone
   compactValue?: boolean
 }>(), {
   tone: 'blue',
+  valueTone: 'default',
   compactValue: false,
 })
 
-const toneClass = computed(() => props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`)
+const hasIcon = computed(() => Boolean(props.icon))
+
+const cardClass = computed(() => [
+  props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`,
+  hasIcon.value ? '' : 'mrr-metric-card--no-icon',
+])
+
+const valueClass = computed(() => [
+  props.compactValue ? 'mrr-metric-card__value--compact' : '',
+  props.valueTone === 'default' ? '' : `mrr-metric-card__value--${props.valueTone}`,
+])
 </script>
 
 <template>
-  <el-card shadow="never" class="mrr-metric-card" :class="toneClass">
-    <div v-if="props.icon" class="mrr-metric-card__icon" aria-hidden="true">
-      <FaIcon :name="props.icon" />
+  <el-card shadow="never" class="mrr-metric-card" :class="cardClass">
+    <div v-if="hasIcon" class="mrr-metric-card__icon" aria-hidden="true">
+      <FaIcon :name="props.icon ?? ''" />
     </div>
     <div class="mrr-metric-card__body">
       <span class="mrr-metric-card__label">{{ props.label }}</span>
       <div class="mrr-metric-card__value-row">
-        <strong
-          class="mrr-metric-card__value"
-          :class="{ 'mrr-metric-card__value--compact': props.compactValue }"
-        >
+        <strong class="mrr-metric-card__value" :class="valueClass">
           {{ props.value }}
         </strong>
         <span v-if="props.suffix" class="mrr-metric-card__suffix">{{ props.suffix }}</span>
@@ -38,6 +48,9 @@ const toneClass = computed(() => props.tone === 'blue' ? '' : `mrr-metric-card--
       <p v-if="props.note" class="mrr-metric-card__note">
         {{ props.note }}
       </p>
+      <div v-if="$slots.extra" class="mrr-metric-card__extra">
+        <slot name="extra" />
+      </div>
     </div>
   </el-card>
 </template>

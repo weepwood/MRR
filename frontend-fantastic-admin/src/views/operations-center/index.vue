@@ -430,41 +430,49 @@ onMounted(async () => {
             </template>
           </el-alert>
 
-          <section class="summary-grid overview-grid">
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">有效运行模式</span>
-              <strong class="metric-value mode-value" :class="`mode-${readiness?.mode || 'unknown'}`">
-                {{ modeLabel(readiness?.mode) }}
-              </strong>
-              <small>最近检查 {{ formatTime(readiness?.checkedAt) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">应用版本</span>
-              <strong class="metric-value small-value">{{ overview?.runtime.applicationVersion || '-' }}</strong>
-              <small>Java {{ overview?.runtime.javaVersion || '-' }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">后端运行时长</span>
-              <strong class="metric-value small-value">{{ formatDuration(overview?.runtime.uptimeMs) }}</strong>
-              <small>启动于 {{ formatTime(overview?.runtime.startedAt) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">JVM 堆内存</span>
-              <strong class="metric-value small-value">{{ heapUsage }}%</strong>
-              <el-progress :percentage="heapUsage" :status="heapUsage >= 90 ? 'exception' : heapUsage >= 80 ? 'warning' : 'success'" />
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">活跃导出任务</span>
-              <strong class="metric-value">{{ formatNumber(overview?.taskSummary.active) }}</strong>
-              <small>失败 {{ formatNumber(overview?.taskSummary.failed) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">近 24 小时 5xx</span>
-              <strong class="metric-value" :class="overview?.recentServerErrors ? 'danger-text' : 'success-text'">
-                {{ formatNumber(overview?.recentServerErrors) }}
-              </strong>
-              <small>集中失败请结合日志和 requestId 排查</small>
-            </el-card>
+          <section class="mrr-metric-grid mrr-metric-grid--three overview-metrics">
+            <MrrMetricCard
+              label="有效运行模式"
+              compact-value
+              :value="modeLabel(readiness?.mode)"
+              :value-tone="modeType(readiness?.mode)"
+              :note="`最近检查 ${formatTime(readiness?.checkedAt)}`"
+            />
+            <MrrMetricCard
+              label="应用版本"
+              compact-value
+              :value="overview?.runtime.applicationVersion || '-'"
+              :note="`Java ${overview?.runtime.javaVersion || '-'}`"
+            />
+            <MrrMetricCard
+              label="后端运行时长"
+              compact-value
+              :value="formatDuration(overview?.runtime.uptimeMs)"
+              :note="`启动于 ${formatTime(overview?.runtime.startedAt)}`"
+            />
+            <MrrMetricCard
+              label="JVM 堆内存"
+              :value="`${heapUsage}%`"
+              :value-tone="heapUsage >= 90 ? 'danger' : heapUsage >= 80 ? 'warning' : 'success'"
+            >
+              <template #extra>
+                <el-progress
+                  :percentage="heapUsage"
+                  :status="heapUsage >= 90 ? 'exception' : heapUsage >= 80 ? 'warning' : 'success'"
+                />
+              </template>
+            </MrrMetricCard>
+            <MrrMetricCard
+              label="活跃导出任务"
+              :value="formatNumber(overview?.taskSummary.active)"
+              :note="`失败 ${formatNumber(overview?.taskSummary.failed)}`"
+            />
+            <MrrMetricCard
+              label="近 24 小时 5xx"
+              :value="formatNumber(overview?.recentServerErrors)"
+              :value-tone="overview?.recentServerErrors ? 'danger' : 'success'"
+              note="集中失败请结合日志和 requestId 排查"
+            />
           </section>
 
           <div class="two-column-layout">
@@ -803,17 +811,11 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 25px;
-}
-
 .page-header > div > p:last-child,
 .toolbar-row,
 .card-header p,
 .issue-row p,
-.check-copy > p,
-.metric-card small {
+.check-copy > p {
   color: var(--el-text-color-secondary);
 }
 
@@ -831,6 +833,11 @@ onMounted(async () => {
   background: var(--el-bg-color);
 }
 
+/* 指标组与上方标签栏之间保持与其它区块一致的间距。 */
+.overview-metrics {
+  margin-top: 16px;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -838,17 +845,8 @@ onMounted(async () => {
   margin-top: 16px;
 }
 
-.overview-grid {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-}
-
 .compact-grid {
   grid-template-columns: repeat(4, minmax(160px, 1fr));
-}
-
-.metric-card :deep(.el-card__body) {
-  display: grid;
-  gap: 8px;
 }
 
 .metric-label {
@@ -866,21 +864,14 @@ onMounted(async () => {
   word-break: break-all;
 }
 
-.mode-value {
-  font-size: 20px;
-}
-
-.mode-READ_WRITE,
 .success-text {
   color: var(--el-color-success);
 }
 
-.mode-READ_ONLY_DEGRADED,
 .danger-text {
   color: var(--el-color-danger);
 }
 
-.mode-READ_ONLY_MAINTENANCE,
 .warning-text {
   color: var(--el-color-warning);
 }
@@ -1019,7 +1010,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 1100px) {
-  .overview-grid,
   .compact-grid {
     grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
@@ -1041,7 +1031,6 @@ onMounted(async () => {
     flex-direction: column;
   }
 
-  .overview-grid,
   .compact-grid,
   .summary-grid {
     grid-template-columns: 1fr;

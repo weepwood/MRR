@@ -39,27 +39,29 @@ function record(event: AuthTestHistoryEvent) {
       <el-tag type="warning" effect="plain">仅 user:manage 权限可见</el-tag>
     </header>
 
-    <section class="metric-grid" aria-label="认证测试环境概览">
-      <el-card shadow="never" class="metric-card">
-        <span>当前账号</span>
-        <strong>{{ userStore.profile.displayName || userStore.profile.username || userStore.account || '未登录' }}</strong>
-        <small>{{ userStore.profile.roleName || userStore.profile.roleCode || '无角色信息' }}</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card">
-        <span>当前权限</span>
-        <strong>{{ permissionCount }}</strong>
-        <small>后端按数据库当前权限实时校验</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card">
-        <span>API Base URL</span>
-        <strong class="base-url">{{ apiBaseUrl }}</strong>
-        <small>测试台不允许请求外部域名</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card">
-        <span>本页请求</span>
-        <strong>{{ history.length }}</strong>
-        <small>仅保存在页面内存，刷新后清空</small>
-      </el-card>
+    <section class="mrr-metric-grid" aria-label="认证测试环境概览">
+      <MrrMetricCard
+        label="当前账号"
+        compact-value
+        :value="userStore.profile.displayName || userStore.profile.username || userStore.account || '未登录'"
+        :note="userStore.profile.roleName || userStore.profile.roleCode || '无角色信息'"
+      />
+      <MrrMetricCard
+        label="当前权限"
+        :value="permissionCount"
+        note="后端按数据库当前权限实时校验"
+      />
+      <MrrMetricCard
+        label="API Base URL"
+        compact-value
+        :value="apiBaseUrl"
+        note="测试台不允许请求外部域名"
+      />
+      <MrrMetricCard
+        label="本页请求"
+        :value="history.length"
+        note="仅保存在页面内存，刷新后清空"
+      />
     </section>
 
     <el-alert
@@ -146,33 +148,9 @@ h2 {
   color: var(--el-text-color-secondary);
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.metric-card :deep(.el-card__body) {
-  display: grid;
-  gap: 5px;
-}
-
-.metric-card span,
-.metric-card small,
 .history-header span {
   color: var(--el-text-color-secondary);
   font-size: 13px;
-}
-
-.metric-card strong {
-  overflow: hidden;
-  font-size: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.base-url {
-  font-size: 14px !important;
 }
 
 .history-header strong,
@@ -184,20 +162,10 @@ h2 {
   overflow: visible;
 }
 
-@media (max-width: 1100px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 720px) {
   .page-header,
   .history-header {
     flex-direction: column;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

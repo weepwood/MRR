@@ -181,7 +181,7 @@ const recordFilters = reactive<RecordFilterState>({
   limit: 100,
 })
 
-const summaryCards = computed(() => [
+const summaryCards = computed(() => ([
   {
     label: '总图片记录',
     value: stats.value.totalCount ?? 0,
@@ -224,7 +224,7 @@ const summaryCards = computed(() => [
     note: '核对 Nginx 原图或对象冲突',
     tone: 'danger',
   },
-])
+] as const))
 
 const isMigrationStarted = computed(() => (stats.value.migratedCount ?? 0) > 0)
 const hasActiveJob = computed(() => Boolean(
@@ -819,17 +819,15 @@ onBeforeUnmount(() => {
       show-icon
     />
 
-    <section class="metric-grid">
-      <article
+    <section class="mrr-metric-grid mrr-metric-grid--wide">
+      <MrrMetricCard
         v-for="item in summaryCards"
         :key="item.label"
-        class="metric-card"
-        :class="`metric-card--${item.tone}`"
-      >
-        <span>{{ item.label }}</span>
-        <strong>{{ formatNumber(item.value) }}</strong>
-        <small>{{ item.note }}</small>
-      </article>
+        :label="item.label"
+        :value="formatNumber(item.value)"
+        :note="item.note"
+        :tone="item.tone"
+      />
     </section>
 
     <div class="primary-grid">
@@ -1532,46 +1530,6 @@ onBeforeUnmount(() => {
 .refresh-state {
   justify-content: flex-end;
   font-size: 12px;
-}
-
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-}
-
-.metric-card {
-  display: grid;
-  gap: 8px;
-  padding: 18px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--el-border-radius-base);
-}
-
-.metric-card strong {
-  font-size: 28px;
-}
-
-.metric-card small,
-.metric-card span {
-  color: var(--el-text-color-secondary);
-}
-
-.metric-card--blue {
-  border-top: 3px solid var(--el-color-primary);
-}
-
-.metric-card--green {
-  border-top: 3px solid var(--el-color-success);
-}
-
-.metric-card--amber {
-  border-top: 3px solid var(--el-color-warning);
-}
-
-.metric-card--danger {
-  border-top: 3px solid var(--el-color-danger);
 }
 
 .primary-grid {

@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
+import ClassificationRules from './ClassificationRules.vue'
 
 interface OcrSettingsModel {
   ocrEnabled: boolean
@@ -214,18 +215,7 @@ onMounted(loadSettings)
         <strong>OCR 字典与分类规则</strong>
         <p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p>
       </div>
-      <div class="foundation-grid">
-        <div class="foundation-card">
-          <span>OCR 识别词库</span>
-          <strong>数据表已建立</strong>
-          <small>术语、别名和常见 OCR 错字管理界面将在下一阶段接入。</small>
-        </div>
-        <div class="foundation-card">
-          <span>分类规则字典</span>
-          <strong>数据表已建立</strong>
-          <small>支持标题、正文、排除词、权重和优先级的规则管理界面将在下一阶段接入。</small>
-        </div>
-      </div>
+      <ClassificationRules />
     </div>
   </section>
 </template>

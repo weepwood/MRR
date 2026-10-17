@@ -35,7 +35,7 @@ class ScanServiceArchiveLookupTest {
     @BeforeEach
     void setUp() {
         scanMapper = mock(ScanMapper.class);
-        scanService = new ScanServiceImpl(scanMapper);
+        scanService = new ScanServiceImpl(scanMapper,mock(com.zjcxph.imgapi.service.ImageTypeService.class));
     }
 
     @Test

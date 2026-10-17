@@ -92,7 +92,7 @@ public class OcrJobService {
             access.require(job.getOwnerUserId(),"record:read","ocr:run");
             item=mapper.next(job.getId());
             if (item==null) { finish(job,token,null,null,null); return; }
-            mapper.processing(job.getId(),item.getScanId());
+            if (mapper.processing(job.getId(),item.getScanId(),token)!=1) return;
             var scan=scans.findById(item.getScanId());
             if (scan==null || !Integer.valueOf(0).equals(scan.getBtype()) || !mapper.belongs(item.getScanId(),job.getArchiveId())) {
                 finish(job,token,item,null,"SKIPPED"); return;

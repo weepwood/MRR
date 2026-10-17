@@ -23,6 +23,7 @@
 
 | 分支/检查 | 实际结果 |
 | --- | --- |
+| OCR执行阶段#344，OcrShutdownProcessTest/OcrProtocolTest | 5单元通过，真实进程关闭/重开及迟到登记验证通过 |
 | 分类阶段#345，mvn -B -ntp verify | 766单元、44集成，失败0、跳过0 |
 | 历史阶段#346，ControllerAccessPolicyTest/OcrShutdownProcessTest + OcrBatchPostgresqlIT/ClassificationAuditPostgresqlIT | 单元与9项集成全部通过 |
 | 自动阶段#347，mvn -B -ntp verify | 770单元、53集成，失败0、跳过0 |

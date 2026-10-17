@@ -174,7 +174,7 @@ onMounted(async () => {
   padding: 28px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 16px;
+  border-radius: var(--mrr-radius-2xl);
 }
 
 .help-kicker {
@@ -209,7 +209,7 @@ onMounted(async () => {
   color: var(--el-text-color-regular);
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .status-dot {
@@ -232,7 +232,7 @@ onMounted(async () => {
   overflow: hidden;
   background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   border: 1px solid var(--el-border-color-light);
-  border-radius: 16px;
+  border-radius: var(--mrr-radius-card);
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -284,7 +284,7 @@ onMounted(async () => {
   height: 52px;
   color: var(--card-accent);
   background: color-mix(in srgb, var(--card-accent) 12%, transparent);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
 }
 
 .card-content h2 {
@@ -314,7 +314,7 @@ onMounted(async () => {
   min-width: 116px;
 }
 
-@media (width <= 820px) {
+@media (max-width: 820px) {
   .help-header {
     flex-direction: column;
   }
@@ -324,7 +324,7 @@ onMounted(async () => {
   }
 }
 
-@media (width <= 520px) {
+@media (max-width: 520px) {
   .help-header,
   .documentation-card :deep(.el-card__body) {
     padding: 18px;

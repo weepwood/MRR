@@ -40,12 +40,15 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
-.setting-group, .switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+
+.setting-group,
+.switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 .group-heading { margin-bottom: var(--mrr-space-5); }
 .group-heading strong { font-size: 15px; }
 .group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .full-width { width: 100%; }
+
 .slider-control {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) auto;
@@ -62,6 +65,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .switch-row:last-child { border-bottom: 0; }
 .switch-row strong { font-size: 13px; }
 .switch-row p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+
 @media (max-width: 680px) {
   .control-grid { grid-template-columns: 1fr; }
   .slider-control { grid-template-columns: minmax(100px, 1fr) auto; }

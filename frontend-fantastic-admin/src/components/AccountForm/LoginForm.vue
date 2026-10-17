@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import type { AuthProfile } from '@/utils/auth-storage'
 import { Key, UserFilled } from '@element-plus/icons-vue'
-import { Eye, EyeOff } from 'lucide-vue-next'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { computed, ref } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
-import type { AuthProfile } from '@/utils/auth-storage'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
 
 defineOptions({ name: 'LoginForm' })
@@ -194,9 +194,9 @@ const onSubmit = form.handleSubmit(async (values) => {
   left: 14px;
   z-index: 2;
   display: grid;
+  place-items: center;
   color: var(--mrr-muted-foreground);
   pointer-events: none;
-  place-items: center;
 }
 
 .input-shell :deep(.fa-input__wrapper),
@@ -233,6 +233,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   right: 12px;
   z-index: 2;
   display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
   padding: 0;
@@ -241,14 +242,13 @@ const onSubmit = form.handleSubmit(async (values) => {
   background: transparent;
   border: 0;
   border-radius: var(--mrr-radius-sm);
-  place-items: center;
 }
 
 .password-toggle:hover,
 .password-toggle:focus-visible {
   color: var(--mrr-foreground);
-  background: var(--mrr-muted);
   outline: none;
+  background: var(--mrr-muted);
 }
 
 .field-message {
@@ -281,9 +281,9 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 @media (max-width: 520px) {
   .form-options {
-    align-items: flex-start;
     flex-direction: column;
     gap: var(--mrr-space-2);
+    align-items: flex-start;
   }
 }
 </style>

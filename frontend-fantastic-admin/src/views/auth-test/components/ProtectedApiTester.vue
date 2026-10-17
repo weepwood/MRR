@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Method } from 'axios'
-import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { AuthTestHistoryEvent } from '../types'
+import type { AuthTestResult } from '@/api/modules/auth-test'
 import { Connection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
@@ -195,8 +195,8 @@ function useCurrentToken() {
 .card-header,
 .response-summary {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
 }
 
 .card-header {
@@ -210,8 +210,8 @@ function useCurrentToken() {
 
 .card-header span,
 .response-summary span {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .response-summary {
@@ -222,9 +222,9 @@ function useCurrentToken() {
 .code-label {
   display: block;
   margin: 14px 0 6px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 600;
+  color: var(--el-text-color-secondary);
   text-transform: uppercase;
 }
 
@@ -232,17 +232,17 @@ function useCurrentToken() {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  margin: 0;
   padding: 14px;
+  margin: 0;
   overflow: auto;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--el-border-radius-base);
-  background: var(--el-fill-color-lighter);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-break: break-all;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
 }
 
 .code-panel.compact {

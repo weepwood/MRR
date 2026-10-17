@@ -296,7 +296,7 @@ onMounted(loadSettings)
 .full-width { width: 100%; }
 .reset-link { padding: 0; margin-top: 4px; }
 
-@media (width <= 680px) {
+@media (max-width: 680px) {
   .control-grid { grid-template-columns: 1fr; }
   .panel-actions { flex-direction: column; align-items: stretch; }
   .actions-buttons { justify-content: flex-end; }

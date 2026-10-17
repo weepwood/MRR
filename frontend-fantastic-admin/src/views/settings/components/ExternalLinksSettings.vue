@@ -200,7 +200,7 @@ function openExternalLink(url: string) {
   padding: 18px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .card-header {
@@ -223,7 +223,7 @@ function openExternalLink(url: string) {
   font-size: 18px;
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .header-copy {
@@ -291,7 +291,7 @@ function openExternalLink(url: string) {
   padding: 11px 12px;
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-extra-light);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .link-icon {
@@ -303,7 +303,7 @@ function openExternalLink(url: string) {
   color: var(--el-color-primary);
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .link-copy {
@@ -345,7 +345,7 @@ function openExternalLink(url: string) {
   margin-left: 0;
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .link-form {
     grid-template-columns: 1fr;
   }

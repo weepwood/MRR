@@ -422,7 +422,10 @@ onBeforeUnmount(() => {
   flex-direction: column;
   padding: 48px;
   overflow: hidden;
-  background: radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--mrr-primary) 14%, transparent), transparent 36%), var(--mrr-muted);
+
+  /* 渐变层在 Chrome 86 会整条失效，实色底单独声明，避免品牌区与表单区失去分层。 */
+  background-color: var(--mrr-muted);
+  background-image: radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--mrr-primary) 14%, transparent), transparent 36%);
   border-right: 1px solid var(--mrr-border);
 }
 .brand-panel::after {

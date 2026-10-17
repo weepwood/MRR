@@ -2,7 +2,6 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrBarSeries } from '@/types/chart'
 import { computed } from 'vue'
-import { MRR_CHART_PALETTE } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrBarChart' })
@@ -55,14 +54,14 @@ const option = computed<ECOption>(() => ({
   dataZoom: props.categories.length > 18
     ? [{ type: 'inside', startValue: Math.max(0, props.categories.length - 18), endValue: props.categories.length - 1 }]
     : undefined,
-  series: props.series.map((item, index) => ({
+  series: props.series.map(item => ({
     name: item.name,
     type: 'bar',
     data: item.data,
     stack: item.stack,
     barMaxWidth: 32,
     itemStyle: {
-      color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+      color: item.color,
       borderRadius: [6, 6, 2, 2],
     },
     emphasis: { focus: 'series' },

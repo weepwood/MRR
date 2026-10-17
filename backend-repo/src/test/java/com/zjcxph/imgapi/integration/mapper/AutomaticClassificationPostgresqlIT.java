@@ -35,13 +35,14 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
     @Autowired OcrBatchMapper batches;@Autowired OcrMapper ocr;@Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager manager;
     @TempDir Path temporary;
     AutomaticClassificationService service;ImageTypeService types;OcrQualityGate quality;OcrAccess access;OcrInput input;
+    OcrJobService jobs;
     AuthSession actor;String batchId;String jobId;Long archive;String sourceHash;List<Integer> scans;
     @BeforeEach void setup() throws Exception {
         actor=new AuthSession();actor.setId(876L);actor.setUsername("synthetic-authorizer");actor.setRoleCode("ADMIN");AuthContext.setCurrentUser(actor);
         access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
         sourceHash="a".repeat(64);input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash));
         quality=mock(OcrQualityGate.class);when(quality.enabled()).thenReturn(true);when(quality.checksum()).thenReturn("c".repeat(64));when(quality.permits(anyString(),anyString(),anyInt())).thenReturn(true);
-        var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);var jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
+        var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
         var batchService=mock(OcrBatchService.class);when(batchService.owned(any(),anyString())).thenAnswer(i->batches.batch(i.getArgument(1)));
         var tx=new TransactionTemplate(manager);types=new ImageTypeService(classifications,ocr,access,input,tx,new ConcurrentMapCacheManager());
         service=new AutomaticClassificationService(mapper,classifications,batches,ocr,input,access,types,quality,guard,jobs,batchService,tx);
@@ -62,6 +63,15 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.mr_image_type_audit WHERE batch_id=?",Integer.class,batchId)).isEqualTo(2);
         assertThat(jdbc.queryForList("SELECT execution_mode FROM app.mr_image_type_audit WHERE batch_id=?",String.class,batchId)).containsOnly("BACKGROUND");
         assertThat(jdbc.queryForList("SELECT operator_user_id FROM app.mr_image_type_audit WHERE batch_id=?",Long.class,batchId)).containsOnly(actor.getId());
+    }
+    @Test void disablingOcrDuringSourceReadPreventsAutomaticTypeCommit() {
+        when(input.prepare(anyInt(),any())).thenAnswer(i->{
+            when(jobs.enabled()).thenReturn(false);
+            return new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash);
+        });
+        service.runOne();
+        assertThat(classifications.scan(scans.getFirst()).getBtype()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.mr_image_type_audit WHERE batch_id=?",Integer.class,batchId)).isZero();
     }
     @Test void rollbackSkipsLaterHumanConfirmationEvenIfTypeIsUnchanged() {
         service.runOne();service.runOne();types.manual(scans.getLast(),3);

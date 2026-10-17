@@ -162,18 +162,8 @@ function typeLabel(value: unknown) {
       </el-button>
     </div>
 
-    <section class="summary-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never">
-        <div class="summary-label">
-          {{ item.label }}
-        </div>
-        <div class="summary-value">
-          {{ item.value }}
-        </div>
-        <div class="summary-note">
-          {{ item.note }}
-        </div>
-      </el-card>
+    <section class="mrr-metric-grid mrr-metric-grid--four">
+      <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
     <el-card shadow="never">
@@ -349,30 +339,6 @@ h2 {
 
 .subtitle {
   margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  margin-top: 8px;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.summary-note {
-  margin-top: 8px;
-  font-size: 12px;
   color: var(--text-secondary);
 }
 

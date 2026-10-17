@@ -354,15 +354,17 @@ onBeforeUnmount(revokePreviewUrl)
 <template>
   <div class="page-shell">
     <header class="page-header">
-      <p class="eyebrow">
-        Nginx Static Resource Browser
-      </p>
-      <h2>
-        Nginx 文件浏览
-      </h2>
-      <p class="subtitle">
-        浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
-      </p>
+      <div>
+        <p class="eyebrow">
+          Nginx Static Resource Browser
+        </p>
+        <h2>
+          Nginx 文件浏览
+        </h2>
+        <p class="subtitle">
+          浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
+        </p>
+      </div>
     </header>
 
     <el-alert
@@ -682,30 +684,14 @@ onBeforeUnmount(revokePreviewUrl)
   padding: var(--g-main-padding);
 }
 
-.page-header h2,
-.page-header p,
-.browser-header p,
+/* 页头排版由全局 page-header.css 统一维护，此处只保留页面内自有元素。 */
+.browser-header p {
+  margin: 6px 0 0;
+  color: var(--el-text-color-secondary);
+}
+
 .detail-pane h3 {
   margin: 0;
-}
-
-.page-header h2 {
-  margin-top: 4px;
-  font-size: 26px;
-}
-
-.eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.subtitle,
-.browser-header p {
-  margin-top: 6px !important;
-  color: var(--el-text-color-secondary);
 }
 
 .browser-header,
@@ -751,9 +737,11 @@ onBeforeUnmount(revokePreviewUrl)
 .summary-item {
   min-width: 0;
   padding: 12px 14px;
-  background: var(--el-fill-color-extra-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+
+  /* 与统一层保持一致：中性表面、统一边框与圆角令牌，不再单独用 Element Plus 填充色。 */
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
 }
 
 .summary-item span,
@@ -764,7 +752,7 @@ onBeforeUnmount(revokePreviewUrl)
 .summary-item span {
   margin-bottom: 5px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .summary-item strong {
@@ -808,7 +796,7 @@ onBeforeUnmount(revokePreviewUrl)
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .folder-pane,
@@ -853,7 +841,7 @@ onBeforeUnmount(revokePreviewUrl)
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .tree-button span {
@@ -894,7 +882,7 @@ onBeforeUnmount(revokePreviewUrl)
   cursor: default;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .file-card:hover,
@@ -996,7 +984,7 @@ onBeforeUnmount(revokePreviewUrl)
   object-fit: contain;
 }
 
-@media (width <= 1180px) {
+@media (max-width: 1180px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1014,7 +1002,7 @@ onBeforeUnmount(revokePreviewUrl)
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .browser-header,
   .header-actions,
   .toolbar,

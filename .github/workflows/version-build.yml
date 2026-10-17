@@ -1,5 +1,11 @@
 name: version-build
 
+# 触发说明：本流水线当前只会在「人工推送 tag」或「人工发布 Release」时运行。
+# 由 release-on-version-bump.yml 自动创建 tag 的路径不会触发它——使用仓库自带
+# GITHUB_TOKEN 推送 tag 所产生的事件不会创建新的 workflow run
+# （仅 workflow_dispatch / repository_dispatch 例外，见 GitHub 官方文档
+# "Triggering a workflow from a workflow"）。如需纳入自动发版流程，必须在
+# release-on-version-bump.yml 中显式 `gh workflow run version-build.yml`。
 on:
   push:
     tags:
@@ -8,73 +14,85 @@ on:
   release:
     types: [published]
 
-# 确保持有上传 Release Assets 所需的写入权限
+# 仅构建与上传 Release Assets，不需要写仓库内容的权限之外的能力。
 permissions:
   contents: read
+
+# 同一 ref 的重复触发只保留最新一次；tag 构建不互相取消，避免产出半成品。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend-fantastic-admin
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        
+
       - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
-        
+
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
           node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
-          
+
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-        
+
       - name: Build Frontend
         run: pnpm build
-        
+
+      # 该制品只用于同一次运行内跨 job 传递，1 天后自动回收：
+      # 免费私有仓库的制品配额极小（500 MB），默认 90 天会把配额长期占满。
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend-fantastic-admin/dist
+          retention-days: 1
 
   build-backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend-repo
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        
+
       - name: Setup Java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
           cache: maven
-          
+
       - name: Build Backend
         run: mvn -B -ntp -DskipTests package
-        
+
+      # 同上：仅跨 job 传递用，1 天回收。
       - name: Upload Backend Artifact
         uses: actions/upload-artifact@v7
         with:
           name: backend-jar
           path: backend-repo/target/*.jar
+          retention-days: 1
 
-  # --- 新增的上传 Assets 的 Job ---
   upload-release-assets:
     # 必须等待前端和后端编译成功后才执行
     needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # 仅在是由 tag 触发或者发布 release 时才运行
     if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
     permissions:

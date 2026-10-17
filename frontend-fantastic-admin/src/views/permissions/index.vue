@@ -432,7 +432,7 @@ h2 { margin: 0; font-size: 28px; }
 
 .matrix-card { overflow-x: auto; }
 
-.matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; }
+.matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--mrr-radius-md); }
 
 .matrix-dot.direct { color: hsl(var(--primary)); background: hsl(var(--primary) / 10%); }
 
@@ -450,7 +450,7 @@ h2 { margin: 0; font-size: 28px; }
 
 .legend.none { background: transparent; }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header { flex-direction: column; }
 
   .header-actions { justify-content: space-between; width: 100%; }

@@ -1043,7 +1043,7 @@ onUnmounted(() => {
   padding: 9px 12px;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
   backdrop-filter: blur(14px);
   transform: translateX(-50%);
@@ -1154,7 +1154,7 @@ onUnmounted(() => {
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 16px;
+  border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
 }
 
@@ -1180,7 +1180,7 @@ onUnmounted(() => {
   min-height: 240px;
 }
 
-@media (width <= 1280px) {
+@media (max-width: 1280px) {
   .archive-wall-toolbar {
     align-items: flex-start;
   }
@@ -1200,7 +1200,7 @@ onUnmounted(() => {
   }
 }
 
-@media (width <= 1100px) {
+@media (max-width: 1100px) {
   .archive-more-settings-float {
     top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 12px);
     right: 12px;
@@ -1248,7 +1248,7 @@ onUnmounted(() => {
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .archive-wall-toolbar-actions {
     flex-wrap: wrap;
   }

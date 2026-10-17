@@ -99,6 +99,9 @@ declare global {
   export type { Component, Slot, Slots, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, ShallowRef, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
   // @ts-ignore
+  export type { UiSettingsSyncState } from '../store/modules/settings'
+  import('../store/modules/settings')
+  // @ts-ignore
   export type { AuthSessionStatus } from '../store/modules/user'
   import('../store/modules/user')
 }

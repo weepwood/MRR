@@ -83,3 +83,22 @@ export function checkPermission(userPermissions: string[], target: string): bool
 export function checkAnyPermission(userPermissions: string[], targets: string[]): boolean {
   return targets.some(target => checkPermission(userPermissions, target))
 }
+
+/**
+ * 基于会话凭据判断是否具备目标权限，不依赖任何 store。
+ *
+ * <p>ADMIN 角色视为拥有全部权限，与后端
+ * {@code AuthorizationInterceptor} 的 {@code session.isAdmin()} 放行保持一致。
+ * 该函数供无法引入 user store 的场景使用（例如 settings store 需要判断是否有
+ * 权限推送全站外观配置，引入 user store 会形成循环依赖）。</p>
+ */
+export function checkSessionPermission(
+  roleCode: string | null | undefined,
+  permissions: readonly string[] | null | undefined,
+  target: string,
+): boolean {
+  if (String(roleCode ?? '').trim().toUpperCase() === 'ADMIN') {
+    return true
+  }
+  return checkPermission([...(permissions ?? [])], target)
+}

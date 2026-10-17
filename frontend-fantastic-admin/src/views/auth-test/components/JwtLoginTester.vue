@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { AuthTestHistoryEvent } from '../types'
+import type { AuthTestResult } from '@/api/modules/auth-test'
 import { CopyDocument, Key, Refresh, SwitchButton, View } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
@@ -335,8 +335,8 @@ async function copyToken() {
 .button-row,
 .response-summary {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
 }
 
 .card-header {
@@ -345,8 +345,8 @@ async function copyToken() {
 
 .card-header span,
 .response-summary span {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .card-header strong,
@@ -366,9 +366,9 @@ async function copyToken() {
 .code-label {
   display: block;
   margin: 14px 0 6px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 600;
+  color: var(--el-text-color-secondary);
   text-transform: uppercase;
 }
 
@@ -376,17 +376,17 @@ async function copyToken() {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  margin: 0;
   padding: 14px;
+  margin: 0;
   overflow: auto;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--el-border-radius-base);
-  background: var(--el-fill-color-lighter);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-break: break-all;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
 }
 
 .code-panel.compact {

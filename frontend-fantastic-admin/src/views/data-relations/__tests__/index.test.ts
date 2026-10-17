@@ -89,6 +89,11 @@ function mountPage() {
         'el-card': {
           template: '<section class="el-card"><slot name="header" /><slot /></section>',
         },
+        // 指标卡统一由 MrrMetricCard 渲染，这里只验证数据接线。
+        'MrrMetricCard': {
+          props: ['label', 'value', 'note'],
+          template: '<article><span>{{ label }}</span><strong>{{ value }}</strong><small>{{ note }}</small></article>',
+        },
         'el-descriptions': {
           template: '<section><slot /></section>',
         },

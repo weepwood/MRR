@@ -11,7 +11,7 @@ import {
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
 
-export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'ocr' | 'security' | 'developer' | 'department' | 'external-links' | 'appearance'
+export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'ocr' | 'security' | 'runtime' | 'developer' | 'department' | 'external-links' | 'appearance'
 
 export const settingsNavItems = [
   { key: 'system', title: '系统信息', description: '名称、机构与系统简介', icon: 'i-ri:information-line' },
@@ -20,6 +20,7 @@ export const settingsNavItems = [
   { key: 'archive', title: '档案浏览', description: '图片来源与加载策略', icon: 'i-ri:image-2-line' },
   { key: 'ocr', title: 'OCR 与智能分类', description: '引擎、词库与分类安全阈值', icon: 'i-ri:scan-2-line' },
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
+  { key: 'runtime', title: '运行参数', description: '限流阈值、会话与日志留存', icon: 'i-ri:dashboard-3-line' },
   { key: 'developer', title: '开发者模式', description: '旧接口与可信来源', icon: 'i-ri:code-box-line' },
   { key: 'department', title: '科室配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },
   { key: 'external-links', title: '外部链接', description: '维护“其他”导航入口', icon: 'i-ri:links-line' },

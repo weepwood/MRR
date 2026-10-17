@@ -211,7 +211,7 @@ watch(
   width: 100%;
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .form-grid {
     grid-template-columns: 1fr;
   }

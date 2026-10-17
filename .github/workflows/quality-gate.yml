@@ -42,6 +42,7 @@ jobs:
             --github-summary "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload test inventory
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: test-inventory
@@ -170,6 +171,7 @@ jobs:
 
       - name: Upload lint report
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: frontend-lint-report
@@ -204,6 +206,7 @@ jobs:
 
       - name: Upload frontend coverage report
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage-report
@@ -222,6 +225,7 @@ jobs:
 
       - name: Upload Playwright report
         if: ${{ always() && needs.frontend-scope.outputs.e2e_changed == 'true' }}
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
@@ -328,6 +332,7 @@ jobs:
 
       - name: Upload unit test reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-unit-test-reports
@@ -379,6 +384,7 @@ jobs:
 
       - name: Upload backend test reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-integration-test-reports

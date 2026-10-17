@@ -34,7 +34,7 @@ const props = defineProps<{
       border-end-start-radius: 0;
     }
 
-    &:not(:first-child, :last-child) {
+    &:not(:first-child):not(:last-child) {
       border-radius: 0;
     }
   }
@@ -52,7 +52,7 @@ const props = defineProps<{
       border-start-end-radius: 0;
     }
 
-    &:not(:first-child, :last-child) {
+    &:not(:first-child):not(:last-child) {
       border-radius: 0;
     }
   }

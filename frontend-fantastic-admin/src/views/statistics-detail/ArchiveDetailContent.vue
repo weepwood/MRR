@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/first-attribute-linebreak, vue/html-closing-bracket-newline, vue/html-indent */
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -108,10 +109,23 @@ const typeOptions = computed(() => {
 
 const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
 
-const summaryCards = computed(() => [
-  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
-  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
-  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
+interface SummaryCard {
+  label: string
+  value: string
+  note: string
+  tone: MetricTone
+  icon: string
+}
+
+/* 指标卡只展示文本，数字在这里一次性格式化为千分位，避免模板里重复判断类型。 */
+function formatSummaryValue(value: unknown) {
+  return Number.isFinite(Number(value)) ? Number(value).toLocaleString('zh-CN') : String(value ?? '-')
+}
+
+const summaryCards = computed<SummaryCard[]>(() => [
+  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
+  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
+  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
   { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-ant-design:user-outlined' },
 ])
 
@@ -443,21 +457,7 @@ onBeforeUnmount(() => {
     </div>
 
     <section class="mrr-metric-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never" class="mrr-metric-card"
-        :class="`mrr-metric-card--${item.tone}`">
-        <div class="mrr-metric-card__icon">
-          <i :class="item.icon" />
-        </div>
-        <div class="mrr-metric-card__body">
-          <span class="mrr-metric-card__label">{{ item.label }}</span>
-          <strong class="mrr-metric-card__value">
-            {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
-          </strong>
-          <p class="mrr-metric-card__note">
-            {{ item.note }}
-          </p>
-        </div>
-      </el-card>
+      <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
     <el-card shadow="never">
@@ -783,7 +783,7 @@ h2 {
 .archive-list-wrap {
   overflow-x: auto;
   border: 1px solid var(--divider);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .archive-list {
@@ -825,8 +825,8 @@ h2 {
 }
 
 .archive-folder-card {
-  --folder-accent: #1d4ed8;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary-hover);
+  --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
   min-height: 412px;
@@ -847,7 +847,7 @@ h2 {
   position: absolute;
   pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
@@ -874,7 +874,7 @@ h2 {
   overflow: hidden;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
   border: 1px solid var(--divider);
-  border-radius: 14px;
+  border-radius: var(--mrr-radius-xl);
   box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
 }
@@ -954,44 +954,28 @@ h2 {
 }
 
 .tone-blue {
-  --folder-accent: #2563eb;
-  --folder-tint: #eef4ff;
+  --folder-accent: var(--color-primary);
+  --folder-tint: var(--mrr-tone-primary-soft);
 }
 
 .tone-green {
-  --folder-accent: #0f766e;
-  --folder-tint: #ecfdf7;
+  --folder-accent: var(--mrr-tone-teal);
+  --folder-tint: var(--mrr-tone-teal-soft);
 }
 
 .tone-amber {
-  --folder-accent: #b86b0b;
-  --folder-tint: #fff6e8;
+  --folder-accent: var(--mrr-tone-warning);
+  --folder-tint: var(--mrr-tone-warning-soft);
 }
 
 .tone-rose {
-  --folder-accent: #be185d;
-  --folder-tint: #fff0f5;
+  --folder-accent: var(--mrr-tone-rose);
+  --folder-tint: var(--mrr-tone-rose-soft);
 }
 
 .tone-slate {
-  --folder-accent: #64748b;
+  --folder-accent: var(--mrr-tone-neutral);
   --folder-tint: var(--surface-alt);
-}
-
-:global(.dark) .tone-blue {
-  --folder-tint: color-mix(in srgb, #2563eb 16%, var(--surface));
-}
-
-:global(.dark) .tone-green {
-  --folder-tint: color-mix(in srgb, #0f766e 16%, var(--surface));
-}
-
-:global(.dark) .tone-amber {
-  --folder-tint: color-mix(in srgb, #b86b0b 16%, var(--surface));
-}
-
-:global(.dark) .tone-rose {
-  --folder-tint: color-mix(in srgb, #be185d 16%, var(--surface));
 }
 
 .folder-top,
@@ -1028,7 +1012,7 @@ h2 {
   font-weight: 700;
   color: var(--folder-accent);
   background: color-mix(in srgb, var(--folder-accent) 9%, transparent);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .folder-selected-label i {
@@ -1053,7 +1037,7 @@ h2 {
   padding: 11px 12px;
   background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
 }
 
 .folder-code-copyable {
@@ -1173,7 +1157,7 @@ h2 {
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .page-header {
     flex-direction: column;
   }
@@ -1200,7 +1184,7 @@ h2 {
   }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .archive-grid {
     grid-template-columns: minmax(0, 1fr);
   }

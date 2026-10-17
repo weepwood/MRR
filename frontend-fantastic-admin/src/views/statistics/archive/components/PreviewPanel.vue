@@ -227,7 +227,7 @@ onUnmounted(() => {
         />
       </div>
 
-      <el-image-viewer
+      <ElImageViewer
         v-if="isImageViewerOpen"
         ref="imageViewerRef"
         :url-list="props.previewList"
@@ -290,7 +290,7 @@ onUnmounted(() => {
   overflow: auto;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .single-stage {
@@ -303,7 +303,7 @@ onUnmounted(() => {
   display: block;
   height: auto;
   margin: 0 auto;
-  background: #fff;
+  background: var(--el-bg-color);
   box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
@@ -330,19 +330,21 @@ onUnmounted(() => {
 }
 
 .fit-scroll-image.fit-width {
-  width: min(
-    calc(100% * var(--scroll-preview-scale)),
-    calc(980px * var(--scroll-preview-scale))
-  );
+  width:
+    min(
+      calc(100% * var(--scroll-preview-scale)),
+      calc(980px * var(--scroll-preview-scale))
+    );
 }
 
 .fit-scroll-image.fit-height {
   width: auto;
   max-width: none;
-  height: min(
-    calc(64vh * var(--scroll-preview-scale)),
-    calc(720px * var(--scroll-preview-scale))
-  );
+  height:
+    min(
+      calc(64vh * var(--scroll-preview-scale)),
+      calc(720px * var(--scroll-preview-scale))
+    );
 }
 
 .preview-image-placeholder {
@@ -360,7 +362,7 @@ onUnmounted(() => {
   text-align: center;
   background: radial-gradient(circle at top, hsl(var(--primary) / 8%), transparent 48%), var(--surface);
   border: 1px dashed var(--divider);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .preview-image-placeholder svg {
@@ -412,7 +414,7 @@ onUnmounted(() => {
   padding: 8px;
   background: hsl(var(--card) / 92%);
   border: 1px solid var(--divider);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-md);
   box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
 }
 
@@ -453,7 +455,7 @@ onUnmounted(() => {
   min-height: 24px;
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .preview-stage {
     padding: 16px;
   }

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrPageShell' })
 
-type PageWidth = 'fluid' | 'standard' | 'narrow'
-
 const props = withDefaults(defineProps<{
   width?: PageWidth
   compact?: boolean
@@ -10,6 +8,8 @@ const props = withDefaults(defineProps<{
   width: 'fluid',
   compact: false,
 })
+
+type PageWidth = 'fluid' | 'standard' | 'narrow'
 </script>
 
 <template>
@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<{
   gap: var(--mrr-space-4);
 }
 
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .mrr-page-shell {
     gap: var(--mrr-space-4);
   }

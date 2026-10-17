@@ -164,7 +164,7 @@ public class UserController {
                                                 HttpServletRequest httpRequest) {
         AuthSession session = requireCurrentUser();
         authService.changeRequiredPassword(session.getId(), request, IpUtil.getClientIp(httpRequest));
-        revokeCurrentToken(httpRequest);
+        // passwordVersion 已使所有旧会话失效，不把后置撤销失败伪报为密码修改失败。
         AuthContext.clear();
         return Result.success("密码修改成功，请使用新密码重新登录");
     }
@@ -238,7 +238,7 @@ public class UserController {
             return Result.fail("password 和 newPassword 不能为空");
         }
         authService.changePassword(session.getId(), oldPassword, newPassword);
-        revokeCurrentToken(httpRequest);
+        // passwordVersion 已使所有旧会话失效。
         AuthContext.clear();
         return Result.success("密码修改成功，请重新登录");
     }
@@ -260,7 +260,8 @@ public class UserController {
         try {
             tokenBlacklist.revoke(JwtUtil.getJti(token), JwtUtil.getExpirationMillis(token));
         } catch (Exception e) {
-            logger.warn("Unable to revoke current token: {}", e.getMessage());
+            logger.warn("Unable to revoke current token");
+            throw new BusinessException(503, "会话撤销暂时不可用，请稍后重试");
         }
     }
 }

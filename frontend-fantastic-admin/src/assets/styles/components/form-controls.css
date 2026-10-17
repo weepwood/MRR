@@ -101,9 +101,9 @@
 .fa-input-control:focus-visible,
 .fa-select-trigger:focus-visible,
 .fa-select-trigger[data-state="open"] {
+  outline: none;
   background: var(--mrr-background);
   border-color: var(--mrr-ring);
-  outline: none;
   box-shadow: var(--mrr-focus-ring);
 }
 

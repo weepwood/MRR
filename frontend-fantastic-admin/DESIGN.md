@@ -397,13 +397,19 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 | 特性 | 最低版本 | 失效后果 |
 |------|----------|----------|
 | `color-mix()` | 111 | 整条 `background` / `border` / `color` 声明被丢弃 |
+| `@media` / `@container` 区间语法 `(width <= 760px)` | 104 / 105 | 查询恒不匹配，**整块规则静默生效为 0** |
 | `:has()` | 105 | 整条规则被丢弃 |
 | `:is()` / `:where()` / `:not(a, b)` | 88 | 整条规则被丢弃（列表形态） |
 | `@container` | 105 | 整块查询失效 |
+| `dvh` / `svh` / `lvh` | 108 | 整条声明失效，需 `vh` 兜底 |
 
 源码门禁：`scripts/verify-chrome86-build.mjs` 会扫描构建产物，源码里出现上述写法直接阻断构建
 （Lightning CSS / UnoCSS / Element Plus 的残留仅提示）。`:not(a, b)` 另由 stylelint
-`selector-not-notation: simple` 拦住，请改链式 `:not(.a):not(.b)`。
+`selector-not-notation: simple` 拦住，请改链式 `:not(.a):not(.b)`；区间语法由
+`media-feature-range-notation: prefix` 拦住，请改 `max-width` / `min-width`。
+
+> **区间语法是特别容易漏的一类**：它不报错、不影响其它规则，只是让那段 `@media` 从来
+> 没匹配过。项目里曾积累 77 处，等于目标浏览器上的折叠布局长期未生效。
 
 ### color-mix() 降级策略
 

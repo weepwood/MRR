@@ -432,7 +432,6 @@ onMounted(reloadAll)
   width: 112px;
 }
 
-
 .chart-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);

@@ -124,6 +124,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .admin-contact { display: inline-flex; }
+
 .admin-contact__trigger {
   padding: 0;
   font: inherit;
@@ -135,6 +136,7 @@ onBeforeUnmount(() => {
   background: transparent;
   border: 0;
 }
+
 .admin-contact__trigger:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--mrr-primary) 42%, transparent);
   outline-offset: 3px;
@@ -144,24 +146,29 @@ onBeforeUnmount(() => {
 .contact-card header { display: flex; gap: var(--mrr-space-3); align-items: center; }
 .contact-card header strong { display: block; font-size: 14px; }
 .contact-card header small { display: block; margin-top: 2px; color: var(--mrr-muted-foreground); }
+
 .contact-card__icon {
   display: grid;
+  place-items: center;
   width: 38px;
   height: 38px;
   color: var(--mrr-primary);
   background: color-mix(in srgb, var(--mrr-primary) 10%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
   border-radius: var(--mrr-radius-md);
-  place-items: center;
 }
 .contact-card__list { display: grid; gap: var(--mrr-space-3); }
 .contact-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--mrr-space-3); font-size: 12px; }
 .contact-row > span { color: var(--mrr-muted-foreground); }
 .contact-row > div { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
-.contact-row a, .contact-row strong { overflow-wrap: anywhere; color: var(--mrr-foreground); }
+
+.contact-row a,
+.contact-row strong { color: var(--mrr-foreground); overflow-wrap: anywhere; }
+
 .contact-row button {
   display: inline-grid;
   flex: 0 0 auto;
+  place-items: center;
   width: 24px;
   height: 24px;
   color: var(--mrr-muted-foreground);
@@ -169,8 +176,8 @@ onBeforeUnmount(() => {
   background: var(--mrr-muted);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-sm);
-  place-items: center;
 }
+
 .contact-card__description {
   padding: var(--mrr-space-3);
   margin: 0;

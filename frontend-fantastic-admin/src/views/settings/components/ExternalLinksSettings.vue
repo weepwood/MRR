@@ -206,13 +206,13 @@ function openExternalLink(url: string) {
 .header-icon {
   display: grid;
   flex: 0 0 38px;
+  place-items: center;
   width: 38px;
   height: 38px;
   font-size: 18px;
   color: var(--el-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
   border-radius: var(--mrr-radius-lg);
-  place-items: center;
 }
 
 .header-copy {
@@ -286,13 +286,13 @@ function openExternalLink(url: string) {
 .link-icon {
   display: grid;
   flex: 0 0 34px;
+  place-items: center;
   width: 34px;
   height: 34px;
   color: var(--el-color-primary);
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
-  place-items: center;
 }
 
 .link-copy {
@@ -307,18 +307,18 @@ function openExternalLink(url: string) {
 
 .link-copy strong {
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   color: var(--el-text-color-primary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .link-copy small {
   margin-top: 3px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--el-text-color-secondary);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -344,8 +344,8 @@ function openExternalLink(url: string) {
   }
 
   .external-link-item {
-    align-items: flex-start;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .link-actions {

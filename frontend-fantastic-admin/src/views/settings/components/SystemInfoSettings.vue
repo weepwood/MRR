@@ -40,5 +40,6 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .group-heading strong { font-size: 15px; }
 .group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+
 @media (max-width: 680px) { .control-grid { grid-template-columns: 1fr; } }
 </style>

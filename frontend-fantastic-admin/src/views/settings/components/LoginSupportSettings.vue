@@ -88,11 +88,15 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
-.setting-group, .login-preview { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+
+.setting-group,
+.login-preview { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 .group-heading { margin-bottom: var(--mrr-space-5); }
 .group-heading strong { font-size: 15px; }
 .group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
-.control-grid, .feature-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+
+.control-grid,
+.feature-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .switch-list { display: grid; margin-bottom: var(--mrr-space-5); border-top: 1px solid var(--mrr-border); border-bottom: 1px solid var(--mrr-border); }
 .switch-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; min-height: 76px; border-bottom: 1px solid var(--mrr-border); }
 .switch-row:last-child { border-bottom: 0; }
@@ -102,12 +106,18 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 .advanced-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--mrr-space-4); }
 .advanced-heading span { font-size: 10px; color: var(--mrr-muted-foreground); }
 .feature-editor + .feature-editor { padding-top: var(--mrr-space-3); border-top: 1px solid var(--mrr-border); }
-.disabled { opacity: .62; }
+.disabled { opacity: 0.62; }
 .login-preview { display: grid; gap: var(--mrr-space-2); background-color: var(--mrr-muted); background-image: radial-gradient(circle at 0 0, color-mix(in srgb, var(--mrr-primary) 10%, transparent), transparent 38%); }
-.login-preview > span, .login-preview > small { font-size: 10px; color: var(--mrr-primary); text-transform: uppercase; letter-spacing: .08em; }
+
+.login-preview > span,
+.login-preview > small { font-size: 10px; color: var(--mrr-primary); text-transform: uppercase; letter-spacing: 0.08em; }
 .login-preview > strong { font-size: 25px; }
 .login-preview > p { margin: 0; color: var(--mrr-muted-foreground); }
 .login-preview > div { display: grid; gap: 3px; padding: var(--mrr-space-3); margin-top: var(--mrr-space-3); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .login-preview em { font-size: 11px; font-style: normal; color: var(--mrr-muted-foreground); }
-@media (max-width: 680px) { .control-grid, .feature-editor { grid-template-columns: 1fr; } }
+
+@media (max-width: 680px) {
+  .control-grid,
+  .feature-editor { grid-template-columns: 1fr; }
+}
 </style>

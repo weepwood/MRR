@@ -123,18 +123,18 @@ function record(event: AuthTestHistoryEvent) {
 .page-header,
 .history-header {
   display: flex;
+  gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
 }
 
 .eyebrow {
   margin: 0 0 4px;
-  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  color: var(--el-color-primary);
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 h2 {
@@ -149,8 +149,8 @@ h2 {
 }
 
 .history-header span {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .history-header strong,

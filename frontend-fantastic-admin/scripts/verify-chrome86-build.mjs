@@ -185,6 +185,66 @@ for (const block of sourceBlocks) {
 
 const ungatedCss = stripAtSupportsBlocks(stripCssComments(cssText))
 
+/*
+ * 区间语法 (width <= 760px) 需要 Chrome 104+，@container 需要 Chrome 105+。
+ * 这类写法在 Chrome 86 上不会报错——查询恒不匹配，整块规则静默失效，
+ * 曾因此在响应式折叠上埋了 77 处而无人察觉。源码与产物都要拦。
+ */
+const RANGE_AT_RULE = /@(media|container)([^{]*)\{/g
+/* 两种形态：(width <= 760px) 与 (400px <= width)。刻意不写 [^)]*，避免回溯开销。 */
+const RANGE_NOTATION = new RegExp(
+  String.raw`\(\s*(?:width|height|inline-size|block-size|aspect-ratio)\s*[<>]=?`
+  + String.raw`|\(\s*[^()<>=\s]+\s*[<>]=?\s*(?:width|height|inline-size|block-size|aspect-ratio)\s*\)`,
+)
+
+function findRangeNotation(css) {
+  const hits = []
+  for (const atRule of css.matchAll(RANGE_AT_RULE)) {
+    const matched = atRule[2].match(RANGE_NOTATION)
+    if (matched) {
+      hits.push({
+        rule: `@${atRule[1]}`,
+        text: matched[0].trim(),
+        line: css.slice(0, atRule.index).split('\n').length,
+      })
+    }
+  }
+  return hits
+}
+
+for (const block of sourceBlocks) {
+  for (const hit of findRangeNotation(stripCssComments(block.css))) {
+    check(
+      false,
+      `源码的 ${hit.rule} 使用了区间语法「${hit.text}」（需要 Chrome 104+），`
+      + `在 Chrome 86 上该查询恒不匹配，整块规则失效：`
+      + `${path.relative(projectRoot, block.file)} 第 ${hit.line} 行。`
+      + '请改用 (max-width: Npx) / (min-width: Npx)。',
+    )
+  }
+}
+
+/*
+ * 产物层：@media 的区间语法必须阻断（这是我们自己的样式，改了就能修好）；
+ * @container 的区间语法只提示——@container 本身需要 Chrome 105+，整块在 86 上
+ * 无论写法如何都不会生效，且这类内容来自 UnoCSS / Element Plus 等依赖产物。
+ */
+const productRangeHits = findRangeNotation(ungatedCss)
+for (const hit of productRangeHits.filter(item => item.rule === '@media')) {
+  check(
+    false,
+    `生产 CSS 的 @media 使用了区间语法「${hit.text}」，在 Chrome 86 上不生效；`
+    + '请检查构建目标的浏览器配置（Lightning CSS targets）是否覆盖了该语法。',
+  )
+}
+const containerRangeHits = productRangeHits.filter(item => item.rule === '@container')
+if (containerRangeHits.length > 0) {
+  console.log(
+    `提示：生产 CSS 中存在 ${containerRangeHits.length} 处 @container 区间语法（如「${containerRangeHits[0].text}」），`
+    + '来自依赖产物；@container 本身需要 Chrome 105+，在基线浏览器上整块不生效。',
+  )
+}
+
 check(
   !/:has\(/.test(ungatedCss),
   '生产 CSS 使用了 Chrome 86 不支持的 :has()（需要 Chrome 105+），且未包在 @supports selector() 内',
@@ -194,7 +254,7 @@ check(
 const toolchainOccurrences = (ungatedCss.match(/:is\(|:where\(|:not\([^)]*,/g) || []).length
 if (toolchainOccurrences > 0) {
   const affectedChunks = cssFiles
-    .filter((file) => /:is\(|:where\(|:not\([^)]*,/.test(
+    .filter(file => /:is\(|:where\(|:not\([^)]*,/.test(
       stripAtSupportsBlocks(fs.readFileSync(file, 'utf8')),
     ))
     .map(file => path.relative(distDir, file))

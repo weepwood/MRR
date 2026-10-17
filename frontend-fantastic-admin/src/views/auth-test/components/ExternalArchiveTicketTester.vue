@@ -833,8 +833,8 @@ onMounted(() => {
 .copy-line,
 .status-meta {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
 }
 
 .card-header,
@@ -856,8 +856,8 @@ onMounted(() => {
 .check-item span,
 .response-summary span,
 .status-meta {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .check-grid {
@@ -869,13 +869,13 @@ onMounted(() => {
 
 .check-item {
   display: flex;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
   padding: 12px;
+  background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--el-border-radius-base);
-  background: var(--el-fill-color-lighter);
 }
 
 .status-meta,
@@ -886,8 +886,8 @@ onMounted(() => {
 }
 
 .status-meta {
-  margin-top: 14px;
   gap: 8px 18px;
+  margin-top: 14px;
 }
 
 .client-table {
@@ -902,10 +902,10 @@ onMounted(() => {
 .setup-steps {
   display: grid;
   gap: 6px;
-  margin: 0;
   padding-left: 22px;
-  color: var(--el-text-color-secondary);
+  margin: 0;
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .scenario-buttons {
@@ -927,9 +927,9 @@ onMounted(() => {
 .code-label {
   display: block;
   margin: 14px 0 6px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 600;
+  color: var(--el-text-color-secondary);
   text-transform: uppercase;
 }
 
@@ -937,17 +937,17 @@ onMounted(() => {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  margin: 0;
   padding: 14px;
+  margin: 0;
   overflow: auto;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--el-border-radius-base);
-  background: var(--el-fill-color-lighter);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   line-height: 1.65;
-  white-space: pre-wrap;
   word-break: break-all;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
 }
 
 .code-panel.compact {
@@ -984,8 +984,8 @@ onMounted(() => {
 
   .card-header,
   .config-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .launch-url {

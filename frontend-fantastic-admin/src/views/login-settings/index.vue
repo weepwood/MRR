@@ -25,8 +25,8 @@ onMounted(() => {
 <style scoped>
 .legacy-settings-redirect {
   display: grid;
+  place-items: center;
   min-height: 220px;
   color: var(--mrr-muted-foreground);
-  place-items: center;
 }
 </style>

@@ -1,9 +1,11 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.service.impl.SystemSettingServiceImpl;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,8 @@ class SystemSettingServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new SystemSettingServiceImpl(mapper, developerModeService, developerApiAccessService);
+        service = new SystemSettingServiceImpl(mapper, developerModeService, developerApiAccessService,
+                new SettingRegistry(new LogRetentionProperties()));
     }
 
     @Test

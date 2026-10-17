@@ -2,7 +2,6 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrChartCountItem } from '@/types/chart'
 import { computed } from 'vue'
-import { MRR_CHART_PALETTE } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrDonutChart' })
@@ -76,11 +75,11 @@ const option = computed<ECOption>(() => {
           label: { show: false },
           scaleSize: 5,
         },
-        data: props.data.map((item, index) => ({
+        data: props.data.map(item => ({
           name: item.label,
           value: item.count,
           itemStyle: {
-            color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+            color: item.color,
           },
         })),
       },

@@ -52,13 +52,13 @@ withDefaults(defineProps<{
   display: flex;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .skeleton-cell {
   flex: 1;
   height: 16px;
-  background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: shimmer 1.5s infinite;
@@ -72,14 +72,14 @@ withDefaults(defineProps<{
 
 .skeleton-card {
   padding: 16px;
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
-  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--mrr-radius-card);
 }
 
 .skeleton-card-img {
   height: 120px;
   margin-bottom: 12px;
-  background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: shimmer 1.5s infinite;
@@ -88,7 +88,7 @@ withDefaults(defineProps<{
 .skeleton-card-line {
   height: 14px;
   margin-bottom: 8px;
-  background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: shimmer 1.5s infinite;
@@ -106,15 +106,15 @@ withDefaults(defineProps<{
 
 .skeleton-stat {
   padding: 16px;
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
-  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--mrr-radius-md);
 }
 
 .skeleton-stat-label {
   width: 50%;
   height: 12px;
   margin-bottom: 8px;
-  background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: shimmer 1.5s infinite;
@@ -123,7 +123,7 @@ withDefaults(defineProps<{
 .skeleton-stat-value {
   width: 70%;
   height: 24px;
-  background: linear-gradient(90deg, var(--el-fill-color-light, #f0f2f5) 25%, var(--el-fill-color, #e4e7ed) 50%, var(--el-fill-color-light, #f0f2f5) 75%);
+  background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: shimmer 1.5s infinite;

@@ -315,9 +315,9 @@ onUnmounted(() => {
 .page-shell { display: grid; gap: 16px; }
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .header-actions { display: flex; gap: 10px; align-items: center; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.12em; }
+.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--mrr-muted-foreground); text-transform: uppercase; letter-spacing: 0.12em; }
 h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; color: #64748b; }
+.subtitle { margin: 8px 0 0; color: var(--mrr-muted-foreground); }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
 .filter-input { width: min(560px, 100%); }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
@@ -325,7 +325,7 @@ h2 { margin: 0; font-size: 28px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }
 .bah-link:hover { text-decoration: underline; }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header { flex-direction: column; }
   .header-actions { flex-wrap: wrap; width: 100%; }
 }

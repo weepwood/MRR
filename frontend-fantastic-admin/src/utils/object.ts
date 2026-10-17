@@ -23,6 +23,17 @@ const mergeWithoutUndefinedProps = createDefu((obj, key, value) => {
 function isObject(value: any) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
+
+/**
+ * 判断对象是否拥有自有属性。
+ *
+ * 不用 `Object.hasOwn`：该 API 需要 Chrome 93+，而本项目基线是 Chrome 86，
+ * 在基线浏览器上会抛 `TypeError`，让整段设置读取逻辑静默走 catch 分支。
+ */
+function hasKey(obj: object, key: PropertyKey): boolean {
+  // eslint-disable-next-line e18e/prefer-object-has-own -- Object.hasOwn 需要 Chrome 93+，基线为 86
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
 /** 比较两个对象，提取出不同的部分 */
 function diffTwoObj(originalObj: Record<string, any>, diffObj: Record<string, any>) {
   if (!isObject(originalObj) || !isObject(diffObj)) {
@@ -49,6 +60,7 @@ function diffTwoObj(originalObj: Record<string, any>, diffObj: Record<string, an
 
 export {
   diffTwoObj,
+  hasKey,
   merge,
   mergeWithoutUndefinedProps,
 }

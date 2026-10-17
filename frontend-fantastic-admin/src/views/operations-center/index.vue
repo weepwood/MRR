@@ -398,7 +398,7 @@ onMounted(async () => {
             {{ modeLabel(readiness.mode) }}
           </el-tag>
         </div>
-        <p>集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。</p>
+        <p class="subtitle">集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。</p>
       </div>
       <div class="header-actions">
         <el-button :loading="loading.report" @click="downloadDiagnosticReport">
@@ -430,41 +430,49 @@ onMounted(async () => {
             </template>
           </el-alert>
 
-          <section class="summary-grid overview-grid">
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">有效运行模式</span>
-              <strong class="metric-value mode-value" :class="`mode-${readiness?.mode || 'unknown'}`">
-                {{ modeLabel(readiness?.mode) }}
-              </strong>
-              <small>最近检查 {{ formatTime(readiness?.checkedAt) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">应用版本</span>
-              <strong class="metric-value small-value">{{ overview?.runtime.applicationVersion || '-' }}</strong>
-              <small>Java {{ overview?.runtime.javaVersion || '-' }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">后端运行时长</span>
-              <strong class="metric-value small-value">{{ formatDuration(overview?.runtime.uptimeMs) }}</strong>
-              <small>启动于 {{ formatTime(overview?.runtime.startedAt) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">JVM 堆内存</span>
-              <strong class="metric-value small-value">{{ heapUsage }}%</strong>
-              <el-progress :percentage="heapUsage" :status="heapUsage >= 90 ? 'exception' : heapUsage >= 80 ? 'warning' : 'success'" />
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">活跃导出任务</span>
-              <strong class="metric-value">{{ formatNumber(overview?.taskSummary.active) }}</strong>
-              <small>失败 {{ formatNumber(overview?.taskSummary.failed) }}</small>
-            </el-card>
-            <el-card shadow="never" class="metric-card">
-              <span class="metric-label">近 24 小时 5xx</span>
-              <strong class="metric-value" :class="overview?.recentServerErrors ? 'danger-text' : 'success-text'">
-                {{ formatNumber(overview?.recentServerErrors) }}
-              </strong>
-              <small>集中失败请结合日志和 requestId 排查</small>
-            </el-card>
+          <section class="mrr-metric-grid mrr-metric-grid--three overview-metrics">
+            <MrrMetricCard
+              label="有效运行模式"
+              compact-value
+              :value="modeLabel(readiness?.mode)"
+              :value-tone="modeType(readiness?.mode)"
+              :note="`最近检查 ${formatTime(readiness?.checkedAt)}`"
+            />
+            <MrrMetricCard
+              label="应用版本"
+              compact-value
+              :value="overview?.runtime.applicationVersion || '-'"
+              :note="`Java ${overview?.runtime.javaVersion || '-'}`"
+            />
+            <MrrMetricCard
+              label="后端运行时长"
+              compact-value
+              :value="formatDuration(overview?.runtime.uptimeMs)"
+              :note="`启动于 ${formatTime(overview?.runtime.startedAt)}`"
+            />
+            <MrrMetricCard
+              label="JVM 堆内存"
+              :value="`${heapUsage}%`"
+              :value-tone="heapUsage >= 90 ? 'danger' : heapUsage >= 80 ? 'warning' : 'success'"
+            >
+              <template #extra>
+                <el-progress
+                  :percentage="heapUsage"
+                  :status="heapUsage >= 90 ? 'exception' : heapUsage >= 80 ? 'warning' : 'success'"
+                />
+              </template>
+            </MrrMetricCard>
+            <MrrMetricCard
+              label="活跃导出任务"
+              :value="formatNumber(overview?.taskSummary.active)"
+              :note="`失败 ${formatNumber(overview?.taskSummary.failed)}`"
+            />
+            <MrrMetricCard
+              label="近 24 小时 5xx"
+              :value="formatNumber(overview?.recentServerErrors)"
+              :value-tone="overview?.recentServerErrors ? 'danger' : 'success'"
+              note="集中失败请结合日志和 requestId 排查"
+            />
           </section>
 
           <div class="two-column-layout">
@@ -538,11 +546,11 @@ onMounted(async () => {
         </div>
         <el-empty v-if="!diagnosticRun" description="点击“开始全面体检”执行实时检查" :image-size="96" />
         <template v-else>
-          <section class="summary-grid compact-grid">
-            <el-card shadow="never"><span class="metric-label">检查总数</span><strong class="metric-value">{{ diagnosticRun.summary.total }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">通过</span><strong class="metric-value success-text">{{ diagnosticRun.summary.passed }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">严重故障</span><strong class="metric-value danger-text">{{ diagnosticRun.summary.critical }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">警告</span><strong class="metric-value warning-text">{{ diagnosticRun.summary.warnings }}</strong></el-card>
+          <section class="mrr-metric-grid mrr-metric-grid--four metric-row">
+            <MrrMetricCard label="检查总数" :value="diagnosticRun.summary.total" />
+            <MrrMetricCard label="通过" value-tone="success" :value="diagnosticRun.summary.passed" />
+            <MrrMetricCard label="严重故障" value-tone="danger" :value="diagnosticRun.summary.critical" />
+            <MrrMetricCard label="警告" value-tone="warning" :value="diagnosticRun.summary.warnings" />
           </section>
           <div class="diagnostic-list">
             <el-card v-for="check in diagnosticRun.checks" :key="check.code" shadow="never" class="check-card">
@@ -586,10 +594,15 @@ onMounted(async () => {
           </el-form>
         </el-card>
         <template v-if="imageDiagnosis">
-          <section class="summary-grid compact-grid">
-            <el-card shadow="never"><span class="metric-label">诊断结果</span><strong class="metric-value" :class="imageDiagnosis.found ? 'success-text' : 'danger-text'">{{ imageDiagnosis.found ? '找到图片' : '未找到图片' }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">最终来源</span><strong class="metric-value small-value">{{ imageDiagnosis.selectedSource || '-' }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">回退原因</span><strong class="metric-value small-value">{{ imageDiagnosis.fallbackReason || '未发生回退' }}</strong></el-card>
+          <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
+            <MrrMetricCard
+              label="诊断结果"
+              compact-value
+              :value="imageDiagnosis.found ? '找到图片' : '未找到图片'"
+              :value-tone="imageDiagnosis.found ? 'success' : 'danger'"
+            />
+            <MrrMetricCard label="最终来源" compact-value :value="imageDiagnosis.selectedSource || '-'" />
+            <MrrMetricCard label="回退原因" compact-value :value="imageDiagnosis.fallbackReason || '未发生回退'" />
           </section>
           <el-card shadow="never" class="section-card">
             <template #header>解析与回退过程</template>
@@ -609,13 +622,13 @@ onMounted(async () => {
           <el-button :loading="loading.integrity" @click="loadIntegrity">刷新</el-button>
         </div>
         <template v-if="integrity">
-          <section class="summary-grid">
-            <el-card shadow="never"><span class="metric-label">archive_id 覆盖率</span><strong class="metric-value">{{ formatPercent(integrity.archiveCoverage) }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">OSS 覆盖率</span><strong class="metric-value">{{ formatPercent(integrity.ossCoverage) }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">缺失上架号</span><strong class="metric-value">{{ formatNumber(integrity.missingSjh) }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">断链记录</span><strong class="metric-value danger-text">{{ formatNumber(integrity.brokenLinks) }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">重复病案组</span><strong class="metric-value danger-text">{{ formatNumber(integrity.duplicateArchiveGroups) }}</strong></el-card>
-            <el-card shadow="never"><span class="metric-label">有效扫描图片</span><strong class="metric-value">{{ formatNumber(integrity.totalActiveScans) }}</strong></el-card>
+          <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
+            <MrrMetricCard label="archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
+            <MrrMetricCard label="OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
+            <MrrMetricCard label="缺失上架号" :value="formatNumber(integrity.missingSjh)" />
+            <MrrMetricCard label="断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
+            <MrrMetricCard label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
+            <MrrMetricCard label="有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" />
           </section>
           <el-card shadow="never" class="section-card">
             <template #header>各业务表关联情况</template>
@@ -640,10 +653,10 @@ onMounted(async () => {
           </div>
           <el-button :loading="loading.tasks" @click="loadTasks">刷新</el-button>
         </div>
-        <section class="summary-grid compact-grid task-summary">
-          <el-card shadow="never"><span class="metric-label">等待与处理中</span><strong class="metric-value warning-text">{{ formatNumber(overview?.taskSummary.active) }}</strong></el-card>
-          <el-card shadow="never"><span class="metric-label">失败</span><strong class="metric-value danger-text">{{ formatNumber(overview?.taskSummary.failed) }}</strong></el-card>
-          <el-card shadow="never"><span class="metric-label">已完成</span><strong class="metric-value success-text">{{ formatNumber(taskCounts.SUCCESS) }}</strong></el-card>
+        <section class="mrr-metric-grid mrr-metric-grid--three task-summary">
+          <MrrMetricCard label="等待与处理中" value-tone="warning" :value="formatNumber(overview?.taskSummary.active)" />
+          <MrrMetricCard label="失败" value-tone="danger" :value="formatNumber(overview?.taskSummary.failed)" />
+          <MrrMetricCard label="已完成" value-tone="success" :value="formatNumber(taskCounts.SUCCESS)" />
         </section>
         <el-table :data="filteredExportJobs" border height="600" class="section-card">
           <el-table-column prop="created_at" label="创建时间" width="180"><template #default="scope">{{ formatTime(scope.row.created_at) }}</template></el-table-column>
@@ -705,10 +718,20 @@ onMounted(async () => {
             <p v-else>系统是否允许写入仍取决于自动部署就绪检查。</p>
           </template>
         </el-alert>
-        <section class="summary-grid compact-grid section-card">
-          <el-card shadow="never"><span class="metric-label">有效模式</span><strong class="metric-value small-value">{{ modeLabel(readiness?.mode) }}</strong></el-card>
-          <el-card shadow="never"><span class="metric-label">自动降级</span><strong class="metric-value small-value" :class="readiness?.automaticReadOnly ? 'danger-text' : 'success-text'">{{ readiness?.automaticReadOnly ? '已触发' : '未触发' }}</strong></el-card>
-          <el-card shadow="never"><span class="metric-label">主动维护</span><strong class="metric-value small-value" :class="maintenance?.enabled ? 'warning-text' : 'success-text'">{{ maintenance?.enabled ? '已启用' : '未启用' }}</strong></el-card>
+        <section class="mrr-metric-grid mrr-metric-grid--three section-card">
+          <MrrMetricCard label="有效模式" compact-value :value="modeLabel(readiness?.mode)" :value-tone="modeType(readiness?.mode)" />
+          <MrrMetricCard
+            label="自动降级"
+            compact-value
+            :value="readiness?.automaticReadOnly ? '已触发' : '未触发'"
+            :value-tone="readiness?.automaticReadOnly ? 'danger' : 'success'"
+          />
+          <MrrMetricCard
+            label="主动维护"
+            compact-value
+            :value="maintenance?.enabled ? '已启用' : '未启用'"
+            :value-tone="maintenance?.enabled ? 'warning' : 'success'"
+          />
         </section>
         <el-card shadow="never" class="section-card">
           <template #header>
@@ -803,17 +826,11 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 25px;
-}
-
 .page-header > div > p:last-child,
 .toolbar-row,
 .card-header p,
 .issue-row p,
-.check-copy > p,
-.metric-card small {
+.check-copy > p {
   color: var(--el-text-color-secondary);
 }
 
@@ -827,62 +844,18 @@ onMounted(async () => {
 .diagnostics-tabs {
   padding: 0 16px 16px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
   background: var(--el-bg-color);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+/* 指标组与上方标签栏之间保持与其它区块一致的间距。 */
+.overview-metrics {
   margin-top: 16px;
 }
 
-.overview-grid {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-}
-
-.compact-grid {
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-}
-
-.metric-card :deep(.el-card__body) {
-  display: grid;
-  gap: 8px;
-}
-
-.metric-label {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
-}
-
-.metric-value {
-  font-size: 27px;
-  font-weight: 700;
-}
-
-.small-value {
-  font-size: 17px;
-  word-break: break-all;
-}
-
-.mode-value {
-  font-size: 20px;
-}
-
-.mode-READ_WRITE,
-.success-text {
-  color: var(--el-color-success);
-}
-
-.mode-READ_ONLY_DEGRADED,
-.danger-text {
-  color: var(--el-color-danger);
-}
-
-.mode-READ_ONLY_MAINTENANCE,
-.warning-text {
-  color: var(--el-color-warning);
+/* 指标组统一使用 MrrMetricCard，只保留与页面节奏相关的间距。 */
+.metric-row {
+  margin-top: 16px;
 }
 
 .two-column-layout {
@@ -975,7 +948,7 @@ onMounted(async () => {
   gap: 4px;
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   font-size: 13px;
 }
@@ -995,7 +968,7 @@ onMounted(async () => {
   overflow: auto;
   margin: 10px 0 0;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
   font-size: 12px;
@@ -1019,11 +992,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 1100px) {
-  .overview-grid,
-  .compact-grid {
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
-  }
-
   .two-column-layout {
     grid-template-columns: 1fr;
   }
@@ -1039,12 +1007,6 @@ onMounted(async () => {
   .check-row {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .overview-grid,
-  .compact-grid,
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 
   .header-actions,

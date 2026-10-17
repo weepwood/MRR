@@ -125,7 +125,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 .developer-grid p { margin: 4px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
 
-@media (width <= 680px) {
+@media (max-width: 680px) {
   .developer-grid,
   .source-examples { grid-template-columns: 1fr; }
 

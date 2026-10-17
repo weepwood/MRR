@@ -14,18 +14,77 @@ Spring Boot 常见优先级从高到低为：
 
 同一参数不要同时在多个位置维护，避免排障时无法确定实际值。
 
+### 数据库覆盖层（仅限已注册的运行参数）
+
+系统设置表 `app.mr_system_settings` 是运行参数的**覆盖层**，优先级高于上表全部来源：
+
+```text
+数据库显式值 → 环境变量 / 外部配置 → JAR 内置默认
+```
+
+规则：
+
+- **数据库留空（或键不存在）时完全沿用部署配置**，因此升级后行为与升级前一致；
+- 只有管理员在「系统设置 → 运行参数」中显式填写后，数据库值才覆盖配置；
+- 覆盖层**只对注册表中声明的键生效**（见下节）。数据库凭据、各类密钥、CORS 白名单、开发者模式来源、Flyway 开关等**永远不会**被覆盖层接管；
+- 写入时服务端会校验类型与安全值域，越界值直接拒绝；直接改库写入的越界值在读取时会被兜底回落到配置默认值。
+
+## 后台可配置的运行参数
+
+以下参数可在「系统设置 → 运行参数」中调整，**保存后立即生效，无需重启**。数据库留空即沿用下表默认值。
+
+| 设置键 | 默认值 | 安全值域 | 说明 |
+| --- | --- | --- | --- |
+| `loginMaxAttempts` | `5` | 3–20 次 | 登录失败上限。低于 3 次会明显削弱暴力破解防护，因此不允许配置 |
+| `loginLockWindowMinutes` | `15` | 5–60 分钟 | 登录锁定窗口 |
+| `registerMaxAttemptsPerIp` | `3` | 1–20 次 | 同一 IP 的注册请求上限（成功与失败均计入） |
+| `registerWindowSeconds` | `60` | 10–600 秒 | 注册统计窗口 |
+| `apiRateLimitMaxRequests` | `30` | 10–600 次 | 敏感接口限流上限（登录、检索、导出等） |
+| `apiRateLimitWindowSeconds` | `60` | 10–600 秒 | 敏感接口限流窗口 |
+| `sessionExpireMinutes` | `1440` | 60–1440 分钟 | 登录会话有效期。仅影响新签发的令牌，已签发令牌按原有效期有效 |
+| `accessLogRetentionEnabled` | `true` | — | 访问日志自动清理开关 |
+| `accessLogRetentionDays` | `1095` | 7–3650 天 | 访问日志保留天数 |
+| `accessLogCleanupBatchSize` | `5000` | 100–50000 条 | 单批删除条数 |
+| `accessLogCleanupMaxBatches` | `20` | 1–200 批 | 单次清理任务的最大批次数 |
+
+约束：
+
+- `app.log-retention.cron` **不支持运行时修改**（`@Scheduled` 在启动时解析），仍需通过部署配置调整；
+- 修改限流、会话与留存类参数属于敏感操作，后台会要求二次确认，并写入运维审计：写操作以 `SETTING_UPDATE` / `SETTING_DELETE` 记录在 `app.access_log` 的审计字段中，`audit_target` 为本次变更的设置键名，描述中单独标注涉及的敏感参数数量。未在注册表中登记的其他设置键（例如界面外观的 `adminAppSettings`）不产生审计记录，以免外观同步写满审计表；
+- 元数据可通过 `GET /api/v1/settings/schema` 获取，前端据此动态渲染，无需在页面代码中重复维护默认值。
+
+## 全局界面外观与导航外链
+
+界面外观与「其他」菜单的外部链接保存在系统设置键 `adminAppSettings`（JSON）中，使同一科室各终端保持一致。
+
+- 写入：`PUT /api/v1/settings`，需 `system:manage` 权限；
+- 读取：`GET /api/v1/settings/ui`，**仅需登录会话**，因为外观需要被全体用户同步；
+- 数据仅包含外观与导航白名单字段，**不包含** `menu.subMenuCollapse` 等本机状态，也不包含任何安全参数；
+- 前端仍在本机 localStorage 保留副本：服务端不可用时界面配置不回退为默认值；
+- 缺少 `system:manage` 权限的账号不参与全站同步（既不推送也不拉取），配置仅在本机生效，界面会明确标注生效范围，其本机调整也不会在下次登录时被服务端值静默覆盖。
+
 ## 必须设置的敏感配置
 
 | 环境变量 | 用途 | 建议 |
 | --- | --- | --- |
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL 密码 | 使用专用数据库账号，禁止默认空密码 |
 | `JWT_SECRET_KEY` | JWT 签名 | 使用高强度随机值，轮换会使旧 Token 失效 |
-| `AES_SECRET_KEY` | AES-GCM 加密 | 使用满足实现要求的随机密钥 |
+| `AES_SECRET_KEY` | 身份证解密与加密查询令牌 | 使用满足实现要求的随机密钥；**留空时后端 fail-closed 拒绝解密**，不会退化为可预测密钥 |
 | 外部调阅 HMAC 密钥 | HIS/EMR Ticket 签名 | 每个接入方独立管理，禁止写入前端 |
 | `OSS_ACCESS_KEY_ID` | OSS AccessKey ID | 使用最小权限账号 |
 | `OSS_ACCESS_KEY_SECRET` | OSS AccessKey Secret | 不写入仓库、日志或页面设置 |
 
 实际 HMAC 配置名称以外部调阅模块和当前配置类为准；升级前应核对运行环境已有配置。
+
+## 加密身份证查询
+
+| 配置 | 默认值 | 说明 |
+| --- | --- | --- |
+| `aes.id-card-query.timestamp-tolerance-seconds` | `300` | `GET /api/v1/search/getBAHByEncryptID` 允许的时间戳偏差（秒）。超窗直接拒绝，用于限制密文重放 |
+
+设 `0` 或负数会关闭该校验，仅作为临时兼容调用方时钟偏差的逃生阀；长期关闭等同于放弃重放防护。
+
+> 后端不再内置任何默认 AES 密钥。历史实现中存在一个 32 字符的硬编码兜底密钥，密钥漏配时会静默生效；现在密钥为空即拒绝解密（fail-closed）。
 
 ## 服务端口
 

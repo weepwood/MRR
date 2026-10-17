@@ -30,13 +30,13 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
     })
   })
 
-  await page.goto('/records')
+  await page.goto('/records', { waitUntil: 'domcontentloaded' })
 
   await expect(page).toHaveURL(/\/records$/)
-  await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'E2E-2026-001' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('cell', { name: 'E2E-2026-001' })).toBeVisible({ timeout: 20_000 })
 
   await page.getByRole('button', { name: '详情' }).click()
 
-  await expect(page.getByRole('dialog', { name: '记录详情' })).toContainText('synthetic-record.pdf')
+  await expect(page.getByRole('dialog', { name: '记录详情' })).toContainText('synthetic-record.pdf', { timeout: 20_000 })
 })

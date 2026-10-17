@@ -1,0 +1,86 @@
+/*
+ * MRR 语义色令牌
+ *
+ * 目的：为「成功 / 危险 / 警告 / 信息 / 中性 / 品牌 / 紫 / 青」建立唯一事实源，
+ * 并把 Element Plus 的语义色（--el-color-*）显式映射到同一组令牌，
+ * 消除 MRR 品牌色与 Element Plus 默认调色板并存的「同义不同色」问题。
+ *
+ * 加载顺序：紧跟 tokens.css，先于 browser-compatibility.css 与组件样式。
+ *
+ * 使用约定：
+ * - 业务页面与组件只引用 --mrr-tone-*，不得再写十六进制色值；
+ * - -soft 用于淡色底，-border 用于低对比描边；
+ * - light-N 沿用 Element Plus 的口径：light-3 = 70% 基色，light-9 = 10% 基色，
+ *   数值越大越浅；
+ * - color-mix() 需要 Chrome 111+，所有派生值均在 browser-compatibility.css 中
+ *   提供等价的静态回退，保证 Chrome 86 上颜色语义不丢失。
+ */
+
+:root {
+  /* 基色：唯一事实源 */
+  --mrr-tone-success: #16803c;
+  --mrr-tone-danger: #d13c3c;
+  --mrr-tone-warning: #b45f06;
+  --mrr-tone-info: #087ea4;
+  --mrr-tone-neutral: #64748b;
+  --mrr-tone-primary: var(--color-primary);
+  --mrr-tone-violet: #7c3aed;
+  --mrr-tone-teal: #0f766e;
+  --mrr-tone-rose: #e11d48;
+
+  /* 页头 Hero 渐变使用的次强调色（避免在组件样式里硬编码紫色） */
+  --mrr-accent-tone: var(--mrr-tone-violet);
+
+  /* 淡色底（等价于 light-9） */
+  --mrr-tone-success-soft: color-mix(in srgb, var(--mrr-tone-success) 10%, var(--mrr-card));
+  --mrr-tone-danger-soft: color-mix(in srgb, var(--mrr-tone-danger) 10%, var(--mrr-card));
+  --mrr-tone-warning-soft: color-mix(in srgb, var(--mrr-tone-warning) 10%, var(--mrr-card));
+  --mrr-tone-info-soft: color-mix(in srgb, var(--mrr-tone-info) 10%, var(--mrr-card));
+  --mrr-tone-neutral-soft: color-mix(in srgb, var(--mrr-tone-neutral) 10%, var(--mrr-card));
+  --mrr-tone-primary-soft: color-mix(in srgb, var(--mrr-tone-primary) 10%, var(--mrr-card));
+  --mrr-tone-teal-soft: color-mix(in srgb, var(--mrr-tone-teal) 10%, var(--mrr-card));
+  --mrr-tone-violet-soft: color-mix(in srgb, var(--mrr-tone-violet) 10%, var(--mrr-card));
+  --mrr-tone-rose-soft: color-mix(in srgb, var(--mrr-tone-rose) 10%, var(--mrr-card));
+
+  /* 低对比描边 */
+  --mrr-tone-success-border: color-mix(in srgb, var(--mrr-tone-success) 22%, var(--mrr-border));
+  --mrr-tone-danger-border: color-mix(in srgb, var(--mrr-tone-danger) 22%, var(--mrr-border));
+  --mrr-tone-warning-border: color-mix(in srgb, var(--mrr-tone-warning) 22%, var(--mrr-border));
+  --mrr-tone-info-border: color-mix(in srgb, var(--mrr-tone-info) 22%, var(--mrr-border));
+  --mrr-tone-neutral-border: color-mix(in srgb, var(--mrr-tone-neutral) 22%, var(--mrr-border));
+  --mrr-tone-primary-border: color-mix(in srgb, var(--mrr-tone-primary) 22%, var(--mrr-border));
+
+  /*
+   * Element Plus 语义色桥接。
+   * light-N 口径与 Element Plus 一致：light-3 = 70% 基色 + 30% 表面，
+   * light-9 = 10% 基色 + 90% 表面。这里用 --mrr-card 作为混合表面以适配暗色主题。
+   */
+  --el-color-success: var(--mrr-tone-success);
+  --el-color-success-light-3: color-mix(in srgb, var(--mrr-tone-success) 70%, var(--mrr-card));
+  --el-color-success-light-5: color-mix(in srgb, var(--mrr-tone-success) 50%, var(--mrr-card));
+  --el-color-success-light-7: color-mix(in srgb, var(--mrr-tone-success) 30%, var(--mrr-card));
+  --el-color-success-light-8: color-mix(in srgb, var(--mrr-tone-success) 20%, var(--mrr-card));
+  --el-color-success-light-9: var(--mrr-tone-success-soft);
+  --el-color-success-dark-2: color-mix(in srgb, var(--mrr-tone-success) 80%, #000);
+  --el-color-danger: var(--mrr-tone-danger);
+  --el-color-danger-light-3: color-mix(in srgb, var(--mrr-tone-danger) 70%, var(--mrr-card));
+  --el-color-danger-light-5: color-mix(in srgb, var(--mrr-tone-danger) 50%, var(--mrr-card));
+  --el-color-danger-light-7: color-mix(in srgb, var(--mrr-tone-danger) 30%, var(--mrr-card));
+  --el-color-danger-light-8: color-mix(in srgb, var(--mrr-tone-danger) 20%, var(--mrr-card));
+  --el-color-danger-light-9: var(--mrr-tone-danger-soft);
+  --el-color-danger-dark-2: color-mix(in srgb, var(--mrr-tone-danger) 80%, #000);
+  --el-color-warning: var(--mrr-tone-warning);
+  --el-color-warning-light-3: color-mix(in srgb, var(--mrr-tone-warning) 70%, var(--mrr-card));
+  --el-color-warning-light-5: color-mix(in srgb, var(--mrr-tone-warning) 50%, var(--mrr-card));
+  --el-color-warning-light-7: color-mix(in srgb, var(--mrr-tone-warning) 30%, var(--mrr-card));
+  --el-color-warning-light-8: color-mix(in srgb, var(--mrr-tone-warning) 20%, var(--mrr-card));
+  --el-color-warning-light-9: var(--mrr-tone-warning-soft);
+  --el-color-warning-dark-2: color-mix(in srgb, var(--mrr-tone-warning) 80%, #000);
+  --el-color-info: var(--mrr-tone-neutral);
+  --el-color-info-light-3: color-mix(in srgb, var(--mrr-tone-neutral) 70%, var(--mrr-card));
+  --el-color-info-light-5: color-mix(in srgb, var(--mrr-tone-neutral) 50%, var(--mrr-card));
+  --el-color-info-light-7: color-mix(in srgb, var(--mrr-tone-neutral) 30%, var(--mrr-card));
+  --el-color-info-light-8: color-mix(in srgb, var(--mrr-tone-neutral) 20%, var(--mrr-card));
+  --el-color-info-light-9: var(--mrr-tone-neutral-soft);
+  --el-color-info-dark-2: color-mix(in srgb, var(--mrr-tone-neutral) 80%, #000);
+}

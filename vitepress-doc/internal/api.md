@@ -37,9 +37,24 @@ OpenAPI YAML：/v3/api-docs.yaml
 | 日志审计 | 访问日志、图片访问审计 | `log:read` |
 | 系统监控 | 数据库、连接池、运行指标 | `system:read` |
 | 数据质量 | 手动执行、批次和问题明细 | `system:read` 或管理员 |
-| 系统设置 | 读取和保存运行时设置 | `system:read` |
+| 系统设置 | 读取、保存和删除运行时设置 | 读 `system:read`，写与删 `system:manage` |
+| 界面外观设置 | 全局外观与导航外链 | 仅需登录（`GET /api/v1/settings/ui`） |
 | 文档会话 | 签发用户或内部文档 Cookie | 按目标文档校验 |
 | 公开状态 | 当前状态、每日可用率、异常区间 | 公开且脱敏 |
+
+关于界面外观设置的例外：`GET /api/v1/settings/ui` 由 `@AuthenticatedOnly` 保护，只要求登录会话，不要求 `system:read`。原因是它只承载需要被全体登录用户同步的展示型配置，且**仅返回 `adminAppSettings` 一个键**，不暴露任何安全或运维参数。写入仍走 `PUT /api/v1/settings`，需要 `system:manage`；因此无该权限的账号只能在本机生效，前端会明确提示生效范围。
+
+关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。`/docs/**` 由 Nginx 直接读取静态目录，不经过后端，需要限制时应在 Nginx 层配置。
+
+## 加密身份证查询的时间戳约束
+
+`GET /api/v1/search/getBAHByEncryptID` 的 `timestamp` 不只是密钥派生材料，还参与**新鲜度校验**：请求时间与服务器时间的偏差超过 `aes.id-card-query.timestamp-tolerance-seconds`（默认 300 秒）时直接用 400 拒绝，以限制密文被无限期重放。该参数接受秒或毫秒时间戳。
+
+- 关闭校验（`0` 或负数）仅用于临时兼容调用方时钟偏差，属于运维逃生阀，不应长期开启；
+- 校验只读取时间戳，不改变密钥派生输入，因此对调用方的加密实现**零影响**；
+- 解密或查询失败统一返回 `加密身份证查询失败`，不回显内部异常信息，避免形成区分性的错误响应；
+- 包含 `idCard` 的查询串、请求体与**请求路径参数**都会在写入 `app.access_log` 前做 SHA-256 脱敏。
+  注意 `GET /api/v1/search/getBAHByID/{idCard}`（已弃用）会把身份证号带入 URL，因而也会出现在浏览器历史、`Referer` 与 Nginx 的 `access.log` 中——新接入方应使用 POST 版本或加密查询。
 
 ## 认证与权限
 
@@ -113,6 +128,20 @@ GET /api/v1/public/status/ping
 ```
 
 只返回当前状态、持续时间、可用率、每日状态和脱敏异常区间，不能返回数据库地址、堆栈、路径、用户名或监控凭证。
+
+## 公开登录页接口
+
+登录页在未认证状态下需要展示系统标识和当前接入环境，这两个接口都不需要令牌：
+
+```text
+GET /api/v1/public/config/login-page
+GET /api/v1/public/config/client-environment
+```
+
+- `login-page`：只返回白名单筛选后的系统标识、登录展示文案和管理员支持信息，单字段截断到 240 字符。管理员联系方式仅在 `systemAdminContactEnabled` 与 `systemAdminPublicVisible` 同时为真时返回。
+- `client-environment`：回显服务端在本次请求中观察到的客户端地址、地址类型（`IPV4` / `IPV6` / `UNKNOWN`）、有效地址是否来自转发头（`behindProxy`），以及服务器时间与时区。
+
+`client-environment` 用于让用户把地址报给管理员做接入排查，因此必须严格限于本次请求的观察结果：不得返回内网拓扑、代理地址列表、账号信息或其他系统配置。客户端地址一律通过 `IpUtil` 解析，仍遵循「仅当远端地址是回环地址时才采信 `X-Forwarded-For` / `X-Real-IP`」的既有规则。
 
 ## 数据质量接口
 

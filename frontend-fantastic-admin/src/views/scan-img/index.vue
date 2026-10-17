@@ -50,10 +50,10 @@ const selectedRecord = ref<BAHRecord | null>(null)
 
 // ==================== 图片查看器 ====================
 const selectedImageIndex = ref(0)
-// @ts-ignore: used as template ref
+// @ts-expect-error 仅在模板中通过 ref="viewerContainer" 绑定，脚本内不直接读取
 const viewerContainer = ref<HTMLElement | null>(null)
 const thumbsContainer = ref<HTMLElement | null>(null)
-// @ts-ignore: used as template ref
+// @ts-expect-error 仅在模板中通过 ref="viewerSplitRef" 绑定，脚本内不直接读取
 const viewerSplitRef = ref<HTMLElement | null>(null)
 const thumbRefs = ref<(HTMLElement | null)[]>([])
 
@@ -678,7 +678,7 @@ watch(idCardParam, async (newId) => {
               <!-- 未选择病案时的占位 -->
               <div v-else class="main-placeholder">
                 <div class="placeholder-icon">
-                  <i class="i-ant-design:file-image-outlined" style="font-size: 64px; color: #cbd5e1;" />
+                  <i class="i-ant-design:file-image-outlined" style="font-size: 64px; color: var(--el-text-color-placeholder);" />
                 </div>
                 <p class="placeholder-text">
                   {{ idSearchLoading ? '正在查询病案...' : (idSearchResults.length ? '请从左侧选择病案' : '未找到病案记录') }}
@@ -780,7 +780,7 @@ watch(idCardParam, async (newId) => {
   padding: 12px;
   overflow: hidden;
   background: var(--color-bg);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
   box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
 
@@ -825,7 +825,7 @@ watch(idCardParam, async (newId) => {
   padding: 8px;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -901,7 +901,7 @@ watch(idCardParam, async (newId) => {
   padding: 8px 10px;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -950,7 +950,7 @@ watch(idCardParam, async (newId) => {
   min-height: 0;
   overflow: hidden;
   background: var(--color-bg);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
   box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
 }
 
@@ -979,7 +979,7 @@ watch(idCardParam, async (newId) => {
   padding: 6px;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1022,7 +1022,7 @@ watch(idCardParam, async (newId) => {
   padding: 6px;
   cursor: pointer;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1055,7 +1055,7 @@ watch(idCardParam, async (newId) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f4f8;
+  background: var(--mrr-muted);
 }
 
 .viewer-image-el {
@@ -1088,10 +1088,10 @@ watch(idCardParam, async (newId) => {
   z-index: 3;
   padding: 8px 14px;
   font-size: 12px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   pointer-events: none;
   background: var(--color-primary);
-  border-radius: 20px;
+  border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
   backdrop-filter: blur(4px);
@@ -1104,9 +1104,9 @@ watch(idCardParam, async (newId) => {
   bottom: 36px;
   min-width: 180px;
   padding: 8px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   background: var(--color-bg-dark);
-  border-radius: 10px;
+  border-radius: var(--mrr-radius-lg);
   box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
 
@@ -1149,10 +1149,10 @@ watch(idCardParam, async (newId) => {
   z-index: 4000;
   padding: 8px 14px;
   font-size: 12px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   pointer-events: none;
   background: var(--color-primary);
-  border-radius: 20px;
+  border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
   backdrop-filter: blur(4px);
@@ -1196,7 +1196,7 @@ watch(idCardParam, async (newId) => {
 .retry-btn {
   padding: 10px 20px;
   margin-top: 15px;
-  color: #fff;
+  color: var(--mrr-primary-foreground);
   cursor: pointer;
   background: var(--el-color-danger);
   border: none;
@@ -1225,7 +1225,7 @@ watch(idCardParam, async (newId) => {
   padding: 30px;
   text-align: center;
   background: var(--color-bg);
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
   box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
 }
 
@@ -1252,25 +1252,25 @@ watch(idCardParam, async (newId) => {
 }
 
 /* ==================== 响应式 ==================== */
-@media (width <= 1200px) {
+@media (max-width: 1200px) {
   .split-layout { gap: 15px; }
   .left-pane { min-width: 250px; }
 }
 
-@media (width <= 992px) {
+@media (max-width: 992px) {
   .image-gallery { padding: 15px; }
   .split-layout { gap: 10px; }
   .left-pane { min-width: 220px; }
   .type-list { grid-template-columns: 1fr; }
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .split-layout { flex-direction: column; }
   .left-pane { width: 100%; }
   .thumbs { width: 100px; min-width: 100px; }
 }
 
-@media (width <= 480px) {
+@media (max-width: 480px) {
   .image-gallery { padding: 10px; }
   .split-layout { gap: 8px; }
 

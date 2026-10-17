@@ -12,7 +12,7 @@ import {
   toValue,
   watch,
 } from 'vue'
-import { applyMrrChartTheme } from '@/config/chart-theme'
+import { applyMrrChartTheme, mrrChartColor } from '@/config/chart-theme'
 import { echarts } from '@/plugins/echarts'
 
 export function useMrrChart(
@@ -68,9 +68,9 @@ export function useMrrChart(
     if (toValue(loading)) {
       chart.showLoading('default', {
         text: loadingText,
-        color: '#2563eb',
+        color: mrrChartColor('primary'),
         maskColor: 'rgba(255, 255, 255, 0.72)',
-        textColor: '#64748b',
+        textColor: mrrChartColor('neutral'),
         fontSize: 12,
       })
     }

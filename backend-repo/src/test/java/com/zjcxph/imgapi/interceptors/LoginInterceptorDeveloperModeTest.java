@@ -46,6 +46,7 @@ class LoginInterceptorDeveloperModeTest {
     @AfterEach
     void tearDown() {
         loginInterceptor.afterCompletion(null, null, null, null);
+        org.slf4j.MDC.clear();
     }
 
     @Test
@@ -88,6 +89,7 @@ class LoginInterceptorDeveloperModeTest {
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).isNull();
+        assertThat(org.slf4j.MDC.get(LogInterceptor.MDC_USER_ID)).isNull();
         verify(developerApiAccessService, never()).isPermissionBypassAllowed(request);
     }
 
@@ -115,6 +117,9 @@ class LoginInterceptorDeveloperModeTest {
                 "user:manage", "system:manage"
         );
         assertThat(response.getHeader("X-MRR-Access-Mode")).isEqualTo("api-permission-bypass");
+        // 日志身份来自服务端会话，而不是客户端可控的 X-User-Id / X-User-Role。
+        assertThat(org.slf4j.MDC.get(LogInterceptor.MDC_USER_ID)).isEqualTo("doctor.test");
+        assertThat(org.slf4j.MDC.get(LogInterceptor.MDC_USER_ROLE)).isEqualTo("DOCTOR");
     }
 
     @Test

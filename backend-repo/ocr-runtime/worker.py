@@ -50,11 +50,18 @@ def main():
     def deny_network(*unused, **kwargs):
         raise OSError("NETWORK_DISABLED")
     socket.socket.connect = deny_network
+    socket.socket.connect_ex = deny_network
+    socket.socket.sendto = deny_network
     socket.create_connection = deny_network
+    socket.getaddrinfo = deny_network
+    os.environ["OMP_NUM_THREADS"] = str(args.threads)
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
     with contextlib.redirect_stdout(sys.stderr):
         paths, fingerprint = load_manifest(args.models)
         from PIL import Image, ImageOps
         import numpy as np
+        import cv2
+        cv2.setNumThreads(1)
         from rapidocr import EngineType, ModelType, OCRVersion, RapidOCR
         Image.MAX_IMAGE_PIXELS = 40_000_000
         engine = RapidOCR(params={

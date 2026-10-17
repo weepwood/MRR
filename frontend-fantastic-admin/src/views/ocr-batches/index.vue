@@ -137,7 +137,7 @@ async function skipRollbackPage() {
       <el-checkbox v-model="form.autoApply" :disabled="!autoAvailable">
         授权本批次仅对已验收类别自动归类，其余页面进入人工审核
       </el-checkbox>
-      <span v-if="!autoAvailable">请先预览；没有对应模型、规则与类别的独立验收证据时不可开启。</span>
+      <br><span v-if="!autoAvailable">请先预览；没有对应模型、规则与类别的独立验收证据时不可开启。</span>
     </p>
     <el-button @click="inspect">
       预览范围
@@ -153,9 +153,9 @@ async function skipRollbackPage() {
       </el-button>
     </div>
     <el-table :data="batches">
-      <el-table-column prop="id" label="批次" min-width="180" />
-      <el-table-column prop="status" label="状态" />
-      <el-table-column label="进度">
+      <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
+      <el-table-column prop="status" label="状态" min-width="120" />
+      <el-table-column label="进度" min-width="170">
         <template #default="{ row }">
           {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
         </template>
@@ -163,7 +163,7 @@ async function skipRollbackPage() {
       <el-table-column prop="successCount" label="已识别" /><el-table-column prop="failedCount" label="失败" />
       <el-table-column prop="autoAppliedCount" label="自动归类" /><el-table-column prop="reviewRequiredCount" label="待审核建议" />
       <el-table-column prop="cursorId" label="续跑游标" /><el-table-column prop="reasonCode" label="等待原因" />
-      <el-table-column label="操作" min-width="260">
+      <el-table-column label="操作" min-width="280" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">
             暂停
@@ -219,5 +219,7 @@ async function skipRollbackPage() {
 
 <style scoped>
 .ocr-batches { padding: 24px; background: var(--mrr-card); }
+.ocr-batches h1 { margin-bottom: 12px; font-size: 22px; font-weight: 600; }
+.ocr-batches p { margin: 12px 0; line-height: 1.7; }
 .batch-preview { padding: 16px; margin: 16px 0; border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 </style>

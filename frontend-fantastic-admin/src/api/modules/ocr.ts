@@ -38,6 +38,10 @@ export function getOcrJob(id: string) {
   return getRequest<OcrJob>(`/api/v1/ocr/jobs/${id}`)
 }
 
+export function getOcrJobs(archiveId: number) {
+  return getRequest<OcrJob[]>(`/api/v1/archive-records/${archiveId}/ocr/jobs`)
+}
+
 export function cancelOcrJob(id: string) {
   return postRequest<OcrJob>(`/api/v1/ocr/jobs/${id}/cancel`)
 }

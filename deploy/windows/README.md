@@ -2,6 +2,8 @@
 
 本目录提供面向单台 Windows Server 的 MRR 部署方案。生产服务器只需要预装 PostgreSQL 和 JDK；Nginx 与 WinSW 已固定版本并包含在 MRR Windows 离线包中，不需要安装 Node.js、pnpm、Maven，也不执行 `git pull`。
 
+可选 OCR 使用单独的不可变离线运行时包；部署、校验与关闭步骤见 [OCR Windows 交付说明](../../backend-repo/docs/ocr-windows-release.md)。未安装或未启用 OCR 不影响影像调阅。
+
 ## 组成
 
 - **MRR-Backend**：Spring Boot JAR，由 WinSW 注册为 Windows 服务；

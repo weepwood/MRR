@@ -1,0 +1,28 @@
+# Windows 11 / CPython 3.12.14 development smoke baseline, 2026-10-18.
+# Target Windows Server validation is still required. Release files are independently SHA-256 pinned.
+rapidocr==3.9.2
+onnxruntime==1.23.2
+Pillow==13.0.0
+PyYAML==6.0.3
+Shapely==2.2.0
+certifi==2026.7.22
+charset-normalizer==3.5.2
+colorama==0.4.6
+coloredlogs==15.0.1
+colorlog==6.12.0
+flatbuffers==25.12.19
+humanfriendly==10.0
+idna==3.20
+mpmath==1.3.0
+numpy==2.5.4
+omegaconf==2.4.0
+opencv-python==5.0.0.93
+packaging==26.3
+protobuf==7.36.2
+pyclipper==1.4.0
+pyreadline3==3.5.6
+requests==2.34.2
+six==1.17.0
+sympy==1.14.0
+tqdm==4.70.1
+urllib3==2.8.0

@@ -48,7 +48,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         scan=jdbc.queryForObject("INSERT INTO app.mr_scan(archive_id,bah,sjh,filename,folder,btype,uploadflag) SELECT id,bah,sjh,'synthetic.jpg','synthetic',0,1 FROM app.mr_archive WHERE id=? RETURNING id",Integer.class,archive);
     }
     @AfterEach void clear() {
-        jdbc.update("UPDATE app.mr_smart_classification_job SET status='SUCCESS' WHERE archive_id=?",archive);
+        com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,transactionManager,archive,null);
         AuthContext.clear();
     }
     @Test void classificationFailureMustNotDiscardSuccessfulOcrFact() {

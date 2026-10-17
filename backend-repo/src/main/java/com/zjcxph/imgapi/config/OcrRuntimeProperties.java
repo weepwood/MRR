@@ -14,6 +14,7 @@ public class OcrRuntimeProperties {
     private String tempDirectory = "./data/ocr-temp";
     private int maxWorkers = 1;
     private long maxInputBytes = 50L * 1024 * 1024;
+    private long readTimeoutMillis = 30000;
     private double imageP95BaselineMillis = 0;
     private boolean autoApplyAllowed = false;
     private Set<Integer> autoTypes = Set.of();

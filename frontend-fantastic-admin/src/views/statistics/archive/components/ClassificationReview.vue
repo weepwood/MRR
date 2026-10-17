@@ -12,17 +12,20 @@ const unresolved = ref<OcrItem[]>([])
 const types = ref<{ value: number, label: string }[]>([])
 const after = ref(0)
 const itemAfter = ref(0)
+const nextItemAfter = ref(0)
 const error = ref('')
 const manualTypes = ref<Record<number, number>>({})
 const busy = ref(false)
 const preview = ref('')
 const previewOpen = ref(false)
 let generation = 0
+let previewGeneration = 0
 async function showImage(scanId: number) {
   const version = generation
+  const request = ++previewGeneration
   try {
     const result = await getReviewImage(scanId)
-    if (version !== generation) { return }
+    if (version !== generation || request !== previewGeneration) { return }
     if (preview.value) { URL.revokeObjectURL(preview.value) }
     preview.value = URL.createObjectURL(result.data)
     previewOpen.value = true
@@ -44,7 +47,7 @@ async function load(reset = false) {
     types.value = dictionary.data || []
     error.value = ''
     const last = items.data?.[items.data.length - 1]
-    if (last) { itemAfter.value = last.scanId }
+    nextItemAfter.value = last?.scanId || itemAfter.value
   }
   catch {
     if (version === generation) { error.value = '审核队列读取失败' }
@@ -69,6 +72,7 @@ async function manual(row: OcrItem) {
 }
 function nextPage() {
   after.value = suggestions.value[suggestions.value.length - 1]?.id || after.value
+  itemAfter.value = nextItemAfter.value
   void load()
 }
 onMounted(() => void load(true))
@@ -143,11 +147,11 @@ watch(() => props.jobId, () => void load(true))
     <el-button @click="load(true)">
       返回首批 / 刷新
     </el-button>
-    <el-button :disabled="!suggestions.length && !unresolved.length" @click="nextPage">
+    <el-button :disabled="!suggestions.length && nextItemAfter === itemAfter" @click="nextPage">
       下一批（最多 50 页）
     </el-button>
     <el-dialog v-model="previewOpen" title="核对影像原图" append-to-body>
-      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%">
+      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%;">
     </el-dialog>
   </section>
 </template>

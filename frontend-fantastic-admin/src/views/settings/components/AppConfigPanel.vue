@@ -892,7 +892,7 @@ function handleReset() {
   border-radius: 0 4px 4px 0;
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .config-summary,
   .setting-item {
     flex-direction: column;

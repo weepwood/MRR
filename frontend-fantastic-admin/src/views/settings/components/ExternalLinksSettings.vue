@@ -345,7 +345,7 @@ function openExternalLink(url: string) {
   margin-left: 0;
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .link-form {
     grid-template-columns: 1fr;
   }

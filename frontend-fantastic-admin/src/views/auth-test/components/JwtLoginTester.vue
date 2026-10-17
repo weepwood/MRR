@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { AuthTestHistoryEvent } from '../types'
+import type { AuthTestResult } from '@/api/modules/auth-test'
 import { CopyDocument, Key, Refresh, SwitchButton, View } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref } from 'vue'

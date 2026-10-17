@@ -12,6 +12,7 @@ import {
   resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { hasKey } from '@/utils/object'
 import ArchiveDetailContent from './ArchiveDetailContent.vue'
 
 defineOptions({ name: 'StatisticsDetailThemePage' })
@@ -52,7 +53,7 @@ async function loadDepartmentThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.prototype.hasOwnProperty.call(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       nextThemes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(nextThemes)
     }

@@ -39,8 +39,8 @@ watch(() => settingsStore.settings, () => {
 }, { deep: true })
 
 const autoSaveLabel = computed(() => {
-  if (autoSaveState.value === 'saving') return '正在自动保存…'
-  if (autoSaveState.value === 'saved') return '已自动保存'
+  if (autoSaveState.value === 'saving') { return '正在自动保存…' }
+  if (autoSaveState.value === 'saved') { return '已自动保存' }
   return '修改后自动保存到当前浏览器'
 })
 

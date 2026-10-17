@@ -30,12 +30,12 @@ const hasContact = computed(() => props.visible && Boolean(
 ))
 
 function show() {
-  if (closeTimer) clearTimeout(closeTimer)
+  if (closeTimer) { clearTimeout(closeTimer) }
   opened.value = true
 }
 
 function hideLater() {
-  if (closeTimer) clearTimeout(closeTimer)
+  if (closeTimer) { clearTimeout(closeTimer) }
   closeTimer = setTimeout(() => {
     opened.value = false
   }, 140)
@@ -52,7 +52,7 @@ async function copy(value: string, label: string) {
 }
 
 onBeforeUnmount(() => {
-  if (closeTimer) clearTimeout(closeTimer)
+  if (closeTimer) { clearTimeout(closeTimer) }
 })
 </script>
 

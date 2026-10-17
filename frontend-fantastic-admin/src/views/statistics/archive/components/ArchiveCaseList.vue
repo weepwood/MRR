@@ -12,6 +12,7 @@ import {
   resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { hasKey } from '@/utils/object'
 import { padCode } from '../constants'
 
 const props = defineProps<{
@@ -60,7 +61,7 @@ async function loadDepartmentThemes() {
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
-    if (Object.hasOwn(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
+    if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       departmentThemes.value = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(departmentThemes.value)
     }

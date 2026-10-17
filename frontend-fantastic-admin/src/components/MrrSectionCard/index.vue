@@ -1,8 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrSectionCard' })
 
-type BodyPadding = 'none' | 'compact' | 'normal'
-
 const props = withDefaults(defineProps<{
   title?: string
   description?: string
@@ -11,6 +9,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   bodyPadding: 'normal',
 })
+
+type BodyPadding = 'none' | 'compact' | 'normal'
 
 const slots = useSlots()
 const hasHeader = computed(() => Boolean(

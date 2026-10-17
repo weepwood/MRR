@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import type { AuthProfile } from '@/utils/auth-storage'
 import { Key, UserFilled } from '@element-plus/icons-vue'
-import { Eye, EyeOff } from 'lucide-vue-next'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { computed, ref } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
-import type { AuthProfile } from '@/utils/auth-storage'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
 
 defineOptions({ name: 'LoginForm' })

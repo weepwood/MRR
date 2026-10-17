@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { AuthTestHistoryEvent } from '../types'
 import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { ExternalArchiveIntegrationStatus } from '@/utils/external-archive-test-guide'
-import type { AuthTestHistoryEvent } from '../types'
 import { CopyDocument, MagicStick, Promotion, Refresh, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'

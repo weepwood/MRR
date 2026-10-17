@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Method } from 'axios'
-import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { AuthTestHistoryEvent } from '../types'
+import type { AuthTestResult } from '@/api/modules/auth-test'
 import { Connection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'

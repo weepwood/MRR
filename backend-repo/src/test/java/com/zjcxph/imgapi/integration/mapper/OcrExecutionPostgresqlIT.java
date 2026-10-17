@@ -27,7 +27,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);
         Job claimed=mapper.claim("token-one"); assertThat(claimed.getId()).isEqualTo(job.getId());
         assertThat(mapper.claim("token-two")).isNull();
-        mapper.processing(job.getId(),scan);
+        assertThat(mapper.processing(job.getId(),scan,"token-one")).isEqualTo(1);
         jdbc.update("UPDATE app.mr_smart_classification_job SET lease_until=NOW()-INTERVAL '1 second' WHERE id=?",job.getId());
         assertThat(mapper.claim("token-two").getLeaseToken()).isEqualTo("token-two");
         assertThat(mapper.alive(job.getId(),"token-one")).isFalse();
@@ -45,6 +45,29 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         Fact second=fact(scan,job.getArchiveId()); second.setOcrText("合成第二版本"); mapper.saveFact(second);
         assertThat(mapper.fact(scan).getOcrText()).isEqualTo("合成第二版本");
         assertThat(jdbc.queryForObject("SELECT ocr_text FROM app.mr_scan_ocr_history WHERE result_version=?",String.class,first.getResultVersion())).isEqualTo("合成测试文字");
+    }
+    @Test void lateWorkerCannotReopenCompletedPageAfterLeaseTakeover() {
+        Job job=job();int scan=scan(job.getArchiveId());mapper.insert(job);mapper.insertItem(job.getId(),scan);mapper.planned(job.getId(),1);
+        mapper.claim("old-worker");assertThat(mapper.next(job.getId()).getScanId()).isEqualTo(scan);
+        jdbc.update("UPDATE app.mr_smart_classification_job SET lease_until=NOW()-INTERVAL '1 second' WHERE id=?",job.getId());
+        mapper.claim("new-worker");mapper.complete(job.getId(),scan,"NO_MATCH","SUCCEEDED","result",null);mapper.release(job.getId(),"new-worker");
+        assertThat(mapper.processing(job.getId(),scan,"old-worker")).isZero();
+        assertThat(mapper.items(job.getId(),0,50).getFirst().getStatus()).isEqualTo("NO_MATCH");
+        assertThat(mapper.job(job.getId()).getStatus()).isEqualTo("SUCCESS");
+        assertThat(mapper.job(job.getId()).getProcessedCount()).isEqualTo(1);
+    }
+    @Test void pageStartRequiresCurrentUnexpiredUncancelledLease() {
+        Job job=job();int scan=scan(job.getArchiveId());mapper.insert(job);mapper.insertItem(job.getId(),scan);mapper.planned(job.getId(),1);
+        mapper.claim("old-worker");
+        jdbc.update("UPDATE app.mr_smart_classification_job SET lease_until=NOW()-INTERVAL '1 second' WHERE id=?",job.getId());
+        assertThat(mapper.processing(job.getId(),scan,"old-worker")).isZero();
+        mapper.claim("new-worker");
+        assertThat(mapper.processing(job.getId(),scan,"old-worker")).isZero();
+        assertThat(mapper.items(job.getId(),0,50).getFirst().getAttempts()).isZero();
+        assertThat(mapper.processing(job.getId(),scan,"new-worker")).isEqualTo(1);
+        mapper.cancel(job.getId());
+        assertThat(mapper.processing(job.getId(),scan,"new-worker")).isZero();
+        assertThat(mapper.items(job.getId(),0,50).getFirst().getAttempts()).isEqualTo(1);
     }
 
     @Test void rejectsConcurrentActiveJobsForSameArchiveAtDatabaseBoundary() {

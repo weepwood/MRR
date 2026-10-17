@@ -59,8 +59,16 @@ public interface OcrMapper {
         AND status IN ('PENDING','PROCESSING') AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
         ORDER BY scan_id LIMIT 1
         """) Item next(String id);
-    @Update("UPDATE app.mr_smart_classification_job_item SET status='PROCESSING',attempts=attempts+1,updated_at=NOW() WHERE job_id=#{job} AND scan_id=#{scan}")
-    void processing(@Param("job") String job, @Param("scan") Integer scan);
+    @Update("""
+        WITH owned AS (SELECT id FROM app.mr_smart_classification_job
+          WHERE id=#{job} AND lease_token=#{token} AND lease_until>NOW()
+            AND status='RUNNING' AND NOT cancel_requested FOR UPDATE)
+        UPDATE app.mr_smart_classification_job_item i
+        SET status='PROCESSING',attempts=i.attempts+1,updated_at=NOW()
+        FROM owned WHERE i.job_id=owned.id AND i.scan_id=#{scan}
+          AND i.status IN ('PENDING','PROCESSING')
+        """)
+    int processing(@Param("job") String job, @Param("scan") Integer scan,@Param("token") String token);
     @Select("SELECT EXISTS(SELECT 1 FROM app.mr_smart_classification_job WHERE id=#{id} AND lease_token=#{token} AND lease_until>NOW() AND NOT cancel_requested)")
     boolean alive(@Param("id") String id, @Param("token") String token);
     @Update("UPDATE app.mr_smart_classification_job SET cancel_requested=true,status='CANCEL_REQUESTED',updated_at=NOW() WHERE id=#{id} AND status IN ('PENDING','RUNNING')")

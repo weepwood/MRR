@@ -25,7 +25,6 @@ import 'virtual:uno.css'
 import 'element-plus/es/components/message-box/style/css'
 import '@/assets/styles/globals.css'
 import '@/assets/styles/motion.css'
-import '@/assets/styles/pages/archive-boxes.css'
 import '@/assets/styles/pages/settings-navigation.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/first-attribute-linebreak, vue/html-closing-bracket-newline, vue/html-indent */
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -108,10 +109,23 @@ const typeOptions = computed(() => {
 
 const currentSort = computed(() => sortOptions.find(item => item.key === sortKey.value) || sortOptions[0])
 
-const summaryCards = computed(() => [
-  { label: '档案袋总数', value: listData.value.total || 0, note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
-  { label: '病案数量', value: summaryData.value?.uniqueBAHCount ?? 0, note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
-  { label: '总页数', value: summaryData.value?.total?.totalPages ?? 0, note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
+interface SummaryCard {
+  label: string
+  value: string
+  note: string
+  tone: MetricTone
+  icon: string
+}
+
+/* 指标卡只展示文本，数字在这里一次性格式化为千分位，避免模板里重复判断类型。 */
+function formatSummaryValue(value: unknown) {
+  return Number.isFinite(Number(value)) ? Number(value).toLocaleString('zh-CN') : String(value ?? '-')
+}
+
+const summaryCards = computed<SummaryCard[]>(() => [
+  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
+  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
+  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
   { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-ant-design:user-outlined' },
 ])
 
@@ -443,21 +457,7 @@ onBeforeUnmount(() => {
     </div>
 
     <section class="mrr-metric-grid">
-      <el-card v-for="item in summaryCards" :key="item.label" shadow="never" class="mrr-metric-card"
-        :class="`mrr-metric-card--${item.tone}`">
-        <div class="mrr-metric-card__icon">
-          <i :class="item.icon" />
-        </div>
-        <div class="mrr-metric-card__body">
-          <span class="mrr-metric-card__label">{{ item.label }}</span>
-          <strong class="mrr-metric-card__value">
-            {{ Number.isFinite(Number(item.value)) ? Number(item.value).toLocaleString('zh-CN') : item.value }}
-          </strong>
-          <p class="mrr-metric-card__note">
-            {{ item.note }}
-          </p>
-        </div>
-      </el-card>
+      <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
     <el-card shadow="never">

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-defineOptions({ name: 'MrrMetricCard' })
+import type { MetricTone, MetricValueTone } from './types'
 
-type MetricTone = 'blue' | 'green' | 'amber' | 'warning' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
-type MetricValueTone = 'default' | 'success' | 'warning' | 'danger'
+defineOptions({ name: 'MrrMetricCard' })
 
 const props = withDefaults(defineProps<{
   label: string

@@ -7,6 +7,7 @@ import type {
   ArchiveBoxStatus,
   ArchiveBoxSummary,
 } from '@/api/modules/archive-boxes'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -119,33 +120,41 @@ const {
 const dialogTitle = computed(() => editingId.value ? '编辑装箱记录' : '新增装箱记录')
 const isMissing = computed(() => form.status === 'MISSING')
 
-const metricCards = computed(() => [
+interface MetricCard {
+  label: string
+  value: number
+  note: string
+  tone: MetricTone
+  icon: string
+}
+
+const metricCards = computed<MetricCard[]>(() => [
   {
     label: '装箱病案',
     value: summary.value.totalRecords,
     note: '已登记实体病案数量',
-    tone: '',
-    icon: 'i-ant-design:file-protect-twotone',
+    tone: 'blue',
+    icon: 'i-ant-design:file-protect-outlined',
   },
   {
     label: '已用箱数',
     value: summary.value.totalBoxes,
     note: '存在实际存放记录的箱号',
-    tone: 'mrr-metric-card--green',
+    tone: 'green',
     icon: 'i-ant-design:inbox-outlined',
   },
   {
     label: '缺失病案',
     value: summary.value.missingCount,
     note: '尚未确认实际存放位置',
-    tone: 'mrr-metric-card--danger',
+    tone: 'danger',
     icon: 'i-ant-design:close-circle-twotone',
   },
   {
     label: '异常记录',
     value: summary.value.abnormalCount,
     note: '缺失、错箱、冲突及其他异常',
-    tone: 'mrr-metric-card--amber',
+    tone: 'amber',
     icon: 'i-ant-design:warning-twotone',
   },
 ])
@@ -436,20 +445,15 @@ onMounted(refreshAll)
     </header>
 
     <section class="mrr-metric-grid">
-      <el-card
+      <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"
-        shadow="never"
-        class="mrr-metric-card"
-        :class="card.tone"
-      >
-        <div class="mrr-metric-card__icon" :class="card.icon" />
-        <div class="mrr-metric-card__body">
-          <span class="mrr-metric-card__label">{{ card.label }}</span>
-          <strong class="mrr-metric-card__value">{{ card.value }}</strong>
-          <p class="mrr-metric-card__note">{{ card.note }}</p>
-        </div>
-      </el-card>
+        :label="card.label"
+        :value="card.value"
+        :note="card.note"
+        :tone="card.tone"
+        :icon="card.icon"
+      />
     </section>
 
     <el-card shadow="never" class="workspace-card">

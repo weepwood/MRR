@@ -737,9 +737,11 @@ onBeforeUnmount(revokePreviewUrl)
 .summary-item {
   min-width: 0;
   padding: 12px 14px;
-  background: var(--el-fill-color-extra-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+
+  /* 与统一层保持一致：中性表面、统一边框与圆角令牌，不再单独用 Element Plus 填充色。 */
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
 }
 
 .summary-item span,
@@ -750,7 +752,7 @@ onBeforeUnmount(revokePreviewUrl)
 .summary-item span {
   margin-bottom: 5px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .summary-item strong {

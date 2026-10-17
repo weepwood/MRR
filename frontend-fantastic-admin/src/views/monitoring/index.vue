@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo } from '@/api/types'
 import type { DatabaseOverview, DataQualityIssue, DataQualitySummary } from '@/api/modules/database-monitoring'
+import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo } from '@/api/types'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import { useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -19,14 +20,16 @@ import {
 
 defineOptions({ name: 'MonitoringPage' })
 
-const emptyDatabase = (): DatabaseOverview => ({
-  database: {},
-  connections: {},
-  transactions: {},
-  contention: {},
-  hikari: {},
-  tables: [],
-})
+function emptyDatabase(): DatabaseOverview {
+  return {
+    database: {},
+    connections: {},
+    transactions: {},
+    contention: {},
+    hikari: {},
+    tables: [],
+  }
+}
 
 const loading = ref(false)
 const qualityRunning = ref(false)
@@ -61,7 +64,15 @@ const latestRun = computed(() => qualitySummary.value.latestRun)
 const criticalIssues = computed(() => Number(latestRun.value?.critical_count || 0))
 const warningIssues = computed(() => Number(latestRun.value?.warning_count || 0))
 
-const summaryCards = computed(() => [
+interface SummaryCard {
+  label: string
+  value: string
+  note: string
+  tone: MetricTone
+  icon: string
+}
+
+const summaryCards = computed<SummaryCard[]>(() => [
   {
     label: '数据库状态',
     value: databaseStatus.value,
@@ -105,7 +116,9 @@ function formatNumber(value: unknown) {
 
 function formatBytes(value: unknown) {
   const bytes = Number(value || 0)
-  if (!bytes) return '-'
+  if (!bytes) {
+    return '-'
+  }
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   return `${(bytes / 1024 ** index).toFixed(index > 1 ? 2 : 0)} ${units[index]}`
@@ -113,7 +126,9 @@ function formatBytes(value: unknown) {
 
 function formatDuration(value: unknown) {
   const seconds = Number(value || 0)
-  if (!seconds) return '-'
+  if (!seconds) {
+    return '-'
+  }
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -121,20 +136,30 @@ function formatDuration(value: unknown) {
 }
 
 function formatDate(value: unknown) {
-  if (!value) return '-'
+  if (!value) {
+    return '-'
+  }
   const date = new Date(String(value))
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
 }
 
 function statusType(status?: string) {
-  if (status === 'SUCCESS' || status === 'UP') return 'success'
-  if (status === 'RUNNING') return 'primary'
-  if (status === 'WARNING') return 'warning'
+  if (status === 'SUCCESS' || status === 'UP') {
+    return 'success'
+  }
+  if (status === 'RUNNING') {
+    return 'primary'
+  }
+  if (status === 'WARNING') {
+    return 'warning'
+  }
   return 'danger'
 }
 
 async function loadAll(showLoading = true) {
-  if (showLoading) loading.value = true
+  if (showLoading) {
+    loading.value = true
+  }
   try {
     const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = await Promise.allSettled([
       getSystemHealth(),
@@ -146,13 +171,27 @@ async function loadAll(showLoading = true) {
       getDataQualityIssues(100),
     ])
 
-    if (healthRes.status === 'fulfilled') healthStatus.value = healthRes.value.data ?? {}
-    if (runtimeRes.status === 'fulfilled') runtimeInfo.value = runtimeRes.value.data ?? {}
-    if (memoryRes.status === 'fulfilled') memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
-    if (infoRes.status === 'fulfilled') systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
-    if (databaseRes.status === 'fulfilled') databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
-    if (qualityRes.status === 'fulfilled') qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
-    if (issuesRes.status === 'fulfilled') qualityIssues.value = issuesRes.value.data ?? []
+    if (healthRes.status === 'fulfilled') {
+      healthStatus.value = healthRes.value.data ?? {}
+    }
+    if (runtimeRes.status === 'fulfilled') {
+      runtimeInfo.value = runtimeRes.value.data ?? {}
+    }
+    if (memoryRes.status === 'fulfilled') {
+      memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
+    }
+    if (infoRes.status === 'fulfilled') {
+      systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
+    }
+    if (databaseRes.status === 'fulfilled') {
+      databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
+    }
+    if (qualityRes.status === 'fulfilled') {
+      qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
+    }
+    if (issuesRes.status === 'fulfilled') {
+      qualityIssues.value = issuesRes.value.data ?? []
+    }
 
     lastRefresh.value = new Date().toLocaleTimeString()
   }
@@ -189,12 +228,18 @@ function openGrafana() {
 }
 
 const { pause, resume } = useIntervalFn(() => {
-  if (autoRefresh.value) void loadAll(false)
+  if (autoRefresh.value) {
+    void loadAll(false)
+  }
 }, 15000)
 
 function handleVisibilityChange() {
-  if (document.hidden) pause()
-  else if (autoRefresh.value) resume()
+  if (document.hidden) {
+    pause()
+  }
+  else if (autoRefresh.value) {
+    resume()
+  }
 }
 
 onMounted(() => {
@@ -233,22 +278,15 @@ onUnmounted(() => {
     </div>
 
     <section class="mrr-metric-grid mrr-metric-grid--compact">
-      <el-card
+      <MrrMetricCard
         v-for="item in summaryCards"
         :key="item.label"
-        shadow="never"
-        class="mrr-metric-card"
-        :class="`mrr-metric-card--${item.tone}`"
-      >
-        <div class="mrr-metric-card__icon">
-          <i :class="item.icon" />
-        </div>
-        <div class="mrr-metric-card__body">
-          <span class="mrr-metric-card__label">{{ item.label }}</span>
-          <strong class="mrr-metric-card__value">{{ item.value }}</strong>
-          <p class="mrr-metric-card__note">{{ item.note }}</p>
-        </div>
-      </el-card>
+        :label="item.label"
+        :value="item.value"
+        :note="item.note"
+        :tone="item.tone"
+        :icon="item.icon"
+      />
     </section>
 
     <el-row :gutter="20" class="monitor-row">
@@ -411,9 +449,9 @@ onUnmounted(() => {
 .quality-actions,
 .progress-label {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
 .page-header {
@@ -426,19 +464,19 @@ onUnmounted(() => {
 
 .eyebrow {
   margin: 0;
-  color: var(--el-color-primary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .12em;
+  color: var(--el-color-primary);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .subtitle,
 .card-header p,
 .card-header span {
   margin: 0;
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .monitor-row {
@@ -477,14 +515,14 @@ onUnmounted(() => {
   display: grid;
   gap: 6px;
   padding: 14px 16px;
+  background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 10px;
-  background: var(--el-fill-color-lighter);
 }
 
 .quality-summary span {
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .quality-summary strong {
@@ -499,11 +537,11 @@ onUnmounted(() => {
   color: var(--el-color-warning);
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .page-header,
   .card-header {
-    align-items: flex-start;
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .header-actions {

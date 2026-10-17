@@ -5,7 +5,7 @@ import type {
   PatientRecord,
 } from '@/api/modules/patients'
 import type { ECOption } from '@/plugins/echarts'
-import { Calendar, OfficeBuilding, Refresh, User, WarningFilled } from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   getMissingIdCardPatients,
@@ -234,39 +234,32 @@ onMounted(reloadAll)
       :closable="false"
     />
 
-    <div v-loading="summaryLoading" class="metric-grid">
-      <article class="metric-card">
-        <span class="metric-icon"><el-icon><User /></el-icon></span>
-        <div>
-          <p>患者数据行</p>
-          <strong>{{ summary?.totalRecords ?? 0 }}</strong>
-          <small>去重病案号 {{ summary?.totalArchives ?? 0 }} 个</small>
-        </div>
-      </article>
-      <article class="metric-card">
-        <span class="metric-icon"><el-icon><Calendar /></el-icon></span>
-        <div>
-          <p>{{ selectedYear }} 年病案</p>
-          <strong>{{ summary?.yearArchives ?? 0 }}</strong>
-          <small>按入院日期去重统计</small>
-        </div>
-      </article>
-      <article class="metric-card metric-card--warning">
-        <span class="metric-icon"><el-icon><WarningFilled /></el-icon></span>
-        <div>
-          <p>身份证号为空</p>
-          <strong>{{ summary?.missingIdCardRecords ?? 0 }}</strong>
-          <small>需要补录或人工核对</small>
-        </div>
-      </article>
-      <article class="metric-card">
-        <span class="metric-icon"><el-icon><OfficeBuilding /></el-icon></span>
-        <div>
-          <p>同一患者多病案</p>
-          <strong>{{ summary?.confirmedMultiRecordGroups ?? 0 }}</strong>
-          <small>另有疑似 {{ summary?.suspectedMultiRecordGroups ?? 0 }} 组</small>
-        </div>
-      </article>
+    <div v-loading="summaryLoading" class="mrr-metric-grid">
+      <MrrMetricCard
+        label="患者数据行"
+        icon="i-ep:user"
+        :value="summary?.totalRecords ?? 0"
+        :note="`去重病案号 ${summary?.totalArchives ?? 0} 个`"
+      />
+      <MrrMetricCard
+        :label="`${selectedYear} 年病案`"
+        icon="i-ep:calendar"
+        :value="summary?.yearArchives ?? 0"
+        note="按入院日期去重统计"
+      />
+      <MrrMetricCard
+        label="身份证号为空"
+        icon="i-ep:warning-filled"
+        tone="warning"
+        :value="summary?.missingIdCardRecords ?? 0"
+        note="需要补录或人工核对"
+      />
+      <MrrMetricCard
+        label="同一患者多病案"
+        icon="i-ep:office-building"
+        :value="summary?.confirmedMultiRecordGroups ?? 0"
+        :note="`另有疑似 ${summary?.suspectedMultiRecordGroups ?? 0} 组`"
+      />
     </div>
 
     <div class="chart-grid">
@@ -439,68 +432,6 @@ onMounted(reloadAll)
   width: 112px;
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  min-height: 112px;
-}
-
-.metric-card {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  min-width: 0;
-  padding: 18px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 12px;
-}
-
-.metric-card--warning {
-  background: var(--el-color-warning-light-9);
-  border-color: var(--el-color-warning-light-5);
-}
-
-.metric-icon {
-  display: grid;
-  flex: 0 0 42px;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  font-size: 21px;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  border-radius: 12px;
-}
-
-.metric-card--warning .metric-icon {
-  color: var(--el-color-warning);
-  background: var(--el-color-warning-light-8);
-}
-
-.metric-card p {
-  margin: 0 0 4px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.metric-card strong {
-  display: block;
-  font-size: 26px;
-  line-height: 1.2;
-  color: var(--el-text-color-primary);
-}
-
-.metric-card small {
-  display: block;
-  margin-top: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--el-text-color-placeholder);
-  white-space: nowrap;
-}
-
 .chart-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
@@ -561,17 +492,13 @@ onMounted(reloadAll)
   gap: 6px 12px;
 }
 
-@media (width <= 1100px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+@media (max-width: 1100px) {
   .chart-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (width <= 720px) {
+@media (max-width: 720px) {
   .analytics-heading {
     flex-direction: column;
   }
@@ -579,10 +506,6 @@ onMounted(reloadAll)
   .analytics-actions {
     flex-wrap: wrap;
     width: 100%;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
   }
 
   .multi-toolbar {

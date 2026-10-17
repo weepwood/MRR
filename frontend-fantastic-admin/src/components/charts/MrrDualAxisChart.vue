@@ -2,7 +2,6 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
 import { computed } from 'vue'
-import { MRR_CHART_PALETTE } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrDualAxisChart' })
@@ -89,7 +88,7 @@ const option = computed<ECOption>(() => ({
       }]
     : undefined,
   series: [
-    ...props.bars.map((item, index) => ({
+    ...props.bars.map(item => ({
       name: item.name,
       type: 'bar' as const,
       yAxisIndex: 0,
@@ -97,13 +96,13 @@ const option = computed<ECOption>(() => ({
       stack: item.stack,
       barMaxWidth: 30,
       itemStyle: {
-        color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+        color: item.color,
         borderRadius: [6, 6, 2, 2],
         opacity: 0.72,
       },
       emphasis: { focus: 'series' as const },
     })),
-    ...props.lines.map((item, index) => ({
+    ...props.lines.map(item => ({
       name: item.name,
       type: 'line' as const,
       yAxisIndex: 1,
@@ -115,10 +114,10 @@ const option = computed<ECOption>(() => ({
       lineStyle: {
         width: 2.5,
         type: item.dashed ? 'dashed' as const : 'solid' as const,
-        color: item.color ?? MRR_CHART_PALETTE[(props.bars.length + index) % MRR_CHART_PALETTE.length],
+        color: item.color,
       },
       itemStyle: {
-        color: item.color ?? MRR_CHART_PALETTE[(props.bars.length + index) % MRR_CHART_PALETTE.length],
+        color: item.color,
         borderWidth: 2,
       },
       emphasis: { focus: 'series' as const },

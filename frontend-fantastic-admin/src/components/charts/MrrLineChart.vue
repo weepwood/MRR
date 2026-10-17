@@ -2,7 +2,6 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrLineSeries } from '@/types/chart'
 import { computed } from 'vue'
-import { MRR_CHART_PALETTE } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrLineChart' })
@@ -74,7 +73,7 @@ const option = computed<ECOption>(() => ({
   dataZoom: props.categories.length > 16
     ? [{ type: 'inside', startValue: Math.max(0, props.categories.length - 16), endValue: props.categories.length - 1 }]
     : undefined,
-  series: props.series.map((item, index) => ({
+  series: props.series.map(item => ({
     name: item.name,
     type: 'line',
     data: item.data,
@@ -86,16 +85,16 @@ const option = computed<ECOption>(() => ({
     lineStyle: {
       width: 2.5,
       type: item.dashed ? 'dashed' : 'solid',
-      color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+      color: item.color,
     },
     itemStyle: {
-      color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+      color: item.color,
       borderWidth: 2,
     },
     areaStyle: item.area
       ? {
           opacity: 0.12,
-          color: item.color ?? MRR_CHART_PALETTE[index % MRR_CHART_PALETTE.length],
+          color: item.color,
         }
       : undefined,
     emphasis: { focus: 'series' },

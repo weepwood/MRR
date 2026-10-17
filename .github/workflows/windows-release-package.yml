@@ -20,14 +20,22 @@ on:
     tags:
       - 'v*'
 
+# 最小权限：本流水线会在 pull_request 事件下执行 PR 代码，
+# 因此 workflow 级一律不给写权限；只有 publish job（仅 tag 运行）单独提权。
 permissions:
-  contents: write
-  issues: read
-  pull-requests: read
+  contents: read
+
+# PR 场景下同一分支连续 push 只保留最新一次；tag 构建永不互相取消。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      archive_name: ${{ steps.package.outputs.archive_name }}
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       NGINX_VERSION: 1.31.3
@@ -47,20 +55,32 @@ jobs:
           java-version: '21'
           cache: maven
 
+      # pnpm 必须先于 setup-node 安装，setup-node 的 pnpm 缓存依赖已就位的 pnpm。
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: frontend-fantastic-admin/.node-version
-          cache: npm
-          cache-dependency-path: vitepress-doc/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      # setup-node 只能配置一种包管理器缓存；VitePress 用的是 npm，这里单独缓存 ~/.npm。
+      - name: Cache VitePress npm store
+        uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-vitepress-${{ hashFiles('vitepress-doc/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-vitepress-
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@10.33.0 --activate
 
       - name: Validate release baseline
         shell: bash
@@ -173,6 +193,7 @@ jobs:
           echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
 
       - name: Upload backend build identity
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: backend-build-identity
@@ -233,6 +254,7 @@ jobs:
 
       - name: Upload documentation build log
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: documentation-build-log
@@ -299,29 +321,67 @@ jobs:
           echo "archive_name=${ARCHIVE}" >> "${GITHUB_OUTPUT}"
           echo "version=${PRODUCT_VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Upload package artifact
+      # 完整离线包约 160 MiB。只在真正需要交付/人工验收时落盘：
+      #   - tag 构建：publish job 需要跨 job 取用该制品；
+      #   - workflow_dispatch：供人工下载验收。
+      # PR 构建不落盘——免费私有仓库制品配额仅 500 MB，历史上有 11 个 PR 构建的
+      # 160 MiB 离线包累计占用 1766 MiB，是全部 upload-artifact 失败的根因。
+      - name: Upload full package artifact
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package.outputs.archive_name }}
           path: ${{ steps.package.outputs.archive }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
+
+      # PR 构建只保留清单与校验和（KB 级），足以复核产物身份与完整性。
+      - name: Upload package evidence
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-package-evidence-${{ github.run_id }}
+          path: |
+            build/windows-package/manifest.json
+            build/windows-package/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  # 独立出来：该 job 持有 contents: write，但只在 tag 上运行，
+  # 因此执行 PR 代码的 build job 永远拿不到写权限。
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.archive_name }}
+          path: release-assets
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          ARCHIVE_PATH="$(find release-assets -maxdepth 1 -type f -name '*.zip' | head -n 1)"
+          test -n "${ARCHIVE_PATH}"
+          ls -lh "${ARCHIVE_PATH}"
+
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
-              "${{ steps.package.outputs.archive }}" \
+              "${ARCHIVE_PATH}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           else
             gh release create "${GITHUB_REF_NAME}" \
-              "${{ steps.package.outputs.archive }}" \
+              "${ARCHIVE_PATH}" \
               --repo "${GITHUB_REPOSITORY}" \
               --title "MRR ${GITHUB_REF_NAME}" \
               --generate-notes

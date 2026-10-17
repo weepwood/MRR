@@ -691,5 +691,5 @@ onMounted(loadData)
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
 .acknowledge { margin-top: 16px; }
-@media (width <= 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
+@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
 </style>

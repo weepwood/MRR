@@ -299,27 +299,29 @@ onMounted(loadDashboard)
       </div>
     </header>
 
-    <section class="metric-grid" aria-label="数据关系健康总览">
-      <el-card shadow="never" class="metric-card">
-        <span>关系健康度</span>
-        <strong>{{ formatPercent(overview?.healthScore) }}</strong>
-        <small>不包含尚无 archive_id 的患者表</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card">
-        <span>病案主档</span>
-        <strong>{{ formatNumber(overview?.archiveCount) }}</strong>
-        <small>mr_archive 当前记录数</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--danger">
-        <span>严重异常</span>
-        <strong>{{ formatNumber(latestRun?.criticalCount ?? latestRun?.critical_count) }}</strong>
-        <small>最近一次质量检查结果</small>
-      </el-card>
-      <el-card shadow="never" class="metric-card metric-card--warning">
-        <span>警告异常</span>
-        <strong>{{ formatNumber(latestRun?.warningCount ?? latestRun?.warning_count) }}</strong>
-        <small>{{ latestRun ? formatDateTime(latestRun.completedAt ?? latestRun.completed_at) : '尚未执行检查' }}</small>
-      </el-card>
+    <section class="mrr-metric-grid" aria-label="数据关系健康总览">
+      <MrrMetricCard
+        label="关系健康度"
+        :value="formatPercent(overview?.healthScore)"
+        note="不包含尚无 archive_id 的患者表"
+      />
+      <MrrMetricCard
+        label="病案主档"
+        :value="formatNumber(overview?.archiveCount)"
+        note="mr_archive 当前记录数"
+      />
+      <MrrMetricCard
+        label="严重异常"
+        tone="danger"
+        :value="formatNumber(latestRun?.criticalCount ?? latestRun?.critical_count)"
+        note="最近一次质量检查结果"
+      />
+      <MrrMetricCard
+        label="警告异常"
+        tone="warning"
+        :value="formatNumber(latestRun?.warningCount ?? latestRun?.warning_count)"
+        :note="latestRun ? formatDateTime(latestRun.completedAt ?? latestRun.completed_at) : '尚未执行检查'"
+      />
     </section>
 
     <el-tabs v-model="activeTab" class="workbench-tabs">
@@ -797,42 +799,18 @@ h2 {
   color: var(--el-text-color-secondary);
 }
 
-.metric-grid,
 .relation-grid,
 .relation-count-grid {
   display: grid;
   gap: 16px;
 }
 
-.metric-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.metric-card :deep(.el-card__body) {
-  display: grid;
-  gap: 8px;
-}
-
-.metric-card span,
 .relation-count-grid span {
   color: var(--el-text-color-secondary);
 }
 
-.metric-card strong {
-  font-size: 28px;
-}
-
-.metric-card small,
 .relation-card small {
   color: var(--el-text-color-secondary);
-}
-
-.metric-card--danger strong {
-  color: var(--el-color-danger);
-}
-
-.metric-card--warning strong {
-  color: var(--el-color-warning);
 }
 
 .workbench-tabs :deep(.el-tabs__content) {
@@ -853,7 +831,7 @@ h2 {
 
 .relation-card {
   min-width: 0;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .relation-card__header > div,
@@ -903,7 +881,7 @@ h2 {
 
 .section-card {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .search-row .el-input {
@@ -943,7 +921,7 @@ h2 {
 }
 
 .detail-tabs {
-  border-radius: 12px;
+  border-radius: var(--mrr-radius-card);
 }
 
 .issue-header {
@@ -964,11 +942,10 @@ h2 {
   font-size: 12px;
   line-height: 1.6;
   background: var(--el-fill-color-light);
-  border-radius: 8px;
+  border-radius: var(--mrr-radius-md);
 }
 
-@media (width <= 1200px) {
-  .metric-grid,
+@media (max-width: 1200px) {
   .relation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -978,7 +955,7 @@ h2 {
   }
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .page-header,
   .issue-header,
   .search-row {
@@ -992,7 +969,6 @@ h2 {
     width: 100%;
   }
 
-  .metric-grid,
   .relation-grid,
   .relation-count-grid {
     grid-template-columns: 1fr;

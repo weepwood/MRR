@@ -30,13 +30,16 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
-.switch-list, .control-grid { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+
+.switch-list,
+.control-grid { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 .switch-list { display: grid; gap: 0; padding-top: 0; padding-bottom: 0; }
 .switch-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; min-height: 76px; border-bottom: 1px solid var(--mrr-border); }
 .switch-row:last-child { border-bottom: 0; }
 .switch-row strong { font-size: 13px; }
 .switch-row p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+
 .slider-control {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) auto;
@@ -48,6 +51,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .slider-control :deep(.el-slider) { width: 100%; min-width: 120px; }
 .slider-value { min-width: 40px; font-size: 12px; color: var(--mrr-muted-foreground); text-align: right; white-space: nowrap; }
 .number-control { display: flex; gap: var(--mrr-space-2); align-items: center; }
+
 @media (max-width: 680px) {
   .control-grid { grid-template-columns: 1fr; }
   .slider-control { grid-template-columns: minmax(100px, 1fr) auto; }

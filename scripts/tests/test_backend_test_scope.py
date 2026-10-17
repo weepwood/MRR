@@ -40,7 +40,13 @@ class BackendTestScopeTest(unittest.TestCase):
                 self.assertEqual(scope.reason, "database-or-integration-change")
 
     def test_release_change_runs_full_backend_verification(self):
-        for path in ("VERSION", "release-baseline.json", "release-notes/0.6.6.md"):
+        for path in (
+            "VERSION",
+            "release-baseline.json",
+            "release-notes/0.6.6.md",
+            ".github/workflows/windows-release-package.yml",
+            ".github/workflows/standalone-jar-release.yml",
+        ):
             with self.subTest(path=path):
                 scope = classify_paths([path])
                 self.assertTrue(scope.backend_changed)

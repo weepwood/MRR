@@ -94,7 +94,7 @@ const slots = useSlots()
   background: var(--mrr-card);
 }
 
-@media (width <= 760px) {
+@media (max-width: 760px) {
   .mrr-filter-bar {
     flex-direction: column;
     align-items: stretch;

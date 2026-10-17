@@ -1,9 +1,11 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.config.LogRetentionProperties;
 import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.impl.SystemSettingServiceImpl;
+import com.zjcxph.imgapi.setting.SettingRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +37,8 @@ class SystemSettingServiceOcrValidationTest {
 
     @BeforeEach
     void setUp() {
-        service = new SystemSettingServiceImpl(mapper, developerModeService, developerApiAccessService);
+        service = new SystemSettingServiceImpl(mapper, developerModeService, developerApiAccessService,
+                new SettingRegistry(new LogRetentionProperties()));
     }
 
     @Test

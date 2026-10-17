@@ -105,6 +105,49 @@ test.describe('登录页统一设计', () => {
     await expect(page.getByText('工作日 08:00–17:30')).toBeVisible()
   })
 
+  test('接入环境自检展开后展示地址、网络与浏览器信息', async ({ page }) => {
+    await page.route('**/api/v1/public/config/client-environment', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 200,
+          message: '操作成功',
+          data: {
+            clientIp: '192.168.10.24',
+            ipVersion: 'IPV4',
+            behindProxy: true,
+            serverTime: '2026-10-16T17:15:20+08:00',
+            serverZoneId: 'Asia/Shanghai',
+          },
+        }),
+      })
+    })
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+
+    const badge = page.getByRole('button', { name: /医院内网系统/ })
+    await expect(badge).toBeVisible({ timeout: 20_000 })
+    await expect(badge).toContainText('192.168.10.24')
+
+    const panel = page.locator('#login-environment-panel')
+    await expect(panel).toBeHidden()
+
+    await badge.click()
+    await expect(panel).toBeVisible()
+    await expect(panel).toContainText('网络')
+    await expect(panel).toContainText('接入地址')
+    await expect(panel).toContainText('客户端')
+    await expect(panel).toContainText('192.168.10.24')
+    await expect(panel).toContainText('经反向代理转发')
+    await expect(panel).toContainText('Asia/Shanghai')
+    await expect(panel.getByRole('button', { name: '复制环境信息' })).toBeVisible()
+
+    await badge.click()
+    await expect(panel).toBeHidden()
+  })
+
   test('窄屏保持单列并隐藏非必要介绍', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/login', { waitUntil: 'domcontentloaded' })

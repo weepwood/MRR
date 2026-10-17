@@ -12,7 +12,7 @@
 | 分类与审核 | [#345](https://github.com/weepwood/MRR/pull/345) | 规则发布、建议审核、统一类型事务审计 |
 | 有界历史批次 | [#346](https://github.com/weepwood/MRR/pull/346) | 范围预览、游标、租约、夜间资源门禁、管理页 |
 | 自动归类与回退 | [#347](https://github.com/weepwood/MRR/pull/347) | 独立证据门禁、真实授权人复核、条件回退 |
-| 离线交付与回归 | 后续草稿，基于 #347 | 运行时打包、校验、存储读取超时、集成测试隔离及浏览器回归 |
+| 离线交付与回归 | [#348](https://github.com/weepwood/MRR/pull/348) | 运行时打包、校验、存储读取超时、集成测试隔离及浏览器回归 |
 
 PR 依次堆叠，按顺序审查、合并并调整后续基线。每个阶段独立提交，不改写已公开历史。
 代码、迁移和前端随应用发布；OCR 模型与 Python 为独立不可变离线包，不提交大型二进制。
@@ -36,6 +36,7 @@ Maven/前端命令分别在 backend-repo/frontend-fantastic-admin 下运行。
 | Python unittest discover -s scripts/tests -p test_*.py -v | 78测试通过 |
 | Python scripts/test_inventory.py --fail-on-focused | 通过，无.only/@Disabled |
 | Python scripts/release_baseline.py validate | 通过，v0.8.0，登记最高迁移V20261018040000 |
+| governance_guard.py 对六个实际PR正文及各自base/head检查 | 全部通过，阻塞0；跨工程域/测试范围警告留给独立审查 |
 | 新增PS脚本由Windows PowerShell5.1解析、执行ocr-doctor.ps1 | 通过，OFFLINE_SMOKE_PASSED |
 | ESLint/Stylelint针对修改前端文件，git diff --check | 通过 |
 

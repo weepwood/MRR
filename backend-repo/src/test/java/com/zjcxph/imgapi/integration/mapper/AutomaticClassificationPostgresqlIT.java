@@ -56,7 +56,7 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
             var s=new ClassificationMapper.Suggestion();s.setJobId(jobId);s.setScanId(scan);s.setOriginalType(0);s.setOriginalTypeVersion(0);s.setSuggestedType(3);s.setRuleScore(1.);s.setOcrConfidence(.99);s.setRuleSetVersion("rules");s.setLexiconVersion("lexicon");s.setOcrContentHash(sourceHash);s.setOcrResultVersion(fact.getResultVersion());s.setMatchedRules("[]");s.setExcludedRules("[]");s.setAutoEligible(true);s.setReasonCode("EXACT_TITLE");classifications.suggest(s);
         }
     }
-    @AfterEach void cleanup() {service.close();jdbc.update("UPDATE app.mr_smart_classification_job SET status='CANCELLED' WHERE batch_id=?",batchId);batches.status(batchId,"CANCELLED",null);AuthContext.clear();}
+    @AfterEach void cleanup() {service.close();com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,manager,archive,batchId);AuthContext.clear();}
     @Test void automaticApplyIsAuditedAndReplayDoesNotWriteTwice() {
         service.runOne();service.runOne();service.runOne();
         assertThat(classifications.scan(scans.getFirst()).getBtype()).isEqualTo(3);

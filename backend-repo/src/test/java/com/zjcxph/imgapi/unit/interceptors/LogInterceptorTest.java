@@ -73,7 +73,7 @@ class LogInterceptorTest {
     }
 
     @Test
-    void preservesBusinessAuditValuesAndHashesCredentials() throws Exception {
+    void retainsAuditStructureWithoutPatientOrCredentialValues() throws Exception {
         MockHttpServletRequest rawRequest = new MockHttpServletRequest(
                 "POST", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
         rawRequest.setQueryString("bah=00123456&page=2&token=secret-token");
@@ -96,18 +96,18 @@ class LogInterceptorTest {
 
         assertThat(savedLog.getRequestId()).isNotBlank();
         assertThat(savedLog.getRequestUri())
-                .isEqualTo("/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
+                .isEqualTo("/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
         assertThat(savedLog.getEndpointTemplate())
                 .isEqualTo("/api/v1/img/image/{bah}/{brxh}/{folder}/{filename}");
         assertThat(savedLog.getQueryString())
-                .startsWith("bah=00123456&page=2&token=sha256:");
+                .contains("page=2").doesNotContain("00123456", "secret-token");
         assertThat(savedLog.getReferer())
-                .startsWith("http://localhost/records?bah=00123456&ticket=sha256:");
+                .isEqualTo("[REFERER OMITTED]");
         assertThat(savedLog.getRequestBody())
-                .contains("\"idCard\":\"sha256:", "\"password\":\"sha256:")
+                .contains("[REDACTED]")
                 .doesNotContain("330123456789012345", "secret-password");
         assertThat(savedLog.getAuditAction()).isEqualTo("VIEW_IMAGE");
-        assertThat(savedLog.getAuditTarget()).isEqualTo("00789508");
+        assertThat(savedLog.getAuditTarget()).isEqualTo("[REDACTED]");
         assertThat(savedLog.toString())
                 .doesNotContain("secret-password", "secret-token", "secret-ticket");
     }
@@ -197,7 +197,7 @@ class LogInterceptorTest {
         Log savedLog = captureSavedLog(request);
 
         assertThat(savedLog.getQueryString())
-                .startsWith("idCard=sha256:")
+                .startsWith("idCard=%5BREDACTED%5D")
                 .contains("page=1")
                 .doesNotContain("330961199001011234");
     }
@@ -212,7 +212,7 @@ class LogInterceptorTest {
         Log savedLog = captureSavedLog(request);
 
         assertThat(savedLog.getRequestUri())
-                .startsWith("/api/v1/search/getBAHByID/sha256:")
+                .isEqualTo("UNKNOWN")
                 .doesNotContain("330961199001011234");
     }
 
@@ -228,14 +228,14 @@ class LogInterceptorTest {
     }
 
     @Test
-    void doesNotMaskOrdinaryNumericPathSegments() throws Exception {
+    void omitsUnmappedPathsRatherThanGuessingWhichNumericSegmentsAreSensitive() throws Exception {
         MockHttpServletRequest request =
                 new MockHttpServletRequest("GET", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
 
         Log savedLog = captureSavedLog(request);
 
         assertThat(savedLog.getRequestUri())
-                .isEqualTo("/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");
+                .isEqualTo("UNKNOWN");
     }
 
     @Test

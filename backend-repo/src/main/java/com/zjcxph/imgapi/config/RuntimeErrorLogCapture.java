@@ -34,7 +34,9 @@ public class RuntimeErrorLogCapture implements SmartLifecycle {
         captureAppender.setContext(context);
         captureAppender.setName(APPENDER_NAME);
         captureAppender.start();
-        rootLogger.addAppender(captureAppender);
+        context.getLoggerList().stream()
+                .filter(logger -> logger == rootLogger || !logger.isAdditive())
+                .forEach(logger -> logger.addAppender(captureAppender));
 
         appender = captureAppender;
         running = true;
@@ -48,7 +50,7 @@ public class RuntimeErrorLogCapture implements SmartLifecycle {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
         if (appender != null) {
-            rootLogger.detachAppender(appender);
+            context.getLoggerList().forEach(logger -> logger.detachAppender(appender));
             appender.stop();
             appender = null;
         }

@@ -99,7 +99,7 @@ public class OperationsDiagnosticsController {
     }
 
     @GetMapping("/image-source")
-    @RequirePermissions({"system:read", "record:read"})
+    @RequirePermissions({"system:manage", "record:read"})
     @Operation(summary = "诊断单张图片的来源解析与回退过程")
     public Result<Map<String, Object>> diagnoseImageSource(
             @RequestParam(required = false) String bah,

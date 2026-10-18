@@ -55,7 +55,6 @@ class ImageControllerLookupTest {
                 scanService,
                 archiveExportService,
                 imageStorage,
-                ossService,
                 imageUrlService,
                 archiveAccessService
         );

@@ -179,7 +179,7 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setRequestUri(sanitizeRequestUri(request));
         log.setEndpointTemplate(endpointTemplate(request));
         log.setMethod(request.getMethod());
-        log.setUserAgent(truncate(request.getHeader("User-Agent"), MAX_REFERER_LENGTH));
+        log.setUserAgent("[USER AGENT OMITTED]");
         log.setAccessTime(new Date());
         log.setQueryString(sanitizeQueryString(request.getQueryString()));
         log.setRequestBody(getRequestBody(request));
@@ -189,6 +189,9 @@ public class LogInterceptor implements HandlerInterceptor {
         log.setErrorMessage(formatError(ex));
 
         enrichAuditFields(log, request);
+        if (log.getAuditTarget() != null && (log.getAuditAction() == null || !log.getAuditAction().startsWith("SETTING_"))) {
+            log.setAuditTarget(com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(log.getAuditTarget()));
+        }
         asyncLogService.saveLogAsync(log);
 
         Counter.builder("http.requests.total")
@@ -227,26 +230,7 @@ public class LogInterceptor implements HandlerInterceptor {
      * 以免破坏病案号的可追溯性。</p>
      */
     private String sanitizeRequestUri(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        if (uri == null || uri.isEmpty()) {
-            return uri;
-        }
-
-        Set<String> sensitiveVariableValues = sensitivePathVariableValues(request);
-        String[] segments = uri.split("/", -1);
-        boolean masked = false;
-        for (int index = 0; index < segments.length; index += 1) {
-            String segment = segments[index];
-            if (segment.isEmpty()) {
-                continue;
-            }
-            if (sensitiveVariableValues.contains(segment)
-                    || ID_CARD_PATH_SEGMENT.matcher(segment).matches()) {
-                segments[index] = hashForAudit(segment);
-                masked = true;
-            }
-        }
-        return masked ? String.join("/", segments) : uri;
+        return endpointTemplate(request);
     }
 
     private Set<String> sensitivePathVariableValues(HttpServletRequest request) {
@@ -515,51 +499,16 @@ public class LogInterceptor implements HandlerInterceptor {
         return truncate(sanitizeJsonStringFields(body), MAX_REQUEST_BODY_LENGTH);
     }
 
-    private String sanitizeQueryString(String queryString) {
-        if (queryString == null || queryString.isBlank()) {
-            return queryString;
-        }
-        return Stream.of(queryString.split("&", -1))
-                .map(parameter -> {
-                    int separator = parameter.indexOf('=');
-                    String rawName = separator < 0 ? parameter : parameter.substring(0, separator);
-                    if (separator < 0 || !isSensitiveName(decodeParameterName(rawName))) {
-                        return parameter;
-                    }
-                    String rawValue = parameter.substring(separator + 1);
-                    return rawName + "=" + hashForAudit(rawValue);
-                })
-                .collect(Collectors.joining("&"));
+    private String sanitizeQueryString(String value) {
+        return com.zjcxph.imgapi.utils.AuditPayloadSanitizer.query(value);
     }
 
-    private String sanitizeReferer(String referer) {
-        if (referer == null || referer.isBlank()) {
-            return referer;
-        }
-        int fragmentIndex = referer.indexOf('#');
-        String withoutFragment = fragmentIndex >= 0 ? referer.substring(0, fragmentIndex) : referer;
-        int queryIndex = withoutFragment.indexOf('?');
-        if (queryIndex < 0) {
-            return truncate(withoutFragment, MAX_REFERER_LENGTH);
-        }
-        String base = withoutFragment.substring(0, queryIndex);
-        String query = withoutFragment.substring(queryIndex + 1);
-        return truncate(base + "?" + sanitizeQueryString(query), MAX_REFERER_LENGTH);
+    private String sanitizeReferer(String value) {
+        return value == null || value.isBlank() ? value : "[REFERER OMITTED]";
     }
 
-    private String sanitizeJsonStringFields(String body) {
-        Matcher matcher = JSON_STRING_FIELD.matcher(body);
-        StringBuffer sanitized = new StringBuffer();
-        while (matcher.find()) {
-            if (!isSensitiveName(matcher.group(2))) {
-                matcher.appendReplacement(sanitized, Matcher.quoteReplacement(matcher.group()));
-                continue;
-            }
-            String replacement = matcher.group(1) + hashForAudit(matcher.group(3)) + matcher.group(4);
-            matcher.appendReplacement(sanitized, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(sanitized);
-        return sanitized.toString();
+    private String sanitizeJsonStringFields(String value) {
+        return com.zjcxph.imgapi.utils.AuditPayloadSanitizer.json(value);
     }
 
     private String decodeParameterName(String name) {
@@ -587,27 +536,11 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     private String formatError(Exception exception) {
-        if (exception == null) {
-            return null;
-        }
-        String message = exception.getClass().getName();
-        if (exception.getMessage() != null && !exception.getMessage().isBlank()) {
-            message += ": " + exception.getMessage();
-        }
-        return truncate(message, MAX_ERROR_MESSAGE_LENGTH);
+        return exception == null ? null : exception.getClass().getName();
     }
 
     private String hashForAudit(String value) {
-        if (value == null || value.isBlank()) {
-            return "[EMPTY]";
-        }
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return "sha256:" + HexFormat.of().formatHex(digest, 0, 16);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is not available", exception);
-        }
+        return com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedValue(value);
     }
 
     private String truncate(String value, int maxLength) {

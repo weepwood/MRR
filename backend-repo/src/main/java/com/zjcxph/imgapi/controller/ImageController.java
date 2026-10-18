@@ -11,7 +11,6 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ImageUrlService;
-import com.zjcxph.imgapi.service.OssService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.storage.ImageStorage;
 import com.zjcxph.imgapi.storage.InvalidImagePathException;
@@ -66,20 +65,17 @@ public class ImageController {
     private final ScanService scanService;
     private final ArchiveExportService archiveExportService;
     private final ImageStorage imageStorage;
-    private final OssService ossService;
     private final ImageUrlService imageUrlService;
     private final ArchiveAccessService archiveAccessService;
 
     public ImageController(ScanService scanService,
                            ArchiveExportService archiveExportService,
                            ImageStorage imageStorage,
-                           OssService ossService,
                            ImageUrlService imageUrlService,
                            ArchiveAccessService archiveAccessService) {
         this.scanService = scanService;
         this.archiveExportService = archiveExportService;
         this.imageStorage = imageStorage;
-        this.ossService = ossService;
         this.imageUrlService = imageUrlService;
         this.archiveAccessService = archiveAccessService;
     }
@@ -215,7 +211,7 @@ public class ImageController {
             headers.setContentDisposition(ContentDisposition.inline()
                     .filename(FILENAME, StandardCharsets.UTF_8)
                     .build());
-            headers.setCacheControl("public, max-age=86400, immutable");
+            headers.setCacheControl("private, no-store");
             headers.setContentType(mediaType);
 
             return ResponseEntity.ok()
@@ -225,7 +221,7 @@ public class ImageController {
         } catch (InvalidImagePathException exception) {
             logger.warn("拒绝非法影像路径: BAH={}, BRXH={}, FOLDER={}, FILENAME={}, reason={}",
                     BAH, BRXH, FOLDER, FILENAME, exception.getMessage());
-            return ResponseEntity.badRequest().body(Result.fail(exception.getMessage()));
+            return ResponseEntity.badRequest().body(Result.fail("影像路径参数无效"));
         } catch (FileNotFoundException exception) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Result.fail("图片不存在"));
@@ -290,23 +286,11 @@ public class ImageController {
             return ResponseEntity.notFound().build();
         }
 
-        String ossKey = scan.getOssUrl();
-        if (ossKey == null || ossKey.isBlank()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.fail("该记录未迁移到 OSS"));
-        }
-
-        try {
-            String signedUrl = ossService.generatePresignedUrl(ossKey);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .header(HttpHeaders.LOCATION, signedUrl)
-                    .header("Cache-Control", "private, max-age=3600")
-                    .build();
-        } catch (Exception exception) {
-            logger.error("获取 OSS 图片失败：id={}", id, exception);
-            return ResponseEntity.internalServerError()
-                    .body(Result.fail("获取 OSS 图片失败：" + exception.getMessage()));
-        }
+        // 旧 OSS 入口也通过统一内容网关；相对跳转保留反向代理前缀与上下文路径。
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, "../content/" + id)
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                .build();
     }
 
     private void applyLookupMetadata(

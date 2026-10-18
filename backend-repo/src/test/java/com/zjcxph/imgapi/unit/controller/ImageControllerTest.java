@@ -80,6 +80,16 @@ class ImageControllerTest {
     }
 
     @Test
+    void legacyOssEndpointUsesProtectedContentGatewayWithoutCreatingSignedStorageUrls() {
+        mockScan.setOssUrl("synthetic/key");
+        when(scanService.findById(1)).thenReturn(mockScan);
+        var result = imageController.getOssImage(1);
+        assertThat(result.getHeaders().getLocation()).hasToString("../content/1");
+        assertThat(result.getHeaders().getCacheControl()).contains("private", "no-store");
+        org.mockito.Mockito.verifyNoInteractions(ossService);
+    }
+
+    @Test
     void hello() {
         Result<Map<String, Object>> result = imageController.hello();
         assertThat(result.getCode()).isEqualTo(200);
@@ -143,6 +153,7 @@ class ImageControllerTest {
                 "00789508", "605746", "25.03.15", "test.jpg");
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getHeaders().getCacheControl()).contains("private", "no-store").doesNotContain("public");
         assertThat(result.getHeaders().getContentLength()).isEqualTo(5L);
         assertThat(result.getHeaders().getContentType()).isNotNull();
     }

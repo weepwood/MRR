@@ -54,7 +54,7 @@ public class SystemErrorEventService {
         if (loggerName != null && loggerName.startsWith(SELF_LOGGER_PREFIX)) {
             return;
         }
-        String formattedMessage = loggingEvent.getFormattedMessage();
+        String formattedMessage = com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(loggingEvent.getMessage());
         if (loggerName != null
                 && loggerName.endsWith("GlobalExceptionHandler")
                 && formattedMessage != null
@@ -64,7 +64,7 @@ public class SystemErrorEventService {
 
         IThrowableProxy throwableProxy = loggingEvent.getThrowableProxy();
         String exceptionType = throwableProxy == null ? null : throwableProxy.getClassName();
-        String rawStackTrace = throwableProxy == null ? null : ThrowableProxyUtil.asString(throwableProxy);
+        String rawStackTrace = com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStack(throwableProxy);
         String summary = RuntimeErrorSanitizer.sanitizeSummary(
                 formattedMessage == null || formattedMessage.isBlank()
                         ? (exceptionType == null ? "未提供错误消息" : exceptionType)
@@ -127,7 +127,7 @@ public class SystemErrorEventService {
             int page,
             int size
     ) {
-        return mapper.search(
+        List<SystemErrorEvent> events = mapper.search(
                 normalize(keyword),
                 normalizeAllowed(level, ALLOWED_LEVELS, "日志级别"),
                 normalizeAllowed(status, ALLOWED_STATUSES, "处理状态"),
@@ -135,6 +135,8 @@ public class SystemErrorEventService {
                 size,
                 (page - 1) * size
         );
+        events.forEach(this::privateRead);
+        return events;
     }
 
     public long count(String keyword, String level, String status, String module) {
@@ -147,7 +149,15 @@ public class SystemErrorEventService {
     }
 
     public SystemErrorEvent findById(long id) {
-        return mapper.findById(id);
+        return privateRead(mapper.findById(id));
+    }
+
+    private SystemErrorEvent privateRead(SystemErrorEvent event) {
+        if (event == null) return null;
+        event.setMessageSummary(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(event.getMessageSummary()));
+        event.setStackTrace(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredStack(event.getStackTrace()));
+        event.setThreadName("[HIDDEN]");
+        return event;
     }
 
     public SystemErrorOverviewDTO overview() {

@@ -18,7 +18,7 @@ public final class RuntimeErrorSanitizer {
             "(?i)\\bBearer\\s+[A-Za-z0-9._~+/-]+=*|\\beyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
     );
     private static final Pattern SENSITIVE_ASSIGNMENT = Pattern.compile(
-            "(?i)([\"']?(?:password|passwd|token|authorization|secret|signature|ticket|access[-_]?key|private[-_]?key)[\"']?"
+            "(?i)([\"']?(?:bah|sjh|brxh|name|patientName|idCard|phone|mobile|password|passwd|token|authorization|secret|signature|ticket|access[-_]?key|private[-_]?key)[\"']?"
                     + "\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^,;\\s\\]}]+)"
     );
     private static final Pattern LONG_ID_NUMBER = Pattern.compile("(?<!\\d)\\d{15,18}[0-9Xx](?!\\d)");
@@ -72,6 +72,8 @@ public final class RuntimeErrorSanitizer {
         String sanitized = BEARER_OR_JWT.matcher(value).replaceAll("[REDACTED_TOKEN]");
         sanitized = SENSITIVE_ASSIGNMENT.matcher(sanitized).replaceAll("$1[REDACTED]");
         sanitized = LONG_ID_NUMBER.matcher(sanitized).replaceAll("[REDACTED_ID]");
+        sanitized = sanitized.replaceAll("(?i)https?://[^\\s\"<>]+", "[REDACTED_URL]");
+        sanitized = sanitized.replaceAll("(?i)[a-z]:[\\\\/][^\\r\\n\"<>]+", "[REDACTED_PATH]");
         return sanitized;
     }
 

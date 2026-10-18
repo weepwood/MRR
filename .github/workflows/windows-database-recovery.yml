@@ -43,3 +43,7 @@ jobs:
         run: |
           $jar = Get-ChildItem backend-repo/target -Filter *.jar | Select-Object -First 1
           & ./scripts/test_windows_database_recovery.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin') -Jar $jar.FullName
+      - name: Verify environment restoration when pg_ctl fails
+        shell: powershell
+        run: |
+          & ./scripts/test_windows_recovery_cleanup.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin')

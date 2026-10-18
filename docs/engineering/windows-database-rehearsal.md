@@ -16,6 +16,8 @@ powershell.exe -NoProfile -NonInteractive -File scripts/test_windows_database_re
 
 finally 停止自建应用和集群，恢复原进程 PG 环境变量及 PATH，验证绝对路径位于此次随机临时目录后清理。集群无法停止时保留目录，不删除仍运行的数据文件。备份、口令、应用输出和数据库内容不上传 Artifact。
 
+`scripts/test_windows_recovery_cleanup.ps1 -PostgresBin <目录>` 另行提取执行器实际 finally 块，用原生 pg_ctl 对不存在的随机数据目录触发停止失败，验证错误传播、PG 环境/PATH 仍恢复且目录保留。该故障测试同样在 CI 的 PowerShell 5.1 下执行。
+
 CI `Windows PostgreSQL recovery rehearsal` 使用相同执行器。PostgreSQL 16.15-5 的 ZIP 取自 [EDB 官方二进制下载页](https://www.enterprisedb.com/download-postgresql-binaries) 对应的 [固定下载地址](https://get.enterprisedb.com/postgresql/postgresql-16.15-5-windows-x64-binaries.zip)，SHA-256 固定为 `43bb45f173a6f08cf1d29a97a6d8deb119e8e8093a24c00d2d1001a0ccaa8281`。该值为本次通过官方 HTTPS 下载后计算的复现校验值，不声称有独立发布的上游签名证明。更新运行时时需人工核对来源、校验值并重跑演练。
 
 ## 验收边界与回滚

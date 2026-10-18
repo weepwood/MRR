@@ -149,15 +149,21 @@ finally {
     try { if ($application -and -not $application.HasExited) { $application.Kill(); $application.WaitForExit() } }
     catch { $applicationStopped = $false; Write-Warning 'Test application could not be stopped; temporary directory retained.' }
     $canDelete = $true
-    if ($clusterStarted) {
-        & (Join-Path $PostgresBin 'pg_ctl.exe') -D $data -m immediate -w stop *> $null
-        $canDelete = $LASTEXITCODE -eq 0
+    try {
+        if ($clusterStarted) {
+            & (Join-Path $PostgresBin 'pg_ctl.exe') -D $data -m immediate -w stop *> $null
+            $canDelete = $LASTEXITCODE -eq 0
+        }
     }
-    Get-ChildItem Env: | Where-Object Name -Like 'PG*' | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }
-    foreach ($key in $pgEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key, $pgEnvironment[$key], 'Process') }
-    $env:PATH = $oldPath
+    catch { $canDelete = $false }
+    finally {
+        Get-ChildItem Env: | Where-Object Name -Like 'PG*' | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }
+        foreach ($key in $pgEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key, $pgEnvironment[$key], 'Process') }
+        $env:PATH = $oldPath
+    }
     $resolved = [IO.Path]::GetFullPath($temporary)
     if ($canDelete -and $applicationStopped -and $resolved.StartsWith($temporaryParent + '\', [StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolved -Leaf) -match '^mrr-recovery-test-[a-f0-9]{32}$') {
         if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
     } elseif (-not $canDelete) { Write-Warning 'Test PostgreSQL stop failed; temporary cluster retained and must be stopped before cleanup.' }
+    if (-not $canDelete -or -not $applicationStopped) { throw 'Recovery rehearsal cleanup failed; owned temporary resources require local inspection.' }
 }

@@ -2,10 +2,13 @@ package com.zjcxph.imgapi.unit.service;
 
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
 import com.zjcxph.imgapi.service.PatientImportService;
+import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,6 +18,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,7 +32,7 @@ class PatientImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        patientImportService = new PatientImportService(jdbcTemplate);
+        patientImportService = new PatientImportService(jdbcTemplate, new TabularImportFileReader());
     }
 
     @Test
@@ -103,6 +107,28 @@ class PatientImportServiceTest {
         assertThat(result.validRows()).isEqualTo(1);
         assertThat(result.errors()).hasSize(200);
         assertThat(result.errorsTruncated()).isTrue();
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-02-29 12:00", "2026-04-31 12:00", "2026-01-01 24:00"})
+    void rejectsInvalidCalendarDateAndTimeBeforeDatabaseAccess(String dateTime) throws Exception {
+        var file = csv("bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\n"
+                + "TEST001,合成患者,,2026-02-30," + dateTime + ",,,\n", StandardCharsets.UTF_8);
+        var result = patientImportService.importPatients(file, false);
+        assertThat(result.canImport()).isFalse();
+        assertThat(result.errors()).extracting("field").contains("ruyuan", "admissiontime");
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void rejectsExtraCsvFieldsBeforeDatabaseAccess() {
+        var file = csv("bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\n"
+                + "TEST001,合成患者,,,,,,,private-extra\n", StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> patientImportService.importPatients(file, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("2")
+                .hasMessageNotContaining("private-extra");
         verifyNoInteractions(jdbcTemplate);
     }
 

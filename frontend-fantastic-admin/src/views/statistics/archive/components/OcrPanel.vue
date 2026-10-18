@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact } from '@/api/modules/ocr'
 import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
+import ClassificationReview from './ClassificationReview.vue'
 
 const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean }>()
 const { auth } = useAuth()
@@ -115,6 +116,7 @@ watch(() => job.value?.status, (status) => {
         </p>
       </div>
     </div>
+    <ClassificationReview v-if="job && auth('classification:read')" :job-id="job.id" />
   </el-drawer>
 </template>
 

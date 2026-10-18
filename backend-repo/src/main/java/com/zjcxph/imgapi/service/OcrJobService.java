@@ -18,10 +18,12 @@ public class OcrJobService {
     private final OcrMapper mapper; private final ScanMapper scans; private final OcrAccess access;
     private final OcrEngine engine; private final OcrInput input; private final SystemSettingService settings;
     private final TransactionTemplate transactions;
+    private final ClassificationService classification;
     public OcrJobService(OcrMapper mapper, ScanMapper scans, OcrAccess access, OcrEngine engine,
-                         OcrInput input, SystemSettingService settings, TransactionTemplate transactions) {
+                         OcrInput input, SystemSettingService settings, TransactionTemplate transactions,ClassificationService classification) {
         this.mapper=mapper; this.scans=scans; this.access=access; this.engine=engine;
         this.input=input; this.settings=settings; this.transactions=transactions;
+        this.classification=classification;
     }
     public boolean enabled() { return "true".equalsIgnoreCase(settings.getSetting("ocrEnabled")); }
     public JobView create(AuthSession session, Long archive, Create request) {
@@ -121,24 +123,48 @@ public class OcrJobService {
         }
     }
     private void finish(Job job,String token,Item item,Fact fact,String failure) {
+        if(fact!=null && item!=null && failure==null) { saveThenClassify(job,token,item,fact); return; }
         transactions.executeWithoutResult(tx -> {
             Job current=mapper.lock(job.getId());
             if (current==null || !token.equals(current.getLeaseToken()) || current.getLeaseUntil().isBefore(java.time.LocalDateTime.now())) return;
             if (current.isCancelRequested() || "CANCELLED".equals(failure)) { mapper.cancel(job.getId()); mapper.cancelItems(job.getId()); }
             else if (item!=null) {
-                if (fact!=null && mapper.belongs(item.getScanId(),job.getArchiveId())) {
-                    access.require(job.getOwnerUserId(),"record:read","ocr:run");
-                    Fact old=mapper.fact(item.getScanId());
-                    if (old==null || !Objects.equals(old.getResultVersion(),fact.getResultVersion())) {
-                        mapper.archiveFact(item.getScanId(),UUID.randomUUID().toString()); mapper.saveFact(fact);
-                    }
-                    mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
-                } else if (failure!=null && new OcrFailure(failure).retryable() && item.getAttempts()<2) {
+                if (failure!=null && new OcrFailure(failure).retryable() && item.getAttempts()<2) {
                     mapper.retry(job.getId(),item.getScanId(),failure);
                 } else mapper.complete(job.getId(),item.getScanId(),"SKIPPED".equals(failure)?"SKIPPED":"FAILED","FAILED",null,failure);
             } else if ("AUTH_REVOKED".equals(failure)) { mapper.cancel(job.getId()); mapper.cancelItems(job.getId()); }
             mapper.release(job.getId(),token);
         });
+    }
+    private void saveThenClassify(Job job,String token,Item item,Fact fact) {
+        boolean saved=Boolean.TRUE.equals(transactions.execute(tx->{
+            mapper.lock(job.getId());
+            if(!mapper.alive(job.getId(),token)) return false;
+            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+            if(!mapper.belongs(item.getScanId(),job.getArchiveId())) throw new OcrFailure("SOURCE_CHANGED");
+            Fact old=mapper.fact(item.getScanId());
+            if(old==null || !Objects.equals(old.getResultVersion(),fact.getResultVersion())) {
+                mapper.archiveFact(item.getScanId(),UUID.randomUUID().toString());mapper.saveFact(fact);
+            }
+            // Keep PROCESSING until classification completes: a crash reuses this committed OCR version.
+            return true;
+        }));
+        if(!saved) return;
+        try {
+            transactions.executeWithoutResult(tx->{
+                mapper.lock(job.getId());
+                if(!mapper.alive(job.getId(),token)) return;
+                mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
+                classification.classify(job,item,fact);
+                mapper.release(job.getId(),token);
+            });
+        } catch(Exception failure) {
+            transactions.executeWithoutResult(tx->{
+                mapper.lock(job.getId());if(!mapper.alive(job.getId(),token)) return;
+                mapper.complete(job.getId(),item.getScanId(),"NO_MATCH",fact.getStatus(),fact.getResultVersion(),"CLASSIFICATION_FAILED");
+                mapper.release(job.getId(),token);
+            });
+        }
     }
     private int integer(String key,int fallback,int min,int max) {
         try { return Math.max(min,Math.min(max,Integer.parseInt(settings.getSetting(key)))); } catch (Exception e) { return fallback; }

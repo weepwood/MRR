@@ -28,6 +28,8 @@ class ScanServiceImplTest {
 
     @Mock
     private ScanMapper scanMapper;
+    @Mock
+    private com.zjcxph.imgapi.service.ImageTypeService imageTypes;
 
     @InjectMocks
     private ScanServiceImpl scanService;
@@ -180,8 +182,9 @@ class ScanServiceImplTest {
 
         @Test
         void updateImageType() {
-            when(scanMapper.updateImageType(1, 2)).thenReturn(1);
+            when(imageTypes.manual(1, 2)).thenReturn(1);
             assertThat(scanService.updateImageType(1, 2)).isEqualTo(1);
+            verify(imageTypes).manual(1,2);
         }
     }
 }

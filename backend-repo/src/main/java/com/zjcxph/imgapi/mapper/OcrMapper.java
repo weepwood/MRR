@@ -36,7 +36,7 @@ public interface OcrMapper {
         VALUES(#{id},#{archiveId},'UNCLASSIFIED',#{ownerUserId},#{createdBy},#{idempotencyKey},#{selectedScanId},
         CAST(#{configSnapshot} AS jsonb),#{ruleSetVersion},#{lexiconVersion})
         """) void insert(Job job);
-    @Insert("INSERT INTO app.mr_smart_classification_job_item(job_id,scan_id,original_type) VALUES(#{job},#{scan},0)")
+    @Insert("INSERT INTO app.mr_smart_classification_job_item(job_id,scan_id,original_type,original_type_version) SELECT #{job},id,btype,type_version FROM app.mr_scan WHERE id=#{scan}")
     void insertItem(@Param("job") String job, @Param("scan") Integer scan);
     @Update("UPDATE app.mr_smart_classification_job SET planned_count=#{count} WHERE id=#{id}")
     void planned(@Param("id") String id, @Param("count") int count);
@@ -97,6 +97,7 @@ public interface OcrMapper {
         WHERE j.id=#{id} AND j.lease_token=#{token}
         """) void release(@Param("id") String id, @Param("token") String token);
     @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan}") Fact fact(Integer scan);
+    @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan} FOR UPDATE") Fact lockFact(Integer scan);
     @Insert("""
         INSERT INTO app.mr_scan_ocr_history(result_version,scan_id,archive_id,content_hash,engine_version,
           model_checksum,preprocessing_version,ocr_text,lines_json,confidence,image_width,image_height,processed_at)
@@ -118,7 +119,7 @@ public interface OcrMapper {
           error_code=NULL,error_message=NULL,updated_at=NOW()
         """) void saveFact(Fact fact);
     @Select("""
-        SELECT job_id,scan_id,original_type,status,attempts,failure_code,ocr_result_version,suggested_type,rule_score,ocr_confidence
+        SELECT job_id,scan_id,original_type,original_type_version,status,attempts,failure_code,ocr_result_version,suggested_type,rule_score,ocr_confidence
         FROM app.mr_smart_classification_job_item WHERE job_id=#{job} AND scan_id>#{after}
         ORDER BY scan_id LIMIT #{limit}
         """) List<Item> items(@Param("job") String job, @Param("after") int after, @Param("limit") int limit);

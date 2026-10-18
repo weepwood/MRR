@@ -99,7 +99,7 @@ class ScanServiceCacheTest {
         scan.setId(1);
         when(scanMapper.findByCode("00789508", "789508", "00000123", "123"))
                 .thenReturn(List.of(scan));
-        when(scanMapper.updateImageType(1, 2)).thenReturn(1);
+        when(context.getBean(com.zjcxph.imgapi.service.ImageTypeService.class).manual(1, 2)).thenReturn(1);
 
         scanService.getImageListByCode("00789508", "789508", "00000123", "123");
         scanService.getImageListByCode("00789508", "789508", "00000123", "123");
@@ -119,8 +119,13 @@ class ScanServiceCacheTest {
         }
 
         @Bean
-        ScanService scanService(ScanMapper scanMapper) {
-            return new ScanServiceImpl(scanMapper);
+        com.zjcxph.imgapi.service.ImageTypeService imageTypes() {
+            return mock(com.zjcxph.imgapi.service.ImageTypeService.class);
+        }
+
+        @Bean
+        ScanService scanService(ScanMapper scanMapper,com.zjcxph.imgapi.service.ImageTypeService imageTypes) {
+            return new ScanServiceImpl(scanMapper,imageTypes);
         }
     }
 }

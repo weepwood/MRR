@@ -32,9 +32,9 @@ public interface OcrMapper {
         """) boolean belongs(@Param("scan") Integer scan, @Param("archive") Long archive);
     @Insert("""
         INSERT INTO app.mr_smart_classification_job
-        (id,archive_id,scope,owner_user_id,created_by,idempotency_key,selected_scan_id,config_snapshot,rule_set_version,lexicon_version)
+        (id,archive_id,scope,owner_user_id,created_by,idempotency_key,selected_scan_id,config_snapshot,rule_set_version,lexicon_version,batch_id)
         VALUES(#{id},#{archiveId},'UNCLASSIFIED',#{ownerUserId},#{createdBy},#{idempotencyKey},#{selectedScanId},
-        CAST(#{configSnapshot} AS jsonb),#{ruleSetVersion},#{lexiconVersion})
+        CAST(#{configSnapshot} AS jsonb),#{ruleSetVersion},#{lexiconVersion},#{batchId})
         """) void insert(Job job);
     @Insert("INSERT INTO app.mr_smart_classification_job_item(job_id,scan_id,original_type,original_type_version) SELECT #{job},id,btype,type_version FROM app.mr_scan WHERE id=#{scan}")
     void insertItem(@Param("job") String job, @Param("scan") Integer scan);
@@ -44,12 +44,15 @@ public interface OcrMapper {
         WITH target AS (SELECT id FROM app.mr_smart_classification_job
         WHERE status IN ('PENDING','RUNNING','CANCEL_REQUESTED')
           AND (lease_until IS NULL OR lease_until < NOW())
-        ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1)
+          AND (cancel_requested OR batch_id IS NULL OR (#{allowBatch} AND EXISTS
+            (SELECT 1 FROM app.mr_ocr_batch b WHERE b.id=batch_id AND b.status='RUNNING')))
+        ORDER BY CASE WHEN batch_id IS NULL THEN 0 ELSE 1 END,created_at,id FOR UPDATE SKIP LOCKED LIMIT 1)
         UPDATE app.mr_smart_classification_job j SET lease_token=#{token}, lease_until=NOW()+INTERVAL '2 minutes',
           status=CASE WHEN cancel_requested THEN 'CANCEL_REQUESTED' ELSE 'RUNNING' END,
           started_at=COALESCE(started_at,NOW()),updated_at=NOW()
         FROM target WHERE j.id=target.id RETURNING j.*
-        """, affectData = true) Job claim(String token);
+        """, affectData = true) Job claimEligible(@Param("token") String token,@Param("allowBatch") boolean allowBatch);
+    default Job claim(String token) {return claimEligible(token,true);}
     @Select("""
         SELECT * FROM app.mr_smart_classification_job_item WHERE job_id=#{id}
         AND status IN ('PENDING','PROCESSING') AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())

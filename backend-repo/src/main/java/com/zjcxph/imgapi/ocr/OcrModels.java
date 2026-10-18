@@ -21,6 +21,7 @@ public final class OcrModels {
         private String status; private String idempotencyKey; private Integer selectedScanId;
         private String configSnapshot; private String leaseToken; private LocalDateTime leaseUntil;
         private String ruleSetVersion; private String lexiconVersion;
+        private String batchId;
         private int plannedCount; private int processedCount; private int ocrSuccessCount; private int failedCount;
         private boolean cancelRequested;
     }

@@ -13,6 +13,7 @@ public class OcrRuntimeProperties {
     private String tempDirectory = "./data/ocr-temp";
     private int maxWorkers = 1;
     private long maxInputBytes = 50L * 1024 * 1024;
+    private double imageP95BaselineMillis = 0;
     private Map<String, Profile> profiles = new LinkedHashMap<>();
     @Data public static class Profile {
         private String executable;

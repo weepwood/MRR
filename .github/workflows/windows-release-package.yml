@@ -4,24 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'VERSION'
-      - 'release-baseline.json'
-      - 'scripts/release_baseline.py'
-      - 'scripts/embed_frontend_in_jar.py'
-      - 'scripts/build_standalone_jar.py'
-      - 'scripts/tests/test_build_standalone_jar.py'
-      - '.github/workflows/standalone-jar-release.yml'
-      - 'scripts/tests/test_embed_frontend_in_jar.py'
-      - 'backend-repo/pom.xml'
-      - 'backend-repo/src/main/resources/**'
-      - 'frontend-fantastic-admin/package.json'
-      - 'frontend-fantastic-admin/pnpm-lock.yaml'
-      - 'frontend-fantastic-admin/vite.config.ts'
-      - 'frontend-fantastic-admin/vite/**'
-      - 'vitepress-doc/**'
-      - 'deploy/windows/**'
-      - '.github/workflows/windows-release-package.yml'
   workflow_dispatch:
   push:
     tags:
@@ -38,7 +20,39 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.scope.outputs.required }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" != pull_request ]; then
+            echo 'required=true' >> "${GITHUB_OUTPUT}"
+          else
+            git diff --name-only "${BASE_SHA}...${HEAD_SHA}" > changed-files.txt
+            REQUIRED="$(python scripts/ci_build_scope.py --changed-files changed-files.txt)"
+            test "${REQUIRED}" = true || test "${REQUIRED}" = false
+            echo "required=${REQUIRED}" >> "${GITHUB_OUTPUT}"
+          fi
+
   build:
+    needs: scope
+    if: needs.scope.outputs.required == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -429,4 +443,26 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --title "MRR ${GITHUB_REF_NAME}" \
               --generate-notes
+          fi
+
+  windows-package-gate:
+    needs: [scope, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate selected package build
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          BUILD_REQUIRED: ${{ needs.scope.outputs.required }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${SCOPE_RESULT}" = success
+          if [ "${BUILD_REQUIRED}" = true ]; then
+            test "${BUILD_RESULT}" = success
+          else
+            test "${BUILD_REQUIRED}" = false
+            test "${BUILD_RESULT}" = skipped
           fi

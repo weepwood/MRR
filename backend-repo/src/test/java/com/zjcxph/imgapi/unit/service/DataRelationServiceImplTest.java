@@ -32,6 +32,19 @@ class DataRelationServiceImplTest {
     }
 
     @Test
+    void missingPostgresStatisticsRemainUnknownAndAreExcludedFromHealthScore() {
+        when(repository.archiveCoverage("mr_statistics")).thenReturn(Map.of());
+        when(repository.archiveCoverage("mr_archive_box_record")).thenReturn(Map.of());
+        when(repository.estimatedScanCoverage()).thenReturn(List.of(Map.of("estimated_total", 0, "null_fraction", 0, "statistics_available", false)));
+        Map<String,Object> result = service.getOverview();
+        var relations = (List<Map<String,Object>>) result.get("relations");
+        Map<String,Object> scan = relations.stream().filter(row -> "mr_scan".equals(row.get("tableName"))).findFirst().orElseThrow();
+        assertThat(scan).containsEntry("status", "UNKNOWN").containsEntry("coverage", null).containsEntry("coverageIncluded", false);
+        assertThat(relations.stream().filter(row -> "mr_statistics".equals(row.get("tableName"))).findFirst().orElseThrow()).containsEntry("status", "UNKNOWN");
+        assertThat(result.get("healthScore")).isNull();
+    }
+
+    @Test
     void searchesArchiveByNumericArchiveId() {
         List<Map<String, Object>> rows = List.of(Map.of("id", 42L));
         when(repository.searchByArchiveId(42L)).thenReturn(rows);

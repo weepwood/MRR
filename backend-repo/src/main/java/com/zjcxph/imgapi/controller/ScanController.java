@@ -136,6 +136,14 @@ public class ScanController {
         return Result.success(scanService.findAfterId(afterId, size));
     }
 
+    @PostMapping("/cursor/condition")
+    @RequirePermissions({"record:read"})
+    @Operation(summary = "按精确编号和 ID 游标查询；不执行同步总数统计")
+    public Result<CursorPageResult<Scan>> findByConditionAfterId(@RequestBody ScanRequest request,
+            @RequestParam(defaultValue="0") Integer afterId, @RequestParam(defaultValue="20") int size) {
+        return Result.success(scanService.findByConditionAfterId(request, afterId, size));
+    }
+
     @Operation(summary = "根据 ID 查询扫描记录")
     @GetMapping("/{id}")
     public Result<Scan> findById(

@@ -27,6 +27,7 @@ export interface IntegrityTableCoverage {
 }
 
 export interface IntegritySummary {
+  sampleScope?: string
   status?: 'PENDING' | 'READY' | 'ERROR'
   generatedAt: string
   lastAttemptAt?: string

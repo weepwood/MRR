@@ -28,6 +28,7 @@ import {
   runOperationsDiagnostics,
   savePermissionMatrixSnapshot,
 } from '@/api/modules/operations'
+import { formatDateTime as formatTime } from '@/utils/display-format'
 
 const route = useRoute()
 const router = useRouter()
@@ -105,14 +106,6 @@ function formatBytes(value?: number) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   return `${(bytes / 1024 ** index).toFixed(index > 1 ? 2 : 1)} ${units[index]}`
-}
-
-function formatTime(value?: string) {
-  if (!value) {
-    return '-'
-  }
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
 function formatDuration(milliseconds?: number) {
@@ -391,14 +384,18 @@ onMounted(async () => {
   <div class="operations-center">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Operations & Diagnostics</p>
+        <p class="eyebrow">
+          Operations & Diagnostics
+        </p>
         <div class="title-line">
           <h1>运维诊断中心</h1>
           <el-tag v-if="readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
             {{ modeLabel(readiness.mode) }}
           </el-tag>
         </div>
-        <p class="subtitle">集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。</p>
+        <p class="subtitle">
+          集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。
+        </p>
       </div>
       <div class="header-actions">
         <el-button :loading="loading.report" @click="downloadDiagnosticReport">
@@ -587,10 +584,20 @@ onMounted(async () => {
       <el-tab-pane label="图片来源诊断" name="image">
         <el-card shadow="never">
           <el-form :model="imageForm" inline class="diagnosis-form">
-            <el-form-item label="病案号"><el-input v-model="imageForm.bah" clearable placeholder="输入病案号" /></el-form-item>
-            <el-form-item label="上架号"><el-input v-model="imageForm.sjh" clearable placeholder="输入上架号" /></el-form-item>
-            <el-form-item label="图片 ID"><el-input-number v-model="imageForm.imageId" :min="1" controls-position="right" /></el-form-item>
-            <el-form-item><el-button type="primary" :loading="loading.image" @click="runImageDiagnosis">开始诊断</el-button></el-form-item>
+            <el-form-item label="病案号">
+              <el-input v-model="imageForm.bah" clearable placeholder="输入病案号" />
+            </el-form-item>
+            <el-form-item label="上架号">
+              <el-input v-model="imageForm.sjh" clearable placeholder="输入上架号" />
+            </el-form-item>
+            <el-form-item label="图片 ID">
+              <el-input-number v-model="imageForm.imageId" :min="1" controls-position="right" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="loading.image" @click="runImageDiagnosis">
+                开始诊断
+              </el-button>
+            </el-form-item>
           </el-form>
         </el-card>
         <template v-if="imageDiagnosis">
@@ -605,10 +612,14 @@ onMounted(async () => {
             <MrrMetricCard label="回退原因" compact-value :value="imageDiagnosis.fallbackReason || '未发生回退'" />
           </section>
           <el-card shadow="never" class="section-card">
-            <template #header>解析与回退过程</template>
+            <template #header>
+              解析与回退过程
+            </template>
             <el-timeline>
               <el-timeline-item v-for="step in imageDiagnosis.steps" :key="step.code" :type="step.success ? 'success' : 'danger'" :hollow="!step.success">
-                <div class="timeline-title"><strong>{{ step.code }}</strong><span>{{ step.message }}</span></div>
+                <div class="timeline-title">
+                  <strong>{{ step.code }}</strong><span>{{ step.message }}</span>
+                </div>
                 <pre v-if="Object.keys(step.details || {}).length" class="detail-json">{{ JSON.stringify(step.details, null, 2) }}</pre>
               </el-timeline-item>
             </el-timeline>
@@ -619,25 +630,34 @@ onMounted(async () => {
       <el-tab-pane label="病案数据完整性" name="integrity">
         <div class="toolbar-row">
           <span>指标基于后台生成的最近一次完整性快照，避免每次打开页面扫描大表。</span>
-          <el-button :loading="loading.integrity" @click="loadIntegrity">刷新</el-button>
+          <el-button :loading="loading.integrity" @click="loadIntegrity">
+            刷新
+          </el-button>
         </div>
-        <template v-if="integrity">
+        <el-alert v-if="integrity && integrity.status !== 'READY'" title="完整性快照尚未就绪或检查失败，不能判断为无异常" type="warning" :closable="false" />
+        <template v-if="integrity?.status === 'READY'">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
-            <MrrMetricCard label="archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
-            <MrrMetricCard label="OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
-            <MrrMetricCard label="缺失上架号" :value="formatNumber(integrity.missingSjh)" />
-            <MrrMetricCard label="断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
+            <MrrMetricCard label="样本 archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
+            <MrrMetricCard label="样本 OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
+            <MrrMetricCard label="样本缺失上架号" :value="formatNumber(integrity.missingSjh)" />
+            <MrrMetricCard label="样本断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
             <MrrMetricCard label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
-            <MrrMetricCard label="有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" />
+            <MrrMetricCard label="样本有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" :note="integrity.sampleScope" />
           </section>
           <el-card shadow="never" class="section-card">
-            <template #header>各业务表关联情况</template>
+            <template #header>
+              各业务表关联情况
+            </template>
             <el-table :data="integrity.tables" border>
               <el-table-column prop="table" label="数据表" min-width="180" />
-              <el-table-column prop="total" label="总数" min-width="130" />
+              <el-table-column prop="total" label="统计范围内总数" min-width="130" />
               <el-table-column prop="linked" label="已关联" min-width="130" />
               <el-table-column prop="unlinked" label="未关联" min-width="130" />
-              <el-table-column label="覆盖率" min-width="130"><template #default="scope">{{ formatPercent(scope.row.coverage) }}</template></el-table-column>
+              <el-table-column label="覆盖率" min-width="130">
+                <template #default="scope">
+                  {{ formatPercent(scope.row.coverage) }}
+                </template>
+              </el-table-column>
             </el-table>
           </el-card>
         </template>
@@ -649,9 +669,13 @@ onMounted(async () => {
             <el-select v-model="exportStatus" clearable placeholder="全部状态" style="width: 160px;">
               <el-option v-for="status in ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED']" :key="status" :label="status" :value="status" />
             </el-select>
-            <el-button plain @click="navigate('/oss-migration')">OSS 迁移管理</el-button>
+            <el-button plain @click="navigate('/oss-migration')">
+              OSS 迁移管理
+            </el-button>
           </div>
-          <el-button :loading="loading.tasks" @click="loadTasks">刷新</el-button>
+          <el-button :loading="loading.tasks" @click="loadTasks">
+            刷新
+          </el-button>
         </div>
         <section class="mrr-metric-grid mrr-metric-grid--three task-summary">
           <MrrMetricCard label="等待与处理中" value-tone="warning" :value="formatNumber(overview?.taskSummary.active)" />
@@ -659,17 +683,43 @@ onMounted(async () => {
           <MrrMetricCard label="已完成" value-tone="success" :value="formatNumber(taskCounts.SUCCESS)" />
         </section>
         <el-table :data="filteredExportJobs" border height="600" class="section-card">
-          <el-table-column prop="created_at" label="创建时间" width="180"><template #default="scope">{{ formatTime(scope.row.created_at) }}</template></el-table-column>
+          <el-table-column prop="created_at" label="创建时间" width="180">
+            <template #default="scope">
+              {{ formatTime(scope.row.created_at) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="format" label="格式" width="80" />
           <el-table-column prop="scope" label="生成条件" min-width="150" />
-          <el-table-column label="病案范围" min-width="180"><template #default="scope">{{ scope.row.bah || '-' }} / {{ scope.row.sjh || '-' }}</template></el-table-column>
-          <el-table-column label="条数" width="100"><template #default="scope">{{ scope.row.processed_count }}/{{ scope.row.planned_count }}</template></el-table-column>
-          <el-table-column label="大小" width="110"><template #default="scope">{{ formatBytes(scope.row.output_bytes || scope.row.estimated_bytes) }}</template></el-table-column>
+          <el-table-column label="病案范围" min-width="180">
+            <template #default="scope">
+              {{ scope.row.bah || '-' }} / {{ scope.row.sjh || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="条数" width="100">
+            <template #default="scope">
+              {{ scope.row.processed_count }}/{{ scope.row.planned_count }}
+            </template>
+          </el-table-column>
+          <el-table-column label="大小" width="110">
+            <template #default="scope">
+              {{ formatBytes(scope.row.output_bytes || scope.row.estimated_bytes) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="sha256" label="SHA-256" min-width="220" show-overflow-tooltip />
-          <el-table-column label="过期时间" width="180"><template #default="scope">{{ formatTime(scope.row.expires_at) }}</template></el-table-column>
+          <el-table-column label="过期时间" width="180">
+            <template #default="scope">
+              {{ formatTime(scope.row.expires_at) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="download_count" label="下载次数" width="100" />
           <el-table-column prop="error_message" label="失败原因" min-width="180" show-overflow-tooltip />
-          <el-table-column label="状态" width="110" fixed="right"><template #default="scope"><el-tag :type="statusType(scope.row.status)">{{ scope.row.status }}</el-tag></template></el-table-column>
+          <el-table-column label="状态" width="110" fixed="right">
+            <template #default="scope">
+              <el-tag :type="statusType(scope.row.status)">
+                {{ scope.row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
 
@@ -677,24 +727,42 @@ onMounted(async () => {
         <div class="toolbar-row">
           <el-input v-model="endpointKeyword" clearable placeholder="搜索接口、操作或权限" style="max-width: 360px;" />
           <div class="toolbar-actions">
-            <el-tag v-if="permissionMatrix?.previousVersion" type="info">上一版本：{{ permissionMatrix.previousVersion }}</el-tag>
-            <el-tag v-if="permissionMatrix?.diff.available" :type="permissionMatrix.diff.changes.length ? 'warning' : 'success'">变化 {{ permissionMatrix.diff.changes.length }} 项</el-tag>
-            <el-button @click="savePermissionSnapshot">保存版本快照</el-button>
-            <el-button :loading="loading.permissions" @click="loadPermissions">刷新</el-button>
+            <el-tag v-if="permissionMatrix?.previousVersion" type="info">
+              上一版本：{{ permissionMatrix.previousVersion }}
+            </el-tag>
+            <el-tag v-if="permissionMatrix?.diff.available" :type="permissionMatrix.diff.changes.length ? 'warning' : 'success'">
+              变化 {{ permissionMatrix.diff.changes.length }} 项
+            </el-tag>
+            <el-button @click="savePermissionSnapshot">
+              保存版本快照
+            </el-button>
+            <el-button :loading="loading.permissions" @click="loadPermissions">
+              刷新
+            </el-button>
           </div>
         </div>
         <el-table :data="filteredEndpoints" border height="600">
           <el-table-column prop="method" label="方法" width="90" fixed />
-          <el-table-column prop="path" label="接口" min-width="260" fixed show-overflow-tooltip />
+          <el-table-column prop="path" label="接口" min-width="260" show-overflow-tooltip fixed />
           <el-table-column prop="operation" label="操作" min-width="230" show-overflow-tooltip />
           <el-table-column prop="policy" label="策略" width="160" />
-          <el-table-column label="所需权限" min-width="220"><template #default="scope">{{ scope.row.requiredPermissions.join(', ') || '-' }}</template></el-table-column>
+          <el-table-column label="所需权限" min-width="220">
+            <template #default="scope">
+              {{ scope.row.requiredPermissions.join(', ') || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column v-for="role in permissionMatrix?.roles || []" :key="role.code" :label="role.name || role.code" width="110" align="center">
-            <template #default="scope"><el-tag :type="scope.row.roleAccess[role.code] ? 'success' : 'info'" effect="plain">{{ scope.row.roleAccess[role.code] ? '允许' : '拒绝' }}</el-tag></template>
+            <template #default="scope">
+              <el-tag :type="scope.row.roleAccess[role.code] ? 'success' : 'info'" effect="plain">
+                {{ scope.row.roleAccess[role.code] ? '允许' : '拒绝' }}
+              </el-tag>
+            </template>
           </el-table-column>
         </el-table>
         <el-card v-if="permissionMatrix?.diff.available && permissionMatrix.diff.changes.length" shadow="never" class="section-card">
-          <template #header>与上一版本的差异</template>
+          <template #header>
+            与上一版本的差异
+          </template>
           <el-table :data="permissionMatrix.diff.changes" border>
             <el-table-column prop="type" label="变化" width="110" />
             <el-table-column prop="key" label="接口" min-width="300" />
@@ -705,7 +773,9 @@ onMounted(async () => {
       <el-tab-pane label="维护模式" name="maintenance">
         <div class="toolbar-row">
           <span>主动维护用于版本升级、数据库维护和批量修复；自动降级由关键依赖检查独立控制。</span>
-          <el-button :loading="loading.maintenance" @click="loadMaintenance(true)">重新检查</el-button>
+          <el-button :loading="loading.maintenance" @click="loadMaintenance(true)">
+            重新检查
+          </el-button>
         </div>
         <el-alert
           :title="maintenance?.enabled ? '主动维护模式已启用' : '主动维护模式未启用'"
@@ -714,8 +784,12 @@ onMounted(async () => {
           show-icon
         >
           <template #default>
-            <p v-if="maintenance?.enabled">原因：{{ maintenance.reason || '计划维护' }}；操作人：{{ maintenance.updatedBy || '-' }}；时间：{{ formatTime(maintenance.updatedAt) }}</p>
-            <p v-else>系统是否允许写入仍取决于自动部署就绪检查。</p>
+            <p v-if="maintenance?.enabled">
+              原因：{{ maintenance.reason || '计划维护' }}；操作人：{{ maintenance.updatedBy || '-' }}；时间：{{ formatTime(maintenance.updatedAt) }}
+            </p>
+            <p v-else>
+              系统是否允许写入仍取决于自动部署就绪检查。
+            </p>
           </template>
         </el-alert>
         <section class="mrr-metric-grid mrr-metric-grid--three section-card">
@@ -738,8 +812,12 @@ onMounted(async () => {
             <div class="card-header">
               <div><strong>维护操作</strong><p>所有操作通过现有访问日志保留 requestId、用户和结果</p></div>
               <div class="toolbar-actions">
-                <el-button v-if="!maintenance?.enabled" type="warning" @click="enableMaintenance">进入维护模式</el-button>
-                <el-button v-else type="success" @click="disableMaintenance">退出主动维护</el-button>
+                <el-button v-if="!maintenance?.enabled" type="warning" @click="enableMaintenance">
+                  进入维护模式
+                </el-button>
+                <el-button v-else type="success" @click="disableMaintenance">
+                  退出主动维护
+                </el-button>
               </div>
             </div>
           </template>
@@ -747,7 +825,9 @@ onMounted(async () => {
           <div class="issue-list maintenance-checks">
             <div v-for="check in readiness?.checks || []" :key="check.code" class="issue-row">
               <div><strong>{{ check.name }}</strong><p>{{ check.message }}</p></div>
-              <el-tag :type="check.passed ? 'success' : check.severity === 'CRITICAL' ? 'danger' : 'warning'">{{ check.passed ? '通过' : check.severity }}</el-tag>
+              <el-tag :type="check.passed ? 'success' : check.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                {{ check.passed ? '通过' : check.severity }}
+              </el-tag>
             </div>
           </div>
         </el-card>
@@ -757,12 +837,20 @@ onMounted(async () => {
         <div class="toolbar-row">
           <span>展示运维中心的写操作、失败请求和对应 requestId。</span>
           <div class="toolbar-actions">
-            <el-button plain @click="navigate('/logs')">打开完整日志</el-button>
-            <el-button :loading="loading.audit" @click="loadAudit">刷新</el-button>
+            <el-button plain @click="navigate('/logs')">
+              打开完整日志
+            </el-button>
+            <el-button :loading="loading.audit" @click="loadAudit">
+              刷新
+            </el-button>
           </div>
         </div>
         <el-table :data="auditEntries" border height="640">
-          <el-table-column prop="access_time" label="时间" width="180"><template #default="scope">{{ formatTime(scope.row.access_time) }}</template></el-table-column>
+          <el-table-column prop="access_time" label="时间" width="180">
+            <template #default="scope">
+              {{ formatTime(scope.row.access_time) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="username" label="操作人" width="130" />
           <el-table-column prop="client_ip" label="来源 IP" width="150" />
           <el-table-column prop="method" label="方法" width="90" />
@@ -770,7 +858,13 @@ onMounted(async () => {
           <el-table-column prop="request_id" label="requestId" min-width="210" show-overflow-tooltip />
           <el-table-column prop="execute_time" label="耗时(ms)" width="110" />
           <el-table-column prop="error_message" label="错误" min-width="180" show-overflow-tooltip />
-          <el-table-column label="结果" width="100" fixed="right"><template #default="scope"><el-tag :type="responseType(scope.row.response_status)">{{ scope.row.response_status || '-' }}</el-tag></template></el-table-column>
+          <el-table-column label="结果" width="100" fixed="right">
+            <template #default="scope">
+              <el-tag :type="responseType(scope.row.response_status)">
+                {{ scope.row.response_status || '-' }}
+              </el-tag>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
     </el-tabs>

@@ -95,7 +95,7 @@ final class DataQualityCheckCatalog {
                         """
                         WITH estimated AS (
                             SELECT GREATEST(
-                                ROUND(GREATEST(c.reltuples, 0) * COALESCE(s.null_frac, 0)),
+                                ROUND(GREATEST(c.reltuples, 0) * s.null_frac),
                                 0
                             )::bigint AS issue_count
                             FROM pg_class c
@@ -112,10 +112,14 @@ final class DataQualityCheckCatalog {
                               AND uploadflag <> 0
                               AND archive_id IS NULL
                         )
-                        SELECT GREATEST(
-                            COALESCE((SELECT issue_count FROM estimated), 0),
-                            COALESCE((SELECT issue_count FROM recent), 0)
-                        )
+                        SELECT CASE WHEN NOT EXISTS (
+                            SELECT 1 FROM pg_stats s JOIN pg_class c ON c.relname=s.tablename
+                            JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname=s.schemaname
+                            WHERE s.schemaname='app' AND s.tablename='mr_scan' AND s.attname='archive_id' AND c.reltuples>=0
+                        ) THEN NULL ELSE GREATEST(
+                            (SELECT issue_count FROM estimated),
+                            (SELECT issue_count FROM recent)
+                        ) END
                         """.formatted(RECENT_SCAN_BOUNDARY),
                         """
                         SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
@@ -331,11 +335,12 @@ final class DataQualityCheckCatalog {
                         """
                 ),
                 new DataQualityCheckDefinition(
-                        "MIGRATED_WITHOUT_OSS_URL", "已迁移扫描记录缺少 OSS 地址", "CRITICAL",
+                        "MIGRATED_WITHOUT_OSS_URL", "最近50万ID窗口已迁移扫描缺少 OSS 地址", "CRITICAL",
                         """
                         SELECT COUNT(*)
                         FROM app.mr_scan
-                        WHERE LOWER(COALESCE(migration_status, ''))
+                        WHERE id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.mr_scan),0)
+                          AND LOWER(COALESCE(migration_status, ''))
                                 IN ('migrated', 'success', 'completed', 'verified')
                           AND NULLIF(BTRIM(COALESCE(oss_url, '')), '') IS NULL
                         """,
@@ -343,18 +348,20 @@ final class DataQualityCheckCatalog {
                         SELECT 'mr_scan' AS entity_type, id::text AS entity_id, bah, sjh,
                                CONCAT('迁移状态=', COALESCE(migration_status, 'NULL'), '，但 OSS 地址为空') AS detail
                         FROM app.mr_scan
-                        WHERE LOWER(COALESCE(migration_status, ''))
+                        WHERE id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.mr_scan),0)
+                          AND LOWER(COALESCE(migration_status, ''))
                                 IN ('migrated', 'success', 'completed', 'verified')
                           AND NULLIF(BTRIM(COALESCE(oss_url, '')), '') IS NULL
                         ORDER BY id DESC
                         """
                 ),
                 new DataQualityCheckDefinition(
-                        "MIGRATION_SUCCESS_UNVERIFIED", "迁移成功但未完成校验", "WARNING",
+                        "MIGRATION_SUCCESS_UNVERIFIED", "最近50万迁移日志ID窗口成功但未完成校验", "WARNING",
                         """
                         SELECT COUNT(*)
                         FROM app.image_migration_log
-                        WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
+                        WHERE id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.image_migration_log),0)
+                          AND LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
                           AND verified_at IS NULL
                         """,
                         """
@@ -362,18 +369,19 @@ final class DataQualityCheckCatalog {
                                NULL::text AS bah, NULL::text AS sjh,
                                CONCAT('scan_id=', scan_id, '，迁移成功但 verified_at 为空') AS detail
                         FROM app.image_migration_log
-                        WHERE LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
+                        WHERE id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.image_migration_log),0)
+                          AND LOWER(COALESCE(migration_status, '')) IN ('migrated', 'success', 'completed')
                           AND verified_at IS NULL
                         ORDER BY id DESC
                         """
                 ),
                 new DataQualityCheckDefinition(
-                        "MIGRATION_SCAN_ORPHAN", "迁移日志找不到扫描记录", "CRITICAL",
+                        "MIGRATION_SCAN_ORPHAN", "最近50万迁移日志ID窗口找不到扫描记录", "CRITICAL",
                         """
                         SELECT COUNT(*)
                         FROM app.image_migration_log l
                         LEFT JOIN app.mr_scan s ON s.id = l.scan_id
-                        WHERE s.id IS NULL
+                        WHERE l.id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.image_migration_log),0) AND s.id IS NULL
                         """,
                         """
                         SELECT 'image_migration_log' AS entity_type, l.id::text AS entity_id,
@@ -381,7 +389,7 @@ final class DataQualityCheckCatalog {
                                CONCAT('scan_id=', l.scan_id, ' 在 mr_scan 中不存在') AS detail
                         FROM app.image_migration_log l
                         LEFT JOIN app.mr_scan s ON s.id = l.scan_id
-                        WHERE s.id IS NULL
+                        WHERE l.id > GREATEST((SELECT COALESCE(MAX(id),0)-500000 FROM app.image_migration_log),0) AND s.id IS NULL
                         ORDER BY l.id DESC
                         """
                 ),

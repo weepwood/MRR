@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -11,6 +10,7 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
+/* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
@@ -25,6 +25,7 @@ import {
 } from '@/api/modules/data-relations'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { formatDateTime } from '@/utils/display-format'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
 
@@ -95,17 +96,13 @@ function numberValue(value: unknown) {
 }
 
 function formatNumber(value: unknown) {
+  if (value == null) return '未知'
   return numberValue(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
 }
 
 function formatPercent(value: unknown) {
+  if (value == null) return '未知'
   return `${formatNumber(value)}%`
-}
-
-function formatDateTime(value: unknown) {
-  if (!value) return '—'
-  const date = new Date(String(value))
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN')
 }
 
 function checkCode(check: QualityCheck) {
@@ -137,6 +134,7 @@ function issueEntityId(issue: DataQualityIssue) {
 }
 
 function relationTagType(status: RelationCoverage['status']) {
+  if (status === 'UNKNOWN') return 'info'
   if (status === 'HEALTHY') return 'success'
   if (status === 'WARNING' || status === 'LEGACY') return 'warning'
   return 'danger'
@@ -303,12 +301,12 @@ onMounted(loadDashboard)
       <MrrMetricCard
         label="关系健康度"
         :value="formatPercent(overview?.healthScore)"
-        note="不包含尚无 archive_id 的患者表"
+        note="基于可用统计估算；未知项不计入"
       />
       <MrrMetricCard
-        label="病案主档"
+        label="病案主档（估算）"
         :value="formatNumber(overview?.archiveCount)"
-        note="mr_archive 当前记录数"
+        note="PostgreSQL统计快照，非实时COUNT"
       />
       <MrrMetricCard
         label="严重异常"
@@ -345,12 +343,12 @@ onMounted(loadDashboard)
               </div>
               <p>{{ relation.relation }}</p>
               <div class="coverage-row">
-                <strong>{{ relation.coverageIncluded ? formatPercent(relation.coverage) : '遗留关联' }}</strong>
+                <strong>{{ relation.source === 'STATISTICS_UNAVAILABLE' ? '统计不可用' : relation.coverageIncluded ? formatPercent(relation.coverage) : '遗留关联' }}</strong>
                 <span v-if="relation.estimated">估算值</span>
               </div>
               <el-progress
                 v-if="relation.coverageIncluded"
-                :percentage="Math.min(100, Math.max(0, relation.coverage))"
+                :percentage="Math.min(100, Math.max(0, relation.coverage ?? 0))"
                 :stroke-width="8"
                 :show-text="false"
               />
@@ -368,7 +366,7 @@ onMounted(loadDashboard)
                   <dd>{{ formatNumber(relation.missingCount) }}</dd>
                 </div>
               </dl>
-              <small>来源：{{ relation.source }}</small>
+              <small>来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
             </el-card>
           </section>
 

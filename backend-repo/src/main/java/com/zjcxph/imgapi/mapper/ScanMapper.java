@@ -15,10 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 public interface ScanMapper {
-    String BAH_SEARCH_EXPRESSION = "CASE WHEN BAH ~ '^[0-9]+$' " +
-            "THEN COALESCE(NULLIF(LTRIM(BAH, '0'), ''), '0') ELSE BAH END";
-    String SJH_SEARCH_EXPRESSION = "CASE WHEN SJH ~ '^[0-9]+$' " +
-            "THEN COALESCE(NULLIF(LTRIM(SJH, '0'), ''), '0') ELSE SJH END";
+    String BAH_SEARCH_EXPRESSION = "app.numeric_code_key(BAH)";
+    String SJH_SEARCH_EXPRESSION = "app.numeric_code_key(SJH)";
     String VALID_SJH_EXPRESSION = "(NULLIF(BTRIM(SJH), '') IS NOT NULL " +
             "AND LENGTH(BTRIM(SJH)) >= 4 AND BTRIM(SJH) ~ '^[0-9]+$')";
     String MIGRATION_ELIGIBLE_EXPRESSION = "(" + VALID_SJH_EXPRESSION + " AND " +
@@ -166,6 +164,8 @@ public interface ScanMapper {
     List<Scan> findByConditionWithPagination(@Param("request") ScanRequest request,
                                               @Param("offset") int offset,
                                               @Param("limit") int limit);
+
+    List<Scan> findByConditionAfterId(@Param("request") ScanRequest request, @Param("afterId") int afterId, @Param("limit") int limit);
 
     long countByCondition(@Param("request") ScanRequest request);
 

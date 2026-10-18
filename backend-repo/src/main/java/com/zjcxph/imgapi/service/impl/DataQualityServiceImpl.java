@@ -209,8 +209,10 @@ public class DataQualityServiceImpl implements DataQualityService {
             int safeSampleLimit = Math.max(1, Math.min(sampleLimit, 1000));
 
             for (DataQualityCheckDefinition check : checks) {
-                Long countValue = jdbcTemplate.queryForObject(check.countSql(), Long.class);
-                long issueCount = countValue == null ? 0 : countValue;
+                Long countValue = jdbcTemplate.query(check.countSql(), statement -> statement.setQueryTimeout(10),
+                        resultSet -> { if (!resultSet.next()) return null; long value = resultSet.getLong(1); return resultSet.wasNull() ? null : value; });
+                if (countValue == null) throw new IllegalStateException("统计信息不可用: " + check.code());
+                long issueCount = countValue;
                 List<Map<String, Object>> samples = issueCount == 0
                         ? List.of()
                         : jdbcTemplate.queryForList(check.sampleSql() + " LIMIT ?", safeSampleLimit);
@@ -244,7 +246,7 @@ public class DataQualityServiceImpl implements DataQualityService {
             return getSummary();
         } catch (Exception exception) {
             recordFailedRun(runId, exception);
-            throw new IllegalStateException("数据质量检查失败: " + exception.getMessage(), exception);
+            throw new IllegalStateException("数据质量检查失败，请检查追踪编号或后台安全堆栈", exception);
         } finally {
             running.set(false);
             runningGauge.set(0);
@@ -418,7 +420,7 @@ public class DataQualityServiceImpl implements DataQualityService {
                 UPDATE app.mrr_data_quality_run
                 SET status = 'FAILED', completed_at = CURRENT_TIMESTAMP, error_message = ?
                 WHERE id = ?
-                """, abbreviate(exception.getMessage(), 2000), runId);
+                """, exception.getClass().getSimpleName(), runId);
     }
 
     private String normalizeTrigger(String triggeredBy) {

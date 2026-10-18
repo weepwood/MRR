@@ -177,16 +177,17 @@ class DataQualityServiceImplTest {
         when(jdbcTemplate.queryForObject(
                 contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
                 .thenReturn(77L);
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class)))
+        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.PreparedStatementSetter>any(),
+                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.ResultSetExtractor<Long>>any()))
                 .thenThrow(new DataAccessResourceFailureException("db offline"));
 
         assertThatThrownBy(() -> service.runChecks("manual"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("数据质量检查失败: db offline")
+                .hasMessageContaining("数据质量检查失败").hasMessageNotContaining("db offline")
                 .hasCauseInstanceOf(DataAccessResourceFailureException.class);
 
         verify(jdbcTemplate).update(
-                contains("SET status = 'FAILED'"), eq("db offline"), eq(77L));
+                contains("SET status = 'FAILED'"), eq("DataAccessResourceFailureException"), eq(77L));
         assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
         AtomicBoolean running = (AtomicBoolean) ReflectionTestUtils.getField(service, "running");
         assertThat(running).isNotNull();

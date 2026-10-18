@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { formatDateTime } from '@/utils/display-format'
-/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -12,6 +10,7 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
+/* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
@@ -26,6 +25,7 @@ import {
 } from '@/api/modules/data-relations'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { formatDateTime } from '@/utils/display-format'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
 
@@ -104,8 +104,6 @@ function formatPercent(value: unknown) {
   if (value == null) return '未知'
   return `${formatNumber(value)}%`
 }
-
-
 
 function checkCode(check: QualityCheck) {
   return check.checkCode ?? check.check_code ?? 'UNKNOWN'

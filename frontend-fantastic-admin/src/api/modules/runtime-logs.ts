@@ -14,4 +14,3 @@ export const getRuntimeLogs = (params: Record<string, unknown>) => getRequest<{ 
 export const getRuntimeLogHealth = () => getRequest<Record<string, unknown>>('/api/v1/runtime-logs/health')
 export const getRuntimeLogFiles = () => getRequest<{ fileName: string, bytes: number }[]>('/api/v1/runtime-logs/files')
 export const importRuntimeLog = (fileName: string) => postRequest('/api/v1/runtime-logs/imports', { fileName })
-

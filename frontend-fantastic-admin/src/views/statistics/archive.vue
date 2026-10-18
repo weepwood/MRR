@@ -8,8 +8,8 @@ import { Document, Download, Printer } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
 import ScanQueryDiagnostics from '@/components/ScanQueryDiagnostics/index.vue'
+import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
 import {
   createDefaultSystemSettings,
   loadEffectiveSystemSettings,

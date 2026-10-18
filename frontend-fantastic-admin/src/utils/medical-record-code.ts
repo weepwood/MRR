@@ -116,4 +116,3 @@ export function resolveArchiveLookup(bah: unknown, sjh: unknown): ArchiveLookupR
 export function getArchiveLookupValidationMessage(bah: unknown, sjh: unknown): string {
   return resolveArchiveLookup(bah, sjh).validationMessage
 }
-

@@ -15,7 +15,7 @@ describe('archive query results', () => {
   beforeEach(() => { query.mockReset(); patient.mockReset(); patient.mockResolvedValue({ data: [] }) })
   it('clears old patient loading when the next search only uses an SJH', async () => {
     let finish: (value: { data: never[] }) => void = () => {}
-    patient.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    patient.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
     query.mockResolvedValueOnce({ data: [{ id: 1, bah: '123' }] }).mockResolvedValueOnce({ data: [{ id: 2, bah: '10000001', sjh: '456' }] })
     const scope = effectScope()
     const archive = scope.run(() => useArchiveImages({ externalSession: ref(null) }))!
@@ -32,7 +32,7 @@ describe('archive query results', () => {
   })
   it('ignores a slower previous response after a new query finishes', async () => {
     let resolveOld: (value: unknown) => void = () => {}
-    query.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
+    query.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve }))
       .mockResolvedValueOnce({ data: [{ id: 2, bah: '456' }], meta: { requestId: 'new-request' } })
     const scope = effectScope()
     const archive = scope.run(() => useArchiveImages({ externalSession: ref(null) }))!

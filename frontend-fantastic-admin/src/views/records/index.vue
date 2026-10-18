@@ -68,23 +68,29 @@ async function loadData() {
   error.value = ''
   try {
     const submitted = appliedQuery.value
-    const res = await getScanCursor({ bah: submitted.bah.trim() || undefined, sjh: submitted.sjh.trim() || undefined,
-      brxh: submitted.brxh.trim() || undefined, openerNo: submitted.openerNo.trim() || undefined, btype: submitted.btype ? Number(submitted.btype) : undefined },
-    cursors.value[pageNum.value - 1] || 0, pageSize.value)
-    if (current !== version) return
-    if (!Array.isArray(res.data?.list)) throw new Error('记录响应格式异常，请重试')
+    const res = await getScanCursor({ bah: submitted.bah.trim() || undefined, sjh: submitted.sjh.trim() || undefined, brxh: submitted.brxh.trim() || undefined, openerNo: submitted.openerNo.trim() || undefined, btype: submitted.btype ? Number(submitted.btype) : undefined }, cursors.value[pageNum.value - 1] || 0, pageSize.value)
+    if (current !== version) { return }
+    if (!Array.isArray(res.data?.list)) { throw new Error('记录响应格式异常，请重试') }
     list.value = res.data.list
     selectedRows.value = []
     hasMore.value = res.data.hasMore
     nextCursor.value = res.data.nextCursorId
-  } catch (exception) {
+  }
+  catch (exception) {
     if (current === version) { error.value = exception instanceof Error ? exception.message : '记录读取失败'; list.value = []; hasMore.value = false }
-  } finally { if (current === version) loading.value = false }
+  }
+  finally {
+    if (current === version) { loading.value = false }
+  }
 }
 function handleSearch() { appliedQuery.value = { ...query }; pageNum.value = 1; cursors.value = [0]; void loadData() }
 function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' }); handleSearch() }
-function nextPage() { if (!hasMore.value || nextCursor.value == null) return; cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData() }
-function previousPage() { if (pageNum.value <= 1) return; pageNum.value--; void loadData() }
+function nextPage() {
+  if (!hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
+}
+function previousPage() {
+  if (pageNum.value <= 1) { return } pageNum.value--; void loadData()
+}
 onMounted(loadData)
 
 const summaryCards = computed(() => [
@@ -245,10 +251,16 @@ function typeLabel(value: unknown) {
       </el-table>
 
       <div class="pager">
-        <el-select v-model="pageSize" aria-label="每批条数" style="width:120px" @change="handleSearch"><el-option v-for="size in [10,20,50,100]" :key="size" :value="size" :label="`${size}条/批`" /></el-select>
-        <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">上一批</el-button>
+        <el-select v-model="pageSize" aria-label="每批条数" style="width: 120px;" @change="handleSearch">
+          <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
+        </el-select>
+        <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
+          上一批
+        </el-button>
         <span>第 {{ pageNum }} 批</span>
-        <el-button :disabled="!hasMore || loading" @click="nextPage">下一批</el-button>
+        <el-button :disabled="!hasMore || loading" @click="nextPage">
+          下一批
+        </el-button>
       </div>
     </el-card>
 

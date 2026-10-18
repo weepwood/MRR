@@ -26,6 +26,6 @@ test('日志页面显示缺口并按文本渲染日志，补录必须显式触�
   await expect.poll(async () => page.locator('.runtime-log-page > .el-card').first().evaluate(element => Math.max(...getComputedStyle(element).backgroundColor.match(/\d+/g)!.slice(0, 3).map(Number)))).toBeLessThan(65)
   await page.screenshot({ path: 'test-results/runtime-logs-dark-reduced.png', fullPage: true })
   await page.getByRole('button', { name: '详情', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: '日志详情' })).toContainText('com.synthetic.Failure')
+  await expect(page.getByRole('dialog', { name: '日志详情' }).locator('pre')).toHaveJSProperty('textContent', '<script>alert("synthetic")</script>\ncom.synthetic.Failure')
 })
 

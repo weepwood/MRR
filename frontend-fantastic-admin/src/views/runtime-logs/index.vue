@@ -194,8 +194,7 @@ onMounted(() => { void load(); void refreshHealth() })
       </el-collapse>
     </el-card>
     <el-drawer v-model="detailVisible" title="日志详情" size="60%">
-      <pre class="log-detail">{{ detail?.message_summary }}
-      {{ detail?.stack_trace }}</pre>
+      <pre class="log-detail" v-text="`${detail?.message_summary ?? ''}\n${detail?.stack_trace ?? ''}`" />
     </el-drawer>
   </div>
 </template>

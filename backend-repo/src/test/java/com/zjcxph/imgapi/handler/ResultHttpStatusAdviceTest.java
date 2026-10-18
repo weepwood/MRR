@@ -16,6 +16,18 @@ class ResultHttpStatusAdviceTest {
     private final ResultHttpStatusAdvice advice = new ResultHttpStatusAdvice();
 
     @Test
+    void diagnosticsAreNotCachedAndDeniedRequestsDoNotExposeExistenceReasons() {
+        var servlet = new org.springframework.mock.web.MockHttpServletResponse();
+        servlet.setHeader("X-Request-Id", "0123456789abcdef");
+        var result = Result.fail(403, "没有接口访问权限");
+        advice.beforeBodyWrite(result, null, org.springframework.http.MediaType.APPLICATION_JSON, null,
+                new org.springframework.http.server.ServletServerHttpRequest(new org.springframework.mock.web.MockHttpServletRequest("POST", "/api/v1/operations/query-diagnostics")),
+                new org.springframework.http.server.ServletServerHttpResponse(servlet));
+        org.assertj.core.api.Assertions.assertThat(servlet.getHeader("Cache-Control")).contains("private", "no-store");
+        org.assertj.core.api.Assertions.assertThat(result.getMeta()).containsEntry("requestId", "0123456789abcdef").doesNotContainKey("reasonCode");
+    }
+
+    @Test
     void shouldConvertDefaultFailureToBadRequest() {
         MockHttpServletResponse response = apply(Result.fail("参数错误"));
 

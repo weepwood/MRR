@@ -1,5 +1,6 @@
 /** 后端统一响应格式 */
 export interface ApiResult<T = unknown> {
+  meta?: { requestId?: string, reasonCode?: string, lookupStrategy?: string }
   code?: number | string
   message?: string
   data?: T

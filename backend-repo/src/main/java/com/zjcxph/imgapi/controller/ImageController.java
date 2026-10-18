@@ -143,7 +143,7 @@ public class ImageController {
         ArchiveLookupResult lookupResult = scanService.getImageLookupByBAH(normalizedBah, bahSearchCode);
         applyLookupMetadata(response, lookupResult);
         List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
-        return Result.success(items).message(normalizedBah + " 数据获取成功");
+        return Result.success(items).meta(lookupMeta(lookupResult));
     }
 
     @Operation(summary = "按统一规则查询图片数据")
@@ -168,7 +168,7 @@ public class ImageController {
         boolean useSjh = normalizedBah.isEmpty()
                 || MedicalRecordCodeUtils.requiresSjhForBah(normalizedBah);
         if (useSjh && normalizedSjh.isEmpty()) {
-            return Result.fail(BAH_REQUIRES_SJH_MESSAGE);
+            return Result.<List<BAHDataResponseDTO>>fail(BAH_REQUIRES_SJH_MESSAGE).meta(Map.of("reasonCode", "NEEDS_SJH", "lookupStrategy", "SJH_REQUIRED"));
         }
 
         archiveAccessService.verifyAndRecord(userid, normalizedBah, normalizedSjh, request);
@@ -186,7 +186,12 @@ public class ImageController {
         );
         applyLookupMetadata(response, lookupResult);
         List<BAHDataResponseDTO> items = imageUrlService.toDtoList(lookupResult.scans());
-        return Result.success(items);
+        return Result.success(items).meta(lookupMeta(lookupResult));
+    }
+
+    private Map<String, Object> lookupMeta(ArchiveLookupResult result) {
+        return Map.of("lookupStrategy", result.strategy().name(), "reasonCode",
+                result.resultCount() == 0 ? "NO_MATCHING_IMAGES" : result.fallbackReason().name());
     }
 
     @Operation(summary = "获取病案号下的对应单张图片")

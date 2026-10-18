@@ -9,6 +9,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
+import ScanQueryDiagnostics from '@/components/ScanQueryDiagnostics/index.vue'
 import {
   createDefaultSystemSettings,
   loadEffectiveSystemSettings,
@@ -52,6 +53,8 @@ const {
   downloading,
   savingType,
   errorMsg,
+  requestId,
+  lookupReason,
   searchBah,
   searchSjh,
   searchIdCard,
@@ -838,7 +841,8 @@ onUnmounted(() => {
 
           <PatientCard :patient="patient" :sjh="currentImage?.sjh || searchSjh" :loading="patientLoading" />
 
-          <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon />
+          <el-alert v-if="errorMsg" :title="errorMsg" :type="lookupReason === 'NO_MATCHING_IMAGES' ? 'info' : lookupReason === 'NEEDS_SJH' ? 'warning' : 'error'" show-icon />
+          <ScanQueryDiagnostics v-if="errorMsg && !isExternalTicketMode" :bah="searchBah" :sjh="searchSjh" :request-id="requestId" />
 
           <template v-if="images.length > 0">
             <TypeFilterBar
@@ -1045,7 +1049,9 @@ onUnmounted(() => {
   width: min(calc(100% - 32px), 1280px);
   min-height: 56px;
   padding: 9px 12px;
+  background: var(--surface);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--divider);
   border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
   border-radius: var(--mrr-radius-xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);

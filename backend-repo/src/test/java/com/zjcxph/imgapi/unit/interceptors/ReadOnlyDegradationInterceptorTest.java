@@ -41,6 +41,14 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
+    void queryDiagnosticsRemainsAvailableDuringDependencyFailureAndMaintenance() throws Exception {
+        when(readinessService.isReadOnly()).thenReturn(true);
+        when(maintenanceModeService.isEnabled()).thenReturn(true);
+        when(readinessService.getSnapshot()).thenReturn(Map.of());
+        assertTrue(interceptor.preHandle(new MockHttpServletRequest("POST", "/api/v1/operations/query-diagnostics"), new MockHttpServletResponse(), new Object()));
+    }
+
+    @Test
     void getRequestRemainsAvailableInReadOnlyMode() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/patients");

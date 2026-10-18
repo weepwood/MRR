@@ -15,6 +15,9 @@ public class Result<T> {
     private Integer code;
     private String message;
     private T data;
+    private java.util.Map<String, Object> meta;
+
+    public Result<T> meta(java.util.Map<String, Object> value) { this.meta = value; return this; }
     private final LocalDateTime timestamp;
 
     // ==================== 构造方法 ====================

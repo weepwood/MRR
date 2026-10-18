@@ -10,7 +10,8 @@ $statement = $ast.EndBlock.Statements | Where-Object { $_ -is [Management.Automa
 $body = $statement.Finally.Extent.Text
 $cleanup = [scriptblock]::Create($body.Substring(1, $body.Length - 2))
 $originalPath = $env:PATH
-$originalPgHost = $env:PGHOST
+$originalPgEnvironment = @{}
+Get-ChildItem Env: | Where-Object Name -Like 'PG*' | ForEach-Object { $originalPgEnvironment[$_.Name] = $_.Value }
 $temporaryParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
 $temporary = Join-Path $temporaryParent ('mrr-recovery-test-' + [Guid]::NewGuid().ToString('N'))
 $data = Join-Path $temporary 'never-created-cluster'
@@ -30,7 +31,8 @@ try {
     Write-Output 'Actual finally block: pg_ctl stderr failure propagated, environment restored, directory retained.'
 }
 finally {
-    $env:PGHOST = $originalPgHost
+    Get-ChildItem Env: | Where-Object Name -Like 'PG*' | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }
+    foreach ($key in $originalPgEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key, $originalPgEnvironment[$key], 'Process') }
     $env:PATH = $originalPath
     $resolved = [IO.Path]::GetFullPath($temporary)
     if ($resolved.StartsWith($temporaryParent + '\', [StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolved -Leaf) -match '^mrr-recovery-test-[a-f0-9]{32}$') {

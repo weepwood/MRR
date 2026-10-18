@@ -46,4 +46,7 @@ jobs:
       - name: Verify environment restoration when pg_ctl fails
         shell: powershell
         run: |
+          $env:PGMRR_REHEARSAL_SENTINEL = 'preserve-caller-value'
           & ./scripts/test_windows_recovery_cleanup.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin')
+          if ($env:PGMRR_REHEARSAL_SENTINEL -ne 'preserve-caller-value') { throw 'Cleanup test removed caller PG environment.' }
+          Remove-Item Env:PGMRR_REHEARSAL_SENTINEL

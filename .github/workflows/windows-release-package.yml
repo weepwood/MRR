@@ -9,9 +9,16 @@ on:
       - 'release-baseline.json'
       - 'scripts/release_baseline.py'
       - 'scripts/embed_frontend_in_jar.py'
+      - 'scripts/build_standalone_jar.py'
+      - 'scripts/tests/test_build_standalone_jar.py'
+      - '.github/workflows/standalone-jar-release.yml'
       - 'scripts/tests/test_embed_frontend_in_jar.py'
-      - 'backend-repo/**'
-      - 'frontend-fantastic-admin/**'
+      - 'backend-repo/pom.xml'
+      - 'backend-repo/src/main/resources/**'
+      - 'frontend-fantastic-admin/package.json'
+      - 'frontend-fantastic-admin/pnpm-lock.yaml'
+      - 'frontend-fantastic-admin/vite.config.ts'
+      - 'frontend-fantastic-admin/vite/**'
       - 'vitepress-doc/**'
       - 'deploy/windows/**'
       - '.github/workflows/windows-release-package.yml'
@@ -36,6 +43,7 @@ jobs:
     timeout-minutes: 60
     outputs:
       archive_name: ${{ steps.package.outputs.archive_name }}
+      standalone_name: ${{ steps.standalone.outputs.jar_name }}
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       NGINX_VERSION: 1.31.3
@@ -235,6 +243,22 @@ jobs:
           python ../scripts/embed_frontend_in_jar.py verify \
             --jar "../${BACKEND_JAR}"
 
+      - name: Build standalone JAR from the same verified backend
+        id: standalone
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            JAR_NAME="MRR-v${PRODUCT_VERSION}-standalone.jar"
+          else
+            JAR_NAME="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}-standalone.jar"
+          fi
+          python scripts/build_standalone_jar.py build \
+            --source "${BACKEND_JAR}" --output "build/${JAR_NAME}" --default-port 8002
+          python scripts/build_standalone_jar.py verify --jar "build/${JAR_NAME}" --default-port 8002
+          (cd build && sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256")
+          echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
+
       - name: Build documentation for external hosting
         shell: bash
         working-directory: vitepress-doc
@@ -335,6 +359,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload standalone artifact
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.standalone.outputs.jar_name }}
+          path: |
+            build/${{ steps.standalone.outputs.jar_name }}
+            build/${{ steps.standalone.outputs.jar_name }}.sha256
+          if-no-files-found: error
+          retention-days: 7
+
       # PR 构建只保留清单与校验和（KB 级），足以复核产物身份与完整性。
       - name: Upload package evidence
         if: github.event_name == 'pull_request'
@@ -364,6 +399,12 @@ jobs:
           name: ${{ needs.build.outputs.archive_name }}
           path: release-assets
 
+      - name: Download standalone artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.standalone_name }}
+          path: release-assets
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -372,16 +413,19 @@ jobs:
           set -euo pipefail
           ARCHIVE_PATH="$(find release-assets -maxdepth 1 -type f -name '*.zip' | head -n 1)"
           test -n "${ARCHIVE_PATH}"
-          ls -lh "${ARCHIVE_PATH}"
+          test -f "release-assets/${{ needs.build.outputs.standalone_name }}"
+          (cd release-assets && sha256sum -c "${{ needs.build.outputs.standalone_name }}.sha256")
+          ASSETS=("${ARCHIVE_PATH}" "release-assets/${{ needs.build.outputs.standalone_name }}" "release-assets/${{ needs.build.outputs.standalone_name }}.sha256")
+          ls -lh "${ASSETS[@]}"
 
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" \
-              "${ARCHIVE_PATH}" \
+              "${ASSETS[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           else
             gh release create "${GITHUB_REF_NAME}" \
-              "${ARCHIVE_PATH}" \
+              "${ASSETS[@]}" \
               --repo "${GITHUB_REPOSITORY}" \
               --title "MRR ${GITHUB_REF_NAME}" \
               --generate-notes

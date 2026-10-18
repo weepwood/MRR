@@ -289,6 +289,9 @@
                 </executions>
                 <configuration>
                     <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <!-- Native Git resolves managed worktree HEAD instead of the primary checkout HEAD. -->
+                    <useNativeGit>true</useNativeGit>
+                    <dotGitDirectory>${project.basedir}</dotGitDirectory>
                     <generateGitPropertiesFile>true</generateGitPropertiesFile>
                     <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
                     <includeOnlyProperties>

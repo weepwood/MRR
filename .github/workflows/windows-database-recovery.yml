@@ -1,0 +1,45 @@
+name: Windows PostgreSQL recovery rehearsal
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-recovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-database-recovery:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Obtain pinned PostgreSQL 16 Windows binaries
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $archive = Join-Path $env:RUNNER_TEMP 'postgresql-16.15-5.zip'
+          Invoke-WebRequest -UseBasicParsing -TimeoutSec 300 -Uri 'https://get.enterprisedb.com/postgresql/postgresql-16.15-5-windows-x64-binaries.zip' -OutFile $archive
+          $expected = '43bb45f173a6f08cf1d29a97a6d8deb119e8e8093a24c00d2d1001a0ccaa8281'
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'PostgreSQL runtime checksum mismatch.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime')
+      - name: Package actual application migrations
+        shell: powershell
+        run: |
+          mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Full backup and restore rehearsal under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $jar = Get-ChildItem backend-repo/target -Filter *.jar | Select-Object -First 1
+          & ./scripts/test_windows_database_recovery.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin') -Jar $jar.FullName

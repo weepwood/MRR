@@ -25,5 +25,4 @@ describe('medical record code utilities', () => {
     expect(toMedicalRecordCodeSearchTerm('00000123')).toBe('123')
     expect(toMedicalRecordCodeSearchTerm('00000000')).toBe('0')
   })
-
 })

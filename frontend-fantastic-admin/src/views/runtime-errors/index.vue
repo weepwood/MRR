@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { formatDateTime } from '@/utils/display-format'
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type {
   SystemErrorEvent,
   SystemErrorOverview,
   SystemErrorStatus,
 } from '@/api/modules/system-errors'
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -15,11 +14,12 @@ import {
   searchSystemErrors,
   updateSystemErrorStatus,
 } from '@/api/modules/system-errors'
-import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
+import { formatDateTime } from '@/utils/display-format'
 import { checkPermission } from '@/utils/permission'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
@@ -130,8 +130,6 @@ async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
     updatingId.value = null
   }
 }
-
-
 
 function levelTagType(level: string) {
   return level === 'ERROR' ? 'danger' : 'warning'
@@ -374,7 +372,6 @@ onMounted(loadData)
   .page-header {
     flex-direction: column;
   }
-
 }
 /* stylelint-enable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
 </style>

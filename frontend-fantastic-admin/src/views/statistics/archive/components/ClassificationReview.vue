@@ -147,7 +147,7 @@ watch(() => props.jobId, () => void load(true))
       下一批（最多 50 页）
     </el-button>
     <el-dialog v-model="previewOpen" title="核对影像原图" append-to-body>
-      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%">
+      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%;">
     </el-dialog>
   </section>
 </template>

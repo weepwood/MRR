@@ -14,29 +14,44 @@ import java.util.*;
 
 @Service
 public class OcrBatchService {
-    public record Request(int afterId,int upperId,int maxPages,String idempotencyKey,boolean autoApply) {}
-    public record Preview(int eligibleInLimit,int upperId,boolean truncated,String readiness) {}
+    public record Request(int afterId,int upperId,int maxPages,String idempotencyKey,boolean autoApply,String policyChecksum) {
+        public Request(int afterId,int upperId,int maxPages,String idempotencyKey,boolean autoApply) {this(afterId,upperId,maxPages,idempotencyKey,autoApply,null);}
+    }
+    public record Preview(int eligibleInLimit,int upperId,boolean truncated,String readiness,boolean autoAvailable,String policyChecksum,List<Integer> autoTypes) {}
     public record View(String id,String status,int afterId,int upperId,int cursorId,int maxPages,int dispatchedCount,
-                       boolean autoApply,String reasonCode,boolean discoveryDone,int processedCount,int successCount,int failedCount) {
-        static View from(Batch b) {return new View(b.getId(),b.getStatus(),b.getAfterId(),b.getUpperId(),b.getCursorId(),b.getMaxPages(),b.getDispatchedCount(),b.isAutoApply(),b.getReasonCode(),b.isDiscoveryDone(),b.getProcessedCount(),b.getSuccessCount(),b.getFailedCount());}
+                       boolean autoApply,String reasonCode,boolean discoveryDone,int processedCount,int successCount,int failedCount,int autoAppliedCount,int reviewRequiredCount) {
+        static View from(Batch b) {return new View(b.getId(),b.getStatus(),b.getAfterId(),b.getUpperId(),b.getCursorId(),b.getMaxPages(),b.getDispatchedCount(),b.isAutoApply(),b.getReasonCode(),b.isDiscoveryDone(),b.getProcessedCount(),b.getSuccessCount(),b.getFailedCount(),b.getAutoAppliedCount(),b.getReviewRequiredCount());}
     }
     private final OcrBatchMapper mapper;private final OcrMapper queue;private final OcrAccess access;
     private final OcrJobService jobs;private final OcrLoadGuard guard;private final TransactionTemplate transactions;
-    public OcrBatchService(OcrBatchMapper mapper,OcrMapper queue,OcrAccess access,OcrJobService jobs,OcrLoadGuard guard,TransactionTemplate transactions) {
+    private final OcrQualityGate quality;
+    public OcrBatchService(OcrBatchMapper mapper,OcrMapper queue,OcrAccess access,OcrJobService jobs,OcrLoadGuard guard,TransactionTemplate transactions,OcrQualityGate quality) {
         this.mapper=mapper;this.queue=queue;this.access=access;this.jobs=jobs;this.guard=guard;this.transactions=transactions;
+        this.quality=quality;
     }
     public Preview preview(AuthSession session,Request request) {
         authorize(session);validate(request);
         int upper=request.upperId()==0?mapper.maximumScanId():request.upperId();
+        if(upper<request.afterId()) throw new BusinessException(400,"扫描上界小于起点");
         var rows=mapper.candidates(request.afterId(),upper,request.maxPages()+1);
-        return new Preview(Math.min(rows.size(),request.maxPages()),upper,rows.size()>request.maxPages(),guard.reason());
+        List<Integer> types=List.of();
+        try {var config=jobs.configuration();types=quality.types(Objects.requireNonNullElse(queue.ruleVersion(),"none"),config.fingerprint());}
+        catch(RuntimeException unavailable) { /* Preview remains read-only when OCR is off. */ }
+        return new Preview(Math.min(rows.size(),request.maxPages()),upper,rows.size()>request.maxPages(),guard.reason(),!types.isEmpty(),quality.checksum(),types);
     }
     public View create(AuthSession session,Request request) {
         AuthSession actor=authorize(session);validate(request);
-        if(request.autoApply()) throw new BusinessException(409,"自动归类尚未开放");
         var config=jobs.configuration();
+        String ruleVersion=Objects.requireNonNullElse(queue.ruleVersion(),"none");
+        if(request.autoApply()) {
+            access.require(actor.getId(),"classification:auto-apply","classification:review");
+            if(!Objects.equals(request.policyChecksum(),quality.checksum())||quality.types(ruleVersion,config.fingerprint()).isEmpty())
+                throw new BusinessException(409,"验收策略已变化或缺少独立证据，请重新预览");
+        }
         return transactions.execute(tx->{
             if(!queue.creationLock()) throw new BusinessException(429,"OCR 队列繁忙");
+            if(!queue.ruleSnapshotLock()) throw new BusinessException(409,"规则正在发布，请稍后重试");
+            if(!Objects.equals(ruleVersion,Objects.requireNonNullElse(queue.ruleVersion(),"none"))) throw new BusinessException(409,"规则已变化，请重新预览");
             Batch existing=mapper.idempotent(actor.getId(),request.idempotencyKey());
             if(existing!=null) {
                 if(existing.getAfterId()!=request.afterId() || (request.upperId()!=0 && existing.getUpperId()!=request.upperId())
@@ -48,8 +63,10 @@ public class OcrBatchService {
             Batch batch=new Batch();batch.setId(UUID.randomUUID().toString());batch.setOwnerUserId(actor.getId());batch.setCreatedBy(actor.getUsername());
             batch.setIdempotencyKey(request.idempotencyKey());batch.setAfterId(request.afterId());
             batch.setUpperId(request.upperId()==0?mapper.maximumScanId():request.upperId());batch.setCursorId(request.afterId());
-            batch.setMaxPages(request.maxPages());batch.setStatus("RUNNING");batch.setAutoApply(false);
-            batch.setConfigSnapshot(json(config));batch.setRuleSetVersion(Objects.requireNonNullElse(queue.ruleVersion(),"none"));
+            if(batch.getUpperId()<request.afterId()) throw new BusinessException(400,"扫描上界小于起点");
+            batch.setMaxPages(request.maxPages());batch.setStatus("RUNNING");batch.setAutoApply(request.autoApply());
+            batch.setPolicyChecksum(request.autoApply()?quality.checksum():null);
+            batch.setConfigSnapshot(json(config));batch.setRuleSetVersion(ruleVersion);
             batch.setLexiconVersion(Objects.requireNonNullElse(queue.lexiconVersion(),"none"));mapper.insert(batch);
             return View.from(batch);
         });
@@ -96,7 +113,10 @@ public class OcrBatchService {
         }
         access.require(batch.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
         if(pending>0) return;
-        if(batch.isDiscoveryDone()) {mapper.status(id,mapper.failed(id)>0?"PARTIAL_SUCCESS":"SUCCESS",null);return;}
+        if(batch.isDiscoveryDone()) {
+            if(mapper.pendingAutomatic(id)>0) {mapper.reason(id,quality.enabled()?"WAITING_AUTO_APPLY":"AUTO_APPLY_DISABLED");return;}
+            mapper.status(id,mapper.failed(id)>0?"PARTIAL_SUCCESS":"SUCCESS",null);return;
+        }
         if(!guard.allowed()) {mapper.reason(id,guard.reason());return;}
         int available=100-queue.queued();if(available<=0) {mapper.reason(id,"QUEUE_FULL");return;}
         int remaining=batch.getMaxPages()-batch.getDispatchedCount();

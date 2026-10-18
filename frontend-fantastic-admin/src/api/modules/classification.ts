@@ -22,6 +22,7 @@ export interface ClassificationSuggestion {
   ruleScore: number
   ocrConfidence: number
   reviewStatus: string
+  autoStatus: string
   autoEligible: boolean
   reasonCode: string
   matchedRules: string

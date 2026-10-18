@@ -13,6 +13,7 @@ public interface ClassificationMapper {
         private Integer suggestedType; private Double ruleScore; private Double ocrConfidence; private String reviewStatus;
         private String ocrContentHash; private String ocrResultVersion; private String ruleSetVersion; private String lexiconVersion;
         private boolean autoEligible; private String reasonCode; private String matchedRules; private String excludedRules;
+        private String autoStatus;
     }
     @Data class LexiconRow { private String term; private String aliases; private String commonOcrErrors; }
     @Select("SELECT id,archive_id,btype,type_version,uploadflag FROM app.mr_scan WHERE id=#{id} FOR UPDATE") TypeState lockScan(Integer id);
@@ -22,14 +23,15 @@ public interface ClassificationMapper {
     @Insert("""
         INSERT INTO app.mr_image_type_audit(scan_id,archive_id,old_type,suggested_type,new_type,operation,
           job_id,rule_set_version,rule_score,ocr_confidence,operator_user_id,operator_username,request_id,
-          type_version,ocr_result_version,execution_mode)
+          type_version,ocr_result_version,execution_mode,batch_id,policy_checksum,reverts_audit_id)
         VALUES(#{scan.id},#{scan.archiveId},#{scan.btype},#{suggestion.suggestedType,jdbcType=INTEGER},#{type},#{operation},
           #{suggestion.jobId,jdbcType=VARCHAR},#{suggestion.ruleSetVersion,jdbcType=VARCHAR},#{suggestion.ruleScore,jdbcType=NUMERIC},
           #{suggestion.ocrConfidence,jdbcType=NUMERIC},#{actor.id},#{actor.username},#{request,jdbcType=VARCHAR},
-          #{version},#{suggestion.ocrResultVersion,jdbcType=VARCHAR},'HUMAN')
+          #{version},#{suggestion.ocrResultVersion,jdbcType=VARCHAR},#{mode},#{batch,jdbcType=VARCHAR},#{policy,jdbcType=VARCHAR},#{reverts,jdbcType=BIGINT})
         """) void audit(@Param("scan") TypeState scan,@Param("type") int type,@Param("operation") String operation,
                          @Param("suggestion") Suggestion suggestion,@Param("actor") com.zjcxph.imgapi.common.AuthSession actor,
-                         @Param("request") String request,@Param("version") long version);
+                         @Param("request") String request,@Param("version") long version,@Param("mode") String mode,
+                         @Param("batch") String batch,@Param("policy") String policy,@Param("reverts") Long reverts);
     @Select("""
         SELECT e.id,e.target_type,e.keyword,e.match_scope,e.match_mode,e.weight,e.negative,e.required,e.priority,e.enabled
         FROM app.mr_classification_rule_entry e JOIN app.mr_classification_rule_set s ON s.id=e.rule_set_id

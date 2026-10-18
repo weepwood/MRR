@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Data
 @Component
@@ -14,6 +15,10 @@ public class OcrRuntimeProperties {
     private int maxWorkers = 1;
     private long maxInputBytes = 50L * 1024 * 1024;
     private double imageP95BaselineMillis = 0;
+    private boolean autoApplyAllowed = false;
+    private Set<Integer> autoTypes = Set.of();
+    private String validationReport;
+    private String validationReportSha256;
     private Map<String, Profile> profiles = new LinkedHashMap<>();
     @Data public static class Profile {
         private String executable;

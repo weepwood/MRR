@@ -37,6 +37,7 @@ public class OcrJobService {
         try {
             return transactions.execute(tx -> {
                 if (!mapper.creationLock()) throw new BusinessException(429,"OCR 队列繁忙，请稍后重试");
+                if (!mapper.ruleSnapshotLock()) throw new BusinessException(409,"规则正在发布，请稍后重试");
                 Job existing=mapper.idempotent(actor.getId(),request.idempotencyKey());
                 if (existing!=null) {
                     if (!archive.equals(existing.getArchiveId()) || !Objects.equals(request.scanId(),existing.getSelectedScanId()))

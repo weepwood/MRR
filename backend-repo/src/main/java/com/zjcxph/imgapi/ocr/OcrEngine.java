@@ -77,6 +77,7 @@ public class OcrEngine {
         catch (Exception e) {
             current.close(); workers.remove(thread);
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            if (e instanceof ExecutionException && e.getCause() instanceof OcrFailure failure) throw failure;
             throw new OcrFailure("ENGINE_EXIT");
         } finally { if (response != null) response.cancel(true); }
     }
@@ -84,7 +85,7 @@ public class OcrEngine {
     private Worker start(String profile, String fingerprint) {
         var p = properties.getProfiles().get(profile);
         try {
-            ProcessBuilder builder = new ProcessBuilder(p.getExecutable(), "-I", p.getScript(), "--models", p.getModelDirectory(),
+            ProcessBuilder builder = new ProcessBuilder(p.getExecutable(), "-X", "utf8", "-I", p.getScript(), "--models", p.getModelDirectory(),
                     "--input-root", Path.of(properties.getTempDirectory()).toAbsolutePath().normalize().toString(), "--threads", "2");
             // Do not inherit database passwords, access tokens, proxy settings, or arbitrary Python hooks.
             String systemRoot = System.getenv("SystemRoot");

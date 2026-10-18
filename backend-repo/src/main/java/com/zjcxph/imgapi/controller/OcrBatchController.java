@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.service.OcrBatchService;
+import com.zjcxph.imgapi.service.AutomaticClassificationService;
 import com.zjcxph.imgapi.service.OcrBatchService.*;
 import com.zjcxph.imgapi.utils.AuthContext;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,7 +14,8 @@ import java.util.List;
 @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
 public class OcrBatchController {
     private final OcrBatchService service;
-    public OcrBatchController(OcrBatchService service) {this.service=service;}
+    private final AutomaticClassificationService automatic;
+    public OcrBatchController(OcrBatchService service,AutomaticClassificationService automatic) {this.service=service;this.automatic=automatic;}
     @ModelAttribute public void privateResponse(HttpServletResponse response) {response.setHeader("Cache-Control","private, no-store");}
     @PostMapping("/preview") @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
     public Result<Preview> preview(@RequestBody Request request) {return Result.success(service.preview(AuthContext.getCurrentUser(),request));}
@@ -24,4 +26,12 @@ public class OcrBatchController {
     @GetMapping("/{id}/jobs") public Result<List<String>> children(@PathVariable String id,@RequestParam(defaultValue="") String after) {return Result.success(service.children(AuthContext.getCurrentUser(),id,after));}
     @PostMapping("/{id}/{action:pause|resume|cancel}") @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
     public Result<View> action(@PathVariable String id,@PathVariable String action) {return Result.success(service.action(AuthContext.getCurrentUser(),id,action));}
+    @GetMapping("/{id}/rollback/preview") @RequirePermissions({"ocr:batch-run","record:read","classification:review","classification:override"})
+    public Result<List<com.zjcxph.imgapi.mapper.AutomaticClassificationMapper.Revert>> previewRollback(@PathVariable String id,@RequestParam(defaultValue="0") long after,@RequestParam(defaultValue="50") int limit) {
+        return Result.success(automatic.preview(AuthContext.getCurrentUser(),id,after,limit));
+    }
+    @PostMapping("/{id}/rollback") @RequirePermissions({"ocr:batch-run","record:read","classification:review","classification:override"})
+    public Result<AutomaticClassificationService.RollbackResult> rollback(@PathVariable String id,@RequestBody AutomaticClassificationService.RollbackRequest request) {
+        return Result.success(automatic.rollback(AuthContext.getCurrentUser(),id,request));
+    }
 }

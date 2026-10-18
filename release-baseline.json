@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20261018030100",
+    "maximumCompatibleMigration": "20261018040000",
     "backwardCompatibleWithPreviousApplication": true
   },
   "applicationRollback": {
     "allowed": true,
-    "reason": "本阶段 OCR 迁移新增有界历史批次、任务关联和未分类候选索引，保持既有业务字段兼容。应用回退前关闭 OCR、暂停或取消批次并停止后端；保留新增结构、候选索引、类型版本触发器、结果和审计，不回退 Flyway 历史。回滚前备份数据库、外部配置和完整发布目录。"
+    "reason": "OCR 迁移通过 V20261018040000 新增任务、批次、结果版本、建议、审计字段与索引，保留原接口及字段。回退应用前必须关闭 OCR 和自动归类、暂停或取消所有批次并停止后端进程；保留新增结构和审计，不回退 Flyway 历史。mr_scan 类型版本触发器保留，可保护后续人工修改不被批次数据回退覆盖。正式类型的数据回退必须在新版本中按批次预览并执行受审计的条件回退，应用回滚本身不会撤销已完成的分类。回滚前备份数据库、外部配置和完整发布目录。"
   },
   "configuration": {
     "schemaVersion": 1

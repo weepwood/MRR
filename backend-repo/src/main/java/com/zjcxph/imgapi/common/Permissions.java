@@ -18,6 +18,7 @@ public final class Permissions {
     public static final String OCR_RUN = "ocr:run";
     public static final String OCR_CONFIG = "ocr:config";
     public static final String CLASSIFICATION_READ = "classification:read";
+    public static final String CLASSIFICATION_AUTO_APPLY = "classification:auto-apply";
     public static final String CLASSIFICATION_REVIEW = "classification:review";
     public static final String CLASSIFICATION_BATCH_REVIEW = "classification:batch-review";
     public static final String CLASSIFICATION_OVERRIDE = "classification:override";
@@ -45,6 +46,7 @@ public final class Permissions {
             OCR_RUN,
             OCR_CONFIG,
             CLASSIFICATION_READ,
+            CLASSIFICATION_AUTO_APPLY,
             CLASSIFICATION_REVIEW,
             CLASSIFICATION_BATCH_REVIEW,
             CLASSIFICATION_OVERRIDE,

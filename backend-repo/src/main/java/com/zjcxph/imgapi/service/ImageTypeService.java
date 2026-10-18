@@ -69,9 +69,12 @@ public class ImageTypeService {
         }
     }
     public void apply(TypeState scan,int type,String operation,Suggestion suggestion,AuthSession actor) {
+        apply(scan,type,operation,suggestion,actor,"HUMAN",null,null,null);
+    }
+    public void apply(TypeState scan,int type,String operation,Suggestion suggestion,AuthSession actor,String mode,String batch,String policy,Long reverts) {
         if(!TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("类型变更需要事务");
         if(mapper.change(scan.getId(),type,scan.getTypeVersion())!=1) throw new BusinessException(409,"影像类型已变化");
-        mapper.audit(scan,type,operation,suggestion,actor,MDC.get("requestId"),scan.getTypeVersion()+1);
+        mapper.audit(scan,type,operation,suggestion,actor,MDC.get("requestId"),scan.getTypeVersion()+1,mode,batch,policy,reverts);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
                 for(String name:java.util.List.of("scanByBah","scanByCode","scanLookupByBah","scanLookupByCode","scanById")) {

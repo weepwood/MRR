@@ -1,72 +1,40 @@
 package com.zjcxph.imgapi.security;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.sql.Timestamp;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-/**
- * JWT Token 内存黑名单 — 用于登出后使 Token 失效。
- * <p>
- * 条目在 Token 自然过期后由定时任务清理（每小时一次），
- * 服务重启后黑名单会丢失（Token 最长存活 24h，可接受）。
- * </p>
- */
+/** PostgreSQL 是撤销事实来源；查询故障向上传播，认证拦截器按 503 拒绝。 */
 @Component
 public class TokenBlacklist {
+    private final JdbcTemplate jdbc;
+    public TokenBlacklist(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    private static final Logger logger = LoggerFactory.getLogger(TokenBlacklist.class);
-    private final ConcurrentHashMap<String, Long> revokedTokens = new ConcurrentHashMap<>();
-
-    /**
-     * 将 Token 加入黑名单。
-     * @param jti Token 唯一标识
-     * @param expiryTimestamp Token 过期时间戳（毫秒）
-     */
     public void revoke(String jti, long expiryTimestamp) {
-        revokedTokens.put(jti, expiryTimestamp);
-        logger.info("Token revoked: jti={}", jti);
+        if (jti == null || jti.isBlank()) throw new IllegalArgumentException("Token identifier missing");
+        jdbc.update("INSERT INTO app.token_revocation(token_hash,expires_at) VALUES (?,?) "
+                + "ON CONFLICT(token_hash) DO UPDATE SET expires_at=GREATEST(token_revocation.expires_at,EXCLUDED.expires_at)",
+                hash(jti), new Timestamp(expiryTimestamp));
     }
 
-    /**
-     * 检查 Token 是否已被撤销。
-     */
     public boolean isRevoked(String jti) {
-        if (jti == null) {
-            return false;
-        }
-        Long expiry = revokedTokens.get(jti);
-        if (expiry == null) {
-            return false;
-        }
-        // 已过期的条目虽然还在 map 里，但 token 本身已无法解析，返回 false
-        if (System.currentTimeMillis() > expiry) {
-            revokedTokens.remove(jti);
-            return false;
-        }
-        return true;
+        if (jti == null || jti.isBlank()) return true;
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM app.token_revocation "
+                + "WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP)", Boolean.class, hash(jti)));
     }
 
-    /**
-     * 每小时清理已过期的黑名单条目。
-     */
     @Scheduled(fixedRate = 3600000)
     public void cleanExpired() {
-        long now = System.currentTimeMillis();
-        Iterator<Map.Entry<String, Long>> it = revokedTokens.entrySet().iterator();
-        int removed = 0;
-        while (it.hasNext()) {
-            if (it.next().getValue() < now) {
-                it.remove();
-                removed++;
-            }
-        }
-        if (removed > 0) {
-            logger.info("Token blacklist cleanup: removed {} expired entries", removed);
-        }
+        jdbc.update("DELETE FROM app.token_revocation WHERE token_hash IN "
+                + "(SELECT token_hash FROM app.token_revocation WHERE expires_at<CURRENT_TIMESTAMP LIMIT 1000)");
+    }
+
+    private static String hash(String value) {
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
+        catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
     }
 }

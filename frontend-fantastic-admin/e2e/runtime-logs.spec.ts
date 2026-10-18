@@ -24,6 +24,6 @@ test('日志页面显示缺口并按文本渲染日志，补录必须显式触�
   await page.evaluate(() => document.documentElement.classList.add('dark'))
   await page.screenshot({ path: 'test-results/runtime-logs-dark-reduced.png', fullPage: true })
   await page.getByRole('button', { name: '详情', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: '日志详情' })).toContainText('com.synthetic.Failure')
+  await expect(page.getByRole('dialog', { name: '日志详情' }).locator('pre')).toHaveJSProperty('textContent', '<script>alert("synthetic")</script>\ncom.synthetic.Failure')
 })
 

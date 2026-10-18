@@ -5,6 +5,24 @@
  * 低阴影、紧凑尺寸和 focus-visible ring。避免渐变、大面积高饱和色和悬浮位移。
  */
 
+/* 比按需注入的 :root 默认值更明确，保证明暗模式共用同一语义表面。 */
+html:root {
+  --el-bg-color: var(--mrr-card);
+  --el-bg-color-page: var(--mrr-background);
+  --el-bg-color-overlay: var(--mrr-popover);
+  --el-text-color-primary: var(--mrr-foreground);
+  --el-text-color-regular: var(--mrr-foreground);
+  --el-text-color-secondary: var(--mrr-muted-foreground);
+  --el-border-color: var(--mrr-border);
+  --el-border-color-light: var(--mrr-border);
+  --el-border-color-lighter: var(--mrr-border);
+  --el-fill-color-light: var(--mrr-muted);
+  --el-fill-color-lighter: var(--mrr-muted);
+  --el-fill-color-blank: var(--mrr-card);
+  --el-disabled-bg-color: var(--mrr-muted);
+  --el-disabled-text-color: var(--mrr-muted-foreground);
+}
+
 /* ===== Buttons ===== */
 .el-button {
   display: inline-flex;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/display-format'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type {
   SystemErrorEvent,
@@ -14,6 +15,7 @@ import {
   searchSystemErrors,
   updateSystemErrorStatus,
 } from '@/api/modules/system-errors'
+import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
@@ -129,11 +131,7 @@ async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
   }
 }
 
-function formatDateTime(value?: string) {
-  if (!value) return '-'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false })
-}
+
 
 function levelTagType(level: string) {
   return level === 'ERROR' ? 'danger' : 'warning'
@@ -168,28 +166,12 @@ onMounted(loadData)
       </el-button>
     </div>
 
-    <div class="overview-grid">
-      <el-card shadow="never" class="overview-card danger-card">
-        <span>待处理错误组</span>
-        <strong>{{ overview.openGroups }}</strong>
-        <small>ERROR {{ overview.errorGroups }} 组</small>
-      </el-card>
-      <el-card shadow="never" class="overview-card">
-        <span>近 24 小时活跃错误组</span>
-        <strong>{{ overview.recentOccurrences }}</strong>
-        <small>按最后发生时间统计</small>
-      </el-card>
-      <el-card shadow="never" class="overview-card">
-        <span>累计错误组</span>
-        <strong>{{ overview.totalGroups }}</strong>
-        <small>累计 {{ overview.totalOccurrences }} 次</small>
-      </el-card>
-      <el-card shadow="never" class="overview-card success-card">
-        <span>已解决</span>
-        <strong>{{ overview.resolvedGroups }}</strong>
-        <small>处理中 {{ overview.acknowledgedGroups }} 组</small>
-      </el-card>
-    </div>
+    <section class="mrr-metric-grid mrr-metric-grid--four">
+      <MrrMetricCard label="待处理错误组" :value="loading || error ? '—' : overview.openGroups" value-tone="danger" :note="`ERROR ${overview.errorGroups} 组`" />
+      <MrrMetricCard label="近24小时活跃错误组" :value="loading || error ? '—' : overview.recentOccurrences" note="按最后发生时间统计" />
+      <MrrMetricCard label="累计错误组" :value="loading || error ? '—' : overview.totalGroups" :note="`累计 ${overview.totalOccurrences} 次`" />
+      <MrrMetricCard label="已解决" :value="loading || error ? '—' : overview.resolvedGroups" value-tone="success" :note="`处理中 ${overview.acknowledgedGroups} 组`" />
+    </section>
 
     <el-card shadow="never">
       <el-form inline @submit.prevent>
@@ -362,36 +344,6 @@ onMounted(loadData)
   color: var(--el-text-color-secondary);
 }
 
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.overview-card :deep(.el-card__body) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.overview-card span,
-.overview-card small {
-  color: var(--el-text-color-secondary);
-}
-
-.overview-card strong {
-  font-size: 30px;
-  line-height: 1;
-}
-
-.danger-card strong {
-  color: var(--el-color-danger);
-}
-
-.success-card strong {
-  color: var(--el-color-success);
-}
-
 .pager {
   display: flex;
   justify-content: flex-end;
@@ -418,20 +370,11 @@ onMounted(loadData)
   max-height: 180px;
 }
 
-@media (max-width: 1100px) {
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 720px) {
   .page-header {
     flex-direction: column;
   }
 
-  .overview-grid {
-    grid-template-columns: 1fr;
-  }
 }
 /* stylelint-enable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
 </style>

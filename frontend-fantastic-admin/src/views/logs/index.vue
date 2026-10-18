@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { formatDateTime } from '@/utils/display-format'
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { LogRecord, PaginatedResult } from '@/api/types'
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ref } from 'vue'
@@ -13,6 +12,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { formatDateTime } from '@/utils/display-format'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -105,8 +105,6 @@ function handleLogAction(action: string, row: LogRecord) {
     void openDetail(row)
   }
 }
-
-
 
 function formatExecuteTime(value: unknown) {
   if (value === null || value === undefined || value === '') return '-'

@@ -19,7 +19,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -41,7 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("核心数据交换 PostgreSQL 16 + Flyway 集成测试")
 class CoreDataExchangePostgresqlIT extends PostgresqlIntegrationTestSupport {
 

@@ -2,31 +2,20 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.dto.resp.PatientImportError;
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -53,26 +42,27 @@ public class PatientImportService {
     );
     private static final DateTimeFormatter NORMALIZED_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final List<DateTimeFormatter> DATE_FORMATTERS = List.of(
-            DateTimeFormatter.ofPattern("yyyy-M-d"),
+            DateTimeFormatter.ofPattern("uuuu-M-d").withResolverStyle(ResolverStyle.STRICT),
             DateTimeFormatter.ISO_LOCAL_DATE
     );
     private static final List<DateTimeFormatter> DATE_TIME_FORMATTERS = List.of(
-            DateTimeFormatter.ofPattern("yyyy-M-d H:m"),
-            DateTimeFormatter.ofPattern("yyyy-M-d H:m:s"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            DateTimeFormatter.ofPattern("uuuu-M-d H:m").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu-M-d H:m:s").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT)
     );
 
     private final JdbcTemplate jdbcTemplate;
+    private final TabularImportFileReader fileReader;
 
-    public PatientImportService(JdbcTemplate jdbcTemplate) {
+    public PatientImportService(JdbcTemplate jdbcTemplate, TabularImportFileReader fileReader) {
         this.jdbcTemplate = jdbcTemplate;
+        this.fileReader = fileReader;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public PatientImportResult importPatients(MultipartFile file, boolean dryRun) throws IOException {
-        validateFile(file);
-        ParsedFile parsedFile = parseFile(file);
+        TabularImportFileReader.ParsedTable parsedFile = fileReader.read(file, MAX_FILE_SIZE, MAX_ROWS);
         ErrorCollector errors = new ErrorCollector();
         List<String> headers = validateAndNormalizeHeaders(parsedFile.headers(), errors);
 
@@ -84,14 +74,11 @@ public class PatientImportService {
         int totalRows = 0;
         int fileDuplicateRows = 0;
 
-        for (SourceRow sourceRow : parsedFile.rows()) {
+        for (TabularImportFileReader.SourceRow sourceRow : parsedFile.rows()) {
             if (isBlankRow(sourceRow.values())) {
                 continue;
             }
             totalRows++;
-            if (totalRows > MAX_ROWS) {
-                throw new IllegalArgumentException("单次最多导入 " + MAX_ROWS + " 行患者数据");
-            }
 
             Map<String, String> values = toValueMap(headers, sourceRow.values());
             PatientRow patientRow = normalizeRow(sourceRow.rowNumber(), values, errors);
@@ -134,100 +121,6 @@ public class PatientImportService {
                 fileDuplicateRows + databaseOutcome.databaseDuplicateRows(),
                 errors
         );
-    }
-
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("请选择需要导入的患者文件");
-        }
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("导入文件不能超过 20 MB");
-        }
-        String fileName = safeFileName(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
-        if (!(fileName.endsWith(".csv") || fileName.endsWith(".xlsx") || fileName.endsWith(".xls"))) {
-            throw new IllegalArgumentException("仅支持 CSV、XLSX 或 XLS 文件");
-        }
-    }
-
-    private ParsedFile parseFile(MultipartFile file) throws IOException {
-        String fileName = safeFileName(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
-        if (fileName.endsWith(".csv")) {
-            return parseCsv(file.getBytes());
-        }
-        return parseWorkbook(file);
-    }
-
-    private ParsedFile parseCsv(byte[] bytes) {
-        DecodedText decoded = decodeCsv(bytes);
-        List<List<String>> records = parseCsvRecords(decoded.text());
-        if (records.isEmpty()) {
-            throw new IllegalArgumentException("CSV 文件没有表头");
-        }
-
-        List<String> headers = records.getFirst();
-        List<SourceRow> rows = new ArrayList<>();
-        for (int i = 1; i < records.size(); i++) {
-            rows.add(new SourceRow(i + 1, records.get(i)));
-        }
-        return new ParsedFile(decoded.encoding(), headers, rows);
-    }
-
-    private ParsedFile parseWorkbook(MultipartFile file) throws IOException {
-        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
-            if (workbook.getNumberOfSheets() == 0) {
-                throw new IllegalArgumentException("Excel 文件没有工作表");
-            }
-            Sheet sheet = workbook.getSheetAt(0);
-            Row headerRow = sheet.getRow(sheet.getFirstRowNum());
-            if (headerRow == null) {
-                throw new IllegalArgumentException("Excel 文件没有表头");
-            }
-
-            DataFormatter formatter = new DataFormatter(Locale.ROOT);
-            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
-            int columnCount = Math.max(0, headerRow.getLastCellNum());
-            List<String> headers = new ArrayList<>(columnCount);
-            for (int column = 0; column < columnCount; column++) {
-                headers.add(formatter.formatCellValue(headerRow.getCell(column), evaluator));
-            }
-
-            List<SourceRow> rows = new ArrayList<>();
-            for (int rowIndex = headerRow.getRowNum() + 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
-                List<String> values = new ArrayList<>(columnCount);
-                for (int column = 0; column < columnCount; column++) {
-                    Cell cell = row == null ? null : row.getCell(column);
-                    values.add(formatExcelCell(cell, headers.get(column), formatter, evaluator));
-                }
-                rows.add(new SourceRow(rowIndex + 1, values));
-            }
-            return new ParsedFile("Excel", headers, rows);
-        } catch (IllegalArgumentException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new IllegalArgumentException("Excel 文件无法读取，请确认文件未损坏且格式正确", exception);
-        }
-    }
-
-    private String formatExcelCell(Cell cell, String rawHeader, DataFormatter formatter, FormulaEvaluator evaluator) {
-        if (cell == null) {
-            return "";
-        }
-        String header = normalizeHeader(rawHeader);
-        if (DateUtil.isCellDateFormatted(cell)) {
-            try {
-                LocalDateTime dateTime = cell.getLocalDateTimeCellValue();
-                if ("ruyuan".equals(header)) {
-                    return dateTime.toLocalDate().toString();
-                }
-                if ("admissiontime".equals(header)) {
-                    return dateTime.format(NORMALIZED_DATE_TIME);
-                }
-            } catch (RuntimeException ignored) {
-                // 回退到 DataFormatter，由后续统一校验。
-            }
-        }
-        return formatter.formatCellValue(cell, evaluator);
     }
 
     private List<String> validateAndNormalizeHeaders(List<String> rawHeaders, ErrorCollector errors) {
@@ -500,126 +393,6 @@ public class PatientImportService {
         return fileName.replace('\\', '/').substring(fileName.replace('\\', '/').lastIndexOf('/') + 1);
     }
 
-    private DecodedText decodeCsv(byte[] bytes) {
-        if (startsWith(bytes, (byte) 0xEF, (byte) 0xBB, (byte) 0xBF)) {
-            return new DecodedText(new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8), "UTF-8 (BOM)");
-        }
-        if (startsWith(bytes, (byte) 0xFF, (byte) 0xFE)) {
-            return new DecodedText(new String(bytes, 2, bytes.length - 2, StandardCharsets.UTF_16LE), "UTF-16LE");
-        }
-        if (startsWith(bytes, (byte) 0xFE, (byte) 0xFF)) {
-            return new DecodedText(new String(bytes, 2, bytes.length - 2, StandardCharsets.UTF_16BE), "UTF-16BE");
-        }
-
-        Charset utf16 = detectUtf16WithoutBom(bytes);
-        if (utf16 != null) {
-            return new DecodedText(new String(bytes, utf16), utf16.displayName());
-        }
-
-        try {
-            String text = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes))
-                    .toString();
-            return new DecodedText(text, "UTF-8");
-        } catch (CharacterCodingException ignored) {
-            Charset gb18030 = Charset.forName("GB18030");
-            return new DecodedText(new String(bytes, gb18030), "GB18030");
-        }
-    }
-
-    private Charset detectUtf16WithoutBom(byte[] bytes) {
-        int sampleLength = Math.min(bytes.length, 512);
-        if (sampleLength < 8) {
-            return null;
-        }
-        int zeroEven = 0;
-        int zeroOdd = 0;
-        for (int i = 0; i < sampleLength; i++) {
-            if (bytes[i] == 0) {
-                if ((i & 1) == 0) {
-                    zeroEven++;
-                } else {
-                    zeroOdd++;
-                }
-            }
-        }
-        int pairs = sampleLength / 2;
-        if (zeroOdd > pairs / 3 && zeroEven < pairs / 10) {
-            return StandardCharsets.UTF_16LE;
-        }
-        if (zeroEven > pairs / 3 && zeroOdd < pairs / 10) {
-            return StandardCharsets.UTF_16BE;
-        }
-        return null;
-    }
-
-    private boolean startsWith(byte[] bytes, byte... prefix) {
-        if (bytes.length < prefix.length) {
-            return false;
-        }
-        for (int i = 0; i < prefix.length; i++) {
-            if (bytes[i] != prefix[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private List<List<String>> parseCsvRecords(String text) {
-        List<List<String>> records = new ArrayList<>();
-        List<String> row = new ArrayList<>();
-        StringBuilder field = new StringBuilder();
-        boolean quoted = false;
-
-        for (int i = 0; i < text.length(); i++) {
-            char current = text.charAt(i);
-            if (quoted) {
-                if (current == '"') {
-                    if (i + 1 < text.length() && text.charAt(i + 1) == '"') {
-                        field.append('"');
-                        i++;
-                    } else {
-                        quoted = false;
-                    }
-                } else {
-                    field.append(current);
-                }
-                continue;
-            }
-
-            if (current == '"' && field.isEmpty()) {
-                quoted = true;
-            } else if (current == ',') {
-                row.add(field.toString());
-                field.setLength(0);
-            } else if (current == '\r' || current == '\n') {
-                row.add(field.toString());
-                field.setLength(0);
-                records.add(row);
-                row = new ArrayList<>();
-                if (current == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') {
-                    i++;
-                }
-            } else {
-                field.append(current);
-            }
-        }
-
-        if (quoted) {
-            throw new IllegalArgumentException("CSV 文件存在未闭合的引号");
-        }
-        if (!field.isEmpty() || !row.isEmpty()) {
-            row.add(field.toString());
-            records.add(row);
-        }
-        while (!records.isEmpty() && records.getLast().stream().allMatch(String::isBlank)) {
-            records.removeLast();
-        }
-        return records;
-    }
-
     private static final class ErrorCollector {
         private final List<PatientImportError> errors = new ArrayList<>();
         private final Set<Integer> errorRows = new LinkedHashSet<>();
@@ -666,15 +439,6 @@ public class PatientImportService {
             }
             return value.length() <= 80 ? value : value.substring(0, 80) + "…";
         }
-    }
-
-    private record ParsedFile(String encoding, List<String> headers, List<SourceRow> rows) {
-    }
-
-    private record SourceRow(int rowNumber, List<String> values) {
-    }
-
-    private record DecodedText(String text, String encoding) {
     }
 
     private record DatabaseImportOutcome(int databaseDuplicateRows, int insertedRows) {

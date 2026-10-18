@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -20,7 +21,7 @@ public final class DataExchangeImportSupport {
     public static final int MAX_CELL_LENGTH = 2_000;
     private static final BigInteger HIGH_BAH_THRESHOLD = BigInteger.valueOf(10_000_000L);
     private static final List<DateTimeFormatter> DATE_FORMATTERS = List.of(
-            DateTimeFormatter.ofPattern("yyyy-M-d"),
+            DateTimeFormatter.ofPattern("uuuu-M-d").withResolverStyle(ResolverStyle.STRICT),
             DateTimeFormatter.ISO_LOCAL_DATE
     );
 

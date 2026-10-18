@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service.importer;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -32,11 +33,7 @@ public class TabularImportFileReader {
     public ParsedTable read(MultipartFile file, long maxFileSize, int maxRows) throws IOException {
         validateFile(file, maxFileSize);
         String fileName = safeFileName(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
-        ParsedTable parsed = fileName.endsWith(".csv") ? parseCsv(file.getBytes()) : parseWorkbook(file);
-        if (parsed.rows().size() > maxRows) {
-            throw new IllegalArgumentException("单次最多导入 " + maxRows + " 行数据，请拆分文件后重试");
-        }
-        return parsed;
+        return fileName.endsWith(".csv") ? parseCsv(file.getBytes(), maxRows) : parseWorkbook(file, maxRows);
     }
 
     public String safeFileName(String fileName) {
@@ -60,25 +57,23 @@ public class TabularImportFileReader {
         }
     }
 
-    private ParsedTable parseCsv(byte[] bytes) {
+    private ParsedTable parseCsv(byte[] bytes, int maxRows) {
         DecodedText decoded = decodeCsv(bytes);
-        List<List<String>> records = parseCsvRecords(decoded.text());
+        List<SourceRow> records = parseCsvRecords(decoded.text(), maxRows);
         if (records.isEmpty()) {
             throw new IllegalArgumentException("CSV 文件没有表头");
         }
-        for (List<String> record : records) {
-            for (int column = 0; column < record.size(); column++) {
-                record.set(column, DataExchangeImportSupport.restoreSpreadsheetProtectedValue(record.get(column)));
+        for (SourceRow record : records) {
+            for (int column = 0; column < record.values().size(); column++) {
+                record.values().set(column,
+                        DataExchangeImportSupport.restoreSpreadsheetProtectedValue(record.values().get(column)));
             }
         }
-        List<SourceRow> rows = new ArrayList<>();
-        for (int index = 1; index < records.size(); index++) {
-            rows.add(new SourceRow(index + 1, records.get(index)));
-        }
-        return new ParsedTable(decoded.encoding(), records.getFirst(), rows);
+        return new ParsedTable(decoded.encoding(), records.getFirst().values(),
+                records.subList(1, records.size()));
     }
 
-    private ParsedTable parseWorkbook(MultipartFile file) throws IOException {
+    private ParsedTable parseWorkbook(MultipartFile file, int maxRows) throws IOException {
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new IllegalArgumentException("Excel 文件没有工作表");
@@ -100,12 +95,25 @@ public class TabularImportFileReader {
             List<SourceRow> rows = new ArrayList<>();
             for (int rowIndex = headerRow.getRowNum() + 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
+                if (row == null) {
+                    continue;
+                }
+                for (int column = columnCount; column < row.getLastCellNum(); column++) {
+                    Cell extra = row.getCell(column);
+                    if (extra != null && extra.getCellType() != CellType.BLANK
+                            && (extra.getCellType() != CellType.STRING || !extra.getStringCellValue().isBlank())) {
+                        throw new IllegalArgumentException("第 " + (rowIndex + 1) + " 行存在表头以外的数据，请检查列数");
+                    }
+                }
                 List<String> values = new ArrayList<>(columnCount);
                 for (int column = 0; column < columnCount; column++) {
                     Cell cell = row == null ? null : row.getCell(column);
-                    values.add(formatExcelCell(cell, formatter, evaluator));
+                    values.add(formatExcelCell(cell, headers.get(column), formatter, evaluator));
                 }
-                rows.add(new SourceRow(rowIndex + 1, values));
+                if (!DataExchangeImportSupport.isBlankRow(values)) {
+                    checkRowLimit(rows.size(), maxRows);
+                    rows.add(new SourceRow(rowIndex + 1, values));
+                }
             }
             return new ParsedTable("Excel", headers, rows);
         } catch (IllegalArgumentException exception) {
@@ -115,13 +123,18 @@ public class TabularImportFileReader {
         }
     }
 
-    private String formatExcelCell(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
+    private String formatExcelCell(Cell cell, String header, DataFormatter formatter, FormulaEvaluator evaluator) {
         if (cell == null) {
             return "";
         }
-        if (DateUtil.isCellDateFormatted(cell)) {
+        boolean numeric = cell.getCellType() == CellType.NUMERIC
+                || (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.NUMERIC);
+        if (numeric && DateUtil.isCellDateFormatted(cell)) {
             try {
                 LocalDateTime dateTime = cell.getLocalDateTimeCellValue();
+                if ("admissiontime".equals(DataExchangeImportSupport.normalizeHeader(header))) {
+                    return dateTime.format(NORMALIZED_DATE_TIME);
+                }
                 if (LocalTime.MIDNIGHT.equals(dateTime.toLocalTime())) {
                     return dateTime.toLocalDate().toString();
                 }
@@ -200,11 +213,13 @@ public class TabularImportFileReader {
         return true;
     }
 
-    private List<List<String>> parseCsvRecords(String text) {
-        List<List<String>> records = new ArrayList<>();
+    private List<SourceRow> parseCsvRecords(String text, int maxRows) {
+        List<SourceRow> records = new ArrayList<>();
         List<String> row = new ArrayList<>();
         StringBuilder field = new StringBuilder();
         boolean quoted = false;
+        boolean closedQuote = false;
+        int rowNumber = 1;
 
         for (int index = 0; index < text.length(); index++) {
             char current = text.charAt(index);
@@ -215,6 +230,7 @@ public class TabularImportFileReader {
                         index++;
                     } else {
                         quoted = false;
+                        closedQuote = true;
                     }
                 } else {
                     field.append(current);
@@ -223,34 +239,62 @@ public class TabularImportFileReader {
             }
 
             if (current == '"' && field.isEmpty()) {
+                if (closedQuote) {
+                    throw invalidCsvQuote(rowNumber);
+                }
                 quoted = true;
             } else if (current == ',') {
                 row.add(field.toString());
                 field.setLength(0);
+                closedQuote = false;
+                if (!records.isEmpty() && row.size() >= records.getFirst().values().size()) {
+                    throw new IllegalArgumentException("第 " + rowNumber + " 行存在表头以外的数据，请检查列数");
+                }
             } else if (current == '\r' || current == '\n') {
                 row.add(field.toString());
                 field.setLength(0);
-                records.add(row);
+                addCsvRecord(records, row, rowNumber++, maxRows);
                 row = new ArrayList<>();
+                closedQuote = false;
                 if (current == '\r' && index + 1 < text.length() && text.charAt(index + 1) == '\n') {
                     index++;
                 }
             } else {
+                if (closedQuote || current == '"') {
+                    throw invalidCsvQuote(rowNumber);
+                }
                 field.append(current);
             }
         }
 
         if (quoted) {
-            throw new IllegalArgumentException("CSV 文件存在未闭合的引号");
+            throw invalidCsvQuote(rowNumber);
         }
-        if (!field.isEmpty() || !row.isEmpty()) {
+        if (!field.isEmpty() || !row.isEmpty() || closedQuote) {
             row.add(field.toString());
-            records.add(row);
-        }
-        while (!records.isEmpty() && records.getLast().stream().allMatch(String::isBlank)) {
-            records.removeLast();
+            addCsvRecord(records, row, rowNumber, maxRows);
         }
         return records;
+    }
+
+    private void addCsvRecord(List<SourceRow> records, List<String> values, int rowNumber, int maxRows) {
+        if (!records.isEmpty()) {
+            if (DataExchangeImportSupport.isBlankRow(values)) {
+                return;
+            }
+            checkRowLimit(records.size() - 1, maxRows);
+        }
+        records.add(new SourceRow(rowNumber, values));
+    }
+
+    private void checkRowLimit(int currentRows, int maxRows) {
+        if (currentRows >= maxRows) {
+            throw new IllegalArgumentException("单次最多导入 " + maxRows + " 行数据，请拆分文件后重试");
+        }
+    }
+
+    private IllegalArgumentException invalidCsvQuote(int rowNumber) {
+        return new IllegalArgumentException("第 " + rowNumber + " 行 CSV 引号格式错误，请检查引号是否闭合或转义");
     }
 
     public record ParsedTable(String encoding, List<String> headers, List<SourceRow> rows) {

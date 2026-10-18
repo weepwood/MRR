@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20261016120000",
+    "maximumCompatibleMigration": "20261018010000",
     "backwardCompatibleWithPreviousApplication": true
   },
   "applicationRollback": {
     "allowed": true,
-    "reason": "最新迁移 V20261016120000 仅向 app.mr_auth_role 幂等插入一条只读角色记录（READER，权限 record:read），不涉及表结构变更，也不改写任何既有用户或角色数据。回滚到上一应用版本后，旧版会忽略该角色记录，自助注册默认角色回到 DOCTOR。回滚前仍应备份数据库、外部配置和完整发布目录。"
+    "reason": "本阶段 OCR 迁移新增结果版本、历史与持久化队列字段，保持既有业务字段兼容。应用回退前关闭 OCR、取消活动任务并停止后端；保留新增结构、结果和审计，不回退 Flyway 历史。回滚前备份数据库、外部配置和完整发布目录。"
   },
   "configuration": {
     "schemaVersion": 1

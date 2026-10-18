@@ -13,6 +13,7 @@ public final class Permissions {
     public static final String RECORD_DOWNLOAD = "record:download";
     public static final String RECORD_PDF_EXPORT = "record:pdf:export";
     public static final String OCR_READ = "ocr:read";
+    public static final String OCR_TEXT_READ = "ocr:text-read";
     public static final String OCR_RUN = "ocr:run";
     public static final String OCR_CONFIG = "ocr:config";
     public static final String CLASSIFICATION_READ = "classification:read";
@@ -38,6 +39,7 @@ public final class Permissions {
             RECORD_DOWNLOAD,
             RECORD_PDF_EXPORT,
             OCR_READ,
+            OCR_TEXT_READ,
             OCR_RUN,
             OCR_CONFIG,
             CLASSIFICATION_READ,

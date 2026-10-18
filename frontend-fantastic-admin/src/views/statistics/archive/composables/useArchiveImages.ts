@@ -150,15 +150,15 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     patientLoading.value = true
     try {
       const res = await asResult<PatientInfo[]>(getPatientByBah(bah))
-      if (version !== queryVersion) return
+      if (version !== queryVersion) { return }
       patientList.value = Array.isArray(res?.data) ? res.data : []
     }
     catch {
-      if (version !== queryVersion) return
+      if (version !== queryVersion) { return }
       patientList.value = []
     }
     finally {
-      if (version === queryVersion) patientLoading.value = false
+      if (version === queryVersion) { patientLoading.value = false }
     }
   }
 
@@ -216,10 +216,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
             forceRefresh,
             userid || undefined,
           ))
-      if (version !== queryVersion) return
+      if (version !== queryVersion) { return }
       requestId.value = res?.meta?.requestId || ''
       lookupReason.value = res?.meta?.reasonCode || ''
-      if (!Array.isArray(res?.data)) throw new Error('服务响应格式异常，请联系管理员并提供追踪编号')
+      if (!Array.isArray(res?.data)) { throw new TypeError('服务响应格式异常，请联系管理员并提供追踪编号') }
       const rawList = res.data
       let cacheBuster = readArchiveImageVersion(requestBah, requestSjh)
       if (forceRefresh) {
@@ -240,7 +240,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah, requestSjh || sjh)
-      if (version !== queryVersion) return
+      if (version !== queryVersion) { return }
 
       if (!externalSession) {
         const firstImage = images.value[0]
@@ -266,7 +266,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }
     }
     catch (err: unknown) {
-      if (version !== queryVersion) return
+      if (version !== queryVersion) { return }
       const failed = err as { payload?: ApiResult, response?: { data?: ApiResult, headers?: Record<string, unknown> } }
       requestId.value = failed.payload?.meta?.requestId || failed.response?.data?.meta?.requestId || String(failed.response?.headers?.['x-request-id'] || '') || requestId.value
       lookupReason.value = failed.payload?.meta?.reasonCode || failed.response?.data?.meta?.reasonCode || 'QUERY_FAILED'
@@ -283,7 +283,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }
     }
     finally {
-      if (version === queryVersion) loading.value = false
+      if (version === queryVersion) { loading.value = false }
     }
   }
 

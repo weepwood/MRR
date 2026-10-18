@@ -86,3 +86,13 @@
 | [359](https://github.com/weepwood/MRR/pull/359) | 补齐Windows安全取证与备份恢复入口 | `codex/ui-consistency` |
 
 首批远端governance与release-baseline门禁已通过；其余CI以GitHub最新状态为准。后续批次转向main后必须重新经过远端检查，不以草稿当前无检查解释为通过。
+
+## 远端门禁修正与最终复核
+
+首次#351前端质量门禁因两处空行规则失败：此前漏跑了变更文件lint。已修正并逐批按 `scripts/lint-changed.mjs` 的相同src文件范围执行ESLint/Stylelint（模块目录内直接调用各bin），九批适用项目全部通过；新追加格式提交及前置merge保留所有公开历史，没有force push。格式化涉及TypeError类型规范与等价声明排序，独立复核确认没有查询/权限/并发行为改变。
+
+格式化后重新执行347项Vitest、生产构建、Chrome86静态校验及4项关键交互E2E，均通过；证据为 `governance-vitest-after-lint.log`、`governance-build-after-lint.log`、`governance-compat-after-lint.log`、`governance-e2e-after-lint.log`。原37项全量E2E为格式整理前的完整运行，不能混淆两次范围。
+
+日志详情随后改用单个v-text和显式换行，保留原样文本而不引入模板缩进；E2E精确断言包括script合成标记、换行和堆栈的完整textContent。该项在运行日志独立批次和最终暗色UI批次均通过，类型与lint通过；最终再次生产build及Chrome86静态检查通过，见 `governance-runtime-detail-e2e.log`、`governance-build-final.log`。独立复核未发现安全或展示问题。后端、数据库和Windows脚本源码相对完整799+74验证版本未改动。
+
+#351在head `105044c3f8f88ba165c21ed4798c96a9e97cbcbb` 的远端检查快照为16项SUCCESS、3项按范围SKIPPED，无失败；包括变更文件lint、类型、生产构建、覆盖率、Chromium E2E、后端及治理门禁。[检查记录](https://github.com/weepwood/MRR/pull/351/checks)。其余草稿仍须在前置合并、转向main后通过自己的远端CI。

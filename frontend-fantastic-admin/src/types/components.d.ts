@@ -117,6 +117,7 @@ declare module 'vue' {
     MrrTableActions: typeof import('./../components/MrrTableActions/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ScanQueryDiagnostics: typeof import('./../components/ScanQueryDiagnostics/index.vue')['default']
     SystemAdminContactPopover: typeof import('./../components/SystemAdminContactPopover/index.vue')['default']
   }
   export interface GlobalDirectives {
@@ -231,5 +232,6 @@ declare global {
   const MrrTableActions: typeof import('./../components/MrrTableActions/index.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
+  const ScanQueryDiagnostics: typeof import('./../components/ScanQueryDiagnostics/index.vue')['default']
   const SystemAdminContactPopover: typeof import('./../components/SystemAdminContactPopover/index.vue')['default']
 }

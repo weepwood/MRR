@@ -1,9 +1,10 @@
 <script setup lang="ts">
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { LogRecord, PaginatedResult } from '@/api/types'
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -11,6 +12,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { formatDateTime } from '@/utils/display-format'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -82,7 +84,7 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
-  defaultQuery: { keyword: '', username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+  defaultQuery: { keyword: String(useRoute().query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
 })
 
 async function openDetail(row: LogRecord) {
@@ -102,12 +104,6 @@ function handleLogAction(action: string, row: LogRecord) {
   if (action === 'detail') {
     void openDetail(row)
   }
-}
-
-function formatDateTime(value: unknown) {
-  if (!value) return '-'
-  const date = new Date(String(value))
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false })
 }
 
 function formatExecuteTime(value: unknown) {

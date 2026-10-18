@@ -74,6 +74,9 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const downloading = ref(false)
   const savingType = ref(false)
   const errorMsg = ref('')
+  const requestId = ref('')
+  const lookupReason = ref('')
+  let queryVersion = 0
   const searchBah = ref('')
   const searchSjh = ref('')
   const searchUserId = ref('')
@@ -123,6 +126,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadPatient(bah: string, sjh = ''): Promise<void> {
+    const version = queryVersion
     const externalCase = findExternalCase(bah, sjh)
     if (externalCase) {
       patientList.value = [{
@@ -146,17 +150,24 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     patientLoading.value = true
     try {
       const res = await asResult<PatientInfo[]>(getPatientByBah(bah))
+      if (version !== queryVersion) { return }
       patientList.value = Array.isArray(res?.data) ? res.data : []
     }
     catch {
+      if (version !== queryVersion) { return }
       patientList.value = []
     }
     finally {
-      patientLoading.value = false
+      if (version === queryVersion) { patientLoading.value = false }
     }
   }
 
   async function loadImages(forceRefresh = false): Promise<void> {
+    const version = ++queryVersion
+    patientLoading.value = false
+    loading.value = false
+    requestId.value = ''
+    lookupReason.value = ''
     const lookup = resolveArchiveLookup(searchBah.value, searchSjh.value)
     const { bah, sjh } = lookup
     const userid = searchUserId.value.trim()
@@ -171,8 +182,11 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     }
 
     if (lookup.validationMessage) {
+      loading.value = false
+      patientLoading.value = false
       images.value = []
       patientList.value = []
+      lookupReason.value = requiresSjhForBah(bah) && !sjh ? 'NEEDS_SJH' : 'INVALID_INPUT'
       errorMsg.value = lookup.validationMessage
       ElMessage.warning(lookup.validationMessage)
       return
@@ -202,7 +216,11 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
             forceRefresh,
             userid || undefined,
           ))
-      const rawList = Array.isArray(res?.data) ? res.data : []
+      if (version !== queryVersion) { return }
+      requestId.value = res?.meta?.requestId || ''
+      lookupReason.value = res?.meta?.reasonCode || ''
+      if (!Array.isArray(res?.data)) { throw new TypeError('服务响应格式异常，请联系管理员并提供追踪编号') }
+      const rawList = res.data
       let cacheBuster = readArchiveImageVersion(requestBah, requestSjh)
       if (forceRefresh) {
         cacheBuster = Date.now()
@@ -222,6 +240,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)
       await loadPatient(patientBah, requestSjh || sjh)
+      if (version !== queryVersion) { return }
 
       if (!externalSession) {
         const firstImage = images.value[0]
@@ -247,6 +266,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }
     }
     catch (err: unknown) {
+      if (version !== queryVersion) { return }
+      const failed = err as { payload?: ApiResult, response?: { data?: ApiResult, headers?: Record<string, unknown> } }
+      requestId.value = failed.payload?.meta?.requestId || failed.response?.data?.meta?.requestId || String(failed.response?.headers?.['x-request-id'] || '') || requestId.value
+      lookupReason.value = failed.payload?.meta?.reasonCode || failed.response?.data?.meta?.reasonCode || 'QUERY_FAILED'
       errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
       images.value = []
       patientList.value = []
@@ -260,7 +283,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }
     }
     finally {
-      loading.value = false
+      if (version === queryVersion) { loading.value = false }
     }
   }
 
@@ -486,6 +509,8 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     downloading,
     savingType,
     errorMsg,
+    requestId,
+    lookupReason,
     searchBah,
     searchSjh,
     searchUserId,

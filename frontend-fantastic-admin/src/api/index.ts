@@ -169,6 +169,7 @@ function asInterceptorResult(payload: unknown): AxiosResponse {
 }
 
 function getRequestId(error: unknown): string | undefined {
+  if (error instanceof BusinessRequestError) { return (error.payload as { meta?: { requestId?: string } })?.meta?.requestId }
   if (!axios.isAxiosError(error)) { return undefined }
   const value = error.response?.headers?.['x-request-id']
   return value == null ? undefined : String(value)

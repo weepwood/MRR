@@ -33,6 +33,19 @@ public class ResultHttpStatusAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
+        String path = request == null ? "" : request.getURI().getPath();
+        if (path.startsWith("/api/v1/operations/query-diagnostics") || path.startsWith("/api/v1/runtime-logs")) {
+            response.getHeaders().setCacheControl("private, no-store, max-age=0");
+            response.getHeaders().setPragma("no-cache");
+        }
+        if (body instanceof Result<?> result && response instanceof ServletServerHttpResponse servlet) {
+            var meta = new java.util.LinkedHashMap<String, Object>();
+            if (result.getMeta() != null) meta.putAll(result.getMeta());
+            String requestId = servlet.getServletResponse().getHeader("X-Request-Id");
+            if (requestId != null) meta.put("requestId", requestId);
+            if (Integer.valueOf(409).equals(result.getCode()) && path.equals("/api/v1/img/search")) meta.put("reasonCode", "AMBIGUOUS_CODE");
+            result.setMeta(meta);
+        }
         if (!(body instanceof Result<?> result) || result.isSuccess()) {
             return body;
         }

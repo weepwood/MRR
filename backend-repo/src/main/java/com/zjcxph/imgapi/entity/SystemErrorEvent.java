@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 @Data
 public class SystemErrorEvent {
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String projectionEventId;
     private Long id;
     private String errorId;
     private String fingerprint;

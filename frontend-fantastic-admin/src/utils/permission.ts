@@ -36,6 +36,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { value: 'user:manage', label: '创建、审核和维护用户', shortLabel: '用户管理', category: '账号权限', children: [] },
   { value: 'role:manage', label: '修改角色及角色权限', shortLabel: '角色管理', category: '账号权限', children: ['role:read'] },
   { value: 'role:read', label: '查看角色与权限配置', shortLabel: '角色查看', category: '账号权限', children: [] },
+  { value: 'system:log:import', label: '登记固定目录历史日志补录', shortLabel: '日志补录', category: '系统运维', children: [] },
   { value: 'log:read', label: '查看日志与审计记录', shortLabel: '日志审计', category: '系统运维', children: [] },
   {
     value: 'system:error:manage',

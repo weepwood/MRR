@@ -39,6 +39,7 @@ const AUTHENTICATED_ROUTES = [
   '/login-settings',
   '/users',
   '/logs',
+  '/runtime-logs',
   '/help',
 ] as const
 

@@ -10,6 +10,7 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.runtime-logs.enabled", havingValue = "false", matchIfMissing = true)
 public class RuntimeErrorLogCapture implements SmartLifecycle {
 
     private static final String APPENDER_NAME = "MRR_RUNTIME_ERROR_CAPTURE";

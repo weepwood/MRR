@@ -28,6 +28,7 @@ public final class Permissions {
     public static final String ROLE_MANAGE = "role:manage";
     public static final String ROLE_READ = "role:read";
     public static final String LOG_READ = "log:read";
+    public static final String RUNTIME_LOG_IMPORT = "system:log:import";
     public static final String SYSTEM_ERROR_MANAGE = "system:error:manage";
     public static final String SYSTEM_ERROR_READ = "system:error:read";
     public static final String SYSTEM_MANAGE = "system:manage";
@@ -56,6 +57,7 @@ public final class Permissions {
             ROLE_MANAGE,
             ROLE_READ,
             LOG_READ,
+            RUNTIME_LOG_IMPORT,
             SYSTEM_ERROR_MANAGE,
             SYSTEM_ERROR_READ,
             SYSTEM_MANAGE,

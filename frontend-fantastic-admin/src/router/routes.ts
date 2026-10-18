@@ -284,6 +284,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/runtime-logs',
+        component: () => import('@/views/runtime-logs/index.vue'),
+        meta: { title: '运行日志', icon: 'i-ant-design:file-search-outlined', auth: ['system:manage'], cache: true },
+      },
+      {
         path: '/audit-images',
         component: () => import('@/views/audit-images/index.vue'),
         meta: { title: '病案图片访问审计', icon: 'i-ant-design:security-scan-outlined', auth: ['log:read'], cache: true },

@@ -72,7 +72,9 @@ public class SystemErrorEventService {
         );
 
         SystemErrorEvent event = new SystemErrorEvent();
-        event.setErrorId(resolveErrorId(loggingEvent));
+        var identity = com.zjcxph.imgapi.utils.RuntimeLogIdentity.of(loggingEvent);
+        event.setProjectionEventId(identity.eventId().toString());
+        event.setErrorId(identity.errorId());
         event.setLevel(loggingEvent.getLevel().toString());
         event.setModule(resolveModule(loggerName));
         event.setLoggerName(loggerName == null ? "unknown" : loggerName);
@@ -81,7 +83,7 @@ public class SystemErrorEventService {
         event.setStackTrace(RuntimeErrorSanitizer.sanitizeStackTrace(rawStackTrace));
         event.setRequestId(loggingEvent.getMDCPropertyMap().get("requestId"));
         event.setThreadName(loggingEvent.getThreadName());
-        LocalDateTime occurredAt = LocalDateTime.now();
+        LocalDateTime occurredAt = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(loggingEvent.getTimeStamp()), java.time.ZoneId.systemDefault());
         event.setFirstSeenAt(occurredAt);
         event.setLastSeenAt(occurredAt);
         event.setFingerprint(RuntimeErrorSanitizer.fingerprint(
@@ -106,12 +108,17 @@ public class SystemErrorEventService {
 
             List<SystemErrorEvent> batch = new ArrayList<>(MAX_FLUSH_SIZE);
             pending.drainTo(batch, MAX_FLUSH_SIZE);
-            for (SystemErrorEvent event : batch) {
+            for (int index = 0; index < batch.size(); index++) {
                 try {
-                    mapper.upsert(event);
+                    mapper.upsert(batch.get(index));
                 } catch (RuntimeException exception) {
+                    // 失败重试共享收据；数据库故障不应静默消耗内存队列。
+                    for (int remaining = index; remaining < batch.size(); remaining++) {
+                        if (!pending.offer(batch.get(remaining))) droppedEvents.incrementAndGet();
+                    }
                     // 不输出异常消息，避免数据库连接串或配置细节进入控制台。
                     System.err.println("运行错误事件持久化失败: " + exception.getClass().getSimpleName());
+                    break; // 本轮停止，避免数据库中断时逐条等待连接超时。
                 }
             }
         } finally {
@@ -172,14 +179,8 @@ public class SystemErrorEventService {
     @PreDestroy
     public void destroy() {
         accepting = false;
-        while (!pending.isEmpty()) {
-            flushPending();
-        }
-    }
-
-    private String resolveErrorId(ILoggingEvent loggingEvent) {
-        String errorId = loggingEvent.getMDCPropertyMap().get("errorId");
-        return errorId == null || errorId.isBlank() ? RuntimeErrorSanitizer.newErrorId() : errorId;
+        // 关闭线程不发起数据库I/O；已产生的脱敏文件是恢复来源。
+        if (!pending.isEmpty()) System.err.println("运行错误事件未确认数量: " + pending.size() + "；可从脱敏日志文件恢复");
     }
 
     private String resolveModule(String loggerName) {

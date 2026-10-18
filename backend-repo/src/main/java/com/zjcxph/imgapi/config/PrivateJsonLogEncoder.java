@@ -21,7 +21,9 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         }
         try {
             var row = new LinkedHashMap<String, Object>();
-            row.put("event_id", java.util.UUID.randomUUID().toString());
+            var identity = com.zjcxph.imgapi.utils.RuntimeLogIdentity.of(event);
+            row.put("event_id", identity.eventId().toString());
+            if (identity.errorId() != null) row.put("errorId", identity.errorId());
             row.put("privacy_version", 1);
             row.put("@timestamp", Instant.ofEpochMilli(event.getTimeStamp()).toString());
             row.put("level", event.getLevel().toString());
@@ -30,7 +32,7 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             row.put("message", safeMessage(event.getMessage()));
             // 模板占位符不展开；所有任意字符串参数均留在原业务边界内。
             row.put("argument_count", event.getArgumentArray() == null ? 0 : event.getArgumentArray().length);
-            for (String key : new String[]{"requestId", "errorId"}) {
+            for (String key : new String[]{"requestId"}) {
                 String value = event.getMDCPropertyMap().get(key);
                 if (value != null && value.matches("[A-Za-z0-9_-]{1,80}")) row.put(key, value);
             }

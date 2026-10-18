@@ -12,41 +12,47 @@ import java.util.List;
 public interface SystemErrorEventMapper {
 
     @Insert("""
+            WITH receipt AS (
+                INSERT INTO app.runtime_error_projection_receipt(event_id)
+                VALUES (CAST(#{projectionEventId} AS UUID))
+                ON CONFLICT DO NOTHING RETURNING event_id
+            )
             INSERT INTO system_error_event (
                 error_id, error_ids, fingerprint, level, module, logger_name, exception_type,
                 message_summary, stack_trace, request_id, thread_name,
                 first_seen_at, last_seen_at, occurrence_count, status
-            ) VALUES (
+            ) SELECT
                 #{errorId}, ARRAY[#{errorId}]::VARCHAR(32)[], #{fingerprint}, #{level}, #{module}, #{loggerName}, #{exceptionType},
                 #{messageSummary}, #{stackTrace}, #{requestId}, #{threadName},
                 #{firstSeenAt}, #{lastSeenAt}, 1, 'OPEN'
-            )
+            FROM receipt WHERE TRUE
             ON CONFLICT (fingerprint) DO UPDATE SET
                 error_ids = CASE
                     WHEN CARDINALITY(system_error_event.error_ids) >= 50
                         THEN system_error_event.error_ids[2:50] || EXCLUDED.error_ids
                     ELSE system_error_event.error_ids || EXCLUDED.error_ids
                 END,
-                level = EXCLUDED.level,
-                module = EXCLUDED.module,
-                logger_name = EXCLUDED.logger_name,
-                exception_type = EXCLUDED.exception_type,
-                message_summary = EXCLUDED.message_summary,
-                stack_trace = EXCLUDED.stack_trace,
-                request_id = EXCLUDED.request_id,
-                thread_name = EXCLUDED.thread_name,
-                last_seen_at = EXCLUDED.last_seen_at,
+                level = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.level ELSE system_error_event.level END,
+                module = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.module ELSE system_error_event.module END,
+                logger_name = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.logger_name ELSE system_error_event.logger_name END,
+                exception_type = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.exception_type ELSE system_error_event.exception_type END,
+                message_summary = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.message_summary ELSE system_error_event.message_summary END,
+                stack_trace = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.stack_trace ELSE system_error_event.stack_trace END,
+                request_id = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.request_id ELSE system_error_event.request_id END,
+                thread_name = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.thread_name ELSE system_error_event.thread_name END,
+                first_seen_at = LEAST(system_error_event.first_seen_at, EXCLUDED.first_seen_at),
+                last_seen_at = GREATEST(system_error_event.last_seen_at, EXCLUDED.last_seen_at),
                 occurrence_count = system_error_event.occurrence_count + 1,
                 status = CASE
-                    WHEN system_error_event.status = 'RESOLVED' THEN 'OPEN'
+                    WHEN system_error_event.status = 'RESOLVED' AND EXCLUDED.last_seen_at > COALESCE(system_error_event.resolved_at,system_error_event.last_seen_at) THEN 'OPEN'
                     ELSE system_error_event.status
                 END,
                 acknowledged_by = CASE
-                    WHEN system_error_event.status = 'RESOLVED' THEN NULL
+                    WHEN system_error_event.status = 'RESOLVED' AND EXCLUDED.last_seen_at > COALESCE(system_error_event.resolved_at,system_error_event.last_seen_at) THEN NULL
                     ELSE system_error_event.acknowledged_by
                 END,
                 resolved_at = CASE
-                    WHEN system_error_event.status = 'RESOLVED' THEN NULL
+                    WHEN system_error_event.status = 'RESOLVED' AND EXCLUDED.last_seen_at > COALESCE(system_error_event.resolved_at,system_error_event.last_seen_at) THEN NULL
                     ELSE system_error_event.resolved_at
                 END
             """)

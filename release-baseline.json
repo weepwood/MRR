@@ -2,12 +2,12 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20261018101000",
+    "maximumCompatibleMigration": "20261018102000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {
     "allowed": false,
-    "reason": "Token撤销事实已持久化，不允许直接回退到仅使用内存撤销的旧应用，以免重启后已撤销令牌重新有效。故障采用安全前向修复；新增撤销表及审计保留。OCR和自动归类仍须关闭并暂停批次后维护，禁止撤销后续人工分类。"
+    "reason": "Token撤销事实已持久化，不允许直接回退到仅使用内存撤销的旧应用，以免重启后已撤销令牌重新有效。故障采用安全前向修复；新增撤销表及审计保留。OCR和自动归类仍须关闭并暂停批次后维护，禁止撤销后续人工分类。 可独立关闭新日志采集与深入诊断，但不得回退到敏感原文日志或泄露存储信息的版本。日志明细、断点和错误投影表长期保留；结构问题使用新的前向迁移。"
   },
   "configuration": {
     "schemaVersion": 1

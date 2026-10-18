@@ -120,6 +120,7 @@ public class IntegrityDiagnosticsService {
                         app.normalize_medical_record_code(bah) AS normalized_bah
                     FROM app.mr_scan
                     WHERE uploadflag <> 0
+                      AND id > GREATEST((SELECT COALESCE(MAX(id),0) FROM app.mr_scan)-1000000,0)
                 ) active_scans
                 """);
 
@@ -132,6 +133,7 @@ public class IntegrityDiagnosticsService {
                 FROM app.mr_scan s
                 LEFT JOIN app.mr_archive a ON a.id = s.archive_id
                 WHERE s.uploadflag <> 0
+                  AND s.id > GREATEST((SELECT COALESCE(MAX(id),0) FROM app.mr_scan)-1000000,0)
                   AND s.archive_id IS NOT NULL
                   AND a.id IS NULL
                 """);
@@ -183,6 +185,7 @@ public class IntegrityDiagnosticsService {
         String generatedAt = Instant.now().toString();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "READY");
+        result.put("sampleScope", "最近100万ID窗口；扫描指标为窗口样本，不能推断全库关联完整性");
         result.put("generatedAt", generatedAt);
         result.put("lastAttemptAt", generatedAt);
         result.put("lastError", "");
@@ -257,11 +260,7 @@ public class IntegrityDiagnosticsService {
     }
 
     private String safeMessage(Exception exception) {
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            return exception.getClass().getSimpleName();
-        }
-        return message.length() <= 300 ? message : message.substring(0, 300);
+        return exception.getClass().getSimpleName();
     }
 
     private static Map<String, Object> pendingSnapshot() {

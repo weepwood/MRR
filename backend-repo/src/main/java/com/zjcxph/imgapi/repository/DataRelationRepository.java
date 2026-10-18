@@ -21,15 +21,23 @@ public class DataRelationRepository {
         if (!List.of("mr_statistics", "mr_archive_box_record").contains(tableName)) {
             throw new IllegalArgumentException("unsupported relation table: " + tableName);
         }
-        return jdbcTemplate.queryForMap(
-                "SELECT COUNT(*) AS total_count, COUNT(archive_id) AS linked_count FROM app." + tableName
-        );
+        return jdbcTemplate.queryForMap("""
+                SELECT GREATEST(c.reltuples::bigint,0) AS total_count,
+                       GREATEST(ROUND(c.reltuples*(1-COALESCE(s.null_frac,0))),0)::bigint AS linked_count,
+                       (s.attname IS NOT NULL AND c.reltuples>=0) AS statistics_available,
+                       GREATEST(t.last_analyze,t.last_autoanalyze) AS analyzed_at
+                FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                LEFT JOIN pg_stats s ON s.schemaname=n.nspname AND s.tablename=c.relname AND s.attname='archive_id'
+                LEFT JOIN pg_stat_all_tables t ON t.relid=c.oid
+                WHERE n.nspname='app' AND c.relname=?
+                """, tableName);
     }
 
     public List<Map<String, Object>> estimatedScanCoverage() {
         return jdbcTemplate.queryForList("""
                 SELECT GREATEST(c.reltuples::bigint, 0) AS estimated_total,
                        COALESCE(s.null_frac, 0)::double precision AS null_fraction,
+                       (s.attname IS NOT NULL AND c.reltuples >= 0) AS statistics_available,
                        pg_total_relation_size(c.oid) AS total_bytes
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -43,12 +51,11 @@ public class DataRelationRepository {
                 """);
     }
 
-    public long countTable(String tableName) {
+    public Long countTable(String tableName) {
         if (!List.of("mr_archive", "mr_patient").contains(tableName)) {
             throw new IllegalArgumentException("unsupported count table: " + tableName);
         }
-        Long value = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM app." + tableName, Long.class);
-        return value == null ? 0 : value;
+        return jdbcTemplate.queryForObject("SELECT CASE WHEN c.reltuples<0 THEN NULL ELSE c.reltuples::bigint END FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='app' AND c.relname=?",Long.class,tableName);
     }
 
     public Map<String, Object> latestQualityRun() {
@@ -235,7 +242,8 @@ public class DataRelationRepository {
                 SELECT COUNT(*)
                 FROM app.mr_scan s
                 CROSS JOIN input i
-                WHERE s.archive_id IS NULL
+                WHERE s.id > GREATEST((SELECT COALESCE(MAX(id),0) FROM app.mr_scan)-1000000,0)
+                  AND s.archive_id IS NULL
                   AND s.uploadflag <> 0
                   AND (
                         (i.sjh IS NOT NULL AND BTRIM(COALESCE(s.sjh, '')) = i.sjh)

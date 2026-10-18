@@ -212,6 +212,19 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
+    public CursorPageResult<Scan> findByConditionAfterId(ScanRequest request, Integer afterId, int size) {
+        PaginationUtils.validatePageParams(1, size);
+        ScanRequest prepared = prepareSearchRequest(request);
+        for (String value : new String[]{prepared.getBah(), prepared.getSjh(), prepared.getBrxh(), prepared.getOpenerNo()}) {
+            if (value != null && value.length() > 64) throw new BusinessException(400, "筛选条件不能超过64个字符");
+        }
+        List<Scan> fetched = scanMapper.findByConditionAfterId(prepared, afterId == null ? 0 : Math.max(0, afterId), size + 1);
+        boolean more = fetched.size() > size;
+        List<Scan> page = more ? List.copyOf(fetched.subList(0, size)) : fetched;
+        return CursorPageResult.of(page, more && !page.isEmpty() ? page.getLast().getId().longValue() : null, more, size);
+    }
+
+    @Override
     @Cacheable(value = "scanById", key = "#id", unless = "#result == null")
     public Scan findById(Integer id) {
         return scanMapper.findById(id);

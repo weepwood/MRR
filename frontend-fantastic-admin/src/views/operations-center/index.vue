@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime as formatTime } from '@/utils/display-format'
 import type {
   ExportCenterJob,
   ImageSourceDiagnosis,
@@ -107,13 +108,7 @@ function formatBytes(value?: number) {
   return `${(bytes / 1024 ** index).toFixed(index > 1 ? 2 : 1)} ${units[index]}`
 }
 
-function formatTime(value?: string) {
-  if (!value) {
-    return '-'
-  }
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-}
+
 
 function formatDuration(milliseconds?: number) {
   const totalMinutes = Math.floor(Number(milliseconds || 0) / 60000)
@@ -621,20 +616,21 @@ onMounted(async () => {
           <span>指标基于后台生成的最近一次完整性快照，避免每次打开页面扫描大表。</span>
           <el-button :loading="loading.integrity" @click="loadIntegrity">刷新</el-button>
         </div>
-        <template v-if="integrity">
+        <el-alert v-if="integrity && integrity.status !== 'READY'" title="完整性快照尚未就绪或检查失败，不能判断为无异常" type="warning" :closable="false" />
+        <template v-if="integrity?.status === 'READY'">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
-            <MrrMetricCard label="archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
-            <MrrMetricCard label="OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
-            <MrrMetricCard label="缺失上架号" :value="formatNumber(integrity.missingSjh)" />
-            <MrrMetricCard label="断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
+            <MrrMetricCard label="样本 archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
+            <MrrMetricCard label="样本 OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
+            <MrrMetricCard label="样本缺失上架号" :value="formatNumber(integrity.missingSjh)" />
+            <MrrMetricCard label="样本断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
             <MrrMetricCard label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
-            <MrrMetricCard label="有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" />
+            <MrrMetricCard label="样本有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" :note="integrity.sampleScope" />
           </section>
           <el-card shadow="never" class="section-card">
             <template #header>各业务表关联情况</template>
             <el-table :data="integrity.tables" border>
               <el-table-column prop="table" label="数据表" min-width="180" />
-              <el-table-column prop="total" label="总数" min-width="130" />
+              <el-table-column prop="total" label="统计范围内总数" min-width="130" />
               <el-table-column prop="linked" label="已关联" min-width="130" />
               <el-table-column prop="unlinked" label="未关联" min-width="130" />
               <el-table-column label="覆盖率" min-width="130"><template #default="scope">{{ formatPercent(scope.row.coverage) }}</template></el-table-column>

@@ -1,21 +1,22 @@
 import { getRequest, postRequest } from '../index'
 
-export type RelationStatus = 'HEALTHY' | 'WARNING' | 'CRITICAL' | 'LEGACY'
+export type RelationStatus = 'HEALTHY' | 'WARNING' | 'CRITICAL' | 'LEGACY' | 'UNKNOWN'
 export type ComparisonStatus = 'EXACT' | 'FORMAT_ONLY' | 'CONFLICT' | 'MISSING' | 'NO_CANONICAL'
 
 export interface RelationCoverage {
   tableName: string
   label: string
   relation: string
-  totalCount: number
-  linkedCount: number
-  missingCount: number
-  coverage: number
+  totalCount: number | null
+  linkedCount: number | null
+  missingCount: number | null
+  coverage: number | null
   estimated: boolean
   source: string
   coverageIncluded: boolean
   status: RelationStatus
   estimatedMissingCount?: number
+  analyzedAt?: string | null
   totalBytes?: number
 }
 
@@ -56,8 +57,8 @@ export interface QualityCheck {
 
 export interface DataRelationOverview {
   generatedAt: string
-  archiveCount: number
-  healthScore: number
+  archiveCount: number | null
+  healthScore: number | null
   relations: RelationCoverage[]
   latestQualityRun: QualityRun | null
   relationChecks: QualityCheck[]

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
-  await page.route('**/api/v1/scan/page?**', async (route) => {
+  await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       json: {
@@ -22,8 +22,7 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
               migrationStatus: 'verified',
             },
           ],
-          total: 1,
-          page: 1,
+          hasMore: false,
           size: 20,
         },
       },
@@ -39,4 +38,22 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   await page.getByRole('button', { name: '详情' }).click()
 
   await expect(page.getByRole('dialog', { name: '记录详情' })).toContainText('synthetic-record.pdf', { timeout: 20_000 })
+})
+
+test('编辑筛选不会把旧游标用于新条件，提交查询后从头读取', async ({ page }) => {
+  const requests: { afterId: string | null, bah?: string }[] = []
+  await page.route('**/api/v1/scan/cursor/condition?**', async route => {
+    const url = new URL(route.request().url())
+    requests.push({ afterId: url.searchParams.get('afterId'), bah: route.request().postDataJSON().bah })
+    await route.fulfill({ json: { code: 200, data: { list: [{ id: 100, bah: '123', filename: 'synthetic.jpg' }], hasMore: true, nextCursorId: 100, size: 20 } } })
+  })
+  await page.goto('/records')
+  await expect(page.getByRole('cell', { name: '123', exact: true })).toBeVisible()
+  await page.getByPlaceholder('输入病案号').fill('456')
+  await page.getByRole('button', { name: '下一批', exact: true }).click()
+  await expect.poll(() => requests.length).toBe(2)
+  expect(requests[1]).toEqual({ afterId: '100', bah: undefined })
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect.poll(() => requests.length).toBe(3)
+  expect(requests[2]).toEqual({ afterId: '0', bah: '456' })
 })

@@ -27,13 +27,13 @@ public class DataRelationServiceImpl implements DataRelationService {
     @Override
     public Map<String, Object> getOverview() {
         List<Map<String, Object>> relations = new ArrayList<>();
-        relations.add(exactArchiveCoverage(
+        relations.add(estimatedArchiveCoverage(
                 "mr_statistics",
                 "统计记录",
                 "mr_statistics.archive_id → mr_archive.id"
         ));
         relations.add(estimatedScanCoverage());
-        relations.add(exactArchiveCoverage(
+        relations.add(estimatedArchiveCoverage(
                 "mr_archive_box_record",
                 "装箱记录",
                 "mr_archive_box_record.archive_id → mr_archive.id"
@@ -53,14 +53,15 @@ public class DataRelationServiceImpl implements DataRelationService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("generatedAt", Instant.now().toString());
         result.put("archiveCount", repository.countTable("mr_archive"));
-        result.put("healthScore", percentage(linkedTotal, relationTotal));
+        result.put("healthScore", relationTotal == 0 ? null : percentage(linkedTotal, relationTotal));
+        result.put("healthScoreScope", "基于可用统计估算；未知项不计为健康");
         result.put("relations", relations);
         result.put("latestQualityRun", repository.latestQualityRun());
         result.put("relationChecks", repository.latestRelationChecks());
         result.put("notes", List.of(
                 "mr_scan 覆盖率来自 PostgreSQL 统计信息，页面打开时不会全表扫描三千万级数据",
                 "mr_patient 当前没有 archive_id，只按 BAH 进行遗留兼容匹配，不把 patient_id 当身份证号猜测关联",
-                "精确关联覆盖率以最近一次数据质量检查结果和外键验收为准"
+                "所有概览计数为统计估算，精确关联完整性以分批检查和外键验收为准"
         ));
         return result;
     }
@@ -109,6 +110,7 @@ public class DataRelationServiceImpl implements DataRelationService {
 
         List<String> warnings = new ArrayList<>();
         warnings.add("mr_patient 尚无 archive_id，患者记录仅通过 BAH 兼容匹配，结果不能视为数据库外键关系");
+        warnings.add("未关联扫描候选仅检查最近100万ID窗口；样本为0不能证明全库没有未关联记录");
         if (number(scanSummary.get("unlinkedCandidateCount")) > 0) {
             warnings.add("发现编号完全相同但 archive_id 为空的扫描记录，需要进入异常中心确认关联");
         }
@@ -136,11 +138,14 @@ public class DataRelationServiceImpl implements DataRelationService {
         return result;
     }
 
-    private Map<String, Object> exactArchiveCoverage(String tableName, String label, String relation) {
+    private Map<String, Object> estimatedArchiveCoverage(String tableName, String label, String relation) {
         Map<String, Object> counts = repository.archiveCoverage(tableName);
         long total = number(counts.get("total_count"));
         long linked = number(counts.get("linked_count"));
-        return relationOverview(tableName, label, relation, total, linked, false, "EXACT", true);
+        Map<String,Object> result = relationOverview(tableName, label, relation, total, linked, true, "POSTGRES_STATISTICS", true);
+        result.put("analyzedAt", counts.get("analyzed_at"));
+        if (!Boolean.TRUE.equals(counts.get("statistics_available"))) markUnavailable(result);
+        return result;
     }
 
     private Map<String, Object> estimatedScanCoverage() {
@@ -160,12 +165,21 @@ public class DataRelationServiceImpl implements DataRelationService {
                 true
         );
         overview.put("estimatedMissingCount", missing);
+        if (rows.isEmpty() || !Boolean.TRUE.equals(rows.getFirst().get("statistics_available"))) {
+            markUnavailable(overview);
+        }
         overview.put("totalBytes", rows.isEmpty() ? 0 : number(rows.getFirst().get("total_bytes")));
         return overview;
     }
 
+    private void markUnavailable(Map<String,Object> relation) {
+        relation.put("coverageIncluded", false);relation.put("status", "UNKNOWN");relation.put("source", "STATISTICS_UNAVAILABLE");
+        for (String key : List.of("coverage","totalCount","linkedCount","missingCount")) relation.put(key,null);
+    }
+
     private Map<String, Object> legacyPatientCoverage() {
-        long total = repository.countTable("mr_patient");
+        Long estimatedTotal = repository.countTable("mr_patient");
+        long total = estimatedTotal == null ? 0 : estimatedTotal;
         Map<String, Object> result = relationOverview(
                 "mr_patient",
                 "患者记录",
@@ -176,6 +190,8 @@ public class DataRelationServiceImpl implements DataRelationService {
                 "LEGACY_BAH_ONLY",
                 false
         );
+        result.put("estimated", true);
+        result.put("totalCount", estimatedTotal);
         result.put("status", "LEGACY");
         return result;
     }

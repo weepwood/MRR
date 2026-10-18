@@ -50,6 +50,21 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private MigrationJobMapper migrationJobMapper;
 
     @Test
+    void filteredCursorUsesWholeNumericKeyAndNeverMatchesPartialIdentifier() {
+        jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES ('00123','cursor-a.jpg','synthetic',1,1),('1234','cursor-b.jpg','synthetic',1,2)");
+        ScanRequest request = new ScanRequest(); request.setBah("123");
+        List<Scan> rows = scanMapper.findByConditionAfterId(request, 0, 2);
+        assertThat(rows).extracting(Scan::getBah).containsExactly("00123");
+        assertThat(scanMapper.findByConditionAfterId(request, rows.getFirst().getId(), 2)).isEmpty();
+    }
+
+    @Test
+    void compatibilityExpressionUsesSameTrimmedNumericKeyAsDatabase() {
+        jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES (' 00123 ','trimmed.jpg','synthetic',1,1)");
+        assertThat(scanMapper.findBAH("123", "123")).extracting(Scan::getFilename).contains("trimmed.jpg");
+    }
+
+    @Test
     @DisplayName("在 PostgreSQL 16 上应用全部 Flyway 迁移")
     void appliesAllFlywayMigrationsOnPostgresql16() {
         String serverVersion = jdbcTemplate.queryForObject("SHOW server_version", String.class);

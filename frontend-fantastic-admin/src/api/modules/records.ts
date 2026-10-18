@@ -54,3 +54,9 @@ export function batchDownloadRecords(ids: (string | number)[]) {
 export function findByCondition(request: ScanRequest) {
   return postRequest<ScanRecord[]>('/api/v1/scan/condition', request)
 }
+
+export interface ScanCursorPage { list: ScanRecord[], nextCursorId?: number, hasMore: boolean, size: number }
+/** 编号按完整值（兼容前导零）筛选，避免大表 OFFSET 与同步 COUNT。 */
+export function getScanCursor(request: Partial<ScanRequest>, afterId = 0, size = 20) {
+  return postRequest<ScanCursorPage>('/api/v1/scan/cursor/condition', request, { params: { afterId, size } })
+}

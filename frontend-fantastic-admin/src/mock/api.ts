@@ -590,6 +590,23 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/scan/cursor/condition',
+    method: 'POST',
+    response: ({ query, body }) => {
+      const key = (value: unknown) => String(value ?? '').trim().replace(/^0+(?=\d)/, '')
+      const size = Math.max(1, Math.min(Number(query.size) || 20, 1000))
+      const found = scans.filter(row => Number(row.id) > Number(query.afterId || 0)
+        && (!body?.bah || key(row.bah) === key(body.bah))
+        && (!body?.sjh || key(row.sjh) === key(body.sjh))
+        && (!body?.brxh || row.brxh === body.brxh)
+        && (!body?.openerNo || row.openerNo === body.openerNo)
+        && (body?.btype == null || row.btype === Number(body.btype)))
+        .sort((a, b) => Number(a.id) - Number(b.id))
+      const list = found.slice(0, size)
+      return ok({ list, hasMore: found.length > size, nextCursorId: found.length > size ? Number(list[list.length - 1]?.id) : undefined, size })
+    },
+  },
+  {
     url: '/api/v1/scan/page',
     response: ({ query }) => ok(paginate(scans, query.page, query.size)),
   },

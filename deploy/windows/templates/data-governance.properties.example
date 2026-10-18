@@ -1,0 +1,9 @@
+# Optional settings: merge into the installed protected application configuration.
+# Do not replace the complete application-prod.properties with this example.
+# Enable only after replica capacity, latency and recovery acceptance.
+app.runtime-logs.enabled=false
+app.operations.query-diagnostics-enabled=true
+app.runtime-logs.buffer-cap=3GB
+app.runtime-logs.buffer-days=30
+# Initialize mrr.audit.hmac-key independently in the protected secrets file using
+# initialize-audit-key.ps1; never reuse JWT or integration secrets.

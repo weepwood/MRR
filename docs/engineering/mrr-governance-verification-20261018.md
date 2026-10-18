@@ -68,3 +68,21 @@
 本地数据库事务与轮转测试不等于真实磁盘满；静态CSS检查不等于旧浏览器实机；NTFS与脚本验证不等于已成功恢复医院备份。现有备份入口未在实际Windows PostgreSQL客户端完成完整恢复。原有OSS浏览签名链接生命周期仍待核查；当前只收口主影像入口。历史数据库日志原文未批量清除，读取脱敏不代表存量已经清理。
 
 这些PR按依赖顺序保持小范围diff；除首批以main为base外，后续草稿暂以上一批为base。仓库远端CI只监听main，后续批次在前置合并后需转向main并通过正式governance-gate及相应CI，不能直接按本地组合验证宣布可上线。
+
+## 分批交付与门禁
+
+九批均为草稿，尚未合并/部署；新增日志采集保持默认关闭。各分批本地 `governance_guard.py --event <实际PR正文> --base <前置分支> --head <本批分支>` 全部通过；同一发布基线验证器读取各分支实际VERSION、pom、基线与迁移目录，九批全部通过。证据为 `governance-batch-1.log` 至 `governance-batch-9.log` 和 `governance-branch-baselines.log`。
+
+| PR | 范围 | 当前base |
+|---|---|---|
+| [351](https://github.com/weepwood/MRR/pull/351) | 修复病案编号原值语义与歧义查询边界 | `main` |
+| [352](https://github.com/weepwood/MRR/pull/352) | 修复扫描编号变更后的主档关联 | `codex/record-code-correctness` |
+| [353](https://github.com/weepwood/MRR/pull/353) | 持久化令牌撤销并使故障路径明确拒绝 | `codex/scan-archive-link-refresh` |
+| [354](https://github.com/weepwood/MRR/pull/354) | 收紧审计、诊断与医疗影像的隐私边界 | `codex/persistent-token-revocation` |
+| [355](https://github.com/weepwood/MRR/pull/355) | 增加可恢复的运行日志入库与前端检索 | `codex/private-diagnostics-logs` |
+| [356](https://github.com/weepwood/MRR/pull/356) | 增加受控查询诊断与请求追踪 | `codex/runtime-log-journal` |
+| [357](https://github.com/weepwood/MRR/pull/357) | 限制质量检查开销并增加稳定游标和性能取证 | `codex/query-diagnostics` |
+| [358](https://github.com/weepwood/MRR/pull/358) | 统一运维页面日期、指标与暗色表现 | `codex/data-quality-performance` |
+| [359](https://github.com/weepwood/MRR/pull/359) | 补齐Windows安全取证与备份恢复入口 | `codex/ui-consistency` |
+
+首批远端governance与release-baseline门禁已通过；其余CI以GitHub最新状态为准。后续批次转向main后必须重新经过远端检查，不以草稿当前无检查解释为通过。

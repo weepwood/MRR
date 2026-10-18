@@ -117,10 +117,12 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 
 ### 环境要求
 
+根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
+
 - JDK 21+
-- Maven 3.9+
+- 仓库自带 Maven Wrapper 3.9.9，无需全局 Maven
 - PostgreSQL 16+
-- Node.js `^20.19.0` 或 `>=22.12.0`
+- Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0
 - Python 3.10+
 
@@ -163,7 +165,7 @@ $env:JWT_SECRET_KEY = '本地 JWT 密钥'
 $env:AES_SECRET_KEY = 'AES随机密钥'
 
 cd backend-repo
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 默认业务端口 `18045`，管理端口 `18046`：
@@ -260,7 +262,7 @@ python -m unittest discover -s scripts/tests -p 'test_*.py' -v
 python scripts/release_baseline.py validate
 
 cd backend-repo
-mvn -B -ntp verify
+.\mvnw.cmd -B -ntp verify
 
 cd ../frontend-fantastic-admin
 pnpm lint:tsc

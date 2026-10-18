@@ -19,3 +19,13 @@ class EngineeringDocsTest(unittest.TestCase):
             problems = validate(root)
             self.assertTrue(any("README" in p for p in problems))
             self.assertTrue(any("ENGINEERING" in p for p in problems))
+
+    def test_detects_node_requirement_drift(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "VERSION").write_text("1.2.3", encoding="utf-8")
+            (root / "README.md").write_text("Node.js：`^20.19.0 || >=22.12.0`", encoding="utf-8")
+            (root / "frontend-fantastic-admin").mkdir()
+            (root / "frontend-fantastic-admin/package.json").write_text(
+                '{"engines":{"node":"^24.15.0 || >=26.0.0"}}', encoding="utf-8")
+            self.assertTrue(any("Node" in p for p in validate(root)))

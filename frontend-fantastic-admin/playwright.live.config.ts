@@ -22,10 +22,4 @@ export default defineConfig({
   // Login credentials and JWTs must not enter traces/screenshots/artifacts.
   use: { baseURL, trace: 'off', screenshot: 'off', video: 'off' },
   projects: [{ name: 'live-chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `node node_modules/vite/bin/vite.js --mode development --host 127.0.0.1 --port ${port} --strictPort`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 90_000,
-  },
 })

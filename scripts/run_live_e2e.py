@@ -8,6 +8,7 @@ import secrets
 import re
 import shutil
 import socket
+import signal
 import subprocess
 import tempfile
 import time
@@ -41,12 +42,41 @@ def stop_process(process: subprocess.Popen | None) -> None:
             subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
                            capture_output=True, timeout=15,
                            creationflags=subprocess.CREATE_NO_WINDOW)
-        process.terminate()
+        if os.name != "nt" and isinstance(process.pid, int):
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            process.terminate()
         try:
             process.wait(timeout=15)
         except subprocess.TimeoutExpired:
-            process.kill()
+            if os.name != "nt" and isinstance(process.pid, int):
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
             process.wait(timeout=15)
+
+
+def docker_command(args: list[str], env: dict[str, str], sql: str | None = None) -> str:
+    hidden = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+    try:
+        completed = subprocess.run(["docker", *args], input=sql, text=True, encoding="utf-8",
+                                   capture_output=True, env=env, timeout=90, **hidden)
+    except (subprocess.TimeoutExpired, OSError):
+        raise RuntimeError("Disposable PostgreSQL command timed out or could not start.") from None
+    if completed.returncode:
+        raise RuntimeError("Disposable PostgreSQL command failed.")
+    return completed.stdout.strip()
+
+
+def cleanup_resources(actions) -> None:
+    failed = False
+    for action in actions:
+        try:
+            action()
+        except Exception:
+            failed = True
+    if failed:
+        raise RuntimeError("Live E2E cleanup failed; inspect owned test resources locally.") from None
 
 
 def free_port() -> int:
@@ -69,16 +99,11 @@ def run(jar: Path) -> None:
         web_port = free_port()
     container = "mrr-live-e2e-" + secrets.token_hex(8)
     password = secrets.token_hex(24)
-    backend = browser = None
-    hidden = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+    backend = browser = vite = None
+    hidden = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {"start_new_session": True}
 
     def docker(*args: str, sql: str | None = None) -> str:
-        completed = subprocess.run(["docker", *args], input=sql, text=True, encoding="utf-8",
-                                   capture_output=True, env=env, timeout=90, **hidden)
-        if completed.returncode:
-            # Do not echo stdin, credentials or potentially sensitive subprocess output.
-            raise RuntimeError("Disposable PostgreSQL command failed.")
-        return completed.stdout.strip()
+        return docker_command(list(args), env | {"POSTGRES_PASSWORD": password}, sql)
 
     with tempfile.TemporaryDirectory(prefix="mrr-live-e2e-") as directory:
         temporary = Path(directory)
@@ -86,7 +111,7 @@ def run(jar: Path) -> None:
         Thread(target=image_source.serve_forever, daemon=True).start()
         try:
             docker("run", "--detach", "--name", container, "--label", "mrr.test=live-e2e",
-                   "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD=" + password,
+                   "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD",
                    "-e", "POSTGRES_DB=mrr_e2e", "postgres:16-alpine")
             mapping = docker("port", container, "5432/tcp")
             db_port = int(mapping.rsplit(":", 1)[1])
@@ -141,6 +166,23 @@ VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_
                                   "MRR_LIVE_RESULTS_DIR": str(temporary / "browser-results"),
                                   "BROWSER": "none", "VITE_BUILD_MOCK": "false", "VITE_APP_DEMO_MODE": "false",
                                   "VITE_APP_API_BASEURL": url, "VITE_OPEN_PROXY": "true"}
+                # Own Vite directly: Playwright's detached webServer process would be
+                # outside the CLI process group on Linux during a forced timeout.
+                vite = subprocess.Popen([node, "node_modules/vite/bin/vite.js", "--mode", "development",
+                                         "--host", "127.0.0.1", "--port", str(web_port), "--strictPort"],
+                                        cwd=frontend, env=test_env, stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL, **hidden)
+                deadline = time.monotonic() + 90
+                while True:
+                    if vite.poll() is not None:
+                        raise RuntimeError("Managed frontend exited before readiness.")
+                    try:
+                        urllib.request.urlopen(f"http://127.0.0.1:{web_port}/login", timeout=2).close()
+                        break
+                    except (OSError, urllib.error.URLError):
+                        if time.monotonic() > deadline:
+                            raise RuntimeError("Managed frontend readiness timed out.") from None
+                        time.sleep(1)
                 browser = subprocess.Popen([node, "node_modules/@playwright/test/cli.js", "test",
                                             "--config=playwright.live.config.ts"], cwd=frontend, env=test_env,
                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **hidden)
@@ -156,12 +198,10 @@ VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_
                     raise RuntimeError("Database assertion failed: expected exactly one imported synthetic row.")
                 print("Live E2E passed; PostgreSQL 16 confirms exactly one synthetic row.")
         finally:
-            stop_process(browser)
-            stop_process(backend)
-            image_source.shutdown()
-            image_source.server_close()
             # The unpredictable name is created by this invocation; no other containers/volumes are touched.
-            subprocess.run(["docker", "rm", "--force", container], env=env, capture_output=True, timeout=90, **hidden)
+            cleanup_resources([lambda: stop_process(browser), lambda: stop_process(vite),
+                               lambda: stop_process(backend), image_source.shutdown,
+                               image_source.server_close, lambda: docker("rm", "--force", container)])
 
 
 if __name__ == "__main__":

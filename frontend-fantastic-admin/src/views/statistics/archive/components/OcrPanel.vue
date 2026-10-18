@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { OcrFact } from '@/api/modules/ocr'
 import { computed, ref, watch } from 'vue'
-import { cancelOcrJob, createOcrJob, getOcrFact } from '@/api/modules/ocr'
+import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
 import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
@@ -26,13 +26,18 @@ const statusLabels: Record<string, string> = {
   INTERRUPTED: '已中断',
 }
 
-async function load() {
+async function load(resume = false) {
   const version = ++generation
   fact.value = null
   error.value = ''
   try {
     const result = await getOcrFact(props.scanId, auth('ocr:text-read'))
-    if (version === generation) { fact.value = result.data ?? null }
+    if (version !== generation) { return }
+    fact.value = result.data ?? null
+    if (resume && fact.value) {
+      const jobs = await getOcrJobs(fact.value.archiveId)
+      if (version === generation && jobs.data?.[0]) { follow(jobs.data[0].id) }
+    }
   }
   catch {
     if (version === generation) { error.value = '无法读取文字识别结果' }
@@ -42,13 +47,14 @@ async function load() {
 async function run(wholeArchive = false) {
   if (!fact.value || busy.value) { return }
   busy.value = true
+  const version = generation
   error.value = ''
   try {
     const result = await createOcrJob(fact.value.archiveId, wholeArchive ? undefined : props.scanId)
-    if (result.data) { follow(result.data.id) }
+    if (version === generation && result.data) { follow(result.data.id) }
   }
   catch {
-    error.value = '无法创建识别任务，请检查功能配置、病案关联或活动任务'
+    if (version === generation) { error.value = '无法创建识别任务，请检查功能配置、病案关联或活动任务' }
   }
   finally { busy.value = false }
 }
@@ -61,7 +67,7 @@ async function cancel() {
 
 watch(open, (value) => {
   if (value) {
-    void load()
+    void load(true)
   }
   else { generation++; stop() }
 })
@@ -69,7 +75,7 @@ watch(() => props.scanId, () => {
   generation++
   stop()
   job.value = null
-  if (open.value) { void load() }
+  if (open.value) { void load(true) }
 })
 watch(() => job.value?.status, (status) => {
   if (status && !['PENDING', 'RUNNING', 'CANCEL_REQUESTED'].includes(status) && open.value) { void load() }
@@ -77,47 +83,49 @@ watch(() => job.value?.status, (status) => {
 </script>
 
 <template>
-  <el-button v-if="auth('ocr:read')" size="small" @click="open = true">
-    识别文字
-  </el-button>
-  <el-drawer v-model="open" title="影像文字识别" size="min(960px, 95vw)" append-to-body>
-    <el-alert v-if="error || pollingError" :title="error || pollingError" type="error" :closable="false" />
-    <p>识别文字供病案整理参考，请对照原图核实。</p>
-    <div class="ocr-actions">
-      <el-tag>{{ statusLabels[fact?.status || 'PENDING'] || fact?.status }}</el-tag>
-      <el-button @click="load">
-        刷新
-      </el-button>
-      <template v-if="auth('ocr:run')">
-        <el-button :loading="busy" :disabled="!fact || !unclassified || !!running" @click="run(false)">
-          识别 / 重试本页
+  <el-config-provider :z-index="3100">
+    <el-button v-if="auth('ocr:read')" size="small" @click="open = true">
+      识别文字
+    </el-button>
+    <el-drawer v-model="open" title="影像文字识别" size="min(960px, 95vw)" append-to-body>
+      <el-alert v-if="error || pollingError" :title="error || pollingError" type="error" :closable="false" />
+      <p>识别文字供病案整理参考，请对照原图核实。</p>
+      <div class="ocr-actions">
+        <el-tag>{{ statusLabels[fact?.status || 'PENDING'] || fact?.status }}</el-tag>
+        <el-button @click="load(true)">
+          刷新
         </el-button>
-        <el-button :disabled="!fact || !!running || busy" @click="run(true)">
-          识别本病案未分类页
-        </el-button>
-        <el-button v-if="running" :disabled="job?.cancelRequested" @click="cancel">
-          取消任务
-        </el-button>
-      </template>
-    </div>
-    <div v-if="job" aria-live="polite">
-      <p>{{ job.status }} · {{ job.processedCount }} / {{ job.plannedCount }} 页 · 失败 {{ job.failedCount }} 页</p>
-      <el-progress :percentage="job.plannedCount ? Math.round(job.processedCount / job.plannedCount * 100) : 0" />
-    </div>
-    <div class="ocr-compare">
-      <img v-if="imageUrl" :src="imageUrl" alt="当前影像原图" referrerpolicy="no-referrer">
-      <div>
-        <p v-if="fact?.confidence != null">
-          文字置信度：{{ (fact.confidence * 100).toFixed(1) }}%
-        </p>
-        <textarea v-if="auth('ocr:text-read')" :value="fact?.text || ''" readonly aria-label="识别原文，可选择复制" />
-        <p v-else>
-          当前账号没有查看完整识别文字的权限。
-        </p>
+        <template v-if="auth('ocr:run')">
+          <el-button :loading="busy" :disabled="!fact || !unclassified || !!running" @click="run(false)">
+            识别 / 重试本页
+          </el-button>
+          <el-button :disabled="!fact || !!running || busy" @click="run(true)">
+            识别本病案未分类页
+          </el-button>
+          <el-button v-if="running" :disabled="job?.cancelRequested" @click="cancel">
+            取消任务
+          </el-button>
+        </template>
       </div>
-    </div>
-    <ClassificationReview v-if="job && auth('classification:read')" :job-id="job.id" />
-  </el-drawer>
+      <div v-if="job" aria-live="polite">
+        <p>{{ job.status }} · {{ job.processedCount }} / {{ job.plannedCount }} 页 · 失败 {{ job.failedCount }} 页</p>
+        <el-progress :percentage="job.plannedCount ? Math.round(job.processedCount / job.plannedCount * 100) : 0" />
+      </div>
+      <div class="ocr-compare">
+        <img v-if="imageUrl" :src="imageUrl" alt="当前影像原图" referrerpolicy="no-referrer">
+        <div>
+          <p v-if="fact?.confidence != null">
+            文字置信度：{{ (fact.confidence * 100).toFixed(1) }}%
+          </p>
+          <textarea v-if="auth('ocr:text-read')" :value="fact?.text || ''" readonly aria-label="识别原文，可选择复制" />
+          <p v-else>
+            当前账号没有查看完整识别文字的权限。
+          </p>
+        </div>
+      </div>
+      <ClassificationReview v-if="job && auth('classification:read')" :job-id="job.id" />
+    </el-drawer>
+  </el-config-provider>
 </template>
 
 <style scoped>

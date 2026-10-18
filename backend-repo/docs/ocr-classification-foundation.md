@@ -1,5 +1,8 @@
 # OCR 与智能分类实施基线
 
+本文记录基础表建设阶段的历史边界。后续执行、审核、批次及自动归类实现见
+[实施验证记录](ocr-implementation-verification.md) 与 [Windows 交付说明](ocr-windows-release.md)。
+
 ## 当前阶段
 
 本阶段只建立 OCR 与智能分类的安全边界和持久化基础，不会启动历史全量 OCR，也不会自动修改 `mr_scan.btype`。

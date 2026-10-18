@@ -35,6 +35,12 @@ public interface ScanMapper {
             @Param("searchCode") String searchCode
     );
 
+    @Select("SELECT COUNT(*) FROM (SELECT id FROM app.mr_archive WHERE "
+            + "CASE WHEN NULLIF(#{sjh}, '') IS NOT NULL "
+            + "THEN app.numeric_code_key(sjh) = #{sjh} "
+            + "ELSE app.numeric_code_key(bah) = #{bah} END LIMIT 2) candidates")
+    int countArchiveCandidates(@Param("bah") String bah, @Param("sjh") String sjh);
+
     /**
      * 通过病案主表精确解析唯一 archive_id。查询操作不创建新的主档记录。
      */
@@ -111,7 +117,7 @@ public interface ScanMapper {
     int updateImageType(@Param("id") Integer id, @Param("type") Integer type);
 
     @Insert("INSERT INTO mr_scan (BRXH, BAH, sjh, filename, btype, pages, openerno, uploaddate, uploadflag, folder) " +
-            "VALUES (#{brxh}, #{bah}, #{sjh}, #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
+            "VALUES (#{brxh}, NULLIF(#{bah}, ''), NULLIF(#{sjh}, ''), #{filename}, #{btype}, #{pages}, #{openerNo}, #{uploadDate}, #{uploadFlag}, #{folder})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Scan scan);
 

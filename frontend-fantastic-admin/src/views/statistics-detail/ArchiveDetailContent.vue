@@ -15,6 +15,7 @@ import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { formatMedicalRecordCode } from '@/utils/medical-record-code'
 import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -135,15 +136,7 @@ function normalizeText(value: unknown) {
 }
 
 function padTo8Digits(value: unknown) {
-  const text = normalizeText(value)
-  if (text === '-') {
-    return '-'
-  }
-  const num = Number.parseInt(text, 10)
-  if (Number.isNaN(num)) {
-    return text
-  }
-  return String(num).padStart(8, '0')
+  return formatMedicalRecordCode(value)
 }
 
 function formatDate(value: unknown) {

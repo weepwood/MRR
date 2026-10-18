@@ -10,10 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MedicalRecordCodeUtilsTest {
 
     @Test
-    void shouldPadNumericCodesToEightDigits() {
-        assertEquals("00000123", MedicalRecordCodeUtils.normalize("123"));
-        assertEquals("00000123", MedicalRecordCodeUtils.normalize(" 123 "));
-        assertEquals("00000000", MedicalRecordCodeUtils.normalize("0"));
+    void shouldPreserveOriginalNumericCodes() {
+        assertEquals("123", MedicalRecordCodeUtils.normalize("123"));
+        assertEquals("123", MedicalRecordCodeUtils.normalize(" 123 "));
+        assertEquals("0", MedicalRecordCodeUtils.normalize("0"));
+        assertEquals("00000123", MedicalRecordCodeUtils.normalize("00000123"));
         assertEquals("12345678", MedicalRecordCodeUtils.normalize("12345678"));
     }
 
@@ -21,7 +22,7 @@ class MedicalRecordCodeUtilsTest {
     void shouldNotSilentlyRewriteUnsupportedValues() {
         assertEquals("123456789", MedicalRecordCodeUtils.normalize("123456789"));
         assertEquals("SJH001", MedicalRecordCodeUtils.normalize(" SJH001 "));
-        assertEquals("", MedicalRecordCodeUtils.normalize("   "));
+        assertNull(MedicalRecordCodeUtils.normalize("   "));
         assertNull(MedicalRecordCodeUtils.normalize(null));
     }
 

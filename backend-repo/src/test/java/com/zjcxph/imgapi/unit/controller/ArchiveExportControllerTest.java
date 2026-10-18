@@ -36,7 +36,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void plansZipAsValidatedBackgroundJob() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(1));
 
         Result<ArchiveExportPlanResponse> result = controller.planZip("789508", null);
@@ -47,7 +47,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void plansSmallPartialPdfInBrowserForLegacyClients() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(3));
 
         Result<ArchiveExportPlanResponse> result = controller.planPdf("789508", null, 2);
@@ -58,7 +58,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void rejectsSelectedCountGreaterThanArchiveTotal() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(2));
 
         assertThatThrownBy(() -> controller.planPdf("789508", null, 3))
@@ -68,7 +68,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void plansWholeArchivePdfOnBackend() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(3));
 
         Result<ArchiveExportPlanResponse> result = controller.planPdf("789508", null, 3);
@@ -79,7 +79,7 @@ class ArchiveExportControllerTest {
 
     @Test
     void plansLargePartialPdfOnBackend() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(30));
 
         Result<ArchiveExportPlanResponse> result = controller.planPdf("789508", null, 21);
@@ -121,25 +121,25 @@ class ArchiveExportControllerTest {
 
     @Test
     void streamsWholeArchiveZipForLegacyClients() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(1));
 
         ResponseEntity<StreamingResponseBody> response = controller.downloadZip("789508", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getHeaders().getFirst("Content-Disposition")).contains("00789508.zip");
+        assertThat(response.getHeaders().getFirst("Content-Disposition")).contains("789508.zip");
     }
 
     @Test
     void streamsWholeArchivePdf() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(1));
 
         ResponseEntity<StreamingResponseBody> response = controller.downloadPdf("789508", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getHeaders().getContentType().toString()).isEqualTo("application/pdf");
-        assertThat(response.getHeaders().getFirst("Content-Disposition")).contains("00789508.pdf");
+        assertThat(response.getHeaders().getFirst("Content-Disposition")).contains("789508.pdf");
     }
 
     @Test

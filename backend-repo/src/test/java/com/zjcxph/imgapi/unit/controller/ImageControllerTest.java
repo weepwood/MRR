@@ -91,13 +91,13 @@ class ImageControllerTest {
         ArchiveExportService.BatchZipExport export = new ArchiveExportService.BatchZipExport(
                 List.of(new PathDO("25.03.15", "test.jpg", "605746", "00789508"))
         );
-        when(archiveExportService.prepareArchive("00789508", "")).thenReturn(export);
+        when(archiveExportService.prepareArchive("789508", "")).thenReturn(export);
 
         ResponseEntity<StreamingResponseBody> responseEntity = imageController.download("789508", null);
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getHeaders().getFirst("Content-Disposition"))
-                .contains("00789508.zip");
+                .contains("789508.zip");
         assertThat(responseEntity.getBody()).isNotNull();
     }
 

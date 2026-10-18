@@ -67,14 +67,14 @@ class ImageControllerLookupTest {
                 ARCHIVE_NOT_FOUND,
                 null
         );
-        when(scanService.getImageLookupByCode("09999999", "9999999", "", ""))
+        when(scanService.getImageLookupByCode("9999999", "9999999", "", ""))
                 .thenReturn(lookupResult);
         when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
 
         controller.searchByCode("9999999", "456", null, request, response);
 
-        verify(archiveAccessService).verifyAndRecord(null, "09999999", "00000456", request);
-        verify(scanService).getImageLookupByCode("09999999", "9999999", "", "");
+        verify(archiveAccessService).verifyAndRecord(null, "9999999", "456", request);
+        verify(scanService).getImageLookupByCode("9999999", "9999999", "", "");
         verify(response).setHeader("X-MRR-Lookup-Strategy", "NOT_FOUND");
         verify(response).setHeader("X-MRR-Fallback-Reason", "ARCHIVE_NOT_FOUND");
         verify(response).setHeader("X-MRR-Image-Count", "0");
@@ -89,14 +89,14 @@ class ImageControllerLookupTest {
                 ARCHIVE_ID_EXACT,
                 42L
         );
-        when(scanService.getImageLookupByCode("", "", "00000456", "456"))
+        when(scanService.getImageLookupByCode("", "", "456", "456"))
                 .thenReturn(lookupResult);
         when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
 
         controller.searchByCode("10000000", "456", null, request, response);
 
-        verify(archiveAccessService).verifyAndRecord(null, "10000000", "00000456", request);
-        verify(scanService).getImageLookupByCode("", "", "00000456", "456");
+        verify(archiveAccessService).verifyAndRecord(null, "10000000", "456", request);
+        verify(scanService).getImageLookupByCode("", "", "456", "456");
         verify(response).setHeader("X-MRR-Lookup-Strategy", "ARCHIVE_ID_EXACT");
         verify(response).setHeader("X-MRR-Fallback-Reason", "NONE");
         verify(response).setHeader("X-MRR-Archive-Id", "42");
@@ -111,7 +111,7 @@ class ImageControllerLookupTest {
                 ARCHIVE_NOT_FOUND,
                 null
         );
-        when(scanService.getImageLookupByBAH("00789508", "789508"))
+        when(scanService.getImageLookupByBAH("789508", "789508"))
                 .thenReturn(lookupResult);
         when(imageUrlService.toDtoList(anyList())).thenReturn(List.of());
 

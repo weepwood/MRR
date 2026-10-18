@@ -170,4 +170,43 @@ class ScanServiceArchiveLookupTest {
         scan.setUploadFlag(1);
         return scan;
     }
+
+    @Test
+    void shortCodeStillUsesCompatibilityResolverWithoutChangingTheInput() {
+        when(scanMapper.resolveArchiveId("123", "")).thenReturn(null);
+        when(scanMapper.resolveArchiveIdBySearchCode("123", "")).thenReturn(42L);
+        when(scanMapper.findActiveByArchiveId(42L)).thenReturn(List.of(scan(1, 42L, "page.jpg")));
+        assertThat(scanService.getImageLookupByCode("123", "123", "", "").strategy())
+                .isEqualTo(ARCHIVE_ID_COMPAT);
+    }
+
+    @Test
+    void ambiguousArchivesNeverFallBackToMergedImages() {
+        when(scanMapper.resolveArchiveId("123", "")).thenReturn(null);
+        when(scanMapper.countArchiveCandidates("123", "")).thenReturn(2);
+        assertThatThrownBy(() -> scanService.getImageLookupByCode("123", "123", "", ""))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        verify(scanMapper, never()).findByCode("123", "123", "", "");
+    }
+
+    @Test
+    void exactArchiveNeverFallsBackToAnotherArchiveImages() {
+        when(scanMapper.resolveArchiveId("123", "")).thenReturn(42L);
+        when(scanMapper.findByCode("123", "123", "", "")).thenReturn(List.of(scan(1, 43L, "other.jpg")));
+        assertThatThrownBy(() -> scanService.getImageLookupByCode("123", "123", "", ""))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+    }
+
+    @Test
+    void unlinkedDifferentOriginalCodesCannotBeAssumedToBeOneArchive() {
+        when(scanMapper.resolveArchiveId("123", "")).thenReturn(null);
+        when(scanMapper.resolveArchiveIdBySearchCode("123", "")).thenReturn(null);
+        Scan first = scan(1, null, "first.jpg");
+        first.setBah("123");
+        Scan second = scan(2, null, "second.jpg");
+        second.setBah("00000123");
+        when(scanMapper.findByCode("123", "123", "", "")).thenReturn(List.of(first, second));
+        assertThatThrownBy(() -> scanService.getImageLookupByCode("123", "123", "", ""))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+    }
 }

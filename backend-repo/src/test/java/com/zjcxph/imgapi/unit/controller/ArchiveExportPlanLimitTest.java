@@ -25,7 +25,7 @@ class ArchiveExportPlanLimitTest {
 
     @Test
     void sendsLargePartialSelectionsToTheBackgroundJob() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(300));
 
         var result = controller.planPdf("789508", null, 201);
@@ -36,7 +36,7 @@ class ArchiveExportPlanLimitTest {
 
     @Test
     void allowsWholeArchiveBeyondSelectionLimit() {
-        when(archiveExportService.prepareArchive("00789508", ""))
+        when(archiveExportService.prepareArchive("789508", ""))
                 .thenReturn(export(300));
 
         var result = controller.planPdf("789508", null, 300);

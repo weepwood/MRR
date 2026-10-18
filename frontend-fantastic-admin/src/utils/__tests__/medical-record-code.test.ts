@@ -7,8 +7,8 @@ import {
 } from '../medical-record-code'
 
 describe('medical record archive lookup rules', () => {
-  it('normalizes short numeric codes to eight digits', () => {
-    expect(normalizeMedicalRecordCode('123')).toBe('00000123')
+  it('preserves short numeric codes', () => {
+    expect(normalizeMedicalRecordCode('123')).toBe('123')
   })
 
   it('uses bah below 10000000 even when sjh is also present', () => {
@@ -16,9 +16,9 @@ describe('medical record archive lookup rules', () => {
     expect(getArchiveLookupValidationMessage('9999999', '')).toBe('')
     expect(resolveArchiveLookup('9999999', '456')).toEqual({
       mode: 'bah',
-      bah: '09999999',
-      sjh: '00000456',
-      requestBah: '09999999',
+      bah: '9999999',
+      sjh: '456',
+      requestBah: '9999999',
       validationMessage: '',
     })
   })
@@ -29,8 +29,8 @@ describe('medical record archive lookup rules', () => {
     expect(resolveArchiveLookup('10000000', '456')).toEqual({
       mode: 'sjh',
       bah: '10000000',
-      sjh: '00000456',
-      requestSjh: '00000456',
+      sjh: '456',
+      requestSjh: '456',
       validationMessage: '',
     })
   })
@@ -51,8 +51,8 @@ describe('medical record archive lookup rules', () => {
     expect(resolveArchiveLookup('', '456')).toEqual({
       mode: 'sjh',
       bah: '',
-      sjh: '00000456',
-      requestSjh: '00000456',
+      sjh: '456',
+      requestSjh: '456',
       validationMessage: '',
     })
   })

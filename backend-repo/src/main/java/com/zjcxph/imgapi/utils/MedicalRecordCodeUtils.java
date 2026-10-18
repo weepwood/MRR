@@ -3,10 +3,7 @@ package com.zjcxph.imgapi.utils;
 import java.math.BigInteger;
 
 /**
- * 病案号（BAH）和上架号（SJH）的统一格式化工具。
- *
- * <p>纯数字编码不足 8 位时在左侧补零；已经是 8 位、超过 8 位或包含非数字字符的值
- * 仅做首尾空白清理，避免静默截断或改写异常历史数据。</p>
+ * 病案号和上架号的原值清理与独立比较键。不得改写用于存储定位的编号。
  */
 public final class MedicalRecordCodeUtils {
 
@@ -17,7 +14,7 @@ public final class MedicalRecordCodeUtils {
     }
 
     /**
-     * 将纯数字编码规范化为 8 位。
+     * 仅清理首尾空白，空值返回 null；保留原始长度和前导零。
      *
      * @param code 原始编码
      * @return 规范化编码；输入为 {@code null} 时返回 {@code null}
@@ -27,10 +24,7 @@ public final class MedicalRecordCodeUtils {
             return null;
         }
         String trimmed = code.trim();
-        if (!trimmed.isEmpty() && trimmed.length() < CODE_LENGTH && trimmed.matches("\\d+")) {
-            return "0".repeat(CODE_LENGTH - trimmed.length()) + trimmed;
-        }
-        return trimmed;
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

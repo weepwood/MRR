@@ -51,12 +51,23 @@ class ImageUrlServiceTest {
     }
 
     @Test
-    @DisplayName("normalizeCode — 不足 8 位左侧补零")
-    void normalizeCode_shouldPadTo8() {
-        assertThat(ImageUrlService.normalizeCode("123")).isEqualTo("00000123");
+    @DisplayName("normalizeCode — 保留原始编号")
+    void normalizeCode_preservesOriginal() {
+        assertThat(ImageUrlService.normalizeCode("123")).isEqualTo("123");
         assertThat(ImageUrlService.normalizeCode("12345678")).isEqualTo("12345678");
         assertThat(ImageUrlService.normalizeCode(null)).isEmpty();
         assertThat(ImageUrlService.normalizeCode("")).isEmpty();
+    }
+
+    @Test
+    void shortBahUsesBrxhAndOriginalDirectoryName() {
+        Scan scan = new Scan();
+        scan.setBah("123");
+        scan.setBrxh("42");
+        scan.setFilename("page.jpg");
+        assertThat(service.buildImageUrl(scan)).isEqualTo("http://default/42-123/page.jpg");
+        scan.setBah("9999999");
+        assertThat(service.buildImageUrl(scan)).isEqualTo("http://default/42-9999999/page.jpg");
     }
 
     @Test

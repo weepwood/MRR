@@ -31,8 +31,8 @@
         UPDATE mr_scan
         <set>
             <if test="brxh != null">BRXH = #{brxh},</if>
-            <if test="bah != null">BAH = #{bah},</if>
-            <if test="sjh != null">sjh = #{sjh},</if>
+            <if test="bah != null">BAH = NULLIF(#{bah}, ''),</if>
+            <if test="sjh != null">sjh = NULLIF(#{sjh}, ''),</if>
             <if test="filename != null">filename = #{filename},</if>
             <if test="btype != null">btype = #{btype},</if>
             <if test="pages != null">pages = #{pages},</if>

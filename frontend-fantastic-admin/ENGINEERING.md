@@ -854,23 +854,25 @@ describe('useUserStore', () => {
 ## 18. 开发工作流
 
 ```
-1. 创建特性分支: git checkout -b feat/my-feature
+1. 创建特性分支: git switch -c codex/my-feature origin/main
 2. 本地开发:    pnpm dev
 3. 代码检查:    pnpm lint
 4. 提交:         pnpm commit (cz-git 交互式提交)
-5. 推送到远程:  git push origin feat/my-feature
+5. 推送到远程:  git push -u origin codex/my-feature
 6. 创建 PR:     发起 Pull Request → CI 检查 → Code Review → 合并
 ```
 
-每日开发之前：
+新任务开始前（已有分支继续工作，不重复创建分支）：
 ```bash
-git checkout dev
-git pull
-pnpm install     # 更新依赖
+git fetch origin main
+git switch -c codex/my-feature origin/main
+pnpm install --frozen-lockfile
 pnpm dev         # 启动开发服务器
 ```
 
 ---
+
+运行根目录 `python scripts/engineering_preflight.py --scope frontend` 检查 Node、pnpm 和 Python。依赖安装使用锁文件，不自动升级依赖。
 
 ## 19. 参考资源
 

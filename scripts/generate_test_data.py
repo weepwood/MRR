@@ -7,9 +7,12 @@ import csv
 import hashlib
 import io
 import json
+import os
 import random
+import shutil
 import struct
 import zlib
+from contextlib import ExitStack
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -26,16 +29,29 @@ SOURCES = {
         "scan": "ScanDataExchangeService", "archive-boxes": "ArchiveBoxDataExchangeService",
     }.items()
 }
+STORAGE_SOURCE = "backend-repo/src/main/java/com/zjcxph/imgapi/storage/ArchiveImagePathSupport.java"
+TYPE_SOURCE = "backend-repo/src/main/java/com/zjcxph/imgapi/domain/MedicalRecordType.java"
 TYPE_LABELS = ["暂未分类", "病案首页", "病程录", "手术记录", "术后病程录", "护理记录", "会诊单",
                "特殊检查", "检验单", "医嘱", "体温单", "新生儿", "出院记录", "大病史", "其它", "分娩记录"]
 
+# 防护上限：避免一次误用的参数组合占满磁盘或产出百万级文件。
+MAX_SCAN_ROWS = 20_000_000
+MAX_IMPORT_FILES = 20_000
+BYTES_PER_SCAN_ROW = 82
+INCOMPLETE_MARKER = "_INCOMPLETE"
+GENERATED_ENTRIES = ("imports", "cases", "media", "storage", "contracts", "migration",
+                     "cases.json", "storage-cases.json", "expected.json", "README.txt", INCOMPLETE_MARKER)
 
-def write_json(path, value):
+
+def write_json(path: Path, value) -> None:
+    """原子写入：先写同目录临时文件再替换，避免中断留下半截 JSON。"""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
 
 
-def digest(path, algorithm="sha256"):
+def digest(path: Path, algorithm: str = "sha256") -> str:
     result = hashlib.new(algorithm)
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -43,7 +59,7 @@ def digest(path, algorithm="sha256"):
     return result.hexdigest()
 
 
-def csv_bytes(headers, rows, encoding="utf-8"):
+def csv_bytes(headers, rows, encoding: str = "utf-8") -> bytes:
     stream = io.StringIO(newline="")
     writer = csv.writer(stream, lineterminator="\r\n")
     writer.writerow(headers)
@@ -51,14 +67,43 @@ def csv_bytes(headers, rows, encoding="utf-8"):
     return stream.getvalue().encode(encoding)
 
 
+def verdict_of(expected: dict) -> str:
+    """把期望结果归一为单一判定，供脚本消费；probe 型不再是“确定通过/拒绝”。"""
+    if "exception" in expected:
+        return "exception"
+    if expected.get("canImport") is True:
+        return "accept"
+    if expected.get("canImport") is False:
+        return "reject"
+    return "observe"
+
+
 class CsvParts:
-    """流式分卷，不把大批量病案保存在内存。"""
-    def __init__(self, root, dataset, chunk_rows):
+    """流式分卷，不把大批量病案保存在内存；按批提交以降低逐行写入开销。"""
+    FLUSH_ROWS = 2000
+
+    def __init__(self, root: Path, dataset: str, chunk_rows: int):
         self.root, self.dataset, self.chunk_rows = root, dataset, chunk_rows
         self.count = 0
         self.stream = None
+        self.writer = None
+        self.pending = []
 
-    def add(self, row):
+    def __enter__(self) -> "CsvParts":
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> bool:
+        if exc_type is None:
+            self.close()
+        else:
+            # 异常路径下关闭失败不得覆盖原始异常。
+            try:
+                self.close()
+            except OSError:
+                pass
+        return False
+
+    def add(self, row) -> None:
         if self.count % self.chunk_rows == 0:
             self.close()
             part = self.count // self.chunk_rows + 1
@@ -66,13 +111,26 @@ class CsvParts:
             self.stream = path.open("w", encoding="utf-8", newline="")
             self.writer = csv.writer(self.stream, lineterminator="\r\n")
             self.writer.writerow(HEADERS[self.dataset])
-        self.writer.writerow(row)
+        self.pending.append(row)
         self.count += 1
+        if len(self.pending) >= self.FLUSH_ROWS:
+            self.flush()
 
-    def close(self):
-        if self.stream is not None:
+    def flush(self) -> None:
+        # pending 上限为 chunk_rows（跨卷前必定 close），因此不会把数据串到下一卷。
+        if self.pending and self.writer is not None:
+            self.writer.writerows(self.pending)
+            self.pending.clear()
+
+    def close(self) -> None:
+        if self.stream is None:
+            return
+        try:
+            self.flush()
+        finally:
             self.stream.close()
             self.stream = None
+            self.writer = None
 
 
 # 小型 5x7 字体，仅为扫描测试页绘制明显的英文合成标识，不依赖系统字体。
@@ -90,7 +148,7 @@ FONT = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-: ", (
 )))
 
 
-def png_page(label, blank=False, rotate=False):
+def png_page(label: str, blank: bool = False, rotate: bool = False) -> bytes:
     width, height = 640, 480
     pixels = bytearray([255]) * (width * height)
 
@@ -98,11 +156,19 @@ def png_page(label, blank=False, rotate=False):
         for index, char in enumerate(text):
             pattern = bytes.fromhex(FONT.get(char, FONT[" "]))
             for row, bits in enumerate(pattern):
+                top = y + row * scale
+                if top >= height:
+                    return
                 for col in range(5):
                     if bits & (1 << (4 - col)):
+                        left = 20 + index * 6 * scale + col * scale
                         for dy in range(scale):
-                            start = (y + row * scale + dy) * width + 20 + index * 6 * scale + col * scale
-                            pixels[start:start + scale] = bytes(scale)
+                            row_start = (top + dy) * width
+                            start = row_start + left
+                            end = min(start + scale, row_start + width)
+                            # 超出右边界时裁剪，不静默折行到下一行像素。
+                            if end > start:
+                                pixels[start:end] = bytes(end - start)
 
     if not blank:
         line("MRR SYNTHETIC TEST ONLY", 30)
@@ -164,19 +230,22 @@ def two_page_pdf():
     return bytes(output)
 
 
-def generate_cases(root, baseline):
+def generate_cases(root: Path, baseline: dict) -> int:
     cases = []
 
     def case(name, dataset, rows, expected, *, headers=None, encoding="utf-8", setup="独立空测试库", raw=None):
         if dataset == "archive-boxes" and setup == "独立空测试库":
             setup = "独立测试库先导入基线统计（或对应低位编号统计）；不预先导入装箱记录"
+        expected = dict(expected)
+        expected["verdict"] = verdict_of(expected)
         relative = f"cases/{name}.csv"
         (root / relative).write_bytes(raw if raw is not None else csv_bytes(headers or HEADERS[dataset], rows, encoding))
         cases.append(dict(id=name, dataset=dataset, file=relative, encoding=encoding, setup=setup, expected=expected))
 
     for dataset, row in baseline.items():
+        note = "新库；装箱须先导入基线统计" if dataset == "archive-boxes" else "新库；仅在独立测试库中重复导入同一行"
         case(dataset + "-duplicate", dataset, [row, row],
-             {"canImport": True, "validRows": 1, "duplicateRows": 1, "note": "新库；装箱须先导入基线统计"})
+             {"canImport": True, "validRows": 1, "duplicateRows": 1, "note": note})
         case(dataset + "-missing-header", dataset, [row[:-1]], {"canImport": False}, headers=HEADERS[dataset][:-1])
         case(dataset + "-duplicate-header", dataset, [row + [row[0]]], {"canImport": False}, headers=HEADERS[dataset] + [HEADERS[dataset][0]])
         case(dataset + "-unknown-header", dataset, [row + ["ignored?"]], {"canImport": False}, headers=HEADERS[dataset] + ["unknown_column"])
@@ -196,26 +265,27 @@ def generate_cases(root, baseline):
     mutated("patients-scientific", "patients", {"bah": "1.234E+7", "idcard": "9.999E+17"})
     mutated("patients-bad-date", "patients", {"ruyuan": "2026-99-01", "admissiontime": "bad-time"})
     mutated("patients-missing-name", "patients", {"name": ""},
-            {"canImport": True, "probe": "当前患者导入只要求bah非空，name允许空；若业务要求必填，另行确认需求"})
+            {"canImport": None, "probe": "当前患者导入只要求bah非空，name允许空；若业务要求必填，另行确认需求"})
     mutated("patients-long-name", "patients", {"name": "合" * 2001})
     mutated("patients-quoted", "patients", {"name": '合成,患者"引号"\n第二行'}, {"canImport": True, "validRows": 1})
-    mutated("patients-formula-literal", "patients", {"name": "=1+1"}, {"canImport": True, "probe": "导出应作为文本保护；不应在表格中执行公式"})
+    mutated("patients-formula-literal", "patients", {"name": "=1+1"},
+            {"canImport": None, "probe": "导出应作为文本保护；不应在表格中执行公式"})
     mutated("patients-invisible-code", "patients", {"bah": "00000001\u200b"},
             {"probe": "零宽字符不得与正常编号静默错关联；检查错误提示和存储原值"})
     case("patients-error-cap", "patients", [["", "合成错误行", "", "", "", "", "", ""]] * 205,
          {"canImport": False, "errorRows": 205, "errorsTruncated": True, "reportedErrors": 200})
     case("patients-empty-file", "patients", [], {"exception": "空文件应拒绝"}, raw=b"")
     for dataset in ("statistics", "scan", "archive-boxes"):
-        name = "boxes" if dataset == "archive-boxes" else dataset
-        mutated(name + "-high-missing-sjh", dataset, {"bah": "10000000", "sjh": ""})
-        mutated(name + "-no-identifiers", dataset, {"bah": "", "sjh": ""})
-        mutated(name + "-low-no-sjh", dataset, {"bah": "9999999", "sjh": ""},
+        mutated(dataset + "-high-missing-sjh", dataset, {"bah": "10000000", "sjh": ""})
+        mutated(dataset + "-no-identifiers", dataset, {"bah": "", "sjh": ""})
+        mutated(dataset + "-low-no-sjh", dataset, {"bah": "9999999", "sjh": ""},
                 {"canImport": True, "note": "装箱先导入同编号统计；低位编号不补零"})
     mutated("statistics-negative-pages", "statistics", {"pages": "-1"})
     mutated("statistics-int-overflow", "statistics", {"pages": "2147483648"})
     mutated("statistics-bad-date", "statistics", {"date": "2026-99-01"})
     mutated("statistics-calendar-probe", "statistics", {"date": "2025-02-29"},
-            {"probe": "业务应拒绝非闰年 2 月 29 日；Java SMART 日期解析可能归一化，实测记录结果"})
+            {"probe": "当前基线（含 7756c98d / #361，uuuu-M-d + STRICT）应拒绝并定位到 date；"
+                      "若观测到归一化到月末，说明被测版本早于该提交"})
     mutated("scan-type-16", "scan", {"btype": "16"})
     mutated("scan-negative-size", "scan", {"filesize": "-1"})
     mutated("scan-long-overflow", "scan", {"filesize": "9223372036854775808"})
@@ -227,10 +297,10 @@ def generate_cases(root, baseline):
             {"probe": "内容网关拒绝编码穿越；记录导入与读取两个阶段的结果"})
     mutated("scan-unc-probe", "scan", {"folder": "\\\\storage.invalid\\synthetic"},
             {"probe": "不应访问未配置 UNC 源；只用测试 stub，禁止真实网络探测"})
-    mutated("boxes-status", "archive-boxes", {"status": "INVALID"})
-    mutated("boxes-empty-box", "archive-boxes", {"box_no": ""})
-    mutated("boxes-missing", "archive-boxes", {"box_no": "", "status": "MISSING"}, {"canImport": True})
-    mutated("boxes-unresolved", "archive-boxes", {"bah": "10000099", "sjh": "SYNTH-NOT-FOUND"})
+    mutated("archive-boxes-status", "archive-boxes", {"status": "INVALID"})
+    mutated("archive-boxes-empty-box", "archive-boxes", {"box_no": ""})
+    mutated("archive-boxes-missing", "archive-boxes", {"box_no": "", "status": "MISSING"}, {"canImport": True})
+    mutated("archive-boxes-unresolved", "archive-boxes", {"bah": "10000099", "sjh": "SYNTH-NOT-FOUND"})
     for dataset, field, value in (("statistics", "pages", "99"), ("scan", "btype", "15"), ("archive-boxes", "remark", "合成冲突")):
         row = list(baseline[dataset])
         row[HEADERS[dataset].index(field)] = value
@@ -239,21 +309,84 @@ def generate_cases(root, baseline):
     return len(cases)
 
 
-def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=20261018):
+def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=20261018,
+             max_scan_rows=MAX_SCAN_ROWS, force=False) -> dict:
     root = Path(root)
     if not 12 <= records <= 10_000_000:
         raise ValueError("records 必须为 12..10000000（预留编号边界场景）")
     if not 1 <= scans_per_record <= 10000 or not 1 <= chunk_rows <= 100000:
         raise ValueError("scans-per-record 必须为 1..10000，chunk-rows 为 1..100000")
+    scan_rows = records * scans_per_record
+    if scan_rows > max_scan_rows:
+        estimated = scan_rows * BYTES_PER_SCAN_ROW
+        size = (f"{estimated / 1024 ** 3:.1f} GiB" if estimated >= 1024 ** 3
+                else f"{estimated / 1024 ** 2:.0f} MiB")
+        raise ValueError(
+            f"扫描行数 {scan_rows} 超过上限 {max_scan_rows}（约需 {size} 磁盘）；"
+            "确认余量后可用 --max-scan-rows 显式放宽")
+    parts = -(-records // chunk_rows)
+    if parts * len(HEADERS) > MAX_IMPORT_FILES:
+        raise ValueError(
+            f"分卷过细：每个数据集 {parts} 卷、合计 {parts * len(HEADERS)} 个 CSV，"
+            f"超过上限 {MAX_IMPORT_FILES}；请调大 --chunk-rows")
+    if force and root.exists():
+        if not (root / INCOMPLETE_MARKER).is_file():
+            raise FileExistsError(
+                f"拒绝清理完整目录：{root}（--force 只回收带 {INCOMPLETE_MARKER} 标记的中断目录）")
+        discard_incomplete(root)
     # mkdir(exist_ok=False) 拒绝重用目录，也不会删除或覆盖原始文件。
     root.mkdir(parents=True, exist_ok=False)
+    try:
+        return _populate(root, records, scans_per_record, chunk_rows, seed)
+    except BaseException as error:
+        mark_incomplete(root, error)
+        raise
+
+
+def mark_incomplete(root: Path, error: BaseException) -> None:
+    """写入中断标记，使下次可以 --force 安全回收，而不是只留一条 WinError 183。"""
+    try:
+        (root / INCOMPLETE_MARKER).write_text(
+            "生成中断，本目录不可用于测试。\n"
+            "删除该目录后重跑，或加 --force 直接回收。\n"
+            f"原因: {type(error).__name__}: {error}\n",
+            encoding="utf-8")
+    except OSError:
+        pass
+
+
+def discard_incomplete(root: Path) -> None:
+    """只删除生成器自己创建的顶层条目；目录内出现其他文件时拒绝回收，交人工确认。"""
+    if not root.is_dir():
+        raise FileExistsError(f"拒绝回收：{root} 不是目录")
+    unknown = [path.name for path in root.iterdir() if path.name not in GENERATED_ENTRIES]
+    if unknown:
+        raise FileExistsError(
+            f"拒绝回收：{root} 含非生成器条目 {sorted(unknown)[:3]}，请人工确认后删除")
+    for name in GENERATED_ENTRIES:
+        target = root / name
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.exists():
+            target.unlink()
+    root.rmdir()
+
+
+def _populate(root: Path, records: int, scans_per_record: int, chunk_rows: int, seed: int) -> dict:
     for directory in ("imports", "cases", "media", "storage", "contracts", "migration"):
         (root / directory).mkdir()
     rng = random.Random(seed)
-    images = [png_page(f"TYPE {i:02d}") for i in range(16)]
-    writers = {key: CsvParts(root / "imports", key, chunk_rows) for key in HEADERS}
+    image_cache = {}
+
+    def image_for(btype: int) -> bytes:
+        # 只生成实际出现的类型，小规模场景不必白算 16 张。
+        if btype not in image_cache:
+            image_cache[btype] = png_page(f"TYPE {btype:02d}")
+        return image_cache[btype]
+
     baseline, materialized = {}, []
-    try:
+    with ExitStack() as stack:
+        writers = {key: stack.enter_context(CsvParts(root / "imports", key, chunk_rows)) for key in HEADERS}
         for index in range(records):
             bah = ["00000001", "9999999", "10000000", "10000000"][index] if index < 4 else str(10000001 + index)
             sjh = f"SYNTH-S{index + 1:08d}"
@@ -268,13 +401,14 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
             for key, row in (("patients", patient), ("statistics", statistics), ("archive-boxes", box)):
                 writers[key].add(row)
                 baseline.setdefault(key, row)
+            # folder/brxh 只随记录变化，提到扫描循环外，避免每个扫描行重复格式化。
+            folder = day.strftime("%y.%m.%d")
+            brxh = f"SYNTH-BR{index + 1:08d}"
             for page in range(scans_per_record):
                 sequence = index * scans_per_record + page
                 btype = sequence % 16
-                folder = day.strftime("%y.%m.%d")
                 filename = f"{index + 1:08d}-{page + 1:04d}.png"
-                brxh = f"SYNTH-BR{index + 1:08d}"
-                scan = [sjh, bah, brxh, folder, filename, btype, len(images[btype])]
+                scan = [sjh, bah, brxh, folder, filename, btype, len(image_for(btype))]
                 writers["scan"].add(scan)
                 baseline.setdefault("scan", scan)
                 if sequence < 48:
@@ -282,12 +416,9 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
                     directory_key = sjh if int(bah) >= 10000000 else brxh
                     path = root / "storage" / folder[:5] / folder / (directory_key + "-" + bah) / filename
                     path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_bytes(images[btype])
+                    path.write_bytes(image_for(btype))
                     materialized.append({"path": path.relative_to(root).as_posix(), "bah": bah, "sjh": sjh,
                                          "btype": btype, "md5": digest(path, "md5"), "bytes": path.stat().st_size})
-    finally:
-        for writer in writers.values():
-            writer.close()
     (root / "media/blank.png").write_bytes(png_page("", blank=True))
     (root / "media/rotated.png").write_bytes(png_page("TYPE 01", rotate=True))
     (root / "media/multipage.tiff").write_bytes(two_page_tiff())
@@ -348,7 +479,7 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
         "first_import": {key: {"canImport": True, "insertedRows": writer.count} for key, writer in writers.items()},
         "repeat_import": {"patients": {"insertedRows": 0, "duplicateRows": records},
                           "statistics": {"insertedRows": 0, "updatedRows": records},
-                          "scan": {"insertedRows": 0, "duplicateRows": records * scans_per_record},
+                          "scan": {"insertedRows": 0, "updatedRows": 0, "duplicateRows": records * scans_per_record},
                           "archive-boxes": {"insertedRows": 0, "updatedRows": records}},
         "record_totals": records, "scan_totals": records * scans_per_record,
         "page_totals": records * scans_per_record,
@@ -366,7 +497,7 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
                 "records": records, "scans_per_record": scans_per_record, "chunk_rows": chunk_rows,
                 "materialized_images": len(materialized), "metadata_only_scans": records * scans_per_record - len(materialized),
                 "cases": cases_count, "sources": SOURCES,
-                "storage_path_source": "backend-repo/src/main/java/com/zjcxph/imgapi/storage/ArchiveImagePathSupport.java",
+                "storage_path_source": STORAGE_SOURCE, "type_source": TYPE_SOURCE,
                 "files": []}
     for path in sorted(root.rglob("*")):
         if path.is_file():
@@ -375,16 +506,36 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
     return manifest
 
 
-def verify(root):
+def _listed_files(root: Path) -> set:
+    return {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
+
+
+def verify(root) -> list:
+    """核验产物：既要求清单内文件存在且校验一致，也要求磁盘上没有清单外文件。"""
     root = Path(root).resolve()
-    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    manifest_path = root / "manifest.json"
+    if not manifest_path.is_file():
+        return [f"缺少 manifest: {manifest_path.name}（生成可能被中断，或目录不完整）"]
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except ValueError as error:
+        return [f"manifest 解析失败: {error}"]
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), list):
+        return ["manifest 结构无效: files 必须是数组"]
     errors = []
+    declared = set()
     for item in manifest["files"]:
+        if not isinstance(item, dict) or not {"path", "bytes", "sha256"} <= set(item):
+            errors.append(f"manifest 条目结构无效: {item!r}")
+            continue
+        declared.add(str(item["path"]))
         path = (root / item["path"]).resolve()
         if not path.is_relative_to(root) or not path.is_file():
             errors.append(f"缺失或越界: {item['path']}")
         elif path.stat().st_size != item["bytes"] or digest(path) != item["sha256"]:
             errors.append(f"校验不一致: {item['path']}")
+    for extra in sorted(_listed_files(root) - declared - {manifest_path.name, INCOMPLETE_MARKER}):
+        errors.append(f"未登记文件: {extra}")
     return errors
 
 
@@ -396,6 +547,10 @@ def main():
     parser.add_argument("--scans-per-record", type=int, default=4)
     parser.add_argument("--chunk-rows", type=int, default=50000)
     parser.add_argument("--seed", type=int, default=20261018)
+    parser.add_argument("--max-scan-rows", type=int, default=MAX_SCAN_ROWS,
+                        help=f"扫描行数上限，默认 {MAX_SCAN_ROWS}；仅用于显式放宽磁盘占用防护")
+    parser.add_argument("--force", action="store_true",
+                        help=f"回收带 {INCOMPLETE_MARKER} 标记的中断目录后重新生成；完整目录仍拒绝覆盖")
     args = parser.parse_args()
     if bool(args.output) == bool(args.verify):
         parser.error("必须且只能指定 --output 或 --verify")
@@ -404,10 +559,15 @@ def main():
             errors = verify(args.verify)
             print(json.dumps({"ok": not errors, "errors": errors}, ensure_ascii=False))
             return int(bool(errors))
-        result = generate(args.output, args.records, args.scans_per_record, args.chunk_rows, args.seed)
+        result = generate(args.output, args.records, args.scans_per_record, args.chunk_rows, args.seed,
+                          max_scan_rows=args.max_scan_rows, force=args.force)
         print(json.dumps({key: result[key] for key in ("records", "cases", "materialized_images", "metadata_only_scans")}, ensure_ascii=False))
         return 0
-    except (ValueError, OSError, KeyError) as error:
+    except (ValueError, OSError, KeyError, TypeError) as error:
+        if args.output and (Path(args.output) / INCOMPLETE_MARKER).is_file():
+            parser.exit(2, f"生成失败: {error}\n"
+                           f"输出目录不完整（已写入 {INCOMPLETE_MARKER} 标记）：{args.output}\n"
+                           "删除该目录后重跑，或加 --force 直接回收。\n")
         parser.exit(2, f"生成/校验失败: {error}\n")
 
 

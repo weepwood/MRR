@@ -39,3 +39,6 @@ finally {
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
 }
+# The expected pg_ctl failure was asserted above. GitHub's PowerShell wrapper
+# exits with LASTEXITCODE, so normalize it only after all assertions/cleanup pass.
+$global:LASTEXITCODE = 0

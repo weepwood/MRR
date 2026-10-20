@@ -6,7 +6,7 @@
 
 验证覆盖空查询拒绝、失败查询计数、默认时间、负数归一化、可信用户归属、未登录拒绝、旧客户端伪造身份字段被忽略及收藏更新限定用户。
 
-`scripts/check_architecture_boundaries.py` 检查 Controller 不能新增 Mapper 依赖，公共 UI 不能导入 api/views/store（含别名和相对路径）。现有 PatientController、ClassificationController 的直接依赖，以及 OcrBatchController 暴露 Mapper 内部结果类型各保留一条显式债务记录；减少依赖时必须同步删除/缩小记录，不能悄悄扩大允许范围。治理单元测试会对实际仓库执行检查，因此已有 Quality gate 的必需 release-baseline-gate 会阻断新增问题。
+`scripts/check_architecture_boundaries.py` 检查 Controller 不能新增 Mapper 依赖，公共 UI 不能导入 api/views/store（含别名和相对路径）。现有 PatientController、ClassificationController 的直接依赖，以及 OcrBatchController 暴露 Mapper 内部结果类型各保留显式类型集合；即使沿用 `mapper.*`，新增 Mapper 字段/构造参数也会被拒绝。减少依赖时必须同步缩小集合，不能悄悄扩大允许范围。治理单元测试会对实际仓库执行检查，因此已有 Quality gate 的必需 release-baseline-gate 会阻断新增问题。
 
 这是可执行的有限规则，不是完整 Java/TypeScript 语义分析；不声称能检测反射、动态拼接或所有间接依赖。暂不改造剩余复杂 Controller、大表查询、审计、OCR 和既有接口，以独立问题继续处理，避免本批扩大。
 

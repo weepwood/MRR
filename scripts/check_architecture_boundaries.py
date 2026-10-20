@@ -4,26 +4,32 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY = {
-    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/PatientController.java": 1,
-    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/ClassificationController.java": 1,
+    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/PatientController.java": {"SearchMapper"},
+    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/ClassificationController.java": {
+        "*", "ClassificationMapper", "OcrMapper", "ClassificationCatalogMapper",
+    },
     # Existing API exposes a mapper's nested result type; track it without widening this PR.
-    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/OcrBatchController.java": 1,
+    "backend-repo/src/main/java/com/zjcxph/imgapi/controller/OcrBatchController.java": {"AutomaticClassificationMapper"},
 }
 
 
-def violations(root: Path, legacy: dict[str, int] | None = None) -> list[str]:
+def violations(root: Path, legacy: dict[str, set[str]] | None = None) -> list[str]:
     legacy = LEGACY if legacy is None else legacy
     problems = []
     observed = {}
     for file in (root / "backend-repo/src/main/java/com/zjcxph/imgapi/controller").rglob("*.java"):
         source = re.sub(r"/\*.*?\*/|//[^\n]*", "", file.read_text(encoding="utf-8"), flags=re.S)
-        edges = set(re.findall(r"\bcom\.zjcxph\.imgapi\.mapper(?:\.[\w*]+)+", source))
+        # Count concrete types used under wildcard imports, including fields,
+        # constructor arguments and nested return types; import count is insufficient.
+        edges = set(re.findall(r"\b[A-Z][A-Za-z0-9_]*Mapper\b", source))
+        for dependency in re.findall(r"\bcom\.zjcxph\.imgapi\.mapper\.([\w*]+)", source):
+            edges.add(dependency)
         path = file.relative_to(root).as_posix()
-        observed[path] = len(edges)
-        if len(edges) > legacy.get(path, 0):
+        observed[path] = edges
+        if edges - legacy.get(path, set()):
             problems.append(f"{path}: controller must use a service, not mapper imports")
-    for path, count in legacy.items():
-        if observed.get(path, 0) != count:
+    for path, allowed in legacy.items():
+        if allowed - observed.get(path, set()):
             problems.append(f"{path}: stale legacy allowance; reduce/remove it")
     ui = root / "frontend-fantastic-admin/src/ui"
     frontend = root / "frontend-fantastic-admin/src"

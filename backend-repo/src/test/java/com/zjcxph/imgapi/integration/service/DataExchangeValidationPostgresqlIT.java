@@ -19,7 +19,6 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -32,7 +31,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         ArchiveBoxDataExchangeService.class, ScanDataExchangeService.class, DataExchangeExportService.class})
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Testcontainers(disabledWithoutDocker = true)
 class DataExchangeValidationPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private static final String PATIENT_HEADERS = "bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\n";
     private static final String STATISTICS_HEADERS =

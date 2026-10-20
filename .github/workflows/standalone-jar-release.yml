@@ -1,25 +1,7 @@
 name: Standalone JAR release
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'VERSION'
-      - 'release-baseline.json'
-      - 'scripts/release_baseline.py'
-      - 'scripts/embed_frontend_in_jar.py'
-      - 'scripts/build_standalone_jar.py'
-      - 'scripts/tests/test_embed_frontend_in_jar.py'
-      - 'scripts/tests/test_documentation_packaging_policy.py'
-      - 'scripts/tests/test_build_standalone_jar.py'
-      - 'backend-repo/**'
-      - 'frontend-fantastic-admin/**'
-      - '.github/workflows/standalone-jar-release.yml'
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: read

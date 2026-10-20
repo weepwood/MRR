@@ -10,7 +10,6 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import java.nio.file.*;
 import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.*;
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.*;
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace=AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation=Propagation.NOT_SUPPORTED)
-@Testcontainers(disabledWithoutDocker=true)
 class CodeKeyIndexPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
     private String sql() throws Exception { return Files.readString(Path.of("scripts/build-code-key-indexes.sql")); }

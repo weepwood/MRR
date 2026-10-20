@@ -11,7 +11,6 @@ import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.*;
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace=AutoConfigureTestDatabase.Replace.NONE)
 @Import({DataRelationRepository.class,DataRelationServiceImpl.class})
-@Testcontainers(disabledWithoutDocker=true)
 class DataRelationOverviewPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
     @Autowired DataRelationRepository repository;

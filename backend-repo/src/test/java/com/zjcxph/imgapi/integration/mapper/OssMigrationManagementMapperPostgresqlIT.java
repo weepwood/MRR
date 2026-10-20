@@ -13,7 +13,6 @@ import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 
@@ -26,7 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("OSS 迁移管理 Mapper PostgreSQL 16 集成测试")
 class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
 

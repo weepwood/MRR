@@ -23,20 +23,29 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Cache pinned PostgreSQL test runtime
+        id: postgres-runtime
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/mrr-pg-runtime
+          key: windows-pg16-43bb45f173a6f08cf1d29a97a6d8deb119e8e8093a24c00d2d1001a0ccaa8281
       - name: Obtain pinned PostgreSQL 16 Windows binaries
+        if: steps.postgres-runtime.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           $archive = Join-Path $env:RUNNER_TEMP 'postgresql-16.15-5.zip'
-          Invoke-WebRequest -UseBasicParsing -TimeoutSec 300 -Uri 'https://get.enterprisedb.com/postgresql/postgresql-16.15-5-windows-x64-binaries.zip' -OutFile $archive
+          curl.exe --fail --location --retry 3 --connect-timeout 30 --max-time 300 'https://get.enterprisedb.com/postgresql/postgresql-16.15-5-windows-x64-binaries.zip' --output $archive
+          if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL runtime download failed.' }
           $expected = '43bb45f173a6f08cf1d29a97a6d8deb119e8e8093a24c00d2d1001a0ccaa8281'
           if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'PostgreSQL runtime checksum mismatch.' }
           Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime')
       - name: Package actual application migrations
         shell: powershell
         run: |
-          mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+          mvn -B -ntp -f backend-repo/pom.xml package '-DskipTests' '-Dlocal.config.exclude=true'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Full backup and restore rehearsal under Windows PowerShell 5.1
         shell: powershell

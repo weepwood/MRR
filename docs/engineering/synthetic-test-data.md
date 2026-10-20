@@ -36,7 +36,7 @@
 ```text
 imports/                 四类可导入 CSV，UTF-8、CRLF、完整表头
 cases/                   69 个独立输入文件（含故意错误）
-cases.json               每个文件的前置条件、预期或待确认探针
+cases.json               每个文件的前置条件、单一判定（accept/reject/observe/exception）与明细
 storage/                 与前48条扫描记录路径、大小匹配的 PNG
 media/                   空白/旋转 PNG、两页 TIFF、两页 PDF、损坏/零字节 PNG
 migration/               旧格式患者和扫描 CSV、字段映射与恢复检查配方
@@ -51,7 +51,7 @@ README.txt               简要入口
 
 ## 重新生成与校验
 
-在仓库根目录执行；每次必须使用新的输出目录，不存在覆盖开关：
+在仓库根目录执行；每次必须使用新的输出目录：
 
 ```powershell
 python scripts/generate_test_data.py --output test-data/generated/smoke-new
@@ -60,7 +60,20 @@ python scripts/generate_test_data.py --output test-data/generated/batch-new --re
 python -m unittest discover -s scripts/tests -p test_generate_test_data.py -v
 ```
 
-参数：`--records` 为 12～10,000,000；`--scans-per-record` 为 1～10,000；`--chunk-rows` 为 1～100,000；`--seed` 默认 20261018。相同参数在受支持的同一 Python/zlib 环境输出字节相同；跨版本压缩结果可能不同，重建后应使用新 manifest。拒绝已存在目录，避免误覆盖。生成中断会保留不完整目录；没有完整 manifest 不能作为已完成产物使用，换新目录重跑即可。
+参数：`--records` 为 12～10,000,000；`--scans-per-record` 为 1～10,000；`--chunk-rows` 为 1～100,000；`--seed` 默认 20261018；`--max-scan-rows` 默认 20,000,000。相同参数在受支持的同一 Python/zlib 环境输出字节相同；跨版本压缩结果可能不同，重建后应使用新 manifest。
+
+**拒绝覆盖与中断恢复**：已存在目录一律拒绝（依赖 `mkdir` 排他语义，无 TOCTOU 窗口）；生成中断时会在输出目录写入 `_INCOMPLETE` 标记并在 CLI 提示处置方式，此时可删除目录重跑，或加 `--force` 直接回收。`--force` **只回收带 `_INCOMPLETE` 标记的目录**，对完整目录仍然报 `FileExistsError`；且只删除生成器自己创建的 11 个顶层条目，目录内一旦出现其他文件即拒绝回收并交人工确认，避免误删他人数据。
+
+**两项防护上限**（防止合法单参数组成的巨大组合写满磁盘）：
+
+| 防护 | 默认值 | 触发条件 | 处置 |
+| --- | ---: | --- | --- |
+| 扫描行数 | 20,000,000 | `records × scans-per-record` 超限，按约 82 B/行估算体积 | 确认磁盘余量后用 `--max-scan-rows` 放宽 |
+| 导入 CSV 文件数 | 20,000 | `ceil(records / chunk-rows) × 4` 超限（如 `--chunk-rows 1` 配百万记录） | 调大 `--chunk-rows` |
+
+两者都在创建目录之前校验，失败时不会留下任何残留目录。
+
+`--verify` 是**双向**核验：清单内文件必须存在且大小、SHA-256 一致，同时磁盘上不允许出现清单外文件（报 `未登记文件`）；manifest 缺失、JSON 损坏或结构无效（`files` 非数组、条目缺 `path/bytes/sha256`）都会返回可读错误而不是抛栈。因此混入旧版残留的目录不会被误判为合格产物。
 
 分卷采用流式写入，内存不随扫描行数线性增加。实际文件和 manifest 仍占磁盘；超大规模先估算空间与耗时。例如以下命令会生成 3000 万扫描行，只用于专项基准，**本次没有执行**：
 
@@ -93,7 +106,7 @@ python scripts/generate_test_data.py --output test-data/generated/benchmark-30m 
 **重复导入的“重复”与“更新”如何划分**（核对 `expected.json` 时必须同时读两个字段）：
 
 - 患者按八字段全等判重（`PatientImportService.PatientRow.fingerprint()` 与入库 SQL 的 `is not distinct from` 逐字段比较 `bah/name/idcard/ruyuan/admissiontime/department/bingqu/chuangwei`）。因此两条 `bah` 相同但入院日期或科室不同的记录**不是重复**，首次导入都会入库：`first_import.patients.insertedRows` 包含它们。
-- 扫描按 `folder`+`filename` 定位已存在记录，再以八字段（含 `archive_id`）全等判定重复；`updatedRows = existingPaths - databaseDuplicates`。**若两轮之间 `archive_id` 解析结果不一致，同一批数据会从 `duplicateRows` 落到 `updatedRows`**。核对时先确认两轮 `archive_id` 一致，再判断 `duplicateRows` 是否符合预期，否则会把正常降级误报为缺陷。
+- 扫描按 `folder`+`filename` 定位已存在记录，再以八字段（含 `archive_id`）全等判定重复；`updatedRows = existingPaths - databaseDuplicates`。`expected.json` 现同时给出 `updatedRows: 0` 与 `duplicateRows`，两者之和应等于扫描总数。**若两轮之间 `archive_id` 解析结果不一致，同一批数据会从 `duplicateRows` 落到 `updatedRows`**（表现为 `updatedRows = 总行数`）；核对时先确认两轮 `archive_id` 一致，再判断 `duplicateRows` 是否符合预期，否则会把正常降级误报为缺陷。
 
 两份 `bah=10000000` 的合成患者对应两个不同上架号，是特意保留的查询歧义样本。按 `bah` 单独调阅不得随意选一份；提供组合编号才能精确定位。`PATIENT_ARCHIVE_AMBIGUOUS` 在空库仅导入本基线的前提下预计涉及2条患者；需在真实 PostgreSQL 执行确认，不能把有意歧义误判为生成器关联损坏。
 
@@ -119,9 +132,18 @@ python scripts/generate_test_data.py --output test-data/generated/benchmark-30m 
 | OCR | `contracts/ocr.json`、空白/旋转图 | 文本/建议/正式类型分离，冲突不静默确认；基础英文扫描图不用于中文OCR准确率评估 |
 | 运维/部署 | manifest完整性、独立测试库/目录清理、已有运维测试 | 清理不越界；PowerShell 5.1、Chrome86、真实存储仍需对应环境验证 |
 
-异常文件必须**逐个在独立前置状态中执行**，不能依赖上一个异常文件的落库结果。装箱样本先建立匹配主档；低位无上架号的装箱样本须先建立相应低位统计。`cases.json` 中 `expected.probe` 表示需要观察的行为，不是肯定通过/拒绝断言。
+异常文件必须**逐个在独立前置状态中执行**，不能依赖上一个异常文件的落库结果。装箱样本先建立匹配主档；低位无上架号的装箱样本须先建立相应低位统计。坏行应检查失败后的业务表无变化；成功用例可再导出重导入检查往返一致性。
 
-注意 probe 条目可能同时携带 `canImport` 等硬编码值（例如 `patients-missing-name` 的 `canImport=true`，其说明为“若业务要求必填，另行确认需求”）。这些值只是编写时对照当时实现的**观测提示**，不构成验收断言；接口未实跑前，`canImport` 与 `probe` 冲突时以 `probe` 为准，并将实测结果回填。部分条目的 `note` 为复制模板残留（如患者用例提到“装箱须先导入基线统计”），执行时按 `dataset` 与 `setup` 判断，不要按 `note` 排序。坏行应检查失败后的业务表无变化；成功用例可再导出重导入检查往返一致性。
+**`cases.json` 的判定字段**：每个 `expected` 都带 `verdict`，取值 `accept` / `reject` / `observe` / `exception`，消费方只判这一个字段即可，不必再推测 `canImport` 与 `probe` 的优先级：
+
+| `verdict` | 含义 | 对应字段 |
+| --- | --- | --- |
+| `accept` | 应导入成功 | `canImport: true` + 数量字段 |
+| `reject` | 应被拒绝 | `canImport: false` + `errorRows` 等定位信息 |
+| `observe` | 待观察，不是验收断言 | `probe` 描述待记录的行为；`canImport` 为 `null` |
+| `exception` | 应抛异常/拒绝读入 | `exception` 描述 |
+
+`probe` 型条目一律 `canImport: null`（10 条），不再出现"既断言为 true 又要求观察"的自相矛盾。用例 `id` 统一以所属 `dataset` 为前缀（如 `archive-boxes-status`），可按前缀筛选。`setup` 描述前置状态，不要按 `note` 排序（`note` 仅作补充说明）。
 
 所有生成的 CSV 表头与当前四个导入 Service 通过自动测试核对，避免文档字段与代码漂移；存储路径测试同时覆盖低位brxh和高位sjh分支。Excel `.xls/.xlsx` 的日期序列、公式缓存、数字精度和多工作表差异仍需专门的原生工作簿夹具；本次CSV不能替代这些文件格式测试。也没有把账号、审计、OCR任务表直接灌库，以免绕过生产服务。
 
@@ -183,6 +205,29 @@ python scripts/release_baseline.py validate
 
 表头一致性测试在新基线通过：`PatientImportService` 虽被 #361 大幅重写，`REQUIRED_HEADERS` 仍是同样的八个字段，生成器无需调整。**这同时说明该测试确实能守住表头契约**，而不是只在旧基线上偶然成立。
 
+### 性能与健壮性改造（2026-10-21）
+
+对生成器做了一轮以实测为依据的优化，输入输出契约不变：`imports/`、`storage/`、`media/`、`migration/`、`contracts/` 共 63 个文件与改造前**逐字节相同**（同参数下 manifest 与 cases 内容按预期变化）。
+
+**性能**（同进程交替 A/B，115 万扫描行）：
+
+| 版本 | 第 1 轮 | 第 2 轮 |
+| --- | ---: | ---: |
+| 改造前 | 6.14 s | 6.47 s |
+| 改造后 | 3.83 s | 3.70 s |
+
+降幅约 40%，来源三点：
+
+1. `folder`/`brxh` 只随记录变化，已从扫描内循环提到记录层。改造前 `date.strftime` 在 115 万行场景被调用 40 万次，`cProfile` 记为总耗时的 29%（单函数最高）。
+2. `CsvParts` 改为累积到 2000 行后 `writerows` 批量提交，减少逐行 Python→C 调用。`pending` 上限为 `chunk-rows`，跨卷前必定 flush，不会串数据；`chunk-rows=1` 时与原行为等价。
+3. 扫描图改为按需生成，小规模场景不再白算 16 张 PNG。
+
+**测试耗时**：生成器测试由 10 条 / 9.86 s 变为 19 条 / 6.65 s。默认套件改为类级共享夹具，需要篡改的用例复制副本，实际生成次数从 10 次降到 6 次，新增用例基本抵消了这部分节省。
+
+**健壮性**：新增扫描行数与 CSV 文件数上限（见"重新生成与校验"）、`_INCOMPLETE` 标记与 `--force`、`--verify` 双向核验、`manifest.json`/`cases.json` 原子写入、manifest 结构损坏的可读报错、扫描图文字越界裁剪；`storage_path_source` 与 `TYPE_LABELS` 增加契约测试（分别核对文件存在、与 `MedicalRecordType` 的 16 项标签一致）。
+
+未做且有意不做：manifest 阶段对成品再算一遍 SHA-256 在小规模占 28%、90 MB 规模只占 2%，改成"边写边哈希"需要给 CSV 与图片写入各加一条增量哈希路径，出错面大于收益，维持现状。
+
 此外用独立 Pillow 解码48张扫描PNG、空白/旋转PNG和TIFF，用 pypdf 确认PDF有2页且可提取合成标识；Poppler渲染PDF并人工视检，无截断或重叠（Poppler报告本机缺少两个未使用字体的告警，渲染退出0且页面可读）。这些独立库只用于本次验证，不是生成器依赖。
 
 未执行：后端 `mvn verify`、PostgreSQL16导入/事务/查询/迁移、Chrome86、真实NAS/OSS、全量负载、原生Excel格式。当前未发现可用Java/Maven/PostgreSQL命令；不访问现有数据库，也未对应用调用导入接口。因此这里交付的是经过格式与生成器验证的测试资产，业务预期仍须执行矩阵验证。合并前仍需按AGENTS进行独立规格/代码审查及适用集成验证；本次自测不代替独立审查。
@@ -197,14 +242,16 @@ python scripts/release_baseline.py validate
 
 ## 交付边界与合并前置条件
 
-本节记录独立代码审查结论与后续处理状态，供接续者判断当前交付是否可合并。状态截至 2026-10-20：
+本节记录独立代码审查结论与后续处理状态，供接续者判断当前交付是否可合并。状态截至 2026-10-21：
 
-1. ✅ **变更已提交**。提交为 `079051fb`（测试资产）与 `93028784`（生成器路径行为记录），工作区干净。PR 与 `governance-gate` 尚未执行；PR 正文须含“变更说明/关联事项/风险等级/验证证据/回滚方案/AI 参与说明”六段，`风险等级` 段单行写 `P2`。
+1. ✅ **变更已提交**。提交为 `079051fb`（测试资产）与 `93028784`（生成器路径行为记录），工作区干净。PR #376 已创建，`governance-gate` 等检查通过；PR 正文含“变更说明/关联事项/风险等级/验证证据/回滚方案/AI 参与说明”六段，`风险等级` 段单行写 `P2`。
 2. ✅ **基线已同步**。分支已从 `1c698081` 变基到 `eaa5b8e3`，无冲突，重跑结果见上节。⏳ 但“已识别的探针与未知项”只是**按代码事实更新了预期**，没有一条经过真实导入接口实跑；其中日期一条已由 #361 反转结论，实跑时应断言“拒绝”。
-3. ⏳ **生成器实现层未逐行审查**。审查时该文件读取受安全策略限制，故改为黑盒行为验证，2026-10-20 实测：
-   - 已存在目录、已存在普通文件：退出码 `2`，报 `[WinError 183]`，不覆盖任何内容。拒绝依赖 `mkdir` 的排他语义而不是“先检查后创建”，因此没有 TOCTOU 窗口。
-   - `--output ../escape-root`（相对逃逸）与 `--output <绝对路径>`：均正常生成并写入指定位置；多级不存在的父目录会自动创建。这是本地命令行工具的预期行为，输出路径由操作者显式给出，没有不可信输入来源；但反过来也说明**生成器不提供“只能写进仓库”的护栏**，路径传错会直接落到任意位置。
-   - 拒绝时错误信息直接输出底层 `WinError` 与绝对路径，对操作者可接受，不适合转发给最终用户。
-   - 仍未确认：`manifest.json` 写入是否原子（中断后是否可能留下“结构完整但内容错误”的 manifest）、指向符号链接目录时是否照样写入、`--records` 取极大值时的临时文件与内存曲线。
+3. ✅ **生成器实现层已逐行审查并改造**。2026-10-21 已完整阅读该文件，此前的黑盒结论均被代码证实，并补上了缺口：
+   - 已存在目录/文件：`mkdir(exist_ok=False)` 排他拒绝，无 TOCTOU，不覆盖任何内容（结论不变）。
+   - `manifest.json`、`cases.json` 写入改为临时文件 + `os.replace`，不再存在“结构完整但内容错误”的中间态。
+   - 中断路径新增 `_INCOMPLETE` 标记与 CLI 处置提示；`--force` 只回收带标记的目录，完整目录仍拒绝。
+   - `--records` 极大值不再可能无声写满磁盘：扫描行数与 CSV 文件数双上限在创建目录前校验。
+   - `--output` 指向仓库外仍会写入（本地工具、无不可信输入），**没有**"只能写仓库内"的护栏，这一点未变，属既定设计。
+   - 仍未实测：输出路径指向符号链接目录时的行为（Windows 下需管理员权限创建联接，未构造）。
 4. ⏳ **无集成证据**。后端 `mvn verify`、PostgreSQL 16 导入/事务/查询、Chrome 86、真实 NAS/OSS、原生 Excel 格式均未执行；`expected.json` 与 `cases.json` 的数值是设计预期，不是已执行的测试报告。本机当前没有可用的 Java/Maven/PostgreSQL 命令，这一项必须在具备后端环境的机器上补齐，不能用生成器自测替代。
 

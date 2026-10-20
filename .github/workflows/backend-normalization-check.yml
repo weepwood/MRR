@@ -1,12 +1,7 @@
 name: backend-normalization-check
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'backend-repo/**'
-      - '.github/workflows/backend-normalization-check.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

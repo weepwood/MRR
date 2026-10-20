@@ -18,7 +18,7 @@ import {
   VideoPlay,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   cancelMigrationJob,
   createMigrationJob,
@@ -36,6 +36,7 @@ import {
 } from '@/api/modules/oss'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useMigrationPolling } from './composables/useMigrationPolling'
 
 defineOptions({ name: 'OssMigrationPage' })
 
@@ -63,16 +64,6 @@ interface RecordFilterState {
 }
 
 const ACTIVE_STATUSES = new Set(['pending', 'running', 'cancelling'])
-const TERMINAL_STATUSES = new Set([
-  'cancelled',
-  'interrupted',
-  'completed',
-  'completed_with_errors',
-  'failed',
-])
-const AUTO_REFRESH_INTERVAL = 15_000
-const JOB_POLL_INTERVAL = 2_000
-
 const jobActions: MrrTableAction[] = [{
   key: 'detail',
   label: '查看任务详情',
@@ -149,8 +140,11 @@ const uploadResult = ref<OssUploadBatchResult>()
 const uploadResultVisible = ref(false)
 const autoRefresh = ref(true)
 const lastUpdatedAt = ref<Date>()
-let pollTimer: ReturnType<typeof setInterval> | undefined
-let overviewTimer: ReturnType<typeof setInterval> | undefined
+const { startPolling, stopPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
+  currentJob,
+  refreshAll,
+  () => refreshOverview(true),
+)
 
 const loading = reactive({
   page: false,
@@ -488,55 +482,6 @@ async function refreshAll() {
   }
 }
 
-function stopPolling() {
-  if (!pollTimer) {
-    return
-  }
-  clearInterval(pollTimer)
-  pollTimer = undefined
-}
-
-function startPolling() {
-  if (pollTimer || currentJob.value?.id == null) {
-    return
-  }
-  pollTimer = setInterval(async () => {
-    const jobId = currentJob.value?.id
-    if (jobId == null) {
-      stopPolling()
-      return
-    }
-    try {
-      const response = await getMigrationJob(jobId)
-      if (response.data) {
-        currentJob.value = response.data
-      }
-      if (TERMINAL_STATUSES.has(currentJob.value?.status ?? '')) {
-        stopPolling()
-        await refreshAll()
-      }
-    }
-    catch {
-      stopPolling()
-    }
-  }, JOB_POLL_INTERVAL)
-}
-
-function stopOverviewRefresh() {
-  if (!overviewTimer) {
-    return
-  }
-  clearInterval(overviewTimer)
-  overviewTimer = undefined
-}
-
-function startOverviewRefresh() {
-  stopOverviewRefresh()
-  overviewTimer = setInterval(() => {
-    void refreshOverview(true)
-  }, AUTO_REFRESH_INTERVAL)
-}
-
 function applyRecommendedMode() {
   const mode = readiness.value?.recommendedMode
   if (mode === 'pilot' || mode === 'batch') {
@@ -770,11 +715,6 @@ function handleLogAction(action: string, row: MigrationLogRecord) {
 onMounted(() => {
   void refreshAll()
   startOverviewRefresh()
-})
-
-onBeforeUnmount(() => {
-  stopPolling()
-  stopOverviewRefresh()
 })
 </script>
 

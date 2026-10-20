@@ -1,327 +1,60 @@
-# 工程化优化使用指南
+# 后端工程与本地验证
 
-本文档说明最近实施的工程化优化功能的使用方法。
+本项目使用 Java 21、Spring Boot、MyBatis、Flyway、PostgreSQL 16。依赖版本以 pom.xml 为准，产品版本以根目录 VERSION 为准。正式部署是 Windows Server + Nginx + JAR + PostgreSQL，不依赖 Docker。
 
-## 📋 目录
+## 开发入口
 
-1. [配置文件管理](#配置文件管理)
-2. [结构化日志](#结构化日志)
-3. [自动化测试](#自动化测试)
-4. [性能压测](#性能压测)
+先读根目录 AGENTS.md、ARCHITECTURE.md 和 docs/engineering/ai-assisted-development-governance.md。功能和修复从最新 origin/main 创建 codex/ 分支；已有工作区有未提交文件时先保留，不直接切换或覆盖。
 
----
+仓库提供 Maven Wrapper，固定 Maven 3.9.9 并校验分发包 SHA-256。首次使用需要联网下载 Maven 与依赖；医院离线部署只消费已验证发布包，不在服务器临时构建。
 
-## 配置文件管理
+在根目录运行只读环境检查：
 
-### 新的配置文件命名规范
-
-- ✅ **模板文件**: `application-local.template.properties` (提交到版本控制)
-- ❌ **本地配置**: `application-local.properties` (已加入 .gitignore)
-
-### 使用步骤
-
-```bash
-# 1. 复制模板文件
-cp src/main/resources/application-local.template.properties src/main/resources/application-local.properties
-
-# 2. 编辑本地配置（修改数据库密码、路径等）
-# 使用你喜欢的编辑器打开 application-local.properties
-
-# 3. 启动应用时使用 local profile
-mvn spring-boot:run -Dspring-boot.run.profiles=local
-```
-
-### 配置文件结构
-
-所有配置项已按功能分组并添加详细注释：
-- Server Configuration
-- Image Service Configuration
-- Database Configuration
-- Security Configuration
-- OSS Configuration (可选)
-- Log Retention Configuration
-- Logging Level
-- DevTools
-
----
-
-## 结构化日志
-
-### 特性
-
-✅ **JSON 格式输出** - 便于日志聚合和分析  
-✅ **MDC 上下文追踪** - 每个请求有唯一 ID  
-✅ **多环境支持** - 开发环境人类可读，生产环境 JSON  
-✅ **异步日志** - 提升性能  
-✅ **自动轮转** - 防止日志文件过大  
-
-### 日志格式示例
-
-#### 开发环境 (控制台 - 人类可读)
-```
-2026-04-13 10:30:45.123 INFO  12345 --- [async-1] c.z.i.controller.ImageController      : 获取图片信息成功
-```
-
-#### 生产环境 (JSON 格式)
-```json
-{
-  "@timestamp": "2026-04-13T10:30:45.123+08:00",
-  "level": "INFO",
-  "logger_name": "com.zjcxph.imgapi.controller.ImageController",
-  "message": "获取图片信息成功",
-  "app_name": "img-api",
-  "requestId": "a1b2c3d4e5f6g7h8",
-  "userId": "user123",
-  "clientIp": "192.168.1.100",
-  "thread_name": "http-nio-18045-exec-1"
-}
-```
-
-### MDC 上下文字段
-
-| 字段 | 说明 | 来源 |
-|------|------|------|
-| requestId | 请求唯一标识 | 自动生成 (UUID) |
-| clientIp | 客户端 IP | 从请求头提取 |
-| userId | 已认证用户名 | 认证会话（`LoginInterceptor` 解析后绑定） |
-| userRole | 已认证角色编码 | 认证会话（`LoginInterceptor` 解析后绑定） |
-
-> 日志身份一律以服务端会话为准。`X-User-Id` / `X-User-Role` 请求头由客户端完全可控，
-> 不再写入 MDC，避免调用方伪造请求头污染日志身份。
-
-### 日志级别配置
-
-```properties
-# 开发环境 - 显示详细信息
-logging.level.com.zjcxph.imgapi=DEBUG
-logging.level.com.zjcxph.imgapi.mapper=DEBUG
-
-# 生产环境 - 减少日志量
-logging.level.com.zjcxph.imgapi=INFO
-logging.level.com.zjcxph.imgapi.mapper=WARN
-```
-
-### 集成 ELK Stack (可选)
-
-如果使用 Elasticsearch + Logstash + Kibana：
-
-```yaml
-# logback-spring.xml 已配置好 JSON 输出
-# 只需在 Filebeat 中收集日志文件即可
-filebeat.inputs:
-  - type: log
-    paths:
-      - /path/to/img-api.log*.gz
-    json.keys_under_root: true
-    json.add_error_key: true
-```
-
----
-
-## 自动化测试
-
-### CI/CD 工作流
-
-项目包含两个 GitHub Actions 工作流：
-
-#### 1. CI/CD Pipeline (`.github/workflows/ci-cd.yml`)
-
-**触发条件**:
-- Push 到 `main` 或 `develop` 分支
-- Pull Request
-- Tag 推送 (v*)
-
-**执行任务**:
-- ✅ 代码编译和风格检查
-- ✅ 单元测试
-- ✅ 集成测试 (带 PostgreSQL 服务)
-- ✅ 代码覆盖率检查 (阈值: 50%)
-- ✅ Docker 镜像构建和推送
-- ✅ OWASP 依赖安全扫描
-
-**查看结果**:
-```
-GitHub -> Actions -> CI/CD Pipeline
-```
-
-#### 2. Performance Testing (`.github/workflows/performance-testing.yml`)
-
-**触发条件**:
-- 定时调度 (每周日凌晨 2 点)
-- 手动触发 (workflow_dispatch)
-- Push 到 main 分支的代码变更
-
-**执行任务**:
-- 🚀 轻量级测试 (10 并发, 50 请求)
-- 🚀 中量级测试 (20 并发, 100 请求)
-- 🚀 重量级测试 (50 并发, 200 请求)
-- 📊 生成性能报告
-- ⚠️ 性能回归检测
-
-**性能阈值**:
-| 指标 | 轻量级 | 中量级 |
-|------|--------|--------|
-| 成功率 | ≥ 95% | ≥ 90% |
-| 平均延迟 | ≤ 1000ms | - |
-
----
-
-## 性能压测
-
-### 本地测试脚本
-
-提供两种平台的测试脚本：
-
-#### Linux/macOS (Bash)
-```bash
-# 赋予执行权限
-chmod +x test-performance.sh
-
-# 运行所有测试
-./test-performance.sh
-
-# 运行特定测试
-./test-performance.sh light    # 轻量级
-./test-performance.sh medium   # 中量级
-./test-performance.sh heavy    # 重量级
-./test-performance.sh all      # 全部 (默认)
-
-# 自定义服务器地址
-BASE_URL=http://your-server:18045 ./test-performance.sh
-```
-
-#### Windows (PowerShell)
 ```powershell
-# 运行所有测试
-.\test-performance.ps1
-
-# 运行特定测试
-.\test-performance.ps1 -TestType light
-.\test-performance.ps1 -TestType medium
-.\test-performance.ps1 -TestType heavy
-.\test-performance.ps1 -TestType all
-
-# 自定义服务器地址
-.\test-performance.ps1 -BaseUrl http://your-server:18045
+python scripts/engineering_preflight.py --scope backend --integration
 ```
 
-### 通过 API 直接测试
+Python 3.10+ 用于仓库工具和 OCR 的真实子进程测试；Maven 不会自动继承运行预检的 Python，需指定实际路径：
 
-```bash
-# 发起压力测试
-curl -X POST http://localhost:18045/api/v1/monitoring/pressure-tests \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "my-test",
-    "targetUrl": "http://localhost:18045/api/v1/system/info",
-    "method": "GET",
-    "concurrency": 20,
-    "totalRequests": 100,
-    "timeoutMillis": 5000
-  }'
-
-# 查看测试结果
-curl http://localhost:18045/api/v1/monitoring/pressure-tests
-
-# 查看最新测试结果
-curl http://localhost:18045/api/v1/monitoring/pressure-tests/latest
-
-# 查看历史测试
-curl http://localhost:18045/api/v1/monitoring/pressure-tests/history
-```
-
-### 测试报告解读
-
-响应示例：
-```json
-{
-  "runId": "pt-20260413103045",
-  "name": "medium-load-test",
-  "targetUrl": "http://localhost:18045/api/v1/system/info",
-  "method": "GET",
-  "concurrency": 20,
-  "totalRequests": 100,
-  "successCount": 98,
-  "failureCount": 2,
-  "successRate": 98.0,
-  "minLatencyMs": 15,
-  "avgLatencyMs": 120,
-  "p95LatencyMs": 250,
-  "maxLatencyMs": 450,
-  "requestsPerSecond": 85.47,
-  "durationMillis": 1170,
-  "startTime": "2026-04-13T10:30:45Z",
-  "endTime": "2026-04-13T10:30:46Z"
-}
-```
-
-**关键指标**:
-- **successRate**: 成功率 (越高越好)
-- **avgLatencyMs**: 平均延迟 (越低越好)
-- **p95LatencyMs**: 95% 请求的延迟 (关注长尾延迟)
-- **requestsPerSecond**: 每秒请求数 (吞吐量)
-
----
-
-## 🔧 故障排查
-
-### 问题 1: 日志不是 JSON 格式
-
-**原因**: 未指定 Spring Profile  
-**解决**: 
-```bash
-# 显式指定 prod 或 test profile
-java -jar app.jar --spring.profiles.active=prod
-```
-
-### 问题 2: MDC 字段为空
-
-**原因**: 请求未经过 LogInterceptor  
-**解决**: 确保请求路径未被排除 (检查 `LogInterceptor.shouldSkipLogging`)
-
-### 问题 3: CI/CD 失败
-
-**常见原因**:
-- 数据库连接失败 → 检查 PostgreSQL 服务状态
-- 测试超时 → 增加 timeout 或优化测试
-- 覆盖率不足 → 补充单元测试
-
-### 问题 4: 压测脚本无法执行
-
-**Linux/macOS**:
-```bash
-# 检查权限
-ls -l test-performance.sh
-
-# 添加执行权限
-chmod +x test-performance.sh
-```
-
-**Windows**:
 ```powershell
-# 允许执行脚本
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+$env:JAVA_HOME = '<本机 Java 21 目录>'
+$env:MRR_TEST_PYTHON = '<本机 Python 可执行文件绝对路径>'
+cd backend-repo
+.\mvnw.cmd -v
+.\mvnw.cmd -B -ntp test
+.\mvnw.cmd -B -ntp verify
 ```
 
----
+Linux 使用 `./mvnw`。预检失败会返回非零退出码，不读取本地业务配置、不输出连接口令、不安装或修改工具。
 
-## 📚 相关文档
+## 配置与隐私
 
-- [Spring Boot Logging](https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.logging)
-- [Logstash Logback Encoder](https://github.com/logfellow/logstash-logback-encoder)
-- [GitHub Actions](https://docs.github.com/en/actions)
-- [JaCoCo Code Coverage](https://www.jacoco.org/jacoco/)
+只提交 application-local.template.properties 等模板，本机配置与凭据保持忽略。不得把生产配置、患者编号、姓名、身份证、令牌、内部地址或密钥放入日志、测试夹具、截图及 Artifact。
 
----
+日志沿用现有脱敏、请求跟踪与可信会话身份机制。不要开启全局 SQL DEBUG，也不要按旧文档另行安装 ELK、Vault 或独立追踪平台。日志采集开关、私有目录和恢复边界见 docs/engineering/mrr-data-operations-runbook.md。
 
-## 🎯 下一步优化建议
+## 测试分层
 
-1. **添加分布式追踪**: 集成 OpenTelemetry + Jaeger
-2. **监控告警**: Prometheus + Grafana + AlertManager
-3. **API 文档**: 使用 Spring REST Docs 生成更详细的文档
-4. **数据库迁移**: 引入 Flyway 管理 schema 变更
-5. **密钥管理**: 使用 HashiCorp Vault 管理敏感配置
+- `test`：单元和切片测试，包含需要 Python 的 OCR 子进程测试。
+- `verify`：单元和集成测试；SQL、锁、Flyway、事务和 Mapper 以 PostgreSQL 16 为事实标准。
+- PostgreSQL 可使用 MRR_TEST_POSTGRES_URL / USERNAME / PASSWORD 指定隔离测试库；测试会清表，只能使用可销毁的测试数据库。
+- 本机没有外部测试库时使用 Testcontainers 启动 PostgreSQL 16；Docker 只用于开发和测试。
+- 检查报告中的 skipped 数量，不能把未执行的数据库用例认定为验证通过。
+- H2 的普通审计测试不证明 PostgreSQL 专有行为。
 
----
+CI 的实际入口是 .github/workflows/quality-gate.yml、governance-gate.yml 和发布工作流。覆盖率与产物检查以这些文件和 quality/ 下的基线为准，不假定存在旧的 ci-cd.yml、固定50%硬门槛或 Docker生产发布。
 
-**最后更新**: 2026-04-13
+## 发布与现场验收
+
+发布前执行根目录治理命令：
+
+```powershell
+python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+python scripts/test_inventory.py --fail-on-focused
+python scripts/release_baseline.py validate
+python scripts/check_engineering_docs.py
+```
+
+接口权限拒绝、边界、失败恢复及独立审查需要实际证据。CI 的合成数据测试不等同于医院 Windows Server、Chrome 86、真实 Nginx/NAS/OSS、大表性能或备份恢复验收。现场步骤和未完成验收由 Issue #350 跟踪。
+
+回滚代码通过独立提交和现有发布流程处理；数据库只做前向修复，不能删除或改写已进入 main 的 Flyway 迁移。

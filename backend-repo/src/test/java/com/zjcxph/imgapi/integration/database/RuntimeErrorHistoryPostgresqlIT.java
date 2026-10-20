@@ -11,7 +11,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.*;
 @MybatisTest
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace=AutoConfigureTestDatabase.Replace.NONE)
-@Testcontainers(disabledWithoutDocker=true)
 class RuntimeErrorHistoryPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
     @Autowired SystemErrorEventMapper mapper;

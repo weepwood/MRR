@@ -16,7 +16,6 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 
@@ -30,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("患者统计 PostgreSQL 16 + Flyway 集成测试")
 class PatientAnalyticsServicePostgresqlIT extends PostgresqlIntegrationTestSupport {
 

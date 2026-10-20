@@ -15,7 +15,6 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.charset.StandardCharsets;
 
@@ -28,7 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("病案号与上架号导入边界 PostgreSQL 16 集成测试")
 class MedicalRecordImportBoundaryPostgresqlIT extends PostgresqlIntegrationTestSupport {
 

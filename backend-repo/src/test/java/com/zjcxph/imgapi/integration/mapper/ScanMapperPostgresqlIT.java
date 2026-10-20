@@ -17,7 +17,6 @@ import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -33,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("ScanMapper PostgreSQL 16 + Flyway 集成测试")
 class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
 

@@ -53,7 +53,7 @@ export function useMigrationPolling(
         }
       }
       catch {
-        if (generation === started) {
+        if (!disposed && generation === started && currentJob.value?.id === jobId) {
           stopPolling()
         }
       }

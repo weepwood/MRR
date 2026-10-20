@@ -53,6 +53,22 @@ describe('migration polling lifecycle', () => {
     context.scope.stop()
   })
 
+  it('keeps polling a new job when an old job request rejects late', async () => {
+    const context = setup()
+    let reject!: (reason: Error) => void
+    vi.mocked(getMigrationJob).mockReturnValueOnce(new Promise((_, r) => { reject = r }))
+    vi.mocked(getMigrationJob).mockResolvedValue({ data: { id: 2, status: 'running' } } as any)
+    context.polling.startPolling()
+    await vi.advanceTimersByTimeAsync(2_000)
+    context.job.value = { id: 2, status: 'running' }
+    context.polling.startPolling()
+    reject(new Error('old job failed'))
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(getMigrationJob).toHaveBeenLastCalledWith(2)
+    expect(vi.getTimerCount()).toBe(1)
+    context.scope.stop()
+  })
+
   it('stops on failure, then permits an explicit restart', async () => {
     const context = setup()
     vi.mocked(getMigrationJob).mockRejectedValue(new Error('synthetic failure'))

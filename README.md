@@ -1,6 +1,6 @@
 # MRR 医疗病案文件管理系统
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
 [![VitePress](https://img.shields.io/badge/VitePress-1.5-646CFF)](https://vitepress.dev/)
@@ -8,7 +8,7 @@
 
 MRR 面向医疗机构的病案扫描、归档、检索、调阅、导出、统计、数据治理和运维场景。系统以患者、病案主档、扫描图片、实体档案位置和多来源文件为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、运行诊断与 Windows 原生部署能力。
 
-> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.7.4**，正式标签为 `v0.7.4`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
+> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.8.0**，正式标签为 `v0.8.0`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
 ## 项目定位
 
@@ -45,7 +45,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 
 | 层次 | 技术 |
 | --- | --- |
-| 后端 | Java 21、Spring Boot 4.0.5、MyBatis 4、Flyway、Springdoc、Micrometer |
+| 后端 | Java 21、Spring Boot 4.1.1、MyBatis 4、Flyway、Springdoc、Micrometer |
 | 前端 | Vue 3.5、TypeScript 5.9、Vite 8、Element Plus、Pinia、ECharts |
 | 数据库 | PostgreSQL 16，业务 Schema 为 `app` |
 | 认证安全 | JWT、bcrypt、AES-GCM、RBAC、HMAC 外部调阅票据 |
@@ -117,10 +117,12 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 
 ### 环境要求
 
+根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
+
 - JDK 21+
-- Maven 3.9+
+- 仓库自带 Maven Wrapper 3.9.9，无需全局 Maven
 - PostgreSQL 16+
-- Node.js `^20.19.0` 或 `>=22.12.0`
+- Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0
 - Python 3.10+
 
@@ -163,7 +165,7 @@ $env:JWT_SECRET_KEY = '本地 JWT 密钥'
 $env:AES_SECRET_KEY = 'AES随机密钥'
 
 cd backend-repo
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 默认业务端口 `18045`，管理端口 `18046`：
@@ -260,7 +262,7 @@ python -m unittest discover -s scripts/tests -p 'test_*.py' -v
 python scripts/release_baseline.py validate
 
 cd backend-repo
-mvn -B -ntp verify
+.\mvnw.cmd -B -ntp verify
 
 cd ../frontend-fantastic-admin
 pnpm lint:tsc

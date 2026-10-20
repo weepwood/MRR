@@ -350,6 +350,12 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
+                    <execution>
+                        <id>report-after-integration</id>
+                        <phase>verify</phase>
+                        <goals><goal>report</goal></goals>
+                        <configuration><outputDirectory>${project.reporting.outputDirectory}/jacoco-combined</outputDirectory></configuration>
+                    </execution>
                 </executions>
                 <configuration>
                     <excludes>

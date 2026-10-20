@@ -7,7 +7,6 @@ import org.flywaydb.core.api.output.MigrateResult;
 import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.net.URI;
 import java.sql.Connection;
@@ -19,7 +18,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("Flyway PostgreSQL 16 空数据库生命周期测试")
 class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
 

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "enforcementMode": "report-only",
+  "enforcementMode": "regression-gate",
   "source": {
-    "commit": "2a013cb5c8c2bff771ce08cb89cf861da112eecd",
-    "workflowRunId": 30110861874,
-    "capturedAt": "2026-07-24"
+    "commit": "7756c98d1834849f4b9811ac5b0c8d4b402fbb15",
+    "workflowRunId": 39125525630,
+    "capturedAt": "2026-10-18"
   },
   "maxRegressionPercentagePoints": 0.5,
   "metrics": {
-    "lines": 19.46,
-    "statements": 19.46,
-    "functions": 76.33,
-    "branches": 77.47
+    "lines": 19.78,
+    "statements": 19.78,
+    "functions": 73.39,
+    "branches": 75.49
   }
 }

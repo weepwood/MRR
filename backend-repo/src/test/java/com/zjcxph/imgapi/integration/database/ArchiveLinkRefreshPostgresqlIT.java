@@ -8,7 +8,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         "mybatis.mapper-locations=classpath*:mapper/*.xml",
         "mybatis.configuration.map-underscore-to-camel-case=true"
 })
-@Testcontainers(disabledWithoutDocker = true)
 class ArchiveLinkRefreshPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired private JdbcTemplate jdbc;
     @Autowired private com.zjcxph.imgapi.mapper.ScanMapper mapper;

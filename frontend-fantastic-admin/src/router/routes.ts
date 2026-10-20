@@ -195,6 +195,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: { title: '患者管理', icon: 'i-ant-design:team-outlined', auth: ['record:read'], cache: true },
       },
       {
+        path: '/data-exchange',
+        component: () => import('@/views/data-exchange/index.vue'),
+        meta: { title: '数据交换中心', icon: 'i-ant-design:swap-outlined', auth: ['record:read', 'statistics:read'], cache: true },
+      },
+      {
         path: '/ocr-batches',
         component: () => import('@/views/ocr-batches/index.vue'),
         meta: { title: '历史影像识别', icon: 'i-ant-design:file-search-outlined', auth: ['ocr:batch-run'] },

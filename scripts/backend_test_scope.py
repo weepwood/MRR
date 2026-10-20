@@ -15,6 +15,9 @@ CI_CONTROL_PATHS = {
     "quality/coverage-baseline.json",
     "scripts/backend_test_scope.py",
     "scripts/jacoco_coverage.py",
+    "scripts/check_test_execution.py",
+    "scripts/tests/test_test_execution.py",
+    "scripts/tests/test_coverage_gate_contract.py",
     "scripts/tests/test_backend_test_scope.py",
     "scripts/tests/test_jacoco_coverage.py",
 }

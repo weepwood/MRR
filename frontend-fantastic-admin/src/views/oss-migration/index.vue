@@ -716,7 +716,6 @@ onMounted(() => {
   void refreshAll()
   startOverviewRefresh()
 })
-
 </script>
 
 <template>

@@ -1,6 +1,6 @@
 import type { MigrationJob } from '@/api/modules/oss'
-import { effectScope, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, ref } from 'vue'
 import { getMigrationJob } from '@/api/modules/oss'
 import { useMigrationPolling } from './useMigrationPolling'
 
@@ -32,7 +32,7 @@ describe('migration polling lifecycle', () => {
   it('ignores a response for an old job', async () => {
     const context = setup()
     let resolve!: (value: any) => void
-    vi.mocked(getMigrationJob).mockReturnValue(new Promise(r => { resolve = r }))
+    vi.mocked(getMigrationJob).mockReturnValue(new Promise((r) => { resolve = r }))
     context.polling.startPolling()
     await vi.advanceTimersByTimeAsync(2_000)
     context.job.value = { id: 2, status: 'running' }
@@ -84,7 +84,7 @@ describe('migration polling lifecycle', () => {
   it('disposal cancels timers and ignores pending job completion', async () => {
     const context = setup()
     let resolve!: (value: any) => void
-    vi.mocked(getMigrationJob).mockReturnValue(new Promise(r => { resolve = r }))
+    vi.mocked(getMigrationJob).mockReturnValue(new Promise((r) => { resolve = r }))
     context.polling.startPolling()
     context.polling.startOverviewRefresh()
     await vi.advanceTimersByTimeAsync(2_000)
@@ -112,7 +112,7 @@ describe('migration polling lifecycle', () => {
   it('ignores a stopped request after restarting the same job', async () => {
     const context = setup()
     let resolve!: (value: any) => void
-    vi.mocked(getMigrationJob).mockReturnValueOnce(new Promise(r => { resolve = r }))
+    vi.mocked(getMigrationJob).mockReturnValueOnce(new Promise((r) => { resolve = r }))
     context.polling.startPolling()
     await vi.advanceTimersByTimeAsync(2_000)
     context.polling.stopPolling()

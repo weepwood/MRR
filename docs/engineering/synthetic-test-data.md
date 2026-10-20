@@ -127,7 +127,7 @@ python scripts/generate_test_data.py --output test-data/generated/benchmark-30m 
 
 ## 已识别的探针与未知项
 
-- 日期（**结论随基线变化，勿沿用旧说法**）：本资产最初基于 `1c698081` 编写，当时 `DataExchangeImportSupport.DATE_FORMATTERS` 为 `yyyy-M-d`（SMART 解析），非闰年 `2025-02-29` 会被调整到月末。`origin/main` 的 #361（`7756c98d`）已改为 `uuuu-M-d` + `ResolverStyle.STRICT`（`PatientImportService` 的 `DATE_FORMATTERS` 同步改动），同一输入应被判为日期非法并拒绝，不再到月末。`statistics-calendar-probe.csv` 保留该输入，但**预期取决于被测基线的版本**：`7756c98d` 之后应断言拒绝；断言“调整到月末”只对旧基线成立，已失效。登记业务缺陷前必须先确认被测 jar 的提交。
+- 日期（**结论随基线版本变化**）：当前基线 `eaa5b8e3`（含 #361 `7756c98d`）的 `DataExchangeImportSupport.DATE_FORMATTERS` 为 `uuuu-M-d` + `ResolverStyle.STRICT`，`PatientImportService` 同步改动。因此非闰年 `2025-02-29` 应被判为日期非法并拒绝，**不会**像 `1c698081` 时代那样（`yyyy-M-d` + SMART）被调整到月末。`statistics-calendar-probe.csv` 保留该输入，在当前基线上应断言“拒绝”。若在某个环境观察到“调整到月末”，说明被测 jar 早于 `7756c98d`，按版本差异处理，不要登记为新缺陷。
 - 列数：`toValueMap` 只遍历表头列，额外单元格可能被忽略。四个 `*-extra-cell-probe.csv` 检查是否发生静默丢数；不要仅测试“接口不报错”。
 - 隐形字符：`patients-invisible-code.csv` 检查零宽字符是否导致找不到或错误关联。不要在生成阶段先清掉，否则无法发现清洗问题。
 - 路径：当前导入校验非空目录/文件名，不代表内容网关会放行穿越。必须分开记录“导入”和“读取”结果。
@@ -164,6 +164,25 @@ python scripts/release_baseline.py validate
 2. 新增"实体化扫描图缺失"用例：删除 `storage/` 下一张 PNG 后 `verify` 必须返回带 `storage` 定位的错误。此前只覆盖内容篡改与 manifest 穿越，未覆盖中断生成留下的"目录在、文件不全"状态。
 3. 新增参数下边界用例：`--records 12 --scans-per-record 1 --chunk-rows 1` 可生成、分卷数为 12、`verify` 通过。此前只测了 `0` 与 `10000001` 两个越界值，未验证文档声明的下边界。
 
+### 变基到 `eaa5b8e3` 后重跑（2026-10-20）
+
+分支已从 `1c698081` 变基到 `eaa5b8e3`，无冲突（104 个提交未触及本资产新增文件），重跑结果：
+
+```text
+python -m unittest discover -s scripts/tests -p test_generate_test_data.py
+  10 tests，OK
+python -m unittest discover -s scripts/tests -p 'test_*.py'
+  120 tests，OK（基线自带 32 条脚本测试，此前记的 88 条属旧基线）
+python scripts/generate_test_data.py --verify test-data/generated/{smoke-v2,scale-1000-v2}
+  ok=true，errors=[]
+python scripts/test_inventory.py --fail-on-focused
+  未发现 .only 或 @Disabled
+python scripts/release_baseline.py validate
+  MRR release baseline valid: v0.8.0
+```
+
+表头一致性测试在新基线通过：`PatientImportService` 虽被 #361 大幅重写，`REQUIRED_HEADERS` 仍是同样的八个字段，生成器无需调整。**这同时说明该测试确实能守住表头契约**，而不是只在旧基线上偶然成立。
+
 此外用独立 Pillow 解码48张扫描PNG、空白/旋转PNG和TIFF，用 pypdf 确认PDF有2页且可提取合成标识；Poppler渲染PDF并人工视检，无截断或重叠（Poppler报告本机缺少两个未使用字体的告警，渲染退出0且页面可读）。这些独立库只用于本次验证，不是生成器依赖。
 
 未执行：后端 `mvn verify`、PostgreSQL16导入/事务/查询/迁移、Chrome86、真实NAS/OSS、全量负载、原生Excel格式。当前未发现可用Java/Maven/PostgreSQL命令；不访问现有数据库，也未对应用调用导入接口。因此这里交付的是经过格式与生成器验证的测试资产，业务预期仍须执行矩阵验证。合并前仍需按AGENTS进行独立规格/代码审查及适用集成验证；本次自测不代替独立审查。
@@ -176,16 +195,16 @@ python scripts/release_baseline.py validate
 
 本地旧版`smoke/`、`scale-1000/`仅为中间产物，已从 `test-data/generated/` 移出到系统临时目录 `%TEMP%\mrr-generated-deprecated-20261020\`（保留以便回溯，不占用仓库空间，可随时删除）。只使用`*-v2`或新生成的数据，交付ZIP排除旧版。
 
-## 合并前置条件（尚未满足）
+## 交付边界与合并前置条件
 
-本节记录独立代码审查的结论，供后续接续者判断当前交付边界。以下四项未完成前不应把本资产视为已合并就绪：
+本节记录独立代码审查结论与后续处理状态，供接续者判断当前交付是否可合并。状态截至 2026-10-20：
 
-1. **变更尚未提交**。生成器、生成器测试、本文、`test-data/README.md` 与 `test-data/.gitignore` 仍是未跟踪文件，没有 diff、提交说明和 CI 结果；“先写失败测试再实现”的过程因此无法被第三方核验。下一步是作为一个独立提交并通过 PR 走 `governance-gate`。
-2. **分支基线落后**。审查时工作分支为 `1c698081`，`origin/main` 已前进 104 个提交。合并前须同步并**重跑“已识别的探针与未知项”全部条目**，特别是日期解析一条：`7756c98d` 已把日期格式化器改为 STRICT，旧结论失效。
-3. **生成器实现层未逐行审查，已用黑盒探测缩小范围**。审查时该文件读取受安全策略限制，故改为行为验证，2026-10-20 实测：
+1. ✅ **变更已提交**。提交为 `079051fb`（测试资产）与 `93028784`（生成器路径行为记录），工作区干净。PR 与 `governance-gate` 尚未执行；PR 正文须含“变更说明/关联事项/风险等级/验证证据/回滚方案/AI 参与说明”六段，`风险等级` 段单行写 `P2`。
+2. ✅ **基线已同步**。分支已从 `1c698081` 变基到 `eaa5b8e3`，无冲突，重跑结果见上节。⏳ 但“已识别的探针与未知项”只是**按代码事实更新了预期**，没有一条经过真实导入接口实跑；其中日期一条已由 #361 反转结论，实跑时应断言“拒绝”。
+3. ⏳ **生成器实现层未逐行审查**。审查时该文件读取受安全策略限制，故改为黑盒行为验证，2026-10-20 实测：
    - 已存在目录、已存在普通文件：退出码 `2`，报 `[WinError 183]`，不覆盖任何内容。拒绝依赖 `mkdir` 的排他语义而不是“先检查后创建”，因此没有 TOCTOU 窗口。
    - `--output ../escape-root`（相对逃逸）与 `--output <绝对路径>`：均正常生成并写入指定位置；多级不存在的父目录会自动创建。这是本地命令行工具的预期行为，输出路径由操作者显式给出，没有不可信输入来源；但反过来也说明**生成器不提供“只能写进仓库”的护栏**，路径传错会直接落到任意位置。
    - 拒绝时错误信息直接输出底层 `WinError` 与绝对路径，对操作者可接受，不适合转发给最终用户。
    - 仍未确认：`manifest.json` 写入是否原子（中断后是否可能留下“结构完整但内容错误”的 manifest）、指向符号链接目录时是否照样写入、`--records` 取极大值时的临时文件与内存曲线。
-4. **无集成证据**。后端 `mvn verify`、PostgreSQL 16 导入/事务/查询、Chrome 86、真实 NAS/OSS、原生 Excel 格式均未执行；`expected.json` 与 `cases.json` 的数值是设计预期，不是已执行的测试报告。
+4. ⏳ **无集成证据**。后端 `mvn verify`、PostgreSQL 16 导入/事务/查询、Chrome 86、真实 NAS/OSS、原生 Excel 格式均未执行；`expected.json` 与 `cases.json` 的数值是设计预期，不是已执行的测试报告。本机当前没有可用的 Java/Maven/PostgreSQL 命令，这一项必须在具备后端环境的机器上补齐，不能用生成器自测替代。
 

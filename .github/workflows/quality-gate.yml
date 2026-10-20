@@ -200,6 +200,7 @@ jobs:
             --summary coverage/coverage-summary.json \
             "${baseline_args[@]}" \
             --max-regression 0.50 \
+            --fail-on-regression \
             --output-json coverage/coverage-comparison.json \
             --output-markdown coverage/coverage-comparison.md \
             --github-summary "${GITHUB_STEP_SUMMARY}"
@@ -330,6 +331,9 @@ jobs:
       - name: Unit tests
         run: mvn -B -ntp test
 
+      - name: Enforce backend unit coverage baseline
+        run: python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload unit test reports
         if: always()
         continue-on-error: true
@@ -339,6 +343,7 @@ jobs:
           path: |
             backend-repo/target/surefire-reports
             backend-repo/target/site/jacoco
+            backend-repo/target/site/jacoco-combined
           if-no-files-found: ignore
           retention-days: 7
 
@@ -382,6 +387,14 @@ jobs:
       - name: Unit and PostgreSQL integration tests
         run: mvn -B -ntp verify
 
+      - name: Require executed PostgreSQL tests
+        run: python3 ../scripts/check_test_execution.py --reports target/failsafe-reports
+
+      - name: Enforce backend coverage baseline
+        run: |
+          python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
+          python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco-combined/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression
+
       - name: Upload backend test reports
         if: always()
         continue-on-error: true
@@ -392,6 +405,7 @@ jobs:
             backend-repo/target/surefire-reports
             backend-repo/target/failsafe-reports
             backend-repo/target/site/jacoco
+            backend-repo/target/site/jacoco-combined
           if-no-files-found: ignore
           retention-days: 7
 

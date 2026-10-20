@@ -1,18 +1,19 @@
 {
   "schemaVersion": 1,
-  "enforcementMode": "report-only",
+  "enforcementMode": "regression-gate",
   "source": {
-    "commit": "c3b7ca94df61bf1169bb2f71e9cc2b19ab7deb9b",
-    "workflowRunId": 30096779534,
-    "capturedAt": "2026-07-24"
+    "commit": "7756c98d1834849f4b9811ac5b0c8d4b402fbb15",
+    "workflowRunId": 39125525630,
+    "capturedAt": "2026-10-18",
+    "scope": "unit-report"
   },
   "maxRegressionPercentagePoints": 0.5,
   "metrics": {
-    "instruction": 50.0352,
-    "branch": 41.5605,
-    "line": 51.2715,
-    "complexity": 35.6711,
-    "method": 59.4655,
-    "class": 75.1073
+    "instruction": 50.1642,
+    "branch": 41.8899,
+    "line": 53.107,
+    "complexity": 35.8181,
+    "method": 58.4321,
+    "class": 69.4805
   }
 }

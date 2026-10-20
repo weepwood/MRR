@@ -37,5 +37,9 @@ class ArchitectureBoundaryTest(unittest.TestCase):
             relative = "backend-repo/src/main/java/com/zjcxph/imgapi/controller/LegacyController.java"
             path = root / relative
             path.parent.mkdir(parents=True)
+            mappers = path.parent.parent / "mapper"
+            mappers.mkdir()
+            for name in ("OldMapper", "SearchMapper"):
+                (mappers / f"{name}.java").write_text(f"interface {name} {{}}", encoding="utf-8")
             path.write_text("import com.zjcxph.imgapi.mapper.*;\nclass LegacyController { OldMapper old; SearchMapper added; }", encoding="utf-8")
             self.assertTrue(any("controller must" in item for item in violations(root, {relative: {"*", "OldMapper"}})))

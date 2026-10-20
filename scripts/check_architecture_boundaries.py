@@ -17,13 +17,15 @@ def violations(root: Path, legacy: dict[str, set[str]] | None = None) -> list[st
     legacy = LEGACY if legacy is None else legacy
     problems = []
     observed = {}
+    mapper_types = {file.stem for file in (root / "backend-repo/src/main/java/com/zjcxph/imgapi/mapper").glob("*.java")}
     for file in (root / "backend-repo/src/main/java/com/zjcxph/imgapi/controller").rglob("*.java"):
         source = re.sub(r"/\*.*?\*/|//[^\n]*", "", file.read_text(encoding="utf-8"), flags=re.S)
         # Count concrete types used under wildcard imports, including fields,
         # constructor arguments and nested return types; import count is insufficient.
-        edges = set(re.findall(r"\b[A-Z][A-Za-z0-9_]*Mapper\b", source))
-        for dependency in re.findall(r"\bcom\.zjcxph\.imgapi\.mapper\.([\w*]+)", source):
-            edges.add(dependency)
+        edges = set(re.findall(r"\bcom\.zjcxph\.imgapi\.mapper\.([\w*]+)", source))
+        if "*" in edges:
+            # Match repository Mapper types, not unrelated Jackson ObjectMapper.
+            edges.update(set(re.findall(r"\b[A-Z][A-Za-z0-9_]*\b", source)) & mapper_types)
         path = file.relative_to(root).as_posix()
         observed[path] = edges
         if edges - legacy.get(path, set()):

@@ -62,14 +62,14 @@ python -m unittest discover -s scripts/tests -p test_generate_test_data.py -v
 
 参数：`--records` 为 12～10,000,000；`--scans-per-record` 为 1～10,000；`--chunk-rows` 为 1～100,000；`--seed` 默认 20261018；`--max-scan-rows` 默认 20,000,000。相同参数在受支持的同一 Python/zlib 环境输出字节相同；跨版本压缩结果可能不同，重建后应使用新 manifest。
 
-**拒绝覆盖与中断恢复**：已存在目录一律拒绝（依赖 `mkdir` 排他语义，无 TOCTOU 窗口）；生成中断时会在输出目录写入 `_INCOMPLETE` 标记并在 CLI 提示处置方式，此时可删除目录重跑，或加 `--force` 直接回收。`--force` **只回收带 `_INCOMPLETE` 标记的目录**，对完整目录仍然报 `FileExistsError`；且只删除生成器自己创建的 11 个顶层条目，目录内一旦出现其他文件即拒绝回收并交人工确认，避免误删他人数据。
+**拒绝覆盖与中断恢复**：已存在目录一律拒绝（依赖 `mkdir` 排他语义，无 TOCTOU 窗口）；生成中断时会在输出目录写入 `_INCOMPLETE` 标记并在 CLI 提示处置方式，此时可删除目录重跑，或加 `--force` 直接回收。`--force` **只回收带 `_INCOMPLETE` 标记的专用生成目录**，对完整目录仍然报 `FileExistsError`；它核验顶层条目名称后递归删除生成器目录，包含原子写入留下的 `.tmp` 文件。不要把输出目录与其他文件共用；嵌套在生成器目录中的外来文件无法可靠区分，会随目录删除。
 
 **两项防护上限**（防止合法单参数组成的巨大组合写满磁盘）：
 
 | 防护 | 默认值 | 触发条件 | 处置 |
 | --- | ---: | --- | --- |
 | 扫描行数 | 20,000,000 | `records × scans-per-record` 超限，按约 82 B/行估算体积 | 确认磁盘余量后用 `--max-scan-rows` 放宽 |
-| 导入 CSV 文件数 | 20,000 | `ceil(records / chunk-rows) × 4` 超限（如 `--chunk-rows 1` 配百万记录） | 调大 `--chunk-rows` |
+| 导入 CSV 文件数 | 20,000 | `3 × ceil(records / chunk-rows) + ceil(records × scans-per-record / chunk-rows)` 超限 | 调大 `--chunk-rows` |
 
 两者都在创建目录之前校验，失败时不会留下任何残留目录。
 

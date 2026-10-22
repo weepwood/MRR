@@ -40,7 +40,8 @@ MAX_IMPORT_FILES = 20_000
 BYTES_PER_SCAN_ROW = 82
 INCOMPLETE_MARKER = "_INCOMPLETE"
 GENERATED_ENTRIES = ("imports", "cases", "media", "storage", "contracts", "migration",
-                     "cases.json", "storage-cases.json", "expected.json", "README.txt", INCOMPLETE_MARKER)
+                     "cases.json", "storage-cases.json", "expected.json", "manifest.json", "README.txt",
+                     "cases.tmp", "storage-cases.tmp", "expected.tmp", "manifest.tmp", INCOMPLETE_MARKER)
 
 
 def write_json(path: Path, value) -> None:
@@ -324,10 +325,12 @@ def generate(root, records=12, scans_per_record=4, chunk_rows=50000, seed=202610
         raise ValueError(
             f"扫描行数 {scan_rows} 超过上限 {max_scan_rows}（约需 {size} 磁盘）；"
             "确认余量后可用 --max-scan-rows 显式放宽")
-    parts = -(-records // chunk_rows)
-    if parts * len(HEADERS) > MAX_IMPORT_FILES:
+    record_parts = -(-records // chunk_rows)
+    scan_parts = -(-scan_rows // chunk_rows)
+    import_files = record_parts * (len(HEADERS) - 1) + scan_parts
+    if import_files > MAX_IMPORT_FILES:
         raise ValueError(
-            f"分卷过细：每个数据集 {parts} 卷、合计 {parts * len(HEADERS)} 个 CSV，"
+            f"分卷过细：病案类各 {record_parts} 卷、扫描 {scan_parts} 卷，合计 {import_files} 个 CSV，"
             f"超过上限 {MAX_IMPORT_FILES}；请调大 --chunk-rows")
     if force and root.exists():
         if not (root / INCOMPLETE_MARKER).is_file():

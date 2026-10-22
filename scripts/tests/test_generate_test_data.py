@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import zlib
 from pathlib import Path
+from unittest.mock import patch
 
 MODULE = Path(__file__).resolve().parents[1] / "generate_test_data.py"
 REPO = MODULE.parent.parent
@@ -108,8 +109,14 @@ class SyntheticDataTest(unittest.TestCase):
         with self.assertRaises(ValueError) as parts_guard:
             self.generate(self.root / "too-many-parts", records=100000, chunk_rows=1)
         self.assertIn("分卷过细", str(parts_guard.exception))
+        scan_parts_root = self.root / "too-many-scan-parts"
+        with patch.object(self.generator, "_populate", side_effect=AssertionError("必须在写文件前拒绝")):
+            with self.assertRaises(ValueError) as scan_parts_guard:
+                self.generate(scan_parts_root, records=12, scans_per_record=2000, chunk_rows=1)
+        self.assertIn("分卷过细", str(scan_parts_guard.exception))
         self.assertFalse((self.root / "too-many-rows").exists())
         self.assertFalse((self.root / "too-many-parts").exists())
+        self.assertFalse(scan_parts_root.exists())
 
     def test_incomplete_generation_is_marked_and_reclaimable(self):
         root = self.root / "interrupted"
@@ -133,6 +140,24 @@ class SyntheticDataTest(unittest.TestCase):
         self.assertFalse((root / self.generator.INCOMPLETE_MARKER).exists())
         with self.assertRaises(FileExistsError):
             self.generate(root, force=True)
+
+    def test_force_reclaims_interrupted_manifest_temp_file(self):
+        root = self.root / "interrupted-manifest"
+        original = self.generator.write_json
+
+        def fail_manifest(path, value):
+            if path.name == "manifest.json":
+                path.with_suffix(".tmp").write_text("partial", encoding="utf-8")
+                raise OSError("模拟 manifest 原子写入中断")
+            return original(path, value)
+
+        with patch.object(self.generator, "write_json", side_effect=fail_manifest):
+            with self.assertRaises(OSError):
+                self.generate(root)
+        self.assertTrue((root / self.generator.INCOMPLETE_MARKER).is_file())
+        self.assertTrue((root / "manifest.tmp").is_file())
+        self.generate(root, force=True)
+        self.assertEqual([], self.generator.verify(root))
 
     def test_force_refuses_directory_with_foreign_entries(self):
         # --force 只回收生成器自己写的内容；目录里混进其他文件时必须停手，交人工确认。

@@ -11,6 +11,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.PreparedStatementSetter;
+import org.springframework.dao.QueryTimeoutException;
+import java.sql.PreparedStatement;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -30,6 +33,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class DataQualityServiceImplTest {
@@ -192,6 +197,29 @@ class DataQualityServiceImplTest {
         AtomicBoolean running = (AtomicBoolean) ReflectionTestUtils.getField(service, "running");
         assertThat(running).isNotNull();
         assertThat(running.get()).isFalse();
+    }
+
+    @Test
+    void sampleUsesBoundedStatementAndLeavesSharedTemplateUnchanged() throws Exception {
+        ReflectionTestUtils.setField(service, "sampleLimit", 5000);
+        when(jdbcTemplate.queryForObject(contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
+                .thenReturn(77L);
+        when(jdbcTemplate.query(anyString(), any(PreparedStatementSetter.class),
+                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.ResultSetExtractor<Long>>any())).thenReturn(1L);
+        doAnswer(invocation -> {
+            PreparedStatement statement = mock(PreparedStatement.class);
+            invocation.<PreparedStatementSetter>getArgument(1).setValues(statement);
+            verify(statement).setQueryTimeout(10);
+            verify(statement).setInt(1, 1000);
+            throw new QueryTimeoutException("synthetic timeout");
+        }).when(jdbcTemplate).query(contains(" LIMIT ?"), any(PreparedStatementSetter.class),
+                org.mockito.ArgumentMatchers.<RowMapper<Map<String, Object>>>any());
+
+        assertThatThrownBy(() -> service.runChecks("manual")).hasCauseInstanceOf(QueryTimeoutException.class);
+
+        verify(jdbcTemplate, never()).setQueryTimeout(org.mockito.ArgumentMatchers.anyInt());
+        verify(jdbcTemplate).update(contains("SET status = 'FAILED'"), eq("QueryTimeoutException"), eq(77L));
+        assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
     }
 
     @Test

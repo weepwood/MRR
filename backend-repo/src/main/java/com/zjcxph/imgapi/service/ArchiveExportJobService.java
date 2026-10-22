@@ -159,7 +159,11 @@ public class ArchiveExportJobService {
         if (repository.requestCancel(id) == 0) {
             return ArchiveExportJobResponse.from(requireOwned(session, id));
         }
-        cancellationFlags.computeIfAbsent(id, ignored -> new AtomicBoolean()).set(true);
+        // 仅Worker拥有内存标志；尚未领取的取消由数据库状态承载，避免领取失败后遗留条目。
+        AtomicBoolean cancellation = cancellationFlags.get(id);
+        if (cancellation != null) {
+            cancellation.set(true);
+        }
         if ("PENDING".equals(job.getStatus())) {
             repository.markCancelled(id, LocalDateTime.now());
         }

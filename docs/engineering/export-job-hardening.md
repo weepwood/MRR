@@ -41,3 +41,10 @@ ArchiveExportJobRepository / ArchiveExportTempFileManager → PostgreSQL / 受�
 - 仓库工具110项单测、测试资产/发布基线/架构边界/工程文档检查、`git diff --check`通过。工具使用实际Python3.12，不使用WindowsApps别名。
 - 独立上下文直接读取#171、diff、测试和架构，两项发现修复后复核通过。未修改前端，不声称完成Chrome86或真实存储验收。
 - Windows11 / Java21 / Maven3.9.9；Testcontainers仅启动一次性PostgreSQL16，正式部署不依赖Docker。
+
+## 合并前复审补充
+
+独立复审发现P2：Worker读到PENDING后发生取消，领取失败的直接返回会绕过finally，遗留cancel()创建的内存标志。
+新增确定性交错测试先失败（3项中1项失败）；修复为只有Worker创建并拥有标志，cancel()只设置已有标志。
+尚未领取或尚未建立标志的取消由持久化cancel_requested及领取后检查承载，另测试执行中Worker的同一标志仍被置位。
+复审修正单独追加提交，不改写公开历史；合入最新main后重新验证组合变更。

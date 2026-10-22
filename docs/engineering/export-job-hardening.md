@@ -48,3 +48,7 @@ ArchiveExportJobRepository / ArchiveExportTempFileManager → PostgreSQL / 受�
 新增确定性交错测试先失败（3项中1项失败）；修复为只有Worker创建并拥有标志，cancel()只设置已有标志。
 尚未领取或尚未建立标志的取消由持久化cancel_requested及领取后检查承载，另测试执行中Worker的同一标志仍被置位。
 复审修正单独追加提交，不改写公开历史；合入最新main后重新验证组合变更。
+
+组合 `mvnw.cmd -B -ntp clean verify` 实际结果：842项单元/切片、92项集成，失败/错误/跳过均0，BUILD SUCCESS。
+22个PostgreSQL测试类完整执行无跳过，单测/集成覆盖率基线均通过；新增取消交错与活动标志两项测试通过。
+独立复核确认原P2消除；仓库工具110项及治理检查通过。此组合包含已合并#380的质量查询超时测试。

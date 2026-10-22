@@ -255,3 +255,6 @@ python scripts/release_baseline.py validate
    - 仍未实测：输出路径指向符号链接目录时的行为（Windows 下需管理员权限创建联接，未构造）。
 4. ⏳ **无集成证据**。后端 `mvn verify`、PostgreSQL 16 导入/事务/查询、Chrome 86、真实 NAS/OSS、原生 Excel 格式均未执行；`expected.json` 与 `cases.json` 的数值是设计预期，不是已执行的测试报告。本机当前没有可用的 Java/Maven/PostgreSQL 命令，这一项必须在具备后端环境的机器上补齐，不能用生成器自测替代。
 
+### 2026-10-23 分卷与恢复复核
+
+审查发现原文件数上限把扫描数据也按病案数计算，`--records 12 --scans-per-record 2000 --chunk-rows 1` 会绕过 20,000 个 CSV 上限。新增失败路径测试后，改为分别计算三类病案 CSV 与扫描 CSV 的分卷数，并在创建输出目录前拒绝。另用故障注入证明原子写入 `manifest.json` 时留下 `manifest.tmp` 会阻止 `--force` 回收，现将生成器可能留下的根目录临时文件列入回收清单。上述两项测试先失败、修复后通过；合并最新 `main` 后仓库脚本测试 130 项通过。未据此宣称 PostgreSQL 导入预期已验证。

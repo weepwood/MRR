@@ -48,6 +48,18 @@ class FrontendTestScopeTest(unittest.TestCase):
                 self.assertTrue(scope.e2e_changed)
                 self.assertEqual(scope.reason, "release-change")
 
+    def test_browser_compatibility_change_runs_e2e(self):
+        for path in (
+            "frontend-fantastic-admin/playwright.compat.config.ts",
+            "frontend-fantastic-admin/index.html",
+            "frontend-fantastic-admin/vite/browser-targets.ts",
+            "frontend-fantastic-admin/src/utils/browser-baseline.ts",
+        ):
+            with self.subTest(path=path):
+                scope = classify_paths([path])
+                self.assertTrue(scope.frontend_changed)
+                self.assertTrue(scope.e2e_changed)
+
     def test_gate_control_change_tests_the_gate_itself(self):
         for path in (
             ".github/workflows/quality-gate.yml",

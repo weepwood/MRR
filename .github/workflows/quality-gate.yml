@@ -224,6 +224,11 @@ jobs:
         timeout-minutes: 15
         run: pnpm test:e2e
 
+      - name: Production browser compatibility
+        if: needs.frontend-scope.outputs.e2e_changed == 'true'
+        timeout-minutes: 5
+        run: pnpm test:compat:browser
+
       - name: Upload Playwright report
         if: ${{ always() && needs.frontend-scope.outputs.e2e_changed == 'true' }}
         continue-on-error: true

@@ -23,7 +23,7 @@ Node.js 必须满足 `^24.15.0 || >=26.0.0`，仓库推荐 Node.js 22。
 
 | 浏览器 | 最低版本 |
 |--------|----------|
-| Microsoft Edge | 111 |
+| Microsoft Edge | 109 |
 | Google Chrome | 86 |
 | Firefox | 114 |
 | Safari | 16.4 |
@@ -34,15 +34,17 @@ Chrome 86 的兼容目标是保证系统可访问，并支持登录、菜单导�
 
 兼容目标同时声明在：
 
-- `package.json` 的 `browserslist`，用于 Autoprefixer 等 CSS 工具。
-- `vite/plugins.ts` 的 `modernTargets`，用于固定 JavaScript 构建目标并按实际用法注入运行时 polyfill。
-- `vite.config.ts` 的 `build.cssTarget`，用于固定 CSS 构建目标并通过 Lightning CSS 降级兼容语法。
+- `package.json` 的 `browserslist` 是唯一版本来源，用于 Autoprefixer 等 CSS 工具。
+- `src/utils/browser-baseline.ts` 从该声明导出入口提示和客户端诊断所用版本。
+- `vite/browser-targets.ts` 派生 JavaScript/polyfill 和 CSS 构建目标；Vite 在开发和构建时将版本注入 HTML 内联检测脚本。
 
-`index.html` 中的浏览器检测通知独立于 Vue 应用启动。检测到版本过低、IE、旧版 Edge，或未知浏览器缺少必要功能时，会显示置顶通知。视觉增强能力缺失不会阻断应用启动；通知不会自动消失，只能由用户手动关闭，关闭状态仅保留在当前浏览器会话中，下次重新打开浏览器仍会提示。
+`index.html` 中的浏览器检测独立于 Vue 应用启动。检测到版本过低、IE、旧版 Edge，或未知浏览器缺少基础能力时，会阻止应用启动并显示不可关闭的升级提示。未知浏览器不会因 polyfill 加载前缺少 `at` / `findLast` 等可补齐方法而被提前拒绝。视觉增强能力缺失不会阻断应用启动。
 
 普通内网 HTTP 页面无法使用原生 Clipboard API 时，应用启动阶段会安装仅包含 `writeText` 的降级实现。HTTPS 或安全上下文仍使用浏览器原生 Clipboard API。
 
-Playwright 默认同时运行 Chromium、Firefox 和 WebKit。它用于验证三类浏览器引擎，不代表已经验证每个最低版本；调整最低版本时还应使用固定版本浏览器执行人工回归。
+默认 Playwright 配置仅运行 Chromium，使用 Mock 开发服务器。`e2e/browser-compatibility.spec.ts` 修改 UA 验证版本策略，不代表真实旧内核兼容。
+
+`pnpm build` 后执行 `pnpm test:compat:browser`，通过独立的 `playwright.compat.config.ts` 测试生产构建。默认使用本机 Playwright Chromium；指定固定浏览器路径及主版本可对真实旧内核运行同一套用例，测试会核对实际版本，不修改 UA。API 使用合成响应，只验证前端操作与会话失效处理，不替代真实后端权限验收。具体命令、已知边界和回归矩阵见[浏览器兼容实施与验收](https://github.com/weepwood/MRR/blob/main/docs/engineering/browser-compatibility.md)。
 
 Chrome 86 发布回归至少检查：
 

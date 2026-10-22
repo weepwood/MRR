@@ -1,7 +1,7 @@
 /**
  * 登录页客户端环境探测。
  *
- * 全部信息都在浏览器侧采集，零外部依赖，并保持与构建基线（Chrome 86 / Edge 111 /
+ * 全部信息都在浏览器侧采集，零外部依赖，并保持与构建基线（Chrome 86 / Edge 109 /
  * Firefox 114 / Safari 16.4）兼容：不使用 `Array.prototype.at`、`Object.hasOwn`、
  * `structuredClone` 等更新语法，所有宿主 API 均带存在性判断，在 jsdom 等
  * 精简环境中也不会抛错。
@@ -9,6 +9,8 @@
  * 唯一无法在浏览器侧获得的是「服务端看到的客户端地址」，由
  * `getPublicClientEnvironment()` 请求后端回显。
  */
+
+import { browserMinimumVersions } from './browser-baseline'
 
 export interface BrowserInfo {
   /** 展示用浏览器名称，例如 Chrome、Edge、360 安全浏览器 */
@@ -83,14 +85,6 @@ interface NetworkInformationLike {
 }
 
 const UNKNOWN_BROWSER = '未知浏览器'
-
-/** 项目声明支持的最低浏览器版本，与 vite/browser-targets.ts 保持一致。 */
-const BROWSER_BASELINES: Record<string, { major: number, minor: number, label: string }> = {
-  Chrome: { major: 86, minor: 0, label: 'Chrome 86' },
-  Edge: { major: 111, minor: 0, label: 'Edge 111' },
-  Firefox: { major: 114, minor: 0, label: 'Firefox 114' },
-  Safari: { major: 16, minor: 4, label: 'Safari 16.4' },
-}
 
 function matchVersion(source: string, pattern: RegExp): string {
   const matched = pattern.exec(source)
@@ -257,7 +251,8 @@ export function evaluateBrowserSupport(info: BrowserInfo): BrowserSupport {
   else if (info.browserName === 'Firefox') { baselineKey = 'Firefox' }
   else if (info.browserName === 'Safari') { baselineKey = 'Safari' }
 
-  const baseline = BROWSER_BASELINES[baselineKey]
+  const required = parseVersionParts(browserMinimumVersions[baselineKey])
+  const baselineLabel = `${baselineKey} ${browserMinimumVersions[baselineKey]}`
   const measured = baselineKey === 'Chrome' && info.chromiumVersion
     ? info.chromiumVersion
     : info.browserVersion
@@ -265,16 +260,15 @@ export function evaluateBrowserSupport(info: BrowserInfo): BrowserSupport {
   if (!parts.length) {
     return {
       supported: true,
-      baselineLabel: baseline.label,
-      reason: `无法识别当前浏览器版本，建议使用 ${baseline.label} 及以上版本。`,
+      baselineLabel,
+      reason: `无法识别当前浏览器版本，建议使用 ${baselineLabel} 及以上版本。`,
     }
   }
-  const required = [baseline.major, baseline.minor]
   const supported = compareVersion(parts, required) >= 0
   return {
     supported,
-    baselineLabel: baseline.label,
-    reason: supported ? '' : `当前版本低于项目支持的 ${baseline.label}，部分功能可能异常，建议升级浏览器。`,
+    baselineLabel,
+    reason: supported ? '' : `当前版本低于项目支持的 ${baselineLabel}，部分功能可能异常，建议升级浏览器。`,
   }
 }
 

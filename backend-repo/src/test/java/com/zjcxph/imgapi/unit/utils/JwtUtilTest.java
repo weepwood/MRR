@@ -1,5 +1,8 @@
 package com.zjcxph.imgapi.unit.utils;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.utils.JwtUtil;
 import org.junit.jupiter.api.BeforeAll;
@@ -9,13 +12,16 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("JwtUtil JWT 工具测试")
 class JwtUtilTest {
 
+    private static final String TEST_SECRET = "unit-test-jwt-secret-key-with-at-least-32-characters";
+
     @BeforeAll
     static void configureSecret() {
-        JwtUtil.configure("unit-test-jwt-secret-key-with-at-least-32-characters");
+        JwtUtil.configure(TEST_SECRET);
     }
 
     @Test
@@ -84,5 +90,20 @@ class JwtUtilTest {
 
         AuthSession parsed = JwtUtil.parseToken(token);
         assertThat(parsed.getPermissions()).contains("user:manage", "role:read");
+    }
+
+    @Test
+    @DisplayName("parseToken — 超出 Instant 范围的 NumericDate 应受控拒绝")
+    void parseToken_rejectsOutOfRangeNumericDate() {
+        for (long expiration : new long[] {Long.MAX_VALUE, Long.MIN_VALUE}) {
+            String token = JWT.create()
+                    .withClaim("tokenType", JwtUtil.ACCESS_TOKEN_TYPE)
+                    .withClaim("exp", expiration)
+                    .sign(Algorithm.HMAC256(TEST_SECRET));
+
+            assertThatThrownBy(() -> JwtUtil.parseToken(token))
+                    .isInstanceOf(JWTDecodeException.class)
+                    .hasMessageContaining("exp");
+        }
     }
 }

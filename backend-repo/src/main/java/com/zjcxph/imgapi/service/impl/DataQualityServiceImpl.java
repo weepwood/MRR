@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -215,7 +216,10 @@ public class DataQualityServiceImpl implements DataQualityService {
                 long issueCount = countValue;
                 List<Map<String, Object>> samples = issueCount == 0
                         ? List.of()
-                        : jdbcTemplate.queryForList(check.sampleSql() + " LIMIT ?", safeSampleLimit);
+                        : jdbcTemplate.query(check.sampleSql() + " LIMIT ?", statement -> {
+                            statement.setQueryTimeout(10);
+                            statement.setInt(1, safeSampleLimit);
+                        }, new ColumnMapRowMapper());
 
                 jdbcTemplate.update("""
                         INSERT INTO app.mrr_data_quality_check_result

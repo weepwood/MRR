@@ -105,27 +105,41 @@ public class ArchiveExportJobRepository {
                 WHERE expires_at IS NOT NULL
                   AND expires_at <= ?
                   AND status IN ('SUCCESS', 'FAILED', 'CANCELLED')
-                ORDER BY expires_at ASC
+                ORDER BY updated_at ASC, id ASC
                 LIMIT 200
                 """, ROW_MAPPER, timestamp(now));
     }
 
-    public void markProcessing(String id, String fileName, String filePath, LocalDateTime expiresAt) {
+    public void deferCleanup(String id) {
         jdbcTemplate.update("""
+                UPDATE app.archive_export_job SET updated_at = clock_timestamp()
+                WHERE id = CAST(? AS UUID) AND status IN ('SUCCESS', 'FAILED', 'CANCELLED')
+                """, id);
+    }
+
+    public int markProcessing(String id, String fileName, String filePath, LocalDateTime expiresAt) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'PROCESSING', file_name = ?, file_path = ?, expires_at = ?,
                     started_at = COALESCE(started_at, CURRENT_TIMESTAMP),
                     error_message = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status = 'PENDING' AND NOT cancel_requested
                 """, fileName, filePath, timestamp(expiresAt), id);
     }
 
-    public void resetToPending(String id) {
-        jdbcTemplate.update("""
+    public int setOutputFile(String id, String filePath) {
+        return jdbcTemplate.update("""
+                UPDATE app.archive_export_job SET file_path = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'PROCESSING' AND NOT cancel_requested
+                """, filePath, id);
+    }
+
+    public int resetToPending(String id) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'PENDING', processed_count = 0, failed_count = 0,
                     output_bytes = 0, error_message = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status IN ('PENDING', 'PROCESSING') AND NOT cancel_requested
                 """, id);
     }
 
@@ -137,35 +151,35 @@ public class ArchiveExportJobRepository {
                 """, processedCount, id);
     }
 
-    public void markSuccess(String id, long outputBytes, String sha256, LocalDateTime completedAt) {
-        jdbcTemplate.update("""
+    public int markSuccess(String id, long outputBytes, String sha256, LocalDateTime completedAt) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'SUCCESS', processed_count = planned_count,
                     output_bytes = ?, sha256 = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status = 'PROCESSING' AND NOT cancel_requested
                 """, outputBytes, sha256, timestamp(completedAt), id);
     }
 
-    public void markFailed(String id, String errorMessage, LocalDateTime completedAt) {
-        jdbcTemplate.update("""
+    public int markFailed(String id, String errorMessage, LocalDateTime completedAt) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'FAILED', failed_count = GREATEST(1, planned_count - processed_count),
                     error_message = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status IN ('PENDING', 'PROCESSING') AND NOT cancel_requested
                 """, truncate(errorMessage), timestamp(completedAt), id);
     }
 
-    public void markCancelled(String id, LocalDateTime completedAt) {
-        jdbcTemplate.update("""
+    public int markCancelled(String id, LocalDateTime completedAt) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'CANCELLED', cancel_requested = TRUE,
                     completed_at = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status IN ('PENDING', 'PROCESSING')
                 """, timestamp(completedAt), id);
     }
 
-    public void requestCancel(String id) {
-        jdbcTemplate.update("""
+    public int requestCancel(String id) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET cancel_requested = TRUE, updated_at = CURRENT_TIMESTAMP
                 WHERE id = CAST(? AS UUID) AND status IN ('PENDING', 'PROCESSING')
@@ -180,11 +194,11 @@ public class ArchiveExportJobRepository {
         return Boolean.TRUE.equals(result);
     }
 
-    public void markExpired(String id) {
-        jdbcTemplate.update("""
+    public int markExpired(String id) {
+        return jdbcTemplate.update("""
                 UPDATE app.archive_export_job
                 SET status = 'EXPIRED', file_path = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE id = CAST(? AS UUID)
+                WHERE id = CAST(? AS UUID) AND status IN ('SUCCESS', 'FAILED', 'CANCELLED')
                 """, id);
     }
 

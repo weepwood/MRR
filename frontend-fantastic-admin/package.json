@@ -7,7 +7,7 @@
   },
   "browserslist": [
     "Chrome >= 86",
-    "Edge >= 111",
+    "Edge >= 109",
     "Firefox >= 114",
     "Safari >= 16.4"
   ],
@@ -37,6 +37,7 @@
     "test:run": "vitest --run",
     "test:coverage": "vitest run --coverage",
     "test:compat:chrome86": "node ./scripts/verify-chrome86-build.mjs",
+    "test:compat:browser": "playwright test --config playwright.compat.config.ts",
     "test:e2e": "playwright test",
     "commit": "git cz",
     "release": "bumpp"

@@ -114,11 +114,14 @@ describe('evaluateBrowserSupport', () => {
     expect(evaluateBrowserSupport(edgeOfBaseline).supported).toBe(true)
   })
 
-  it('edge 以 111 为基线', () => {
+  it('edge 以 109 为基线，108 拒绝，109 和 110 放行', () => {
     expect(evaluateBrowserSupport(parseUserAgent(EDGE_WINDOWS)).supported).toBe(true)
-    const old = parseUserAgent(EDGE_WINDOWS.replace('Edg/141', 'Edg/110'))
+    const old = parseUserAgent(EDGE_WINDOWS.replace('Edg/141', 'Edg/108'))
     expect(evaluateBrowserSupport(old).supported).toBe(false)
-    expect(evaluateBrowserSupport(old).baselineLabel).toBe('Edge 111')
+    expect(evaluateBrowserSupport(old).baselineLabel).toBe('Edge 109')
+    for (const version of [109, 110]) {
+      expect(evaluateBrowserSupport(parseUserAgent(EDGE_WINDOWS.replace('Edg/141', `Edg/${version}`))).supported).toBe(true)
+    }
   })
 
   it('firefox 以 114 为基线', () => {

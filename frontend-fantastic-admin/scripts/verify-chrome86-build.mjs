@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import pkg from '../package.json' with { type: 'json' }
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = path.resolve(projectRoot, process.argv[2] || 'dist')
@@ -36,6 +37,12 @@ if (fs.existsSync(indexPath)) {
 
   check(html.includes('Chrome 86'), '生产入口未声明 Chrome 86 最低版本')
   check(!html.includes('Chrome 109'), '生产入口仍包含 Chrome 109 旧基线')
+  check(!html.includes('%MRR_BROWSER_'), '生产入口浏览器基线占位符未替换')
+  for (const target of pkg.browserslist) {
+    const [browser, version] = target.split(' >= ')
+    check(html.includes(`${browser} ${version}`), `生产入口浏览器提示与声明不一致：${target}`)
+    check(html.includes(`"${browser}":"${version}"`), `生产入口版本判定与声明不一致：${target}`)
+  }
   check(Boolean(polyfillScript), '生产入口未加载现代浏览器 polyfill')
   check(Boolean(appScript), '生产入口未加载应用主模块')
 

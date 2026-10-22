@@ -20,7 +20,31 @@ async function expectApplicationToRemainStopped(page: Page) {
   await expect(page.locator('#app')).toBeEmpty()
 }
 
-test.describe('浏览器兼容性阻断', () => {
+test.describe('浏览器版本策略（仅模拟 UA，不代表旧内核实测）', () => {
+  test('Edge 108 低于基线时阻止应用启动', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: 'e2e/.auth/anonymous.json',
+      userAgent: 'Mozilla/5.0 Chrome/108.0.0.0 Safari/537.36 Edg/108.0.0.0',
+    })
+    const page = await context.newPage()
+    await page.goto('/')
+    await expect(page.locator('#browser-compat-blocker')).toContainText('最低支持版本 Edge 109')
+    await expectApplicationToRemainStopped(page)
+    await context.close()
+  })
+
+  test('Edge 109 可以进入应用', async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: 'e2e/.auth/admin.json',
+      userAgent: 'Mozilla/5.0 Chrome/109.0.0.0 Safari/537.36 Edg/109.0.0.0',
+    })
+    const page = await context.newPage()
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: '管理概览' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('#browser-compat-blocker')).toBeHidden()
+    await context.close()
+  })
+
   test('Chrome 85 低于基线时阻止应用启动', async ({ browser }) => {
     const context = await browser.newContext({
       storageState: 'e2e/.auth/anonymous.json',

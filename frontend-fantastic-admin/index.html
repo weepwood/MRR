@@ -29,7 +29,7 @@
             此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
           </div>
           <div id="browser-compat-requirement" class="browser-compat-requirement">
-            最低支持：Edge 111、Chrome 86、Firefox 114、Safari 16.4。
+            %MRR_BROWSER_REQUIREMENTS%
           </div>
           <div id="browser-compat-actions" class="browser-compat-actions" hidden>
             <button id="browser-compat-continue" class="browser-compat-button browser-compat-button-primary" type="button">继续等待</button>
@@ -42,12 +42,7 @@
     <div id="app"></div>
     <script>
       (function () {
-        var minimumVersions = {
-          Edge: '111',
-          Chrome: '86',
-          Firefox: '114',
-          Safari: '16.4'
-        }
+        var minimumVersions = %MRR_BROWSER_VERSIONS%
         var startupTimeout
         var initialStartupTimeoutMs = 15000
         var continuedStartupTimeoutMs = 60000
@@ -116,8 +111,8 @@
             || typeof window.fetch !== 'function'
             || typeof window.URL !== 'function'
             || typeof window.TextEncoder !== 'function'
-            || typeof Array.prototype.at !== 'function'
-            || typeof Array.prototype.findLast !== 'function'
+            || typeof window.Proxy !== 'function'
+            || !('noModule' in document.createElement('script'))
         }
 
         function showApplicationOverlay(reason, title, options) {
@@ -159,7 +154,7 @@
           window.__MRR_APP_STARTUP_BLOCKED__ = true
           window.clearTimeout(startupTimeout)
           showApplicationOverlay(reason, title, {
-            requirement: '最低支持：Edge 111、Chrome 86、Firefox 114、Safari 16.4。',
+            requirement: '%MRR_BROWSER_REQUIREMENTS%',
             showActions: false
           })
         }

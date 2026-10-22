@@ -5,6 +5,8 @@ const baseURL = 'http://127.0.0.1:9000'
 
 export default defineConfig({
   testDir: './e2e',
+  // 生产构建回归由 playwright.compat.config.ts 独立运行，不使用开发服务器。
+  testIgnore: '**/compat/**',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,

@@ -1,13 +1,13 @@
-export const browserBuildTargets = [
-  'chrome86',
-  'edge111',
-  'firefox114',
-  'safari16.4',
-]
+import pkg from '../package.json'
+import { browserMinimumVersions, browserRequirements } from '../src/utils/browser-baseline'
 
-export const browserPolyfillTargets = [
-  'Chrome >= 86',
-  'Edge >= 111',
-  'Firefox >= 114',
-  'Safari >= 16.4',
-]
+export const browserPolyfillTargets = pkg.browserslist
+export const browserBuildTargets = Object.entries(browserMinimumVersions)
+  .map(([browser, version]) => `${browser.toLowerCase()}${version}`)
+
+// 保留 HTML 内联的 ES5 启动脚本，使不支持应用模块的浏览器也能显示升级提示。
+export function renderBrowserBaseline(html: string): string {
+  return html
+    .replaceAll('%MRR_BROWSER_VERSIONS%', JSON.stringify(browserMinimumVersions))
+    .replaceAll('%MRR_BROWSER_REQUIREMENTS%', browserRequirements)
+}

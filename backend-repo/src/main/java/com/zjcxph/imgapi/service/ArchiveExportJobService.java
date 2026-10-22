@@ -17,6 +17,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +28,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -40,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ArchiveExportJobService {
 
     private static final int MAX_SELECTED_JOB_ITEMS = 10_000;
-    private static final int MAX_ERROR_MESSAGE_LENGTH = 2_000;
+    private static final Logger logger = LoggerFactory.getLogger(ArchiveExportJobService.class);
     private static final String BAH_REQUIRES_SJH_MESSAGE =
             "病案号大于等于 10000000 时必须使用上架号导出";
 
@@ -154,7 +156,9 @@ public class ArchiveExportJobService {
         if (Set.of("SUCCESS", "FAILED", "CANCELLED", "EXPIRED").contains(job.getStatus())) {
             return ArchiveExportJobResponse.from(job);
         }
-        repository.requestCancel(id);
+        if (repository.requestCancel(id) == 0) {
+            return ArchiveExportJobResponse.from(requireOwned(session, id));
+        }
         cancellationFlags.computeIfAbsent(id, ignored -> new AtomicBoolean()).set(true);
         if ("PENDING".equals(job.getStatus())) {
             repository.markCancelled(id, LocalDateTime.now());
@@ -165,9 +169,11 @@ public class ArchiveExportJobService {
     public Path requireDownloadFile(AuthSession session, String id) throws IOException {
         ArchiveExportJob job = requireOwned(session, id);
         requirePermission(session, job.getFormat());
+        if (Set.of("PENDING", "PROCESSING").contains(job.getStatus())) {
+            throw new BusinessException(409, "导出任务尚未完成");
+        }
         if (job.getExpiresAt() != null && job.getExpiresAt().isBefore(LocalDateTime.now())) {
-            tempFileManager.deleteManagedFile(job.getFilePath());
-            repository.markExpired(id);
+            expireFile(job);
             throw new BusinessException(410, "导出文件已过期");
         }
         if (!"SUCCESS".equals(job.getStatus())) {
@@ -194,16 +200,25 @@ public class ArchiveExportJobService {
                 tempFileManager.deleteManagedFile(job.getFilePath());
                 continue;
             }
-            repository.resetToPending(job.getId());
-            submit(job.getId());
+            if (repository.resetToPending(job.getId()) != 0) {
+                submit(job.getId());
+            }
         }
     }
 
     @Scheduled(fixedDelayString = "${archive.export.cleanup-interval:PT15M}")
     public void cleanupExpiredFiles() {
         for (ArchiveExportJob job : repository.findExpired(LocalDateTime.now())) {
-            tempFileManager.deleteManagedFile(job.getFilePath());
+            expireFile(job);
+        }
+    }
+
+    private void expireFile(ArchiveExportJob job) {
+        if (tempFileManager.deleteManagedFile(job.getFilePath())) {
             repository.markExpired(job.getId());
+        } else {
+            // 失败记录轮转到队尾，避免最旧200条长期占满所有清理批次。
+            repository.deferCleanup(job.getId());
         }
     }
 
@@ -221,7 +236,17 @@ public class ArchiveExportJobService {
             cancellationFlags.remove(id);
             return;
         }
+        // 在准备、预留或删除文件之前原子领取；重复 Worker 不得操作同一输出。
+        if (repository.markProcessing(id, job.getFileName(), job.getFilePath(),
+                LocalDateTime.now().plus(properties.getRetention())) == 0) {
+            if (repository.isCancelRequested(id)) {
+                repository.markCancelled(id, LocalDateTime.now());
+            }
+            return;
+        }
         AtomicBoolean cancellation = cancellationFlags.computeIfAbsent(id, ignored -> new AtomicBoolean());
+        String previousRequestId = MDC.get("requestId");
+        MDC.put("requestId", id);
         boolean success = false;
         String extension = job.getFormat().toLowerCase(Locale.ROOT);
         ArchiveExportTempFileManager.Reservation reservation = null;
@@ -233,15 +258,17 @@ public class ArchiveExportJobService {
             if (export.itemCount() == 0) {
                 throw new IOException("病案已没有可导出的影像");
             }
-            tempFileManager.deleteManagedFile(job.getFilePath());
+            if (!tempFileManager.deleteManagedFile(job.getFilePath())) {
+                throw new IOException("Export temporary cleanup unavailable");
+            }
             reservation = tempFileManager.reserve(id, estimateBytes(export), extension);
-            repository.markProcessing(
-                    id,
-                    job.getFileName(),
-                    reservation.path().toString(),
-                    LocalDateTime.now().plus(properties.getRetention()));
+            if (repository.setOutputFile(id, reservation.path().toString()) == 0) {
+                throw new ArchiveExportCancelledException();
+            }
 
             ArchiveExportService.ExportProgress progress = new ArchiveExportService.ExportProgress() {
+                private int lastCompleted;
+                private long lastWrite = System.nanoTime();
                 @Override
                 public boolean isCancelled() {
                     return cancellation.get() || Thread.currentThread().isInterrupted();
@@ -249,7 +276,13 @@ public class ArchiveExportJobService {
 
                 @Override
                 public void onItemCompleted(int completed, int total, com.zjcxph.imgapi.entity.PathDO item) {
-                    repository.updateProgress(id, completed);
+                    long now = System.nanoTime();
+                    if (completed == total || completed - lastCompleted >= 100
+                            || now - lastWrite >= 1_000_000_000L) {
+                        repository.updateProgress(id, completed);
+                        lastCompleted = completed;
+                        lastWrite = System.nanoTime();
+                    }
                 }
             };
 
@@ -269,20 +302,44 @@ public class ArchiveExportJobService {
             try (InputStream input = Files.newInputStream(reservation.path())) {
                 sha256 = DigestUtils.sha256Hex(input);
             }
-            repository.markSuccess(id, outputBytes, sha256, LocalDateTime.now());
+            if (cancellation.get() || Thread.currentThread().isInterrupted() || repository.isCancelRequested(id)
+                    || repository.markSuccess(id, outputBytes, sha256, LocalDateTime.now()) == 0) {
+                throw new ArchiveExportCancelledException();
+            }
             success = true;
         } catch (ArchiveExportCancelledException exception) {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
-            repository.markFailed(id, safeFailureMessage(exception), LocalDateTime.now());
+            logger.error("Archive export job failed: jobId={}", id, exception);
+            if (repository.markFailed(id, "病案导出失败，请使用任务编号联系管理员", LocalDateTime.now()) == 0
+                    && repository.isCancelRequested(id)) {
+                repository.markCancelled(id, LocalDateTime.now());
+            }
         } finally {
             cancellationFlags.remove(id);
             if (reservation != null) {
                 if (!success) {
-                    tempFileManager.deleteManagedFile(reservation.path().toString());
+                    cleanupFailedOutput(id, reservation.path());
                 }
                 reservation.close();
             }
+            if (previousRequestId == null) {
+                MDC.remove("requestId");
+            } else {
+                MDC.put("requestId", previousRequestId);
+            }
+        }
+    }
+
+    private void cleanupFailedOutput(String id, Path output) {
+        try {
+            // 成功提交后连接中断可能丢失确认；状态不明时保留文件供重启恢复，不能删除成功文件。
+            var current = repository.findById(id);
+            if (current.isPresent() && Set.of("FAILED", "CANCELLED").contains(current.get().getStatus())) {
+                tempFileManager.deleteManagedFile(output.toString());
+            }
+        } catch (RuntimeException exception) {
+            logger.warn("Export output retained pending state reconciliation");
         }
     }
 
@@ -361,31 +418,6 @@ public class ArchiveExportJobService {
         }
         // 仅兼容迁移前没有 owner_user_id 的历史任务。
         return Objects.equals(session.getUsername(), job.getOwnerUsername());
-    }
-
-    private String safeFailureMessage(Throwable failure) {
-        LinkedHashSet<String> messages = new LinkedHashSet<>();
-        Throwable current = failure;
-        int depth = 0;
-        while (current != null && depth < 8) {
-            String message = current.getMessage();
-            if (message == null || message.isBlank()) {
-                message = current.getClass().getSimpleName();
-            }
-            message = message.replace('\r', ' ').replace('\n', ' ').trim();
-            if (!message.isBlank()) {
-                messages.add(message.length() <= 500 ? message : message.substring(0, 500) + "…");
-            }
-            current = current.getCause();
-            depth++;
-        }
-        String result = String.join("；原因：", messages);
-        if (result.isBlank()) {
-            result = "病案导出失败";
-        }
-        return result.length() <= MAX_ERROR_MESSAGE_LENGTH
-                ? result
-                : result.substring(0, MAX_ERROR_MESSAGE_LENGTH);
     }
 
     private String normalizeFormat(String value) {

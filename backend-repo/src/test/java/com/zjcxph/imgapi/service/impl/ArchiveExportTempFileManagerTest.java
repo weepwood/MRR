@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +49,20 @@ class ArchiveExportTempFileManagerTest {
                 assertThat(second.reservedBytes()).isEqualTo(10);
             }
         }
+    }
+
+    @Test
+    void cleanupCannotDeleteTheManagedRootOrAnOutsideFile() throws Exception {
+        ArchiveExportProperties properties = properties(20, 10);
+        properties.setTempDirectory(tempDir.resolve("managed").toString());
+        ArchiveExportTempFileManager manager = new ArchiveExportTempFileManager(properties);
+        manager.initialize();
+        Path outside = Files.writeString(tempDir.resolve("synthetic-outside.zip"), "synthetic");
+
+        assertThat(manager.deleteManagedFile(outside.toString())).isFalse();
+        assertThat(manager.deleteManagedFile(properties.getTempDirectory())).isFalse();
+        assertThat(outside).exists();
+        assertThat(Path.of(properties.getTempDirectory())).isDirectory();
     }
 
     private ArchiveExportProperties properties(long maxTotalBytes, long maxFileBytes) {

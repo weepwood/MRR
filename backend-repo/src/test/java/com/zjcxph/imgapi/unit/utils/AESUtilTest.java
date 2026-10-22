@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.utils;
 
 import com.zjcxph.imgapi.utils.AESUtil;
+import org.apache.commons.codec.DecoderException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -78,6 +79,15 @@ class AESUtilTest {
         assertThatThrownBy(() -> AESUtil.decryptIdCard("00", "00", "1", "   "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("密钥未配置");
+    }
+
+    @Test
+    @DisplayName("decryptIdCard — 非 ASCII 十六进制密文应在解码阶段拒绝")
+    void decryptIdCard_rejectsNonAsciiHex() {
+        assertThatThrownBy(() -> AESUtil.decryptIdCard(
+                "Ａ0", "00000000000000000000000000000000", "1", "test-key"))
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(DecoderException.class);
     }
 
     @Test

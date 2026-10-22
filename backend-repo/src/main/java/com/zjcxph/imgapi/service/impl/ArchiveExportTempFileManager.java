@@ -4,6 +4,11 @@ import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -11,19 +16,30 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.InvalidPathException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class ArchiveExportTempFileManager {
 
+    private static final Logger logger = LoggerFactory.getLogger(ArchiveExportTempFileManager.class);
+    private final AtomicLong cleanupFailures = new AtomicLong();
     private final ArchiveExportProperties properties;
     private final Map<String, Long> reservations = new HashMap<>();
     private Path root;
 
     public ArchiveExportTempFileManager(ArchiveExportProperties properties) {
         this.properties = properties;
+    }
+
+    @Autowired
+    public void registerCleanupMetrics(MeterRegistry registry) {
+        Gauge.builder("mrr.archive.export.cleanup.failures", cleanupFailures, AtomicLong::get)
+                .description("Cumulative export temporary file deletion failures")
+                .register(registry);
     }
 
     @PostConstruct
@@ -119,18 +135,21 @@ public class ArchiveExportTempFileManager {
         return realPath;
     }
 
-    public void deleteManagedFile(String filePath) {
+    public boolean deleteManagedFile(String filePath) {
         if (filePath == null || filePath.isBlank()) {
-            return;
+            return true;
         }
         try {
             Path path = Path.of(filePath).toAbsolutePath().normalize();
-            if (path.startsWith(root)) {
+            if (root.equals(path.getParent()) && !Files.isSymbolicLink(path)) {
                 Files.deleteIfExists(path);
+                return true;
             }
-        } catch (IOException ignored) {
-            // 清理失败由下一轮任务继续处理。
+        } catch (IOException | InvalidPathException | SecurityException exception) {
+            // 保留任务路径，由后续清理重试；日志不记录内部路径和异常正文。
         }
+        logger.warn("Export temporary cleanup failed; failures={}", cleanupFailures.incrementAndGet());
+        return false;
     }
 
     public synchronized long currentUsageBytes() throws IOException {

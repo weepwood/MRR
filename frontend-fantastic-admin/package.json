@@ -149,6 +149,11 @@
     "commit-msg": "pnpm commitlint --edit $1",
     "preserveUnused": true
   },
+  "pnpm": {
+    "overrides": {
+      "vue-sonner>nuxt": "-"
+    }
+  },
   "config": {
     "commitizen": {
       "path": "node_modules/cz-git"

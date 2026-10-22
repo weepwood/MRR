@@ -54,15 +54,18 @@ class AESUtilTest {
     }
 
     @Test
-    @DisplayName("decryptIdCard — 解密后返回原身份证号")
-    void decryptIdCard_roundTrip() {
-        String original = "110101199001011234";
-        String userId = "1";
-        String key = "test-key-32-bytes-long!!!!!";
+    @DisplayName("decryptIdCard — ASCII 十六进制密文应还原合成数据")
+    void decryptIdCard_asciiHex() {
+        assertThat(AESUtil.decryptIdCard(
+                "32011fee299ca608c221f90ac36adc3dbbfe96a0517bea6fb8bcdd04538c1c1f",
+                "000102030405060708090a0b0c0d0e0f", "1", "test-key"))
+                .isEqualTo("SYNTHETIC-ID-001");
+    }
 
-        // We need an encrypted value to test decryption.
-        // Since encrypt functionality isn't exposed, this tests the error path
-        assertThatThrownBy(() -> AESUtil.decryptIdCard("badhex", "badhex", userId, key))
+    @Test
+    @DisplayName("decryptIdCard — 非法十六进制密文应拒绝")
+    void decryptIdCard_invalidHex() {
+        assertThatThrownBy(() -> AESUtil.decryptIdCard("badhex", "badhex", "1", "test-key"))
                 .isInstanceOf(RuntimeException.class);
     }
 

@@ -36,7 +36,7 @@
 
         <!-- Plugin versions not managed by the Spring Boot parent -->
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <mockito.version>5.23.0</mockito.version>
+        <mockito.version>5.24.0</mockito.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 

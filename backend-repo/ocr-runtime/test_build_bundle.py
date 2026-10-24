@@ -24,6 +24,15 @@ class PinnedRuntimeDependenciesTest(unittest.TestCase):
             lock.write_text("certifi==2026.10.19\n", encoding="utf-8")
             build_bundle.validate_runtime_packages({"certifi": "2026.10.19"}, lock)
 
+    def test_bundle_rejects_duplicate_runtime_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / "requirements.lock"
+            lock.write_text("certifi==2026.10.19\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "RUNTIME_DEPENDENCY_DUPLICATE"):
+                build_bundle.validate_runtime_packages(
+                    {"Certifi": "2026.7.22", "certifi": "2026.10.19"}, lock
+                )
+
     def test_validated_lock_excludes_vulnerable_certifi(self):
         pinned = build_bundle.read_pinned_requirements(ROOT / "requirements-validated.lock")
         version = tuple(map(int, pinned["certifi"].split(".")))

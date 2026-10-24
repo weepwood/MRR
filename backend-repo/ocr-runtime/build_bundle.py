@@ -1,5 +1,6 @@
 """Prepare a relocatable Windows OCR release from trusted local runtimes and pinned models; no downloads."""
 import argparse
+from collections.abc import Mapping
 import hashlib
 import importlib.metadata
 import json
@@ -39,7 +40,13 @@ def read_pinned_requirements(lock_path):
 
 def validate_runtime_packages(installed, lock_path):
     pinned = read_pinned_requirements(lock_path)
-    normalized = {normalize_package_name(name): version for name, version in installed.items()}
+    normalized = {}
+    entries = installed.items() if isinstance(installed, Mapping) else installed
+    for name, version in entries:
+        key = normalize_package_name(name)
+        if key in normalized:
+            raise ValueError("RUNTIME_DEPENDENCY_DUPLICATE")
+        normalized[key] = version
     if any(normalized.get(name) != version for name, version in pinned.items()):
         raise ValueError("RUNTIME_DEPENDENCY_MISMATCH")
 
@@ -68,7 +75,7 @@ def main():
     worker_spec.loader.exec_module(worker)
     worker.load_manifest(models)
     distributions = list(importlib.metadata.distributions(path=[str(packages)]))
-    installed_versions = {d.metadata["Name"]: d.version for d in distributions}
+    installed_versions = [(d.metadata["Name"], d.version) for d in distributions]
     validate_runtime_packages(installed_versions, Path(__file__).with_name("requirements-validated.lock"))
     python = output / "python"
     python.mkdir(parents=True)

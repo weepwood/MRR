@@ -46,15 +46,11 @@ OpenAPI YAML：/v3/api-docs.yaml
 
 关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。`/docs/**` 由 Nginx 直接读取静态目录，不经过后端，需要限制时应在 Nginx 层配置。
 
-## 加密身份证查询的时间戳约束
+## 身份证查询入口
 
-`GET /api/v1/search/getBAHByEncryptID` 的 `timestamp` 不只是密钥派生材料，还参与**新鲜度校验**：请求时间与服务器时间的偏差超过 `aes.id-card-query.timestamp-tolerance-seconds`（默认 300 秒）时直接用 400 拒绝，以限制密文被无限期重放。该参数接受秒或毫秒时间戳。
+内部登录用户使用受权限保护的 `POST /api/v1/search/getBAHByID` 或 `POST /api/v1/search/archive-cases`，把身份证号放在请求体中。后者返回短期受控令牌，可通过 `GET /api/v1/search/archive-cases?id=...` 恢复病案查询；外部系统使用 HMAC Ticket。不要把身份证原文放进 URL。
 
-- 关闭校验（`0` 或负数）仅用于临时兼容调用方时钟偏差，属于运维逃生阀，不应长期开启；
-- 校验只读取时间戳，不改变密钥派生输入，因此对调用方的加密实现**零影响**；
-- 解密或查询失败统一返回 `加密身份证查询失败`，不回显内部异常信息，避免形成区分性的错误响应；
-- 包含 `idCard` 的查询串、请求体与**请求路径参数**都会在写入 `app.access_log` 前做 SHA-256 脱敏。
-  注意 `GET /api/v1/search/getBAHByID/{idCard}`（已弃用）会把身份证号带入 URL，因而也会出现在浏览器历史、`Referer` 与 Nginx 的 `access.log` 中——新接入方应使用 POST 版本或加密查询。
+旧 `GET /api/v1/search/getBAHByEncryptID`、`GET /api/v1/search/getBAHByEncryptIDLegacy`、`GET /api/v1/search/getBAHByID/{idCard}` 和 `GET /api/v1/patients/idcard/{idCard}` 均返回 HTTP 410，不再解密或查询。旧客户端应迁移到上述受控入口。包含 `idCard` 的请求体和历史路径仍按访问日志脱敏规则处理。
 
 ## 认证与权限
 

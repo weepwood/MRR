@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
-import { getBAHByIdCard } from '@/api/modules/search'
+import { getArchiveCasesByToken } from '@/api/modules/search'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
 
 defineOptions({ name: 'ScanImgPage' })
@@ -29,14 +29,8 @@ const downloading = ref(false)
 const initDone = ref(false)
 
 // ==================== 身份证相关 ====================
-// 从路由参数取身份证号
-const idCardParam = computed(() => String(route.params.idCard || ''))
-// 脱敏显示（保留前3位和后4位）
-const displayIdCard = computed(() => {
-  const v = idCardParam.value
-  if (v.length <= 7) { return v }
-  return `${v.slice(0, 3)}${'*'.repeat(v.length - 7)}${v.slice(-4)}`
-})
+const archiveToken = computed(() => typeof route.query.id === 'string' ? route.query.id : '')
+const displayIdCard = ref('')
 
 // ==================== 病案号范围 ====================
 const startBah = ref('00787327')
@@ -160,15 +154,28 @@ async function loadImages() {
   }
 }
 
-async function searchByIdCard(idCard: string) {
-  if (!idCard) { return }
+async function searchByToken(token: string) {
+  if (!token) { return }
   idSearchLoading.value = true
   idSearchResults.value = []
   images.value = []
   try {
-    const res = await getBAHByIdCard(idCard)
+    const res = await getArchiveCasesByToken(token)
     const data = res.data
-    idSearchResults.value = Array.isArray(data) ? data : []
+    displayIdCard.value = data?.maskedIdCard || ''
+    const seen = new Set<string>()
+    idSearchResults.value = (data?.cases || []).filter((item) => {
+      const key = `${item.patientRecordId ?? ''}:${item.bah ?? ''}`
+      if (seen.has(key)) { return false }
+      seen.add(key)
+      return true
+    }).map(item => ({
+      id: item.patientRecordId,
+      bah: item.bah,
+      name: item.name,
+      department: item.department,
+      admissionTime: item.admissionTime,
+    }))
     // 优先自动选中在可访问区间内的第一条
     const firstInRange = idSearchResults.value.find(r => isBahClickable(r.bah))
     if (firstInRange) {
@@ -180,8 +187,9 @@ async function searchByIdCard(idCard: string) {
     }
   }
   catch {
-    ElMessage.error('身份证查询失败，请检查网络')
+    ElMessage.error('身份证查询链接已失效，请重新查询')
     idSearchResults.value = []
+    displayIdCard.value = ''
   }
   finally {
     idSearchLoading.value = false
@@ -470,9 +478,9 @@ onMounted(async () => {
   }
   catch {}
 
-  // 核心入口：以身份证号触发查询
-  if (idCardParam.value) {
-    await searchByIdCard(idCardParam.value)
+  // 使用受控令牌恢复查询，URL 中不包含身份证原文。
+  if (archiveToken.value) {
+    await searchByToken(archiveToken.value)
   }
   else {
     initDone.value = true
@@ -506,10 +514,10 @@ watch(thumbsLayoutMode, (mode) => {
 })
 watch(selectedImageIndex, () => { ensureCurrentImageBlob() })
 
-// 路由参数变化时重新查询（支持在同页内切换身份证）
-watch(idCardParam, async (newId) => {
-  if (newId) {
-    await searchByIdCard(newId)
+// 令牌变化时重新查询。
+watch(archiveToken, async (newToken) => {
+  if (newToken) {
+    await searchByToken(newToken)
   }
 })
 </script>

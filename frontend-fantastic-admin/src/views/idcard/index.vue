@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getArchiveCasesByIdCard } from '@/api/modules/search'
 
 const router = useRouter()
 const idCard = ref('')
@@ -9,16 +10,26 @@ const errorMsg = ref('')
 
 const isValid = computed(() => /^\d{15}(?:\d{2}[\dX])?$/i.test(idCard.value.trim()))
 
-function handleSearch() {
+async function handleSearch() {
   if (!isValid.value) {
     return
   }
   errorMsg.value = ''
   loading.value = true
-  // 跳转到图库页，由目标页负责查询
-  router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
+  try {
+    const result = await getArchiveCasesByIdCard(idCard.value.trim())
+    if (!result.data?.token) {
+      errorMsg.value = '未查询到该患者的影像病案'
+      return
+    }
+    await router.push({ name: 'scanImg', query: { id: result.data.token } })
+  }
+  catch {
+    errorMsg.value = '身份证查询失败，请重试'
+  }
+  finally {
     loading.value = false
-  })
+  }
 }
 </script>
 

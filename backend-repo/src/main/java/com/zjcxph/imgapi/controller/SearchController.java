@@ -6,8 +6,6 @@ import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
 import com.zjcxph.imgapi.dto.resp.IdCardArchiveSearchResponse;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.service.SearchService;
-import com.zjcxph.imgapi.utils.AESUtil;
-import com.zjcxph.imgapi.utils.IdCardQueryTimestampValidator;
 import com.zjcxph.imgapi.utils.IdCardUrlTokenUtil;
 import com.zjcxph.imgapi.utils.IpUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -43,15 +40,8 @@ public class SearchController {
     @Value("${aes.secret.key}")
     private String secretKey;
 
-    /**
-     * 加密身份证查询允许的时间戳偏差（秒）。小于等于 0 表示关闭校验。
-     *
-     * <p>字段初始化值保证非 Spring 环境下（例如单元测试）仍采用安全默认值。
-     * 如需临时放宽以兼容调用方时钟偏差，可调整
-     * {@code aes.id-card-query.timestamp-tolerance-seconds}。</p>
-     */
-    @Value("${aes.id-card-query.timestamp-tolerance-seconds:300}")
-    private int timestampToleranceSeconds = IdCardQueryTimestampValidator.DEFAULT_TOLERANCE_SECONDS;
+    private static final String LEGACY_ID_CARD_QUERY_MESSAGE =
+            "旧身份证查询接口已停用，请改用受控 POST 查询或外部 Ticket";
 
     public SearchController(SearchService searchService) {
         this.searchService = searchService;
@@ -63,49 +53,18 @@ public class SearchController {
         return "hello world search, your IP is: " + IpUtil.getClientIp(request);
     }
 
-    @Operation(summary = "通过加密身份证号查询病案号（带时间戳）")
+    @Deprecated
+    @Operation(summary = "旧版加密身份证查询（已停用）")
     @GetMapping("/getBAHByEncryptID")
-    public Result<List<Patient>> getBAHByEncryptID(
-            @RequestParam String EncryptID,
-            @RequestParam String userId,
-            @RequestParam String iv,
-            @RequestParam String timestamp) {
-        try {
-            IdCardQueryTimestampValidator.validate(
-                    timestamp, timestampToleranceSeconds, Instant.now().getEpochSecond());
-            logger.info("Decrypt id-card for external userId={}", userId);
-            String decryptedIdCard = AESUtil.decryptIdCardWithTimestamp(EncryptID, iv, userId, timestamp, secretKey);
-            List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
-            logger.info("Found {} records for decrypted id-card", patients.size());
-            return Result.success(patients);
-        } catch (IllegalArgumentException e) {
-            logger.warn("Encrypted id-card query rejected: {}", e.getMessage());
-            return Result.fail("加密身份证查询参数无效");
-        } catch (Exception e) {
-            logger.error("Encrypted id-card query failed: {}", e.getMessage());
-            return Result.fail("加密身份证查询失败");
-        }
+    public Result<List<Patient>> getBAHByEncryptID() {
+        return Result.fail(410, LEGACY_ID_CARD_QUERY_MESSAGE);
     }
 
-    @Operation(summary = "通过加密身份证号查询病案号（旧版）")
+    @Deprecated
+    @Operation(summary = "旧版加密身份证查询（已停用）")
     @GetMapping("/getBAHByEncryptIDLegacy")
-    public Result<List<Patient>> getBAHByEncryptIDLegacy(
-            @RequestParam String EncryptID,
-            @RequestParam String userId,
-            @RequestParam String iv) {
-        try {
-            logger.info("Decrypt legacy id-card for external userId={}", userId);
-            String decryptedIdCard = AESUtil.decryptIdCard(EncryptID, iv, userId, secretKey);
-            List<Patient> patients = searchService.getBAHByID(decryptedIdCard);
-            logger.info("Found {} records for decrypted legacy id-card", patients.size());
-            return Result.success(patients);
-        } catch (IllegalArgumentException e) {
-            logger.warn("Legacy encrypted id-card query rejected: {}", e.getMessage());
-            return Result.fail("加密身份证查询参数无效");
-        } catch (Exception e) {
-            logger.error("Legacy encrypted id-card query failed: {}", e.getMessage());
-            return Result.fail("加密身份证查询失败");
-        }
+    public Result<List<Patient>> getBAHByEncryptIDLegacy() {
+        return Result.fail(410, LEGACY_ID_CARD_QUERY_MESSAGE);
     }
 
     @Operation(summary = "通过身份证号查询全部影像档案，并生成 URL 安全令牌")
@@ -157,12 +116,10 @@ public class SearchController {
     }
 
     @Deprecated
-    @Operation(summary = "通过身份证号查询病案号（已弃用，使用POST版本）")
+    @Operation(summary = "通过 URL 身份证号查询病案号（已停用）")
     @GetMapping("/getBAHByID/{idCard}")
-    public Result<List<Patient>> getBAHByiDCard(@PathVariable String idCard) {
-        List<Patient> patients = searchService.getBAHByID(idCard);
-        logger.info("Found {} records for id-card path lookup", patients.size());
-        return Result.success(patients);
+    public Result<List<Patient>> getBAHByiDCard() {
+        return Result.fail(410, LEGACY_ID_CARD_QUERY_MESSAGE);
     }
 
     @Operation(summary = "通过身份证号查询病案号")

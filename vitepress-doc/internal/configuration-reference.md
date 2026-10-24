@@ -76,15 +76,9 @@ Spring Boot 常见优先级从高到低为：
 
 实际 HMAC 配置名称以外部调阅模块和当前配置类为准；升级前应核对运行环境已有配置。
 
-## 加密身份证查询
+## 身份证查询令牌
 
-| 配置 | 默认值 | 说明 |
-| --- | --- | --- |
-| `aes.id-card-query.timestamp-tolerance-seconds` | `300` | `GET /api/v1/search/getBAHByEncryptID` 允许的时间戳偏差（秒）。超窗直接拒绝，用于限制密文重放 |
-
-设 `0` 或负数会关闭该校验，仅作为临时兼容调用方时钟偏差的逃生阀；长期关闭等同于放弃重放防护。
-
-> 后端不再内置任何默认 AES 密钥。历史实现中存在一个 32 字符的硬编码兜底密钥，密钥漏配时会静默生效；现在密钥为空即拒绝解密（fail-closed）。
+`aes.secret.key` 仅用于受控身份证档案查询的短期 URL 令牌。密钥由 `AES_SECRET_KEY` 注入，不含内置默认值；缺失时拒绝签发或解析令牌。旧 AES-CBC GET 查询已停用，`aes.id-card-query.timestamp-tolerance-seconds` 不再生效。
 
 ## 服务端口
 

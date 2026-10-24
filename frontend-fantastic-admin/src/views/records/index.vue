@@ -209,20 +209,24 @@ function typeLabel(value: unknown) {
         style="margin-top: 12px;"
         @selection-change="handleSelectionChange"
       >
+        <!-- 列宽全部走 min-width，由 el-table 按容器宽度分配：
+             原来 6 个固定 width 列 + 5 个 min-width 列合计 1294px，
+             而 1600 视口下容器只有 1244px，导致右侧「操作」列被挤出可视区，
+             必须横向滚动才能点到。全部改为 min-width 后总宽自适应，不再溢出。 -->
         <el-table-column type="selection" width="48" />
-        <el-table-column prop="bah" label="病案号" min-width="140" />
-        <el-table-column prop="brxh" label="病人序号" min-width="120" />
-        <el-table-column prop="sjh" label="上架号" min-width="120" />
-        <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="btype" label="类型" width="160">
+        <el-table-column prop="bah" label="病案号" min-width="130" />
+        <el-table-column prop="brxh" label="病人序号" min-width="110" />
+        <el-table-column prop="sjh" label="上架号" min-width="110" />
+        <el-table-column prop="filename" label="文件名" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="btype" label="类型" min-width="120">
           <template #default="{ row }">
             {{ typeLabel(row.btype) }}
           </template>
         </el-table-column>
-        <el-table-column prop="pages" label="页数" width="80" />
+        <el-table-column prop="pages" label="页数" min-width="72" />
         <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
-        <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="迁移状态" width="100">
+        <el-table-column prop="folder" label="目录" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="迁移状态" min-width="96">
           <template #default="{ row }">
             <el-tag
               v-if="row.migrationStatus"

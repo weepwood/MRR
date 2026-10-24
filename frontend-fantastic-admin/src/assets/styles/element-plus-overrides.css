@@ -217,6 +217,21 @@ html:root {
   box-shadow: var(--mrr-danger-focus-ring);
 }
 
+/* 禁用态原先只是把主色降到 50% 透明度：浅蓝填充 + 白字仍然读作「可点击的主按钮」，
+ * 用户在设置页会反复点「保存设置」。改为中性灰底灰字，与可用的主按钮彻底区分。
+ * text / link 类按钮没有填充，保持透明度降级即可，不套灰底。 */
+.el-button.is-disabled:not(.is-text):not(.is-link),
+.el-button.is-disabled:not(.is-text):not(.is-link):hover,
+.el-button.is-disabled:not(.is-text):not(.is-link):focus {
+  color: var(--mrr-muted-foreground);
+  cursor: not-allowed;
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+  box-shadow: none;
+  opacity: 1;
+  transform: none;
+}
+
 .el-button.is-disabled,
 .el-button.is-disabled:hover,
 .el-button.is-loading {

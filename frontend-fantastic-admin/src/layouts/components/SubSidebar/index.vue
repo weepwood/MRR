@@ -172,34 +172,63 @@ watch(() => menuStore.actived, (val, oldVal) => {
     padding-top: 10px;
 
     & > :deep(.menu-item) {
-      padding: 2px 0;
+      padding: 1px 0;
     }
 
+    /* 分组标题不再整行长灰底：single 模式下 5 个分组就是 5 个色块，
+     * 与子项、激活态的蓝底叠在一起形成三层块状噪音。
+     * 改为「字重 + 上间距」建立分组边界，只有悬停和激活才出现底色。 */
     & > :deep(.menu-item > .menu-item-container) {
-      min-height: 40px;
+      min-height: 34px;
       padding-inline: 10px !important;
-      font-weight: 620;
+      font-weight: 640;
       color: var(--text-primary) !important;
-      background: color-mix(in srgb, var(--mrr-navigation-hover) 52%, transparent);
+      background: transparent;
       border-color: transparent;
       border-radius: var(--mrr-radius-md);
     }
 
-    & > :deep(.sub-menu) {
-      padding-inline-start: 2px;
-      margin: 2px 0 8px;
+    /* 分组之间留出呼吸间距，让标题与下方子项成为一组。 */
+    & > :deep(.menu-item + .menu-item) {
+      margin-top: 6px;
     }
 
+    & > :deep(.sub-menu) {
+      padding-inline-start: 2px;
+      margin: 1px 0 6px;
+    }
+
+    /* 子项比分组标题弱一档：常规态用次级文本色，靠左缩进读出层级。 */
     :deep(.sub-menu .menu-item-container) {
+      min-height: 32px;
+      padding-inline-start: 14px !important;
+      font-weight: 500;
+      color: var(--text-secondary) !important;
       background: transparent;
     }
 
+    :deep(.sub-menu .menu-item-container-icon) {
+      width: 15px;
+      height: 15px;
+      font-size: 15px !important;
+      opacity: 0.75;
+    }
+
     :deep(.menu-item-container:hover) {
+      color: var(--text-primary) !important;
       background: var(--mrr-navigation-hover);
     }
 
-    :deep(.menu-item.active .menu-item-container) {
+    :deep(.menu-item.active .menu-item-container),
+    :deep(.sub-menu .menu-item.active .menu-item-container) {
+      font-weight: 600;
+      color: var(--color-primary) !important;
       background: var(--mrr-navigation-active) !important;
+      border-color: var(--mrr-navigation-active-border);
+    }
+
+    :deep(.sub-menu .menu-item.active .menu-item-container-icon) {
+      opacity: 1;
     }
   }
 

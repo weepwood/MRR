@@ -32,6 +32,10 @@ class PinnedRuntimeDependenciesTest(unittest.TestCase):
                 build_bundle.validate_runtime_packages(
                     {"Certifi": "2026.7.22", "certifi": "2026.10.19"}, lock
                 )
+            with self.assertRaisesRegex(ValueError, "RUNTIME_DEPENDENCY_DUPLICATE"):
+                build_bundle.validate_runtime_packages(
+                    [("certifi", "2026.7.22"), ("certifi", "2026.10.19")], lock
+                )
 
     def test_validated_lock_excludes_vulnerable_certifi(self):
         pinned = build_bundle.read_pinned_requirements(ROOT / "requirements-validated.lock")

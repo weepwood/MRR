@@ -3,6 +3,7 @@ import type { OcrFact } from '@/api/modules/ocr'
 import { computed, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
 import useAuth from '@/utils/composables/useAuth'
+import { ocrJobStatusLabels, ocrLabel, ocrPageStatusLabels } from '@/utils/ocr-labels'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
 
@@ -15,16 +16,6 @@ const busy = ref(false)
 const error = ref('')
 let generation = 0
 const running = computed(() => job.value && ['PENDING', 'RUNNING', 'CANCEL_REQUESTED'].includes(job.value.status))
-const statusLabels: Record<string, string> = {
-  PENDING: '待识别',
-  PROCESSING: '识别中',
-  SUCCEEDED: '识别完成',
-  LOW_CONFIDENCE: '文字质量较低',
-  FAILED: '识别失败',
-  SKIPPED: '已跳过',
-  STALE: '源文件已变化',
-  INTERRUPTED: '已中断',
-}
 
 async function load(resume = false) {
   const version = ++generation
@@ -91,7 +82,7 @@ watch(() => job.value?.status, (status) => {
       <el-alert v-if="error || pollingError" :title="error || pollingError" type="error" :closable="false" />
       <p>识别文字供病案整理参考，请对照原图核实。</p>
       <div class="ocr-actions">
-        <el-tag>{{ statusLabels[fact?.status || 'PENDING'] || fact?.status }}</el-tag>
+        <el-tag>{{ ocrLabel(ocrPageStatusLabels, fact?.status || 'PENDING') }}</el-tag>
         <el-button @click="load(true)">
           刷新
         </el-button>
@@ -108,7 +99,7 @@ watch(() => job.value?.status, (status) => {
         </template>
       </div>
       <div v-if="job" aria-live="polite">
-        <p>{{ job.status }} · {{ job.processedCount }} / {{ job.plannedCount }} 页 · 失败 {{ job.failedCount }} 页</p>
+        <p>{{ ocrLabel(ocrJobStatusLabels, job.status) }} · {{ job.processedCount }} / {{ job.plannedCount }} 页 · 失败 {{ job.failedCount }} 页</p>
         <el-progress :percentage="job.plannedCount ? Math.round(job.processedCount / job.plannedCount * 100) : 0" />
       </div>
       <div class="ocr-compare">

@@ -4,6 +4,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getClassificationSuggestions, getOcrItems, getRecordTypes, getReviewImage, reviewClassification } from '@/api/modules/classification'
 import { updateImageType } from '@/api/modules/image'
 import useAuth from '@/utils/composables/useAuth'
+import { ocrAutoStatusLabels, ocrItemStatusLabels, ocrLabel, ocrReasonLabels, ocrReviewStatusLabels } from '@/utils/ocr-labels'
 
 const props = defineProps<{ jobId: string }>()
 const { auth } = useAuth()
@@ -90,11 +91,15 @@ watch(() => props.jobId, () => void load(true))
           {{ types.find(type => type.value === row.suggestedType)?.label || row.suggestedType }}
         </template>
       </el-table-column>
-      <el-table-column prop="reasonCode" label="分类依据" />
+      <el-table-column label="分类依据">
+        <template #default="{ row }">
+          {{ ocrLabel(ocrReasonLabels, row.reasonCode) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="ruleScore" label="规则分数" />
       <el-table-column label="状态">
         <template #default="{ row }">
-          {{ row.autoStatus === 'APPLIED' ? '已自动归类' : row.reviewStatus }}
+          {{ row.autoStatus === 'APPLIED' ? ocrLabel(ocrAutoStatusLabels, row.autoStatus) : ocrLabel(ocrReviewStatusLabels, row.reviewStatus) }}
         </template>
       </el-table-column>
       <el-table-column label="原图">
@@ -124,7 +129,11 @@ watch(() => props.jobId, () => void load(true))
     </el-table>
     <el-table :data="unresolved">
       <el-table-column prop="scanId" label="需人工处理的影像 ID" />
-      <el-table-column prop="status" label="原因" />
+      <el-table-column label="原因">
+        <template #default="{ row }">
+          {{ ocrLabel(ocrItemStatusLabels, row.status) }}
+        </template>
+      </el-table-column>
       <el-table-column label="原图">
         <template #default="{ row }">
           <el-button link @click="showImage(row.scanId)">

@@ -4,6 +4,7 @@ import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import useAuth from '@/utils/composables/useAuth'
+import { ocrJobStatusLabels, ocrLabel, ocrReasonLabels } from '@/utils/ocr-labels'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
 defineOptions({ name: 'OcrBatchesPage' })
@@ -144,7 +145,7 @@ async function skipRollbackPage() {
     </el-button>
     <div v-if="validPreview && preview" class="batch-preview">
       <p>扫描上界 {{ preview.upperId }}；本次范围内最多处理 {{ preview.eligibleInLimit }} 页{{ preview.truncated ? '，仍有更多候选，后续批次继续处理' : '' }}。</p>
-      <p>运行条件：{{ preview.readiness }}。未达到资源或延迟基线要求时保持等待。</p>
+      <p>运行条件：{{ ocrLabel(ocrReasonLabels, preview.readiness) }}。未达到资源或延迟基线要求时保持等待。</p>
       <p v-if="form.autoApply">
         将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
       </p>
@@ -154,7 +155,11 @@ async function skipRollbackPage() {
     </div>
     <el-table :data="batches">
       <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="status" label="状态" min-width="120" />
+      <el-table-column label="状态" min-width="120">
+        <template #default="{ row }">
+          {{ ocrLabel(ocrJobStatusLabels, row.status) }}
+        </template>
+      </el-table-column>
       <el-table-column label="进度" min-width="170">
         <template #default="{ row }">
           {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
@@ -162,7 +167,11 @@ async function skipRollbackPage() {
       </el-table-column>
       <el-table-column prop="successCount" label="已识别" /><el-table-column prop="failedCount" label="失败" />
       <el-table-column prop="autoAppliedCount" label="自动归类" /><el-table-column prop="reviewRequiredCount" label="待审核建议" />
-      <el-table-column prop="cursorId" label="续跑游标" /><el-table-column prop="reasonCode" label="等待原因" />
+      <el-table-column prop="cursorId" label="续跑游标" /><el-table-column label="等待原因">
+        <template #default="{ row }">
+          {{ ocrLabel(ocrReasonLabels, row.reasonCode) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" min-width="280" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">

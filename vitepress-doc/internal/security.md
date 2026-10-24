@@ -43,6 +43,10 @@ OSS_ACCESS_KEY_SECRET
 - 不要改回 `DOCTOR` 等具备病历编辑、下载能力的角色；
 - 需要更高权限时，由管理员在审核通过或后续编辑用户时显式授予。
 
+## 最后一名有效管理员
+
+编辑用户角色或状态、禁用账号时，后端在同一 PostgreSQL 事务内串行检查有效管理员数量。若操作会使数量降为 0，返回 HTTP 409，响应 `meta.reasonCode` 为 `LAST_ACTIVE_ADMIN_REQUIRED`。有效管理员只统计数据库中角色为 `ADMIN` 且状态为 `active` 的真实账号；开发者档案袋兼容身份不计入。
+
 ## 开发者档案袋兼容模式
 
 系统设置键 `developerModeEnabled` 默认由 Flyway 初始化为 `false`。该开关只用于旧系统通过无 Token URL 打开独立影像档案袋，不再提供全系统开发者管理员身份。

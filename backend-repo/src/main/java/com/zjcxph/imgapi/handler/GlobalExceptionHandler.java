@@ -26,9 +26,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Result<Void>> handleBusinessException(BusinessException e) {
         logger.warn("业务异常: code={}, msg={}", e.getCode(), e.getMessage());
+        Result<Void> result = Result.fail(e.getCode(), e.getMessage());
+        if (e.getReasonCode() != null) {
+            result.meta(Map.of("reasonCode", e.getReasonCode()));
+        }
         return ResponseEntity
                 .status(ResultCode.resolveHttpStatus(e.getCode()))
-                .body(Result.fail(e.getCode(), e.getMessage()));
+                .body(result);
     }
 
     /**

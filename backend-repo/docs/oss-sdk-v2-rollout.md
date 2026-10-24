@@ -21,4 +21,4 @@
 
 ## 回滚
 
-若上述任一步失败，停止新包的 OSS 写入操作并进入维护模式；确认失败上传没有留下待处理的虚构对象。按 `deploy/windows/README.md` 的受管理发布流程执行 `mrrctl.ps1 rollback previous`，再复测读取、签名、分页和后端健康检查。若 manifest 禁止直接回滚，保持维护模式，按该文档的数据库兼容性与备份恢复规则处理；不要用 `-Force` 绕过未确认的兼容性。回滚不会改变 OSS 已写入的对象，应根据审计记录逐项核对并处理。
+若上述任一步失败，停止新包的 OSS 写入操作并进入维护模式；确认失败上传没有留下待处理的虚构对象。先核对部署包 manifest 与当前 `release-baseline.json`。当前 `applicationRollback.allowed=false`，不得直接执行 `mrrctl.ps1 rollback previous`，也不得用 `-Force` 绕过兼容性限制。应在当前主线保留数据库迁移、令牌撤销与安全修复，仅撤销本次 OSS SDK 迁移，构建新的受管理发布包；按 `deploy/windows/README.md` 验证清单、安装并复测读取、签名、分页和后端健康检查。只有后续基线明确允许应用回滚且现场完成兼容演练时，才使用受管理回滚命令。此恢复过程不会改变 OSS 已写入的对象，应根据审计记录逐项核对并处理。

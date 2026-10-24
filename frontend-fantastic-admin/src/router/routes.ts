@@ -87,7 +87,7 @@ const constantRoutes: RouteRecordRaw[] = [
     meta: { title: '病案查询' },
   },
   {
-    path: '/idcard/:idCard',
+    path: '/idcard/view',
     name: 'scanImg',
     component: () => import('@/views/scan-img/index.vue'),
     meta: { title: '病案图像查询' },

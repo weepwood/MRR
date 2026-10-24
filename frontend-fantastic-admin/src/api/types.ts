@@ -238,14 +238,6 @@ export interface ImageAuditAnalytics {
   topUsers: ImageAuditCountItem[]
 }
 
-/** 加密ID搜索参数 */
-export interface EncryptIDSearchParams {
-  EncryptID: string
-  userId: string
-  iv: string
-  timestamp: string
-}
-
 /** 认证用户（对齐后端 AuthUserProfileDTO / AuthSession） */
 export interface AuthUser {
   id?: number

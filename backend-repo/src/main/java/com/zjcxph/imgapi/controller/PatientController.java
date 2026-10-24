@@ -157,11 +157,11 @@ public class PatientController {
         return Result.<List<Patient>>success().data(patients);
     }
 
-    @Operation(summary = "根据身份证号查询患者信息")
+    @Deprecated
+    @Operation(summary = "通过 URL 身份证号查询患者信息（已停用）")
     @GetMapping("/idcard/{idCard}")
-    public Result<List<Patient>> getByIdCard(@PathVariable String idCard) {
-        List<Patient> patients = searchMapper.findBAHByIDCard(idCard);
-        return Result.<List<Patient>>success().data(patients);
+    public Result<List<Patient>> getByIdCard() {
+        return Result.fail(410, "旧身份证查询接口已停用，请改用受控 POST 查询或外部 Ticket");
     }
 
     @Operation(summary = "导出患者列表为 Excel")

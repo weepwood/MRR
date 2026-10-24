@@ -158,7 +158,8 @@
 
 **覆盖的 API**:
 - `GET /api/v1/search/hello`
-- `GET /api/v1/search/getBAHByEncryptID`
+- `POST /api/v1/search/getBAHByID`（内部受控身份证查询）
+- `POST /api/v1/search/archive-cases`（档案查询与短期令牌签发）
 - `GET /api/v1/search/patient/bah/{bah}`
 - `GET /api/v1/search/patient/idcard/{idcard}`
 - `GET /api/v1/search/patient/name/{name}`

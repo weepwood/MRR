@@ -80,6 +80,6 @@
     <!-- 第三方库日志级别控制 -->
     <logger name="org.springframework.web" level="WARN"/>
     <logger name="org.hibernate" level="WARN"/>
-    <logger name="com.amazonaws" level="WARN"/>
+    <logger name="software.amazon.awssdk" level="WARN"/>
     
 </configuration>

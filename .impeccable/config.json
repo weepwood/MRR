@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-10-25T06:30:29.444Z",
         "reason": "Agent review: DESIGN.md section 3 explicitly lists Inter in the font family; base.css already used this family before the control-layout work. Preserve the established Operate UI typography and limit the waiver to this font in this file."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "frontend-fantastic-admin/src/views/operations-center/index.vue"
+        ],
+        "createdAt": "2026-10-25T07:28:23.706Z",
+        "reason": "False positive: the check-card uses neutral --el-border-color rather than a colored accent."
       }
     ]
   }

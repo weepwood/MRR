@@ -191,28 +191,6 @@ html[data-page-title-style="card"] .mrr-page-header > * {
 html[data-page-title-style="card"] .page-header .eyebrow,
 html[data-page-title-style="card"] .help-center > .help-header .help-kicker,
 html[data-page-title-style="card"] .mrr-page-header__eyebrow {
-  display: inline-flex;
-  gap: 0;
-  align-items: center;
-  width: fit-content;
-  padding: 4px 9px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-
-  /* 同上：color-mix() 在 Chrome 86 上整条失效，先用令牌（兼容层会给出静态色值）。 */
-  background: var(--mrr-tone-primary-soft);
-  background: color-mix(in srgb, var(--mrr-primary) 7%, transparent);
-  border: 1px solid var(--mrr-tone-primary-border);
-  border: 1px solid color-mix(in srgb, var(--mrr-primary) 12%, transparent);
-  border-radius: var(--mrr-radius-pill);
-}
-
-/* 英文标签前的状态绿点语义错位（绿色在全站表示"运行正常/成功"，
- * 这里只是页头的英文名），移除后标签只剩一句双语标题，更安静。 */
-html[data-page-title-style="card"] .page-header .eyebrow::before,
-html[data-page-title-style="card"] .help-center > .help-header .help-kicker::before,
-html[data-page-title-style="card"] .mrr-page-header__eyebrow::before {
   display: none;
 }
 

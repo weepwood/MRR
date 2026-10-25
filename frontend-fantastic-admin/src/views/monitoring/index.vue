@@ -289,9 +289,8 @@ onUnmounted(() => {
       />
     </section>
 
-    <el-row :gutter="20" class="monitor-row">
-      <el-col :xs="24" :lg="14">
-        <el-card shadow="never" class="monitor-card">
+    <div class="monitor-grid monitor-grid--availability">
+      <el-card shadow="never" class="monitor-card">
           <template #header>
             <div class="card-header">
               <div>
@@ -327,11 +326,9 @@ onUnmounted(() => {
               <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
             </div>
           </div>
-        </el-card>
-      </el-col>
+      </el-card>
 
-      <el-col :xs="24" :lg="10">
-        <el-card shadow="never" class="monitor-card">
+      <el-card shadow="never" class="monitor-card">
           <template #header>
             <div class="card-header">
               <div>
@@ -351,11 +348,10 @@ onUnmounted(() => {
             <el-descriptions-item label="处理器">{{ systemInfo.jvm?.availableProcessors || '-' }}</el-descriptions-item>
             <el-descriptions-item label="系统负载">{{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}</el-descriptions-item>
           </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
+      </el-card>
+    </div>
 
-    <el-card shadow="never" class="monitor-card monitor-row">
+    <el-card shadow="never" class="monitor-card">
       <template #header>
         <div class="card-header">
           <div>
@@ -395,9 +391,8 @@ onUnmounted(() => {
       </el-table>
     </el-card>
 
-    <el-row :gutter="20" class="monitor-row">
-      <el-col :xs="24" :xl="13">
-        <el-card shadow="never" class="monitor-card">
+    <div class="monitor-grid monitor-grid--details">
+      <el-card shadow="never" class="monitor-card">
           <template #header>
             <div class="card-header"><strong>异常样本</strong><span>最多显示最近 100 条</span></div>
           </template>
@@ -414,10 +409,8 @@ onUnmounted(() => {
             <el-table-column prop="sjh" label="上架号" width="120" />
             <el-table-column prop="detail" label="说明" min-width="260" show-overflow-tooltip />
           </el-table>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :xl="11">
-        <el-card shadow="never" class="monitor-card">
+      </el-card>
+      <el-card shadow="never" class="monitor-card">
           <template #header>
             <div class="card-header"><strong>数据库占用最大的表</strong><span>包含表与索引</span></div>
           </template>
@@ -432,15 +425,15 @@ onUnmounted(() => {
               <template #default="scope">{{ formatDate(scope.row.last_autovacuum) }}</template>
             </el-table-column>
           </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .page-shell {
-  padding: 20px;
+  display: grid;
+  gap: 18px;
 }
 
 .page-header,
@@ -455,7 +448,7 @@ onUnmounted(() => {
 }
 
 .page-header {
-  margin-bottom: 18px;
+  margin: 0;
 }
 
 .page-header h2 {
@@ -479,11 +472,19 @@ onUnmounted(() => {
   color: var(--el-text-color-secondary);
 }
 
-.monitor-row {
-  margin-top: 20px;
+.monitor-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.monitor-grid--availability,
+.monitor-grid--details {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .monitor-card {
+  width: 100%;
+  min-width: 0;
   height: 100%;
   border-radius: var(--mrr-radius-card);
 }
@@ -550,6 +551,18 @@ onUnmounted(() => {
   }
 
   .quality-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .monitor-grid--availability {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1920px) {
+  .monitor-grid--details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -149,7 +149,8 @@
   },
   "pnpm": {
     "overrides": {
-      "qs": "^6.16.0"
+      "qs": "^6.16.0",
+      "vue-sonner>nuxt": "-"
     }
   },
   "config": {

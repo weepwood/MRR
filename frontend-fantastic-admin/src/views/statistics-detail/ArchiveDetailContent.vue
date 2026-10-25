@@ -1134,23 +1134,6 @@ h2 {
   justify-content: flex-end;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .archive-folder-card,
-  .folder-layer,
-  .folder-card-body,
-  .folder-card-body::before,
-  .folder-card-body::after,
-  .folder-code-block,
-  .folder-action span {
-    transition: none;
-  }
-
-  .archive-folder-card:hover .folder-card-body,
-  .archive-folder-card:focus-visible .folder-card-body {
-    transform: none;
-  }
-}
-
 @media (max-width: 720px) {
   .page-header {
     flex-direction: column;

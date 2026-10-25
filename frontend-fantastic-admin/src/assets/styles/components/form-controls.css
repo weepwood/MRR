@@ -163,11 +163,3 @@
   color: var(--mrr-foreground);
   transform: rotate(180deg);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .fa-input-control,
-  .fa-select-trigger,
-  .fa-select-chevron {
-    transition: none;
-  }
-}

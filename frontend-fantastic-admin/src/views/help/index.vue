@@ -343,10 +343,4 @@ onMounted(async () => {
     width: 100%;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .documentation-card {
-    transition: none;
-  }
-}
 </style>

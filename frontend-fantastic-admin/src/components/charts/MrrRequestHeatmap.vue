@@ -630,10 +630,4 @@ onBeforeUnmount(hideTooltip)
     width: 100%;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .heatmap-tooltip {
-    transition: none;
-  }
-}
 </style>

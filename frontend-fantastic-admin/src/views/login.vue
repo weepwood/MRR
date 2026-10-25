@@ -32,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'Login' })
@@ -59,7 +60,7 @@ watch(authMode, async () => {
     shell.removeEventListener('transitionend', authModeTransitionEnd)
     authModeTransitionEnd = undefined
   }
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!isMotionEnabled()) {
     shell.style.height = ''
     shell.style.minHeight = ''
     shell.style.transition = ''
@@ -569,7 +570,8 @@ onBeforeUnmount(() => {
 .session-notice { margin-top: var(--mrr-space-4); }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: var(--mrr-space-3); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
-@media (prefers-reduced-motion: no-preference) { .login-shell { animation: login-enter 0.35s ease-out both; } @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
+.login-shell { animation: login-enter 0.35s ease-out both; }
+@keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }

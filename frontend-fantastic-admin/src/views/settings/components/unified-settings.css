@@ -68,18 +68,3 @@
   .settings-nav { grid-template-columns: 1fr; }
   .settings-content { padding: var(--mrr-space-4); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .settings-nav-item,
-  .nav-icon,
-  .nav-arrow,
-  .sidebar-save-card,
-  .save-status .status-dot { transition: none; }
-
-  .settings-nav-item:hover .nav-icon,
-  .settings-nav-item.active .nav-icon,
-  .settings-nav-item:active .nav-icon,
-  .settings-nav-item:hover .nav-arrow,
-  .settings-nav-item.active .nav-arrow,
-  .save-status.dirty .status-dot { transform: none; }
-}

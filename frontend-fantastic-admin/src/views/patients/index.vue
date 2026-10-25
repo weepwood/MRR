@@ -197,7 +197,7 @@ onUnmounted(() => {
         </p>
         <h2>患者管理</h2>
         <p class="subtitle">
-          查询和编辑患者基本信息，并分析身份证完整性、重复患者、年度日期与科室分布。数据导入导出统一在数据交换中心执行。
+          查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。数据导入导出统一在数据交换中心执行。
         </p>
       </div>
       <div class="header-actions">
@@ -210,98 +210,102 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey" />
-
-    <el-card shadow="never">
-      <div class="filter-bar">
-        <el-input
-          v-model="filters.keyword"
-          placeholder="搜索病案号 / 姓名 / 身份证号 / 科室 / 病区 / 床位"
-          clearable
-          class="filter-input"
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button type="primary" @click="handleSearch">
-          查询
-        </el-button>
-        <el-button @click="resetFilters">
-          重置
-        </el-button>
-      </div>
-    </el-card>
-
-    <el-card shadow="never">
-      <AppLoading v-if="loading" type="table" :rows="8" />
-      <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-      <el-table v-else :data="tableData" stripe style="width: 100%;">
-        <el-table-column prop="id" label="ID" width="100" />
-        <el-table-column prop="bah" label="病案号" width="140">
-          <template #default="{ row }">
-            <router-link
-              v-if="row.bah"
-              :to="{ path: '/archive', query: { bah: row.bah, from: 'patients' } }"
-              class="bah-link"
-              target="_blank"
-              rel="noopener noreferrer"
+    <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey">
+      <template #search>
+        <el-card shadow="never">
+          <div class="filter-bar">
+            <el-input
+              v-model="filters.keyword"
+              placeholder="搜索病案号 / 姓名 / 身份证号 / 科室 / 病区 / 床位"
+              clearable
+              class="filter-input"
+              @keyup.enter="handleSearch"
             >
-              {{ row.bah }}
-            </router-link>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="idCard" label="身份证号" width="200">
-          <template #default="{ row }">
-            <el-button
-              v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
-              link
-              class="id-card-toggle"
-              @click="handleIdCardClick(row.idCard)"
-            >
-              {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
-            </el-button>
-            <span v-else>{{ maskIdCard(row.idCard) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="department" label="科室" width="150" show-overflow-tooltip />
-        <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
-        <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
-        <el-table-column prop="ruyuan" label="入院日期" width="120" />
-        <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-        <el-table-column
-          v-if="canEditPatients"
-          label="操作"
-          :width="patientActionColumnWidth"
-          fixed="right"
-          align="center"
-        >
-          <template #default="{ row }">
-            <MrrTableActions
-              :actions="patientActions"
-              :max-inline="patientMaxInlineActions"
-              @select="handlePatientAction($event, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <div class="filter-actions">
+              <el-button type="primary" @click="handleSearch">
+                查询
+              </el-button>
+              <el-button @click="resetFilters">
+                重置
+              </el-button>
+            </div>
+          </div>
+        </el-card>
+      </template>
 
-      <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="size"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @current-change="handlePageChange"
-          @size-change="handleSizeChange"
-        />
-      </div>
-    </el-card>
+      <template #patients>
+        <AppLoading v-if="loading" type="table" :rows="8" />
+        <AppError v-else-if="error" :message="error" @retry="loadData" />
+        <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
+        <el-table v-else :data="tableData" stripe style="width: 100%;">
+          <el-table-column prop="id" label="ID" width="100" />
+          <el-table-column prop="bah" label="病案号" width="140">
+            <template #default="{ row }">
+              <router-link
+                v-if="row.bah"
+                :to="{ path: '/archive', query: { bah: row.bah, from: 'patients' } }"
+                class="bah-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ row.bah }}
+              </router-link>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="name" label="姓名" width="100" />
+          <el-table-column prop="idCard" label="身份证号" width="200">
+            <template #default="{ row }">
+              <el-button
+                v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
+                link
+                class="id-card-toggle"
+                @click="handleIdCardClick(row.idCard)"
+              >
+                {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
+              </el-button>
+              <span v-else>{{ maskIdCard(row.idCard) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="department" label="科室" width="150" show-overflow-tooltip />
+          <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
+          <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
+          <el-table-column prop="ruyuan" label="入院日期" width="120" />
+          <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
+          <el-table-column
+            v-if="canEditPatients"
+            label="操作"
+            :width="patientActionColumnWidth"
+            fixed="right"
+            align="center"
+          >
+            <template #default="{ row }">
+              <MrrTableActions
+                :actions="patientActions"
+                :max-inline="patientMaxInlineActions"
+                @select="handlePatientAction($event, row)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="pagination-bar">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="size"
+            :total="total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+          />
+        </div>
+      </template>
+    </PatientAnalyticsPanel>
 
     <PatientEditDialog
       v-model="editDialogVisible"
@@ -319,7 +323,8 @@ onUnmounted(() => {
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: var(--mrr-muted-foreground); }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
-.filter-input { width: min(560px, 100%); }
+.filter-input { flex: 1; width: auto; max-width: 560px; min-width: 0; }
+.filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }

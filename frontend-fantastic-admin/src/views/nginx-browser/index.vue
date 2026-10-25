@@ -11,6 +11,7 @@ import {
   Download,
   Folder,
   Grid,
+  InfoFilled,
   List,
   Picture,
   Refresh,
@@ -358,22 +359,25 @@ onBeforeUnmount(revokePreviewUrl)
         <p class="eyebrow">
           Nginx Static Resource Browser
         </p>
-        <h2>
-          Nginx 文件浏览
-        </h2>
+        <div class="page-title-row">
+          <h2>
+            Nginx 文件浏览
+          </h2>
+          <el-tooltip
+            content="目录浏览依赖 Nginx autoindex。对应 location 需要启用 autoindex on；推荐使用 autoindex_format json。页面为只读模式，文件通过后端代理读取，不向浏览器暴露 Nginx Basic Auth 凭据。"
+            placement="right"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="目录浏览说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
         <p class="subtitle">
           浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
         </p>
       </div>
     </header>
-
-    <el-alert
-      title="目录浏览依赖 Nginx autoindex"
-      description="对应 location 需要启用 autoindex on；推荐使用 autoindex_format json。页面为只读模式，文件通过后端代理读取，不向浏览器暴露 Nginx Basic Auth 凭据。"
-      type="info"
-      :closable="false"
-      show-icon
-    />
 
     <el-card shadow="never" class="browser-card">
       <template #header>
@@ -682,6 +686,38 @@ onBeforeUnmount(revokePreviewUrl)
   display: grid;
   gap: 18px;
   padding: var(--g-main-padding);
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-title-row h2 {
+  margin: 0;
+}
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.info-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 /* 页头排版由全局 page-header.css 统一维护，此处只保留页面内自有元素。 */

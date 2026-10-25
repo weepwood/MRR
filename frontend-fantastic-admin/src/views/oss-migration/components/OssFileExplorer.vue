@@ -5,6 +5,7 @@ import {
   Document,
   Folder,
   Grid,
+  InfoFilled,
   List,
   Picture,
   Refresh,
@@ -308,9 +309,17 @@ onMounted(() => {
       <div class="explorer-title-row">
         <div>
           <strong>OSS 文件资源管理器</strong>
-          <p>以只读方式浏览 medical-records 下的目录和文件，不执行全桶扫描或精确总数统计。</p>
         </div>
         <div class="explorer-status">
+          <el-tooltip
+            content="以只读方式浏览 medical-records 下的目录和文件，不执行全桶扫描或精确总数统计。"
+            placement="top"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="OSS 文件浏览说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
           <el-tag :type="page?.configured ? 'success' : 'danger'">
             {{ page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
           </el-tag>
@@ -585,16 +594,33 @@ onMounted(() => {
   align-items: center;
 }
 
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.info-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
 .explorer-title-row,
 .breadcrumb-row,
 .cursor-pager,
 .preview-title {
   justify-content: space-between;
-}
-
-.explorer-title-row p {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
 }
 
 .repository-summary {

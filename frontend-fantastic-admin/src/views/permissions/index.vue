@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AuthRole } from '@/api/types'
 import type { PermissionDefinition } from '@/utils/permission'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
@@ -201,7 +202,18 @@ onMounted(loadPermissions)
         <p class="eyebrow">
           Permission Management
         </p>
-        <h2>权限管理</h2>
+        <div class="page-title-row">
+          <h2>权限管理</h2>
+          <el-tooltip
+            content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
+            placement="right"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="权限继承说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
         <p class="subtitle">
           按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。
         </p>
@@ -213,12 +225,6 @@ onMounted(loadPermissions)
         </el-button>
       </div>
     </header>
-
-    <el-alert type="info" :closable="false" show-icon>
-      <template #title>
-        上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。
-      </template>
-    </el-alert>
 
     <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
 
@@ -376,6 +382,25 @@ onMounted(loadPermissions)
 .page-shell { display: grid; gap: 18px; }
 
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+
+.page-title-row { display: flex; align-items: center; gap: 8px; }
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: help;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible { color: hsl(var(--primary)); }
+
+.info-trigger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 
 .header-actions,
 .role-header,

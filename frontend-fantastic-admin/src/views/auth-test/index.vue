@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AuthTestHistoryEvent, AuthTestHistoryItem } from './types'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import ExternalArchiveTicketTester from './components/ExternalArchiveTicketTester.vue'
@@ -31,7 +32,18 @@ function record(event: AuthTestHistoryEvent) {
     <header class="page-header">
       <div>
         <p class="eyebrow">Authentication Playground</p>
-        <h2>认证与外部访问测试台</h2>
+        <div class="page-title-row">
+          <h2>认证与外部访问测试台</h2>
+          <el-tooltip
+            content="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。"
+            placement="right"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="生产 Secret 安全说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
         <p class="subtitle">
           测试内部 JWT、受保护 API 和外部影像票据。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。
         </p>
@@ -63,13 +75,6 @@ function record(event: AuthTestHistoryEvent) {
         note="仅保存在页面内存，刷新后清空"
       />
     </section>
-
-    <el-alert
-      type="warning"
-      show-icon
-      :closable="false"
-      title="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。"
-    />
 
     <el-tabs v-model="activeTab" class="test-tabs">
       <el-tab-pane name="external" label="外部影像票据">
@@ -140,6 +145,34 @@ function record(event: AuthTestHistoryEvent) {
 h2 {
   margin: 0;
   font-size: 24px;
+}
+
+.page-title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.info-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 .subtitle {

@@ -19,7 +19,7 @@ import type {
   ScanExchangeFilters,
   StatisticsExchangeFilters,
 } from '@/api/modules/data-exchange'
-import { Download, Refresh } from '@element-plus/icons-vue'
+import { Download, InfoFilled, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -285,7 +285,18 @@ function today() {
         <p class="eyebrow">
           Data Exchange
         </p>
-        <h2>数据交换中心</h2>
+        <div class="page-title-row">
+          <h2>数据交换中心</h2>
+          <el-tooltip placement="right" :show-after="200">
+            <template #content>
+              <span v-if="!canImport">当前账号只有读取权限。可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。<br></span>
+              导出采用受控行数上限：所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
+            </template>
+            <button type="button" class="info-trigger" aria-label="数据交换说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
         <p class="subtitle">
           患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。
         </p>
@@ -294,29 +305,6 @@ function today() {
         返回患者数据
       </el-button>
     </div>
-
-    <el-alert
-      v-if="!canImport"
-      title="当前账号只有读取权限"
-      type="info"
-      show-icon
-      :closable="false"
-    >
-      <template #default>
-        可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。
-      </template>
-    </el-alert>
-
-    <el-alert
-      title="导出采用受控行数上限"
-      type="info"
-      show-icon
-      :closable="false"
-    >
-      <template #default>
-        所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
-      </template>
-    </el-alert>
 
     <div class="dataset-overview">
       <button type="button" :class="{ active: activeTab === 'patients' }" @click="activeTab = 'patients'">
@@ -438,16 +426,16 @@ function today() {
 
       <el-tab-pane name="archives" label="病案主档">
         <div class="tab-content">
-          <el-alert
-            title="病案主档只允许导出"
-            type="warning"
-            show-icon
-            :closable="false"
-          >
-            <template #default>
-              mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
-            </template>
-          </el-alert>
+          <div class="notice-row">
+            <el-tooltip placement="right" :show-after="200">
+              <template #content>
+                病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
+              </template>
+              <button type="button" class="info-trigger" aria-label="病案主档导出说明">
+                <el-icon><InfoFilled /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
 
           <el-card shadow="never">
             <template #header>
@@ -551,16 +539,16 @@ function today() {
 
       <el-tab-pane name="scan" label="扫描记录">
         <div class="tab-content">
-          <el-alert
-            title="浏览器只处理小批量扫描记录"
-            type="warning"
-            show-icon
-            :closable="false"
-          >
-            <template #default>
-              单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
-            </template>
-          </el-alert>
+          <div class="notice-row">
+            <el-tooltip placement="right" :show-after="200">
+              <template #content>
+                浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
+              </template>
+              <button type="button" class="info-trigger" aria-label="扫描记录导入说明">
+                <el-icon><InfoFilled /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
 
           <el-card shadow="never">
             <template #header>
@@ -622,6 +610,35 @@ function today() {
   gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.page-title-row,
+.notice-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.info-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 .eyebrow {

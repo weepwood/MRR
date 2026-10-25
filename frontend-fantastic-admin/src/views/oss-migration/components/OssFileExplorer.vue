@@ -602,8 +602,8 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
   background: transparent;
   border: 0;
-  border-radius: var(--mrr-radius-pill);
   cursor: help;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .info-trigger:hover,

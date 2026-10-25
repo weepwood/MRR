@@ -182,5 +182,4 @@ function onSelection(value: number | 'all') {
     transform: scale(1);
   }
 }
-
 </style>

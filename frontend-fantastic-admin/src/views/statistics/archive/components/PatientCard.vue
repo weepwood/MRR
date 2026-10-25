@@ -136,5 +136,4 @@ function toggleRecordNumber() {
   color: var(--text-primary);
   white-space: nowrap;
 }
-
 </style>

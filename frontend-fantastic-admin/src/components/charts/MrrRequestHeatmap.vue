@@ -566,8 +566,8 @@ onBeforeUnmount(hideTooltip)
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
-  will-change: transform;
   transition: transform 90ms ease-out;
+  will-change: transform;
 }
 
 .heatmap-tooltip > span {

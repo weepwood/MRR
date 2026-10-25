@@ -3,6 +3,10 @@ import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/ap
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import useAuth from '@/utils/composables/useAuth'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
@@ -118,75 +122,112 @@ async function skipRollbackPage() {
 </script>
 
 <template>
-  <div v-loading="busy" class="ocr-batches">
-    <h1>历史未分类影像识别</h1>
-    <p>只处理有效、病案关联已核验且仍未分类的页面。批次有明确上界，每次最多 10,000 页，主要在北京时间 22:00–06:00 运行。</p>
+  <MrrPageShell v-loading="busy" class="ocr-batches" width="fluid">
+    <MrrPageHeader
+      eyebrow="OCR BATCH PROCESSING"
+      title="历史未分类影像识别"
+      description="只处理有效、病案关联已核验且仍未分类的页面。批次有明确上界，每次最多 10,000 页，主要在北京时间 22:00–06:00 运行。"
+    >
+      <template #actions>
+        <el-button @click="after = ''; generation++; reload()">
+          <FaIcon name="i-ri:refresh-line" />
+          首批 / 刷新
+        </el-button>
+      </template>
+    </MrrPageHeader>
+
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
-    <el-form inline label-position="top">
-      <el-form-item label="起点影像 ID（不包含）">
-        <el-input-number v-model="form.afterId" :min="0" :max="2147483647" />
-      </el-form-item>
-      <el-form-item label="终点影像 ID（0 为当前最大值）">
-        <el-input-number v-model="form.upperId" :min="0" :max="2147483647" />
-      </el-form-item>
-      <el-form-item label="本批次页数上限">
-        <el-input-number v-model="form.maxPages" :min="1" :max="10000" />
-      </el-form-item>
-    </el-form>
-    <p v-if="auth('classification:auto-apply') && auth('classification:review')">
-      <el-checkbox v-model="form.autoApply" :disabled="!autoAvailable">
-        授权本批次仅对已验收类别自动归类，其余页面进入人工审核
-      </el-checkbox>
-      <br><span v-if="!autoAvailable">请先预览；没有对应模型、规则与类别的独立验收证据时不可开启。</span>
-    </p>
-    <el-button @click="inspect">
-      预览范围
-    </el-button>
-    <div v-if="validPreview && preview" class="batch-preview">
-      <p>扫描上界 {{ preview.upperId }}；本次范围内最多处理 {{ preview.eligibleInLimit }} 页{{ preview.truncated ? '，仍有更多候选，后续批次继续处理' : '' }}。</p>
-      <p>运行条件：{{ preview.readiness }}。未达到资源或延迟基线要求时保持等待。</p>
-      <p v-if="form.autoApply">
-        将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
-      </p>
-      <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
-        创建此范围的识别批次
-      </el-button>
-    </div>
-    <el-table :data="batches">
-      <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="status" label="状态" min-width="120" />
-      <el-table-column label="进度" min-width="170">
-        <template #default="{ row }">
-          {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
-        </template>
-      </el-table-column>
-      <el-table-column prop="successCount" label="已识别" /><el-table-column prop="failedCount" label="失败" />
-      <el-table-column prop="autoAppliedCount" label="自动归类" /><el-table-column prop="reviewRequiredCount" label="待审核建议" />
-      <el-table-column prop="cursorId" label="续跑游标" /><el-table-column prop="reasonCode" label="等待原因" />
-      <el-table-column label="操作" min-width="280" fixed="right">
-        <template #default="{ row }">
-          <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">
-            暂停
-          </el-button><el-button v-if="row.status === 'PAUSED'" @click="action(row.id, 'resume')">
-            续跑
-          </el-button><el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" @click="action(row.id, 'cancel')">
-            取消
-          </el-button><el-button @click="children(row.id)">
-            查看明细与审核
-          </el-button>
-          <el-button v-if="row.autoApply && auth('classification:override')" @click="inspectRollback(row.id)">
-            回退预览
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-button @click="after = ''; generation++; reload()">
-      首批 / 刷新
-    </el-button><el-button :disabled="batches.length < 20" @click="nextPage">
-      更多批次
-    </el-button>
-    <section v-if="childBatch && auth('classification:read')">
-      <h2>批次任务与人工审核</h2>
+    <MrrSectionCard
+      title="批次范围"
+      description="设置影像 ID 范围和本批次页数上限，再预览符合条件的页面。"
+      body-padding="normal"
+    >
+      <template #actions>
+        <el-button @click="inspect">
+          预览范围
+        </el-button>
+      </template>
+
+      <el-form class="ocr-batches__form" label-position="top">
+        <el-form-item label="起点影像 ID（不包含）">
+          <el-input-number v-model="form.afterId" :min="0" :max="2147483647" />
+        </el-form-item>
+        <el-form-item label="终点影像 ID（0 为当前最大值）">
+          <el-input-number v-model="form.upperId" :min="0" :max="2147483647" />
+        </el-form-item>
+        <el-form-item label="本批次页数上限">
+          <el-input-number v-model="form.maxPages" :min="1" :max="10000" />
+        </el-form-item>
+      </el-form>
+
+      <div v-if="auth('classification:auto-apply') && auth('classification:review')" class="ocr-batches__auto-apply">
+        <el-checkbox v-model="form.autoApply" :disabled="!autoAvailable">
+          授权本批次仅对已验收类别自动归类，其余页面进入人工审核
+        </el-checkbox>
+        <span v-if="!autoAvailable" class="ocr-batches__hint">请先预览；没有对应模型、规则与类别的独立验收证据时不可开启。</span>
+      </div>
+
+      <div v-if="validPreview && preview" class="batch-preview">
+        <p>扫描上界 {{ preview.upperId }}；本次范围内最多处理 {{ preview.eligibleInLimit }} 页{{ preview.truncated ? '，仍有更多候选，后续批次继续处理' : '' }}。</p>
+        <p>运行条件：{{ preview.readiness }}。未达到资源或延迟基线要求时保持等待。</p>
+        <p v-if="form.autoApply">
+          将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
+        </p>
+        <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
+          创建此范围的识别批次
+        </el-button>
+      </div>
+    </MrrSectionCard>
+
+    <MrrDataTablePanel title="识别批次" description="查看批次处理进度、审核建议和运行状态。" :count="batches.length" count-label="当前页">
+      <template #actions>
+        <el-button :disabled="batches.length < 20" @click="nextPage">
+          更多批次
+        </el-button>
+      </template>
+
+      <el-table :data="batches">
+        <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" min-width="120" />
+        <el-table-column label="进度" min-width="170">
+          <template #default="{ row }">
+            {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
+          </template>
+        </el-table-column>
+        <el-table-column prop="successCount" label="已识别" />
+        <el-table-column prop="failedCount" label="失败" />
+        <el-table-column prop="autoAppliedCount" label="自动归类" />
+        <el-table-column prop="reviewRequiredCount" label="待审核建议" />
+        <el-table-column prop="cursorId" label="续跑游标" />
+        <el-table-column prop="reasonCode" label="等待原因" />
+        <el-table-column label="操作" min-width="280" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">
+              暂停
+            </el-button>
+            <el-button v-if="row.status === 'PAUSED'" @click="action(row.id, 'resume')">
+              续跑
+            </el-button>
+            <el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" @click="action(row.id, 'cancel')">
+              取消
+            </el-button>
+            <el-button @click="children(row.id)">
+              查看明细与审核
+            </el-button>
+            <el-button v-if="row.autoApply && auth('classification:override')" @click="inspectRollback(row.id)">
+              回退预览
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </MrrDataTablePanel>
+
+    <MrrSectionCard
+      v-if="childBatch && auth('classification:read')"
+      title="批次任务与人工审核"
+      description="选择批次内的任务，查看识别结果并处理人工审核建议。"
+      body-padding="compact"
+    >
       <el-select v-model="selectedJob" placeholder="选择病案任务">
         <el-option v-for="id in childJobs" :key="id" :value="id" :label="id" />
       </el-select>
@@ -194,7 +235,8 @@ async function skipRollbackPage() {
         更多病案任务
       </el-button>
       <ClassificationReview v-if="selectedJob" :job-id="selectedJob" />
-    </section>
+    </MrrSectionCard>
+
     <el-dialog v-model="rollbackOpen" title="自动归类回退预览" width="min(900px, 95vw)">
       <p>先关闭自动归类总开关并暂停或取消批次。只撤销该批次仍为最后一次变更的自动归类，后续人工操作会跳过。</p>
       <p aria-live="polite">
@@ -214,12 +256,57 @@ async function skipRollbackPage() {
         跳过本页
       </el-button>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.ocr-batches { padding: 24px; background: var(--mrr-card); }
-.ocr-batches h1 { margin-bottom: 12px; font-size: 22px; font-weight: 600; }
-.ocr-batches p { margin: 12px 0; line-height: 1.7; }
-.batch-preview { padding: 16px; margin: 16px 0; border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.ocr-batches {
+  min-width: 0;
+}
+
+.ocr-batches__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px 16px;
+}
+
+.ocr-batches__form :deep(.el-form-item) {
+  min-width: 0;
+  margin: 0;
+}
+
+.ocr-batches__form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.ocr-batches__auto-apply {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.ocr-batches__auto-apply :deep(.el-checkbox) {
+  white-space: normal;
+}
+
+.ocr-batches__hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground);
+}
+
+.batch-preview {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  margin-top: 18px;
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.batch-preview p {
+  margin: 0;
+  line-height: 1.6;
+}
 </style>

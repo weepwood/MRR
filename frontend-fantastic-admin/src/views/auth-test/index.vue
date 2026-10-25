@@ -151,8 +151,8 @@ h2 {
 
 .page-title-row {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
 }
 
 .info-trigger {
@@ -160,11 +160,11 @@ h2 {
   align-items: center;
   justify-content: center;
   padding: 4px;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-  background: transparent;
   color: var(--el-text-color-secondary);
   cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .info-trigger:hover,

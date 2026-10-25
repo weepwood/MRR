@@ -688,6 +688,7 @@ onMounted(loadData)
 .users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-4); padding-left: var(--mrr-space-4); }
 .users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { width: auto; margin: 0 var(--mrr-space-4); }
 .users-filter-bar { padding: 0 0 var(--mrr-space-3); background: transparent; border: 0; border-bottom: 1px solid var(--mrr-shell-divider); border-radius: 0; box-shadow: none; }
+.users-filter-bar.users-filter-bar:focus-within { border-color: transparent; border-bottom-color: var(--mrr-shell-divider); box-shadow: none; }
 .users-info-trigger { display: inline-flex; align-items: center; justify-content: center; padding: 4px; color: var(--mrr-muted-foreground); cursor: help; background: transparent; border: 0; border-radius: var(--mrr-radius-pill); }
 .users-info-trigger:hover, .users-info-trigger:focus-visible { color: var(--mrr-primary); }
 .users-info-trigger:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 2px; }

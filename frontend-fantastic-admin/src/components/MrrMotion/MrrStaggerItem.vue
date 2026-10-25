@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { motion } from 'motion-v'
 import { computed } from 'vue'
+import { useMotionReduced } from '@/composables/useMotionReduced'
 
 /**
  * MrrStaggerItem —— Motion(motion-v) 列表单元（ADR-0007 局部增强层）
@@ -25,9 +26,7 @@ const props = withDefaults(
   { spring: true, as: 'div', offset: 10 },
 )
 
-const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  : false
+const reduced = useMotionReduced()
 
 const Tag = computed(() => (motion as Record<string, unknown>)[props.as] ?? motion.div)
 
@@ -46,7 +45,7 @@ const variants = computed(() => ({
 </script>
 
 <template>
-  <component :is="Tag" :variants="variants">
+  <component :is="Tag" :variants="variants" initial="hidden">
     <slot />
   </component>
 </template>

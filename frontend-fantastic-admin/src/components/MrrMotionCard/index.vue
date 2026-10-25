@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { motion } from 'motion-v'
 import { computed } from 'vue'
+import { useMotionReduced } from '@/composables/useMotionReduced'
 
 /**
  * MrrMotionCard —— Motion(motion-v) 试点组件（ADR-0007）
@@ -20,9 +21,7 @@ const props = withDefaults(
   { spring: true, offset: 8 },
 )
 
-const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  : false
+const reduced = useMotionReduced()
 
 const initial = computed(() =>
   reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: props.offset },

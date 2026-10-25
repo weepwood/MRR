@@ -212,7 +212,18 @@ export function useUnifiedSettings() {
     }
   }
 
-  function handleReset() {
+  async function handleReset() {
+    try {
+      await ElMessageBox.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
+        type: 'warning',
+        confirmButtonText: '确认恢复',
+        cancelButtonText: '取消',
+      })
+    }
+    catch {
+      return
+    }
+
     settings.value = createDefaultSystemSettings()
     ElMessage.info('已恢复默认值，保存后生效')
   }

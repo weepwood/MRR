@@ -2,8 +2,8 @@
 import type { Tabbar } from '#/global'
 import { useMagicKeys } from '@vueuse/core'
 import hotkeys from 'hotkeys-js'
-import { toast } from 'vue-sonner'
 import { useSlots } from '@/slots'
+import { notify } from '@/utils/notification'
 
 defineOptions({
   name: 'Tabbar',
@@ -52,14 +52,10 @@ watch(() => route, (val) => {
 function tabbarScrollTip() {
   if (tabContainerRef.value?.$el.clientWidth > (tabsRef.value?.ref?.$el.clientWidth ?? 0) && localStorage.getItem('tabbarScrollTip') === undefined) {
     localStorage.setItem('tabbarScrollTip', '')
-    const tips = toast.info('温馨提示', {
+    notify.info('温馨提示', {
       description: '标签栏数量超过展示区域范围，可以将鼠标移到标签栏上，通过鼠标滚轮滑动浏览',
-      position: 'top-center',
-      duration: Infinity,
-      action: {
-        label: '知道了',
-        onClick: () => toast.dismiss(tips),
-      },
+      duration: 0,
+      showClose: true,
     })
   }
 }

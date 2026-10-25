@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Settings } from '#/global'
-import { toast } from 'vue-sonner'
 import settingsDefault from '@/settings.default'
+import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
 
 defineOptions({ name: 'AppConfigPanel' })
@@ -82,7 +82,7 @@ function handleExport() {
   link.download = `mrr-interface-config-${new Date().toISOString().slice(0, 10)}.json`
   link.click()
   URL.revokeObjectURL(url)
-  toast.success('界面外观配置已导出')
+  notify.success('界面外观配置已导出')
 }
 
 function triggerImport() {
@@ -102,10 +102,10 @@ async function handleImport(event: Event) {
       throw new TypeError('配置文件必须是 JSON 对象')
     }
     settingsStore.updateSettings(data as Settings.all)
-    toast.success('界面外观配置已导入')
+    notify.success('界面外观配置已导入')
   }
   catch {
-    toast.error('导入失败，请选择有效的配置 JSON 文件')
+    notify.error('导入失败，请选择有效的配置 JSON 文件')
   }
   finally {
     input.value = ''
@@ -114,7 +114,7 @@ async function handleImport(event: Event) {
 
 function handleReset() {
   settingsStore.resetAppSettings()
-  toast.success('已恢复默认应用配置')
+  notify.success('已恢复默认应用配置')
 }
 </script>
 

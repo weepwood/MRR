@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
-import { toast } from 'vue-sonner'
+import { notify } from '@/utils/notification'
 
 defineOptions({
   name: 'LinkView',
@@ -10,7 +10,7 @@ const route = useRoute()
 
 const { copy, copied } = useClipboard()
 watch(copied, (val) => {
-  val && toast.success('复制成功')
+  val && notify.success('复制成功')
 })
 
 function open() {

@@ -53,21 +53,6 @@
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
-/* 卡片右上角原有一个 132px 的 15% 语义色圆形光晕。四张卡并排时，
- * 四团彩色雾会让白色卡面读起来「发脏」，且与图标色块承担了同一个语义。
- * 语义色统一收敛为顶部 3px 色条（DESIGN.md §0.2 的标准结构）+ 图标底色。 */
-.mrr-metric-card::before {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 3px;
-  pointer-events: none;
-  content: "";
-  background: var(--mrr-metric-accent);
-  opacity: 0.8;
-}
-
 .mrr-metric-card:hover,
 .mrr-metric-card:focus-within {
   border-color: color-mix(in srgb, var(--mrr-metric-accent) 24%, var(--mrr-border));

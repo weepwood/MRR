@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
-import { Download, UploadFilled } from '@element-plus/icons-vue'
+import { Download, InfoFilled, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, genFileId } from 'element-plus'
 import { computed, ref } from 'vue'
 import {
@@ -168,7 +168,24 @@ function today() {
     <template #header>
       <div class="panel-heading">
         <div>
-          <h3>{{ title }}</h3>
+          <div class="panel-title-row">
+            <h3>{{ title }}</h3>
+            <el-tooltip placement="top" :show-after="200">
+              <template #content>
+                <div class="import-safety-tooltip">
+                  <strong>先校验，后写入</strong>
+                  <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
+                </div>
+              </template>
+              <button
+                type="button"
+                class="import-safety-trigger"
+                aria-label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
+              >
+                <el-icon><InfoFilled /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
           <p>{{ description }}</p>
         </div>
         <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
@@ -178,17 +195,6 @@ function today() {
     </template>
 
     <div class="panel-content">
-      <el-alert
-        title="先校验，后写入"
-        type="info"
-        show-icon
-        :closable="false"
-      >
-        <template #default>
-          表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。
-        </template>
-      </el-alert>
-
       <div class="field-grid">
         <div v-for="field in fields" :key="field.name" class="field-item">
           <code>{{ field.name }}</code>
@@ -326,6 +332,47 @@ function today() {
 .result-section {
   display: grid;
   gap: 16px;
+}
+
+.panel-title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.import-safety-trigger {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+}
+
+.import-safety-trigger:hover,
+.import-safety-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.import-safety-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.import-safety-tooltip {
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.import-safety-tooltip p {
+  margin: 4px 0 0;
 }
 
 .panel-heading {

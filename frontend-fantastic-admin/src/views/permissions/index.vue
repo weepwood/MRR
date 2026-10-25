@@ -435,8 +435,8 @@ h2 { margin: 0; font-size: 28px; }
 
 .edit-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+  justify-content: flex-end;
   padding-top: 12px;
   border-top: 1px solid var(--divider);
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { OcrFact } from '@/api/modules/ocr'
+import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
 import useAuth from '@/utils/composables/useAuth'
@@ -12,7 +13,7 @@ const { job, error: pollingError, follow, stop } = useOcrJob()
 const open = ref(false)
 const fact = ref<OcrFact | null>(null)
 const busy = ref(false)
-const error = ref('')
+const loadError = ref('')
 let generation = 0
 const running = computed(() => job.value && ['PENDING', 'RUNNING', 'CANCEL_REQUESTED'].includes(job.value.status))
 const statusLabels: Record<string, string> = {
@@ -29,7 +30,7 @@ const statusLabels: Record<string, string> = {
 async function load(resume = false) {
   const version = ++generation
   fact.value = null
-  error.value = ''
+  loadError.value = ''
   try {
     const result = await getOcrFact(props.scanId, auth('ocr:text-read'))
     if (version !== generation) { return }
@@ -40,7 +41,7 @@ async function load(resume = false) {
     }
   }
   catch {
-    if (version === generation) { error.value = '无法读取文字识别结果' }
+    if (version === generation) { loadError.value = '无法读取文字识别结果' }
   }
 }
 
@@ -48,13 +49,12 @@ async function run(wholeArchive = false) {
   if (!fact.value || busy.value) { return }
   busy.value = true
   const version = generation
-  error.value = ''
   try {
     const result = await createOcrJob(fact.value.archiveId, wholeArchive ? undefined : props.scanId)
     if (version === generation && result.data) { follow(result.data.id) }
   }
   catch {
-    if (version === generation) { error.value = '无法创建识别任务，请检查功能配置、病案关联或活动任务' }
+    if (version === generation) { ElMessage.error('无法创建识别任务，请检查功能配置、病案关联或活动任务') }
   }
   finally { busy.value = false }
 }
@@ -62,7 +62,7 @@ async function run(wholeArchive = false) {
 async function cancel() {
   if (!job.value) { return }
   try { await cancelOcrJob(job.value.id) }
-  catch { error.value = '取消请求失败，请稍后重试' }
+  catch { ElMessage.error('取消请求失败，请稍后重试') }
 }
 
 watch(open, (value) => {
@@ -88,7 +88,7 @@ watch(() => job.value?.status, (status) => {
       识别文字
     </el-button>
     <el-drawer v-model="open" title="影像文字识别" size="min(960px, 95vw)" append-to-body>
-      <el-alert v-if="error || pollingError" :title="error || pollingError" type="error" :closable="false" />
+      <el-alert v-if="loadError || pollingError" :title="loadError || pollingError" type="error" :closable="false" />
       <p>识别文字供病案整理参考，请对照原图核实。</p>
       <div class="ocr-actions">
         <el-tag>{{ statusLabels[fact?.status || 'PENDING'] || fact?.status }}</el-tag>

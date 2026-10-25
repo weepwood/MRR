@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RuntimeLogRow } from '@/api/modules/runtime-logs'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getRuntimeLogFiles, getRuntimeLogHealth, getRuntimeLogs, importRuntimeLog } from '@/api/modules/runtime-logs'
@@ -79,7 +80,7 @@ async function importFile() {
   if (!selectedFiles.value.length) { return }
   importing.value = true
   try { for (const name of selectedFiles.value) { await importRuntimeLog(name) } selectedFiles.value = []; await refreshHealth() }
-  catch (exception) { error.value = exception instanceof Error ? exception.message : '补录登记失败' }
+  catch { ElMessage.error('补录登记失败，请检查所选文件和导入权限') }
   finally { importing.value = false }
 }
 function next() { cursor.value = rows.value[rows.value.length - 1] || null; void load(false) }

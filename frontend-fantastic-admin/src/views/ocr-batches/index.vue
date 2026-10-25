@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/api/modules/ocr-batches'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
@@ -17,7 +18,7 @@ const batches = ref<OcrBatch[]>([])
 const preview = ref<OcrBatchPreview | null>(null)
 const previewScope = ref('')
 const busy = ref(false)
-const error = ref('')
+const loadError = ref('')
 const after = ref('')
 const childBatch = ref('')
 const childJobs = ref<string[]>([])
@@ -40,9 +41,9 @@ async function reload() {
   const version = generation
   try {
     const result = await listOcrBatches(after.value)
-    if (version === generation) { batches.value = result.data || [] }
+    if (version === generation) { batches.value = result.data || []; loadError.value = '' }
   }
-  catch { error.value = '批次读取失败，请稍后刷新' }
+  catch { loadError.value = '批次读取失败，请稍后刷新' }
   finally { loading = false }
 }
 const polling = useIntervalFn(() => void reload(), 3000, { immediate: false })
@@ -58,9 +59,8 @@ watch(visibility, (value) => {
 watch(scope, () => { preview.value = null; form.idempotencyKey = '' })
 async function attempt(work: () => Promise<void>) {
   busy.value = true
-  error.value = ''
   try { await work() }
-  catch { error.value = '操作失败，请检查权限、任务状态和 OCR 配置' }
+  catch { ElMessage.error('操作失败，请检查权限、任务状态和 OCR 配置') }
   finally { busy.value = false }
 }
 async function inspect() {
@@ -116,8 +116,10 @@ async function rollbackPage() {
   })
 }
 async function skipRollbackPage() {
-  rollbackAfter.value = rollbackRows.value[rollbackRows.value.length - 1]?.auditId || rollbackAfter.value
-  rollbackRows.value = (await previewOcrRollback(rollbackId.value, rollbackAfter.value)).data || []
+  await attempt(async () => {
+    rollbackAfter.value = rollbackRows.value[rollbackRows.value.length - 1]?.auditId || rollbackAfter.value
+    rollbackRows.value = (await previewOcrRollback(rollbackId.value, rollbackAfter.value)).data || []
+  })
 }
 </script>
 
@@ -136,7 +138,7 @@ async function skipRollbackPage() {
       </template>
     </MrrPageHeader>
 
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
     <MrrSectionCard
       title="批次范围"
       description="设置影像 ID 范围和本批次页数上限，再预览符合条件的页面。"

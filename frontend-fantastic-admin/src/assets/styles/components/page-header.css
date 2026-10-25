@@ -15,7 +15,7 @@
  *
  * 两种模式均保持“英文标题 / 中文标题 / 描述”三行排版：
  * - plain：标题直接位于页面内容层级，不使用独立卡片容器。
- * - card：标题使用带渐变、网格和装饰光斑的 Hero 卡片容器。
+ * - card：标题使用轻微主色渐变的卡片容器。
  */
 
 /* ===== 1. 页头结构（两种风格共用） ===== */
@@ -46,7 +46,7 @@ html[data-page-title-style] .mrr-page-header__copy {
 html[data-page-title-style] .page-header .eyebrow,
 html[data-page-title-style] .help-center > .help-header .help-kicker,
 html[data-page-title-style] .mrr-page-header__eyebrow {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
   font-size: 11px;
   font-weight: 800;
   line-height: 1.5;
@@ -60,11 +60,11 @@ html[data-page-title-style] .page-header h2,
 html[data-page-title-style] .help-center > .help-header h1,
 html[data-page-title-style] .mrr-page-header h1 {
   margin: 0;
-  font-size: clamp(30px, 3vw, 40px);
+  font-size: 28px;
   font-weight: 650;
   line-height: 1.18;
   color: var(--mrr-foreground);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.022em;
 }
 
 html[data-page-title-style] .page-header .subtitle,
@@ -75,6 +75,15 @@ html[data-page-title-style] .mrr-page-header__description {
   font-size: 14px;
   line-height: 1.7;
   color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+html[data-page-title-style] .page-header > div:first-child,
+html[data-page-title-style] .help-center > .help-header > div:first-child,
+html[data-page-title-style] .mrr-page-header__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 html[data-page-title-style] .mrr-page-header__title-row {
@@ -196,7 +205,7 @@ html[data-page-title-style="card"] .mrr-page-header__eyebrow {
   background: color-mix(in srgb, var(--mrr-primary) 7%, transparent);
   border: 1px solid var(--mrr-tone-primary-border);
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 12%, transparent);
-  border-radius: 999px;
+  border-radius: var(--mrr-radius-pill);
 }
 
 /* 英文标签前的状态绿点语义错位（绿色在全站表示"运行正常/成功"，
@@ -211,7 +220,7 @@ html[data-page-title-style="card"] .page-header h1,
 html[data-page-title-style="card"] .page-header h2,
 html[data-page-title-style="card"] .help-center > .help-header h1,
 html[data-page-title-style="card"] .mrr-page-header h1 {
-  font-size: clamp(24px, 2vw, 30px);
+  font-size: 28px;
   font-weight: 650;
   line-height: 1.28;
   letter-spacing: -0.022em;
@@ -246,6 +255,13 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
 /* ===== 5. 响应式 ===== */
 
 @media (max-width: 760px) {
+  html[data-page-title-style] .page-header h1,
+  html[data-page-title-style] .page-header h2,
+  html[data-page-title-style] .help-center > .help-header h1,
+  html[data-page-title-style] .mrr-page-header h1 {
+    font-size: 24px;
+  }
+
   html[data-page-title-style] .page-header,
   html[data-page-title-style] .help-center > .help-header,
   html[data-page-title-style] .mrr-page-header {

@@ -250,7 +250,7 @@ function openExternalLink(url: string) {
 
 .link-form {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.4fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 12px;
   align-items: end;
 }

@@ -101,7 +101,7 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header h1 {
   margin: 0;
-  font-size: clamp(24px, 2vw, 30px);
+  font-size: 28px;
   font-weight: 650;
   line-height: 1.28;
   color: var(--mrr-foreground);
@@ -128,10 +128,12 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__aside {
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
+  min-width: 0;
   padding-top: 2px;
 }
 

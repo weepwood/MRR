@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "frontend-fantastic-admin/src/assets/styles/components/metric-card.css"
+        ],
+        "createdAt": "2026-10-25T05:47:22.469Z",
+        "reason": "Agent review: frontend-fantastic-admin/DESIGN.md section 0.2 explicitly requires the 3px top semantic stripe on metric cards; preserve the existing documented design."
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "files": [
+          "frontend-fantastic-admin/src/assets/styles/base.css"
+        ],
+        "createdAt": "2026-10-25T06:30:29.444Z",
+        "reason": "Agent review: DESIGN.md section 3 explicitly lists Inter in the font family; base.css already used this family before the control-layout work. Preserve the established Operate UI typography and limit the waiver to this font in this file."
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@ import { getRuntimeLogFiles, getRuntimeLogHealth, getRuntimeLogs, importRuntimeL
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
 import { formatDateTime } from '@/utils/display-format'
 
@@ -105,7 +106,7 @@ onMounted(() => { void load(); void refreshHealth() })
     <el-card shadow="never">
       <el-form inline @submit.prevent="load()">
         <el-form-item label="时间范围">
-          <el-date-picker v-model="range" type="datetimerange" value-format="YYYY-MM-DDTHH:mm:ssZ" start-placeholder="开始时间" end-placeholder="结束时间" />
+          <el-date-picker v-model="range" type="datetimerange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DDTHH:mm:ssZ" start-placeholder="开始时间" end-placeholder="结束时间" />
         </el-form-item>
         <el-form-item label="追踪编号">
           <el-input v-model="requestId" clearable placeholder="Request ID" />
@@ -167,7 +168,7 @@ onMounted(() => { void load(); void refreshHealth() })
       <p>长期数据库日志不自动删除。补录仅限服务端日志目录中的文件，后台按批次处理。</p>
       <el-form v-if="auth('system:log:import')" inline @submit.prevent="importFile">
         <el-form-item label="轮转日期">
-          <el-date-picker v-model="historyRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
+          <el-date-picker v-model="historyRange" type="daterange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
         </el-form-item>
         <el-form-item label="历史文件">
           <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" style="width: 340px;">

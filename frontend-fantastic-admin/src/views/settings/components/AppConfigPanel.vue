@@ -566,12 +566,17 @@ function handleReset() {
   justify-content: flex-start;
 }
 
+.app-config-panel--drawer .config-summary > div:first-child {
+  flex-basis: auto;
+}
+
 .app-config-panel--drawer .autosave-state {
   width: 100%;
 }
 
 .config-summary {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   align-items: center;
   justify-content: space-between;
@@ -580,6 +585,11 @@ function handleReset() {
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-card);
+}
+
+.config-summary > div:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
 }
 
 .config-summary strong,
@@ -610,9 +620,12 @@ function handleReset() {
 
 .config-summary-actions {
   display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
+  max-width: 100%;
 }
 
 .config-summary-actions :deep(.el-button) {
@@ -713,6 +726,7 @@ function handleReset() {
 
 .setting-item {
   display: flex;
+  flex-wrap: wrap;
   gap: 28px;
   align-items: center;
   justify-content: space-between;
@@ -729,7 +743,8 @@ function handleReset() {
 }
 
 .label-copy {
-  min-width: 180px;
+  flex: 1 1 180px;
+  min-width: 0;
   max-width: 420px;
 }
 
@@ -760,6 +775,10 @@ function handleReset() {
 
 .slider-field {
   width: min(360px, 48%);
+}
+
+.setting-item > :not(.label-copy) {
+  max-width: 100%;
 }
 
 .button-options {
@@ -893,6 +912,11 @@ function handleReset() {
 }
 
 @media (max-width: 720px) {
+  .config-summary > div:first-child,
+  .label-copy {
+    flex-basis: auto;
+  }
+
   .config-summary,
   .setting-item {
     flex-direction: column;

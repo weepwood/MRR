@@ -202,9 +202,8 @@ onBeforeUnmount(() => {
       padding: clamp(18px, 2vw, 28px);
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
-      background:
-        radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-primary) 4%, transparent), transparent 26%),
-        var(--mrr-workspace-bg);
+      background-color: var(--mrr-workspace-bg);
+      background-image: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-primary) 4%, transparent), transparent 26%);
     }
   }
 }

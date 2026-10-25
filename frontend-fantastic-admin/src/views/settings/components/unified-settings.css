@@ -21,7 +21,7 @@
  * 改为「纯图标 + 文本」，只有悬停与选中才出现底色。 */
 .settings-nav-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; padding: 8px 10px; text-align: left; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: var(--mrr-radius-md); transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease; }
 .settings-nav-item:hover { background: color-mix(in srgb, var(--mrr-card) 70%, transparent); border-color: var(--mrr-border); }
-.settings-nav-item.active { background: var(--mrr-card); border-color: color-mix(in srgb, var(--mrr-primary) 22%, var(--mrr-border)); box-shadow: inset 2px 0 0 var(--mrr-primary); }
+.settings-nav-item.active { background: var(--mrr-card); border-color: color-mix(in srgb, var(--mrr-primary) 22%, var(--mrr-border)); }
 .settings-nav-item.danger .nav-icon { color: var(--color-danger); }
 .nav-icon { display: grid; flex: 0 0 auto; place-items: center; width: 20px; height: 20px; font-size: 17px; color: var(--mrr-muted-foreground); background: transparent; border: 0; transform-origin: center; transition: color var(--mrr-motion-fast) ease; }
 .settings-nav-item:hover .nav-icon { color: var(--text-primary); }

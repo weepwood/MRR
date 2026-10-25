@@ -96,6 +96,13 @@ html:root {
   margin-left: var(--mrr-space-2);
 }
 
+/* 这些显式操作组以 gap 控制间距，不再叠加 Element Plus 的相邻按钮 margin。 */
+.header-actions > .el-button + .el-button,
+.filter-actions > .el-button + .el-button,
+.section-actions > .el-button + .el-button {
+  margin-left: 0;
+}
+
 /* Outline / default */
 .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text) {
   color: var(--mrr-foreground);
@@ -207,12 +214,15 @@ html:root {
 }
 
 .el-button:focus-visible {
-  outline: none;
+  /* 各按钮变体的高优先级阴影可能覆盖 focus ring，outline 独立保证键盘可见。 */
+  outline: 2px solid var(--mrr-primary);
+  outline-offset: 2px;
   border-color: var(--mrr-ring);
   box-shadow: var(--mrr-focus-ring);
 }
 
 .el-button--danger:focus-visible {
+  outline-color: var(--mrr-destructive);
   border-color: color-mix(in srgb, var(--mrr-destructive) 55%, transparent);
   box-shadow: var(--mrr-danger-focus-ring);
 }
@@ -473,6 +483,51 @@ html:root {
   border-color: var(--mrr-border);
 }
 
+@media (max-width: 760px) {
+  body .el-date-range-picker {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  body .el-date-range-picker .el-picker-panel__body {
+    min-width: 0;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__content {
+    display: block;
+    width: 100%;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__content.is-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--mrr-border);
+  }
+
+  body .el-date-range-picker .el-date-range-picker__time-header {
+    display: grid;
+    gap: var(--mrr-space-2);
+  }
+
+  body .el-date-range-picker .el-date-range-picker__editors-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--mrr-space-2);
+    min-width: 0;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__time-picker-wrap {
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+
+  body .el-date-range-picker .el-time-panel {
+    right: 0;
+    left: auto;
+  }
+}
+
 .el-select-dropdown__item,
 .el-dropdown-menu__item {
   margin: 2px 4px;
@@ -540,12 +595,63 @@ html:root {
   min-height: 220px;
 }
 
-.el-pagination {
+body .el-pagination {
   --el-pagination-button-height: 32px;
   --el-pagination-button-width: 32px;
 
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  min-width: 0;
   font-size: 13px;
+  white-space: normal;
+}
+
+/* 同一分页契约覆盖共享数据面板与既有页面，导航箭头不与页码分散。 */
+@media (max-width: 760px) {
+  body .el-pagination {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .el-pagination .el-pagination__total {
+    grid-row: 1;
+    grid-column: 1 / 3;
+    justify-self: start;
+  }
+
+  .el-pagination .el-pagination__sizes {
+    grid-row: 1;
+    grid-column: 2 / 4;
+    justify-self: end;
+    margin-left: 0;
+  }
+
+  .el-pagination .btn-prev {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .el-pagination .el-pager {
+    display: flex;
+    flex-wrap: wrap;
+    grid-row: 2;
+    grid-column: 2;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .el-pagination .btn-next {
+    grid-row: 2;
+    grid-column: 3;
+  }
+
+  .el-pagination .el-pagination__jump {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-left: 0;
+  }
 }
 
 .el-pagination button,

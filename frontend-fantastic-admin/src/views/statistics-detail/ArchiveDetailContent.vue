@@ -15,6 +15,7 @@ import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { formatMedicalRecordCode } from '@/utils/medical-record-code'
 import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
@@ -474,7 +475,7 @@ onBeforeUnmount(() => {
         <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
           <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
-        <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" range-separator="至"
+        <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
           start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD" />
         <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />

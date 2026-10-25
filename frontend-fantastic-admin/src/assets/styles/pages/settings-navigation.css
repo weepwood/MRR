@@ -51,6 +51,16 @@ body .main .settings-page .settings-content {
   scrollbar-width: thin;
 }
 
+/* 双侧栏后的实际内容宽度决定列数；不能仅依赖整个窗口的手机断点。 */
+body .main .settings-page .control-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+body .main .settings-page .control-grid .el-form-item,
+body .main .settings-page .control-grid .el-form-item__content {
+  min-width: 0;
+}
+
 @media (max-width: 980px) {
   body .main .settings-page {
     grid-template-rows: none;

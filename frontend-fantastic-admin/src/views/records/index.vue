@@ -258,13 +258,15 @@ function typeLabel(value: unknown) {
         <el-select v-model="pageSize" aria-label="每批条数" style="width: 120px;" @change="handleSearch">
           <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
         </el-select>
-        <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
-          上一批
-        </el-button>
-        <span>第 {{ pageNum }} 批</span>
-        <el-button :disabled="!hasMore || loading" @click="nextPage">
-          下一批
-        </el-button>
+        <div class="pager__navigation">
+          <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
+            上一批
+          </el-button>
+          <span>第 {{ pageNum }} 批</span>
+          <el-button :disabled="!hasMore || loading" @click="nextPage">
+            下一批
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -352,8 +354,19 @@ h2 {
 
 .pager {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
   justify-content: center;
   margin-top: 16px;
+}
+
+.pager__navigation {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  white-space: nowrap;
 }
 
 .text-muted {

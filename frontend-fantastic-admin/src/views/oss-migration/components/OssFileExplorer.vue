@@ -15,6 +15,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
+import OssFolderIcon from './OssFolderIcon.vue'
 
 defineOptions({ name: 'OssFileExplorer' })
 
@@ -425,11 +426,12 @@ onMounted(() => {
             @click="selectEntry(entry)"
             @dblclick="handleEntryDoubleClick(entry)"
           >
-            <el-icon class="file-tile-icon" :class="{ folder: entry.directory, image: isImage(entry) }">
+            <OssFolderIcon v-if="entry.directory" class="file-tile-icon folder" />
+            <el-icon v-else class="file-tile-icon" :class="{ image: isImage(entry) }">
               <component :is="entryIcon(entry)" />
             </el-icon>
             <span class="file-tile-name" :title="entry.name">{{ entry.name }}</span>
-            <small>{{ entry.directory ? '文件夹' : formatFileSize(entry.size) }}</small>
+            <small v-if="!entry.directory">{{ formatFileSize(entry.size) }}</small>
           </button>
         </div>
 
@@ -445,7 +447,8 @@ onMounted(() => {
           <el-table-column label="名称" min-width="260">
             <template #default="{ row }">
               <div class="name-cell">
-                <el-icon :class="{ folder: row.directory, image: isImage(row as OssBrowserEntry) }">
+                <OssFolderIcon v-if="row.directory" class="folder" />
+                <el-icon v-else :class="{ image: isImage(row as OssBrowserEntry) }">
                   <component :is="entryIcon(row as OssBrowserEntry)" />
                 </el-icon>
                 <span>{{ row.name }}</span>
@@ -492,7 +495,8 @@ onMounted(() => {
       <aside class="details-pane">
         <template v-if="selectedEntry">
           <div class="details-icon-wrap">
-            <el-icon class="details-icon" :class="{ folder: selectedEntry.directory, image: selectedIsImage }">
+            <OssFolderIcon v-if="selectedEntry.directory" class="details-icon folder" />
+            <el-icon v-else class="details-icon" :class="{ image: selectedIsImage }">
               <component :is="entryIcon(selectedEntry)" />
             </el-icon>
           </div>
@@ -762,6 +766,10 @@ onMounted(() => {
 
 .file-tile-icon {
   font-size: 48px;
+}
+
+.file-tile-icon.folder {
+  font-size: 80px;
 }
 
 .file-tile-icon.folder,

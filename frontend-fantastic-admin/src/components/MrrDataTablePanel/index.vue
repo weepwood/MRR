@@ -23,6 +23,10 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
     :icon="props.icon"
     body-padding="none"
   >
+    <template #title-suffix>
+      <slot name="title-suffix" />
+    </template>
+
     <template v-if="hasActions" #actions>
       <span v-if="props.count !== undefined" class="mrr-data-table-panel__count">
         {{ props.countLabel || '共' }} {{ countText }} 条

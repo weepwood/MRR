@@ -3,6 +3,7 @@
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -532,32 +533,43 @@ onMounted(loadData)
       eyebrow="User Management"
       title="用户管理"
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
-    >
-      <template #actions>
-        <el-button :loading="loading" @click="loadData"><FaIcon name="i-ri:refresh-line" />刷新数据</el-button>
-        <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-ri:user-add-line" />创建用户</el-button>
-      </template>
-    </MrrPageHeader>
+    />
 
     <section class="mrr-metric-grid">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrFilterBar class="users-filter-bar">
-      <el-input v-model="filters.keyword" class="users-filter__keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
-      <el-select v-model="filters.roleCode" class="users-filter__select" clearable placeholder="全部角色">
-        <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
-      </el-select>
-      <el-select v-model="filters.status" class="users-filter__select" clearable placeholder="全部状态">
-        <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
-      </el-select>
-      <template #actions>
-        <el-button type="primary" :loading="loading" @click="handleSearch">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+    <MrrDataTablePanel class="users-table-panel" title="账号与注册申请" icon="i-ant-design:unordered-list-outlined" :count="total">
+      <template #title-suffix>
+        <el-tooltip
+          content="待审核账号必须由管理员明确通过后才能登录；注册时填写的密码不会展示给管理员。"
+          placement="top"
+          :show-after="200"
+        >
+          <button type="button" class="users-info-trigger" aria-label="账号与注册申请说明">
+            <el-icon><InfoFilled /></el-icon>
+          </button>
+        </el-tooltip>
       </template>
-    </MrrFilterBar>
 
-    <MrrDataTablePanel title="账号与注册申请" description="待审核账号必须由管理员明确通过后才能登录；注册时填写的密码不会展示给管理员。" icon="i-ant-design:unordered-list-outlined" :count="total">
+      <template #filters>
+        <MrrFilterBar class="users-filter-bar">
+          <el-input v-model="filters.keyword" class="users-filter__keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
+          <el-select v-model="filters.roleCode" class="users-filter__select" clearable placeholder="全部角色">
+            <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
+          </el-select>
+          <el-select v-model="filters.status" class="users-filter__select" clearable placeholder="全部状态">
+            <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
+          </el-select>
+          <template #actions>
+            <el-button type="primary" :loading="loading" @click="handleSearch">查询</el-button>
+            <el-button @click="resetFilters">重置</el-button>
+            <el-button :loading="loading" @click="loadData"><FaIcon name="i-ri:refresh-line" />刷新数据</el-button>
+            <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-ri:user-add-line" />创建用户</el-button>
+          </template>
+        </MrrFilterBar>
+      </template>
+
       <div v-if="loading" class="users-state"><AppLoading type="table" :rows="8" /></div>
       <div v-else-if="error" class="users-state"><AppError :message="error" @retry="loadData" /></div>
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
@@ -673,6 +685,12 @@ onMounted(loadData)
 /* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
 .users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
 .users-filter__select { flex: 0 1 190px; width: 190px; }
+.users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-4); padding-left: var(--mrr-space-4); }
+.users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { width: auto; margin: 0 var(--mrr-space-4); }
+.users-filter-bar { padding: 0 0 var(--mrr-space-3); background: transparent; border: 0; border-bottom: 1px solid var(--mrr-shell-divider); border-radius: 0; box-shadow: none; }
+.users-info-trigger { display: inline-flex; align-items: center; justify-content: center; padding: 4px; color: var(--mrr-muted-foreground); cursor: help; background: transparent; border: 0; border-radius: var(--mrr-radius-pill); }
+.users-info-trigger:hover, .users-info-trigger:focus-visible { color: var(--mrr-primary); }
+.users-info-trigger:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 2px; }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
@@ -691,5 +709,5 @@ onMounted(loadData)
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
 .acknowledge { margin-top: 16px; }
-@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
+@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-3); padding-left: var(--mrr-space-3); } .users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { margin-right: var(--mrr-space-3); margin-left: var(--mrr-space-3); } .credential-actions { flex-direction: column; } }
 </style>

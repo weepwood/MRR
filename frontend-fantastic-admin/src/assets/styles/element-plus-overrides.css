@@ -528,10 +528,21 @@ html:root {
   }
 }
 
+.el-select-dropdown__list,
+.el-dropdown-menu {
+  padding: var(--mrr-space-1);
+}
+
 .el-select-dropdown__item,
 .el-dropdown-menu__item {
-  margin: 2px 4px;
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 0 var(--mrr-space-2);
+  margin: 2px 0;
+  font-size: 13px;
+  line-height: 1.4;
   border-radius: var(--mrr-radius-sm);
+  transition: color 120ms ease, background-color 120ms ease;
 }
 
 .el-select-dropdown__item:hover,
@@ -545,7 +556,7 @@ html:root {
 .el-select-dropdown__item.is-selected {
   font-weight: 500;
   color: var(--mrr-primary);
-  background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-popover));
+  background: var(--mrr-accent);
 }
 
 /* ===== Cards, tables, tags and pagination ===== */

@@ -2,8 +2,8 @@
 import type { ScanRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download, Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElNotification } from 'element-plus'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -58,6 +58,15 @@ const pageSize = ref(20)
 const query = reactive({ bah: '', brxh: '', sjh: '', openerNo: '', btype: '' })
 const appliedQuery = ref({ ...query })
 const unapplied = computed(() => JSON.stringify(query) !== JSON.stringify(appliedQuery.value))
+watch(unapplied, (changed) => {
+  if (changed) {
+    ElNotification.info({
+      title: '筛选条件已修改',
+      message: '点击“查询”后生效；翻页仍使用上次已提交条件',
+      duration: 4500,
+    })
+  }
+})
 const cursors = ref<number[]>([0])
 const nextCursor = ref<number | undefined>()
 const hasMore = ref(false)
@@ -168,7 +177,6 @@ function typeLabel(value: unknown) {
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <el-alert v-if="unapplied" title="筛选已修改，点击查询后生效；翻页仍使用上次已提交条件" type="info" :closable="false" />
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="病案号">

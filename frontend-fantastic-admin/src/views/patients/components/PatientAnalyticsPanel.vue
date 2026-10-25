@@ -4,15 +4,12 @@ import type {
   PatientMultiRecordGroup,
   PatientRecord,
 } from '@/api/modules/patients'
-import type { ECOption } from '@/plugins/echarts'
-import { Refresh } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import {
   getMissingIdCardPatients,
   getPatientAnalyticsSummary,
   getPatientMultiRecordGroups,
 } from '@/api/modules/patients'
-import MrrChart from '@/components/charts/MrrChart.vue'
 
 const props = withDefaults(defineProps<{
   refreshKey?: number
@@ -21,14 +18,12 @@ const props = withDefaults(defineProps<{
 })
 
 const currentYear = new Date().getFullYear()
-const selectedYear = ref(currentYear)
-const yearOptions = Array.from({ length: 10 }, (_, index) => currentYear - index)
 
 const summaryLoading = ref(false)
 const summaryError = ref('')
 const summary = ref<PatientAnalyticsSummary>()
 
-const activeDetailTab = ref<'missing' | 'multi'>('missing')
+const activeDetailTab = ref<'patients' | 'missing' | 'multi'>('patients')
 const missingLoading = ref(false)
 const missingRecords = ref<PatientRecord[]>([])
 const missingPage = ref(1)
@@ -42,89 +37,11 @@ const multiSize = ref(10)
 const multiTotal = ref(0)
 const includeSuspected = ref(true)
 
-const trendOption = computed<ECOption>(() => ({
-  tooltip: {
-    trigger: 'axis',
-    valueFormatter: value => `${Number(value || 0)} 份`,
-  },
-  grid: {
-    left: 48,
-    right: 24,
-    top: 24,
-    bottom: 58,
-  },
-  xAxis: {
-    type: 'category',
-    boundaryGap: false,
-    data: summary.value?.dateCounts.map(item => item.date) ?? [],
-    axisLabel: {
-      formatter: (value: string) => value.slice(5),
-    },
-  },
-  yAxis: {
-    type: 'value',
-    minInterval: 1,
-    name: '病案数',
-  },
-  dataZoom: [
-    { type: 'inside' },
-    { type: 'slider', height: 18, bottom: 8 },
-  ],
-  series: [
-    {
-      name: '当日病案',
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      areaStyle: {},
-      data: summary.value?.dateCounts.map(item => item.count) ?? [],
-    },
-  ],
-}))
-
-const departmentOption = computed<ECOption>(() => {
-  const items = [...(summary.value?.departmentCounts ?? [])].slice(0, 15).reverse()
-  return {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      valueFormatter: value => `${Number(value || 0)} 份`,
-    },
-    grid: {
-      left: 110,
-      right: 28,
-      top: 20,
-      bottom: 34,
-    },
-    xAxis: {
-      type: 'value',
-      minInterval: 1,
-      name: '病案数',
-    },
-    yAxis: {
-      type: 'category',
-      data: items.map(item => item.department),
-      axisLabel: {
-        width: 92,
-        overflow: 'truncate',
-      },
-    },
-    series: [
-      {
-        name: '科室病案',
-        type: 'bar',
-        barMaxWidth: 24,
-        data: items.map(item => item.count),
-      },
-    ],
-  }
-})
-
 async function loadSummary() {
   summaryLoading.value = true
   summaryError.value = ''
   try {
-    const response = await getPatientAnalyticsSummary(selectedYear.value)
+    const response = await getPatientAnalyticsSummary(currentYear)
     summary.value = response.data
   }
   catch (error: unknown) {
@@ -195,10 +112,6 @@ function handleMultiSizeChange(size: number) {
   void loadMultiGroups()
 }
 
-watch(selectedYear, () => {
-  void loadSummary()
-})
-
 watch(includeSuspected, () => {
   multiPage.value = 1
   void loadMultiGroups()
@@ -211,21 +124,6 @@ onMounted(reloadAll)
 
 <template>
   <section class="analytics-panel">
-    <div class="analytics-heading">
-      <div>
-        <h3>患者数据概览</h3>
-        <p>统计身份证完整性、同一患者多病案、年度日期趋势与科室分布。</p>
-      </div>
-      <div class="analytics-actions">
-        <el-select v-model="selectedYear" class="year-select" aria-label="统计年份">
-          <el-option v-for="year in yearOptions" :key="year" :label="`${year} 年`" :value="year" />
-        </el-select>
-        <el-button :icon="Refresh" :loading="summaryLoading" @click="reloadAll">
-          刷新统计
-        </el-button>
-      </div>
-    </div>
-
     <el-alert
       v-if="summaryError"
       :title="summaryError"
@@ -242,7 +140,7 @@ onMounted(reloadAll)
         :note="`去重病案号 ${summary?.totalArchives ?? 0} 个`"
       />
       <MrrMetricCard
-        :label="`${selectedYear} 年病案`"
+        :label="`${currentYear} 年病案`"
         icon="i-ep:calendar"
         :value="summary?.yearArchives ?? 0"
         note="按入院日期去重统计"
@@ -262,44 +160,14 @@ onMounted(reloadAll)
       />
     </div>
 
-    <div class="chart-grid">
-      <el-card shadow="never" class="chart-card">
-        <template #header>
-          <div class="card-title">
-            <span>{{ selectedYear }} 年每日病案趋势</span>
-            <small>可拖动底部滑块查看具体日期</small>
-          </div>
-        </template>
-        <MrrChart
-          :option="trendOption"
-          :loading="summaryLoading"
-          :empty="!summary?.dateCounts.some(item => item.count > 0)"
-          empty-description="该年度暂无可解析入院日期的病案"
-          height="340px"
-          aria-label="患者年度每日病案趋势图"
-        />
-      </el-card>
-
-      <el-card shadow="never" class="chart-card">
-        <template #header>
-          <div class="card-title">
-            <span>{{ selectedYear }} 年科室病案分布</span>
-            <small>展示病案数最多的 15 个科室</small>
-          </div>
-        </template>
-        <MrrChart
-          :option="departmentOption"
-          :loading="summaryLoading"
-          :empty="!summary?.departmentCounts.length"
-          empty-description="该年度暂无科室统计数据"
-          height="340px"
-          aria-label="患者科室病案分布图"
-        />
-      </el-card>
-    </div>
+    <slot name="search" />
 
     <el-card shadow="never" class="detail-card">
       <el-tabs v-model="activeDetailTab">
+        <el-tab-pane label="患者表格" name="patients">
+          <slot name="patients" />
+        </el-tab-pane>
+
         <el-tab-pane name="missing">
           <template #label>
             身份证为空病案（{{ summary?.missingIdCardRecords ?? missingTotal }}）
@@ -405,58 +273,6 @@ onMounted(reloadAll)
   gap: 16px;
 }
 
-.analytics-heading {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.analytics-heading h3 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.analytics-heading p {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
-}
-
-.analytics-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.year-select {
-  width: 112px;
-}
-
-.chart-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
-  gap: 16px;
-}
-
-.chart-card :deep(.el-card__header) {
-  padding: 15px 18px;
-}
-
-.card-title {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.card-title span {
-  font-weight: 600;
-}
-
-.card-title small {
-  color: var(--el-text-color-placeholder);
-}
-
 .detail-card :deep(.el-card__body) {
   padding-top: 4px;
 }
@@ -492,28 +308,8 @@ onMounted(reloadAll)
   gap: 6px 12px;
 }
 
-@media (max-width: 1100px) {
-  .chart-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 720px) {
-  .analytics-heading {
-    flex-direction: column;
-  }
-
-  .analytics-actions {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
   .multi-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .card-title {
     flex-direction: column;
     align-items: flex-start;
   }

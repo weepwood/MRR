@@ -18,6 +18,15 @@
   --el-component-size: var(--mrr-control-height-compact);
 }
 
+/* Element Plus gives the page-size select a compact 32px wrapper directly,
+ * outside the `.el-select--small` class path. Match the regular filter selects. */
+.el-pagination .el-pagination__sizes .el-select .el-select__wrapper {
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding-inline: 11px;
+  border-radius: var(--mrr-control-radius);
+}
+
 .el-input--large,
 .el-select--large,
 .el-date-editor--large,

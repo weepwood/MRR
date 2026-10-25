@@ -528,32 +528,36 @@ html:root {
   }
 }
 
-.el-select-dropdown__list,
-.el-dropdown-menu {
+.el-select__popper .el-select-dropdown__list:not(.el-vl__window),
+.el-dropdown__popper .el-dropdown-menu {
   padding: var(--mrr-space-1);
 }
 
-.el-select-dropdown__item,
-.el-dropdown-menu__item {
+/* Element Plus component CSS is injected after this file, so keep the menu
+ * contract more specific than its defaults. Select, pagination and action
+ * menus then share one row height, inset, type size and radius. */
+body .el-select-dropdown .el-select-dropdown__item,
+body .el-dropdown__popper .el-dropdown-menu__item {
   box-sizing: border-box;
+  height: 34px;
   min-height: 34px;
   padding: 0 var(--mrr-space-2);
   margin: 2px 0;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 34px;
   border-radius: var(--mrr-radius-sm);
   transition: color 120ms ease, background-color 120ms ease;
 }
 
-.el-select-dropdown__item:hover,
-.el-select-dropdown__item.is-hovering,
-.el-dropdown-menu__item:not(.is-disabled):focus,
-.el-dropdown-menu__item:not(.is-disabled):hover {
+body .el-select-dropdown .el-select-dropdown__item:hover,
+body .el-select-dropdown .el-select-dropdown__item.is-hovering,
+body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):focus,
+body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):hover {
   color: var(--mrr-accent-foreground);
   background: var(--mrr-accent);
 }
 
-.el-select-dropdown__item.is-selected {
+body .el-select-dropdown .el-select-dropdown__item.is-selected {
   font-weight: 500;
   color: var(--mrr-primary);
   background: var(--mrr-accent);

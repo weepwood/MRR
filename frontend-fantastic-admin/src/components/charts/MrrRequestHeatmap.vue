@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MrrRequestHeatmapItem } from '@/types/chart'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 
 defineOptions({ name: 'MrrRequestHeatmap' })
 
@@ -40,6 +40,8 @@ const VIEWPORT_PADDING = 8
 
 const activeDay = ref<HeatmapDay | null>(null)
 const tooltipPosition = ref({ x: 0, y: 0 })
+let pendingTooltipUpdate: { day: HeatmapDay, target: HTMLElement } | null = null
+let tooltipAnimationFrame: number | null = null
 
 const normalizedData = computed(() => {
   const map = new Map<string, MrrRequestHeatmapItem>()
@@ -123,6 +125,10 @@ const monthLabels = computed<MonthLabel[]>(() => {
     })
   })
 
+  if (labels.length > 1 && labels[0].weekIndex === labels[1].weekIndex) {
+    labels.shift()
+  }
+
   return labels
 })
 
@@ -133,8 +139,7 @@ const totalRequests = computed(() => calendarDays.value.reduce(
 const activeDays = computed(() => calendarDays.value.filter(day => day.inRange && day.total > 0).length)
 const hasData = computed(() => totalRequests.value > 0)
 const tooltipStyle = computed(() => ({
-  left: `${tooltipPosition.value.x}px`,
-  top: `${tooltipPosition.value.y}px`,
+  transform: `translate3d(${tooltipPosition.value.x}px, ${tooltipPosition.value.y}px, 0)`,
 }))
 
 function normalizeDateKey(value: string) {
@@ -233,32 +238,53 @@ function showTooltip(day: HeatmapDay, event: PointerEvent | FocusEvent) {
     return
   }
 
-  const targetRect = target.getBoundingClientRect()
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
-  const maxX = Math.max(VIEWPORT_PADDING, viewportWidth - TOOLTIP_WIDTH - VIEWPORT_PADDING)
-  const maxY = Math.max(VIEWPORT_PADDING, viewportHeight - TOOLTIP_HEIGHT - VIEWPORT_PADDING)
-  const preferredTop = targetRect.top - TOOLTIP_HEIGHT - TOOLTIP_OFFSET
-  const fallbackTop = targetRect.bottom + TOOLTIP_OFFSET
-
-  activeDay.value = day
-  tooltipPosition.value = {
-    x: clamp(
-      targetRect.left + targetRect.width / 2 - TOOLTIP_WIDTH / 2,
-      VIEWPORT_PADDING,
-      maxX,
-    ),
-    y: clamp(
-      preferredTop >= VIEWPORT_PADDING ? preferredTop : fallbackTop,
-      VIEWPORT_PADDING,
-      maxY,
-    ),
+  pendingTooltipUpdate = { day, target }
+  if (tooltipAnimationFrame !== null) {
+    return
   }
+
+  tooltipAnimationFrame = window.requestAnimationFrame(() => {
+    tooltipAnimationFrame = null
+    const pendingUpdate = pendingTooltipUpdate
+    pendingTooltipUpdate = null
+    if (!pendingUpdate) {
+      return
+    }
+
+    const targetRect = pendingUpdate.target.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const maxX = Math.max(VIEWPORT_PADDING, viewportWidth - TOOLTIP_WIDTH - VIEWPORT_PADDING)
+    const maxY = Math.max(VIEWPORT_PADDING, viewportHeight - TOOLTIP_HEIGHT - VIEWPORT_PADDING)
+    const preferredTop = targetRect.top - TOOLTIP_HEIGHT - TOOLTIP_OFFSET
+    const fallbackTop = targetRect.bottom + TOOLTIP_OFFSET
+
+    activeDay.value = pendingUpdate.day
+    tooltipPosition.value = {
+      x: clamp(
+        targetRect.left + targetRect.width / 2 - TOOLTIP_WIDTH / 2,
+        VIEWPORT_PADDING,
+        maxX,
+      ),
+      y: clamp(
+        preferredTop >= VIEWPORT_PADDING ? preferredTop : fallbackTop,
+        VIEWPORT_PADDING,
+        maxY,
+      ),
+    }
+  })
 }
 
 function hideTooltip() {
+  pendingTooltipUpdate = null
+  if (tooltipAnimationFrame !== null) {
+    window.cancelAnimationFrame(tooltipAnimationFrame)
+    tooltipAnimationFrame = null
+  }
   activeDay.value = null
 }
+
+onBeforeUnmount(hideTooltip)
 </script>
 
 <template>
@@ -527,6 +553,8 @@ function hideTooltip() {
 
 .heatmap-tooltip {
   position: fixed;
+  top: 0;
+  left: 0;
   z-index: 4000;
   box-sizing: border-box;
   width: 236px;
@@ -538,8 +566,7 @@ function hideTooltip() {
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
-  backdrop-filter: blur(12px);
-  will-change: left, top;
+  will-change: transform;
 }
 
 .heatmap-tooltip > span {

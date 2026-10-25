@@ -402,8 +402,8 @@ onMounted(loadPermissions)
   padding: 4px;
   color: var(--text-secondary);
   background: transparent;
-  border: 0;
   cursor: help;
+  border: 0;
   border-radius: var(--mrr-radius-pill);
 }
 

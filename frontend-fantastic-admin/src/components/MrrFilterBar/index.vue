@@ -3,15 +3,19 @@ defineOptions({ name: 'MrrFilterBar' })
 
 const props = withDefaults(defineProps<{
   compact?: boolean
+  embedded?: boolean
+  focusRing?: boolean
 }>(), {
   compact: false,
+  embedded: false,
+  focusRing: true,
 })
 
 const slots = useSlots()
 </script>
 
 <template>
-  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact }">
+  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing }">
     <div class="mrr-filter-bar__fields">
       <slot />
     </div>
@@ -37,7 +41,7 @@ const slots = useSlots()
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.mrr-filter-bar:focus-within {
+.mrr-filter-bar--focus-ring:focus-within {
   border-color: color-mix(in srgb, var(--mrr-ring) 46%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-xs), 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 10%, transparent);
 }
@@ -45,6 +49,15 @@ const slots = useSlots()
 .mrr-filter-bar--compact {
   padding: 8px 9px;
   border-radius: var(--mrr-radius-md);
+}
+
+.mrr-filter-bar.mrr-filter-bar--embedded {
+  padding: 0 0 var(--mrr-space-3);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--mrr-shell-divider);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .mrr-filter-bar__fields {

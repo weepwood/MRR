@@ -10,7 +10,12 @@ class WindowsBundledNginxTest(unittest.TestCase):
     def test_release_workflow_bundles_pinned_nginx_and_winsw(self):
         workflow = (ROOT / '.github/workflows/windows-release-package.yml').read_text(encoding='utf-8')
 
-        self.assertRegex(workflow, r'NGINX_VERSION:\s*[0-9]+\.[0-9]+\.[0-9]+')
+        nginx_version = re.search(r'NGINX_VERSION:\s*([0-9]+\.[0-9]+\.[0-9]+)', workflow)
+        self.assertIsNotNone(nginx_version)
+        self.assertGreaterEqual(
+            tuple(map(int, nginx_version.group(1).split('.'))),
+            (1, 31, 7),  # CVE-2026-15176 and related October 2026 fixes
+        )
         self.assertRegex(workflow, r'WINSW_VERSION:\s*[0-9]+\.[0-9]+\.[0-9]+')
         self.assertIn('nginx/Windows-', workflow)
         self.assertIn('WinSW-x64.exe', workflow)

@@ -36,6 +36,17 @@ describe('mrr request heatmap month labels', () => {
     wrapper.unmount()
   })
 
+  it('shows the recent day range after the request total in the summary', () => {
+    const wrapper = mount(MrrRequestHeatmap, { props: { data: [] } })
+    const summary = wrapper.find('.heatmap-summary')
+
+    expect(summary.find('strong').text()).toBe('0 次请求')
+    expect(summary.find('span').text()).toBe('最近 365 天 · 0 天有请求记录')
+    expect(summary.element.firstElementChild?.tagName).toBe('STRONG')
+
+    wrapper.unmount()
+  })
+
   it('coalesces rapid hover updates to the last day in one animation frame', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 9, 25, 12))

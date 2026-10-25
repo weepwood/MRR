@@ -11,26 +11,26 @@
 /* Regular 400 —— 正文默认 */
 @font-face {
   font-family: "HarmonyOS Sans SC";
-  src: url("/fonts/harmonyos-sans-sc-regular.woff2") format("woff2");
-  font-weight: 400;
   font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/harmonyos-sans-sc-regular.woff2") format("woff2");
   font-display: swap;
 }
 
 /* Medium 500 —— 强调、标题、按钮 */
 @font-face {
   font-family: "HarmonyOS Sans SC";
-  src: url("/fonts/harmonyos-sans-sc-medium.woff2") format("woff2");
-  font-weight: 500;
   font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/harmonyos-sans-sc-medium.woff2") format("woff2");
   font-display: swap;
 }
 
 /* Bold 700 —— 强强调 */
 @font-face {
   font-family: "HarmonyOS Sans SC";
-  src: url("/fonts/harmonyos-sans-sc-bold.woff2") format("woff2");
-  font-weight: 700;
   font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/harmonyos-sans-sc-bold.woff2") format("woff2");
   font-display: swap;
 }

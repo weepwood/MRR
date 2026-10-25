@@ -304,18 +304,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: { title: '系统监控', icon: 'i-ant-design:dashboard-twotone', auth: ['system:read'], cache: true },
       },
       {
-        path: '/system-status',
-        name: 'systemStatusMenu',
-        redirect: '/status',
-        meta: {
-          title: '服务状态',
-          icon: 'i-ant-design:check-circle-twotone',
-          link: '/status',
-          auth: ['system:read'],
-          cache: false,
-        },
-      },
-      {
         path: '/response-analysis',
         component: () => import('@/views/response-analysis/index.vue'),
         meta: {

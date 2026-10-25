@@ -36,12 +36,13 @@ const slots = useSlots()
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-lg);
+  border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .mrr-filter-bar--focus-ring:focus-within {
+  border-color: var(--mrr-primary);
   border-color: color-mix(in srgb, var(--mrr-ring) 46%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-xs), 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 10%, transparent);
 }
@@ -71,10 +72,11 @@ const slots = useSlots()
 
 .mrr-filter-bar__actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
+  min-width: 0;
   padding-left: var(--mrr-space-3);
   border-left: 1px solid var(--mrr-shell-divider);
 }
@@ -116,6 +118,11 @@ const slots = useSlots()
   .mrr-filter-bar__fields,
   .mrr-filter-bar__actions {
     width: 100%;
+  }
+
+  .mrr-filter-bar__fields > :deep(*) {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .mrr-filter-bar__actions {

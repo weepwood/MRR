@@ -184,7 +184,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     title: '服务状态',
     description: '快速确认系统服务是否正常运行。',
     icon: 'i-ant-design:check-circle-twotone',
-    path: '/system-status',
+    path: '/status',
     permission: 'system:read',
     defaultSize: 'small',
     defaultVisible: false,

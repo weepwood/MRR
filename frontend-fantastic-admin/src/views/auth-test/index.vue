@@ -160,8 +160,8 @@ h2 {
   padding: 4px;
   color: var(--el-text-color-secondary);
   background: transparent;
-  border: 0;
   cursor: help;
+  border: 0;
   border-radius: var(--mrr-radius-pill);
 }
 

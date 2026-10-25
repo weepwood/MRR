@@ -615,8 +615,7 @@ function today() {
 .page-title-row,
 .notice-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 8px; align-items: center;
 }
 
 .info-trigger {
@@ -624,10 +623,10 @@ function today() {
   align-items: center;
   justify-content: center;
   padding: 4px;
+  color: var(--el-text-color-secondary);
+  background: transparent;
   border: 0;
   border-radius: var(--mrr-radius-pill);
-  background: transparent;
-  color: var(--el-text-color-secondary);
   cursor: help;
 }
 

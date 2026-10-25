@@ -383,17 +383,17 @@ onMounted(loadPermissions)
 
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 
-.page-title-row { display: flex; align-items: center; gap: 8px; }
+.page-title-row { display: flex; gap: 8px; align-items: center; }
 
 .info-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
+  color: var(--text-secondary);
+  background: transparent;
   border: 0;
   border-radius: var(--mrr-radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
   cursor: help;
 }
 

@@ -147,29 +147,4 @@
   box-shadow: 0 0.0833em 0.1667em rgb(0 0 0 / 20%);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .work-4,
-  .work-3,
-  .work-2,
-  .work-1,
-  .work-5 {
-    transition-duration: 200ms;
-  }
-
-  .oss-folder-icon:hover .work-4 {
-    transform: rotateX(-18deg);
-  }
-
-  .oss-folder-icon:hover .work-3 {
-    transform: rotateX(-27deg);
-  }
-
-  .oss-folder-icon:hover .work-2 {
-    transform: rotateX(-36deg);
-  }
-
-  .oss-folder-icon:hover .work-1 {
-    transform: rotateX(-44deg) translateY(0.0042em);
-  }
-}
 </style>

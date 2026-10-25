@@ -137,9 +137,4 @@ const slots = useSlots()
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mrr-filter-bar {
-    transition: none;
-  }
-}
 </style>

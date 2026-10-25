@@ -2,6 +2,7 @@
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { Clock, Refresh } from '@element-plus/icons-vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import {
   archiveAccessMode,
   isExternalArchiveAccessMode,
@@ -92,7 +93,7 @@ function selectHistory(item: ArchiveSearchHistoryItem) {
 }
 
 function animateFavorite(button: HTMLButtonElement) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!isMotionEnabled()) {
     return
   }
 
@@ -752,25 +753,5 @@ onUnmounted(() => {
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-5);
   border-radius: var(--mrr-radius-pill);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .history-item,
-  .history-filter-button,
-  .bookmark-icon,
-  .history-tab-enter-active,
-  .history-tab-leave-active {
-    transition: none;
-  }
-
-  .history-favorite-button:active .bookmark-icon {
-    transform: none;
-  }
-
-  .history-tab-enter-from,
-  .history-tab-leave-to {
-    opacity: 1;
-    transform: none;
-  }
 }
 </style>

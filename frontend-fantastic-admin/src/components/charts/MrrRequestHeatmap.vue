@@ -631,9 +631,4 @@ onBeforeUnmount(hideTooltip)
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .heatmap-tooltip {
-    transition: none;
-  }
-}
 </style>

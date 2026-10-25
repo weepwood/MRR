@@ -183,13 +183,4 @@ function onSelection(value: number | 'all') {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .type-tab {
-    transition: none;
-  }
-
-  .type-tab.active {
-    animation: none;
-  }
-}
 </style>

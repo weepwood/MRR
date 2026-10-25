@@ -99,24 +99,46 @@ a:active .mrr-icon-interactive,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mrr-icon-interactive {
-    transition: none !important;
-  }
+:root[data-motion="off"],
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  scroll-behavior: auto !important;
+  transition: none !important;
+  animation: none !important;
+}
 
-  button:not(:disabled):hover .mrr-icon-interactive,
-  button:not(:disabled):active .mrr-icon-interactive,
-  a:hover .mrr-icon-interactive,
-  a:active .mrr-icon-interactive,
-  [role="button"]:hover .mrr-icon-interactive,
-  [role="button"]:active .mrr-icon-interactive {
-    transform: none;
-  }
+:root[data-motion="off"] button:not(:disabled):hover .mrr-icon-interactive,
+:root[data-motion="off"] button:not(:disabled):active .mrr-icon-interactive,
+:root[data-motion="off"] a:hover .mrr-icon-interactive,
+:root[data-motion="off"] a:active .mrr-icon-interactive,
+:root[data-motion="off"] [role="button"]:hover .mrr-icon-interactive,
+:root[data-motion="off"] [role="button"]:active .mrr-icon-interactive,
+:root[data-motion="off"] .menu-item.active .menu-item-container-icon,
+:root[data-motion="off"] .menu-item-container:active .menu-item-container-icon,
+:root[data-motion="off"] .menu-leading-control:hover .menu-leading-control-icon,
+:root[data-motion="off"] .menu-leading-control:hover .menu-leading-control-arrow,
+:root[data-motion="off"] .dashboard-widget:active:not(.is-editing),
+:root[data-motion="off"] .dashboard-widget:hover .dashboard-widget__arrow,
+:root[data-motion="off"] .oss-folder-icon:hover .work-1,
+:root[data-motion="off"] .oss-folder-icon:hover .work-2,
+:root[data-motion="off"] .oss-folder-icon:hover .work-3,
+:root[data-motion="off"] .oss-folder-icon:hover .work-4,
+:root[data-motion="off"] .settings-nav-item:hover .nav-icon,
+:root[data-motion="off"] .settings-nav-item.active .nav-icon,
+:root[data-motion="off"] .settings-nav-item:hover .nav-arrow,
+:root[data-motion="off"] .settings-nav-item.active .nav-arrow,
+:root[data-motion="off"] .save-status.dirty .status-dot,
+:root[data-motion="off"] .archive-folder-card:hover .folder-card-body,
+:root[data-motion="off"] .archive-folder-card:focus-visible .folder-card-body,
+:root[data-motion="off"] .history-favorite-button:active .bookmark-icon,
+:root[data-motion="off"] .field-label--switchable:active .field-switch-icon,
+:root[data-motion="off"] .field-label--switchable:active .field-switch-icon:not(.is-switched) {
+  transform: none !important;
+}
 
-  .mrr-icon-spin-once,
-  .mrr-status-pop,
-  .mrr-content-enter,
-  .mrr-fade-enter {
-    animation: none !important;
-  }
+:root[data-motion="off"] .history-tab-enter-from,
+:root[data-motion="off"] .history-tab-leave-to {
+  opacity: 1 !important;
+  transform: none !important;
 }

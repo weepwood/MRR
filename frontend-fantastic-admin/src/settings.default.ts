@@ -6,6 +6,7 @@ const globalSettingsDefault: RecursiveRequired<Settings.all> = {
     themeColor: '#2563eb',
     radius: 0.75,
     pageTitleStyle: 'card',
+    enableMotion: true,
     enableMournMode: false,
     enableColorAmblyopiaMode: false,
     enablePermission: true,

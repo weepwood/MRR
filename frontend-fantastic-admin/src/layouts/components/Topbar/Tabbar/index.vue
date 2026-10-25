@@ -408,14 +408,4 @@ onUnmounted(() => {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tabs .tabbar-move,
-  .tabs .tabbar-enter-active,
-  .tabs .tabbar-leave-active,
-  .tab-background,
-  .title,
-  .action-icon {
-    transition: none !important;
-  }
-}
 </style>

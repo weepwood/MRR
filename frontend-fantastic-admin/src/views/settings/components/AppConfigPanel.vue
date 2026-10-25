@@ -217,6 +217,14 @@ function handleReset() {
               class="title-style-tabs"
             />
           </div>
+
+          <div class="setting-item">
+            <div class="label-copy">
+              <strong>动态效果</strong>
+              <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
+            </div>
+            <FaSwitch v-model="settingsStore.settings.app.enableMotion" />
+          </div>
         </div>
       </el-collapse-item>
 

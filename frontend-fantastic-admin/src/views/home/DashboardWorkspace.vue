@@ -1232,15 +1232,4 @@ watch(storageKey, loadPreferences, { immediate: true })
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-widget,
-  .dashboard-widget__arrow {
-    transition: none;
-  }
-
-  .dashboard-widget:active:not(.is-editing),
-  .dashboard-widget:hover .dashboard-widget__arrow {
-    transform: none;
-  }
-}
 </style>

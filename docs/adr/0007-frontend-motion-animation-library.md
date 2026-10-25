@@ -143,8 +143,21 @@
 - 性能与容量：包体积增量、首屏与交互帧率（内网低配终端抽样）；
 - 生产或灰度验证：在受控内网终端（含 Chrome 86）实际演练试点交互。
 
+## 验证进展（草案阶段，2026-10-25）
+
+- **Vitest(jsdom) 已通过**：`src/components/MrrMotionCard/__tests__/index.test.ts` 共 3 项（渲染 slot、`prefers-reduced-motion` 下静态渲染、正常偏好下挂载不抛错）在 jsdom 环境全绿。说明组件在「无 WAAPI」的 jsdom 下通过 polyfill 可正常挂载，未引入崩溃路径。
+- **依赖已落地**：`package.json` 加入 `motion-v ^2.8.0`、移除未使用的 `gsap`；`pnpm install`（Node 24 / pnpm 10）成功，lockfile 已更新并提交。
+- **待执行：Chrome 86 运行时实测（前置条件②，阻塞项）**：当前沙箱无 Chrome 86 运行环境，需在目标内网 Chrome 86 终端或 Playwright Chrome 86 通道执行。验证清单：
+  1. 打开挂载 `MrrMotionCard` 的页面；
+  2. 默认偏好下，元素应从 `opacity:0 / translateY(8px)` 过渡至 `opacity:1 / translateY(0)`（spring 或 0.18s 缓动），无「瞬间完成」；
+  3. 开启系统「减少动态效果」后，应为静态渲染（无过渡），`prefers-reduced-motion` 降级生效；
+  4. DevTools Console 无 WAAPI / Motion 报错；
+  5. 对比 Chrome 最新版，记录行为差异（重点：`linear()` 自定义缓动、scroll-linked、layout 在 86 上的回退）。
+- 该实测需在 ADR 评审通过前完成并留证；若实测不达标，本 ADR 转 `Rejected`（落入方案 C 保持现状）。
+
 ## 后续事项
 
+- [ ] 补充 Playwright Chrome 86 E2E spec（可选，验证清单的程序化落地）；
 - [ ] 创建跟踪 Issue 并关联本 ADR；
 - [ ] 完成 Chrome 86 试点验证，形成证据记录（建议放在 `.workbuddy/analysis/` 或 PR 描述）；
 - [ ] 清理 `gsap` 死依赖（与引入 Motion 二选一，不并存）；

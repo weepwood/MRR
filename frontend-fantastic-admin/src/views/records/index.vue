@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ScanRecord } from '@/api/types'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElNotification } from 'element-plus'
@@ -103,10 +104,34 @@ function previousPage() {
 onMounted(loadData)
 
 const summaryCards = computed(() => [
-  { label: '当前页记录数', value: list.value.length, note: '当前筛选结果中已加载的数据条数' },
-  { label: '读取方式', value: '游标', note: '按完整编号筛选；未执行全表总数统计' },
-  { label: '已选记录', value: selectedRows.value.length, note: '可用于批量打包下载' },
-  { label: '当前页码', value: pageNum.value, note: `每页 ${pageSize.value} 条` },
+  {
+    label: '当前页记录数',
+    value: list.value.length,
+    note: '当前筛选结果中已加载的数据条数',
+    tone: 'blue' as MetricTone,
+    icon: 'i-ant-design:profile-twotone',
+  },
+  {
+    label: '读取方式',
+    value: '游标',
+    note: '按完整编号筛选；未执行全表总数统计',
+    tone: 'teal' as MetricTone,
+    icon: 'i-ant-design:database-twotone',
+  },
+  {
+    label: '已选记录',
+    value: selectedRows.value.length,
+    note: '可用于批量打包下载',
+    tone: 'violet' as MetricTone,
+    icon: 'i-ant-design:check-circle-twotone',
+  },
+  {
+    label: '当前页码',
+    value: pageNum.value,
+    note: `每页 ${pageSize.value} 条`,
+    tone: 'amber' as MetricTone,
+    icon: 'i-ant-design:unordered-list-outlined',
+  },
 ])
 
 function handleSelectionChange(rows: ScanRecord[]) {
@@ -207,11 +232,12 @@ function typeLabel(value: unknown) {
         </el-form-item>
       </el-form>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
       <el-table
         v-else
+        v-loading="loading"
         :data="list"
         stripe
         style="margin-top: 12px;"

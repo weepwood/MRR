@@ -35,8 +35,9 @@ for (const path of ['/logs', '/runtime-logs', '/patients', '/records', '/data-ex
   test(`${path} 窄屏控件与分页不被工作区裁切`, async ({ page }) => {
     await prepare(page, 375)
     await page.goto(path)
-    await expect(page.locator('.page-header')).toBeVisible()
-    await expectControlsInside(page, '.el-input, .el-select, .el-date-editor, .el-input-number, .page-header .el-button')
+    const pageHeader = page.locator('.page-header, .mrr-page-header').first()
+    await expect(pageHeader).toBeVisible()
+    await expectControlsInside(page, '.el-input, .el-select, .el-date-editor, .el-input-number, .page-header .el-button, .mrr-page-header .el-button')
     if (await page.locator('.el-pagination').count()) {
       await expectNoOverflow(page, '.el-pagination')
       await expectControlsInside(page, '.el-pagination')

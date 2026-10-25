@@ -20,10 +20,11 @@ async function expectContained(page: Page, selector: string) {
     .map(element => ({ class: element.className, width: element.clientWidth, scroll: element.scrollWidth })))).toEqual([])
 }
 
-test('共享外层表面跟随同一圆角设置', async ({ page }) => {
+test('共享页头、分区卡和指标卡跟随同一圆角设置', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await openUsers(page, 'light', 1.25)
-  for (const selector of ['.mrr-page-header', '.mrr-filter-bar', '.mrr-section-card', '.mrr-metric-card']) {
+  // 用户列表将筛选栏嵌入表格面板，只保留下边框，不属于独立圆角表面。
+  for (const selector of ['.mrr-page-header', '.mrr-section-card', '.mrr-metric-card']) {
     await expect(page.locator(selector).first()).toHaveCSS('border-radius', '20px')
   }
 })

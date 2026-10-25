@@ -258,7 +258,9 @@ onUnmounted(() => {
   <div class="page-shell">
     <div class="page-header">
       <div>
-        <p class="eyebrow">System & Database Monitor</p>
+        <p class="eyebrow">
+          System & Database Monitor
+        </p>
         <h2>系统与数据库监控</h2>
         <p class="subtitle">
           {{ autoRefresh ? '每 15 秒自动刷新' : '自动刷新已暂停' }} · 上次刷新 {{ lastRefresh || '--' }}
@@ -291,63 +293,99 @@ onUnmounted(() => {
 
     <div class="monitor-grid monitor-grid--availability">
       <el-card shadow="never" class="monitor-card">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <strong>PostgreSQL 运行状态</strong>
-                <p>实时连接、事务、锁等待和缓存情况</p>
-              </div>
-              <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
-                {{ databaseStatus }}
-              </el-tag>
-            </div>
-          </template>
-
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="数据库">{{ databaseOverview.database?.name || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="版本">{{ databaseOverview.database?.version || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="运行时长">{{ formatDuration(databaseOverview.database?.uptime_seconds) }}</el-descriptions-item>
-            <el-descriptions-item label="数据库大小">{{ formatBytes(databaseOverview.database?.size_bytes) }}</el-descriptions-item>
-            <el-descriptions-item label="事务提交">{{ formatNumber(databaseOverview.transactions?.commits) }}</el-descriptions-item>
-            <el-descriptions-item label="事务回滚">{{ formatNumber(databaseOverview.transactions?.rollbacks) }}</el-descriptions-item>
-            <el-descriptions-item label="锁等待">{{ databaseOverview.contention?.lock_waiters ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item label="长事务">{{ databaseOverview.contention?.long_transactions ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item label="死锁累计">{{ databaseOverview.transactions?.deadlocks ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item label="缓存命中率">{{ databaseOverview.transactions?.cache_hit_ratio ?? '-' }}%</el-descriptions-item>
-          </el-descriptions>
-
-          <div class="progress-grid">
+        <template #header>
+          <div class="card-header">
             <div>
-              <div class="progress-label"><span>数据库连接使用率</span><strong>{{ connectionUsage }}%</strong></div>
-              <el-progress :percentage="connectionUsage" :status="connectionUsage >= 90 ? 'exception' : connectionUsage >= 80 ? 'warning' : 'success'" />
+              <strong>PostgreSQL 运行状态</strong>
+              <p>实时连接、事务、锁等待和缓存情况</p>
             </div>
-            <div>
-              <div class="progress-label"><span>Hikari 连接池使用率</span><strong>{{ hikariUsage }}%</strong></div>
-              <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
-            </div>
+            <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
+              {{ databaseStatus }}
+            </el-tag>
           </div>
+        </template>
+
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="数据库">
+            {{ databaseOverview.database?.name || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="版本">
+            {{ databaseOverview.database?.version || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="运行时长">
+            {{ formatDuration(databaseOverview.database?.uptime_seconds) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="数据库大小">
+            {{ formatBytes(databaseOverview.database?.size_bytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="事务提交">
+            {{ formatNumber(databaseOverview.transactions?.commits) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="事务回滚">
+            {{ formatNumber(databaseOverview.transactions?.rollbacks) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="锁等待">
+            {{ databaseOverview.contention?.lock_waiters ?? 0 }}
+          </el-descriptions-item>
+          <el-descriptions-item label="长事务">
+            {{ databaseOverview.contention?.long_transactions ?? 0 }}
+          </el-descriptions-item>
+          <el-descriptions-item label="死锁累计">
+            {{ databaseOverview.transactions?.deadlocks ?? 0 }}
+          </el-descriptions-item>
+          <el-descriptions-item label="缓存命中率">
+            {{ databaseOverview.transactions?.cache_hit_ratio ?? '-' }}%
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <div class="progress-grid">
+          <div>
+            <div class="progress-label">
+              <span>数据库连接使用率</span><strong>{{ connectionUsage }}%</strong>
+            </div>
+            <el-progress :percentage="connectionUsage" :status="connectionUsage >= 90 ? 'exception' : connectionUsage >= 80 ? 'warning' : 'success'" />
+          </div>
+          <div>
+            <div class="progress-label">
+              <span>Hikari 连接池使用率</span><strong>{{ hikariUsage }}%</strong>
+            </div>
+            <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
+          </div>
+        </div>
       </el-card>
 
       <el-card shadow="never" class="monitor-card">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <strong>应用运行状态</strong>
-                <p>JVM、内存与运行环境摘要</p>
-              </div>
-              <el-tag :type="statusType(String(healthStatus.status || 'UNKNOWN'))">
-                {{ healthStatus.status || 'UNKNOWN' }}
-              </el-tag>
+        <template #header>
+          <div class="card-header">
+            <div>
+              <strong>应用运行状态</strong>
+              <p>JVM、内存与运行环境摘要</p>
             </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="应用">{{ systemInfo.application?.name || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="运行时长">{{ runtimeInfo.uptimeFormatted || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Java">{{ systemInfo.jvm?.javaVersion || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="堆内存使用率">{{ memoryInfo.usagePercent || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="处理器">{{ systemInfo.jvm?.availableProcessors || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="系统负载">{{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}</el-descriptions-item>
-          </el-descriptions>
+            <el-tag :type="statusType(String(healthStatus.status || 'UNKNOWN'))">
+              {{ healthStatus.status || 'UNKNOWN' }}
+            </el-tag>
+          </div>
+        </template>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="应用">
+            {{ systemInfo.application?.name || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="运行时长">
+            {{ runtimeInfo.uptimeFormatted || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="Java">
+            {{ systemInfo.jvm?.javaVersion || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="堆内存使用率">
+            {{ memoryInfo.usagePercent || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="处理器">
+            {{ systemInfo.jvm?.availableProcessors || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="系统负载">
+            {{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
       </el-card>
     </div>
 
@@ -393,38 +431,46 @@ onUnmounted(() => {
 
     <div class="monitor-grid monitor-grid--details">
       <el-card shadow="never" class="monitor-card">
-          <template #header>
-            <div class="card-header"><strong>异常样本</strong><span>最多显示最近 100 条</span></div>
-          </template>
-          <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
-            <el-table-column prop="severity" label="级别" width="100">
-              <template #default="scope">
-                <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'" size="small">
-                  {{ scope.row.severity }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="check_name" label="检查项" min-width="180" />
-            <el-table-column prop="bah" label="病案号" width="120" />
-            <el-table-column prop="sjh" label="上架号" width="120" />
-            <el-table-column prop="detail" label="说明" min-width="260" show-overflow-tooltip />
-          </el-table>
+        <template #header>
+          <div class="card-header">
+            <strong>异常样本</strong><span>最多显示最近 100 条</span>
+          </div>
+        </template>
+        <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
+          <el-table-column prop="severity" label="级别" width="100">
+            <template #default="scope">
+              <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'" size="small">
+                {{ scope.row.severity }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="check_name" label="检查项" min-width="180" />
+          <el-table-column prop="bah" label="病案号" width="120" />
+          <el-table-column prop="sjh" label="上架号" width="120" />
+          <el-table-column prop="detail" label="说明" min-width="260" show-overflow-tooltip />
+        </el-table>
       </el-card>
       <el-card shadow="never" class="monitor-card">
-          <template #header>
-            <div class="card-header"><strong>数据库占用最大的表</strong><span>包含表与索引</span></div>
-          </template>
-          <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
-            <el-table-column prop="table_name" label="表" min-width="180" />
-            <el-table-column label="总大小" width="120">
-              <template #default="scope">{{ formatBytes(scope.row.total_bytes) }}</template>
-            </el-table-column>
-            <el-table-column prop="live_rows" label="有效行" width="110" />
-            <el-table-column prop="dead_rows" label="死元组" width="110" />
-            <el-table-column label="最近自动清理" min-width="180">
-              <template #default="scope">{{ formatDate(scope.row.last_autovacuum) }}</template>
-            </el-table-column>
-          </el-table>
+        <template #header>
+          <div class="card-header">
+            <strong>数据库占用最大的表</strong><span>包含表与索引</span>
+          </div>
+        </template>
+        <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
+          <el-table-column prop="table_name" label="表" min-width="180" />
+          <el-table-column label="总大小" width="120">
+            <template #default="scope">
+              {{ formatBytes(scope.row.total_bytes) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="live_rows" label="有效行" width="110" />
+          <el-table-column prop="dead_rows" label="死元组" width="110" />
+          <el-table-column label="最近自动清理" min-width="180">
+            <template #default="scope">
+              {{ formatDate(scope.row.last_autovacuum) }}
+            </template>
+          </el-table-column>
+        </el-table>
       </el-card>
     </div>
   </div>

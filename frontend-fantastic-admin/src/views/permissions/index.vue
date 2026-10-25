@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AuthRole } from '@/api/types'
 import type { PermissionDefinition } from '@/utils/permission'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
@@ -201,7 +202,18 @@ onMounted(loadPermissions)
         <p class="eyebrow">
           Permission Management
         </p>
-        <h2>权限管理</h2>
+        <div class="page-title-row">
+          <h2>权限管理</h2>
+          <el-tooltip
+            content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
+            placement="right"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="权限继承说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
         <p class="subtitle">
           按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。
         </p>
@@ -213,12 +225,6 @@ onMounted(loadPermissions)
         </el-button>
       </div>
     </header>
-
-    <el-alert type="info" :closable="false" show-icon>
-      <template #title>
-        上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。
-      </template>
-    </el-alert>
 
     <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
 
@@ -271,11 +277,21 @@ onMounted(loadPermissions)
             <div>
               <div class="role-name-row">
                 <strong>{{ role.name || role.code }}</strong>
+                <span class="permission-count">{{ rolePermCount(role) }} 项权限</span>
                 <el-tag size="small" effect="plain">
                   {{ role.code }}
                 </el-tag>
+                <el-tooltip
+                  v-if="isAdminRole(role.code)"
+                  content="管理员自动拥有全部权限，不可修改。"
+                  placement="top"
+                  :show-after="200"
+                >
+                  <button type="button" class="info-trigger" aria-label="管理员权限说明">
+                    <el-icon><InfoFilled /></el-icon>
+                  </button>
+                </el-tooltip>
               </div>
-              <span class="permission-count">{{ rolePermCount(role) }} 项权限</span>
             </div>
             <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
               编辑
@@ -283,9 +299,6 @@ onMounted(loadPermissions)
           </div>
           <p v-if="role.description" class="role-description">
             {{ role.description }}
-          </p>
-          <p v-if="isAdminRole(role.code)" class="admin-note">
-            管理员自动拥有全部权限，不可修改。
           </p>
           <div class="permission-groups">
             <section v-for="[category, defs] in permsByCategory(viewDirectPermsFor(role))" :key="category">
@@ -306,14 +319,61 @@ onMounted(loadPermissions)
         </template>
 
         <template v-else>
-          <div class="role-header">
-            <div class="edit-fields">
-              <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
-              <el-tag size="small" effect="plain">
-                {{ role.code }}
-              </el-tag>
+          <div class="role-edit-form">
+            <div class="role-header">
+              <div class="edit-fields">
+                <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
+                <el-tag size="small" effect="plain">
+                  {{ role.code }}
+                </el-tag>
+              </div>
             </div>
-            <div>
+            <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
+
+            <div class="edit-section">
+              <span class="category-label">直接权限</span>
+              <div class="permission-tags">
+                <el-tag
+                  v-for="permission in editDirectPerms"
+                  :key="permission"
+                  size="small"
+                  closable
+                  @close="removePermission(permission)"
+                >
+                  {{ permLabel(permission) }}
+                </el-tag>
+                <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
+              </div>
+            </div>
+
+            <div v-if="editInheritedPerms.length" class="edit-section">
+              <span class="category-label">继承权限</span>
+              <div class="permission-tags">
+                <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
+                  {{ permLabel(permission) }}
+                </el-tag>
+              </div>
+            </div>
+
+            <el-select
+              class="permission-select"
+              placeholder="搜索或选择要添加的权限"
+              filterable
+              model-value=""
+              @change="addPermission"
+            >
+              <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
+                <el-option
+                  v-for="option in group.options"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="isImpliedBy(option.value)"
+                  :label="`${option.shortLabel} · ${option.value}`"
+                />
+              </el-option-group>
+            </el-select>
+
+            <div class="edit-actions">
               <el-button size="small" @click="cancelEdit">
                 取消
               </el-button>
@@ -322,50 +382,6 @@ onMounted(loadPermissions)
               </el-button>
             </div>
           </div>
-          <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
-
-          <div class="edit-section">
-            <span class="category-label">直接权限</span>
-            <div class="permission-tags">
-              <el-tag
-                v-for="permission in editDirectPerms"
-                :key="permission"
-                size="small"
-                closable
-                @close="removePermission(permission)"
-              >
-                {{ permLabel(permission) }}
-              </el-tag>
-              <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
-            </div>
-          </div>
-
-          <div v-if="editInheritedPerms.length" class="edit-section">
-            <span class="category-label">继承权限</span>
-            <div class="permission-tags">
-              <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
-                {{ permLabel(permission) }}
-              </el-tag>
-            </div>
-          </div>
-
-          <el-select
-            class="permission-select"
-            placeholder="搜索或选择要添加的权限"
-            filterable
-            model-value=""
-            @change="addPermission"
-          >
-            <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
-              <el-option
-                v-for="option in group.options"
-                :key="option.value"
-                :value="option.value"
-                :disabled="isImpliedBy(option.value)"
-                :label="`${option.shortLabel} · ${option.value}`"
-              />
-            </el-option-group>
-          </el-select>
         </template>
       </el-card>
     </div>
@@ -376,6 +392,25 @@ onMounted(loadPermissions)
 .page-shell { display: grid; gap: 18px; }
 
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+
+.page-title-row { display: flex; align-items: center; gap: 8px; }
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: help;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible { color: hsl(var(--primary)); }
+
+.info-trigger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 
 .header-actions,
 .role-header,
@@ -398,23 +433,30 @@ h2 { margin: 0; font-size: 28px; }
 .subtitle,
 .role-description { margin: 8px 0 0; color: var(--text-secondary); }
 
-.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); align-items: start; gap: 16px; }
 
-.role-card { display: grid; gap: 12px; }
+.role-card { align-self: start; border-radius: var(--mrr-radius-card); }
+
+.role-card :deep(.el-card__body) { display: grid; align-content: start; gap: 12px; }
 
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
 
-.role-header { gap: 12px; justify-content: space-between; }
+.role-edit-form { display: grid; gap: 16px; }
+
+.role-header { gap: 12px; align-items: flex-start; justify-content: space-between; }
+
+.role-name-row strong { color: var(--text-primary); font-size: 16px; font-weight: 600; line-height: 1.4; }
+
+.role-name-row { flex-wrap: wrap; }
 
 .permission-count,
-.admin-note,
 .category-label,
 .empty-text,
 .matrix-permission span { font-size: 12px; color: var(--text-tertiary); }
 
-.role-description { font-size: 13px; line-height: 1.6; }
+.permission-count { display: inline-flex; padding: 2px 8px; border-radius: var(--mrr-radius-pill); background: var(--surface-alt); line-height: 1.4; }
 
-.admin-note { margin: 0; }
+.role-description { margin: 0; font-size: 13px; line-height: 1.6; }
 
 .permission-groups { display: grid; gap: 10px; }
 
@@ -422,11 +464,23 @@ h2 { margin: 0; font-size: 28px; }
 .edit-section,
 .matrix-permission { display: grid; gap: 6px; }
 
+.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
+
 .permission-tags { flex-wrap: wrap; }
 
-.category-label { font-weight: 600; letter-spacing: 0.04em; }
+.category-label { color: var(--text-secondary); font-weight: 600; letter-spacing: 0.04em; }
 
 .edit-fields :deep(.el-input) { width: 150px; }
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.edit-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .permission-select { width: 100%; }
 

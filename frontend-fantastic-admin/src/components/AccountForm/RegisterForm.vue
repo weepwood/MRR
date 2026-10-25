@@ -4,6 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
+import { nextTick } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
@@ -22,12 +23,16 @@ const emits = defineEmits<{
 const loading = ref(false)
 const showPwd = ref(false)
 const showCheckPwd = ref(false)
+const isApplicationStep = ref(false)
+const identityHeading = ref<HTMLElement | null>(null)
+const applicationHeading = ref<HTMLElement | null>(null)
 
 function resolveMessage(payload: any, fallback: string): string {
   return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
 }
 
 const form = useForm({
+  keepValuesOnUnmount: true,
   validationSchema: toTypedSchema(
     z.object({
       account: z.string().trim()
@@ -55,6 +60,13 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
+  if (!isApplicationStep.value) {
+    isApplicationStep.value = true
+    await nextTick()
+    applicationHeading.value?.focus()
+    return
+  }
+
   loading.value = true
   try {
     await apiUser.register({
@@ -80,11 +92,22 @@ const onSubmit = form.handleSubmit(async (values) => {
     loading.value = false
   }
 })
+
+async function handlePrevious() {
+  if (isApplicationStep.value) {
+    isApplicationStep.value = false
+    await nextTick()
+    identityHeading.value?.focus()
+    return
+  }
+
+  emits('onLogin', form.values.account)
+}
 </script>
 
 <template>
   <form class="register-form" @submit="onSubmit">
-    <section class="review-flow" aria-label="注册审核流程">
+    <section class="review-flow" aria-label="账号申请流程">
       <div class="review-flow__summary">
         <span class="review-flow__icon"><FaIcon name="i-ri:user-received-2-line" /></span>
         <div>
@@ -92,21 +115,21 @@ const onSubmit = form.handleSubmit(async (values) => {
           <p>提交后账号进入待审核状态，审核通过前无法登录系统。</p>
         </div>
       </div>
-      <div class="review-flow__steps" aria-hidden="true">
-        <span class="is-current"><b>1</b>填写申请</span>
-        <FaIcon name="i-ri:arrow-right-s-line" />
-        <span><b>2</b>管理员审核</span>
-        <FaIcon name="i-ri:arrow-right-s-line" />
-        <span><b>3</b>账号登录</span>
+      <div class="review-flow__steps" aria-label="注册申请进度">
+        <span :class="{ 'is-current': !isApplicationStep }" :aria-current="isApplicationStep ? undefined : 'step'"><b>1</b>身份信息</span>
+        <FaIcon aria-hidden="true" name="i-ri:arrow-right-s-line" />
+        <span :class="{ 'is-current': isApplicationStep }" :aria-current="isApplicationStep ? 'step' : undefined"><b>2</b>申请说明</span>
+        <FaIcon aria-hidden="true" name="i-ri:arrow-right-s-line" />
+        <span><b>3</b>管理员审核</span>
       </div>
     </section>
 
-    <section class="form-section">
+    <section v-if="!isApplicationStep" class="form-section">
       <header class="section-heading">
         <span><FaIcon name="i-ri:id-card-line" /></span>
         <div>
-          <strong>身份信息</strong>
-          <p>填写便于管理员核验的账号和人员信息。</p>
+          <strong ref="identityHeading" role="heading" aria-level="3" tabindex="-1">身份信息</strong>
+          <p>填写登录账号、密码和人员身份信息。</p>
         </div>
       </header>
 
@@ -132,30 +155,7 @@ const onSubmit = form.handleSubmit(async (values) => {
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
-      </div>
 
-      <FormField v-slot="{ componentField, errors }" name="contactInfo">
-        <FormItem class="field-item">
-          <label for="register-contact">联系方式 <span>选填</span></label>
-          <FormControl>
-            <FaInput id="register-contact" type="text" autocomplete="tel" placeholder="手机号、工号、科室内线等" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
-          </FormControl>
-          <small class="field-hint">仅用于注册审核和账号问题联系</small>
-          <FormMessage class="field-message" />
-        </FormItem>
-      </FormField>
-    </section>
-
-    <section class="form-section">
-      <header class="section-heading">
-        <span><FaIcon name="i-ri:shield-keyhole-line" /></span>
-        <div>
-          <strong>账号安全</strong>
-          <p>设置登录密码。最低 6 位，建议使用更长且容易记忆的口令。</p>
-        </div>
-      </header>
-
-      <div class="field-grid password-grid">
         <FormField v-slot="{ componentField, value, errors }" name="password">
           <FormItem class="field-item">
             <label for="register-password">密码 <em>必填</em></label>
@@ -192,14 +192,25 @@ const onSubmit = form.handleSubmit(async (values) => {
       </div>
     </section>
 
-    <section class="form-section form-section--remark">
+    <section v-else class="form-section form-section--remark">
       <header class="section-heading">
         <span><FaIcon name="i-ri:file-text-line" /></span>
         <div>
-          <strong>申请说明</strong>
-          <p>补充所在科室、岗位或使用目的，可以提高审核效率。</p>
+          <strong ref="applicationHeading" role="heading" aria-level="3" tabindex="-1">申请说明</strong>
+          <p>留下可联系的方式，并说明岗位或使用目的，帮助管理员核验申请。</p>
         </div>
       </header>
+
+      <FormField v-slot="{ componentField, errors }" name="contactInfo">
+        <FormItem class="field-item">
+          <label for="register-contact">联系方式 <span>选填</span></label>
+          <FormControl>
+            <FaInput id="register-contact" type="text" autocomplete="tel" placeholder="手机号、工号、科室内线等" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+          </FormControl>
+          <small class="field-hint">仅用于注册审核和账号问题联系</small>
+          <FormMessage class="field-message" />
+        </FormItem>
+      </FormField>
 
       <FormField v-slot="{ componentField, errors }" name="applyRemark">
         <FormItem class="field-item field-item--remark">
@@ -213,13 +224,13 @@ const onSubmit = form.handleSubmit(async (values) => {
     </section>
 
     <div class="form-actions">
-      <FaButton type="button" variant="outline" size="lg" @click="emits('onLogin', form.values.account)">
+      <FaButton type="button" variant="outline" size="lg" @click="handlePrevious">
         <FaIcon name="i-ri:arrow-left-line" />
-        返回登录
+        {{ isApplicationStep ? '返回身份信息' : '返回登录' }}
       </FaButton>
       <FaButton :loading="loading" size="lg" type="submit">
-        <FaIcon v-if="!loading" name="i-ri:send-plane-2-line" />
-        提交注册申请
+        <FaIcon v-if="!loading" :name="isApplicationStep ? 'i-ri:send-plane-2-line' : 'i-ri:arrow-right-line'" />
+        {{ isApplicationStep ? '提交注册' : '填写申请说明' }}
       </FaButton>
     </div>
   </form>
@@ -264,7 +275,6 @@ const onSubmit = form.handleSubmit(async (values) => {
   .review-flow__steps > svg { display: none; }
   .review-flow__steps span { justify-content: flex-start; }
   .field-grid, .form-actions { grid-template-columns: 1fr; }
-  .password-grid { gap: 0; }
   .form-actions { display: flex; flex-direction: column-reverse; }
 }
 </style>

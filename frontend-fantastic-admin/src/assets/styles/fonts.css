@@ -1,0 +1,36 @@
+/*
+ * 开源鸿蒙字体（HarmonyOS Sans SC）自托管配置
+ *
+ * 字体来源：https://github.com/IKKI2000/harmonyos-fonts（MIT 授权，鸿蒙字体本身可免费商用）
+ * 文件放置于 public/fonts/，由 Nginx / Vite 静态目录直接提供，不依赖任何外部 CDN，
+ * 适配医院内网离线部署。
+ * 仅引入内网 UI 实际使用的三个字重：Regular(400) / Medium(500) / Bold(700)。
+ * 字体为完整中文字库，可覆盖病案姓名与医疗术语中的生僻字。
+ */
+
+/* Regular 400 —— 正文默认 */
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  src: url("/fonts/harmonyos-sans-sc-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Medium 500 —— 强调、标题、按钮 */
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  src: url("/fonts/harmonyos-sans-sc-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bold 700 —— 强强调 */
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  src: url("/fonts/harmonyos-sans-sc-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

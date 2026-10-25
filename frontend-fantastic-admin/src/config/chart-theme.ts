@@ -119,7 +119,7 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
     animationEasing: option.animationEasing ?? 'cubicOut',
     textStyle: {
       color: tokens.textSecondary,
-      fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontFamily: 'Inter, "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
       ...(option.textStyle ?? {}),
     },
     tooltip: option.tooltip

@@ -468,6 +468,8 @@ h2 { margin: 0; font-size: 28px; }
 
 .permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
 
+.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
+
 .permission-tags { flex-wrap: wrap; }
 
 .category-label { font-weight: 600; color: var(--text-secondary); letter-spacing: 0.04em; }

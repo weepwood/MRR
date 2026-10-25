@@ -85,7 +85,8 @@ describe('buildLoginEnvironmentView', () => {
     expect(view.statusLabel).toBe('网络正常')
     expect(view.statusTone).toBe('ok')
     expect(view.clientIpLabel).toBe('192.168.10.24')
-    expect(view.browserLabel).toBe('Chrome 141.0.0.0')
+    expect(view.browserLabel).toBe('Chrome 141')
+    expect(findItem(view, 'client', '浏览器')?.value).toBe('Chrome 141.0.0.0')
   })
 
   it('按网络、接入地址、客户端三组输出明细', () => {
@@ -96,7 +97,7 @@ describe('buildLoginEnvironmentView', () => {
     expect(findItem(view, 'network', '后端可达性')?.value).toBe('可达 · 18 毫秒')
     expect(findItem(view, 'network', '网络类型')?.value).toBe('Wi-Fi · 4G')
     expect(findItem(view, 'network', '预估下行带宽')?.value).toBe('10 Mbps')
-    expect(findItem(view, 'address', '客户端地址')?.value).toBe('192.168.10.24')
+    expect(findItem(view, 'address', '客户端 IP')?.value).toBe('192.168.10.24')
     expect(findItem(view, 'address', '地址类型')?.value).toBe('IPv4')
     expect(findItem(view, 'address', '接入方式')?.value).toBe('经反向代理转发')
     expect(findItem(view, 'address', '服务器时间')?.value).toContain('2026-10-16 17:15:20')
@@ -115,7 +116,7 @@ describe('buildLoginEnvironmentView', () => {
     expect(view.statusTone).toBe('danger')
     expect(view.clientIpLabel).toBe('')
     expect(findItem(view, 'network', '后端可达性')?.value).toBe('不可达')
-    expect(findItem(view, 'address', '客户端地址')?.value).toBe('未能获取')
+    expect(findItem(view, 'address', '客户端 IP')?.value).toBe('未能获取')
   })
 
   it('网络断开时优先报告连接状态', () => {
@@ -189,7 +190,7 @@ describe('buildLoginEnvironmentView', () => {
     expect(view.reportText).toContain('【网络】')
     expect(view.reportText).toContain('【接入地址】')
     expect(view.reportText).toContain('【客户端】')
-    expect(view.reportText).toContain('客户端地址：192.168.10.24')
+    expect(view.reportText).toContain('客户端 IP：192.168.10.24')
     expect(view.reportText).toContain(`User-Agent：${CHROME_WINDOWS}`)
   })
 

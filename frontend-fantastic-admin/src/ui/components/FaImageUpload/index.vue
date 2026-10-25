@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { filesize } from 'filesize'
-import { toast } from 'vue-sonner'
 import { useFaImagePreview } from '@/ui/components/FaImagePreview'
 import { cn } from '@/utils'
+import { notify } from '@/utils/notification'
 
 const props = withDefaults(defineProps<{
   action: string
@@ -60,14 +60,14 @@ function onSelectFile(e: Event) {
   for (const file of selectedFiles.slice(0, remain)) {
     const fileSize = file.size / 1024 / 1024
     if (fileSize > props.size) {
-      toast.error(`上传图片大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`)
+      notify.error(`上传图片大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`)
       return
     }
     // 类型校验
     if (props.ext.length > 0) {
       const ext = file.name.split('.').pop()?.toLowerCase()
       if (!props.ext.map(e => e.toLowerCase()).includes(ext || '')) {
-        toast.error(`上传图片只支持 ${props.ext.join(' / ')} 格式`, {
+        notify.error(`上传图片只支持 ${props.ext.join(' / ')} 格式`, {
           description: file.name,
         })
         continue
@@ -76,7 +76,7 @@ function onSelectFile(e: Event) {
     // 大小校验
     if (props.size > 0) {
       if (file.size > props.size) {
-        toast.error(`上传图片大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`, {
+        notify.error(`上传图片大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`, {
           description: `${file.name} (${filesize(file.size, { standard: 'jedec' })})`,
         })
         continue

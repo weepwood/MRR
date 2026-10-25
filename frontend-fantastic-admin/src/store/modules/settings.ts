@@ -1,9 +1,9 @@
 import type { RouteMeta } from 'vue-router'
 import type { RecursiveRequired, Settings } from '#/global'
 import { cloneDeep } from 'es-toolkit'
-import { toast } from 'vue-sonner'
 import settingsDefault from '@/settings'
 import { readAuthStorage } from '@/utils/auth-storage'
+import { notify } from '@/utils/notification'
 import { merge } from '@/utils/object'
 import { checkSessionPermission } from '@/utils/permission'
 
@@ -402,7 +402,7 @@ export const useSettingsStore = defineStore(
           return false
         }
         uiSettingsSyncState.value = 'failed'
-        toast.error('界面外观已保存在本机，但同步到全站失败，请稍后重试')
+        notify.error('界面外观已保存在本机，但同步到全站失败，请稍后重试')
         return false
       }
     }

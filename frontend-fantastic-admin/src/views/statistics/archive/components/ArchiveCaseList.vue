@@ -3,6 +3,8 @@ import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchiveDepartmentTheme } from '@/utils/archive-department-theme'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getSystemSettings } from '@/api/modules/settings'
+import MrrStagger from '@/components/MrrMotion/MrrStagger.vue'
+import MrrStaggerItem from '@/components/MrrMotion/MrrStaggerItem.vue'
 import {
   ARCHIVE_DEPARTMENT_THEME_SETTING_KEY,
   ARCHIVE_DEPARTMENT_THEME_UPDATED_EVENT,
@@ -88,10 +90,11 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
     </header>
 
     <el-skeleton v-if="loading && !cases.length" :rows="3" animated />
-    <div v-else class="case-list">
-      <button
+    <MrrStagger v-else class="case-list" :stagger="0.04">
+      <MrrStaggerItem
         v-for="item in cases"
         :key="`${item.patientRecordId || 'patient'}:${item.bah || ''}:${item.sjh || ''}`"
+        as="button"
         type="button"
         class="case-item"
         :class="{ active: isActive(item) }"
@@ -108,8 +111,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
           <span><small>病案号</small>{{ padCode(item.bah || '') || '--' }}</span>
           <span><small>上架号</small>{{ padCode(item.sjh || '') || '--' }}</span>
         </span>
-      </button>
-    </div>
+      </MrrStaggerItem>
+    </MrrStagger>
   </section>
 </template>
 

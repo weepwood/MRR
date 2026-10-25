@@ -10,6 +10,8 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStagger from '@/components/MrrMotion/MrrStagger.vue'
+import MrrStaggerItem from '@/components/MrrMotion/MrrStaggerItem.vue'
 import { useUserStore } from '@/store/modules/user'
 import { hasPermission } from '@/utils/session'
 import {
@@ -502,14 +504,14 @@ watch(storageKey, loadPreferences, { immediate: true })
         拖动卡片调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
       </div>
 
-      <div v-if="visibleWidgets.length" class="dashboard-grid" :class="{ 'is-editing': editMode }">
-        <article
+      <MrrStagger v-if="visibleWidgets.length" class="dashboard-grid" :class="{ 'is-editing': editMode }" :stagger="0.05">
+        <MrrStaggerItem
           v-for="widget in visibleWidgets"
           :key="widget.id"
-          class="dashboard-widget"
+          class="dashboard-cell"
           :class="[
-            `dashboard-widget--${widget.size}`,
-            `dashboard-widget--color-${widget.color}`,
+            `dashboard-cell--${widget.size}`,
+            `dashboard-cell--color-${widget.color}`,
             {
               'is-editing': editMode,
               'is-pinned': widget.pinned,
@@ -530,6 +532,7 @@ watch(storageKey, loadPreferences, { immediate: true })
           @drop.prevent="handleDrop($event, widget.id)"
           @dragend="handleDragEnd"
         >
+          <article class="dashboard-widget">
           <header class="dashboard-widget__header">
             <span class="dashboard-widget__icon" aria-hidden="true">
               <FaIcon :name="widget.icon" />
@@ -583,8 +586,9 @@ watch(storageKey, loadPreferences, { immediate: true })
               <FaIcon :name="editMode ? 'i-ri:drag-move-2-line' : 'i-ri:arrow-right-line'" />
             </div>
           </div>
-        </article>
-      </div>
+          </article>
+        </MrrStaggerItem>
+      </MrrStagger>
 
       <div v-else class="dashboard-empty">
         <FaIcon name="i-ant-design:appstore-add-outlined" />
@@ -755,6 +759,58 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: var(--mrr-space-4);
 }
 
+.dashboard-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.dashboard-cell--small {
+  grid-row: span 1;
+  grid-column: span 1;
+}
+
+.dashboard-cell--wide {
+  grid-row: span 1;
+  grid-column: span 2;
+}
+
+.dashboard-cell--large {
+  grid-row: span 2;
+  grid-column: span 2;
+}
+
+.dashboard-cell--color-blue {
+  --widget-accent: var(--el-color-primary);
+  --widget-surface: color-mix(in srgb, var(--el-color-primary) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-primary) 24%, var(--mrr-border));
+}
+
+.dashboard-cell--color-green {
+  --widget-accent: var(--el-color-success);
+  --widget-surface: color-mix(in srgb, var(--el-color-success) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-success) 24%, var(--mrr-border));
+}
+
+.dashboard-cell--color-orange {
+  --widget-accent: var(--el-color-warning);
+  --widget-surface: color-mix(in srgb, var(--el-color-warning) 8%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-warning) 28%, var(--mrr-border));
+}
+
+.dashboard-cell--color-red {
+  --widget-accent: var(--el-color-danger);
+  --widget-surface: color-mix(in srgb, var(--el-color-danger) 7%, var(--mrr-card));
+  --widget-border: color-mix(in srgb, var(--el-color-danger) 24%, var(--mrr-border));
+}
+
+.dashboard-cell--color-purple {
+  --widget-accent: var(--mrr-tone-violet);
+  --widget-surface: var(--mrr-tone-violet-soft);
+  --widget-border: color-mix(in srgb, var(--mrr-tone-violet) 26%, var(--mrr-border));
+}
+
 .dashboard-widget {
   --widget-accent: var(--mrr-primary);
   --widget-surface: var(--mrr-card);
@@ -779,83 +835,41 @@ watch(storageKey, loadPreferences, { immediate: true })
     transform var(--mrr-motion-fast) var(--mrr-ease-out);
 }
 
-.dashboard-widget--color-blue {
-  --widget-accent: var(--el-color-primary);
-  --widget-surface: color-mix(in srgb, var(--el-color-primary) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-primary) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-green {
-  --widget-accent: var(--el-color-success);
-  --widget-surface: color-mix(in srgb, var(--el-color-success) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-success) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-orange {
-  --widget-accent: var(--el-color-warning);
-  --widget-surface: color-mix(in srgb, var(--el-color-warning) 8%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-warning) 28%, var(--mrr-border));
-}
-
-.dashboard-widget--color-red {
-  --widget-accent: var(--el-color-danger);
-  --widget-surface: color-mix(in srgb, var(--el-color-danger) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-danger) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-purple {
-  --widget-accent: var(--mrr-tone-violet);
-  --widget-surface: var(--mrr-tone-violet-soft);
-  --widget-border: color-mix(in srgb, var(--mrr-tone-violet) 26%, var(--mrr-border));
-}
-
-.dashboard-widget--small {
-  grid-row: span 1;
-  grid-column: span 1;
-}
-
-.dashboard-widget--wide {
-  grid-row: span 1;
-  grid-column: span 2;
-}
-
-.dashboard-widget--large {
-  grid-row: span 2;
-  grid-column: span 2;
-}
-
-.dashboard-widget:hover {
+.dashboard-cell:hover .dashboard-widget {
   border-color: color-mix(in srgb, var(--widget-accent) 48%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-sm);
 }
 
-.dashboard-widget:active:not(.is-editing) {
+.dashboard-cell:active:not(.is-editing) .dashboard-widget {
   transform: translateY(1px);
 }
 
-.dashboard-widget:focus-visible {
+.dashboard-cell:focus-visible {
   outline: 2px solid var(--widget-accent);
   outline-offset: 2px;
 }
 
-.dashboard-widget.is-editing {
+.dashboard-cell.is-editing {
   cursor: grab;
+}
+
+.dashboard-cell.is-editing .dashboard-widget {
   border-style: dashed;
 }
 
-.dashboard-widget.is-editing:active {
+.dashboard-cell.is-editing:active {
   cursor: grabbing;
 }
 
-.dashboard-widget.is-pinned {
+.dashboard-cell.is-pinned .dashboard-widget {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--widget-accent) 16%, transparent), var(--mrr-shadow-xs);
 }
 
-.dashboard-widget.is-dragging {
+.dashboard-cell.is-dragging {
   opacity: 0.45;
 }
 
-.dashboard-widget.is-drag-over {
+.dashboard-cell.is-drag-over .dashboard-widget {
   border-color: var(--widget-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent) 18%, transparent);
 }
@@ -934,7 +948,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
 }
 
-.dashboard-widget:hover .dashboard-widget__arrow {
+.dashboard-cell:hover .dashboard-widget__arrow {
   color: var(--widget-accent);
   transform: translateX(2px);
 }
@@ -958,7 +972,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   -webkit-box-orient: vertical;
 }
 
-.dashboard-widget--large .dashboard-widget__body p {
+.dashboard-cell--large .dashboard-widget__body p {
   -webkit-line-clamp: 7;
   font-size: 13px;
 }
@@ -974,7 +988,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   color: var(--mrr-muted-foreground);
 }
 
-.dashboard-widget--small .dashboard-widget__footer {
+.dashboard-cell--small .dashboard-widget__footer {
   display: none;
 }
 

@@ -143,23 +143,44 @@
 - 性能与容量：包体积增量、首屏与交互帧率（内网低配终端抽样）；
 - 生产或灰度验证：在受控内网终端（含 Chrome 86）实际演练试点交互。
 
-## 验证进展（草案阶段，2026-10-25）
+## 验证进展
+
+### 草案阶段（2026-10-25）
 
 - **Vitest(jsdom) 已通过**：`src/components/MrrMotionCard/__tests__/index.test.ts` 共 3 项（渲染 slot、`prefers-reduced-motion` 下静态渲染、正常偏好下挂载不抛错）在 jsdom 环境全绿。说明组件在「无 WAAPI」的 jsdom 下通过 polyfill 可正常挂载，未引入崩溃路径。
 - **依赖已落地**：`package.json` 加入 `motion-v ^2.8.0`、移除未使用的 `gsap`；`pnpm install`（Node 24 / pnpm 10）成功，lockfile 已更新并提交。
-- **待执行：Chrome 86 运行时实测（前置条件②，阻塞项）**：当前沙箱无 Chrome 86 运行环境，需在目标内网 Chrome 86 终端或 Playwright Chrome 86 通道执行。验证清单：
-  1. 打开挂载 `MrrMotionCard` 的页面；
-  2. 默认偏好下，元素应从 `opacity:0 / translateY(8px)` 过渡至 `opacity:1 / translateY(0)`（spring 或 0.18s 缓动），无「瞬间完成」；
+- **跟踪 Issue / PR 已建**：Issue #424、PR #425（governance 六段式正文，风险 P2）。
+
+### 应用阶段（2026-10-26，仍在草案分支 `feat/adr-0007-motion-pilot` 上）
+
+已将 motion-v 从「单组件试点」推进到「真实业务动画优化」，全部落在 Chrome 86 安全子集（仅用 `opacity` / `translateY` + spring，不依赖 ScrollTimeline / View Transitions / `linear()`），并保留 `prefers-reduced-motion` 降级：
+
+- **新增可复用组件** `src/components/MrrMotion/`：
+  - `MrrStagger.vue`：列表级 stagger 容器，父级 orchestrate 变体，子项按 `staggerChildren` 依次入场；
+  - `MrrStaggerItem.vue`：列表单元，支持 `as`（div/button/li/...）与 fallthrough 属性透传；
+  - 设计要点：入场 `transform` 只作用在「外层单元」，**不触碰内层交互元素**，避免动画结束后残留 inline transform 覆盖 `:hover`/`:active` 等 CSS 变形（仪表盘卡片的按压位移即由此保留）。
+- **管理概览仪表盘**（`views/home/DashboardWorkspace.vue`）：widget 网格改为 `MrrStagger` + `MrrStaggerItem` 包裹，卡片以 spring 依次入场（仅首页落地页、可见度最高）；内层 `article.dashboard-widget` 保留全部 hover/按压/置顶/拖拽交互态，相关尺寸与配色类已迁移到外层 `.dashboard-cell`。
+- **身份证关联病案列表**（`views/statistics/archive/components/ArchiveCaseList.vue`）：病案卡片以 `MrrStaggerItem as="button"` 依次入场。
+- **测试**：`src/components/MrrMotion/__tests__/stagger.test.ts` 共 5 项（渲染、reduced-motion 静态降级、fallthrough 透传、正常偏好下挂载不抛错）全绿；与既有 `MrrMotionCard` 测试合计 **8 项 Vitest(jsdom) 全绿**。
+- **静态校验**：4 个改动 SFC（含两个视图）经 `@vue/compiler-sfc` 解析无语法/标签闭合错误。
+
+### 待执行（阻塞项）
+
+- **[阻塞] Chrome 86 运行时实测（前置条件②）**：当前沙箱无 Chrome 86 环境，需在目标内网 Chrome 86 终端或 Playwright Chrome 86 通道执行。验证清单：
+  1. 打开管理概览页与身份证关联病案页；
+  2. 默认偏好下，卡片应从 `opacity:0 / translateY(10px)` 依次过渡至 `opacity:1 / translateY(0)`（spring），无「瞬间完成」；
   3. 开启系统「减少动态效果」后，应为静态渲染（无过渡），`prefers-reduced-motion` 降级生效；
   4. DevTools Console 无 WAAPI / Motion 报错；
-  5. 对比 Chrome 最新版，记录行为差异（重点：`linear()` 自定义缓动、scroll-linked、layout 在 86 上的回退）。
+  5. 对比 Chrome 最新版，记录行为差异（重点：`linear()` 自定义缓动、scroll-linked、layout 在 86 上的回退——本方案未启用这些特性，应无差异）。
 - 该实测需在 ADR 评审通过前完成并留证；若实测不达标，本 ADR 转 `Rejected`（落入方案 C 保持现状）。
 
 ## 后续事项
 
-- [ ] 补充 Playwright Chrome 86 E2E spec（可选，验证清单的程序化落地）；
-- [ ] 创建跟踪 Issue 并关联本 ADR；
-- [ ] 完成 Chrome 86 试点验证，形成证据记录（建议放在 `.workbuddy/analysis/` 或 PR 描述）；
-- [ ] 清理 `gsap` 死依赖（与引入 Motion 二选一，不并存）；
+- [x] 清理 `gsap` 死依赖（与引入 Motion 二选一，不并存）；
+- [x] 创建跟踪 Issue（#424）并关联本 ADR、创建 PR（#425）；
+- [x] 沉淀可复用的 `MrrStagger` / `MrrStaggerItem` 并接入真实业务列表；
+- [x] 补充 Vitest(jsdom) 渲染与 reduced-motion 行为测试（8 项全绿）；
+- [ ] 补充 Playwright Chrome 86 E2E spec（验证清单的程序化落地）；
+- [ ] 完成 Chrome 86 试点运行时实测，形成证据记录（建议放在 `.workbuddy/analysis/` 或 PR 描述）；
 - [ ] 评审通过将本 ADR 状态更新为 Accepted，并在 `docs/adr/README.md` 的已记录决策表登记 ADR-0007；
 - [ ] 若试点不达标，将状态改为 Rejected 并说明落入方案 C 的理由。

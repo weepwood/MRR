@@ -383,8 +383,7 @@ onMounted(loadPermissions)
 
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 
-.page-title-row { display: flex; gap: 8px;
-  align-items: center; }
+.page-title-row { display: flex; gap: 8px; align-items: center; }
 
 .info-trigger {
   display: inline-flex;
@@ -393,8 +392,8 @@ onMounted(loadPermissions)
   padding: 4px;
   color: var(--text-secondary);
   background: transparent;
-  border: 0;
   cursor: help;
+  border: 0;
   border-radius: var(--mrr-radius-pill);
 }
 

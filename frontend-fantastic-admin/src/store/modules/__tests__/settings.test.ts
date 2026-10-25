@@ -27,8 +27,8 @@ vi.mock('@/api/modules/settings', () => ({
   getUiSettings: mocks.getUiSettings,
 }))
 
-vi.mock('vue-sonner', () => ({
-  toast: {
+vi.mock('@/utils/notification', () => ({
+  notify: {
     error: mocks.toastError,
     success: vi.fn(),
     info: vi.fn(),

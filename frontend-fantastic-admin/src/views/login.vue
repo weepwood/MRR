@@ -9,7 +9,6 @@ meta:
 /* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
 import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
 import { nextTick, onBeforeUnmount, watch } from 'vue'
-import { toast } from 'vue-sonner'
 import {
   type ClientEnvironmentProbe,
   getPublicClientEnvironment,
@@ -33,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'Login' })
 
@@ -180,10 +180,10 @@ async function copyEnvironmentReport() {
       throw new Error('clipboard unavailable')
     }
     await navigator.clipboard.writeText(environmentView.value.reportText)
-    toast.success('环境信息已复制，可粘贴给管理员排查')
+    notify.success('环境信息已复制，可粘贴给管理员排查')
   }
   catch {
-    toast.error('当前浏览器不支持自动复制，请手动选择面板内容')
+    notify.error('当前浏览器不支持自动复制，请手动选择面板内容')
   }
 }
 

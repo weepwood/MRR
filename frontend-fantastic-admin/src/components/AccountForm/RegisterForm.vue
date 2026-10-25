@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /* eslint-disable antfu/consistent-chaining, regexp/prefer-w, regexp/use-ignore-case */
 import { toTypedSchema } from '@vee-validate/zod'
-import { ElMessage } from 'element-plus'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { nextTick } from 'vue'
 import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'RegisterForm' })
 
@@ -76,17 +76,13 @@ const onSubmit = form.handleSubmit(async (values) => {
       contactInfo: values.contactInfo?.trim() || undefined,
       applyRemark: values.applyRemark?.trim() || undefined,
     })
-    ElMessage({
-      message: '注册申请已提交，请等待管理员审核。审核通过后即可登录。',
-      type: 'success',
-      duration: 5000,
-    })
+    notify.success('注册申请已提交，请等待管理员审核。审核通过后即可登录。')
     emits('onRegister', values.account.trim())
   }
   catch (err: any) {
     console.error('Registration failed:', err)
     const msg = resolveMessage(err?.response?.data ?? err, '注册申请提交失败，请重试')
-    ElMessage({ message: msg, type: 'error', grouping: true, offset: 90 })
+    notify.error(msg, { offset: 90 })
   }
   finally {
     loading.value = false

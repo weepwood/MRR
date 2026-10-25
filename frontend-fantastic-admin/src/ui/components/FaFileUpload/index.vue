@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { filesize } from 'filesize'
-import { toast } from 'vue-sonner'
+import { notify } from '@/utils/notification'
 
 defineOptions({
   name: 'FaFileUpload',
@@ -89,14 +89,14 @@ function onSelectFile(files: FileList | File[] | null) {
     if (props.ext.length > 0) {
       const ext = file.name.split('.').pop()?.toLowerCase()
       if (!props.ext.map(e => e.toLowerCase()).includes(ext || '')) {
-        toast.error(`上传文件只支持 ${props.ext.join(' / ')} 格式`)
+        notify.error(`上传文件只支持 ${props.ext.join(' / ')} 格式`)
         continue
       }
     }
     // 大小校验
     if (props.size > 0) {
       if (file.size > props.size) {
-        toast.error(`上传文件大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`)
+        notify.error(`上传文件大小不能超过 ${filesize(props.size, { standard: 'jedec' })}`)
         continue
       }
     }

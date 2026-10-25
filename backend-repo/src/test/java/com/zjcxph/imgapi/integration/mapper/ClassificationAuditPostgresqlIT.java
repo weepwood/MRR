@@ -89,6 +89,17 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(jdbc.queryForObject("SELECT review_status FROM app.mr_image_classification_suggestion WHERE id=?",String.class,suggestion)).isEqualTo("ACCEPTED");
         assertThatThrownBy(()->service.review(actor,suggestion,"ACCEPT",null)).hasMessageContaining("已被处理");
     }
+    @Test void contextReferenceChangeMustRejectAcceptance() throws Exception {
+        Long suggestion=suggestion();
+        jdbc.update("UPDATE app.mr_scan SET pages=2 WHERE id=?",scan);
+        int reference=jdbc.queryForObject("INSERT INTO app.mr_scan(archive_id,bah,sjh,filename,folder,btype,uploadflag,pages) SELECT id,bah,sjh,'synthetic-reference.jpg','synthetic',0,1,1 FROM app.mr_archive WHERE id=? RETURNING id",Integer.class,archive);
+        var fact=new OcrModels.Fact();fact.setScanId(reference);fact.setArchiveId(archive);fact.setStatus("SUCCEEDED");fact.setOcrText("合成参考标题");fact.setLinesJson("[]");fact.setContentHash("a".repeat(64));fact.setResultVersion(UUID.randomUUID().toString());fact.setConfidence(.99);ocr.saveFact(fact);
+        String evidence=OcrProtocol.JSON.writeValueAsString(java.util.List.of(new OcrModels.Evidence(reference,0,fact.getResultVersion(),fact.getContentHash(),1)));
+        jdbc.update("UPDATE app.mr_image_classification_suggestion SET page_number=2,reference_scan_id=?,context_evidence=CAST(? AS jsonb) WHERE id=?",reference,evidence,suggestion);
+        jdbc.update("UPDATE app.mr_scan SET type_version=type_version+1 WHERE id=?",reference);
+        assertThatThrownBy(()->service.review(actor,suggestion,"ACCEPT",null)).hasMessageContaining("参考页");
+        assertThat(mapper.scan(scan).getBtype()).isZero();
+    }
     @Test void ocrVersionReplacementMustWaitForReviewCommit() throws Exception {
         Long suggestion=suggestion();
         var access=mock(OcrAccess.class);

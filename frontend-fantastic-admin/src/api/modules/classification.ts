@@ -26,11 +26,14 @@ export interface ClassificationSuggestion {
   autoEligible: boolean
   reasonCode: string
   matchedRules: string
+  pageNumber?: number
+  referenceScanId?: number | null
+  relationStatus?: string | null
 }
-export interface OcrItem { scanId: number, status: string, failureCode: string | null, suggestedType: number | null }
+export interface OcrItem { scanId: number, status: string, failureCode: string | null, suggestedType: number | null, pageNumber?: number, pageOrder?: number, relatedScanId?: number | null, relationStatus?: string | null }
 
 export const getRecordTypes = () => getRequest<{ value: number, label: string }[]>('/api/v1/medical-record-types')
-export const getReviewImage = (scanId: number) => api.get<Blob>(`/api/v1/img/content/${scanId}`, { responseType: 'blob' })
+export const getReviewImage = (scanId: number) => api.get<Blob, Blob>(`/api/v1/img/content/${scanId}`, { responseType: 'blob' })
 export const getClassificationVersions = () => getRequest<ClassificationVersion[]>('/api/v1/classification/rule-sets')
 export const getClassificationBundle = (version: string) => getRequest<ClassificationBundle>(`/api/v1/classification/rule-sets/${version}`)
 export const createClassificationDraft = (bundle: ClassificationBundle) => postRequest<string>('/api/v1/classification/rule-sets', bundle)

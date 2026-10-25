@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/api/modules/ocr-batches'
+import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrCase, OcrRevert } from '@/api/modules/ocr-batches'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
+import { actOnOcrBatch, createOcrBatch, listOcrBatchCases, listOcrBatches, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -21,7 +21,7 @@ const busy = ref(false)
 const loadError = ref('')
 const after = ref('')
 const childBatch = ref('')
-const childJobs = ref<string[]>([])
+const childJobs = ref<OcrCase[]>([])
 const selectedJob = ref('')
 const visibility = useDocumentVisibility()
 const scope = computed(() => `${form.afterId}:${form.upperId}:${form.maxPages}:${form.autoApply}`)
@@ -34,6 +34,18 @@ const rollbackRows = ref<OcrRevert[]>([])
 const rollbackMessage = ref('')
 let loading = false
 let generation = 0
+const reasons: Record<string, string> = {
+  READY: '可以处理',
+  CASE_CODE_CONFLICT: '有效上架号对应多个主档或缺少编号。请先核对归属，再续跑。',
+  CASE_RANGE_INCOMPLETE: 'ID 范围截断了病案。请扩大范围后重新预览、创建批次。',
+  CASE_EXCEEDS_BUDGET: '剩余页数额度不足以容纳完整病案。请调整页数上限或新建下一批。',
+  CASE_TOO_LARGE: '单份病案超过 10,000 页，需单独制定受限处理方案。',
+  WAITING_PREVIOUS_CASE: '等待上一份病案处理收尾',
+  CASE_BUSY: '该病案已有手动或历史任务，等待完成',
+  USER_PAUSED: '已手动暂停',
+  AUTH_REVOKED: '授权账号或权限已变化，请管理员核查',
+}
+function reason(code: string | null | undefined) { return code ? reasons[code] || code : '—' }
 
 async function reload() {
   if (loading || visibility.value === 'hidden') { return }
@@ -87,10 +99,10 @@ async function action(id: string, value: 'pause' | 'resume' | 'cancel') {
 }
 async function children(id: string, next = false) {
   await attempt(async () => {
-    const cursor = next && childBatch.value === id ? childJobs.value[childJobs.value.length - 1] || '' : ''
+    const cursor = next && childBatch.value === id ? childJobs.value[childJobs.value.length - 1]?.id || '' : ''
     childBatch.value = id
-    childJobs.value = (await listOcrBatchJobs(id, cursor)).data || []
-    selectedJob.value = childJobs.value[0] || ''
+    childJobs.value = (await listOcrBatchCases(id, cursor)).data || []
+    selectedJob.value = childJobs.value[0]?.id || ''
   })
 }
 async function nextPage() { after.value = batches.value[batches.value.length - 1]?.id || ''; generation++; await reload() }
@@ -128,7 +140,7 @@ async function skipRollbackPage() {
     <MrrPageHeader
       eyebrow="OCR BATCH PROCESSING"
       title="历史未分类影像识别"
-      description="只处理有效、病案关联已核验且仍未分类的页面。批次有明确上界，每次最多 10,000 页，主要在北京时间 22:00–06:00 运行。"
+      description="按有效上架号逐份处理；上架号为空时使用病案号。每份按页码识别、分析上下文并收尾后，再处理下一份。每批最多 10,000 页，主要在北京时间 22:00–06:00 运行。"
     >
       <template #actions>
         <el-button @click="after = ''; generation++; reload()">
@@ -141,7 +153,7 @@ async function skipRollbackPage() {
     <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
     <MrrSectionCard
       title="批次范围"
-      description="设置影像 ID 范围和本批次页数上限，再预览符合条件的页面。"
+      description="设置完整病案所在的 ID 范围和页数上限。额度不足或范围截断病案时停止登记，不拆开一份病案。"
       body-padding="normal"
     >
       <template #actions>
@@ -172,10 +184,13 @@ async function skipRollbackPage() {
       <div v-if="validPreview && preview" class="batch-preview">
         <p>扫描上界 {{ preview.upperId }}；本次范围内最多处理 {{ preview.eligibleInLimit }} 页{{ preview.truncated ? '，仍有更多候选，后续批次继续处理' : '' }}。</p>
         <p>运行条件：{{ preview.readiness }}。未达到资源或延迟基线要求时保持等待。</p>
+        <p v-if="preview.firstCasePages !== undefined">
+          首份病案 {{ preview.firstCasePages }} 页；{{ reason(preview.caseReadiness) }}。
+        </p>
         <p v-if="form.autoApply">
           将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
         </p>
-        <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
+        <el-button type="primary" :disabled="!preview.eligibleInLimit || (!!preview.caseReadiness && preview.caseReadiness !== 'READY')" @click="create">
           创建此范围的识别批次
         </el-button>
       </div>
@@ -191,6 +206,23 @@ async function skipRollbackPage() {
       <el-table :data="batches">
         <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" min-width="120" />
+        <el-table-column label="病案进度" min-width="240">
+          <template #default="{ row }">
+            <template v-if="row.caseMode">
+              <span>已完成 {{ row.completedCases || 0 }} 份</span>
+              <p v-if="row.currentCaseCode">
+                当前 / 最近：{{ row.currentCaseCode }}
+              </p>
+              <p v-if="row.currentCasePlanned">
+                OCR {{ row.currentCaseProcessed }} / {{ row.currentCasePlanned }} 页
+              </p>
+              <p v-if="row.currentCaseContextDone === false">
+                页序分析 {{ row.currentCaseContextCursor || 0 }} / {{ row.currentCasePlanned }} 页
+              </p>
+            </template>
+            <span v-else>旧批次按原模式执行</span>
+          </template>
+        </el-table-column>
         <el-table-column label="进度" min-width="170">
           <template #default="{ row }">
             {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
@@ -201,7 +233,11 @@ async function skipRollbackPage() {
         <el-table-column prop="autoAppliedCount" label="自动归类" />
         <el-table-column prop="reviewRequiredCount" label="待审核建议" />
         <el-table-column prop="cursorId" label="续跑游标" />
-        <el-table-column prop="reasonCode" label="等待原因" />
+        <el-table-column label="等待原因" min-width="220">
+          <template #default="{ row }">
+            {{ reason(row.reasonCode) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" min-width="280" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">
@@ -231,7 +267,7 @@ async function skipRollbackPage() {
       body-padding="compact"
     >
       <el-select v-model="selectedJob" placeholder="选择病案任务">
-        <el-option v-for="id in childJobs" :key="id" :value="id" :label="id" />
+        <el-option v-for="job in childJobs" :key="job.id" :value="job.id" :label="`${job.caseCode || `主档 ${job.archiveId}`} · ${job.processedCount}/${job.plannedCount} 页 · ${job.status}`" />
       </el-select>
       <el-button :disabled="childJobs.length < 50" @click="children(childBatch, true)">
         更多病案任务

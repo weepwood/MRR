@@ -18,23 +18,40 @@ const loadError = ref('')
 const manualTypes = ref<Record<number, number>>({})
 const busy = ref(false)
 const preview = ref('')
+const referencePreview = ref('')
+const pageItems = ref<OcrItem[]>([])
 const previewOpen = ref(false)
 let generation = 0
 let previewGeneration = 0
-async function showImage(scanId: number) {
+function clearPreview() {
+  previewGeneration++
+  if (preview.value) { URL.revokeObjectURL(preview.value) }
+  if (referencePreview.value) { URL.revokeObjectURL(referencePreview.value) }
+  preview.value = ''; referencePreview.value = ''
+}
+function explanation(row: ClassificationSuggestion) {
+  if (row.reasonCode === 'CONTEXT_REVERSE') { return `疑似正反面 · 参考影像 ${row.referenceScanId}` }
+  if (row.reasonCode === 'CONTEXT_CONTINUATION') { return `连续页建议 · 参考影像 ${row.referenceScanId}` }
+  return ({ EXACT_TITLE: '明确独占标题', CONFLICT: '存在类型冲突，需人工核对', REVIEW_REQUIRED: '规则建议，需人工核对' } as Record<string, string>)[row.reasonCode] || row.reasonCode
+}
+function relation(row: ClassificationSuggestion) {
+  return row.relationStatus || pageItems.value.find(item => item.scanId === row.scanId)?.relationStatus
+}
+async function showImage(scanId: number, referenceId?: number | null) {
   const version = generation
   const request = ++previewGeneration
   try {
-    const result = await getReviewImage(scanId)
+    const [result, reference] = await Promise.all([getReviewImage(scanId), referenceId ? getReviewImage(referenceId) : Promise.resolve(null)])
     if (version !== generation || request !== previewGeneration) { return }
-    if (preview.value) { URL.revokeObjectURL(preview.value) }
-    preview.value = URL.createObjectURL(result.data)
+    clearPreview()
+    preview.value = URL.createObjectURL(result)
+    referencePreview.value = reference ? URL.createObjectURL(reference) : ''
     previewOpen.value = true
   }
   catch { loadError.value = '原图读取失败' }
 }
 onBeforeUnmount(() => {
-  generation++; if (preview.value) { URL.revokeObjectURL(preview.value) }
+  generation++; clearPreview()
 })
 
 async function load(reset = false) {
@@ -44,6 +61,7 @@ async function load(reset = false) {
     const [list, items, dictionary] = await Promise.all([getClassificationSuggestions(props.jobId, after.value), getOcrItems(props.jobId, itemAfter.value), getRecordTypes()])
     if (version !== generation) { return }
     suggestions.value = list.data || []
+    pageItems.value = items.data || []
     unresolved.value = (items.data || []).filter(item => ['NO_MATCH', 'LOW_CONFIDENCE', 'FAILED'].includes(item.status) && !item.suggestedType)
     types.value = dictionary.data || []
     loadError.value = ''
@@ -77,7 +95,7 @@ function nextPage() {
   void load()
 }
 onMounted(() => void load(true))
-watch(() => props.jobId, () => void load(true))
+watch(() => props.jobId, () => { previewOpen.value = false; clearPreview(); void load(true) })
 </script>
 
 <template>
@@ -85,24 +103,55 @@ watch(() => props.jobId, () => void load(true))
     <h3>分类建议与待处理页面</h3>
     <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
     <el-table :data="suggestions">
+      <el-table-column prop="pageNumber" label="页码" width="75" />
       <el-table-column prop="scanId" label="影像 ID" />
       <el-table-column label="建议">
         <template #default="{ row }">
           {{ types.find(type => type.value === row.suggestedType)?.label || row.suggestedType }}
         </template>
       </el-table-column>
-      <el-table-column prop="reasonCode" label="分类依据" />
-      <el-table-column prop="ruleScore" label="规则分数" />
-      <el-table-column label="状态">
+      <el-table-column label="分类依据" min-width="230">
         <template #default="{ row }">
-          {{ row.autoStatus === 'APPLIED' ? '已自动归类' : row.reviewStatus }}
+          {{ explanation(row as ClassificationSuggestion) }}
+          <p v-if="row.referenceScanId">
+            上下文建议需人工审核
+          </p>
         </template>
       </el-table-column>
-      <el-table-column label="原图">
+      <el-table-column label="规则分数">
+        <template #default="{ row }">
+          {{ row.referenceScanId ? '—' : row.ruleScore }}
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" min-width="100">
+        <template #default="{ row }">
+          {{ row.autoStatus === 'APPLIED' ? '已自动归类' : ({ PENDING: '待审核', ACCEPTED: '已确认', REJECTED: '已拒绝', OVERRIDDEN: '人工改类', SUPERSEDED: '已过期' } as Record<string, string>)[row.reviewStatus] || row.reviewStatus }}
+        </template>
+      </el-table-column>
+      <el-table-column label="原图" min-width="140">
         <template #default="{ row }">
           <el-button link @click="showImage(row.scanId)">
             核对原图
           </el-button>
+          <el-button v-if="row.referenceScanId" link @click="showImage(row.scanId, row.referenceScanId)">
+            对照前后页
+          </el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="正反面关联" min-width="180">
+        <template #default="{ row }">
+          <template v-if="row.reasonCode === 'CONTEXT_REVERSE'">
+            <span>{{ relation(row as ClassificationSuggestion) === 'CONFIRMED' ? '已确认关联' : relation(row as ClassificationSuggestion) === 'REJECTED' ? '关联已解除' : '待核对' }}</span>
+            <template v-if="auth('classification:review')">
+              <el-button v-if="relation(row as ClassificationSuggestion) === 'SUGGESTED'" link @click="review(row as ClassificationSuggestion, 'CONFIRM_PAIR')">
+                确认关联
+              </el-button>
+              <el-button v-if="['SUGGESTED', 'CONFIRMED'].includes(relation(row as ClassificationSuggestion) || '')" link @click="review(row as ClassificationSuggestion, 'REJECT_PAIR')">
+                解除关联
+              </el-button>
+            </template>
+          </template>
+          <span v-else>—</span>
         </template>
       </el-table-column>
       <el-table-column label="审核" min-width="210">
@@ -124,6 +173,7 @@ watch(() => props.jobId, () => void load(true))
       </el-table-column>
     </el-table>
     <el-table :data="unresolved">
+      <el-table-column prop="pageNumber" label="页码" width="75" />
       <el-table-column prop="scanId" label="需人工处理的影像 ID" />
       <el-table-column prop="status" label="原因" />
       <el-table-column label="原图">
@@ -151,8 +201,34 @@ watch(() => props.jobId, () => void load(true))
     <el-button :disabled="!suggestions.length && nextItemAfter === itemAfter" @click="nextPage">
       下一批（最多 50 页）
     </el-button>
-    <el-dialog v-model="previewOpen" title="核对影像原图" append-to-body>
-      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%;">
+    <el-dialog v-model="previewOpen" title="核对影像原图" width="85%" append-to-body @closed="clearPreview">
+      <div class="classification-comparison">
+        <figure v-if="referencePreview">
+          <figcaption>参考页</figcaption><img :src="referencePreview" alt="参考页">
+        </figure>
+        <figure v-if="preview">
+          <figcaption>当前审核页</figcaption><img :src="preview" alt="当前审核页">
+        </figure>
+      </div>
     </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.classification-comparison {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.classification-comparison figure {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.classification-comparison img { width: 100%; }
+
+@media (max-width: 760px) {
+  .classification-comparison { flex-direction: column; }
+}
+</style>

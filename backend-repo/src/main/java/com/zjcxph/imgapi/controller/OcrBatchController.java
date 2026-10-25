@@ -24,6 +24,7 @@ public class OcrBatchController {
     @GetMapping public Result<List<View>> list(@RequestParam(defaultValue="") String after) {return Result.success(service.list(AuthContext.getCurrentUser(),after));}
     @GetMapping("/{id}") public Result<View> get(@PathVariable String id) {return Result.success(service.get(AuthContext.getCurrentUser(),id));}
     @GetMapping("/{id}/jobs") public Result<List<String>> children(@PathVariable String id,@RequestParam(defaultValue="") String after) {return Result.success(service.children(AuthContext.getCurrentUser(),id,after));}
+    @GetMapping("/{id}/cases") public Result<List<com.zjcxph.imgapi.ocr.OcrModels.JobView>> cases(@PathVariable String id,@RequestParam(defaultValue="") String after) {return Result.success(service.cases(AuthContext.getCurrentUser(),id,after));}
     @PostMapping("/{id}/{action:pause|resume|cancel}") @RequirePermissions({"record:read","ocr:run","ocr:batch-run"})
     public Result<View> action(@PathVariable String id,@PathVariable String action) {return Result.success(service.action(AuthContext.getCurrentUser(),id,action));}
     @GetMapping("/{id}/rollback/preview") @RequirePermissions({"ocr:batch-run","record:read","classification:review","classification:override"})

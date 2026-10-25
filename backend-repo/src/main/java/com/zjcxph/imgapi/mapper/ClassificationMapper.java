@@ -7,17 +7,20 @@ import java.util.List;
 
 @Mapper
 public interface ClassificationMapper {
-    @Data class TypeState { private Integer id; private Long archiveId; private Integer btype; private long typeVersion; private Integer uploadflag; }
+    @Data class TypeState { private Integer id; private Long archiveId; private Integer btype; private long typeVersion; private Integer uploadflag; private Integer pageNumber; }
     @Data class Suggestion {
         private Long id; private Integer scanId; private String jobId; private Integer originalType; private long originalTypeVersion;
         private Integer suggestedType; private Double ruleScore; private Double ocrConfidence; private String reviewStatus;
         private String ocrContentHash; private String ocrResultVersion; private String ruleSetVersion; private String lexiconVersion;
         private boolean autoEligible; private String reasonCode; private String matchedRules; private String excludedRules;
         private String autoStatus;
+        private Integer pageNumber; private Integer referenceScanId; private String contextEvidence="[]";
+        private String relationStatus;
+        private Integer finalType;
     }
     @Data class LexiconRow { private String term; private String aliases; private String commonOcrErrors; }
-    @Select("SELECT id,archive_id,btype,type_version,uploadflag FROM app.mr_scan WHERE id=#{id} FOR UPDATE") TypeState lockScan(Integer id);
-    @Select("SELECT id,archive_id,btype,type_version,uploadflag FROM app.mr_scan WHERE id=#{id}") TypeState scan(Integer id);
+    @Select("SELECT id,archive_id,btype,type_version,uploadflag,pages AS page_number FROM app.mr_scan WHERE id=#{id} FOR UPDATE") TypeState lockScan(Integer id);
+    @Select("SELECT id,archive_id,btype,type_version,uploadflag,pages AS page_number FROM app.mr_scan WHERE id=#{id}") TypeState scan(Integer id);
     @Update("UPDATE app.mr_scan SET btype=#{type},type_version=type_version+1 WHERE id=#{id} AND type_version=#{version} AND uploadflag<>0")
     int change(@Param("id") Integer id,@Param("type") Integer type,@Param("version") long version);
     @Insert("""
@@ -45,13 +48,13 @@ public interface ClassificationMapper {
     @Insert("""
         INSERT INTO app.mr_image_classification_suggestion(scan_id,job_id,original_type,original_type_version,
           suggested_type,rule_score,ocr_confidence,matched_rules,excluded_rules,rule_set_version,lexicon_version,
-          ocr_content_hash,ocr_result_version,auto_eligible,reason_code)
+          ocr_content_hash,ocr_result_version,auto_eligible,reason_code,page_number,reference_scan_id,context_evidence)
         VALUES(#{scanId},#{jobId},#{originalType},#{originalTypeVersion},#{suggestedType},#{ruleScore},#{ocrConfidence},
           CAST(#{matchedRules} AS jsonb),CAST(#{excludedRules} AS jsonb),#{ruleSetVersion},#{lexiconVersion},
-          #{ocrContentHash},#{ocrResultVersion},#{autoEligible},#{reasonCode}) ON CONFLICT(job_id,scan_id) DO NOTHING
+          #{ocrContentHash},#{ocrResultVersion},#{autoEligible},#{reasonCode},#{pageNumber},#{referenceScanId},CAST(#{contextEvidence} AS jsonb)) ON CONFLICT(job_id,scan_id) DO NOTHING
         """) void suggest(Suggestion suggestion);
     @Select("SELECT * FROM app.mr_image_classification_suggestion WHERE id=#{id} FOR UPDATE") Suggestion lockSuggestion(Long id);
-    @Select("SELECT * FROM app.mr_image_classification_suggestion WHERE job_id=#{job} AND id>#{after} ORDER BY id LIMIT 50")
+    @Select("SELECT s.*,i.relation_status FROM app.mr_image_classification_suggestion s LEFT JOIN app.mr_smart_classification_job_item i ON i.job_id=s.job_id AND i.scan_id=s.scan_id WHERE s.job_id=#{job} AND s.id>#{after} ORDER BY s.id LIMIT 50")
     List<Suggestion> suggestions(@Param("job") String job,@Param("after") long after);
     @Update("UPDATE app.mr_image_classification_suggestion SET review_status=#{status},final_type=#{type},reviewed_by=#{actor},reviewed_at=NOW(),updated_at=NOW() WHERE id=#{id} AND review_status='PENDING'")
     int reviewed(@Param("id") Long id,@Param("status") String status,@Param("type") Integer type,@Param("actor") String actor);

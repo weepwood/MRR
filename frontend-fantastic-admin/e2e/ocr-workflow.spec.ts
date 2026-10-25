@@ -3,6 +3,50 @@ import { expect, test } from '@playwright/test'
 const syntheticJobId = '11111111-1111-4111-8111-111111111111'
 const reply = (data: unknown) => ({ code: 200, message: 'success', data })
 
+test('历史识别逐案展示页序和依据，正反面可对照、确认与解除', async ({ page }) => {
+  const actions: string[] = []
+  let relationStatus = 'SUGGESTED'
+  let reviewStatus = 'PENDING'
+  await page.route('**/api/v1/medical-record-types', route => route.fulfill({ json: reply([{ value: 3, label: '手术记录' }]) }))
+  await page.route('**/api/v1/ocr/batches**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    await route.fulfill({ json: reply(path.endsWith('/cases')
+      ? [{ id: syntheticJobId, caseCode: 'SYNTHETIC-SHELF', status: 'SUCCESS', plannedCount: 2, processedCount: 2 }]
+      : [{ id: 'synthetic-batch', status: 'PAUSED', caseMode: true, completedCases: 2, currentCaseCode: 'SYNTHETIC-SHELF', currentCaseProcessed: 2, currentCasePlanned: 2, processedCount: 4, dispatchedCount: 4, reasonCode: 'USER_PAUSED' }]) })
+  })
+  await page.route('**/api/v1/classification/jobs/**/suggestions?**', route => route.fulfill({ json: reply([
+    { id: 42, scanId: 9002, pageNumber: 2, referenceScanId: 9001, suggestedType: 3, reasonCode: 'CONTEXT_REVERSE', reviewStatus, autoEligible: false },
+  ]) }))
+  await page.route('**/api/v1/ocr/jobs/**/items?**', route => route.fulfill({ json: reply([
+    { scanId: 9001, pageNumber: 1, pageOrder: 1, status: 'SUGGESTED', suggestedType: 3, relatedScanId: 9002, relationStatus },
+    { scanId: 9002, pageNumber: 2, pageOrder: 2, status: 'SUGGESTED', suggestedType: 3, relatedScanId: 9001, relationStatus },
+  ]) }))
+  await page.route('**/api/v1/img/content/*', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="white"/><text x="20" y="40">Synthetic page</text></svg>' }))
+  await page.route('**/api/v1/classification/suggestions/42/review', async (route) => {
+    const action = route.request().postDataJSON().action
+    actions.push(action)
+    relationStatus = action === 'CONFIRM_PAIR' ? 'CONFIRMED' : 'REJECTED'
+    if (action === 'REJECT_PAIR') { reviewStatus = 'REJECTED' }
+    await route.fulfill({ json: reply(null) })
+  })
+  await page.goto('/ocr-batches', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('已完成 2 份')).toBeVisible()
+  await page.getByRole('button', { name: '查看明细与审核' }).click()
+  await expect(page.getByText('疑似正反面 · 参考影像 9001')).toBeVisible()
+  await page.getByRole('button', { name: '对照前后页' }).click()
+  await expect(page.getByRole('img', { name: '当前审核页' })).toBeVisible()
+  await expect(page.getByRole('img', { name: '参考页' })).toBeVisible()
+  await page.getByRole('button', { name: '关闭此对话框' }).click()
+  await page.getByRole('button', { name: '确认关联' }).click()
+  await expect.poll(() => actions.includes('CONFIRM_PAIR')).toBe(true)
+  await page.getByRole('button', { name: '解除关联' }).click()
+  await expect.poll(() => actions.includes('REJECT_PAIR')).toBe(true)
+  await expect(page.getByText('已拒绝', { exact: true })).toBeVisible()
+  await page.screenshot({ path: 'test-results/ocr-case-context.png', fullPage: true })
+  await page.setViewportSize({ width: 760, height: 900 })
+  await page.screenshot({ path: 'test-results/ocr-case-context-narrow.png', fullPage: true })
+})
+
 test('历史 OCR 创建绑定预览范围，缺少验收证据时不能授权自动分类', async ({ page }) => {
   let created: Record<string, unknown> | undefined
   let list: unknown[] = []

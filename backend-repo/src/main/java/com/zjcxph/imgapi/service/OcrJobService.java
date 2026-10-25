@@ -56,6 +56,7 @@ public class OcrJobService {
                 job.setLexiconVersion(Objects.requireNonNullElse(mapper.lexiconVersion(),"none"));
                 mapper.insert(job);
                 for (Integer scan:candidates) mapper.insertItem(job.getId(),scan);
+                mapper.snapshotOrder(job.getId());
                 mapper.planned(job.getId(),candidates.size()); job.setPlannedCount(candidates.size());
                 return JobView.from(job);
             });
@@ -93,6 +94,7 @@ public class OcrJobService {
         try {
             if (job.isCancelRequested()) { finish(job,token,null,null,"CANCELLED"); return; }
             access.require(job.getOwnerUserId(),"record:read","ocr:run");
+            if(job.getBatchId()!=null) access.require(job.getOwnerUserId(),"ocr:batch-run");
             item=mapper.next(job.getId());
             if (item==null) { finish(job,token,null,null,null); return; }
             if (mapper.processing(job.getId(),item.getScanId(),token)!=1) return;
@@ -140,6 +142,10 @@ public class OcrJobService {
                     mapper.retry(job.getId(),item.getScanId(),failure);
                 } else mapper.complete(job.getId(),item.getScanId(),"SKIPPED".equals(failure)?"SKIPPED":"FAILED","FAILED",null,failure);
             } else if ("AUTH_REVOKED".equals(failure)) { mapper.cancel(job.getId()); mapper.cancelItems(job.getId()); }
+            else if(failure==null && item==null && current.isContextEnabled() && !current.isContextDone() && !mapper.unfinishedPages(job.getId())) {
+                access.require(current.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
+                classification.contextOne(current);
+            }
             mapper.release(job.getId(),token);
         });
     }
@@ -149,6 +155,7 @@ public class OcrJobService {
             if(!mapper.alive(job.getId(),token)) return false;
             access.require(job.getOwnerUserId(),"record:read","ocr:run");
             if(!mapper.belongs(item.getScanId(),job.getArchiveId())) throw new OcrFailure("SOURCE_CHANGED");
+            if(job.getBatchId()!=null) access.require(job.getOwnerUserId(),"ocr:batch-run");
             Fact old=mapper.fact(item.getScanId());
             if(old==null || !Objects.equals(old.getResultVersion(),fact.getResultVersion())) {
                 mapper.archiveFact(item.getScanId(),UUID.randomUUID().toString());mapper.saveFact(fact);

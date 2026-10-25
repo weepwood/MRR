@@ -17,10 +17,13 @@ public class OcrBatchService {
     public record Request(int afterId,int upperId,int maxPages,String idempotencyKey,boolean autoApply,String policyChecksum) {
         public Request(int afterId,int upperId,int maxPages,String idempotencyKey,boolean autoApply) {this(afterId,upperId,maxPages,idempotencyKey,autoApply,null);}
     }
-    public record Preview(int eligibleInLimit,int upperId,boolean truncated,String readiness,boolean autoAvailable,String policyChecksum,List<Integer> autoTypes) {}
+    public record Preview(int eligibleInLimit,int upperId,boolean truncated,String readiness,boolean autoAvailable,String policyChecksum,List<Integer> autoTypes,int firstCasePages,String caseReadiness) {}
     public record View(String id,String status,int afterId,int upperId,int cursorId,int maxPages,int dispatchedCount,
-                       boolean autoApply,String reasonCode,boolean discoveryDone,int processedCount,int successCount,int failedCount,int autoAppliedCount,int reviewRequiredCount) {
-        static View from(Batch b) {return new View(b.getId(),b.getStatus(),b.getAfterId(),b.getUpperId(),b.getCursorId(),b.getMaxPages(),b.getDispatchedCount(),b.isAutoApply(),b.getReasonCode(),b.isDiscoveryDone(),b.getProcessedCount(),b.getSuccessCount(),b.getFailedCount(),b.getAutoAppliedCount(),b.getReviewRequiredCount());}
+                       boolean autoApply,String reasonCode,boolean discoveryDone,int processedCount,int successCount,int failedCount,int autoAppliedCount,int reviewRequiredCount,
+                       boolean caseMode,int completedCases,String currentCaseCode,int currentCaseProcessed,int currentCasePlanned,int currentCaseContextCursor,boolean currentCaseContextDone) {}
+    private View view(Batch b) {
+        Job current=mapper.latestCase(b.getId());
+        return new View(b.getId(),b.getStatus(),b.getAfterId(),b.getUpperId(),b.getCursorId(),b.getMaxPages(),b.getDispatchedCount(),b.isAutoApply(),b.getReasonCode(),b.isDiscoveryDone(),b.getProcessedCount(),b.getSuccessCount(),b.getFailedCount(),b.getAutoAppliedCount(),b.getReviewRequiredCount(),b.isCaseMode(),mapper.completedCases(b.getId()),current==null?null:current.getCaseCode(),current==null?0:current.getProcessedCount(),current==null?0:current.getPlannedCount(),current==null?0:current.getContextCursor(),current==null||current.isContextDone());
     }
     private final OcrBatchMapper mapper;private final OcrMapper queue;private final OcrAccess access;
     private final OcrJobService jobs;private final OcrLoadGuard guard;private final TransactionTemplate transactions;
@@ -31,13 +34,21 @@ public class OcrBatchService {
     }
     public Preview preview(AuthSession session,Request request) {
         authorize(session);validate(request);
-        int upper=request.upperId()==0?mapper.maximumScanId():request.upperId();
+        int snapshot=mapper.maximumScanId();int upper=request.upperId()==0?snapshot:Math.min(request.upperId(),snapshot);
         if(upper<request.afterId()) throw new BusinessException(400,"扫描上界小于起点");
         var rows=mapper.candidates(request.afterId(),upper,request.maxPages()+1);
         List<Integer> types=List.of();
         try {var config=jobs.configuration();types=quality.types(Objects.requireNonNullElse(queue.ruleVersion(),"none"),config.fingerprint());}
         catch(RuntimeException unavailable) { /* Preview remains read-only when OCR is off. */ }
-        return new Preview(Math.min(rows.size(),request.maxPages()),upper,rows.size()>request.maxPages(),guard.reason(),!types.isEmpty(),quality.checksum(),types);
+        var candidate=mapper.nextCase("",request.afterId(),upper);int firstPages=0;String caseReadiness="READY";
+        if(candidate!=null) {
+            String code=mapper.caseCode(candidate.archiveId());var pages=mapper.casePages(candidate.archiveId(),upper);firstPages=pages.size();
+            if(code==null||mapper.caseArchives(code).size()!=1) caseReadiness="CASE_CODE_CONFLICT";
+            else if(firstPages>10000) caseReadiness="CASE_TOO_LARGE";
+            else if(!pages.isEmpty()&&(pages.getFirst()<=request.afterId()||mapper.caseOutsideRange(candidate.archiveId(),upper,snapshot))) caseReadiness="CASE_RANGE_INCOMPLETE";
+            else if(firstPages>request.maxPages()) caseReadiness="CASE_EXCEEDS_BUDGET";
+        }
+        return new Preview(Math.min(rows.size(),request.maxPages()),upper,rows.size()>request.maxPages(),guard.reason(),!types.isEmpty(),quality.checksum(),types,firstPages,caseReadiness);
     }
     public View create(AuthSession session,Request request) {
         AuthSession actor=authorize(session);validate(request);
@@ -54,21 +65,24 @@ public class OcrBatchService {
             if(!Objects.equals(ruleVersion,Objects.requireNonNullElse(queue.ruleVersion(),"none"))) throw new BusinessException(409,"规则已变化，请重新预览");
             Batch existing=mapper.idempotent(actor.getId(),request.idempotencyKey());
             if(existing!=null) {
-                if(existing.getAfterId()!=request.afterId() || (request.upperId()!=0 && existing.getUpperId()!=request.upperId())
+                int requestedUpper=request.upperId();
+                if(requestedUpper!=0&&existing.getScanSnapshotUpper()!=null) requestedUpper=Math.min(requestedUpper,existing.getScanSnapshotUpper());
+                if(existing.getAfterId()!=request.afterId() || (request.upperId()!=0 && existing.getUpperId()!=requestedUpper)
                         || existing.getMaxPages()!=request.maxPages() || existing.isAutoApply()!=request.autoApply())
                     throw new BusinessException(409,"幂等键已用于其他批次范围");
-                return View.from(existing);
+                return view(existing);
             }
             if(mapper.activeCount()>=10) throw new BusinessException(429,"历史活动批次已达到上限 10");
             Batch batch=new Batch();batch.setId(UUID.randomUUID().toString());batch.setOwnerUserId(actor.getId());batch.setCreatedBy(actor.getUsername());
             batch.setIdempotencyKey(request.idempotencyKey());batch.setAfterId(request.afterId());
-            batch.setUpperId(request.upperId()==0?mapper.maximumScanId():request.upperId());batch.setCursorId(request.afterId());
+            batch.setScanSnapshotUpper(mapper.maximumScanId());
+            batch.setUpperId(request.upperId()==0?batch.getScanSnapshotUpper():Math.min(request.upperId(),batch.getScanSnapshotUpper()));batch.setCursorId(request.afterId());
             if(batch.getUpperId()<request.afterId()) throw new BusinessException(400,"扫描上界小于起点");
             batch.setMaxPages(request.maxPages());batch.setStatus("RUNNING");batch.setAutoApply(request.autoApply());
             batch.setPolicyChecksum(request.autoApply()?quality.checksum():null);
             batch.setConfigSnapshot(json(config));batch.setRuleSetVersion(ruleVersion);
             batch.setLexiconVersion(Objects.requireNonNullElse(queue.lexiconVersion(),"none"));mapper.insert(batch);
-            return View.from(batch);
+            batch.setCaseMode(true);return view(batch);
         });
     }
     public Batch owned(AuthSession session,String id) {
@@ -77,11 +91,14 @@ public class OcrBatchService {
         if(!actor.isAdmin()&&!actor.getId().equals(batch.getOwnerUserId())) throw new BusinessException(403,"无权访问此批次");
         return batch;
     }
-    public View get(AuthSession session,String id) {return View.from(owned(session,id));}
+    public View get(AuthSession session,String id) {return view(owned(session,id));}
     public List<View> list(AuthSession session,String after) {
-        AuthSession actor=authorize(session);return mapper.list(actor.getId(),actor.isAdmin(),after).stream().map(View::from).toList();
+        AuthSession actor=authorize(session);return mapper.list(actor.getId(),actor.isAdmin(),after).stream().map(this::view).toList();
     }
     public List<String> children(AuthSession session,String id,String after) {owned(session,id);return mapper.jobs(id,after);}
+    public List<com.zjcxph.imgapi.ocr.OcrModels.JobView> cases(AuthSession session,String id,String after) {
+        owned(session,id);return mapper.cases(id,after).stream().map(com.zjcxph.imgapi.ocr.OcrModels.JobView::from).toList();
+    }
     public View action(AuthSession session,String id,String action) {
         owned(session,id);
         transactions.executeWithoutResult(tx->{
@@ -113,11 +130,14 @@ public class OcrBatchService {
         }
         access.require(batch.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
         if(pending>0) return;
+        if(batch.isCaseMode()&&!quality.enabled()) mapper.disablePendingAutomatic(id);
         if(batch.isDiscoveryDone()) {
             if(mapper.pendingAutomatic(id)>0) {mapper.reason(id,quality.enabled()?"WAITING_AUTO_APPLY":"AUTO_APPLY_DISABLED");return;}
             mapper.status(id,mapper.failed(id)>0?"PARTIAL_SUCCESS":"SUCCESS",null);return;
         }
         if(!guard.allowed()) {mapper.reason(id,guard.reason());return;}
+        if(mapper.historyBusy()) {mapper.reason(id,"WAITING_PREVIOUS_CASE");return;}
+        if(batch.isCaseMode()) {advanceCase(batch);return;}
         int available=100-queue.queued();if(available<=0) {mapper.reason(id,"QUEUE_FULL");return;}
         int remaining=batch.getMaxPages()-batch.getDispatchedCount();
         if(remaining<=0) {mapper.advance(id,batch.getCursorId(),0,true);return;}
@@ -139,6 +159,33 @@ public class OcrBatchService {
         }
         boolean done=candidates.isEmpty()||batch.getDispatchedCount()+selected>=batch.getMaxPages()||cursor>=batch.getUpperId();
         mapper.advance(id,cursor,selected,done);
+    }
+    private void advanceCase(Batch batch) {
+        String id=batch.getId();
+        if(queue.queued()>=100) {mapper.reason(id,"QUEUE_FULL");return;}
+        if(batch.getDispatchedCount()>=batch.getMaxPages()) {finishDiscovery(batch);return;}
+        Candidate candidate=mapper.nextCase(id,batch.getCursorId(),batch.getUpperId());
+        if(candidate==null) {finishDiscovery(batch);return;}
+        String code=mapper.caseCode(candidate.archiveId());
+        if(code==null||mapper.caseArchives(code).size()!=1) {mapper.status(id,"PAUSED","CASE_CODE_CONFLICT");return;}
+        if(mapper.busyArchive(candidate.archiveId())) {mapper.reason(id,"CASE_BUSY");return;}
+        List<Integer> pages=mapper.casePages(candidate.archiveId(),batch.getUpperId());
+        if(pages.size()>10000) {mapper.status(id,"PAUSED","CASE_TOO_LARGE");return;}
+        if(pages.isEmpty()) return;
+        if(pages.getFirst()<=batch.getAfterId()||mapper.caseOutsideRange(candidate.archiveId(),batch.getUpperId(),batch.getScanSnapshotUpper())) {mapper.status(id,"PAUSED","CASE_RANGE_INCOMPLETE");return;}
+        if(pages.size()>batch.getMaxPages()-batch.getDispatchedCount()) {mapper.status(id,"PAUSED","CASE_EXCEEDS_BUDGET");return;}
+        Job job=new Job();job.setId(UUID.randomUUID().toString());job.setArchiveId(candidate.archiveId());job.setBatchId(id);
+        job.setCaseCode(code);job.setContextEnabled(true);job.setContextDone(false);
+        job.setOwnerUserId(batch.getOwnerUserId());job.setCreatedBy(batch.getCreatedBy());job.setConfigSnapshot(batch.getConfigSnapshot());
+        job.setRuleSetVersion(batch.getRuleSetVersion());job.setLexiconVersion(batch.getLexiconVersion());queue.insert(job);
+        for(Integer scan:pages) queue.insertItem(job.getId(),scan);
+        queue.snapshotOrder(job.getId());queue.planned(job.getId(),pages.size());
+        // Advance only past the seed, not the last page: IDs of different cases may interleave.
+        mapper.advance(id,candidate.id(),pages.size(),false);
+    }
+    private void finishDiscovery(Batch batch) {
+        mapper.advance(batch.getId(),batch.getCursorId(),0,true);
+        mapper.status(batch.getId(),mapper.failed(batch.getId())>0?"PARTIAL_SUCCESS":"SUCCESS",null);
     }
     private AuthSession authorize(AuthSession session) {return access.require(session==null?null:session.getId(),"record:read","ocr:run","ocr:batch-run");}
     private void validate(Request r) {

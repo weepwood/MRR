@@ -23,7 +23,7 @@ public interface OcrMapper {
           AND a.bah IS NOT DISTINCT FROM NULLIF(BTRIM(s.bah),'')
           AND a.sjh IS NOT DISTINCT FROM NULLIF(BTRIM(s.sjh),'')
           AND (#{scan,jdbcType=INTEGER} IS NULL OR s.id=#{scan})
-        ORDER BY s.id LIMIT 10001
+        ORDER BY s.pages NULLS LAST,s.id LIMIT 10001
         """) List<Integer> candidates(@Param("archive") Long archive, @Param("scan") Integer scan);
     @Select("""
         SELECT EXISTS(SELECT 1 FROM app.mr_scan s JOIN app.mr_archive a ON a.id=s.archive_id
@@ -33,14 +33,19 @@ public interface OcrMapper {
         """) boolean belongs(@Param("scan") Integer scan, @Param("archive") Long archive);
     @Insert("""
         INSERT INTO app.mr_smart_classification_job
-        (id,archive_id,scope,owner_user_id,created_by,idempotency_key,selected_scan_id,config_snapshot,rule_set_version,lexicon_version,batch_id)
+        (id,archive_id,scope,owner_user_id,created_by,idempotency_key,selected_scan_id,config_snapshot,rule_set_version,lexicon_version,batch_id,case_code,context_enabled,context_done)
         VALUES(#{id},#{archiveId},'UNCLASSIFIED',#{ownerUserId},#{createdBy},#{idempotencyKey},#{selectedScanId},
-        CAST(#{configSnapshot} AS jsonb),#{ruleSetVersion},#{lexiconVersion},#{batchId})
+        CAST(#{configSnapshot} AS jsonb),#{ruleSetVersion},#{lexiconVersion},#{batchId},#{caseCode},#{contextEnabled},#{contextDone})
         """) void insert(Job job);
-    @Insert("INSERT INTO app.mr_smart_classification_job_item(job_id,scan_id,original_type,original_type_version) SELECT #{job},id,btype,type_version FROM app.mr_scan WHERE id=#{scan}")
+    @Insert("INSERT INTO app.mr_smart_classification_job_item(job_id,scan_id,original_type,original_type_version,page_number) SELECT #{job},id,btype,type_version,pages FROM app.mr_scan WHERE id=#{scan}")
     void insertItem(@Param("job") String job, @Param("scan") Integer scan);
     @Update("UPDATE app.mr_smart_classification_job SET planned_count=#{count} WHERE id=#{id}")
     void planned(@Param("id") String id, @Param("count") int count);
+    @Update("""
+        UPDATE app.mr_smart_classification_job_item i SET page_order=t.n FROM
+        (SELECT scan_id,ROW_NUMBER() OVER(ORDER BY page_number NULLS LAST,scan_id) AS n
+         FROM app.mr_smart_classification_job_item WHERE job_id=#{id}) t WHERE i.job_id=#{id} AND i.scan_id=t.scan_id
+        """) void snapshotOrder(String id);
     @Select(value = """
         WITH target AS (SELECT id FROM app.mr_smart_classification_job
         WHERE status IN ('PENDING','RUNNING','CANCEL_REQUESTED')
@@ -56,8 +61,11 @@ public interface OcrMapper {
     default Job claim(String token) {return claimEligible(token,true);}
     @Select("""
         SELECT * FROM app.mr_smart_classification_job_item WHERE job_id=#{id}
-        AND status IN ('PENDING','PROCESSING') AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
-        ORDER BY scan_id LIMIT 1
+        AND status IN ('PENDING','PROCESSING')
+        AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
+        AND scan_id=(SELECT scan_id FROM app.mr_smart_classification_job_item WHERE job_id=#{id}
+          AND status IN ('PENDING','PROCESSING') ORDER BY page_order,scan_id LIMIT 1)
+        LIMIT 1
         """) Item next(String id);
     @Update("""
         WITH owned AS (SELECT id FROM app.mr_smart_classification_job
@@ -89,13 +97,13 @@ public interface OcrMapper {
     @Update("""
         UPDATE app.mr_smart_classification_job j SET
           processed_count=t.done,ocr_success_count=t.success,failed_count=t.failed,
-          status=CASE WHEN cancel_requested THEN 'CANCELLED' WHEN t.pending>0 THEN 'RUNNING'
+          status=CASE WHEN cancel_requested THEN 'CANCELLED' WHEN t.pending>0 OR (context_enabled AND NOT context_done) THEN 'RUNNING'
              WHEN t.failed=0 THEN 'SUCCESS' WHEN t.success>0 THEN 'PARTIAL_SUCCESS' ELSE 'FAILED' END,
-          finished_at=CASE WHEN t.pending=0 OR cancel_requested THEN NOW() ELSE NULL END,
+          finished_at=CASE WHEN (t.pending=0 AND (NOT context_enabled OR context_done)) OR cancel_requested THEN NOW() ELSE NULL END,
           lease_token=NULL,lease_until=NULL,updated_at=NOW()
         FROM (SELECT COUNT(*) FILTER(WHERE status NOT IN ('PENDING','PROCESSING')) AS done,
               COUNT(*) FILTER(WHERE ocr_status IN ('SUCCEEDED','LOW_CONFIDENCE')) AS success,
-              COUNT(*) FILTER(WHERE status='FAILED') AS failed,
+              COUNT(*) FILTER(WHERE status='FAILED' OR failure_code='CONTEXT_FAILED') AS failed,
               COUNT(*) FILTER(WHERE status IN ('PENDING','PROCESSING')) AS pending
               FROM app.mr_smart_classification_job_item WHERE job_id=#{id}) t
         WHERE j.id=#{id} AND j.lease_token=#{token}
@@ -125,10 +133,29 @@ public interface OcrMapper {
           error_code=NULL,error_message=NULL,updated_at=NOW()
         """) void saveFact(Fact fact);
     @Select("""
-        SELECT job_id,scan_id,original_type,original_type_version,status,attempts,failure_code,ocr_result_version,suggested_type,rule_score,ocr_confidence
-        FROM app.mr_smart_classification_job_item WHERE job_id=#{job} AND scan_id>#{after}
-        ORDER BY scan_id LIMIT #{limit}
+        SELECT * FROM app.mr_smart_classification_job_item WHERE job_id=#{job}
+          AND (page_order>COALESCE((SELECT page_order FROM app.mr_smart_classification_job_item WHERE job_id=#{job} AND scan_id=#{after}),0)
+            OR (page_order=0 AND scan_id>#{after}))
+        ORDER BY page_order,scan_id LIMIT #{limit}
         """) List<Item> items(@Param("job") String job, @Param("after") int after, @Param("limit") int limit);
     @Select("SELECT * FROM app.mr_smart_classification_job WHERE archive_id=#{archive} ORDER BY created_at DESC,id LIMIT 20")
     List<Job> jobs(Long archive);
+    @Select("SELECT EXISTS(SELECT 1 FROM app.mr_smart_classification_job_item WHERE job_id=#{id} AND status IN ('PENDING','PROCESSING'))")
+    boolean unfinishedPages(String id);
+    @Select("SELECT * FROM app.mr_smart_classification_job_item WHERE job_id=#{job} AND page_order>#{after} ORDER BY page_order LIMIT 1")
+    Item nextContext(@Param("job") String job,@Param("after") int after);
+    @Update("UPDATE app.mr_smart_classification_job SET context_cursor=#{cursor},context_done=#{done} WHERE id=#{job}")
+    void contextProgress(@Param("job") String job,@Param("cursor") int cursor,@Param("done") boolean done);
+    @Select("SELECT * FROM app.mr_smart_classification_job_item WHERE job_id=#{job} AND scan_id=#{scan}")
+    Item item(@Param("job") String job,@Param("scan") int scan);
+    @Update("UPDATE app.mr_smart_classification_job_item SET failure_code='CONTEXT_FAILED' WHERE job_id=#{job} AND scan_id=#{scan}")
+    void contextFailure(@Param("job") String job,@Param("scan") int scan);
+    @Select("SELECT id FROM app.mr_scan WHERE archive_id=#{archive} AND uploadflag<>0 AND pages>=#{page}-2 AND pages<=#{page}+1 ORDER BY pages,id LIMIT 20")
+    List<Integer> neighbors(@Param("archive") Long archive,@Param("page") int page);
+    @Update("UPDATE app.mr_smart_classification_job_item SET related_scan_id=#{related},relation_status='SUGGESTED' WHERE job_id=#{job} AND scan_id=#{scan} AND related_scan_id IS NULL")
+    int pair(@Param("job") String job,@Param("scan") int scan,@Param("related") int related);
+    @Update("UPDATE app.mr_smart_classification_job_item SET relation_status=#{status},relation_reviewed_by=#{actor},relation_reviewed_at=NOW() WHERE job_id=#{job} AND ((scan_id=#{scan} AND related_scan_id=#{related}) OR (scan_id=#{related} AND related_scan_id=#{scan})) AND (relation_status='SUGGESTED' OR (#{status}='REJECTED' AND relation_status='CONFIRMED'))")
+    int reviewPair(@Param("job") String job,@Param("scan") int scan,@Param("related") int related,@Param("status") String status,@Param("actor") Long actor);
+    @Insert("INSERT INTO app.mr_ocr_page_relation_audit(job_id,scan_id,related_scan_id,action,operator_user_id) VALUES(#{job},#{scan},#{related},#{status},#{actor})")
+    void auditPair(@Param("job") String job,@Param("scan") int scan,@Param("related") int related,@Param("status") String status,@Param("actor") Long actor);
 }

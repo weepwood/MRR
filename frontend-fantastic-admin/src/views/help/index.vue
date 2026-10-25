@@ -343,5 +343,4 @@ onMounted(async () => {
     width: 100%;
   }
 }
-
 </style>

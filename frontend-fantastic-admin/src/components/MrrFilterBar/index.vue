@@ -136,5 +136,4 @@ const slots = useSlots()
     flex: 1 1 120px;
   }
 }
-
 </style>

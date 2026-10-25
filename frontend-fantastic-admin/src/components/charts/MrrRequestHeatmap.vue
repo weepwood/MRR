@@ -630,5 +630,4 @@ onBeforeUnmount(hideTooltip)
     width: 100%;
   }
 }
-
 </style>

@@ -407,5 +407,4 @@ onUnmounted(() => {
     position: absolute !important;
   }
 }
-
 </style>

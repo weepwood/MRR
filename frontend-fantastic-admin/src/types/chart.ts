@@ -1,6 +1,8 @@
 import type { ECOption } from '@/plugins/echarts'
 
-export type MrrChartRenderer = 'canvas' | 'svg'
+// plugins/echarts.ts 只注册了 CanvasRenderer，这里同步收窄可选值，
+// 避免类型层面仍允许传 'svg' 而运行时因渲染器未注册而失败。
+export type MrrChartRenderer = 'canvas'
 
 export interface MrrChartSeries {
   name: string

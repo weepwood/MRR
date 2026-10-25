@@ -323,7 +323,7 @@ onUnmounted(() => {
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: var(--mrr-muted-foreground); }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
-.filter-input { flex: 1; width: auto; max-width: 560px; min-width: 0; }
+.filter-input { flex: 1; width: auto; min-width: 0; max-width: 560px; }
 .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
 .id-card-toggle { font-size: 12px; }

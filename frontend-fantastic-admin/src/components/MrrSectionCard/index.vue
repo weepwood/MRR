@@ -32,8 +32,15 @@ const hasHeader = computed(() => Boolean(
               <FaIcon :name="props.icon" />
             </span>
             <div>
-              <h2 v-if="props.title">{{ props.title }}</h2>
-              <p v-if="props.description">{{ props.description }}</p>
+              <div v-if="props.title || slots['title-suffix']" class="mrr-section-card__title-row">
+                <h2 v-if="props.title">
+                  {{ props.title }}
+                </h2>
+                <slot name="title-suffix" />
+              </div>
+              <p v-if="props.description">
+                {{ props.description }}
+              </p>
             </div>
           </div>
           <div v-if="slots.actions" class="mrr-section-card__actions">
@@ -101,6 +108,12 @@ const hasHeader = computed(() => Boolean(
   background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 16%, var(--mrr-border));
   border-radius: var(--mrr-radius-md);
+}
+
+.mrr-section-card__title-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .mrr-section-card h2 {

@@ -122,7 +122,9 @@ function record(event: AuthTestHistoryEvent) {
 <style scoped>
 .auth-test-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
+  min-width: 0;
 }
 
 .page-header,

@@ -16,6 +16,7 @@ import {
   getStatisticsSummary,
 } from '@/api/modules/statistics'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 
 defineOptions({ name: 'StatisticsPage' })
 
@@ -465,6 +466,7 @@ onMounted(refreshAll)
         <el-date-picker
           v-model="listSearchDateRange"
           type="daterange"
+          :popper-options="rangePickerPopperOptions"
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"

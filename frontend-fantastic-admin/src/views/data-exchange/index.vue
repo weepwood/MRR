@@ -24,6 +24,7 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
 import { downloadBlob, getResponseHeader } from '@/utils/file-download'
 import DatasetImportPanel from './components/DatasetImportPanel.vue'
@@ -402,6 +403,7 @@ function today() {
               <el-date-picker
                 v-model="statisticsDateRange"
                 type="daterange"
+                :popper-options="rangePickerPopperOptions"
                 value-format="YYYY-MM-DD"
                 range-separator="至"
                 start-placeholder="归档开始日期"
@@ -464,6 +466,7 @@ function today() {
               <el-date-picker
                 v-model="archiveDateRange"
                 type="daterange"
+                :popper-options="rangePickerPopperOptions"
                 value-format="YYYY-MM-DD"
                 range-separator="至"
                 start-placeholder="归档开始日期"
@@ -601,7 +604,9 @@ function today() {
 .tab-content,
 .readonly-fields {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  min-width: 0;
 }
 
 .page-header,

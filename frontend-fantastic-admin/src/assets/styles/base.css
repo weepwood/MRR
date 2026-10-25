@@ -95,6 +95,12 @@ textarea {
   height: 100%;
 }
 
+/* 既有页面壳的单列网格必须允许收缩，表格和长表单在各自区域内布局。 */
+.page-shell {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
 textarea {
   font-family: inherit;
 }

@@ -219,17 +219,18 @@ onMounted(loadPermissions)
         </p>
       </div>
       <div class="header-actions">
-        <el-segmented v-model="viewMode" :options="[{ label: '卡片视图', value: 'cards' }, { label: '矩阵视图', value: 'matrix' }]" />
-        <el-button :loading="loading" @click="loadPermissions">
-          刷新
-        </el-button>
+        <el-segmented
+          v-model="viewMode"
+          aria-label="权限展示方式"
+          :options="[{ label: '按角色查看', value: 'cards' }, { label: '按权限对比', value: 'matrix' }]"
+        />
       </div>
     </header>
 
     <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
 
     <el-card v-if="viewMode === 'matrix' && sortedRoles.length" shadow="never" class="matrix-card">
-      <el-table v-loading="loading" :data="permissionDefs" border stripe>
+      <el-table v-loading="loading" :data="permissionDefs" stripe border>
         <el-table-column label="权限" min-width="230" fixed>
           <template #default="{ row }">
             <div class="matrix-permission">
@@ -461,8 +462,11 @@ h2 { margin: 0; font-size: 28px; }
 .permission-groups { display: grid; gap: 10px; }
 
 .permission-groups section,
-.edit-section,
-.matrix-permission { display: grid; gap: 6px; }
+.edit-section { display: grid; gap: 6px; }
+
+.matrix-permission { display: flex; gap: 8px; align-items: baseline; white-space: nowrap; }
+
+.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
 
 .permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
 
@@ -484,9 +488,14 @@ h2 { margin: 0; font-size: 28px; }
 
 .permission-select { width: 100%; }
 
-.matrix-card { overflow-x: auto; }
+.matrix-card { overflow-x: auto; --mrr-table-row-height: 34px; }
 
-.matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--mrr-radius-md); }
+.matrix-card :deep(.el-table),
+.matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-card); }
+
+.matrix-card :deep(.el-table td.el-table__cell) { padding-block: 4px; }
+
+.matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--mrr-radius-md); }
 
 .matrix-dot.direct { color: hsl(var(--primary)); background: hsl(var(--primary) / 10%); }
 

@@ -31,7 +31,7 @@ const hasHeader = computed(() => Boolean(
             <span v-if="props.icon" class="mrr-section-card__icon" aria-hidden="true">
               <FaIcon :name="props.icon" />
             </span>
-            <div>
+            <div class="mrr-section-card__copy">
               <div v-if="props.title || slots['title-suffix']" class="mrr-section-card__title-row">
                 <h2 v-if="props.title">
                   {{ props.title }}
@@ -60,12 +60,13 @@ const hasHeader = computed(() => Boolean(
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border-color: var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
 }
 
 .mrr-section-card :deep(.el-card__header) {
   padding: 15px 18px;
+  background: var(--mrr-card);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-bottom-color: var(--mrr-border);
 }
@@ -84,6 +85,7 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__header {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-4);
   align-items: center;
   justify-content: space-between;
@@ -92,9 +94,15 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__heading {
   display: flex;
+  flex: 1 1 260px;
   gap: 10px;
   align-items: center;
   min-width: 0;
+}
+
+.mrr-section-card__copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mrr-section-card__icon {
@@ -134,10 +142,13 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__actions {
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mrr-section-card__actions :deep(.el-button + .el-button) {
@@ -145,6 +156,10 @@ const hasHeader = computed(() => Boolean(
 }
 
 @media (max-width: 640px) {
+  .mrr-section-card__heading {
+    flex-basis: auto;
+  }
+
   .mrr-section-card__header {
     flex-direction: column;
     align-items: flex-start;

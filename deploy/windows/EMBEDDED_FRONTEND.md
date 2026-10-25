@@ -91,6 +91,7 @@ C:\MRR\ops\mrrctl.ps1 rollback previous
 
 - `index.html` 和 Vue 浏览器路由：`Cache-Control: no-cache`；
 - `/assets/` 和 `/browser_upgrade/`：一年不可变缓存；
+- `/assets/` 静态文件优先由 `gzip_static` 下发构建期预压缩的 `.gz`，无预压缩文件时回退动态 gzip；
 - API 不套用前端静态资源缓存策略；
 - Nginx 继续动态 gzip Spring Boot 返回的静态文件。
 

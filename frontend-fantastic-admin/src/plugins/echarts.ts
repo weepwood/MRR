@@ -23,7 +23,10 @@ import {
 } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import { LabelLayout, UniversalTransition } from 'echarts/features'
-import { CanvasRenderer, SVGRenderer } from 'echarts/renderers'
+// 仅注册 Canvas 渲染器：所有调用点（useMrrChart 默认值）均为 canvas，
+// 同时打包 SVGRenderer 会让懒加载图表 chunk 额外增大上百 KB。
+// 如未来需要 SVG 输出，需重新评估并在此注册。
+import { CanvasRenderer } from 'echarts/renderers'
 
 echarts.use([
   BarChart,
@@ -38,7 +41,6 @@ echarts.use([
   LabelLayout,
   UniversalTransition,
   CanvasRenderer,
-  SVGRenderer,
 ])
 
 export type ECOption = ComposeOption<

@@ -566,6 +566,7 @@ onBeforeUnmount(hideTooltip)
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
+  transition: transform 90ms ease-out;
   will-change: transform;
 }
 
@@ -627,6 +628,12 @@ onBeforeUnmount(hideTooltip)
   .heatmap-legend {
     justify-content: flex-end;
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heatmap-tooltip {
+    transition: none;
   }
 }
 </style>

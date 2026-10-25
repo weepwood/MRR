@@ -704,8 +704,8 @@ onBeforeUnmount(revokePreviewUrl)
   justify-content: center;
   padding: 4px;
   color: var(--el-text-color-secondary);
-  background: transparent;
   cursor: help;
+  background: transparent;
   border: 0;
   border-radius: var(--mrr-radius-pill);
 }

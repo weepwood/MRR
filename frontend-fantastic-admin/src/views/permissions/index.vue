@@ -393,7 +393,7 @@ onMounted(loadPermissions)
 
 .page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 
-.page-title-row { display: flex; align-items: center; gap: 8px; }
+.page-title-row { display: flex; gap: 8px; align-items: center; }
 
 .info-trigger {
   display: inline-flex;
@@ -401,9 +401,9 @@ onMounted(loadPermissions)
   justify-content: center;
   padding: 4px;
   border: 0;
-  border-radius: var(--mrr-radius-pill);
-  background: transparent;
   color: var(--text-secondary);
+  background: transparent;
+  border-radius: var(--mrr-radius-pill);
   cursor: help;
 }
 
@@ -433,11 +433,11 @@ h2 { margin: 0; font-size: 28px; }
 .subtitle,
 .role-description { margin: 8px 0 0; color: var(--text-secondary); }
 
-.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); align-items: start; gap: 16px; }
+.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; align-items: start; }
 
 .role-card { align-self: start; border-radius: var(--mrr-radius-card); }
 
-.role-card :deep(.el-card__body) { display: grid; align-content: start; gap: 12px; }
+.role-card :deep(.el-card__body) { display: grid; gap: 12px; align-content: start; }
 
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
 
@@ -445,7 +445,7 @@ h2 { margin: 0; font-size: 28px; }
 
 .role-header { gap: 12px; align-items: flex-start; justify-content: space-between; }
 
-.role-name-row strong { color: var(--text-primary); font-size: 16px; font-weight: 600; line-height: 1.4; }
+.role-name-row strong { font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
 
 .role-name-row { flex-wrap: wrap; }
 
@@ -454,7 +454,7 @@ h2 { margin: 0; font-size: 28px; }
 .empty-text,
 .matrix-permission span { font-size: 12px; color: var(--text-tertiary); }
 
-.permission-count { display: inline-flex; padding: 2px 8px; border-radius: var(--mrr-radius-pill); background: var(--surface-alt); line-height: 1.4; }
+.permission-count { display: inline-flex; padding: 2px 8px; line-height: 1.4; background: var(--surface-alt); border-radius: var(--mrr-radius-pill); }
 
 .role-description { margin: 0; font-size: 13px; line-height: 1.6; }
 
@@ -468,14 +468,14 @@ h2 { margin: 0; font-size: 28px; }
 
 .permission-tags { flex-wrap: wrap; }
 
-.category-label { color: var(--text-secondary); font-weight: 600; letter-spacing: 0.04em; }
+.category-label { font-weight: 600; color: var(--text-secondary); letter-spacing: 0.04em; }
 
 .edit-fields :deep(.el-input) { width: 150px; }
 
 .edit-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+  justify-content: flex-end;
   padding-top: 12px;
   border-top: 1px solid var(--divider);
 }

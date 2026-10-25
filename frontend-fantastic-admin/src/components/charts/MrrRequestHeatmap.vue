@@ -213,7 +213,10 @@ function dayAriaLabel(day: HeatmapDay) {
 }
 
 function monthLabelStyle(label: MonthLabel) {
-  return { gridColumnStart: label.weekIndex + 1 }
+  return {
+    gridColumnStart: label.weekIndex + 1,
+    gridRowStart: 1,
+  }
 }
 
 function clamp(value: number, minimum: number, maximum: number) {

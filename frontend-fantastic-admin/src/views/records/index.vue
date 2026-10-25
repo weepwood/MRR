@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ScanRecord } from '@/api/types'
-import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
@@ -105,20 +105,32 @@ onMounted(loadData)
 
 const summaryCards = computed(() => [
   {
-    label: '当前页记录数', value: list.value.length, note: '当前筛选结果中已加载的数据条数',
-    tone: 'blue' as MetricTone, icon: 'i-ant-design:profile-twotone',
+    label: '当前页记录数',
+    value: list.value.length,
+    note: '当前筛选结果中已加载的数据条数',
+    tone: 'blue' as MetricTone,
+    icon: 'i-ant-design:profile-twotone',
   },
   {
-    label: '读取方式', value: '游标', note: '按完整编号筛选；未执行全表总数统计',
-    tone: 'teal' as MetricTone, icon: 'i-ant-design:database-twotone',
+    label: '读取方式',
+    value: '游标',
+    note: '按完整编号筛选；未执行全表总数统计',
+    tone: 'teal' as MetricTone,
+    icon: 'i-ant-design:database-twotone',
   },
   {
-    label: '已选记录', value: selectedRows.value.length, note: '可用于批量打包下载',
-    tone: 'violet' as MetricTone, icon: 'i-ant-design:check-circle-twotone',
+    label: '已选记录',
+    value: selectedRows.value.length,
+    note: '可用于批量打包下载',
+    tone: 'violet' as MetricTone,
+    icon: 'i-ant-design:check-circle-twotone',
   },
   {
-    label: '当前页码', value: pageNum.value, note: `每页 ${pageSize.value} 条`,
-    tone: 'amber' as MetricTone, icon: 'i-ant-design:unordered-list-outlined',
+    label: '当前页码',
+    value: pageNum.value,
+    note: `每页 ${pageSize.value} 条`,
+    tone: 'amber' as MetricTone,
+    icon: 'i-ant-design:unordered-list-outlined',
   },
 ])
 

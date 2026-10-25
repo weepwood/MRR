@@ -400,11 +400,11 @@ onMounted(loadPermissions)
   align-items: center;
   justify-content: center;
   padding: 4px;
-  border: 0;
   color: var(--text-secondary);
   background: transparent;
-  border-radius: var(--mrr-radius-pill);
+  border: 0;
   cursor: help;
+  border-radius: var(--mrr-radius-pill);
 }
 
 .info-trigger:hover,

@@ -306,14 +306,61 @@ onMounted(loadPermissions)
         </template>
 
         <template v-else>
-          <div class="role-header">
-            <div class="edit-fields">
-              <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
-              <el-tag size="small" effect="plain">
-                {{ role.code }}
-              </el-tag>
+          <div class="role-edit-form">
+            <div class="role-header">
+              <div class="edit-fields">
+                <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
+                <el-tag size="small" effect="plain">
+                  {{ role.code }}
+                </el-tag>
+              </div>
             </div>
-            <div>
+            <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
+
+            <div class="edit-section">
+              <span class="category-label">直接权限</span>
+              <div class="permission-tags">
+                <el-tag
+                  v-for="permission in editDirectPerms"
+                  :key="permission"
+                  size="small"
+                  closable
+                  @close="removePermission(permission)"
+                >
+                  {{ permLabel(permission) }}
+                </el-tag>
+                <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
+              </div>
+            </div>
+
+            <div v-if="editInheritedPerms.length" class="edit-section">
+              <span class="category-label">继承权限</span>
+              <div class="permission-tags">
+                <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
+                  {{ permLabel(permission) }}
+                </el-tag>
+              </div>
+            </div>
+
+            <el-select
+              class="permission-select"
+              placeholder="搜索或选择要添加的权限"
+              filterable
+              model-value=""
+              @change="addPermission"
+            >
+              <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
+                <el-option
+                  v-for="option in group.options"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="isImpliedBy(option.value)"
+                  :label="`${option.shortLabel} · ${option.value}`"
+                />
+              </el-option-group>
+            </el-select>
+
+            <div class="edit-actions">
               <el-button size="small" @click="cancelEdit">
                 取消
               </el-button>
@@ -322,50 +369,6 @@ onMounted(loadPermissions)
               </el-button>
             </div>
           </div>
-          <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
-
-          <div class="edit-section">
-            <span class="category-label">直接权限</span>
-            <div class="permission-tags">
-              <el-tag
-                v-for="permission in editDirectPerms"
-                :key="permission"
-                size="small"
-                closable
-                @close="removePermission(permission)"
-              >
-                {{ permLabel(permission) }}
-              </el-tag>
-              <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
-            </div>
-          </div>
-
-          <div v-if="editInheritedPerms.length" class="edit-section">
-            <span class="category-label">继承权限</span>
-            <div class="permission-tags">
-              <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
-                {{ permLabel(permission) }}
-              </el-tag>
-            </div>
-          </div>
-
-          <el-select
-            class="permission-select"
-            placeholder="搜索或选择要添加的权限"
-            filterable
-            model-value=""
-            @change="addPermission"
-          >
-            <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
-              <el-option
-                v-for="option in group.options"
-                :key="option.value"
-                :value="option.value"
-                :disabled="isImpliedBy(option.value)"
-                :label="`${option.shortLabel} · ${option.value}`"
-              />
-            </el-option-group>
-          </el-select>
         </template>
       </el-card>
     </div>
@@ -404,6 +407,8 @@ h2 { margin: 0; font-size: 28px; }
 
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
 
+.role-edit-form { display: grid; gap: 16px; }
+
 .role-header { gap: 12px; justify-content: space-between; }
 
 .permission-count,
@@ -427,6 +432,16 @@ h2 { margin: 0; font-size: 28px; }
 .category-label { font-weight: 600; letter-spacing: 0.04em; }
 
 .edit-fields :deep(.el-input) { width: 150px; }
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.edit-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .permission-select { width: 100%; }
 

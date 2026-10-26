@@ -4,8 +4,7 @@
 .title-line,
 .header-actions { display: flex; gap: var(--mrr-space-3); align-items: center; }
 
-.section-icon,
-.nav-icon { display: grid; flex: 0 0 auto; place-items: center; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); }
+.section-icon { display: grid; flex: 0 0 auto; place-items: center; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); }
 
 .header-title h2,
 .section-header h3 { margin: 0; }
@@ -15,22 +14,25 @@
 .settings-workspace-frame { box-sizing: border-box; height: 100vh; min-height: min(640px, 100vh); padding-block: var(--settings-workspace-edge-gap); }
 .settings-shell { box-sizing: border-box; display: grid; grid-template-columns: 270px minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); box-shadow: var(--mrr-shadow-sm); }
 .settings-sidebar { display: flex; flex-direction: column; gap: var(--mrr-space-4); min-height: 0; padding: var(--mrr-space-4); overflow-y: auto; background: var(--mrr-muted); border-right: 1px solid var(--mrr-border); }
-.settings-nav { display: grid; gap: 6px; }
-.settings-nav-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) 16px; gap: var(--mrr-space-3); align-items: center; width: 100%; padding: 11px; text-align: left; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: var(--mrr-radius-lg); transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease, box-shadow var(--mrr-motion-fast) ease; }
-.settings-nav-item:hover { background: color-mix(in srgb, var(--mrr-card) 68%, transparent); border-color: var(--mrr-border); }
-.settings-nav-item.active { background: var(--mrr-card); border-color: color-mix(in srgb, var(--mrr-primary) 24%, var(--mrr-border)); box-shadow: var(--mrr-shadow-xs); }
-.settings-nav-item.danger .nav-icon { color: var(--color-danger); }
-.nav-icon { width: 34px; height: 34px; border-radius: var(--mrr-radius-md); transform-origin: center; transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out); }
-.settings-nav-item:hover .nav-icon { transform: scale(1.04); }
-.settings-nav-item.active .nav-icon { transform: scale(1.06); }
-.settings-nav-item:active .nav-icon { transform: scale(0.94); }
-.nav-copy { display: grid; min-width: 0; }
-.nav-copy strong { font-size: 13px; }
-.nav-copy small { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; color: var(--mrr-muted-foreground); white-space: nowrap; }
-.nav-arrow { color: var(--mrr-muted-foreground); transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out); }
+.settings-nav { display: grid; gap: 2px; }
 
-.settings-nav-item:hover .nav-arrow,
-.settings-nav-item.active .nav-arrow { color: currentcolor; transform: translateX(1px); }
+/* 设置分类不再做成 11 张带边图标卡：11 个同色圆角方块连排时，
+ * 图标块本身成了主要视觉信息，分类名反而退到第二位。
+ * 改为「纯图标 + 文本」，只有悬停与选中才出现底色。 */
+.settings-nav-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; padding: 8px 10px; text-align: left; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: var(--mrr-radius-md); transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease; }
+.settings-nav-item:hover { background: color-mix(in srgb, var(--mrr-card) 70%, transparent); border-color: var(--mrr-border); }
+.settings-nav-item.active { background: var(--mrr-card); border-color: color-mix(in srgb, var(--mrr-primary) 22%, var(--mrr-border)); }
+.settings-nav-item.danger .nav-icon { color: var(--color-danger); }
+.nav-icon { display: grid; flex: 0 0 auto; place-items: center; width: 20px; height: 20px; font-size: 17px; color: var(--mrr-muted-foreground); background: transparent; border: 0; transform-origin: center; transition: color var(--mrr-motion-fast) ease; }
+.settings-nav-item:hover .nav-icon { color: var(--text-primary); }
+.settings-nav-item.active .nav-icon { color: var(--color-primary); }
+.nav-copy { display: grid; gap: 1px; min-width: 0; }
+.nav-copy strong { font-size: 13px; font-weight: 550; }
+.settings-nav-item.active .nav-copy strong { font-weight: 620; color: var(--color-primary); }
+.nav-copy small { overflow: hidden; text-overflow: ellipsis; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); white-space: nowrap; }
+
+/* 右侧箭头在「点击即切换」的分类列表里是冗余标记，11 个箭头只会加重密度。 */
+.nav-arrow { display: none; }
 
 .sidebar-save-card,
 .sidebar-status { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-3); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
@@ -65,19 +67,4 @@
   .header-actions { display: none; }
   .settings-nav { grid-template-columns: 1fr; }
   .settings-content { padding: var(--mrr-space-4); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .settings-nav-item,
-  .nav-icon,
-  .nav-arrow,
-  .sidebar-save-card,
-  .save-status .status-dot { transition: none; }
-
-  .settings-nav-item:hover .nav-icon,
-  .settings-nav-item.active .nav-icon,
-  .settings-nav-item:active .nav-icon,
-  .settings-nav-item:hover .nav-arrow,
-  .settings-nav-item.active .nav-arrow,
-  .save-status.dirty .status-dot { transform: none; }
 }

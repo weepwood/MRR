@@ -1086,15 +1086,4 @@ onBeforeUnmount(() => {
     margin-left: 23px;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .spinning,
-  .loading-dot {
-    animation: none;
-  }
-
-  .day-cell {
-    transition: none;
-  }
-}
 </style>

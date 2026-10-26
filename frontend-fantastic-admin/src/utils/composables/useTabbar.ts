@@ -1,4 +1,4 @@
-import { toast } from 'vue-sonner'
+import { notify } from '@/utils/notification'
 
 export default function useTabbar() {
   const route = useRoute()
@@ -82,15 +82,11 @@ export default function useTabbar() {
     const index = tabbarStore.list.findIndex(item => item.tabId === tabId)
     if (index < 0) {
       flag = false
-      !checkOnly && toast.warning('关闭的标签页不存在', {
-        position: 'top-center',
-      })
+      !checkOnly && notify.warning('关闭的标签页不存在')
     }
     else if (tabbarStore.list.length <= 1) {
       flag = false
-      !checkOnly && toast.warning('当前只有一个标签页，不可关闭', {
-        position: 'top-center',
-      })
+      !checkOnly && notify.warning('当前只有一个标签页，不可关闭')
     }
     return flag
   }

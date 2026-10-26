@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
-import { toast } from 'vue-sonner'
 import * as z from 'zod'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import { notify } from '@/utils/notification'
 
 defineOptions({
   name: 'EditPasswordForm',
@@ -37,7 +37,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
   try {
     await userStore.editPassword(values)
-    toast.success('密码修改成功，请使用新密码重新登录')
+    notify.success('密码修改成功，请使用新密码重新登录')
     await userStore.requestLogout()
   }
   finally {

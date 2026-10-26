@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 
 import { useSettingsStore } from '../settings'
 
@@ -27,8 +28,8 @@ vi.mock('@/api/modules/settings', () => ({
   getUiSettings: mocks.getUiSettings,
 }))
 
-vi.mock('vue-sonner', () => ({
-  toast: {
+vi.mock('@/utils/notification', () => ({
+  notify: {
     error: mocks.toastError,
     success: vi.fn(),
     info: vi.fn(),
@@ -79,6 +80,27 @@ describe('settings store — 全站界面配置同步', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    document.documentElement.removeAttribute('data-motion')
+  })
+
+  it('默认开启动态效果，并允许用户在本机关闭', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    const store = useSettingsStore()
+
+    expect(store.settings.app.enableMotion).toBe(true)
+    expect(document.documentElement.dataset.motion).toBe('on')
+
+    store.settings.app.enableMotion = false
+    await nextTick()
+
+    expect(document.documentElement.dataset.motion).toBe('off')
+
+    store.saveAppSettings()
+    expect(JSON.parse(String(localStorage.getItem('MRR-ADMIN:app-settings'))).app.enableMotion).toBe(false)
   })
 
   describe('推送（saveAppSettings → scheduleUiSettingsPush → pushUiSettings）', () => {
@@ -135,6 +157,7 @@ describe('settings store — 全站界面配置同步', () => {
       const app = payload.app as Record<string, unknown>
 
       expect(app.themeColor).toBe('#16803C')
+      expect(app).not.toHaveProperty('enableMotion')
       expect(menu.mode).toBe('head')
       expect(menu).not.toHaveProperty('subMenuCollapse')
       expect(app).not.toHaveProperty('enablePermission')
@@ -222,10 +245,12 @@ describe('settings store — 全站界面配置同步', () => {
       })
       const store = useSettingsStore()
       store.settings.app.themeColor = '#DC2626'
+      store.settings.app.enableMotion = false
       store.settings.menu.mode = 'side'
 
       expect(await store.loadUiSettings()).toBe(true)
       expect(store.settings.app.themeColor).toBe('#16803C')
+      expect(store.settings.app.enableMotion).toBe(false)
       expect(store.settings.menu.mode).toBe('head')
     })
 

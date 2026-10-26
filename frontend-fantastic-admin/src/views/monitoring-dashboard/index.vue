@@ -52,11 +52,9 @@ function openStatusPage() {
 
 <style scoped>
 .monitoring-dashboard {
+  display: grid;
+  gap: 18px;
   min-width: 0;
-}
-
-.embedded-status-section {
-  padding: 0 20px 20px;
 }
 
 .embedded-status-card {
@@ -104,10 +102,6 @@ function openStatusPage() {
 }
 
 @media (max-width: 760px) {
-  .embedded-status-section {
-    padding: 0 12px 12px;
-  }
-
   .embedded-status-header {
     flex-direction: column;
     align-items: flex-start;

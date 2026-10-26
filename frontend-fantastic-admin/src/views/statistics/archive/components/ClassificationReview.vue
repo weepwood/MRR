@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ClassificationSuggestion, OcrItem } from '@/api/modules/classification'
+import { ElMessage } from 'element-plus'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getClassificationSuggestions, getOcrItems, getRecordTypes, getReviewImage, reviewClassification } from '@/api/modules/classification'
 import { updateImageType } from '@/api/modules/image'
@@ -13,7 +14,7 @@ const types = ref<{ value: number, label: string }[]>([])
 const after = ref(0)
 const itemAfter = ref(0)
 const nextItemAfter = ref(0)
-const error = ref('')
+const loadError = ref('')
 const manualTypes = ref<Record<number, number>>({})
 const busy = ref(false)
 const preview = ref('')
@@ -30,7 +31,7 @@ async function showImage(scanId: number) {
     preview.value = URL.createObjectURL(result.data)
     previewOpen.value = true
   }
-  catch { error.value = '原图读取失败' }
+  catch { loadError.value = '原图读取失败' }
 }
 onBeforeUnmount(() => {
   generation++; if (preview.value) { URL.revokeObjectURL(preview.value) }
@@ -45,12 +46,12 @@ async function load(reset = false) {
     suggestions.value = list.data || []
     unresolved.value = (items.data || []).filter(item => ['NO_MATCH', 'LOW_CONFIDENCE', 'FAILED'].includes(item.status) && !item.suggestedType)
     types.value = dictionary.data || []
-    error.value = ''
+    loadError.value = ''
     const last = items.data?.[items.data.length - 1]
     nextItemAfter.value = last?.scanId || itemAfter.value
   }
   catch {
-    if (version === generation) { error.value = '审核队列读取失败' }
+    if (version === generation) { loadError.value = '审核队列读取失败' }
   }
 }
 async function review(row: ClassificationSuggestion, action: string) {
@@ -59,7 +60,7 @@ async function review(row: ClassificationSuggestion, action: string) {
     await reviewClassification(row.id, action, manualTypes.value[row.scanId])
     await load()
   }
-  catch { error.value = '审核失败，影像、类型、源文件或权限可能已变化' }
+  catch { ElMessage.error('审核失败，影像、类型、源文件或权限可能已变化') }
   finally { busy.value = false }
 }
 async function manual(row: OcrItem) {
@@ -67,7 +68,7 @@ async function manual(row: OcrItem) {
   if (type === undefined) { return }
   busy.value = true
   try { await updateImageType(row.scanId, { btype: type }); unresolved.value = unresolved.value.filter(item => item.scanId !== row.scanId) }
-  catch { error.value = '人工分类失败，请刷新后重试' }
+  catch { ElMessage.error('人工分类失败，请刷新后重试') }
   finally { busy.value = false }
 }
 function nextPage() {
@@ -82,7 +83,7 @@ watch(() => props.jobId, () => void load(true))
 <template>
   <section v-if="auth('classification:read')" v-loading="busy">
     <h3>分类建议与待处理页面</h3>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
     <el-table :data="suggestions">
       <el-table-column prop="scanId" label="影像 ID" />
       <el-table-column label="建议">

@@ -1,50 +1,42 @@
 # main 分支保护实施记录
 
-关联 #362。用户已确认单人维护策略：强制 PR、CI、解决审查对话和禁止强推，
-独立审查继续留证；增加第二名维护者后再考虑强制批准人数与 Code Owner 审批。
+关联 #362、#450。用户采用单人维护策略：强制 PR、CI、解决审查对话、禁止强推与删除，独立审查继续留证；批准人数为 0，避免作者自批死锁。
 
-## 规则
+## 当前目标
 
-目标配置保存在 `quality/main-branch-protection.json`。要求八个稳定检查：原五项
-`governance`、`release-baseline-gate`、`frontend-gate`、`backend-gate`、`windows-management-gate`，
-以及 `windows-package-gate`、`live-e2e`、`windows-database-recovery`。
-来源固定为 GitHub Actions App（15368）；不把会按路径跳过的内部 Job 设为 required。
-管理员同样受限，线性历史开启，禁止强推和删除。要求 PR，但批准人数为 0，避免作者自批死锁；
-这不是免除 AGENTS.md 的 P0/P1 独立审查要求。
+`quality/main-branch-protection.json` 定义两个稳定必需状态：
 
-## 应用与核验
+- governance
+- pr-gate
 
-使用已授权的仓库管理账户，在根目录执行：
+来源固定为 GitHub Actions App（15368），strict=true。管理员同样受限，线性历史、解决对话、禁强推/删除继续生效。按路径选择的内部 job 不直接设为 required。
 
-先合并 #366、#368、#369 及其必要修复，确认三个新工作流存在于 main、对最新 PR
-产生成功检查；再合并本策略并应用。启用前远程保留已核验的原五项，不提前强制尚未在
-main 定义的上下文。旧 PR 需要更新到最新 main 后重跑，不能用管理员绕过 CI。
+P0/P1 的独立审查义务不由批准人数 0 免除。完整发布验收必须先于正式 tag 和公开 Release。
+
+## 迁移与核验
+
+不得以目标 JSON 或本地测试声称远程已启用。先合并 #450 的新门禁并确认 main 上 pr-gate 实际成功，旧状态由过渡矩阵继续转发真实汇总结果。
 
 ```powershell
-gh api --method PUT repos/weepwood/MRR/branches/main/protection --input quality/main-branch-protection.json
+python -m scripts.ci_protection
+python -m scripts.ci_protection --apply --snapshot "$env:TEMP\MRR-ci-protection-before-450.json"
 gh api repos/weepwood/MRR/branches/main/protection
 ```
 
-读回必须核对 strict、enforce_admins、八个 App 绑定检查、批准人数 0、
-conversation resolution、force pushes/deletions。不通过真实强推或直接推送来试验保护。
+工具仅 PATCH required_status_checks，不覆盖其他保护。读回核对 strict、两个 App 绑定检查、enforce_admins、0 批准、对话解决、线性历史和禁强推/删除。迁移成功后才通过后续 PR 移除 legacy-gates 矩阵。
 
-## 实施前状态及回退
+## 回滚
 
-实施前保护 API 返回 `404 Branch not protected`，已有 Ruleset 是禁用状态；
-不修改该既有 Ruleset。恢复到实施前状态只能由授权管理员执行：
+先通过 PR 恢复旧工作流及检查上下文，再执行：
 
 ```powershell
-gh api --method DELETE repos/weepwood/MRR/branches/main/protection
+python -m scripts.ci_protection --restore "$env:TEMP\MRR-ci-protection-before-450.json"
 ```
 
-删除保护会降低仓库控制，只在本次配置错误的恢复流程使用，不能为绕过失败 CI 临时取消保护。
-后续若已有额外保护，先重新读取并保存实际配置，不能再沿用本次“原来未保护”的快照。
-未来 Job 改名先安排规则迁移，避免 required check 永远等待。
+不要删除分支保护或使用管理员绕过失败 CI。快照保存的是实际旧配置，不得覆盖或用目标文件代替。
 
-## 实际核验（2026-10-18）
+## 历史实施证据
 
-独立审查通过后已应用配置。PUT成功，随后GET完整读回确认strict、管理员约束、五个App绑定检查、0批准、对话解决、线性历史和禁强推/删除全部符合；原状态与读回快照保存在本地临时受控目录。未测试真实强推或直接推送。
+2026-10-18 应用初始五项保护，随后 #362 合并 #366/#368/#369 等批次，启用 governance、release-baseline-gate、frontend-gate、backend-gate、windows-management-gate、windows-package-gate、live-e2e、windows-database-recovery 八项状态并读回。
 
-该日期记录的是初始五项策略。新增三项的启用及读回证据在合并后记录于 #362；
-不能仅以目标 JSON 或本地测试通过声称远程已启用。
-
+#450 将 PR 检查与发布验收分层；新的远程应用证据应在完成迁移后记录，不能将旧八项记录解释为两个新状态已经启用。

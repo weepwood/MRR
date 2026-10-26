@@ -23,11 +23,9 @@
 至少要求：
 
 - [ ] `governance-gate / governance`；
-- [ ] `quality-gate / release-baseline-gate`；
-- [ ] `quality-gate / frontend-gate`；
-- [ ] `quality-gate / backend-gate`；
-- [ ] `quality-gate / windows-management-gate`；
-- [ ] 监控、发布或安全相关工作流中被项目确认为稳定的汇总 Job。
+- [ ] `quality-gate / pr-gate`；
+- [ ] 依照 [分层 CI 迁移顺序](ci-tiered-verification.md) 先确认新 main 的实际成功检查，再移除旧七个状态；
+- [ ] 正式发布必须通过完整候选验收，不能把仅 PR 快速检查通过的版本直接交付。
 
 不要把可能因路径条件被跳过的内部 Job 直接设为 required，优先选择始终产生结果的汇总 Gate。
 

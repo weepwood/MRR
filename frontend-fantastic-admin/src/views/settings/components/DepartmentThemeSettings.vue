@@ -271,7 +271,7 @@ onMounted(() => {
       </div>
 
       <div v-for="row in rows" :key="row.id" class="theme-editor-row">
-        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="w-full">
+        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="department-theme-select">
           <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
         </el-select>
 
@@ -342,6 +342,10 @@ onMounted(() => {
 <style scoped>
 .department-theme-card {
   border-radius: var(--mrr-radius-card);
+}
+
+.department-theme-select {
+  width: 100%;
 }
 
 .department-theme-header {

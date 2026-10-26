@@ -321,8 +321,8 @@ onMounted(loadData)
         <el-form-item label="关键字"><el-input v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
         <el-form-item label="用户"><el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
         <el-form-item label="客户端 IP"><el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" class="w-[190px]"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" class="w-[120px]"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" class="audit-action-select"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" class="audit-status-select"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
         <el-form-item><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" type="primary" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></el-form-item>
       </el-form>
@@ -393,6 +393,8 @@ onMounted(loadData)
 h2 { margin: 0; font-size: 28px; }
 .subtitle { margin: 8px 0 0; color: var(--text-secondary); }
 .filter-card :deep(.el-card__body) { padding-bottom: 2px; }
+.audit-action-select { width: 190px; }
+.audit-status-select { width: 120px; }
 .section-header { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
 .section-header > div:first-child { display: grid; gap: 4px; }
 .section-header strong { font-size: 16px; }

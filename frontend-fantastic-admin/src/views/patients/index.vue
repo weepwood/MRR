@@ -242,7 +242,7 @@ onUnmounted(() => {
         <AppLoading v-if="loading" type="table" :rows="8" />
         <AppError v-else-if="error" :message="error" @retry="loadData" />
         <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-        <el-table v-else :data="tableData" stripe class="w-full">
+        <el-table v-else :data="tableData" stripe class="patients-table">
           <el-table-column prop="id" label="ID" width="100" />
           <el-table-column prop="bah" label="病案号" width="140">
             <template #default="{ row }">
@@ -326,6 +326,7 @@ h2 { margin: 0; font-size: 28px; }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
 .filter-input { flex: 1; width: auto; min-width: 0; max-width: 560px; }
 .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
+.patients-table { width: 100%; }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }

@@ -24,7 +24,7 @@ test('real login, invalid file, dry run, commit and query', async ({ page, reque
   const token = await login(page, 'e2e_editor')
   const headers = { Authorization: `Bearer ${token}` }
   await page.goto('/data-exchange?dataset=patients')
-  const panel = page.locator('.mrr-section-card').filter({ has: page.getByRole('heading', { name: '患者数据导入', exact: true }) })
+  const panel = page.locator('.dataset-card').filter({ has: page.getByRole('heading', { name: '患者数据导入', exact: true }) })
   await expect(panel).toBeVisible()
   await panel.locator('input[type=file]').setInputFiles({ name: 'invalid.csv', mimeType: 'text/csv', buffer: Buffer.from('wrong\r\nvalue\r\n') })
   const invalid = page.waitForResponse(r => r.url().includes('/data-exchange/patients/import'))

@@ -14,8 +14,6 @@ class RepositoryProtectionTest(unittest.TestCase):
         self.assertTrue(policy["required_conversation_resolution"])
         self.assertFalse(policy["allow_force_pushes"])
         self.assertFalse(policy["allow_deletions"])
-        self.assertEqual({"governance", "release-baseline-gate", "frontend-gate", "backend-gate",
-                          "windows-management-gate", "windows-package-gate", "live-e2e",
-                          "windows-database-recovery"}, {
+        self.assertEqual({"governance", "pr-gate"}, {
                               check["context"] for check in policy["required_status_checks"]["checks"]})
         self.assertTrue(all(check["app_id"] == 15368 for check in policy["required_status_checks"]["checks"]))

@@ -6,8 +6,7 @@ on:
 permissions:
   contents: read
 
-# PR 场景下同一分支连续 push 只保留最新一次；tag 构建永不互相取消，
-# 否则会打断正在进行的发布。
+# 手动诊断只生成候选文件；正式发布统一通过 Release 完整验收。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -174,44 +173,3 @@ jobs:
           path: build/*.sha256
           if-no-files-found: error
           retention-days: 7
-
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download standalone JAR artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.build.outputs.jar_name }}
-          path: build/release-assets
-
-      - name: Upload JAR to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          JAR_PATH="$(find build/release-assets -maxdepth 1 -type f -name '*.jar' | head -n 1)"
-          test -n "${JAR_PATH}"
-          test -f "${JAR_PATH}.sha256"
-
-          for attempt in $(seq 1 80); do
-            if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-              gh release upload "${GITHUB_REF_NAME}" \
-                "${JAR_PATH}" \
-                "${JAR_PATH}.sha256" \
-                --repo "${GITHUB_REPOSITORY}" \
-                --clobber
-              exit 0
-            fi
-            echo "Waiting for GitHub Release ${GITHUB_REF_NAME} (${attempt}/80)..."
-            sleep 15
-          done
-
-          echo "GitHub Release ${GITHUB_REF_NAME} was not created by the Windows release workflow" >&2
-          exit 1

@@ -16,7 +16,10 @@ class CoverageGateContractTest(unittest.TestCase):
         for path in (ROOT / "backend-repo/src/test/java/com/zjcxph/imgapi/integration").rglob("*PostgresqlIT.java"):
             self.assertNotIn("disabledWithoutDocker", path.read_text(encoding="utf-8"), str(path))
 
-    def test_coverage_comparison_is_part_of_required_quality_workflow(self):
-        workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+    def test_full_coverage_comparison_is_required_before_release(self):
+        workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         self.assertGreaterEqual(workflow.count("--fail-on-regression"), 3)
         self.assertIn("scripts/check_test_execution.py", workflow)
+        release = (ROOT / ".github/workflows/release-on-version-bump.yml").read_text(encoding="utf-8")
+        self.assertIn("needs: [identity, qualify]", release)
+        self.assertIn("./.github/workflows/release-validation.yml", release)

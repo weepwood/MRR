@@ -1,10 +1,23 @@
 import unittest
 from unittest.mock import patch
 
-from scripts.run_live_e2e import cleanup_resources, docker_command, isolated_environment, stop_process
+from scripts.run_live_e2e import cleanup_resources, docker_command, isolated_environment, stop_process, run
 
 
 class LiveE2eTest(unittest.TestCase):
+    def test_embedded_mode_rejects_jar_without_production_frontend_before_starting_database(self):
+        from pathlib import Path
+        import tempfile
+        from zipfile import ZipFile
+        with tempfile.TemporaryDirectory() as directory:
+            jar = Path(directory) / 'candidate.jar'
+            with ZipFile(jar, 'w') as archive:
+                archive.writestr('synthetic', 'not a production frontend')
+            with patch('scripts.run_live_e2e.docker_command') as docker:
+                with self.assertRaises(ValueError):
+                    run(jar, embedded=True)
+                docker.assert_not_called()
+
     def test_docker_timeout_does_not_expose_command_or_credentials(self):
         import subprocess
         with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(["docker", "secret-marker"], 1)):

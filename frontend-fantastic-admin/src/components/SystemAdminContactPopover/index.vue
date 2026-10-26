@@ -62,8 +62,9 @@ onBeforeUnmount(() => {
       v-model:visible="opened"
       placement="top-start"
       :width="330"
+      :popper-style="{ maxWidth: 'calc(100vw - 24px)' }"
       trigger="click"
-      :teleported="false"
+      :teleported="true"
       popper-class="mrr-admin-contact-popper"
     >
       <template #reference>

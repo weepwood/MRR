@@ -1286,15 +1286,4 @@ watch(idCardParam, async (newId) => {
 /* ==================== 类型修改消息 ==================== */
 :global(.type-success-prev) { color: var(--el-color-danger); }
 :global(.type-success-new) { color: var(--el-color-success); }
-
-@media (prefers-reduced-motion: reduce) {
-  .id-result-item,
-  .type-item,
-  .thumb-item,
-  .thumb-row,
-  .type-option,
-  .retry-btn {
-    transition: none;
-  }
-}
 </style>

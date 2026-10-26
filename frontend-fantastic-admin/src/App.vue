@@ -80,7 +80,6 @@ onBeforeUnmount(() => {
       <FaNotAllowed v-else />
     </RouterView>
     <FaBackToTop />
-    <FaToast />
     <FaNotification />
     <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
   </Provider>

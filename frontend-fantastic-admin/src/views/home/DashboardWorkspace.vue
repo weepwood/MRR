@@ -184,7 +184,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     title: '服务状态',
     description: '快速确认系统服务是否正常运行。',
     icon: 'i-ant-design:check-circle-twotone',
-    path: '/system-status',
+    path: '/status',
     permission: 'system:read',
     defaultSize: 'small',
     defaultVisible: false,
@@ -1229,18 +1229,6 @@ watch(storageKey, loadPreferences, { immediate: true })
 
   .color-picker-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-widget,
-  .dashboard-widget__arrow {
-    transition: none;
-  }
-
-  .dashboard-widget:active:not(.is-editing),
-  .dashboard-widget:hover .dashboard-widget__arrow {
-    transform: none;
   }
 }
 </style>

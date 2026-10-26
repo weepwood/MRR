@@ -875,7 +875,6 @@ onMounted(async () => {
 /* stylelint-disable order/properties-order, media-feature-range-notation */
 .operations-center {
   min-height: 100%;
-  padding: 20px;
 }
 
 .page-header,
@@ -1092,10 +1091,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
-  .operations-center {
-    padding: 12px;
-  }
-
   .page-header,
   .toolbar-row,
   .check-row {

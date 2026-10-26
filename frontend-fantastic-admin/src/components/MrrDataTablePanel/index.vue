@@ -23,9 +23,12 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
     :icon="props.icon"
     body-padding="none"
   >
+    <template #title-suffix>
+      <slot name="title-suffix" />
+    </template>
+
     <template v-if="hasActions" #actions>
       <span v-if="props.count !== undefined" class="mrr-data-table-panel__count">
-        <span class="mrr-data-table-panel__count-dot" />
         {{ props.countLabel || '共' }} {{ countText }} 条
       </span>
       <slot name="actions" />
@@ -58,18 +61,12 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   padding: 3px 9px;
   font-size: 12px;
   font-weight: 550;
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-secondary-foreground);
+  white-space: nowrap;
   background: var(--mrr-secondary);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-pill);
-}
-
-.mrr-data-table-panel__count-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--mrr-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrr-primary) 10%, transparent);
 }
 
 .mrr-data-table-panel__filters {
@@ -78,6 +75,7 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 
 .mrr-data-table-panel__toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
@@ -94,8 +92,13 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   display: flex;
   justify-content: flex-end;
   padding: 13px 16px;
+  background: var(--mrr-card);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-top: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-data-table-panel__pagination :deep(.el-pagination) {
+  justify-content: flex-end;
 }
 
 .mrr-data-table-panel__content :deep(.el-table) {
@@ -112,7 +115,6 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
     padding-inline: var(--mrr-space-3);
-    overflow-x: auto;
   }
 }
 </style>

@@ -184,24 +184,4 @@ defineExpose({
 .menu-leading-control:hover .menu-leading-control-arrow {
   opacity: 1;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .menu-item-container,
-  .menu-item-container-icon,
-  .menu-leading-control-icon,
-  .menu-leading-control-arrow {
-    transition: none;
-  }
-
-  .menu-item-container:hover .menu-item-container-icon,
-  .menu-item-container.active .menu-item-container-icon,
-  .menu-item.active .menu-item-container-icon,
-  .menu-item-container:active .menu-item-container-icon {
-    transform: none;
-  }
-
-  .menu-leading-control:hover .menu-leading-control-icon {
-    transform: none !important;
-  }
-}
 </style>

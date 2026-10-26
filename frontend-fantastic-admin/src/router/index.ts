@@ -1,5 +1,4 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { loadingFadeOut } from 'virtual:app-loading'
 import { createRouter, createWebHistory } from 'vue-router'
 import pinia from '@/store'
 import setupExtensions from './extensions'
@@ -26,12 +25,26 @@ const router = createRouter({
 setupGuards(router)
 setupExtensions(router)
 
+function removeAppLoading() {
+  const loadingEl = document.querySelector<HTMLElement>('[data-app-loading]')
+  if (!loadingEl) {
+    return
+  }
+
+  loadingEl.style.pointerEvents = 'none'
+  loadingEl.style.transition = 'opacity 120ms ease-out'
+  void getComputedStyle(loadingEl).opacity
+  loadingEl.style.opacity = '0'
+  window.setTimeout(() => loadingEl.remove(), 160)
+}
+
 router.isReady()
   .then(() => {
-    loadingFadeOut()
+    removeAppLoading()
     window.dispatchEvent(new Event('mrr:app-ready'))
   })
   .catch(() => {
+    removeAppLoading()
     window.dispatchEvent(new Event('mrr:app-startup-failed'))
   })
 

@@ -5,6 +5,7 @@ import {
   Document,
   Folder,
   Grid,
+  InfoFilled,
   List,
   Picture,
   Refresh,
@@ -15,6 +16,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
+import OssFolderIcon from './OssFolderIcon.vue'
 
 defineOptions({ name: 'OssFileExplorer' })
 
@@ -308,9 +310,17 @@ onMounted(() => {
       <div class="explorer-title-row">
         <div>
           <strong>OSS 文件资源管理器</strong>
-          <p>以只读方式浏览 medical-records 下的目录和文件，不执行全桶扫描或精确总数统计。</p>
         </div>
         <div class="explorer-status">
+          <el-tooltip
+            content="以只读方式浏览 medical-records 下的目录和文件，不执行全桶扫描或精确总数统计。"
+            placement="top"
+            :show-after="200"
+          >
+            <button type="button" class="info-trigger" aria-label="OSS 文件浏览说明">
+              <el-icon><InfoFilled /></el-icon>
+            </button>
+          </el-tooltip>
           <el-tag :type="page?.configured ? 'success' : 'danger'">
             {{ page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
           </el-tag>
@@ -425,11 +435,12 @@ onMounted(() => {
             @click="selectEntry(entry)"
             @dblclick="handleEntryDoubleClick(entry)"
           >
-            <el-icon class="file-tile-icon" :class="{ folder: entry.directory, image: isImage(entry) }">
+            <OssFolderIcon v-if="entry.directory" class="file-tile-icon folder" />
+            <el-icon v-else class="file-tile-icon" :class="{ image: isImage(entry) }">
               <component :is="entryIcon(entry)" />
             </el-icon>
             <span class="file-tile-name" :title="entry.name">{{ entry.name }}</span>
-            <small>{{ entry.directory ? '文件夹' : formatFileSize(entry.size) }}</small>
+            <small v-if="!entry.directory">{{ formatFileSize(entry.size) }}</small>
           </button>
         </div>
 
@@ -445,7 +456,8 @@ onMounted(() => {
           <el-table-column label="名称" min-width="260">
             <template #default="{ row }">
               <div class="name-cell">
-                <el-icon :class="{ folder: row.directory, image: isImage(row as OssBrowserEntry) }">
+                <OssFolderIcon v-if="row.directory" class="folder" />
+                <el-icon v-else :class="{ image: isImage(row as OssBrowserEntry) }">
                   <component :is="entryIcon(row as OssBrowserEntry)" />
                 </el-icon>
                 <span>{{ row.name }}</span>
@@ -492,7 +504,8 @@ onMounted(() => {
       <aside class="details-pane">
         <template v-if="selectedEntry">
           <div class="details-icon-wrap">
-            <el-icon class="details-icon" :class="{ folder: selectedEntry.directory, image: selectedIsImage }">
+            <OssFolderIcon v-if="selectedEntry.directory" class="details-icon folder" />
+            <el-icon v-else class="details-icon" :class="{ image: selectedIsImage }">
               <component :is="entryIcon(selectedEntry)" />
             </el-icon>
           </div>
@@ -585,16 +598,33 @@ onMounted(() => {
   align-items: center;
 }
 
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-pill);
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: var(--el-color-primary);
+}
+
+.info-trigger:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
 .explorer-title-row,
 .breadcrumb-row,
 .cursor-pager,
 .preview-title {
   justify-content: space-between;
-}
-
-.explorer-title-row p {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
 }
 
 .repository-summary {
@@ -762,6 +792,10 @@ onMounted(() => {
 
 .file-tile-icon {
   font-size: 48px;
+}
+
+.file-tile-icon.folder {
+  font-size: 80px;
 }
 
 .file-tile-icon.folder,

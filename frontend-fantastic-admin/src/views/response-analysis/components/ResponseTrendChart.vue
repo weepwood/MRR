@@ -95,14 +95,7 @@ function formatBucket(bucket: string) {
       </div>
     </div>
 
-    <section class="trend-section" aria-labelledby="request-heatmap-heading">
-      <div class="section-heading">
-        <div>
-          <strong id="request-heatmap-heading">每日请求热力图</strong>
-          <span>一个方块代表一天，颜色越深表示当天请求数量越多</span>
-        </div>
-        <small>最近 365 天</small>
-      </div>
+    <section class="trend-section" aria-label="每日请求热力图">
       <MrrRequestHeatmap
         :data="requestHeatmap"
         :days="365"

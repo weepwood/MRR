@@ -35,6 +35,18 @@ class OcrInputTest {
         try {
             assertThatThrownBy(()->input.prepare(1,()->false)).isInstanceOfSatisfying(OcrFailure.class,e->assertThat(e.code()).isEqualTo("INPUT_LIMIT"));
             assertThatThrownBy(()->input.prepare(1,()->true)).isInstanceOfSatisfying(OcrFailure.class,e->assertThat(e.code()).isEqualTo("CANCELLED"));
+            // Cancellation signals a separate reader thread; it may still be closing the temporary stream.
+            // Bound the eventual-cleanup check so genuine leaks still fail this test.
+            long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
+            while(System.nanoTime()<deadline) {
+                try(var files=Files.list(root)) {
+                    if(files.findAny().isEmpty()) break;
+                }
+                try {Thread.sleep(20);} catch(InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError("等待 OCR 临时文件清理时被中断",interrupted);
+                }
+            }
             try(var files=Files.list(root)){assertThat(files.count()).isZero();}
         } finally {input.close();}
     }

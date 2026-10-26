@@ -81,10 +81,4 @@ watch(scrollTop, (val, oldVal) => {
 :global(.dark) .topbar-container.mask {
   box-shadow: 0 10px 30px rgb(0 0 0 / 24%);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .topbar-container {
-    transition: none;
-  }
-}
 </style>

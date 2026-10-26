@@ -2,12 +2,12 @@
 import type { Component } from 'vue'
 import type { DocumentationSettings } from '@/api/modules/documentation-settings'
 import { Connection, Document, Reading, Setting } from '@element-plus/icons-vue'
-import { toast } from 'vue-sonner'
 import { createDocumentationSession } from '@/api/modules/documentation'
 import {
   DEFAULT_DOCUMENTATION_SETTINGS,
   getPublicDocumentationSettings,
 } from '@/api/modules/documentation-settings'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'HelpCenter' })
 
@@ -88,7 +88,7 @@ async function openDocumentation(entry: DocumentationEntry) {
   }
   catch {
     popup?.close()
-    toast.error('打开实时 API 文档失败，请确认当前账号具备系统查看权限')
+    notify.error('打开实时 API 文档失败，请确认当前账号具备系统查看权限')
   }
 }
 
@@ -341,12 +341,6 @@ onMounted(async () => {
 
   .documentation-button {
     width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .documentation-card {
-    transition: none;
   }
 }
 </style>

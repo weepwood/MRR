@@ -64,10 +64,46 @@ function resolveProxyOrigin(target: string): string | undefined {
   }
 }
 
+function getVueFiles(directory: string): string[] {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name)
+    if (entry.isDirectory()) {
+      return getVueFiles(entryPath)
+    }
+    return entry.isFile() && entry.name.endsWith('.vue') ? [entryPath] : []
+  })
+}
+
+function getElementPlusStyleImports(): string[] {
+  const componentNames = new Set<string>()
+  const componentTag = /<\s*(?:el-([\da-z-]+)|El([A-Z]\w*))/g
+
+  for (const file of getVueFiles(path.resolve(__dirname, 'src'))) {
+    const source = fs.readFileSync(file, 'utf8')
+    for (const [, kebabName, pascalName] of source.matchAll(componentTag)) {
+      const componentName = kebabName ?? pascalName
+        .replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+        .replace(/^-/, '')
+      if (componentName) {
+        componentNames.add(componentName)
+      }
+    }
+  }
+
+  // These styles are imported by the UI provider or Element Plus internals,
+  // rather than appearing as component tags in Vue templates.
+  for (const componentName of ['base', 'image-viewer', 'loading', 'message', 'message-box']) {
+    componentNames.add(componentName)
+  }
+
+  return [...componentNames].map(componentName => `element-plus/es/components/${componentName}/style/css`)
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd())
   const proxyOrigin = resolveProxyOrigin(env.VITE_APP_API_BASEURL)
+  const elementPlusStyleImports = command === 'serve' ? getElementPlusStyleImports() : []
   const productVersion = readProductVersion()
   const releaseBaseline = readReleaseBaseline()
   const gitCommit = resolveGitCommit()
@@ -80,6 +116,12 @@ export default defineConfig(({ mode, command }) => {
     }
   })
   return {
+    // ElementPlusResolver adds style deep imports while transforming lazy pages.
+    // Scan Vue templates to include those paths in the initial optimizer pass;
+    // the existing app build remains tree-shaken.
+    optimizeDeps: {
+      include: elementPlusStyleImports,
+    },
     // 开发服务器选项 https://cn.vitejs.dev/config/server-options
     server: {
       open: true,

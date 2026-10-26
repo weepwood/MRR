@@ -12,6 +12,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { formatDateTime } from '@/utils/display-format'
 
 defineOptions({ name: 'LogsPage' })
@@ -176,6 +177,7 @@ function statusTagType(status: string | number) {
           <el-date-picker
             v-model="query.timeRange"
             type="datetimerange"
+            :popper-options="rangePickerPopperOptions"
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"

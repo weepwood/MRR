@@ -6,6 +6,7 @@
 ## 准备不可变运行时
 
 在可信 Windows 构建机准备独立 Python 环境，使用 ocr-runtime/requirements-validated.lock 固定依赖。
+打包器会在复制运行时前核对锁文件中每个包的实际安装版本；不一致时拒绝打包。
 当前开发冒烟基线是 CPython 3.12.14、RapidOCR 3.9.2、ONNX Runtime 1.23.2 CPU。
 构建环境所需 wheel、Python 安装包及模型必须提前审查来源、许可与 SHA-256，保留供应链记录。
 本仓库不随 Git 分发模型及 Python 二进制，也不在生产服务器运行 pip 或下载默认模型。

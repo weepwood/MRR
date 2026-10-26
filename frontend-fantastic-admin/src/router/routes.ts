@@ -195,11 +195,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: { title: '患者管理', icon: 'i-ant-design:team-outlined', auth: ['record:read'], cache: true },
       },
       {
-        path: '/data-exchange',
-        component: () => import('@/views/data-exchange/index.vue'),
-        meta: { title: '数据交换中心', icon: 'i-ant-design:swap-outlined', auth: ['record:read', 'statistics:read'], cache: true },
-      },
-      {
         path: '/ocr-batches',
         component: () => import('@/views/ocr-batches/index.vue'),
         meta: { title: '历史影像识别', icon: 'i-ant-design:file-search-outlined', auth: ['ocr:batch-run'] },
@@ -248,6 +243,11 @@ const asyncRoutes: Route.recordMainRaw[] = [
   {
     meta: { title: '数据治理', icon: 'i-ant-design:cluster-outlined' },
     children: [
+      {
+        path: '/data-exchange',
+        component: () => import('@/views/data-exchange/index.vue'),
+        meta: { title: '数据导入导出', icon: 'i-ant-design:swap-outlined', auth: ['record:read', 'statistics:read'], cache: true },
+      },
       {
         path: '/data-relations',
         component: () => import('@/views/data-relations/index.vue'),
@@ -302,18 +302,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
         path: '/monitoring',
         component: () => import('@/views/monitoring-dashboard/index.vue'),
         meta: { title: '系统监控', icon: 'i-ant-design:dashboard-twotone', auth: ['system:read'], cache: true },
-      },
-      {
-        path: '/system-status',
-        name: 'systemStatusMenu',
-        redirect: '/status',
-        meta: {
-          title: '服务状态',
-          icon: 'i-ant-design:check-circle-twotone',
-          link: '/status',
-          auth: ['system:read'],
-          cache: false,
-        },
       },
       {
         path: '/response-analysis',

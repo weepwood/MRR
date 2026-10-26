@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -27,8 +27,8 @@
 
         <!-- Dependency versions -->
         <mybatis.version>4.1.0</mybatis.version>
-        <java-jwt.version>4.6.1</java-jwt.version>
-        <springdoc.version>3.0.3</springdoc.version>
+        <java-jwt.version>4.6.2</java-jwt.version>
+        <springdoc.version>3.1.1</springdoc.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.8.0</itextpdf.version>
         <commons-codec.version>1.22.0</commons-codec.version>
@@ -36,7 +36,7 @@
 
         <!-- Plugin versions not managed by the Spring Boot parent -->
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <mockito.version>5.23.0</mockito.version>
+        <mockito.version>5.24.0</mockito.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 

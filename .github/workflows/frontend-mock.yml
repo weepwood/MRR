@@ -1,12 +1,8 @@
 name: frontend-mock
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'frontend-fantastic-admin/**'
-      - '.github/workflows/frontend-mock.yml'
+  # Optional supplementary mock-backed check. The required quality gate already
+  # runs frontend type, unit, build, and scoped E2E checks for pull requests.
   workflow_dispatch:
 
 permissions:

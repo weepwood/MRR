@@ -201,9 +201,6 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 
 :global(.mrr-table-actions__menu .el-dropdown-menu__item) {
   gap: 10px;
-  min-height: 40px;
-  padding: 8px 12px;
-  border-radius: var(--mrr-radius-md);
 }
 
 :global(.mrr-table-actions__menu-item--danger) {

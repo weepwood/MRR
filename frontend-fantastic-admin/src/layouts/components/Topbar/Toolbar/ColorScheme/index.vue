@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { isMotionEnabled } from '@/utils/motion-preference'
+
 defineOptions({
   name: 'ColorScheme',
 })
@@ -6,7 +8,7 @@ defineOptions({
 const settingsStore = useSettingsStore()
 
 function toggleColorScheme(event: MouseEvent) {
-  if (!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!document.startViewTransition || !isMotionEnabled()) {
     settingsStore.currentColorScheme && settingsStore.setColorScheme(settingsStore.currentColorScheme === 'dark' ? 'light' : 'dark')
     return
   }

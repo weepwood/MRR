@@ -276,13 +276,19 @@ onMounted(() => {
         </el-select>
 
         <div class="color-field">
-          <el-color-picker v-model="row.folderColor" :predefine="colorPresets" />
-          <el-input v-model="row.folderColor" maxlength="7" />
+          <span class="color-field__label">
+            档案袋主色
+          </span>
+          <el-color-picker v-model="row.folderColor" :predefine="colorPresets" aria-label="档案袋主色" />
+          <el-input v-model="row.folderColor" maxlength="7" aria-label="档案袋主色值" />
         </div>
 
         <div class="color-field">
-          <el-color-picker v-model="row.stripColor" :predefine="colorPresets" />
-          <el-input v-model="row.stripColor" maxlength="7" />
+          <span class="color-field__label">
+            顶部色条
+          </span>
+          <el-color-picker v-model="row.stripColor" :predefine="colorPresets" aria-label="顶部色条" />
+          <el-input v-model="row.stripColor" maxlength="7" aria-label="顶部色条色值" />
         </div>
 
         <div class="archive-theme-preview" :style="previewStyle(row)">
@@ -340,9 +346,15 @@ onMounted(() => {
 
 .department-theme-header {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.department-theme-header > div:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
 }
 
 .department-theme-header strong {
@@ -358,8 +370,10 @@ onMounted(() => {
 
 .department-theme-actions {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
 }
 
 .department-theme-actions :deep(.el-button) {
@@ -404,6 +418,10 @@ onMounted(() => {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
   align-items: center;
+}
+
+.color-field__label {
+  display: none;
 }
 
 .archive-theme-preview {
@@ -491,13 +509,20 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1560px) {
   .theme-editor-head {
     display: none;
   }
 
   .theme-editor-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+
+  .color-field__label {
+    display: block;
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--text-secondary);
   }
 
   .archive-theme-preview {
@@ -506,6 +531,10 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .department-theme-header > div:first-child {
+    flex-basis: auto;
+  }
+
   .department-theme-header {
     flex-direction: column;
   }

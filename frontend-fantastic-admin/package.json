@@ -112,7 +112,7 @@
     "postcss": "^8.5.23",
     "postcss-nested": "^7.0.2",
     "sass-embedded": "^1.98.0",
-    "simple-git-hooks": "^2.13.1",
+    "simple-git-hooks": "^2.14.0",
     "stylelint": "^17.15.0",
     "stylelint-config-recess-order": "^7.8.2",
     "stylelint-config-standard-scss": "^17.0.0",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
-import { Clock, Refresh } from '@element-plus/icons-vue'
+import { CircleCheck, CircleX, Clock3 as Clock, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import {
@@ -283,6 +283,7 @@ onUnmounted(() => {
                     :aria-pressed="historyStatus === 'success'"
                     @click="historyStatus = 'success'"
                   >
+                    <CircleCheck :size="14" aria-hidden="true" />
                     <span>成功查询</span><span class="history-filter-count">{{ successfulHistory.length }}</span>
                   </button>
                   <button
@@ -292,6 +293,7 @@ onUnmounted(() => {
                     :aria-pressed="historyStatus === 'failure'"
                     @click="historyStatus = 'failure'"
                   >
+                    <CircleX :size="14" aria-hidden="true" />
                     <span>失败查询</span><span class="history-filter-count">{{ failedHistory.length }}</span>
                   </button>
                   <button
@@ -484,8 +486,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 32px;
-  padding: 4px 5px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 5px;
   font: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -579,10 +582,10 @@ onUnmounted(() => {
 
   position: relative;
   display: grid;
-  flex: 0 0 32px;
+  flex: 0 0 var(--mrr-control-height);
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--mrr-control-height);
+  height: var(--mrr-control-height);
   padding: 0;
   color: inherit;
   cursor: pointer;

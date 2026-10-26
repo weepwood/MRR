@@ -99,7 +99,7 @@ function handleSendCaptcha() {
         确认
       </FaButton>
       <div class="mt-4 flex-center gap-2 text-sm color-[var(--el-text-color-secondary)]">
-        <FaButton variant="link" class="h-auto p-0" @click="emits('onLogin', form.values.account)">
+        <FaButton variant="link" class="p-0" @click="emits('onLogin', form.values.account)">
           去登录
         </FaButton>
       </div>

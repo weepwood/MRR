@@ -481,16 +481,16 @@ watch(storageKey, loadPreferences, { immediate: true })
 
       <template #actions>
         <el-button @click="managerVisible = true">
-          <FaIcon name="i-ri:layout-grid-line" />
+          <FaIcon name="i-lucide:layout-grid" />
           管理小组件
           <span v-if="hiddenWidgetCount" class="hidden-count">{{ hiddenWidgetCount }}</span>
         </el-button>
         <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
-          <FaIcon :name="editMode ? 'i-ri:check-line' : 'i-ri:drag-move-2-line'" />
+          <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
           {{ editMode ? '完成调整' : '调整布局' }}
         </el-button>
         <el-button v-if="editMode" @click="resetDashboard">
-          <FaIcon name="i-ri:restart-line" />
+          <FaIcon name="i-lucide:rotate-cw" />
           恢复默认
         </el-button>
       </template>
@@ -498,7 +498,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
     <section class="dashboard-workspace" aria-label="我的工作台">
       <div v-if="editMode" class="dashboard-workspace__notice">
-        <FaIcon name="i-ri:drag-move-2-line" />
+        <FaIcon name="i-lucide:move" />
         拖动卡片调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
       </div>
 
@@ -538,7 +538,7 @@ watch(storageKey, loadPreferences, { immediate: true })
               <div class="dashboard-widget__title-row">
                 <strong>{{ widget.title }}</strong>
                 <span v-if="widget.pinned" class="pin-badge">
-                  <FaIcon name="i-ri:pushpin-2-fill" />
+                  <FaIcon name="i-lucide:pin" />
                   置顶
                 </span>
               </div>
@@ -547,50 +547,58 @@ watch(storageKey, loadPreferences, { immediate: true })
             <div v-if="editMode" class="dashboard-widget__tools" @click.stop>
               <el-tooltip content="拖动小组件" placement="top">
                 <el-button text circle size="small" class="drag-handle" aria-label="拖动小组件">
-                  <FaIcon name="i-ri:draggable" />
+                  <FaIcon name="i-lucide:grip-vertical" />
                 </el-button>
               </el-tooltip>
               <el-dropdown trigger="click" @command="handleWidgetCommand($event, widget)">
                 <el-button text circle size="small" aria-label="小组件设置">
-                  <FaIcon name="i-ri:more-2-fill" />
+                  <FaIcon name="i-lucide:ellipsis" />
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="edit">
-                      <FaIcon name="i-ri:edit-line" />编辑设置
+                      <FaIcon name="i-lucide:pencil" />编辑设置
                     </el-dropdown-item>
                     <el-dropdown-item command="pin">
-                      <FaIcon :name="widget.pinned ? 'i-ri:unpin-line' : 'i-ri:pushpin-2-line'" />
+                      <FaIcon :name="widget.pinned ? 'i-lucide:pin-off' : 'i-lucide:pin'" />
                       {{ widget.pinned ? '取消置顶' : '置顶' }}
                     </el-dropdown-item>
-                    <el-dropdown-item divided command="size:small">标准大小</el-dropdown-item>
-                    <el-dropdown-item command="size:wide">宽卡片</el-dropdown-item>
-                    <el-dropdown-item command="size:large">大卡片</el-dropdown-item>
+                    <el-dropdown-item divided command="size:small">
+                      标准大小
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:wide">
+                      宽卡片
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:large">
+                      大卡片
+                    </el-dropdown-item>
                     <el-dropdown-item divided command="hide">
-                      <FaIcon name="i-ri:eye-off-line" />隐藏组件
+                      <FaIcon name="i-lucide:eye-off" />隐藏组件
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
             </div>
-            <FaIcon v-else name="i-ri:arrow-right-s-line" class="dashboard-widget__arrow" />
+            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" />
           </header>
 
           <div class="dashboard-widget__body">
             <p>{{ widget.description }}</p>
             <div class="dashboard-widget__footer">
               <span>{{ editMode ? '拖动调整位置' : '进入模块' }}</span>
-              <FaIcon :name="editMode ? 'i-ri:drag-move-2-line' : 'i-ri:arrow-right-line'" />
+              <FaIcon :name="editMode ? 'i-lucide:move' : 'i-lucide:arrow-right'" />
             </div>
           </div>
         </article>
       </div>
 
       <div v-else class="dashboard-empty">
-        <FaIcon name="i-ant-design:appstore-add-outlined" />
+        <FaIcon name="i-lucide:layout-grid" />
         <strong>当前没有显示的小组件</strong>
         <p>可以从“小组件管理”中重新启用需要的模块。</p>
-        <el-button type="primary" @click="managerVisible = true">管理小组件</el-button>
+        <el-button type="primary" @click="managerVisible = true">
+          管理小组件
+        </el-button>
       </div>
     </section>
 
@@ -636,11 +644,11 @@ watch(storageKey, loadPreferences, { immediate: true })
             :disabled="!isWidgetVisible(definition.id)"
             @click="toggleWidgetPinned(definition.id)"
           >
-            <FaIcon :name="isWidgetPinned(definition.id) ? 'i-ri:pushpin-2-fill' : 'i-ri:pushpin-2-line'" />
+            <FaIcon :name="isWidgetPinned(definition.id) ? 'i-lucide:pin' : 'i-lucide:pin'" />
             {{ isWidgetPinned(definition.id) ? '已置顶' : '置顶' }}
           </el-button>
           <el-button text :disabled="!isWidgetVisible(definition.id)" @click="openWidgetEditor(definition.id)">
-            <FaIcon name="i-ri:edit-line" />编辑
+            <FaIcon name="i-lucide:pencil" />编辑
           </el-button>
           <el-switch
             :model-value="isWidgetVisible(definition.id)"
@@ -650,8 +658,12 @@ watch(storageKey, loadPreferences, { immediate: true })
         </div>
       </div>
       <template #footer>
-        <el-button @click="resetDashboard">恢复默认</el-button>
-        <el-button type="primary" @click="managerVisible = false">完成</el-button>
+        <el-button @click="resetDashboard">
+          恢复默认
+        </el-button>
+        <el-button type="primary" @click="managerVisible = false">
+          完成
+        </el-button>
       </template>
     </el-dialog>
 
@@ -691,9 +703,15 @@ watch(storageKey, loadPreferences, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="restoreEditorDefaults">恢复该组件默认值</el-button>
-        <el-button @click="editorVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveWidgetEditor">保存</el-button>
+        <el-button @click="restoreEditorDefaults">
+          恢复该组件默认值
+        </el-button>
+        <el-button @click="editorVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="saveWidgetEditor">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </MrrPageShell>
@@ -1136,8 +1154,9 @@ watch(storageKey, loadPreferences, { immediate: true })
   display: flex;
   gap: 8px;
   align-items: center;
-  min-height: 38px;
-  padding: 8px 10px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 10px;
   font-size: 12px;
   color: var(--mrr-foreground);
   cursor: pointer;

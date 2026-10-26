@@ -243,10 +243,10 @@ void shellRef
       </div>
       <div v-if="isServerSettingSection" class="header-actions">
         <el-button :disabled="loading || saving" @click="handleReload">
-          <FaIcon name="i-ri:refresh-line" class="mrr-icon-interactive" />重新加载
+          <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
         </el-button>
         <el-button :disabled="loading || saving" @click="handleReset">
-          <FaIcon name="i-ri:restart-line" class="mrr-icon-interactive" />恢复默认
+          <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
         </el-button>
       </div>
     </header>
@@ -270,7 +270,7 @@ void shellRef
                 <strong>{{ item.title }}</strong>
                 <small>{{ item.description }}</small>
               </span>
-              <FaIcon name="i-ri:arrow-right-s-line" class="nav-arrow" />
+              <FaIcon name="i-lucide:chevron-right" class="nav-arrow" />
             </button>
           </nav>
 
@@ -289,7 +289,7 @@ void shellRef
               @click="handleServerSave"
             >
               <FaIcon
-                :name="savedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                :name="savedRecently ? 'i-lucide:check' : 'i-lucide:save'"
                 class="mrr-icon-interactive"
                 :class="{ 'mrr-status-pop': savedRecently }"
               />
@@ -312,7 +312,7 @@ void shellRef
               @click="handleOcrSave"
             >
               <FaIcon
-                :name="ocrSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                :name="ocrSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
                 class="mrr-icon-interactive"
                 :class="{ 'mrr-status-pop': ocrSavedRecently }"
               />
@@ -335,7 +335,7 @@ void shellRef
               @click="handleRuntimeSave"
             >
               <FaIcon
-                :name="runtimeSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                :name="runtimeSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
                 class="mrr-icon-interactive"
                 :class="{ 'mrr-status-pop': runtimeSavedRecently }"
               />
@@ -358,7 +358,7 @@ void shellRef
               @click="handleDepartmentSave"
             >
               <FaIcon
-                :name="departmentSavedRecently ? 'i-ri:check-line' : 'i-ri:save-3-line'"
+                :name="departmentSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
                 class="mrr-icon-interactive"
                 :class="{ 'mrr-status-pop': departmentSavedRecently }"
               />

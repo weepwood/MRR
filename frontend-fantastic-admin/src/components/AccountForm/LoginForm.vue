@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { AuthProfile } from '@/utils/auth-storage'
-import { Key, UserFilled } from '@element-plus/icons-vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
-import { Eye, EyeOff } from 'lucide-vue-next'
+import { Eye, EyeOff, KeyRound as Key, UserRound as UserFilled } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { computed, ref } from 'vue'
 import * as z from 'zod'
@@ -158,7 +157,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       class="login-submit-btn"
       type="submit"
     >
-      <FaIcon v-if="!loading" name="i-ri:login-box-line" />
+      <FaIcon v-if="!loading" name="i-lucide:log-in" />
       {{ buttonText }}
     </FaButton>
   </form>
@@ -202,7 +201,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 .input-shell :deep(.fa-input__wrapper),
 .input-shell :deep(input) {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-input-height);
   padding-right: 14px;
   padding-left: 42px;
   font-size: 14px;
@@ -278,7 +277,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 .login-submit-btn {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-control-height);
   margin-top: var(--mrr-space-1);
   border-radius: var(--mrr-control-radius);
 }

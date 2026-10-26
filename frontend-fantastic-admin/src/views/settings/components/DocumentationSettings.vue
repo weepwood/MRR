@@ -62,7 +62,7 @@ function openPreview(value: string) {
               :disabled="!canOpen(settings[item.key])"
               @click="openPreview(settings[item.key])"
             >
-              <FaIcon name="i-ri:external-link-line" />
+              <FaIcon name="i-lucide:external-link" />
               测试访问
             </el-button>
           </div>

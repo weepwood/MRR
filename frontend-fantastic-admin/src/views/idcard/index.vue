@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 
 const router = useRouter()
 const idCard = ref('')
@@ -51,20 +52,22 @@ function handleSearch() {
             @keyup.enter="handleSearch"
           >
             <template #prefix>
-              <i class="i-ant-design:idcard-outlined prefix-icon" />
+              <i class="i-lucide:contact-round prefix-icon" />
             </template>
           </el-input>
         </div>
-        <el-button
+        <MrrFilterActionButton
+          action="search"
+          :pending="loading"
+          :busy="loading"
           type="primary"
           size="large"
-          :loading="loading"
           :disabled="!isValid"
           class="search-btn"
           @click="handleSearch"
         >
           查询病案
-        </el-button>
+        </MrrFilterActionButton>
       </div>
 
       <!-- 输入提示 -->
@@ -155,7 +158,7 @@ function handleSearch() {
 
 .search-btn {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-control-height);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;

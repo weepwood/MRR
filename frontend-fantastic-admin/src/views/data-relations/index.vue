@@ -23,6 +23,7 @@ import {
   runDataQualityChecks,
   searchDataRelationArchives,
 } from '@/api/modules/data-relations'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
@@ -52,14 +53,14 @@ const issueActions: MrrTableAction[] = [
   {
     key: 'locate',
     label: '定位病案',
-    icon: 'i-ri:map-pin-line',
+    icon: 'i-lucide:map-pin',
     tone: 'primary',
     placement: 'inline',
   },
   {
     key: 'preview',
     label: '修复预览',
-    icon: 'i-ri:tools-line',
+    icon: 'i-lucide:wrench',
     tone: 'warning',
   },
 ]
@@ -434,9 +435,9 @@ onMounted(loadDashboard)
                 placeholder="输入 archive_id、病案号或上架号"
                 @keyup.enter="searchArchives"
               />
-              <el-button type="primary" :loading="searchLoading" @click="searchArchives">
+              <MrrFilterActionButton action="search" :pending="searchLoading" :busy="searchLoading" type="primary" @click="searchArchives">
                 查询
-              </el-button>
+              </MrrFilterActionButton>
             </div>
           </el-card>
 

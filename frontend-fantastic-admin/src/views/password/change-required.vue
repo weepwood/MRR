@@ -86,7 +86,7 @@ async function logout() {
     </header>
 
     <section class="password-card" aria-labelledby="password-change-title">
-      <div class="security-mark"><FaIcon name="i-ri:shield-keyhole-line" /></div>
+      <div class="security-mark"><FaIcon name="i-lucide:shield-ellipsis" /></div>
       <div class="card-heading">
         <span>Required security action</span>
         <h1 id="password-change-title">首次登录，请设置新密码</h1>
@@ -113,7 +113,7 @@ async function logout() {
           >
             <template #suffix>
               <button type="button" class="visibility-button" @click="showCurrentPassword = !showCurrentPassword">
-                <FaIcon :name="showCurrentPassword ? 'i-ri:eye-off-line' : 'i-ri:eye-line'" />
+                <FaIcon :name="showCurrentPassword ? 'i-lucide:eye-off' : 'i-lucide:eye'" />
               </button>
             </template>
           </el-input>
@@ -128,7 +128,7 @@ async function logout() {
           >
             <template #suffix>
               <button type="button" class="visibility-button" @click="showNewPassword = !showNewPassword">
-                <FaIcon :name="showNewPassword ? 'i-ri:eye-off-line' : 'i-ri:eye-line'" />
+                <FaIcon :name="showNewPassword ? 'i-lucide:eye-off' : 'i-lucide:eye'" />
               </button>
             </template>
           </el-input>

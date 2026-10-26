@@ -2,8 +2,8 @@
 import type { AuthTestHistoryEvent } from '../types'
 import type { AuthTestResult } from '@/api/modules/auth-test'
 import type { ExternalArchiveIntegrationStatus } from '@/utils/external-archive-test-guide'
-import { CopyDocument, MagicStick, Promotion, Refresh, Setting } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { Copy as CopyDocument, WandSparkles as MagicStick, Send as Promotion, RefreshCw as Refresh, Settings as Setting } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import { useUserStore } from '@/store/modules/user'
@@ -539,7 +539,9 @@ onMounted(() => {
         :description="readiness.description"
       />
 
-      <div v-if="integrationStatusError" class="inline-error">{{ integrationStatusError }}</div>
+      <div v-if="integrationStatusError" class="inline-error">
+        {{ integrationStatusError }}
+      </div>
 
       <div class="check-grid">
         <div v-for="item in configChecks" :key="item.label" class="check-item">
@@ -565,7 +567,9 @@ onMounted(() => {
         <el-table-column prop="clientId" label="Client ID" min-width="180" />
         <el-table-column label="启用" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'danger'" effect="plain">{{ row.enabled ? '是' : '否' }}</el-tag>
+            <el-tag :type="row.enabled ? 'success' : 'danger'" effect="plain">
+              {{ row.enabled ? '是' : '否' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="Secret" width="110">
@@ -583,7 +587,9 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column label="IP 白名单" min-width="220">
-          <template #default="{ row }">{{ row.allowedIps?.length ? row.allowedIps.join(', ') : '未限制' }}</template>
+          <template #default="{ row }">
+            {{ row.allowedIps?.length ? row.allowedIps.join(', ') : '未限制' }}
+          </template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -595,7 +601,9 @@ onMounted(() => {
             <strong>第二步：生成或填写相同的 HMAC Secret</strong>
             <span>生成后必须复制到后端 secrets 文件并重启</span>
           </div>
-          <el-button :icon="MagicStick" @click="generateSecret">生成 256 位 Secret</el-button>
+          <el-button :icon="MagicStick" @click="generateSecret">
+            生成 256 位 Secret
+          </el-button>
         </div>
       </template>
 
@@ -644,7 +652,9 @@ onMounted(() => {
               <strong>application-secrets.properties</strong>
               <span>已有客户端时请检查 clients[n] 索引</span>
             </div>
-            <el-button text :icon="CopyDocument" @click="copyText(configSnippet, '后端配置片段')">复制</el-button>
+            <el-button text :icon="CopyDocument" @click="copyText(configSnippet, '后端配置片段')">
+              复制
+            </el-button>
           </div>
           <pre class="code-panel config-code">{{ configSnippet }}</pre>
           <ol class="setup-steps">
@@ -692,7 +702,9 @@ onMounted(() => {
         <el-form-item label="精确病案号与上架号组合">
           <el-input v-model="form.archivesText" type="textarea" :rows="4" placeholder="每行一个，例如：10000001:20000001" />
         </el-form-item>
-        <el-button @click="syncRawBody()">从表单生成实际 JSON</el-button>
+        <el-button @click="syncRawBody()">
+          从表单生成实际 JSON
+        </el-button>
       </el-form>
     </el-card>
 
@@ -704,14 +716,22 @@ onMounted(() => {
               <strong>第四步：签名与模拟场景</strong>
               <span>正常流程和安全失败场景分开准备</span>
             </div>
-            <el-button text :icon="Refresh" @click="refreshTimestampAndNonce">更新时间与 nonce</el-button>
+            <el-button text :icon="Refresh" @click="refreshTimestampAndNonce">
+              更新时间与 nonce
+            </el-button>
           </div>
         </template>
 
         <div class="scenario-buttons">
-          <el-button @click="prepareScenario('normal')">正常请求</el-button>
-          <el-button type="warning" plain @click="prepareScenario('expired')">过期时间戳</el-button>
-          <el-button type="danger" plain @click="prepareScenario('bad-signature')">错误签名</el-button>
+          <el-button @click="prepareScenario('normal')">
+            正常请求
+          </el-button>
+          <el-button type="warning" plain @click="prepareScenario('expired')">
+            过期时间戳
+          </el-button>
+          <el-button type="danger" plain @click="prepareScenario('bad-signature')">
+            错误签名
+          </el-button>
           <el-button type="warning" plain :disabled="!lastSuccessfulRequest" @click="replayLastRequest">
             重放上次成功请求
           </el-button>
@@ -737,7 +757,9 @@ onMounted(() => {
             <el-switch v-model="form.manualSignature" active-text="使用手工签名" inactive-text="发送前自动重新签名" />
           </el-form-item>
           <div class="button-row">
-            <el-button :loading="signing" @click="signOnly">仅生成签名</el-button>
+            <el-button :loading="signing" @click="signOnly">
+              仅生成签名
+            </el-button>
             <el-button type="primary" :icon="Promotion" :loading="loading" @click="sendTicket()">
               发送票据请求
             </el-button>
@@ -773,7 +795,9 @@ onMounted(() => {
             <strong>票据响应与处理建议</strong>
             <span>成功后打开 launchUrl；失败时显示可执行的下一步</span>
           </div>
-          <el-tag :type="responseType(result)" effect="plain">{{ result?.status ?? '未发送' }}</el-tag>
+          <el-tag :type="responseType(result)" effect="plain">
+            {{ result?.status ?? '未发送' }}
+          </el-tag>
         </div>
       </template>
 
@@ -791,7 +815,9 @@ onMounted(() => {
         <strong>{{ result ? `${result.durationMs} ms` : '—' }}</strong>
         <span>Launch URL</span>
         <strong class="launch-url">{{ launchUrl || '—' }}</strong>
-        <el-button :disabled="!launchUrl" @click="openLaunchUrl">打开影像档案袋</el-button>
+        <el-button :disabled="!launchUrl" @click="openLaunchUrl">
+          打开影像档案袋
+        </el-button>
       </div>
       <pre class="code-panel response-body">{{ formatJson(result?.data) || '票据响应将在这里显示' }}</pre>
     </el-card>

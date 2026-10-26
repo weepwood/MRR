@@ -139,7 +139,7 @@
     "vite-plugin-vue-devtools": "^8.2.1",
     "vite-plugin-vue-meta-layouts": "^0.6.1",
     "vitest": "^3.2.4",
-    "vue-tsc": "^3.3.8"
+    "vue-tsc": "^3.3.13"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",

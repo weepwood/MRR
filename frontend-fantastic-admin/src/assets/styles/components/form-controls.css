@@ -1,41 +1,30 @@
 /*
  * Element Plus 只在这里桥接 MRR 的尺寸令牌；颜色、边框、圆角和状态
  * 继续由 element-plus-overrides.css 统一维护，避免两套全局规则互相覆盖。
- * Fantastic Admin 自带的 FaInput / FaSelect 则使用同一套 MRR 控件令牌。
+ * 单行输入统一使用 --mrr-input-height，大小号保留字体、间距和圆角差异。
+ * Fantastic Admin 自带的 FaInput / FaSelect 使用同一输入高度令牌。
  */
 .el-input,
 .el-select,
 .el-date-editor,
-.el-input-number {
-  --el-component-size: var(--mrr-control-height);
-}
-
-.el-input--small,
-.el-select--small,
-.el-date-editor--small,
-.el-range-editor--small,
-.el-input-number--small {
-  --el-component-size: var(--mrr-control-height-compact);
+.el-input-number,
+.el-range-editor {
+  --el-component-size: var(--mrr-input-height);
+  --el-component-size-small: var(--mrr-input-height);
+  --el-component-size-large: var(--mrr-input-height);
 }
 
 /* Element Plus gives the page-size select a compact 32px wrapper directly,
  * outside the `.el-select--small` class path. Match the regular filter selects. */
 .el-pagination .el-pagination__sizes .el-select .el-select__wrapper {
-  height: var(--mrr-control-height);
-  min-height: var(--mrr-control-height);
+  height: var(--mrr-input-height);
+  min-height: var(--mrr-input-height);
   padding-inline: 11px;
   border-radius: var(--mrr-control-radius);
 }
 
-.el-input--large,
-.el-select--large,
-.el-date-editor--large,
-.el-range-editor--large,
-.el-input-number--large {
-  --el-component-size: var(--mrr-control-height-large);
-}
-
 .el-range-editor {
+  height: var(--mrr-input-height);
   min-height: var(--el-component-size);
 }
 
@@ -68,8 +57,15 @@
   min-height: 0;
 }
 
-.el-range-input {
+.el-input-number.is-controls-right .el-input-number__increase,
+.el-input-number.is-controls-right .el-input-number__decrease {
+  height: calc((var(--mrr-input-height) - 2px) / 2);
+  line-height: calc((var(--mrr-input-height) - 2px) / 2);
+}
+
+.el-date-editor .el-range-input {
   min-width: 0;
+  height: 100%;
   font-size: 13px;
   line-height: 20px;
 }
@@ -106,8 +102,8 @@
 .fa-input-control,
 .fa-select-trigger {
   box-sizing: border-box;
-  height: var(--mrr-control-height);
-  min-height: var(--mrr-control-height);
+  height: var(--mrr-input-height);
+  min-height: var(--mrr-input-height);
   padding: 0 11px;
   font-size: 13px;
   line-height: 1;

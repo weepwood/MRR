@@ -2,13 +2,14 @@
 import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
@@ -38,7 +39,7 @@ const logActions: MrrTableAction[] = [
   {
     key: 'detail',
     label: '查看详情',
-    icon: 'i-ri:eye-line',
+    icon: 'i-lucide:eye',
     tone: 'primary',
     placement: 'inline',
   },
@@ -164,12 +165,12 @@ function statusTagType(status: string | number) {
           <el-input v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="方法">
-          <el-select v-model="query.method" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.method" clearable placeholder="全部" class="logs-method-select">
             <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.responseStatus" clearable placeholder="全部" class="logs-status-select">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -186,18 +187,17 @@ function statusTagType(status: string | number) {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
         </el-form-item>
       </el-form>
 
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
-      <el-table v-else :data="list" stripe style="margin-top: 12px;">
+      <el-table v-else :data="list" stripe class="logs-table">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
@@ -328,6 +328,15 @@ h2 {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+.logs-method-select,
+.logs-status-select {
+  width: 140px;
+}
+
+.logs-table {
+  margin-top: 12px;
 }
 
 .detail-value,

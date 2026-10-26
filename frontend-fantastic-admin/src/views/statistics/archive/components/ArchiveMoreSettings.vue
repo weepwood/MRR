@@ -8,7 +8,7 @@ import type {
 } from '../composables/useArchiveLocalPreferences'
 import type { ViewMode } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
-import { MoreFilled } from '@element-plus/icons-vue'
+import { Ellipsis as MoreFilled } from 'lucide-vue-next'
 
 const props = defineProps<{
   viewMode: ViewMode

@@ -3,8 +3,8 @@
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { DataBoard, Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { LayoutDashboard as DataBoard, Download, RefreshCw as Refresh } from 'lucide-vue-next'
 
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -13,6 +13,7 @@ import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -73,7 +74,7 @@ const selectedArchiveKey = ref('')
 const archiveActions: MrrTableAction[] = [{
   key: 'view',
   label: '查看影像',
-  icon: 'i-ri:eye-line',
+  icon: 'i-lucide:eye',
   tone: 'primary',
   placement: 'inline',
 }]
@@ -125,10 +126,10 @@ function formatSummaryValue(value: unknown) {
 }
 
 const summaryCards = computed<SummaryCard[]>(() => [
-  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-ant-design:folder-open-twotone' },
-  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-ant-design:profile-twotone' },
-  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-ant-design:file-text-twotone' },
-  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-ant-design:user-outlined' },
+  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-lucide:folder-open' },
+  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-lucide:contact-round' },
+  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-lucide:file-text' },
+  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-lucide:user-round' },
 ])
 
 function normalizeText(value: unknown) {
@@ -481,12 +482,12 @@ onBeforeUnmount(() => {
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
         <div class="filter-actions">
-          <el-button type="primary" :icon="Search" @click="handleSearch">
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetSearch">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetSearch">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </div>
       </div>
     </el-card>

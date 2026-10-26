@@ -35,9 +35,9 @@ describe('mrrMetricCard', () => {
   })
 
   it('有图标时渲染图标区且不加无图标修饰类', () => {
-    const wrapper = mountCard({ icon: 'i-ep:user' })
+    const wrapper = mountCard({ icon: 'i-lucide:user-round' })
     expect(wrapper.find('.mrr-metric-card__icon').exists()).toBe(true)
-    expect(wrapper.find('.icon-stub').attributes('data-icon')).toBe('i-ep:user')
+    expect(wrapper.find('.icon-stub').attributes('data-icon')).toBe('i-lucide:user-round')
     expect(wrapper.classes()).not.toContain('mrr-metric-card--no-icon')
   })
 

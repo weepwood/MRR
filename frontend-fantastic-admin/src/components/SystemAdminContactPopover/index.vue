@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
 
       <section class="contact-card" @mouseenter="show" @mouseleave="hideLater">
         <header>
-          <span class="contact-card__icon"><FaIcon name="i-ri:customer-service-2-line" /></span>
+          <span class="contact-card__icon"><FaIcon name="i-lucide:headset" /></span>
           <div>
             <strong>{{ displayName || '系统管理员' }}</strong>
             <small v-if="department">{{ department }}</small>
@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
             <div>
               <a :href="`tel:${phone}`">{{ phone }}</a>
               <button type="button" title="复制联系电话" @click="copy(phone, '联系电话')">
-                <FaIcon name="i-ri:file-copy-line" />
+                <FaIcon name="i-lucide:copy" />
               </button>
             </div>
           </div>
@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
             <div>
               <a :href="`mailto:${email}`">{{ email }}</a>
               <button type="button" title="复制联系邮箱" @click="copy(email, '联系邮箱')">
-                <FaIcon name="i-ri:file-copy-line" />
+                <FaIcon name="i-lucide:copy" />
               </button>
             </div>
           </div>
@@ -170,8 +170,8 @@ onBeforeUnmount(() => {
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: var(--mrr-control-height);
+  height: var(--mrr-control-height);
   color: var(--mrr-muted-foreground);
   cursor: pointer;
   background: var(--mrr-muted);

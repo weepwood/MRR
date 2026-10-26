@@ -19,11 +19,12 @@ import type {
   ScanExchangeFilters,
   StatisticsExchangeFilters,
 } from '@/api/modules/data-exchange'
-import { Download, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { Download, Info as InfoFilled } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
 import { downloadBlob, getResponseHeader } from '@/utils/file-download'
@@ -334,9 +335,9 @@ function today() {
         <div class="filter-grid filter-grid--patient">
           <el-input v-model="patientFilters.keyword" clearable placeholder="病案号 / 姓名 / 身份证号 / 科室" />
           <div class="filter-actions">
-            <el-button @click="resetPatientFilters">
+            <MrrFilterActionButton action="reset" @click="resetPatientFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
             <el-button
               type="primary"
               :icon="Download"
@@ -395,9 +396,9 @@ function today() {
             end-placeholder="结束日期"
           />
           <div class="filter-actions">
-            <el-button @click="resetStatisticsFilters">
+            <MrrFilterActionButton action="reset" @click="resetStatisticsFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
             <el-button
               type="primary"
               :icon="Download"
@@ -457,9 +458,9 @@ function today() {
             end-placeholder="结束日期"
           />
           <div class="filter-actions">
-            <el-button @click="resetArchiveFilters">
+            <MrrFilterActionButton action="reset" @click="resetArchiveFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
             <el-button
               type="primary"
               :icon="Download"
@@ -508,9 +509,9 @@ function today() {
           </el-select>
           <el-input v-model="archiveBoxFilters.keyword" clearable placeholder="综合关键字" />
           <div class="filter-actions">
-            <el-button @click="resetArchiveBoxFilters">
+            <MrrFilterActionButton action="reset" @click="resetArchiveBoxFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
             <el-button
               type="primary"
               :icon="Download"
@@ -563,9 +564,9 @@ function today() {
           <el-input v-model="scanFilters.filename" clearable placeholder="文件名" />
           <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" placeholder="图片类型" />
           <div class="filter-actions">
-            <el-button @click="resetScanFilters">
+            <MrrFilterActionButton action="reset" @click="resetScanFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
             <el-button
               type="primary"
               :icon="Download"

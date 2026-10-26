@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Refresh } from '@element-plus/icons-vue'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 
 defineOptions({ name: 'AppError' })
 
@@ -22,7 +22,7 @@ function handleRetry() {
 
 <template>
   <div class="app-error mrr-content-enter" role="alert">
-    <div class="app-error-icon i-ant-design:warning-twotone mrr-status-pop" />
+    <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" />
     <p class="app-error-text">{{ message }}</p>
     <el-button type="primary" :icon="Refresh" @click="handleRetry">
       {{ retryText }}

@@ -105,7 +105,7 @@ async function handlePrevious() {
   <form class="register-form" @submit="onSubmit">
     <section class="review-flow" aria-label="账号申请流程">
       <div class="review-flow__summary">
-        <span class="review-flow__icon"><FaIcon name="i-ri:user-received-2-line" /></span>
+        <span class="review-flow__icon"><FaIcon name="i-lucide:user-round-check" /></span>
         <div>
           <strong>账号需要管理员审核</strong>
           <p>提交后账号进入待审核状态，审核通过前无法登录系统。</p>
@@ -113,16 +113,16 @@ async function handlePrevious() {
       </div>
       <div class="review-flow__steps" aria-label="注册申请进度">
         <span :class="{ 'is-current': !isApplicationStep }" :aria-current="isApplicationStep ? undefined : 'step'"><b>1</b>身份信息</span>
-        <FaIcon aria-hidden="true" name="i-ri:arrow-right-s-line" />
+        <FaIcon aria-hidden="true" name="i-lucide:chevron-right" />
         <span :class="{ 'is-current': isApplicationStep }" :aria-current="isApplicationStep ? 'step' : undefined"><b>2</b>申请说明</span>
-        <FaIcon aria-hidden="true" name="i-ri:arrow-right-s-line" />
+        <FaIcon aria-hidden="true" name="i-lucide:chevron-right" />
         <span><b>3</b>管理员审核</span>
       </div>
     </section>
 
     <section v-if="!isApplicationStep" class="form-section">
       <header class="section-heading">
-        <span><FaIcon name="i-ri:id-card-line" /></span>
+        <span><FaIcon name="i-lucide:contact-round" /></span>
         <div>
           <strong ref="identityHeading" role="heading" aria-level="3" tabindex="-1">身份信息</strong>
           <p>填写登录账号、密码和人员身份信息。</p>
@@ -190,7 +190,7 @@ async function handlePrevious() {
 
     <section v-else class="form-section form-section--remark">
       <header class="section-heading">
-        <span><FaIcon name="i-ri:file-text-line" /></span>
+        <span><FaIcon name="i-lucide:file-text" /></span>
         <div>
           <strong ref="applicationHeading" role="heading" aria-level="3" tabindex="-1">申请说明</strong>
           <p>留下可联系的方式，并说明岗位或使用目的，帮助管理员核验申请。</p>
@@ -221,11 +221,11 @@ async function handlePrevious() {
 
     <div class="form-actions">
       <FaButton type="button" variant="outline" size="lg" @click="handlePrevious">
-        <FaIcon name="i-ri:arrow-left-line" />
+        <FaIcon name="i-lucide:arrow-left" />
         {{ isApplicationStep ? '返回身份信息' : '返回登录' }}
       </FaButton>
       <FaButton :loading="loading" size="lg" type="submit">
-        <FaIcon v-if="!loading" :name="isApplicationStep ? 'i-ri:send-plane-2-line' : 'i-ri:arrow-right-line'" />
+        <FaIcon v-if="!loading" :name="isApplicationStep ? 'i-lucide:send' : 'i-lucide:arrow-right'" />
         {{ isApplicationStep ? '提交注册' : '填写申请说明' }}
       </FaButton>
     </div>

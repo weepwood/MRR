@@ -46,7 +46,7 @@ const { switchTo } = useMenu()
         </FaScrollArea>
         <component :is="useSlots('header-after-menu')" />
         <div class="account-slot flex-center">
-          <AccountButton only-avatar dropdown-side="bottom" class="size-10 p-1.5" />
+          <AccountButton only-avatar dropdown-side="bottom" class="p-1.5" />
         </div>
         <component :is="useSlots('header-end')" />
       </div>
@@ -89,12 +89,6 @@ header {
       height: inherit;
       padding: 0;
       background: transparent;
-
-      .logo {
-        width: initial;
-        max-width: initial;
-        height: min(62%, 42px);
-      }
 
       span {
         font-size: 17px;

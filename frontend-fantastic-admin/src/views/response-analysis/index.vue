@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ResponseMetricAnalysis } from '@/api/types'
-import { Refresh } from '@element-plus/icons-vue'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
@@ -92,27 +92,27 @@ onMounted(loadData)
       <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
         <MrrMetricCard
           label="总请求数"
-          icon="i-ant-design:api-twotone"
+          icon="i-lucide:network"
           note="最近 365 天完成的请求总量"
           :value="formatNumber(analysis?.overview.totalRequests)"
         />
         <MrrMetricCard
           label="HTTP 成功率"
-          icon="i-ant-design:check-circle-twotone"
+          icon="i-lucide:circle-check"
           tone="green"
           note="HTTP 2xx 响应占近一年请求的比例"
           :value="formatPercent(analysis?.overview.successRate)"
         />
         <MrrMetricCard
           label="客户端 P95"
-          icon="i-ant-design:field-time-outlined"
+          icon="i-lucide:calendar-clock"
           tone="violet"
           note="包含网络与浏览器处理耗时"
           :value="formatDuration(analysis?.overview.p95ClientDurationMs)"
         />
         <MrrMetricCard
           label="服务端平均耗时"
-          icon="i-ant-design:dashboard-twotone"
+          icon="i-lucide:layout-dashboard"
           tone="amber"
           note="最近一年服务端请求处理平均值"
           :value="formatDuration(analysis?.overview.avgServerDurationMs)"

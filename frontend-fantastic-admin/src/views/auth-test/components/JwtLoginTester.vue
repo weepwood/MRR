@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AuthTestHistoryEvent } from '../types'
 import type { AuthTestResult } from '@/api/modules/auth-test'
-import { CopyDocument, Key, Refresh, SwitchButton, View } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Copy as CopyDocument, KeyRound as Key, RefreshCw as Refresh, LogOut as SwitchButton, Eye as View } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import { useUserStore } from '@/store/modules/user'
@@ -271,13 +271,17 @@ async function copyToken() {
           <el-button type="primary" :icon="Key" :loading="loading" @click="sendLogin">
             发送登录请求
           </el-button>
-          <el-button :disabled="!hasToken" @click="applyTestSession">应用到当前会话</el-button>
+          <el-button :disabled="!hasToken" @click="applyTestSession">
+            应用到当前会话
+          </el-button>
         </div>
       </el-form>
 
       <div class="response-summary">
         <span>HTTP 状态</span>
-        <el-tag :type="responseType(result)" effect="plain">{{ result?.status ?? '—' }}</el-tag>
+        <el-tag :type="responseType(result)" effect="plain">
+          {{ result?.status ?? '—' }}
+        </el-tag>
         <span>耗时</span>
         <strong>{{ result ? `${result.durationMs} ms` : '—' }}</strong>
       </div>
@@ -291,7 +295,9 @@ async function copyToken() {
             <strong>JWT 查看与验证</strong>
             <span>本地解析不代表后端签名验证通过</span>
           </div>
-          <el-button text :icon="Refresh" @click="useCurrentToken">使用当前 Token</el-button>
+          <el-button text :icon="Refresh" @click="useCurrentToken">
+            使用当前 Token
+          </el-button>
         </div>
       </template>
 
@@ -300,11 +306,15 @@ async function copyToken() {
           <el-input v-model="testedToken" type="textarea" :rows="4" placeholder="登录成功后自动填入，也可手动粘贴" />
         </el-form-item>
         <div class="button-row">
-          <el-button :icon="View" :loading="loading" @click="testCurrentUser">调用 /auth/me</el-button>
+          <el-button :icon="View" :loading="loading" @click="testCurrentUser">
+            调用 /auth/me
+          </el-button>
           <el-button type="danger" plain :icon="SwitchButton" :loading="loading" @click="testLogout">
             测试注销
           </el-button>
-          <el-button :icon="CopyDocument" @click="copyToken">复制</el-button>
+          <el-button :icon="CopyDocument" @click="copyToken">
+            复制
+          </el-button>
         </div>
       </el-form>
 

@@ -35,7 +35,7 @@ withDefaults(defineProps<{
 
     <div v-loading="loading" class="mrr-chart-card__body">
       <div v-if="empty && !loading" class="mrr-chart-card__empty">
-        <i class="i-ant-design:bar-chart-outlined" aria-hidden="true" />
+        <i class="i-lucide:chart-no-axes-column-increasing" aria-hidden="true" />
         <span>{{ emptyDescription }}</span>
       </div>
       <slot v-else />

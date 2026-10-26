@@ -197,7 +197,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/ocr-batches',
         component: () => import('@/views/ocr-batches/index.vue'),
-        meta: { title: '历史影像识别', icon: 'i-lucide:file-search', auth: ['ocr:batch-run'] },
+        meta: { title: '历史影像识别', icon: 'i-lucide:scan-text', auth: ['ocr:batch-run'] },
       },
       {
         path: '/statistics',
@@ -291,7 +291,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/runtime-logs',
         component: () => import('@/views/runtime-logs/index.vue'),
-        meta: { title: '运行日志', icon: 'i-lucide:file-search', auth: ['system:manage'], cache: true },
+        meta: { title: '运行日志', icon: 'i-lucide:terminal', auth: ['system:manage'], cache: true },
       },
       {
         path: '/audit-images',
@@ -317,7 +317,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
-    meta: { title: '帮助', icon: 'i-lucide:circle-help' },
+    meta: { title: '帮助', icon: 'i-lucide:circle-question-mark' },
     children: [
       {
         path: '/help',

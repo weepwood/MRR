@@ -2,8 +2,8 @@
 import type { Method } from 'axios'
 import type { AuthTestHistoryEvent } from '../types'
 import type { AuthTestResult } from '@/api/modules/auth-test'
-import { Connection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { Network as Connection } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import { useUserStore } from '@/store/modules/user'
@@ -122,7 +122,9 @@ function useCurrentToken() {
             <strong>自定义当前后端请求</strong>
             <span>故意测试 401/403 不会触发后台全局退出</span>
           </div>
-          <el-button text @click="useCurrentToken">使用当前 Token</el-button>
+          <el-button text @click="useCurrentToken">
+            使用当前 Token
+          </el-button>
         </div>
       </template>
 
@@ -138,7 +140,9 @@ function useCurrentToken() {
           </el-form-item>
         </div>
         <el-form-item>
-          <el-checkbox v-model="request.useToken">添加 Authorization: Bearer Token</el-checkbox>
+          <el-checkbox v-model="request.useToken">
+            添加 Authorization: Bearer Token
+          </el-checkbox>
         </el-form-item>
         <el-form-item v-if="request.useToken" label="Bearer Token">
           <el-input v-model="request.token" type="textarea" :rows="3" />
@@ -162,7 +166,9 @@ function useCurrentToken() {
             <strong>接口响应</strong>
             <span>保留 HTTP 状态、响应头和业务响应体</span>
           </div>
-          <el-tag :type="responseType(result)" effect="plain">{{ result?.status ?? '未发送' }}</el-tag>
+          <el-tag :type="responseType(result)" effect="plain">
+            {{ result?.status ?? '未发送' }}
+          </el-tag>
         </div>
       </template>
       <div class="response-summary">

@@ -2,7 +2,7 @@
 name: dataExchange
 meta:
   title: 数据导入导出
-  icon: i-ant-design:swap-outlined
+  icon: i-lucide:arrow-left-right
   auth:
     - record:read
     - statistics:read
@@ -40,6 +40,15 @@ const canImport = computed(() => auth('record:edit'))
 const canReadRecords = computed(() => auth('record:read'))
 const canReadStatistics = computed(() => auth('statistics:read'))
 const activeTab = ref<ExchangeTab>(normalizeTab(route.query.dataset))
+
+/* 数据集切换使用分段控件；选项顺序与后端支持的数据集保持一致。 */
+const datasetTabs: { label: string, value: ExchangeTab }[] = [
+  { label: '患者信息', value: 'patients' },
+  { label: '统计数据', value: 'statistics' },
+  { label: '病案主档', value: 'archives' },
+  { label: '档案装箱', value: 'archive-boxes' },
+  { label: '扫描记录', value: 'scan' },
+]
 const exporting = ref<Partial<Record<ExchangeTab, boolean>>>({})
 
 const patientFilters = reactive<PatientExchangeFilters>({ keyword: '' })
@@ -304,285 +313,281 @@ function today() {
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" class="workbench-tabs">
-      <el-tab-pane name="patients" label="患者信息">
-        <div class="tab-content">
-          <el-card shadow="never">
-            <template #header>
-              <div class="panel-heading">
-                <div>
-                  <h3>患者数据条件导出</h3>
-                  <p>导出字段与患者导入模板保持一致，可在本页面重新校验和导入。</p>
-                </div>
-              </div>
-            </template>
-            <div class="filter-grid filter-grid--patient">
-              <el-input v-model="patientFilters.keyword" clearable placeholder="病案号 / 姓名 / 身份证号 / 科室" />
-              <div class="filter-actions">
-                <el-button @click="resetPatientFilters">
-                  重置
-                </el-button>
-                <el-button
-                  type="primary"
-                  :icon="Download"
-                  :loading="exporting.patients"
-                  :disabled="!canReadRecords"
-                  @click="exportPatients"
-                >
-                  导出 CSV
-                </el-button>
-              </div>
-            </div>
-          </el-card>
+    <el-segmented
+      v-model="activeTab"
+      class="dataset-switch"
+      :options="datasetTabs"
+      block
+      aria-label="数据集切换"
+    />
 
-          <DatasetImportPanel
-            v-if="canImport"
-            dataset="patients"
-            title="患者数据导入"
-            description="复用患者管理已经验证的两步导入服务；文件内和数据库内完全重复行会自动跳过。"
-            :fields="patientFields"
-            max-file-size="单文件不超过 20 MB"
+    <div v-show="activeTab === 'patients'" class="tab-content">
+      <el-card shadow="never">
+        <template #header>
+          <div class="panel-heading">
+            <div>
+              <h3>患者数据条件导出</h3>
+              <p>导出字段与患者导入模板保持一致，可在本页面重新校验和导入。</p>
+            </div>
+          </div>
+        </template>
+        <div class="filter-grid filter-grid--patient">
+          <el-input v-model="patientFilters.keyword" clearable placeholder="病案号 / 姓名 / 身份证号 / 科室" />
+          <div class="filter-actions">
+            <el-button @click="resetPatientFilters">
+              重置
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              :loading="exporting.patients"
+              :disabled="!canReadRecords"
+              @click="exportPatients"
+            >
+              导出 CSV
+            </el-button>
+          </div>
+        </div>
+      </el-card>
+
+      <DatasetImportPanel
+        v-if="canImport"
+        dataset="patients"
+        title="患者数据导入"
+        description="复用患者管理已经验证的两步导入服务；文件内和数据库内完全重复行会自动跳过。"
+        :fields="patientFields"
+        max-file-size="单文件不超过 20 MB"
+      />
+      <el-card v-else shadow="never">
+        <div class="readonly-fields">
+          <h3>患者数据字段</h3>
+          <div class="field-grid">
+            <div v-for="field in patientFields" :key="field.name" class="field-item">
+              <code>{{ field.name }}</code><span>{{ field.description }}</span>
+            </div>
+          </div>
+        </div>
+      </el-card>
+    </div>
+
+    <div v-show="activeTab === 'statistics'" class="tab-content">
+      <el-card shadow="never">
+        <template #header>
+          <div class="panel-heading">
+            <div>
+              <h3>统计数据条件导出</h3>
+              <p>按病案号、上架号、档案类型、日期和综合关键字筛选。</p>
+            </div>
+          </div>
+        </template>
+        <div class="filter-grid">
+          <el-input v-model="statisticsFilters.bah" clearable placeholder="病案号" />
+          <el-input v-model="statisticsFilters.sjh" clearable placeholder="上架号" />
+          <el-input v-model="statisticsFilters.type" clearable placeholder="档案类型" />
+          <el-input v-model="statisticsFilters.keyword" clearable placeholder="患者、科室、设备或负责人" />
+          <el-date-picker
+            v-model="statisticsDateRange"
+            type="daterange"
+            :popper-options="rangePickerPopperOptions"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
           />
-          <el-card v-else shadow="never">
-            <div class="readonly-fields">
-              <h3>患者数据字段</h3>
-              <div class="field-grid">
-                <div v-for="field in patientFields" :key="field.name" class="field-item">
-                  <code>{{ field.name }}</code><span>{{ field.description }}</span>
-                </div>
-              </div>
-            </div>
-          </el-card>
+          <div class="filter-actions">
+            <el-button @click="resetStatisticsFilters">
+              重置
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              :loading="exporting.statistics"
+              :disabled="!canReadStatistics"
+              @click="exportStatistics"
+            >
+              导出 CSV
+            </el-button>
+          </div>
         </div>
-      </el-tab-pane>
+      </el-card>
 
-      <el-tab-pane name="statistics" label="统计数据">
-        <div class="tab-content">
-          <el-card shadow="never">
-            <template #header>
-              <div class="panel-heading">
-                <div>
-                  <h3>统计数据条件导出</h3>
-                  <p>按病案号、上架号、档案类型、日期和综合关键字筛选。</p>
-                </div>
+      <DatasetImportPanel
+        v-if="canImport"
+        dataset="statistics"
+        title="统计数据导入"
+        description="非空上架号命中现有记录时更新；无上架号记录按完整业务字段精确去重，并由触发器同步病案主档。"
+        :fields="statisticsFields"
+        max-file-size="单文件不超过 50 MB"
+      />
+    </div>
+
+    <div v-show="activeTab === 'archives'" class="tab-content">
+      <el-card shadow="never">
+        <template #header>
+          <div class="panel-heading">
+            <div>
+              <div class="page-title-row">
+                <h3>病案主档条件导出</h3>
+                <el-tooltip placement="right" :show-after="200">
+                  <template #content>
+                    病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
+                  </template>
+                  <button type="button" class="info-trigger" aria-label="病案主档导出说明">
+                    <el-icon><InfoFilled /></el-icon>
+                  </button>
+                </el-tooltip>
               </div>
-            </template>
-            <div class="filter-grid">
-              <el-input v-model="statisticsFilters.bah" clearable placeholder="病案号" />
-              <el-input v-model="statisticsFilters.sjh" clearable placeholder="上架号" />
-              <el-input v-model="statisticsFilters.type" clearable placeholder="档案类型" />
-              <el-input v-model="statisticsFilters.keyword" clearable placeholder="患者、科室、设备或负责人" />
-              <el-date-picker
-                v-model="statisticsDateRange"
-                type="daterange"
-                :popper-options="rangePickerPopperOptions"
-                value-format="YYYY-MM-DD"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-              />
-              <div class="filter-actions">
-                <el-button @click="resetStatisticsFilters">
-                  重置
-                </el-button>
-                <el-button
-                  type="primary"
-                  :icon="Download"
-                  :loading="exporting.statistics"
-                  :disabled="!canReadStatistics"
-                  @click="exportStatistics"
-                >
-                  导出 CSV
-                </el-button>
-              </div>
+              <p>用于审计、核对和迁移前检查，不作为直接回写模板。</p>
             </div>
-          </el-card>
-
-          <DatasetImportPanel
-            v-if="canImport"
-            dataset="statistics"
-            title="统计数据导入"
-            description="非空上架号命中现有记录时更新；无上架号记录按完整业务字段精确去重，并由触发器同步病案主档。"
-            :fields="statisticsFields"
-            max-file-size="单文件不超过 50 MB"
+          </div>
+        </template>
+        <div class="filter-grid">
+          <el-input v-model="archiveFilters.bah" clearable placeholder="病案号" />
+          <el-input v-model="archiveFilters.sjh" clearable placeholder="上架号" />
+          <el-input v-model="archiveFilters.patientId" clearable placeholder="患者 ID" />
+          <el-input v-model="archiveFilters.type" clearable placeholder="档案类型" />
+          <el-input v-model="archiveFilters.keyword" clearable placeholder="患者姓名 / 科室 / 设备 / 操作人" />
+          <el-date-picker
+            v-model="archiveDateRange"
+            type="daterange"
+            :popper-options="rangePickerPopperOptions"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
           />
+          <div class="filter-actions">
+            <el-button @click="resetArchiveFilters">
+              重置
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              :loading="exporting.archives"
+              :disabled="!canReadRecords"
+              @click="exportArchives"
+            >
+              导出 CSV
+            </el-button>
+          </div>
         </div>
-      </el-tab-pane>
+      </el-card>
 
-      <el-tab-pane name="archives" label="病案主档">
-        <div class="tab-content">
-          <el-card shadow="never">
-            <template #header>
-              <div class="panel-heading">
-                <div>
-                  <div class="page-title-row">
-                    <h3>病案主档条件导出</h3>
-                    <el-tooltip placement="right" :show-after="200">
-                      <template #content>
-                        病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
-                      </template>
-                      <button type="button" class="info-trigger" aria-label="病案主档导出说明">
-                        <el-icon><InfoFilled /></el-icon>
-                      </button>
-                    </el-tooltip>
-                  </div>
-                  <p>用于审计、核对和迁移前检查，不作为直接回写模板。</p>
-                </div>
-              </div>
-            </template>
-            <div class="filter-grid">
-              <el-input v-model="archiveFilters.bah" clearable placeholder="病案号" />
-              <el-input v-model="archiveFilters.sjh" clearable placeholder="上架号" />
-              <el-input v-model="archiveFilters.patientId" clearable placeholder="患者 ID" />
-              <el-input v-model="archiveFilters.type" clearable placeholder="档案类型" />
-              <el-input v-model="archiveFilters.keyword" clearable placeholder="患者姓名 / 科室 / 设备 / 操作人" />
-              <el-date-picker
-                v-model="archiveDateRange"
-                type="daterange"
-                :popper-options="rangePickerPopperOptions"
-                value-format="YYYY-MM-DD"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-              />
-              <div class="filter-actions">
-                <el-button @click="resetArchiveFilters">
-                  重置
-                </el-button>
-                <el-button
-                  type="primary"
-                  :icon="Download"
-                  :loading="exporting.archives"
-                  :disabled="!canReadRecords"
-                  @click="exportArchives"
-                >
-                  导出 CSV
-                </el-button>
-              </div>
+      <el-card shadow="never">
+        <div class="readonly-fields">
+          <h3>病案主档导出字段</h3>
+          <div class="field-grid">
+            <div v-for="field in archiveFields" :key="field.name" class="field-item">
+              <code>{{ field.name }}</code><span>{{ field.description }}</span>
             </div>
-          </el-card>
-
-          <el-card shadow="never">
-            <div class="readonly-fields">
-              <h3>病案主档导出字段</h3>
-              <div class="field-grid">
-                <div v-for="field in archiveFields" :key="field.name" class="field-item">
-                  <code>{{ field.name }}</code><span>{{ field.description }}</span>
-                </div>
-              </div>
-            </div>
-          </el-card>
+          </div>
         </div>
-      </el-tab-pane>
+      </el-card>
+    </div>
 
-      <el-tab-pane name="archive-boxes" label="档案装箱">
-        <div class="tab-content">
-          <el-card shadow="never">
-            <template #header>
-              <div class="panel-heading">
-                <div>
-                  <h3>档案装箱条件导出</h3>
-                  <p>按病案号、上架号、箱号、状态或备注筛选装箱记录。</p>
-                </div>
-              </div>
-            </template>
-            <div class="filter-grid">
-              <el-input v-model="archiveBoxFilters.bah" clearable placeholder="病案号" />
-              <el-input v-model="archiveBoxFilters.sjh" clearable placeholder="上架号" />
-              <el-input v-model="archiveBoxFilters.boxNo" clearable placeholder="箱号" />
-              <el-select v-model="archiveBoxFilters.status" clearable placeholder="全部状态">
-                <el-option label="正常" value="NORMAL" />
-                <el-option label="缺失" value="MISSING" />
-                <el-option label="位置不一致" value="MISPLACED" />
-                <el-option label="冲突" value="CONFLICT" />
-                <el-option label="其他" value="OTHER" />
-              </el-select>
-              <el-input v-model="archiveBoxFilters.keyword" clearable placeholder="综合关键字" />
-              <div class="filter-actions">
-                <el-button @click="resetArchiveBoxFilters">
-                  重置
-                </el-button>
-                <el-button
-                  type="primary"
-                  :icon="Download"
-                  :loading="exporting['archive-boxes']"
-                  :disabled="!canReadRecords"
-                  @click="exportArchiveBoxes"
-                >
-                  导出 CSV
-                </el-button>
-              </div>
+    <div v-show="activeTab === 'archive-boxes'" class="tab-content">
+      <el-card shadow="never">
+        <template #header>
+          <div class="panel-heading">
+            <div>
+              <h3>档案装箱条件导出</h3>
+              <p>按病案号、上架号、箱号、状态或备注筛选装箱记录。</p>
             </div>
-          </el-card>
-
-          <DatasetImportPanel
-            v-if="canImport"
-            dataset="archive-boxes"
-            title="档案装箱导入"
-            description="导入前解析稳定 archive_id；无法唯一关联病案主档或同一病案存在冲突时整批拒绝。"
-            :fields="archiveBoxFields"
-            max-file-size="单文件不超过 20 MB"
-          />
+          </div>
+        </template>
+        <div class="filter-grid">
+          <el-input v-model="archiveBoxFilters.bah" clearable placeholder="病案号" />
+          <el-input v-model="archiveBoxFilters.sjh" clearable placeholder="上架号" />
+          <el-input v-model="archiveBoxFilters.boxNo" clearable placeholder="箱号" />
+          <el-select v-model="archiveBoxFilters.status" clearable placeholder="全部状态">
+            <el-option label="正常" value="NORMAL" />
+            <el-option label="缺失" value="MISSING" />
+            <el-option label="位置不一致" value="MISPLACED" />
+            <el-option label="冲突" value="CONFLICT" />
+            <el-option label="其他" value="OTHER" />
+          </el-select>
+          <el-input v-model="archiveBoxFilters.keyword" clearable placeholder="综合关键字" />
+          <div class="filter-actions">
+            <el-button @click="resetArchiveBoxFilters">
+              重置
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              :loading="exporting['archive-boxes']"
+              :disabled="!canReadRecords"
+              @click="exportArchiveBoxes"
+            >
+              导出 CSV
+            </el-button>
+          </div>
         </div>
-      </el-tab-pane>
+      </el-card>
 
-      <el-tab-pane name="scan" label="扫描记录">
-        <div class="tab-content">
-          <el-card shadow="never">
-            <template #header>
-              <div class="panel-heading">
-                <div>
-                  <div class="page-title-row">
-                    <h3>扫描记录条件导出</h3>
-                    <el-tooltip placement="right" :show-after="200">
-                      <template #content>
-                        浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
-                      </template>
-                      <button type="button" class="info-trigger" aria-label="扫描记录导入说明">
-                        <el-icon><InfoFilled /></el-icon>
-                      </button>
-                    </el-tooltip>
-                  </div>
-                  <p>导出按 ID 升序，afterId 可用于手工分卷；单次最多返回 100,000 行。</p>
-                </div>
+      <DatasetImportPanel
+        v-if="canImport"
+        dataset="archive-boxes"
+        title="档案装箱导入"
+        description="导入前解析稳定 archive_id；无法唯一关联病案主档或同一病案存在冲突时整批拒绝。"
+        :fields="archiveBoxFields"
+        max-file-size="单文件不超过 20 MB"
+      />
+    </div>
+
+    <div v-show="activeTab === 'scan'" class="tab-content">
+      <el-card shadow="never">
+        <template #header>
+          <div class="panel-heading">
+            <div>
+              <div class="page-title-row">
+                <h3>扫描记录条件导出</h3>
+                <el-tooltip placement="right" :show-after="200">
+                  <template #content>
+                    浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
+                  </template>
+                  <button type="button" class="info-trigger" aria-label="扫描记录导入说明">
+                    <el-icon><InfoFilled /></el-icon>
+                  </button>
+                </el-tooltip>
               </div>
-            </template>
-            <div class="filter-grid filter-grid--scan">
-              <el-input-number v-model="scanFilters.afterId" :min="0" controls-position="right" placeholder="起始 ID（不含）" />
-              <el-input v-model="scanFilters.bah" clearable placeholder="病案号" />
-              <el-input v-model="scanFilters.sjh" clearable placeholder="上架号" />
-              <el-input v-model="scanFilters.brxh" clearable placeholder="病人序号" />
-              <el-input v-model="scanFilters.folder" clearable placeholder="目录" />
-              <el-input v-model="scanFilters.filename" clearable placeholder="文件名" />
-              <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" placeholder="图片类型" />
-              <div class="filter-actions">
-                <el-button @click="resetScanFilters">
-                  重置
-                </el-button>
-                <el-button
-                  type="primary"
-                  :icon="Download"
-                  :loading="exporting.scan"
-                  :disabled="!canReadRecords"
-                  @click="exportScans"
-                >
-                  导出 CSV
-                </el-button>
-              </div>
+              <p>导出按 ID 升序，afterId 可用于手工分卷；单次最多返回 100,000 行。</p>
             </div>
-          </el-card>
-
-          <DatasetImportPanel
-            v-if="canImport"
-            dataset="scan"
-            title="扫描记录小批量导入"
-            description="以 folder + filename 作为受控定位条件；完全重复跳过，已存在路径按模板字段更新，新路径创建扫描记录并关联病案主档。"
-            :fields="scanFields"
-            max-file-size="单文件不超过 50 MB"
-          />
+          </div>
+        </template>
+        <div class="filter-grid filter-grid--scan">
+          <el-input-number v-model="scanFilters.afterId" :min="0" controls-position="right" placeholder="起始 ID（不含）" />
+          <el-input v-model="scanFilters.bah" clearable placeholder="病案号" />
+          <el-input v-model="scanFilters.sjh" clearable placeholder="上架号" />
+          <el-input v-model="scanFilters.brxh" clearable placeholder="病人序号" />
+          <el-input v-model="scanFilters.folder" clearable placeholder="目录" />
+          <el-input v-model="scanFilters.filename" clearable placeholder="文件名" />
+          <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" placeholder="图片类型" />
+          <div class="filter-actions">
+            <el-button @click="resetScanFilters">
+              重置
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              :loading="exporting.scan"
+              :disabled="!canReadRecords"
+              @click="exportScans"
+            >
+              导出 CSV
+            </el-button>
+          </div>
         </div>
-      </el-tab-pane>
-    </el-tabs>
+      </el-card>
+
+      <DatasetImportPanel
+        v-if="canImport"
+        dataset="scan"
+        title="扫描记录小批量导入"
+        description="以 folder + filename 作为受控定位条件；完全重复跳过，已存在路径按模板字段更新，新路径创建扫描记录并关联病案主档。"
+        :fields="scanFields"
+        max-file-size="单文件不超过 50 MB"
+      />
+    </div>
   </div>
 </template>
 
@@ -661,8 +666,48 @@ h2 {
   color: var(--el-text-color-secondary);
 }
 
-.workbench-tabs :deep(.el-tabs__content) {
-  overflow: visible;
+/*
+ * 数据集切换：浅灰底槽 + 白色滑块的分段控件。
+ * 圆角跟随全局「界面圆角」设置（--mrr-radius-lg），不写死 px。
+ */
+.dataset-switch {
+  --el-segmented-bg-color: var(--mrr-muted);
+  --el-segmented-color: var(--mrr-muted-foreground);
+  --el-segmented-padding: 4px;
+  --el-segmented-item-selected-bg-color: #fff;
+  --el-segmented-item-selected-color: var(--mrr-foreground);
+  --el-segmented-item-hover-bg-color: rgb(15 23 42 / 4%);
+  --el-segmented-item-active-bg-color: rgb(15 23 42 / 7%);
+
+  width: 100%;
+  min-height: 40px;
+  overflow: hidden;
+  font-size: 13px;
+  border-radius: var(--mrr-radius-lg);
+}
+
+.dataset-switch :deep(.el-segmented__item) {
+  font-weight: 500;
+  border-radius: clamp(0px, calc(var(--mrr-radius-lg) - 2px), 20px);
+}
+
+.dataset-switch :deep(.el-segmented__item.is-selected) {
+  font-weight: 600;
+}
+
+.dataset-switch :deep(.el-segmented__item-selected) {
+  border-radius: clamp(0px, calc(var(--mrr-radius-lg) - 2px), 20px);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%), 0 2px 6px rgb(15 23 42 / 5%);
+}
+
+@media (max-width: 720px) {
+  .dataset-switch {
+    font-size: 12px;
+  }
+
+  .dataset-switch :deep(.el-segmented__item) {
+    padding: 0 4px;
+  }
 }
 
 .filter-grid {

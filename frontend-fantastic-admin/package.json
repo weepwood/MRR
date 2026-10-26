@@ -98,7 +98,7 @@
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.4.27",
     "boxen": "^8.0.1",
-    "bumpp": "^11.0.1",
+    "bumpp": "^11.1.0",
     "cz-git": "^1.12.0",
     "eslint": "^10.11.0",
     "fs-extra": "^11.3.4",
@@ -139,7 +139,7 @@
     "vite-plugin-vue-devtools": "^8.2.1",
     "vite-plugin-vue-meta-layouts": "^0.6.1",
     "vitest": "^3.2.4",
-    "vue-tsc": "^3.3.8"
+    "vue-tsc": "^3.3.13"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",

@@ -1,5 +1,4 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
-import { useNProgress } from '@vueuse/integrations/useNProgress'
 import { canUseArchiveLegacyRoute, getRuntimeDeveloperModeStatus } from '@/api/modules/developer-mode'
 import {
   clearExternalArchiveSession,
@@ -7,6 +6,7 @@ import {
   setExternalArchiveSession,
 } from '@/api/modules/external-archive'
 import { setArchiveAccessMode } from '@/views/statistics/archive/access-mode'
+import setupProgress from './progress'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
 import '@/assets/styles/nprogress.css'
 import '@/assets/styles/archive-legacy-mode.css'
@@ -215,22 +215,6 @@ function setupRedirectAuthChildrenRoute(router: Router) {
       if (findAuthRoute) {
         return findAuthRoute
       }
-    }
-  })
-}
-
-function setupProgress(router: Router) {
-  const { isLoading } = useNProgress()
-  router.beforeEach(() => {
-    const settingsStore = useSettingsStore()
-    if (settingsStore.settings.app.enableProgress) {
-      isLoading.value = true
-    }
-  })
-  router.afterEach(() => {
-    const settingsStore = useSettingsStore()
-    if (settingsStore.settings.app.enableProgress) {
-      isLoading.value = false
     }
   })
 }

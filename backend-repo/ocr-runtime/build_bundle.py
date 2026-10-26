@@ -1,9 +1,11 @@
 """Prepare a relocatable Windows OCR release from trusted local runtimes and pinned models; no downloads."""
 import argparse
+from collections.abc import Mapping
 import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +14,41 @@ import sys
 def digest(path):
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def normalize_package_name(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def read_pinned_requirements(lock_path):
+    pinned = {}
+    for line in lock_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.count("==") != 1:
+            raise ValueError("INVALID_RUNTIME_DEPENDENCY_LOCK")
+        name, version = line.split("==")
+        key = normalize_package_name(name.strip())
+        if not key or not version.strip() or key in pinned:
+            raise ValueError("INVALID_RUNTIME_DEPENDENCY_LOCK")
+        pinned[key] = version.strip()
+    if not pinned:
+        raise ValueError("INVALID_RUNTIME_DEPENDENCY_LOCK")
+    return pinned
+
+
+def validate_runtime_packages(installed, lock_path):
+    pinned = read_pinned_requirements(lock_path)
+    normalized = {}
+    entries = installed.items() if isinstance(installed, Mapping) else installed
+    for name, version in entries:
+        key = normalize_package_name(name)
+        if key in normalized:
+            raise ValueError("RUNTIME_DEPENDENCY_DUPLICATE")
+        normalized[key] = version
+    if any(normalized.get(name) != version for name, version in pinned.items()):
+        raise ValueError("RUNTIME_DEPENDENCY_MISMATCH")
 
 
 def main():
@@ -37,6 +74,9 @@ def main():
     worker = spec.module_from_spec(worker_spec)
     worker_spec.loader.exec_module(worker)
     worker.load_manifest(models)
+    distributions = list(importlib.metadata.distributions(path=[str(packages)]))
+    installed_versions = [(d.metadata["Name"], d.version) for d in distributions]
+    validate_runtime_packages(installed_versions, Path(__file__).with_name("requirements-validated.lock"))
     python = output / "python"
     python.mkdir(parents=True)
     for path in home.iterdir():
@@ -55,7 +95,7 @@ def main():
     shutil.copytree(models, output / "models")
     for filename in ("worker.py", "evaluate.py", "doctor.py", "requirements-validated.lock"):
         shutil.copyfile(Path(__file__).with_name(filename), output / filename)
-    installed = sorted(f"{d.metadata['Name']}=={d.version}" for d in importlib.metadata.distributions(path=[str(packages)]))
+    installed = sorted(f"{d.metadata['Name']}=={d.version}" for d in distributions)
     (output / "requirements.lock").write_text("\n".join(installed) + "\n", encoding="utf-8")
     manifest = {"schemaVersion": 1, "version": args.version, "pythonVersion": sys.version.split()[0],
                 "modelManifestSha256": digest(output / "models" / "manifest.json"),

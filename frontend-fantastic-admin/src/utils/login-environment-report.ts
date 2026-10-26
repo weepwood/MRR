@@ -81,6 +81,12 @@ function describeBrowser(info: BrowserInfo): string {
   return `${info.browserName}${version}`
 }
 
+function describeBrowserSummary(info: BrowserInfo): string {
+  const majorVersion = /^(\d+)/.exec(info.browserVersion)?.[1]
+  const version = majorVersion ? ` ${majorVersion}` : ''
+  return `${info.browserName}${version}`
+}
+
 function describeEngine(info: BrowserInfo): string {
   if (!info.engineName) { return '' }
   return info.engineVersion ? `${info.engineName} ${info.engineVersion}` : info.engineName
@@ -152,7 +158,7 @@ export function buildLoginEnvironmentView(
   }
 
   const addressItems: EnvironmentItem[] = [
-    { label: '客户端地址', value: server && server.clientIp ? server.clientIp : '未能获取' },
+    { label: '客户端 IP', value: server && server.clientIp ? server.clientIp : '未能获取' },
   ]
   if (server) {
     const versionLabel = server.ipVersion === 'IPV4'
@@ -238,7 +244,7 @@ export function buildLoginEnvironmentView(
     statusLabel,
     statusTone,
     clientIpLabel: server && server.clientIp ? server.clientIp : '',
-    browserLabel: browser.browserName === '未知浏览器' ? '' : describeBrowser(browser),
+    browserLabel: browser.browserName === '未知浏览器' ? '' : describeBrowserSummary(browser),
     groups,
     reportText: reportLines.join('\n'),
   }

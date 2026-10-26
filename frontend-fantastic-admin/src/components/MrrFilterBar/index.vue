@@ -3,15 +3,19 @@ defineOptions({ name: 'MrrFilterBar' })
 
 const props = withDefaults(defineProps<{
   compact?: boolean
+  embedded?: boolean
+  focusRing?: boolean
 }>(), {
   compact: false,
+  embedded: false,
+  focusRing: true,
 })
 
 const slots = useSlots()
 </script>
 
 <template>
-  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact }">
+  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing }">
     <div class="mrr-filter-bar__fields">
       <slot />
     </div>
@@ -32,12 +36,13 @@ const slots = useSlots()
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-lg);
+  border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.mrr-filter-bar:focus-within {
+.mrr-filter-bar--focus-ring:focus-within {
+  border-color: var(--mrr-primary);
   border-color: color-mix(in srgb, var(--mrr-ring) 46%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-xs), 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 10%, transparent);
 }
@@ -45,6 +50,15 @@ const slots = useSlots()
 .mrr-filter-bar--compact {
   padding: 8px 9px;
   border-radius: var(--mrr-radius-md);
+}
+
+.mrr-filter-bar.mrr-filter-bar--embedded {
+  padding: 0 0 var(--mrr-space-3);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--mrr-shell-divider);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .mrr-filter-bar__fields {
@@ -58,10 +72,11 @@ const slots = useSlots()
 
 .mrr-filter-bar__actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
+  min-width: 0;
   padding-left: var(--mrr-space-3);
   border-left: 1px solid var(--mrr-shell-divider);
 }
@@ -105,6 +120,11 @@ const slots = useSlots()
     width: 100%;
   }
 
+  .mrr-filter-bar__fields > :deep(*) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .mrr-filter-bar__actions {
     padding-top: var(--mrr-space-3);
     padding-left: 0;
@@ -114,12 +134,6 @@ const slots = useSlots()
 
   .mrr-filter-bar__actions :deep(.el-button) {
     flex: 1 1 120px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mrr-filter-bar {
-    transition: none;
   }
 }
 </style>

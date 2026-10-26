@@ -9,7 +9,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
     <div class="setting-group">
       <div class="group-heading"><strong>默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p></div>
       <el-segmented v-model="settings.imageSource" :options="[{ label: '本地图片', value: 'local' }, { label: 'OSS 图片', value: 'oss' }]" class="full-width" />
-      <el-alert type="info" :closable="false" show-icon :title="settings.imageSource === 'local' ? '默认从本地图片服务器读取。' : '优先从 OSS 读取；签名失败时自动回退本地图片。'" />
+      <el-alert class="image-source-hint" type="info" :closable="false" show-icon :title="settings.imageSource === 'local' ? '默认从本地图片服务器读取。' : '优先从 OSS 读取；签名失败时自动回退本地图片。'" />
     </div>
     <div class="setting-group">
       <div class="group-heading"><strong>默认浏览方式</strong><p>进入影像档案袋时自动应用。</p></div>
@@ -46,6 +46,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .group-heading { margin-bottom: var(--mrr-space-5); }
 .group-heading strong { font-size: 15px; }
 .group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
+.image-source-hint { margin-top: var(--mrr-space-3); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .full-width { width: 100%; }
 

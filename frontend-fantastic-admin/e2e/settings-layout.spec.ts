@@ -8,7 +8,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page.locator('.settings-shell')).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.settings-tabs')).toHaveCount(0)
 
-    for (const label of ['系统信息', '登录与支持', '档案浏览', '访问安全', '开发者模式', '科室配色', '界面外观']) {
+    for (const label of ['系统信息', '登录与支持', '档案浏览', '访问安全', '开发者模式', '科室档案袋配色', '界面外观']) {
       await expect(page.locator('.settings-nav-item').filter({ hasText: label })).toBeVisible()
     }
 
@@ -65,7 +65,7 @@ test.describe('系统设置分类布局', () => {
     const initial = await page.evaluate(() => {
       const inputElement = document.querySelector('.users-filter-bar .el-input__wrapper')
       const selectElement = document.querySelector('.users-filter-bar .el-select__wrapper')
-      if (!inputElement || !selectElement) throw new Error('筛选控件未渲染')
+      if (!inputElement || !selectElement) { throw new Error('筛选控件未渲染') }
       return {
         inputHeight: inputElement.getBoundingClientRect().height,
         selectHeight: selectElement.getBoundingClientRect().height,

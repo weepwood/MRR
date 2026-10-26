@@ -1,8 +1,8 @@
 /* MRR 业务指标卡片：现代 SaaS 仪表盘风格 */
 .mrr-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--mrr-space-4);
 }
 
 .mrr-metric-grid--compact {
@@ -46,29 +46,18 @@
   height: 100%;
   overflow: hidden;
   color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
   background: linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.mrr-metric-card::after {
-  position: absolute;
-  top: -54px;
-  right: -42px;
-  width: 132px;
-  height: 132px;
-  pointer-events: none;
-  content: "";
-  background: radial-gradient(circle, color-mix(in srgb, var(--mrr-metric-accent) 15%, transparent) 0%, transparent 68%);
-}
-
-.mrr-metric-card:hover,
 .mrr-metric-card:focus-within {
+  border-color: var(--mrr-primary);
   border-color: color-mix(in srgb, var(--mrr-metric-accent) 24%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-sm);
-  transform: translateY(-1px);
 }
 
 .mrr-metric-card .el-card__body {
@@ -176,13 +165,11 @@
 
 .mrr-metric-card__note {
   margin: 7px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 12px;
   line-height: 1.45;
   color: var(--mrr-muted-foreground);
-  white-space: nowrap;
-  opacity: 0.84;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .mrr-metric-card--rose {
@@ -231,16 +218,5 @@
     height: 46px;
     font-size: 23px;
     border-radius: var(--mrr-radius-card);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mrr-metric-card {
-    transition: none;
-  }
-
-  .mrr-metric-card:hover,
-  .mrr-metric-card:focus-within {
-    transform: none;
   }
 }

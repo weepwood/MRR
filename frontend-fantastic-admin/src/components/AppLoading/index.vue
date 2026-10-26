@@ -133,15 +133,4 @@ withDefaults(defineProps<{
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-cell,
-  .skeleton-card-img,
-  .skeleton-card-line,
-  .skeleton-stat-label,
-  .skeleton-stat-value {
-    background-position: 0 0;
-    animation: none;
-  }
-}
 </style>

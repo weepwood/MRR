@@ -22,19 +22,6 @@ CI_CONTROL_PATHS = {
     "scripts/tests/test_jacoco_coverage.py",
 }
 
-RELEASE_EXACT_PATHS = {
-    "VERSION",
-    "release-baseline.json",
-    ".github/workflows/windows-release-package.yml",
-    # 该流水线同样消费后端 JAR 与前端 dist，改动它必须跑完整后端验证，
-    # 口径与 frontend_test_scope.RELEASE_EXACT_PATHS 保持一致。
-    ".github/workflows/standalone-jar-release.yml",
-}
-
-RELEASE_PREFIXES = (
-    "release-notes/",
-)
-
 INTEGRATION_EXACT_PATHS = {
     "backend-repo/pom.xml",
 }
@@ -46,6 +33,9 @@ INTEGRATION_PREFIXES = (
     "backend-repo/src/main/java/com/zjcxph/imgapi/entity/",
     "backend-repo/src/main/java/com/zjcxph/imgapi/repository/",
     "backend-repo/src/main/java/com/zjcxph/imgapi/config/",
+    "backend-repo/src/main/java/com/zjcxph/imgapi/service/",
+    "backend-repo/src/main/java/com/zjcxph/imgapi/security/",
+    "backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/",
 )
 
 
@@ -75,18 +65,16 @@ def classify_paths(paths: Iterable[str]) -> BackendTestScope:
     if any(path in CI_CONTROL_PATHS for path in normalized):
         return BackendTestScope(True, True, "backend-gate-control")
 
-    if any(
-        path in RELEASE_EXACT_PATHS or _matches_prefix(path, RELEASE_PREFIXES)
-        for path in normalized
-    ):
-        return BackendTestScope(True, True, "release-change")
-
-    backend_paths = [path for path in normalized if path.startswith("backend-repo/")]
+    backend_paths = [path for path in normalized if path.startswith("backend-repo/")
+                     and not path.lower().endswith('.md')]
     if not backend_paths:
         return BackendTestScope(False, False, "frontend-or-docs-only")
 
     integration_changed = any(
         path in INTEGRATION_EXACT_PATHS or _matches_prefix(path, INTEGRATION_PREFIXES)
+        or path.startswith('backend-repo/src/main/') and any(word in path.lower() for word in (
+            'auth', 'permission', 'audit', 'ticket', 'import', 'export', 'exchange',
+        ))
         for path in backend_paths
     )
     return BackendTestScope(

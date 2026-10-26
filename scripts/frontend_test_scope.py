@@ -18,17 +18,6 @@ CI_CONTROL_PATHS = {
     "scripts/tests/test_vitest_coverage.py",
 }
 
-RELEASE_EXACT_PATHS = {
-    "VERSION",
-    "release-baseline.json",
-    ".github/workflows/windows-release-package.yml",
-    ".github/workflows/standalone-jar-release.yml",
-}
-
-RELEASE_PREFIXES = (
-    "release-notes/",
-)
-
 FRONTEND_EXACT_PATHS = {
     "frontend-fantastic-admin/package.json",
     "frontend-fantastic-admin/pnpm-lock.yaml",
@@ -42,14 +31,17 @@ FRONTEND_EXACT_PATHS = {
 
 E2E_PREFIXES = (
     "frontend-fantastic-admin/e2e/",
-    "frontend-fantastic-admin/src/api/",
-    "frontend-fantastic-admin/src/components/",
-    "frontend-fantastic-admin/src/layouts/",
-    "frontend-fantastic-admin/src/mock/",
+    "frontend-fantastic-admin/e2e-live/",
+    "frontend-fantastic-admin/src/api/index.ts",
+    "frontend-fantastic-admin/src/api/modules/auth",
+    "frontend-fantastic-admin/src/api/modules/user",
+    "frontend-fantastic-admin/src/api/modules/data-exchange",
+    "frontend-fantastic-admin/src/api/modules/external-archive",
+    "frontend-fantastic-admin/src/components/AccountForm/",
     "frontend-fantastic-admin/src/router/",
-    "frontend-fantastic-admin/src/store/",
-    "frontend-fantastic-admin/src/ui/",
-    "frontend-fantastic-admin/src/views/",
+    "frontend-fantastic-admin/src/store/modules/user",
+    "frontend-fantastic-admin/src/views/login",
+    "frontend-fantastic-admin/src/views/data-exchange/",
 )
 
 
@@ -58,6 +50,7 @@ class FrontendTestScope:
     frontend_changed: bool
     e2e_changed: bool
     reason: str
+    build_changed: bool = False
 
 
 def _normalize(path: str) -> str:
@@ -77,13 +70,7 @@ def classify_paths(paths: Iterable[str]) -> FrontendTestScope:
         return FrontendTestScope(False, False, "no-changed-files")
 
     if any(path in CI_CONTROL_PATHS for path in normalized):
-        return FrontendTestScope(True, True, "frontend-gate-control")
-
-    if any(
-        path in RELEASE_EXACT_PATHS or _matches_prefix(path, RELEASE_PREFIXES)
-        for path in normalized
-    ):
-        return FrontendTestScope(True, True, "release-change")
+        return FrontendTestScope(True, True, "frontend-gate-control", True)
 
     frontend_paths = [
         path for path in normalized
@@ -92,14 +79,22 @@ def classify_paths(paths: Iterable[str]) -> FrontendTestScope:
     if not frontend_paths:
         return FrontendTestScope(False, False, "backend-or-docs-only")
 
+    # Maintained prose alone does not require installing application dependencies.
+    frontend_paths = [p for p in frontend_paths if not p.lower().endswith('.md')]
+    if not frontend_paths:
+        return FrontendTestScope(False, False, "backend-or-docs-only")
+
     e2e_changed = any(
-        path in FRONTEND_EXACT_PATHS or _matches_prefix(path, E2E_PREFIXES)
+        path in ("frontend-fantastic-admin/playwright.config.ts",
+                 "frontend-fantastic-admin/playwright.live.config.ts") or _matches_prefix(path, E2E_PREFIXES)
         for path in frontend_paths
     )
     return FrontendTestScope(
         frontend_changed=True,
         e2e_changed=e2e_changed,
         reason="frontend-user-flow-change" if e2e_changed else "frontend-unit-change",
+        build_changed=any(not p.removeprefix('frontend-fantastic-admin/').startswith(
+            ('src/', 'e2e/', 'e2e-live/')) for p in frontend_paths),
     )
 
 

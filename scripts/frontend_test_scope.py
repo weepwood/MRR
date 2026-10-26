@@ -34,7 +34,19 @@ E2E_PREFIXES = (
     "frontend-fantastic-admin/src/utils/auth-storage",
     "frontend-fantastic-admin/src/utils/permission",
     "frontend-fantastic-admin/src/utils/composables/useAuth",
+    "frontend-fantastic-admin/src/views/password/",
+    "frontend-fantastic-admin/src/views/permissions/",
+    "frontend-fantastic-admin/src/ui/components/FaAuth/",
 )
+
+CRITICAL_SOURCE_NAMES = ('auth', 'session', 'permission', 'login', 'password', 'ticket', 'import', 'export')
+
+
+def _critical_source(path: str) -> bool:
+    return (path.startswith('frontend-fantastic-admin/src/')
+            and Path(path).suffix in ('.ts', '.tsx', '.js', '.jsx', '.vue')
+            and not path.endswith('.d.ts')
+            and any(part in Path(path).name.lower() for part in CRITICAL_SOURCE_NAMES))
 
 
 @dataclass(frozen=True)
@@ -78,7 +90,8 @@ def classify_paths(paths: Iterable[str]) -> FrontendTestScope:
 
     e2e_changed = any(
         path in ("frontend-fantastic-admin/playwright.config.ts",
-                 "frontend-fantastic-admin/playwright.live.config.ts") or _matches_prefix(path, E2E_PREFIXES)
+                 "frontend-fantastic-admin/playwright.live.config.ts")
+        or _matches_prefix(path, E2E_PREFIXES) or _critical_source(path)
         for path in frontend_paths
     )
     return FrontendTestScope(

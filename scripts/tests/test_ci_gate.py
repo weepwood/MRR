@@ -85,10 +85,23 @@ class CiGateTest(unittest.TestCase):
                      'backend-repo/src/main/java/com/zjcxph/imgapi/utils/PasswordUtil.java',
                      'frontend-fantastic-admin/src/utils/auth-storage.ts',
                      'frontend-fantastic-admin/src/utils/composables/useAuth.ts',
-                     'frontend-fantastic-admin/src/utils/permission.ts'):
+                     'frontend-fantastic-admin/src/utils/permission.ts',
+                     'frontend-fantastic-admin/src/utils/session.ts',
+                     'frontend-fantastic-admin/src/utils/unauthorized-session.ts',
+                     'frontend-fantastic-admin/src/views/patients/components/PatientImportDialog.vue',
+                     'frontend-fantastic-admin/src/views/data-exchange/components/DatasetImportPanel.vue',
+                     'frontend-fantastic-admin/src/views/password/change-required.vue',
+                     'frontend-fantastic-admin/src/ui/components/FaAuth/index.vue'):
             with self.subTest(path=path):
                 scope = classify_paths([path])
                 self.assertTrue(scope['integration'])
+
+    def test_login_image_and_generated_import_types_do_not_trigger_real_identity_checks(self):
+        for path in ('frontend-fantastic-admin/src/assets/images/login-banner.png',
+                     'frontend-fantastic-admin/src/types/auto-imports.d.ts'):
+            scope = classify_paths([path])
+            self.assertTrue(scope['frontend'])
+            self.assertFalse(scope['integration'])
 
     def test_packaging_inputs_require_complete_candidate_validation(self):
         for path in ('scripts/build_standalone_jar.py', 'scripts/embed_frontend_in_jar.py',

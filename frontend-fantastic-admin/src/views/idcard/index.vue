@@ -28,7 +28,7 @@ function handleSearch() {
       <!-- Logo / 标题区 -->
       <div class="search-header">
         <div class="search-logo">
-          <i class="i-ant-design:file-search-outlined" />
+          <i class="i-lucide:file-search" />
         </div>
         <h1 class="search-title">
           病案图像查询
@@ -51,7 +51,7 @@ function handleSearch() {
             @keyup.enter="handleSearch"
           >
             <template #prefix>
-              <i class="i-ant-design:idcard-outlined" style="font-size: 16px;" />
+              <i class="i-ant-design:idcard-outlined prefix-icon" />
             </template>
           </el-input>
         </div>
@@ -93,6 +93,10 @@ function handleSearch() {
   min-height: 100vh;
   padding: 24px;
   background: linear-gradient(135deg, var(--mrr-muted) 0%, var(--mrr-background) 60%, var(--mrr-muted) 100%);
+}
+
+.prefix-icon {
+  font-size: 16px;
 }
 
 .search-card {

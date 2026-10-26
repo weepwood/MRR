@@ -31,7 +31,7 @@ const archiveEmbeddedRoute: RouteRecordRaw = {
   component: () => import('@/views/statistics/archive.vue'),
   meta: {
     title: '影像档案袋',
-    icon: 'i-ant-design:folder-open-twotone',
+    icon: 'i-lucide:folder-open',
     auth: ['record:read'],
     cache: false,
   },
@@ -43,7 +43,7 @@ const monitoringFilesystemRoute: RouteRecordRaw = {
   component: () => import('@/views/monitoring-dashboard/index.vue'),
   meta: {
     title: '系统监控',
-    icon: 'i-ant-design:dashboard-twotone',
+    icon: 'i-lucide:activity',
     auth: ['system:read'],
     cache: true,
   },
@@ -55,7 +55,7 @@ const authenticationTestRoute: RouteRecordRaw = {
   component: () => import('@/views/auth-test/index.vue'),
   meta: {
     title: '认证接口测试',
-    icon: 'i-ant-design:api-twotone',
+    icon: 'i-lucide:key-round',
     auth: ['user:manage'],
     cache: false,
   },
@@ -67,7 +67,7 @@ const nginxBrowserRoute: RouteRecordRaw = {
   component: () => import('@/views/nginx-browser/index.vue'),
   meta: {
     title: 'Nginx 文件浏览',
-    icon: 'i-ant-design:folder-open-twotone',
+    icon: 'i-lucide:folder-open',
     auth: ['record:read'],
     cache: true,
   },
@@ -119,7 +119,7 @@ const systemRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/index.vue'),
         meta: {
           title: () => useSettingsStore().settings.home.title,
-          icon: 'i-ant-design:home-twotone',
+          icon: 'i-lucide:house',
           breadcrumb: false,
         },
       },
@@ -135,14 +135,14 @@ const systemRoutes: RouteRecordRaw[] = [
 
 const asyncRoutes: Route.recordMainRaw[] = [
   {
-    meta: { title: '系统', icon: 'i-ant-design:setting-twotone' },
+    meta: { title: '系统', icon: 'i-lucide:settings' },
     children: [
       {
         path: '/users',
         component: () => import('@/views/users/index.vue'),
         meta: {
           title: '用户管理',
-          icon: 'i-ant-design:user-outlined',
+          icon: 'i-lucide:user-round',
           auth: ['user:manage'],
           cache: true,
         },
@@ -152,7 +152,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/permissions/index.vue'),
         meta: {
           title: '权限管理',
-          icon: 'i-ant-design:lock-twotone',
+          icon: 'i-lucide:shield-check',
           auth: ['role:read'],
           cache: true,
         },
@@ -162,7 +162,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/settings/index.vue'),
         meta: {
           title: '系统设置',
-          icon: 'i-ant-design:tool-twotone',
+          icon: 'i-lucide:sliders-horizontal',
           auth: ['system:read'],
           cache: true,
         },
@@ -182,32 +182,32 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
-    meta: { title: '业务', icon: 'i-ant-design:appstore-twotone' },
+    meta: { title: '业务', icon: 'i-lucide:layout-grid' },
     children: [
       {
         path: '/records',
         component: () => import('@/views/records/index.vue'),
-        meta: { title: '记录管理', icon: 'i-ant-design:database-twotone', auth: ['record:read'], cache: true },
+        meta: { title: '记录管理', icon: 'i-lucide:files', auth: ['record:read'], cache: true },
       },
       {
         path: '/patients',
         component: () => import('@/views/patients/index.vue'),
-        meta: { title: '患者管理', icon: 'i-ant-design:team-outlined', auth: ['record:read'], cache: true },
+        meta: { title: '患者管理', icon: 'i-lucide:users-round', auth: ['record:read'], cache: true },
       },
       {
         path: '/ocr-batches',
         component: () => import('@/views/ocr-batches/index.vue'),
-        meta: { title: '历史影像识别', icon: 'i-ant-design:file-search-outlined', auth: ['ocr:batch-run'] },
+        meta: { title: '历史影像识别', icon: 'i-lucide:file-search', auth: ['ocr:batch-run'] },
       },
       {
         path: '/statistics',
         component: () => import('@/views/statistics/index.vue'),
-        meta: { title: '病案扫描统计', icon: 'i-ant-design:area-chart-outlined', auth: ['statistics:read'], cache: true },
+        meta: { title: '病案扫描统计', icon: 'i-lucide:chart-column', auth: ['statistics:read'], cache: true },
       },
       {
         path: '/statistics-detail',
         component: () => import('@/views/statistics-detail/index.vue'),
-        meta: { title: '统计明细', icon: 'i-ant-design:profile-twotone', auth: ['statistics:read'], cache: true },
+        meta: { title: '统计明细', icon: 'i-lucide:table-2', auth: ['statistics:read'], cache: true },
       },
       {
         path: '/records-statistics',
@@ -224,36 +224,36 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/archive-boxes',
         component: () => import('@/views/archive-boxes/index.vue'),
-        meta: { title: '档案装箱', icon: 'i-ant-design:inbox-outlined', auth: ['record:read'], cache: true },
+        meta: { title: '档案装箱', icon: 'i-lucide:archive', auth: ['record:read'], cache: true },
       },
       {
         path: '/oss-migration',
         component: () => import('@/views/oss-migration/index.vue'),
-        meta: { title: 'OSS 迁移管理', icon: 'i-ant-design:cloud-upload-outlined', auth: ['record:read'], cache: true },
+        meta: { title: 'OSS 迁移管理', icon: 'i-lucide:cloud-upload', auth: ['record:read'], cache: true },
       },
       {
         path: '/oss-browser',
         component: () => import('@/views/oss-browser/index.vue'),
-        meta: { title: 'OSS 文件浏览', icon: 'i-ant-design:folder-open-twotone', auth: ['record:read'], cache: true },
+        meta: { title: 'OSS 文件浏览', icon: 'i-lucide:folder-open', auth: ['record:read'], cache: true },
       },
       nginxBrowserRoute,
       archiveEmbeddedRoute,
     ],
   },
   {
-    meta: { title: '数据治理', icon: 'i-ant-design:cluster-outlined' },
+    meta: { title: '数据治理', icon: 'i-lucide:network' },
     children: [
       {
         path: '/data-exchange',
         component: () => import('@/views/data-exchange/index.vue'),
-        meta: { title: '数据导入导出', icon: 'i-ant-design:swap-outlined', auth: ['record:read', 'statistics:read'], cache: true },
+        meta: { title: '数据导入导出', icon: 'i-lucide:arrow-left-right', auth: ['record:read', 'statistics:read'], cache: true },
       },
       {
         path: '/data-relations',
         component: () => import('@/views/data-relations/index.vue'),
         meta: {
           title: '数据关系工作台',
-          icon: 'i-ant-design:apartment-outlined',
+          icon: 'i-lucide:workflow',
           auth: ['system:read'],
           cache: true,
         },
@@ -261,14 +261,14 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
-    meta: { title: '运维', icon: 'i-ant-design:control-twotone' },
+    meta: { title: '运维', icon: 'i-lucide:wrench' },
     children: [
       {
         path: '/operations-center',
         component: () => import('@/views/operations-center/index.vue'),
         meta: {
           title: '运维诊断中心',
-          icon: 'i-ant-design:deployment-unit-outlined',
+          icon: 'i-lucide:clipboard-check',
           auth: ['system:read'],
           cache: true,
         },
@@ -276,14 +276,14 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/logs',
         component: () => import('@/views/logs/index.vue'),
-        meta: { title: '日志管理', icon: 'i-ant-design:file-search-outlined', auth: ['log:read'], cache: true },
+        meta: { title: '日志管理', icon: 'i-lucide:file-search', auth: ['log:read'], cache: true },
       },
       {
         path: '/runtime-errors',
         component: () => import('@/views/runtime-errors/index.vue'),
         meta: {
           title: '运行错误中心',
-          icon: 'i-ant-design:bug-twotone',
+          icon: 'i-lucide:bug',
           auth: ['system:error:read'],
           cache: true,
         },
@@ -291,24 +291,24 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/runtime-logs',
         component: () => import('@/views/runtime-logs/index.vue'),
-        meta: { title: '运行日志', icon: 'i-ant-design:file-search-outlined', auth: ['system:manage'], cache: true },
+        meta: { title: '运行日志', icon: 'i-lucide:file-search', auth: ['system:manage'], cache: true },
       },
       {
         path: '/audit-images',
         component: () => import('@/views/audit-images/index.vue'),
-        meta: { title: '病案图片访问审计', icon: 'i-ant-design:security-scan-outlined', auth: ['log:read'], cache: true },
+        meta: { title: '病案图片访问审计', icon: 'i-lucide:eye', auth: ['log:read'], cache: true },
       },
       {
         path: '/monitoring',
         component: () => import('@/views/monitoring-dashboard/index.vue'),
-        meta: { title: '系统监控', icon: 'i-ant-design:dashboard-twotone', auth: ['system:read'], cache: true },
+        meta: { title: '系统监控', icon: 'i-lucide:activity', auth: ['system:read'], cache: true },
       },
       {
         path: '/response-analysis',
         component: () => import('@/views/response-analysis/index.vue'),
         meta: {
           title: '接口响应分析',
-          icon: 'i-ant-design:fund-projection-screen-outlined',
+          icon: 'i-lucide:gauge',
           auth: ['system:read'],
           cache: true,
         },
@@ -317,12 +317,12 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
-    meta: { title: '帮助', icon: 'i-ant-design:question-circle-twotone' },
+    meta: { title: '帮助', icon: 'i-lucide:circle-help' },
     children: [
       {
         path: '/help',
         component: () => import('@/views/help/index.vue'),
-        meta: { title: '帮助与文档', icon: 'i-ant-design:read-outlined', cache: true },
+        meta: { title: '帮助与文档', icon: 'i-lucide:book-open', cache: true },
       },
     ],
   },

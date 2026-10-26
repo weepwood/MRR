@@ -531,7 +531,7 @@ watch(idCardParam, async (newId) => {
           <!-- 加载中提示 -->
           <div v-if="idSearchLoading" class="id-results-empty">
             <el-icon class="is-loading">
-              <i class="i-ant-design:loading-outlined" />
+              <i class="i-lucide:loader-circle animate-spin" />
             </el-icon>
             查询中...
           </div>
@@ -678,7 +678,7 @@ watch(idCardParam, async (newId) => {
               <!-- 未选择病案时的占位 -->
               <div v-else class="main-placeholder">
                 <div class="placeholder-icon">
-                  <i class="i-ant-design:file-image-outlined text-[64px] text-[var(--el-text-color-placeholder)]" />
+                  <i class="i-lucide:file-image text-[64px] text-[var(--el-text-color-placeholder)]" />
                 </div>
                 <p class="placeholder-text">
                   {{ idSearchLoading ? '正在查询病案...' : (idSearchResults.length ? '请从左侧选择病案' : '未找到病案记录') }}

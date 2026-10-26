@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
-import { Clock, Refresh } from '@element-plus/icons-vue'
+import { CircleCheck, CircleX, Clock3 as Clock, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import {
@@ -283,6 +283,7 @@ onUnmounted(() => {
                     :aria-pressed="historyStatus === 'success'"
                     @click="historyStatus = 'success'"
                   >
+                    <CircleCheck :size="14" aria-hidden="true" />
                     <span>成功查询</span><span class="history-filter-count">{{ successfulHistory.length }}</span>
                   </button>
                   <button
@@ -292,6 +293,7 @@ onUnmounted(() => {
                     :aria-pressed="historyStatus === 'failure'"
                     @click="historyStatus = 'failure'"
                   >
+                    <CircleX :size="14" aria-hidden="true" />
                     <span>失败查询</span><span class="history-filter-count">{{ failedHistory.length }}</span>
                   </button>
                   <button

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import type { OssBrowserEntry, OssBrowserPage } from '@/api/modules/oss'
+import { ElMessage } from 'element-plus'
 import {
   ArrowLeft,
-  Document,
+  FileText as Document,
   Folder,
-  Grid,
-  InfoFilled,
+  LayoutGrid as Grid,
+  Info as InfoFilled,
   List,
-  Picture,
-  Refresh,
+  Image as Picture,
+  RefreshCw as Refresh,
   Search,
-  Top,
-  View,
-} from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+  ArrowUp as Top,
+  Eye as View,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import OssFolderIcon from './OssFolderIcon.vue'

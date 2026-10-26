@@ -81,11 +81,11 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
     <div class="developer-grid">
       <article>
-        <span><FaIcon name="i-ri:folder-shield-2-line" /></span>
+        <span><FaIcon name="i-lucide:folder-lock" /></span>
         <div><strong>匿名只读范围</strong><p>无 Token 只允许影像档案袋查询和图片读取，不能进入后台管理 API。</p></div>
       </article>
       <article>
-        <span><FaIcon name="i-ri:shield-keyhole-line" /></span>
+        <span><FaIcon name="i-lucide:shield-ellipsis" /></span>
         <div><strong>真实账号审计</strong><p>API 权限旁路仍使用登录账号，用户 ID、操作日志和数据关联不会变成虚拟身份。</p></div>
       </article>
     </div>

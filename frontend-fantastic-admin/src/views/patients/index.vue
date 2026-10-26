@@ -2,14 +2,15 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { RefreshCw as Refresh, Search, Upload } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
@@ -40,7 +41,7 @@ const patientActions: MrrTableAction[] = [
   {
     key: 'edit',
     label: '编辑患者',
-    icon: 'i-ri:edit-line',
+    icon: 'i-lucide:pencil',
     tone: 'primary',
     placement: 'inline',
   },
@@ -226,12 +227,12 @@ onUnmounted(() => {
               </template>
             </el-input>
             <div class="filter-actions">
-              <el-button type="primary" @click="handleSearch">
+              <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
                 查询
-              </el-button>
-              <el-button @click="resetFilters">
+              </MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
                 重置
-              </el-button>
+              </MrrFilterActionButton>
             </div>
           </div>
         </el-card>

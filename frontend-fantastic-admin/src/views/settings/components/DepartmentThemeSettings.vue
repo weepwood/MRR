@@ -242,11 +242,11 @@ onMounted(() => {
             恢复自动配色
           </el-button>
           <el-button @click="handleExport">
-            <FaIcon name="i-ri:download-2-line" />
+            <FaIcon name="i-lucide:download" />
             导出配色
           </el-button>
           <el-button @click="triggerImport">
-            <FaIcon name="i-ri:upload-2-line" />
+            <FaIcon name="i-lucide:upload" />
             导入配色
           </el-button>
         </div>

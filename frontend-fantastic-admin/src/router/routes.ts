@@ -317,7 +317,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
     ],
   },
   {
-    meta: { title: '帮助', icon: 'i-lucide:circle-help' },
+    meta: { title: '帮助', icon: 'i-lucide:circle-question-mark' },
     children: [
       {
         path: '/help',

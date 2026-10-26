@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { getRuntimeLogFiles, getRuntimeLogHealth, getRuntimeLogs, importRuntimeLog } from '@/api/modules/runtime-logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
@@ -135,9 +136,9 @@ onMounted(() => { void load(); void refreshHealth() })
           </el-select>
         </el-form-item>
         <el-form-item class="filter-actions">
-          <el-button native-type="submit" type="primary" :loading="loading">
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" native-type="submit" type="primary">
             查询日志
-          </el-button>
+          </MrrFilterActionButton>
         </el-form-item>
       </el-form>
       <el-alert v-if="filtersChanged" title="筛选已修改，点击查询后生效；下一批沿用已提交条件" type="info" :closable="false" />

@@ -2,13 +2,14 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Download, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElNotification } from 'element-plus'
+import { Download } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
@@ -41,7 +42,7 @@ const recordActions: MrrTableAction[] = [
   {
     key: 'detail',
     label: '查看详情',
-    icon: 'i-ri:eye-line',
+    icon: 'i-lucide:eye',
     tone: 'primary',
     placement: 'inline',
   },
@@ -109,28 +110,28 @@ const summaryCards = computed(() => [
     value: list.value.length,
     note: '当前筛选结果中已加载的数据条数',
     tone: 'blue' as MetricTone,
-    icon: 'i-ant-design:profile-twotone',
+    icon: 'i-lucide:contact-round',
   },
   {
     label: '读取方式',
     value: '游标',
     note: '按完整编号筛选；未执行全表总数统计',
     tone: 'teal' as MetricTone,
-    icon: 'i-ant-design:database-twotone',
+    icon: 'i-lucide:database',
   },
   {
     label: '已选记录',
     value: selectedRows.value.length,
     note: '可用于批量打包下载',
     tone: 'violet' as MetricTone,
-    icon: 'i-ant-design:check-circle-twotone',
+    icon: 'i-lucide:circle-check',
   },
   {
     label: '当前页码',
     value: pageNum.value,
     note: `每页 ${pageSize.value} 条`,
     tone: 'amber' as MetricTone,
-    icon: 'i-ant-design:unordered-list-outlined',
+    icon: 'i-lucide:list',
   },
 ])
 
@@ -222,13 +223,12 @@ function typeLabel(value: unknown) {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetFilters">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </el-form-item>
       </el-form>
 

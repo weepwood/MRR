@@ -127,29 +127,29 @@ function handleReset() {
       </div>
       <div class="config-summary-actions">
         <span class="autosave-state">
-          <FaIcon name="i-ri:save-3-line" />
+          <FaIcon name="i-lucide:save" />
           {{ autoSaveLabel }}
         </span>
         <el-button @click="handleReset">
-          <FaIcon name="i-ri:restart-line" />
+          <FaIcon name="i-lucide:rotate-cw" />
           恢复默认
         </el-button>
         <el-button @click="handleExport">
-          <FaIcon name="i-ri:download-2-line" />
+          <FaIcon name="i-lucide:download" />
           导出配置
         </el-button>
         <el-button @click="triggerImport">
-          <FaIcon name="i-ri:upload-2-line" />
+          <FaIcon name="i-lucide:upload" />
           导入配置
         </el-button>
       </div>
     </div>
     <div v-if="settingsStore.uiSettingsSyncState === 'local-only'" class="sync-notice">
-      <FaIcon name="i-ri:information-line" />
+      <FaIcon name="i-lucide:info" />
       <span>当前账号没有「系统管理」权限，外观修改仅在本机生效，不会影响其他终端。</span>
     </div>
     <div v-else-if="settingsStore.uiSettingsSyncState === 'failed'" class="sync-notice sync-notice--warning">
-      <FaIcon name="i-ri:error-warning-line" />
+      <FaIcon name="i-lucide:triangle-alert" />
       <span>同步到全站失败，修改已保存在本机。请检查网络后重试。</span>
     </div>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
@@ -158,7 +158,7 @@ function handleReset() {
       <el-collapse-item name="theme">
         <template #title>
           <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-ri:paint-brush-line" /></span>
+            <span class="collapse-icon"><FaIcon name="i-lucide:paintbrush" /></span>
             <div>
               <strong>主题与页面样式</strong>
               <small>颜色模式、圆角与页面标题展示</small>
@@ -175,9 +175,9 @@ function handleReset() {
             <FaTabs
               v-model="settingsStore.settings.app.colorScheme"
               :list="[
-                { icon: 'i-ri:sun-line', label: '明亮', value: 'light' },
-                { icon: 'i-ri:moon-line', label: '暗黑', value: 'dark' },
-                { icon: 'i-codicon:color-mode', label: '系统', value: '' },
+                { icon: 'i-lucide:sun', label: '明亮', value: 'light' },
+                { icon: 'i-lucide:moon', label: '暗黑', value: 'dark' },
+                { icon: 'i-lucide:sun-moon', label: '系统', value: '' },
               ]"
               class="theme-tabs"
             />
@@ -231,7 +231,7 @@ function handleReset() {
       <el-collapse-item name="navigation">
         <template #title>
           <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-ri:menu-2-line" /></span>
+            <span class="collapse-icon"><FaIcon name="i-lucide:menu" /></span>
             <div>
               <strong>导航与顶栏</strong>
               <small>导航结构、点击方式与顶栏定位</small>
@@ -345,7 +345,7 @@ function handleReset() {
       <el-collapse-item name="workspace">
         <template #title>
           <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-ri:layout-masonry-line" /></span>
+            <span class="collapse-icon"><FaIcon name="i-lucide:layout-dashboard" /></span>
             <div>
               <strong>工作区组件</strong>
               <small>标签栏、工具栏、主页与导航搜索</small>
@@ -450,7 +450,7 @@ function handleReset() {
       <el-collapse-item name="other">
         <template #title>
           <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-ri:more-2-fill" /></span>
+            <span class="collapse-icon"><FaIcon name="i-lucide:ellipsis" /></span>
             <div>
               <strong>主页、版权与其他</strong>
               <small>主页入口、版权信息和辅助功能</small>

@@ -39,7 +39,7 @@
   --mrr-radius-xl: clamp(0px, calc(var(--mrr-radius-base) + 2px), 26px);
   --mrr-radius-2xl: clamp(0px, calc(var(--mrr-radius-base) + 6px), 30px);
   --mrr-radius-card: var(--mrr-radius-base);
-  --mrr-radius-dialog: clamp(0px, calc(var(--mrr-radius-base) + 4px), 28px);
+  --mrr-radius-dialog: var(--mrr-radius-base);
   --mrr-radius-pill: 999px;
   --mrr-control-radius: var(--mrr-radius-md);
 

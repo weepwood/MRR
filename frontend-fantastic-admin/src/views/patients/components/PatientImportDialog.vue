@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { PatientImportResult } from '@/api/modules/patients'
-import { Download, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, genFileId } from 'element-plus'
+import { Download, Upload as UploadFilled } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { importPatients } from '@/api/modules/patients'
 

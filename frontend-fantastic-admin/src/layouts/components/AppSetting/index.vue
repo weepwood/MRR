@@ -16,7 +16,7 @@ const isShow = ref(false)
     aria-label="打开应用外观设置"
     @click="isShow = true"
   >
-    <FaIcon name="i-ri:settings-3-line" class="size-4" />
+    <FaIcon name="i-lucide:settings-2" class="size-4" />
   </FaButton>
 
   <FaDrawer

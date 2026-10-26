@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { AuthProfile } from '@/utils/auth-storage'
-import { Key, UserFilled } from '@element-plus/icons-vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
-import { Eye, EyeOff } from 'lucide-vue-next'
+import { Eye, EyeOff, KeyRound as Key, UserRound as UserFilled } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { computed, ref } from 'vue'
 import * as z from 'zod'
@@ -158,7 +157,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       class="login-submit-btn"
       type="submit"
     >
-      <FaIcon v-if="!loading" name="i-ri:login-box-line" />
+      <FaIcon v-if="!loading" name="i-lucide:log-in" />
       {{ buttonText }}
     </FaButton>
   </form>

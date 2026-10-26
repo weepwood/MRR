@@ -5,8 +5,8 @@ import type {
   SystemErrorStatus,
 } from '@/api/modules/system-errors'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
-import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   getSystemErrorDetail,
@@ -17,6 +17,7 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { formatDateTime } from '@/utils/display-format'
@@ -199,11 +200,10 @@ onMounted(loadData)
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
         </el-form-item>
       </el-form>
 

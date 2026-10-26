@@ -3,13 +3,14 @@
 import type { ImageAuditFilterParams } from '@/api/modules/logs'
 import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
@@ -28,7 +29,7 @@ const exportLoading = ref(false)
 const detailActions: MrrTableAction[] = [{
   key: 'detail',
   label: '查看审计详情',
-  icon: 'i-ri:eye-line',
+  icon: 'i-lucide:eye',
   tone: 'primary',
   placement: 'inline',
 }]
@@ -323,7 +324,7 @@ onMounted(loadData)
         <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" style="width: 190px;"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 120px;"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
-        <el-form-item><el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>查询</el-button><el-button @click="resetFilters">重置</el-button></el-form-item>
+        <el-form-item><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" type="primary" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></el-form-item>
       </el-form>
     </el-card>
 

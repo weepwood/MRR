@@ -2,13 +2,14 @@
 import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
@@ -38,7 +39,7 @@ const logActions: MrrTableAction[] = [
   {
     key: 'detail',
     label: '查看详情',
-    icon: 'i-ri:eye-line',
+    icon: 'i-lucide:eye',
     tone: 'primary',
     placement: 'inline',
   },
@@ -186,11 +187,10 @@ function statusTagType(status: string | number) {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
         </el-form-item>
       </el-form>
 

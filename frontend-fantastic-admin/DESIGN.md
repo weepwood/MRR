@@ -293,7 +293,7 @@ What makes Notion's visual language distinctive is its border philosophy. Rather
 | `--mrr-radius-lg` | 10px | 小卡片、内嵌面板、头像容器 |
 | `--mrr-radius-card` | 12px | **页面级表面：卡片、页头、分区、设置分组** |
 | `--mrr-radius-xl` | 14px | 卡片内的二级分组面板（见下方分层约定） |
-| `--mrr-radius-dialog` | 16px | 弹窗、抽屉 |
+| `--mrr-radius-dialog` | 12px | 弹窗、确认框，与全局圆角基准一致 |
 | `--mrr-radius-2xl` | 18px | 全页容器、登录外壳 |
 | `--mrr-radius-pill` | 999px | 徽标、胶囊 |
 

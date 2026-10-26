@@ -7,7 +7,7 @@ meta:
 
 <script setup lang="ts">
 /* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
-import { DataBoard, Document, Lock } from '@element-plus/icons-vue'
+import { LayoutDashboard as DataBoard, FileText as Document, LockKeyhole as Lock } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount, watch } from 'vue'
 import {
   type ClientEnvironmentProbe,
@@ -374,7 +374,7 @@ onBeforeUnmount(() => {
 
               <div class="environment-footer">
                 <p v-if="!browserSupport.supported" class="environment-warning">
-                  <FaIcon name="i-ri:error-warning-line" />
+                  <FaIcon name="i-lucide:triangle-alert" />
                   <span>{{ browserSupport.reason }}</span>
                 </p>
                 <p class="environment-hint">

@@ -3,8 +3,9 @@
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Info as InfoFilled, KeyRound } from 'lucide-vue-next'
+import { nextTick } from 'vue'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -27,6 +28,10 @@ const { auth } = useAuth()
 const userStore = useUserStore()
 const canManage = computed(() => auth('user:manage'))
 const loading = ref(false)
+const hasLoaded = ref(false)
+const dataLoadingAction = ref<'search' | 'reset' | null>(null)
+const minDataLoadingDuration = 320
+const queryNoticeStackStep = 14
 const users = ref<CredentialAwareUser[]>([])
 const error = ref('')
 const roles = ref<AuthRole[]>([])
@@ -70,9 +75,13 @@ const approveForm = reactive({ roleCode: '' })
 
 const resetVisible = ref(false)
 const resetSaving = ref(false)
+const showResetLoading = ref(false)
 const resetTarget = ref<CredentialAwareUser | null>(null)
 const resetFormRef = ref()
 const resetForm = reactive({ administratorPassword: '', temporaryPasswordValidHours: 24 })
+const maxQueryNoticeStack = 3
+const activeQueryNotices: Array<{ id: number, close: () => void, element: HTMLElement | null }> = []
+let queryNoticeId = 0
 
 const credentialVisible = ref(false)
 const credentialAcknowledged = ref(false)
@@ -93,22 +102,22 @@ const summaryCards = computed(() => [
   {
     label: '待审核', value: users.value.filter(item => normalizeStatus(item.status) === 'pending').length,
     note: '当前页等待管理员处理的注册申请', tone: 'violet' as MetricTone,
-    icon: 'i-ri:user-received-2-line',
+    icon: 'i-lucide:user-round-check',
   },
   {
     label: '已启用', value: users.value.filter(item => normalizeStatus(item.status) === 'active').length,
     note: `系统共 ${total.value.toLocaleString('zh-CN')} 个账号`, tone: 'green' as MetricTone,
-    icon: 'i-ant-design:check-circle-outlined',
+    icon: 'i-lucide:circle-check',
   },
   {
     label: '已拒绝', value: users.value.filter(item => normalizeStatus(item.status) === 'rejected').length,
     note: '当前页审核未通过的申请', tone: 'danger' as MetricTone,
-    icon: 'i-ri:user-unfollow-line',
+    icon: 'i-lucide:user-round-x',
   },
   {
     label: '已禁用', value: users.value.filter(item => normalizeStatus(item.status) === 'disabled').length,
     note: '当前页已停止登录的账号', tone: 'blue' as MetricTone,
-    icon: 'i-ant-design:stop-outlined',
+    icon: 'i-lucide:circle-stop',
   },
 ])
 
@@ -134,8 +143,70 @@ const resetRules = {
   administratorPassword: [{ required: true, message: '请输入当前管理员密码', trigger: 'blur' }],
 }
 
-async function loadData() {
+function restackQueryNotices() {
+  const notices = activeQueryNotices
+    .map(notice => notice.element)
+    .filter((element): element is HTMLElement => Boolean(element?.isConnected))
+    .sort((left, right) => (Number.parseFloat(left.style.top) || 0) - (Number.parseFloat(right.style.top) || 0))
+  if (!notices.length) return
+
+  const firstTop = Number.parseFloat(notices[0].style.top) || 16
+  notices.forEach((notice, index) => {
+    const naturalTop = Number.parseFloat(notice.style.top) || firstTop
+    notice.style.marginTop = `${firstTop + index * queryNoticeStackStep - naturalTop}px`
+  })
+}
+
+async function showQuerySuccessNotice() {
+  if (activeQueryNotices.length >= maxQueryNoticeStack) {
+    const oldestNotice = activeQueryNotices.shift()
+    oldestNotice?.close()
+    await nextTick()
+    restackQueryNotices()
+  }
+
+  const id = ++queryNoticeId
+  const notice = { id, close: () => {}, element: null as HTMLElement | null }
+  const message = ElMessage.success({
+    message: `查询成功：已加载 ${users.value.length} 条账号与注册申请记录`,
+    duration: 3200,
+    grouping: false,
+    placement: 'top-right',
+    customClass: `users-query-success-notice users-query-success-notice--${id}`,
+    onClose: () => {
+      const activeIndex = activeQueryNotices.findIndex(item => item.id === id)
+      if (activeIndex !== -1) {
+        activeQueryNotices.splice(activeIndex, 1)
+      }
+      window.requestAnimationFrame(restackQueryNotices)
+    },
+  })
+  notice.close = message.close
+  activeQueryNotices.push(notice)
+  await nextTick()
+  notice.element = document.querySelector<HTMLElement>(`.users-query-success-notice--${id}`)
+  restackQueryNotices()
+}
+
+watch(resetSaving, (isSaving, _, onCleanup) => {
+  if (!isSaving) {
+    showResetLoading.value = false
+    return
+  }
+
+  const timer = setTimeout(() => {
+    showResetLoading.value = true
+  }, 180)
+  onCleanup(() => clearTimeout(timer))
+})
+
+async function loadData(action?: 'search' | 'reset') {
+  const showButtonLoading = hasLoaded.value && action !== undefined
+  const loadingStartedAt = Date.now()
   loading.value = true
+  if (showButtonLoading) {
+    dataLoadingAction.value = action!
+  }
   try {
     error.value = ''
     const [usersRes, rolesRes] = await Promise.all([
@@ -151,6 +222,9 @@ async function loadData() {
     users.value = (Array.isArray(usersRes.data?.list) ? usersRes.data.list : []) as CredentialAwareUser[]
     total.value = Number(usersRes.data?.total ?? users.value.length)
     roles.value = Array.isArray(rolesRes.data) ? rolesRes.data : []
+    if (action === 'search') {
+      void showQuerySuccessNotice()
+    }
   }
   catch (err: any) {
     users.value = []
@@ -159,6 +233,16 @@ async function loadData() {
   }
   finally {
     loading.value = false
+    hasLoaded.value = true
+    if (showButtonLoading) {
+      const remainingDuration = minDataLoadingDuration - (Date.now() - loadingStartedAt)
+      if (remainingDuration > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingDuration))
+      }
+      if (dataLoadingAction.value === action) {
+        dataLoadingAction.value = null
+      }
+    }
   }
 }
 
@@ -185,15 +269,23 @@ function statusDisplay(status?: string): { label: string, tone: StatusTone } {
 }
 
 function handleSearch() {
+  if (loading.value || dataLoadingAction.value !== null) return
   page.value = 1
+  void loadData('search')
+}
+
+function handlePageChange() {
+  if (loading.value || dataLoadingAction.value !== null) return
   void loadData()
 }
 
 function resetFilters() {
+  if (loading.value || dataLoadingAction.value !== null) return
   filters.keyword = ''
   filters.roleCode = ''
   filters.status = ''
-  handleSearch()
+  page.value = 1
+  void loadData('reset')
 }
 
 function isSelf(rowId?: number | string) {
@@ -207,14 +299,14 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
       {
         key: 'approve',
         label: '审核通过',
-        icon: 'i-ri:check-line',
+        icon: 'i-lucide:check',
         tone: 'success',
         placement: 'inline',
       },
       {
         key: 'reject',
         label: '拒绝申请',
-        icon: 'i-ri:close-line',
+        icon: 'i-lucide:x',
         tone: 'danger',
       },
     ]
@@ -225,14 +317,14 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
       {
         key: 'edit',
         label: '编辑用户',
-        icon: 'i-ri:edit-line',
+        icon: 'i-lucide:pencil',
         tone: 'primary',
         placement: 'inline',
       },
       {
         key: 'reset-password',
         label: '重置密码',
-        icon: 'i-ri:key-2-line',
+        icon: 'i-lucide:key-round',
         tone: 'warning',
         placement: 'overflow',
         disabled: self,
@@ -241,7 +333,7 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
       {
         key: 'disable',
         label: '禁用用户',
-        icon: 'i-ri:forbid-line',
+        icon: 'i-lucide:ban',
         tone: 'danger',
         placement: 'overflow',
         disabled: self,
@@ -254,7 +346,7 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
       {
         key: 'edit',
         label: '编辑用户',
-        icon: 'i-ri:edit-line',
+        icon: 'i-lucide:pencil',
         tone: 'primary',
         placement: 'inline',
       },
@@ -539,7 +631,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="账号与注册申请" icon="i-ant-design:unordered-list-outlined" :count="total">
+    <MrrDataTablePanel class="users-table-panel" title="账号与注册申请" icon="i-lucide:list" :count="total">
       <template #title-suffix>
         <el-tooltip
           content="待审核账号必须由管理员明确通过后才能登录；注册时填写的密码不会展示给管理员。"
@@ -562,15 +654,14 @@ onMounted(loadData)
             <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
           </el-select>
           <template #actions>
-            <el-button type="primary" :loading="loading" @click="handleSearch">查询</el-button>
-            <el-button @click="resetFilters">重置</el-button>
-            <el-button :loading="loading" @click="loadData"><FaIcon name="i-ri:refresh-line" />刷新数据</el-button>
-            <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-ri:user-add-line" />创建用户</el-button>
+            <el-button type="primary" :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
+            <el-button :aria-busy="dataLoadingAction === 'reset'" :aria-disabled="dataLoadingAction === 'reset'" @click="resetFilters"><FaIcon :name="dataLoadingAction === 'reset' ? 'i-lucide:loader-circle' : 'i-lucide:rotate-ccw'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'reset' }" />重置</el-button>
+            <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
           </template>
         </MrrFilterBar>
       </template>
 
-      <div v-if="loading" class="users-state"><AppLoading type="table" :rows="8" /></div>
+      <div v-if="loading && !hasLoaded" class="users-state"><AppLoading type="table" :rows="8" /></div>
       <div v-else-if="error" class="users-state"><AppError :message="error" @retry="loadData" /></div>
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
@@ -614,7 +705,7 @@ onMounted(loadData)
       </el-table>
 
       <template #pagination>
-        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSearch" @current-change="loadData" />
+        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSearch" @current-change="handlePageChange" />
       </template>
     </MrrDataTablePanel>
 
@@ -664,7 +755,7 @@ onMounted(loadData)
         <el-form-item label="当前管理员密码" prop="administratorPassword"><el-input v-model="resetForm.administratorPassword" type="password" autocomplete="current-password" show-password /></el-form-item>
         <el-form-item label="临时密码有效期"><el-input-number v-model="resetForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
       </el-form>
-      <template #footer><el-button @click="resetVisible = false">取消</el-button><el-button type="danger" :loading="resetSaving" @click="handleResetPassword">确认重置</el-button></template>
+      <template #footer><el-button @click="resetVisible = false">取消</el-button><el-button type="danger" :icon="KeyRound" :loading="showResetLoading" :disabled="resetSaving" @click="handleResetPassword">确认重置</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="credentialVisible" :title="credentialTitle" width="520px" :close-on-click-modal="false" :show-close="false" :close-on-press-escape="false">
@@ -691,6 +782,7 @@ onMounted(loadData)
 .users-info-trigger { display: inline-flex; align-items: center; justify-content: center; padding: 4px; color: var(--mrr-muted-foreground); cursor: help; background: transparent; border: 0; border-radius: var(--mrr-radius-pill); }
 .users-info-trigger:hover, .users-info-trigger:focus-visible { color: var(--mrr-primary); }
 .users-info-trigger:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 2px; }
+:global(.el-message.users-query-success-notice) { transition: opacity var(--el-transition-duration), transform 0.4s, top 0.4s, bottom 0.4s, margin-top 0.4s; box-shadow: 0 8px 24px rgb(15 23 42 / 14%); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }

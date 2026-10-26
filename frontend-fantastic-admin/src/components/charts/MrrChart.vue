@@ -49,7 +49,7 @@ function setChartRef(element: unknown) {
       role="img"
     />
     <div v-if="empty" class="mrr-chart__empty">
-      <i class="i-ant-design:bar-chart-outlined" aria-hidden="true" />
+      <i class="i-lucide:chart-no-axes-column-increasing" aria-hidden="true" />
       <span>{{ emptyDescription }}</span>
     </div>
   </div>

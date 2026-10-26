@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/views/scan-img/index.vue"
+        ],
+        "createdAt": "2026-10-26T15:23:31.598Z",
+        "reason": "Agent: both matches are circular loading spinners built from a rotating top-border segment, not accented cards or callouts"
+      }
+    ]
+  }
+}

@@ -18,7 +18,7 @@ const props = defineProps<{
 
 <template>
   <Button :variant :size :disabled="props.disabled || props.loading" :class="props.class">
-    <FaIcon v-if="loading" name="i-line-md:loading-twotone-loop" />
+    <FaIcon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" />
     <slot />
   </Button>
 </template>

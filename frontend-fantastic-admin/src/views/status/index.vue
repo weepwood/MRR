@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
           </span>
         </a>
         <button class="refresh-button" type="button" :disabled="refreshing" @click="refreshCurrentStatus">
-          <i class="i-ant-design:reload-outlined" :class="{ spinning: refreshing }" aria-hidden="true" />
+          <i class="i-lucide:refresh-cw" :class="{ spinning: refreshing }" aria-hidden="true" />
           刷新状态
         </button>
       </header>
@@ -296,9 +296,9 @@ onBeforeUnmount(() => {
           :class="`is-${currentState.toLowerCase().replace('_', '-')}`"
         >
           <div class="state-icon" aria-hidden="true">
-            <i v-if="currentState === 'UP'" class="i-ant-design:check-circle-filled" />
-            <i v-else-if="currentState === 'DOWN'" class="i-ant-design:warning-filled" />
-            <i v-else class="i-ant-design:clock-circle-filled" />
+            <i v-if="currentState === 'UP'" class="i-lucide:circle-check" />
+            <i v-else-if="currentState === 'DOWN'" class="i-lucide:triangle-alert" />
+            <i v-else class="i-lucide:clock" />
           </div>
           <div class="state-copy">
             <span class="eyebrow">Current system status</span>
@@ -451,7 +451,7 @@ onBeforeUnmount(() => {
             </article>
           </div>
           <div v-else class="empty-incidents">
-            <i class="i-ant-design:safety-certificate-outlined" aria-hidden="true" />
+            <i class="i-lucide:shield-check" aria-hidden="true" />
             <strong>{{ selectedDate ? '当天没有异常记录' : '查询范围内没有异常记录' }}</strong>
             <p>{{ selectedDate ? '可选择其他日期或查看全部异常记录。' : '系统将在检测到状态变化后自动记录异常区间。' }}</p>
           </div>

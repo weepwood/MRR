@@ -100,7 +100,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
         class="mrr-table-actions__button mrr-table-actions__button--more"
         @click.stop
       >
-        <FaIcon name="i-ri:more-fill" />
+        <FaIcon name="i-lucide:ellipsis" />
       </el-button>
 
       <template #dropdown>
@@ -115,7 +115,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
           >
             <FaIcon :name="action.icon" class="mrr-table-actions__menu-icon" />
             <span>{{ action.label }}</span>
-            <FaIcon v-if="action.loading" name="i-ri:loader-4-line" class="mrr-table-actions__menu-loading" />
+            <FaIcon v-if="action.loading" name="i-lucide:loader-circle" class="mrr-table-actions__menu-loading animate-spin" />
           </el-dropdown-item>
         </el-dropdown-menu>
       </template>

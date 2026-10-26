@@ -60,7 +60,7 @@ function handleCtrlClick() {
     </template>
     <FaButton variant="ghost" size="icon" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
       <FaIcon
-        name="i-iconoir:refresh-double"
+        name="i-lucide:refresh-cw"
         class="mrr-icon-interactive size-4"
         :class="{ 'mrr-icon-spin-once': isAnimating }"
       />

@@ -161,32 +161,68 @@ html:root {
   box-shadow: var(--mrr-shadow-xs);
 }
 
-.el-button.is-plain {
+body .el-button.is-plain {
   background: transparent;
   box-shadow: none;
 }
 
-.el-button--primary.is-plain {
+body .el-button--primary.is-plain {
   color: var(--mrr-primary);
   background: transparent;
   border-color: color-mix(in srgb, var(--mrr-primary) 45%, var(--mrr-border));
 }
 
-.el-button--primary.is-plain:not(.is-disabled):hover {
+body .el-button--primary.is-plain:not(.is-disabled):hover {
   color: var(--mrr-primary);
   background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
   border-color: color-mix(in srgb, var(--mrr-primary) 60%, var(--mrr-border));
 }
 
-.el-button--danger.is-plain {
+body .el-button--danger.is-plain {
   color: var(--mrr-destructive);
   background: transparent;
   border-color: color-mix(in srgb, var(--mrr-destructive) 38%, var(--mrr-border));
 }
 
-.el-button--danger.is-plain:not(.is-disabled):hover {
+body .el-button--danger.is-plain:not(.is-disabled):hover {
   background: var(--mrr-destructive-muted);
   border-color: color-mix(in srgb, var(--mrr-destructive) 55%, var(--mrr-border));
+}
+
+body .el-button--success.is-plain {
+  color: var(--mrr-tone-success);
+  background: transparent;
+  border-color: var(--mrr-tone-success-border);
+}
+
+body .el-button--success.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-success);
+  background: var(--mrr-tone-success-soft);
+  border-color: var(--el-color-success-light-5);
+}
+
+body .el-button--warning.is-plain {
+  color: var(--mrr-tone-warning);
+  background: transparent;
+  border-color: var(--mrr-tone-warning-border);
+}
+
+body .el-button--warning.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-warning);
+  background: var(--mrr-tone-warning-soft);
+  border-color: var(--el-color-warning-light-5);
+}
+
+body .el-button--info.is-plain {
+  color: var(--mrr-tone-neutral);
+  background: transparent;
+  border-color: var(--mrr-tone-neutral-border);
+}
+
+body .el-button--info.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-neutral);
+  background: var(--mrr-tone-neutral-soft);
+  border-color: var(--el-color-info-light-5);
 }
 
 /* Ghost and link */
@@ -740,7 +776,8 @@ body .el-pagination {
 }
 
 /* ===== Dialogs, forms and tabs ===== */
-.el-dialog {
+body .el-dialog,
+body .el-message-box {
   overflow: hidden;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);

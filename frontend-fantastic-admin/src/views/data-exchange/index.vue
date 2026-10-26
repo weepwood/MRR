@@ -2,7 +2,7 @@
 name: dataExchange
 meta:
   title: 数据导入导出
-  icon: i-ant-design:swap-outlined
+  icon: i-lucide:arrow-left-right
   auth:
     - record:read
     - statistics:read

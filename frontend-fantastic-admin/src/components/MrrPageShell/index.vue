@@ -27,6 +27,7 @@ type PageWidth = 'fluid' | 'standard' | 'narrow'
 <style scoped>
 .mrr-page-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-page-gap);
   width: 100%;
   min-width: 0;

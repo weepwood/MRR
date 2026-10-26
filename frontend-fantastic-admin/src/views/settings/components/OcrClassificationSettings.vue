@@ -184,7 +184,7 @@ onMounted(loadSettings)
         <strong>OCR 引擎与资源限制</strong>
         <p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p>
       </div>
-      <div class="control-grid">
+      <el-form class="control-grid" label-position="top" @submit.prevent>
         <el-form-item label="白名单配置名称">
           <el-input v-model="settings.ocrProfile" placeholder="例如 tesseract-local" maxlength="64" />
         </el-form-item>
@@ -218,7 +218,7 @@ onMounted(loadSettings)
             <span>{{ Math.round(settings.classificationBatchReviewThreshold * 100) }}%</span>
           </div>
         </el-form-item>
-      </div>
+      </el-form>
     </div>
 
     <div class="setting-group">

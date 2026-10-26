@@ -1,6 +1,7 @@
+import { isMotionEnabled } from '@/utils/motion-preference'
+
 const SETTINGS_WORKSPACE_SELECTOR = '.settings-page > .settings-workspace-frame'
 const DESKTOP_SETTINGS_MEDIA_QUERY = '(min-width: 981px)'
-const REDUCED_MOTION_MEDIA_QUERY = '(prefers-reduced-motion: reduce)'
 
 let installed = false
 
@@ -26,7 +27,7 @@ function focusSettingsWorkspace(event: MouseEvent) {
 
   window.scrollTo({
     top: Math.max(0, window.scrollY + workspaceTop),
-    behavior: window.matchMedia(REDUCED_MOTION_MEDIA_QUERY).matches ? 'auto' : 'smooth',
+    behavior: isMotionEnabled() ? 'smooth' : 'auto',
   })
 }
 

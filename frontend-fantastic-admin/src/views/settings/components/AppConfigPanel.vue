@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Settings } from '#/global'
-import { toast } from 'vue-sonner'
 import settingsDefault from '@/settings.default'
+import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
 
 defineOptions({ name: 'AppConfigPanel' })
@@ -82,7 +82,7 @@ function handleExport() {
   link.download = `mrr-interface-config-${new Date().toISOString().slice(0, 10)}.json`
   link.click()
   URL.revokeObjectURL(url)
-  toast.success('界面外观配置已导出')
+  notify.success('界面外观配置已导出')
 }
 
 function triggerImport() {
@@ -102,10 +102,10 @@ async function handleImport(event: Event) {
       throw new TypeError('配置文件必须是 JSON 对象')
     }
     settingsStore.updateSettings(data as Settings.all)
-    toast.success('界面外观配置已导入')
+    notify.success('界面外观配置已导入')
   }
   catch {
-    toast.error('导入失败，请选择有效的配置 JSON 文件')
+    notify.error('导入失败，请选择有效的配置 JSON 文件')
   }
   finally {
     input.value = ''
@@ -114,7 +114,7 @@ async function handleImport(event: Event) {
 
 function handleReset() {
   settingsStore.resetAppSettings()
-  toast.success('已恢复默认应用配置')
+  notify.success('已恢复默认应用配置')
 }
 </script>
 
@@ -216,6 +216,14 @@ function handleReset() {
               ]"
               class="title-style-tabs"
             />
+          </div>
+
+          <div class="setting-item">
+            <div class="label-copy">
+              <strong>动态效果</strong>
+              <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
+            </div>
+            <FaSwitch v-model="settingsStore.settings.app.enableMotion" />
           </div>
         </div>
       </el-collapse-item>
@@ -566,12 +574,17 @@ function handleReset() {
   justify-content: flex-start;
 }
 
+.app-config-panel--drawer .config-summary > div:first-child {
+  flex-basis: auto;
+}
+
 .app-config-panel--drawer .autosave-state {
   width: 100%;
 }
 
 .config-summary {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   align-items: center;
   justify-content: space-between;
@@ -580,6 +593,11 @@ function handleReset() {
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-card);
+}
+
+.config-summary > div:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
 }
 
 .config-summary strong,
@@ -610,9 +628,12 @@ function handleReset() {
 
 .config-summary-actions {
   display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
+  max-width: 100%;
 }
 
 .config-summary-actions :deep(.el-button) {
@@ -713,6 +734,7 @@ function handleReset() {
 
 .setting-item {
   display: flex;
+  flex-wrap: wrap;
   gap: 28px;
   align-items: center;
   justify-content: space-between;
@@ -729,7 +751,8 @@ function handleReset() {
 }
 
 .label-copy {
-  min-width: 180px;
+  flex: 1 1 180px;
+  min-width: 0;
   max-width: 420px;
 }
 
@@ -760,6 +783,10 @@ function handleReset() {
 
 .slider-field {
   width: min(360px, 48%);
+}
+
+.setting-item > :not(.label-copy) {
+  max-width: 100%;
 }
 
 .button-options {
@@ -893,6 +920,11 @@ function handleReset() {
 }
 
 @media (max-width: 720px) {
+  .config-summary > div:first-child,
+  .label-copy {
+    flex-basis: auto;
+  }
+
   .config-summary,
   .setting-item {
     flex-direction: column;

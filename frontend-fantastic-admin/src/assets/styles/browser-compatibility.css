@@ -151,6 +151,20 @@
     box-shadow: none;
   }
 
+  /* 环境信息下拉面板与操作按钮：color-mix 失效时保持卡片表面与强调边界。 */
+  .login-page .environment-panel {
+    background: var(--mrr-card);
+  }
+
+  .login-page .environment-badge[aria-expanded="true"] {
+    border-color: var(--mrr-border-strong);
+  }
+
+  .login-page .environment-actions button.is-primary {
+    background: var(--mrr-card);
+    border-color: var(--mrr-border-strong);
+  }
+
   /* 业务主流程组件：查询、表格、详情和设置页面保持明确边界。 */
   .mrr-page-header,
   .mrr-filter-bar,

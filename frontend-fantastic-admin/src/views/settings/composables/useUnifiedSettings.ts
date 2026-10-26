@@ -22,7 +22,7 @@ export const settingsNavItems = [
   { key: 'security', title: '访问安全', description: '水印、身份证与 IP 限制', icon: 'i-ri:shield-check-line' },
   { key: 'runtime', title: '运行参数', description: '限流阈值、会话与日志留存', icon: 'i-ri:dashboard-3-line' },
   { key: 'developer', title: '开发者模式', description: '旧接口与可信来源', icon: 'i-ri:code-box-line' },
-  { key: 'department', title: '科室配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },
+  { key: 'department', title: '科室档案袋配色', description: '档案袋颜色规则', icon: 'i-ri:palette-line' },
   { key: 'external-links', title: '外部链接', description: '维护“其他”导航入口', icon: 'i-ri:links-line' },
   { key: 'appearance', title: '界面外观', description: '主题、导航与页面样式', icon: 'i-ri:layout-4-line' },
 ] as const
@@ -212,7 +212,18 @@ export function useUnifiedSettings() {
     }
   }
 
-  function handleReset() {
+  async function handleReset() {
+    try {
+      await ElMessageBox.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
+        type: 'warning',
+        confirmButtonText: '确认恢复',
+        cancelButtonText: '取消',
+      })
+    }
+    catch {
+      return
+    }
+
     settings.value = createDefaultSystemSettings()
     ElMessage.info('已恢复默认值，保存后生效')
   }

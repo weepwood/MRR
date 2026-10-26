@@ -138,15 +138,17 @@ const onSubmit = form.handleSubmit(async (values) => {
     </FormField>
 
     <div class="form-options">
-      <FormField v-slot="{ componentField }" type="checkbox" name="remember">
-        <FormItem>
-          <FormControl>
-            <FaCheckbox v-bind="componentField">
-              记住用户名
-            </FaCheckbox>
-          </FormControl>
-        </FormItem>
-      </FormField>
+      <div class="remember-control">
+        <FormField v-slot="{ componentField }" type="checkbox" name="remember">
+          <FormItem>
+            <FormControl>
+              <FaCheckbox v-bind="componentField">
+                记住用户名
+              </FaCheckbox>
+            </FormControl>
+          </FormItem>
+        </FormField>
+      </div>
       <span>密码问题请联系系统管理员</span>
     </div>
 
@@ -170,10 +172,8 @@ const onSubmit = form.handleSubmit(async (values) => {
 }
 
 .field-item {
-  position: relative;
   display: grid;
   gap: var(--mrr-space-2);
-  padding-bottom: var(--mrr-space-3);
 }
 
 .field-item label {
@@ -252,10 +252,9 @@ const onSubmit = form.handleSubmit(async (values) => {
 }
 
 .field-message {
-  position: absolute;
-  bottom: -2px;
-  left: 0;
+  margin: 0;
   font-size: 11px;
+  line-height: 1.4;
 }
 
 .form-options {
@@ -270,6 +269,11 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 .form-options :deep(.form-item) {
   margin: 0;
+}
+
+.remember-control {
+  display: grid;
+  gap: var(--mrr-space-1);
 }
 
 .login-submit-btn {

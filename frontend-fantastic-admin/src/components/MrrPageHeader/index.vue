@@ -82,13 +82,13 @@ const hasAside = computed(() => Boolean(slots.actions))
 }
 
 .mrr-page-header__eyebrow {
-  margin: 0 0 18px;
+  margin: 0 0 6px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.5;
   color: var(--mrr-primary);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.06em;
   opacity: 0.82;
 }
 
@@ -101,18 +101,18 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header h1 {
   margin: 0;
-  font-size: clamp(30px, 3vw, 40px);
+  font-size: 28px;
   font-weight: 650;
-  line-height: 1.18;
+  line-height: 1.28;
   color: var(--mrr-foreground);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.022em;
 }
 
 .mrr-page-header__description {
   max-width: 780px;
-  margin: 12px 0 0;
-  font-size: 14px;
-  line-height: 1.7;
+  margin: 7px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 
@@ -128,10 +128,12 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__aside {
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
+  min-width: 0;
   padding-top: 2px;
 }
 

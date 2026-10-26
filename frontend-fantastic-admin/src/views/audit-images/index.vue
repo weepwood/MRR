@@ -13,6 +13,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
@@ -321,7 +322,7 @@ onMounted(loadData)
         <el-form-item label="客户端 IP"><el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
         <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" style="width: 190px;"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 120px;"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+        <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
         <el-form-item><el-button type="primary" @click="handleSearch"><el-icon><Search /></el-icon>查询</el-button><el-button @click="resetFilters">重置</el-button></el-form-item>
       </el-form>
     </el-card>

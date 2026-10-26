@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { ScanRecord } from '@/api/types'
+import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download, Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElNotification } from 'element-plus'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -58,6 +59,15 @@ const pageSize = ref(20)
 const query = reactive({ bah: '', brxh: '', sjh: '', openerNo: '', btype: '' })
 const appliedQuery = ref({ ...query })
 const unapplied = computed(() => JSON.stringify(query) !== JSON.stringify(appliedQuery.value))
+watch(unapplied, (changed) => {
+  if (changed) {
+    ElNotification.info({
+      title: '筛选条件已修改',
+      message: '点击“查询”后生效；翻页仍使用上次已提交条件',
+      duration: 4500,
+    })
+  }
+})
 const cursors = ref<number[]>([0])
 const nextCursor = ref<number | undefined>()
 const hasMore = ref(false)
@@ -94,10 +104,34 @@ function previousPage() {
 onMounted(loadData)
 
 const summaryCards = computed(() => [
-  { label: '当前页记录数', value: list.value.length, note: '当前筛选结果中已加载的数据条数' },
-  { label: '读取方式', value: '游标', note: '按完整编号筛选；未执行全表总数统计' },
-  { label: '已选记录', value: selectedRows.value.length, note: '可用于批量打包下载' },
-  { label: '当前页码', value: pageNum.value, note: `每页 ${pageSize.value} 条` },
+  {
+    label: '当前页记录数',
+    value: list.value.length,
+    note: '当前筛选结果中已加载的数据条数',
+    tone: 'blue' as MetricTone,
+    icon: 'i-ant-design:profile-twotone',
+  },
+  {
+    label: '读取方式',
+    value: '游标',
+    note: '按完整编号筛选；未执行全表总数统计',
+    tone: 'teal' as MetricTone,
+    icon: 'i-ant-design:database-twotone',
+  },
+  {
+    label: '已选记录',
+    value: selectedRows.value.length,
+    note: '可用于批量打包下载',
+    tone: 'violet' as MetricTone,
+    icon: 'i-ant-design:check-circle-twotone',
+  },
+  {
+    label: '当前页码',
+    value: pageNum.value,
+    note: `每页 ${pageSize.value} 条`,
+    tone: 'amber' as MetricTone,
+    icon: 'i-ant-design:unordered-list-outlined',
+  },
 ])
 
 function handleSelectionChange(rows: ScanRecord[]) {
@@ -168,7 +202,6 @@ function typeLabel(value: unknown) {
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <el-alert v-if="unapplied" title="筛选已修改，点击查询后生效；翻页仍使用上次已提交条件" type="info" :closable="false" />
     <el-card shadow="never">
       <el-form inline @submit.prevent>
         <el-form-item label="病案号">
@@ -199,30 +232,35 @@ function typeLabel(value: unknown) {
         </el-form-item>
       </el-form>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
       <el-table
         v-else
+        v-loading="loading"
         :data="list"
         stripe
         style="margin-top: 12px;"
         @selection-change="handleSelectionChange"
       >
+        <!-- 列宽全部走 min-width，由 el-table 按容器宽度分配：
+             原来 6 个固定 width 列 + 5 个 min-width 列合计 1294px，
+             而 1600 视口下容器只有 1244px，导致右侧「操作」列被挤出可视区，
+             必须横向滚动才能点到。全部改为 min-width 后总宽自适应，不再溢出。 -->
         <el-table-column type="selection" width="48" />
-        <el-table-column prop="bah" label="病案号" min-width="140" />
-        <el-table-column prop="brxh" label="病人序号" min-width="120" />
-        <el-table-column prop="sjh" label="上架号" min-width="120" />
-        <el-table-column prop="filename" label="文件名" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="btype" label="类型" width="160">
+        <el-table-column prop="bah" label="病案号" min-width="130" />
+        <el-table-column prop="brxh" label="病人序号" min-width="110" />
+        <el-table-column prop="sjh" label="上架号" min-width="110" />
+        <el-table-column prop="filename" label="文件名" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="btype" label="类型" min-width="120">
           <template #default="{ row }">
             {{ typeLabel(row.btype) }}
           </template>
         </el-table-column>
-        <el-table-column prop="pages" label="页数" width="80" />
+        <el-table-column prop="pages" label="页数" min-width="72" />
         <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
-        <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="迁移状态" width="100">
+        <el-table-column prop="folder" label="目录" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="迁移状态" min-width="96">
           <template #default="{ row }">
             <el-tag
               v-if="row.migrationStatus"
@@ -254,13 +292,15 @@ function typeLabel(value: unknown) {
         <el-select v-model="pageSize" aria-label="每批条数" style="width: 120px;" @change="handleSearch">
           <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
         </el-select>
-        <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
-          上一批
-        </el-button>
-        <span>第 {{ pageNum }} 批</span>
-        <el-button :disabled="!hasMore || loading" @click="nextPage">
-          下一批
-        </el-button>
+        <div class="pager__navigation">
+          <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
+            上一批
+          </el-button>
+          <span>第 {{ pageNum }} 批</span>
+          <el-button :disabled="!hasMore || loading" @click="nextPage">
+            下一批
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -348,8 +388,19 @@ h2 {
 
 .pager {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
   justify-content: center;
   margin-top: 16px;
+}
+
+.pager__navigation {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  white-space: nowrap;
 }
 
 .text-muted {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElMessageBox } from 'element-plus'
-import { toast } from 'vue-sonner'
 import { createExternalLinkId, normalizeExternalLinkUrl } from '@/utils/external-links'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'ExternalLinksSettings' })
 
@@ -38,23 +38,23 @@ function addExternalLink() {
   const url = normalizeExternalLinkUrl(draft.url)
 
   if (!title) {
-    toast.warning('请填写外链名称')
+    notify.warning('请填写外链名称')
     return
   }
   if (title.length > 40) {
-    toast.warning('外链名称不能超过 40 个字符')
+    notify.warning('外链名称不能超过 40 个字符')
     return
   }
   if (!url) {
-    toast.warning('请输入有效的 HTTP 或 HTTPS 地址')
+    notify.warning('请输入有效的 HTTP 或 HTTPS 地址')
     return
   }
   if (externalLinks.value.length >= 30) {
-    toast.warning('最多可以添加 30 个外部链接')
+    notify.warning('最多可以添加 30 个外部链接')
     return
   }
   if (externalLinks.value.some(item => normalizeExternalLinkUrl(item.url) === url)) {
-    toast.warning('该网站已经添加')
+    notify.warning('该网站已经添加')
     return
   }
 
@@ -66,7 +66,7 @@ function addExternalLink() {
   })
   persistSettings()
   resetDraft()
-  toast.success('外部链接已添加到“其他”菜单')
+  notify.success('外部链接已添加到“其他”菜单')
 }
 
 async function removeExternalLink(index: number, title: string) {
@@ -87,13 +87,13 @@ async function removeExternalLink(index: number, title: string) {
 
   externalLinks.value.splice(index, 1)
   persistSettings()
-  toast.success('外部链接已移除')
+  notify.success('外部链接已移除')
 }
 
 function openExternalLink(url: string) {
   const normalizedUrl = normalizeExternalLinkUrl(url)
   if (!normalizedUrl) {
-    toast.warning('该链接地址无效')
+    notify.warning('该链接地址无效')
     return
   }
   window.open(normalizedUrl, '_blank', 'noopener,noreferrer')
@@ -250,7 +250,7 @@ function openExternalLink(url: string) {
 
 .link-form {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.4fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 12px;
   align-items: end;
 }

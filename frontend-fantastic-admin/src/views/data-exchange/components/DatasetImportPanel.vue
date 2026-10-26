@@ -8,9 +8,7 @@ import {
   downloadDataExchangeTemplate,
   importDataExchangeFile,
 } from '@/api/modules/data-exchange'
-import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { createCsvBlob, downloadBlob, downloadResponseBlob } from '@/utils/file-download'
-import FieldDictionary from './FieldDictionary.vue'
 
 interface FieldDefinition {
   name: string
@@ -166,32 +164,44 @@ function today() {
 </script>
 
 <template>
-  <MrrSectionCard :title="title" :description="description">
-    <template #title-suffix>
-      <el-tooltip placement="top" :show-after="200">
-        <template #content>
-          <div class="import-safety-tooltip">
-            <strong>先校验，后写入</strong>
-            <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
+  <el-card shadow="never" class="dataset-card">
+    <template #header>
+      <div class="panel-heading">
+        <div>
+          <div class="panel-title-row">
+            <h3>{{ title }}</h3>
+            <el-tooltip placement="top" :show-after="200">
+              <template #content>
+                <div class="import-safety-tooltip">
+                  <strong>先校验，后写入</strong>
+                  <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
+                </div>
+              </template>
+              <button
+                type="button"
+                class="import-safety-trigger"
+                aria-label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
+              >
+                <el-icon><InfoFilled /></el-icon>
+              </button>
+            </el-tooltip>
           </div>
-        </template>
-        <button
-          type="button"
-          class="import-safety-trigger"
-          aria-label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
-        >
-          <el-icon><InfoFilled /></el-icon>
-        </button>
-      </el-tooltip>
-    </template>
-
-    <template #actions>
-      <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
-        下载模板
-      </el-button>
+          <p>{{ description }}</p>
+        </div>
+        <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
+          下载模板
+        </el-button>
+      </div>
     </template>
 
     <div class="panel-content">
+      <div class="field-grid">
+        <div v-for="field in fields" :key="field.name" class="field-item">
+          <code>{{ field.name }}</code>
+          <span>{{ field.description }}</span>
+        </div>
+      </div>
+
       <el-upload
         ref="uploadRef"
         v-model:file-list="fileList"
@@ -239,39 +249,36 @@ function today() {
       </div>
 
       <section v-if="result" class="result-section">
-        <div class="result-head">
-          <h3 class="result-head__title">
-            {{ result.dryRun ? '校验结果' : '导入结果' }}
-          </h3>
-          <span class="result-head__meta">文件编码 {{ result.encoding }}</span>
+        <div class="result-summary">
+          <div class="summary-item">
+            <span>文件编码</span>
+            <strong>{{ result.encoding }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>数据行</span>
+            <strong>{{ result.totalRows }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>有效唯一行</span>
+            <strong>{{ result.validRows }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>{{ result.dryRun ? '预计新增' : '实际新增' }}</span>
+            <strong>{{ result.insertedRows }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>{{ result.dryRun ? '预计更新' : '实际更新' }}</span>
+            <strong>{{ result.updatedRows }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>重复跳过</span>
+            <strong>{{ result.duplicateRows }}</strong>
+          </div>
+          <div class="summary-item" :class="{ danger: result.errorRows > 0 }">
+            <span>错误行</span>
+            <strong>{{ result.errorRows }}</strong>
+          </div>
         </div>
-
-        <dl class="result-metrics">
-          <div class="result-metrics__item">
-            <dt>数据行</dt>
-            <dd>{{ result.totalRows }}</dd>
-          </div>
-          <div class="result-metrics__item">
-            <dt>有效唯一行</dt>
-            <dd>{{ result.validRows }}</dd>
-          </div>
-          <div class="result-metrics__item">
-            <dt>{{ result.dryRun ? '预计新增' : '实际新增' }}</dt>
-            <dd>{{ result.insertedRows }}</dd>
-          </div>
-          <div class="result-metrics__item">
-            <dt>{{ result.dryRun ? '预计更新' : '实际更新' }}</dt>
-            <dd>{{ result.updatedRows }}</dd>
-          </div>
-          <div class="result-metrics__item">
-            <dt>重复跳过</dt>
-            <dd>{{ result.duplicateRows }}</dd>
-          </div>
-          <div class="result-metrics__item" :class="{ 'result-metrics__item--danger': result.errorRows > 0 }">
-            <dt>错误行</dt>
-            <dd>{{ result.errorRows }}</dd>
-          </div>
-        </dl>
 
         <el-alert
           v-if="result.canImport"
@@ -312,29 +319,37 @@ function today() {
           错误较多，页面与下载文件仅包含后端返回的前 200 条脱敏明细；请先修复当前错误后重新校验。
         </p>
       </section>
-
-      <FieldDictionary title="导入字段说明" :fields="fields" />
     </div>
-  </MrrSectionCard>
+  </el-card>
 </template>
 
 <style scoped>
+.dataset-card {
+  min-width: 0;
+}
+
 .panel-content,
 .result-section {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+}
+
+.panel-title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
 }
 
 .import-safety-trigger {
   display: inline-flex;
-  flex: 0 0 18px;
+  flex: 0 0 20px;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  color: var(--mrr-muted-foreground);
+  color: var(--el-text-color-secondary);
   cursor: help;
   background: transparent;
   border: 0;
@@ -343,11 +358,11 @@ function today() {
 
 .import-safety-trigger:hover,
 .import-safety-trigger:focus-visible {
-  color: var(--mrr-primary);
+  color: var(--el-color-primary);
 }
 
 .import-safety-trigger:focus-visible {
-  outline: 2px solid var(--mrr-primary);
+  outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
 }
 
@@ -360,6 +375,54 @@ function today() {
   margin: 4px 0 0;
 }
 
+.panel-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.panel-heading p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.field-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--mrr-radius-md);
+}
+
+.field-item code {
+  flex: 0 0 128px;
+  font-weight: 700;
+  color: var(--el-color-primary);
+}
+
+.field-item span {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .action-row,
 .result-actions {
   display: flex;
@@ -367,99 +430,60 @@ function today() {
   justify-content: flex-end;
 }
 
-.action-row :deep(.el-button + .el-button),
-.result-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-
-/* 结果标题行：指标条取代原先 7 个描边小方块，文件编码降级为标题右侧说明。 */
-.result-head {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.result-head__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--mrr-foreground);
-}
-
-.result-head__meta {
-  font-size: 12px;
-  color: var(--mrr-muted-foreground);
-}
-
-/* 1px gap + 底色做分隔线：任意列数都能得到均匀的细分隔，无需按 nth-child 补边框。 */
-.result-metrics {
+.result-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  background: var(--mrr-shell-divider);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
 }
 
-.result-metrics__item {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  padding: 9px 12px;
-  background: var(--mrr-muted);
+.summary-item span {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
-.result-metrics dt {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--mrr-muted-foreground);
-}
-
-.result-metrics dd {
-  margin: 0;
+.summary-item strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 16px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-  color: var(--mrr-foreground);
+  font-size: 18px;
   white-space: nowrap;
 }
 
-.result-metrics__item--danger dd {
+.summary-item.danger strong {
   color: var(--el-color-danger);
 }
 
 .truncated-tip {
   margin: -4px 0 0;
   font-size: 12px;
-  line-height: 1.5;
   color: var(--el-color-warning);
 }
 
-@media (min-width: 1600px) {
-  .result-metrics {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+@media (max-width: 1100px) {
+  .result-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 520px) {
-  .result-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .action-row,
-  .result-actions {
+@media (max-width: 760px) {
+  .panel-heading {
     flex-direction: column;
   }
 
-  .action-row :deep(.el-button),
-  .result-actions :deep(.el-button) {
-    width: 100%;
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

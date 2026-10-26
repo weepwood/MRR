@@ -218,7 +218,7 @@ function typeLabel(value: unknown) {
           <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="query.btype" clearable placeholder="全部类型" style="width: 180px;">
+          <el-select v-model="query.btype" clearable placeholder="全部类型" class="w-[180px]">
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -240,7 +240,7 @@ function typeLabel(value: unknown) {
         v-loading="loading"
         :data="list"
         stripe
-        style="margin-top: 12px;"
+        class="mt-3"
         @selection-change="handleSelectionChange"
       >
         <!-- 列宽全部走 min-width，由 el-table 按容器宽度分配：
@@ -289,7 +289,7 @@ function typeLabel(value: unknown) {
       </el-table>
 
       <div class="pager">
-        <el-select v-model="pageSize" aria-label="每批条数" style="width: 120px;" @change="handleSearch">
+        <el-select v-model="pageSize" aria-label="每批条数" class="w-[120px]" @change="handleSearch">
           <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
         </el-select>
         <div class="pager__navigation">

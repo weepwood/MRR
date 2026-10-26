@@ -131,7 +131,7 @@ onMounted(() => { void load(); void refreshHealth() })
           <el-input v-model="errorId" clearable />
         </el-form-item>
         <el-form-item label="级别" class="filter-level">
-          <el-select v-model="level" clearable placeholder="全部级别" style="width: 140px;">
+          <el-select v-model="level" clearable placeholder="全部级别" class="w-[140px]">
             <el-option v-for="item in ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
@@ -205,7 +205,7 @@ onMounted(() => { void load(); void refreshHealth() })
           <el-date-picker v-model="historyRange" type="daterange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
         </el-form-item>
         <el-form-item label="历史文件">
-          <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" style="width: 340px;">
+          <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" class="w-[340px]">
             <el-option v-for="file in selectableFiles" :key="file.fileName" :label="file.fileName" :value="file.fileName" />
           </el-select>
         </el-form-item>

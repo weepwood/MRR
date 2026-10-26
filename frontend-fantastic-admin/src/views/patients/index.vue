@@ -242,7 +242,7 @@ onUnmounted(() => {
         <AppLoading v-if="loading" type="table" :rows="8" />
         <AppError v-else-if="error" :message="error" @retry="loadData" />
         <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-        <el-table v-else :data="tableData" stripe style="width: 100%;">
+        <el-table v-else :data="tableData" stripe class="w-full">
           <el-table-column prop="id" label="ID" width="100" />
           <el-table-column prop="bah" label="病案号" width="140">
             <template #default="{ row }">

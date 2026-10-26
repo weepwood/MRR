@@ -165,12 +165,12 @@ function statusTagType(status: string | number) {
           <el-input v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="方法">
-          <el-select v-model="query.method" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.method" clearable placeholder="全部" class="w-[140px]">
             <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态码">
-          <el-select v-model="query.responseStatus" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.responseStatus" clearable placeholder="全部" class="w-[140px]">
             <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -197,7 +197,7 @@ function statusTagType(status: string | number) {
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
-      <el-table v-else :data="list" stripe style="margin-top: 12px;">
+      <el-table v-else :data="list" stripe class="mt-3">
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>

@@ -271,7 +271,7 @@ onMounted(() => {
       </div>
 
       <div v-for="row in rows" :key="row.id" class="theme-editor-row">
-        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" style="width: 100%;">
+        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="w-full">
           <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
         </el-select>
 

@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
           <el-popover
             v-model:visible="environmentOpen"
             placement="top-start"
-            :width="560"
+            :width="760"
             :popper-style="{ maxWidth: 'calc(100vw - 24px)' }"
             trigger="hover"
             :show-after="120"
@@ -360,9 +360,20 @@ onBeforeUnmount(() => {
                 >
                   <h3>{{ group.title }}</h3>
                   <dl>
-                    <div v-for="item in group.items" :key="item.label" class="environment-item">
+                    <div
+                      v-for="item in group.items"
+                      :key="item.label"
+                      class="environment-item"
+                      :class="{ 'environment-item--wide': group.key === 'client' && item.label === '屏幕分辨率', 'environment-item--single-line': item.label === '服务器时间' }"
+                    >
                       <dt>{{ item.label }}</dt>
-                      <dd :class="item.tone ? `tone-text-${item.tone}` : undefined" v-text="item.value" />
+                      <dd
+                        :class="[
+                          item.tone ? `tone-text-${item.tone}` : undefined,
+                          item.label === '屏幕分辨率' ? 'environment-item__value--single-line' : undefined,
+                        ]"
+                        v-text="item.value"
+                      />
                     </div>
                     <div v-if="group.key === 'client'" class="environment-item">
                       <dt>本机当前时间</dt>
@@ -517,8 +528,11 @@ onBeforeUnmount(() => {
 .environment-group dl { display: grid; gap: 7px; margin: 0; }
 .environment-group--client dl { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--mrr-space-5); }
 .environment-item { display: flex; gap: var(--mrr-space-3); align-items: baseline; justify-content: space-between; }
+.environment-group--client .environment-item--wide { grid-column: 1 / -1; }
 .environment-item dt { flex: 0 0 auto; font-size: 11px; color: var(--mrr-muted-foreground); }
 .environment-item dd { margin: 0; font-size: 12px; font-weight: 600; color: var(--mrr-foreground); text-align: right; overflow-wrap: anywhere; }
+.environment-item--single-line dd,
+.environment-item__value--single-line { white-space: nowrap; }
 .environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; padding-top: var(--mrr-space-4); margin-top: var(--mrr-space-4); border-top: 1px solid var(--mrr-border); }
 .environment-hint { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.6; color: var(--mrr-muted-foreground); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
@@ -608,6 +622,8 @@ onBeforeUnmount(() => {
   .environment-group--client { grid-column: auto; }
   .environment-group--client dl { grid-template-columns: 1fr; }
   .environment-group dl { gap: 5px; }
+  .environment-item--single-line dd,
+  .environment-item__value--single-line { white-space: normal; }
   .environment-footer { grid-template-columns: 1fr; }
   .environment-actions { justify-content: flex-end; }
   .form-panel { padding: 30px var(--mrr-space-5); }

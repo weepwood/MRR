@@ -540,7 +540,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  padding: 9px 14px;
+  height: var(--mrr-control-height);
+  padding: 0 14px;
   font: inherit;
   font-size: 13px;
   color: var(--el-text-color-primary);
@@ -899,7 +900,8 @@ onBeforeUnmount(() => {
 
 .clear-date-filter {
   flex: none;
-  padding: 7px 10px;
+  height: var(--mrr-control-height);
+  padding: 0 10px;
   font: inherit;
   font-size: 12px;
   color: var(--color-primary);

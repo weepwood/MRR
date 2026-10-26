@@ -139,8 +139,8 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 .mrr-table-actions__button {
-  width: 28px;
-  height: 28px;
+  width: var(--mrr-control-height);
+  height: var(--mrr-control-height);
   padding: 0;
   margin: 0;
   font-size: 16px;

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import imgLogo from '@/assets/images/mrr-logo.svg'
+import type { EffectiveSystemSettings } from '@/utils/system-settings'
+import { RouterLink } from 'vue-router'
 import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
+import imgLogo from '@/assets/images/mrr-logo.svg'
 import {
   readLocalSystemSettings,
   SYSTEM_SETTINGS_UPDATED_EVENT,
-  type EffectiveSystemSettings,
 } from '@/utils/system-settings'
 
 defineOptions({
@@ -15,10 +16,12 @@ const props = withDefaults(
   defineProps<{
     showLogo?: boolean
     showTitle?: boolean
+    collapsible?: boolean
   }>(),
   {
     showLogo: true,
     showTitle: true,
+    collapsible: false,
   },
 )
 
@@ -30,6 +33,9 @@ const developerModeEnabled = ref(readLocalSystemSettings()?.developerModeEnabled
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 
 const to = computed(() => settingsStore.settings.home.enable ? settingsStore.settings.home.fullPath : '')
+const canToggleSidebar = computed(() => props.collapsible && props.showLogo && settingsStore.mode === 'pc')
+const sidebarCollapsed = computed(() => canToggleSidebar.value && settingsStore.settings.menu.subMenuCollapse)
+const toggleLabel = computed(() => sidebarCollapsed.value ? '展开侧边栏' : '收起侧边栏')
 
 async function refreshDeveloperModeStatus(force = false) {
   developerModeEnabled.value = await isRuntimeDeveloperModeEnabled(force)
@@ -50,7 +56,9 @@ function handleVisibilityChange() {
 }
 
 onMounted(() => {
-  if (!props.showTitle) return
+  if (!props.showTitle) {
+    return
+  }
 
   void refreshDeveloperModeStatus(true)
   window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, handleSettingsUpdated)
@@ -68,23 +76,72 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <RouterLink :to class="h-[var(--g-sidebar-logo-height)] w-inherit flex-center gap-2 px-3 text-inherit no-underline" :class="{ 'cursor-default': !settingsStore.settings.home.enable }" :title="title">
-    <img v-if="showLogo" :src="logo" :alt="`${title} logo`" class="logo h-[30px] w-[30px] object-contain">
-    <span v-if="showTitle" class="logo-title">
-      <strong class="title-text">{{ title }}</strong>
-      <small
-        v-if="developerModeEnabled"
-        class="developer-mode-badge"
-        role="status"
-        aria-live="polite"
-        data-testid="developer-mode-badge"
-        title="开发者模式已启用"
-      >开发者模式</small>
-    </span>
-  </RouterLink>
+  <component
+    :is="canToggleSidebar ? 'div' : RouterLink" :to="canToggleSidebar ? undefined : to" :title="canToggleSidebar ? undefined : title"
+    class="h-[var(--g-sidebar-logo-height)] w-inherit flex-center gap-2 px-3 text-inherit no-underline" :class="{
+      'logo-container--collapsible': canToggleSidebar,
+      'cursor-default': !canToggleSidebar && !settingsStore.settings.home.enable,
+    }"
+  >
+    <FaButton
+      v-if="canToggleSidebar" type="button" variant="ghost" size="icon"
+      class="logo-toggle relative" :class="{ 'is-collapsed': sidebarCollapsed }"
+      :aria-label="toggleLabel" :aria-expanded="!sidebarCollapsed" :title="toggleLabel"
+      @click="settingsStore.toggleSidebarCollapse()"
+    >
+      <img :src="logo" alt="" class="logo logo-mark size-[17px] shrink-0 object-contain">
+      <FaIcon :name="sidebarCollapsed ? 'i-lucide:panel-left-open' : 'i-lucide:panel-left-close'" class="logo-toggle-icon absolute size-[17px]" />
+    </FaButton>
+    <component
+      :is="canToggleSidebar ? RouterLink : 'span'" v-if="!sidebarCollapsed" :to="canToggleSidebar ? to : undefined"
+      class="min-h-[var(--mrr-control-height)] min-w-0 flex-center gap-2 text-inherit no-underline"
+      :class="{ 'cursor-default': !settingsStore.settings.home.enable }" :title="title"
+    >
+      <img v-if="showLogo && !canToggleSidebar" :src="logo" :alt="`${title} logo`" class="logo size-[17px] shrink-0 object-contain">
+      <span v-if="showTitle" class="logo-title">
+        <strong class="title-text">{{ title }}</strong>
+        <small
+          v-if="developerModeEnabled"
+          class="developer-mode-badge"
+          role="status"
+          aria-live="polite"
+          data-testid="developer-mode-badge"
+          title="开发者模式已启用"
+        >开发者模式</small>
+      </span>
+    </component>
+  </component>
 </template>
 
 <style scoped>
+.logo-container--collapsible {
+  justify-content: flex-start;
+  padding-inline-start: calc((var(--g-sub-sidebar-collapse-width) - var(--mrr-control-height)) / 2);
+}
+
+.logo-mark,
+.logo-toggle-icon {
+  transition: opacity var(--mrr-motion-fast) ease;
+}
+
+.logo-toggle-icon {
+  color: var(--text-secondary);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.logo-toggle:hover .logo-mark,
+.logo-toggle:focus-visible .logo-mark,
+.logo-toggle.is-collapsed .logo-mark {
+  opacity: 0;
+}
+
+.logo-toggle:hover .logo-toggle-icon,
+.logo-toggle:focus-visible .logo-toggle-icon,
+.logo-toggle.is-collapsed .logo-toggle-icon {
+  opacity: 1;
+}
+
 .logo-title {
   display: flex;
   gap: 8px;

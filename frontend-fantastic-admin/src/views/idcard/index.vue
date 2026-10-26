@@ -155,7 +155,7 @@ function handleSearch() {
 
 .search-btn {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-control-height);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;

@@ -563,9 +563,15 @@ watch(storageKey, loadPreferences, { immediate: true })
                       <FaIcon :name="widget.pinned ? 'i-ri:unpin-line' : 'i-ri:pushpin-2-line'" />
                       {{ widget.pinned ? '取消置顶' : '置顶' }}
                     </el-dropdown-item>
-                    <el-dropdown-item divided command="size:small">标准大小</el-dropdown-item>
-                    <el-dropdown-item command="size:wide">宽卡片</el-dropdown-item>
-                    <el-dropdown-item command="size:large">大卡片</el-dropdown-item>
+                    <el-dropdown-item divided command="size:small">
+                      标准大小
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:wide">
+                      宽卡片
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:large">
+                      大卡片
+                    </el-dropdown-item>
                     <el-dropdown-item divided command="hide">
                       <FaIcon name="i-ri:eye-off-line" />隐藏组件
                     </el-dropdown-item>
@@ -590,7 +596,9 @@ watch(storageKey, loadPreferences, { immediate: true })
         <FaIcon name="i-ant-design:appstore-add-outlined" />
         <strong>当前没有显示的小组件</strong>
         <p>可以从“小组件管理”中重新启用需要的模块。</p>
-        <el-button type="primary" @click="managerVisible = true">管理小组件</el-button>
+        <el-button type="primary" @click="managerVisible = true">
+          管理小组件
+        </el-button>
       </div>
     </section>
 
@@ -650,8 +658,12 @@ watch(storageKey, loadPreferences, { immediate: true })
         </div>
       </div>
       <template #footer>
-        <el-button @click="resetDashboard">恢复默认</el-button>
-        <el-button type="primary" @click="managerVisible = false">完成</el-button>
+        <el-button @click="resetDashboard">
+          恢复默认
+        </el-button>
+        <el-button type="primary" @click="managerVisible = false">
+          完成
+        </el-button>
       </template>
     </el-dialog>
 
@@ -691,9 +703,15 @@ watch(storageKey, loadPreferences, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="restoreEditorDefaults">恢复该组件默认值</el-button>
-        <el-button @click="editorVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveWidgetEditor">保存</el-button>
+        <el-button @click="restoreEditorDefaults">
+          恢复该组件默认值
+        </el-button>
+        <el-button @click="editorVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="saveWidgetEditor">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </MrrPageShell>
@@ -1136,8 +1154,9 @@ watch(storageKey, loadPreferences, { immediate: true })
   display: flex;
   gap: 8px;
   align-items: center;
-  min-height: 38px;
-  padding: 8px 10px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 10px;
   font-size: 12px;
   color: var(--mrr-foreground);
   cursor: pointer;

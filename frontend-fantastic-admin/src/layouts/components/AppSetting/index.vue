@@ -12,7 +12,6 @@ const isShow = ref(false)
   <FaButton
     variant="ghost"
     size="icon"
-    class="size-9"
     title="应用外观设置"
     aria-label="打开应用外观设置"
     @click="isShow = true"

@@ -170,8 +170,8 @@ onBeforeUnmount(() => {
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: var(--mrr-control-height);
+  height: var(--mrr-control-height);
   color: var(--mrr-muted-foreground);
   cursor: pointer;
   background: var(--mrr-muted);

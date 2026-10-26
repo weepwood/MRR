@@ -202,7 +202,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 .input-shell :deep(.fa-input__wrapper),
 .input-shell :deep(input) {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-input-height);
   padding-right: 14px;
   padding-left: 42px;
   font-size: 14px;
@@ -278,7 +278,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 .login-submit-btn {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-control-height);
   margin-top: var(--mrr-space-1);
   border-radius: var(--mrr-control-radius);
 }

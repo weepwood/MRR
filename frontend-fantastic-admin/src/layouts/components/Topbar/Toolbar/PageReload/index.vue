@@ -22,18 +22,18 @@ onMounted(() => {
 })
 onUnmounted(() => {
   hotkeys.unbind('f5')
-  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
-  if (animationTimer !== undefined) window.clearTimeout(animationTimer)
+  if (animationFrame !== undefined) { cancelAnimationFrame(animationFrame) }
+  if (animationTimer !== undefined) { window.clearTimeout(animationTimer) }
 })
 
 function playRefreshFeedback() {
   isAnimating.value = false
-  if (animationFrame !== undefined) cancelAnimationFrame(animationFrame)
+  if (animationFrame !== undefined) { cancelAnimationFrame(animationFrame) }
   animationFrame = requestAnimationFrame(() => {
     isAnimating.value = true
     animationFrame = undefined
   })
-  if (animationTimer !== undefined) window.clearTimeout(animationTimer)
+  if (animationTimer !== undefined) { window.clearTimeout(animationTimer) }
   animationTimer = window.setTimeout(() => {
     isAnimating.value = false
     animationTimer = undefined
@@ -58,7 +58,7 @@ function handleCtrlClick() {
         <p>可切换为浏览器原生刷新</p>
       </div>
     </template>
-    <FaButton variant="ghost" size="icon" class="size-9" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
+    <FaButton variant="ghost" size="icon" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
       <FaIcon
         name="i-iconoir:refresh-double"
         class="mrr-icon-interactive size-4"

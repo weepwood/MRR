@@ -53,7 +53,7 @@ async function run() {
 <style scoped>
 .query-diagnostics { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .query-diagnostics label { display: grid; gap: 4px; font-size: 12px; color: var(--el-text-color-secondary); }
-.query-diagnostics input { padding: 6px; color: var(--el-text-color-primary); background: var(--el-fill-color-light); border: 1px solid var(--el-border-color); border-radius: 4px; }
+.query-diagnostics input { box-sizing: border-box; height: var(--mrr-input-height); padding: 6px; color: var(--el-text-color-primary); background: var(--el-fill-color-light); border: 1px solid var(--el-border-color); border-radius: 4px; }
 .diagnostic-steps { padding-left: 24px; }
 .diagnostic-steps li { margin-bottom: 16px; }
 .diagnostic-steps pre { overflow-wrap: anywhere; white-space: pre-wrap; }

@@ -136,10 +136,4 @@ const slots = useSlots()
     flex: 1 1 120px;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .mrr-filter-bar {
-    transition: none;
-  }
-}
 </style>

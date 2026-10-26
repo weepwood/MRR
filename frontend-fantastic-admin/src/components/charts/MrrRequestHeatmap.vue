@@ -290,7 +290,7 @@ onBeforeUnmount(hideTooltip)
 <template>
   <section class="request-heatmap" :style="chartStyle" aria-label="最近一年每日请求量热力图">
     <header class="heatmap-header">
-      <div>
+      <div class="heatmap-summary">
         <strong>{{ formatNumber(totalRequests) }} 次请求</strong>
         <span>最近 {{ days }} 天 · {{ activeDays }} 天有请求记录</span>
       </div>
@@ -393,9 +393,12 @@ onBeforeUnmount(hideTooltip)
   justify-content: space-between;
 }
 
-.heatmap-header > div:first-child {
-  display: grid;
-  gap: 3px;
+.heatmap-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  min-width: 0;
 }
 
 .heatmap-header strong {
@@ -628,12 +631,6 @@ onBeforeUnmount(hideTooltip)
   .heatmap-legend {
     justify-content: flex-end;
     width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .heatmap-tooltip {
-    transition: none;
   }
 }
 </style>

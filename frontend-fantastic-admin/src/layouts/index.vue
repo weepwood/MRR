@@ -213,12 +213,4 @@ onBeforeUnmount(() => {
     padding: 16px;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .wrapper,
-  .sidebar-container,
-  .main-container {
-    transition: none;
-  }
-}
 </style>

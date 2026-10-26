@@ -136,17 +136,4 @@ function toggleRecordNumber() {
   color: var(--text-primary);
   white-space: nowrap;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .field-label--switchable,
-  .field-switch-icon {
-    transition: none;
-  }
-
-  .field-switch-icon.is-switched,
-  .field-label--switchable:active .field-switch-icon,
-  .field-label--switchable:active .field-switch-icon:not(.is-switched) {
-    transform: none;
-  }
-}
 </style>

@@ -254,6 +254,12 @@ export const useSettingsStore = defineStore(
       immediate: true,
     })
 
+    watch(() => settings.value.app.enableMotion, (enabled) => {
+      document.documentElement.dataset.motion = enabled === false ? 'off' : 'on'
+    }, {
+      immediate: true,
+    })
+
     watch([
       () => settings.value.app.enableMournMode,
       () => settings.value.app.enableColorAmblyopiaMode,

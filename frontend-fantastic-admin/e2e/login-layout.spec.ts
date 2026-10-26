@@ -240,6 +240,43 @@ test.describe('登录页统一设计', () => {
     }
   })
 
+  test('诊断请求尚未结束时键盘仍可聚焦并禁止重复检测', async ({ page }) => {
+    let releaseProbe!: () => void
+    const pendingProbe = new Promise<void>((resolve) => { releaseProbe = resolve })
+    let probeRequests = 0
+    await page.route('**/api/v1/public/config/client-environment', async (route) => {
+      probeRequests++
+      await pendingProbe
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 200, data: { clientIp: '192.0.2.10', ipVersion: 'IPV4', behindProxy: false } }),
+      })
+    })
+
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+    await expect.poll(() => probeRequests).toBe(1)
+    const badge = page.locator('.brand-footer').getByRole('button', { name: /MRR v/ })
+    await badge.focus()
+    await page.keyboard.press('Enter')
+
+    const panel = page.locator('#login-environment-panel')
+    const refresh = panel.locator('.environment-actions button').first()
+    await expect(panel).toBeVisible()
+    await expect(refresh).toHaveText('检测中…')
+    await expect(refresh).toHaveAttribute('aria-disabled', 'true')
+    await expect(refresh).toBeFocused()
+
+    await page.keyboard.press('Enter')
+    expect(probeRequests).toBe(1)
+    releaseProbe()
+    await expect(refresh).toHaveAttribute('aria-disabled', 'false')
+
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    await expect(badge).toBeFocused()
+  })
+
   test('窄屏保持单列并隐藏非必要介绍', async ({ page }) => {
     await page.route('**/api/v1/public/config/login-page', async (route) => {
       await route.fulfill({

@@ -32,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'Login' })
@@ -59,7 +60,7 @@ watch(authMode, async () => {
     shell.removeEventListener('transitionend', authModeTransitionEnd)
     authModeTransitionEnd = undefined
   }
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!isMotionEnabled()) {
     shell.style.height = ''
     shell.style.minHeight = ''
     shell.style.transition = ''
@@ -112,6 +113,7 @@ watch(authMode, async () => {
 const environmentPanelId = 'login-environment-panel'
 const environmentBadge = ref<HTMLButtonElement | null>(null)
 const environmentOpen = ref(false)
+let environmentKeyboardFocusRequested = false
 const environmentProbing = ref(false)
 const environmentUserAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
 const browserInfo = parseUserAgent(environmentUserAgent)
@@ -141,16 +143,27 @@ function updateLocalCurrentTime() {
   localCurrentTime.value = formatLocalDateTime(new Date())
 }
 
+function focusEnvironmentActionForKeyboard() {
+  if (!environmentKeyboardFocusRequested || !environmentOpen.value) return
+  document.getElementById(environmentPanelId)
+    ?.querySelector<HTMLButtonElement>('.environment-actions button')
+    ?.focus()
+}
+
 function openEnvironmentForKeyboard() {
+  environmentKeyboardFocusRequested = true
   environmentOpen.value = true
-  void nextTick(() => {
-    document.getElementById(environmentPanelId)
-      ?.querySelector<HTMLButtonElement>('.environment-actions button:not(:disabled)')
-      ?.focus()
-  })
+  // Teleported popover content can mount after the first Vue update.
+  void nextTick(focusEnvironmentActionForKeyboard)
+}
+
+function onEnvironmentPopoverShow() {
+  updateLocalCurrentTime()
+  void nextTick(focusEnvironmentActionForKeyboard)
 }
 
 function closeEnvironmentForKeyboard() {
+  environmentKeyboardFocusRequested = false
   environmentOpen.value = false
   void nextTick(() => environmentBadge.value?.focus())
 }
@@ -289,7 +302,9 @@ onBeforeUnmount(() => {
             :show-after="120"
             :hide-after="220"
             popper-class="login-environment-popper"
-            @show="updateLocalCurrentTime"
+            @show="onEnvironmentPopoverShow"
+            @after-enter="focusEnvironmentActionForKeyboard"
+            @hide="environmentKeyboardFocusRequested = false"
           >
             <template #reference>
               <button
@@ -366,7 +381,7 @@ onBeforeUnmount(() => {
                   客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。
                 </p>
                 <div class="environment-actions">
-                  <button type="button" :disabled="environmentProbing" @click="probeEnvironment">
+                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment">
                     {{ environmentProbing ? '检测中…' : '重新检测' }}
                   </button>
                   <button type="button" class="is-primary" @click="copyEnvironmentReport">
@@ -510,7 +525,7 @@ onBeforeUnmount(() => {
 .environment-actions { display: flex; gap: var(--mrr-space-2); }
 .environment-actions button { padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-actions button:hover:not(:disabled) { color: var(--mrr-foreground); border-color: var(--mrr-border-strong); }
-.environment-actions button:disabled { cursor: default; opacity: 0.6; }
+.environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 .environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
 :global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: var(--mrr-popover); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
 .login-shell {
@@ -569,7 +584,8 @@ onBeforeUnmount(() => {
 .session-notice { margin-top: var(--mrr-space-4); }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: var(--mrr-space-3); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
-@media (prefers-reduced-motion: no-preference) { .login-shell { animation: login-enter 0.35s ease-out both; } @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } }
+.login-shell { animation: login-enter 0.35s ease-out both; }
+@keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }

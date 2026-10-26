@@ -220,9 +220,3 @@
     border-radius: var(--mrr-radius-card);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .mrr-metric-card {
-    transition: none;
-  }
-}

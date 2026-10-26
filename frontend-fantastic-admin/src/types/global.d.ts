@@ -34,6 +34,11 @@ declare namespace Settings {
      */
     pageTitleStyle?: 'plain' | 'card'
     /**
+     * 是否启用界面动效（本机浏览器个人偏好）
+     * @默认值 `true`
+     */
+    enableMotion?: boolean
+    /**
      * 是否开启哀悼模式
      * @默认值 `false`
      */

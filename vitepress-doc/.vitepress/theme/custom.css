@@ -1,4 +1,36 @@
+/* 开源鸿蒙字体（HarmonyOS Sans SC）自托管配置
+ * 字体文件位于 public/fonts/，由 VitePress 静态目录直接提供，不依赖外部 CDN。
+ * 来源：https://github.com/IKKI2000/harmonyos-fonts（MIT 授权，鸿蒙字体本身可免费商用）。
+ */
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/harmonyos-sans-sc-regular.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/harmonyos-sans-sc-medium.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "HarmonyOS Sans SC";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/harmonyos-sans-sc-bold.woff2") format("woff2");
+  font-display: swap;
+}
+
 :root {
+  --vp-font-family-base: "HarmonyOS Sans SC", Inter, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --vp-font-family-mono: Monaco, "Cascadia Code", "Fira Code", Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
   --vp-c-brand-1: #0a7c42;
   --vp-c-brand-2: #0f9d58;
   --vp-c-brand-3: #0a7c42;
@@ -13,6 +45,15 @@
   --vp-custom-block-tip-border: #0a7c42;
   --vp-custom-block-tip-text: #0a7c42;
   --vp-custom-block-tip-bg: rgba(10, 124, 66, 0.06);
+}
+
+/* 文档标题字重稍淡：使用鸿蒙 Medium（500），比 VitePress 默认 600 更轻，
+ * 命中已下载的 harmonyos-sans-sc-medium.woff2，避免浏览器合成假粗体。 */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4 {
+  font-weight: 500;
 }
 
 .dark {

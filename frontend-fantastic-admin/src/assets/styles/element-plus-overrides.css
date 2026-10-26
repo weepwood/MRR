@@ -837,15 +837,3 @@ body .el-descriptions__table {
     margin-inline: 12px;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .el-button,
-  .el-input__wrapper,
-  .el-select__wrapper,
-  .el-textarea__inner,
-  .el-input__prefix,
-  .el-input__suffix,
-  .el-select__caret {
-    transition: none;
-  }
-}

@@ -261,8 +261,9 @@ test.describe('登录页统一设计', () => {
     await page.keyboard.press('Enter')
 
     const panel = page.locator('#login-environment-panel')
-    const refresh = panel.getByRole('button', { name: '重新检测' })
+    const refresh = panel.locator('.environment-actions button').first()
     await expect(panel).toBeVisible()
+    await expect(refresh).toHaveText('检测中…')
     await expect(refresh).toHaveAttribute('aria-disabled', 'true')
     await expect(refresh).toBeFocused()
 

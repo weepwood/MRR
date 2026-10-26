@@ -38,6 +38,21 @@ INTEGRATION_PREFIXES = (
     "backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/",
 )
 
+REAL_CHECK_PREFIXES = (
+    'backend-repo/src/main/java/com/zjcxph/imgapi/security/',
+    'backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/',
+    'backend-repo/src/main/java/com/zjcxph/imgapi/annotation/',
+)
+REAL_CHECK_NAME_PARTS = ('auth', 'jwt', 'user', 'role', 'permission', 'password', 'credential',
+                         'session', 'login', 'audit', 'ticket', 'readonly', 'import', 'export', 'exchange')
+
+
+def requires_real_checks(paths: Iterable[str]) -> bool:
+    return any(path.startswith('backend-repo/src/main/') and (
+        path.startswith(REAL_CHECK_PREFIXES)
+        or any(part in Path(path).name.lower() for part in REAL_CHECK_NAME_PARTS)
+    ) for path in paths)
+
 
 @dataclass(frozen=True)
 class BackendTestScope:
@@ -72,11 +87,8 @@ def classify_paths(paths: Iterable[str]) -> BackendTestScope:
 
     integration_changed = any(
         path in INTEGRATION_EXACT_PATHS or _matches_prefix(path, INTEGRATION_PREFIXES)
-        or path.startswith('backend-repo/src/main/') and any(word in path.lower() for word in (
-            'auth', 'permission', 'audit', 'ticket', 'import', 'export', 'exchange',
-        ))
         for path in backend_paths
-    )
+    ) or requires_real_checks(backend_paths)
     return BackendTestScope(
         backend_changed=True,
         integration_changed=integration_changed,

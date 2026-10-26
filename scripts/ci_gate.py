@@ -7,16 +7,11 @@ from pathlib import Path
 import subprocess
 
 from scripts.backend_test_scope import classify_paths as backend_scope
+from scripts.backend_test_scope import requires_real_checks
+from scripts.ci_build_scope import needs_release_build
 from scripts.frontend_test_scope import classify_paths as frontend_scope
 
 JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release')
-RELEASE_CONTROLS = {
-    '.github/workflows/release-on-version-bump.yml', '.github/workflows/release-validation.yml',
-    '.github/workflows/windows-release-package.yml', 'scripts/release_candidate.py',
-    '.github/workflows/quality-gate.yml', 'scripts/ci_gate.py',
-    'scripts/tests/test_release_candidate.py',
-}
-
 
 def classify_paths(paths, mode='pr') -> dict[str, bool]:
     paths = [p.strip().replace('\\', '/').removeprefix('./') for p in paths if p.strip()]
@@ -25,17 +20,15 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
     recovery = any(p.startswith('deploy/windows/') and any(word in p.lower() for word in ('backup', 'restore', 'database'))
                    or p.startswith('scripts/test_windows_') and 'recovery' in p
                    or p in ('.github/workflows/windows-database-recovery.yml', 'deploy/windows/mrrctl.ps1') for p in paths)
-    live = frontend.e2e_changed or any(
-        p.startswith('backend-repo/src/main/') and any(word in p.lower() for word in (
-            'auth', 'security/', 'interceptor', 'permission', 'audit', 'ticket', 'import', 'export', 'exchange',
-        )) or p.startswith(('scripts/run_live_e2e.py', 'frontend-fantastic-admin/e2e-live/'))
+    live = frontend.e2e_changed or requires_real_checks(paths) or any(
+        p.startswith(('scripts/run_live_e2e.py', 'frontend-fantastic-admin/e2e-live/'))
         or p == '.github/workflows/live-e2e.yml' for p in paths)
     scope = dict(frontend=frontend.frontend_changed, backend=backend.backend_changed or live or recovery or database_tools,
-                 build=frontend.build_changed, postgres=backend.integration_changed or database_tools,
+                 build=frontend.build_changed, postgres=backend.integration_changed or database_tools or live,
                  e2e=frontend.e2e_changed,
                  integration=live,
                  live=live, windows=any(p.startswith('deploy/windows/') for p in paths),
-                 recovery=recovery, release=any(p in RELEASE_CONTROLS for p in paths),
+                 recovery=recovery, release=needs_release_build(paths),
                  tooling=any(p.startswith(('scripts/', '.github/', 'quality/')) for p in paths))
     if mode == 'integration':
         if frontend.frontend_changed or backend.backend_changed or live or database_tools:

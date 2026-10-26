@@ -1,4 +1,9 @@
 from pathlib import Path
+import os
+import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -6,6 +11,20 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class CoverageGateContractTest(unittest.TestCase):
+    def test_manual_coverage_consumer_finds_both_actual_artifact_directory_layouts(self):
+        workflow = (ROOT / '.github/workflows/coverage-baseline.yml').read_text(encoding='utf-8')
+        command = re.search(r'xml_path="\$\((.*?)\)"', workflow).group(1)
+        bash = (Path(shutil.which('git')).parent.parent / 'bin/bash.exe'
+                if os.name == 'nt' else Path(shutil.which('bash')))
+        for layout in ('artifacts/integration/site/jacoco/jacoco.xml',
+                       'artifacts/integration/jacoco/jacoco.xml'):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory() as directory:
+                report = Path(directory) / layout
+                report.parent.mkdir(parents=True)
+                report.write_text('<report name="synthetic"/>', encoding='utf-8')
+                found = subprocess.check_output([str(bash), '-c', command], cwd=directory, text=True).strip()
+                self.assertEqual(layout, found)
+
     def test_verify_generates_combined_report(self):
         ns = {"m": "http://maven.apache.org/POM/4.0.0"}
         tree = ET.parse(ROOT / "backend-repo/pom.xml")

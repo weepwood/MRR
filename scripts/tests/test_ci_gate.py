@@ -79,6 +79,24 @@ class CiGateTest(unittest.TestCase):
             self.assertTrue(scope['postgres'], path)
         self.assertTrue(classify_paths(['frontend-fantastic-admin/src/router/guards.ts'])['live'])
 
+    def test_existing_identity_entrypoints_require_real_checks(self):
+        for path in ('backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java',
+                     'backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java',
+                     'backend-repo/src/main/java/com/zjcxph/imgapi/utils/PasswordUtil.java',
+                     'frontend-fantastic-admin/src/utils/auth-storage.ts',
+                     'frontend-fantastic-admin/src/utils/composables/useAuth.ts',
+                     'frontend-fantastic-admin/src/utils/permission.ts'):
+            with self.subTest(path=path):
+                scope = classify_paths([path])
+                self.assertTrue(scope['integration'])
+
+    def test_packaging_inputs_require_complete_candidate_validation(self):
+        for path in ('scripts/build_standalone_jar.py', 'scripts/embed_frontend_in_jar.py',
+                     'scripts/release_baseline.py', 'scripts/tests/test_build_standalone_jar.py',
+                     'scripts/ci_build_scope.py'):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])['release'])
+
     def test_recovery_changes_use_windows_rehearsal_but_other_scripts_do_not(self):
         self.assertTrue(classify_paths(['deploy/windows/restore-database.ps1'])['recovery'])
         scope = classify_paths(['deploy/windows/mrr-manager.ps1'])

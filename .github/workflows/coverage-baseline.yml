@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          xml_path="$(find artifacts -path '*/site/jacoco/jacoco.xml' -print -quit 2>/dev/null || true)"
+          xml_path="$(find artifacts -path '*/jacoco/jacoco.xml' -print -quit 2>/dev/null || true)"
           if [ -z "${xml_path}" ]; then
             echo 'available=false' >> "${GITHUB_OUTPUT}"
             {

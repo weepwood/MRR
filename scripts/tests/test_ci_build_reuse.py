@@ -12,12 +12,15 @@ class CiBuildReuseTest(unittest.TestCase):
                      "frontend-fantastic-admin/src/views/example/index.vue"):
             self.assertFalse(needs_release_build([path]))
         for path in ("backend-repo/pom.xml", "deploy/windows/install.ps1",
-                     "scripts/build_standalone_jar.py", "frontend-fantastic-admin/vite.config.ts",
+                     "frontend-fantastic-admin/vite.config.ts",
                      "frontend-fantastic-admin/.env.production", "frontend-fantastic-admin/.node-version",
                      "frontend-fantastic-admin/tsconfig.app.json", "frontend-fantastic-admin/postcss.config.js",
                      "frontend-fantastic-admin/uno.config.ts", "frontend-fantastic-admin/index.html",
                      "frontend-fantastic-admin/public/favicon.svg", "frontend-fantastic-admin/src/assets/test.svg",
-                     "scripts/ci_build_scope.py", "backend-repo/.mvn/wrapper/maven-wrapper.properties"):
+                     "backend-repo/.mvn/wrapper/maven-wrapper.properties"):
+            self.assertFalse(needs_release_build([path]), path)
+        for path in ("scripts/ci_build_scope.py", "scripts/build_standalone_jar.py",
+                     "scripts/embed_frontend_in_jar.py", "scripts/release_baseline.py"):
             self.assertTrue(needs_release_build([path]), path)
 
     def test_pr_summary_always_runs_and_checks_selected_jobs(self):

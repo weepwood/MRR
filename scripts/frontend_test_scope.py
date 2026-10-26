@@ -18,17 +18,6 @@ CI_CONTROL_PATHS = {
     "scripts/tests/test_vitest_coverage.py",
 }
 
-FRONTEND_EXACT_PATHS = {
-    "frontend-fantastic-admin/package.json",
-    "frontend-fantastic-admin/pnpm-lock.yaml",
-    "frontend-fantastic-admin/vite.config.ts",
-    "frontend-fantastic-admin/vitest.config.ts",
-    "frontend-fantastic-admin/playwright.config.ts",
-    "frontend-fantastic-admin/tsconfig.json",
-    "frontend-fantastic-admin/tsconfig.app.json",
-    "frontend-fantastic-admin/tsconfig.node.json",
-}
-
 E2E_PREFIXES = (
     "frontend-fantastic-admin/e2e/",
     "frontend-fantastic-admin/e2e-live/",
@@ -42,6 +31,9 @@ E2E_PREFIXES = (
     "frontend-fantastic-admin/src/store/modules/user",
     "frontend-fantastic-admin/src/views/login",
     "frontend-fantastic-admin/src/views/data-exchange/",
+    "frontend-fantastic-admin/src/utils/auth-storage",
+    "frontend-fantastic-admin/src/utils/permission",
+    "frontend-fantastic-admin/src/utils/composables/useAuth",
 )
 
 

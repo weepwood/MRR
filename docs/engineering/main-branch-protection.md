@@ -2,7 +2,7 @@
 
 关联 #362、#450。用户采用单人维护策略：强制 PR、CI、解决审查对话、禁止强推与删除，独立审查继续留证；批准人数为 0，避免作者自批死锁。
 
-## 当前目标
+## 当前配置
 
 `quality/main-branch-protection.json` 定义两个稳定必需状态：
 
@@ -39,4 +39,8 @@ python -m scripts.ci_protection --restore "$env:TEMP\MRR-ci-protection-before-45
 
 2026-10-18 应用初始五项保护，随后 #362 合并 #366/#368/#369 等批次，启用 governance、release-baseline-gate、frontend-gate、backend-gate、windows-management-gate、windows-package-gate、live-e2e、windows-database-recovery 八项状态并读回。
 
-#450 将 PR 检查与发布验收分层；新的远程应用证据应在完成迁移后记录，不能将旧八项记录解释为两个新状态已经启用。
+2026-10-27，#451 合并为 `005ffce7145e6ea475931f501dd8a231e1e33347`。该 main 的 [quality-gate 40473921669](https://github.com/weepwood/MRR/actions/runs/40473921669) 全部成功，包含生产 JAR 联调、真实 PostgreSQL 和 Windows PowerShell 5.1 恢复。
+
+随后实际执行 `scripts.ci_protection` 只读预览、apply、restore、再次 apply，每步均读回成功：八项 → governance/pr-gate → 原八项 → governance/pr-gate。两个状态均绑定 App 15368，strict=true；除 required_status_checks 外，远程全部保护字段与原始快照完全一致。管理员约束、0 批准、对话解决、线性历史、禁止强推/删除均保留。
+
+原始与第二次 apply 前快照保存在实施机 `$env:TEMP\MRR-ci-evidence-450\protection-before.json`、`protection-before-second-apply.json`；最终读回保存在同目录 `protection-after.json`。回滚演练在旧转发矩阵仍存在时完成；矩阵删除后必须先通过 PR 恢复旧检查生成，再恢复快照。

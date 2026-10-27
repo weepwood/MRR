@@ -72,7 +72,7 @@ main push 执行同一 quality-gate，查询此前成功的 main push run，比�
 
 迁移分两步，不能先移除远程仍必需的检查：
 
-1. 合并本批时保留 quality-gate 中的 legacy-gates 矩阵。七个旧状态转发真正 pr-gate 结果，governance 独立保留。旧工作流不再重复启动。
+1. 首批 #451 合并时保留 quality-gate 中的 legacy-gates 矩阵。七个旧状态转发真正 pr-gate 结果，governance 独立保留。旧工作流不再重复启动。
 2. 在新 main 上确认 pr-gate 实际成功，然后执行下面的只读预览和迁移。工具只 PATCH required_status_checks，保留其他保护字段；遇到新增的未知检查或不同 App 时拒绝覆盖。
 
 ```powershell
@@ -80,7 +80,7 @@ python -m scripts.ci_protection
 python -m scripts.ci_protection --apply --snapshot "$env:TEMP\MRR-ci-protection-before-450.json"
 ```
 
-成功后读回两个状态、strict 与 App 绑定；再以小 PR 删除 legacy-gates 矩阵，才消除过渡用 runner。目标 JSON 不是远程已经生效的证据。
+成功后读回两个状态、strict 与 App 绑定；再以小 PR 删除 legacy-gates 矩阵，才消除过渡用 runner。2026-10-27 已在 main 成功后实际切为两个状态，并完成恢复原八项再切回的回滚演练，全部其他保护字段与原快照完全一致；详见 [实施记录](./main-branch-protection.md)。当前工作流已删除过渡矩阵。目标 JSON 不是远程已经生效的证据。
 
 回滚先通过 PR 恢复旧工作流能产生相应检查，再恢复已保存配置：
 

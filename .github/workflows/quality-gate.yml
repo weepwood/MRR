@@ -219,21 +219,3 @@ jobs:
         run: |
           printf '%s' "${NEEDS_JSON}" > needs.json
           python -m scripts.ci_gate check needs.json
-
-  # Transitional names keep existing branch protection usable until pr-gate is live on main.
-  # Remove this matrix only AFTER the remote required checks have been migrated.
-  legacy-gates:
-    needs: pr-gate
-    if: always() && github.event_name == 'pull_request'
-    name: ${{ matrix.context }}
-    strategy:
-      fail-fast: false
-      matrix:
-        context: [release-baseline-gate, frontend-gate, backend-gate, windows-management-gate, windows-package-gate, live-e2e, windows-database-recovery]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Forward the actual aggregate result during migration
-        env:
-          RESULT: ${{ needs.pr-gate.result }}
-        run: test "${RESULT}" = success

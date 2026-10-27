@@ -17,6 +17,11 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 
+try:
+    from .embed_frontend_in_jar import verify_frontend
+except ImportError:  # Support the existing direct script entry point.
+    from embed_frontend_in_jar import verify_frontend
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -85,17 +90,20 @@ def free_port() -> int:
         return listener.getsockname()[1]
 
 
-def run(jar: Path) -> None:
+def run(jar: Path, embedded: bool = False) -> None:
     if not jar.is_file():
         raise ValueError("Build the backend executable JAR first (--jar).")
+    if embedded:
+        verify_frontend(jar)
     env = isolated_environment()
     java = str(Path(env["JAVA_HOME"]) / "bin" / ("java.exe" if os.name == "nt" else "java")) if env.get("JAVA_HOME") else "java"
     node = shutil.which("node", path=env.get("PATH"))
     if not node:
         raise ValueError("Node.js is required.")
     frontend = ROOT / "frontend-fantastic-admin"
-    backend_port, web_port = free_port(), free_port()
-    while web_port == backend_port:
+    backend_port = free_port()
+    web_port = backend_port if embedded else free_port()
+    while not embedded and web_port == backend_port:
         web_port = free_port()
     container = "mrr-live-e2e-" + secrets.token_hex(8)
     password = secrets.token_hex(24)
@@ -163,18 +171,20 @@ VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_
                 docker("exec", "-i", container, "psql", "-U", "postgres", "-d", "mrr_e2e", "-v", "ON_ERROR_STOP=1", sql=sql)
                 test_env = env | {"MRR_LIVE_MANAGED": "1", "MRR_LIVE_API_URL": url,
                                   "MRR_LIVE_WEB_PORT": str(web_port), "MRR_LIVE_PASSWORD": password,
+                                  "MRR_LIVE_API_PREFIX": "" if embedded else "/proxy",
                                   "MRR_LIVE_RESULTS_DIR": str(temporary / "browser-results"),
                                   "BROWSER": "none", "VITE_BUILD_MOCK": "false", "VITE_APP_DEMO_MODE": "false",
                                   "VITE_APP_API_BASEURL": url, "VITE_OPEN_PROXY": "true"}
                 # Own Vite directly: Playwright's detached webServer process would be
                 # outside the CLI process group on Linux during a forced timeout.
-                vite = subprocess.Popen([node, "node_modules/vite/bin/vite.js", "--mode", "development",
-                                         "--host", "127.0.0.1", "--port", str(web_port), "--strictPort"],
-                                        cwd=frontend, env=test_env, stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL, **hidden)
+                if not embedded:
+                    vite = subprocess.Popen([node, "node_modules/vite/bin/vite.js", "--mode", "development",
+                                             "--host", "127.0.0.1", "--port", str(web_port), "--strictPort"],
+                                            cwd=frontend, env=test_env, stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL, **hidden)
                 deadline = time.monotonic() + 90
                 while True:
-                    if vite.poll() is not None:
+                    if vite is not None and vite.poll() is not None:
                         raise RuntimeError("Managed frontend exited before readiness.")
                     try:
                         urllib.request.urlopen(f"http://127.0.0.1:{web_port}/login", timeout=2).close()
@@ -207,5 +217,6 @@ VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--jar", type=Path, required=True)
+    parser.add_argument("--embedded", action="store_true", help="Exercise the production frontend served by the candidate JAR, without Vite.")
     args = parser.parse_args()
-    run(args.jar)
+    run(args.jar, args.embedded)

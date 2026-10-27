@@ -31,6 +31,16 @@ AI 负责初稿，人负责审查规则边界。
 
 
 class GovernanceGuardTest(unittest.TestCase):
+    def test_p3_can_use_short_body_without_ai_report(self):
+        body = VALID_BODY.replace('P2', 'P3').split('## AI 参与说明')[0]
+        self.assertEqual([], MODULE.validate_pr_body(body).errors)
+
+    def test_p1_requires_an_issue_and_independent_review_record(self):
+        body = VALID_BODY.replace('P2', 'P1').replace('Closes #279', '无关联 Issue：调整发布配置')
+        self.assertTrue(MODULE.validate_pr_body(body).errors)
+        body = VALID_BODY.replace('P2', 'P1').split('## AI 参与说明')[0]
+        self.assertTrue(MODULE.validate_pr_body(body).errors)
+
     def test_valid_pr_body_passes(self):
         report = MODULE.validate_pr_body(VALID_BODY)
         self.assertEqual([], report.errors)

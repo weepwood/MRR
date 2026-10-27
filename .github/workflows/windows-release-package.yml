@@ -1,131 +1,104 @@
 name: Windows release package
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      full:
+        type: boolean
+        default: true
+      browser_tests:
+        type: boolean
+        default: false
+      retain_candidate:
+        type: boolean
+        default: false
+    outputs:
+      artifact:
+        value: ${{ jobs.build.outputs.artifact }}
+      attempt:
+        value: ${{ jobs.build.outputs.attempt }}
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
+    inputs:
+      full:
+        type: boolean
+        default: true
+      retain_candidate:
+        type: boolean
+        default: false
 
-# 最小权限：本流水线会在 pull_request 事件下执行 PR 代码，
-# 因此 workflow 级一律不给写权限；只有 publish job（仅 tag 运行）单独提权。
+# Candidate validation may execute PR code. Publishing is a separate main-only job.
 permissions:
   contents: read
 
-# PR 场景下同一分支连续 push 只保留最新一次；tag 构建永不互相取消。
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  scope:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      required: ${{ steps.scope.outputs.required }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-      - id: scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          if [ "${EVENT_NAME}" != pull_request ]; then
-            echo 'required=true' >> "${GITHUB_OUTPUT}"
-          else
-            git diff --name-only "${BASE_SHA}...${HEAD_SHA}" > changed-files.txt
-            REQUIRED="$(python scripts/ci_build_scope.py --changed-files changed-files.txt)"
-            test "${REQUIRED}" = true || test "${REQUIRED}" = false
-            echo "required=${REQUIRED}" >> "${GITHUB_OUTPUT}"
-          fi
-
   build:
-    needs: scope
-    if: needs.scope.outputs.required == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
-      archive_name: ${{ steps.package.outputs.archive_name }}
-      standalone_name: ${{ steps.standalone.outputs.jar_name }}
+      artifact: ${{ steps.candidate.outputs.artifact }}
+      attempt: ${{ steps.candidate.outputs.attempt }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: imgapi
+          POSTGRES_USER: imgapi
+          POSTGRES_PASSWORD: imgapi
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U imgapi -d imgapi"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      FULL: ${{ inputs.full }}
+      SOURCE_SHA: ${{ github.sha }}
+      MRR_TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/imgapi
+      MRR_TEST_POSTGRES_USERNAME: imgapi
+      MRR_TEST_POSTGRES_PASSWORD: imgapi
       NGINX_VERSION: 1.31.8
       WINSW_VERSION: 2.12.0
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set up Java
-        uses: actions/setup-java@v6
+          ref: ${{ github.sha }}
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-
-      # pnpm 必须先于 setup-node 安装，setup-node 的 pnpm 缓存依赖已就位的 pnpm。
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: frontend-fantastic-admin/.node-version
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
-
-      # setup-node 只能配置一种包管理器缓存；VitePress 用的是 npm，这里单独缓存 ~/.npm。
-      - name: Cache VitePress npm store
-        uses: actions/cache@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v6
+        if: inputs.full
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-vitepress-${{ hashFiles('vitepress-doc/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-vitepress-
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Validate release baseline
+          restore-keys: ${{ runner.os }}-npm-vitepress-
+      - name: Validate repository and frozen release identity
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${FULL}" = true ]; then python -m unittest discover -s scripts/tests -p 'test_*.py' -v; fi
+          python scripts/test_inventory.py --fail-on-focused
           python scripts/release_baseline.py validate
-
-          PRODUCT_VERSION="$(tr -d '\r\n' < VERSION)"
-          BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
-          if [[ "${GITHUB_REF}" == refs/tags/* ]] && [[ "${GITHUB_REF_NAME}" != "v${PRODUCT_VERSION}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match VERSION v${PRODUCT_VERSION}" >&2
-            exit 1
-          fi
-
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> "${GITHUB_ENV}"
+          python scripts/check_main_branch_references.py
+          python scripts/check_engineering_docs.py
+          test "$(git rev-parse HEAD)" = "${SOURCE_SHA}"
+          echo "PRODUCT_VERSION=$(tr -d '\r\n' < VERSION)" >> "${GITHUB_ENV}"
           echo "MRR_GIT_COMMIT=${SOURCE_SHA}" >> "${GITHUB_ENV}"
-          echo "MRR_BUILD_TIME=${BUILD_TIME}" >> "${GITHUB_ENV}"
-
-      - name: Test frontend JAR embedder
-        run: python -m unittest scripts.tests.test_embed_frontend_in_jar
-
+          echo "MRR_BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "${GITHUB_ENV}"
       - name: Validate deployment sources
+        if: inputs.full
         shell: pwsh
         run: |
           $failed = $false
@@ -133,191 +106,122 @@ jobs:
             $tokens = $null
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
-            if ($errors.Count -gt 0) {
-              $failed = $true
-              Write-Error "PowerShell syntax error in $($_.FullName): $($errors -join '; ')"
-            }
+            if ($errors.Count -gt 0) { $failed = $true; Write-Error "PowerShell syntax error: $($_.Name)" }
           }
           Get-ChildItem deploy/windows/services -Filter *.xml | ForEach-Object {
-            try { [xml](Get-Content $_.FullName -Raw) | Out-Null }
-            catch {
-              $failed = $true
-              Write-Error "Invalid XML in $($_.FullName): $($_.Exception.Message)"
-            }
+            try { [xml](Get-Content $_.FullName -Raw) | Out-Null } catch { $failed = $true }
           }
           if ($failed) { exit 1 }
-
-      - name: Download pinned Windows runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          RUNTIME_DIR="build/windows-runtime"
-          DOWNLOAD_DIR="build/windows-runtime-download"
-          NGINX_DISTRIBUTION="nginx/Windows-${NGINX_VERSION}"
-
-          rm -rf "${RUNTIME_DIR}" "${DOWNLOAD_DIR}"
-          mkdir -p "${RUNTIME_DIR}/nginx" "${RUNTIME_DIR}/winsw" "${DOWNLOAD_DIR}"
-
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-            "https://nginx.org/download/nginx-${NGINX_VERSION}.zip" \
-            --output "${DOWNLOAD_DIR}/nginx.zip"
-          unzip -q "${DOWNLOAD_DIR}/nginx.zip" -d "${DOWNLOAD_DIR}"
-          cp -a "${DOWNLOAD_DIR}/nginx-${NGINX_VERSION}/." "${RUNTIME_DIR}/nginx/"
-
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-            "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe" \
-            --output "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-            "https://raw.githubusercontent.com/winsw/winsw/v${WINSW_VERSION}/LICENSE.txt" \
-            --output "${RUNTIME_DIR}/winsw/LICENSE.txt"
-
-          test -f "${RUNTIME_DIR}/nginx/nginx.exe"
-          test -f "${RUNTIME_DIR}/nginx/conf/mime.types"
-          test -f "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
-
-          cat > "${RUNTIME_DIR}/versions.json" <<EOF
-          {
-            "nginx": {
-              "distribution": "${NGINX_DISTRIBUTION}",
-              "version": "${NGINX_VERSION}",
-              "source": "https://nginx.org/download/nginx-${NGINX_VERSION}.zip"
-            },
-            "winsw": {
-              "version": "${WINSW_VERSION}",
-              "source": "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe"
-            }
-          }
-          EOF
-
-          (
-            cd "${RUNTIME_DIR}"
-            find nginx winsw versions.json -type f -print0 \
-              | sort -z \
-              | xargs -0 sha256sum > SHA256SUMS
-          )
-
-      - name: Test and package backend
+      - name: Test and package backend once
         working-directory: backend-repo
-        run: mvn -B -Drevision="${PRODUCT_VERSION}" test package
-
-      - name: Extract backend build identity
-        shell: bash
         run: |
-          set -euo pipefail
-          BACKEND_JAR="$(find backend-repo/target -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"
-          test -n "${BACKEND_JAR}"
-          IDENTITY_DIR="build/backend-identity"
-          mkdir -p "${IDENTITY_DIR}"
-          unzip -l "${BACKEND_JAR}" > "${IDENTITY_DIR}/jar-entries.txt"
-          unzip -p "${BACKEND_JAR}" META-INF/build-info.properties > "${IDENTITY_DIR}/build-info.properties" || true
-          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties > "${IDENTITY_DIR}/git.properties" || true
-          printf 'source.sha=%s\njar.path=%s\n' "${SOURCE_SHA}" "${BACKEND_JAR}" > "${IDENTITY_DIR}/expected.properties"
-          echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
-
-      - name: Upload backend build identity
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-build-identity
-          path: build/backend-identity
-          if-no-files-found: error
-          retention-days: 7
-
+          mvn -B -ntp -Drevision="${PRODUCT_VERSION}" clean verify -Dlocal.config.exclude=true
+          python ../scripts/check_test_execution.py --reports target/failsafe-reports
+          if [ "${FULL}" = true ]; then
+            python ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
+            python ../scripts/jacoco_coverage.py --xml target/site/jacoco-combined/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression
+          fi
       - name: Verify backend build identity
         shell: bash
         run: |
           set -euo pipefail
-          BUILD_INFO="$(cat build/backend-identity/build-info.properties)"
-          GIT_INFO="$(cat build/backend-identity/git.properties)"
-          grep -F "build.version=${PRODUCT_VERSION}" <<< "${BUILD_INFO}"
-
-          if grep -F "${SOURCE_SHA}" <<< "${GIT_INFO}"; then
-            exit 0
-          fi
-          if grep -F "${SOURCE_SHA:0:7}" <<< "${GIT_INFO}"; then
-            exit 0
-          fi
-
-          echo "Backend git.properties does not contain source commit ${SOURCE_SHA}" >&2
-          printf '%s\n' "${GIT_INFO}" >&2
-          exit 1
-
+          mapfile -t JARS < <(find backend-repo/target -maxdepth 1 -type f -name '*.jar')
+          test "${#JARS[@]}" = 1
+          BACKEND_JAR="${JARS[0]}"
+          unzip -p "${BACKEND_JAR}" META-INF/build-info.properties | grep -F "build.version=${PRODUCT_VERSION}"
+          unzip -p "${BACKEND_JAR}" BOOT-INF/classes/git.properties > backend-git.properties
+          grep -F "${SOURCE_SHA}" backend-git.properties || grep -F "${SOURCE_SHA:0:7}" backend-git.properties
+          echo "BACKEND_JAR=${BACKEND_JAR}" >> "${GITHUB_ENV}"
+      - name: Coverage evidence for optional manual reports
+        if: always() && inputs.full
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-integration-test-reports
+          path: |
+            backend-repo/target/site/jacoco
+            backend-repo/target/site/jacoco-combined
+          retention-days: 3
+          if-no-files-found: ignore
       - name: Test, build and embed frontend
         working-directory: frontend-fantastic-admin
         run: |
           pnpm install --frozen-lockfile
           pnpm lint:tsc
-          pnpm test:run
+          if [ "${FULL}" = true ]; then
+            pnpm test:coverage
+            python ../scripts/vitest_coverage.py --summary coverage/coverage-summary.json --baseline ../quality/frontend-coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
+          else
+            pnpm test:run
+          fi
           pnpm build
+          pnpm test:compat:chrome86
           grep -R --fixed-strings "${PRODUCT_VERSION}" dist >/dev/null
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
-          python ../scripts/embed_frontend_in_jar.py embed \
-            --jar "../${BACKEND_JAR}" \
-            --dist dist
-          python ../scripts/embed_frontend_in_jar.py verify \
-            --jar "../${BACKEND_JAR}"
-
+          python ../scripts/embed_frontend_in_jar.py embed --jar "../${BACKEND_JAR}" --dist dist
+          python ../scripts/embed_frontend_in_jar.py verify --jar "../${BACKEND_JAR}"
+      - name: Full browser tests
+        working-directory: frontend-fantastic-admin
+        env:
+          BROWSER_TESTS: ${{ inputs.browser_tests }}
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          if [ "${FULL}" = true ] || [ "${BROWSER_TESTS}" = true ]; then pnpm test:e2e; fi
       - name: Build standalone JAR from the same verified backend
+        if: inputs.full
         id: standalone
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            JAR_NAME="MRR-v${PRODUCT_VERSION}-standalone.jar"
-          else
-            JAR_NAME="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}-standalone.jar"
-          fi
-          python scripts/build_standalone_jar.py build \
-            --source "${BACKEND_JAR}" --output "build/${JAR_NAME}" --default-port 8002
-          python scripts/build_standalone_jar.py verify --jar "build/${JAR_NAME}" --default-port 8002
-          (cd build && sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256")
+          mkdir -p build/release-assets
+          JAR_NAME="MRR-v${PRODUCT_VERSION}-standalone.jar"
+          python scripts/build_standalone_jar.py build --source "${BACKEND_JAR}" --output "build/release-assets/${JAR_NAME}" --default-port 8002
+          python scripts/build_standalone_jar.py verify --jar "build/release-assets/${JAR_NAME}" --default-port 8002
+          (cd build/release-assets && sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256")
           echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
-
+      - name: Real login, import, query and refusal against the production candidate JAR
+        env:
+          STANDALONE: ${{ steps.standalone.outputs.jar_name }}
+        run: |
+          JAR="${BACKEND_JAR}"
+          if [ "${FULL}" = true ]; then JAR="build/release-assets/${STANDALONE}"; fi
+          python -m scripts.run_live_e2e --jar "${JAR}" --embedded
       - name: Build documentation for external hosting
-        shell: bash
+        if: inputs.full
         working-directory: vitepress-doc
         env:
           GITHUB_TOKEN: ${{ github.token }}
           MRR_CHANGELOG_GITHUB: 'true'
-          MRR_CHANGELOG_BASE_BRANCH: 'main'
+          MRR_CHANGELOG_BASE_BRANCH: main
         run: |
-          set -euo pipefail
-          {
-            npm ci
-            npm run docs:changelog:test
-            npm run docs:build
-            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
-            grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
-          } 2>&1 | tee docs-build.log
-
-      - name: Upload documentation build log
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: documentation-build-log
-          path: vitepress-doc/docs-build.log
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Assemble offline package
-        id: package
+          npm ci
+          npm run docs:changelog:test
+          npm run docs:build
+          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
+          grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+      - name: Download pinned Windows runtime
+        if: inputs.full
         shell: bash
         run: |
           set -euo pipefail
-
-          PACKAGE_DIR="build/windows-package"
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            ARCHIVE="MRR-v${PRODUCT_VERSION}.zip"
-          else
-            ARCHIVE="MRR-v${PRODUCT_VERSION}-${SOURCE_SHA:0:8}.zip"
-          fi
-
-          rm -rf "${PACKAGE_DIR}"
-          mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" \
-                   "${PACKAGE_DIR}/docs/user" "${PACKAGE_DIR}/docs/internal" \
-                   "${PACKAGE_DIR}/deploy/windows" "${PACKAGE_DIR}/runtime"
-
+          RUNTIME_DIR=build/windows-runtime
+          DOWNLOAD_DIR=build/windows-runtime-download
+          NGINX_DISTRIBUTION="nginx/Windows-${NGINX_VERSION}"
+          mkdir -p "${RUNTIME_DIR}/nginx" "${RUNTIME_DIR}/winsw" "${DOWNLOAD_DIR}"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://nginx.org/download/nginx-${NGINX_VERSION}.zip" --output "${DOWNLOAD_DIR}/nginx.zip"
+          unzip -q "${DOWNLOAD_DIR}/nginx.zip" -d "${DOWNLOAD_DIR}"
+          cp -a "${DOWNLOAD_DIR}/nginx-${NGINX_VERSION}/." "${RUNTIME_DIR}/nginx/"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe" --output "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://raw.githubusercontent.com/winsw/winsw/v${WINSW_VERSION}/LICENSE.txt" --output "${RUNTIME_DIR}/winsw/LICENSE.txt"
+          printf '{"nginx":{"distribution":"%s","version":"%s"},"winsw":{"version":"%s"}}\n' "${NGINX_DISTRIBUTION}" "${NGINX_VERSION}" "${WINSW_VERSION}" > "${RUNTIME_DIR}/versions.json"
+          (cd "${RUNTIME_DIR}" && find nginx winsw versions.json -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Assemble offline package
+        if: inputs.full
+        shell: bash
+        run: |
+          set -euo pipefail
+          PACKAGE_DIR=build/windows-package
+          mkdir -p "${PACKAGE_DIR}/backend" "${PACKAGE_DIR}/frontend" "${PACKAGE_DIR}/docs/user" "${PACKAGE_DIR}/docs/internal" "${PACKAGE_DIR}/deploy/windows" "${PACKAGE_DIR}/runtime"
           cp "${BACKEND_JAR}" "${PACKAGE_DIR}/backend/mrr-backend.jar"
           cp -a frontend-fantastic-admin/dist/. "${PACKAGE_DIR}/frontend/"
           cp -a vitepress-doc/.vitepress/dist-user/. "${PACKAGE_DIR}/docs/user/"
@@ -325,144 +229,41 @@ jobs:
           cp -a deploy/windows/. "${PACKAGE_DIR}/deploy/windows/"
           cp -a build/windows-runtime/. "${PACKAGE_DIR}/runtime/"
           cp VERSION release-baseline.json "${PACKAGE_DIR}/"
-
+          cp "release-notes/${PRODUCT_VERSION}.md" "${PACKAGE_DIR}/release-notes.md"
           test -f "${PACKAGE_DIR}/runtime/nginx/nginx.exe"
           test -f "${PACKAGE_DIR}/runtime/winsw/WinSW-x64.exe"
           test -f "${PACKAGE_DIR}/runtime/SHA256SUMS"
-          test -f "${PACKAGE_DIR}/deploy/windows/nginxctl.ps1"
-          test -f "${PACKAGE_DIR}/deploy/windows/nginx-control.cmd"
           test -f "${PACKAGE_DIR}/docs/user/index.html"
           test -f "${PACKAGE_DIR}/docs/internal/index.html"
-          python scripts/embed_frontend_in_jar.py verify \
-            --jar "${PACKAGE_DIR}/backend/mrr-backend.jar"
-
-          python scripts/release_baseline.py manifest \
-            --git-commit "${SOURCE_SHA}" \
-            --build-time "${MRR_BUILD_TIME}" \
-            --output "${PACKAGE_DIR}/manifest.json"
-
-          if [ -f CHANGELOG.md ]; then
-            cp CHANGELOG.md "${PACKAGE_DIR}/release-notes.md"
-          else
-            printf '# MRR v%s\n\nCommit: %s\n' "${PRODUCT_VERSION}" "${SOURCE_SHA}" > "${PACKAGE_DIR}/release-notes.md"
-          fi
-
-          (
-            cd "${PACKAGE_DIR}"
-            find backend frontend docs deploy runtime VERSION release-baseline.json manifest.json release-notes.md -type f -print0 \
-              | sort -z \
-              | xargs -0 sha256sum > SHA256SUMS
-            zip -qr "../${ARCHIVE}" .
-          )
-
-          echo "archive=build/${ARCHIVE}" >> "${GITHUB_OUTPUT}"
-          echo "archive_name=${ARCHIVE}" >> "${GITHUB_OUTPUT}"
-          echo "version=${PRODUCT_VERSION}" >> "${GITHUB_OUTPUT}"
-
-      # 完整离线包约 160 MiB。只在真正需要交付/人工验收时落盘：
-      #   - tag 构建：publish job 需要跨 job 取用该制品；
-      #   - workflow_dispatch：供人工下载验收。
-      # PR 构建不落盘——免费私有仓库制品配额仅 500 MB，历史上有 11 个 PR 构建的
-      # 160 MiB 离线包累计占用 1766 MiB，是全部 upload-artifact 失败的根因。
-      - name: Upload full package artifact
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.package.outputs.archive_name }}
-          path: ${{ steps.package.outputs.archive }}
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload standalone artifact
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.standalone.outputs.jar_name }}
-          path: |
-            build/${{ steps.standalone.outputs.jar_name }}
-            build/${{ steps.standalone.outputs.jar_name }}.sha256
-          if-no-files-found: error
-          retention-days: 7
-
-      # PR 构建只保留清单与校验和（KB 级），足以复核产物身份与完整性。
-      - name: Upload package evidence
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-package-evidence-${{ github.run_id }}
-          path: |
-            build/windows-package/manifest.json
-            build/windows-package/SHA256SUMS
-          if-no-files-found: error
-          retention-days: 7
-
-  # 独立出来：该 job 持有 contents: write，但只在 tag 上运行，
-  # 因此执行 PR 代码的 build job 永远拿不到写权限。
-  publish:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - name: Download package artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.build.outputs.archive_name }}
-          path: release-assets
-
-      - name: Download standalone artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.build.outputs.standalone_name }}
-          path: release-assets
-
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
+          python scripts/embed_frontend_in_jar.py verify --jar "${PACKAGE_DIR}/backend/mrr-backend.jar"
+          python scripts/release_baseline.py manifest --git-commit "${SOURCE_SHA}" --build-time "${MRR_BUILD_TIME}" --output "${PACKAGE_DIR}/manifest.json"
+          (cd "${PACKAGE_DIR}" && find backend frontend docs deploy runtime VERSION release-baseline.json manifest.json release-notes.md -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          (cd "${PACKAGE_DIR}" && sha256sum -c SHA256SUMS >/dev/null && zip -qr "../release-assets/MRR-v${PRODUCT_VERSION}.zip" .)
+      - name: Bind verified files to this commit and build attempt
+        if: inputs.full
+        id: candidate
         shell: bash
         run: |
           set -euo pipefail
-          ARCHIVE_PATH="$(find release-assets -maxdepth 1 -type f -name '*.zip' | head -n 1)"
-          test -n "${ARCHIVE_PATH}"
-          test -f "release-assets/${{ needs.build.outputs.standalone_name }}"
-          (cd release-assets && sha256sum -c "${{ needs.build.outputs.standalone_name }}.sha256")
-          ASSETS=("${ARCHIVE_PATH}" "release-assets/${{ needs.build.outputs.standalone_name }}" "release-assets/${{ needs.build.outputs.standalone_name }}.sha256")
-          ls -lh "${ASSETS[@]}"
-
-          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" \
-              "${ASSETS[@]}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          else
-            gh release create "${GITHUB_REF_NAME}" \
-              "${ASSETS[@]}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "MRR ${GITHUB_REF_NAME}" \
-              --generate-notes
-          fi
-
-  windows-package-gate:
-    needs: [scope, build]
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Validate selected package build
-        env:
-          SCOPE_RESULT: ${{ needs.scope.result }}
-          BUILD_REQUIRED: ${{ needs.scope.outputs.required }}
-          BUILD_RESULT: ${{ needs.build.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "${SCOPE_RESULT}" = success
-          if [ "${BUILD_REQUIRED}" = true ]; then
-            test "${BUILD_RESULT}" = success
-          else
-            test "${BUILD_REQUIRED}" = false
-            test "${BUILD_RESULT}" = skipped
-          fi
+          python -m scripts.release_candidate manifest --directory build/release-assets
+          python -m scripts.release_candidate verify --directory build/release-assets
+          echo "artifact=release-candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${SOURCE_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "attempt=${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+      - name: Share candidate files only with this verification/publishing run
+        if: inputs.full && inputs.retain_candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.candidate.outputs.artifact }}
+          path: build/release-assets
+          retention-days: 1
+          if-no-files-found: error
+      - name: Share only the candidate JAR and identity for Windows dry-run validation
+        if: inputs.full && !inputs.retain_candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.candidate.outputs.artifact }}
+          path: |
+            build/release-assets/*.jar
+            build/release-assets/release-candidate.json
+          retention-days: 1
+          if-no-files-found: error

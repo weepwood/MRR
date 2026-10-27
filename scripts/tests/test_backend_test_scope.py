@@ -17,8 +17,8 @@ class BackendTestScopeTest(unittest.TestCase):
 
     def test_regular_backend_change_runs_unit_tests_only(self):
         scope = classify_paths([
-            "backend-repo/src/main/java/com/zjcxph/imgapi/controller/AuthController.java",
-            "backend-repo/src/test/java/com/zjcxph/imgapi/controller/AuthControllerTest.java",
+            "backend-repo/src/main/java/com/zjcxph/imgapi/controller/StatisticsController.java",
+            "backend-repo/src/test/java/com/zjcxph/imgapi/controller/StatisticsControllerTest.java",
         ])
 
         self.assertTrue(scope.backend_changed)
@@ -39,7 +39,7 @@ class BackendTestScopeTest(unittest.TestCase):
                 self.assertTrue(scope.integration_changed)
                 self.assertEqual(scope.reason, "database-or-integration-change")
 
-    def test_release_change_runs_full_backend_verification(self):
+    def test_release_metadata_does_not_repeat_application_verification(self):
         for path in (
             "VERSION",
             "release-baseline.json",
@@ -49,9 +49,8 @@ class BackendTestScopeTest(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 scope = classify_paths([path])
-                self.assertTrue(scope.backend_changed)
-                self.assertTrue(scope.integration_changed)
-                self.assertEqual(scope.reason, "release-change")
+                self.assertFalse(scope.backend_changed)
+                self.assertFalse(scope.integration_changed)
 
     def test_gate_control_change_tests_the_gate_itself(self):
         for path in (

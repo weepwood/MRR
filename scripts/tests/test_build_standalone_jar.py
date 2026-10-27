@@ -94,22 +94,22 @@ class BuildStandaloneJarTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "different"):
                 build_standalone_jar(source, source)
 
-    def test_release_workflow_builds_and_uploads_standalone_jar(self):
-        workflow = (ROOT / ".github/workflows/standalone-jar-release.yml").read_text(
+    def test_central_release_builds_standalone_and_legacy_entry_cannot_publish(self):
+        workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("scripts/build_standalone_jar.py", workflow)
         self.assertIn("--default-port 8002", workflow)
         self.assertIn("MRR-v${PRODUCT_VERSION}-standalone.jar", workflow)
-        self.assertIn("steps.standalone.outputs.jar", workflow)
-        self.assertIn("actions/download-artifact@v8", workflow)
-        self.assertIn("gh release upload", workflow)
-        self.assertIn("Waiting for GitHub Release", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
-        self.assertIn("publish:\n    if: startsWith", workflow)
-        self.assertIn("permissions:\n      contents: write", workflow)
         self.assertIn('sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256"', workflow)
+        legacy = (ROOT / ".github/workflows/standalone-jar-release.yml").read_text(encoding="utf-8")
+        self.assertNotIn('contents: write', legacy)
+        self.assertNotIn('gh release upload', legacy)
+        release = (ROOT / ".github/workflows/release-on-version-bump.yml").read_text(encoding="utf-8")
+        self.assertIn('needs: [identity, qualify]', release)
+        self.assertIn('scripts.release_candidate publish', release)
 
 
 if __name__ == "__main__":

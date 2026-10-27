@@ -1,20 +1,10 @@
 name: version-build
 
-# 触发说明：本流水线当前只会在「人工推送 tag」或「人工发布 Release」时运行。
-# 由 release-on-version-bump.yml 自动创建 tag 的路径不会触发它——使用仓库自带
-# GITHUB_TOKEN 推送 tag 所产生的事件不会创建新的 workflow run
-# （仅 workflow_dispatch / repository_dispatch 例外，见 GitHub 官方文档
-# "Triggering a workflow from a workflow"）。如需纳入自动发版流程，必须在
-# release-on-version-bump.yml 中显式 `gh workflow run version-build.yml`。
+# Legacy manual diagnostics. Publishing is owned exclusively by Release.
 on:
-  push:
-    tags:
-      - 'v*'
-      - '*.*.*'
-  release:
-    types: [published]
+  workflow_dispatch:
 
-# 仅构建与上传 Release Assets，不需要写仓库内容的权限之外的能力。
+
 permissions:
   contents: read
 
@@ -87,39 +77,3 @@ jobs:
           name: backend-jar
           path: backend-repo/target/*.jar
           retention-days: 1
-
-  upload-release-assets:
-    # 必须等待前端和后端编译成功后才执行
-    needs: [build-frontend, build-backend]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # 仅在是由 tag 触发或者发布 release 时才运行
-    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-    steps:
-      - name: Download Frontend Artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: frontend-dist
-          path: frontend-dist # 下载到当前目录的 frontend-dist 文件夹下
-
-      - name: Download Backend Artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: backend-jar
-          path: backend-jar # 下载到当前目录的 backend-jar 文件夹下
-
-      - name: Zip Frontend Dist
-        # Release Assets 最好是单文件压缩包，把前端的一堆静态文件打个 zip
-        run: zip -r frontend-dist.zip frontend-dist/
-
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v3
-        # Action 会自动识别当前触发的 Tag 并关联到对应的 Release 上
-        with:
-          files: |
-            frontend-dist.zip
-            backend-jar/*.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -77,13 +77,22 @@ class CiGateTest(unittest.TestCase):
                      'backend-repo/src/main/java/com/zjcxph/imgapi/service/importer/TabularImportFileReader.java'):
             scope = classify_paths([path])
             self.assertTrue(scope['postgres'], path)
-        self.assertTrue(classify_paths(['frontend-fantastic-admin/src/router/guards.ts'])['live'])
+        frontend_scope = classify_paths(['frontend-fantastic-admin/src/router/guards.ts'])
+        self.assertTrue(frontend_scope['frontend'])
+        self.assertFalse(frontend_scope['live'])
+        self.assertFalse(frontend_scope['e2e'])
 
     def test_existing_identity_entrypoints_require_real_checks(self):
         for path in ('backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java',
                      'backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java',
-                     'backend-repo/src/main/java/com/zjcxph/imgapi/utils/PasswordUtil.java',
-                     'frontend-fantastic-admin/src/utils/auth-storage.ts',
+                     'backend-repo/src/main/java/com/zjcxph/imgapi/utils/PasswordUtil.java'):
+            with self.subTest(path=path):
+                scope = classify_paths([path])
+                self.assertTrue(scope['integration'])
+                self.assertTrue(scope['postgres'])
+
+    def test_frontend_identity_flows_keep_unit_checks_and_defer_browser_integration(self):
+        for path in ('frontend-fantastic-admin/src/utils/auth-storage.ts',
                      'frontend-fantastic-admin/src/utils/composables/useAuth.ts',
                      'frontend-fantastic-admin/src/utils/permission.ts',
                      'frontend-fantastic-admin/src/utils/session.ts',
@@ -91,10 +100,26 @@ class CiGateTest(unittest.TestCase):
                      'frontend-fantastic-admin/src/views/patients/components/PatientImportDialog.vue',
                      'frontend-fantastic-admin/src/views/data-exchange/components/DatasetImportPanel.vue',
                      'frontend-fantastic-admin/src/views/password/change-required.vue',
-                     'frontend-fantastic-admin/src/ui/components/FaAuth/index.vue'):
+                     'frontend-fantastic-admin/src/ui/components/FaAuth/index.vue',
+                     'frontend-fantastic-admin/src/views/login.vue',
+                     'frontend-fantastic-admin/e2e/login.spec.ts'):
             with self.subTest(path=path):
                 scope = classify_paths([path])
-                self.assertTrue(scope['integration'])
+                self.assertTrue(scope['frontend'])
+                self.assertFalse(scope['integration'])
+                self.assertFalse(scope['e2e'])
+
+    def test_main_integration_defers_mock_e2e_but_keeps_live_application_checks(self):
+        scope = classify_paths(['frontend-fantastic-admin/src/views/login.vue'], mode='integration')
+        self.assertTrue(all(scope[key] for key in ('integration', 'build', 'postgres', 'live')))
+        self.assertFalse(scope['e2e'])
+
+    def test_release_orchestration_changes_select_full_candidate(self):
+        for path in ('.github/workflows/quality-gate.yml',
+                     '.github/workflows/windows-release-package.yml',
+                     'scripts/ci_gate.py'):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])['release'])
 
     def test_login_image_and_generated_import_types_do_not_trigger_real_identity_checks(self):
         for path in ('frontend-fantastic-admin/src/assets/images/login-banner.png',

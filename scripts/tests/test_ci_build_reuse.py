@@ -33,6 +33,18 @@ class CiBuildReuseTest(unittest.TestCase):
         release = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         self.assertNotIn("pull_request:", release.split('permissions:', 1)[0])
 
+    def test_pull_requests_defer_browser_e2e_to_main_and_release_checks(self):
+        quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+        self.assertNotIn("pnpm test:e2e", quality)
+        self.assertIn("live_checks: ${{ github.event_name != 'pull_request' }}", quality)
+
+        package = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
+        mock_e2e = package.split("- name: Full mock-backed browser tests", 1)[1].split("- name:", 1)[0]
+        self.assertIn("if: inputs.full", mock_e2e)
+        self.assertIn("pnpm test:e2e", mock_e2e)
+        real_e2e = package.split("- name: Real login, import, query and refusal", 1)[1]
+        self.assertIn("if: inputs.full || inputs.live_checks", real_e2e)
+
     def test_windows_and_standalone_share_the_verified_jar(self):
         workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         self.assertIn('python scripts/build_standalone_jar.py build', workflow)

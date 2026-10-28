@@ -33,13 +33,13 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
     recovery = any(p.startswith('deploy/windows/') and any(word in p.lower() for word in ('backup', 'restore', 'database'))
                    or p.startswith('scripts/test_windows_') and 'recovery' in p
                    or p in ('.github/workflows/windows-database-recovery.yml', 'deploy/windows/mrrctl.ps1') for p in paths)
-    live = frontend.e2e_changed or requires_real_checks(paths) or any(
-        p.startswith(('scripts/run_live_e2e.py', 'frontend-fantastic-admin/e2e-live/'))
-        or p == '.github/workflows/live-e2e.yml' for p in paths)
+    live = requires_real_checks(paths)
     development = any(p in DEVELOPMENT_INPUTS or p.startswith(('backend-repo/.mvn/', 'backend-repo/examples/', 'vitepress-doc/.vitepress/')) for p in paths)
+    # Mock browser E2E is deferred to full release validation. Main integration
+    # has its own real JAR browser flow, selected by the integration mode below.
     scope = dict(development=development, frontend=frontend.frontend_changed, backend=backend.backend_changed or live or recovery or database_tools,
                  build=frontend.build_changed, postgres=backend.integration_changed or database_tools or live,
-                 e2e=frontend.e2e_changed,
+                 e2e=False,
                  integration=live,
                  live=live, windows=any(p.startswith('deploy/windows/') or p in ('scripts/dev.ps1', 'scripts/dev.py') for p in paths),
                  recovery=recovery, release=needs_release_build(paths),

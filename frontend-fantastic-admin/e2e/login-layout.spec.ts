@@ -313,6 +313,8 @@ test.describe('登录页统一设计', () => {
     expect(popupBox).not.toBeNull()
     expect(popupBox!.x).toBeGreaterThanOrEqual(0)
     expect(popupBox!.x + popupBox!.width).toBeLessThanOrEqual(390)
+    await page.mouse.move(0, 0)
+    await expect(environmentPopup).toBeHidden()
 
     const adminContact = page.getByRole('button', { name: '查看系统管理员信息' })
     await expect(adminContact).toBeVisible()
@@ -325,7 +327,7 @@ test.describe('登录页统一设计', () => {
     expect(adminContactBox!.x + adminContactBox!.width).toBeLessThanOrEqual(390)
   })
 
-  test('320px 窄屏注册进度完整显示三步', async ({ page }) => {
+  test('320px 窄屏注册进度以三列横向显示且不重叠', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 800 })
     await page.goto('/login?mode=register', { waitUntil: 'domcontentloaded' })
 
@@ -335,6 +337,35 @@ test.describe('登录页统一设计', () => {
     await expect(progress.getByText('2申请说明')).toBeVisible()
     await expect(progress.getByText('3管理员审核')).toBeVisible()
     await expect.poll(() => progress.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+
+    const steps = progress.locator('span')
+    await expect(steps.first()).toHaveCSS('flex-direction', 'column')
+    const boxes = await Promise.all([0, 1, 2].map(index => steps.nth(index).boundingBox()))
+    expect(boxes.every(Boolean)).toBe(true)
+    expect(boxes[0]!.x + boxes[0]!.width).toBeLessThanOrEqual(boxes[1]!.x)
+    expect(boxes[1]!.x + boxes[1]!.width).toBeLessThanOrEqual(boxes[2]!.x)
+    expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThanOrEqual(2)
+    expect(Math.abs(boxes[1]!.y - boxes[2]!.y)).toBeLessThanOrEqual(2)
+  })
+
+  test('637px 竖屏注册进度仍以清晰的三列步骤显示', async ({ page }) => {
+    await page.setViewportSize({ width: 637, height: 845 })
+    await page.goto('/login?mode=register', { waitUntil: 'domcontentloaded' })
+
+    const progress = page.locator('.review-flow__steps')
+    const steps = progress.locator('span')
+    await expect(progress.getByText('1身份信息')).toBeVisible()
+    await expect(progress.getByText('2申请说明')).toBeVisible()
+    await expect(progress.getByText('3管理员审核')).toBeVisible()
+    await expect(steps.first()).toHaveCSS('flex-direction', 'column')
+    await expect.poll(() => progress.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+
+    const boxes = await Promise.all([0, 1, 2].map(index => steps.nth(index).boundingBox()))
+    expect(boxes.every(Boolean)).toBe(true)
+    expect(boxes[0]!.x + boxes[0]!.width).toBeLessThanOrEqual(boxes[1]!.x)
+    expect(boxes[1]!.x + boxes[1]!.width).toBeLessThanOrEqual(boxes[2]!.x)
+    expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThanOrEqual(2)
+    expect(Math.abs(boxes[1]!.y - boxes[2]!.y)).toBeLessThanOrEqual(2)
   })
 
   test('登录与注册切换时卡片高度平滑过渡', async ({ page }) => {
@@ -369,5 +400,62 @@ test.describe('登录页统一设计', () => {
     await page.getByRole('tab', { name: '账号登录' }).click()
     await expect.poll(() => card.evaluate(element => element.style.height)).toBe('')
     await expect.poll(() => card.evaluate(element => element.style.minHeight)).toBe('')
+  })
+
+  test('竖屏登录与注册切换时卡片顶部保持稳定', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+
+    const card = page.locator('.login-shell')
+    await expect(card).toBeVisible()
+    await page.waitForTimeout(400)
+    const loginTop = (await card.boundingBox())!.y
+
+    await page.getByRole('tab', { name: '注册申请' }).click()
+    await expect(card).toHaveClass(/is-register/)
+    const loginForm = page.locator('.login-form')
+    await expect(loginForm).toHaveClass(/auth-mode-forward-leave-active/)
+    await page.waitForTimeout(120)
+    const forwardX = await loginForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(forwardX).toBeLessThan(0)
+    await expect.poll(() => card.evaluate(element => element.style.transition)).toBe('')
+    await expect.poll(() => card.evaluate(element => element.style.height)).toBe('')
+    const registerForm = page.locator('.register-form')
+    await expect(registerForm).toHaveClass(/auth-mode-forward-enter-active/)
+    await page.waitForTimeout(100)
+    const forwardEnterX = await registerForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(forwardEnterX).toBeGreaterThan(0)
+    const transitionTop = (await card.boundingBox())!.y
+
+    expect(Math.abs(transitionTop - loginTop)).toBeLessThanOrEqual(1)
+
+    await page.waitForTimeout(350)
+    const registerBox = (await card.boundingBox())!
+    const registerTop = registerBox.y
+    const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+    expect(registerBox.y + registerBox.height).toBeLessThanOrEqual(documentHeight)
+    expect(documentHeight).toBeGreaterThanOrEqual(844)
+
+    await page.getByRole('tab', { name: '账号登录' }).click()
+    await expect(card).not.toHaveClass(/is-register/)
+    await expect(registerForm).toHaveClass(/auth-mode-backward-leave-active/)
+    await page.waitForTimeout(120)
+    const reverseMotion = await registerForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(reverseMotion).toBeGreaterThan(0)
+    await expect(loginForm).toHaveClass(/auth-mode-backward-enter-active/)
+    await page.waitForTimeout(100)
+    const reverseEnterX = await loginForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(reverseEnterX).toBeLessThan(0)
+    const reverseTransitionTop = (await card.boundingBox())!.y
+
+    expect(Math.abs(reverseTransitionTop - registerTop)).toBeLessThanOrEqual(1)
   })
 })

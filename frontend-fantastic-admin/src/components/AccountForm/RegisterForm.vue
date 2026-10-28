@@ -266,10 +266,12 @@ async function handlePrevious() {
 .password-strength { margin-top: 0; }
 .form-actions { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); }
 .form-actions :deep(button) { width: 100%; }
+@media (max-width: 768px) {
+  .review-flow__steps { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--mrr-space-1); align-items: start; }
+  .review-flow__steps span { min-width: 0; flex-direction: column; gap: var(--mrr-space-1); justify-content: flex-start; text-align: center; white-space: normal; }
+  .review-flow__steps > svg { align-self: start; margin-top: 3px; }
+}
 @media (max-width: 620px) {
-  .review-flow__steps { grid-template-columns: 1fr; justify-items: start; }
-  .review-flow__steps > svg { display: none; }
-  .review-flow__steps span { justify-content: flex-start; }
   .field-grid, .form-actions { grid-template-columns: 1fr; }
   .form-actions { display: flex; flex-direction: column-reverse; }
 }

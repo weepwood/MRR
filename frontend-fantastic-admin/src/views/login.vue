@@ -60,7 +60,7 @@ watch(authMode, async () => {
     shell.removeEventListener('transitionend', authModeTransitionEnd)
     authModeTransitionEnd = undefined
   }
-  if (!isMotionEnabled()) {
+  if (!isMotionEnabled() || window.matchMedia('(orientation: portrait)').matches) {
     shell.style.height = ''
     shell.style.minHeight = ''
     shell.style.transition = ''
@@ -424,20 +424,22 @@ onBeforeUnmount(() => {
           show-icon
         />
 
-        <LoginForm
-          v-if="authMode === 'login'"
-          :key="`login-${account}`"
-          :account="account"
-          @on-login="handleLogin"
-          @on-register="showRegister"
-        />
-        <RegisterForm
-          v-else
-          :key="`register-${account}`"
-          :account="account"
-          @on-login="showLogin"
-          @on-register="handleRegistrationSubmitted"
-        />
+        <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" mode="out-in" :css="isMotionEnabled()">
+          <LoginForm
+            v-if="authMode === 'login'"
+            :key="`login-${account}`"
+            :account="account"
+            @on-login="handleLogin"
+            @on-register="showRegister"
+          />
+          <RegisterForm
+            v-else
+            :key="`register-${account}`"
+            :account="account"
+            @on-login="showLogin"
+            @on-register="handleRegistrationSubmitted"
+          />
+        </Transition>
 
         <SystemAdminContactPopover
           class="login-admin-contact"
@@ -627,5 +629,22 @@ onBeforeUnmount(() => {
   .environment-footer { grid-template-columns: 1fr; }
   .environment-actions { justify-content: flex-end; }
   .form-panel { padding: 30px var(--mrr-space-5); }
+}
+@media (orientation: portrait) {
+  .login-shell { align-self: start; }
+  :global(.auth-mode-forward-enter-active),
+  :global(.auth-mode-forward-leave-active),
+  :global(.auth-mode-backward-enter-active),
+  :global(.auth-mode-backward-leave-active) { transition: opacity 220ms ease, transform 220ms ease; }
+  :global(.auth-mode-forward-enter-from) { opacity: 0; transform: translateX(24px); }
+  :global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
+  :global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
+  :global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
+}
+@media (orientation: portrait) and (prefers-reduced-motion: reduce) {
+  :global(.auth-mode-forward-enter-active),
+  :global(.auth-mode-forward-leave-active),
+  :global(.auth-mode-backward-enter-active),
+  :global(.auth-mode-backward-leave-active) { transition-duration: 0.01ms; }
 }
 </style>

@@ -226,6 +226,28 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>exclude-local-config</id>
+            <activation>
+                <property><name>local.config.exclude</name><value>true</value></property>
+            </activation>
+            <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <filtering>false</filtering>
+                        <excludes>
+                            <exclude>application-local.properties</exclude>
+                            <exclude>application-local.yml</exclude>
+                            <exclude>application-local.yaml</exclude>
+                        </excludes>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <!-- Compiler Plugin -->

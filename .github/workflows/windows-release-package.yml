@@ -115,7 +115,7 @@ jobs:
       - name: Test and package backend once
         working-directory: backend-repo
         run: |
-          mvn -B -ntp -Drevision="${PRODUCT_VERSION}" clean verify -Dlocal.config.exclude=true
+          bash ./mvnw -B -ntp -Drevision="${PRODUCT_VERSION}" clean verify -Dlocal.config.exclude=true
           python ../scripts/check_test_execution.py --reports target/failsafe-reports
           if [ "${FULL}" = true ]; then
             python ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"

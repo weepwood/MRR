@@ -133,15 +133,15 @@ jobs:
           cache: maven
       - name: Unit tests
         if: needs.scope.outputs.postgres != 'true'
-        run: mvn -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
       - name: Unit and actual PostgreSQL tests
         if: needs.scope.outputs.postgres == 'true'
         run: |
-          mvn -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
+          bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
           python scripts/check_test_execution.py --reports backend-repo/target/failsafe-reports
       - name: Package compiled classes for selected real checks
         if: needs.scope.outputs.postgres != 'true' && needs.scope.outputs.recovery == 'true'
-        run: mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
       - name: Share the same backend JAR
         if: needs.scope.outputs.recovery == 'true'
         uses: actions/upload-artifact@v7

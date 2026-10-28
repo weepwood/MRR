@@ -44,7 +44,7 @@ jobs:
           path: backend-repo/target
       - name: Package backend only for a standalone manual diagnosis
         if: inputs.backend_artifact == ''
-        run: mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
       - name: Obtain the already built production frontend
         if: inputs.frontend_artifact != ''
         uses: actions/download-artifact@v8

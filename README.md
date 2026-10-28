@@ -120,7 +120,7 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
 
 - JDK 21+
-- 仓库自带 Maven Wrapper 3.9.9，无需全局 Maven
+- 仓库自带 Maven Wrapper 3.10.0（以 Wrapper 配置为准），无需全局 Maven
 - PostgreSQL 16+
 - Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0

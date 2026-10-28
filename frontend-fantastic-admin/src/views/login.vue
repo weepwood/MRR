@@ -411,22 +411,24 @@ onBeforeUnmount(() => {
           show-icon
         />
 
-        <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" mode="out-in" :css="isMotionEnabled()">
-          <LoginForm
-            v-if="authMode === 'login'"
-            :key="`login-${account}`"
-            :account="account"
-            @on-login="handleLogin"
-            @on-register="showRegister"
-          />
-          <RegisterForm
-            v-else
-            :key="`register-${account}`"
-            :account="account"
-            @on-login="showLogin"
-            @on-register="handleRegistrationSubmitted"
-          />
-        </Transition>
+        <div class="auth-mode-stage">
+          <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" :css="isMotionEnabled()">
+            <LoginForm
+              v-if="authMode === 'login'"
+              :key="`login-${account}`"
+              :account="account"
+              @on-login="handleLogin"
+              @on-register="showRegister"
+            />
+            <RegisterForm
+              v-else
+              :key="`register-${account}`"
+              :account="account"
+              @on-login="showLogin"
+              @on-register="handleRegistrationSubmitted"
+            />
+          </Transition>
+        </div>
 
         <SystemAdminContactPopover
           class="login-admin-contact"
@@ -546,7 +548,6 @@ onBeforeUnmount(() => {
   border-radius: var(--mrr-radius-2xl);
   box-shadow: var(--mrr-shadow-md);
 }
-.login-shell.is-register { min-height: 760px; }
 .brand-panel {
   position: relative;
   display: flex;
@@ -586,6 +587,8 @@ onBeforeUnmount(() => {
 .auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: var(--mrr-space-5); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .auth-mode-switch button { height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); }
 .auth-mode-switch button.active { color: var(--mrr-foreground); background: var(--mrr-card); box-shadow: var(--mrr-shadow-xs); }
+.auth-mode-stage { display: grid; }
+.auth-mode-stage > :deep(*) { grid-area: 1 / 1; min-width: 0; }
 .session-notice { margin-top: var(--mrr-space-4); }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: var(--mrr-space-3); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
@@ -599,6 +602,9 @@ onBeforeUnmount(() => {
 :global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
 :global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
 :global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
+@media (min-width: 901px) {
+  .auth-mode-stage { min-height: 520px; }
+}
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }

@@ -19,6 +19,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +39,12 @@ class DataExchangeValidationPostgresqlIT extends PostgresqlIntegrationTestSuppor
 
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PatientImportService patients;
+
+    /**
+     * 这些用例只验证导入校验与回滚，不关心查询缓存；用 mock 代替真实 CacheManager，
+     * 避免在导入流程中启用缓存切面。
+     */
+    @MockitoBean private org.springframework.cache.CacheManager cacheManager;
     @Autowired private StatisticsDataExchangeService statistics;
     @Autowired private ArchiveBoxDataExchangeService boxes;
     @Autowired private ScanDataExchangeService scans;

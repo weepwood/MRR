@@ -134,6 +134,22 @@ cd MRR
 git switch main
 ```
 
+### 本机前端 + 后端 Docker 联调
+
+如果只修改前端，可在 Docker 中运行后端与 PostgreSQL，在本机运行 Vite：
+
+```powershell
+.\scripts\backend-docker.ps1 setup
+.\scripts\backend-docker.ps1 up
+.\scripts\backend-docker.ps1 status
+.\scripts\backend-docker.ps1 logs
+.\scripts\backend-docker.ps1 down
+```
+
+`setup` 在忽略且限制当前用户访问的 `.mrr-dev` 目录生成随机本地密钥；`up` 只构建后端镜像，并自动启动独立 PostgreSQL。后端默认绑定 `127.0.0.1:18045`，PostgreSQL 绑定 `127.0.0.1:15432`，不会构建或启动前端容器。本机前端使用 `pnpm dev`，Vite 默认在 `http://localhost:9200` 并将 `/proxy/` 请求转发给后端。`down` 保留数据库卷和本地密钥。详细说明见[本地开发文档](docs/engineering/local-development.md)。
+
+数据库只执行应用迁移，不会创建开发免登录账号或填充演示病案；账号仍需走现有注册审批或系统建号流程。
+
 ### 数据库
 
 Windows 本地开发可以使用统一入口，自动创建独立 PostgreSQL16、随机本地密钥并启动原生 Java/Vite：

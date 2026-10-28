@@ -117,6 +117,7 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .menu-item.active .menu-item-container-icon,
 :root[data-motion="off"] .menu-item-container:active .menu-item-container-icon,
 :root[data-motion="off"] .menu-item-container:hover .menu-leading-control-icon,
+:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow,
 :root[data-motion="off"] .dashboard-widget:active:not(.is-editing),
 :root[data-motion="off"] .dashboard-widget:hover .dashboard-widget__arrow,
 :root[data-motion="off"] .oss-folder-icon:hover .work-1,
@@ -133,12 +134,6 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .history-favorite-button:active .bookmark-icon,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon:not(.is-switched) {
-  transform: none !important;
-}
-
-:root[data-motion="off"] .menu-item-container--expand-trigger:hover,
-:root[data-motion="off"] .menu-item-container--expand-trigger:active {
-  box-shadow: none !important;
   transform: none !important;
 }
 

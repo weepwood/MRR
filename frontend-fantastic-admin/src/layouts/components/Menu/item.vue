@@ -62,7 +62,6 @@ defineExpose({
           }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
-            'menu-item-container--expand-trigger': useLeadingExpandIndicator,
           })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" v-on="{
             ...(!subMenu && {
               click: navigate,
@@ -160,7 +159,7 @@ defineExpose({
   position: absolute;
   inset: 0;
   margin: auto;
-  transition: opacity var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+  transition: opacity var(--mrr-motion-normal) var(--mrr-ease-out), transform var(--mrr-motion-normal) var(--mrr-ease-out);
 }
 
 .menu-leading-control-arrow {
@@ -170,19 +169,43 @@ defineExpose({
   border-right: 1.5px solid currentcolor;
   border-bottom: 1.5px solid currentcolor;
   opacity: 0;
-  transform: rotate(-45deg);
+  transform: translateX(-3px) rotate(-45deg);
 }
 
 .menu-leading-control-arrow.is-expanded {
-  transform: translateY(-1px) rotate(45deg);
+  transform: translateX(-3px) translateY(-1px) rotate(45deg);
 }
 
 .menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
-  transform: scale(0.82) !important;
+  transform: scale(0.82) translateX(-3px) !important;
 }
 
 .menu-item-container:hover .menu-leading-control-arrow {
   opacity: 1;
+  transform: rotate(-45deg);
+}
+
+.menu-item-container:hover .menu-leading-control-arrow.is-expanded {
+  transform: translateY(-1px) rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-leading-control-icon,
+  .menu-leading-control-arrow {
+    transition: none;
+  }
+
+  .menu-item-container:hover .menu-leading-control-icon {
+    transform: scale(0.82) !important;
+  }
+
+  .menu-leading-control-arrow {
+    transform: rotate(-45deg);
+  }
+
+  .menu-leading-control-arrow.is-expanded {
+    transform: translateY(-1px) rotate(45deg);
+  }
 }
 </style>

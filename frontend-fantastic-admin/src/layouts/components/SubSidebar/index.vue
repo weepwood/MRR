@@ -158,7 +158,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
           background: var(--mrr-navigation-hover);
         }
 
-        .menu-item-container-icon {
+        .menu-item-container-icon:not(.menu-leading-control-icon) {
           width: 17px;
           height: 17px;
           font-size: 17px !important;
@@ -206,24 +206,6 @@ watch(() => menuStore.actived, (val, oldVal) => {
       border-radius: var(--mrr-radius-md);
     }
 
-    & > :deep(.menu-item > .menu-item-container--expand-trigger) {
-      transition:
-        color var(--mrr-motion-normal) var(--mrr-ease-out),
-        background-color var(--mrr-motion-normal) var(--mrr-ease-out),
-        border-color var(--mrr-motion-normal) var(--mrr-ease-out),
-        box-shadow var(--mrr-motion-normal) var(--mrr-ease-out),
-        transform var(--mrr-motion-normal) var(--mrr-ease-out);
-
-      &:hover {
-        box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
-        transform: translateY(-1px);
-      }
-
-      &:active {
-        transform: translateY(0);
-      }
-    }
-
     /* 分组之间留出呼吸间距，让标题与下方子项成为一组。 */
     & > :deep(.menu-item + .menu-item) {
       margin-top: 6px;
@@ -265,20 +247,6 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
     :deep(.sub-menu .menu-item.active .menu-item-container-icon) {
       opacity: 1;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .menu--grouped-single {
-      & > :deep(.menu-item > .menu-item-container--expand-trigger) {
-        transition: none;
-
-        &:hover,
-        &:active {
-          box-shadow: none;
-          transform: none;
-        }
-      }
     }
   }
 

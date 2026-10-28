@@ -48,6 +48,20 @@ public class DeploymentReadinessService {
 
     private static final Logger logger = LoggerFactory.getLogger(DeploymentReadinessService.class);
 
+    /**
+     * 病案影像表的编号查询索引。
+     *
+     * <p>由 {@code backend-repo/scripts/build-code-key-indexes.sql} 在批准的副本窗口
+     * 人工创建。{@code mr_scan} 约三千万行，Flyway 迁移里同步建索引会长时间阻塞写入，
+     * 因此故意不纳入自动迁移——代价是「缺索引」在运行时不报任何错，只让按病案号/
+     * 上架号查询退化为全表扫描（实测两千万行下约 613 ms，建索引后 0.5 ms）。</p>
+     */
+    static final List<String> SCAN_CODE_KEY_INDEXES = List.of(
+            "idx_mr_scan_bah_numeric_cursor",
+            "idx_mr_scan_sjh_numeric_cursor");
+
+    static final String SCAN_CODE_KEY_INDEX_SCRIPT = "scripts/build-code-key-indexes.sql";
+
     private final JdbcTemplate jdbcTemplate;
     private final Flyway flyway;
     private final ImageProperties imageProperties;
@@ -60,6 +74,13 @@ public class DeploymentReadinessService {
     private final long minimumFreeBytes;
     private final long maximumBackupAgeHours;
     private final long ossHealthTimeoutSeconds;
+    private final long scanIndexMinimumRows;
+
+    /**
+     * 上一次编号索引检查的状态，仅用于「状态变化时打一次日志」。
+     * 就绪快照每 30 秒重建一次，无条件打日志会淹没运行日志。
+     */
+    private volatile String lastScanIndexState;
 
     private volatile Map<String, Object> cachedSnapshot = Map.of(
             "ready", false,
@@ -79,7 +100,8 @@ public class DeploymentReadinessService {
             SystemSettingService systemSettingService,
             @Value("${app.readiness.minimum-free-bytes:5368709120}") long minimumFreeBytes,
             @Value("${app.readiness.maximum-backup-age-hours:48}") long maximumBackupAgeHours,
-            @Value("${app.readiness.oss-health-timeout-seconds:5}") long ossHealthTimeoutSeconds
+            @Value("${app.readiness.oss-health-timeout-seconds:5}") long ossHealthTimeoutSeconds,
+            @Value("${app.readiness.scan-index-min-rows:1000000}") long scanIndexMinimumRows
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.flyway = flyway;
@@ -91,6 +113,7 @@ public class DeploymentReadinessService {
         this.minimumFreeBytes = Math.max(0L, minimumFreeBytes);
         this.maximumBackupAgeHours = Math.max(1L, maximumBackupAgeHours);
         this.ossHealthTimeoutSeconds = Math.max(1L, ossHealthTimeoutSeconds);
+        this.scanIndexMinimumRows = Math.max(0L, scanIndexMinimumRows);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
                 .followRedirects(HttpClient.Redirect.NEVER)
@@ -146,6 +169,7 @@ public class DeploymentReadinessService {
         checks.add(checkDatabase());
         checks.add(checkFlyway());
         checks.add(checkArchiveForeignKeys());
+        checks.add(checkScanCodeKeyIndexes());
         checks.add(checkTemporaryDirectory());
         checks.add(checkNginxSources());
         checks.add(checkOss());
@@ -231,8 +255,112 @@ public class DeploymentReadinessService {
         }
     }
 
-    private Map<String, Object> checkTemporaryDirectory() {
+    /**
+     * 检查病案影像表的编号查询索引是否就绪。
+     *
+     * <p>这些索引不随 Flyway 创建，缺失时系统不会报错，只会让查询退化为全表扫描。
+     * 因此这里把它变成可见的告警：只在表规模超过阈值时提示，避免在开发机和小站点
+     * 上产生噪音。</p>
+     *
+     * <p>公开可见是为了让集成测试能在真实数据库上验证目录查询 SQL；业务代码统一
+     * 通过 {@link #getSnapshot()} 读取结果，不应单独调用本方法。</p>
+     */
+    public Map<String, Object> checkScanCodeKeyIndexes() {
         try {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                    SELECT c.relname AS index_name, i.indisvalid AS valid
+                    FROM pg_index i
+                    JOIN pg_class c ON c.oid = i.indexrelid
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'app'
+                      AND c.relname IN ('idx_mr_scan_bah_numeric_cursor', 'idx_mr_scan_sjh_numeric_cursor')
+                    ORDER BY c.relname
+                    """);
+
+            List<String> valid = new ArrayList<>();
+            List<String> invalid = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                String name = String.valueOf(row.get("index_name"));
+                if (Boolean.TRUE.equals(row.get("valid"))) {
+                    valid.add(name);
+                } else {
+                    invalid.add(name);
+                }
+            }
+            List<String> missing = SCAN_CODE_KEY_INDEXES.stream()
+                    .filter(name -> !valid.contains(name) && !invalid.contains(name))
+                    .toList();
+
+            long estimatedRows = estimatedScanRows();
+            boolean needed = estimatedRows >= scanIndexMinimumRows;
+            boolean passed = (missing.isEmpty() && invalid.isEmpty()) || !needed;
+            String state = !missing.isEmpty() || !invalid.isEmpty()
+                    ? (needed ? "MISSING" : "BELOW_THRESHOLD")
+                    : "READY";
+
+            String message;
+            if (passed && "READY".equals(state)) {
+                message = "病案影像表的编号查询索引已就绪";
+            } else if (passed) {
+                message = "病案影像表规模较小（约 " + estimatedRows + " 行），暂不需要编号查询索引";
+            } else {
+                message = "病案影像表约 " + estimatedRows + " 行，但缺少编号查询索引，"
+                        + "按病案号/上架号查询会退化为全表扫描";
+            }
+
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("state", state);
+            details.put("expected", SCAN_CODE_KEY_INDEXES);
+            details.put("present", List.copyOf(valid));
+            details.put("missing", List.copyOf(missing));
+            details.put("invalid", List.copyOf(invalid));
+            details.put("estimatedRows", estimatedRows);
+            details.put("minimumRows", scanIndexMinimumRows);
+            details.put("script", SCAN_CODE_KEY_INDEX_SCRIPT);
+
+            logScanIndexStateChange(state, missing, invalid, estimatedRows);
+            return check("scan-code-key-indexes", "病案影像查询索引", passed, "WARNING", message, details);
+        } catch (Exception exception) {
+            return failed("scan-code-key-indexes", "病案影像查询索引", "WARNING", exception);
+        }
+    }
+
+    /**
+     * 读取 {@code mr_scan} 的行数估计值。
+     *
+     * <p>使用 {@code pg_class.reltuples}（统计信息里的估计值）而不是 {@code count(*)}：
+     * 这张表约三千万行，精确计数本身就是一次全表扫描，绝不能放进每 30 秒执行一次的就绪检查。</p>
+     */
+    private long estimatedScanRows() {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT COALESCE(c.reltuples, 0)::bigint AS estimated_rows
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'app' AND c.relname = 'mr_scan'
+                """);
+        if (rows.isEmpty()) {
+            return 0L;
+        }
+        Object value = rows.get(0).get("estimated_rows");
+        return value instanceof Number number ? Math.max(0L, number.longValue()) : 0L;
+    }
+
+    private void logScanIndexStateChange(String state, List<String> missing, List<String> invalid, long estimatedRows) {
+        if (state.equals(lastScanIndexState)) {
+            return;
+        }
+        lastScanIndexState = state;
+        if ("MISSING".equals(state)) {
+            logger.warn(
+                    "病案影像表约 {} 行但缺少编号查询索引（缺失={}，无效={}），"
+                            + "按病案号查询将全表扫描；请在批准的窗口执行 {}",
+                    estimatedRows, missing, invalid, SCAN_CODE_KEY_INDEX_SCRIPT);
+        } else if ("READY".equals(state)) {
+            logger.info("病案影像表编号查询索引已就绪");
+        }
+    }
+
+    private Map<String, Object> checkTemporaryDirectory() {        try {
             Path directory = Path.of(exportProperties.getTempDirectory()).toAbsolutePath().normalize();
             Files.createDirectories(directory);
             FileStore store = Files.getFileStore(directory);

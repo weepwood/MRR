@@ -319,6 +319,9 @@ SearchController --> AESUtil : "解密"
     - Result 对象，包含 code、msg、data（`List<Patient>`）
 
 - 旧版兼容：GET /v2/search/getBAHByEncryptIDLegacy
+  - **默认停用**：密文不含时间戳，同一组参数可无限重放，一旦泄露即长期有效。
+    默认返回 code 410 并指向新版接口；仅当现场确有未升级的外部系统时，才在
+    `application.properties` 打开 `aes.id-card-query.legacy-encrypt-id-enabled=true` 临时兼容。
   - 查询参数
     - EncryptID：字符串，加密的身份证号（ciphertext_iv）
     - userId：字符串，用户标识

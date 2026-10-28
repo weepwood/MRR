@@ -388,6 +388,10 @@ public class OperationsCenterService {
             case "archive-foreign-keys" -> new Recommendation(
                     "先统计未关联记录，再补齐 archive_id 或验证外键，避免直接强制建约束。",
                     "查看数据关系", "/data-relations");
+            case "scan-code-key-indexes" -> new Recommendation(
+                    "在批准的副本窗口执行 backend-repo/scripts/build-code-key-indexes.sql 建索引；"
+                            + "索引缺失不会报错，只会让按病案号查询退化为全表扫描。",
+                    "查看运维总览", "/operations-center?tab=diagnostics");
             case "temporary-directory" -> new Recommendation(
                     "检查目录权限和磁盘空间，清理已过期导出文件后重新体检。",
                     "查看任务中心", "/operations-center?tab=tasks");

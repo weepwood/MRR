@@ -6,7 +6,7 @@ on:
       full:
         type: boolean
         default: true
-      browser_tests:
+      live_checks:
         type: boolean
         default: false
       retain_candidate:
@@ -160,13 +160,12 @@ jobs:
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
           python ../scripts/embed_frontend_in_jar.py embed --jar "../${BACKEND_JAR}" --dist dist
           python ../scripts/embed_frontend_in_jar.py verify --jar "../${BACKEND_JAR}"
-      - name: Full browser tests
+      - name: Full mock-backed browser tests
         working-directory: frontend-fantastic-admin
-        env:
-          BROWSER_TESTS: ${{ inputs.browser_tests }}
+        if: inputs.full
         run: |
           pnpm exec playwright install --with-deps chromium
-          if [ "${FULL}" = true ] || [ "${BROWSER_TESTS}" = true ]; then pnpm test:e2e; fi
+          pnpm test:e2e
       - name: Build standalone JAR from the same verified backend
         if: inputs.full
         id: standalone
@@ -180,6 +179,7 @@ jobs:
           (cd build/release-assets && sha256sum "${JAR_NAME}" > "${JAR_NAME}.sha256")
           echo "jar_name=${JAR_NAME}" >> "${GITHUB_OUTPUT}"
       - name: Real login, import, query and refusal against the production candidate JAR
+        if: inputs.full || inputs.live_checks
         env:
           STANDALONE: ${{ steps.standalone.outputs.jar_name }}
         run: |

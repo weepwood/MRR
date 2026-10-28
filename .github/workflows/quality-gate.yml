@@ -24,7 +24,6 @@ jobs:
       backend: ${{ steps.scope.outputs.backend }}
       integration: ${{ steps.scope.outputs.integration }}
       build: ${{ steps.scope.outputs.build }}
-      e2e: ${{ steps.scope.outputs.e2e }}
       postgres: ${{ steps.scope.outputs.postgres }}
       live: ${{ steps.scope.outputs.live }}
       windows: ${{ steps.scope.outputs.windows }}
@@ -101,11 +100,6 @@ jobs:
         run: |
           pnpm build
           pnpm test:compat:chrome86
-      - name: Browser tests only for critical flows or browser test changes
-        if: needs.scope.outputs.e2e == 'true'
-        run: |
-          pnpm exec playwright install --with-deps chromium
-          pnpm test:e2e
 
   backend:
     needs: scope
@@ -171,7 +165,8 @@ jobs:
     uses: ./.github/workflows/windows-release-package.yml
     with:
       full: false
-      browser_tests: ${{ needs.scope.outputs.e2e == 'true' }}
+      # PRs keep database/build checks but defer browser flows to main/release.
+      live_checks: ${{ github.event_name != 'pull_request' }}
 
   windows:
     needs: scope

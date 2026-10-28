@@ -13,9 +13,9 @@
 | 普通 Markdown、VERSION、发布说明 | 治理与静态不变量；不构建应用 |
 | 普通前端页面、样式、公共 UI | 类型、变更 lint、前端全量单测；不采集覆盖率 |
 | 前端根配置、依赖或构建工具 | 上述检查 + 生产构建与 Chrome 86 兼容检查 |
-| 登录、认证客户端、路由、导入关键页面或浏览器用例 | 增加浏览器测试、真实 JWT/PostgreSQL 链路 |
+| 登录、认证客户端、路由、导入关键页面或浏览器用例 | 类型、变更 lint、前端全量单测；浏览器 E2E 延后到 main 集成与发布候选验收 |
 | 普通后端 Controller/DTO/工具 | 编译与全量单测 |
-| Mapper、资源、数据库、配置、Service、身份权限/审计/票据/导入导出 | PostgreSQL 16 集成测试；关键身份/导入链路再增加真实浏览器 |
+| Mapper、资源、数据库、配置、Service、身份权限/审计/票据/导入导出 | PostgreSQL 16 集成测试；真实浏览器链路延后到 main 集成与发布候选验收 |
 | Windows 部署资产 | PS5.1 解析与 manager 自检 |
 | 数据库恢复、备份、恢复调度 | 增加隔离 Windows PostgreSQL 恢复与失败清理 |
 | CI 发布编排、候选文件校验 | 增加无发布权限的完整候选验收 |
@@ -23,6 +23,8 @@
 Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事务或 SQL 影响。风险选择不读取作者的 P3 标签来减少检查。未运行的测试不能作为成功证据。
 
 复用 `frontend_test_scope.py`、`backend_test_scope.py`；`ci_gate.py` 统一编排两者和 Windows/真实链路范围。git diff 关闭重命名折叠，删除、重命名前后的路径均参与分类。`pr-gate` 使用 always() 检查每个实际选中的 job，失败、取消、输出缺失或意外跳过均拒绝。整个必需 workflow 不使用顶层 paths 过滤。
+
+普通 PR 不运行 Mock Playwright 或真实浏览器 E2E。关键前端流程仍执行类型检查、变更 lint 和前端全量单测；后端高风险路径保留 PostgreSQL 集成测试。main 合并后的应用集成执行真实 JWT/PostgreSQL/JAR 浏览器联调；完整发布候选执行全量 Mock E2E、真实联调与 Windows 恢复验收。
 
 P3 PR 可省略 AI 参与报告，正文保留变更、关联原因、风险、验证与回滚。P0/P1 必须关联 Issue/提案并记录独立审查；隐私和历史迁移硬门禁不减。
 

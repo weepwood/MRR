@@ -20,19 +20,19 @@ MRR 已具备后端 JUnit、Mockito、Testcontainers、H2、JaCoCo，以及前�
 | 后端单元/切片 | `backend-repo/src/test/java` 非 `integration` 目录 | 业务规则、权限、工具类、Controller/Service 隔离测试 | 普通后端代码变更 |
 | 后端 PostgreSQL 集成 | `backend-repo/src/test/java/**/integration/**`，类名建议 `*IT` | Mapper、Flyway、SQL、事务与 PostgreSQL 行为 | Mapper、实体、配置、资源、迁移、POM 变更 |
 | 前端单元/组件 | `frontend-fantastic-admin/src/**/*.test.ts(x)` | Utils、Store、API 封装、组件行为与覆盖率趋势 | 任意前端源码或配置变更 |
-| 前端 E2E | `frontend-fantastic-admin/e2e/*.spec.ts` | 登录、权限、路由、核心业务流程和兼容性 | 页面、路由、API、Store、布局、组件、Mock、E2E 配置变更 |
+| 前端 E2E | `frontend-fantastic-admin/e2e/*.spec.ts` | 登录、权限、路由、核心业务流程和兼容性 | main 集成与完整发布候选验收；普通 PR 不运行 |
 | 发布与运维 | `scripts/tests`、Windows 自检 | 版本一致性、发布基线、脚本编码和 PowerShell 5.1 | 每个 PR 与 main/tag |
 
 ## 3. CI 门禁
 
 ### 前端
 
-`scripts/frontend_test_scope.py` 根据 PR 文件变化输出：
+`scripts/frontend_test_scope.py` 根据变更文件识别前端范围；普通 PR 不触发浏览器 E2E：
 
 - `frontend_changed=false`：后端或纯文档变更，跳过 Node 安装和前端测试；
-- `frontend_changed=true, e2e_changed=false`：执行类型检查、变更文件 lint、构建、Vitest 和覆盖率报告；
-- `e2e_changed=true`：在上述检查后安装 Chromium 并执行 Playwright；
-- 覆盖率脚本、基线或质量门禁变更：执行完整前端验证。
+- `frontend_changed=true`：执行类型检查、变更文件 lint 和前端全量单测；构建与 Chrome 86 检查仅在构建配置或依赖变化时执行；
+- 登录、权限、路由及 E2E 用例变化也不在普通 PR 运行浏览器 E2E；
+- main 集成运行真实 JAR 浏览器链路，完整发布候选运行 Mock E2E、真实联调和覆盖率验收。
 
 `frontend-gate` 始终产生最终状态，因此分支保护只需要依赖该汇总 Job，而不必依赖会被跳过的内部 Job。
 
@@ -136,7 +136,7 @@ python ../scripts/vitest_coverage.py \
 
 ## 7. 本地快速检查与 CI 测试分工
 
-本地默认执行快速静态检查、编译和必要的手工冒烟；不要求每次启动或提交前运行全量单测、覆盖率或 E2E。PR 的 GitHub Actions 按改动范围执行前端/后端单测、PostgreSQL 集成测试和关键流程浏览器测试；完整覆盖率、候选包和 Windows 恢复在发布验收执行。CI 结果是合并门禁依据。
+本地默认执行快速静态检查、编译和必要的手工冒烟；不要求每次启动或提交前运行全量单测、覆盖率或 E2E。PR 的 GitHub Actions 按改动范围执行前端/后端单测和 PostgreSQL 集成测试，不运行浏览器 E2E；main 集成与发布验收负责关键流程浏览器测试，发布验收还执行完整覆盖率、候选包和 Windows 恢复。CI 结果是合并门禁依据。
 
 需要在本地快速确认编译或类型时：
 

@@ -37,7 +37,8 @@ class SyntheticImageSource(BaseHTTPRequestHandler):
 def isolated_environment() -> dict[str, str]:
     allowed = {"PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "TEMP", "TMP",
                "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "JAVA_HOME", "CI",
-               "PLAYWRIGHT_BROWSERS_PATH", "LANG"}
+               "PLAYWRIGHT_BROWSERS_PATH", "LANG", "ProgramFiles", "ProgramFiles(x86)",
+               "ProgramW6432", "ProgramData", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432"}
     return {key: value for key, value in os.environ.items() if key in allowed}
 
 

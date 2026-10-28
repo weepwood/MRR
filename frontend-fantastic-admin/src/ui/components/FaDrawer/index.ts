@@ -15,6 +15,7 @@ export interface DrawerProps {
   bordered?: boolean
   overlay?: boolean
   overlayBlur?: boolean
+  overlayClass?: HTMLAttributes['class']
   showConfirmButton?: boolean
   showCancelButton?: boolean
   confirmButtonText?: string

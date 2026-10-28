@@ -32,9 +32,9 @@ const stubs = {
 }
 
 const actions: MrrTableAction[] = [
-  { key: 'edit', label: '编辑', icon: 'i-ri:edit-line', tone: 'primary', placement: 'inline' },
-  { key: 'reset', label: '重置密码', icon: 'i-ri:key-2-line', placement: 'overflow' },
-  { key: 'disable', label: '禁用', icon: 'i-ri:forbid-line', tone: 'danger' },
+  { key: 'edit', label: '编辑', icon: 'i-lucide:pencil', tone: 'primary', placement: 'inline' },
+  { key: 'reset', label: '重置密码', icon: 'i-lucide:key-round', placement: 'overflow' },
+  { key: 'disable', label: '禁用', icon: 'i-lucide:ban', tone: 'danger' },
 ]
 
 function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$props']> = {}) {
@@ -65,7 +65,7 @@ describe('mrrTableActions', () => {
     expect(exposed.inlineActions.map(item => item.key)).toEqual(['edit'])
     expect(exposed.overflowActions.map(item => item.key)).toEqual(['disable', 'reset'])
     expect(wrapper.find('[aria-label="更多操作"]').exists()).toBe(true)
-    expect(wrapper.find('[aria-label="更多操作"] [data-icon="i-ri:more-fill"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="更多操作"] [data-icon="i-lucide:ellipsis"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('更多操作')
   })
 
@@ -90,9 +90,9 @@ describe('mrrTableActions', () => {
   it('通过显式检查器过滤不可见和无权限操作', () => {
     const wrapper = mountActions({
       actions: [
-        { key: 'hidden', label: '隐藏', icon: 'i-ri:eye-off-line', visible: false },
-        { key: 'denied', label: '拒绝', icon: 'i-ri:close-line', permission: 'denied' },
-        { key: 'view', label: '查看', icon: 'i-ri:eye-line', permission: 'record:read' },
+        { key: 'hidden', label: '隐藏', icon: 'i-lucide:eye-off', visible: false },
+        { key: 'denied', label: '拒绝', icon: 'i-lucide:x', permission: 'denied' },
+        { key: 'view', label: '查看', icon: 'i-lucide:eye', permission: 'record:read' },
       ],
     })
     const exposed = wrapper.vm as unknown as { availableActions: MrrTableAction[] }
@@ -105,7 +105,7 @@ describe('mrrTableActions', () => {
   it('未提供权限检查器时默认隐藏声明权限的操作', () => {
     const wrapper = mountActions({
       permissionChecker: undefined,
-      actions: [{ key: 'edit', label: '编辑', icon: 'i-ri:edit-line', permission: 'record:edit' }],
+      actions: [{ key: 'edit', label: '编辑', icon: 'i-lucide:pencil', permission: 'record:edit' }],
     })
 
     expect(wrapper.find('.mrr-table-actions').exists()).toBe(false)
@@ -116,7 +116,7 @@ describe('mrrTableActions', () => {
       actions: [{
         key: 'delete',
         label: '删除',
-        icon: 'i-ri:delete-bin-line',
+        icon: 'i-lucide:trash-2',
         tone: 'danger',
         disabled: true,
         disabledReason: '当前记录不能删除',
@@ -131,7 +131,7 @@ describe('mrrTableActions', () => {
 
   it('没有可用操作时不渲染空操作组', () => {
     const wrapper = mountActions({
-      actions: [{ key: 'hidden', label: '隐藏', icon: 'i-ri:eye-off-line', visible: false }],
+      actions: [{ key: 'hidden', label: '隐藏', icon: 'i-lucide:eye-off', visible: false }],
     })
     expect(wrapper.find('.mrr-table-actions').exists()).toBe(false)
   })

@@ -4,22 +4,22 @@ import type {
   NginxBrowserPage,
   NginxBrowserServer,
 } from '@/api/modules/nginx-browser'
+import { ElMessage } from 'element-plus'
 import {
   ArrowLeft,
   ArrowRight,
-  Document,
+  FileText as Document,
   Download,
   Folder,
-  Grid,
-  InfoFilled,
+  LayoutGrid as Grid,
+  Info as InfoFilled,
   List,
-  Picture,
-  Refresh,
+  Image as Picture,
+  RefreshCw as Refresh,
   Search,
-  Top,
-  View,
-} from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+  ArrowUp as Top,
+  Eye as View,
+} from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   browseNginxDirectory,

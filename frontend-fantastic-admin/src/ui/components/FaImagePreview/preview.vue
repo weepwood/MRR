@@ -153,19 +153,19 @@ function handleAnimationEnd() {
         </template>
         <FaButtonGroup class="absolute bottom-4 left-1/2 scale-125 -translate-x-1/2">
           <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleZoomIn">
-            <FaIcon name="i-carbon:zoom-in" class="size-5" />
+            <FaIcon name="i-lucide:zoom-in" class="size-5" />
           </FaButton>
           <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleZoomOut">
-            <FaIcon name="i-carbon:zoom-out" class="size-5" />
+            <FaIcon name="i-lucide:zoom-out" class="size-5" />
           </FaButton>
           <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleOriginalSize">
             <FaIcon name="i-lucide:maximize" class="size-5" />
           </FaButton>
           <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleRotateLeft">
-            <FaIcon name="i-carbon:rotate" class="size-5" />
+            <FaIcon name="i-lucide:rotate-cw" class="size-5" />
           </FaButton>
           <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleRotateRight">
-            <FaIcon name="i-carbon:rotate-180" class="size-5" />
+            <FaIcon name="i-lucide:rotate-ccw" class="size-5" />
           </FaButton>
         </FaButtonGroup>
       </div>

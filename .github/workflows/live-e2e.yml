@@ -1,16 +1,18 @@
 name: Live browser integration
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
+    inputs:
+      backend_artifact:
+        type: string
+        default: ''
+      frontend_artifact:
+        type: string
+        default: ''
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: live-e2e-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   live-e2e:
@@ -34,17 +36,37 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Package backend (unit and integration checks run in Quality gate)
-        run: mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+      - name: Obtain the already compiled backend
+        if: inputs.backend_artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.backend_artifact }}
+          path: backend-repo/target
+      - name: Package backend only for a standalone manual diagnosis
+        if: inputs.backend_artifact == ''
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+      - name: Obtain the already built production frontend
+        if: inputs.frontend_artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.frontend_artifact }}
+          path: build/live-dist
       - name: Install browser test dependencies
         working-directory: frontend-fantastic-admin
         run: |
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
       - name: Real login, import, query and permission refusal on PostgreSQL 16
+        env:
+          FRONTEND_ARTIFACT: ${{ inputs.frontend_artifact }}
         shell: bash
         run: |
           set -euo pipefail
-          JAR="$(find backend-repo/target -maxdepth 1 -name '*.jar' ! -name '*.original' | head -n 1)"
-          test -n "${JAR}"
-          python scripts/run_live_e2e.py --jar "${JAR}"
+          mapfile -t JARS < <(find backend-repo/target -maxdepth 1 -type f -name '*.jar')
+          test "${#JARS[@]}" = 1
+          if [ -n "${FRONTEND_ARTIFACT}" ]; then
+            python scripts/embed_frontend_in_jar.py embed --jar "${JARS[0]}" --dist build/live-dist
+            python -m scripts.run_live_e2e --jar "${JARS[0]}" --embedded
+          else
+            python -m scripts.run_live_e2e --jar "${JARS[0]}"
+          fi

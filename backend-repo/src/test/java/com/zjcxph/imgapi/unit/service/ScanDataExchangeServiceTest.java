@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -24,11 +25,18 @@ class ScanDataExchangeServiceTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private CacheManager cacheManager;
+
     private ScanDataExchangeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ScanDataExchangeService(jdbcTemplate, new TabularImportFileReader());
+        service = new ScanDataExchangeService(
+                jdbcTemplate,
+                new TabularImportFileReader(),
+                cacheManager
+        );
     }
 
     @Test

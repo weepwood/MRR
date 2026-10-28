@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test'
+import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import { expect, test } from '@playwright/test'
 
 const csv = 'bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\r\nE2E-SYNTHETIC-0001,Synthetic Patient,,,,Synthetic Unit,,\r\n'
+const apiPrefix = process.env.MRR_LIVE_API_PREFIX ?? '/proxy'
 
 async function login(page: Page, account: string) {
   await page.goto('/login')
@@ -19,7 +21,7 @@ async function login(page: Page, account: string) {
 test.describe.configure({ mode: 'serial' })
 
 test('real login, invalid file, dry run, commit and query', async ({ page, request }) => {
-  const unauthorized = await request.get('/proxy/api/v1/patients')
+  const unauthorized = await request.get(`${apiPrefix}/api/v1/patients`)
   expect(unauthorized.status()).toBe(401)
   const token = await login(page, 'e2e_editor')
   const headers = { Authorization: `Bearer ${token}` }
@@ -41,13 +43,13 @@ test('real login, invalid file, dry run, commit and query', async ({ page, reque
   expect(preview.data.canImport).toBe(true)
   expect(preview.data.validRows).toBe(1)
   expect(preview.data.dryRun).toBe(true)
-  const before = await request.get('/proxy/api/v1/patients?keyword=E2E-SYNTHETIC-0001', { headers })
+  const before = await request.get(`${apiPrefix}/api/v1/patients?keyword=E2E-SYNTHETIC-0001`, { headers })
   expect((await before.json()).data.total).toBe(0)
   await panel.getByRole('button', { name: '确认导入', exact: true }).click()
   const commit = page.waitForResponse(r => r.url().includes('/data-exchange/patients/import'))
   await page.getByRole('button', { name: '确认写入', exact: true }).click()
   expect((await (await commit).json()).data.insertedRows).toBe(1)
-  const after = await request.get('/proxy/api/v1/patients?keyword=E2E-SYNTHETIC-0001', { headers })
+  const after = await request.get(`${apiPrefix}/api/v1/patients?keyword=E2E-SYNTHETIC-0001`, { headers })
   const result = await after.json()
   expect(result.data.total).toBe(1)
   expect(result.data.list[0].bah).toBe('E2E-SYNTHETIC-0001')
@@ -55,7 +57,7 @@ test('real login, invalid file, dry run, commit and query', async ({ page, reque
 
 test('real read-only account receives 403 on write', async ({ page, request }) => {
   const token = await login(page, 'e2e_reader')
-  const response = await request.post('/proxy/api/v1/data-exchange/patients/import?dryRun=false', {
+  const response = await request.post(`${apiPrefix}/api/v1/data-exchange/patients/import?dryRun=false`, {
     headers: { Authorization: `Bearer ${token}` },
     multipart: { file: { name: 'denied.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) } },
   })

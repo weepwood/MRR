@@ -41,7 +41,7 @@ function toggleRecordNumber() {
         >
           {{ field.label }}
           <FaIcon
-            name="i-ri:repeat-line"
+            name="i-lucide:repeat"
             class="field-switch-icon"
             :class="{ 'is-switched': showShelfNumber }"
           />

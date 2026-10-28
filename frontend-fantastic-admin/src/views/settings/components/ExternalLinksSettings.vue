@@ -62,7 +62,7 @@ function addExternalLink() {
     id: createExternalLinkId(),
     title,
     url,
-    icon: 'i-ri:external-link-line',
+    icon: 'i-lucide:external-link',
   })
   persistSettings()
   resetDraft()
@@ -105,7 +105,7 @@ function openExternalLink(url: string) {
     <section class="settings-card add-link-card">
       <header class="card-header">
         <div class="header-icon">
-          <FaIcon name="i-ri:add-circle-line" />
+          <FaIcon name="i-lucide:circle-plus" />
         </div>
         <div>
           <h4>添加外部网站</h4>
@@ -134,12 +134,12 @@ function openExternalLink(url: string) {
             @keyup.enter="addExternalLink"
           >
             <template #prefix>
-              <FaIcon name="i-ri:global-line" />
+              <FaIcon name="i-lucide:globe" />
             </template>
           </el-input>
         </label>
         <el-button type="primary" class="add-button" @click="addExternalLink">
-          <FaIcon name="i-ri:add-line" />
+          <FaIcon name="i-lucide:plus" />
           添加外链
         </el-button>
       </div>
@@ -151,7 +151,7 @@ function openExternalLink(url: string) {
     <section class="settings-card link-list-card">
       <header class="card-header card-header--list">
         <div class="header-icon">
-          <FaIcon name="i-ri:links-line" />
+          <FaIcon name="i-lucide:link-2" />
         </div>
         <div class="header-copy">
           <h4>“其他”菜单</h4>
@@ -167,7 +167,7 @@ function openExternalLink(url: string) {
       <div v-else class="external-link-list">
         <article v-for="(link, index) in externalLinks" :key="link.id" class="external-link-item">
           <span class="link-icon">
-            <FaIcon :name="link.icon || 'i-ri:external-link-line'" />
+            <FaIcon :name="link.icon || 'i-lucide:external-link'" />
           </span>
           <div class="link-copy">
             <strong>{{ link.title }}</strong>
@@ -175,11 +175,11 @@ function openExternalLink(url: string) {
           </div>
           <div class="link-actions">
             <el-button text type="primary" @click="openExternalLink(link.url)">
-              <FaIcon name="i-ri:external-link-line" />
+              <FaIcon name="i-lucide:external-link" />
               访问
             </el-button>
             <el-button text type="danger" @click="removeExternalLink(index, link.title)">
-              <FaIcon name="i-ri:delete-bin-6-line" />
+              <FaIcon name="i-lucide:trash-2" />
               移除
             </el-button>
           </div>

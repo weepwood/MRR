@@ -64,7 +64,7 @@ const strengthColor = computed(() => {
       />
     </div>
     <FaTooltip>
-      <FaIcon name="i-ri:question-line" class="cursor-help text-sm text-muted-foreground" />
+      <FaIcon name="i-lucide:circle-question-mark" class="cursor-help text-sm text-muted-foreground" />
       <template #content>
         <div class="py-1">
           <div class="mb-1 text-sm text-muted-foreground">
@@ -72,23 +72,23 @@ const strengthColor = computed(() => {
           </div>
           <ul class="text-sm text-muted-foreground space-y-1">
             <li class="flex-center-start gap-1" :class="{ 'text-green-600': hasLength }">
-              <FaIcon :name="hasLength ? 'i-carbon:checkmark' : 'i-carbon:close'" />
+              <FaIcon :name="hasLength ? 'i-lucide:check' : 'i-lucide:x'" />
               长度至少为8个字符
             </li>
             <li class="flex-center-start gap-1" :class="{ 'text-green-600': hasUppercase }">
-              <FaIcon :name="hasUppercase ? 'i-carbon:checkmark' : 'i-carbon:close'" />
+              <FaIcon :name="hasUppercase ? 'i-lucide:check' : 'i-lucide:x'" />
               包含大写字母
             </li>
             <li class="flex-center-start gap-1" :class="{ 'text-green-600': hasLowercase }">
-              <FaIcon :name="hasLowercase ? 'i-carbon:checkmark' : 'i-carbon:close'" />
+              <FaIcon :name="hasLowercase ? 'i-lucide:check' : 'i-lucide:x'" />
               包含小写字母
             </li>
             <li class="flex-center-start gap-1" :class="{ 'text-green-600': hasNumber }">
-              <FaIcon :name="hasNumber ? 'i-carbon:checkmark' : 'i-carbon:close'" />
+              <FaIcon :name="hasNumber ? 'i-lucide:check' : 'i-lucide:x'" />
               包含数字
             </li>
             <li class="flex-center-start gap-1" :class="{ 'text-green-600': hasSpecialChar }">
-              <FaIcon :name="hasSpecialChar ? 'i-carbon:checkmark' : 'i-carbon:close'" />
+              <FaIcon :name="hasSpecialChar ? 'i-lucide:check' : 'i-lucide:x'" />
               包含特殊字符
             </li>
           </ul>

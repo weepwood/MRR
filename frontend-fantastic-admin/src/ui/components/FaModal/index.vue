@@ -31,6 +31,7 @@ const props = withDefaults(
     alignCenter: false,
     overlay: true,
     overlayBlur: false,
+    overlayClass: '',
     showConfirmButton: true,
     showCancelButton: false,
     confirmButtonText: '确定',
@@ -222,6 +223,7 @@ function handleAnimationEnd() {
       :closable="props.closable"
       :overlay="props.overlay"
       :overlay-blur="props.overlayBlur"
+      :overlay-class="props.overlayClass"
       :maximize="isMaximize"
       :maximizable="props.maximizable"
       :force-mount="forceMount"
@@ -254,10 +256,10 @@ function handleAnimationEnd() {
           <DialogTitle class="flex-center gap-x-2 md:justify-start" :class="{ 'md:justify-center': props.center }">
             <FaIcon
               v-if="props.icon" :name="{
-                info: 'i-ant-design:info-circle-filled',
-                success: 'i-ant-design:check-circle-filled',
-                warning: 'i-ant-design:exclamation-circle-filled',
-                error: 'i-ant-design:close-circle-filled',
+                info: 'i-lucide:info',
+                success: 'i-lucide:circle-check',
+                warning: 'i-lucide:circle-alert',
+                error: 'i-lucide:circle-x',
               }[props.icon]" class="size-6" :class="{
                 'text-blue-600 dark:text-blue-400': props.icon === 'info',
                 'text-green-600 dark:text-green-400': props.icon === 'success',
@@ -280,7 +282,7 @@ function handleAnimationEnd() {
         <slot />
       </div>
       <div v-show="props.loading" class="absolute inset-0 z-1000 size-full flex-center bg-popover/75">
-        <FaIcon name="i-line-md:loading-twotone-loop" class="size-10" />
+        <FaIcon name="i-lucide:loader-circle" class="size-10 animate-spin" />
       </div>
       <DialogFooter
         v-if="footer" :class="cn('p-3 gap-y-2', props.footerClass, {

@@ -11,7 +11,7 @@ const { isFullscreen, toggle } = useFullscreen()
 </script>
 
 <template>
-  <FaButton v-if="settingsStore.mode === 'pc'" variant="ghost" size="icon" class="size-9" @click="toggle">
-    <FaIcon :name="isFullscreen ? 'i-ri:fullscreen-exit-line' : 'i-ri:fullscreen-line'" class="size-4" />
+  <FaButton v-if="settingsStore.mode === 'pc'" variant="ghost" size="icon" @click="toggle">
+    <FaIcon :name="isFullscreen ? 'i-lucide:minimize' : 'i-lucide:maximize'" class="size-4" />
   </FaButton>
 </template>

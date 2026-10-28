@@ -1,6 +1,6 @@
 # MRR 内部文档
 
-> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.7.4**，正式标签为 `v0.7.4`。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
+> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.8.0**，正式标签为 `v0.8.0`。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
 
 ## 按任务查找文档
 
@@ -9,7 +9,7 @@
 | 文档 | 说明 |
 | --- | --- |
 | [系统架构](./architecture.md) | 运行边界、模块、数据流、存储和部署拓扑 |
-| [最新代码审查](./code-review.md) | `v0.7.0` 到当前 `main` 的审查范围、风险和处理优先级 |
+| [历史代码审查（2026-07-23）](./code-review.md) | `v0.7.0` 时期的审查范围、风险和处理优先级，已归档为历史快照 |
 | [前端工程](./frontend.md) | Vue、路由、权限、设计系统、图表和浏览器兼容 |
 | [后端工程](./backend.md) | Spring Boot 分层、认证、存储、导出任务和 Flyway |
 | [数据库](./database.md) | PostgreSQL、病案主档、关联、编号、约束和索引 |

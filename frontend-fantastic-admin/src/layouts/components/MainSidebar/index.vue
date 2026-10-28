@@ -65,7 +65,7 @@ onUnmounted(() => {
       </FaScrollArea>
       <component :is="useSlots('main-sidebar-after-menu')" />
       <div class="account-area flex-center px-3 py-3">
-        <AccountButton only-avatar :button-variant="settingsStore.settings.menu.mode === 'side' ? 'secondary' : 'ghost'" class="size-10 p-1.5" />
+        <AccountButton only-avatar :button-variant="settingsStore.settings.menu.mode === 'side' ? 'secondary' : 'ghost'" class="p-1.5" />
       </div>
       <component :is="useSlots('main-sidebar-bottom')" />
     </div>

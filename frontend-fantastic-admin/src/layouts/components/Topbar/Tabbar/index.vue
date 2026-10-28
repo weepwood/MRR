@@ -64,13 +64,13 @@ function contextMenuItems(routeItem: Tabbar.recordRaw) {
     [
       {
         label: '重新加载',
-        icon: 'i-ri:refresh-line',
+        icon: 'i-lucide:refresh-cw',
         disabled: routeItem.tabId !== activedTabId.value,
         handle: () => mainPage.reload(),
       },
       {
         label: '关闭标签页',
-        icon: 'i-ri:close-line',
+        icon: 'i-lucide:x',
         disabled: tabbarStore.list.length <= 1,
         handle: () => tabbar.closeById(routeItem.tabId),
       },
@@ -78,19 +78,19 @@ function contextMenuItems(routeItem: Tabbar.recordRaw) {
     [
       {
         label: '关闭其他标签页',
-        icon: 'i-mdi:close',
+        icon: 'i-lucide:x',
         disabled: !tabbar.checkCloseOtherSide(routeItem.tabId),
         handle: () => tabbar.closeOtherSide(routeItem.tabId),
       },
       {
         label: '关闭左侧标签页',
-        icon: 'i-mdi:arrow-expand-left',
+        icon: 'i-lucide:arrow-left-to-line',
         disabled: !tabbar.checkCloseLeftSide(routeItem.tabId),
         handle: () => tabbar.closeLeftSide(routeItem.tabId),
       },
       {
         label: '关闭右侧标签页',
-        icon: 'i-mdi:arrow-expand-right',
+        icon: 'i-lucide:arrow-right-to-line',
         disabled: !tabbar.checkCloseRightSide(routeItem.tabId),
         handle: () => tabbar.closeRightSide(routeItem.tabId),
       },
@@ -201,7 +201,7 @@ onUnmounted(() => {
                       {{ typeof element?.title === 'function' ? element.title() : element.title }}
                     </div>
                     <div v-if="tabbarStore.list.length > 1" class="action-icon" @click.stop="tabbar.closeById(element.tabId)">
-                      <FaIcon name="i-ri:close-fill" />
+                      <FaIcon name="i-lucide:x" />
                     </div>
                     <div v-show="keys.alt && getVisibleTabIndex(index) >= 0 && getVisibleTabIndex(index) < 9" class="hotkey-number">
                       {{ getVisibleTabIndex(index) + 1 }}

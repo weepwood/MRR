@@ -2,14 +2,15 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { Refresh, Search, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { RefreshCw as Refresh, Search, Upload } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
@@ -40,7 +41,7 @@ const patientActions: MrrTableAction[] = [
   {
     key: 'edit',
     label: '编辑患者',
-    icon: 'i-ri:edit-line',
+    icon: 'i-lucide:pencil',
     tone: 'primary',
     placement: 'inline',
   },
@@ -226,12 +227,12 @@ onUnmounted(() => {
               </template>
             </el-input>
             <div class="filter-actions">
-              <el-button type="primary" @click="handleSearch">
+              <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
                 查询
-              </el-button>
-              <el-button @click="resetFilters">
+              </MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
                 重置
-              </el-button>
+              </MrrFilterActionButton>
             </div>
           </div>
         </el-card>
@@ -241,7 +242,7 @@ onUnmounted(() => {
         <AppLoading v-if="loading" type="table" :rows="8" />
         <AppError v-else-if="error" :message="error" @retry="loadData" />
         <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-        <el-table v-else :data="tableData" stripe style="width: 100%;">
+        <el-table v-else :data="tableData" stripe class="patients-table">
           <el-table-column prop="id" label="ID" width="100" />
           <el-table-column prop="bah" label="病案号" width="140">
             <template #default="{ row }">
@@ -325,6 +326,7 @@ h2 { margin: 0; font-size: 28px; }
 .filter-bar { display: flex; gap: 12px; align-items: center; }
 .filter-input { flex: 1; width: auto; min-width: 0; max-width: 560px; }
 .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
+.patients-table { width: 100%; }
 .pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
 .id-card-toggle { font-size: 12px; }
 .bah-link { color: var(--el-color-primary); text-decoration: none; }

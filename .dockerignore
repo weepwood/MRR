@@ -1,4 +1,8 @@
 .git
+.mrr-dev
+**/application-local.properties
+**/application-local.yml
+**/application-local.yaml
 .github
 .idea
 .vscode

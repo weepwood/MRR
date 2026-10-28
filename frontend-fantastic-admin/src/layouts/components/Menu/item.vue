@@ -62,6 +62,7 @@ defineExpose({
           }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
+            'menu-item-container--expand-trigger': useLeadingExpandIndicator,
           })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" v-on="{
             ...(!subMenu && {
               click: navigate,

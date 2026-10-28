@@ -136,6 +136,12 @@ a:active .mrr-icon-interactive,
   transform: none !important;
 }
 
+:root[data-motion="off"] .menu-item-container--expand-trigger:hover,
+:root[data-motion="off"] .menu-item-container--expand-trigger:active {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 :root[data-motion="off"] .history-tab-enter-from,
 :root[data-motion="off"] .history-tab-leave-to {
   opacity: 1 !important;

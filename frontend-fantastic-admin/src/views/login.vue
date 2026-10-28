@@ -58,7 +58,6 @@ const environmentBadge = ref<HTMLButtonElement | null>(null)
 const environmentOpen = ref(false)
 let environmentKeyboardFocusRequested = false
 const environmentProbing = ref(false)
-const environmentRetryScheduled = ref(false)
 const environmentUserAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
 const browserInfo = parseUserAgent(environmentUserAgent)
 const browserSupport = evaluateBrowserSupport(browserInfo)
@@ -120,17 +119,14 @@ function clearEnvironmentRetry() {
     window.clearTimeout(environmentRetryTimer)
     environmentRetryTimer = undefined
   }
-  environmentRetryScheduled.value = false
 }
 
 function scheduleEnvironmentRetry() {
   clearEnvironmentRetry()
   environmentProbeFailureCount += 1
   const delay = getEnvironmentProbeRetryDelay(environmentProbeFailureCount)
-  environmentRetryScheduled.value = true
   environmentRetryTimer = window.setTimeout(() => {
     environmentRetryTimer = undefined
-    environmentRetryScheduled.value = false
     void probeEnvironment(true)
   }, delay)
 }
@@ -375,9 +371,6 @@ onBeforeUnmount(() => {
                   <FaIcon name="i-lucide:triangle-alert" />
                   <span>{{ browserSupport.reason }}</span>
                 </p>
-                <p v-if="environmentRetryScheduled" class="environment-retry-status" role="status">
-                  网络连接异常，将自动重试；重试间隔会逐步延长。
-                </p>
                 <div class="environment-actions">
                   <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment()">
                     {{ environmentProbing ? '检测中…' : '重新检测' }}
@@ -402,45 +395,46 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <el-alert
-          v-if="sessionNotice"
-          class="session-notice"
-          :type="sessionNotice.type"
-          :title="sessionNotice.title"
-          :closable="false"
-          show-icon
-        />
+        <div class="form-panel__content">
+          <el-alert
+            v-if="sessionNotice"
+            class="session-notice"
+            :type="sessionNotice.type"
+            :title="sessionNotice.title"
+            :closable="false"
+            show-icon
+          />
+          <div class="auth-mode-stage">
+            <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" :css="isMotionEnabled()">
+              <LoginForm
+                v-if="authMode === 'login'"
+                :key="`login-${account}`"
+                :account="account"
+                @on-login="handleLogin"
+                @on-register="showRegister"
+              />
+              <RegisterForm
+                v-else
+                :key="`register-${account}`"
+                :account="account"
+                @on-login="showLogin"
+                @on-register="handleRegistrationSubmitted"
+              />
+            </Transition>
+          </div>
 
-        <div class="auth-mode-stage">
-          <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" :css="isMotionEnabled()">
-            <LoginForm
-              v-if="authMode === 'login'"
-              :key="`login-${account}`"
-              :account="account"
-              @on-login="handleLogin"
-              @on-register="showRegister"
-            />
-            <RegisterForm
-              v-else
-              :key="`register-${account}`"
-              :account="account"
-              @on-login="showLogin"
-              @on-register="handleRegistrationSubmitted"
-            />
-          </Transition>
+          <SystemAdminContactPopover
+            class="login-admin-contact"
+            :visible="copy.systemAdminContactVisible"
+            :display-name="copy.systemAdminDisplayName"
+            :department="copy.systemAdminDepartment"
+            :phone="copy.systemAdminPhone"
+            :extension="copy.systemAdminExtension"
+            :email="copy.systemAdminEmail"
+            :service-hours="copy.systemAdminServiceHours"
+            :description="copy.systemAdminDescription"
+          />
         </div>
-
-        <SystemAdminContactPopover
-          class="login-admin-contact"
-          :visible="copy.systemAdminContactVisible"
-          :display-name="copy.systemAdminDisplayName"
-          :department="copy.systemAdminDepartment"
-          :phone="copy.systemAdminPhone"
-          :extension="copy.systemAdminExtension"
-          :email="copy.systemAdminEmail"
-          :service-hours="copy.systemAdminServiceHours"
-          :description="copy.systemAdminDescription"
-        />
       </section>
     </section>
 
@@ -507,7 +501,7 @@ onBeforeUnmount(() => {
 .tone-text-neutral { color: var(--mrr-muted-foreground); }
 .product-version { font-family: inherit; font-size: 11px; color: var(--mrr-primary); }
 .environment-panel { max-height: min(68vh, 620px); padding: 0; margin: 0; overflow-y: auto; background: transparent; border: 0; box-shadow: none; scrollbar-color: var(--mrr-border-strong) transparent; scrollbar-width: thin; }
-.environment-panel__header { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: 0 0 var(--mrr-space-4); margin-bottom: var(--mrr-space-4); border-bottom: 1px solid var(--mrr-border); }
+.environment-panel__header { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: 0; margin-bottom: var(--mrr-space-2); }
 .environment-panel__eyebrow { font-size: 10px; font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
 .environment-panel__header h2 { margin: 3px 0 0; font-size: 16px; font-weight: 750; color: var(--mrr-foreground); }
 .environment-status { display: inline-flex; flex: 0 0 auto; gap: var(--mrr-space-2); align-items: center; padding: 6px 10px; font-size: 11px; font-weight: 700; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
@@ -526,21 +520,21 @@ onBeforeUnmount(() => {
 .environment-item-info :deep(svg) { width: 13px; height: 13px; }
 .environment-item dd { margin: 0; font-size: 12px; font-weight: 600; color: var(--mrr-foreground); text-align: right; overflow-wrap: anywhere; }
 .environment-item--single-line dd { white-space: nowrap; }
-.environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; padding-top: var(--mrr-space-4); margin-top: var(--mrr-space-4); border-top: 1px solid var(--mrr-border); }
+.environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; margin-top: var(--mrr-space-2); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
-.environment-retry-status { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.5; color: var(--color-warning); }
 .environment-actions { grid-column: 1 / -1; display: flex; gap: var(--mrr-space-2); justify-content: flex-end; }
-.environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
-.environment-actions button:hover:not(:disabled) { color: var(--mrr-foreground); border-color: var(--mrr-border-strong); }
+.environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease; }
+.environment-actions button:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--mrr-primary); background-color: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
 .environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 .environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
+.environment-actions button.is-primary:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--mrr-primary-foreground); background-color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
 :global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: var(--mrr-popover); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
 .login-shell {
   align-self: center;
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(420px, 0.98fr);
   width: min(1120px, 100%);
-  min-height: 610px;
+  min-height: 580px;
   margin: var(--mrr-space-6) auto;
   overflow: hidden;
   background: var(--mrr-card);
@@ -583,14 +577,15 @@ onBeforeUnmount(() => {
 .feature-list strong { display: block; font-size: 13px; }
 .feature-list p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--mrr-muted-foreground); }
 .brand-footer { position: relative; z-index: 1; display: flex; gap: var(--mrr-space-2); align-items: center; margin-top: auto; padding-top: var(--mrr-space-6); font-size: 11px; color: var(--mrr-muted-foreground); }
-.form-panel { display: flex; flex-direction: column; justify-content: center; padding: 44px 48px; background: var(--mrr-card); }
-.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: var(--mrr-space-5); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.form-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); row-gap: var(--mrr-space-4); padding: 44px 48px; background: var(--mrr-card); }
+.form-panel__content { display: flex; flex-direction: column; justify-content: flex-start; gap: var(--mrr-space-4); min-width: 0; }
+.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .auth-mode-switch button { height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); }
 .auth-mode-switch button.active { color: var(--mrr-foreground); background: var(--mrr-card); box-shadow: var(--mrr-shadow-xs); }
-.auth-mode-stage { display: grid; }
+.session-notice { margin-top: 0; }
+.login-admin-contact { display: flex; justify-content: flex-end; margin-top: 0; }
+.auth-mode-stage { display: grid; min-height: 0; }
 .auth-mode-stage > :deep(*) { grid-area: 1 / 1; min-width: 0; }
-.session-notice { margin-top: var(--mrr-space-4); }
-.login-admin-contact { display: flex; justify-content: flex-end; margin-top: var(--mrr-space-3); }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
 .login-shell { animation: login-enter 0.35s ease-out both; }
 @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -602,9 +597,6 @@ onBeforeUnmount(() => {
 :global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
 :global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
 :global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
-@media (min-width: 901px) {
-  .auth-mode-stage { min-height: 520px; }
-}
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }
@@ -617,7 +609,6 @@ onBeforeUnmount(() => {
 @media (max-width: 620px) {
   .login-page { padding: var(--mrr-space-3); }
   .login-shell { min-height: 0; margin: var(--mrr-space-4) auto; border-radius: var(--mrr-radius-xl); }
-  .login-shell.is-register { min-height: 0; }
   .brand-panel { padding: var(--mrr-space-5); }
   .brand-heading h1 { font-size: 25px; }
   .brand-heading p, .feature-list, .brand-panel::after { display: none; }
@@ -632,9 +623,15 @@ onBeforeUnmount(() => {
   .environment-actions { justify-content: flex-end; }
   .form-panel { padding: 30px var(--mrr-space-5); }
 }
-@media (min-width: 901px) and (min-height: 900px) {
-  .login-shell,
-  .login-shell.is-register { min-height: 760px; }
+@media (min-width: 901px) {
+  .login-shell { height: 580px; grid-template-rows: minmax(0, 1fr); }
+  .brand-panel { min-height: 0; padding: 32px; overflow: hidden; }
+  .brand-heading h1 { font-size: 36px; }
+  .brand-heading p { margin-top: var(--mrr-space-3); }
+  .feature-list { gap: var(--mrr-space-2); margin-top: var(--mrr-space-5); }
+  .feature-list article { padding: var(--mrr-space-2) var(--mrr-space-3); }
+  .brand-footer { padding-top: var(--mrr-space-3); }
+  .form-panel { padding: 36px 40px; }
 }
 @media (orientation: portrait) {
   .login-shell { align-self: start; }

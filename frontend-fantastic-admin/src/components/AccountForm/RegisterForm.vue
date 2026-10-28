@@ -25,8 +25,6 @@ const loading = ref(false)
 const showPwd = ref(false)
 const showCheckPwd = ref(false)
 const isApplicationStep = ref(false)
-const identityHeading = ref<HTMLElement | null>(null)
-const applicationHeading = ref<HTMLElement | null>(null)
 
 function resolveMessage(payload: any, fallback: string): string {
   return payload?.message || payload?.msg || payload?.error || payload?.data?.message || payload?.data?.msg || fallback
@@ -37,13 +35,13 @@ const form = useForm({
   validationSchema: toTypedSchema(
     z.object({
       account: z.string().trim()
-        .min(3, '用户名长度应为3到40位')
-        .max(40, '用户名长度应为3到40位')
+        .min(3, '用户名长度应为 3 到 40 位')
+        .max(40, '用户名长度应为 3 到 40 位')
         .regex(/^[A-Za-z0-9._-]+$/, '只能包含字母、数字、点、下划线和短横线'),
       displayName: z.string().trim().min(1, '请输入显示名称').max(80, '显示名称不能超过80个字符'),
       contactInfo: z.string().trim().max(200, '联系方式不能超过200个字符').optional(),
       applyRemark: z.string().trim().max(500, '申请说明不能超过500个字符').optional(),
-      password: z.string().min(6, '密码长度应为6到64位').max(64, '密码长度应为6到64位'),
+      password: z.string().min(6, '密码长度应为 6 到 64 位').max(64, '密码长度应为 6 到 64 位'),
       checkPassword: z.string().min(1, '请再次输入密码'),
     }).refine(data => data.password === data.checkPassword, {
       message: '两次输入的密码不一致',
@@ -64,7 +62,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   if (!isApplicationStep.value) {
     isApplicationStep.value = true
     await nextTick()
-    applicationHeading.value?.focus()
+    document.getElementById('register-contact')?.focus()
     return
   }
 
@@ -94,7 +92,7 @@ async function handlePrevious() {
   if (isApplicationStep.value) {
     isApplicationStep.value = false
     await nextTick()
-    identityHeading.value?.focus()
+    document.getElementById('register-account')?.focus()
     return
   }
 
@@ -121,15 +119,7 @@ async function handlePrevious() {
       </div>
     </section>
 
-    <section v-if="!isApplicationStep" class="form-section">
-      <header class="section-heading">
-        <span><FaIcon name="i-lucide:contact-round" /></span>
-        <div>
-          <strong ref="identityHeading" role="heading" aria-level="3" tabindex="-1">身份信息</strong>
-          <p>填写登录账号、密码和人员身份信息。</p>
-        </div>
-      </header>
-
+    <section v-if="!isApplicationStep" class="form-section" aria-label="注册账号信息">
       <div class="field-grid">
         <FormField v-slot="{ componentField, errors }" name="account">
           <FormItem class="field-item">
@@ -151,20 +141,13 @@ async function handlePrevious() {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField, value, errors }" name="password">
+        <FormField v-slot="{ componentField, errors }" name="password">
           <FormItem class="field-item">
             <RegisterFieldLabel
               html-for="register-password"
               label="密码"
               status="必填"
               description="长度为 6 到 64 位"
-              :suggestions="[
-                '长度至少为 8 个字符',
-                '包含大写字母',
-                '包含小写字母',
-                '包含数字',
-                '包含特殊字符',
-              ]"
             />
             <FormControl>
               <div class="password-shell">
@@ -175,7 +158,6 @@ async function handlePrevious() {
                 </button>
               </div>
             </FormControl>
-            <FaPasswordStrength :password="value" class="password-strength" />
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
@@ -198,15 +180,7 @@ async function handlePrevious() {
       </div>
     </section>
 
-    <section v-else class="form-section form-section--remark">
-      <header class="section-heading">
-        <span><FaIcon name="i-lucide:file-text" /></span>
-        <div>
-          <strong ref="applicationHeading" role="heading" aria-level="3" tabindex="-1">申请说明</strong>
-          <p>留下可联系的方式，并说明岗位或使用目的，帮助管理员核验申请。</p>
-        </div>
-      </header>
-
+    <section v-else class="form-section form-section--remark" aria-label="注册申请补充信息">
       <FormField v-slot="{ componentField, errors }" name="contactInfo">
         <FormItem class="field-item">
           <RegisterFieldLabel html-for="register-contact" label="联系方式" status="选填" description="仅用于注册审核和账号问题联系" />
@@ -221,7 +195,7 @@ async function handlePrevious() {
         <FormItem class="field-item field-item--remark">
           <RegisterFieldLabel html-for="register-remark" label="申请说明" status="选填" description="最多 500 个字符" />
           <FormControl>
-            <FaTextarea id="register-remark" :rows="3" maxlength="500" show-word-limit placeholder="例如：肿瘤科医生，需要查阅本科室住院病案" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <FaTextarea id="register-remark" :rows="2" maxlength="500" show-word-limit placeholder="例如：肿瘤科医生，需要查阅本科室住院病案" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
           </FormControl>
           <FormMessage class="field-message" />
         </FormItem>
@@ -243,7 +217,7 @@ async function handlePrevious() {
 
 <style scoped>
 /* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
-.register-form { display: grid; gap: var(--mrr-space-4); margin-top: var(--mrr-space-5); }
+.register-form { display: grid; gap: var(--mrr-space-4); margin-top: 0; }
 .review-flow { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); color: var(--mrr-foreground); background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 22%, var(--mrr-border)); border-radius: var(--mrr-radius-lg); }
 .review-flow__summary { display: flex; gap: var(--mrr-space-3); align-items: flex-start; }
 .review-flow__summary strong { display: block; font-size: 13px; }
@@ -256,17 +230,13 @@ async function handlePrevious() {
 .review-flow__steps .is-current b { color: var(--mrr-primary-foreground); background: var(--color-info); border-color: var(--color-info); }
 .form-section { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .form-section--remark { gap: var(--mrr-space-2); }
-.section-heading { display: flex; gap: var(--mrr-space-3); align-items: flex-start; padding-bottom: var(--mrr-space-3); border-bottom: 1px solid var(--mrr-border); }
-.section-heading > span { display: grid; flex: 0 0 auto; width: 30px; height: 30px; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); border-radius: var(--mrr-radius-md); place-items: center; }
-.section-heading strong { display: block; font-size: 13px; }
-.section-heading p { margin: 3px 0 0; font-size: 11px; line-height: 1.55; color: var(--mrr-muted-foreground); }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); min-width: 0; padding-bottom: 18px; }
 .field-item :deep(.fa-input__wrapper), .field-item :deep(input), .field-item :deep(textarea) { width: 100%; }
 .field-message { position: absolute; bottom: 0; font-size: 10px; }
 .field-item--remark { padding-bottom: 16px; }
+.field-item--remark :deep(textarea) { min-height: 64px; }
 .password-shell { position: relative; }
-.password-strength { margin-top: 0; }
 .password-shell :deep(input) { padding-right: 42px; }
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
 .form-actions { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); }

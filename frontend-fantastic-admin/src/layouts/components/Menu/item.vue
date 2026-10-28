@@ -19,6 +19,63 @@ const props = withDefaults(
 const rootMenu = inject(rootMenuInjectionKey)!
 
 const itemRef = ref<HTMLElement>()
+const ripple = ref<{ key: number, x: number, y: number, diameter: number } | null>(null)
+let rippleKey = 0
+let rippleTimer: ReturnType<typeof setTimeout> | undefined
+
+const canRipple = computed(() => !props.subMenu && props.level > 0 && !rootMenu.isMenuPopup)
+
+function startRipple(element: HTMLElement, clientX: number, clientY: number) {
+  const rect = element.getBoundingClientRect()
+  const x = Math.min(Math.max(clientX - rect.left, 0), rect.width)
+  const y = Math.min(Math.max(clientY - rect.top, 0), rect.height)
+  const radius = Math.max(
+    Math.hypot(x, y),
+    Math.hypot(rect.width - x, y),
+    Math.hypot(x, rect.height - y),
+    Math.hypot(rect.width - x, rect.height - y),
+  )
+  const maxRippleDiameter = Math.max(rect.height * 0.95, 24)
+  const key = ++rippleKey
+
+  ripple.value = { key, x, y, diameter: Math.ceil(Math.min(radius * 2, maxRippleDiameter)) }
+
+  if (rippleTimer) {
+    clearTimeout(rippleTimer)
+  }
+
+  rippleTimer = setTimeout(() => {
+    if (ripple.value?.key === key) {
+      ripple.value = null
+    }
+  }, 700)
+}
+
+function handlePointerDown(event: PointerEvent) {
+  if (!canRipple.value || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return
+  }
+
+  startRipple(event.currentTarget as HTMLElement, event.clientX, event.clientY)
+}
+
+function handleClick(event: MouseEvent, navigate: (event?: MouseEvent) => void) {
+  if (!props.subMenu) {
+    if (canRipple.value && event.detail === 0) {
+      const element = event.currentTarget as HTMLElement
+      const rect = element.getBoundingClientRect()
+      startRipple(element, rect.left + rect.width / 2, rect.top + rect.height / 2)
+    }
+
+    navigate(event)
+  }
+}
+
+onBeforeUnmount(() => {
+  if (rippleTimer) {
+    clearTimeout(rippleTimer)
+  }
+})
 
 const isActived = computed(() => {
   return props.subMenu
@@ -62,14 +119,21 @@ defineExpose({
           }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
-          })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" v-on="{
-            ...(!subMenu && {
-              click: navigate,
-            }),
-          }"
+          })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @pointerdown="handlePointerDown" @click="handleClick($event, navigate)"
         >
+          <span
+            v-if="ripple && canRipple" :key="ripple.key" class="menu-item-ripple-viewport" aria-hidden="true"
+          >
+            <i
+              v-for="wave in 2" :key="wave" class="menu-item-ripple" :class="{ 'menu-item-ripple--delayed': wave === 2 }" :style="{
+                '--ripple-x': `${ripple.x}px`,
+                '--ripple-y': `${ripple.y}px`,
+                '--ripple-diameter': `${ripple.diameter}px`,
+              }"
+            />
+          </span>
           <div
-            :class="cn('inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {
+            :class="cn('relative z-10 inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {
               'flex-col': rootMenu.isMenuPopup && level === 0 && rootMenu.props.mode === 'vertical',
               'gap-1': rootMenu.isMenuPopup && level === 0 && rootMenu.props.showCollapseName,
               'w-full': rootMenu.isMenuPopup && level === 0 && rootMenu.props.showCollapseName && rootMenu.props.mode === 'vertical',
@@ -176,6 +240,54 @@ defineExpose({
   transform: translateX(-3px) translateY(-1px) rotate(45deg);
 }
 
+.menu-item-ripple-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.menu-item-ripple {
+  position: absolute;
+  top: var(--ripple-y);
+  left: var(--ripple-x);
+  width: var(--ripple-diameter);
+  height: var(--ripple-diameter);
+  background: rgb(255 255 255 / 18%);
+  border: 1.5px solid var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 14%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.08);
+  animation: menu-item-ripple 540ms cubic-bezier(0.2, 0.5, 0.3, 1) forwards;
+}
+
+.menu-item-ripple--delayed {
+  animation-delay: 110ms;
+}
+
+@keyframes menu-item-ripple {
+  0% {
+    opacity: 0.36;
+    transform: translate(-50%, -50%) scale(0.08);
+  }
+
+  24% {
+    opacity: 0.34;
+  }
+
+  68% {
+    opacity: 0.16;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
 .menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
   transform: scale(0.82) translateX(-3px) !important;
@@ -191,6 +303,10 @@ defineExpose({
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .menu-item-ripple {
+    animation: none;
+  }
+
   .menu-leading-control-icon,
   .menu-leading-control-arrow {
     transition: none;

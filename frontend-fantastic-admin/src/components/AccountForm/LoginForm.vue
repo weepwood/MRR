@@ -85,7 +85,10 @@ const onSubmit = form.handleSubmit(async (values) => {
   <form class="login-form" @submit="onSubmit">
     <FormField v-slot="{ componentField, errors }" name="account">
       <FormItem class="field-item">
-        <label for="login-account">用户名</label>
+        <div class="field-label-row">
+          <label for="login-account">用户名</label>
+          <FormMessage class="field-message" />
+        </div>
         <FormControl>
           <div class="input-shell" :class="{ invalid: errors.length > 0 }">
             <span class="input-icon">
@@ -101,13 +104,15 @@ const onSubmit = form.handleSubmit(async (values) => {
             />
           </div>
         </FormControl>
-        <FormMessage class="field-message" />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ componentField, errors }" name="password">
       <FormItem class="field-item">
-        <label for="login-password">密码</label>
+        <div class="field-label-row">
+          <label for="login-password">密码</label>
+          <FormMessage class="field-message" />
+        </div>
         <FormControl>
           <div class="input-shell password-shell" :class="{ invalid: errors.length > 0 }">
             <span class="input-icon">
@@ -132,7 +137,6 @@ const onSubmit = form.handleSubmit(async (values) => {
             </button>
           </div>
         </FormControl>
-        <FormMessage class="field-message" />
       </FormItem>
     </FormField>
 
@@ -179,6 +183,14 @@ const onSubmit = form.handleSubmit(async (values) => {
   font-size: 13px;
   font-weight: 650;
   color: var(--mrr-foreground);
+}
+
+.field-label-row {
+  display: flex;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 18px;
 }
 
 .input-shell {
@@ -254,6 +266,8 @@ const onSubmit = form.handleSubmit(async (values) => {
   margin: 0;
   font-size: 11px;
   line-height: 1.4;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .form-options {

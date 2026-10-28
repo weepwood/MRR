@@ -709,7 +709,7 @@ onMounted(loadData)
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="createVisible" title="创建用户" width="520px" class="mrr-vscode-glass" modal-class="mrr-vscode-overlay" :close-on-click-modal="false">
       <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
@@ -720,7 +720,7 @@ onMounted(loadData)
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="approveVisible" title="审核注册申请" width="540px" :close-on-click-modal="false">
+    <el-dialog v-model="approveVisible" title="审核注册申请" width="540px" class="mrr-vscode-glass" modal-class="mrr-vscode-overlay" :close-on-click-modal="false">
       <el-alert type="warning" :closable="false" show-icon title="审核通过后账号立即变为启用状态，用户可使用注册时设置的密码登录。" />
       <div class="review-summary">
         <div><span>用户名</span><strong>{{ approveTarget?.username }}</strong></div>
@@ -739,7 +739,7 @@ onMounted(loadData)
       <template #footer><el-button @click="approveVisible = false">取消</el-button><el-button type="success" :loading="approveSaving" @click="handleApprove">确认通过</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="editVisible" title="编辑用户" width="480px" class="mrr-vscode-glass" modal-class="mrr-vscode-overlay" :close-on-click-modal="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名"><div class="readonly-field">{{ editTarget?.username }}</div></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="editForm.displayName" /></el-form-item>

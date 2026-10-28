@@ -1,12 +1,14 @@
 # 测试执行与覆盖率门禁
 
-关联 #362、#244。覆盖率不是业务正确性的替代品；本门禁用于阻止已有覆盖能力静默回退。
+关联 #362、#244、#450。覆盖率不是业务正确性的替代品；本门禁用于阻止已有覆盖能力静默回退。
 
 ## 同步检查
 
-`quality-gate` 的前端、后端单测和后端集成 Job 直接调用现有比较器并传
-`--fail-on-regression`；失败使对应汇总 Gate 失败。旧的异步 coverage-baseline
-只用于补充报表，不能替代同步门禁。Artifact 上传失败不跳过测试或改变测试结果。
+完整发布候选验收在 `windows-release-package.yml` 调用现有比较器并传
+`--fail-on-regression`；失败使 release-validation/qualify 失败，无法创建正式 tag 和发布。
+普通 PR 保留单测，按风险执行 PostgreSQL/浏览器检查，不逐 PR 采集全仓覆盖率。
+`coverage-baseline` 只保留手动补充报表，不能替代完整验收中的同步门禁。
+Artifact 上传失败不跳过测试或改变测试结果。详见 [分层 CI](ci-tiered-verification.md)。
 
 基线来源是已成功的 main `7756c98d`，quality-gate run `39125525630`，
 2026-10-18 的真实 Artifact。容忍下降为 0.5 个百分点；新增功能应补充有意义的行为测试，

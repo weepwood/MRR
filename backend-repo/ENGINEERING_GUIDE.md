@@ -6,7 +6,7 @@
 
 先读根目录 AGENTS.md、ARCHITECTURE.md 和 docs/engineering/ai-assisted-development-governance.md。功能和修复从最新 origin/main 创建 codex/ 分支；已有工作区有未提交文件时先保留，不直接切换或覆盖。
 
-仓库提供 Maven Wrapper，固定 Maven 3.9.9 并校验分发包 SHA-256。首次使用需要联网下载 Maven 与依赖；医院离线部署只消费已验证发布包，不在服务器临时构建。
+仓库提供 Maven Wrapper，固定 Maven 3.10.0 并校验分发包 SHA-256，版本以 `.mvn/wrapper/maven-wrapper.properties` 为准。CI、容器与本机均使用 Wrapper。首次使用需要联网下载 Maven 与依赖；医院离线部署只消费已验证发布包，不在服务器临时构建。
 
 在根目录运行只读环境检查：
 

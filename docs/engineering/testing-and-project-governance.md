@@ -75,7 +75,7 @@ CI 会把清单写入 Job Summary，并上传 `test-inventory.md`。该清单反
 | 方法覆盖率 | 59.47% |
 | 类覆盖率 | 75.11% |
 
-`coverage-baseline` 工作流会在 `quality-gate` 成功后读取后端测试 Artifact，使用 `scripts/jacoco_coverage.py` 生成：
+`coverage-baseline` 保留手动入口，读取指定完整发布验收（或历史 quality-gate）的后端测试 Artifact，使用 `scripts/jacoco_coverage.py` 生成：
 
 - GitHub Actions Job Summary；
 - `coverage-summary.json`，便于后续趋势分析；
@@ -177,16 +177,14 @@ python scripts/release_baseline.py validate
 
 为 `main` 设置：
 
-- 必须通过 `quality-gate / release-baseline-gate`；
-- 必须通过 `quality-gate / frontend-gate`；
-- 必须通过 `quality-gate / backend-gate`；
-- 必须通过 `quality-gate / windows-management-gate`；
-- 合并前至少一次 Review；
+- 必须通过 `governance-gate / governance` 与 `quality-gate / pr-gate`；
+- 普通 PR 按风险验证；完整覆盖率、生产包和 Windows 恢复在发布前验收；
+- P0/P1 必须有独立 Review；单人维护不强制自批；
 - 所有 Review 对话必须解决；
 - 禁止直接推送和强制推送；
 - 建议使用 squash merge，并保留中文、可追踪的提交说明。
 
-仓库设置无法通过代码 PR 自动强制，需在 GitHub Branch protection rules 中配置。
+仓库设置无法通过代码 PR 自动强制，需按 [分层 CI](ci-tiered-verification.md) 执行迁移工具并读回配置。
 
 ## 9. 后续测试债务
 

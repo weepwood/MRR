@@ -44,7 +44,7 @@ defineExpose({
 
 <template>
   <div
-    ref="itemRef" :class="cn('menu-item relative', {
+    ref="itemRef" :class="cn('menu-item relative select-none', {
       'active': isItemActive,
       'py-[2px] px-1.5': (rootMenu.isMenuPopup && rootMenu.props.mode === 'vertical') || (rootMenu.isMenuPopup && level !== 0 && rootMenu.props.mode === 'horizontal') || !rootMenu.isMenuPopup,
       'px-1 py-1.5': rootMenu.isMenuPopup && level === 0 && rootMenu.props.mode === 'horizontal',
@@ -176,12 +176,12 @@ defineExpose({
   transform: translateY(-1px) rotate(45deg);
 }
 
-.menu-leading-control:hover .menu-leading-control-icon {
+.menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
   transform: scale(0.82) !important;
 }
 
-.menu-leading-control:hover .menu-leading-control-arrow {
+.menu-item-container:hover .menu-leading-control-arrow {
   opacity: 1;
 }
 </style>

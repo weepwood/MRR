@@ -21,6 +21,31 @@ import java.util.concurrent.TimeUnit;
 @EnableCaching
 public class CacheConfig {
 
+    /** 按病案号查询扫描记录的缓存。 */
+    public static final String SCAN_BY_BAH = "scanByBah";
+    /** 按上架号查询扫描记录的缓存。 */
+    public static final String SCAN_BY_CODE = "scanByCode";
+    /** 病案影像定位结果缓存（病案号维度）。 */
+    public static final String SCAN_LOOKUP_BY_BAH = "scanLookupByBah";
+    /** 病案影像定位结果缓存（上架号维度）。 */
+    public static final String SCAN_LOOKUP_BY_CODE = "scanLookupByCode";
+    /** 单条扫描记录缓存。 */
+    public static final String SCAN_BY_ID = "scanById";
+
+    /**
+     * 全部依赖 {@code mr_scan} 行内容的查询缓存。
+     *
+     * <p>任何绕过 {@code ScanServiceImpl} 写路径的数据导入都必须整表清理这批缓存，
+     * 否则已查询过的病案号会在 TTL 内继续返回导入前的数据。</p>
+     */
+    public static final List<String> SCAN_QUERY_CACHES = List.of(
+            SCAN_BY_BAH,
+            SCAN_BY_CODE,
+            SCAN_LOOKUP_BY_BAH,
+            SCAN_LOOKUP_BY_CODE,
+            SCAN_BY_ID
+    );
+
     private static final int INITIAL_CAPACITY = 100;
     private static final int MAXIMUM_SIZE = 1000;
 
@@ -28,11 +53,11 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(List.of(
-                buildCache("scanByBah", 1, TimeUnit.DAYS),
-                buildCache("scanByCode", 1, TimeUnit.DAYS),
-                buildCache("scanLookupByBah", 1, TimeUnit.DAYS),
-                buildCache("scanLookupByCode", 1, TimeUnit.DAYS),
-                buildCache("scanById", 10, TimeUnit.MINUTES),
+                buildCache(SCAN_BY_BAH, 1, TimeUnit.DAYS),
+                buildCache(SCAN_BY_CODE, 1, TimeUnit.DAYS),
+                buildCache(SCAN_LOOKUP_BY_BAH, 1, TimeUnit.DAYS),
+                buildCache(SCAN_LOOKUP_BY_CODE, 1, TimeUnit.DAYS),
+                buildCache(SCAN_BY_ID, 10, TimeUnit.MINUTES),
                 buildCache("ossSignedUrl", 10, TimeUnit.MINUTES)
         ));
         return cacheManager;

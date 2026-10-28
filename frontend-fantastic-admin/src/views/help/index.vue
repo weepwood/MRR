@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { DocumentationSettings } from '@/api/modules/documentation-settings'
-import { Connection, Document, Reading, Setting } from '@element-plus/icons-vue'
+import { Network as Connection, FileText as Document, BookOpen as Reading, Settings as Setting } from 'lucide-vue-next'
 import { createDocumentationSession } from '@/api/modules/documentation'
 import {
   DEFAULT_DOCUMENTATION_SETTINGS,
@@ -149,7 +149,7 @@ onMounted(async () => {
             @click="openDocumentation(entry)"
           >
             {{ entry.target ? '打开文档' : '未配置' }}
-            <FaIcon v-if="entry.target" name="i-ri:arrow-right-up-line" />
+            <FaIcon v-if="entry.target" name="i-lucide:arrow-up-right" />
           </el-button>
         </div>
       </el-card>

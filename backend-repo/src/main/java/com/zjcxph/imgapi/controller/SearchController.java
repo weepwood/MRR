@@ -53,6 +53,21 @@ public class SearchController {
     @Value("${aes.id-card-query.timestamp-tolerance-seconds:300}")
     private int timestampToleranceSeconds = IdCardQueryTimestampValidator.DEFAULT_TOLERANCE_SECONDS;
 
+    /**
+     * 是否允许旧版加密身份证查询（无时间戳）。
+     *
+     * <p>旧版接口的密文是「用户ID + 身份证号」的静态产物：同一组
+     * {@code EncryptID}/{@code iv}/{@code userId} 可以无限次重放，没有任何新鲜度约束，
+     * 一旦从日志、浏览器历史或截图中泄露即长期有效。新版接口把时间戳并入密钥派生，
+     * 超出窗口即失效。</p>
+     *
+     * <p>默认关闭：本仓库前端已全部改用新版接口，仓库内没有旧版的调用方。若现场
+     * 确有未升级的外部系统，可在 {@code application.properties} 打开
+     * {@code aes.id-card-query.legacy-encrypt-id-enabled=true} 临时兼容，并尽快完成改造。</p>
+     */
+    @Value("${aes.id-card-query.legacy-encrypt-id-enabled:false}")
+    private boolean legacyEncryptIdEnabled = false;
+
     public SearchController(SearchService searchService) {
         this.searchService = searchService;
     }
@@ -87,12 +102,22 @@ public class SearchController {
         }
     }
 
-    @Operation(summary = "通过加密身份证号查询病案号（旧版）")
+    @Operation(
+            summary = "通过加密身份证号查询病案号（旧版，默认停用）",
+            description = "密文不含时间戳，可被无限重放，默认返回 410。"
+                    + "如确有未升级的外部系统，需显式开启 aes.id-card-query.legacy-encrypt-id-enabled。")
     @GetMapping("/getBAHByEncryptIDLegacy")
     public Result<List<Patient>> getBAHByEncryptIDLegacy(
             @RequestParam String EncryptID,
             @RequestParam String userId,
             @RequestParam String iv) {
+        if (!legacyEncryptIdEnabled) {
+            logger.warn("Legacy encrypted id-card endpoint rejected (disabled): external userId={}", userId);
+            return Result.fail(
+                    410,
+                    "旧版加密身份证查询已停用，请改用 /api/v1/search/getBAHByEncryptID（带 timestamp）");
+        }
+        logger.warn("Legacy encrypted id-card endpoint in use, please migrate caller: external userId={}", userId);
         try {
             logger.info("Decrypt legacy id-card for external userId={}", userId);
             String decryptedIdCard = AESUtil.decryptIdCard(EncryptID, iv, userId, secretKey);

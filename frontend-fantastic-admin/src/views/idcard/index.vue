@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 
 const router = useRouter()
 const idCard = ref('')
@@ -28,7 +29,7 @@ function handleSearch() {
       <!-- Logo / 标题区 -->
       <div class="search-header">
         <div class="search-logo">
-          <i class="i-ant-design:file-search-outlined" />
+          <i class="i-lucide:file-search" />
         </div>
         <h1 class="search-title">
           病案图像查询
@@ -51,20 +52,22 @@ function handleSearch() {
             @keyup.enter="handleSearch"
           >
             <template #prefix>
-              <i class="i-ant-design:idcard-outlined" style="font-size: 16px;" />
+              <i class="i-lucide:contact-round prefix-icon" />
             </template>
           </el-input>
         </div>
-        <el-button
+        <MrrFilterActionButton
+          action="search"
+          :pending="loading"
+          :busy="loading"
           type="primary"
           size="large"
-          :loading="loading"
           :disabled="!isValid"
           class="search-btn"
           @click="handleSearch"
         >
           查询病案
-        </el-button>
+        </MrrFilterActionButton>
       </div>
 
       <!-- 输入提示 -->
@@ -93,6 +96,10 @@ function handleSearch() {
   min-height: 100vh;
   padding: 24px;
   background: linear-gradient(135deg, var(--mrr-muted) 0%, var(--mrr-background) 60%, var(--mrr-muted) 100%);
+}
+
+.prefix-icon {
+  font-size: 16px;
 }
 
 .search-card {
@@ -151,7 +158,7 @@ function handleSearch() {
 
 .search-btn {
   width: 100%;
-  height: 44px;
+  height: var(--mrr-control-height);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;

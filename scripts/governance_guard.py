@@ -117,7 +117,11 @@ def validate_pr_body(body: str, actor: str = "", enforce: bool = True) -> Report
         )
         return report
 
-    for section in REQUIRED_SECTIONS:
+    risk = heading_content(body, "风险等级") or ""
+    risk_match = RISK_RE.search(risk)
+    declared_risk = risk_match.group(1).upper() if risk_match else None
+    sections = tuple(s for s in REQUIRED_SECTIONS if declared_risk != 'P3' or s != 'AI 参与说明')
+    for section in sections:
         content = heading_content(body, section)
         if content is None:
             report.errors.append(f"PR 正文缺少必填章节：{section}")
@@ -129,9 +133,9 @@ def validate_pr_body(body: str, actor: str = "", enforce: bool = True) -> Report
         report.errors.append(
             "关联事项必须引用 Issue，或写明“无关联 Issue：具体原因”"
         )
+    if declared_risk in ('P0', 'P1') and not ISSUE_RE.search(relation):
+        report.errors.append("P0/P1 变更必须关联 Issue 或高风险变更提案")
 
-    risk = heading_content(body, "风险等级") or ""
-    risk_match = RISK_RE.search(risk)
     if not risk_match:
         report.errors.append("风险等级必须明确填写 P0、P1、P2 或 P3")
     else:

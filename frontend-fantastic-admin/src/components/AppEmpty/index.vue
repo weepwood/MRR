@@ -8,7 +8,7 @@ withDefaults(defineProps<{
   actionIcon?: string
 }>(), {
   description: '暂无数据',
-  icon: 'i-ant-design:inbox-outlined',
+  icon: 'i-lucide:inbox',
 })
 
 const emit = defineEmits<{

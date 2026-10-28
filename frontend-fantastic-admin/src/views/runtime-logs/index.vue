@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { getRuntimeLogFiles, getRuntimeLogHealth, getRuntimeLogs, importRuntimeLog } from '@/api/modules/runtime-logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
@@ -130,14 +131,14 @@ onMounted(() => { void load(); void refreshHealth() })
           <el-input v-model="errorId" clearable />
         </el-form-item>
         <el-form-item label="级别" class="filter-level">
-          <el-select v-model="level" clearable placeholder="全部级别" style="width: 140px;">
+          <el-select v-model="level" clearable placeholder="全部级别" class="runtime-logs-level">
             <el-option v-for="item in ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR']" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item class="filter-actions">
-          <el-button native-type="submit" type="primary" :loading="loading">
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" native-type="submit" type="primary">
             查询日志
-          </el-button>
+          </MrrFilterActionButton>
         </el-form-item>
       </el-form>
       <el-alert v-if="filtersChanged" title="筛选已修改，点击查询后生效；下一批沿用已提交条件" type="info" :closable="false" />
@@ -204,7 +205,7 @@ onMounted(() => { void load(); void refreshHealth() })
           <el-date-picker v-model="historyRange" type="daterange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
         </el-form-item>
         <el-form-item label="历史文件">
-          <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" style="width: 340px;">
+          <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" class="runtime-logs-files">
             <el-option v-for="file in selectableFiles" :key="file.fileName" :label="file.fileName" :value="file.fileName" />
           </el-select>
         </el-form-item>
@@ -238,6 +239,8 @@ onMounted(() => { void load(); void refreshHealth() })
 
 <style scoped>
 .runtime-log-page { display: grid; gap: 18px; min-width: 0; }
+.runtime-logs-level { width: 140px; }
+.runtime-logs-files { width: 340px; }
 .page-header { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; }
 .page-header h2 { margin: 0; font-size: 26px; line-height: 1.25; }
 .page-header p { max-width: 72ch; margin: 8px 0 0; line-height: 1.6; color: var(--el-text-color-secondary); }

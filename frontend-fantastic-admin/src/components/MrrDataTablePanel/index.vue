@@ -28,9 +28,15 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
     </template>
 
     <template v-if="hasActions" #actions>
-      <span v-if="props.count !== undefined" class="mrr-data-table-panel__count">
+      <el-tag
+        v-if="props.count !== undefined"
+        size="small"
+        type="info"
+        effect="plain"
+        class="mrr-data-table-panel__count"
+      >
         {{ props.countLabel || '共' }} {{ countText }} 条
-      </span>
+      </el-tag>
       <slot name="actions" />
     </template>
 
@@ -54,19 +60,8 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 
 <style scoped>
 .mrr-data-table-panel__count {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  min-height: 25px;
-  padding: 3px 9px;
-  font-size: 12px;
-  font-weight: 550;
   font-variant-numeric: tabular-nums;
-  color: var(--mrr-secondary-foreground);
   white-space: nowrap;
-  background: var(--mrr-secondary);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-pill);
 }
 
 .mrr-data-table-panel__filters {

@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -57,6 +58,13 @@ class CoreDataExchangePostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @Autowired
     private DataExchangeExportService exportService;
+
+    /**
+     * 核心数据交换用例只关注写入语义，不需要查询缓存；
+     * 用 mock 代替真实 CacheManager，避免连带引入缓存切面。
+     */
+    @MockitoBean
+    private org.springframework.cache.CacheManager cacheManager;
 
     @BeforeEach
     void resetTables() {

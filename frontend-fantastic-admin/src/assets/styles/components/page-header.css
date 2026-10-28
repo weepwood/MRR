@@ -154,8 +154,8 @@ html[data-page-title-style="card"] .mrr-page-header {
   align-items: center;
 
   /* 页头是导航定位用的标题条，不是首屏内容。220px 的 Hero 会把真正的
-   * 数据区推到首屏以下，这里按内容自适应，高度约 96–116px。 */
-  min-height: 0;
+   * 数据区推到首屏以下。单行描述时与指标卡共享紧凑高度，长文案仍自然撑开。 */
+  min-height: var(--mrr-summary-min-height);
   padding: 22px 26px;
   overflow: hidden;
 

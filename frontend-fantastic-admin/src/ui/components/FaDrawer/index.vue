@@ -221,7 +221,7 @@ function handleAnimationEnd() {
         <slot />
       </div>
       <div v-show="props.loading" class="absolute inset-0 z-1000 size-full flex-center bg-popover/75">
-        <FaIcon name="i-line-md:loading-twotone-loop" class="size-10" />
+        <FaIcon name="i-lucide:loader-circle" class="size-10 animate-spin" />
       </div>
       <SheetFooter
         v-if="footer" :class="cn('p-3 gap-y-2', props.footerClass, {

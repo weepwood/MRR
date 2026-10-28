@@ -32,7 +32,6 @@ class FrontendTestScopeTest(unittest.TestCase):
             "frontend-fantastic-admin/src/api/index.ts",
             "frontend-fantastic-admin/e2e/login-layout.spec.ts",
             "frontend-fantastic-admin/playwright.config.ts",
-            "frontend-fantastic-admin/package.json",
         ):
             with self.subTest(path=path):
                 scope = classify_paths([path])
@@ -40,13 +39,19 @@ class FrontendTestScopeTest(unittest.TestCase):
                 self.assertTrue(scope.e2e_changed)
                 self.assertEqual(scope.reason, "frontend-user-flow-change")
 
-    def test_release_change_runs_full_frontend_verification(self):
+    def test_build_dependency_change_builds_production_without_unrelated_browser_suites(self):
+        scope = classify_paths(['frontend-fantastic-admin/package.json'])
+        self.assertTrue(scope.frontend_changed)
+        self.assertTrue(scope.build_changed)
+        self.assertFalse(scope.e2e_changed)
+
+    def test_release_metadata_does_not_repeat_application_verification(self):
         for path in ("VERSION", "release-baseline.json", "release-notes/0.7.5.md"):
             with self.subTest(path=path):
                 scope = classify_paths([path])
-                self.assertTrue(scope.frontend_changed)
-                self.assertTrue(scope.e2e_changed)
-                self.assertEqual(scope.reason, "release-change")
+                self.assertFalse(scope.frontend_changed)
+                self.assertFalse(scope.e2e_changed)
+                self.assertFalse(scope.build_changed)
 
     def test_gate_control_change_tests_the_gate_itself(self):
         for path in (

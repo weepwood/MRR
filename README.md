@@ -136,6 +136,17 @@ git switch main
 
 ### 数据库
 
+Windows 本地开发可以使用统一入口，自动创建独立 PostgreSQL16、随机本地密钥并启动原生 Java/Vite：
+
+```powershell
+.\scripts\dev.ps1 doctor
+.\scripts\dev.ps1 up
+.\scripts\dev.ps1 status
+.\scripts\dev.ps1 down
+```
+
+如 `python` 不可执行，添加 `-PythonExe 'C:\Python312\python.exe'` 指定实际路径。Web 端口被占用时使用 `-WebPort 0`。资源归属、日志隐私、数据卷保留和容器验证见[可重复的本地开发与启动](docs/engineering/local-development.md)。
+
 正式迁移位于：
 
 ```text

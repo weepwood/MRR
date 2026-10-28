@@ -367,6 +367,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthUserProfileDTO updateUser(Long id, AuthUserUpdateRequest request) {
+        // 必须先获得同一把数据库锁，再读取目标和活动管理员数量。
+        authRoleMapper.lockAdminRole();
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
             return null;
@@ -380,7 +382,7 @@ public class AuthServiceImpl implements AuthService {
         String nextStatus = normalizeEditableStatus(request.getStatus());
         if (isLastActiveAdmin(user)
                 && (!"ADMIN".equalsIgnoreCase(nextRoleCode) || !"active".equalsIgnoreCase(nextStatus))) {
-            throw new BusinessException("不能停用或降级最后一个有效管理员");
+            throw lastActiveAdminRequired();
         }
 
         user.setDisplayName(StringUtils.hasText(request.getDisplayName()) ? request.getDisplayName().trim() : null);
@@ -399,12 +401,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int disableUser(Long id) {
+        authRoleMapper.lockAdminRole();
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
             return 0;
         }
         if (isLastActiveAdmin(user)) {
-            throw new BusinessException("不能禁用最后一个有效管理员");
+            throw lastActiveAdminRequired();
         }
         int updated = authUserMapper.updateStatus(id, "disabled");
         if (updated > 0) {
@@ -555,6 +558,10 @@ public class AuthServiceImpl implements AuthService {
                 && "ADMIN".equalsIgnoreCase(user.getRoleCode())
                 && "active".equalsIgnoreCase(user.getStatus())
                 && authUserMapper.countActiveAdmins() <= 1;
+    }
+
+    private BusinessException lastActiveAdminRequired() {
+        return new BusinessException(409, "不能停用或降级最后一个有效管理员", "LAST_ACTIVE_ADMIN_REQUIRED");
     }
 
     private AuthRole requireRole(String roleCode) {

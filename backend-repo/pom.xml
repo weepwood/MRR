@@ -32,7 +32,7 @@
         <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.8.0</itextpdf.version>
         <commons-codec.version>1.22.0</commons-codec.version>
-        <aws-sdk.version>1.12.797</aws-sdk.version>
+        <aws-sdk.version>2.57.2</aws-sdk.version>
 
         <!-- Plugin versions not managed by the Spring Boot parent -->
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
@@ -89,8 +89,13 @@
 
         <!-- AWS -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
             <version>${aws-sdk.version}</version>
         </dependency>
 

@@ -1,24 +1,29 @@
 package com.zjcxph.imgapi.storage;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.S3Object;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import com.zjcxph.imgapi.config.OssProperties;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.time.Duration;
 
 @Component
 public class OssObjectReader {
 
     private final OssProperties properties;
-    private volatile AmazonS3 client;
+    private volatile S3Client client;
 
     public OssObjectReader(OssProperties properties) {
         this.properties = properties;
@@ -26,8 +31,8 @@ public class OssObjectReader {
 
     public InputStream open(String objectKey) throws IOException {
         try {
-            S3Object object = client().getObject(properties.getBucket(), objectKey);
-            return object.getObjectContent();
+            return client().getObject(GetObjectRequest.builder()
+                    .bucket(properties.getBucket()).key(objectKey).build());
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片读取失败", exception);
         }
@@ -35,14 +40,15 @@ public class OssObjectReader {
 
     public long size(String objectKey) throws IOException {
         try {
-            return client().getObjectMetadata(properties.getBucket(), objectKey).getContentLength();
+            return client().headObject(HeadObjectRequest.builder()
+                    .bucket(properties.getBucket()).key(objectKey).build()).contentLength();
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片元数据读取失败", exception);
         }
     }
 
-    private AmazonS3 client() throws IOException {
-        AmazonS3 current = client;
+    private S3Client client() throws IOException {
+        S3Client current = client;
         if (current != null) {
             return current;
         }
@@ -54,7 +60,7 @@ public class OssObjectReader {
         }
     }
 
-    private AmazonS3 buildClient() throws IOException {
+    private S3Client buildClient() throws IOException {
         String accessKeyId = require(properties.getAccessKeyId(), "OSS_ACCESS_KEY_ID");
         String accessKeySecret = require(properties.getAccessKeySecret(), "OSS_ACCESS_KEY_SECRET");
         String endpoint = require(properties.getEndpoint(), "OSS_ENDPOINT");
@@ -66,19 +72,19 @@ public class OssObjectReader {
             endpoint = "https://" + endpoint;
         }
 
-        ClientConfiguration configuration = new ClientConfiguration();
-        configuration.setConnectionTimeout(30_000);
-        configuration.setSocketTimeout(60_000);
-        configuration.setMaxConnections(50);
-
-        return AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        endpoint,
-                        properties.getRegion()))
-                .withCredentials(new AWSStaticCredentialsProvider(
-                        new BasicAWSCredentials(accessKeyId, accessKeySecret)))
-                .withClientConfiguration(configuration)
-                .withPathStyleAccessEnabled(properties.isPathStyleAccess())
+        return S3Client.builder()
+                .endpointOverride(URI.create(endpoint))
+                .region(Region.of(require(properties.getRegion(), "OSS_REGION")))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(accessKeyId, accessKeySecret)))
+                .httpClientBuilder(ApacheHttpClient.builder()
+                        .connectionTimeout(Duration.ofSeconds(30))
+                        .socketTimeout(Duration.ofSeconds(60))
+                        .maxConnections(50))
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(properties.isPathStyleAccess()).build())
+                .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
                 .build();
     }
 
@@ -95,9 +101,9 @@ public class OssObjectReader {
 
     @PreDestroy
     public void close() {
-        AmazonS3 current = client;
+        S3Client current = client;
         if (current != null) {
-            current.shutdown();
+            current.close();
         }
     }
 }

@@ -207,7 +207,9 @@ MRR/
 
 技术：Vue 3 Composition API + `<script setup>`、TypeScript、Vite、Pinia、Element Plus、UnoCSS。
 
-常用命令：
+常用命令（按需执行）：
+
+本地默认只做快速静态检查和必要的手工冒烟；不要把全量测试套件作为每次启动或提交的前置步骤。完整单测、集成测试和 E2E 由 PR 的 GitHub Actions 按改动范围执行。调试具体逻辑时，可在本地运行对应的单个测试。
 
 ```bash
 cd frontend-fantastic-admin

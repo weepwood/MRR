@@ -28,7 +28,7 @@
 .\scripts\dev.ps1 down -PythonExe 'C:\Python312\python.exe'
 ```
 
-up 冻结安装前端依赖并用 Wrapper 打包后端；使用独立 PostgreSQL16 容器和命名卷，不读取已有本地数据库配置。首次需要联网下载依赖。Web 默认9200；`-WebPort 0` 自动分配本机端口，后端与管理端口自动分配。使用 `-SkipBuild` 可复用本工作树已有 JAR 和前端依赖，适用于只需重新启动的开发场景。
+up 冻结安装前端依赖并用 Wrapper 打包后端；后端命令显式使用 `-DskipTests`，因此启动流程不会运行测试套件。启动耗时主要来自依赖安装与 `clean package` 构建。首次需要联网下载依赖。Web 默认9200；`-WebPort 0` 自动分配本机端口，后端与管理端口自动分配。使用 `-SkipBuild` 可复用本工作树已有 JAR 和前端依赖，适用于只需重新启动的开发场景。完整测试由 PR GitHub Actions 按改动范围执行，本地仅在调试问题时按需运行相关测试。
 
 Java、Vite 和 PostgreSQL 均仅绑定本机；管理端口不公开。启动就绪要求登录页200且无Token的auth/me返回401。账号通过现有注册审批或系统建号流程建立，不提供跳过鉴权的开发账号。
 

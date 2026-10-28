@@ -266,7 +266,23 @@ MRR/
 └── README.md
 ```
 
-## 验证命令
+## 本地快速检查与 CI 验证
+
+本地开发默认运行快速静态检查和必要的手工冒烟，不需要每次启动或提交前执行全量测试。PR 上的 GitHub Actions 会按改动范围运行单测、PostgreSQL 集成测试和关键流程 E2E；完整覆盖率与发布/恢复验收在发布流程执行。只有在本地调试特定问题时，才手动运行对应测试。
+
+快速检查示例：
+
+```bash
+python scripts/release_baseline.py validate
+
+cd backend-repo
+./mvnw -B -ntp -DskipTests compile
+
+cd ../frontend-fantastic-admin
+pnpm lint:tsc
+```
+
+Windows 后端命令使用 `mvnw.cmd`。以下为按需手动运行的完整验证命令，不是每次本地开发的必跑步骤：
 
 ```bash
 python -m unittest discover -s scripts/tests -p 'test_*.py' -v

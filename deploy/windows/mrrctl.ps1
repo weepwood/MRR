@@ -21,6 +21,7 @@ $P = @{
     Maintenance = Join-Path $Root 'config\nginx\maintenance.inc'
     MaintenancePage = Join-Path $Root 'shared\maintenance.html'
     FrontendMode = Join-Path $Root 'config\nginx\frontend-mode.inc'
+    SecurityHeaders = Join-Path $Root 'config\nginx\security-headers.inc'
     Nginx = Join-Path $Root 'runtime\nginx\nginx.exe'
     NginxHome = Join-Path $Root 'runtime\nginx'
     NginxConfig = Join-Path $Root 'config\nginx\nginx.conf'
@@ -514,9 +515,24 @@ function Show-Versions {
     } | Format-Table -AutoSize
 }
 
+# 安全响应头片段是否已随 Nginx 配置落地。旧版 nginx.conf 在 location 内声明
+# add_header 后丢弃了 server 级安全头，而这类缺陷不会让 nginx -t 失败，
+# 因此 doctor 必须显式提示。
+function Assert-SecurityHeaders {
+    if (-not (Test-Path -LiteralPath $P.SecurityHeaders -PathType Leaf)) {
+        Write-Warning "缺少安全响应头片段：$($P.SecurityHeaders)；请重新运行安装脚本或应用新版 deploy/windows/templates。"
+        return
+    }
+    $config = Get-Content -LiteralPath $P.NginxConfig -Raw -Encoding UTF8
+    if ($config -notmatch 'security-headers\.inc') {
+        Write-Warning 'Nginx 配置未 include security-headers.inc，SPA 与状态页会丢失 X-Content-Type-Options / X-Frame-Options / Referrer-Policy；请按新版 templates/nginx.conf 重新生成配置。'
+    }
+}
+
 function Doctor {
     Status
     Invoke-Nginx test
+    Assert-SecurityHeaders
     if ((Get-FrontendMode) -eq 'embedded') {
         Assert-BundledFrontendJar (Join-Path $P.Current 'backend\mrr-backend.jar')
         Write-Host 'JAR 内嵌前端校验通过。' -ForegroundColor Green

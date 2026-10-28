@@ -120,7 +120,7 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
 
 - JDK 21+
-- 仓库自带 Maven Wrapper 3.9.9，无需全局 Maven
+- 仓库自带 Maven Wrapper 3.10.0（以 Wrapper 配置为准），无需全局 Maven
 - PostgreSQL 16+
 - Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0
@@ -135,6 +135,17 @@ git switch main
 ```
 
 ### 数据库
+
+Windows 本地开发可以使用统一入口，自动创建独立 PostgreSQL16、随机本地密钥并启动原生 Java/Vite：
+
+```powershell
+.\scripts\dev.ps1 doctor
+.\scripts\dev.ps1 up
+.\scripts\dev.ps1 status
+.\scripts\dev.ps1 down
+```
+
+如 `python` 不可执行，添加 `-PythonExe 'C:\Python312\python.exe'` 指定实际路径。Web 端口被占用时使用 `-WebPort 0`。资源归属、日志隐私、数据卷保留和容器验证见[可重复的本地开发与启动](docs/engineering/local-development.md)。
 
 正式迁移位于：
 
@@ -255,7 +266,23 @@ MRR/
 └── README.md
 ```
 
-## 验证命令
+## 本地快速检查与 CI 验证
+
+本地开发默认运行快速静态检查和必要的手工冒烟，不需要每次启动或提交前执行全量测试。PR 上的 GitHub Actions 会按改动范围运行单测、PostgreSQL 集成测试和关键流程 E2E；完整覆盖率与发布/恢复验收在发布流程执行。只有在本地调试特定问题时，才手动运行对应测试。
+
+快速检查示例：
+
+```bash
+python scripts/release_baseline.py validate
+
+cd backend-repo
+./mvnw -B -ntp -DskipTests compile
+
+cd ../frontend-fantastic-admin
+pnpm lint:tsc
+```
+
+Windows 后端命令使用 `mvnw.cmd`。以下为按需手动运行的完整验证命令，不是每次本地开发的必跑步骤：
 
 ```bash
 python -m unittest discover -s scripts/tests -p 'test_*.py' -v

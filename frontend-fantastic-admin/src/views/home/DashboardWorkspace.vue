@@ -48,7 +48,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'archive',
     title: '影像档案袋',
     description: '查询并浏览病案影像、缩略图和患者信息。',
-    icon: 'i-ant-design:folder-open-twotone',
+    icon: 'i-lucide:folder-open',
     path: '/archive/embed',
     permission: 'record:read',
     defaultSize: 'wide',
@@ -58,7 +58,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'records',
     title: '记录管理',
     description: '维护病案扫描记录及其基础数据。',
-    icon: 'i-ant-design:database-twotone',
+    icon: 'i-lucide:files',
     path: '/records',
     permission: 'record:read',
     defaultSize: 'small',
@@ -67,7 +67,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'statistics',
     title: '病案扫描统计',
     description: '按年份、科室和扫描状态查看统计结果。',
-    icon: 'i-ant-design:area-chart-outlined',
+    icon: 'i-lucide:chart-column',
     path: '/statistics',
     permission: 'statistics:read',
     defaultSize: 'wide',
@@ -76,7 +76,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'monitoring',
     title: '系统监控',
     description: '查看服务、数据库、内存和运行指标。',
-    icon: 'i-ant-design:dashboard-twotone',
+    icon: 'i-lucide:activity',
     path: '/monitoring',
     permission: 'system:read',
     defaultSize: 'small',
@@ -85,7 +85,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'statistics-detail',
     title: '统计明细',
     description: '查看病案扫描与档案记录的详细数据。',
-    icon: 'i-ant-design:profile-twotone',
+    icon: 'i-lucide:table-2',
     path: '/statistics-detail',
     permission: 'statistics:read',
     defaultSize: 'small',
@@ -94,7 +94,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'audit-images',
     title: '病案图片访问审计',
     description: '查询病案影像查看、下载和访问记录。',
-    icon: 'i-ant-design:security-scan-outlined',
+    icon: 'i-lucide:eye',
     path: '/audit-images',
     permission: 'log:read',
     defaultSize: 'small',
@@ -103,7 +103,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'patients',
     title: '患者管理',
     description: '查看患者与住院病案的关联信息。',
-    icon: 'i-ant-design:team-outlined',
+    icon: 'i-lucide:users-round',
     path: '/patients',
     permission: 'record:read',
     defaultSize: 'small',
@@ -113,7 +113,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'archive-boxes',
     title: '档案装箱',
     description: '管理病案装箱、箱号和档案状态。',
-    icon: 'i-ant-design:inbox-outlined',
+    icon: 'i-lucide:archive',
     path: '/archive-boxes',
     permission: 'record:read',
     defaultSize: 'small',
@@ -123,7 +123,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'oss-migration',
     title: 'OSS 迁移管理',
     description: '查看与管理病案影像迁移任务。',
-    icon: 'i-ant-design:cloud-upload-outlined',
+    icon: 'i-lucide:cloud-upload',
     path: '/oss-migration',
     permission: 'record:read',
     defaultSize: 'small',
@@ -133,7 +133,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'data-relations',
     title: '数据关系工作台',
     description: '检查数据库表之间的关联和数据完整性。',
-    icon: 'i-ant-design:apartment-outlined',
+    icon: 'i-lucide:workflow',
     path: '/data-relations',
     permission: 'system:read',
     defaultSize: 'wide',
@@ -143,7 +143,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'users',
     title: '用户管理',
     description: '创建用户、审核账号和重置密码。',
-    icon: 'i-ant-design:user-outlined',
+    icon: 'i-lucide:user-round',
     path: '/users',
     permission: 'user:manage',
     defaultSize: 'small',
@@ -153,7 +153,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'permissions',
     title: '权限管理',
     description: '维护角色权限和功能访问范围。',
-    icon: 'i-ant-design:lock-twotone',
+    icon: 'i-lucide:shield-check',
     path: '/permissions',
     permission: 'role:read',
     defaultSize: 'small',
@@ -163,7 +163,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'settings',
     title: '系统设置',
     description: '配置系统信息、档案浏览、安全和界面外观。',
-    icon: 'i-ant-design:tool-twotone',
+    icon: 'i-lucide:sliders-horizontal',
     path: '/settings',
     permission: 'system:read',
     defaultSize: 'small',
@@ -173,7 +173,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'logs',
     title: '日志管理',
     description: '检索系统日志、操作记录和异常信息。',
-    icon: 'i-ant-design:file-search-outlined',
+    icon: 'i-lucide:file-search',
     path: '/logs',
     permission: 'log:read',
     defaultSize: 'small',
@@ -183,7 +183,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'status',
     title: '服务状态',
     description: '快速确认系统服务是否正常运行。',
-    icon: 'i-ant-design:check-circle-twotone',
+    icon: 'i-lucide:circle-check',
     path: '/status',
     permission: 'system:read',
     defaultSize: 'small',
@@ -193,7 +193,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'response-analysis',
     title: '接口响应分析',
     description: '分析慢接口、响应时间和近期性能趋势。',
-    icon: 'i-ant-design:fund-projection-screen-outlined',
+    icon: 'i-lucide:gauge',
     path: '/response-analysis',
     permission: 'system:read',
     defaultSize: 'wide',
@@ -203,7 +203,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'auth-test',
     title: '认证接口测试',
     description: '验证登录、鉴权和外部系统接入流程。',
-    icon: 'i-ant-design:api-twotone',
+    icon: 'i-lucide:key-round',
     path: '/auth-test',
     permission: 'user:manage',
     defaultSize: 'small',
@@ -213,7 +213,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
     id: 'help',
     title: '帮助与文档',
     description: '查看功能说明、使用流程和常见问题。',
-    icon: 'i-ant-design:read-outlined',
+    icon: 'i-lucide:book-open',
     path: '/help',
     defaultSize: 'small',
     defaultVisible: false,
@@ -481,16 +481,16 @@ watch(storageKey, loadPreferences, { immediate: true })
 
       <template #actions>
         <el-button @click="managerVisible = true">
-          <FaIcon name="i-ri:layout-grid-line" />
+          <FaIcon name="i-lucide:layout-grid" />
           管理小组件
           <span v-if="hiddenWidgetCount" class="hidden-count">{{ hiddenWidgetCount }}</span>
         </el-button>
         <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
-          <FaIcon :name="editMode ? 'i-ri:check-line' : 'i-ri:drag-move-2-line'" />
+          <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
           {{ editMode ? '完成调整' : '调整布局' }}
         </el-button>
         <el-button v-if="editMode" @click="resetDashboard">
-          <FaIcon name="i-ri:restart-line" />
+          <FaIcon name="i-lucide:rotate-cw" />
           恢复默认
         </el-button>
       </template>
@@ -498,7 +498,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
     <section class="dashboard-workspace" aria-label="我的工作台">
       <div v-if="editMode" class="dashboard-workspace__notice">
-        <FaIcon name="i-ri:drag-move-2-line" />
+        <FaIcon name="i-lucide:move" />
         拖动卡片调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
       </div>
 
@@ -538,7 +538,7 @@ watch(storageKey, loadPreferences, { immediate: true })
               <div class="dashboard-widget__title-row">
                 <strong>{{ widget.title }}</strong>
                 <span v-if="widget.pinned" class="pin-badge">
-                  <FaIcon name="i-ri:pushpin-2-fill" />
+                  <FaIcon name="i-lucide:pin" />
                   置顶
                 </span>
               </div>
@@ -547,50 +547,58 @@ watch(storageKey, loadPreferences, { immediate: true })
             <div v-if="editMode" class="dashboard-widget__tools" @click.stop>
               <el-tooltip content="拖动小组件" placement="top">
                 <el-button text circle size="small" class="drag-handle" aria-label="拖动小组件">
-                  <FaIcon name="i-ri:draggable" />
+                  <FaIcon name="i-lucide:grip-vertical" />
                 </el-button>
               </el-tooltip>
               <el-dropdown trigger="click" @command="handleWidgetCommand($event, widget)">
                 <el-button text circle size="small" aria-label="小组件设置">
-                  <FaIcon name="i-ri:more-2-fill" />
+                  <FaIcon name="i-lucide:ellipsis" />
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="edit">
-                      <FaIcon name="i-ri:edit-line" />编辑设置
+                      <FaIcon name="i-lucide:pencil" />编辑设置
                     </el-dropdown-item>
                     <el-dropdown-item command="pin">
-                      <FaIcon :name="widget.pinned ? 'i-ri:unpin-line' : 'i-ri:pushpin-2-line'" />
+                      <FaIcon :name="widget.pinned ? 'i-lucide:pin-off' : 'i-lucide:pin'" />
                       {{ widget.pinned ? '取消置顶' : '置顶' }}
                     </el-dropdown-item>
-                    <el-dropdown-item divided command="size:small">标准大小</el-dropdown-item>
-                    <el-dropdown-item command="size:wide">宽卡片</el-dropdown-item>
-                    <el-dropdown-item command="size:large">大卡片</el-dropdown-item>
+                    <el-dropdown-item divided command="size:small">
+                      标准大小
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:wide">
+                      宽卡片
+                    </el-dropdown-item>
+                    <el-dropdown-item command="size:large">
+                      大卡片
+                    </el-dropdown-item>
                     <el-dropdown-item divided command="hide">
-                      <FaIcon name="i-ri:eye-off-line" />隐藏组件
+                      <FaIcon name="i-lucide:eye-off" />隐藏组件
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
             </div>
-            <FaIcon v-else name="i-ri:arrow-right-s-line" class="dashboard-widget__arrow" />
+            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" />
           </header>
 
           <div class="dashboard-widget__body">
             <p>{{ widget.description }}</p>
             <div class="dashboard-widget__footer">
               <span>{{ editMode ? '拖动调整位置' : '进入模块' }}</span>
-              <FaIcon :name="editMode ? 'i-ri:drag-move-2-line' : 'i-ri:arrow-right-line'" />
+              <FaIcon :name="editMode ? 'i-lucide:move' : 'i-lucide:arrow-right'" />
             </div>
           </div>
         </article>
       </div>
 
       <div v-else class="dashboard-empty">
-        <FaIcon name="i-ant-design:appstore-add-outlined" />
+        <FaIcon name="i-lucide:layout-grid" />
         <strong>当前没有显示的小组件</strong>
         <p>可以从“小组件管理”中重新启用需要的模块。</p>
-        <el-button type="primary" @click="managerVisible = true">管理小组件</el-button>
+        <el-button type="primary" @click="managerVisible = true">
+          管理小组件
+        </el-button>
       </div>
     </section>
 
@@ -636,11 +644,11 @@ watch(storageKey, loadPreferences, { immediate: true })
             :disabled="!isWidgetVisible(definition.id)"
             @click="toggleWidgetPinned(definition.id)"
           >
-            <FaIcon :name="isWidgetPinned(definition.id) ? 'i-ri:pushpin-2-fill' : 'i-ri:pushpin-2-line'" />
+            <FaIcon :name="isWidgetPinned(definition.id) ? 'i-lucide:pin' : 'i-lucide:pin'" />
             {{ isWidgetPinned(definition.id) ? '已置顶' : '置顶' }}
           </el-button>
           <el-button text :disabled="!isWidgetVisible(definition.id)" @click="openWidgetEditor(definition.id)">
-            <FaIcon name="i-ri:edit-line" />编辑
+            <FaIcon name="i-lucide:pencil" />编辑
           </el-button>
           <el-switch
             :model-value="isWidgetVisible(definition.id)"
@@ -650,8 +658,12 @@ watch(storageKey, loadPreferences, { immediate: true })
         </div>
       </div>
       <template #footer>
-        <el-button @click="resetDashboard">恢复默认</el-button>
-        <el-button type="primary" @click="managerVisible = false">完成</el-button>
+        <el-button @click="resetDashboard">
+          恢复默认
+        </el-button>
+        <el-button type="primary" @click="managerVisible = false">
+          完成
+        </el-button>
       </template>
     </el-dialog>
 
@@ -691,9 +703,15 @@ watch(storageKey, loadPreferences, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="restoreEditorDefaults">恢复该组件默认值</el-button>
-        <el-button @click="editorVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveWidgetEditor">保存</el-button>
+        <el-button @click="restoreEditorDefaults">
+          恢复该组件默认值
+        </el-button>
+        <el-button @click="editorVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="saveWidgetEditor">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </MrrPageShell>
@@ -1136,8 +1154,9 @@ watch(storageKey, loadPreferences, { immediate: true })
   display: flex;
   gap: 8px;
   align-items: center;
-  min-height: 38px;
-  padding: 8px 10px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 10px;
   font-size: 12px;
   color: var(--mrr-foreground);
   cursor: pointer;

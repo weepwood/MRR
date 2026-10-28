@@ -5,8 +5,8 @@ import type {
   SystemErrorStatus,
 } from '@/api/modules/system-errors'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
-import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   getSystemErrorDetail,
@@ -17,6 +17,7 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { formatDateTime } from '@/utils/display-format'
@@ -178,7 +179,7 @@ onMounted(loadData)
             v-model="query.keyword"
             clearable
             placeholder="错误编号 / Request ID / 异常 / 消息"
-            style="width: 300px;"
+            class="runtime-errors-keyword"
             @keyup.enter="handleSearch"
           />
         </el-form-item>
@@ -186,31 +187,30 @@ onMounted(loadData)
           <el-input v-model="query.module" clearable placeholder="controller / storage" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="级别">
-          <el-select v-model="query.level" clearable placeholder="全部" style="width: 130px;">
+          <el-select v-model="query.level" clearable placeholder="全部" class="runtime-errors-level">
             <el-option label="ERROR" value="ERROR" />
             <el-option label="WARN" value="WARN" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="query.status" clearable placeholder="全部" style="width: 140px;">
+          <el-select v-model="query.status" clearable placeholder="全部" class="runtime-errors-status">
             <el-option label="待处理" value="OPEN" />
             <el-option label="处理中" value="ACKNOWLEDGED" />
             <el-option label="已解决" value="RESOLVED" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
-          </el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
         </el-form-item>
       </el-form>
 
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无运行错误事件" />
-      <el-table v-else :data="list" stripe style="margin-top: 12px;">
+      <el-table v-else :data="list" stripe class="runtime-errors-table">
         <el-table-column prop="lastSeenAt" label="最后发生" min-width="175">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
         </el-table-column>
@@ -366,6 +366,22 @@ onMounted(loadData)
 
 .summary-pre {
   max-height: 180px;
+}
+
+.runtime-errors-keyword {
+  width: 300px;
+}
+
+.runtime-errors-level {
+  width: 130px;
+}
+
+.runtime-errors-status {
+  width: 140px;
+}
+
+.runtime-errors-table {
+  margin-top: 12px;
 }
 
 @media (max-width: 720px) {

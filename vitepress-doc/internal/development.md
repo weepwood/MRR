@@ -75,6 +75,10 @@ netsh interface ipv4 show excludedportrange protocol=tcp
 
 ## 前端检查
 
+本地日常开发默认运行类型检查、修改文件的 lint 和必要的手工冒烟；完整单测、覆盖率、构建兼容检查及 E2E 由 PR GitHub Actions 按改动范围执行。无需每次启动或提交前跑完整套测试。调试具体问题时，可本地运行相关测试。
+
+以下命令按需手动执行；不是本地每次改动都要全部运行：
+
 ```bash
 pnpm lint:tsc
 pnpm lint:eslint
@@ -85,7 +89,7 @@ pnpm build:mock
 pnpm test:e2e
 ```
 
-最低要求：
+PR 合并前由 CI 验证：
 
 1. TypeScript 检查通过。
 2. 修改文件的 ESLint 与 Stylelint 通过。
@@ -94,6 +98,10 @@ pnpm test:e2e
 5. 交互变更执行 Playwright 或人工回归。
 
 ## 后端检查
+
+本地日常开发可先运行编译检查；单测和 PostgreSQL 集成测试由 PR GitHub Actions 执行。仅在调试或定位 CI 失败时，按需在本地运行对应测试。
+
+以下 Maven 测试命令用于本地定位问题；普通 PR 的测试由 GitHub Actions 执行：
 
 ```bash
 mvn test

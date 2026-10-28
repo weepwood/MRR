@@ -24,14 +24,14 @@ const emit = defineEmits<{
 const userActions: MrrTableAction[] = [{
   key: 'export-user',
   label: '导出访问明细',
-  icon: 'i-ri:download-line',
+  icon: 'i-lucide:download',
   tone: 'primary',
   placement: 'inline',
 }]
 const targetActions: MrrTableAction[] = [{
   key: 'export-target',
   label: '导出访问人员',
-  icon: 'i-ri:download-line',
+  icon: 'i-lucide:download',
   tone: 'success',
   placement: 'inline',
 }]
@@ -82,30 +82,30 @@ function handleTargetAction(action: string, target: string) {
     <section class="mrr-metric-grid">
       <MrrMetricCard
         label="访问用户数"
-        icon="i-ep:user"
+        icon="i-lucide:user-round"
         :value="loading ? '—' : formatNumber(analytics.uniqueUsers)"
       />
       <MrrMetricCard
         label="被访问病历数"
-        icon="i-ep:files"
+        icon="i-lucide:files"
         tone="teal"
         :value="loading ? '—' : formatNumber(analytics.uniqueTargets)"
       />
       <MrrMetricCard
         label="总访问次数"
-        icon="i-ep:data-analysis"
+        icon="i-lucide:chart-no-axes-combined"
         :value="loading ? '—' : formatNumber(analytics.totalAccesses)"
       />
       <MrrMetricCard
         label="异常访问告警"
-        icon="i-ep:warning"
+        icon="i-lucide:triangle-alert"
         tone="danger"
         :value="loading ? '—' : formatNumber(analytics.abnormalAccesses)"
         :suffix="`${abnormalRate.toFixed(1)}%`"
       />
       <MrrMetricCard
         label="平均响应耗时"
-        icon="i-ep:timer"
+        icon="i-lucide:timer"
         tone="slate"
         :value="loading ? '—' : formatNumber(analytics.averageDurationMs, 1)"
         suffix="ms"

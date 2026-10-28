@@ -2,77 +2,197 @@ name: quality-gate
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-      - '*.*.*'
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+  group: quality-gate-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  release-baseline-gate:
+  scope:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.scope.outputs.frontend }}
+      backend: ${{ steps.scope.outputs.backend }}
+      integration: ${{ steps.scope.outputs.integration }}
+      build: ${{ steps.scope.outputs.build }}
+      e2e: ${{ steps.scope.outputs.e2e }}
+      postgres: ${{ steps.scope.outputs.postgres }}
+      live: ${{ steps.scope.outputs.live }}
+      windows: ${{ steps.scope.outputs.windows }}
+      recovery: ${{ steps.scope.outputs.recovery }}
+      release: ${{ steps.scope.outputs.release }}
+      development: ${{ steps.scope.outputs.development }}
+      base: ${{ steps.scope.outputs.base }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Test repository tooling
+      - name: Read last successful main integration
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality-gate.yml/runs?branch=main&event=push&status=success&per_page=20" > main-runs.json
+      - name: Select checks once for the complete change
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = pull_request ]; then
+            python -m scripts.ci_gate scope --mode pr --base "${BASE_SHA}" --output "${GITHUB_OUTPUT}"
+          else
+            python -m scripts.ci_gate scope --mode integration --runs main-runs.json --output "${GITHUB_OUTPUT}"
+          fi
+      - name: Repository invariants
+        run: |
+          python scripts/release_baseline.py validate
+          python scripts/test_inventory.py --fail-on-focused
+          python scripts/check_main_branch_references.py
+          python scripts/check_engineering_docs.py
+          python -c "from pathlib import Path; from scripts.engineering_preflight import configuration_problems; p=configuration_problems(Path('.')); print('\n'.join(p)); raise SystemExit(bool(p))"
+      - name: Test CI and repository tooling when affected
+        if: steps.scope.outputs.tooling == 'true'
         run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
 
-      - name: Generate test inventory
+  frontend:
+    needs: scope
+    if: needs.scope.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint:tsc
+      - name: Lint changed sources
+        env:
+          LINT_BASE_SHA: ${{ needs.scope.outputs.base }}
+          LINT_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/lint-changed.mjs
+      - name: Unit tests without coverage collection
+        run: pnpm test:run
+      - name: Production build and Chrome 86 compatibility
+        if: needs.scope.outputs.build == 'true'
         run: |
-          python scripts/test_inventory.py \
-            --fail-on-focused \
-            --output test-inventory.md \
-            --github-summary "${GITHUB_STEP_SUMMARY}"
+          pnpm build
+          pnpm test:compat:chrome86
+      - name: Browser tests only for critical flows or browser test changes
+        if: needs.scope.outputs.e2e == 'true'
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
 
-      - name: Upload test inventory
+  backend:
+    needs: scope
+    if: needs.scope.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: ${{ needs.scope.outputs.postgres == 'true' && 'postgres:16-alpine' || '' }}
+        env:
+          POSTGRES_DB: imgapi
+          POSTGRES_USER: imgapi
+          POSTGRES_PASSWORD: imgapi
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U imgapi -d imgapi"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      MRR_TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/imgapi
+      MRR_TEST_POSTGRES_USERNAME: imgapi
+      MRR_TEST_POSTGRES_PASSWORD: imgapi
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Unit tests
+        if: needs.scope.outputs.postgres != 'true'
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
+      - name: Unit and actual PostgreSQL tests
+        if: needs.scope.outputs.postgres == 'true'
+        run: |
+          bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
+          python scripts/check_test_execution.py --reports backend-repo/target/failsafe-reports
+      - name: Package compiled classes for selected real checks
+        if: needs.scope.outputs.postgres != 'true' && needs.scope.outputs.recovery == 'true'
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+      - name: Share the same backend JAR
+        if: needs.scope.outputs.recovery == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-${{ github.run_id }}-${{ github.sha }}
+          path: backend-repo/target/*.jar
+          retention-days: 1
+          if-no-files-found: error
+      - name: Failed test diagnostics
+        if: failure()
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: test-inventory
-          path: test-inventory.md
-          retention-days: 30
+          name: backend-failure-${{ github.run_id }}
+          path: |
+            backend-repo/target/surefire-reports
+            backend-repo/target/failsafe-reports
+          retention-days: 3
+          if-no-files-found: ignore
 
-      - name: Validate repository release baseline
-        run: python scripts/release_baseline.py validate
+  integration:
+    needs: scope
+    if: needs.scope.outputs.integration == 'true'
+    uses: ./.github/workflows/windows-release-package.yml
+    with:
+      full: false
+      browser_tests: ${{ needs.scope.outputs.e2e == 'true' }}
 
-      - name: Validate main branch references
-        run: python scripts/check_main_branch_references.py
-
-  windows-management-gate:
+  windows:
+    needs: scope
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          show-progress: false
-
-      - name: Setup Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Validate script encoding and CMD entry
-        run: python -m unittest scripts.tests.test_windows_one_click_manager -v
-
-      - name: Parse scripts with Windows PowerShell 5.1
+      - run: python -m unittest scripts.tests.test_windows_one_click_manager -v
+      - run: python -m unittest scripts.tests.test_dev -v
+      - name: Parse development entry with PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'scripts/dev.ps1'), [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw 'Development entry has PowerShell syntax errors.' }
+      - name: Parse deployment scripts with PowerShell 5.1
         shell: powershell
         run: |
           $failed = $false
@@ -80,371 +200,46 @@ jobs:
             $tokens = $null
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
-            if ($errors.Count -gt 0) {
-              $failed = $true
-              Write-Error "Windows PowerShell 5.1 syntax error in $($_.FullName): $($errors -join '; ')"
-            }
+            if ($errors.Count -gt 0) { $failed = $true; Write-Error "PowerShell syntax error: $($_.Name)" }
           }
           if ($failed) { exit 1 }
+          .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
 
-      - name: Run manager self-test with Windows PowerShell 5.1
-        shell: powershell
-        run: .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
+  recovery:
+    needs: [scope, backend]
+    if: needs.scope.outputs.recovery == 'true'
+    uses: ./.github/workflows/windows-database-recovery.yml
+    with:
+      backend_artifact: backend-${{ github.run_id }}-${{ github.sha }}
 
-  frontend-scope:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      frontend_changed: ${{ steps.scope.outputs.frontend_changed }}
-      e2e_changed: ${{ steps.scope.outputs.e2e_changed }}
-      reason: ${{ steps.scope.outputs.reason }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+  release:
+    needs: scope
+    if: needs.scope.outputs.release == 'true'
+    uses: ./.github/workflows/release-validation.yml
 
-      - name: Detect frontend test scope
-        id: scope
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" != 'pull_request' ]; then
-            {
-              echo 'frontend_changed=true'
-              echo 'e2e_changed=true'
-              echo 'reason=push-or-tag'
-            } >> "${GITHUB_OUTPUT}"
-            echo 'Push/tag execution: run the complete frontend verification.'
-            exit 0
-          fi
-
-          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-files.txt
-          echo 'Changed files:'
-          cat changed-files.txt
-          python scripts/frontend_test_scope.py \
-            --github-output "${GITHUB_OUTPUT}" \
-            changed-files.txt
-
-  frontend-tests:
-    needs: frontend-scope
-    if: needs.frontend-scope.outputs.frontend_changed == 'true'
+  development:
+    needs: scope
+    if: needs.scope.outputs.development == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: frontend-fantastic-admin
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          fetch-depth: 0
+          python-version: '3.12'
+      - name: Build clean development images and verify startup and refusal
+        run: python -m scripts.smoke_dev
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.33.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: frontend-fantastic-admin/.node-version
-          cache: pnpm
-          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type Check
-        run: pnpm lint:tsc
-
-      - name: Lint Changed Files
-        env:
-          LINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          LINT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -o pipefail
-          node scripts/lint-changed.mjs 2>&1 | tee lint-changed.log
-
-      - name: Upload lint report
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-lint-report
-          path: frontend-fantastic-admin/lint-changed.log
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Build
-        run: pnpm build
-
-      - name: Verify Chrome 86 production compatibility
-        run: pnpm test:compat:chrome86
-
-      - name: Unit Test with coverage
-        run: pnpm test:coverage
-
-      - name: Summarize frontend coverage
-        shell: bash
-        run: |
-          set -euo pipefail
-          baseline_args=()
-          if [ -f ../quality/frontend-coverage-baseline.json ]; then
-            baseline_args+=(--baseline ../quality/frontend-coverage-baseline.json)
-          fi
-          python3 ../scripts/vitest_coverage.py \
-            --summary coverage/coverage-summary.json \
-            "${baseline_args[@]}" \
-            --max-regression 0.50 \
-            --fail-on-regression \
-            --output-json coverage/coverage-comparison.json \
-            --output-markdown coverage/coverage-comparison.md \
-            --github-summary "${GITHUB_STEP_SUMMARY}"
-
-      - name: Upload frontend coverage report
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-coverage-report
-          path: frontend-fantastic-admin/coverage
-          if-no-files-found: ignore
-          retention-days: 30
-
-      - name: Install Chromium
-        if: needs.frontend-scope.outputs.e2e_changed == 'true'
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: End-to-End Test
-        if: needs.frontend-scope.outputs.e2e_changed == 'true'
-        timeout-minutes: 15
-        run: pnpm test:e2e
-
-      - name: Upload Playwright report
-        if: ${{ always() && needs.frontend-scope.outputs.e2e_changed == 'true' }}
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: |
-            frontend-fantastic-admin/playwright-report
-            frontend-fantastic-admin/test-results
-          if-no-files-found: ignore
-          retention-days: 7
-
-  frontend-gate:
-    needs:
-      - frontend-scope
-      - frontend-tests
+  pr-gate:
+    needs: [scope, frontend, backend, integration, windows, recovery, release, development]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Validate selected frontend gate
-        shell: bash
+      - uses: actions/checkout@v7
+      - name: Reject failed, cancelled, missing or unexpectedly skipped checks
         env:
-          SCOPE_RESULT: ${{ needs.frontend-scope.result }}
-          FRONTEND_CHANGED: ${{ needs.frontend-scope.outputs.frontend_changed }}
-          E2E_CHANGED: ${{ needs.frontend-scope.outputs.e2e_changed }}
-          SCOPE_REASON: ${{ needs.frontend-scope.outputs.reason }}
-          TEST_RESULT: ${{ needs.frontend-tests.result }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          set -euo pipefail
-          echo "scope=${SCOPE_RESULT} frontend=${FRONTEND_CHANGED} e2e=${E2E_CHANGED} reason=${SCOPE_REASON}"
-          echo "frontend_tests=${TEST_RESULT}"
-
-          if [ "${SCOPE_RESULT}" != 'success' ]; then
-            echo 'Frontend test scope detection failed.' >&2
-            exit 1
-          fi
-
-          if [ "${FRONTEND_CHANGED}" != 'true' ]; then
-            echo 'No frontend-related files changed; frontend tests were intentionally skipped.'
-            exit 0
-          fi
-
-          test "${TEST_RESULT}" = 'success'
-
-  backend-scope:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      backend_changed: ${{ steps.scope.outputs.backend_changed }}
-      integration_changed: ${{ steps.scope.outputs.integration_changed }}
-      reason: ${{ steps.scope.outputs.reason }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Detect backend test scope
-        id: scope
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" != 'pull_request' ]; then
-            {
-              echo 'backend_changed=true'
-              echo 'integration_changed=true'
-              echo 'reason=push-or-tag'
-            } >> "${GITHUB_OUTPUT}"
-            echo 'Push/tag execution: run the complete backend verification.'
-            exit 0
-          fi
-
-          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-files.txt
-          echo 'Changed files:'
-          cat changed-files.txt
-          python scripts/backend_test_scope.py \
-            --github-output "${GITHUB_OUTPUT}" \
-            changed-files.txt
-
-  backend-unit-tests:
-    needs: backend-scope
-    if: >-
-      needs.backend-scope.outputs.backend_changed == 'true' &&
-      needs.backend-scope.outputs.integration_changed != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend-repo
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-
-      - name: Unit tests
-        run: mvn -B -ntp test
-
-      - name: Enforce backend unit coverage baseline
-        run: python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
-
-      - name: Upload unit test reports
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-unit-test-reports
-          path: |
-            backend-repo/target/surefire-reports
-            backend-repo/target/site/jacoco
-            backend-repo/target/site/jacoco-combined
-          if-no-files-found: ignore
-          retention-days: 7
-
-  backend-integration-tests:
-    needs: backend-scope
-    if: needs.backend-scope.outputs.integration_changed == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: imgapi
-          POSTGRES_USER: imgapi
-          POSTGRES_PASSWORD: imgapi
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U imgapi -d imgapi"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      MRR_TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/imgapi
-      MRR_TEST_POSTGRES_USERNAME: imgapi
-      MRR_TEST_POSTGRES_PASSWORD: imgapi
-    defaults:
-      run:
-        working-directory: backend-repo
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-
-      - name: Unit and PostgreSQL integration tests
-        run: mvn -B -ntp verify
-
-      - name: Require executed PostgreSQL tests
-        run: python3 ../scripts/check_test_execution.py --reports target/failsafe-reports
-
-      - name: Enforce backend coverage baseline
-        run: |
-          python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
-          python3 ../scripts/jacoco_coverage.py --xml target/site/jacoco-combined/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression
-
-      - name: Upload backend test reports
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-integration-test-reports
-          path: |
-            backend-repo/target/surefire-reports
-            backend-repo/target/failsafe-reports
-            backend-repo/target/site/jacoco
-            backend-repo/target/site/jacoco-combined
-          if-no-files-found: ignore
-          retention-days: 7
-
-  backend-gate:
-    needs:
-      - backend-scope
-      - backend-unit-tests
-      - backend-integration-tests
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Validate selected backend gate
-        shell: bash
-        env:
-          SCOPE_RESULT: ${{ needs.backend-scope.result }}
-          BACKEND_CHANGED: ${{ needs.backend-scope.outputs.backend_changed }}
-          INTEGRATION_CHANGED: ${{ needs.backend-scope.outputs.integration_changed }}
-          SCOPE_REASON: ${{ needs.backend-scope.outputs.reason }}
-          UNIT_RESULT: ${{ needs.backend-unit-tests.result }}
-          INTEGRATION_RESULT: ${{ needs.backend-integration-tests.result }}
-        run: |
-          set -euo pipefail
-          echo "scope=${SCOPE_RESULT} backend=${BACKEND_CHANGED} integration=${INTEGRATION_CHANGED} reason=${SCOPE_REASON}"
-          echo "unit=${UNIT_RESULT} integration_job=${INTEGRATION_RESULT}"
-
-          if [ "${SCOPE_RESULT}" != 'success' ]; then
-            echo 'Backend test scope detection failed.' >&2
-            exit 1
-          fi
-
-          if [ "${BACKEND_CHANGED}" != 'true' ]; then
-            echo 'No backend-related files changed; backend tests were intentionally skipped.'
-            exit 0
-          fi
-
-          if [ "${INTEGRATION_CHANGED}" = 'true' ]; then
-            test "${INTEGRATION_RESULT}" = 'success'
-            exit 0
-          fi
-
-          test "${UNIT_RESULT}" = 'success'
+          printf '%s' "${NEEDS_JSON}" > needs.json
+          python -m scripts.ci_gate check needs.json

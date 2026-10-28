@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Search } from '@element-plus/icons-vue'
 import { computed } from 'vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import { requiresSjhForBah } from '@/utils/medical-record-code'
 import {
   archiveAccessMode,
@@ -52,9 +52,9 @@ const sjhRequired = computed(() => !searchIdCard.value.trim() && requiresSjhForB
             placeholder="身份证号"
             @keyup.enter="emit('search')"
           />
-          <el-button type="primary" :icon="Search" :loading="loading" @click="emit('search')">
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="emit('search')">
             查询
-          </el-button>
+          </MrrFilterActionButton>
         </div>
       </div>
       <p v-if="sjhRequired" class="search-rule-hint">

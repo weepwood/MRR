@@ -192,7 +192,7 @@ class EmbedFrontendInJarTest(unittest.TestCase):
 
         remove_index = dockerfile.index("rm -rf src/main/resources/static")
         copy_index = dockerfile.index("cp -a /workspace/frontend-dist/. src/main/resources/static/")
-        package_index = dockerfile.index("mvn -q -B -ntp -DskipTests package")
+        package_index = dockerfile.index("bash mvnw -q -B -ntp -Dmaven.gitcommitid.skip=true -Dlocal.config.exclude=true -DskipTests package")
 
         self.assertLess(remove_index, copy_index)
         self.assertLess(copy_index, package_index)

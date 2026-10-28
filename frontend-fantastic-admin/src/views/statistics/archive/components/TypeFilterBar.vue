@@ -109,7 +109,8 @@ function onSelection(value: number | 'all') {
   justify-content: space-between;
   width: 100%;
   min-width: 0;
-  padding: 4px 8px;
+  height: var(--mrr-control-height);
+  padding: 0 8px;
   font-size: 13px;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -130,6 +131,10 @@ function onSelection(value: number | 'all') {
 
 .type-tab :deep(.el-checkbox__inner) {
   border-radius: var(--mrr-control-radius);
+}
+
+.type-tab :deep(.el-checkbox) {
+  height: auto;
 }
 
 .type-tab.active {

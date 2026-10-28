@@ -4,29 +4,28 @@ import argparse
 
 
 EXACT = {
-    "VERSION", "release-baseline.json", "backend-repo/pom.xml",
+    "release-baseline.json",
+    ".github/workflows/quality-gate.yml",
+    ".github/workflows/release-on-version-bump.yml",
+    ".github/workflows/release-validation.yml",
     ".github/workflows/windows-release-package.yml",
     ".github/workflows/standalone-jar-release.yml",
     "scripts/ci_build_scope.py", "scripts/tests/test_ci_build_reuse.py",
     "scripts/release_baseline.py", "scripts/embed_frontend_in_jar.py",
     "scripts/build_standalone_jar.py", "scripts/tests/test_build_standalone_jar.py",
     "scripts/tests/test_embed_frontend_in_jar.py",
+    "scripts/ci_gate.py", "scripts/release_candidate.py",
+    "scripts/tests/test_ci_gate.py", "scripts/tests/test_release_candidate.py",
 }
-PREFIXES = ("backend-repo/src/main/resources/", "backend-repo/.mvn/",
-            "deploy/windows/", "vitepress-doc/")
 
 
 def needs_release_build(paths: list[str]) -> bool:
     for raw in paths:
         path = raw.strip().replace("\\", "/").removeprefix("./")
-        if path in EXACT or path.startswith(PREFIXES):
+        if path in EXACT:
             return True
-        # Frontend build inputs include dotfiles, root configs, public and src assets.
-        # Ordinary Vue/TS business changes still receive the normal quality gate.
-        if path.startswith("frontend-fantastic-admin/"):
-            local = path.removeprefix("frontend-fantastic-admin/")
-            if not local.startswith("src/") or local.startswith("src/assets/"):
-                return True
+        # Application/configuration and deployment changes use their scoped checks.
+        # Only release machinery itself requires an additional complete candidate.
     return False
 
 

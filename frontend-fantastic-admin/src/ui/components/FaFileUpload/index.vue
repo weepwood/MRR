@@ -176,7 +176,7 @@ function removeFile(idx: number) {
       @click="fileInputRef?.click()"
     >
       <slot>
-        <FaIcon name="i-icon-park-outline:upload" class="mb-2 text-2xl text-card-foreground/50" />
+        <FaIcon name="i-lucide:upload" class="mb-2 text-2xl text-card-foreground/50" />
         <div class="text-sm text-card-foreground/70">
           将文件拖到此处，或<span class="cursor-pointer text-primary font-bold">点击上传</span>
         </div>
@@ -214,17 +214,17 @@ function removeFile(idx: number) {
         </div>
         <div v-if="item.status === 'uploading'" class="pointer-events-none absolute inset-0 z-0 bg-primary/5" :style="{ width: `${item.progress}%` }" />
         <div v-else-if="item.status === 'success'" class="size-10 flex-center">
-          <FaIcon name="i-ix:upload-success" class="text-lg text-green-600" />
+          <FaIcon name="i-lucide:upload" class="text-lg text-green-600" />
         </div>
         <div v-else-if="item.status === 'error'" class="size-10 flex-center">
-          <FaIcon name="i-ix:upload-fail" class="text-lg text-red-600" />
+          <FaIcon name="i-lucide:circle-x" class="text-lg text-red-600" />
         </div>
         <FaButtonGroup v-if="!props.disabled" class="absolute inset-e-2 top-1/2 opacity-0 transition-opacity -translate-y-1/2 group-hover/file-upload-item:opacity-100">
           <FaButton v-if="item.status === 'error'" variant="outline" size="icon" @click.stop="uploadFile(item.file!, index)">
-            <FaIcon name="i-icon-park-outline:upload" class="cursor-pointer text-lg" />
+            <FaIcon name="i-lucide:upload" class="cursor-pointer text-lg" />
           </FaButton>
           <FaButton v-if="item.status !== 'uploading'" variant="outline" size="icon" @click.stop="removeFile(index)">
-            <FaIcon name="i-icon-park-outline:delete" class="cursor-pointer text-lg text-red-500" />
+            <FaIcon name="i-lucide:trash-2" class="cursor-pointer text-lg text-red-500" />
           </FaButton>
         </FaButtonGroup>
       </div>

@@ -1,6 +1,9 @@
-FROM node:22-alpine AS docs-build
+ARG NODE_VERSION=24.15.0
+FROM node:${NODE_VERSION}-alpine AS docs-build
 WORKDIR /app/docs
-
+RUN apk add --no-cache git
+COPY VERSION /app/VERSION
+COPY backend-repo/examples /app/backend-repo/examples
 COPY vitepress-doc/package.json vitepress-doc/package-lock.json ./
 RUN npm ci
 

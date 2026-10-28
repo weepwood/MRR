@@ -15,7 +15,9 @@ cd ..
 python scripts/run_live_e2e.py --jar backend-repo/target/imgapi-0.8.0.jar
 ```
 
-工作流 `Live browser integration` 对 PR 执行同样的链路。它与现有 Mock E2E 使用独立配置和目录，不共享登录状态、不拦截接口、不伪造 Token。
+涉及关键链路的 PR 和 main 集成在统一应用验证中复用现有运行器；工作流 `Live browser integration` 保留手动/可复用诊断入口。
+发布完整验收直接使用已嵌入生产前端的候选 JAR（`python -m scripts.run_live_e2e --jar <candidate.jar> --embedded`），不再启动 Vite。
+它与现有 Mock E2E 使用独立配置和目录，不共享登录状态、不拦截接口、不伪造 Token。
 
 运行器只创建随机名称的测试容器，PostgreSQL 和后端只监听回环地址，端口随机分配。后端读取 JAR 内标准配置，环境变量采用白名单隔离，JWT/AES/审计密钥和测试密码每次生成。Flyway 初始化空库后，只在该容器内插入两个虚构测试账号，分别使用现有 DOCTOR 和 READER 角色。测试禁止复用已有前端服务；结束或失败时清理自建进程和容器，不连接外部数据库。
 
@@ -23,7 +25,8 @@ python scripts/run_live_e2e.py --jar backend-repo/target/imgapi-0.8.0.jar
 
 浏览器使用正式表单登录，在数据交换页面校验错误文件、预览合法文件、确认写入并查询结果。测试验证预览前后数据库无写入、正式导入只插入一行、无 Token 返回 401、只读角色写入返回 403；运行器最后用 PostgreSQL 查询再次确认行数。账户与数据均为合成夹具。
 
-不生成登录截图、视频或 Trace，不上传后端日志或浏览器测试目录；临时目录随运行清理。现有五项远程必需检查不受本批改变。本工作流进入 main 后，可将 `live-e2e` 加入分支必需检查，避免在旧分支无法产生上下文时锁住合并。
+不生成登录截图、视频或 Trace，不上传后端日志或浏览器测试目录；临时目录随运行清理。
+本检查由 pr-gate 或发布完整验收汇总，不再单独要求每个普通 PR 提供 live-e2e 状态；迁移见 [分层 CI](ci-tiered-verification.md)。
 
 ## 回滚与限制
 

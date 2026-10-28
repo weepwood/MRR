@@ -1,12 +1,17 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.config.CacheConfig;
 import com.zjcxph.imgapi.dto.resp.DataExchangeImportResult;
 import com.zjcxph.imgapi.service.importer.DataExchangeImportSupport;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -41,13 +46,16 @@ public class ScanDataExchangeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TabularImportFileReader fileReader;
+    private final CacheManager cacheManager;
 
     public ScanDataExchangeService(
             JdbcTemplate jdbcTemplate,
-            TabularImportFileReader fileReader
+            TabularImportFileReader fileReader,
+            CacheManager cacheManager
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.fileReader = fileReader;
+        this.cacheManager = cacheManager;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -135,6 +143,9 @@ public class ScanDataExchangeService {
                     errors
             );
         }
+        if (!dryRun) {
+            evictScanQueryCachesAfterCommit();
+        }
         return result(
                 file,
                 parsed.encoding(),
@@ -147,6 +158,36 @@ public class ScanDataExchangeService {
                 fileDuplicateRows + outcome.databaseDuplicateRows(),
                 errors
         );
+    }
+
+    /**
+     * 导入写库后清理扫描记录查询缓存。
+     *
+     * <p>该导入通过 {@code JdbcTemplate} 直写 {@code mr_scan}，绕过了
+     * {@code ScanServiceImpl} 写路径上的 {@code @CacheEvict} 切面。清理动作必须推迟到
+     * 事务提交之后：若在提交前清理，并发查询会在清理与提交之间把旧数据重新写回缓存，
+     * 而这些缓存 TTL 长达一天。</p>
+     */
+    private void evictScanQueryCachesAfterCommit() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictScanQueryCaches();
+                }
+            });
+            return;
+        }
+        evictScanQueryCaches();
+    }
+
+    private void evictScanQueryCaches() {
+        for (String cacheName : CacheConfig.SCAN_QUERY_CACHES) {
+            Cache cache = cacheManager.getCache(cacheName);
+            if (cache != null) {
+                cache.clear();
+            }
+        }
     }
 
     private ScanImportRow normalizeRow(

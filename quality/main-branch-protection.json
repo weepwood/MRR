@@ -3,13 +3,7 @@
     "strict": true,
     "checks": [
       { "context": "governance", "app_id": 15368 },
-      { "context": "release-baseline-gate", "app_id": 15368 },
-      { "context": "frontend-gate", "app_id": 15368 },
-      { "context": "backend-gate", "app_id": 15368 },
-      { "context": "windows-management-gate", "app_id": 15368 },
-      { "context": "windows-package-gate", "app_id": 15368 },
-      { "context": "live-e2e", "app_id": 15368 },
-      { "context": "windows-database-recovery", "app_id": 15368 }
+      { "context": "pr-gate", "app_id": 15368 }
     ]
   },
   "enforce_admins": true,

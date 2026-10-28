@@ -1,7 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import com.zjcxph.imgapi.dto.resp.OssBrowserPageDTO;
 import com.zjcxph.imgapi.exception.OssErrorType;
 import com.zjcxph.imgapi.exception.OssOperationException;
@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * 防止缓存命中绕过 {@code medical-records/} 边界。</p>
  *
  * <p>所有远程 OSS 调用同时在此边界映射为稳定、脱敏的业务错误；底层异常
- * 作为 cause 保留给服务端日志，但不会把 endpoint、bucket、Object Key 或 SDK
+ * 作为 cause 保留供受控诊断，但不会把 endpoint、bucket、Object Key 或 SDK
  * 原始消息直接返回给客户端。</p>
  */
 @Service
@@ -112,8 +112,7 @@ public class ManagedPrefixOssService implements OssService {
             logger.warn(
                     "OSS remote operation failed: operation={}, type={}",
                     operation,
-                    mapped.getType(),
-                    exception
+                    mapped.getType()
             );
             throw mapped;
         }
@@ -125,14 +124,14 @@ public class ManagedPrefixOssService implements OssService {
             if (current instanceof OssOperationException operationException) {
                 return operationException;
             }
-            if (current instanceof AmazonServiceException serviceException) {
+            if (current instanceof AwsServiceException serviceException) {
                 return new OssOperationException(classifyServiceFailure(serviceException), failure);
             }
             if (current instanceof SocketTimeoutException
                     || current instanceof ConnectException
                     || current instanceof SocketException
                     || current instanceof InterruptedIOException
-                    || current instanceof AmazonClientException) {
+                    || current instanceof SdkClientException) {
                 return new OssOperationException(OssErrorType.OSS_UNAVAILABLE, failure);
             }
             if (current instanceof IllegalStateException
@@ -176,9 +175,11 @@ public class ManagedPrefixOssService implements OssService {
         return new OssOperationException(OssErrorType.OSS_OPERATION_FAILED, failure);
     }
 
-    private OssErrorType classifyServiceFailure(AmazonServiceException exception) {
-        int statusCode = exception.getStatusCode();
-        String errorCode = safeLowerMessage(exception.getErrorCode());
+    private OssErrorType classifyServiceFailure(AwsServiceException exception) {
+        int statusCode = exception.statusCode();
+        String errorCode = exception.awsErrorDetails() == null
+                ? ""
+                : safeLowerMessage(exception.awsErrorDetails().errorCode());
 
         if (statusCode == 401
                 || statusCode == 403

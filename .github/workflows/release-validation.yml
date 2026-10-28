@@ -1,0 +1,40 @@
+name: Full release validation
+
+on:
+  workflow_call:
+    inputs:
+      retain_candidate:
+        type: boolean
+        default: false
+    outputs:
+      artifact:
+        value: ${{ jobs.candidate.outputs.artifact }}
+      attempt:
+        value: ${{ jobs.candidate.outputs.attempt }}
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    uses: ./.github/workflows/windows-release-package.yml
+    with:
+      retain_candidate: ${{ inputs.retain_candidate }}
+  recovery:
+    needs: candidate
+    uses: ./.github/workflows/windows-database-recovery.yml
+    with:
+      candidate_artifact: ${{ needs.candidate.outputs.artifact }}
+      candidate_attempt: ${{ needs.candidate.outputs.attempt }}
+      candidate_complete: ${{ inputs.retain_candidate }}
+  complete:
+    needs: [candidate, recovery]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all release checks, including the actual Windows rehearsal
+        env:
+          BUILD: ${{ needs.candidate.result }}
+          RECOVERY: ${{ needs.recovery.result }}
+        run: test "${BUILD}" = success && test "${RECOVERY}" = success

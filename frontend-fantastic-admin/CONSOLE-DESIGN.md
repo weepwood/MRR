@@ -63,7 +63,7 @@ MRR Console 是面向医疗档案业务的现代 SaaS 管理界面设计系统�
   <MrrPageHeader
     title="用户管理"
     description="管理系统账号、角色分配和启停状态。"
-    icon="i-ant-design:team-outlined"
+    icon="i-lucide:users-round"
   >
     <template #actions>
       <el-button>刷新</el-button>
@@ -75,7 +75,7 @@ MRR Console 是面向医疗档案业务的现代 SaaS 管理界面设计系统�
       label="账号总数"
       :value="128"
       note="当前系统账号"
-      icon="i-ant-design:user-outlined"
+      icon="i-lucide:user-round"
     />
   </section>
 
@@ -183,6 +183,7 @@ MRR Console 是面向医疗档案业务的现代 SaaS 管理界面设计系统�
 - 状态使用 `MrrStatusTag`。
 - 页面局部 CSS 只处理业务特有布局。
 - 不在业务页面覆盖公共 `.el-button`、`.el-input`、`.el-select`、`.el-card` 和 `.el-table` 外观。
+- 图标统一使用 Lucide（`i-lucide:*`），Element Plus 图标仅在配套组件内部使用；新增页面不要再引入 `i-ant-design:*`。存量组件中的 ant-design 图标按页面迁移顺序逐步替换。
 
 ## 12. 后续迁移顺序
 

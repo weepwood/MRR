@@ -1,19 +1,26 @@
 package com.zjcxph.imgapi.service.impl;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import com.zjcxph.imgapi.config.OssProperties;
 import com.zjcxph.imgapi.dto.resp.OssBrowserEntryDTO;
 import com.zjcxph.imgapi.dto.resp.OssBrowserPageDTO;
@@ -32,13 +39,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class OssServiceImpl implements OssService {
@@ -51,7 +59,8 @@ public class OssServiceImpl implements OssService {
     private static final int MAX_CONTINUATION_TOKEN_LENGTH = 8_192;
 
     private final OssProperties ossProperties;
-    private AmazonS3 s3Client;
+    private S3Client s3Client;
+    private S3Presigner s3Presigner;
 
     public OssServiceImpl(OssProperties ossProperties) {
         this.ossProperties = ossProperties;
@@ -82,40 +91,49 @@ public class OssServiceImpl implements OssService {
         }
 
         try {
-            BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
-
-            ClientConfiguration clientConfig = new ClientConfiguration();
-            clientConfig.setConnectionTimeout(30_000);
-            clientConfig.setSocketTimeout(60_000);
-            clientConfig.setMaxConnections(50);
-
             String endpoint = ossProperties.getEndpoint();
             if (!endpoint.startsWith("http://") && !endpoint.startsWith("https://")) {
                 endpoint = "https://" + endpoint;
             }
 
-            s3Client = AmazonS3ClientBuilder.standard()
-                    .withEndpointConfiguration(
-                            new AwsClientBuilder.EndpointConfiguration(endpoint, ossProperties.getRegion()))
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .withClientConfiguration(clientConfig)
-                    .withPathStyleAccessEnabled(ossProperties.isPathStyleAccess())
+            S3Configuration s3Configuration = S3Configuration.builder()
+                    .pathStyleAccessEnabled(ossProperties.isPathStyleAccess())
                     .build();
+            URI endpointUri = URI.create(endpoint);
+            Region region = Region.of(ossProperties.getRegion());
+            StaticCredentialsProvider credentials = StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKeyId, accessKeySecret));
+            S3Client builtClient = S3Client.builder()
+                    .endpointOverride(endpointUri)
+                    .region(region)
+                    .credentialsProvider(credentials)
+                    .httpClientBuilder(ApacheHttpClient.builder()
+                            .connectionTimeout(Duration.ofSeconds(30))
+                            .socketTimeout(Duration.ofSeconds(60))
+                            .maxConnections(50))
+                    .serviceConfiguration(s3Configuration)
+                    .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                    .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
+                    .build();
+            try {
+                s3Presigner = S3Presigner.builder()
+                        .endpointOverride(endpointUri)
+                        .region(region)
+                        .credentialsProvider(credentials)
+                        .serviceConfiguration(s3Configuration)
+                        .build();
+                s3Client = builtClient;
+            } catch (RuntimeException exception) {
+                builtClient.close();
+                throw exception;
+            }
 
-            String maskedKeyId = accessKeyId.length() > 8
-                    ? accessKeyId.substring(0, 4)
-                    + "****"
-                    + accessKeyId.substring(accessKeyId.length() - 4)
-                    : "****";
             logger.info(
-                    "OSS client initialized successfully: endpoint={}, bucket={}, pathStyleAccess={}, accessKeyId={}",
-                    ossProperties.getEndpoint(),
-                    ossProperties.getBucket(),
-                    ossProperties.isPathStyleAccess(),
-                    maskedKeyId
+                    "OSS client initialized successfully: pathStyleAccess={}",
+                    ossProperties.isPathStyleAccess()
             );
         } catch (Exception exception) {
-            logger.error("Failed to initialize OSS client", exception);
+            logger.error("Failed to initialize OSS client: {}", exception.getClass().getSimpleName());
         }
     }
 
@@ -125,10 +143,13 @@ public class OssServiceImpl implements OssService {
             return;
         }
         try {
-            s3Client.shutdown();
+            if (s3Presigner != null) {
+                s3Presigner.close();
+            }
+            s3Client.close();
             logger.info("OSS client shut down");
         } catch (Exception exception) {
-            logger.warn("Error shutting down OSS client", exception);
+            logger.warn("Error shutting down OSS client: {}", exception.getClass().getSimpleName());
         }
     }
 
@@ -148,50 +169,38 @@ public class OssServiceImpl implements OssService {
         ensureClient();
         File file = new File(localFilePath);
         if (!file.exists() || !file.isFile()) {
-            throw new IllegalArgumentException("Local file does not exist: " + localFilePath);
+            throw new IllegalArgumentException("Local file does not exist");
         }
         if (sourceMd5 == null || !sourceMd5.matches("(?i)[0-9a-f]{32}")) {
             throw new IllegalArgumentException("Source MD5 must be a 32-character hexadecimal value");
         }
 
         try {
-            logger.debug("Local file MD5: {} for {}", sourceMd5, localFilePath);
+            PutObjectRequest putRequest = PutObjectRequest.builder()
+                    .bucket(ossProperties.getBucket())
+                    .key(ossKey)
+                    .contentLength(file.length())
+                    .contentMD5(Base64.getEncoder().encodeToString(Hex.decodeHex(sourceMd5.toCharArray())))
+                    .metadata(Map.of(SOURCE_MD5_METADATA, sourceMd5))
+                    .contentType(resolveContentType(file.getName()))
+                    .build();
 
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.length());
-            metadata.setContentMD5(
-                    Base64.getEncoder().encodeToString(Hex.decodeHex(sourceMd5.toCharArray()))
-            );
-            metadata.addUserMetadata(SOURCE_MD5_METADATA, sourceMd5);
-            metadata.setContentType(resolveContentType(file.getName()));
-
-            PutObjectRequest putRequest = new PutObjectRequest(
-                    ossProperties.getBucket(),
-                    ossKey,
-                    file
-            ).withMetadata(metadata);
-
-            PutObjectResult result = s3Client.putObject(putRequest);
-            String etag = result.getETag();
+            PutObjectResponse result = s3Client.putObject(putRequest, RequestBody.fromFile(file));
+            String etag = result.eTag();
             if (etag != null) {
                 etag = etag.replace("\"", "").trim();
                 if (etag.equalsIgnoreCase(sourceMd5)) {
-                    logger.info("Upload verified by ETag for {} -> {}", localFilePath, ossKey);
+                    logger.info("OSS upload verified by ETag");
                 } else {
-                    logger.info(
-                            "Upload completed with server-side Content-MD5 validation: {} -> {}, ETag={}",
-                            localFilePath,
-                            ossKey,
-                            etag
-                    );
+                    logger.info("OSS upload completed with Content-MD5 validation");
                 }
             }
 
-            logger.info("Uploaded to OSS: {} -> {}", localFilePath, ossKey);
+            logger.info("OSS upload completed");
             return ossKey;
         } catch (Exception exception) {
-            logger.error("Failed to upload file to OSS: {} -> {}", localFilePath, ossKey, exception);
-            throw new RuntimeException("OSS upload failed: " + exception.getMessage(), exception);
+            logger.error("OSS upload failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS upload failed", exception);
         }
     }
 
@@ -213,21 +222,20 @@ public class OssServiceImpl implements OssService {
         }
 
         try {
-            ListObjectsV2Request request = new ListObjectsV2Request()
-                    .withBucketName(ossProperties.getBucket())
-                    .withPrefix(safePrefix)
-                    .withDelimiter("/")
-                    .withMaxKeys(safeMaxKeys);
-            if (safeContinuationToken != null) {
-                request.setContinuationToken(safeContinuationToken);
-            }
+            ListObjectsV2Request request = ListObjectsV2Request.builder()
+                    .bucket(ossProperties.getBucket())
+                    .prefix(safePrefix)
+                    .delimiter("/")
+                    .maxKeys(safeMaxKeys)
+                    .continuationToken(safeContinuationToken)
+                    .build();
 
-            ListObjectsV2Result result = s3Client.listObjectsV2(request);
+            ListObjectsV2Response result = s3Client.listObjectsV2(request);
             List<OssBrowserEntryDTO> entries = new ArrayList<>();
 
-            List<String> commonPrefixes = result.getCommonPrefixes();
-            if (commonPrefixes != null) {
-                for (String commonPrefix : commonPrefixes) {
+            if (result.commonPrefixes() != null) {
+                for (var prefixEntry : result.commonPrefixes()) {
+                    String commonPrefix = prefixEntry.prefix();
                     String name = browserEntryName(safePrefix, commonPrefix, true);
                     if (!name.isBlank()) {
                         entries.add(OssBrowserEntryDTO.builder()
@@ -240,26 +248,26 @@ public class OssServiceImpl implements OssService {
                 }
             }
 
-            List<S3ObjectSummary> objectSummaries = result.getObjectSummaries();
+            List<S3Object> objectSummaries = result.contents();
             if (objectSummaries != null) {
-                for (S3ObjectSummary summary : objectSummaries) {
-                    if (summary.getKey() == null || summary.getKey().equals(safePrefix)) {
+                for (S3Object summary : objectSummaries) {
+                    if (summary.key() == null || summary.key().equals(safePrefix)) {
                         continue;
                     }
-                    String name = browserEntryName(safePrefix, summary.getKey(), false);
+                    String name = browserEntryName(safePrefix, summary.key(), false);
                     if (name.isBlank()) {
                         continue;
                     }
                     entries.add(OssBrowserEntryDTO.builder()
                             .name(name)
-                            .key(summary.getKey())
+                            .key(summary.key())
                             .directory(false)
-                            .size(Math.max(0, summary.getSize()))
-                            .lastModified(summary.getLastModified() == null
+                            .size(summary.size() == null ? 0 : Math.max(0, summary.size()))
+                            .lastModified(summary.lastModified() == null
                                     ? null
-                                    : summary.getLastModified().toInstant())
-                            .etag(summary.getETag())
-                            .storageClass(summary.getStorageClass())
+                                    : summary.lastModified())
+                            .etag(summary.eTag())
+                            .storageClass(summary.storageClassAsString())
                             .build());
                 }
             }
@@ -273,12 +281,12 @@ public class OssServiceImpl implements OssService {
                     safePrefix,
                     safeMaxKeys,
                     entries,
-                    result.getNextContinuationToken(),
-                    result.isTruncated()
+                    result.nextContinuationToken(),
+                    Boolean.TRUE.equals(result.isTruncated())
             );
         } catch (Exception exception) {
-            logger.error("Failed to browse OSS prefix: {}", safePrefix, exception);
-            throw new RuntimeException("OSS directory listing failed: " + exception.getMessage(), exception);
+            logger.error("OSS directory listing failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS directory listing failed", exception);
         }
     }
 
@@ -294,8 +302,8 @@ public class OssServiceImpl implements OssService {
         try (FileInputStream input = new FileInputStream(filePath)) {
             return DigestUtils.md5Hex(input);
         } catch (IOException exception) {
-            logger.error("Failed to calculate MD5 for: {}", filePath, exception);
-            throw new RuntimeException("MD5 calculation failed: " + exception.getMessage(), exception);
+            logger.error("OSS source MD5 calculation failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("MD5 calculation failed", exception);
         }
     }
 
@@ -303,13 +311,18 @@ public class OssServiceImpl implements OssService {
     public boolean doesObjectExist(String ossKey) {
         ensureClient();
         try {
-            return s3Client.doesObjectExist(ossProperties.getBucket(), ossKey);
+            s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(ossProperties.getBucket()).key(ossKey).build());
+            return true;
+        } catch (S3Exception exception) {
+            if (exception.statusCode() == 404) {
+                return false;
+            }
+            logger.error("OSS object existence check failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS object existence check failed", exception);
         } catch (Exception exception) {
-            logger.error("Failed to check object existence: {}", ossKey, exception);
-            throw new RuntimeException(
-                    "OSS object existence check failed: " + exception.getMessage(),
-                    exception
-            );
+            logger.error("OSS object existence check failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS object existence check failed", exception);
         }
     }
 
@@ -318,11 +331,12 @@ public class OssServiceImpl implements OssService {
     public void deleteObject(String ossKey) {
         ensureClient();
         try {
-            s3Client.deleteObject(ossProperties.getBucket(), ossKey);
-            logger.info("Deleted from OSS: {}", ossKey);
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(ossProperties.getBucket()).key(ossKey).build());
+            logger.info("OSS object deleted");
         } catch (Exception exception) {
-            logger.error("Failed to delete object: {}", ossKey, exception);
-            throw new RuntimeException("OSS delete failed: " + exception.getMessage(), exception);
+            logger.error("OSS delete failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS delete failed", exception);
         }
     }
 
@@ -330,7 +344,7 @@ public class OssServiceImpl implements OssService {
     public long getFileSize(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) {
-            throw new IllegalArgumentException("File does not exist: " + filePath);
+            throw new IllegalArgumentException("File does not exist");
         }
         return file.length();
     }
@@ -339,45 +353,33 @@ public class OssServiceImpl implements OssService {
     public boolean verifyUploadIntegrity(String ossKey, String expectedMd5) {
         ensureClient();
         if (expectedMd5 == null || expectedMd5.isBlank()) {
-            throw new IllegalArgumentException("Expected MD5 is empty for " + ossKey);
+            throw new IllegalArgumentException("Expected MD5 is empty");
         }
 
         try {
-            ObjectMetadata metadata = s3Client.getObjectMetadata(ossProperties.getBucket(), ossKey);
-            String storedSourceMd5 = metadata.getUserMetadata().get(SOURCE_MD5_METADATA);
+            HeadObjectResponse metadata = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(ossProperties.getBucket()).key(ossKey).build());
+            String storedSourceMd5 = metadata.metadata().get(SOURCE_MD5_METADATA);
             if (storedSourceMd5 != null && !storedSourceMd5.isBlank()) {
                 boolean matches = storedSourceMd5.equalsIgnoreCase(expectedMd5);
                 if (!matches) {
-                    logger.error(
-                            "Integrity metadata mismatch for {}. Expected: {}, stored: {}",
-                            ossKey,
-                            expectedMd5,
-                            storedSourceMd5
-                    );
+                    logger.error("OSS integrity metadata mismatch");
                 }
                 return matches;
             }
 
-            S3Object s3Object = s3Client.getObject(ossProperties.getBucket(), ossKey);
-            try (InputStream inputStream = s3Object.getObjectContent()) {
+            try (InputStream inputStream = s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(ossProperties.getBucket()).key(ossKey).build())) {
                 String actualMd5 = DigestUtils.md5Hex(inputStream);
                 boolean matches = actualMd5.equalsIgnoreCase(expectedMd5);
                 if (!matches) {
-                    logger.error(
-                            "Integrity verification failed for {}. Expected: {}, actual: {}",
-                            ossKey,
-                            expectedMd5,
-                            actualMd5
-                    );
+                    logger.error("OSS integrity verification failed");
                 }
                 return matches;
             }
         } catch (Exception exception) {
-            logger.error("Failed to verify upload integrity for {}", ossKey, exception);
-            throw new RuntimeException(
-                    "OSS integrity verification failed: " + exception.getMessage(),
-                    exception
-            );
+            logger.error("OSS integrity verification failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("OSS integrity verification failed", exception);
         }
     }
 
@@ -417,21 +419,15 @@ public class OssServiceImpl implements OssService {
 
     private String createPresignedUrl(String ossKey) {
         try {
-            Date expiration = new Date(
-                    System.currentTimeMillis() + (long) ossProperties.getUrlExpireSeconds() * 1000
-            );
-            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
-                    ossProperties.getBucket(),
-                    ossKey
-            ).withExpiration(expiration);
-            URL url = s3Client.generatePresignedUrl(request);
-            return url.toString();
+            GetObjectPresignRequest request = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofSeconds(ossProperties.getUrlExpireSeconds()))
+                    .getObjectRequest(GetObjectRequest.builder()
+                            .bucket(ossProperties.getBucket()).key(ossKey).build())
+                    .build();
+            return s3Presigner.presignGetObject(request).url().toString();
         } catch (Exception exception) {
-            logger.error("Failed to generate presigned URL for: {}", ossKey, exception);
-            throw new RuntimeException(
-                    "Failed to generate presigned URL: " + exception.getMessage(),
-                    exception
-            );
+            logger.error("OSS presigned URL generation failed: {}", exception.getClass().getSimpleName());
+            throw new RuntimeException("Failed to generate presigned URL", exception);
         }
     }
 

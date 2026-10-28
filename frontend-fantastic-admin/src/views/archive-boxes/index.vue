@@ -9,8 +9,8 @@ import type {
 } from '@/api/modules/archive-boxes'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, RefreshCw as Refresh, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createArchiveBoxRecord,
@@ -23,6 +23,7 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
@@ -88,14 +89,14 @@ const recordActions: MrrTableAction[] = [
   {
     key: 'edit',
     label: '编辑装箱记录',
-    icon: 'i-ri:edit-line',
+    icon: 'i-lucide:pencil',
     tone: 'primary',
     placement: 'inline',
   },
   {
     key: 'delete',
     label: '删除装箱记录',
-    icon: 'i-ri:delete-bin-line',
+    icon: 'i-lucide:trash-2',
     tone: 'danger',
   },
 ]
@@ -103,7 +104,7 @@ const boxActions: MrrTableAction[] = [
   {
     key: 'view',
     label: '查看箱内病案',
-    icon: 'i-ri:folder-open-line',
+    icon: 'i-lucide:folder-open',
     tone: 'primary',
     placement: 'inline',
   },
@@ -134,28 +135,28 @@ const metricCards = computed<MetricCard[]>(() => [
     value: summary.value.totalRecords,
     note: '已登记实体病案数量',
     tone: 'blue',
-    icon: 'i-ant-design:file-protect-outlined',
+    icon: 'i-lucide:file-lock',
   },
   {
     label: '已用箱数',
     value: summary.value.totalBoxes,
     note: '存在实际存放记录的箱号',
     tone: 'green',
-    icon: 'i-ant-design:inbox-outlined',
+    icon: 'i-lucide:inbox',
   },
   {
     label: '缺失病案',
     value: summary.value.missingCount,
     note: '尚未确认实际存放位置',
     tone: 'danger',
-    icon: 'i-ant-design:close-circle-twotone',
+    icon: 'i-lucide:circle-x',
   },
   {
     label: '异常记录',
     value: summary.value.abnormalCount,
     note: '缺失、错箱、冲突及其他异常',
     tone: 'amber',
-    icon: 'i-ant-design:warning-twotone',
+    icon: 'i-lucide:triangle-alert',
   },
 ])
 
@@ -515,12 +516,12 @@ onMounted(refreshAll)
             />
           </el-select>
           <div class="filter-actions">
-            <el-button type="primary" :icon="Search" @click="handleSearch">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
               查询
-            </el-button>
-            <el-button @click="resetFilters">
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
               重置
-            </el-button>
+            </MrrFilterActionButton>
           </div>
         </div>
       </el-card>
@@ -619,12 +620,12 @@ onMounted(refreshAll)
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button type="primary" :icon="Search" @click="searchBoxes">
+          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="searchBoxes">
             查询
-          </el-button>
-          <el-button @click="resetBoxSearch">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetBoxSearch">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </div>
       </el-card>
 
@@ -636,7 +637,7 @@ onMounted(refreshAll)
           <el-table-column label="箱号" min-width="220">
             <template #default="{ row }">
               <button class="box-number-button" type="button" @click="openBox(row.boxNo)">
-                <span class="i-ant-design:inbox-outlined" />
+                <span class="i-lucide:inbox" />
                 {{ row.boxNo }}
               </button>
             </template>

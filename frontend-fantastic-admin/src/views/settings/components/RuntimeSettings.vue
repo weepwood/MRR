@@ -188,9 +188,11 @@ onMounted(loadSettings)
       </div>
       <div class="actions-buttons">
         <el-button :disabled="loading || saving" @click="loadSettings">
-          <FaIcon name="i-ri:refresh-line" class="mrr-icon-interactive" />重新加载
+          <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
         </el-button>
-        <el-button :disabled="loading || saving" @click="fillWithConfigDefaults">填入配置默认值</el-button>
+        <el-button :disabled="loading || saving" @click="fillWithConfigDefaults">
+          填入配置默认值
+        </el-button>
       </div>
     </header>
 
@@ -243,7 +245,9 @@ onMounted(loadSettings)
               :disabled="item.effect === 'RESTART_REQUIRED'"
             />
 
-            <p class="field-hint">{{ item.description }}</p>
+            <p class="field-hint">
+              {{ item.description }}
+            </p>
             <p class="field-meta">
               <span>配置默认值 {{ defaultValueLabel(item) }}<template v-if="item.unit"> {{ item.unit }}</template></span>
               <span v-if="rangeLabel(item)">{{ rangeLabel(item) }}</span>

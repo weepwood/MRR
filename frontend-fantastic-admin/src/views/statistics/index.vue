@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { StatisticsRecord } from '@/api/types'
 import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
-import {
-  Calendar,
-  Document,
-  Download,
-  Refresh,
-} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import {
+  CalendarDays as Calendar,
+  FileText as Document,
+  Download,
+  RefreshCw as Refresh,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import {
   exportStatisticsCsv,
@@ -16,6 +16,7 @@ import {
   getStatisticsSummary,
 } from '@/api/modules/statistics'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 
 defineOptions({ name: 'StatisticsPage' })
@@ -346,24 +347,24 @@ onMounted(refreshAll)
     <section class="mrr-metric-grid" aria-label="核心统计指标">
       <MrrMetricCard
         label="总记录数"
-        icon="i-ep:grid"
+        icon="i-lucide:layout-grid"
         :value="formatNumber(summaryData.total?.totalRecords ?? 0)"
       />
       <MrrMetricCard
         label="总扫描页数"
-        icon="i-ep:tickets"
+        icon="i-lucide:ticket"
         tone="rose"
         :value="formatNumber(summaryData.total?.totalPages ?? 0)"
       />
       <MrrMetricCard
         label="扫描病案数"
-        icon="i-ep:document"
+        icon="i-lucide:file-text"
         tone="green"
         :value="formatNumber(summaryData.uniqueBAHCount ?? 0)"
       />
       <MrrMetricCard
         label="统计时间范围"
-        icon="i-ep:trend-charts"
+        icon="i-lucide:chart-no-axes-combined"
         tone="amber"
         compact-value
         :value="`${dateRange.start} — ${dateRange.end}`"
@@ -475,12 +476,12 @@ onMounted(refreshAll)
           @change="handleDateRangeChange"
         />
         <div class="search-actions">
-          <el-button type="primary" @click="handleListSearch">
+          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" type="primary" @click="handleListSearch">
             查询
-          </el-button>
-          <el-button @click="resetListSearch">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="listLoading" :busy="listLoading" @click="resetListSearch">
             重置
-          </el-button>
+          </MrrFilterActionButton>
           <el-button
             type="success"
             plain

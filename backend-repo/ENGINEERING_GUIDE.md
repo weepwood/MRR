@@ -6,7 +6,7 @@
 
 先读根目录 AGENTS.md、ARCHITECTURE.md 和 docs/engineering/ai-assisted-development-governance.md。功能和修复从最新 origin/main 创建 codex/ 分支；已有工作区有未提交文件时先保留，不直接切换或覆盖。
 
-仓库提供 Maven Wrapper，固定 Maven 3.9.9 并校验分发包 SHA-256。首次使用需要联网下载 Maven 与依赖；医院离线部署只消费已验证发布包，不在服务器临时构建。
+仓库提供 Maven Wrapper，固定 Maven 3.10.0 并校验分发包 SHA-256，版本以 `.mvn/wrapper/maven-wrapper.properties` 为准。CI、容器与本机均使用 Wrapper。首次使用需要联网下载 Maven 与依赖；医院离线部署只消费已验证发布包，不在服务器临时构建。
 
 在根目录运行只读环境检查：
 
@@ -14,16 +14,17 @@
 python scripts/engineering_preflight.py --scope backend --integration
 ```
 
-Python 3.10+ 用于仓库工具和 OCR 的真实子进程测试；Maven 不会自动继承运行预检的 Python，需指定实际路径：
+Python 3.10+ 用于仓库工具和 OCR 的真实子进程测试；Maven 不会自动继承运行预检的 Python，需指定实际路径。日常本地开发不要求每次运行完整测试套件；通常只需环境预检、编译和必要的手工冒烟：
 
 ```powershell
 $env:JAVA_HOME = '<本机 Java 21 目录>'
 $env:MRR_TEST_PYTHON = '<本机 Python 可执行文件绝对路径>'
 cd backend-repo
 .\mvnw.cmd -v
-.\mvnw.cmd -B -ntp test
-.\mvnw.cmd -B -ntp verify
+.\mvnw.cmd -B -ntp -DskipTests compile
 ```
+
+需要调试具体逻辑时，可运行对应的单测，例如 `.\mvnw.cmd -B -ntp -Dtest=ScanTest test`。完整 `test`、PostgreSQL `verify` 及覆盖率检查由 PR GitHub Actions 按改动范围执行；不必把它们作为每次本地启动或提交的步骤。数据库、锁、迁移和 Mapper 的集成测试仍必须在 PostgreSQL 16 上执行，PR CI 会提供该环境。
 
 Linux 使用 `./mvnw`。预检失败会返回非零退出码，不读取本地业务配置、不输出连接口令、不安装或修改工具。
 
@@ -46,7 +47,7 @@ CI 的实际入口是 .github/workflows/quality-gate.yml、governance-gate.yml �
 
 ## 发布与现场验收
 
-发布前执行根目录治理命令：
+发布验收由 GitHub Actions 执行。仅在本地改动仓库治理脚本时，按需运行以下仓库检查：
 
 ```powershell
 python -m unittest discover -s scripts/tests -p 'test_*.py' -v

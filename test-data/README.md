@@ -1,10 +1,13 @@
 # MRR 合成测试资产
 
 入口：[生成、使用和验证说明](../docs/engineering/synthetic-test-data.md)。
+直连本地/独立测试库快速灌数：[直连造数器说明](../docs/engineering/dev-data-seeding.md)。
 
 ```powershell
 python scripts/generate_test_data.py --output test-data/generated/my-suite
 python scripts/generate_test_data.py --verify test-data/generated/my-suite
+# 直连库造数（开发演示用，不连库的 --emit 模式见上链接）
+python scripts/seed_dev_data.py --plan
 ```
 
 生成代码：`scripts/generate_test_data.py`。只写新目录，不连接数据库，不使用真实患者或凭据。

@@ -20,6 +20,7 @@ const props = defineProps<DialogContentProps & {
   closable?: boolean
   overlay?: boolean
   overlayBlur?: boolean
+  overlayClass?: HTMLAttributes['class']
   class?: HTMLAttributes['class']
 }>()
 const emits = defineEmits<DialogContentEmits & {
@@ -69,7 +70,7 @@ watch(showOverlay, (val) => {
       <div
         v-if="showOverlay"
         :data-modal-id="props.modalId"
-        :class="cn('fixed inset-0 data-[state=closed]:animate-out data-[state=open]:animate-in bg-black/50 data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0', {
+        :class="cn('fixed inset-0 data-[state=closed]:animate-out data-[state=open]:animate-in bg-black/50 data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0', props.overlayClass, {
           'backdrop-blur-sm': props.overlayBlur,
         })"
         :style="{

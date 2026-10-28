@@ -71,5 +71,65 @@ class WindowsBundledNginxTest(unittest.TestCase):
         self.assertIn('set /p "choice=', wrapper)
 
 
+class NginxSecurityHeadersTest(unittest.TestCase):
+    """Nginx 的 add_header 不继承：location 内出现 add_header 会丢弃 server 级头。"""
+
+    @property
+    def config(self) -> str:
+        return (ROOT / 'deploy/windows/templates/nginx.conf').read_text(encoding='utf-8')
+
+    def blocks_with_add_header(self) -> list[str]:
+        blocks = []
+        for match in re.finditer(r'location[^{]*\{', self.config):
+            start = match.end()
+            depth = 1
+            cursor = start
+            while cursor < len(self.config) and depth:
+                if self.config[cursor] == '{':
+                    depth += 1
+                elif self.config[cursor] == '}':
+                    depth -= 1
+                cursor += 1
+            body = self.config[start:cursor - 1]
+            if 'add_header' in body:
+                blocks.append(match.group(0) + body)
+        return blocks
+
+    def test_every_location_declaring_add_header_reincludes_security_headers(self):
+        blocks = self.blocks_with_add_header()
+        self.assertTrue(blocks, '预期至少存在一个自行声明 add_header 的 location')
+        for block in blocks:
+            with self.subTest(block=block.split('{')[0].strip()):
+                self.assertIn(
+                    'config/nginx/security-headers.inc',
+                    block,
+                    'location 内声明 add_header 会覆盖继承，必须同时 include security-headers.inc',
+                )
+
+    def test_security_headers_have_a_single_definition_site(self):
+        fragment = (ROOT / 'deploy/windows/templates/security-headers.inc').read_text(encoding='utf-8')
+
+        for header in ('X-Content-Type-Options nosniff',
+                       'X-Frame-Options SAMEORIGIN',
+                       'Referrer-Policy strict-origin-when-cross-origin'):
+            self.assertIn(header, fragment)
+            self.assertNotIn(header, self.config, '安全头只允许在 security-headers.inc 中定义')
+        self.assertIn('config/nginx/security-headers.inc', self.config, 'server 级必须 include 该片段')
+
+    def test_installer_ships_the_fragment(self):
+        installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
+
+        self.assertIn("templates\\security-headers.inc", installer)
+        self.assertIn("config\\nginx\\security-headers.inc", installer)
+
+    def test_doctor_warns_when_deployed_config_predates_the_fragment(self):
+        controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')
+        doctor = controller.split('function Doctor {', 1)[1].split('\nswitch ($Command)', 1)[0]
+
+        self.assertIn('Assert-SecurityHeaders', doctor)
+        self.assertIn('function Assert-SecurityHeaders', controller)
+        self.assertIn('security-headers\\.inc', controller)
+
+
 if __name__ == '__main__':
     unittest.main()

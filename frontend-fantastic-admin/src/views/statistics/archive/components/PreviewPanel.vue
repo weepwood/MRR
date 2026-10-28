@@ -2,8 +2,8 @@
 import type { ArchiveFitMode } from '../composables/useArchiveLocalPreferences'
 import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElImageViewer, ElMessageBox } from 'element-plus'
+import { ArrowLeft, ArrowRight } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { TYPE_OPTIONS } from '../constants'
 import 'element-plus/es/components/image-viewer/style/css'
@@ -224,7 +224,7 @@ onUnmounted(() => {
           :alt="`第 ${props.index + 1} 张影像`"
           @click="openImageViewer"
           @error="markImageFailed(props.image.imageUrl)"
-        />
+        >
       </div>
 
       <ElImageViewer
@@ -452,7 +452,7 @@ onUnmounted(() => {
 }
 
 .preview-type-select :deep(.el-select__wrapper) {
-  min-height: 24px;
+  min-height: var(--mrr-input-height);
 }
 
 @media (max-width: 720px) {

@@ -34,6 +34,43 @@ Java、Vite 和 PostgreSQL 均仅绑定本机；管理端口不公开。启动�
 
 状态、随机本地密钥和日志存放在忽略目录 .mrr-dev；Windows限制为当前用户/SYSTEM可访问。该目录同时被Docker构建上下文排除。日志只在本地查看，不上传为诊断Artifact。停止时根据进程创建时间和容器归属标签校验所有权；保留命名数据库卷和密钥供下次启动使用。停止失败保留状态供重试，禁止按端口或名称通配结束其他项目进程。
 
+## 后端 Docker + 本机 Vite 联调
+
+这条路径适合只改前端、需要连接真实 Spring Boot API 的日常开发：后端运行在 Docker，前端 Vite 继续运行在本机并保留热更新。它只用于开发、测试和演示，不改变 Windows Server 正式部署方案。
+
+在仓库根目录运行：
+
+```powershell
+.\scripts\backend-docker.ps1 setup
+.\scripts\backend-docker.ps1 up
+.\scripts\backend-docker.ps1 status
+.\scripts\backend-docker.ps1 logs
+.\scripts\backend-docker.ps1 down
+```
+
+- `setup` 只创建一次随机 PostgreSQL、JWT 与 AES 本地密钥，保存在忽略目录 `.mrr-dev/backend.env`，并将 Windows ACL 限制为当前用户和 SYSTEM。重复执行不会覆盖已有密钥。
+- `up` 用 `backend-repo/Dockerfile.dev` 只构建 Java 后端，不安装或构建前端；Compose 会先启动 PostgreSQL 16，待数据库健康后再启动后端。Flyway 在首次连接时初始化 schema。
+- 后端默认把业务 API `18045` 和 PostgreSQL `15432` 绑定到本机回环地址；数据库端口供合成数据工具等本机开发工具连接。管理端口 `18046` 不发布到主机。端口冲突时可在 `.mrr-dev/backend.env` 修改 `MRR_BACKEND_PORT` 或 `MRR_POSTGRES_PORT`，同时调整 Vite 的代理目标。
+- 项目名按工作区路径隔离，避免不同 worktree 共用容器和数据库卷。`down` 停止本工作区的容器但保留数据库卷和密钥。
+- 后端数据库为空时不会自动建开发账号或写入演示病案。账号必须通过现有注册审批或系统建号流程创建；需要页面记录时，可用 `scripts/seed_dev_data.py` 向仅绑定本机的 PostgreSQL 写入合成数据。
+
+随后在另一个终端启动本机前端：
+
+```powershell
+cd frontend-fantastic-admin
+corepack pnpm@10.33.0 install --frozen-lockfile  # 首次安装
+pnpm dev
+```
+
+Vite 默认监听 `http://localhost:9200`。开发 API 客户端使用 `/proxy/`，Vite 将请求转发到 `.env.development` 中配置的 `http://localhost:18045`。启动本机 Vite 前，在前端终端用环境变量同步代理目标，避免修改受版本控制的 `.env.development`：
+
+```powershell
+$env:VITE_APP_API_BASEURL = 'http://localhost:18045'
+pnpm dev
+```
+
+这条路径不需要本机 Python 或 Java；Docker 使用 Java 21 与 Maven Wrapper 在镜像构建阶段打包后端。首次构建需要网络下载 PostgreSQL、基础镜像和 Maven 依赖。前端仍需要仓库支持的 Node.js 与 pnpm。
+
 ## 开发容器与干净检出验证
 
 开发Compose保留前后端和独立文档Nginx入口，支持通过项目名并行运行。数据库、应用及Web端口分别可用MRR_POSTGRES_PORT、MRR_APP_PORT、MRR_WEB_PORT调整。18046只用于容器内健康检查。

@@ -195,7 +195,7 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
 </script>
 
 <template>
-  <FaModal v-model="isShow" border :footer="settingsStore.mode === 'pc'" :closable="false" class="w-full lg-max-w-2xl" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
+  <FaModal v-model="isShow" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-2xl" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
     <template #header>
       <div class="h-12 flex flex-shrink-0 items-center">
         <div class="h-full w-14 flex-center">

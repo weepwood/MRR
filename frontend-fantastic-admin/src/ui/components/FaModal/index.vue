@@ -31,6 +31,7 @@ const props = withDefaults(
     alignCenter: false,
     overlay: true,
     overlayBlur: false,
+    overlayClass: '',
     showConfirmButton: true,
     showCancelButton: false,
     confirmButtonText: '确定',
@@ -222,6 +223,7 @@ function handleAnimationEnd() {
       :closable="props.closable"
       :overlay="props.overlay"
       :overlay-blur="props.overlayBlur"
+      :overlay-class="props.overlayClass"
       :maximize="isMaximize"
       :maximizable="props.maximizable"
       :force-mount="forceMount"

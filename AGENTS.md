@@ -144,6 +144,18 @@ MRR/
 - 不修改与当前 Issue 无关的文件；
 - 不使用强制推送改写已公开审查历史，除非明确处理分支事故。
 
+### 分支与 worktree 生命周期
+
+- 一个独立任务使用一条分支和一个专属 worktree；并行任务不得共用工作区。`main` worktree 用于同步主线，不承载功能修改。
+- 新分支使用清楚的类型前缀和主题，例如 `codex/<issue>-<topic>`、`fix/<issue>-<topic>`、`feat/<issue>-<topic>`、`docs/<issue>-<topic>`；不得编造 Issue 编号。无 Issue 时使用简短主题，并在 PR 中说明原因。
+- 分支开始工作时记录任务/PR、worktree 路径和负责人或代理；状态统一标记为“进行中、待合并、已完成、待认领”。
+- 执行分支清理前，先检查 `git worktree list --porcelain`、`git branch -vv`、各 worktree 的 `git status --short`、上游领先/落后和关联 PR 状态，并报告拟清理清单。
+- 不得仅因分支没有 worktree、落后 `main`、名称陌生或长期未更新就删除；须确认独有提交及 PR 状态。远程跟踪引用消失也不代表本地提交已安全保存。
+- 有未提交改动的 worktree 或分支必须保留并报告；不得为清理而自动 `reset`、`clean`、强制移除 worktree、覆盖文件或把改动混入无关 PR。不得擅自提交或 stash 用户改动。
+- PR 合并后，先确认 worktree 干净，再移除专属 worktree 和本地分支；普通情况使用 `git branch -d`。Squash/rebase 导致祖先检查不通过时，须以已合并 PR、对应 head SHA 和目标分支已包含的变更为证据，才可清理本地分支，并说明依据。默认不删除远程分支；仅在仓库策略或用户要求下处理。
+- `git fetch --prune` 只清理已不存在的远程跟踪引用；`git worktree prune` 只清理确认路径已不存在的孤立登记。执行前检查清理对象，不能把它们当作删除活跃 worktree 或远程分支的命令。
+- `main` 只允许快进同步到 `origin/main`，不得重置或强制更新。分支清理后复查 `main`、worktree 列表和剩余未提交改动，并在结果中列出删除项与保留原因。
+
 ### 数据库
 
 - PostgreSQL 16 是生产事实标准；

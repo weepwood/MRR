@@ -17,7 +17,6 @@ const props = defineProps<{
 }>()
 
 const emits = defineEmits<{
-  onLogin: [account?: string]
   onRegister: [account?: string]
 }>()
 
@@ -89,14 +88,9 @@ const onSubmit = form.handleSubmit(async (values) => {
 })
 
 async function handlePrevious() {
-  if (isApplicationStep.value) {
-    isApplicationStep.value = false
-    await nextTick()
-    document.getElementById('register-account')?.focus()
-    return
-  }
-
-  emits('onLogin', form.values.account)
+  isApplicationStep.value = false
+  await nextTick()
+  document.getElementById('register-account')?.focus()
 }
 </script>
 
@@ -202,10 +196,10 @@ async function handlePrevious() {
       </FormField>
     </section>
 
-    <div class="form-actions">
-      <FaButton type="button" variant="outline" size="lg" @click="handlePrevious">
+    <div class="form-actions" :class="{ 'form-actions--single': !isApplicationStep }">
+      <FaButton v-if="isApplicationStep" type="button" variant="outline" size="lg" @click="handlePrevious">
         <FaIcon name="i-lucide:arrow-left" />
-        {{ isApplicationStep ? '返回身份信息' : '返回登录' }}
+        返回身份信息
       </FaButton>
       <FaButton :loading="loading" size="lg" type="submit">
         <FaIcon v-if="!loading" :name="isApplicationStep ? 'i-lucide:send' : 'i-lucide:arrow-right'" />
@@ -217,7 +211,7 @@ async function handlePrevious() {
 
 <style scoped>
 /* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
-.register-form { display: grid; gap: var(--mrr-space-4); margin-top: 0; }
+.register-form { display: flex; flex-direction: column; gap: var(--mrr-space-4); min-height: var(--auth-form-height, 0); margin-top: 0; }
 .review-flow { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); color: var(--mrr-foreground); background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 22%, var(--mrr-border)); border-radius: var(--mrr-radius-lg); }
 .review-flow__summary { display: flex; gap: var(--mrr-space-3); align-items: flex-start; }
 .review-flow__summary strong { display: block; font-size: 13px; }
@@ -233,13 +227,15 @@ async function handlePrevious() {
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); min-width: 0; padding-bottom: 18px; }
 .field-item :deep(.fa-input__wrapper), .field-item :deep(input), .field-item :deep(textarea) { width: 100%; }
+.field-item :deep(.fa-input__wrapper), .field-item :deep(input) { height: var(--auth-input-height, var(--mrr-input-height)); }
 .field-message { position: absolute; bottom: 0; font-size: 10px; }
 .field-item--remark { padding-bottom: 16px; }
 .field-item--remark :deep(textarea) { min-height: 64px; }
 .password-shell { position: relative; }
 .password-shell :deep(input) { padding-right: 42px; }
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
-.form-actions { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); }
+.form-actions { display: grid; flex-shrink: 0; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); margin-top: auto; }
+.form-actions--single { grid-template-columns: minmax(0, 1fr); }
 .form-actions :deep(button) { width: 100%; }
 @media (max-width: 768px) {
   .review-flow__steps { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--mrr-space-1); align-items: start; }

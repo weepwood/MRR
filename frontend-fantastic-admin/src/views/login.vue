@@ -7,6 +7,7 @@ meta:
 
 <script setup lang="ts">
 /* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
+import { useResizeObserver } from '@vueuse/core'
 import { LayoutDashboard as DataBoard, FileText as Document, LockKeyhole as Lock } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount } from 'vue'
 import {
@@ -48,6 +49,26 @@ const copy = reactive<LoginPageSettings>({ ...DEFAULT_LOGIN_PAGE_SETTINGS })
 const productVersion = __SYSTEM_INFO__.product.version
 const authMode = ref<AuthMode>(route.query.mode === 'register' ? 'register' : 'login')
 const account = ref('')
+const authModeStage = ref<HTMLDivElement | null>(null)
+let authStageWidth = 0
+
+function alignAuthActions(element?: Element) {
+  const stage = authModeStage.value
+  if (!stage) return
+  const activeForm = element ?? stage.querySelector(`.${authMode.value}-form`)
+  if (!activeForm) return
+  const previousHeight = Number.parseFloat(stage.style.getPropertyValue('--auth-form-height')) || 0
+  const height = Math.max(previousHeight, activeForm.getBoundingClientRect().height)
+  stage.style.setProperty('--auth-form-height', `${height}px`)
+}
+
+useResizeObserver(authModeStage, ([entry]) => {
+  const width = entry.contentRect.width
+  if (authStageWidth && Math.abs(width - authStageWidth) > 1) {
+    authModeStage.value?.style.removeProperty('--auth-form-height')
+  }
+  authStageWidth = width
+})
 
 /* ---------------------------------------------------------------------------
  * 接入环境自检：浏览器侧探测 + 服务端回显客户端地址。
@@ -386,7 +407,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <section class="form-panel">
-        <div class="auth-mode-switch" role="tablist" aria-label="登录或注册">
+        <div class="auth-mode-switch" :class="{ 'is-register': authMode === 'register' }" role="tablist" aria-label="登录或注册">
           <button type="button" :class="{ active: authMode === 'login' }" role="tab" :aria-selected="authMode === 'login'" @click="showLogin()">
             账号登录
           </button>
@@ -404,8 +425,13 @@ onBeforeUnmount(() => {
             :closable="false"
             show-icon
           />
-          <div class="auth-mode-stage">
-            <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" :css="isMotionEnabled()">
+          <div ref="authModeStage" class="auth-mode-stage">
+            <Transition
+              :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'"
+              :css="isMotionEnabled()"
+              @before-leave="alignAuthActions"
+              @enter="alignAuthActions"
+            >
               <LoginForm
                 v-if="authMode === 'login'"
                 :key="`login-${account}`"
@@ -417,7 +443,6 @@ onBeforeUnmount(() => {
                 v-else
                 :key="`register-${account}`"
                 :account="account"
-                @on-login="showLogin"
                 @on-register="handleRegistrationSubmitted"
               />
             </Transition>
@@ -577,26 +602,31 @@ onBeforeUnmount(() => {
 .feature-list strong { display: block; font-size: 13px; }
 .feature-list p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--mrr-muted-foreground); }
 .brand-footer { position: relative; z-index: 1; display: flex; gap: var(--mrr-space-2); align-items: center; margin-top: auto; padding-top: var(--mrr-space-6); font-size: 11px; color: var(--mrr-muted-foreground); }
-.form-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); row-gap: var(--mrr-space-4); padding: 44px 48px; background: var(--mrr-card); }
+.form-panel { --auth-input-height: 38px; --auth-switch-duration: 360ms; --auth-switch-ease: cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: var(--mrr-space-4); min-width: 0; padding: 44px 48px; background: var(--mrr-card); }
 .form-panel__content { display: flex; flex-direction: column; justify-content: flex-start; gap: var(--mrr-space-4); min-width: 0; }
-.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
-.auth-mode-switch button { height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); }
-.auth-mode-switch button.active { color: var(--mrr-foreground); background: var(--mrr-card); box-shadow: var(--mrr-shadow-xs); }
+.auth-mode-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.auth-mode-switch::before { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 6px); pointer-events: none; content: ''; background: var(--mrr-card); border-radius: calc(var(--mrr-radius-md) - 3px); box-shadow: var(--mrr-shadow-xs); transform: translateX(0); transition: transform var(--auth-switch-duration) var(--auth-switch-ease); }
+.auth-mode-switch.is-register::before { transform: translateX(calc(100% + 4px)); }
+.auth-mode-switch button { position: relative; z-index: 1; height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); transition: color 160ms ease; }
+.auth-mode-switch button.active { color: var(--mrr-foreground); }
 .session-notice { margin-top: 0; }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: 0; }
-.auth-mode-stage { display: grid; min-height: 0; }
-.auth-mode-stage > :deep(*) { grid-area: 1 / 1; min-width: 0; }
+
+/* 留出焦点轮廓空间；退出表单脱离文档流，滑动只在表单窗口内呈现。 */
+.auth-mode-stage { position: relative; min-width: 0; padding: var(--mrr-space-1); margin: calc(0px - var(--mrr-space-1)); overflow: hidden; }
+.auth-mode-stage > :deep(.auth-mode-forward-leave-active),
+.auth-mode-stage > :deep(.auth-mode-backward-leave-active) { position: absolute; top: var(--mrr-space-1); left: var(--mrr-space-1); width: calc(100% - var(--mrr-space-1) - var(--mrr-space-1)); pointer-events: none; }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
 .login-shell { animation: login-enter 0.35s ease-out both; }
 @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 :global(.auth-mode-forward-enter-active),
-:global(.auth-mode-forward-leave-active),
 :global(.auth-mode-backward-enter-active),
-:global(.auth-mode-backward-leave-active) { transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
-:global(.auth-mode-forward-enter-from) { opacity: 0; transform: translateX(24px); }
-:global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
-:global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
-:global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
+:global(.auth-mode-forward-leave-active),
+:global(.auth-mode-backward-leave-active) { transition: transform var(--auth-switch-duration) var(--auth-switch-ease); }
+:global(.auth-mode-forward-enter-from),
+:global(.auth-mode-backward-leave-to) { transform: translateX(calc(-100% - var(--mrr-space-4))); }
+:global(.auth-mode-forward-leave-to),
+:global(.auth-mode-backward-enter-from) { transform: translateX(calc(100% + var(--mrr-space-4))); }
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }
@@ -624,22 +654,32 @@ onBeforeUnmount(() => {
   .form-panel { padding: 30px var(--mrr-space-5); }
 }
 @media (min-width: 901px) {
-  .login-shell { height: 580px; grid-template-rows: minmax(0, 1fr); }
+  .login-shell { height: 628px; grid-template-rows: minmax(0, 1fr); }
   .brand-panel { min-height: 0; padding: 32px; overflow: hidden; }
   .brand-heading h1 { font-size: 36px; }
   .brand-heading p { margin-top: var(--mrr-space-3); }
   .feature-list { gap: var(--mrr-space-2); margin-top: var(--mrr-space-5); }
   .feature-list article { padding: var(--mrr-space-2) var(--mrr-space-3); }
   .brand-footer { padding-top: var(--mrr-space-3); }
-  .form-panel { padding: 36px 40px; }
+  .form-panel { padding: 60px 40px; }
+  .form-panel__content { flex: 1; min-height: 0; }
+  .auth-mode-stage { flex: 1; min-height: 0; }
+  .auth-mode-stage > :deep(form) { height: 100%; }
+  .auth-mode-stage > :deep(.auth-mode-forward-leave-active),
+  .auth-mode-stage > :deep(.auth-mode-backward-leave-active) { height: calc(100% - var(--mrr-space-1) - var(--mrr-space-1)); }
 }
 @media (orientation: portrait) {
   .login-shell { align-self: start; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .auth-mode-switch::before { transition: none; }
   :global(.auth-mode-forward-enter-active),
   :global(.auth-mode-forward-leave-active),
   :global(.auth-mode-backward-enter-active),
   :global(.auth-mode-backward-leave-active) { transition-duration: 0.01ms; }
+  :global(.auth-mode-forward-enter-from),
+  :global(.auth-mode-forward-leave-to),
+  :global(.auth-mode-backward-enter-from),
+  :global(.auth-mode-backward-leave-to) { transform: none; }
 }
 </style>

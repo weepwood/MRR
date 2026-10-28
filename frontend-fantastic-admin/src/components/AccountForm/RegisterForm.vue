@@ -36,13 +36,13 @@ const form = useForm({
   validationSchema: toTypedSchema(
     z.object({
       account: z.string().trim()
-        .min(3, '用户名长度应为3到40位')
-        .max(40, '用户名长度应为3到40位')
+        .min(3, '用户名长度应为 3 到 40 位')
+        .max(40, '用户名长度应为 3 到 40 位')
         .regex(/^[A-Za-z0-9._-]+$/, '只能包含字母、数字、点、下划线和短横线'),
       displayName: z.string().trim().min(1, '请输入显示名称').max(80, '显示名称不能超过80个字符'),
       contactInfo: z.string().trim().max(200, '联系方式不能超过200个字符').optional(),
       applyRemark: z.string().trim().max(500, '申请说明不能超过500个字符').optional(),
-      password: z.string().min(6, '密码长度应为6到64位').max(64, '密码长度应为6到64位'),
+      password: z.string().min(6, '密码长度应为 6 到 64 位').max(64, '密码长度应为 6 到 64 位'),
       checkPassword: z.string().min(1, '请再次输入密码'),
     }).refine(data => data.password === data.checkPassword, {
       message: '两次输入的密码不一致',

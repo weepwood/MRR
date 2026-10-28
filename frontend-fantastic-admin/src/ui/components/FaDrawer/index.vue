@@ -27,6 +27,7 @@ const props = withDefaults(
     bordered: true,
     overlay: true,
     overlayBlur: false,
+    overlayClass: '',
     showConfirmButton: true,
     showCancelButton: false,
     confirmButtonText: '确定',
@@ -182,6 +183,7 @@ function handleAnimationEnd() {
       :closable="props.closable"
       :overlay="props.overlay"
       :overlay-blur="props.overlayBlur"
+      :overlay-class="props.overlayClass"
       :class="cn('w-full flex flex-col gap-0 p-0', props.contentClass, {
         hidden: isClosed,
       })"

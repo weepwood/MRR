@@ -45,6 +45,38 @@ test.describe('登录页统一设计', () => {
     await expect(page.getByText('忘记密码了?', { exact: true })).toHaveCount(0)
   })
 
+  test('窄屏登录校验提示显示在标签右侧且卡片高度保持稳定', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+
+    const shell = page.locator('.login-shell')
+    await expect(shell).toBeVisible({ timeout: 20_000 })
+    await page.waitForTimeout(400)
+    const heightBeforeValidation = (await shell.boundingBox())!.height
+
+    await page.getByRole('button', { name: '登录系统' }).click()
+    const usernameError = page.getByText('请输入用户名', { exact: true })
+    const passwordError = page.getByText('请输入密码', { exact: true })
+    await expect(usernameError).toBeVisible()
+    await expect(passwordError).toBeVisible()
+
+    const usernameLabelBox = await page.locator('label[for="login-account"]').boundingBox()
+    const usernameErrorBox = await usernameError.boundingBox()
+    const passwordLabelBox = await page.locator('label[for="login-password"]').boundingBox()
+    const passwordErrorBox = await passwordError.boundingBox()
+    expect(usernameLabelBox).not.toBeNull()
+    expect(usernameErrorBox).not.toBeNull()
+    expect(passwordLabelBox).not.toBeNull()
+    expect(passwordErrorBox).not.toBeNull()
+    expect(usernameErrorBox!.x).toBeGreaterThanOrEqual(usernameLabelBox!.x + usernameLabelBox!.width)
+    expect(passwordErrorBox!.x).toBeGreaterThanOrEqual(passwordLabelBox!.x + passwordLabelBox!.width)
+    expect(Math.abs(usernameErrorBox!.y - usernameLabelBox!.y)).toBeLessThanOrEqual(3)
+    expect(Math.abs(passwordErrorBox!.y - passwordLabelBox!.y)).toBeLessThanOrEqual(3)
+
+    const heightAfterValidation = (await shell.boundingBox())!.height
+    expect(Math.abs(heightAfterValidation - heightBeforeValidation)).toBeLessThanOrEqual(1)
+  })
+
   test('匿名用户可以直接提交注册申请', async ({ page }) => {
     let registrationRequested = false
     await page.route('**/api/v1/auth/register', async (route) => {
@@ -210,6 +242,17 @@ test.describe('登录页统一设计', () => {
     await expect(panel.locator('.environment-item').filter({ hasText: '本机当前时间' }).locator('dd')).toHaveText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
     await expect(panel.getByRole('button', { name: '复制环境信息' })).toBeVisible()
     await expect(panel.getByRole('button', { name: '重新检测' })).toBeVisible()
+
+    const resolutionItem = panel.locator('.environment-item').filter({ hasText: '屏幕分辨率' })
+    const pixelRatioItem = panel.locator('.environment-item').filter({ hasText: '像素比' })
+    await expect(resolutionItem).not.toHaveClass(/environment-item--wide/)
+    await expect(resolutionItem.locator('dd')).toHaveCSS('white-space', 'normal')
+    const [resolutionBox, pixelRatioBox] = await Promise.all([resolutionItem.boundingBox(), pixelRatioItem.boundingBox()])
+    expect(resolutionBox).not.toBeNull()
+    expect(pixelRatioBox).not.toBeNull()
+    expect(resolutionBox!.width).toBeLessThan(400)
+    expect(Math.abs(resolutionBox!.y - pixelRatioBox!.y)).toBeLessThanOrEqual(2)
+    expect(resolutionBox!.x).toBeLessThan(pixelRatioBox!.x)
 
     const initialProbeRequestCount = probeRequestCount
     await page.mouse.move(0, 0)

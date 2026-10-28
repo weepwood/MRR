@@ -57,6 +57,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldExposeStableReasonCodeForLastAdminConflict() {
+        ResponseEntity<Result<Void>> response = handler.handleBusinessException(
+                new BusinessException(409, "不能停用或降级最后一个有效管理员", "LAST_ACTIVE_ADMIN_REQUIRED"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMeta()).containsEntry("reasonCode", "LAST_ACTIVE_ADMIN_REQUIRED");
+    }
+
+    @Test
     void shouldNotExposeInternalExceptionMessage() {
         ResponseEntity<Result<Void>> response = handler.handleException(
                 new IllegalStateException("JWT_SECRET_KEY=/internal/secret"),

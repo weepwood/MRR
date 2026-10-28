@@ -1,7 +1,8 @@
 package com.zjcxph.imgapi.unit.service;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import com.zjcxph.imgapi.common.ResultCode;
 import com.zjcxph.imgapi.exception.OssErrorType;
 import com.zjcxph.imgapi.exception.OssOperationException;
@@ -10,6 +11,8 @@ import com.zjcxph.imgapi.service.impl.ManagedPrefixOssService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -92,7 +95,7 @@ class ManagedPrefixOssServiceTest {
     @Test
     @DisplayName("上游 403 映射为 OSS_UNAUTHORIZED 且隐藏 SDK 原文")
     void mapsForbiddenToUnauthorizedWithoutLeakingDetails() {
-        AmazonServiceException cause = serviceFailure(
+        RuntimeException cause = serviceFailure(
                 403,
                 "AccessDenied",
                 "Access denied for bucket hospital-private at http://10.0.0.10:9000"
@@ -108,6 +111,24 @@ class ManagedPrefixOssServiceTest {
                     assertThat(exception.getMessage())
                             .doesNotContain("hospital-private", "10.0.0.10", "internal endpoint");
                     assertThat(exception.getCause()).isNotNull();
+                });
+    }
+
+    @Test
+    @DisplayName("SDK v2 上游 403 仍映射为脱敏的 OSS_UNAUTHORIZED")
+    void mapsV2ForbiddenToUnauthorizedWithoutLeakingDetails() {
+        RuntimeException cause = S3Exception.builder()
+                .statusCode(403)
+                .awsErrorDetails(AwsErrorDetails.builder().errorCode("AccessDenied").build())
+                .message("private endpoint detail")
+                .build();
+        when(delegate.generatePresignedUrl(MANAGED_KEY)).thenThrow(cause);
+
+        assertThatThrownBy(() -> service.generatePresignedUrl(MANAGED_KEY))
+                .isInstanceOfSatisfying(OssOperationException.class, exception -> {
+                    assertThat(exception.getType()).isEqualTo(OssErrorType.OSS_UNAUTHORIZED);
+                    assertThat(exception.getMessage()).isEqualTo(ResultCode.OSS_UNAUTHORIZED.getMessage());
+                    assertThat(exception.getMessage()).doesNotContain("private endpoint detail");
                 });
     }
 
@@ -139,13 +160,32 @@ class ManagedPrefixOssServiceTest {
         );
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "401, AccessDenied, OSS_UNAUTHORIZED",
+            "408, RequestTimeout, OSS_UNAVAILABLE",
+            "429, SlowDown, OSS_UNAVAILABLE",
+            "500, InternalError, OSS_UNAVAILABLE"
+    })
+    @DisplayName("SDK v2 服务错误按状态码稳定分类")
+    void mapsV2ServiceStatus(int statusCode, String errorCode, OssErrorType expected) {
+        when(delegate.doesObjectExist(MANAGED_KEY))
+                .thenThrow(serviceFailure(statusCode, errorCode, "private endpoint detail"));
+
+        assertThatThrownBy(() -> service.doesObjectExist(MANAGED_KEY))
+                .isInstanceOfSatisfying(OssOperationException.class, exception -> {
+                    assertThat(exception.getType()).isEqualTo(expected);
+                    assertThat(exception.getMessage()).doesNotContain("private endpoint detail");
+                });
+    }
+
     @Test
     @DisplayName("客户端超时映射为 OSS_UNAVAILABLE")
     void mapsTimeoutToUnavailable() {
-        AmazonClientException clientFailure = new AmazonClientException(
-                "request timed out for http://10.0.0.10:9000",
-                new SocketTimeoutException("read timed out")
-        );
+        SdkClientException clientFailure = SdkClientException.builder()
+                .message("request timed out for http://10.0.0.10:9000")
+                .cause(new SocketTimeoutException("read timed out"))
+                .build();
         when(delegate.generatePresignedUrl(MANAGED_KEY)).thenThrow(clientFailure);
 
         assertThatThrownBy(() -> service.generatePresignedUrl(MANAGED_KEY))
@@ -214,10 +254,11 @@ class ManagedPrefixOssServiceTest {
                 });
     }
 
-    private AmazonServiceException serviceFailure(int statusCode, String errorCode, String message) {
-        AmazonServiceException exception = new AmazonServiceException(message);
-        exception.setStatusCode(statusCode);
-        exception.setErrorCode(errorCode);
-        return exception;
+    private RuntimeException serviceFailure(int statusCode, String errorCode, String message) {
+        return S3Exception.builder()
+                .statusCode(statusCode)
+                .awsErrorDetails(AwsErrorDetails.builder().errorCode(errorCode).build())
+                .message(message)
+                .build();
     }
 }

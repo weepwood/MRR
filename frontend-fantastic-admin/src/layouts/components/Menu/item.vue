@@ -35,7 +35,7 @@ function startRipple(element: HTMLElement, clientX: number, clientY: number) {
     Math.hypot(x, rect.height - y),
     Math.hypot(rect.width - x, rect.height - y),
   )
-  const maxRippleDiameter = Math.max(rect.height * 0.95, 24)
+  const maxRippleDiameter = Math.max(rect.height * 1.2, 28)
   const key = ++rippleKey
 
   ripple.value = { key, x, y, diameter: Math.ceil(Math.min(radius * 2, maxRippleDiameter)) }

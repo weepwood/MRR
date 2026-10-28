@@ -306,6 +306,10 @@ test.describe('登录页统一设计', () => {
     const panel = page.locator('#login-environment-panel')
     const refresh = panel.locator('.environment-actions button').first()
     await expect(panel).toBeVisible()
+    const clientIpHelp = panel.getByRole('button', { name: '客户端 IP 说明' })
+    await expect(clientIpHelp).toBeVisible()
+    await clientIpHelp.hover()
+    await expect(page.getByRole('tooltip', { name: '客户端 IP' })).toContainText('客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。')
     await expect(refresh).toHaveText('检测中…')
     await expect(refresh).toHaveAttribute('aria-disabled', 'true')
     await expect(refresh).toBeFocused()
@@ -411,38 +415,53 @@ test.describe('登录页统一设计', () => {
     expect(Math.abs(boxes[1]!.y - boxes[2]!.y)).toBeLessThanOrEqual(2)
   })
 
-  test('登录与注册切换时卡片高度平滑过渡', async ({ page }) => {
+  test('宽屏登录与注册切换使用横向合成动画且不插值卡片高度', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
     const card = page.locator('.login-shell')
-    const loginHeight = (await card.boundingBox())!.height
+    await expect(card).toHaveCSS('min-height', '760px')
+    await expect(card).toHaveCSS('height', '760px')
     await page.getByRole('tab', { name: '注册申请' }).click()
     await expect(card).toHaveClass(/is-register/)
-    await page.waitForTimeout(150)
-    const transitionHeight = (await card.boundingBox())!.height
-    await page.waitForTimeout(350)
-    const registerHeight = (await card.boundingBox())!.height
+    const loginForm = page.locator('.login-form')
+    await expect(loginForm).toHaveClass(/auth-mode-forward-leave-active/)
+    await page.waitForTimeout(80)
+    const loginLeaveX = await loginForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(loginLeaveX).toBeLessThan(0)
+    const transitionProperties = await loginForm.evaluate(element => getComputedStyle(element).transitionProperty)
+    expect(transitionProperties).toContain('opacity')
+    expect(transitionProperties).toContain('transform')
+    expect(transitionProperties).not.toContain('height')
+    await page.waitForTimeout(100)
+    const cardStyles = await card.evaluate(element => ({
+      height: element.style.height,
+      minHeight: element.style.minHeight,
+      transition: element.style.transition,
+    }))
+    expect(cardStyles).toEqual({ height: '', minHeight: '', transition: '' })
 
-    expect(transitionHeight).toBeGreaterThan(loginHeight + 1)
-    expect(transitionHeight).toBeLessThan(registerHeight - 1)
+    const registerForm = page.locator('.register-form')
+    await expect(registerForm).toHaveClass(/auth-mode-forward-enter-active/)
+    await page.waitForTimeout(80)
+    const registerEnterX = await registerForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(registerEnterX).toBeGreaterThan(0)
+    await expect(card).toHaveCSS('height', '760px')
 
     await page.getByRole('tab', { name: '账号登录' }).click()
     await expect(card).not.toHaveClass(/is-register/)
-    await page.waitForTimeout(150)
-    const reverseTransitionHeight = (await card.boundingBox())!.height
-    await page.waitForTimeout(350)
-    const returnedLoginHeight = (await card.boundingBox())!.height
-
-    expect(reverseTransitionHeight).toBeLessThan(registerHeight - 1)
-    expect(reverseTransitionHeight).toBeGreaterThan(returnedLoginHeight + 1)
-
-    await page.getByRole('tab', { name: '注册申请' }).click()
-    await page.waitForTimeout(100)
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.getByRole('tab', { name: '账号登录' }).click()
-    await expect.poll(() => card.evaluate(element => element.style.height)).toBe('')
-    await expect.poll(() => card.evaluate(element => element.style.minHeight)).toBe('')
+    await expect(registerForm).toHaveClass(/auth-mode-backward-leave-active/)
+    await page.waitForTimeout(80)
+    const registerLeaveX = await registerForm.evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
+    )
+    expect(registerLeaveX).toBeGreaterThan(0)
+    await expect(page.locator('.login-form')).toHaveClass(/auth-mode-backward-enter-active/)
+    await expect(card).toHaveCSS('height', '760px')
   })
 
   test('竖屏登录与注册切换时卡片顶部保持稳定', async ({ page }) => {

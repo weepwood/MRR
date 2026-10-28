@@ -37,6 +37,21 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 
 ## 前端开发
 
+只改页面、样式或交互且不需要真实 API 时，在仓库根目录运行轻量入口：
+
+```powershell
+.\scripts\dev.ps1 frontend
+```
+
+首次使用前，在前端目录安装依赖：
+
+```powershell
+cd frontend-fantastic-admin
+corepack pnpm install --frozen-lockfile
+```
+
+轻量入口使用 Mock API，不启动后端、PostgreSQL 或 Docker。需要真实登录和接口联调时，再使用 `pnpm dev` 并启动后端。
+
 ```bash
 cd frontend-fantastic-admin
 corepack pnpm@10.33.0 install --frozen-lockfile

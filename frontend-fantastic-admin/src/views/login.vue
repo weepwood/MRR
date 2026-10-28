@@ -32,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { getEnvironmentProbeRetryDelay } from '@/utils/login-environment-retry'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { notify } from '@/utils/notification'
 
@@ -115,6 +116,7 @@ const environmentBadge = ref<HTMLButtonElement | null>(null)
 const environmentOpen = ref(false)
 let environmentKeyboardFocusRequested = false
 const environmentProbing = ref(false)
+const environmentRetryScheduled = ref(false)
 const environmentUserAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
 const browserInfo = parseUserAgent(environmentUserAgent)
 const browserSupport = evaluateBrowserSupport(browserInfo)
@@ -124,6 +126,9 @@ const clientProbe = ref<ClientEnvironmentProbe | null>(null)
 const environmentSampledAt = ref(Date.now())
 const localCurrentTime = ref(formatLocalDateTime(new Date()))
 let localClockTimer: number | undefined
+let environmentRetryTimer: number | undefined
+let environmentProbeFailureCount = 0
+let loginViewActive = true
 const environmentView = computed(() => buildLoginEnvironmentView(
   browserInfo,
   networkSnapshot.value,
@@ -168,17 +173,52 @@ function closeEnvironmentForKeyboard() {
   void nextTick(() => environmentBadge.value?.focus())
 }
 
-async function probeEnvironment() {
+function clearEnvironmentRetry() {
+  if (environmentRetryTimer !== undefined) {
+    window.clearTimeout(environmentRetryTimer)
+    environmentRetryTimer = undefined
+  }
+  environmentRetryScheduled.value = false
+}
+
+function scheduleEnvironmentRetry() {
+  clearEnvironmentRetry()
+  environmentProbeFailureCount += 1
+  const delay = getEnvironmentProbeRetryDelay(environmentProbeFailureCount)
+  environmentRetryScheduled.value = true
+  environmentRetryTimer = window.setTimeout(() => {
+    environmentRetryTimer = undefined
+    environmentRetryScheduled.value = false
+    void probeEnvironment(true)
+  }, delay)
+}
+
+async function probeEnvironment(isAutomaticRetry = false) {
   if (environmentProbing.value) return
+  if (!isAutomaticRetry) {
+    clearEnvironmentRetry()
+    environmentProbeFailureCount = 0
+  }
   environmentProbing.value = true
   networkSnapshot.value = collectNetworkSnapshot()
   deviceSnapshot.value = collectDeviceSnapshot()
   try {
-    clientProbe.value = await getPublicClientEnvironment()
+    const probe = await getPublicClientEnvironment()
+    if (!loginViewActive) return
+    clientProbe.value = probe
+    if (networkSnapshot.value.online && clientProbe.value.reachable) {
+      clearEnvironmentRetry()
+      environmentProbeFailureCount = 0
+    }
+    else {
+      scheduleEnvironmentRetry()
+    }
   }
   finally {
-    environmentSampledAt.value = Date.now()
-    environmentProbing.value = false
+    if (loginViewActive) {
+      environmentSampledAt.value = Date.now()
+      environmentProbing.value = false
+    }
   }
 }
 
@@ -261,8 +301,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  loginViewActive = false
   window.removeEventListener(LOGIN_PAGE_SETTINGS_UPDATED_EVENT, handleUpdated)
   if (localClockTimer !== undefined) window.clearInterval(localClockTimer)
+  clearEnvironmentRetry()
   if (unsubscribeNetworkChanges) unsubscribeNetworkChanges()
   if (authModeAnimationFrame) window.cancelAnimationFrame(authModeAnimationFrame)
   if (authModeTransitionEnd && loginShell.value) {
@@ -388,11 +430,14 @@ onBeforeUnmount(() => {
                 <p class="environment-hint">
                   客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。
                 </p>
+                <p v-if="environmentRetryScheduled" class="environment-retry-status" role="status">
+                  网络连接异常，将自动重试；重试间隔会逐步延长。
+                </p>
                 <div class="environment-actions">
-                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment">
+                  <button type="button" :disabled="environmentProbing" @click="probeEnvironment()">
                     {{ environmentProbing ? '检测中…' : '重新检测' }}
                   </button>
-                  <button type="button" class="is-primary" @click="copyEnvironmentReport">
+                  <button type="button" @click="copyEnvironmentReport">
                     复制环境信息
                   </button>
                 </div>
@@ -532,12 +577,12 @@ onBeforeUnmount(() => {
 .environment-item--single-line dd { white-space: nowrap; }
 .environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; padding-top: var(--mrr-space-4); margin-top: var(--mrr-space-4); border-top: 1px solid var(--mrr-border); }
 .environment-hint { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.6; color: var(--mrr-muted-foreground); }
+.environment-retry-status { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.5; color: var(--color-warning); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
 .environment-actions { display: flex; gap: var(--mrr-space-2); }
 .environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-actions button:hover:not(:disabled) { color: var(--mrr-foreground); border-color: var(--mrr-border-strong); }
-.environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
-.environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
+.environment-actions button:disabled { cursor: default; opacity: 0.6; }
 :global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: var(--mrr-popover); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
 .login-shell {
   align-self: center;

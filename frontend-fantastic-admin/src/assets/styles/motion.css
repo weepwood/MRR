@@ -118,6 +118,7 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .menu-item-container:active .menu-item-container-icon,
 :root[data-motion="off"] .menu-item-container:hover .menu-leading-control-icon,
 :root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow,
+:root[data-motion="off"] .sub-menu .menu-item-container:hover .menu-item-container-icon,
 :root[data-motion="off"] .dashboard-widget:active:not(.is-editing),
 :root[data-motion="off"] .dashboard-widget:hover .dashboard-widget__arrow,
 :root[data-motion="off"] .oss-folder-icon:hover .work-1,
@@ -141,4 +142,14 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .history-tab-leave-to {
   opacity: 1 !important;
   transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-menu .menu-item-container-icon {
+    transition: none !important;
+  }
+
+  .sub-menu .menu-item-container:hover .menu-item-container-icon {
+    transform: none !important;
+  }
 }

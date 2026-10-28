@@ -404,23 +404,24 @@ onBeforeUnmount(() => {
             :closable="false"
             show-icon
           />
-
-          <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" mode="out-in" :css="isMotionEnabled()">
-            <LoginForm
-              v-if="authMode === 'login'"
-              :key="`login-${account}`"
-              :account="account"
-              @on-login="handleLogin"
-              @on-register="showRegister"
-            />
-            <RegisterForm
-              v-else
-              :key="`register-${account}`"
-              :account="account"
-              @on-login="showLogin"
-              @on-register="handleRegistrationSubmitted"
-            />
-          </Transition>
+          <div class="auth-mode-stage">
+            <Transition :name="authMode === 'register' ? 'auth-mode-forward' : 'auth-mode-backward'" :css="isMotionEnabled()">
+              <LoginForm
+                v-if="authMode === 'login'"
+                :key="`login-${account}`"
+                :account="account"
+                @on-login="handleLogin"
+                @on-register="showRegister"
+              />
+              <RegisterForm
+                v-else
+                :key="`register-${account}`"
+                :account="account"
+                @on-login="showLogin"
+                @on-register="handleRegistrationSubmitted"
+              />
+            </Transition>
+          </div>
 
           <SystemAdminContactPopover
             class="login-admin-contact"
@@ -488,7 +489,7 @@ onBeforeUnmount(() => {
 .environment-badge[aria-expanded='true'] { border-color: color-mix(in srgb, var(--mrr-primary) 58%, var(--mrr-border)); }
 .environment-separator { color: var(--mrr-border-strong); }
 .environment-ip-label { font-size: 10px; font-weight: 600; color: var(--mrr-muted-foreground); }
-.environment-mono { font-family: var(--font-mono, monospace); font-size: 11px; }
+.environment-mono { font-family: inherit; font-size: 11px; }
 .status-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; }
 .status-dot.tone-ok { background: var(--color-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 15%, transparent); }
 .status-dot.tone-warn { background: var(--color-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning) 15%, transparent); }
@@ -498,7 +499,7 @@ onBeforeUnmount(() => {
 .tone-text-warn { color: var(--color-warning); }
 .tone-text-danger { color: var(--color-danger); }
 .tone-text-neutral { color: var(--mrr-muted-foreground); }
-.product-version { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--mrr-primary); }
+.product-version { font-family: inherit; font-size: 11px; color: var(--mrr-primary); }
 .environment-panel { max-height: min(68vh, 620px); padding: 0; margin: 0; overflow-y: auto; background: transparent; border: 0; box-shadow: none; scrollbar-color: var(--mrr-border-strong) transparent; scrollbar-width: thin; }
 .environment-panel__header { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: 0; margin-bottom: var(--mrr-space-2); }
 .environment-panel__eyebrow { font-size: 10px; font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
@@ -583,6 +584,8 @@ onBeforeUnmount(() => {
 .auth-mode-switch button.active { color: var(--mrr-foreground); background: var(--mrr-card); box-shadow: var(--mrr-shadow-xs); }
 .session-notice { margin-top: 0; }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: 0; }
+.auth-mode-stage { display: grid; min-height: 0; }
+.auth-mode-stage > :deep(*) { grid-area: 1 / 1; min-width: 0; }
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
 .login-shell { animation: login-enter 0.35s ease-out both; }
 @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }

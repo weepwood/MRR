@@ -1,18 +1,36 @@
 interface ImportMetaEnv {
   // Auto generate by env-parse
+  /**
+   * 接口请求地址，会设置到 axios 的 baseURL 参数上
+   */
   readonly VITE_APP_API_BASEURL: string
+  /**
+   * 调试工具，可设置 eruda 或 vconsole，如果不需要开启则留空
+   */
   readonly VITE_APP_DEBUG_TOOL: string
+  /**
+   * 默认联调真实登录；仅使用 .env.mock 时启用展示模式。
+   */
   readonly VITE_APP_DEMO_MODE: boolean
+  /**
+   * 是否禁用开发者工具，可防止被调试
+   */
   readonly VITE_APP_DISABLE_DEVTOOL: boolean
   /**
-   * 无后端开发与自动化测试模式（不包含敏感信息）
+   * 应用配置面板
    */
   readonly VITE_APP_SETTING: boolean
+  /**
+   * 页面标题
+   */
   readonly VITE_APP_TITLE: string
   /**
-   * Mock 模式由 vite-plugin-fake-server 拦截 /proxy 下的请求
+   * 是否开启开发者工具
    */
-  readonly VITE_BUILD_MOCK: boolean
   readonly VITE_OPEN_DEVTOOLS: boolean
+  /**
+   * 是否开启代理
+   */
   readonly VITE_OPEN_PROXY: boolean
+  readonly VITE_BUILD_MOCK: boolean
 }

@@ -8,6 +8,7 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { notify } from '@/utils/notification'
+import RegisterFieldLabel from './RegisterFieldLabel.vue'
 
 defineOptions({ name: 'RegisterForm' })
 
@@ -36,13 +37,13 @@ const form = useForm({
   validationSchema: toTypedSchema(
     z.object({
       account: z.string().trim()
-        .min(3, '用户名长度应为 3 到 40 位')
-        .max(40, '用户名长度应为 3 到 40 位')
+        .min(3, '用户名长度应为3到40位')
+        .max(40, '用户名长度应为3到40位')
         .regex(/^[A-Za-z0-9._-]+$/, '只能包含字母、数字、点、下划线和短横线'),
       displayName: z.string().trim().min(1, '请输入显示名称').max(80, '显示名称不能超过80个字符'),
       contactInfo: z.string().trim().max(200, '联系方式不能超过200个字符').optional(),
       applyRemark: z.string().trim().max(500, '申请说明不能超过500个字符').optional(),
-      password: z.string().min(6, '密码长度应为 6 到 64 位').max(64, '密码长度应为 6 到 64 位'),
+      password: z.string().min(6, '密码长度应为6到64位').max(64, '密码长度应为6到64位'),
       checkPassword: z.string().min(1, '请再次输入密码'),
     }).refine(data => data.password === data.checkPassword, {
       message: '两次输入的密码不一致',
@@ -132,32 +133,42 @@ async function handlePrevious() {
       <div class="field-grid">
         <FormField v-slot="{ componentField, errors }" name="account">
           <FormItem class="field-item">
-            <label for="register-account">用户名 <em>必填</em></label>
+            <RegisterFieldLabel html-for="register-account" label="用户名" status="必填" description="3–40 位，可使用字母、数字、点、下划线和短横线" />
             <FormControl>
-              <FaInput id="register-account" type="text" autocomplete="username" placeholder="例如 zhangsan" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <FaInput id="register-account" type="text" autocomplete="username" placeholder="例如 zhangsan" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
             </FormControl>
-            <small class="field-hint">3–40 位，可使用字母、数字、点、下划线和短横线</small>
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
 
         <FormField v-slot="{ componentField, errors }" name="displayName">
           <FormItem class="field-item">
-            <label for="register-display-name">显示名称 <em>必填</em></label>
+            <RegisterFieldLabel html-for="register-display-name" label="显示名称" status="必填" description="建议填写真实姓名，便于管理员确认身份" />
             <FormControl>
-              <FaInput id="register-display-name" type="text" autocomplete="name" placeholder="例如 张三" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <FaInput id="register-display-name" type="text" autocomplete="name" placeholder="例如 张三" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
             </FormControl>
-            <small class="field-hint">建议填写真实姓名，便于管理员确认身份</small>
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
 
         <FormField v-slot="{ componentField, value, errors }" name="password">
           <FormItem class="field-item">
-            <label for="register-password">密码 <em>必填</em></label>
+            <RegisterFieldLabel
+              html-for="register-password"
+              label="密码"
+              status="必填"
+              description="长度为 6 到 64 位"
+              :suggestions="[
+                '长度至少为 8 个字符',
+                '包含大写字母',
+                '包含小写字母',
+                '包含数字',
+                '包含特殊字符',
+              ]"
+            />
             <FormControl>
               <div class="password-shell">
-                <FaInput id="register-password" :type="showPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="6 到 64 位" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+                <FaInput id="register-password" :type="showPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="6 到 64 位" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
                 <button type="button" class="password-toggle" :aria-label="showPwd ? '隐藏密码' : '显示密码'" @click="showPwd = !showPwd">
                   <Eye v-if="!showPwd" class="size-4" />
                   <EyeOff v-else class="size-4" />
@@ -171,17 +182,16 @@ async function handlePrevious() {
 
         <FormField v-slot="{ componentField, errors }" name="checkPassword">
           <FormItem class="field-item">
-            <label for="register-password-confirm">确认密码 <em>必填</em></label>
+            <RegisterFieldLabel html-for="register-password-confirm" label="确认密码" status="必填" description="请与上方密码保持一致" />
             <FormControl>
               <div class="password-shell">
-                <FaInput id="register-password-confirm" :type="showCheckPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="再次输入密码" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+                <FaInput id="register-password-confirm" :type="showCheckPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="再次输入密码" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
                 <button type="button" class="password-toggle" :aria-label="showCheckPwd ? '隐藏密码' : '显示密码'" @click="showCheckPwd = !showCheckPwd">
                   <Eye v-if="!showCheckPwd" class="size-4" />
                   <EyeOff v-else class="size-4" />
                 </button>
               </div>
             </FormControl>
-            <small class="field-hint">请与上方密码保持一致</small>
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
@@ -199,18 +209,17 @@ async function handlePrevious() {
 
       <FormField v-slot="{ componentField, errors }" name="contactInfo">
         <FormItem class="field-item">
-          <label for="register-contact">联系方式 <span>选填</span></label>
+          <RegisterFieldLabel html-for="register-contact" label="联系方式" status="选填" description="仅用于注册审核和账号问题联系" />
           <FormControl>
             <FaInput id="register-contact" type="text" autocomplete="tel" placeholder="手机号、工号、科室内线等" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
           </FormControl>
-          <small class="field-hint">仅用于注册审核和账号问题联系</small>
           <FormMessage class="field-message" />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField, errors }" name="applyRemark">
         <FormItem class="field-item field-item--remark">
-          <label for="register-remark">申请说明 <span>选填</span></label>
+          <RegisterFieldLabel html-for="register-remark" label="申请说明" status="选填" description="最多 500 个字符" />
           <FormControl>
             <FaTextarea id="register-remark" :rows="3" maxlength="500" show-word-limit placeholder="例如：肿瘤科医生，需要查阅本科室住院病案" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
           </FormControl>
@@ -253,17 +262,13 @@ async function handlePrevious() {
 .section-heading p { margin: 3px 0 0; font-size: 11px; line-height: 1.55; color: var(--mrr-muted-foreground); }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); min-width: 0; padding-bottom: 18px; }
-.field-item label { display: flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 650; color: var(--mrr-foreground); }
-.field-item label em { font-size: 10px; font-style: normal; font-weight: 500; color: var(--color-danger); }
-.field-item label span { font-size: 10px; font-weight: 500; color: var(--mrr-muted-foreground); }
 .field-item :deep(.fa-input__wrapper), .field-item :deep(input), .field-item :deep(textarea) { width: 100%; }
-.field-hint { min-height: 16px; font-size: 10px; line-height: 1.5; color: var(--mrr-muted-foreground); }
 .field-message { position: absolute; bottom: 0; font-size: 10px; }
 .field-item--remark { padding-bottom: 16px; }
 .password-shell { position: relative; }
+.password-strength { margin-top: 0; }
 .password-shell :deep(input) { padding-right: 42px; }
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
-.password-strength { margin-top: 0; }
 .form-actions { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); }
 .form-actions :deep(button) { width: 100%; }
 @media (max-width: 768px) {

@@ -151,7 +151,7 @@ async function handlePrevious() {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField, errors }" name="password">
+        <FormField v-slot="{ componentField, value, errors }" name="password">
           <FormItem class="field-item">
             <RegisterFieldLabel
               html-for="register-password"
@@ -175,6 +175,7 @@ async function handlePrevious() {
                 </button>
               </div>
             </FormControl>
+            <FaPasswordStrength :password="value" class="password-strength" />
             <FormMessage class="field-message" />
           </FormItem>
         </FormField>
@@ -265,6 +266,7 @@ async function handlePrevious() {
 .field-message { position: absolute; bottom: 0; font-size: 10px; }
 .field-item--remark { padding-bottom: 16px; }
 .password-shell { position: relative; }
+.password-strength { margin-top: 0; }
 .password-shell :deep(input) { padding-right: 42px; }
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
 .form-actions { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); }

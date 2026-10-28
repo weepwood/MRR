@@ -2,12 +2,32 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
+
+
+def configuration_problems(root: Path) -> list[str]:
+    problems = []
+    node_file = root / 'frontend-fantastic-admin/.node-version'
+    node = node_file.read_text(encoding='utf-8').strip()
+    package = json.loads((root / 'frontend-fantastic-admin/package.json').read_text(encoding='utf-8'))
+    if not check_version('node', node)[0] or f'^{node}' not in package['engines']['node']:
+        problems.append('Node pin is outside the supported engine range')
+    if package['packageManager'] != 'pnpm@10.33.0':
+        problems.append('pnpm packageManager differs from the supported pin')
+    for relative in ('backend-repo/Dockerfile', 'frontend-fantastic-admin/Dockerfile'):
+        source = (root / relative).read_text(encoding='utf-8')
+        if f'ARG NODE_VERSION={node}' not in source or 'FROM node:${NODE_VERSION}-alpine' not in source:
+            problems.append(f'{relative}: Node image differs from .node-version')
+    for file in (root / '.github/workflows').glob('*.yml'):
+        if re.search(r'(?<![\w./])mvn\s', file.read_text(encoding='utf-8')):
+            problems.append(f'{file.name}: use the Maven Wrapper')
+    return problems
 
 
 def check_version(tool: str, output: str) -> tuple[bool, str]:
@@ -35,6 +55,9 @@ def main() -> int:
     parser.add_argument("--scope", choices=("backend", "frontend", "all"), default="all")
     parser.add_argument("--integration", action="store_true", help="Require external PostgreSQL configuration or Docker")
     args = parser.parse_args()
+    problems = configuration_problems(Path(__file__).resolve().parents[1])
+    for problem in problems:
+        print(f'FAIL configuration: {problem}')
     commands = {"python": [os.environ.get("MRR_TEST_PYTHON", sys.executable), "--version"]}
     if args.scope != "frontend":
         java_home = os.environ.get("JAVA_HOME")
@@ -42,8 +65,12 @@ def main() -> int:
         commands["java"] = [java, "-version"]
     if args.scope != "backend":
         for tool in ("node", "pnpm"):
-            commands[tool] = [shutil.which(tool) or tool, "--version"]
-    valid = True
+            commands[tool] = ([shutil.which('corepack'), 'pnpm', '--version']
+                              if tool == 'pnpm' and shutil.which('corepack') else [shutil.which(tool) or tool, '--version'])
+    valid = not problems
+    if args.scope != 'frontend' and os.name != 'nt' and not shutil.which('unzip'):
+        print('FAIL unzip is required for the checksum-pinned Maven ZIP')
+        valid = False
     for tool, command in commands.items():
         directory = Path(__file__).resolve().parents[1] / "frontend-fantastic-admin" if tool in ("node", "pnpm") else None
         ok, version = check_version(tool, run(command, directory))

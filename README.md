@@ -120,7 +120,7 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
 
 - JDK 21+
-- 仓库自带 Maven Wrapper 3.9.9，无需全局 Maven
+- 仓库自带 Maven Wrapper 3.10.0（以 Wrapper 配置为准），无需全局 Maven
 - PostgreSQL 16+
 - Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0
@@ -135,6 +135,17 @@ git switch main
 ```
 
 ### 数据库
+
+Windows 本地开发可以使用统一入口，自动创建独立 PostgreSQL16、随机本地密钥并启动原生 Java/Vite：
+
+```powershell
+.\scripts\dev.ps1 doctor
+.\scripts\dev.ps1 up
+.\scripts\dev.ps1 status
+.\scripts\dev.ps1 down
+```
+
+如 `python` 不可执行，添加 `-PythonExe 'C:\Python312\python.exe'` 指定实际路径。Web 端口被占用时使用 `-WebPort 0`。资源归属、日志隐私、数据卷保留和容器验证见[可重复的本地开发与启动](docs/engineering/local-development.md)。
 
 正式迁移位于：
 

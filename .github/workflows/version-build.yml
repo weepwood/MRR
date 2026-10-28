@@ -68,7 +68,7 @@ jobs:
           cache: maven
 
       - name: Build Backend
-        run: mvn -B -ntp -DskipTests package
+        run: bash ./mvnw -B -ntp -DskipTests package
 
       # 同上：仅跨 job 传递用，1 天回收。
       - name: Upload Backend Artifact

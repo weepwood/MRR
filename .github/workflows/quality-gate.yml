@@ -30,6 +30,7 @@ jobs:
       windows: ${{ steps.scope.outputs.windows }}
       recovery: ${{ steps.scope.outputs.recovery }}
       release: ${{ steps.scope.outputs.release }}
+      development: ${{ steps.scope.outputs.development }}
       base: ${{ steps.scope.outputs.base }}
     steps:
       - uses: actions/checkout@v7
@@ -60,6 +61,8 @@ jobs:
           python scripts/release_baseline.py validate
           python scripts/test_inventory.py --fail-on-focused
           python scripts/check_main_branch_references.py
+          python scripts/check_engineering_docs.py
+          python -c "from pathlib import Path; from scripts.engineering_preflight import configuration_problems; p=configuration_problems(Path('.')); print('\n'.join(p)); raise SystemExit(bool(p))"
       - name: Test CI and repository tooling when affected
         if: steps.scope.outputs.tooling == 'true'
         run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
@@ -133,15 +136,15 @@ jobs:
           cache: maven
       - name: Unit tests
         if: needs.scope.outputs.postgres != 'true'
-        run: mvn -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
       - name: Unit and actual PostgreSQL tests
         if: needs.scope.outputs.postgres == 'true'
         run: |
-          mvn -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
+          bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
           python scripts/check_test_execution.py --reports backend-repo/target/failsafe-reports
       - name: Package compiled classes for selected real checks
         if: needs.scope.outputs.postgres != 'true' && needs.scope.outputs.recovery == 'true'
-        run: mvn -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
       - name: Share the same backend JAR
         if: needs.scope.outputs.recovery == 'true'
         uses: actions/upload-artifact@v7
@@ -181,6 +184,14 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest scripts.tests.test_windows_one_click_manager -v
+      - run: python -m unittest scripts.tests.test_dev -v
+      - name: Parse development entry with PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'scripts/dev.ps1'), [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw 'Development entry has PowerShell syntax errors.' }
       - name: Parse deployment scripts with PowerShell 5.1
         shell: powershell
         run: |
@@ -206,8 +217,21 @@ jobs:
     if: needs.scope.outputs.release == 'true'
     uses: ./.github/workflows/release-validation.yml
 
+  development:
+    needs: scope
+    if: needs.scope.outputs.development == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build clean development images and verify startup and refusal
+        run: python -m scripts.smoke_dev
+
   pr-gate:
-    needs: [scope, frontend, backend, integration, windows, recovery, release]
+    needs: [scope, frontend, backend, integration, windows, recovery, release, development]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

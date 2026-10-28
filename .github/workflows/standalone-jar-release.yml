@@ -78,7 +78,7 @@ jobs:
 
       - name: Test and package backend
         working-directory: backend-repo
-        run: mvn -B -Drevision="${PRODUCT_VERSION}" test package
+        run: bash ./mvnw -B -Drevision="${PRODUCT_VERSION}" test package
 
       - name: Locate backend JAR
         shell: bash

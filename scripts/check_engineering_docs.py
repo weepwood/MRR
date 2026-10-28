@@ -28,6 +28,17 @@ def validate(root: Path) -> list[str]:
         path = root / relative
         if path.exists() and re.search(r"git (?:checkout|switch) (?:dev|develop)\b", path.read_text(encoding="utf-8")):
             problems.append(f"{relative}: development must start from main")
+    wrapper = root / 'backend-repo/.mvn/wrapper/maven-wrapper.properties'
+    if wrapper.exists():
+        match = re.search(r'/apache-maven/([\d.]+)/', wrapper.read_text(encoding='utf-8'))
+        if not match:
+            problems.append('Maven Wrapper distribution version is missing')
+        else:
+            for relative in ('README.md', 'backend-repo/ENGINEERING_GUIDE.md'):
+                text = (root / relative).read_text(encoding='utf-8')
+                for version in re.findall(r'Maven (?:Wrapper，固定 Maven |Wrapper )([\d.]+)', text):
+                    if version != match[1]:
+                        problems.append(f'{relative}: Maven version differs from Wrapper')
     return problems
 
 

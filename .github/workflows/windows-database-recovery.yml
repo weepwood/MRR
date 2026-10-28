@@ -80,7 +80,7 @@ jobs:
         if: inputs.backend_artifact == '' && inputs.candidate_artifact == ''
         shell: powershell
         run: |
-          mvn -B -ntp -f backend-repo/pom.xml package '-DskipTests' '-Dlocal.config.exclude=true'
+          .\backend-repo\mvnw.cmd -B -ntp -f backend-repo/pom.xml package '-DskipTests' '-Dlocal.config.exclude=true'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Parse deployment scripts and run the manager self-test with PowerShell 5.1
         shell: powershell

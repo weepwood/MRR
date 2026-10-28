@@ -30,7 +30,7 @@
     "lint:stylelint": "stylelint \"src/**/*.{css,scss,vue}\" --cache",
     "lint:stylelint:fix": "stylelint \"src/**/*.{css,scss,vue}\" --cache --fix",
     "lint:last-commit": "commitlint --from HEAD~1 --to HEAD",
-    "preinstall": "npx only-allow pnpm",
+    "preinstall": "node scripts/require-package-manager.mjs",
     "postinstall": "simple-git-hooks",
     "taze": "taze minor -wIr",
     "test": "vitest",
@@ -142,8 +142,8 @@
     "vue-tsc": "^3.3.13"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged",
-    "commit-msg": "pnpm commitlint --edit $1",
+    "pre-commit": "cd frontend-fantastic-admin && corepack pnpm lint-staged",
+    "commit-msg": "message_file=\"$(git rev-parse --path-format=absolute --git-path COMMIT_EDITMSG)\"; cd frontend-fantastic-admin && corepack pnpm commitlint --edit \"$message_file\"",
     "preserveUnused": true
   },
   "pnpm": {

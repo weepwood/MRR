@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: mrr-postgres
     command:
       - postgres
       - -c
@@ -13,7 +12,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${MRR_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +25,8 @@ services:
     build:
       context: .
       dockerfile: backend-repo/Dockerfile
-    container_name: mrr-backend
+      args:
+        SOURCE_REVISION: ${MRR_GIT_COMMIT:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,9 +40,9 @@ services:
       APP_LOG_RETENTION_RETENTION_DAYS: "1095"
       SERVER_PORT: "18045"
     ports:
-      - "18045:18045"
+      - "127.0.0.1:${MRR_APP_PORT:-18045}:18045"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:18045/actuator/health | grep -q '\"status\":\"UP\"'"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:18046/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -52,12 +52,11 @@ services:
     build:
       context: .
       dockerfile: frontend-fantastic-admin/Dockerfile
-    container_name: mrr-frontend
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "127.0.0.1:${MRR_WEB_PORT:-8080}:80"
 
 volumes:
   postgres_data:

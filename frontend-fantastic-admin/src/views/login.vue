@@ -32,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { getEnvironmentProbeRetryDelay } from '@/utils/login-environment-retry'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { notify } from '@/utils/notification'
 
@@ -57,6 +58,7 @@ const environmentBadge = ref<HTMLButtonElement | null>(null)
 const environmentOpen = ref(false)
 let environmentKeyboardFocusRequested = false
 const environmentProbing = ref(false)
+const environmentRetryScheduled = ref(false)
 const environmentUserAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
 const browserInfo = parseUserAgent(environmentUserAgent)
 const browserSupport = evaluateBrowserSupport(browserInfo)
@@ -66,6 +68,9 @@ const clientProbe = ref<ClientEnvironmentProbe | null>(null)
 const environmentSampledAt = ref(Date.now())
 const localCurrentTime = ref(formatLocalDateTime(new Date()))
 let localClockTimer: number | undefined
+let environmentRetryTimer: number | undefined
+let environmentProbeFailureCount = 0
+let loginViewActive = true
 const environmentView = computed(() => buildLoginEnvironmentView(
   browserInfo,
   networkSnapshot.value,
@@ -110,17 +115,52 @@ function closeEnvironmentForKeyboard() {
   void nextTick(() => environmentBadge.value?.focus())
 }
 
-async function probeEnvironment() {
-  if (environmentProbing.value) return
+function clearEnvironmentRetry() {
+  if (environmentRetryTimer !== undefined) {
+    window.clearTimeout(environmentRetryTimer)
+    environmentRetryTimer = undefined
+  }
+  environmentRetryScheduled.value = false
+}
+
+function scheduleEnvironmentRetry() {
+  clearEnvironmentRetry()
+  environmentProbeFailureCount += 1
+  const delay = getEnvironmentProbeRetryDelay(environmentProbeFailureCount)
+  environmentRetryScheduled.value = true
+  environmentRetryTimer = window.setTimeout(() => {
+    environmentRetryTimer = undefined
+    environmentRetryScheduled.value = false
+    void probeEnvironment(true)
+  }, delay)
+}
+
+async function probeEnvironment(isAutomaticRetry = false) {
+  if (environmentProbing.value || !loginViewActive) return
+  if (!isAutomaticRetry) {
+    clearEnvironmentRetry()
+    environmentProbeFailureCount = 0
+  }
   environmentProbing.value = true
   networkSnapshot.value = collectNetworkSnapshot()
   deviceSnapshot.value = collectDeviceSnapshot()
   try {
-    clientProbe.value = await getPublicClientEnvironment()
+    const probe = await getPublicClientEnvironment()
+    if (!loginViewActive) return
+    clientProbe.value = probe
+    if (networkSnapshot.value.online && probe.reachable) {
+      clearEnvironmentRetry()
+      environmentProbeFailureCount = 0
+    }
+    else {
+      scheduleEnvironmentRetry()
+    }
   }
   finally {
-    environmentSampledAt.value = Date.now()
-    environmentProbing.value = false
+    if (loginViewActive) {
+      environmentSampledAt.value = Date.now()
+      environmentProbing.value = false
+    }
   }
 }
 
@@ -203,8 +243,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  loginViewActive = false
   window.removeEventListener(LOGIN_PAGE_SETTINGS_UPDATED_EVENT, handleUpdated)
   if (localClockTimer !== undefined) window.clearInterval(localClockTimer)
+  clearEnvironmentRetry()
   if (unsubscribeNetworkChanges) unsubscribeNetworkChanges()
 })
 </script>
@@ -333,8 +375,11 @@ onBeforeUnmount(() => {
                   <FaIcon name="i-lucide:triangle-alert" />
                   <span>{{ browserSupport.reason }}</span>
                 </p>
+                <p v-if="environmentRetryScheduled" class="environment-retry-status" role="status">
+                  网络连接异常，将自动重试；重试间隔会逐步延长。
+                </p>
                 <div class="environment-actions">
-                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment">
+                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment()">
                     {{ environmentProbing ? '检测中…' : '重新检测' }}
                   </button>
                   <button type="button" class="is-primary" @click="copyEnvironmentReport">
@@ -481,6 +526,7 @@ onBeforeUnmount(() => {
 .environment-item--single-line dd { white-space: nowrap; }
 .environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; padding-top: var(--mrr-space-4); margin-top: var(--mrr-space-4); border-top: 1px solid var(--mrr-border); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
+.environment-retry-status { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.5; color: var(--color-warning); }
 .environment-actions { grid-column: 1 / -1; display: flex; gap: var(--mrr-space-2); justify-content: flex-end; }
 .environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-actions button:hover:not(:disabled) { color: var(--mrr-foreground); border-color: var(--mrr-border-strong); }

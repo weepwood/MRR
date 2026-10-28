@@ -21,8 +21,14 @@ const triggerLabel = computed(() => {
 
 <template>
   <div class="field-label">
-    <label :for="props.htmlFor">{{ props.label }}</label>
-    <span class="field-status" :class="props.status === '必填' ? 'is-required' : 'is-optional'">{{ props.status }}</span>
+    <label :for="props.htmlFor">
+      {{ props.label }}
+      <span v-if="props.status === '必填'" class="field-status is-required">
+        <span aria-hidden="true">*</span>
+        <span class="sr-only">必填</span>
+      </span>
+    </label>
+    <span v-if="props.status === '选填'" class="field-status is-optional">{{ props.status }}</span>
     <FaTooltip side="top" :delay="200">
       <button type="button" class="field-info-trigger" aria-label="查看字段填写要求" :aria-description="triggerLabel">
         <FaIcon aria-hidden="true" name="i-lucide:info" />
@@ -49,7 +55,7 @@ const triggerLabel = computed(() => {
 
 <style scoped>
 .field-label { display: flex; gap: 6px; align-items: center; }
-.field-label label { font-size: 12px; font-weight: 650; color: var(--mrr-foreground); }
+.field-label label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 650; color: var(--mrr-foreground); }
 .field-status { font-size: 10px; font-weight: 500; }
 .field-status.is-required { color: var(--color-danger); }
 .field-status.is-optional { color: var(--mrr-muted-foreground); }

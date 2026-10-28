@@ -158,11 +158,10 @@ watch(() => menuStore.actived, (val, oldVal) => {
           background: var(--mrr-navigation-hover);
         }
 
-        .menu-item-container-icon {
+        .menu-item-container-icon:not(.menu-leading-control-icon) {
           width: 17px;
           height: 17px;
           font-size: 17px !important;
-          transform: none !important;
         }
       }
 
@@ -230,6 +229,14 @@ watch(() => menuStore.actived, (val, oldVal) => {
       height: 15px;
       font-size: 15px !important;
       opacity: 0.75;
+      transition:
+        color var(--mrr-motion-normal) var(--mrr-ease-out),
+        opacity var(--mrr-motion-normal) var(--mrr-ease-out),
+        transform var(--mrr-motion-normal) var(--mrr-ease-out);
+    }
+
+    :deep(.sub-menu .menu-item-container:hover .menu-item-container-icon) {
+      transform: translateX(1px) scale(1.08);
     }
 
     :deep(.menu-item-container:hover) {

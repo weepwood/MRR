@@ -9,6 +9,7 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
+import LoginSlideCheck from './LoginSlideCheck.vue'
 
 defineOptions({ name: 'LoginForm' })
 
@@ -25,6 +26,8 @@ const emits = defineEmits<{
 const userStore = useUserStore()
 const loading = ref(false)
 const showPassword = ref(false)
+const slideComplete = ref(false)
+const slideRequired = ref(false)
 const buttonText = computed(() => loading.value ? '正在验证...' : '登录系统')
 const rememberedAccount = readRememberedAccount()
 
@@ -46,6 +49,10 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
+  if (!slideComplete.value) {
+    slideRequired.value = true
+    return
+  }
   loading.value = true
   try {
     const res = await apiUser.login({ account: values.account.trim(), password: values.password })
@@ -77,6 +84,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
   finally {
     loading.value = false
+    slideComplete.value = false
   }
 })
 </script>
@@ -94,76 +102,84 @@ const onSubmit = form.handleSubmit(async (values) => {
         </div>
       </header>
 
-      <FormField v-slot="{ componentField, errors }" name="account">
-        <FormItem class="field-item">
-          <div class="field-label-row">
-            <label for="login-account">用户名</label>
-            <FormMessage class="field-message" />
-          </div>
-          <FormControl>
-            <div class="input-shell" :class="{ invalid: errors.length > 0 }">
-              <span class="input-icon">
-                <el-icon><UserFilled /></el-icon>
-              </span>
-              <FaInput
-                id="login-account"
-                type="text"
-                placeholder="请输入系统用户名"
-                autocomplete="username"
-                class="w-full"
-                v-bind="componentField"
-              />
+      <div class="login-fields-card__body">
+        <FormField v-slot="{ componentField, errors }" name="account">
+          <FormItem class="field-item space-y-0">
+            <div class="field-label-row">
+              <label for="login-account">用户名</label>
+              <FormMessage class="field-message" />
             </div>
-          </FormControl>
-        </FormItem>
-      </FormField>
+            <FormControl>
+              <div class="input-shell" :class="{ invalid: errors.length > 0 }">
+                <span class="input-icon">
+                  <el-icon><UserFilled /></el-icon>
+                </span>
+                <FaInput
+                  id="login-account"
+                  type="text"
+                  placeholder="请输入系统用户名"
+                  autocomplete="username"
+                  class="w-full"
+                  v-bind="componentField"
+                />
+              </div>
+            </FormControl>
+          </FormItem>
+        </FormField>
 
-      <FormField v-slot="{ componentField, errors }" name="password">
-        <FormItem class="field-item">
-          <div class="field-label-row">
-            <label for="login-password">密码</label>
-            <FormMessage class="field-message" />
-          </div>
-          <FormControl>
-            <div class="input-shell password-shell" :class="{ invalid: errors.length > 0 }">
-              <span class="input-icon">
-                <el-icon><Key /></el-icon>
-              </span>
-              <FaInput
-                id="login-password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="请输入登录密码"
-                autocomplete="current-password"
-                class="w-full"
-                v-bind="componentField"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-                @click="showPassword = !showPassword"
-              >
-                <Eye v-if="!showPassword" class="size-4" />
-                <EyeOff v-else class="size-4" />
-              </button>
+        <FormField v-slot="{ componentField, errors }" name="password">
+          <FormItem class="field-item space-y-0">
+            <div class="field-label-row">
+              <label for="login-password">密码</label>
+              <FormMessage class="field-message" />
             </div>
-          </FormControl>
-        </FormItem>
-      </FormField>
+            <FormControl>
+              <div class="input-shell password-shell" :class="{ invalid: errors.length > 0 }">
+                <span class="input-icon">
+                  <el-icon><Key /></el-icon>
+                </span>
+                <FaInput
+                  id="login-password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="请输入登录密码"
+                  autocomplete="current-password"
+                  class="w-full"
+                  v-bind="componentField"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                  @click="showPassword = !showPassword"
+                >
+                  <Eye v-if="!showPassword" class="size-4" />
+                  <EyeOff v-else class="size-4" />
+                </button>
+              </div>
+            </FormControl>
+          </FormItem>
+        </FormField>
+        <LoginSlideCheck
+          v-model="slideComplete"
+          :disabled="loading"
+          :invalid="slideRequired"
+          @update:model-value="slideRequired = false"
+        />
 
-      <div class="form-options">
-        <div class="remember-control">
-          <FormField v-slot="{ componentField }" type="checkbox" name="remember">
-            <FormItem>
-              <FormControl>
-                <FaCheckbox v-bind="componentField">
-                  记住用户名
-                </FaCheckbox>
-              </FormControl>
-            </FormItem>
-          </FormField>
+        <div class="form-options">
+          <div class="remember-control">
+            <FormField v-slot="{ componentField }" type="checkbox" name="remember">
+              <FormItem>
+                <FormControl>
+                  <FaCheckbox v-bind="componentField">
+                    记住用户名
+                  </FaCheckbox>
+                </FormControl>
+              </FormItem>
+            </FormField>
+          </div>
+          <span>密码问题请联系系统管理员</span>
         </div>
-        <span>密码问题请联系系统管理员</span>
       </div>
     </section>
 
@@ -181,13 +197,16 @@ const onSubmit = form.handleSubmit(async (values) => {
 
 <style scoped>
 .login-form {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--mrr-space-3);
+  min-height: var(--auth-form-height, 0);
   margin-top: 0;
 }
 
 .login-fields-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--mrr-space-3);
   padding: var(--mrr-space-4);
   background: var(--mrr-card);
@@ -237,8 +256,15 @@ const onSubmit = form.handleSubmit(async (values) => {
   color: var(--mrr-muted-foreground);
 }
 
+.login-fields-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mrr-space-3);
+}
+
 .field-item {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--mrr-space-1);
 }
 
@@ -276,7 +302,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 .input-shell :deep(.fa-input__wrapper),
 .input-shell :deep(input) {
   width: 100%;
-  height: var(--mrr-input-height);
+  height: var(--auth-input-height, var(--mrr-input-height));
   padding-right: 14px;
   padding-left: 42px;
   font-size: 14px;
@@ -353,9 +379,40 @@ const onSubmit = form.handleSubmit(async (values) => {
 }
 
 .login-submit-btn {
+  flex-shrink: 0;
   width: 100%;
   height: var(--mrr-control-height);
+  margin-top: auto;
   border-radius: var(--mrr-control-radius);
+}
+
+@media (min-width: 901px) {
+  .login-form {
+    gap: var(--mrr-space-4);
+  }
+
+  .login-fields-card {
+    display: grid;
+    flex-grow: 1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    gap: var(--mrr-space-2);
+    align-content: space-between;
+  }
+
+  .login-fields-card__body,
+  .field-item,
+  .login-fields-card__body > :deep(.slide-check) {
+    display: contents;
+  }
+
+  .form-options {
+    margin-top: 0;
+  }
+
+  .login-submit-btn {
+    margin-top: 0;
+  }
 }
 
 @media (max-width: 520px) {

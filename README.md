@@ -150,6 +150,16 @@ git switch main
 
 数据库只执行应用迁移，不会创建开发免登录账号或填充演示病案；账号仍需走现有注册审批或系统建号流程。
 
+### 仅前端开发
+
+只改页面、样式或交互时，在仓库根目录运行：
+
+```powershell
+.\scripts\dev.ps1 frontend
+```
+
+该入口直接启动 Vite Mock 模式，不需要 Python、Java、Docker 或 PostgreSQL。首次使用前，在 `frontend-fantastic-admin` 目录执行一次 `corepack pnpm install --frozen-lockfile`。需要真实后端接口时，再使用下面的 Docker 联调或完整本地开发入口。
+
 ### 数据库
 
 Windows 本地开发可以使用统一入口，自动创建独立 PostgreSQL16、随机本地密钥并启动原生 Java/Vite：

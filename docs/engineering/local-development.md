@@ -19,6 +19,18 @@
 
 ## Windows 开发命令
 
+### 仅前端页面开发
+
+只修改页面、样式或交互且不需要真实 API 时，在仓库根目录运行：
+
+```powershell
+.\scripts\dev.ps1 frontend
+```
+
+该命令直接在 `frontend-fantastic-admin` 启动现有 `pnpm dev:mock`，不会运行 Python 预检、安装依赖、构建后端或启动 Docker/PostgreSQL。首次使用先在前端目录执行一次 `corepack pnpm install --frozen-lockfile`；之后启动只依赖 Node.js、Corepack/pnpm 和已安装的前端依赖。需要真实接口时使用下方后端联调入口。
+
+### 完整本地环境
+
 在仓库根目录运行，支持 Windows PowerShell5.1。Python3.10+ 需安装并可执行；如 python 命中 Windows 商店占位符，显式指定实际路径。
 
 ```powershell

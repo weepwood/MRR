@@ -24,6 +24,36 @@ except ImportError:  # Support the existing direct script entry point.
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# OpenAPI 规格与 Swagger UI 由后端直接提供，不属于 /api/**，必须单独校验访问会话。
+# 安全审计 H1 的缺陷正是“拦截器存在却未被真正调用”，只有对真实进程发请求才能守住。
+DOCUMENTATION_PATHS = (
+    "/v3/api-docs",
+    "/v3/api-docs.yaml",
+    "/v3/api-docs/swagger-config",
+    "/swagger-ui/index.html",
+)
+
+
+def assert_documentation_requires_session(base_url: str) -> None:
+    """断言未携带文档会话的匿名请求无法读取接口规格与 Swagger UI。"""
+    for path in DOCUMENTATION_PATHS:
+        request = urllib.request.Request(base_url + path, headers={"Accept": "*/*"})
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                raise RuntimeError(
+                    f"Documentation endpoint {path} is publicly reachable with HTTP {response.status}."
+                )
+        except urllib.error.HTTPError as error:
+            if error.code != 401:
+                raise RuntimeError(
+                    f"Documentation endpoint {path} answered HTTP {error.code} instead of 401."
+                ) from None
+            body = error.read().decode("utf-8", errors="replace").replace(" ", "")
+            if '"code":401' not in body:
+                raise RuntimeError(
+                    f"Documentation endpoint {path} did not return the documentation-session error body."
+                ) from None
+
 
 class SyntheticImageSource(BaseHTTPRequestHandler):
     def do_HEAD(self):
@@ -162,6 +192,7 @@ def run(jar: Path, embedded: bool = False) -> None:
                         raise RuntimeError("Test backend readiness timed out.")
                     time.sleep(1)
 
+                assert_documentation_requires_session(url)
                 # These fixtures exist only after Flyway in our newly created container.
                 sql = f"""CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO app.mr_auth_user (username, display_name, password_hash, role_code, status)

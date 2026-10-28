@@ -2,5 +2,6 @@ shamefullyHoist: true
 strictPeerDependencies: false
 engineStrict: true
 verifyDepsBeforeRun: prompt
+
 overrides:
   qs: ^6.16.0

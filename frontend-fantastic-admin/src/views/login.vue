@@ -8,7 +8,7 @@ meta:
 <script setup lang="ts">
 /* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
 import { LayoutDashboard as DataBoard, FileText as Document, LockKeyhole as Lock } from 'lucide-vue-next'
-import { nextTick, onBeforeUnmount, watch } from 'vue'
+import { nextTick, onBeforeUnmount } from 'vue'
 import {
   type ClientEnvironmentProbe,
   getPublicClientEnvironment,
@@ -32,6 +32,7 @@ import {
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
+import { getEnvironmentProbeRetryDelay } from '@/utils/login-environment-retry'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { notify } from '@/utils/notification'
 
@@ -47,64 +48,6 @@ const copy = reactive<LoginPageSettings>({ ...DEFAULT_LOGIN_PAGE_SETTINGS })
 const productVersion = __SYSTEM_INFO__.product.version
 const authMode = ref<AuthMode>(route.query.mode === 'register' ? 'register' : 'login')
 const account = ref('')
-const loginShell = ref<HTMLElement | null>(null)
-let authModeAnimationFrame = 0
-let authModeTransitionEnd: ((event: TransitionEvent) => void) | undefined
-
-watch(authMode, async () => {
-  const shell = loginShell.value
-  if (!shell) return
-
-  if (authModeAnimationFrame) window.cancelAnimationFrame(authModeAnimationFrame)
-  if (authModeTransitionEnd) {
-    shell.removeEventListener('transitionend', authModeTransitionEnd)
-    authModeTransitionEnd = undefined
-  }
-  if (!isMotionEnabled() || window.matchMedia('(orientation: portrait)').matches) {
-    shell.style.height = ''
-    shell.style.minHeight = ''
-    shell.style.transition = ''
-    return
-  }
-
-  const startHeight = shell.getBoundingClientRect().height
-  shell.style.transition = 'none'
-  shell.style.minHeight = '0'
-  shell.style.height = `${startHeight}px`
-  void shell.offsetHeight
-
-  await nextTick()
-
-  shell.style.height = 'auto'
-  shell.style.minHeight = ''
-  const targetHeight = shell.getBoundingClientRect().height
-  shell.style.minHeight = '0'
-  shell.style.height = `${startHeight}px`
-  void shell.offsetHeight
-
-  const clearHeightStyles = (event?: TransitionEvent) => {
-    if (event && (event.target !== shell || event.propertyName !== 'height')) return
-    if (authModeTransitionEnd) shell.removeEventListener('transitionend', authModeTransitionEnd)
-    shell.style.height = ''
-    shell.style.minHeight = ''
-    shell.style.transition = ''
-    authModeTransitionEnd = undefined
-  }
-  const finishHeightTransition = (event: TransitionEvent) => clearHeightStyles(event)
-
-  if (Math.abs(targetHeight - startHeight) < 1) {
-    clearHeightStyles()
-    return
-  }
-
-  authModeTransitionEnd = finishHeightTransition
-  shell.addEventListener('transitionend', finishHeightTransition)
-  authModeAnimationFrame = window.requestAnimationFrame(() => {
-    authModeAnimationFrame = 0
-    shell.style.transition = 'height 380ms cubic-bezier(0.22, 1, 0.36, 1)'
-    shell.style.height = `${targetHeight}px`
-  })
-})
 
 /* ---------------------------------------------------------------------------
  * 接入环境自检：浏览器侧探测 + 服务端回显客户端地址。
@@ -115,6 +58,7 @@ const environmentBadge = ref<HTMLButtonElement | null>(null)
 const environmentOpen = ref(false)
 let environmentKeyboardFocusRequested = false
 const environmentProbing = ref(false)
+const environmentRetryScheduled = ref(false)
 const environmentUserAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
 const browserInfo = parseUserAgent(environmentUserAgent)
 const browserSupport = evaluateBrowserSupport(browserInfo)
@@ -124,6 +68,9 @@ const clientProbe = ref<ClientEnvironmentProbe | null>(null)
 const environmentSampledAt = ref(Date.now())
 const localCurrentTime = ref(formatLocalDateTime(new Date()))
 let localClockTimer: number | undefined
+let environmentRetryTimer: number | undefined
+let environmentProbeFailureCount = 0
+let loginViewActive = true
 const environmentView = computed(() => buildLoginEnvironmentView(
   browserInfo,
   networkSnapshot.value,
@@ -168,17 +115,52 @@ function closeEnvironmentForKeyboard() {
   void nextTick(() => environmentBadge.value?.focus())
 }
 
-async function probeEnvironment() {
-  if (environmentProbing.value) return
+function clearEnvironmentRetry() {
+  if (environmentRetryTimer !== undefined) {
+    window.clearTimeout(environmentRetryTimer)
+    environmentRetryTimer = undefined
+  }
+  environmentRetryScheduled.value = false
+}
+
+function scheduleEnvironmentRetry() {
+  clearEnvironmentRetry()
+  environmentProbeFailureCount += 1
+  const delay = getEnvironmentProbeRetryDelay(environmentProbeFailureCount)
+  environmentRetryScheduled.value = true
+  environmentRetryTimer = window.setTimeout(() => {
+    environmentRetryTimer = undefined
+    environmentRetryScheduled.value = false
+    void probeEnvironment(true)
+  }, delay)
+}
+
+async function probeEnvironment(isAutomaticRetry = false) {
+  if (environmentProbing.value || !loginViewActive) return
+  if (!isAutomaticRetry) {
+    clearEnvironmentRetry()
+    environmentProbeFailureCount = 0
+  }
   environmentProbing.value = true
   networkSnapshot.value = collectNetworkSnapshot()
   deviceSnapshot.value = collectDeviceSnapshot()
   try {
-    clientProbe.value = await getPublicClientEnvironment()
+    const probe = await getPublicClientEnvironment()
+    if (!loginViewActive) return
+    clientProbe.value = probe
+    if (networkSnapshot.value.online && probe.reachable) {
+      clearEnvironmentRetry()
+      environmentProbeFailureCount = 0
+    }
+    else {
+      scheduleEnvironmentRetry()
+    }
   }
   finally {
-    environmentSampledAt.value = Date.now()
-    environmentProbing.value = false
+    if (loginViewActive) {
+      environmentSampledAt.value = Date.now()
+      environmentProbing.value = false
+    }
   }
 }
 
@@ -261,19 +243,17 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  loginViewActive = false
   window.removeEventListener(LOGIN_PAGE_SETTINGS_UPDATED_EVENT, handleUpdated)
   if (localClockTimer !== undefined) window.clearInterval(localClockTimer)
+  clearEnvironmentRetry()
   if (unsubscribeNetworkChanges) unsubscribeNetworkChanges()
-  if (authModeAnimationFrame) window.cancelAnimationFrame(authModeAnimationFrame)
-  if (authModeTransitionEnd && loginShell.value) {
-    loginShell.value.removeEventListener('transitionend', authModeTransitionEnd)
-  }
 })
 </script>
 
 <template>
   <main class="login-page">
-    <section ref="loginShell" class="login-shell" :class="{ 'is-register': authMode === 'register' }" :aria-label="`${copy.systemName}${authMode === 'register' ? '注册申请' : '登录'}`">
+    <section class="login-shell" :class="{ 'is-register': authMode === 'register' }" :aria-label="`${copy.systemName}${authMode === 'register' ? '注册申请' : '登录'}`">
       <aside class="brand-panel">
         <div class="brand-heading">
           <span>{{ copy.systemEnglishName }}</span>
@@ -366,7 +346,17 @@ onBeforeUnmount(() => {
                       class="environment-item"
                       :class="{ 'environment-item--single-line': item.label === '服务器时间' }"
                     >
-                      <dt>{{ item.label }}</dt>
+                      <dt>
+                        <span>{{ item.label }}</span>
+                        <FaTooltip
+                          v-if="group.key === 'address' && item.label === '客户端 IP'"
+                          text="客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。"
+                        >
+                          <button type="button" class="environment-item-info" aria-label="客户端 IP 说明">
+                            <FaIcon name="i-lucide:info" aria-hidden="true" />
+                          </button>
+                        </FaTooltip>
+                      </dt>
                       <dd
                         :class="item.tone ? `tone-text-${item.tone}` : undefined"
                         v-text="item.value"
@@ -385,11 +375,11 @@ onBeforeUnmount(() => {
                   <FaIcon name="i-lucide:triangle-alert" />
                   <span>{{ browserSupport.reason }}</span>
                 </p>
-                <p class="environment-hint">
-                  客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。
+                <p v-if="environmentRetryScheduled" class="environment-retry-status" role="status">
+                  网络连接异常，将自动重试；重试间隔会逐步延长。
                 </p>
                 <div class="environment-actions">
-                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment">
+                  <button type="button" :aria-disabled="environmentProbing" @click="probeEnvironment()">
                     {{ environmentProbing ? '检测中…' : '重新检测' }}
                   </button>
                   <button type="button" class="is-primary" @click="copyEnvironmentReport">
@@ -527,13 +517,17 @@ onBeforeUnmount(() => {
 .environment-group dl { display: grid; gap: 7px; margin: 0; }
 .environment-group--client dl { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--mrr-space-5); }
 .environment-item { display: flex; gap: var(--mrr-space-3); align-items: baseline; justify-content: space-between; }
-.environment-item dt { flex: 0 0 auto; font-size: 11px; color: var(--mrr-muted-foreground); }
+.environment-group--client .environment-item--wide { grid-column: 1 / -1; }
+.environment-item dt { display: inline-flex; flex: 0 0 auto; gap: 5px; align-items: center; font-size: 11px; color: var(--mrr-muted-foreground); }
+.environment-item-info { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; padding: 0; color: var(--mrr-muted-foreground); cursor: help; background: transparent; border: 0; border-radius: 50%; }
+.environment-item-info:hover, .environment-item-info:focus-visible { color: var(--mrr-primary); outline: none; }
+.environment-item-info :deep(svg) { width: 13px; height: 13px; }
 .environment-item dd { margin: 0; font-size: 12px; font-weight: 600; color: var(--mrr-foreground); text-align: right; overflow-wrap: anywhere; }
 .environment-item--single-line dd { white-space: nowrap; }
 .environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; padding-top: var(--mrr-space-4); margin-top: var(--mrr-space-4); border-top: 1px solid var(--mrr-border); }
-.environment-hint { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.6; color: var(--mrr-muted-foreground); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
-.environment-actions { display: flex; gap: var(--mrr-space-2); }
+.environment-retry-status { grid-column: 1 / -1; margin: 0; font-size: 11px; line-height: 1.5; color: var(--color-warning); }
+.environment-actions { grid-column: 1 / -1; display: flex; gap: var(--mrr-space-2); justify-content: flex-end; }
 .environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-actions button:hover:not(:disabled) { color: var(--mrr-foreground); border-color: var(--mrr-border-strong); }
 .environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
@@ -597,6 +591,14 @@ onBeforeUnmount(() => {
 .copyright { width: 100%; padding: var(--mrr-space-4) 0 0; margin: 0; }
 .login-shell { animation: login-enter 0.35s ease-out both; }
 @keyframes login-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+:global(.auth-mode-forward-enter-active),
+:global(.auth-mode-forward-leave-active),
+:global(.auth-mode-backward-enter-active),
+:global(.auth-mode-backward-leave-active) { transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+:global(.auth-mode-forward-enter-from) { opacity: 0; transform: translateX(24px); }
+:global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
+:global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
+:global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; width: min(640px, 100%); }
   .brand-panel { padding: 28px; border-right: 0; border-bottom: 1px solid var(--mrr-border); }
@@ -624,18 +626,14 @@ onBeforeUnmount(() => {
   .environment-actions { justify-content: flex-end; }
   .form-panel { padding: 30px var(--mrr-space-5); }
 }
+@media (min-width: 901px) and (min-height: 900px) {
+  .login-shell,
+  .login-shell.is-register { min-height: 760px; }
+}
 @media (orientation: portrait) {
   .login-shell { align-self: start; }
-  :global(.auth-mode-forward-enter-active),
-  :global(.auth-mode-forward-leave-active),
-  :global(.auth-mode-backward-enter-active),
-  :global(.auth-mode-backward-leave-active) { transition: opacity 220ms ease, transform 220ms ease; }
-  :global(.auth-mode-forward-enter-from) { opacity: 0; transform: translateX(24px); }
-  :global(.auth-mode-forward-leave-to) { opacity: 0; transform: translateX(-24px); }
-  :global(.auth-mode-backward-enter-from) { opacity: 0; transform: translateX(-24px); }
-  :global(.auth-mode-backward-leave-to) { opacity: 0; transform: translateX(24px); }
 }
-@media (orientation: portrait) and (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce) {
   :global(.auth-mode-forward-enter-active),
   :global(.auth-mode-forward-leave-active),
   :global(.auth-mode-backward-enter-active),

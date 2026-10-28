@@ -622,8 +622,13 @@ onBeforeUnmount(() => {
 }
 @media (min-width: 901px) {
   .login-shell { height: 580px; grid-template-rows: minmax(0, 1fr); }
-  .brand-panel { min-height: 0; overflow: hidden auto; }
-  .form-panel__content { min-height: 0; overflow-y: auto; }
+  .brand-panel { min-height: 0; padding: 32px; overflow: hidden; }
+  .brand-heading h1 { font-size: 36px; }
+  .brand-heading p { margin-top: var(--mrr-space-3); }
+  .feature-list { gap: var(--mrr-space-2); margin-top: var(--mrr-space-5); }
+  .feature-list article { padding: var(--mrr-space-2) var(--mrr-space-3); }
+  .brand-footer { padding-top: var(--mrr-space-3); }
+  .form-panel { padding: 36px 40px; }
 }
 @media (orientation: portrait) {
   .login-shell { align-self: start; }

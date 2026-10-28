@@ -35,7 +35,7 @@ function startRipple(element: HTMLElement, clientX: number, clientY: number) {
     Math.hypot(x, rect.height - y),
     Math.hypot(rect.width - x, rect.height - y),
   )
-  const maxRippleDiameter = Math.max(rect.height * 1.2, 28)
+  const maxRippleDiameter = Math.max(rect.height * 1.2, 68)
   const key = ++rippleKey
 
   ripple.value = { key, x, y, diameter: Math.ceil(Math.min(radius * 2, maxRippleDiameter)) }
@@ -125,7 +125,7 @@ defineExpose({
             v-if="ripple && canRipple" :key="ripple.key" class="menu-item-ripple-viewport" aria-hidden="true"
           >
             <i
-              v-for="wave in 2" :key="wave" class="menu-item-ripple" :class="{ 'menu-item-ripple--delayed': wave === 2 }" :style="{
+              class="menu-item-ripple" :style="{
                 '--ripple-x': `${ripple.x}px`,
                 '--ripple-y': `${ripple.y}px`,
                 '--ripple-diameter': `${ripple.diameter}px`,
@@ -262,10 +262,6 @@ defineExpose({
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.08);
   animation: menu-item-ripple 540ms cubic-bezier(0.2, 0.5, 0.3, 1) forwards;
-}
-
-.menu-item-ripple--delayed {
-  animation-delay: 110ms;
 }
 
 @keyframes menu-item-ripple {

@@ -9,6 +9,7 @@ import com.zjcxph.imgapi.service.ScanDataExchangeService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.service.impl.ScanServiceImpl;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -74,17 +75,30 @@ class ScanImportCacheInvalidationPostgresqlIT extends PostgresqlIntegrationTestS
 
     @BeforeEach
     void resetTablesAndCaches() {
-        jdbcTemplate.execute("""
-                truncate table app.mr_archive_box_record, app.mr_scan,
-                               app.mr_statistics, app.mr_archive
-                restart identity cascade
-                """);
+        resetTables();
         for (String name : cacheManager.getCacheNames()) {
             Cache cache = cacheManager.getCache(name);
             if (cache != null) {
                 cache.clear();
             }
         }
+    }
+
+    /**
+     * 集成测试共享同一个数据库实例，部分既有用例（如 {@code ScanMapperPostgresqlIT}）
+     * 假定 {@code mr_scan} 为空。本类不清理就会让它们的行数断言失败，因此用完即清。
+     */
+    @AfterEach
+    void removeImportedRows() {
+        resetTables();
+    }
+
+    private void resetTables() {
+        jdbcTemplate.execute("""
+                truncate table app.mr_archive_box_record, app.mr_scan,
+                               app.mr_statistics, app.mr_archive
+                restart identity cascade
+                """);
     }
 
     @Test

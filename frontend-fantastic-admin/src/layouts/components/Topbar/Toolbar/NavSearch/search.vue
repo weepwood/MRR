@@ -35,35 +35,36 @@ const actived = ref(0)
 const searchResultRef = useTemplateRef('searchResultRef')
 const searchResultItemRef = useTemplateRef<HTMLElement[]>('searchResultItemRef')
 
-const resultList = computed(() => {
-  let result = []
-  result = sourceList.value.filter((item) => {
-    let flag = false
-    if (searchInput.value !== '') {
-      if (item.title) {
-        if (typeof item.title === 'function') {
-          if (item.title().includes(searchInput.value)) {
-            flag = true
-          }
-        }
-        else {
-          if (item.title.includes(searchInput.value)) {
-            flag = true
-          }
-        }
-      }
-      if (item.path.includes(searchInput.value)) {
-        flag = true
-      }
-      if (routeStore.getRouteMatchedByPath(item.path).some((b) => {
-        return typeof b.meta?.title === 'function' ? b.meta?.title().includes(searchInput.value) : b.meta?.title?.includes(searchInput.value)
-      })) {
-        flag = true
-      }
-    }
-    return flag
+function getResultTitle(item: listTypes) {
+  return (typeof item.title === 'function' ? item.title() : item.title) ?? '[ 无标题 ]'
+}
+
+function getResultBreadcrumbs(item: listTypes) {
+  const title = getResultTitle(item)
+  return routeStore.getRouteMatchedByPath(item.path).filter((route) => {
+    const breadcrumbTitle = typeof route.meta?.title === 'function' ? route.meta.title() : route.meta?.title
+    return (breadcrumbTitle ?? '[ 无标题 ]') !== title
   })
-  return result
+}
+
+const resultList = computed(() => {
+  const keyword = searchInput.value.trim()
+  if (!keyword) {
+    return sourceList.value
+  }
+
+  return sourceList.value.filter((item) => {
+    const titleMatches = item.title
+      ? (typeof item.title === 'function' ? item.title() : item.title).includes(keyword)
+      : false
+    const pathMatches = item.path.includes(keyword)
+    const breadcrumbMatches = routeStore.getRouteMatchedByPath(item.path).some((route) => {
+      const title = typeof route.meta?.title === 'function' ? route.meta.title() : route.meta?.title
+      return title?.includes(keyword) ?? false
+    })
+
+    return titleMatches || pathMatches || breadcrumbMatches
+  })
 })
 
 watch(() => isShow.value, (val) => {
@@ -195,13 +196,13 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
 </script>
 
 <template>
-  <FaModal v-model="isShow" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-2xl" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
+  <FaModal v-model="isShow" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay mrr-vscode-search-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-[40rem]" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
     <template #header>
       <div class="h-12 flex flex-shrink-0 items-center">
-        <div class="h-full w-14 flex-center">
-          <FaIcon name="i-lucide:search" class="size-4 text-foreground/30" />
+        <div class="h-full w-20 flex-center flex-shrink-0 pl-4">
+          <FaIcon name="i-lucide:search" class="size-5 text-foreground/30" />
         </div>
-        <input ref="searchInputRef" v-model="searchInput" placeholder="搜索页面，支持标题、URL模糊查询" class="h-[var(--mrr-input-height)] w-full border-0 rounded-md bg-transparent text-base text-foreground focus-outline-none placeholder-foreground/30" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter">
+        <input ref="searchInputRef" v-model="searchInput" placeholder="搜索页面，支持标题、URL模糊查询" class="h-full min-w-0 w-full border-0 rounded-md bg-transparent pl-4 text-base text-foreground focus-outline-none placeholder-foreground/30" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter">
         <div v-if="settingsStore.mode === 'mobile'" class="h-full w-14 flex-center border-s">
           <FaIcon name="i-lucide:x" class="size-4" @click="isShow = false" />
         </div>
@@ -237,12 +238,12 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
     <FaScrollArea ref="searchResultRef">
       <template v-if="resultList.length > 0">
         <div v-for="(item, index) in resultList" ref="searchResultItemRef" :key="item.path" class="p-4" :data-index="index" @click="pageJump(item.path, item.link)" @mouseover="actived = index">
-          <a class="flex cursor-pointer items-center border rounded-lg" :class="{ '-mt-4': index !== 0, 'bg-accent': index === actived }">
+          <a class="flex cursor-pointer items-center border rounded-lg" :class="{ 'bg-accent': index === actived }">
             <FaIcon v-if="item.icon" :name="item.icon" class="size-5 basis-16 transition" :class="{ 'scale-120 text-primary': index === actived }" />
-            <div class="flex flex-1 flex-col gap-1 truncate border-s px-4 py-3">
-              <div class="truncate text-start text-base font-bold">{{ (typeof item.title === 'function' ? item.title() : item.title) ?? '[ 无标题 ]' }}</div>
-              <Breadcrumb v-if="routeStore.getRouteMatchedByPath(item.path).length" class="truncate">
-                <BreadcrumbItem v-for="(bc, bcIndex) in routeStore.getRouteMatchedByPath(item.path)" :key="bcIndex" class="text-xs">
+            <div class="flex flex-1 flex-col gap-1 truncate border-s px-4 py-1.5">
+              <div class="truncate text-start text-base font-bold">{{ getResultTitle(item) }}</div>
+              <Breadcrumb v-if="getResultBreadcrumbs(item).length" class="truncate">
+                <BreadcrumbItem v-for="(bc, bcIndex) in getResultBreadcrumbs(item)" :key="bcIndex" class="text-xs">
                   {{ (typeof bc.meta?.title === 'function' ? bc.meta?.title() : bc.meta?.title) ?? '[ 无标题 ]' }}
                 </BreadcrumbItem>
               </Breadcrumb>

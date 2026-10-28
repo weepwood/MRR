@@ -45,6 +45,46 @@ body .el-overlay.mrr-vscode-overlay {
   }
 }
 
+/* Give navigation search its own restrained frosted-glass treatment. */
+body .mrr-vscode-search-overlay,
+body .el-overlay.mrr-vscode-search-overlay {
+  background-color: rgb(15 23 42 / 28%);
+  backdrop-filter: none;
+}
+
+body .mrr-vscode-search {
+  background-color: #f7f9fc;
+  border-color: rgb(148 163 184 / 22%);
+  box-shadow:
+    0 28px 80px rgb(15 23 42 / 22%),
+    0 8px 24px rgb(15 23 42 / 10%);
+  backdrop-filter: none;
+}
+
+:root.dark body .mrr-vscode-search {
+  background-color: #171e2a;
+  border-color: rgb(255 255 255 / 12%);
+  box-shadow:
+    0 32px 88px rgb(0 0 0 / 48%),
+    0 8px 28px rgb(0 0 0 / 32%);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  body .mrr-vscode-search-overlay,
+  body .el-overlay.mrr-vscode-search-overlay {
+    background-color: rgb(15 23 42 / 16%);
+  }
+
+  body .mrr-vscode-search {
+    background-color: rgb(247 249 252 / 72%);
+    backdrop-filter: blur(22px) saturate(145%);
+  }
+
+  :root.dark body .mrr-vscode-search {
+    background-color: rgb(23 30 42 / 72%);
+  }
+}
+
 body .mrr-vscode-glass .el-dialog__header,
 body .mrr-vscode-glass .el-dialog__footer {
   background-color: transparent;
@@ -74,12 +114,12 @@ body .mrr-vscode-search input::placeholder {
 }
 
 body .mrr-vscode-search [data-index] {
-  padding: 8px 12px;
+  padding: 2px 16px;
   cursor: pointer;
 }
 
 body .mrr-vscode-search [data-index] > a {
-  min-height: 52px;
+  min-height: 48px;
   border-color: transparent;
   border-radius: var(--mrr-radius-md);
   transition: background-color 140ms ease, border-color 140ms ease;
@@ -94,7 +134,6 @@ body .mrr-vscode-search [data-index] > a.bg-accent {
   color: var(--mrr-foreground);
   background-color: rgb(37 99 235 / 10%);
   border-color: rgb(37 99 235 / 18%);
-  box-shadow: inset 2px 0 0 var(--color-primary);
 }
 
 body .mrr-vscode-search [data-index] > a > div:last-child {

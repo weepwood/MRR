@@ -135,26 +135,26 @@ onMounted(reloadAll)
     <div v-loading="summaryLoading" class="mrr-metric-grid">
       <MrrMetricCard
         label="患者数据行"
-        icon="i-ep:user"
+        icon="i-lucide:user-round"
         :value="summary?.totalRecords ?? 0"
         :note="`去重病案号 ${summary?.totalArchives ?? 0} 个`"
       />
       <MrrMetricCard
         :label="`${currentYear} 年病案`"
-        icon="i-ep:calendar"
+        icon="i-lucide:calendar-days"
         :value="summary?.yearArchives ?? 0"
         note="按入院日期去重统计"
       />
       <MrrMetricCard
         label="身份证号为空"
-        icon="i-ep:warning-filled"
+        icon="i-lucide:triangle-alert"
         tone="warning"
         :value="summary?.missingIdCardRecords ?? 0"
         note="需要补录或人工核对"
       />
       <MrrMetricCard
         label="同一患者多病案"
-        icon="i-ep:office-building"
+        icon="i-lucide:building-2"
         :value="summary?.confirmedMultiRecordGroups ?? 0"
         :note="`另有疑似 ${summary?.suspectedMultiRecordGroups ?? 0} 组`"
       />

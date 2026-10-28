@@ -1,16 +1,24 @@
 name: Windows PostgreSQL recovery rehearsal
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
+    inputs:
+      backend_artifact:
+        type: string
+        default: ''
+      candidate_artifact:
+        type: string
+        default: ''
+      candidate_attempt:
+        type: string
+        default: ''
+      candidate_complete:
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: windows-recovery-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   windows-database-recovery:
@@ -23,6 +31,32 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Download the selected backend without compiling it again
+        if: inputs.backend_artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.backend_artifact }}
+          path: backend-repo/target
+      - name: Download the exact release candidate
+        if: inputs.candidate_artifact != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: build/release-assets
+      - name: Verify candidate identity and every file before recovery
+        if: inputs.candidate_artifact != ''
+        env:
+          BUILD_ATTEMPT: ${{ inputs.candidate_attempt }}
+          COMPLETE: ${{ inputs.candidate_complete }}
+        shell: powershell
+        run: |
+          $argsForVerify = @('-m', 'scripts.release_candidate', 'verify', '--directory', 'build/release-assets', '--attempt', $env:BUILD_ATTEMPT)
+          if ($env:COMPLETE -ne 'true') { $argsForVerify += '--jar-only' }
+          & python @argsForVerify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Cache pinned PostgreSQL test runtime
         id: postgres-runtime
         uses: actions/cache@v6
@@ -43,15 +77,32 @@ jobs:
           if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'PostgreSQL runtime checksum mismatch.' }
           Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime')
       - name: Package actual application migrations
+        if: inputs.backend_artifact == '' && inputs.candidate_artifact == ''
         shell: powershell
         run: |
-          mvn -B -ntp -f backend-repo/pom.xml package '-DskipTests' '-Dlocal.config.exclude=true'
+          .\backend-repo\mvnw.cmd -B -ntp -f backend-repo/pom.xml package '-DskipTests' '-Dlocal.config.exclude=true'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Full backup and restore rehearsal under Windows PowerShell 5.1
+      - name: Parse deployment scripts and run the manager self-test with PowerShell 5.1
         shell: powershell
         run: |
-          $jar = Get-ChildItem backend-repo/target -Filter *.jar | Select-Object -First 1
-          & ./scripts/test_windows_database_recovery.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin') -Jar $jar.FullName
+          $failed = $false
+          Get-ChildItem deploy/windows -Filter *.ps1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) { $failed = $true; Write-Error "PowerShell syntax error: $($_.Name)" }
+          }
+          if ($failed) { exit 1 }
+          .\deploy\windows\mrr-manager.ps1 -SelfTest -Root $PWD
+      - name: Full backup and restore rehearsal under Windows PowerShell 5.1
+        env:
+          CANDIDATE_ARTIFACT: ${{ inputs.candidate_artifact }}
+        shell: powershell
+        run: |
+          $jarRoot = if ($env:CANDIDATE_ARTIFACT) { 'build/release-assets' } else { 'backend-repo/target' }
+          $jars = @(Get-ChildItem $jarRoot -Filter *.jar)
+          if ($jars.Count -ne 1) { throw 'Expected exactly one selected backend JAR.' }
+          & ./scripts/test_windows_database_recovery.ps1 -PostgresBin (Join-Path $env:RUNNER_TEMP 'mrr-pg-runtime/pgsql/bin') -Jar $jars[0].FullName
       - name: Verify environment restoration when pg_ctl fails
         shell: powershell
         run: |

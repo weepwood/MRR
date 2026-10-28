@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AuthTestHistoryEvent, AuthTestHistoryItem } from './types'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import ExternalArchiveTicketTester from './components/ExternalArchiveTicketTester.vue'
@@ -31,7 +31,9 @@ function record(event: AuthTestHistoryEvent) {
   <div class="auth-test-page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">Authentication Playground</p>
+        <p class="eyebrow">
+          Authentication Playground
+        </p>
         <div class="page-title-row">
           <h2>认证与外部访问测试台</h2>
           <el-tooltip
@@ -48,7 +50,9 @@ function record(event: AuthTestHistoryEvent) {
           测试内部 JWT、受保护 API 和外部影像票据。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。
         </p>
       </div>
-      <el-tag type="warning" effect="plain">仅 user:manage 权限可见</el-tag>
+      <el-tag type="warning" effect="plain">
+        仅 user:manage 权限可见
+      </el-tag>
     </header>
 
     <section class="mrr-metric-grid" aria-label="认证测试环境概览">
@@ -94,7 +98,9 @@ function record(event: AuthTestHistoryEvent) {
                 <strong>本页请求记录</strong>
                 <span>最多保留最近 30 条</span>
               </div>
-              <el-button text @click="history = []">清空</el-button>
+              <el-button text @click="history = []">
+                清空
+              </el-button>
             </div>
           </template>
           <el-table :data="history" empty-text="尚未发送测试请求">
@@ -110,7 +116,9 @@ function record(event: AuthTestHistoryEvent) {
               </template>
             </el-table-column>
             <el-table-column label="耗时" width="110">
-              <template #default="{ row }">{{ row.durationMs }} ms</template>
+              <template #default="{ row }">
+                {{ row.durationMs }} ms
+              </template>
             </el-table-column>
           </el-table>
         </el-card>

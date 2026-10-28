@@ -1,15 +1,10 @@
 name: coverage-baseline
 
 on:
-  workflow_run:
-    workflows:
-      - quality-gate
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       run_id:
-        description: 包含后端测试报告的 quality-gate workflow run ID
+        description: 包含后端覆盖率报告的完整发布验收 run ID（或历史 quality-gate run ID）
         required: true
         type: string
 
@@ -18,18 +13,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: coverage-baseline-${{ github.event.workflow_run.id || inputs.run_id }}
+  group: coverage-baseline-${{ inputs.run_id }}
   cancel-in-progress: true
 
 jobs:
   summarize-backend-coverage:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+      SOURCE_RUN_ID: ${{ inputs.run_id }}
     steps:
       - name: Checkout coverage tooling
         uses: actions/checkout@v7
@@ -64,7 +56,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          xml_path="$(find artifacts -path '*/site/jacoco/jacoco.xml' -print -quit 2>/dev/null || true)"
+          xml_path="$(find artifacts -path '*/jacoco/jacoco.xml' -print -quit 2>/dev/null || true)"
           if [ -z "${xml_path}" ]; then
             echo 'available=false' >> "${GITHUB_OUTPUT}"
             {

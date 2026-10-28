@@ -1,0 +1,122 @@
+/*
+ * VS Code-inspired glass for selected utility overlays.
+ * Keep this opt-in; dialogs that show credentials remain opaque.
+ */
+body .mrr-vscode-glass {
+  color: var(--mrr-foreground);
+  background-color: #f7f9fc;
+  border: 1px solid rgb(255 255 255 / 76%);
+  box-shadow:
+    0 28px 80px rgb(15 23 42 / 22%),
+    0 8px 24px rgb(15 23 42 / 10%),
+    inset 0 1px 0 rgb(255 255 255 / 86%);
+  backdrop-filter: blur(26px) saturate(150%);
+}
+
+:root.dark body .mrr-vscode-glass {
+  background-color: #171e2a;
+  border-color: rgb(255 255 255 / 14%);
+  box-shadow:
+    0 32px 88px rgb(0 0 0 / 48%),
+    0 8px 28px rgb(0 0 0 / 32%),
+    inset 0 1px 0 rgb(255 255 255 / 9%);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  body .mrr-vscode-glass {
+    background-color: rgb(247 249 252 / 80%);
+  }
+
+  :root.dark body .mrr-vscode-glass {
+    background-color: rgb(23 30 42 / 80%);
+  }
+}
+
+body .mrr-vscode-overlay,
+body .el-overlay.mrr-vscode-overlay {
+  background-color: rgb(15 23 42 / 50%);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  body .mrr-vscode-overlay,
+  body .el-overlay.mrr-vscode-overlay {
+    background-color: rgb(15 23 42 / 22%);
+    backdrop-filter: blur(5px);
+  }
+}
+
+body .mrr-vscode-glass .el-dialog__header,
+body .mrr-vscode-glass .el-dialog__footer {
+  background-color: transparent;
+}
+
+body .mrr-vscode-search {
+  outline: 1px solid rgb(15 23 42 / 4%);
+  outline-offset: -4px;
+  border-radius: var(--mrr-radius-dialog);
+}
+
+body .mrr-vscode-search > :first-child,
+body .mrr-vscode-search > :last-child {
+  background: transparent;
+}
+
+body .mrr-vscode-search input {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+body .mrr-vscode-search input::placeholder {
+  color: var(--mrr-muted-foreground);
+  opacity: 1;
+}
+
+body .mrr-vscode-search [data-index] {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+body .mrr-vscode-search [data-index] > a {
+  min-height: 52px;
+  border-color: transparent;
+  border-radius: var(--mrr-radius-md);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+body .mrr-vscode-search [data-index]:hover > a {
+  background-color: rgb(37 99 235 / 6%);
+  border-color: rgb(37 99 235 / 10%);
+}
+
+body .mrr-vscode-search [data-index] > a.bg-accent {
+  color: var(--mrr-foreground);
+  background-color: rgb(37 99 235 / 10%);
+  border-color: rgb(37 99 235 / 18%);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+body .mrr-vscode-search [data-index] > a > div:last-child {
+  border-color: rgb(127 140 160 / 20%);
+}
+
+:root.dark body .mrr-vscode-search {
+  outline-color: rgb(255 255 255 / 5%);
+}
+
+:root.dark body .mrr-vscode-search [data-index]:hover > a {
+  background-color: rgb(96 165 250 / 9%);
+  border-color: rgb(96 165 250 / 15%);
+}
+
+:root.dark body .mrr-vscode-search [data-index] > a.bg-accent {
+  background-color: rgb(96 165 250 / 14%);
+  border-color: rgb(96 165 250 / 24%);
+}
+
+@media (max-width: 640px) {
+  body .mrr-vscode-search {
+    border-radius: var(--mrr-radius-card);
+  }
+}

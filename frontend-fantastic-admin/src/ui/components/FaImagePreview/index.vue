@@ -61,12 +61,12 @@ function handleClick() {
     >
     <div v-if="isLoading" class="absolute left-0 top-0 h-full w-full flex-center">
       <slot name="loading">
-        <FaIcon name="i-line-md:loading-twotone-loop" class="size-8 text-secondary-foreground/50" />
+        <FaIcon name="i-lucide:loader-circle" class="size-8 animate-spin text-secondary-foreground/50" />
       </slot>
     </div>
     <div v-if="isError" class="absolute left-0 top-0 h-full w-full flex-center">
       <slot name="error">
-        <FaIcon name="i-ph:image-broken-duotone" class="size-8 text-secondary-foreground/50" />
+        <FaIcon name="i-lucide:image-off" class="size-8 text-secondary-foreground/50" />
       </slot>
     </div>
     <Preview v-model="isOpen" :src />

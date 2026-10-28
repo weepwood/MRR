@@ -1,7 +1,7 @@
 <route lang="yaml">
 meta:
   title: 管理概览
-  icon: ant-design:home-twotone
+  icon: i-lucide:house
 </route>
 
 <script setup lang="ts">

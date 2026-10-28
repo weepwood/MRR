@@ -242,11 +242,11 @@ onMounted(() => {
             恢复自动配色
           </el-button>
           <el-button @click="handleExport">
-            <FaIcon name="i-ri:download-2-line" />
+            <FaIcon name="i-lucide:download" />
             导出配色
           </el-button>
           <el-button @click="triggerImport">
-            <FaIcon name="i-ri:upload-2-line" />
+            <FaIcon name="i-lucide:upload" />
             导入配色
           </el-button>
         </div>
@@ -271,7 +271,7 @@ onMounted(() => {
       </div>
 
       <div v-for="row in rows" :key="row.id" class="theme-editor-row">
-        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" style="width: 100%;">
+        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="department-theme-select">
           <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
         </el-select>
 
@@ -342,6 +342,10 @@ onMounted(() => {
 <style scoped>
 .department-theme-card {
   border-radius: var(--mrr-radius-card);
+}
+
+.department-theme-select {
+  width: 100%;
 }
 
 .department-theme-header {

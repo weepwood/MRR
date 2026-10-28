@@ -5,7 +5,7 @@
   /* 页面布局 */
   --g-header-height: 64px;
   --g-main-sidebar-width: 72px;
-  --g-sub-sidebar-width: 248px;
+  --g-sub-sidebar-width: 232px;
   --g-sub-sidebar-collapse-width: 64px;
   --g-sidebar-logo-height: 56px;
   --g-tabbar-height: 44px;
@@ -16,6 +16,7 @@
   --mrr-content-standard: 1440px;
   --mrr-content-narrow: 1120px;
   --mrr-page-gap: 24px;
+  --mrr-summary-min-height: 110px;
 
   /* 4px 基础间距 */
   --mrr-space-1: 4px;
@@ -38,14 +39,15 @@
   --mrr-radius-xl: clamp(0px, calc(var(--mrr-radius-base) + 2px), 26px);
   --mrr-radius-2xl: clamp(0px, calc(var(--mrr-radius-base) + 6px), 30px);
   --mrr-radius-card: var(--mrr-radius-base);
-  --mrr-radius-dialog: clamp(0px, calc(var(--mrr-radius-base) + 4px), 28px);
+  --mrr-radius-dialog: var(--mrr-radius-base);
   --mrr-radius-pill: 999px;
   --mrr-control-radius: var(--mrr-radius-md);
 
   /* 控件尺寸 */
-  --mrr-control-height: 36px;
-  --mrr-control-height-compact: 32px;
-  --mrr-control-height-large: 40px;
+  --mrr-input-height: 33px;
+  --mrr-control-height: var(--mrr-input-height);
+  --mrr-control-height-compact: var(--mrr-control-height);
+  --mrr-control-height-large: var(--mrr-control-height);
   --mrr-table-header-height: 42px;
   --mrr-table-row-height: 46px;
 

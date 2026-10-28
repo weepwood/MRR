@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
-import { Download, InfoFilled, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, genFileId } from 'element-plus'
+import { Download, Info as InfoFilled, Upload as UploadFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   downloadDataExchangeTemplate,

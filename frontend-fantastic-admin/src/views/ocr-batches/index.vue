@@ -144,7 +144,7 @@ async function skipRollbackPage() {
     >
       <template #actions>
         <el-button @click="after = ''; generation++; reload()">
-          <FaIcon name="i-ri:refresh-line" />
+          <FaIcon name="i-lucide:refresh-cw" />
           首批 / 刷新
         </el-button>
       </template>

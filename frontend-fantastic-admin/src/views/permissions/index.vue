@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AuthRole } from '@/api/types'
 import type { PermissionDefinition } from '@/utils/permission'
-import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'

@@ -49,11 +49,11 @@ function toggleColorScheme(event: MouseEvent) {
 </script>
 
 <template>
-  <FaButton variant="ghost" size="icon" class="size-9" @click="toggleColorScheme">
+  <FaButton variant="ghost" size="icon" @click="toggleColorScheme">
     <FaIcon
       :name="{
-        light: 'i-ri:sun-line',
-        dark: 'i-ri:moon-line',
+        light: 'i-lucide:sun',
+        dark: 'i-lucide:moon',
       }[settingsStore.currentColorScheme!]" class="size-4"
     />
   </FaButton>

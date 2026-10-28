@@ -29,6 +29,7 @@ html:root {
   gap: 6px;
   align-items: center;
   justify-content: center;
+  height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
   padding: 0 14px;
   font-size: 13px;
@@ -66,6 +67,7 @@ html:root {
 }
 
 .el-button.el-button--small {
+  height: var(--mrr-control-height-compact);
   min-height: var(--mrr-control-height-compact);
   padding-inline: 11px;
   font-size: 12px;
@@ -73,13 +75,16 @@ html:root {
 }
 
 .el-button.el-button--large {
+  height: var(--mrr-control-height-large);
   min-height: var(--mrr-control-height-large);
   padding-inline: 16px;
   font-size: 14px;
   border-radius: var(--mrr-radius-lg);
 }
 
-.el-button.is-circle {
+.el-button.is-circle,
+.el-button.el-button--default.is-circle {
+  flex-shrink: 0;
   width: var(--mrr-control-height);
   padding: 0;
 }
@@ -156,38 +161,75 @@ html:root {
   box-shadow: var(--mrr-shadow-xs);
 }
 
-.el-button.is-plain {
+body .el-button.is-plain {
   background: transparent;
   box-shadow: none;
 }
 
-.el-button--primary.is-plain {
+body .el-button--primary.is-plain {
   color: var(--mrr-primary);
   background: transparent;
   border-color: color-mix(in srgb, var(--mrr-primary) 45%, var(--mrr-border));
 }
 
-.el-button--primary.is-plain:not(.is-disabled):hover {
+body .el-button--primary.is-plain:not(.is-disabled):hover {
   color: var(--mrr-primary);
   background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
   border-color: color-mix(in srgb, var(--mrr-primary) 60%, var(--mrr-border));
 }
 
-.el-button--danger.is-plain {
+body .el-button--danger.is-plain {
   color: var(--mrr-destructive);
   background: transparent;
   border-color: color-mix(in srgb, var(--mrr-destructive) 38%, var(--mrr-border));
 }
 
-.el-button--danger.is-plain:not(.is-disabled):hover {
+body .el-button--danger.is-plain:not(.is-disabled):hover {
   background: var(--mrr-destructive-muted);
   border-color: color-mix(in srgb, var(--mrr-destructive) 55%, var(--mrr-border));
+}
+
+body .el-button--success.is-plain {
+  color: var(--mrr-tone-success);
+  background: transparent;
+  border-color: var(--mrr-tone-success-border);
+}
+
+body .el-button--success.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-success);
+  background: var(--mrr-tone-success-soft);
+  border-color: var(--el-color-success-light-5);
+}
+
+body .el-button--warning.is-plain {
+  color: var(--mrr-tone-warning);
+  background: transparent;
+  border-color: var(--mrr-tone-warning-border);
+}
+
+body .el-button--warning.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-warning);
+  background: var(--mrr-tone-warning-soft);
+  border-color: var(--el-color-warning-light-5);
+}
+
+body .el-button--info.is-plain {
+  color: var(--mrr-tone-neutral);
+  background: transparent;
+  border-color: var(--mrr-tone-neutral-border);
+}
+
+body .el-button--info.is-plain:not(.is-disabled):hover {
+  color: var(--mrr-tone-neutral);
+  background: var(--mrr-tone-neutral-soft);
+  border-color: var(--el-color-info-light-5);
 }
 
 /* Ghost and link */
 .el-button.is-text,
 .el-button.is-link {
-  min-height: 30px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
   padding: 0 8px;
   background: transparent;
   border-color: transparent;
@@ -286,23 +328,27 @@ html:root {
 
 .el-input__wrapper,
 .el-select__wrapper {
-  min-height: var(--mrr-control-height);
+  min-height: var(--mrr-input-height);
   padding-inline: 11px;
   box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-shadow-xs);
 }
 
 .el-input--small .el-input__wrapper,
 .el-select--small .el-select__wrapper {
-  min-height: var(--mrr-control-height-compact);
+  min-height: var(--mrr-input-height);
   padding-inline: 9px;
   border-radius: var(--mrr-radius-sm);
 }
 
 .el-input--large .el-input__wrapper,
 .el-select--large .el-select__wrapper {
-  min-height: var(--mrr-control-height-large);
+  min-height: var(--mrr-input-height);
   padding-inline: 12px;
   border-radius: var(--mrr-radius-lg);
+}
+
+.el-select .el-select__wrapper {
+  padding-block: 4px;
 }
 
 .el-input__wrapper:hover,
@@ -599,7 +645,7 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
 
 .el-table td.el-table__cell {
   height: var(--mrr-table-row-height);
-  padding-block: 8px;
+  padding-block: 6px;
 }
 
 .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
@@ -611,8 +657,8 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
 }
 
 body .el-pagination {
-  --el-pagination-button-height: 32px;
-  --el-pagination-button-width: 32px;
+  --el-pagination-button-height: var(--mrr-control-height);
+  --el-pagination-button-width: var(--mrr-control-height);
 
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
@@ -730,7 +776,8 @@ body .el-pagination {
 }
 
 /* ===== Dialogs, forms and tabs ===== */
-.el-dialog {
+body .el-dialog,
+body .el-message-box {
   overflow: hidden;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);

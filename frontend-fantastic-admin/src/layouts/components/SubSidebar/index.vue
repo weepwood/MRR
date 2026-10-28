@@ -49,7 +49,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     >
       <component :is="useSlots('sub-sidebar-top')" />
       <Logo
-        v-if="['side', 'single'].includes(settingsStore.settings.menu.mode)" :show-logo="settingsStore.settings.menu.mode === 'single'" class="sidebar-logo" :class="{
+        v-if="['side', 'single'].includes(settingsStore.settings.menu.mode)" :show-logo="settingsStore.settings.menu.mode === 'single'" :collapsible="settingsStore.settings.menu.mode === 'single'" class="sidebar-logo" :class="{
           'single': settingsStore.settings.menu.mode === 'single',
           'side-mode-logo': settingsStore.settings.menu.mode === 'side',
         }"
@@ -74,7 +74,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
         </TransitionGroup>
       </FaScrollArea>
       <div v-if="settingsStore.mode === 'pc' && settingsStore.settings.menu.enableSubMenuCollapseButton" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
-        <FaButton variant="ghost" size="icon" class="h-8 w-8 transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
+        <FaButton variant="ghost" size="icon" class="transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
           <FaIcon name="toolbar-collapse" class="size-4" />
         </FaButton>
       </div>
@@ -133,12 +133,19 @@ watch(() => menuStore.actived, (val, oldVal) => {
     width: 100%;
     padding: 4px 8px 16px;
 
+    :deep(.sub-menu) {
+      background-image: linear-gradient(var(--mrr-navigation-border), var(--mrr-navigation-border));
+      background-repeat: no-repeat;
+      background-position: 19px 4px;
+      background-size: 1px calc(100% - 8px);
+    }
+
     :deep(.menu-item) {
       padding: 2px 4px;
 
       .menu-item-container {
-        min-height: 38px;
-        padding: 8px 10px !important;
+        min-height: 34px;
+        padding: 6px 10px !important;
         font-size: 13px;
         font-weight: 500;
         color: var(--text-secondary) !important;
@@ -166,6 +173,17 @@ watch(() => menuStore.actived, (val, oldVal) => {
         border-color: var(--mrr-navigation-active-border);
       }
     }
+
+    :deep(.sub-menu .menu-item-container) {
+      width: calc(100% - 18px);
+      padding-inline-start: 8px !important;
+      margin-inline-start: 18px;
+    }
+
+    /* 收进背景边界，同时抵消一层内容缩进，保留子项图标和文字的位置。 */
+    :deep(.sub-menu .menu-item-container > div) {
+      padding-inline-start: calc((var(--indent-level) - 1) * 16px);
+    }
   }
 
   .menu--grouped-single {
@@ -179,7 +197,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
      * 与子项、激活态的蓝底叠在一起形成三层块状噪音。
      * 改为「字重 + 上间距」建立分组边界，只有悬停和激活才出现底色。 */
     & > :deep(.menu-item > .menu-item-container) {
-      min-height: 34px;
+      min-height: 32px;
       padding-inline: 10px !important;
       font-weight: 640;
       color: var(--text-primary) !important;
@@ -200,8 +218,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
     /* 子项比分组标题弱一档：常规态用次级文本色，靠左缩进读出层级。 */
     :deep(.sub-menu .menu-item-container) {
-      min-height: 32px;
-      padding-inline-start: 14px !important;
+      min-height: 30px;
+      padding-inline-start: 12px !important;
       font-weight: 500;
       color: var(--text-secondary) !important;
       background: transparent;

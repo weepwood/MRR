@@ -9,15 +9,15 @@ import type {
 } from '@/api/modules/oss'
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import {
-  CircleClose,
-  Document,
-  Refresh,
-  Search,
-  UploadFilled,
-  VideoPlay,
-} from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  CircleX as CircleClose,
+  FileText as Document,
+  RefreshCw as Refresh,
+  RotateCcw,
+  Upload as UploadFilled,
+  CirclePlay as VideoPlay,
+} from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   cancelMigrationJob,
@@ -34,6 +34,7 @@ import {
   uploadByBah,
   uploadToOss,
 } from '@/api/modules/oss'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useMigrationPolling } from './composables/useMigrationPolling'
@@ -67,14 +68,14 @@ const ACTIVE_STATUSES = new Set(['pending', 'running', 'cancelling'])
 const jobActions: MrrTableAction[] = [{
   key: 'detail',
   label: '查看任务详情',
-  icon: 'i-ri:eye-line',
+  icon: 'i-lucide:eye',
   tone: 'primary',
   placement: 'inline',
 }]
 const logViewAction: MrrTableAction = {
   key: 'view-image',
   label: '查看 OSS 图片',
-  icon: 'i-ri:image-line',
+  icon: 'i-lucide:image',
   tone: 'primary',
   placement: 'inline',
 }
@@ -1034,12 +1035,12 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item class="filter-actions" label="操作">
-          <el-button type="primary" :icon="Search" @click="loadRecords">
+          <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" type="primary" @click="loadRecords">
             查询
-          </el-button>
-          <el-button @click="resetRecordFilters">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading.records" :busy="loading.records" @click="resetRecordFilters">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </el-form-item>
       </el-form>
 
@@ -1205,6 +1206,7 @@ onMounted(() => {
             <p>按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。</p>
           </div>
           <el-button
+            :icon="RotateCcw"
             :disabled="!failedLogScanIds.length || hasActiveJob"
             :loading="loading.retry"
             @click="handleRetryFailed"
@@ -1233,12 +1235,12 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadLogs">
+          <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" type="primary" @click="loadLogs">
             查询
-          </el-button>
-          <el-button @click="resetLogFilters">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </el-form-item>
       </el-form>
 

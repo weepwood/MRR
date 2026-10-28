@@ -40,7 +40,8 @@ class DeploymentReadinessServiceTest {
                 systemSettingService,
                 0L,
                 48L,
-                1L
+                1L,
+                1_000_000L
         );
 
         try {

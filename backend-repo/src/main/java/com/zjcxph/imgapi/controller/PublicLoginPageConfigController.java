@@ -14,6 +14,10 @@ import java.util.Map;
  *
  * <p>只返回经过白名单筛选的系统标识、登录展示和管理员支持信息，
  * 不暴露开发者模式、图片来源、权限或其他内部系统配置。</p>
+ *
+ * <p>整表一次性读出：本端点匿名可访问，且不在限流覆盖范围内，若逐个键调用
+ * {@code getSetting} 会让一次登录页加载产生二十多次库查询，等于给未认证访问者
+ * 提供一个放大倍数很高的打点。设置表只有几十行，一次全量读取代价可忽略。</p>
  */
 @RestController
 @RequestMapping("/api/v1/public/config")
@@ -30,29 +34,31 @@ public class PublicLoginPageConfigController {
 
     @GetMapping("/login-page")
     public Result<Map<String, String>> getLoginPageConfig() {
+        Map<String, String> settings = systemSettingService.getAllSettings();
         Map<String, String> config = new LinkedHashMap<>();
-        DISPLAY_DEFAULTS.forEach((key, fallback) -> config.put(key, resolveValue(key, fallback, false)));
+        DISPLAY_DEFAULTS.forEach((key, fallback) ->
+                config.put(key, resolveValue(settings, key, fallback, false)));
 
-        boolean featureEnabled = resolveBoolean("loginFeatureEnabled", true);
+        boolean featureEnabled = resolveBoolean(settings, "loginFeatureEnabled", true);
         config.put("loginFeatureEnabled", Boolean.toString(featureEnabled));
 
-        boolean contactVisible = resolveBoolean("systemAdminContactEnabled", false)
-                && resolveBoolean("systemAdminPublicVisible", false);
+        boolean contactVisible = resolveBoolean(settings, "systemAdminContactEnabled", false)
+                && resolveBoolean(settings, "systemAdminPublicVisible", false);
         config.put("systemAdminContactVisible", Boolean.toString(contactVisible));
         if (contactVisible) {
-            config.put("systemAdminDisplayName", resolveValue("systemAdminDisplayName", "系统管理员", false));
-            config.put("systemAdminDepartment", resolveValue("systemAdminDepartment", "信息科", false));
-            config.put("systemAdminPhone", resolveValue("systemAdminPhone", "", true));
-            config.put("systemAdminExtension", resolveValue("systemAdminExtension", "", true));
-            config.put("systemAdminEmail", resolveValue("systemAdminEmail", "", true));
-            config.put("systemAdminServiceHours", resolveValue("systemAdminServiceHours", "", true));
-            config.put("systemAdminDescription", resolveValue("systemAdminDescription", "", true));
+            config.put("systemAdminDisplayName", resolveValue(settings, "systemAdminDisplayName", "系统管理员", false));
+            config.put("systemAdminDepartment", resolveValue(settings, "systemAdminDepartment", "信息科", false));
+            config.put("systemAdminPhone", resolveValue(settings, "systemAdminPhone", "", true));
+            config.put("systemAdminExtension", resolveValue(settings, "systemAdminExtension", "", true));
+            config.put("systemAdminEmail", resolveValue(settings, "systemAdminEmail", "", true));
+            config.put("systemAdminServiceHours", resolveValue(settings, "systemAdminServiceHours", "", true));
+            config.put("systemAdminDescription", resolveValue(settings, "systemAdminDescription", "", true));
         }
         return Result.success(config);
     }
 
-    private String resolveValue(String key, String fallback, boolean allowEmpty) {
-        String value = systemSettingService.getSetting(key);
+    private String resolveValue(Map<String, String> settings, String key, String fallback, boolean allowEmpty) {
+        String value = settings.get(key);
         if (value == null || value.isBlank()) {
             return allowEmpty ? "" : fallback;
         }
@@ -62,8 +68,8 @@ public class PublicLoginPageConfigController {
                 : normalized.substring(0, MAX_PUBLIC_TEXT_LENGTH);
     }
 
-    private boolean resolveBoolean(String key, boolean fallback) {
-        String value = systemSettingService.getSetting(key);
+    private boolean resolveBoolean(Map<String, String> settings, String key, boolean fallback) {
+        String value = settings.get(key);
         if (value == null || value.isBlank()) return fallback;
         return switch (value.trim().toLowerCase()) {
             case "true", "1", "yes", "on", "enabled" -> true;

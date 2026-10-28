@@ -19,6 +19,7 @@ export interface ModalProps {
   alignCenter?: boolean
   overlay?: boolean
   overlayBlur?: boolean
+  overlayClass?: HTMLAttributes['class']
   showConfirmButton?: boolean
   showCancelButton?: boolean
   confirmButtonText?: string
@@ -60,9 +61,9 @@ type BaseOptions = Omit<ModalProps, 'modelValue'> & {
   onCancel?: () => void
 }
 
-type alertOptions = Pick<BaseOptions, 'title' | 'description' | 'icon' | 'alignCenter' | 'overlay' | 'overlayBlur' | 'confirmButtonText' | 'confirmButtonDisabled' | 'confirmButtonLoading' | 'closeOnClickOverlay' | 'closeOnPressEscape' | 'class' | 'headerClass' | 'contentClass' | 'footerClass' | 'content' | 'onConfirm'>
+type alertOptions = Pick<BaseOptions, 'title' | 'description' | 'icon' | 'alignCenter' | 'overlay' | 'overlayBlur' | 'overlayClass' | 'confirmButtonText' | 'confirmButtonDisabled' | 'confirmButtonLoading' | 'closeOnClickOverlay' | 'closeOnPressEscape' | 'class' | 'headerClass' | 'contentClass' | 'footerClass' | 'content' | 'onConfirm'>
 
-type confirmOptions = Pick<BaseOptions, 'title' | 'description' | 'alignCenter' | 'overlay' | 'overlayBlur' | 'confirmButtonText' | 'cancelButtonText' | 'confirmButtonDisabled' | 'confirmButtonLoading' | 'beforeClose' | 'closeOnClickOverlay' | 'closeOnPressEscape' | 'class' | 'headerClass' | 'contentClass' | 'footerClass' | 'content' | 'onConfirm' | 'onCancel'>
+type confirmOptions = Pick<BaseOptions, 'title' | 'description' | 'alignCenter' | 'overlay' | 'overlayBlur' | 'overlayClass' | 'confirmButtonText' | 'cancelButtonText' | 'confirmButtonDisabled' | 'confirmButtonLoading' | 'beforeClose' | 'closeOnClickOverlay' | 'closeOnPressEscape' | 'class' | 'headerClass' | 'contentClass' | 'footerClass' | 'content' | 'onConfirm' | 'onCancel'>
 
 export function useFaModal() {
   function create(initialOptions: BaseOptions) {

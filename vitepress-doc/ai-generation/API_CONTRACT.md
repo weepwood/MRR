@@ -27,7 +27,7 @@ This file records current frontend/backend API alignment.
 
 - `GET /v2/search/getBAHByID/{idCard}` (default flow)
 - `GET /v2/search/getBAHByEncryptID` (reserved/compatibility)
-- `GET /v2/search/getBAHByEncryptIDLegacy` (legacy compatibility)
+- `GET /v2/search/getBAHByEncryptIDLegacy` (legacy compatibility, **disabled by default** since the ciphertext carries no timestamp and can be replayed indefinitely)
 
 ## Scan
 

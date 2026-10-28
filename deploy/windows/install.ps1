@@ -211,6 +211,11 @@ Write-TemplateIfMissing `
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\proxy.inc') `
     -Destination (Join-Path $Root 'config\nginx\proxy.inc')
+# 安全响应头片段：location 内的 add_header 会覆盖继承，因此该片段被 server 级与
+# 各 add_header location 共同 include，必须与 nginx.conf 一同落盘。
+Write-TemplateIfMissing `
+    -Source (Join-Path $scriptDir 'templates\security-headers.inc') `
+    -Destination (Join-Path $Root 'config\nginx\security-headers.inc')
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\maintenance.html') `
     -Destination (Join-Path $Root 'shared\maintenance.html')

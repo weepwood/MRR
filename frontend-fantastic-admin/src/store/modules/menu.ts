@@ -1,5 +1,5 @@
-import type { Menu, Route } from '#/global'
 import type { RouteRecordRaw } from 'vue-router'
+import type { Menu, Route } from '#/global'
 import { cloneDeep } from 'es-toolkit'
 import menu from '@/menu'
 import { resolveRoutePath } from '@/utils'
@@ -83,7 +83,7 @@ export const useMenuStore = defineStore(
           path: `/__external/${encodeURIComponent(link.id)}`,
           meta: {
             title,
-            icon: link.icon || 'i-ri:external-link-line',
+            icon: link.icon || 'i-lucide:external-link',
             link: url,
           },
         }]
@@ -107,7 +107,7 @@ export const useMenuStore = defineStore(
         path: '/__external',
         meta: {
           title: '其他',
-          icon: 'i-ri:links-line',
+          icon: 'i-lucide:link-2',
         },
         children: externalLinks,
       })
@@ -228,7 +228,7 @@ export const useMenuStore = defineStore(
         if (item.children) {
           return isPathInMenus(item.children, path)
         }
-        return path.indexOf(`${item.path}/`) === 0 || path === item.path
+        return path.startsWith(`${item.path}/`) || path === item.path
       })
       return flag
     }

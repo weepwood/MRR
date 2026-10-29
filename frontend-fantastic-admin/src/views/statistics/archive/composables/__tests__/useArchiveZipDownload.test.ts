@@ -22,7 +22,10 @@ vi.mock('@/api/modules/external-archive', () => ({
 vi.mock('@/api/modules/image', () => ({ getImgByCode: vi.fn(), updateImageType: vi.fn() }))
 vi.mock('@/api/modules/search', () => ({ getPatientByBah: vi.fn(), getArchiveCasesByIdCard: vi.fn(), getArchiveCasesByToken: vi.fn() }))
 vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => allowed.value }) }))
-vi.mock('../useArchiveSearchHistory', () => ({ addArchiveSearchHistory: vi.fn() }))
+vi.mock('../useArchiveSearchHistory', () => ({
+  addArchiveSearchHistory: vi.fn(),
+  captureArchiveSearchHistorySession: vi.fn(() => null),
+}))
 vi.mock('../useArchiveExportJob', () => ({
   useArchiveExportJob: () => ({ job: {}, cancelling: false, downloading: false, start, discard: vi.fn() }),
 }))

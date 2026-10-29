@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.annotation.EnableCaching;
@@ -50,7 +52,12 @@ public class CacheConfig {
     private static final int MAXIMUM_SIZE = 1000;
 
     @Bean
-    public CacheManager cacheManager() {
+    public CacheManager cacheManager(ObjectProvider<OssProperties> ossProperties,
+                                     ObjectProvider<Ticker> ticker) {
+        // OSS properties are startup configuration. Restarting after a change creates a fresh cache.
+        // Keep the existing ten-minute budget, but never consume the final 30 seconds of a signature.
+        int signatureSeconds = ossProperties.getIfAvailable(OssProperties::new).getUrlExpireSeconds();
+        long signatureCacheSeconds = Math.max(0L, Math.min(600L, (long) signatureSeconds - 30L));
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(List.of(
                 buildCache(SCAN_BY_BAH, 1, TimeUnit.DAYS),
@@ -58,7 +65,13 @@ public class CacheConfig {
                 buildCache(SCAN_LOOKUP_BY_BAH, 1, TimeUnit.DAYS),
                 buildCache(SCAN_LOOKUP_BY_CODE, 1, TimeUnit.DAYS),
                 buildCache(SCAN_BY_ID, 10, TimeUnit.MINUTES),
-                buildCache("ossSignedUrl", 10, TimeUnit.MINUTES)
+                new CaffeineCache("ossSignedUrl", Caffeine.newBuilder()
+                        .initialCapacity(INITIAL_CAPACITY)
+                        .maximumSize(MAXIMUM_SIZE)
+                        .expireAfterWrite(signatureCacheSeconds, TimeUnit.SECONDS)
+                        .ticker(ticker.getIfAvailable(Ticker::systemTicker))
+                        .recordStats()
+                        .build())
         ));
         return cacheManager;
     }

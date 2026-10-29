@@ -226,9 +226,25 @@ function recordFinalRetry(config: InternalAxiosRequestConfig | undefined, outcom
   })
 }
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** Bind sensitive queued work to its verified originating session. */
+    authSessionToken?: string
+  }
+}
+
+function isStaleSession(config: import('axios').AxiosRequestConfig | undefined) {
+  const user = useUserStore()
+  return config?.authSessionToken !== undefined
+    && (!user.isSessionVerified || config.authSessionToken !== user.token)
+}
+
 async function handleError(error: unknown) {
   const axiosError = axios.isAxiosError<unknown>(error) ? error : undefined
   const config = axiosError?.config
+  if (isStaleSession(config)) {
+    return Promise.reject(new axios.CanceledError('会话已变更，请重新操作'))
+  }
   const response = axiosError?.response
   const responseCode = extractBusinessCode(response?.data)
 
@@ -286,12 +302,18 @@ api.interceptors.request.use((request) => {
   if (request.idempotencyKey) { request.headers.set('Idempotency-Key', request.idempotencyKey) }
 
   const userStore = useUserStore()
+  if (isStaleSession(request)) {
+    throw new axios.CanceledError('会话已变更，请重新操作')
+  }
   if (userStore.isLogin) { request.headers.set('Authorization', `Bearer ${userStore.token}`) }
   return request
 })
 
 api.interceptors.response.use(
   (response) => {
+    if (isStaleSession(response.config)) {
+      return Promise.reject(new axios.CanceledError('会话已变更，请重新操作'))
+    }
     const payload: unknown = response.data
     recordFinalRetry(response.config, 'succeeded')
     enqueueResponseMetric(response.config, response, payload)

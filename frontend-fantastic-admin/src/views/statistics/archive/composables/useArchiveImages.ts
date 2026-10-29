@@ -29,7 +29,7 @@ import {
 import { archiveAccessMode } from '../access-mode'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { useArchiveExportJob } from './useArchiveExportJob'
-import { addArchiveSearchHistory } from './useArchiveSearchHistory'
+import { addArchiveSearchHistory, captureArchiveSearchHistorySession } from './useArchiveSearchHistory'
 
 export interface UseArchiveImagesOptions {
   externalSession?: Readonly<Ref<ExternalArchiveSession | null | undefined>>
@@ -164,6 +164,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
   async function loadImages(forceRefresh = false): Promise<void> {
     const version = ++queryVersion
+    const historySession = captureArchiveSearchHistorySession()
     patientLoading.value = false
     loading.value = false
     requestId.value = ''
@@ -249,7 +250,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
             bah: firstImage.bah || bah,
             sjh: firstImage.sjh || sjh,
             imageCount: images.value.length,
-          })
+          }, historySession)
         }
         else {
           addArchiveSearchHistory({
@@ -257,7 +258,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
             sjh,
             status: 'failure',
             failureReason: '未查询到影像',
-          })
+          }, historySession)
         }
       }
 
@@ -278,8 +279,8 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
           bah,
           sjh,
           status: 'failure',
-          failureReason: errorMsg.value,
-        })
+          failureReason: '查询失败',
+        }, historySession)
       }
     }
     finally {

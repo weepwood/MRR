@@ -65,10 +65,12 @@ scanByBah              | 10分钟   | 1000     | 病案号查询
 scanById               | 10分钟   | 1000     | ID查询
 userByUsername         | 10分钟   | 1000     | 用户信息查询
 patientByIdcard        | 10分钟   | 1000     | 患者身份证查询
-ossSignedUrl           | 10分钟   | 1000     | OSS签名URL
+ossSignedUrl           | min(600秒, 签名有效期-30秒)，下限0秒 | 1000 | OSS签名URL
 ```
 
 **已添加缓存的方法:**
+
+OSS 签名缓存按启动时的 `oss.urlExpireSeconds` 计算并预留30秒余量；修改该配置需重启，重启后建立空缓存。真实存储验收与回滚边界见 `docs/engineering/oss-signature-cache-expiry.md`（仓库根目录）。
 - `ScanServiceImpl.getImageListByBAH()` - @Cacheable("scanByBah")
 - `ScanServiceImpl.findById()` - @Cacheable("scanById")
 - `OssServiceImpl.generatePresignedUrl()` - @Cacheable("ossSignedUrl")

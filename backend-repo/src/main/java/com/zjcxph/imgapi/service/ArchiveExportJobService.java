@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.dto.req.ArchiveExportJobRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveExportJobResponse;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.entity.ArchiveExportJob;
 import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -107,10 +108,12 @@ public class ArchiveExportJobService {
             }
         }
 
-        ArchiveExportService.BatchZipExport export = ids.isEmpty()
-                ? archiveExportService.prepareArchive(bah, sjh)
-                : archiveExportService.prepareSelectedArchive(ids);
-        if (export.itemCount() == 0) {
+        ArchiveExportService.BatchZipExport selected = ids.isEmpty()
+                ? null : archiveExportService.prepareSelectedArchive(ids);
+        ArchiveExportSummary summary = ids.isEmpty()
+                ? archiveExportService.summarizeArchive(bah, sjh)
+                : new ArchiveExportSummary(selected.itemCount(), selected.estimatedBytes());
+        if (summary.itemCount() == 0) {
             throw new BusinessException(404, "未找到可导出的影像");
         }
 
@@ -124,9 +127,9 @@ public class ArchiveExportJobService {
         job.setBah(bah);
         job.setSjh(sjh);
         job.setScanIds(scanIds);
-        job.setPlannedCount(export.itemCount());
-        job.setEstimatedBytes(estimateBytes(export));
-        job.setSourceSummary(String.join(",", export.sourceSummary()));
+        job.setPlannedCount(summary.itemCount());
+        job.setEstimatedBytes(estimateBytes(summary.itemCount(), summary.estimatedBytes()));
+        job.setSourceSummary(ids.isEmpty() ? "" : String.join(",", selected.sourceSummary()));
         job.setFileName(buildFileName(job));
         job.setIdempotencyKey(idempotencyKey);
         job.setExpiresAt(LocalDateTime.now().plus(properties.getRetention()));
@@ -262,6 +265,10 @@ public class ArchiveExportJobService {
             if (export.itemCount() == 0) {
                 throw new IOException("病案已没有可导出的影像");
             }
+            if (repository.updatePlan(id, export.itemCount(), estimateBytes(export),
+                    String.join(",", export.sourceSummary())) == 0) {
+                throw new ArchiveExportCancelledException();
+            }
             if (!tempFileManager.deleteManagedFile(job.getFilePath())) {
                 throw new IOException("Export temporary cleanup unavailable");
             }
@@ -364,13 +371,16 @@ public class ArchiveExportJobService {
     }
 
     private long estimateBytes(ArchiveExportService.BatchZipExport export) {
-        long known = export.estimatedBytes();
+        return estimateBytes(export.itemCount(), export.estimatedBytes());
+    }
+
+    private long estimateBytes(int itemCount, long known) {
         if (known > 0) {
             return Math.min(known, properties.getMaxFileBytes());
         }
         try {
             return Math.min(
-                    Math.multiplyExact(export.itemCount(), properties.getFallbackBytesPerImage()),
+                    Math.multiplyExact(itemCount, properties.getFallbackBytesPerImage()),
                     properties.getMaxFileBytes());
         } catch (ArithmeticException exception) {
             return properties.getMaxFileBytes();

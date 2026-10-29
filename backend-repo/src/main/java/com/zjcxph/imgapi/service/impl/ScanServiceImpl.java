@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -36,6 +37,16 @@ public class ScanServiceImpl implements ScanService {
     public ScanServiceImpl(ScanMapper scanMapper,ImageTypeService imageTypes) {
         this.scanMapper = scanMapper;
         this.imageTypes=imageTypes;
+    }
+
+    @Override
+    public ArchiveExportSummary getLinkedArchiveExportSummaryByCode(
+            String normalizedBah, String bahSearchCode, String normalizedSjh, String sjhSearchCode) {
+        // Share the existing exact/compatible resolution and candidate ambiguity checks.
+        ArchiveResolution resolution = resolveArchiveId(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
+        if (resolution.archiveId() == null) return null;
+        ArchiveExportSummary summary = scanMapper.summarizeActiveByArchiveId(resolution.archiveId());
+        return summary != null && summary.itemCount() > 0 ? summary : null;
     }
 
     @Override

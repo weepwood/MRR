@@ -134,6 +134,14 @@ public class ArchiveExportJobRepository {
                 """, filePath, id);
     }
 
+    public int updatePlan(String id, int plannedCount, long estimatedBytes, String sourceSummary) {
+        return jdbcTemplate.update("""
+                UPDATE app.archive_export_job
+                SET planned_count = ?, estimated_bytes = ?, source_summary = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'PROCESSING' AND NOT cancel_requested
+                """, plannedCount, estimatedBytes, sourceSummary, id);
+    }
+
     public int resetToPending(String id) {
         return jdbcTemplate.update("""
                 UPDATE app.archive_export_job

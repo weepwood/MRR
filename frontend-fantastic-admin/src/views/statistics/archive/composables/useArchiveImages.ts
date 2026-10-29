@@ -6,10 +6,6 @@ import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { ref, shallowRef, watch } from 'vue'
 import {
-  downloadArchiveZip,
-  getArchiveZipExportPlan,
-} from '@/api/modules/archive-export'
-import {
   downloadExternalArchive,
   externalArchiveSession,
   getExternalArchiveImages,
@@ -428,24 +424,9 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
     downloading.value = true
     try {
-      const plan = await getArchiveZipExportPlan(bah || undefined, sjh || undefined)
-      if (plan.data?.executionMode === 'BACKEND_JOB') {
-        await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
-        return
-      }
-
-      try {
-        const archiveBlob = await downloadArchiveZip(bah || undefined, sjh || undefined)
-        if (!(archiveBlob instanceof Blob) || archiveBlob.size <= 0) {
-          throw new Error('服务器返回的 ZIP 文件为空')
-        }
-        saveBlob(archiveBlob, `${bah || 'archive'}${sjh ? `-${sjh}` : ''}.zip`)
-        ElMessage.success('档案袋已由服务器打包并开始下载')
-      }
-      catch {
-        await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
-        ElMessage.warning('直接下载未完成，已自动转为后台生成任务')
-      }
+      // The server always plans internal ZIP exports as BACKEND_JOB; avoid preparing
+      // the entire archive once more merely to obtain that constant routing decision.
+      await exportJob.start({ format: 'ZIP', bah: bah || undefined, sjh: sjh || undefined })
     }
     catch (err: unknown) {
       ElMessage.error((err as { message?: string })?.message || '下载失败')

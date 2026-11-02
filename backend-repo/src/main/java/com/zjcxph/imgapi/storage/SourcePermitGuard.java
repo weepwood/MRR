@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class SourcePermitGuard {
 
@@ -39,17 +40,18 @@ final class SourcePermitGuard {
             }
             success = true;
             return new FilterInputStream(delegate) {
-                private boolean released;
+                private final AtomicBoolean closed = new AtomicBoolean();
 
                 @Override
                 public void close() throws IOException {
+                    // The closing owner keeps the permit until the underlying resource finishes closing.
+                    if (!closed.compareAndSet(false, true)) {
+                        return;
+                    }
                     try {
                         super.close();
                     } finally {
-                        if (!released) {
-                            released = true;
-                            semaphore.release();
-                        }
+                        semaphore.release();
                     }
                 }
             };

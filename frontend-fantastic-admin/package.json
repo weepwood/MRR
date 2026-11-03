@@ -131,7 +131,7 @@
     "vite-plugin-app-loading": "^0.6.1",
     "vite-plugin-archiver": "^0.4.1",
     "vite-plugin-banner": "^0.8.1",
-    "vite-plugin-compression2": "^2.5.3",
+    "vite-plugin-compression2": "^2.5.4",
     "vite-plugin-env-parse": "^1.0.15",
     "vite-plugin-fake-server": "^2.2.4",
     "vite-plugin-pages": "^0.33.3",

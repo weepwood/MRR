@@ -47,17 +47,44 @@ public class OperationsCenterService {
     }
 
     public Map<String, Object> overview() {
-        Map<String, Object> readiness = effectiveReadiness(readinessService.getSnapshot());
+        Map<String, Object> readiness = overviewReadiness(effectiveReadiness(readinessService.getSnapshot()));
+        Long recentErrors = recentServerErrorCount();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("generatedAt", Instant.now().toString());
         result.put("readiness", readiness);
-        result.put("maintenance", maintenanceModeService.getStatus());
+        result.put("maintenance", readiness.get("maintenance"));
         result.put("runtime", runtimeInfo());
         result.put("taskSummary", taskSummary());
-        result.put("recentServerErrors", recentServerErrorCount());
-        result.put("latestOperation", latestOperation());
+        result.put("recentServerErrors", recentErrors == null ? 0L : recentErrors);
+        result.put("recentServerErrorsAvailable", recentErrors != null);
+        // Older clients expect this object. Full operation details belong to the audit endpoint.
+        result.put("latestOperation", Map.of());
         result.put("quickLinks", quickLinks());
         return Map.copyOf(result);
+    }
+
+    private Map<String, Object> overviewReadiness(Map<String, Object> readiness) {
+        List<Map<String, Object>> checks = castChecks(readiness.get("checks")).stream().map(check -> {
+            boolean passed = Boolean.TRUE.equals(check.get("passed"));
+            return Map.<String, Object>of(
+                    "code", check.get("code"),
+                    "name", check.get("name"),
+                    "severity", check.get("severity"),
+                    "passed", passed,
+                    "message", passed ? "符合就绪条件" : "未通过就绪检查",
+                    "details", Map.of()
+            );
+        }).toList();
+        return Map.of(
+                "ready", readiness.get("ready"),
+                "readOnly", readiness.get("readOnly"),
+                "automaticReadOnly", readiness.get("automaticReadOnly"),
+                "maintenanceReadOnly", readiness.get("maintenanceReadOnly"),
+                "mode", readiness.get("mode"),
+                "checkedAt", readiness.get("checkedAt"),
+                "checks", checks,
+                "maintenance", Map.of("enabled", readiness.get("maintenanceReadOnly"))
+        );
     }
 
     public Map<String, Object> readiness() {
@@ -255,6 +282,7 @@ public class OperationsCenterService {
         for (String status : List.of("PENDING", "PROCESSING", "SUCCESS", "FAILED", "CANCELLED", "EXPIRED")) {
             counts.put(status, 0L);
         }
+        boolean available = true;
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                     SELECT status, COUNT(*) AS count
@@ -269,17 +297,18 @@ public class OperationsCenterService {
                 }
             }
         } catch (Exception ignored) {
-            // 旧库尚未创建任务表时返回零值快照。
+            available = false;
         }
         long active = counts.get("PENDING") + counts.get("PROCESSING");
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("available", available);
         result.put("counts", Map.copyOf(counts));
         result.put("active", active);
         result.put("failed", counts.get("FAILED"));
         return Map.copyOf(result);
     }
 
-    private long recentServerErrorCount() {
+    private Long recentServerErrorCount() {
         try {
             Long value = jdbcTemplate.queryForObject("""
                     SELECT COUNT(*)
@@ -289,13 +318,8 @@ public class OperationsCenterService {
                     """, Long.class);
             return value == null ? 0L : value;
         } catch (Exception ignored) {
-            return 0L;
+            return null;
         }
-    }
-
-    private Map<String, Object> latestOperation() {
-        List<Map<String, Object>> rows = recentOperations(1);
-        return rows.isEmpty() ? Map.of() : new LinkedHashMap<>(rows.getFirst());
     }
 
     private Map<String, Object> runtimeCheck() {
@@ -336,7 +360,8 @@ public class OperationsCenterService {
     }
 
     private Map<String, Object> recentErrorsCheck() {
-        long errors = recentServerErrorCount();
+        Long count = recentServerErrorCount();
+        long errors = count == null ? 0L : count;
         boolean passed = errors <= RECENT_ERROR_WARNING;
         return diagnosticCheck(
                 "recent-server-errors",

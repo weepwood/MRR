@@ -54,8 +54,8 @@ importers:
         specifier: ^1.45.1
         version: 1.45.1
       filesize:
-        specifier: ^11.0.28
-        version: 11.0.28
+        specifier: ^11.0.29
+        version: 11.0.29
       gsap:
         specifier: ^3.14.2
         version: 3.14.2
@@ -4774,8 +4774,8 @@ packages:
   file-entry-cache@11.1.5:
     resolution: {integrity: sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==}
 
-  filesize@11.0.28:
-    resolution: {integrity: sha512-tsZcwUmhL0WQpsxe9Oua6FBjb0aBTRkXobZBhQdkoII0pYgy9h+cXm5tp13Fsr8dSwp1+UVDxNwAFULDpxkXaw==}
+  filesize@11.0.29:
+    resolution: {integrity: sha512-+Mkmp8keoklLzAnvP/RQGDUEWEpjGmhvm4d4U739C1ZnkqxqoSqdLHnjv9/4QX6lltKSRk6qzQI7+94JVDtuCA==}
     engines: {node: '>= 10.8.0'}
 
   fill-range@4.0.0:
@@ -12928,7 +12928,7 @@ snapshots:
     dependencies:
       flat-cache: 6.1.23
 
-  filesize@11.0.28: {}
+  filesize@11.0.29: {}
 
   fill-range@4.0.0:
     dependencies:
@@ -16591,7 +16591,7 @@ snapshots:
     dependencies:
       archiver: 8.0.0
       dayjs: 1.11.23
-      filesize: 11.0.28
+      filesize: 11.0.29
       open: 11.0.0
       vite: 8.3.5(@types/node@22.15.30)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.49.0)(tsx@4.21.0)(yaml@2.9.1)
     transitivePeerDependencies:

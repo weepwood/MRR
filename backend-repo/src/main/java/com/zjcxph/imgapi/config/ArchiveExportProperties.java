@@ -16,6 +16,7 @@ public class ArchiveExportProperties {
     private long maxFileBytes = 10L * 1024 * 1024 * 1024;
     private Duration retention = Duration.ofHours(24);
     private Duration cleanupInterval = Duration.ofMinutes(15);
+    private Duration recoveryInterval = Duration.ofSeconds(1);
     private int workerCoreSize = 1;
     private int workerMaxSize = 2;
     private int workerQueueCapacity = 20;

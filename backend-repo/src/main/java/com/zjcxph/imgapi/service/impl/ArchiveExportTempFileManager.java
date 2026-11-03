@@ -13,10 +13,14 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.InvalidPathException;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -161,20 +165,32 @@ public class ArchiveExportTempFileManager {
     }
 
     private long calculateUsageBytes(Set<String> excludedJobIds) throws IOException {
-        if (!Files.exists(root)) {
-            return 0;
-        }
         try (var stream = Files.list(root)) {
-            return stream.filter(path -> !Files.isSymbolicLink(path) && Files.isRegularFile(path))
-                    .filter(path -> !belongsToReservedJob(path, excludedJobIds))
-                    .mapToLong(path -> {
-                        try {
-                            return Files.size(path);
-                        } catch (IOException exception) {
-                            return 0L;
-                        }
-                    })
-                    .sum();
+            long total = 0;
+            var paths = stream.iterator();
+            while (paths.hasNext()) {
+                Path path = paths.next();
+                if (belongsToReservedJob(path, excludedJobIds)) {
+                    continue;
+                }
+                final BasicFileAttributes attributes;
+                try {
+                    attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+                } catch (NoSuchFileException exception) {
+                    // Cleanup may remove a file after the directory entry was listed.
+                    continue;
+                }
+                if (attributes.isRegularFile()) {
+                    long size = attributes.size();
+                    total = size > Long.MAX_VALUE - total ? Long.MAX_VALUE : total + size;
+                }
+            }
+            return total;
+        } catch (NoSuchFileException exception) {
+            return 0;
+        } catch (IOException | UncheckedIOException exception) {
+            // Worker logs the exception chain, so do not retain filesystem paths in a cause either.
+            throw new IOException("无法核算导出临时目录占用");
         }
     }
 

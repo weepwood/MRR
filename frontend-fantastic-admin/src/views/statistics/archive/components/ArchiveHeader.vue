@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { CircleCheck, CircleX, Clock3 as Clock, RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { useUserStore } from '@/store/modules/user'
+import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import {
   archiveAccessMode,
@@ -36,6 +38,7 @@ const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
 const externalAccess = computed(() => isExternalArchiveAccessMode(archiveAccessMode.value))
+const userStore = useUserStore()
 const accessModeLabel = computed(() => {
   if (archiveAccessMode.value === 'external-ticket') {
     return '外部访问'
@@ -47,6 +50,7 @@ const historyVisible = ref(false)
 const allHistoryVisible = ref(false)
 const historyStatus = ref<'success' | 'failure' | 'favorite'>('success')
 let historyListenersAttached = false
+let historyGeneration = 0
 
 const displayedSuccessfulHistory = computed(() => searchHistory.value
   .filter(item => item.status === 'success')
@@ -72,14 +76,13 @@ function formatHistoryTime(timestamp: number): string {
   return historyTimeFormatter.format(new Date(timestamp))
 }
 
-function handleHistoryUpdated(event: Event) {
-  const detail = (event as CustomEvent<ArchiveSearchHistoryItem[]>).detail
-  searchHistory.value = Array.isArray(detail) ? detail : readArchiveSearchHistory()
+function handleHistoryUpdated() {
+  searchHistory.value = externalAccess.value ? [] : readArchiveSearchHistory()
 }
 
 function handleStorage(event: StorageEvent) {
-  if (event.key === ARCHIVE_SEARCH_HISTORY_STORAGE_KEY || event.key === null) {
-    searchHistory.value = readArchiveSearchHistory()
+  if (event.key === ARCHIVE_SEARCH_HISTORY_STORAGE_KEY || event.key === AUTH_STORAGE_KEYS.token || event.key === null) {
+    void syncHistoryAccess()
   }
 }
 
@@ -165,8 +168,14 @@ function detachHistoryListeners() {
   historyListenersAttached = false
 }
 
-async function syncHistoryAccess(isExternal: boolean) {
-  if (isExternal) {
+async function syncHistoryAccess() {
+  const generation = ++historyGeneration
+  searchHistory.value = []
+  historyVisible.value = false
+  allHistoryVisible.value = false
+  // Invalidate old memory immediately; login persists auth storage later in the same tick.
+  readArchiveSearchHistory()
+  if (externalAccess.value) {
     detachHistoryListeners()
     searchHistory.value = []
     historyVisible.value = false
@@ -175,22 +184,19 @@ async function syncHistoryAccess(isExternal: boolean) {
   }
 
   attachHistoryListeners()
+  await nextTick()
+  if (generation !== historyGeneration || externalAccess.value) { return }
   searchHistory.value = readArchiveSearchHistory()
   const history = await loadArchiveSearchHistory()
-  if (!externalAccess.value) {
+  if (generation === historyGeneration && !externalAccess.value) {
     searchHistory.value = history
   }
 }
 
-onMounted(() => {
-  void syncHistoryAccess(externalAccess.value)
-})
-
-watch(externalAccess, (isExternal) => {
-  void syncHistoryAccess(isExternal)
-})
+watch([externalAccess, () => userStore.token, () => userStore.isSessionVerified, () => userStore.profile.id], () => { void syncHistoryAccess() }, { immediate: true, flush: 'sync' })
 
 onUnmounted(() => {
+  historyGeneration++
   detachHistoryListeners()
 })
 </script>

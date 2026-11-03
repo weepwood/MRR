@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.entity.ArchiveExportJob;
 import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
+import com.zjcxph.imgapi.repository.ArchiveExportJobRepository.RecoveryCursor;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -52,6 +54,11 @@ public class ArchiveExportJobService {
     private final ArchiveExportProperties properties;
     private final Executor executor;
     private final ConcurrentHashMap<String, AtomicBoolean> cancellationFlags = new ConcurrentHashMap<>();
+    private final Set<String> submittedJobIds = ConcurrentHashMap.newKeySet();
+    private boolean recoveryRequested;
+    private boolean recoveryInitialized;
+    private RecoveryCursor recoveryUpperBound;
+    private RecoveryCursor recoveryAfter;
 
     public ArchiveExportJobService(
             ArchiveExportService archiveExportService,
@@ -131,9 +138,12 @@ public class ArchiveExportJobService {
         job.setIdempotencyKey(idempotencyKey);
         job.setExpiresAt(LocalDateTime.now().plus(properties.getRetention()));
 
+        // Register before the row becomes visible to startup recovery, including requests before Ready.
+        submittedJobIds.add(job.getId());
         try {
             repository.insert(job);
         } catch (DuplicateKeyException exception) {
+            submittedJobIds.remove(job.getId());
             ArchiveExportJob existing = repository.findByIdempotency(
                             session.getId(), session.getUsername(), idempotencyKey)
                     .orElseThrow(() -> exception);
@@ -141,6 +151,9 @@ public class ArchiveExportJobService {
                 throw new BusinessException(409, "幂等键已被其他导出请求使用");
             }
             return ArchiveExportJobResponse.from(existing);
+        } catch (RuntimeException exception) {
+            submittedJobIds.remove(job.getId());
+            throw exception;
         }
         submit(job.getId());
         return ArchiveExportJobResponse.from(repository.findById(job.getId()).orElse(job));
@@ -197,17 +210,72 @@ public class ArchiveExportJobService {
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void recoverJobsAfterRestart() {
-        for (ArchiveExportJob job : repository.findRecoverable()) {
-            if (Boolean.TRUE.equals(job.getCancelRequested())) {
-                repository.markCancelled(job.getId(), LocalDateTime.now());
-                tempFileManager.deleteManagedFile(job.getFilePath());
+    public synchronized void recoverJobsAfterRestart() {
+        recoveryRequested = true;
+        continueStartupRecovery();
+    }
+
+    @Scheduled(fixedDelayString = "${archive.export.recovery-interval:PT1S}")
+    public synchronized void continueStartupRecovery() {
+        if (!recoveryRequested) return;
+        try {
+            recoverStartupBatch();
+        } catch (DataAccessException exception) {
+            // Keep the last accepted cursor and retry; do not abort application startup or log SQL details.
+            logger.warn("Archive export startup recovery deferred: database unavailable");
+        }
+    }
+
+    private void recoverStartupBatch() {
+        if (!recoveryInitialized) {
+            recoveryUpperBound = repository.findRecoveryUpperBound().orElse(null);
+            recoveryInitialized = true;
+        }
+        if (recoveryUpperBound == null) return;
+        int batchSize = Math.max(1, Math.min(200, properties.getWorkerQueueCapacity()));
+        List<ArchiveExportJob> page = repository.findRecoveryPage(recoveryAfter, recoveryUpperBound, batchSize);
+        if (page.isEmpty()) {
+            recoveryUpperBound = null;
+            return;
+        }
+        for (ArchiveExportJob job : page) {
+            if (!submittedJobIds.add(job.getId())) {
+                recoveryAfter = new RecoveryCursor(job.getCreatedAt(), job.getId());
                 continue;
             }
-            if (repository.resetToPending(job.getId()) != 0) {
-                submit(job.getId());
+            boolean accepted = false;
+            try {
+                if (Boolean.TRUE.equals(job.getCancelRequested())) {
+                    if (!cancelRecoveredJob(job)) return;
+                } else if (repository.resetToPending(job.getId()) != 0) {
+                    // A full or shutting-down executor leaves this row pending and this cursor unchanged.
+                    if (!executeOwnedJob(job.getId())) return;
+                    accepted = true;
+                } else if (!reconcileRecoveryCandidate(job.getId())) {
+                    return;
+                }
+                recoveryAfter = new RecoveryCursor(job.getCreatedAt(), job.getId());
+            } finally {
+                if (!accepted) submittedJobIds.remove(job.getId());
             }
         }
+    }
+
+    private boolean reconcileRecoveryCandidate(String id) {
+        var current = repository.findById(id);
+        if (current.isEmpty() || Set.of("SUCCESS", "FAILED", "CANCELLED", "EXPIRED")
+                .contains(current.get().getStatus())) return true;
+        return Boolean.TRUE.equals(current.get().getCancelRequested()) && cancelRecoveredJob(current.get());
+    }
+
+    private boolean cancelRecoveredJob(ArchiveExportJob job) {
+        if (repository.markCancelled(job.getId(), LocalDateTime.now()) == 0) {
+            var current = repository.findById(job.getId());
+            return current.isEmpty() || Set.of("SUCCESS", "FAILED", "CANCELLED", "EXPIRED")
+                    .contains(current.get().getStatus());
+        }
+        tempFileManager.deleteManagedFile(job.getFilePath());
+        return true;
     }
 
     @Scheduled(fixedDelayString = "${archive.export.cleanup-interval:PT15M}")
@@ -227,10 +295,30 @@ public class ArchiveExportJobService {
     }
 
     private void submit(String id) {
+        boolean accepted = false;
         try {
-            executor.execute(() -> runJob(id));
+            accepted = executeOwnedJob(id);
+            if (!accepted) {
+                repository.markFailed(id, "异步导出队列已满，请稍后重试", LocalDateTime.now());
+            }
+        } finally {
+            // Keep rejected new rows owned until the failure update finishes, including during Ready.
+            if (!accepted) submittedJobIds.remove(id);
+        }
+    }
+
+    private boolean executeOwnedJob(String id) {
+        try {
+            executor.execute(() -> {
+                try {
+                    runJob(id);
+                } finally {
+                    submittedJobIds.remove(id);
+                }
+            });
+            return true;
         } catch (RejectedExecutionException exception) {
-            repository.markFailed(id, "异步导出队列已满，请稍后重试", LocalDateTime.now());
+            return false;
         }
     }
 

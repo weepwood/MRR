@@ -8,7 +8,7 @@ vi.mock('@/api/modules/external-archive', () => ({ downloadExternalArchive: vi.f
 vi.mock('@/api/modules/image', () => ({ getImgByCode: query, updateImageType: vi.fn() }))
 vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
 vi.mock('@/api/modules/search', () => ({ getPatientByBah: patient, getArchiveCasesByIdCard: vi.fn(), getArchiveCasesByToken: vi.fn() }))
-vi.mock('../useArchiveSearchHistory', () => ({ addArchiveSearchHistory: vi.fn() }))
+vi.mock('../useArchiveSearchHistory', () => ({ addArchiveSearchHistory: vi.fn(), captureArchiveSearchHistorySession: vi.fn(() => null) }))
 vi.mock('../useArchiveExportJob', () => ({ useArchiveExportJob: () => ({ job: {}, cancelling: false, downloading: false, discard: vi.fn() }) }))
 
 describe('archive query results', () => {

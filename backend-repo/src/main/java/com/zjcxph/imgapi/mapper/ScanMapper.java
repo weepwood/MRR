@@ -128,6 +128,7 @@ public interface ScanMapper {
      * 兼容旧接口的有限查询。LIMIT 必须在数据库执行，不能加载全表后再截断。
      */
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit}")
+    @Options(timeout = 3)
     List<Scan> findAll(@Param("limit") int limit);
 
     @Select("SELECT * FROM mr_scan WHERE id > #{afterId} ORDER BY id LIMIT #{limit}")
@@ -157,6 +158,7 @@ public interface ScanMapper {
     List<Scan> findByBrxh(@Param("brxh") String brxh);
 
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit} OFFSET #{offset}")
+    @Options(timeout = 3)
     List<Scan> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
 
     List<Scan> findByCondition(@Param("request") ScanRequest request, @Param("limit") int limit);

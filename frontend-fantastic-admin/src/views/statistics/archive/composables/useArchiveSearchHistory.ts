@@ -1,8 +1,13 @@
+import { useUserStore } from '@/store/modules/user'
+import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 
+/** Legacy shared storage is deleted, never read or migrated to an arbitrary user. */
 export const ARCHIVE_SEARCH_HISTORY_STORAGE_KEY = 'MRR-ADMIN:archive-search-history:v1'
 export const ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT = 'mrr:archive-search-history-updated'
 export const ARCHIVE_SEARCH_HISTORY_DISPLAY_LIMIT = 20
+const MEMORY_LIMIT = 100
+const MEMORY_MAX_AGE = 30 * 24 * 60 * 60 * 1000
 export type ArchiveSearchHistoryStatus = 'success' | 'failure'
 
 export interface ArchiveSearchHistoryItem {
@@ -26,15 +31,47 @@ export interface AddArchiveSearchHistoryInput {
   failureReason?: string | null
 }
 
+interface HistorySession {
+  userId: number
+  token: string
+  items: ArchiveSearchHistoryItem[]
+  revision: number
+  favoriteRequests: Map<string, symbol>
+}
+let activeSession: HistorySession | null = null
+
+export function captureArchiveSearchHistorySession(): HistorySession | null {
+  let storedToken: string | null | undefined
+  try {
+    localStorage.removeItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY)
+    storedToken = localStorage.getItem(AUTH_STORAGE_KEYS.token)
+  }
+  catch {
+    // Verified in-memory sessions remain usable when browser storage is blocked.
+  }
+  const user = useUserStore()
+  const userId = Number(user.profile.id)
+  if (!user.isSessionVerified || !user.token || !Number.isSafeInteger(userId) || userId <= 0
+    || (storedToken !== undefined && storedToken !== user.token)) {
+    activeSession = null
+    return null
+  }
+  if (activeSession?.userId !== userId || activeSession.token !== user.token) {
+    activeSession = { userId, token: user.token, items: [], revision: 0, favoriteRequests: new Map() }
+  }
+  return activeSession
+}
+
+function isCurrent(session: HistorySession | null): session is HistorySession {
+  return session !== null && captureArchiveSearchHistorySession() === session
+}
+
 function createHistoryKey(bah: string, sjh: string, status: ArchiveSearchHistoryStatus): string {
   return `${bah || 'none'}:${sjh || 'none'}:${status}`
 }
 
 function normalizeHistoryItem(value: unknown): ArchiveSearchHistoryItem | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
+  if (!value || typeof value !== 'object') { return null }
   const source = value as Record<string, unknown>
   const bah = normalizeMedicalRecordCode(source.bah)
   const sjh = normalizeMedicalRecordCode(source.sjh)
@@ -42,11 +79,10 @@ function normalizeHistoryItem(value: unknown): ArchiveSearchHistoryItem | null {
   const imageCount = Number(source.imageCount)
   const queryCount = Number(source.queryCount)
   const status = source.status === 'failure' ? 'failure' : 'success'
-
-  if ((!bah && !sjh) || !Number.isSafeInteger(searchedAt) || searchedAt <= 0) {
+  if ((!bah && !sjh) || !Number.isSafeInteger(searchedAt) || searchedAt <= 0
+    || searchedAt <= Date.now() - MEMORY_MAX_AGE || searchedAt > Date.now()) {
     return null
   }
-
   const id = Number(source.id)
   return {
     ...(Number.isSafeInteger(id) && id > 0 ? { id } : {}),
@@ -57,44 +93,44 @@ function normalizeHistoryItem(value: unknown): ArchiveSearchHistoryItem | null {
     queryCount: status === 'success' && Number.isFinite(queryCount) ? Math.max(1, Math.floor(queryCount)) : 0,
     searchedAt,
     status,
-    failureReason: status === 'failure' ? String(source.failureReason || '查询失败') : '',
+    failureReason: status === 'failure' ? '查询失败' : '',
     favorite: source.favorite === true,
   }
 }
 
-function notifyArchiveSearchHistoryUpdated(items: ArchiveSearchHistoryItem[]): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.dispatchEvent(new CustomEvent(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, { detail: items }))
-}
-
-function writeArchiveSearchHistory(items: ArchiveSearchHistoryItem[]): ArchiveSearchHistoryItem[] {
+function normalizeItems(items: ArchiveSearchHistoryItem[]): ArchiveSearchHistoryItem[] {
   const seen = new Set<string>()
-  const normalized = items
-    .map(normalizeHistoryItem)
-    .filter((item): item is ArchiveSearchHistoryItem => {
-      if (!item || seen.has(item.key)) {
-        return false
-      }
-      seen.add(item.key)
-      return true
-    })
-
-  try {
-    localStorage.setItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(normalized))
-  }
-  catch {
-    // 本地存储不可用时不影响档案查询。
-  }
-
-  notifyArchiveSearchHistoryUpdated(normalized)
-  return normalized
+  return items.map(normalizeHistoryItem).filter((item): item is ArchiveSearchHistoryItem => {
+    if (!item || seen.has(item.key)) { return false }
+    seen.add(item.key)
+    return true
+  }).slice(0, MEMORY_LIMIT)
 }
 
-function persistArchiveSearchHistory(item: ArchiveSearchHistoryItem): void {
-  void import('@/api/modules/archive-search-history')
-    .then(({ createArchiveSearchHistory }) => createArchiveSearchHistory({
+function notifyUpdated() {
+  // Consumers re-read the current session; events never carry another session's data.
+  if (typeof window !== 'undefined') { window.dispatchEvent(new Event(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT)) }
+}
+
+function writeHistory(session: HistorySession, items: ArchiveSearchHistoryItem[]): ArchiveSearchHistoryItem[] {
+  if (!isCurrent(session)) { return [] }
+  session.items = normalizeItems(items)
+  session.revision++
+  notifyUpdated()
+  return session.items.map(item => ({ ...item }))
+}
+
+export function readArchiveSearchHistory(): ArchiveSearchHistoryItem[] {
+  const session = captureArchiveSearchHistorySession()
+  if (!session) { return [] }
+  session.items = normalizeItems(session.items)
+  return session.items.map(item => ({ ...item }))
+}
+
+function persistHistory(session: HistorySession, item: ArchiveSearchHistoryItem): void {
+  void import('@/api/modules/archive-search-history').then(async ({ createArchiveSearchHistory }) => {
+    if (!isCurrent(session)) { return }
+    const { data } = await createArchiveSearchHistory({
       bah: item.bah,
       sjh: item.sjh,
       success: item.status === 'success',
@@ -103,152 +139,98 @@ function persistArchiveSearchHistory(item: ArchiveSearchHistoryItem): void {
       failureReason: item.failureReason,
       favorite: item.favorite,
       searchedAt: new Date(item.searchedAt).toISOString().slice(0, 19),
-    }).then(({ data }) => {
-      const id = Number(data?.id)
-      if (Number.isSafeInteger(id) && id > 0) {
-        writeArchiveSearchHistory(readArchiveSearchHistory().map(history => history.key === item.key
-          ? { ...history, id }
-          : history))
-      }
-    }))
-    .catch(() => {
-      // 服务端暂不可用时保留本地缓存，避免影响病案查询。
-    })
-}
-
-function toLocalHistoryItem(record: Record<string, unknown>): ArchiveSearchHistoryItem | null {
-  const searchedAt = new Date(String(record.searchedAt || '')).getTime()
-  return normalizeHistoryItem({
-    ...record,
-    status: record.success === false ? 'failure' : 'success',
-    searchedAt,
-  })
+    }, session.token)
+    const id = Number(data?.id)
+    if (isCurrent(session) && Number.isSafeInteger(id) && id > 0) {
+      writeHistory(session, session.items.map(history => history.key === item.key && history.searchedAt === item.searchedAt
+        ? { ...history, id }
+        : history))
+    }
+  }).catch(() => { /* History failures must not interrupt record queries. */ })
 }
 
 export async function loadArchiveSearchHistory(): Promise<ArchiveSearchHistoryItem[]> {
+  const session = captureArchiveSearchHistorySession()
+  if (!session) { return [] }
+  const revision = session.revision
   try {
     const { getArchiveSearchHistory } = await import('@/api/modules/archive-search-history')
-    const { data } = await getArchiveSearchHistory()
-    if (!Array.isArray(data) || data.length === 0) {
-      return readArchiveSearchHistory()
-    }
-    const localHistory = readArchiveSearchHistory()
-    const serverHistory = data
-      .map(item => toLocalHistoryItem(item as unknown as Record<string, unknown>))
-      .filter((item): item is ArchiveSearchHistoryItem => Boolean(item))
-    const localByKey = new Map(localHistory.map(item => [item.key, item]))
-    const serverKeys = new Set(serverHistory.map(item => item.key))
-    const merged = serverHistory.map((serverItem) => {
-      const localItem = localByKey.get(serverItem.key)
-      if (!localItem) {
-        return serverItem
-      }
-      return {
-        ...serverItem,
-        ...(localItem.queryCount > serverItem.queryCount ? localItem : {}),
-        id: serverItem.id ?? localItem.id,
-        favorite: serverItem.favorite || localItem.favorite,
-        queryCount: Math.max(serverItem.queryCount, localItem.queryCount),
-      }
-    })
-    return writeArchiveSearchHistory([
-      ...merged,
-      ...localHistory.filter(item => !serverKeys.has(item.key)),
-    ].sort((left, right) => right.searchedAt - left.searchedAt))
+    if (!isCurrent(session)) { return [] }
+    const { data } = await getArchiveSearchHistory(session.token)
+    if (!isCurrent(session)) { return [] }
+    // Keep newer local edits when a server snapshot began before them.
+    if (session.revision !== revision || !Array.isArray(data)) { return readArchiveSearchHistory() }
+    const serverHistory = data.map(record => normalizeHistoryItem({
+      ...record,
+      status: record.success === false ? 'failure' : 'success',
+      searchedAt: new Date(String(record.searchedAt || '')).getTime(),
+    })).filter((item): item is ArchiveSearchHistoryItem => Boolean(item))
+    return writeHistory(session, serverHistory.sort((left, right) => right.searchedAt - left.searchedAt))
   }
   catch {
-    return readArchiveSearchHistory()
+    return isCurrent(session) ? readArchiveSearchHistory() : []
   }
 }
 
-export function readArchiveSearchHistory(): ArchiveSearchHistoryItem[] {
-  try {
-    const raw = localStorage.getItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-
-    const seen = new Set<string>()
-    return parsed
-      .map(normalizeHistoryItem)
-      .filter((item): item is ArchiveSearchHistoryItem => {
-        if (!item || seen.has(item.key)) {
-          return false
-        }
-        seen.add(item.key)
-        return true
-      })
-  }
-  catch {
-    return []
-  }
-}
-
-export function addArchiveSearchHistory(input: AddArchiveSearchHistoryInput): ArchiveSearchHistoryItem[] {
+export function addArchiveSearchHistory(input: AddArchiveSearchHistoryInput, session = captureArchiveSearchHistorySession()): ArchiveSearchHistoryItem[] {
+  if (!isCurrent(session)) { return [] }
   const bah = normalizeMedicalRecordCode(input.bah)
   const sjh = normalizeMedicalRecordCode(input.sjh)
-  if (!bah && !sjh) {
-    return readArchiveSearchHistory()
-  }
-
+  if (!bah && !sjh) { return readArchiveSearchHistory() }
   const status = input.status === 'failure' ? 'failure' : 'success'
   const key = createHistoryKey(bah, sjh, status)
-  const existingItem = readArchiveSearchHistory().find(item => item.key === key)
-  const nextItem: ArchiveSearchHistoryItem = {
-    ...(existingItem?.id ? { id: existingItem.id } : {}),
+  const existing = session.items.find(item => item.key === key)
+  const item: ArchiveSearchHistoryItem = {
+    ...(existing?.id ? { id: existing.id } : {}),
     key,
     bah,
     sjh,
-    imageCount: Number.isFinite(Number(input.imageCount))
-      ? Math.max(0, Math.floor(Number(input.imageCount)))
-      : 0,
-    queryCount: status === 'success' ? (existingItem?.queryCount ?? 0) + 1 : 0,
-    searchedAt: Date.now(),
     status,
-    failureReason: status === 'failure' ? String(input.failureReason || '查询失败') : '',
-    favorite: existingItem?.favorite ?? false,
+    searchedAt: Date.now(),
+    imageCount: Number.isFinite(Number(input.imageCount)) ? Math.max(0, Math.floor(Number(input.imageCount))) : 0,
+    queryCount: status === 'success' ? (existing?.queryCount ?? 0) + 1 : 0,
+    failureReason: status === 'failure' ? '查询失败' : '',
+    favorite: existing?.favorite ?? false,
   }
-
-  const history = writeArchiveSearchHistory([
-    nextItem,
-    ...readArchiveSearchHistory().filter(item => item.key !== key),
-  ])
-  persistArchiveSearchHistory(nextItem)
-  return history
+  const items = writeHistory(session, [item, ...session.items.filter(history => history.key !== key)])
+  persistHistory(session, item)
+  return items
 }
 
 export function removeArchiveSearchHistory(key: string): ArchiveSearchHistoryItem[] {
-  return writeArchiveSearchHistory(readArchiveSearchHistory().filter(item => item.key !== key))
+  const session = captureArchiveSearchHistorySession()
+  return session ? writeHistory(session, session.items.filter(item => item.key !== key)) : []
 }
 
 export function toggleArchiveSearchHistoryFavorite(key: string): ArchiveSearchHistoryItem[] {
-  const previousHistory = readArchiveSearchHistory()
-  const history = writeArchiveSearchHistory(previousHistory.map(item => item.key === key
-    ? { ...item, favorite: !item.favorite }
-    : item))
-  const changedItem = history.find(item => item.key === key)
-  if (changedItem) {
-    if (!changedItem.id) {
-      persistArchiveSearchHistory(changedItem)
-    }
-    else {
-      void import('@/api/modules/archive-search-history')
-        .then(({ updateArchiveSearchHistoryFavorite }) => updateArchiveSearchHistoryFavorite(changedItem.id!, changedItem.favorite))
-        .catch(() => {
-          writeArchiveSearchHistory(previousHistory)
-        })
-    }
+  const session = captureArchiveSearchHistorySession()
+  if (!session) { return [] }
+  const previous = readArchiveSearchHistory()
+  const items = writeHistory(session, previous.map(item => item.key === key ? { ...item, favorite: !item.favorite } : item))
+  const changed = items.find(item => item.key === key)
+  if (!changed) { return items }
+  if (!changed.id) {
+    persistHistory(session, changed)
+    return items
   }
-  return history
+  const operation = Symbol(key)
+  session.favoriteRequests.set(key, operation)
+  void import('@/api/modules/archive-search-history').then(async ({ updateArchiveSearchHistoryFavorite }) => {
+    if (isCurrent(session)) { await updateArchiveSearchHistoryFavorite(changed.id!, changed.favorite, session.token) }
+  }).catch(() => {
+    if (isCurrent(session) && session.favoriteRequests.get(key) === operation) {
+      const favorite = previous.find(item => item.key === key)?.favorite ?? false
+      writeHistory(session, session.items.map(item => item.key === key ? { ...item, favorite } : item))
+    }
+  }).finally(() => {
+    if (session.favoriteRequests.get(key) === operation) { session.favoriteRequests.delete(key) }
+  })
+  return items
 }
 
 export function clearArchiveSearchHistory(): void {
-  try {
-    localStorage.removeItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY)
-  }
-  catch {
-    // 忽略受限浏览器环境中的本地存储异常。
-  }
-  notifyArchiveSearchHistoryUpdated([])
+  activeSession = null
+  try { localStorage.removeItem(ARCHIVE_SEARCH_HISTORY_STORAGE_KEY) }
+  catch { /* Storage may be unavailable. */ }
+  notifyUpdated()
 }

@@ -132,7 +132,7 @@ export interface ReadinessSnapshot {
   maintenanceReadOnly?: boolean
   mode: 'READ_WRITE' | 'READ_ONLY_DEGRADED' | 'READ_ONLY_MAINTENANCE'
   checkedAt: string
-  maintenance?: MaintenanceStatus
+  maintenance?: Pick<MaintenanceStatus, 'enabled'>
   checks: ReadinessCheck[]
 }
 
@@ -148,6 +148,7 @@ export interface OperationsRuntime {
 }
 
 export interface OperationsTaskSummary {
+  available?: boolean
   counts: Record<string, number>
   active: number
   failed: number
@@ -161,11 +162,11 @@ export interface OperationsQuickLink {
 export interface OperationsOverview {
   generatedAt: string
   readiness: ReadinessSnapshot
-  maintenance: MaintenanceStatus
+  maintenance: Pick<MaintenanceStatus, 'enabled'>
   runtime: OperationsRuntime
   taskSummary: OperationsTaskSummary
   recentServerErrors: number
-  latestOperation: Record<string, unknown>
+  recentServerErrorsAvailable?: boolean
   quickLinks: OperationsQuickLink[]
 }
 

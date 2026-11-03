@@ -1,10 +1,13 @@
 package com.zjcxph.imgapi.mapper;
 
 import com.zjcxph.imgapi.dto.req.ScanRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -77,6 +80,17 @@ public interface ScanMapper {
             "AND uploadflag != 0 ORDER BY pages, id")
     List<Scan> findActiveByArchiveId(@Param("archiveId") Long archiveId);
 
+    /** One metadata row for an already resolved archive; no paths or images enter the request heap. */
+    @Select("SELECT COUNT(*)::integer AS item_count, "
+            + "CASE WHEN BOOL_AND(file_size IS NOT NULL AND file_size > 0) "
+            + "THEN LEAST(SUM(file_size), 9223372036854775807)::bigint "
+            + "ELSE 0::bigint END AS estimated_bytes "
+            + "FROM app.mr_scan WHERE archive_id = #{archiveId} AND uploadflag != 0")
+    @ConstructorArgs({@Arg(column = "item_count", javaType = int.class),
+            @Arg(column = "estimated_bytes", javaType = long.class)})
+    @Options(timeout = 3)
+    ArchiveExportSummary summarizeActiveByArchiveId(@Param("archiveId") Long archiveId);
+
     /**
      * 未完成 archive_id 关联的数据兼容查询。
      */
@@ -128,6 +142,7 @@ public interface ScanMapper {
      * 兼容旧接口的有限查询。LIMIT 必须在数据库执行，不能加载全表后再截断。
      */
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit}")
+    @Options(timeout = 3)
     List<Scan> findAll(@Param("limit") int limit);
 
     @Select("SELECT * FROM mr_scan WHERE id > #{afterId} ORDER BY id LIMIT #{limit}")
@@ -157,6 +172,7 @@ public interface ScanMapper {
     List<Scan> findByBrxh(@Param("brxh") String brxh);
 
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit} OFFSET #{offset}")
+    @Options(timeout = 3)
     List<Scan> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
 
     List<Scan> findByCondition(@Param("request") ScanRequest request, @Param("limit") int limit);

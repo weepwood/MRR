@@ -9,6 +9,7 @@ import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -56,6 +57,17 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
     public ArchiveExportServiceImpl(ScanService scanService, ImageStorage imageStorage) {
         this.scanService = scanService;
         this.imageStorage = imageStorage;
+    }
+
+    @Override
+    public ArchiveExportSummary summarizeArchive(String bah, String sjh) {
+        String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);
+        String normalizedSjh = MedicalRecordCodeUtils.normalizeOrEmpty(sjh);
+        ArchiveExportSummary summary = scanService.getLinkedArchiveExportSummaryByCode(
+                normalizedBah, MedicalRecordCodeUtils.toSearchTerm(normalizedBah),
+                normalizedSjh, MedicalRecordCodeUtils.toSearchTerm(normalizedSjh));
+        // Legacy/unlinked data must still pass the original full lookup and ambiguity checks.
+        return summary != null ? summary : ArchiveExportService.super.summarizeArchive(bah, sjh);
     }
 
     @Override

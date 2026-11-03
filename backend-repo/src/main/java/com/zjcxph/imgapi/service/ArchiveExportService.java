@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -21,6 +22,11 @@ public interface ArchiveExportService {
     BatchZipExport prepareSelectedArchive(List<String> scanIds);
 
     BatchZipExport prepareArchive(String bah, String sjh);
+
+    default ArchiveExportSummary summarizeArchive(String bah, String sjh) {
+        BatchZipExport export = prepareArchive(bah, sjh);
+        return new ArchiveExportSummary(export.itemCount(), export.estimatedBytes());
+    }
 
     default void writeBatchZip(BatchZipExport export, OutputStream outputStream) throws IOException {
         writeBatchZip(export, outputStream, ExportProgress.NONE);

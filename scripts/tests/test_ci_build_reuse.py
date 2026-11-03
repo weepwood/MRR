@@ -54,6 +54,18 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertIn('--embedded', workflow)
         self.assertIn('scripts.release_candidate manifest', workflow)
 
+    def test_live_only_checks_install_their_browser_before_running(self):
+        workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
+        setup_name = "- name: Install Chromium for selected browser checks"
+        self.assertIn(setup_name, workflow)
+        setup = workflow.split(setup_name, 1)[1].split("- name:", 1)[0]
+        self.assertIn("if: inputs.full || inputs.live_checks", setup)
+        self.assertIn("working-directory: frontend-fantastic-admin", setup)
+        self.assertIn("pnpm exec playwright install --with-deps chromium", setup)
+        self.assertEqual(workflow.count("pnpm exec playwright install --with-deps chromium"), 1)
+        self.assertLess(workflow.index(setup_name), workflow.index("- name: Full mock-backed browser tests"))
+        self.assertLess(workflow.index(setup_name), workflow.index("- name: Real login, import, query and refusal"))
+
     def test_legacy_standalone_and_normalization_workflows_are_manual(self):
         for name in ("standalone-jar-release.yml", "backend-normalization-check.yml"):
             trigger = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8").split("permissions:", 1)[0]

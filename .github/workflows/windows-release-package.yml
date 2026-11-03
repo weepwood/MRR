@@ -160,11 +160,14 @@ jobs:
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
           python ../scripts/embed_frontend_in_jar.py embed --jar "../${BACKEND_JAR}" --dist dist
           python ../scripts/embed_frontend_in_jar.py verify --jar "../${BACKEND_JAR}"
+      - name: Install Chromium for selected browser checks
+        working-directory: frontend-fantastic-admin
+        if: inputs.full || inputs.live_checks
+        run: pnpm exec playwright install --with-deps chromium
       - name: Full mock-backed browser tests
         working-directory: frontend-fantastic-admin
         if: inputs.full
         run: |
-          pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
       - name: Build standalone JAR from the same verified backend
         if: inputs.full

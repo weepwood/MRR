@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 
 @Repository
@@ -91,12 +92,31 @@ public class ArchiveExportJobRepository {
                 """, ROW_MAPPER, ownerUserId, ownerUsername, format, limit);
     }
 
-    public List<ArchiveExportJob> findRecoverable() {
+    public record RecoveryCursor(LocalDateTime createdAt, String id) { }
+
+    public Optional<RecoveryCursor> findRecoveryUpperBound() {
+        return jdbcTemplate.query("""
+                SELECT created_at, id FROM app.archive_export_job
+                WHERE status IN ('PENDING', 'PROCESSING')
+                ORDER BY created_at DESC, id DESC LIMIT 1
+                """, (rs, row) -> new RecoveryCursor(rs.getTimestamp("created_at").toLocalDateTime(),
+                rs.getString("id"))).stream().findFirst();
+    }
+
+    public List<ArchiveExportJob> findRecoveryPage(RecoveryCursor after, RecoveryCursor upper, int limit) {
+        if (upper == null) return List.of();
+        String afterClause = after == null ? "" : " AND (created_at, id) > (?, CAST(? AS UUID))";
+        List<Object> arguments = new ArrayList<>();
+        arguments.add(timestamp(upper.createdAt())); arguments.add(upper.id());
+        if (after != null) {
+            arguments.add(timestamp(after.createdAt())); arguments.add(after.id());
+        }
+        arguments.add(Math.max(1, Math.min(200, limit)));
         return jdbcTemplate.query("""
                 SELECT * FROM app.archive_export_job
                 WHERE status IN ('PENDING', 'PROCESSING')
-                ORDER BY created_at ASC
-                """, ROW_MAPPER);
+                  AND (created_at, id) <= (?, CAST(? AS UUID))
+                """ + afterClause + " ORDER BY created_at, id LIMIT ?", ROW_MAPPER, arguments.toArray());
     }
 
     public List<ArchiveExportJob> findExpired(LocalDateTime now) {
@@ -132,6 +152,14 @@ public class ArchiveExportJobRepository {
                 UPDATE app.archive_export_job SET file_path = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = CAST(? AS UUID) AND status = 'PROCESSING' AND NOT cancel_requested
                 """, filePath, id);
+    }
+
+    public int updatePlan(String id, int plannedCount, long estimatedBytes, String sourceSummary) {
+        return jdbcTemplate.update("""
+                UPDATE app.archive_export_job
+                SET planned_count = ?, estimated_bytes = ?, source_summary = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'PROCESSING' AND NOT cancel_requested
+                """, plannedCount, estimatedBytes, sourceSummary, id);
     }
 
     public int resetToPending(String id) {

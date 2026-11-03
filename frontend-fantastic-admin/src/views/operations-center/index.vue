@@ -28,7 +28,9 @@ import {
   runOperationsDiagnostics,
   savePermissionMatrixSnapshot,
 } from '@/api/modules/operations'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime as formatTime } from '@/utils/display-format'
+import { hasAnyPermission, hasPermission } from '@/utils/session'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,6 +51,15 @@ const loading = reactive({
 })
 
 const overview = ref<OperationsOverview>()
+const overviewFailed = ref(false)
+let overviewRequest: Promise<void> | undefined
+const canManage = computed(() => hasPermission('system:manage'))
+const canViewTasks = computed(() => hasPermission('record:read'))
+const canViewLogs = computed(() => hasPermission('log:read'))
+const quickLinks = computed(() => (overview.value?.quickLinks || []).filter((link) => {
+  const permissions = router.resolve(link.path).meta.auth
+  return Array.isArray(permissions) && hasAnyPermission(permissions)
+}))
 const diagnosticRun = ref<OperationsDiagnosticRun>()
 const readiness = ref<ReadinessSnapshot>()
 const maintenance = ref<MaintenanceStatus>()
@@ -82,8 +93,20 @@ const filteredExportJobs = computed(() => {
   return exportJobs.value.filter(item => item.status === exportStatus.value)
 })
 
-const failedReadinessChecks = computed(() => readiness.value?.checks.filter(item => !item.passed) || [])
+const overviewChecks = computed(() => overview.value?.readiness.checks || [])
+const failedReadinessChecks = computed(() => overviewChecks.value.filter(check => !check.passed)
+  .sort((a, b) => Number(b.severity === 'CRITICAL') - Number(a.severity === 'CRITICAL')))
+const criticalChecks = computed(() => failedReadinessChecks.value.filter(check => check.severity === 'CRITICAL'))
 const taskCounts = computed(() => overview.value?.taskSummary.counts || {})
+const tasksAvailable = computed(() => overview.value?.taskSummary.available === true)
+const taskStates = [
+  { code: 'PENDING', label: '等待', status: 'warning' },
+  { code: 'PROCESSING', label: '处理中', status: undefined },
+  { code: 'SUCCESS', label: '成功', status: 'success' },
+  { code: 'FAILED', label: '失败', status: 'exception' },
+] as const
+const taskTotal = computed(() => taskStates.reduce((sum, state) => sum + (taskCounts.value[state.code] || 0), 0))
+
 const heapUsage = computed(() => {
   const used = Number(overview.value?.runtime.heapUsedBytes || 0)
   const max = Number(overview.value?.runtime.heapMaxBytes || 0)
@@ -165,19 +188,31 @@ function responseType(status?: string): 'success' | 'danger' | 'warning' | 'info
   return 'info'
 }
 
-async function loadOverview() {
+function loadOverview() {
+  if (overviewRequest) {
+    return overviewRequest
+  }
   loading.overview = true
-  try {
-    overview.value = await getOperationsOverview()
-    readiness.value = overview.value.readiness
-    maintenance.value = overview.value.maintenance
-  }
-  finally {
-    loading.overview = false
-  }
+  overviewRequest = getOperationsOverview()
+    .then((snapshot) => {
+      overview.value = snapshot
+      readiness.value = snapshot.readiness
+      overviewFailed.value = false
+    })
+    .catch(() => {
+      overviewFailed.value = true
+    })
+    .finally(() => {
+      loading.overview = false
+      overviewRequest = undefined
+    })
+  return overviewRequest
 }
 
 async function runFullDiagnostic() {
+  if (!canManage.value || loading.diagnostics || loading.overview) {
+    return
+  }
   loading.diagnostics = true
   try {
     diagnosticRun.value = await runOperationsDiagnostics()
@@ -306,6 +341,7 @@ async function enableMaintenance() {
   try {
     maintenance.value = await enableMaintenanceMode(reason.trim())
     ElMessage.warning('系统已进入主动维护只读模式')
+    await overviewRequest
     await loadOverview()
   }
   finally {
@@ -323,6 +359,7 @@ async function disableMaintenance() {
   try {
     maintenance.value = await disableMaintenanceMode()
     ElMessage.success('主动维护模式已关闭')
+    await overviewRequest
     await loadOverview()
   }
   finally {
@@ -352,9 +389,6 @@ async function selectTab(tab: string) {
 async function handleTabChange(name: string | number) {
   const tab = String(name)
   await router.replace({ query: { ...route.query, tab } })
-  if (tab === 'overview') {
-    await loadOverview()
-  }
   if (tab === 'integrity' && !integrity.value) {
     await loadIntegrity()
   }
@@ -389,7 +423,7 @@ onMounted(async () => {
         </p>
         <div class="title-line">
           <h1>运维诊断中心</h1>
-          <el-tag v-if="readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
+          <el-tag v-if="activeTab !== 'overview' && readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
             {{ modeLabel(readiness.mode) }}
           </el-tag>
         </div>
@@ -398,10 +432,13 @@ onMounted(async () => {
         </p>
       </div>
       <div class="header-actions">
-        <el-button :loading="loading.report" @click="downloadDiagnosticReport">
+        <el-button v-if="canManage" :loading="loading.report" @click="downloadDiagnosticReport">
           导出诊断报告
         </el-button>
-        <el-button type="primary" :loading="loading.diagnostics" @click="runFullDiagnostic">
+        <el-button v-if="activeTab === 'overview'" :loading="loading.overview" :disabled="loading.diagnostics || loading.maintenance" @click="loadOverview">
+          刷新看板
+        </el-button>
+        <el-button v-if="canManage" type="primary" :loading="loading.diagnostics" :disabled="loading.overview" @click="runFullDiagnostic">
           一键全面体检
         </el-button>
       </div>
@@ -409,139 +446,173 @@ onMounted(async () => {
 
     <el-tabs v-model="activeTab" class="diagnostics-tabs" @tab-change="handleTabChange">
       <el-tab-pane label="运维总览" name="overview">
-        <div v-loading="loading.overview">
+        <div class="overview-dashboard" :aria-busy="loading.overview">
           <el-alert
-            v-if="readiness?.readOnly"
-            :title="readiness.mode === 'READ_ONLY_MAINTENANCE' ? '系统处于主动维护只读模式' : '系统处于自动只读降级模式'"
-            :type="readiness.mode === 'READ_ONLY_MAINTENANCE' ? 'warning' : 'error'"
+            v-if="overviewFailed"
+            :title="overview ? '刷新失败，当前为上次成功数据' : '无法获取状态'"
+            type="warning"
             :closable="false"
             show-icon
           >
-            <template #default>
-              <span v-if="readiness.mode === 'READ_ONLY_MAINTENANCE'">
-                维护原因：{{ maintenance?.reason || '计划维护' }}。查询和诊断继续可用，业务写入已暂停。
-              </span>
-              <span v-else>
-                存在关键依赖故障。关闭主动维护模式不会恢复写入，请先修复失败检查项。
-              </span>
-            </template>
+            请重试刷新看板。若服务不可达，请在服务器查看 Windows 服务日志。
           </el-alert>
+          <el-skeleton v-if="!overview && loading.overview" :rows="4" />
 
-          <section class="mrr-metric-grid mrr-metric-grid--three overview-metrics">
-            <MrrMetricCard
-              label="有效运行模式"
-              compact-value
-              :value="modeLabel(readiness?.mode)"
-              :value-tone="modeType(readiness?.mode)"
-              :note="`最近检查 ${formatTime(readiness?.checkedAt)}`"
-            />
-            <MrrMetricCard
-              label="应用版本"
-              compact-value
-              :value="overview?.runtime.applicationVersion || '-'"
-              :note="`Java ${overview?.runtime.javaVersion || '-'}`"
-            />
-            <MrrMetricCard
-              label="后端运行时长"
-              compact-value
-              :value="formatDuration(overview?.runtime.uptimeMs)"
-              :note="`启动于 ${formatTime(overview?.runtime.startedAt)}`"
-            />
-            <MrrMetricCard
-              label="JVM 堆内存"
-              :value="`${heapUsage}%`"
-              :value-tone="heapUsage >= 90 ? 'danger' : heapUsage >= 80 ? 'warning' : 'success'"
+          <template v-if="overview">
+            <el-alert
+              :title="overviewFailed ? `上次记录：${modeLabel(overview.readiness.mode)}` : modeLabel(overview.readiness.mode)"
+              :type="overviewFailed ? 'info' : overview.readiness.mode === 'READ_ONLY_DEGRADED' ? 'error' : overview.readiness.readOnly ? 'warning' : 'success'"
+              :closable="false"
+              show-icon
             >
-              <template #extra>
-                <el-progress
-                  :percentage="heapUsage"
-                  :status="heapUsage >= 90 ? 'exception' : heapUsage >= 80 ? 'warning' : 'success'"
-                />
-              </template>
-            </MrrMetricCard>
-            <MrrMetricCard
-              label="活跃导出任务"
-              :value="formatNumber(overview?.taskSummary.active)"
-              :note="`失败 ${formatNumber(overview?.taskSummary.failed)}`"
-            />
-            <MrrMetricCard
-              label="近 24 小时 5xx"
-              :value="formatNumber(overview?.recentServerErrors)"
-              :value-tone="overview?.recentServerErrors ? 'danger' : 'success'"
-              note="集中失败请结合日志和 requestId 排查"
-            />
-          </section>
-
-          <div class="two-column-layout">
-            <el-card shadow="never" class="section-card">
-              <template #header>
-                <div class="card-header">
-                  <div>
-                    <strong>当前需要处理</strong>
-                    <p>部署就绪检查中的未通过项目</p>
-                  </div>
-                  <el-button text type="primary" @click="selectTab('diagnostics')">
-                    查看完整体检
-                  </el-button>
-                </div>
-              </template>
-              <el-empty v-if="failedReadinessChecks.length === 0" description="当前没有未通过的部署检查" :image-size="72" />
-              <div v-else class="issue-list">
-                <div v-for="check in failedReadinessChecks" :key="check.code" class="issue-row">
-                  <div>
-                    <strong>{{ check.name }}</strong>
-                    <p>{{ check.message }}</p>
-                  </div>
-                  <el-tag :type="check.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ check.severity }}
-                  </el-tag>
-                </div>
+              <p v-if="!overviewFailed && overview.readiness.automaticReadOnly">
+                自动只读降级：{{ criticalChecks[0] ? `${criticalChecks[0].name}检查未通过` : '关键依赖状态待确认' }}。
+              </p>
+              <p v-if="!overviewFailed && overview.readiness.maintenanceReadOnly">
+                主动维护已开启，业务写入暂停。
+              </p>
+              <p v-if="!overviewFailed && !overview.readiness.readOnly">
+                当前允许业务写入。
+              </p>
+              <div class="snapshot-times">
+                <span>总览快照 {{ formatTime(overview.generatedAt) }}</span>
+                <span>依赖检查 {{ overviewChecks.length ? formatTime(overview.readiness.checkedAt) : '等待首次检查' }}</span>
               </div>
-            </el-card>
+            </el-alert>
 
-            <el-card shadow="never" class="section-card">
-              <template #header>
-                <div class="card-header">
-                  <div>
-                    <strong>运维快捷入口</strong>
-                    <p>跳转到已有专用页面处理问题</p>
+            <section class="mrr-metric-grid overview-metrics" aria-label="核心指标">
+              <MrrMetricCard :label="overviewFailed ? '上次运行模式' : '运行模式'" icon="i-lucide:activity" compact-value :value="modeLabel(overview.readiness.mode)" :value-tone="modeType(overview.readiness.mode)" />
+              <MrrMetricCard
+                label="待处理检查"
+                icon="i-lucide:clipboard-check"
+                tone="amber"
+                compact-value
+                :value="overviewChecks.length ? formatNumber(failedReadinessChecks.length) : '待检查'"
+                :note="overviewChecks.length ? `严重 ${criticalChecks.length} · 警告 ${failedReadinessChecks.length - criticalChecks.length}` : undefined"
+              />
+              <MrrMetricCard
+                label="活跃导出任务"
+                icon="i-lucide:list-checks"
+                tone="teal"
+                compact-value
+                :value="tasksAvailable ? formatNumber(overview.taskSummary.active) : '不可用'"
+                :note="tasksAvailable ? `等待 ${formatNumber(taskCounts.PENDING)} · 处理中 ${formatNumber(taskCounts.PROCESSING)}` : '暂未取得统计数据'"
+              />
+              <MrrMetricCard
+                label="近 24 小时 5xx"
+                icon="i-lucide:triangle-alert"
+                compact-value
+                :value="overview.recentServerErrorsAvailable ? formatNumber(overview.recentServerErrors) : '不可用'"
+                :value-tone="overview.recentServerErrorsAvailable && overview.recentServerErrors > 0 ? 'danger' : undefined"
+              >
+                <template v-if="canViewLogs" #extra>
+                  <el-button text type="primary" @click="navigate('/logs')">
+                    查看日志
+                  </el-button>
+                </template>
+              </MrrMetricCard>
+            </section>
+
+            <div class="two-column-layout">
+              <MrrSectionCard title="待处理问题" description="严重问题优先">
+                <el-empty
+                  v-if="failedReadinessChecks.length === 0"
+                  :description="overviewChecks.length ? '最近检查无未通过项目' : '等待首次依赖检查'"
+                  :image-size="60"
+                />
+                <div v-else class="issue-list">
+                  <div v-for="check in failedReadinessChecks" :key="check.code" class="issue-row">
+                    <div>
+                      <strong>{{ check.name }}</strong>
+                      <p>{{ check.message }}</p>
+                    </div>
+                    <el-tag :type="check.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                      {{ check.severity === 'CRITICAL' ? '严重' : '警告' }}
+                    </el-tag>
+                    <el-button v-if="canManage" text type="primary" @click="selectTab('diagnostics')">
+                      查看体检
+                    </el-button>
                   </div>
                 </div>
-              </template>
-              <div class="quick-link-grid">
-                <el-button
-                  v-for="link in overview?.quickLinks || []"
-                  :key="link.path"
-                  plain
-                  @click="navigate(link.path)"
-                >
+                <p v-if="failedReadinessChecks.length && !canManage" class="overview-hint">
+                  请联系有运维管理权限的人员执行全面体检。
+                </p>
+              </MrrSectionCard>
+
+              <MrrSectionCard title="后端运行">
+                <el-descriptions :column="1" size="small">
+                  <el-descriptions-item label="应用版本">
+                    {{ overview.runtime.applicationVersion || '未知' }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="启动时间">
+                    {{ formatTime(overview.runtime.startedAt) }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="运行时长">
+                    {{ formatDuration(overview.runtime.uptimeMs) }}
+                  </el-descriptions-item>
+                </el-descriptions>
+                <p>JVM 堆内存 {{ formatBytes(overview.runtime.heapUsedBytes) }} / {{ overview.runtime.heapMaxBytes > 0 ? formatBytes(overview.runtime.heapMaxBytes) : '上限未知' }}</p>
+                <el-progress v-if="overview.runtime.heapMaxBytes > 0" aria-label="JVM 堆内存使用率" :percentage="heapUsage" />
+              </MrrSectionCard>
+
+              <MrrSectionCard title="依赖检查" description="最近一次部署就绪检查">
+                <el-table :data="overviewChecks" empty-text="等待首次依赖检查">
+                  <el-table-column prop="name" label="检查项" />
+                  <el-table-column label="状态" width="100">
+                    <template #default="{ row }">
+                      <el-tag :type="row.passed ? 'success' : row.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                        {{ row.passed ? '通过' : '未通过' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </MrrSectionCard>
+
+              <MrrSectionCard title="导出任务状态" description="横条表示所列四种状态中的占比">
+                <template v-if="canViewTasks" #actions>
+                  <el-button text type="primary" @click="selectTab('tasks')">
+                    查看任务
+                  </el-button>
+                </template>
+                <div v-if="tasksAvailable" class="overview-task-states">
+                  <div v-for="state in taskStates" :key="state.code">
+                    <div class="task-state-label">
+                      <span>{{ state.label }}</span>
+                      <strong>{{ formatNumber(taskCounts[state.code]) }}</strong>
+                    </div>
+                    <el-progress
+                      :aria-label="`${state.label}任务占比`"
+                      :percentage="taskTotal ? Math.round((taskCounts[state.code] || 0) / taskTotal * 100) : 0"
+                      :show-text="false"
+                      :status="state.status"
+                    />
+                  </div>
+                </div>
+                <p v-else>
+                  暂未取得导出任务统计。
+                </p>
+              </MrrSectionCard>
+            </div>
+
+            <MrrSectionCard v-if="quickLinks.length" title="运维快捷入口">
+              <div class="overview-links">
+                <el-button v-for="link in quickLinks" :key="link.path" plain @click="navigate(link.path)">
                   {{ link.label }}
                 </el-button>
               </div>
-              <el-descriptions class="latest-operation" :column="1" border size="small">
-                <el-descriptions-item label="最近运维操作">
-                  {{ overview?.latestOperation.request_uri || '暂无操作记录' }}
-                </el-descriptions-item>
-                <el-descriptions-item label="执行人员">
-                  {{ overview?.latestOperation.username || '-' }}
-                </el-descriptions-item>
-                <el-descriptions-item label="执行时间">
-                  {{ formatTime(String(overview?.latestOperation.access_time || '')) }}
-                </el-descriptions-item>
-              </el-descriptions>
-            </el-card>
-          </div>
+            </MrrSectionCard>
+          </template>
         </div>
       </el-tab-pane>
 
       <el-tab-pane label="全面体检" name="diagnostics">
         <div class="toolbar-row">
           <span>执行数据库、迁移、存储、备份、运行时、任务和错误检查，并给出处理入口。</span>
-          <el-button type="primary" :loading="loading.diagnostics" @click="runFullDiagnostic">
+          <el-button v-if="canManage" type="primary" :loading="loading.diagnostics" :disabled="loading.overview" @click="runFullDiagnostic">
             {{ diagnosticRun ? '重新体检' : '开始全面体检' }}
           </el-button>
         </div>
-        <el-empty v-if="!diagnosticRun" description="点击“开始全面体检”执行实时检查" :image-size="96" />
+        <el-empty v-if="!diagnosticRun" :description="canManage ? '点击“开始全面体检”执行实时检查' : '执行体检需要运维管理权限'" :image-size="96" />
         <template v-else>
           <section class="mrr-metric-grid mrr-metric-grid--four metric-row">
             <MrrMetricCard label="检查总数" :value="diagnosticRun.summary.total" />
@@ -666,7 +737,7 @@ onMounted(async () => {
       <el-tab-pane label="后台任务" name="tasks">
         <div class="toolbar-row">
           <div class="toolbar-actions">
-            <el-select v-model="exportStatus" clearable placeholder="全部状态" style="width: 160px;">
+            <el-select v-model="exportStatus" clearable placeholder="全部状态" class="export-status-filter">
               <el-option v-for="status in ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED']" :key="status" :label="status" :value="status" />
             </el-select>
             <el-button plain @click="navigate('/oss-migration')">
@@ -678,9 +749,9 @@ onMounted(async () => {
           </el-button>
         </div>
         <section class="mrr-metric-grid mrr-metric-grid--three task-summary">
-          <MrrMetricCard label="等待与处理中" value-tone="warning" :value="formatNumber(overview?.taskSummary.active)" />
-          <MrrMetricCard label="失败" value-tone="danger" :value="formatNumber(overview?.taskSummary.failed)" />
-          <MrrMetricCard label="已完成" value-tone="success" :value="formatNumber(taskCounts.SUCCESS)" />
+          <MrrMetricCard label="等待与处理中" value-tone="warning" :value="tasksAvailable ? formatNumber(overview?.taskSummary.active) : '不可用'" />
+          <MrrMetricCard label="失败" value-tone="danger" :value="tasksAvailable ? formatNumber(overview?.taskSummary.failed) : '不可用'" />
+          <MrrMetricCard label="已完成" value-tone="success" :value="tasksAvailable ? formatNumber(taskCounts.SUCCESS) : '不可用'" />
         </section>
         <el-table :data="filteredExportJobs" border height="600" class="section-card">
           <el-table-column prop="created_at" label="创建时间" width="180">
@@ -725,7 +796,7 @@ onMounted(async () => {
 
       <el-tab-pane label="权限矩阵" name="permissions">
         <div class="toolbar-row">
-          <el-input v-model="endpointKeyword" clearable placeholder="搜索接口、操作或权限" style="max-width: 360px;" />
+          <el-input v-model="endpointKeyword" clearable placeholder="搜索接口、操作或权限" class="endpoint-filter" />
           <div class="toolbar-actions">
             <el-tag v-if="permissionMatrix?.previousVersion" type="info">
               上一版本：{{ permissionMatrix.previousVersion }}
@@ -941,7 +1012,28 @@ onMounted(async () => {
   background: var(--el-bg-color);
 }
 
-/* 指标组与上方标签栏之间保持与其它区块一致的间距。 */
+.overview-dashboard,
+.overview-task-states {
+  display: grid;
+  gap: 16px;
+}
+
+.snapshot-times,
+.task-state-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.task-state-label {
+  justify-content: space-between;
+  margin-block-end: 6px;
+}
+
+.overview-hint {
+  margin-block-start: 12px;
+}
+
 .overview-metrics {
   margin-top: 16px;
 }
@@ -987,19 +1079,22 @@ onMounted(async () => {
   border-bottom: 0;
 }
 
-.quick-link-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+.overview-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.quick-link-grid .el-button {
-  width: 100%;
+.overview-links .el-button {
   margin: 0;
 }
 
-.latest-operation {
-  margin-top: 16px;
+.export-status-filter {
+  width: 160px;
+}
+
+.endpoint-filter {
+  max-width: 360px;
 }
 
 .toolbar-row {
@@ -1103,8 +1198,8 @@ onMounted(async () => {
     width: 100%;
   }
 
-  .quick-link-grid {
-    grid-template-columns: 1fr;
+  .overview-dashboard .issue-row {
+    flex-wrap: wrap;
   }
 
   .check-actions {

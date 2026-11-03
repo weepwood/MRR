@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { sampleAuthModeSwitch } from './helpers/auth-mode-motion'
 
 test.use({ storageState: 'e2e/.auth/anonymous.json' })
 
@@ -108,8 +109,8 @@ test.describe('登录页统一设计', () => {
     await expect(page.getByText('申请系统账号', { exact: true })).toHaveCount(0)
     await expect(page.getByText('填写申请信息。管理员审核通过后，才可以使用注册账号登录。', { exact: true })).toHaveCount(0)
 
-    const identitySection = page.locator('.form-section').filter({ hasText: '身份信息' })
-    const applicationSection = page.locator('.form-section').filter({ hasText: '申请说明' })
+    const identitySection = page.getByRole('region', { name: '注册账号信息' })
+    const applicationSection = page.getByRole('region', { name: '注册申请补充信息' })
     const progress = page.locator('.review-flow__steps')
     await expect(progress.getByText('1身份信息')).toBeVisible()
     await expect(progress.getByText('2申请说明')).toBeVisible()
@@ -132,7 +133,7 @@ test.describe('登录页统一设计', () => {
     await expect(identitySection).toHaveCount(0)
     await expect(applicationSection.locator('#register-contact')).toBeVisible()
     await expect(applicationSection.locator('#register-remark')).toBeVisible()
-    await expect(page.getByRole('heading', { name: '申请说明' })).toBeFocused()
+    await expect(applicationSection.getByLabel('联系方式')).toBeFocused()
     await expect(page.getByRole('button', { name: '提交注册' })).toBeVisible()
     await expect.poll(() => registrationRequested).toBe(false)
 
@@ -141,7 +142,7 @@ test.describe('登录页统一设计', () => {
     await page.getByRole('button', { name: '返回身份信息' }).click()
 
     await expect(identitySection.getByLabel('用户名')).toHaveValue('doctor.apply')
-    await expect(page.getByRole('heading', { name: '身份信息' })).toBeFocused()
+    await expect(identitySection.getByLabel('用户名')).toBeFocused()
     await expect(applicationSection).toHaveCount(0)
     await page.getByRole('button', { name: '填写申请说明' }).click()
     await expect(applicationSection.locator('#register-contact')).toHaveValue('内线 6123')
@@ -417,107 +418,46 @@ test.describe('登录页统一设计', () => {
 
   test('宽屏登录与注册切换使用横向合成动画且不插值卡片高度', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
-    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/login')
 
     const card = page.locator('.login-shell')
-    await expect(card).toHaveCSS('min-height', '760px')
-    await expect(card).toHaveCSS('height', '760px')
-    await page.getByRole('tab', { name: '注册申请' }).click()
-    await expect(card).toHaveClass(/is-register/)
-    const loginForm = page.locator('.login-form')
-    await expect(loginForm).toHaveClass(/auth-mode-forward-leave-active/)
-    await page.waitForTimeout(80)
-    const loginLeaveX = await loginForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(loginLeaveX).toBeLessThan(0)
-    const transitionProperties = await loginForm.evaluate(element => getComputedStyle(element).transitionProperty)
-    expect(transitionProperties).toContain('opacity')
-    expect(transitionProperties).toContain('transform')
-    expect(transitionProperties).not.toContain('height')
-    await page.waitForTimeout(100)
-    const cardStyles = await card.evaluate(element => ({
-      height: element.style.height,
-      minHeight: element.style.minHeight,
-      transition: element.style.transition,
-    }))
-    expect(cardStyles).toEqual({ height: '', minHeight: '', transition: '' })
-
-    const registerForm = page.locator('.register-form')
-    await expect(registerForm).toHaveClass(/auth-mode-forward-enter-active/)
-    await page.waitForTimeout(80)
-    const registerEnterX = await registerForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(registerEnterX).toBeGreaterThan(0)
-    await expect(card).toHaveCSS('height', '760px')
-
-    await page.getByRole('tab', { name: '账号登录' }).click()
-    await expect(card).not.toHaveClass(/is-register/)
-    await expect(registerForm).toHaveClass(/auth-mode-backward-leave-active/)
-    await page.waitForTimeout(80)
-    const registerLeaveX = await registerForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(registerLeaveX).toBeGreaterThan(0)
-    await expect(page.locator('.login-form')).toHaveClass(/auth-mode-backward-enter-active/)
-    await expect(card).toHaveCSS('height', '760px')
+    await expect(page.locator('#login-account')).toBeVisible()
+    await expect(card).toHaveCSS('min-height', '580px')
+    await expect(card).toHaveCSS('height', '628px')
+    const { forward, backward, initial, registered } = await sampleAuthModeSwitch(page)
+    expect(initial.height).toBe(628)
+    expect(registered.height).toBe(initial.height)
+    for (const frame of [...forward, ...backward]) {
+      expect(frame.height).toBe(initial.height)
+      expect(frame.properties).toEqual(['transform', 'transform'])
+      expect(frame.inlineSizing).toEqual(['', '', ''])
+    }
+    expect(forward.some(frame => frame.enterX < -20 && frame.leaveX > 40)).toBe(true)
+    expect(backward.some(frame => frame.enterX > 20 && frame.leaveX < -40)).toBe(true)
+    await expect(page.locator('.register-form')).toHaveCount(0)
+    await expect(card).toHaveCSS('height', '628px')
   })
 
   test('竖屏登录与注册切换时卡片顶部保持稳定', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/login')
+    await expect(page.locator('#login-account')).toBeVisible()
 
-    const card = page.locator('.login-shell')
-    await expect(card).toBeVisible()
-    await page.waitForTimeout(400)
-    const loginTop = (await card.boundingBox())!.y
-
-    await page.getByRole('tab', { name: '注册申请' }).click()
-    await expect(card).toHaveClass(/is-register/)
-    const loginForm = page.locator('.login-form')
-    await expect(loginForm).toHaveClass(/auth-mode-forward-leave-active/)
-    await page.waitForTimeout(120)
-    const forwardX = await loginForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(forwardX).toBeLessThan(0)
-    await expect.poll(() => card.evaluate(element => element.style.transition)).toBe('')
-    await expect.poll(() => card.evaluate(element => element.style.height)).toBe('')
-    const registerForm = page.locator('.register-form')
-    await expect(registerForm).toHaveClass(/auth-mode-forward-enter-active/)
-    await page.waitForTimeout(100)
-    const forwardEnterX = await registerForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(forwardEnterX).toBeGreaterThan(0)
-    const transitionTop = (await card.boundingBox())!.y
-
-    expect(Math.abs(transitionTop - loginTop)).toBeLessThanOrEqual(1)
-
-    await page.waitForTimeout(350)
-    const registerBox = (await card.boundingBox())!
-    const registerTop = registerBox.y
-    const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight)
-    expect(registerBox.y + registerBox.height).toBeLessThanOrEqual(documentHeight)
-    expect(documentHeight).toBeGreaterThanOrEqual(844)
-
-    await page.getByRole('tab', { name: '账号登录' }).click()
-    await expect(card).not.toHaveClass(/is-register/)
-    await expect(registerForm).toHaveClass(/auth-mode-backward-leave-active/)
-    await page.waitForTimeout(120)
-    const reverseMotion = await registerForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(reverseMotion).toBeGreaterThan(0)
-    await expect(loginForm).toHaveClass(/auth-mode-backward-enter-active/)
-    await page.waitForTimeout(100)
-    const reverseEnterX = await loginForm.evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).m41,
-    )
-    expect(reverseEnterX).toBeLessThan(0)
-    const reverseTransitionTop = (await card.boundingBox())!.y
-
-    expect(Math.abs(reverseTransitionTop - registerTop)).toBeLessThanOrEqual(1)
+    const { forward, backward, initial, registered } = await sampleAuthModeSwitch(page)
+    expect(forward.some(frame => frame.enterX < -20 && frame.leaveX > 40)).toBe(true)
+    expect(backward.some(frame => frame.enterX > 20 && frame.leaveX < -40)).toBe(true)
+    for (const frame of forward) {
+      expect(Math.abs(frame.top - initial.top)).toBeLessThanOrEqual(1)
+      expect(frame.inlineSizing).toEqual(['', '', ''])
+    }
+    for (const frame of backward) {
+      expect(Math.abs(frame.top - registered.top)).toBeLessThanOrEqual(1)
+      expect(frame.inlineSizing).toEqual(['', '', ''])
+    }
+    expect(registered.bottom).toBeLessThanOrEqual(registered.documentHeight)
+    expect(registered.documentHeight).toBeGreaterThanOrEqual(844)
+    await expect(page.locator('.register-form')).toHaveCount(0)
   })
 })

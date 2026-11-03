@@ -1,5 +1,5 @@
-import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { sampleAuthModeSwitch } from './helpers/auth-mode-motion'
 
 test.use({ storageState: 'e2e/.auth/anonymous.json' })
 
@@ -104,37 +104,6 @@ for (const width of [390, 637, 1440]) {
   })
 }
 
-async function sampleSwitch(page: Page, mode: 'login' | 'register') {
-  return page.evaluate(async (mode) => {
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.auth-mode-switch button')
-    tabs[mode === 'register' ? 1 : 0].click()
-    const samples = []
-    const start = performance.now()
-    do {
-      await new Promise(requestAnimationFrame)
-      const incoming = document.querySelector(`.${mode}-form`)!
-      const outgoing = document.querySelector(mode === 'register' ? '.login-form' : '.register-form')
-      const switcher = document.querySelector('.auth-mode-switch')!
-      const incomingAction = incoming.querySelector('button[type="submit"]')!
-      const outgoingAction = outgoing?.querySelector('button[type="submit"]')
-      samples.push({
-        actionTopDelta: outgoingAction ? incomingAction.getBoundingClientRect().top - outgoingAction.getBoundingClientRect().top : 0,
-        indicatorX: new DOMMatrixReadOnly(getComputedStyle(switcher, '::before').transform).m41,
-        enterX: new DOMMatrixReadOnly(getComputedStyle(incoming).transform).m41,
-        leaveX: outgoing ? new DOMMatrixReadOnly(getComputedStyle(outgoing).transform).m41 : null,
-        enterTiming: getComputedStyle(incoming).transitionTimingFunction,
-        leaveTiming: outgoing ? getComputedStyle(outgoing).transitionTimingFunction : null,
-        indicatorTiming: getComputedStyle(switcher, '::before').transitionTimingFunction,
-        enterDuration: getComputedStyle(incoming).transitionDuration,
-        leaveDuration: outgoing ? getComputedStyle(outgoing).transitionDuration : null,
-        indicatorDuration: getComputedStyle(switcher, '::before').transitionDuration,
-        pageOverflows: document.documentElement.scrollWidth > innerWidth,
-      })
-    } while (performance.now() - start < 160)
-    return samples
-  }, mode)
-}
-
 for (const width of [390, 637, 1440]) {
   test(`${width}px 选中底板与卡片同向穿梭并共用贝塞尔曲线`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
@@ -146,23 +115,23 @@ for (const width of [390, 637, 1440]) {
       const style = getComputedStyle(element, '::before')
       return Number.parseFloat(style.width) + 4
     })
-    const forward = await sampleSwitch(page, 'register')
+    const { forward, backward } = await sampleAuthModeSwitch(page, true)
     expect(forward.some(frame => frame.indicatorX > 1 && frame.indicatorX < travel - 1)).toBe(true)
-    expect(forward.some(frame => frame.enterX < -20 && frame.leaveX !== null && frame.leaveX > 40)).toBe(true)
-    expect(forward[0].enterTiming).toBe('cubic-bezier(0.4, 0, 0.2, 1)')
-    expect(forward[0].leaveTiming).toBe(forward[0].enterTiming)
-    expect(forward[0].indicatorTiming).toBe(forward[0].enterTiming)
-    expect(forward[0].enterDuration).toBe('0.36s')
-    expect(forward[0].leaveDuration).toBe(forward[0].enterDuration)
-    expect(forward[0].indicatorDuration).toBe(forward[0].enterDuration)
-    expect(forward.every(frame => !frame.pageOverflows)).toBe(true)
-    expect(forward.every(frame => Math.abs(frame.actionTopDelta) <= 1), '进入注册时两个主按钮应沿同一水平线滑动').toBe(true)
+    expect(forward.some(frame => frame.enterX < -20 && frame.leaveX > 40)).toBe(true)
+    for (const frame of forward) {
+      expect(frame.timings).toEqual(Array.from({ length: 3 }).fill('cubic-bezier(0.4, 0, 0.2, 1)'))
+      expect(frame.durations).toEqual(['0.36s', '0.36s', '0.36s'])
+      expect(frame.pageOverflows).toBe(false)
+      expect(Math.abs(frame.actionTopDelta), '进入注册时两个主按钮应沿同一水平线滑动').toBeLessThanOrEqual(1)
+    }
     // 底板尚未到站就反向点击，验证动画能从当前位置返回。
-    const reverse = await sampleSwitch(page, 'login')
-    expect(reverse[0].indicatorX).toBeGreaterThan(1)
-    expect(reverse.some(frame => frame.enterX > 20 && frame.leaveX !== null && frame.leaveX < -40)).toBe(true)
-    expect(reverse.every(frame => !frame.pageOverflows)).toBe(true)
-    expect(reverse.every(frame => Math.abs(frame.actionTopDelta) <= 1), '返回登录时两个主按钮应沿同一水平线滑动').toBe(true)
+    expect(backward[0].indicatorX).toBeGreaterThan(1)
+    expect(backward[0].indicatorX).toBeLessThan(travel - 1)
+    expect(backward.some(frame => frame.enterX > 20 && frame.leaveX < -40)).toBe(true)
+    for (const frame of backward) {
+      expect(frame.pageOverflows).toBe(false)
+      expect(Math.abs(frame.actionTopDelta), '返回登录时两个主按钮应沿同一水平线滑动').toBeLessThanOrEqual(1)
+    }
     await expect.poll(() => switcher.evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element, '::before').transform).m41)).toBe(0)
     await expect(page.locator('.register-form')).toHaveCount(0)
     await expect(page.locator('#login-account')).toBeVisible()

@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.dto.req.ScanRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.dto.resp.CursorPageResult;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
@@ -9,6 +10,10 @@ import com.zjcxph.imgapi.entity.Scan;
 import java.util.List;
 
 public interface ScanService {
+    /** Returns null when the existing full lookup/ambiguity validation must be used. */
+    ArchiveExportSummary getLinkedArchiveExportSummaryByCode(
+            String normalizedBah, String bahSearchCode, String normalizedSjh, String sjhSearchCode);
+
     ArchiveLookupResult getImageLookupByBAH(String normalizedCode, String searchCode);
 
     ArchiveLookupResult getImageLookupByCode(

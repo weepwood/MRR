@@ -3,8 +3,8 @@ package com.zjcxph.imgapi.service;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.dto.req.ArchiveExportJobRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
 import com.zjcxph.imgapi.entity.ArchiveExportJob;
-import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository.RecoveryCursor;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
@@ -64,9 +64,8 @@ class ArchiveExportRecoveryTest {
             ArchiveExportJob row = invocation.getArgument(0);
             row.setCreatedAt(LocalDateTime.of(2026, 1, 1, 0, 0)); rows.add(row); return null;
         }).when(repository).insert(any());
-        PathDO image = new PathDO(); image.setFileSize(1L);
-        when(exporter.prepareArchive(anyString(), anyString()))
-                .thenReturn(new ArchiveExportService.BatchZipExport(List.of(image)));
+        when(exporter.summarizeArchive(anyString(), anyString()))
+                .thenReturn(new ArchiveExportSummary(1, 1L));
     }
 
     @Test
@@ -106,10 +105,6 @@ class ArchiveExportRecoveryTest {
             created.set(row); return null;
         }).when(repository).insert(any());
         when(repository.findById(anyString())).thenAnswer(invocation -> Optional.ofNullable(created.get()));
-        PathDO image = new PathDO();
-        image.setFileSize(1L);
-        when(exporter.prepareArchive(anyString(), anyString()))
-                .thenReturn(new ArchiveExportService.BatchZipExport(List.of(image)));
         ArchiveExportJobRequest request = new ArchiveExportJobRequest();
         request.setFormat("ZIP");
         request.setBah("00001234");

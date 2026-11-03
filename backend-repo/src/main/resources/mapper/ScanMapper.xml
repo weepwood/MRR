@@ -48,7 +48,7 @@
     </update>
 
     <!-- 兼容旧接口的有限条件查询，必须在 SQL 层 LIMIT。 -->
-    <select id="findByCondition" resultType="com.zjcxph.imgapi.entity.Scan">
+    <select id="findByCondition" resultType="com.zjcxph.imgapi.entity.Scan" timeout="3">
         SELECT * FROM mr_scan
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>
@@ -66,7 +66,7 @@
         LIMIT #{limit}
     </select>
 
-    <select id="findByConditionWithPagination" resultType="com.zjcxph.imgapi.entity.Scan">
+    <select id="findByConditionWithPagination" resultType="com.zjcxph.imgapi.entity.Scan" timeout="3">
         SELECT * FROM mr_scan
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>
@@ -83,7 +83,7 @@
         ORDER BY id LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="countByCondition" resultType="java.lang.Long">
+    <select id="countByCondition" resultType="java.lang.Long" timeout="3">
         SELECT COUNT(*) FROM mr_scan
         <where>
             <if test="request.brxh != null and request.brxh != ''">AND BRXH LIKE '%' || #{request.brxh} || '%'</if>

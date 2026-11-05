@@ -828,6 +828,7 @@ onUnmounted(() => {
                 {{ downloadButtonLabel }}
               </el-button>
               <el-button
+                v-if="showSelectionStatus"
                 size="small"
                 :icon="Download"
                 :disabled="!selectedCount"
@@ -925,7 +926,7 @@ onUnmounted(() => {
               {{ downloadButtonLabel }}
             </el-button>
             <el-button
-              v-if="!isExternalTicketMode"
+              v-if="showSelectionStatus"
               :icon="Download"
               :disabled="!selectedCount"
               :loading="selectedZipCreating || selectedZipCancelling || selectedZipDownloading"

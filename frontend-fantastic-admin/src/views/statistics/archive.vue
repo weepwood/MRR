@@ -34,6 +34,7 @@ import {
   writeArchiveLocalPreferences,
 } from './archive/composables/useArchiveLocalPreferences'
 import { useArchivePrint } from './archive/composables/useArchivePrint'
+import { useArchiveSelectedZip } from './archive/composables/useArchiveSelectedZip'
 import { useSelection } from './archive/composables/useSelection'
 import { buildTypeStats, padCode } from './archive/constants'
 
@@ -161,6 +162,45 @@ const downloadButtonLabel = computed(() => {
   return '下载病案（整份病案）'
 })
 const pdfButtonLabel = computed(() => `导出 PDF（${selectedCount.value}）`)
+
+const {
+  job: selectedZipJob,
+  creating: selectedZipCreating,
+  cancelling: selectedZipCancelling,
+  downloading: selectedZipDownloading,
+  start: startSelectedZip,
+  cancel: cancelSelectedZip,
+  download: downloadSelectedZip,
+  dismiss: dismissSelectedZip,
+} = useArchiveSelectedZip(selectedItems)
+const selectedZipLabel = computed(() => {
+  const job = selectedZipJob.value
+  if (job && isJobRunning(job)) {
+    return `取消选中 ZIP（${job.processedCount}/${job.plannedCount}）`
+  }
+  return job?.status === 'SUCCESS' ? '重新下载选中 ZIP' : `导出选中 ZIP（${selectedCount.value}）`
+})
+
+async function handleSelectedZipAction() {
+  try {
+    const job = selectedZipJob.value
+    if (job?.status === 'SUCCESS') {
+      await downloadSelectedZip()
+    }
+    else if (job && isJobRunning(job)) {
+      if (await confirmCancel('选中 ZIP')) {
+        await cancelSelectedZip()
+      }
+    }
+    else {
+      dismissSelectedZip()
+      await startSelectedZip()
+    }
+  }
+  catch (error: unknown) {
+    ElMessage.error((error as { message?: string })?.message || '选中 ZIP 操作失败')
+  }
+}
 
 const selectionStorageKey = computed(() => {
   const bah = normalizeSearchParam(searchBah.value)
@@ -787,6 +827,15 @@ onUnmounted(() => {
               >
                 {{ downloadButtonLabel }}
               </el-button>
+              <el-button
+                size="small"
+                :icon="Download"
+                :disabled="!selectedCount"
+                :loading="selectedZipCreating || selectedZipCancelling || selectedZipDownloading"
+                @click="handleSelectedZipAction"
+              >
+                {{ selectedZipLabel }}
+              </el-button>
               <el-button size="small" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
                 打印选中
                 <template v-if="selectedCount">
@@ -874,6 +923,15 @@ onUnmounted(() => {
               @click="handleDownloadAction"
             >
               {{ downloadButtonLabel }}
+            </el-button>
+            <el-button
+              v-if="!isExternalTicketMode"
+              :icon="Download"
+              :disabled="!selectedCount"
+              :loading="selectedZipCreating || selectedZipCancelling || selectedZipDownloading"
+              @click="handleSelectedZipAction"
+            >
+              {{ selectedZipLabel }}
             </el-button>
             <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
               打印选中<template v-if="selectedCount">

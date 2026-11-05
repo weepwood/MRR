@@ -11,6 +11,12 @@ function readBlob(blob: Blob): Promise<ArrayBuffer> {
 }
 
 describe('client PDF writer', () => {
+  it('rejects output beyond the shared budget before creating the final Blob', () => {
+    const jpeg = new Blob(['synthetic'])
+    Object.defineProperty(jpeg, 'size', { value: 128 * 1024 * 1024 })
+    expect(() => buildPdfBlob([{ blob: jpeg, width: 1, height: 1 }])).toThrow('分批')
+  })
+
   it('writes selected images as valid PDF pages', async () => {
     const jpeg = new Blob([new Uint8Array([0xFF, 0xD8, 0xFF, 0xD9])], { type: 'image/jpeg' })
     const pdf = buildPdfBlob([

@@ -1,6 +1,6 @@
 import type { GalleryImage } from '../../types'
-import { effectScope } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope } from 'vue'
 import { useArchivePrint } from '../useArchivePrint'
 import { ARCHIVE_SELECTION_CHANGED_EVENT } from '../useSelection'
 
@@ -40,6 +40,18 @@ describe('useArchivePrint', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     permission.auth.mockReturnValue(true)
+  })
+
+  it('超过首轮打印页数上限时不创建打印框架，也不静默截断', async () => {
+    const create = vi.spyOn(document, 'createElement').mockImplementation(() => {
+      throw new Error('Printing must be rejected before allocating a frame')
+    })
+    const images: GalleryImage[] = Array.from({ length: 51 }, (_, index) => ({ id: index + 1, imageUrl: '/synthetic.jpg' }))
+    const { printSelected, printing } = useArchivePrint()
+    await printSelected(images)
+    expect(create).not.toHaveBeenCalledWith('iframe')
+    expect(message.warning).toHaveBeenCalledWith(expect.stringContaining('分批'))
+    expect(printing.value).toBe(false)
   })
 
   it('规划接口拒绝时不会继续在浏览器生成 PDF', async () => {
@@ -160,7 +172,7 @@ describe('useArchivePrint', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchivePrint())
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.exportSelectedPdf([
       { id: 1, bah: '00789508', sjh: '', imageUrl: '/1.jpg' },

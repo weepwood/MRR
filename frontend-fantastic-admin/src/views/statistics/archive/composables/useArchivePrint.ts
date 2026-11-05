@@ -6,12 +6,14 @@ import {
   downloadSelectedImagesPdf,
   getSelectedImagesPdfExportPlan,
 } from '@/api/modules/archive-export'
+import { ARCHIVE_PRINT_MAX_IMAGES, requireArchiveExportBlob } from '@/utils/archive-export-budget'
 import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
 import { useArchiveExportJob } from './useArchiveExportJob'
 import { ARCHIVE_SELECTION_CHANGED_EVENT } from './useSelection'
 
 function saveBlob(blob: Blob, fileName: string) {
+  requireArchiveExportBlob(blob)
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -76,6 +78,10 @@ export function useArchivePrint() {
   async function printSelected(images: GalleryImage[]): Promise<void> {
     if (!images.length) {
       ElMessage.warning('请先选择要打印的影像')
+      return
+    }
+    if (images.length > ARCHIVE_PRINT_MAX_IMAGES) {
+      ElMessage.warning(`单次最多打印 ${ARCHIVE_PRINT_MAX_IMAGES} 张影像，请减少选页并分批打印`)
       return
     }
     printing.value = true

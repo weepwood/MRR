@@ -1,5 +1,5 @@
 import type { AxiosRequestConfig } from 'axios'
-import { ARCHIVE_EXPORT_BUDGET_MESSAGE, ARCHIVE_EXPORT_MAX_BYTES, requireArchiveExportBlob } from '@/utils/archive-export-budget'
+import { ARCHIVE_EXPORT_MAX_BYTES, ArchiveExportBudgetError, requireArchiveExportBlob } from '@/utils/archive-export-budget'
 import api, { getRequest, postRequest } from '../index'
 
 export type ArchiveExportMode = 'CLIENT_PDF' | 'BACKEND_STREAM' | 'BACKEND_JOB'
@@ -111,13 +111,13 @@ async function downloadWithinBudget(request: (config: AxiosRequestConfig) => Pro
       },
     })
     if (exceeded) {
-      throw new Error(ARCHIVE_EXPORT_BUDGET_MESSAGE)
+      throw new ArchiveExportBudgetError()
     }
     return requireArchiveExportBlob(blob)
   }
   catch (error: unknown) {
     if (exceeded) {
-      throw new Error(ARCHIVE_EXPORT_BUDGET_MESSAGE)
+      throw new ArchiveExportBudgetError()
     }
     throw error
   }

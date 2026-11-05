@@ -14,10 +14,10 @@
 
 - 首轮单文件默认上限 128 MiB（134217728 字节）。Java 默认与应用配置一致，Windows 包继承应用默认，不在生产模板重复配置；服务端保留原环境变量。前端上限固定，单改服务端配置不能开放大文件。
 - 创建任务时使用未截断、溢出饱和的估算值；超配额在 insert 和排队前返回 413，未知单图大小继续用现有保守每图估算。等于上限允许，不代表最终压缩输出一定符合上限。
-- 任务文件与兼容流式 ZIP/PDF 共用实际输出限制器；超过上限抛异常，不静默截断或报告成功。旧流式接口可能已发送部分响应，失败不能作为有效文件；首轮优先使用已有后台任务。
+- 任务文件与兼容流式 ZIP/PDF 共用实际输出限制器；超过上限抛专用异常，不静默截断或报告成功。后台识别包装原因链中的限额异常及重新估算后的413，返回稳定分批提示，其他底层异常仍隐藏。旧流式接口可能已发送部分响应，失败不能作为有效文件；首轮优先使用已有后台任务。
 - 自动/手动任务下载均先要求 `outputBytes` 为正的安全整数且不超过预算。未知大小不退回无界下载，提示刷新任务或减少选页。
 - 内部任务与兼容 ZIP/PDF 下载均经现有 Axios，检查进度中的 total/loaded，超限主动取消，并复核实际 Blob 大小。进度回调可能延迟，不能证明峰值内存严格等于128 MiB。
-- 无文件系统 API 的 Chrome86/HTTP 终端仍可下载预算内文件。Range 每块8 MiB机制保留；权限/过期等HTTP拒绝、取消不再追加整份下载请求；其他回退仍必须经过相同预算与长度校验。
+- 无文件系统 API 的 Chrome86/HTTP 终端仍可下载预算内文件。Range 每块8 MiB机制保留；预算拒绝保留专用错误类型，权限/过期等HTTP拒绝、预算取消和用户取消不再追加整份下载请求；其他回退仍必须经过相同预算与长度校验。
 - 下载被拒绝不改成功任务状态、不删除文件；保留重新下载入口，并明确“已生成，但下载未完成”。服务端下载也检查受控文件实际大小，超当前配额返回413；上线前产生的超预算成功文件不自动删除。
 - 浏览器 PDF 合成累计与最终输出复用同一预算。打印一次最多50张；超限整体拒绝并提示分批，不自动只打印前50张。
 - API 路径与响应结构、权限/身份、Range协议和表结构不变；超预算导出从晚期失败提前为413，默认大文件能力收紧是本次明确兼容变化。
@@ -33,11 +33,12 @@
 2026-11-05 本地证据（合成夹具，不是医院验收）：
 
 - 首轮新增前端回归先复现17项失败；补充打印/PDF及生成与下载状态回归也先失败，再修改对应实现。
-- `corepack pnpm exec vitest run` 定向执行下载工具、下载API、任务状态、打印和客户端PDF五个文件：36项通过。
-- `mvnw.cmd -B -ntp -Dtest=ArchiveExportJobPreflightTest,ArchiveExportOutputBudgetTest,ArchiveExportTempFileManagerTest,ArchiveExportServiceImplTest,ArchiveExportJobFailureTest,ArchiveExportJobServiceValidationTest,ArchiveExportJobPolicyTest,ArchiveExportJobOwnershipTest test`：41项通过，0失败/错误/跳过。创建前拒绝和旧文件超限回归均曾先失败。
+- `corepack pnpm exec vitest run` 定向执行下载工具、下载API、任务状态、打印和客户端PDF五个文件：37项通过，包含实际两层API/Range组合的预算取消回归。
+- `mvnw.cmd -B -ntp -Dtest=ArchiveExportJobPreflightTest,ArchiveExportOutputBudgetTest,ArchiveExportTempFileManagerTest,ArchiveExportServiceImplTest,ArchiveExportJobFailureTest,ArchiveExportJobServiceValidationTest,ArchiveExportJobPolicyTest,ArchiveExportJobOwnershipTest test`：44项通过，0失败/错误/跳过。创建前拒绝和旧文件超限回归均曾先失败。
 - `corepack pnpm build`、`corepack pnpm test:compat:chrome86`通过；静态检查仍提示既有依赖CSS的装饰降级，不等于Chrome86真机通过。
 - 实际命令日志保留在本worktree的忽略构建目录；独立审查、PG16 CI及医院现场结果单独记录，不包含在上述通过数内。
 - 现有查询/缓存/超时隐私/授权/诊断/搜索六个定向测试类35项通过；仍不能证明医院等量副本性能或真实空查询根因。
+- 独立代理在 `fce782c0` 发现两项P2：后台实际超限提示不可操作、Range预算取消后再次整份回退；先补充1项前端、3项后端失败回归，再修复稳定错误分类与消息映射。最终复核及当前SHA的CI结果以PR为准。
 
 用户已确认具备获授权隔离PostgreSQL16副本与测试影像源，后续由现场负责人执行 #350。必须绑定同一候选SHA和制品摘要，在真实Chrome86、Nginx HTTP及混合存储上验证下载、选页、页序、打印取消、配额与内存/临时空间；具体身份、位置与原始证据留院内。这里不填写虚构PASS或RPO/RTO。
 

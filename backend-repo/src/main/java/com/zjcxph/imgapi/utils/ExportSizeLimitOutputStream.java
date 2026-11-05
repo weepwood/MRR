@@ -7,6 +7,7 @@ import java.util.Objects;
 
 /** 同时约束任务文件和兼容流式导出的实际输出字节数。 */
 public final class ExportSizeLimitOutputStream extends FilterOutputStream {
+    public static final String LIMIT_MESSAGE = "导出文件超过单文件配额，请减少选页并分批导出";
     private final long maximum;
     private long written;
 
@@ -33,7 +34,13 @@ public final class ExportSizeLimitOutputStream extends FilterOutputStream {
 
     private void ensureCapacity(int increment) throws IOException {
         if (written > maximum - increment) {
-            throw new IOException("导出文件超过单文件配额，请减少选页并分批导出");
+            throw new LimitExceededException();
+        }
+    }
+
+    public static final class LimitExceededException extends IOException {
+        private LimitExceededException() {
+            super(LIMIT_MESSAGE);
         }
     }
 }

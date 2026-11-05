@@ -3,12 +3,20 @@ export const ARCHIVE_EXPORT_MAX_BYTES = 128 * 1024 * 1024
 export const ARCHIVE_PRINT_MAX_IMAGES = 50
 export const ARCHIVE_EXPORT_BUDGET_MESSAGE = '导出文件超过首轮 128 MiB 上限，请减少选页并分批导出'
 
+/** 预算拒绝不得被断点下载当成可重试的传输错误。 */
+export class ArchiveExportBudgetError extends Error {
+  constructor() {
+    super(ARCHIVE_EXPORT_BUDGET_MESSAGE)
+    this.name = 'ArchiveExportBudgetError'
+  }
+}
+
 export function requireArchiveExportSize(bytes: unknown): number {
   if (typeof bytes !== 'number' || !Number.isSafeInteger(bytes) || bytes <= 0) {
     throw new Error('导出文件大小未知或无效，请刷新任务后重试，或减少选页分批导出')
   }
   if (bytes > ARCHIVE_EXPORT_MAX_BYTES) {
-    throw new Error(ARCHIVE_EXPORT_BUDGET_MESSAGE)
+    throw new ArchiveExportBudgetError()
   }
   return bytes
 }

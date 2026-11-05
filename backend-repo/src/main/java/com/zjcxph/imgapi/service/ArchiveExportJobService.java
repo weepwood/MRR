@@ -12,10 +12,12 @@ import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository.RecoveryCursor;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -418,7 +420,7 @@ public class ArchiveExportJobService {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
             logger.error("Archive export job failed: jobId={}", id, exception);
-            if (repository.markFailed(id, "病案导出失败，请使用任务编号联系管理员", LocalDateTime.now()) == 0
+            if (repository.markFailed(id, publicFailureMessage(exception), LocalDateTime.now()) == 0
                     && repository.isCancelRequested(id)) {
                 repository.markCancelled(id, LocalDateTime.now());
             }
@@ -436,6 +438,15 @@ public class ArchiveExportJobService {
                 MDC.put("requestId", previousRequestId);
             }
         }
+    }
+
+    private String publicFailureMessage(Exception exception) {
+        Throwable cause = NestedExceptionUtils.getMostSpecificCause(exception);
+        if (cause instanceof ExportSizeLimitOutputStream.LimitExceededException
+                || (cause instanceof BusinessException business && business.getCode() == 413)) {
+            return ExportSizeLimitOutputStream.LIMIT_MESSAGE;
+        }
+        return "病案导出失败，请使用任务编号联系管理员";
     }
 
     private void cleanupFailedOutput(String id, Path output) {

@@ -1,6 +1,6 @@
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { downloadArchiveExportJob } from '@/api/modules/archive-export'
-import { requireArchiveExportSize } from '@/utils/archive-export-budget'
+import { ArchiveExportBudgetError, requireArchiveExportSize } from '@/utils/archive-export-budget'
 import { isRequestCanceled } from '@/utils/request-retry'
 
 const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
@@ -149,7 +149,7 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
     return 'resumable'
   }
   catch (error: unknown) {
-    if ((error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
+    if (error instanceof ArchiveExportBudgetError || (error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
       || (error as { response?: { status?: number } })?.response?.status !== undefined) {
       throw error
     }

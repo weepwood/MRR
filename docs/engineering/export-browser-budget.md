@@ -12,7 +12,7 @@
 
 ## 本批行为与兼容影响
 
-- 首轮单文件默认上限 128 MiB（134217728 字节）。Java 默认、应用配置及 Windows 生产模板一致；服务端保留原环境变量。前端上限固定，单改服务端配置不能开放大文件。
+- 首轮单文件默认上限 128 MiB（134217728 字节）。Java 默认与应用配置一致，Windows 包继承应用默认，不在生产模板重复配置；服务端保留原环境变量。前端上限固定，单改服务端配置不能开放大文件。
 - 创建任务时使用未截断、溢出饱和的估算值；超配额在 insert 和排队前返回 413，未知单图大小继续用现有保守每图估算。等于上限允许，不代表最终压缩输出一定符合上限。
 - 任务文件与兼容流式 ZIP/PDF 共用实际输出限制器；超过上限抛异常，不静默截断或报告成功。旧流式接口可能已发送部分响应，失败不能作为有效文件；首轮优先使用已有后台任务。
 - 自动/手动任务下载均先要求 `outputBytes` 为正的安全整数且不超过预算。未知大小不退回无界下载，提示刷新任务或减少选页。
@@ -37,6 +37,7 @@
 - `mvnw.cmd -B -ntp -Dtest=ArchiveExportJobPreflightTest,ArchiveExportOutputBudgetTest,ArchiveExportTempFileManagerTest,ArchiveExportServiceImplTest,ArchiveExportJobFailureTest,ArchiveExportJobServiceValidationTest,ArchiveExportJobPolicyTest,ArchiveExportJobOwnershipTest test`：41项通过，0失败/错误/跳过。创建前拒绝和旧文件超限回归均曾先失败。
 - `corepack pnpm build`、`corepack pnpm test:compat:chrome86`通过；静态检查仍提示既有依赖CSS的装饰降级，不等于Chrome86真机通过。
 - 实际命令日志保留在本worktree的忽略构建目录；独立审查、PG16 CI及医院现场结果单独记录，不包含在上述通过数内。
+- 现有查询/缓存/超时隐私/授权/诊断/搜索六个定向测试类35项通过；仍不能证明医院等量副本性能或真实空查询根因。
 
 用户已确认具备获授权隔离PostgreSQL16副本与测试影像源，后续由现场负责人执行 #350。必须绑定同一候选SHA和制品摘要，在真实Chrome86、Nginx HTTP及混合存储上验证下载、选页、页序、打印取消、配额与内存/临时空间；具体身份、位置与原始证据留院内。这里不填写虚构PASS或RPO/RTO。
 

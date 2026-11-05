@@ -1,5 +1,7 @@
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { downloadArchiveExportJob } from '@/api/modules/archive-export'
+import { requireArchiveExportSize } from '@/utils/archive-export-budget'
+import { isRequestCanceled } from '@/utils/request-retry'
 
 const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
 const PREFIX_VERIFY_BYTES = 64 * 1024
@@ -82,12 +84,12 @@ async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boo
 }
 
 async function downloadAsBlob(job: ArchiveExportJob, fileName: string): Promise<'blob'> {
+  const expectedBytes = requireArchiveExportSize(job.outputBytes)
   const blob = await downloadArchiveExportJob(job.id)
   if (!(blob instanceof Blob) || blob.size <= 0) {
     throw new Error('服务器返回的导出文件为空')
   }
-  const expectedBytes = Number(job.outputBytes || 0)
-  if (expectedBytes > 0 && blob.size !== expectedBytes) {
+  if (blob.size !== expectedBytes) {
     throw new Error(`导出文件长度不一致：期望 ${expectedBytes}，实际 ${blob.size}`)
   }
   saveBlob(blob, fileName)
@@ -101,9 +103,9 @@ export function downloadExportJobToBrowser(job: ArchiveExportJob): Promise<'blob
 
 export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
   const fileName = uniqueFileName(job)
-  const totalBytes = Number(job.outputBytes || 0)
+  const totalBytes = requireArchiveExportSize(job.outputBytes)
   const picker = (window as FilePickerWindow).showSaveFilePicker
-  if (!picker || totalBytes <= 0) {
+  if (!picker) {
     return downloadAsBlob(job, fileName)
   }
 
@@ -147,7 +149,8 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
     return 'resumable'
   }
   catch (error: unknown) {
-    if ((error as { name?: string })?.name === 'AbortError') {
+    if ((error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
+      || (error as { response?: { status?: number } })?.response?.status !== undefined) {
       throw error
     }
     if (writable) {

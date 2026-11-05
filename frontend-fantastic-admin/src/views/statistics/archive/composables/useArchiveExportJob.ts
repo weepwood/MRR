@@ -55,18 +55,18 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   }
 
   function schedulePoll(id: string, token: number, delay: number) {
-    if (!isCurrent(id, token)) return
+    if (!isCurrent(id, token)) { return }
     stopPolling()
     pollTimer = setTimeout(() => void poll(id, token), delay)
   }
 
   async function poll(id: string, token: number) {
-    if (!isCurrent(id, token)) return
+    if (!isCurrent(id, token)) { return }
     try {
       const response = await getArchiveExportJob(id)
       // discard/dismiss 或新任务启动后，即使旧请求稍后返回也不得恢复旧按钮状态。
-      if (!isCurrent(id, token)) return
-      if (response.data) applyJob(response.data)
+      if (!isCurrent(id, token)) { return }
+      if (response.data) { applyJob(response.data) }
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
         cancelling.value = false
@@ -77,7 +77,8 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
             ElMessage.success('病案导出文件已生成，已开始下载')
           }
           catch (error: unknown) {
-            ElMessage.error((error as { message?: string })?.message || '导出文件已生成，请点击按钮重新下载')
+            const reason = (error as { message?: string })?.message || '请点击按钮重新下载'
+            ElMessage.error(`导出文件已生成，但下载未完成：${reason}`)
           }
         }
         else if (job.value?.status === 'FAILED') {
@@ -91,7 +92,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       schedulePoll(id, token, 1500)
     }
     catch (error: unknown) {
-      if (!isCurrent(id, token)) return
+      if (!isCurrent(id, token)) { return }
       stopPolling()
       cancelling.value = false
       ElMessage.error((error as { message?: string })?.message || '导出任务状态查询失败')
@@ -108,7 +109,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
         ...request,
         idempotencyKey: request.idempotencyKey || createIdempotencyKey(request),
       })
-      if (!response.data) throw new Error('服务器未返回导出任务')
+      if (!response.data) { throw new Error('服务器未返回导出任务') }
       if (disposed || token !== generation) {
         if (!isTerminal(response.data.status)) {
           void cancelArchiveExportJob(response.data.id).catch(() => undefined)
@@ -124,19 +125,19 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       return createdJob
     }
     finally {
-      if (token === generation) creating.value = false
+      if (token === generation) { creating.value = false }
     }
   }
 
   async function cancel() {
     const current = job.value
-    if (!current || isTerminal(current.status)) return
+    if (!current || isTerminal(current.status)) { return }
     const token = generation
     cancelling.value = true
     try {
       const response = await cancelArchiveExportJob(current.id)
-      if (!isCurrent(current.id, token)) return
-      if (response.data) applyJob(response.data)
+      if (!isCurrent(current.id, token)) { return }
+      if (response.data) { applyJob(response.data) }
       ElMessage.info(job.value?.status === 'CANCELLED' ? '导出任务已取消' : '正在取消导出任务')
       if (job.value && !isTerminal(job.value.status)) {
         // PROCESSING 任务的取消是协作式的，继续轮询直到后端写入终态。
@@ -148,7 +149,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       }
     }
     catch (error) {
-      if (token === generation) cancelling.value = false
+      if (token === generation) { cancelling.value = false }
       throw error
     }
   }
@@ -160,7 +161,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     job.value = null
     creating.value = false
     cancelling.value = false
-    if (!current || isTerminal(current.status)) return
+    if (!current || isTerminal(current.status)) { return }
     try {
       await cancelArchiveExportJob(current.id)
     }
@@ -171,7 +172,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
 
   async function download() {
     const current = job.value
-    if (!current || current.status !== 'SUCCESS') return
+    if (!current || current.status !== 'SUCCESS') { return }
     downloading.value = true
     try {
       const mode = await downloadExportJobWithResume(current)

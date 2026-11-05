@@ -1,5 +1,5 @@
-import { effectScope } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope } from 'vue'
 import { useArchiveExportJob } from '../useArchiveExportJob'
 
 const api = vi.hoisted(() => ({
@@ -67,7 +67,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
@@ -91,7 +91,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await composable.cancel()
@@ -115,12 +115,27 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
 
     expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob)
+    scope.stop()
+  })
+
+  it('下载预算拒绝时保留成功任务和重新下载入口，不报告导出生成失败', async () => {
+    const completedJob = job('job-budget', 'SUCCESS')
+    api.createArchiveExportJob.mockResolvedValue({ data: job('job-budget', 'PROCESSING') })
+    api.getArchiveExportJob.mockResolvedValue({ data: completedJob })
+    exportDownload.downloadExportJobToBrowser.mockRejectedValue(new Error('请分批导出'))
+    const scope = effectScope()
+    const composable = scope.run(() => useArchiveExportJob('PDF'))!
+    await composable.start({ format: 'PDF', ids: [1, 2] })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(composable.job.value).toEqual(completedJob)
+    expect(message.error).toHaveBeenCalledWith(expect.stringContaining('已生成'))
+    expect(message.success).not.toHaveBeenCalled()
     scope.stop()
   })
 })

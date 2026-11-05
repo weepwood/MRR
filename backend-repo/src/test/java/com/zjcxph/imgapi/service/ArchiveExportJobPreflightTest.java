@@ -32,13 +32,43 @@ class ArchiveExportJobPreflightTest {
     final ArchiveExportTempFileManager files = mock(ArchiveExportTempFileManager.class);
     final List<Runnable> queue = new ArrayList<>();
     final AtomicReference<ArchiveExportJob> inserted = new AtomicReference<>();
+    final ArchiveExportProperties properties = new ArchiveExportProperties();
     final ArchiveExportJobService service = new ArchiveExportJobService(
-            exporter, repository, files, new ArchiveExportProperties(), queue::add);
+            exporter, repository, files, properties, queue::add);
 
     @BeforeEach
     void setup() {
         doAnswer(invocation -> { inserted.set(invocation.getArgument(0)); return null; }).when(repository).insert(any());
         when(repository.findById(anyString())).thenAnswer(invocation -> Optional.ofNullable(inserted.get()));
+    }
+
+    @Test
+    void rejectsKnownOversizeBeforeInsertingOrQueueingTheJob() {
+        properties.setMaxFileBytes(10);
+        when(exporter.summarizeArchive("789508", "")).thenReturn(new ArchiveExportSummary(1, 11));
+        assertThatThrownBy(() -> service.create(session(), request()))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("分批");
+        verify(repository, never()).insert(any());
+        assertThat(queue).isEmpty();
+    }
+
+    @Test
+    void appliesTheSamePreflightBudgetToUnknownImageSizes() {
+        properties.setMaxFileBytes(9);
+        properties.setFallbackBytesPerImage(5);
+        when(exporter.summarizeArchive("789508", "")).thenReturn(new ArchiveExportSummary(2, 0));
+        assertThatThrownBy(() -> service.create(session(), request()))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("分批");
+        verify(repository, never()).insert(any());
+        assertThat(queue).isEmpty();
+    }
+
+    @Test
+    void allowsAnEstimateExactlyAtTheConfiguredBudget() {
+        properties.setMaxFileBytes(10);
+        when(exporter.summarizeArchive("789508", "")).thenReturn(new ArchiveExportSummary(1, 10));
+        assertThat(service.create(session(), request()).estimatedBytes()).isEqualTo(10);
+        assertThat(queue).hasSize(1);
     }
 
     @Test

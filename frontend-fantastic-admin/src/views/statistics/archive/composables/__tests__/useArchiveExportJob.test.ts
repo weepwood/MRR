@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope } from 'vue'
+import { effectScope, ref } from 'vue'
 import { useArchiveExportJob } from '../useArchiveExportJob'
+import { useArchiveSelectedZip } from '../useArchiveSelectedZip'
 
 const api = vi.hoisted(() => ({
   createArchiveExportJob: vi.fn(),
@@ -23,6 +24,7 @@ const exportDownload = vi.hoisted(() => ({
 
 vi.mock('@/api/modules/archive-export', () => api)
 vi.mock('element-plus', () => ({ ElMessage: message }))
+vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
 vi.mock('../../utils/resumable-export-download', () => exportDownload)
 
 function job(id: string, status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'CANCELLED') {
@@ -49,6 +51,23 @@ function deferred<T>() {
 }
 
 describe('useArchiveExportJob', () => {
+  it('选择变化后取消迟到创建的选中ZIP，不恢复旧任务或启动下载', async () => {
+    const pending = deferred<{ data: ReturnType<typeof job> }>()
+    api.createArchiveExportJob.mockReturnValue(pending.promise)
+    api.cancelArchiveExportJob.mockResolvedValue({ data: job('old-selection', 'CANCELLED') })
+    const selection = ref([{ id: 1, bah: '123' }])
+    const scope = effectScope()
+    const task = scope.run(() => useArchiveSelectedZip(selection))!
+    const creating = task.start()
+    selection.value = [{ id: 2, bah: '123' }]
+    pending.resolve({ data: job('old-selection', 'PENDING') })
+    await creating
+    expect(task.job.value).toBeNull()
+    expect(api.cancelArchiveExportJob).toHaveBeenCalledWith('old-selection')
+    expect(api.getArchiveExportJob).not.toHaveBeenCalled()
+    expect(exportDownload.downloadExportJobToBrowser).not.toHaveBeenCalled()
+    scope.stop()
+  })
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()

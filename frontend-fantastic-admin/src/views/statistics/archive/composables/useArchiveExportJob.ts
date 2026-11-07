@@ -29,6 +29,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   let pollTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
   let generation = 0
+  let autoDownloadGeneration = -1
 
   function applyJob(next: ArchiveExportJob) {
     if (job.value?.id === next.id) {
@@ -71,14 +72,22 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
         stopPolling()
         cancelling.value = false
         if (job.value?.status === 'SUCCESS') {
+          if (downloading.value || autoDownloadGeneration === token) { return }
+          autoDownloadGeneration = token
+          downloading.value = true
           const completedJob = job.value
           try {
-            await downloadExportJobToBrowser(completedJob)
+            await downloadExportJobToBrowser(completedJob, () => isCurrent(id, token))
+            if (!isCurrent(id, token)) { return }
             ElMessage.success('病案导出文件已生成，已开始下载')
           }
           catch (error: unknown) {
+            if (!isCurrent(id, token)) { return }
             const reason = (error as { message?: string })?.message || '请点击按钮重新下载'
             ElMessage.error(`导出文件已生成，但下载未完成：${reason}`)
+          }
+          finally {
+            if (isCurrent(id, token)) { downloading.value = false }
           }
         }
         else if (job.value?.status === 'FAILED') {
@@ -102,6 +111,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   async function start(request: CreateArchiveExportJobRequest) {
     stopPolling()
     const token = ++generation
+    downloading.value = false
     creating.value = true
     cancelling.value = false
     try {
@@ -159,6 +169,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     generation++
     stopPolling()
     job.value = null
+    downloading.value = false
     creating.value = false
     cancelling.value = false
     if (!current || isTerminal(current.status)) { return }
@@ -172,13 +183,17 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
 
   async function download() {
     const current = job.value
-    if (!current || current.status !== 'SUCCESS') { return }
+    if (disposed || creating.value || downloading.value || !current || current.status !== 'SUCCESS') { return }
+    const token = generation
+    autoDownloadGeneration = token
     downloading.value = true
     try {
-      const mode = await downloadExportJobWithResume(current)
+      const mode = await downloadExportJobWithResume(current, () => isCurrent(current.id, token))
+      if (!isCurrent(current.id, token)) { return }
       ElMessage.success(mode === 'resumable' ? '导出文件已写入磁盘' : '导出文件已开始下载')
     }
     catch (error: unknown) {
+      if (!isCurrent(current.id, token)) { return }
       if ((error as { name?: string })?.name === 'AbortError') {
         ElMessage.info('已取消选择下载文件')
         return
@@ -186,7 +201,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       ElMessage.error((error as { message?: string })?.message || '导出文件下载失败')
     }
     finally {
-      downloading.value = false
+      if (isCurrent(current.id, token)) { downloading.value = false }
     }
   }
 
@@ -194,6 +209,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     generation++
     stopPolling()
     job.value = null
+    downloading.value = false
     creating.value = false
     cancelling.value = false
   }
@@ -202,6 +218,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
     onScopeDispose(() => {
       disposed = true
       generation++
+      downloading.value = false
       stopPolling()
     })
   }

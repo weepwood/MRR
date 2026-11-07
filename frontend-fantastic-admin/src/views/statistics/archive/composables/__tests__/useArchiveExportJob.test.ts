@@ -139,8 +139,11 @@ describe('useArchiveExportJob', () => {
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
 
-    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob)
+    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob, expect.any(Function))
+    const isCurrent = exportDownload.downloadExportJobToBrowser.mock.calls[0][1]
+    expect(isCurrent()).toBe(true)
     scope.stop()
+    expect(isCurrent()).toBe(false)
   })
 
   it('下载预算拒绝时保留成功任务和重新下载入口，不报告导出生成失败', async () => {

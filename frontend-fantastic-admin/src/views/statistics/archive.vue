@@ -113,7 +113,7 @@ const {
   cancelPdfJob,
   downloadPreparedPdf,
   dismissPdfJob,
-} = useArchivePrint()
+} = useArchivePrint(selectedItems)
 
 const currentImage = computed(() => filteredImages.value[selectedImageIndex.value] || null)
 const previewList = computed(() => filteredImages.value.map(item => item.imageUrl || ''))

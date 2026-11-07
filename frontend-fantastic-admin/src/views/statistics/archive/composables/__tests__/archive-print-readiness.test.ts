@@ -6,7 +6,19 @@ const message = vi.hoisted(() => ({ error: vi.fn(), warning: vi.fn() }))
 vi.mock('element-plus', () => ({ ElMessage: message }))
 vi.mock('@/api/modules/archive-export', () => ({ downloadSelectedImagesPdf: vi.fn(), getSelectedImagesPdfExportPlan: vi.fn() }))
 vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
-vi.mock('../useArchiveExportJob', () => ({ useArchiveExportJob: () => ({}) }))
+vi.mock('../useArchiveExportJob', () => ({
+  useArchiveExportJob: () => ({
+    job: { value: null },
+    creating: { value: false },
+    cancelling: { value: false },
+    downloading: { value: false },
+    start: vi.fn(),
+    cancel: vi.fn(),
+    discard: vi.fn(),
+    download: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}))
 const scopes: ReturnType<typeof effectScope>[] = []
 function printer(ready: Array<boolean | 'pending'>) {
   const create = document.createElement.bind(document)

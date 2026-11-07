@@ -1,9 +1,8 @@
-import type { EffectScope } from 'vue'
+import type { EffectScope, Ref } from 'vue'
 import type { GalleryImage } from '../../types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope } from 'vue'
+import { effectScope, ref } from 'vue'
 import { useArchivePrint } from '../useArchivePrint'
-import { ARCHIVE_SELECTION_CHANGED_EVENT } from '../useSelection'
 
 const api = vi.hoisted(() => ({
   getSelectedImagesPdfExportPlan: vi.fn(),
@@ -32,13 +31,15 @@ const pendingJob = { id: 'old-pdf', format: 'PDF', scope: 'SELECTED_IMAGES', sta
 
 describe('选页 PDF 异步生命周期', () => {
   const scopes: EffectScope[] = []
+  let selected: Ref<GalleryImage[]>
   function setup() {
     const scope = effectScope()
     scopes.push(scope)
-    return { scope, pdf: scope.run(() => useArchivePrint())! }
+    selected = ref(images.map(image => ({ ...image })))
+    return { scope, pdf: scope.run(() => useArchivePrint(selected))! }
   }
   function changeSelection() {
-    window.dispatchEvent(new CustomEvent(ARCHIVE_SELECTION_CHANGED_EVENT, { detail: { keys: ['2'] } }))
+    selected.value = otherImages
   }
 
   beforeEach(() => {
@@ -205,7 +206,7 @@ describe('选页 PDF 异步生命周期', () => {
     const { pdf } = setup()
     const mutable = images.map(image => ({ ...image }))
     const running = pdf.exportSelectedPdf(mutable)
-    window.dispatchEvent(new CustomEvent(ARCHIVE_SELECTION_CHANGED_EVENT, { detail: { keys: ['1'] } }))
+    selected.value = images.map(image => ({ ...image }))
     mutable[0].imageUrl = '/changed-after-start.jpg'
     plan.resolve({ data: { executionMode: 'CLIENT_PDF' } })
     await running

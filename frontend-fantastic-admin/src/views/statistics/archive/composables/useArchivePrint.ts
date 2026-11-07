@@ -1,9 +1,10 @@
+import type { Ref } from 'vue'
 import type { GalleryImage } from '../types'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import { useArchivePdfExport } from './useArchivePdfExport'
 
-export function useArchivePrint() {
+export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryImage[]>>) {
   const printing = ref(false)
   function escapeAttribute(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -97,6 +98,6 @@ export function useArchivePrint() {
   return {
     printing,
     printSelected,
-    ...useArchivePdfExport(),
+    ...useArchivePdfExport(selectedImages),
   }
 }

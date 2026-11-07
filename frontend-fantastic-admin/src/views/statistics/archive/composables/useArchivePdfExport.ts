@@ -1,12 +1,11 @@
+import type { Ref } from 'vue'
 import type { GalleryImage } from '../types'
-import type { ArchiveSelectionChangedDetail } from './useSelection'
 import { ElMessage } from 'element-plus'
-import { getCurrentScope, onScopeDispose, ref } from 'vue'
+import { getCurrentScope, onScopeDispose, ref, watch } from 'vue'
 import { downloadSelectedImagesPdf, getSelectedImagesPdfExportPlan } from '@/api/modules/archive-export'
 import useAuth from '@/utils/composables/useAuth'
 import { createPdfFromImageUrls } from '../utils/client-pdf'
 import { useArchiveExportJob } from './useArchiveExportJob'
-import { ARCHIVE_SELECTION_CHANGED_EVENT } from './useSelection'
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
@@ -19,12 +18,12 @@ function saveBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function selectionSignature(images: GalleryImage[]): string {
+function selectionSignature(images: readonly GalleryImage[]): string {
   return images.map(image => String(image.id || image.filename || '').trim()).filter(Boolean).sort().join(',')
 }
 
 /** 只编排选页 PDF；后台任务状态、轮询和取消继续由 useArchiveExportJob 管理。 */
-export function useArchivePdfExport() {
+export function useArchivePdfExport(selectedImages?: Readonly<Ref<readonly GalleryImage[]>>) {
   const exportingPdf = ref(false)
   const { auth } = useAuth()
   const exportJob = useArchiveExportJob('PDF')
@@ -40,10 +39,10 @@ export function useArchivePdfExport() {
     void exportJob.discard()
   }
 
-  function onSelectionChanged(event: Event) {
-    const detail = (event as CustomEvent<ArchiveSelectionChangedDetail>).detail
-    const nextSignature = Array.isArray(detail?.keys) ? detail.keys.filter(Boolean).slice().sort().join(',') : ''
-    if (boundSelection !== null && boundSelection !== nextSignature) { invalidate() }
+  if (selectedImages) {
+    watch(() => selectionSignature(selectedImages.value), (nextSignature) => {
+      if (boundSelection !== null && boundSelection !== nextSignature) { invalidate() }
+    }, { flush: 'sync' })
   }
 
   async function exportSelectedPdf(selection: GalleryImage[]): Promise<void> {
@@ -121,11 +120,9 @@ export function useArchivePdfExport() {
   }
 
   if (getCurrentScope()) {
-    if (typeof window !== 'undefined') { window.addEventListener(ARCHIVE_SELECTION_CHANGED_EVENT, onSelectionChanged) }
     onScopeDispose(() => {
       disposed = true
       invalidate()
-      if (typeof window !== 'undefined') { window.removeEventListener(ARCHIVE_SELECTION_CHANGED_EVENT, onSelectionChanged) }
     })
   }
 

@@ -1,8 +1,7 @@
 import type { GalleryImage } from '../../types'
-import { effectScope } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, ref } from 'vue'
 import { useArchivePrint } from '../useArchivePrint'
-import { ARCHIVE_SELECTION_CHANGED_EVENT } from '../useSelection'
 
 const api = vi.hoisted(() => ({
   getSelectedImagesPdfExportPlan: vi.fn(),
@@ -158,9 +157,13 @@ describe('useArchivePrint', () => {
       },
     })
     const scope = effectScope()
-    const composable = scope.run(() => useArchivePrint())
+    const selected = ref<GalleryImage[]>([
+      { id: 1, bah: 'TEST', imageUrl: '/1.jpg' },
+      { id: 2, bah: 'TEST', imageUrl: '/2.jpg' },
+    ])
+    const composable = scope.run(() => useArchivePrint(selected))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.exportSelectedPdf([
       { id: 1, bah: '00789508', sjh: '', imageUrl: '/1.jpg' },
@@ -168,9 +171,7 @@ describe('useArchivePrint', () => {
     ])
     expect(composable.pdfJob.value?.id).toBe('job-old-selection')
 
-    window.dispatchEvent(new CustomEvent(ARCHIVE_SELECTION_CHANGED_EVENT, {
-      detail: { keys: ['3'] },
-    }))
+    selected.value = [{ id: 3, bah: 'TEST', imageUrl: '/3.jpg' }]
 
     expect(composable.pdfJob.value).toBeNull()
     expect(api.downloadArchiveExportJob).not.toHaveBeenCalled()

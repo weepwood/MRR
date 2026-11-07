@@ -1,5 +1,5 @@
-import { effectScope } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope } from 'vue'
 import { useArchiveExportJob } from '../useArchiveExportJob'
 
 const api = vi.hoisted(() => ({
@@ -67,7 +67,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
@@ -91,7 +91,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await composable.cancel()
@@ -115,12 +115,15 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
 
-    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob)
+    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob, expect.any(Function))
+    const isCurrent = exportDownload.downloadExportJobToBrowser.mock.calls[0][1]
+    expect(isCurrent()).toBe(true)
     scope.stop()
+    expect(isCurrent()).toBe(false)
   })
 })

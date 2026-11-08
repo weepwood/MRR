@@ -46,8 +46,11 @@ export function useMrrChart(
     }
 
     if (element.clientWidth === 0 || element.clientHeight === 0) {
-      clearRetryTimer()
-      retryTimer = window.setTimeout(render, 32)
+      // 自动适配已有尺寸观察器；隐藏容器无需每32ms唤醒一次。
+      if (!autoresize) {
+        clearRetryTimer()
+        retryTimer = window.setTimeout(render, 32)
+      }
       return null
     }
 
@@ -94,6 +97,10 @@ export function useMrrChart(
 
   const resize = useDebounceFn(() => {
     if (!active) {
+      return
+    }
+    if (!chartInstance.value || chartInstance.value.getDom() !== chartRef.value) {
+      render()
       return
     }
     chartInstance.value?.resize()

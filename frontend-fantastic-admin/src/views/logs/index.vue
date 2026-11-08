@@ -63,7 +63,7 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
   LogRecord,
   LogsQuery
 >({
-  fetchApi: async (params) => {
+  fetchApi: async (params, { isCurrent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Record<string, any> = { page, size }
     if (keyword?.trim()) apiParams.keyword = keyword.trim()
@@ -78,11 +78,11 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
     }
     try {
       error.value = ''
-      return searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
+      return await searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
     }
     catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载日志记录失败'
-      error.value = msg
+      if (isCurrent()) error.value = msg
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },

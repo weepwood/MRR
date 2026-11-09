@@ -332,6 +332,7 @@ npm run docs:build
 
 ## 文档入口
 
+- [项目设计导航：产品、架构、界面与验收](docs/design/README.md)
 - [用户手册](vitepress-doc/user-guide/index.md)
 - [日志、审计与运行错误](vitepress-doc/user-guide/logs.md)
 - [系统架构](vitepress-doc/internal/architecture.md)

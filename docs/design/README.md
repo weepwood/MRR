@@ -2,7 +2,7 @@
 
 本文连接产品、架构、数据、界面和交付设计，帮助开发者确定应阅读和更新哪一份文档，不再建立一套平行规范。
 
-核对日期：2026-11-09；产品版本 `0.8.0`；事实基线 `main` / `5b9b920a35c32b296ca53317985af5ecbb1d6ca6`。关联 [Issue #554](https://github.com/weepwood/MRR/issues/554)，风险 P3，负责人：文档实施代理；分支 `codex/design-docs-consolidation`；worktree `D:/Project/CodexWorkTress/design-docs-consolidation/MRR`。
+核对日期：2026-11-09；产品版本 `0.8.0`；事实基线 `main` / `322552356bc2f39e2c1984174a127f83ed9c49ad`。关联 [Issue #554](https://github.com/weepwood/MRR/issues/554)，风险 P3，负责人：文档实施代理；分支 `codex/design-docs-consolidation`；worktree `D:/Project/CodexWorkTress/design-docs-consolidation/MRR`。
 
 ## 1. 按任务选择入口
 
@@ -61,7 +61,7 @@ MRR 是院内病案与扫描影像管理系统，核心使用者包括病案调�
 | --- | --- | --- |
 | 导出预算、固定选页、打印就绪与下载隔离 | #528 已合入主线，终端待验收 | 128MiB/文件和50张打印是当前限制，安全性仍需目标终端证明 |
 | OCR 轮询、共用页头/工作台、查询代次隔离、侧栏无涟漪、图表尺寸初始化 | #532/#534/#536/#548/#549 已合入主线 | 复用已有实现与测试，不重复建设 |
-| 图表卡片规范收口、用户筛选标签 | [#551](https://github.com/weepwood/MRR/pull/551)、[#553](https://github.com/weepwood/MRR/pull/553) 候选待合并 | 与主线现状分开，合并后再更新状态 |
+| 图表卡片规范收口、用户筛选标签 | [#551](https://github.com/weepwood/MRR/pull/551)、[#553](https://github.com/weepwood/MRR/pull/553) 已合入主线 | 复用当前组件、标签和回归测试，目标终端仍需适用场景验收 |
 | 产品规格草稿 | #530 待确认 | 原草稿基线早于近期合并，不作为已批准需求或当前上线证明 |
 | 医院副本与首轮试点 | #350 现场待验收 | 按现场准备反馈已具备授权副本/影像源，由现场负责人执行；本次未连接核验，仓库没有最终通过证据 |
 | 受控修复与 Manifest | #166/#144 后续规划 | 先确认关联基线；复用 `mr_scan` 文件事实，验证范围、时间和覆盖率 |

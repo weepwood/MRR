@@ -12,9 +12,9 @@ const api = vi.hoisted(() => ({
 vi.mock('@/api/modules/logs', () => api)
 
 const stubs = {
-  'AuditAnalytics': { template: '<div class="audit-analytics" />' },
+  'AuditAnalytics': { props: ['analytics', 'loading'], template: '<div class="audit-analytics" :data-count="analytics.totalAccesses" :data-loading="loading" />' },
   'AppEmpty': true,
-  'AppError': true,
+  'AppError': { props: ['message'], template: '<p class="list-error">{{ message }}</p>' },
   'AppLoading': true,
   'el-alert': { template: '<div><slot name="title"/><slot/></div>' },
   'el-button': { template: '<button><slot/></button>' },
@@ -30,7 +30,7 @@ const stubs = {
   'el-option': { props: ['label'], template: '<span class="audit-option">{{ label }}</span>' },
   'el-pagination': true,
   'el-select': { template: '<div><slot/></div>' },
-  'el-table': true,
+  'el-table': { props: ['data'], template: '<div class="audit-rows">{{ (data || []).map(row => row.id).join(",") }}</div>' },
   'el-table-column': true,
   'el-tag': { template: '<span><slot/></span>' },
 }
@@ -82,5 +82,72 @@ describe('audit images page', () => {
       '下载病案压缩包',
     ]))
     expect(labels).not.toEqual(expect.arrayContaining(['禁用用户', '更新角色权限配置']))
+  })
+
+  it('旧列表和统计晚返回不覆盖刷新后的结果', async () => {
+    let resolveList!: (value: unknown) => void
+    let resolveStats!: (value: unknown) => void
+    api.searchImageAuditLogs.mockReturnValueOnce(new Promise((resolve) => { resolveList = resolve }))
+    api.getImageAuditAnalytics.mockReturnValueOnce(new Promise((resolve) => { resolveStats = resolve }))
+    const wrapper = mount(AuditImagesPage, { global: { stubs } })
+    api.searchImageAuditLogs.mockResolvedValue({ data: { list: [{ id: 2 }], total: 1 } })
+    api.getImageAuditAnalytics.mockResolvedValue({ data: { totalAccesses: 2 } })
+    await wrapper.findAll('button').find(button => button.text() === '刷新')!.trigger('click')
+    await flushPromises()
+    resolveList({ data: { list: [{ id: 1 }], total: 1 } })
+    resolveStats({ data: { totalAccesses: 1 } })
+    await flushPromises()
+    expect(wrapper.find('.audit-rows').text()).toBe('2')
+    expect(wrapper.find('.audit-analytics').attributes('data-count')).toBe('2')
+    wrapper.unmount()
+  })
+
+  it('旧统计finally不能提前结束刷新统计的加载状态', async () => {
+    let resolveStats!: (value: unknown) => void
+    api.getImageAuditAnalytics.mockReturnValueOnce(new Promise((resolve) => { resolveStats = resolve }))
+    const wrapper = mount(AuditImagesPage, { global: { stubs } })
+    api.getImageAuditAnalytics.mockReturnValue(new Promise(() => {}))
+    await wrapper.findAll('button').find(button => button.text() === '刷新')!.trigger('click')
+    resolveStats({ data: { totalAccesses: 1 } })
+    await flushPromises()
+    expect(wrapper.find('.audit-analytics').attributes('data-loading')).toBe('true')
+    wrapper.unmount()
+  })
+
+  it('当前列表异步失败仍显示可重试错误', async () => {
+    api.searchImageAuditLogs.mockRejectedValueOnce(new Error('synthetic current failure'))
+    const wrapper = mount(AuditImagesPage, { global: { stubs } })
+    await flushPromises()
+    expect(wrapper.find('.list-error').text()).toContain('synthetic current failure')
+    wrapper.unmount()
+  })
+
+  it('旧统计失败不清空新统计或回填旧错误', async () => {
+    let rejectOld!: (error: unknown) => void
+    api.getImageAuditAnalytics.mockReturnValueOnce(new Promise((_, reject) => { rejectOld = reject }))
+    const wrapper = mount(AuditImagesPage, { global: { stubs } })
+    api.getImageAuditAnalytics.mockResolvedValue({ data: { totalAccesses: 2 } })
+    await wrapper.findAll('button').find(button => button.text() === '刷新')!.trigger('click')
+    await flushPromises()
+    rejectOld(new Error('synthetic obsolete analytics'))
+    await flushPromises()
+    expect(wrapper.find('.audit-analytics').attributes('data-count')).toBe('2')
+    expect(wrapper.find('[title="分析数据加载失败：synthetic obsolete analytics"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('卸载后统计不回填，也不能重新启动列表和统计查询', async () => {
+    let resolveStats!: (value: unknown) => void
+    api.getImageAuditAnalytics.mockReturnValueOnce(new Promise((resolve) => { resolveStats = resolve }))
+    const wrapper = mount(AuditImagesPage, { global: { stubs } })
+    const state = wrapper.vm as unknown as { analytics: { totalAccesses: number }, analyticsLoading: boolean, loadData: () => Promise<void> }
+    wrapper.unmount()
+    resolveStats({ data: { totalAccesses: 99 } })
+    await flushPromises()
+    await state.loadData()
+    expect(state.analytics.totalAccesses).toBe(0)
+    expect(state.analyticsLoading).toBe(false)
+    expect(api.searchImageAuditLogs).toHaveBeenCalledTimes(1)
+    expect(api.getImageAuditAnalytics).toHaveBeenCalledTimes(1)
   })
 })

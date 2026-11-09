@@ -58,7 +58,7 @@
     "es-toolkit": "^1.53.1",
     "filesize": "^11.0.29",
     "gsap": "^3.14.2",
-    "hotkeys-js": "^4.0.8",
+    "hotkeys-js": "^4.1.1",
     "jszip": "^3.10.2",
     "lucide-vue-next": "^1.0.0",
     "mitt": "^3.0.1",

@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
-import { onMounted, reactive, ref } from 'vue'
 import type { ApiResult, PaginatedResult } from '@/api/types'
+import { getCurrentScope, onMounted, onScopeDispose, reactive, ref } from 'vue'
 
 /**
  * CRUD 列表通用 composable。
@@ -26,7 +26,7 @@ import type { ApiResult, PaginatedResult } from '@/api/types'
  * ```
  */
 interface CrudListOptions<T, Q extends Record<string, any>> {
-  fetchApi: (params: Q & { page: number; size: number }) => Promise<ApiResult<PaginatedResult<T>> | PaginatedResult<T>>
+  fetchApi: (params: Q & { page: number, size: number }, context: { isCurrent: () => boolean }) => Promise<ApiResult<PaginatedResult<T>> | PaginatedResult<T>>
   defaultQuery: Q
   immediate?: boolean
   defaultPageSize?: number
@@ -39,22 +39,39 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
   const pageSize = ref(opts.defaultPageSize ?? 20)
   const loading = ref(false)
   const query = reactive({ ...opts.defaultQuery }) as Q
+  let generation = 0
+  let disposed = false
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      disposed = true
+      generation++
+      loading.value = false
+    })
+  }
 
   async function loadData() {
+    if (disposed) { return }
+    const token = ++generation
+    const isCurrent = () => !disposed && token === generation
     loading.value = true
     try {
       const params = {
         ...query,
         page: pageNum.value,
         size: pageSize.value,
-      } as Q & { page: number; size: number }
-      const res = await opts.fetchApi(params)
+      } as Q & { page: number, size: number }
+      const res = await opts.fetchApi(params, { isCurrent })
+      if (!isCurrent()) { return }
       const pageData = ('data' in res ? res.data : res) as PaginatedResult<T> | undefined
       list.value = pageData?.list ?? []
       total.value = pageData?.total ?? 0
     }
+    catch (error) {
+      if (isCurrent()) { throw error }
+    }
     finally {
-      loading.value = false
+      if (isCurrent()) { loading.value = false }
     }
   }
 

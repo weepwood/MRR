@@ -142,6 +142,8 @@ CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配�
 | [charts](src/components/charts/index.ts) | 复用图表卡与图表适配层；页面不自行创建第二套实例、主题或尺寸轮询 |
 | [AppLoading](src/components/AppLoading/index.vue)、[AppEmpty](src/components/AppEmpty/index.vue)、[AppError](src/components/AppError/index.vue) | 复用加载、无结果和失败/重试状态；页面负责正确选择状态，不能用空态掩盖错误 |
 
+图表卡片复用 `MrrSectionCard` 的表面、标题和操作区；趋势说明完整换行，不能截掉时间范围或图表操作提示。图表区通过 `aria-busy` 表达加载状态。
+
 指标卡通过图标语义色和轻色调背景辅助辨认，默认数值使用主文本色，异常数值可使用既有 `valueTone`。当前实现没有旧规范中的顶部 3px 色条，不应仅根据历史文字重新添加。指标图标当前桌面为 52×52px，600px 以下为 46×46px；保持正方形。无图标卡在桌面和移动端都只保留正文列。页头卡片与指标卡使用 110px 的共享最小高度，长内容按需增高，不使用固定高度裁掉信息。指标网格的 compact/three/four/wide 等变体沿用 [metric-card.css](src/assets/styles/components/metric-card.css)，不单凭指标数量在页面复制布局。
 
 ### 导航与品牌入口

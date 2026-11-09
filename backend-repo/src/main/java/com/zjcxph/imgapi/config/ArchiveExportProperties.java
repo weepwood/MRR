@@ -13,7 +13,7 @@ public class ArchiveExportProperties {
     private String tempDirectory = Path.of(
             System.getProperty("java.io.tmpdir"), "mrr-archive-exports").toString();
     private long maxTotalBytes = 20L * 1024 * 1024 * 1024;
-    private long maxFileBytes = 10L * 1024 * 1024 * 1024;
+    private long maxFileBytes = 128L * 1024 * 1024;
     private Duration retention = Duration.ofHours(24);
     private Duration cleanupInterval = Duration.ofMinutes(15);
     private Duration recoveryInterval = Duration.ofSeconds(1);

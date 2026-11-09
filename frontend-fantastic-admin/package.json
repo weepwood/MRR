@@ -111,7 +111,7 @@
     "plop": "^4.0.5",
     "postcss": "^8.5.32",
     "postcss-nested": "^7.0.2",
-    "sass-embedded": "^1.98.0",
+    "sass-embedded": "^1.107.1",
     "simple-git-hooks": "^2.14.0",
     "stylelint": "^17.15.0",
     "stylelint-config-recess-order": "^7.9.0",

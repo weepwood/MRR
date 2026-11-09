@@ -5,7 +5,7 @@ import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { onMounted, onScopeDispose, ref } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -180,14 +180,14 @@ const {
   resetFilters: resetListFilters,
   handleSizeChange,
 } = useCrudList<LogRecord, AuditQuery>({
-  fetchApi: async (params) => {
+  fetchApi: async (params, { isCurrent }) => {
     error.value = ''
     try {
       const { page, size, ...filters } = params
-      return searchImageAuditLogs({ ...buildAuditParams(filters), page, size })
+      return await searchImageAuditLogs({ ...buildAuditParams(filters), page, size })
     }
     catch (err: any) {
-      error.value = err?.message || '加载失败'
+      if (isCurrent()) error.value = err?.message || '加载失败'
       return { list: [], total: 0, page: 1, size: 20 }
     }
   },
@@ -195,11 +195,23 @@ const {
   immediate: false,
 })
 
+let analyticsGeneration = 0
+let disposed = false
+onScopeDispose(() => {
+  disposed = true
+  analyticsGeneration++
+  analyticsLoading.value = false
+})
+
 async function loadAnalytics() {
+  if (disposed) return
+  const token = ++analyticsGeneration
+  const isCurrent = () => !disposed && token === analyticsGeneration
   analyticsLoading.value = true
   analyticsError.value = ''
   try {
     const res = await getImageAuditAnalytics(buildAuditParams(query))
+    if (!isCurrent()) return
     analytics.value = {
       totalAccesses: res.data?.totalAccesses ?? 0,
       uniqueUsers: res.data?.uniqueUsers ?? 0,
@@ -213,11 +225,12 @@ async function loadAnalytics() {
     }
   }
   catch (err: unknown) {
+    if (!isCurrent()) return
     analytics.value = createEmptyAnalytics()
     analyticsError.value = err instanceof Error ? err.message : '分析数据加载失败'
   }
   finally {
-    analyticsLoading.value = false
+    if (isCurrent()) analyticsLoading.value = false
   }
 }
 

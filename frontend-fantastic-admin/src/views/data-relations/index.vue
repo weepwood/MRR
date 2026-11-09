@@ -277,28 +277,23 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <div class="relation-workbench">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Data Governance
-        </p>
-        <h2>数据关系工作台</h2>
-        <p class="subtitle">
-          以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。第一阶段仅提供只读检查和修复预览。
-        </p>
-      </div>
-      <div class="page-actions">
+  <MrrPageShell class="relation-workbench">
+    <MrrPageHeader
+      title="数据关系工作台"
+      eyebrow="Data Governance"
+      description="以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。第一阶段仅提供只读检查和修复预览。"
+    >
+      <template #actions>
         <el-button :loading="overviewLoading" @click="loadDashboard">
           刷新
         </el-button>
         <el-button type="primary" :loading="checking" @click="runChecks">
           执行检查
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
-    <section class="mrr-metric-grid" aria-label="数据关系健康总览">
+    <section class="mrr-metric-grid mrr-metric-grid--four" aria-label="数据关系健康总览">
       <MrrMetricCard
         label="关系健康度"
         :value="formatPercent(overview?.healthScore)"
@@ -431,6 +426,7 @@ onMounted(loadDashboard)
               </el-select>
               <el-input
                 v-model="searchValue"
+                aria-label="病案查询值"
                 clearable
                 placeholder="输入 archive_id、病案号或上架号"
                 @keyup.enter="searchArchives"
@@ -467,7 +463,7 @@ onMounted(loadDashboard)
             </el-table>
           </el-card>
 
-          <div v-loading="detailLoading">
+          <div v-loading="detailLoading" class="archive-detail-stack">
             <template v-if="relationDetail">
               <el-card shadow="never" class="section-card archive-header-card">
                 <div class="archive-header">
@@ -644,12 +640,12 @@ onMounted(loadDashboard)
                   <span>当前显示最近一次检查保存的有界样本，不直接返回全量异常</span>
                 </div>
                 <div class="issue-filters">
-                  <el-select v-model="issueSeverity" class="severity-select">
+                  <el-select v-model="issueSeverity" aria-label="异常级别筛选" class="severity-select">
                     <el-option label="全部级别" value="ALL" />
                     <el-option label="严重" value="CRITICAL" />
                     <el-option label="警告" value="WARNING" />
                   </el-select>
-                  <el-input v-model="issueKeyword" clearable placeholder="筛选规则、表、BAH 或 SJH" />
+                  <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
                 </div>
               </div>
             </template>
@@ -697,7 +693,7 @@ onMounted(loadDashboard)
       </el-tab-pane>
     </el-tabs>
 
-    <el-drawer v-model="previewVisible" title="只读修复预览" size="520px">
+    <el-drawer v-model="previewVisible" title="只读修复预览" size="min(520px, 100%)">
       <div v-loading="previewLoading" class="preview-content">
         <template v-if="repairPreview">
           <el-alert
@@ -734,18 +730,15 @@ onMounted(loadDashboard)
         </template>
       </div>
     </el-drawer>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
 .relation-workbench {
   display: grid;
-  gap: 20px;
   min-width: 0;
 }
 
-.page-header,
-.page-actions,
 .card-header,
 .issue-header,
 .issue-filters,
@@ -758,7 +751,6 @@ onMounted(loadDashboard)
   align-items: center;
 }
 
-.page-header,
 .card-header,
 .issue-header,
 .archive-header,
@@ -767,35 +759,10 @@ onMounted(loadDashboard)
   justify-content: space-between;
 }
 
-.page-header {
-  align-items: flex-start;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-h2,
 h3,
 h4,
 p {
   margin-top: 0;
-}
-
-h2 {
-  margin-bottom: 8px;
-  font-size: 26px;
-}
-
-.subtitle {
-  max-width: 860px;
-  margin-bottom: 0;
-  color: var(--el-text-color-secondary);
 }
 
 .relation-grid,
@@ -818,14 +785,17 @@ h2 {
 
 .overview-stack,
 .archive-stack,
+.archive-detail-stack,
 .quality-stack,
 .preview-content {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  min-width: 0;
 }
 
 .relation-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .relation-card {
@@ -858,8 +828,8 @@ h2 {
 
 .relation-card dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 12px;
   margin: 16px 0;
 }
 
@@ -876,9 +846,12 @@ h2 {
 .relation-card dd {
   margin: 0;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .section-card {
+  min-width: 0;
   overflow: hidden;
   border-radius: var(--mrr-radius-card);
 }
@@ -924,15 +897,25 @@ h2 {
 }
 
 .issue-header {
+  flex-wrap: wrap;
   align-items: flex-start;
 }
 
+.issue-header > div:first-child {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
 .issue-filters {
-  width: min(520px, 100%);
+  flex: 1 1 360px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .issue-filters .el-input {
-  flex: 1;
+  flex: 1 1 230px;
+  min-width: 0;
 }
 
 .preview-content pre {
@@ -955,17 +938,22 @@ h2 {
 }
 
 @media (max-width: 760px) {
-  .page-header,
   .issue-header,
+  .issue-filters,
   .search-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .page-actions,
   .issue-filters {
     flex-wrap: wrap;
     width: 100%;
+  }
+
+  .issue-header > div:first-child,
+  .issue-filters,
+  .issue-filters .el-input {
+    flex: 0 1 auto;
   }
 
   .relation-grid,

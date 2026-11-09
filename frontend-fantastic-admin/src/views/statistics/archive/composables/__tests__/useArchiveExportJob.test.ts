@@ -1,6 +1,7 @@
-import { effectScope } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, ref } from 'vue'
 import { useArchiveExportJob } from '../useArchiveExportJob'
+import { useArchiveSelectedZip } from '../useArchiveSelectedZip'
 
 const api = vi.hoisted(() => ({
   createArchiveExportJob: vi.fn(),
@@ -23,6 +24,7 @@ const exportDownload = vi.hoisted(() => ({
 
 vi.mock('@/api/modules/archive-export', () => api)
 vi.mock('element-plus', () => ({ ElMessage: message }))
+vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
 vi.mock('../../utils/resumable-export-download', () => exportDownload)
 
 function job(id: string, status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'CANCELLED') {
@@ -49,6 +51,23 @@ function deferred<T>() {
 }
 
 describe('useArchiveExportJob', () => {
+  it('选择变化后取消迟到创建的选中ZIP，不恢复旧任务或启动下载', async () => {
+    const pending = deferred<{ data: ReturnType<typeof job> }>()
+    api.createArchiveExportJob.mockReturnValue(pending.promise)
+    api.cancelArchiveExportJob.mockResolvedValue({ data: job('old-selection', 'CANCELLED') })
+    const selection = ref([{ id: 1, bah: '123' }])
+    const scope = effectScope()
+    const task = scope.run(() => useArchiveSelectedZip(selection))!
+    const creating = task.start()
+    selection.value = [{ id: 2, bah: '123' }]
+    pending.resolve({ data: job('old-selection', 'PENDING') })
+    await creating
+    expect(task.job.value).toBeNull()
+    expect(api.cancelArchiveExportJob).toHaveBeenCalledWith('old-selection')
+    expect(api.getArchiveExportJob).not.toHaveBeenCalled()
+    expect(exportDownload.downloadExportJobToBrowser).not.toHaveBeenCalled()
+    scope.stop()
+  })
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
@@ -67,7 +86,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
@@ -91,7 +110,7 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await composable.cancel()
@@ -115,12 +134,30 @@ describe('useArchiveExportJob', () => {
     const scope = effectScope()
     const composable = scope.run(() => useArchiveExportJob('PDF'))
     expect(composable).toBeDefined()
-    if (!composable) return
+    if (!composable) { return }
 
     await composable.start({ format: 'PDF', ids: [1, 2] })
     await vi.advanceTimersByTimeAsync(500)
 
-    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob)
+    expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledWith(completedJob, expect.any(Function))
+    const isCurrent = exportDownload.downloadExportJobToBrowser.mock.calls[0][1]
+    expect(isCurrent()).toBe(true)
+    scope.stop()
+    expect(isCurrent()).toBe(false)
+  })
+
+  it('下载预算拒绝时保留成功任务和重新下载入口，不报告导出生成失败', async () => {
+    const completedJob = job('job-budget', 'SUCCESS')
+    api.createArchiveExportJob.mockResolvedValue({ data: job('job-budget', 'PROCESSING') })
+    api.getArchiveExportJob.mockResolvedValue({ data: completedJob })
+    exportDownload.downloadExportJobToBrowser.mockRejectedValue(new Error('请分批导出'))
+    const scope = effectScope()
+    const composable = scope.run(() => useArchiveExportJob('PDF'))!
+    await composable.start({ format: 'PDF', ids: [1, 2] })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(composable.job.value).toEqual(completedJob)
+    expect(message.error).toHaveBeenCalledWith(expect.stringContaining('已生成'))
+    expect(message.success).not.toHaveBeenCalled()
     scope.stop()
   })
 })

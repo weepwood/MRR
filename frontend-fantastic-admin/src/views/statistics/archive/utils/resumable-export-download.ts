@@ -1,5 +1,7 @@
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { downloadArchiveExportJob } from '@/api/modules/archive-export'
+import { ArchiveExportBudgetError, requireArchiveExportSize } from '@/utils/archive-export-budget'
+import { isRequestCanceled } from '@/utils/request-retry'
 
 const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
 const PREFIX_VERIFY_BYTES = 64 * 1024
@@ -8,6 +10,7 @@ interface FileSystemWritableFileStreamLike {
   write: (data: Blob | { type: 'write', position: number, data: Blob }) => Promise<void>
   truncate: (size: number) => Promise<void>
   close: () => Promise<void>
+  abort?: () => Promise<void>
 }
 
 interface FileSystemFileHandleLike {
@@ -56,7 +59,14 @@ function readBlobAsArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
   })
 }
 
-async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boolean> {
+function assertCurrent(isCurrent: () => boolean) {
+  if (!isCurrent()) {
+    throw new DOMException('导出下载已失效', 'AbortError')
+  }
+}
+
+async function hasMatchingPrefix(jobId: string, existingFile: File, isCurrent: () => boolean): Promise<boolean> {
+  assertCurrent(isCurrent)
   if (existingFile.size <= 0) {
     return true
   }
@@ -65,11 +75,13 @@ async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boo
     readBlobAsArrayBuffer(existingFile.slice(0, verifyLength)),
     downloadArchiveExportJob(jobId, `bytes=0-${verifyLength - 1}`),
   ])
+  assertCurrent(isCurrent)
   if (remoteBlob.size !== verifyLength) {
     return false
   }
   const local = new Uint8Array(localBuffer)
   const remote = new Uint8Array(await readBlobAsArrayBuffer(remoteBlob))
+  assertCurrent(isCurrent)
   if (local.length !== remote.length) {
     return false
   }
@@ -81,13 +93,15 @@ async function hasMatchingPrefix(jobId: string, existingFile: File): Promise<boo
   return true
 }
 
-async function downloadAsBlob(job: ArchiveExportJob, fileName: string): Promise<'blob'> {
+async function downloadAsBlob(job: ArchiveExportJob, fileName: string, isCurrent: () => boolean): Promise<'blob'> {
+  assertCurrent(isCurrent)
+  const expectedBytes = requireArchiveExportSize(job.outputBytes)
   const blob = await downloadArchiveExportJob(job.id)
+  assertCurrent(isCurrent)
   if (!(blob instanceof Blob) || blob.size <= 0) {
     throw new Error('服务器返回的导出文件为空')
   }
-  const expectedBytes = Number(job.outputBytes || 0)
-  if (expectedBytes > 0 && blob.size !== expectedBytes) {
+  if (blob.size !== expectedBytes) {
     throw new Error(`导出文件长度不一致：期望 ${expectedBytes}，实际 ${blob.size}`)
   }
   saveBlob(blob, fileName)
@@ -95,21 +109,58 @@ async function downloadAsBlob(job: ArchiveExportJob, fileName: string): Promise<
 }
 
 /** 后台任务完成后直接交给浏览器下载，避免额外弹出文件保存对话框。 */
-export function downloadExportJobToBrowser(job: ArchiveExportJob): Promise<'blob'> {
-  return downloadAsBlob(job, uniqueFileName(job))
+export function downloadExportJobToBrowser(job: ArchiveExportJob, isCurrent: () => boolean = () => true): Promise<'blob'> {
+  return downloadAsBlob(job, uniqueFileName(job), isCurrent)
 }
 
-export async function downloadExportJobWithResume(job: ArchiveExportJob): Promise<'resumable' | 'blob'> {
+export async function downloadExportJobWithResume(job: ArchiveExportJob, isCurrent: () => boolean = () => true): Promise<'resumable' | 'blob'> {
+  assertCurrent(isCurrent)
   const fileName = uniqueFileName(job)
-  const totalBytes = Number(job.outputBytes || 0)
+  const totalBytes = requireArchiveExportSize(job.outputBytes)
   const picker = (window as FilePickerWindow).showSaveFilePicker
-  if (!picker || totalBytes <= 0) {
-    return downloadAsBlob(job, fileName)
+  if (!picker) {
+    return downloadAsBlob(job, fileName, isCurrent)
   }
 
   let writable: FileSystemWritableFileStreamLike | undefined
   let originalSize = 0
-  let completed = false
+  let closeStarted = false
+
+  async function restoreWritable(): Promise<boolean> {
+    if (!writable) { return true }
+    const stream = writable
+    writable = undefined
+    // close 已开始提交后，abort 只能尽力释放，不能证明提交失败已恢复。
+    if (closeStarted) {
+      try { await stream.abort?.() }
+      catch { /* 文件提交结果不明，禁止普通下载回退掩盖失败。 */ }
+      return false
+    }
+    if (!isCurrent() && stream.abort) {
+      try {
+        await stream.abort()
+        return true
+      }
+      catch { /* 暂存放弃失败时，继续尝试恢复原长度。 */ }
+    }
+    let restoreCloseStarted = false
+    try {
+      await stream.truncate(originalSize)
+      restoreCloseStarted = true
+      await stream.close()
+      return true
+    }
+    catch {
+      try {
+        if (stream.abort) {
+          await stream.abort()
+          return !restoreCloseStarted
+        }
+      }
+      catch { /* 交由调用方报告恢复失败；禁止以普通下载成功掩盖。 */ }
+      return false
+    }
+  }
   try {
     const mimeType = job.format === 'PDF' ? 'application/pdf' : 'application/zip'
     const extension = job.format === 'PDF' ? '.pdf' : '.zip'
@@ -120,58 +171,55 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob): Promis
         accept: { [mimeType]: [extension] },
       }],
     })
+    assertCurrent(isCurrent)
     const existingFile = await handle.getFile()
+    assertCurrent(isCurrent)
     originalSize = existingFile.size
 
     // 文件不是当前任务的有效前缀时，不修改用户选择的原文件，直接走普通下载。
-    if (originalSize > totalBytes || !(await hasMatchingPrefix(job.id, existingFile))) {
-      return downloadAsBlob(job, fileName)
+    if (originalSize > totalBytes || !(await hasMatchingPrefix(job.id, existingFile, isCurrent))) {
+      return downloadAsBlob(job, fileName, isCurrent)
     }
 
+    assertCurrent(isCurrent)
     let offset = originalSize
     writable = await handle.createWritable({ keepExistingData: true })
+    assertCurrent(isCurrent)
     while (offset < totalBytes) {
+      assertCurrent(isCurrent)
       const end = Math.min(totalBytes - 1, offset + DOWNLOAD_CHUNK_BYTES - 1)
       const expectedLength = end - offset + 1
       const chunk = await downloadArchiveExportJob(job.id, `bytes=${offset}-${end}`)
+      assertCurrent(isCurrent)
       if (!(chunk instanceof Blob) || chunk.size !== expectedLength) {
         throw new Error(`断点下载区间长度不一致：期望 ${expectedLength}，实际 ${chunk instanceof Blob ? chunk.size : 0}`)
       }
       await writable.write({ type: 'write', position: offset, data: chunk })
+      assertCurrent(isCurrent)
       offset += chunk.size
     }
     await writable.truncate(totalBytes)
+    assertCurrent(isCurrent)
+    closeStarted = true
     await writable.close()
     writable = undefined
-    completed = true
+    assertCurrent(isCurrent)
     return 'resumable'
   }
   catch (error: unknown) {
-    if ((error as { name?: string })?.name === 'AbortError') {
+    const restored = await restoreWritable()
+    // 普通网络错误也可能在操作失效后返回；恢复等待期间同样可能切页。
+    assertCurrent(isCurrent)
+    if (error instanceof ArchiveExportBudgetError || (error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
+      || (error as { response?: { status?: number } })?.response?.status !== undefined) {
       throw error
     }
-    if (writable) {
-      try {
-        // 只会在已验证的远端前缀后追加，失败时恢复到原始长度即可避免残缺文件。
-        await writable.truncate(originalSize)
-        await writable.close()
-      }
-      catch {
-        // 恢复失败不覆盖后续普通下载结果，但调用方仍会得到完整文件校验。
-      }
-      writable = undefined
+    if (!restored) {
+      throw new Error('断点下载中断且原文件恢复失败，请检查所选文件后重试')
     }
-    return downloadAsBlob(job, fileName)
+    return downloadAsBlob(job, fileName, isCurrent)
   }
   finally {
-    if (writable && !completed) {
-      try {
-        await writable.truncate(originalSize)
-        await writable.close()
-      }
-      catch {
-        // 页面退出或浏览器写入异常时尽力恢复原文件长度。
-      }
-    }
+    await restoreWritable()
   }
 }

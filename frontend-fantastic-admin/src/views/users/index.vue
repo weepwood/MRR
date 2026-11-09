@@ -646,13 +646,22 @@ onMounted(loadData)
 
       <template #filters>
         <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
-          <el-input v-model="filters.keyword" class="users-filter__keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
-          <el-select v-model="filters.roleCode" class="users-filter__select" clearable placeholder="全部角色">
-            <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
-          </el-select>
-          <el-select v-model="filters.status" class="users-filter__select" clearable placeholder="全部状态">
-            <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
-          </el-select>
+          <div class="users-filter__field users-filter__keyword">
+            <label for="users-filter-keyword">关键词</label>
+            <el-input id="users-filter-keyword" v-model="filters.keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
+          </div>
+          <div class="users-filter__field users-filter__select">
+            <label for="users-filter-role">角色</label>
+            <el-select id="users-filter-role" v-model="filters.roleCode" clearable placeholder="全部角色">
+              <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
+            </el-select>
+          </div>
+          <div class="users-filter__field users-filter__select">
+            <label for="users-filter-status">账号状态</label>
+            <el-select id="users-filter-status" v-model="filters.status" clearable placeholder="全部状态">
+              <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
+            </el-select>
+          </div>
           <template #actions>
             <el-button type="primary" :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
             <el-button :aria-busy="dataLoadingAction === 'reset'" :aria-disabled="dataLoadingAction === 'reset'" @click="resetFilters"><FaIcon :name="dataLoadingAction === 'reset' ? 'i-lucide:loader-circle' : 'i-lucide:rotate-ccw'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'reset' }" />重置</el-button>
@@ -774,8 +783,11 @@ onMounted(loadData)
 
 <style scoped>
 /* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
+.users-filter__field { display: grid; gap: 6px; min-width: 0; }
+.users-filter__field label { font-size: 12px; line-height: 1.5; color: var(--mrr-muted-foreground); }
 .users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
 .users-filter__select { flex: 0 1 190px; width: 190px; }
+.users-filter-bar :deep(.mrr-filter-bar__actions) { align-self: flex-end; }
 .users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-4); padding-left: var(--mrr-space-4); }
 .users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { width: auto; margin: 0 var(--mrr-space-4); }
 .users-filter-bar :deep(.el-input__wrapper.is-focus), .users-filter-bar :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--mrr-ring) inset; }

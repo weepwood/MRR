@@ -32,8 +32,9 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     // Chrome 86 已支持原生 ESM，不需要生成 IE/旧 Edge 的 legacy chunk。
     // 生产构建仍需按实际用法补齐较新的 ECMAScript/Web API，并由同一组
     // modernTargets 负责 JavaScript 语法降级，避免构建目标与 polyfill 漂移。
-    // 这里固定开启且不提供环境变量开关：scripts/verify-chrome86-build.mjs
-    // 会校验产物 polyfill 含 findLast / hasOwn / structuredClone / toReversed。
+    // 这里固定开启：.env.production 中遗留的 VITE_BUILD_MODERN_POLYFILLS 声明
+    // 没有读取点、不生效；scripts/verify-chrome86-build.mjs 会校验产物 polyfill
+    // 含 findLast / hasOwn / structuredClone / toReversed。
     isBuild && vueLegacy({
       renderLegacyChunks: false,
       modernTargets: browserPolyfillTargets,

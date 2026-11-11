@@ -832,7 +832,7 @@ import { Search, Edit, Delete } from 'lucide-vue-next'
 | `VITE_BUILD_COMPRESS` | prod | gzip,brotli | 构建压缩 |
 | `VITE_BUILD_SOURCEMAP` | test/prod | false | Source Map |
 
-> 生产构建的 modern polyfill 由 `vite/plugins.ts` 固定开启（`modernPolyfills: true`），不提供环境变量开关；`scripts/verify-chrome86-build.mjs` 会校验产物中的 polyfill 内容，关闭会破坏 Chrome 86 基线。
+> 生产构建的 modern polyfill 由 `vite/plugins.ts` 固定开启（`modernPolyfills: true`），`scripts/verify-chrome86-build.mjs` 会校验产物中的 polyfill 内容。`.env.production` 中遗留的 `VITE_BUILD_MODERN_POLYFILLS` 声明没有任何代码读取点，**不生效也请勿依赖**；关闭 polyfill 会破坏 Chrome 86 基线。
 
 ---
 

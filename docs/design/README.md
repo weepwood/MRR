@@ -10,6 +10,7 @@ UI 与交互专项的事实、首批统一范围及后续检查顺序见 [UI 一
 
 | 要解决的问题 | 主要文档 | 维护边界 |
 | --- | --- | --- |
+| 从仓库根目录开始设计任务 | [DESIGN.md](../../DESIGN.md) | 选择阅读入口，不重复定义视觉数值或产品规格 |
 | 系统做什么、当前有什么能力 | [项目 README](../../README.md) | 主线能力摘要，不将提案写成现状 |
 | 为什么这样划分系统和依赖 | [架构边界](../../ARCHITECTURE.md)、[ADR 索引](../adr/README.md) | 正式模块化单体、权限/隐私/存储和迁移约束 |
 | 具体怎么开发和验证 | [AGENTS](../../AGENTS.md)、[AI 开发治理](../engineering/ai-assisted-development-governance.md)、[前端工程](../../frontend-fantastic-admin/ENGINEERING.md)、[后端工程](../../backend-repo/ENGINEERING_GUIDE.md) | 风险、任务包、测试、独立审查和交付 |

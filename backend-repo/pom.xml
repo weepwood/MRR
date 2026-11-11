@@ -32,7 +32,7 @@
         <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.8.0</itextpdf.version>
         <commons-codec.version>1.22.0</commons-codec.version>
-        <aws-sdk.version>2.57.7</aws-sdk.version>
+        <aws-sdk.version>2.57.11</aws-sdk.version>
 
         <!-- Plugin versions not managed by the Spring Boot parent -->
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>

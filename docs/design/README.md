@@ -2,12 +2,15 @@
 
 本文连接产品、架构、数据、界面和交付设计，帮助开发者确定应阅读和更新哪一份文档，不再建立一套平行规范。
 
+UI 与交互专项的事实、首批统一范围及后续检查顺序见 [UI 一致性评估](ui-consistency-review.md)；视觉规则仍以对应的前端设计规范为准。
+
 核对日期：2026-11-09；产品版本 `0.8.0`；事实基线 `main` / `322552356bc2f39e2c1984174a127f83ed9c49ad`。关联 [Issue #554](https://github.com/weepwood/MRR/issues/554)，风险 P3，负责人：文档实施代理；分支 `codex/design-docs-consolidation`；worktree `D:/Project/CodexWorkTress/design-docs-consolidation/MRR`。
 
 ## 1. 按任务选择入口
 
 | 要解决的问题 | 主要文档 | 维护边界 |
 | --- | --- | --- |
+| 从仓库根目录开始设计任务 | [DESIGN.md](../../DESIGN.md) | 选择阅读入口，不重复定义视觉数值或产品规格 |
 | 系统做什么、当前有什么能力 | [项目 README](../../README.md) | 主线能力摘要，不将提案写成现状 |
 | 为什么这样划分系统和依赖 | [架构边界](../../ARCHITECTURE.md)、[ADR 索引](../adr/README.md) | 正式模块化单体、权限/隐私/存储和迁移约束 |
 | 具体怎么开发和验证 | [AGENTS](../../AGENTS.md)、[AI 开发治理](../engineering/ai-assisted-development-governance.md)、[前端工程](../../frontend-fantastic-admin/ENGINEERING.md)、[后端工程](../../backend-repo/ENGINEERING_GUIDE.md) | 风险、任务包、测试、独立审查和交付 |

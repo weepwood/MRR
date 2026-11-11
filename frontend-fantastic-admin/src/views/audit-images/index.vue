@@ -3,6 +3,7 @@
 import type { ImageAuditFilterParams } from '@/api/modules/logs'
 import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
 import { onMounted, onScopeDispose, ref } from 'vue'
@@ -10,7 +11,11 @@ import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAu
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
@@ -20,6 +25,7 @@ import AuditAnalytics from './components/AuditAnalytics.vue'
 defineOptions({ name: 'ImageAuditPage' })
 
 const detailVisible = ref(false)
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
 const analyticsError = ref('')
@@ -316,40 +322,32 @@ onMounted(loadData)
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">Medical Record Audit</p>
-        <h2>病历访问审计可视化</h2>
-        <p class="subtitle">按用户和病历双向追溯访问关系，并导出完整审计证据。</p>
-      </div>
-      <div class="header-actions">
+  <MrrPageShell>
+    <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
+      <template #actions>
         <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
         <el-button :loading="loading || analyticsLoading" @click="loadData"><el-icon><Refresh /></el-icon>刷新</el-button>
-      </div>
-    </div>
+      </template>
+    </MrrPageHeader>
 
-    <el-card shadow="never" class="filter-card">
-      <el-form inline @submit.prevent>
-        <el-form-item label="关键字"><el-input v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="用户"><el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="客户端 IP"><el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="访问类型"><el-select v-model="query.auditAction" clearable placeholder="全部" class="audit-action-select"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="状态码"><el-select v-model="query.responseStatus" clearable placeholder="全部" class="audit-status-select"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="访问时间"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
-        <el-form-item><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" type="primary" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></el-form-item>
-      </el-form>
-    </el-card>
+    <el-form label-position="top" @submit.prevent>
+      <MrrFilterBar layout="grid">
+        <el-form-item label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="用户" for="audit-username"><el-input id="audit-username" v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" clearable placeholder="全部"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" clearable placeholder="全部"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="访问时间" class="mrr-filter-bar__range"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+        <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" type="primary" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
+      </MrrFilterBar>
+    </el-form>
 
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
     <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
-    <el-card shadow="never" class="detail-card">
-      <template #header>
-        <div class="section-header">
-          <div><strong>最近访问明细</strong><span>病案号、上架号和身份证号独立展示</span></div>
-          <div class="section-actions"><el-tag type="info" effect="plain">共 {{ total.toLocaleString('zh-CN') }} 条</el-tag><el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button></div>
-        </div>
+    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total">
+      <template #actions>
+        <el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button>
       </template>
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
@@ -374,11 +372,11 @@ onMounted(loadData)
           </template>
         </el-table-column>
       </el-table>
-      <div class="pager"><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="loadListData" /></div>
-    </el-card>
+      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="loadListData" /></template>
+    </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)">
-      <el-descriptions v-if="currentLog" :column="2" border>
+    <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">
+      <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问类型">{{ currentLog.auditDescription || actionLabel(currentLog.auditAction) }}</el-descriptions-item>
@@ -394,30 +392,15 @@ onMounted(loadData)
         <el-descriptions-item label="查询参数" :span="2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-/* stylelint-disable @stylistic/selector-list-comma-newline-after, @stylistic/number-leading-zero, at-rule-empty-line-before, media-feature-range-notation */
-.page-shell { display: grid; gap: 18px; }
-.page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.header-actions, .section-actions { display: flex; gap: 10px; align-items: center; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .12em; }
-h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; color: var(--text-secondary); }
-.filter-card :deep(.el-card__body) { padding-bottom: 2px; }
-.audit-action-select { width: 190px; }
-.audit-status-select { width: 120px; }
-.section-header { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
-.section-header > div:first-child { display: grid; gap: 4px; }
-.section-header strong { font-size: 16px; }
-.section-header span { font-size: 12px; color: var(--text-secondary); }
-.pager { display: flex; justify-content: center; margin-top: 16px; }
-@media (max-width: 760px) {
-  .page-header, .section-header { flex-direction: column; align-items: stretch; }
-  .header-actions, .section-actions { flex-wrap: wrap; }
-  :deep(.el-form--inline .el-form-item) { display: flex; width: 100%; margin-right: 0; }
-  :deep(.el-form--inline .el-form-item__content) { flex: 1; min-width: 0; }
-  :deep(.el-form--inline .el-input), :deep(.el-form--inline .el-select), :deep(.el-form--inline .el-date-editor) { width: 100% !important; }
+:global(.audit-detail .el-descriptions__table) {
+  table-layout: fixed;
+}
+
+:global(.audit-detail .el-descriptions__cell) {
+  overflow-wrap: anywhere;
 }
 </style>

@@ -2,12 +2,12 @@
 
 ## 1. 审计目标
 
-MRR 使用两层日志共同回答以下问题：
+MRR 使用入口与应用访问日志共同追溯以下问题，运行日志及错误聚合另见 [日志功能分析](../../docs/engineering/runtime-log-function-review.md)：
 
 - 谁在什么时间访问了系统；
 - 请求来自哪个客户端 IP 和页面来源；
 - 实际访问了哪个 URI，对应哪个 Spring MVC 接口模板；
-- 使用了哪些病案号、上架号、身份证查询条件等业务参数；
+- 使用了哪些获准留存的业务定位摘要和普通参数；敏感原文不进入日志副本；
 - 请求是否成功、耗时多久、是否发生异常；
 - 后端未启动、维护模式或代理超时时，入口请求是否真实发生过。
 
@@ -61,13 +61,14 @@ app.access_log
 - `error_message`；
 - `audit_action`、`audit_target`、`audit_description`。
 
-密码、Token、Secret、签名、票据和密钥等凭据不会明文保存，而是记录为：
+当前实现以 `AuditPayloadSanitizer` 和读取时的隐私过滤为准：密码、Token、Secret、签名、票据、身份及未知字段默认隐藏，不提供凭据摘要比对；业务编号使用独立审计密钥的HMAC摘要：
 
 ```text
-sha256:<32位摘要>
+[REDACTED]
+hmac:v1:<业务编号摘要>
 ```
 
-摘要可用于判断多条日志是否使用了同一凭据，但不能还原原值。
+只有明确允许的普通参数可以明文留存。缺少独立密钥时编号仅隐藏，不能退回普通哈希；密钥轮换及检索兼容按 [ADR-0002](../../docs/adr/0002-recoverable-private-runtime-diagnostics.md) 和排障手册处理。
 
 ## 3. 常用追溯方式
 
@@ -94,18 +95,9 @@ ORDER BY access_time DESC;
 
 ### 3.3 查询某个病案号或业务参数
 
-日志管理页面的“关键字”支持搜索 Query String、Request Body、审计目标、真实 URI、接口模板和 Request ID。
+日志管理页面的“关键字”可搜索已脱敏的 Query String、Request Body、审计目标、真实 URI、接口模板和 Request ID；匹配1至18位纯数字的查询会按当前审计密钥补充HMAC检索条件。密钥缺失、轮换或早期未留存摘要的数据可能无法通过编号匹配。
 
-也可以直接查询：
-
-```sql
-SELECT *
-FROM app.access_log
-WHERE query_string LIKE '%00123456%'
-   OR request_body LIKE '%00123456%'
-   OR audit_target = '00123456'
-ORDER BY access_time DESC;
-```
+不要使用患者原文 `LIKE` 查询作为日志必须保存敏感原文的依据。优先使用可信 Request ID 关联一次请求；已隐藏的身份证或其他字段不能从日志恢复。
 
 ### 3.4 查询异常接口访问
 
@@ -161,7 +153,7 @@ GROUP BY endpoint_template, method;
 
 ## 6. 后续增强方向
 
-当前方案解决“完整记录和快速查询”。如果需要更强的防篡改能力，可以继续增加：
+当前应用访问日志仍使用内存缓冲和失败重试，数据库持续故障、强制退出时可能丢失，不能承诺“完整记录”。可靠性工作沿用 [#102](https://github.com/weepwood/MRR/issues/102)；运行日志的文件断点机制不等于访问日志已经具备同样的耐久性。完成容量与恢复要求后，防篡改能力可以另行评估：
 
 - 审计表只允许专用数据库账号 `INSERT`，禁止应用账号 `UPDATE/DELETE`；
 - 日志哈希链或每日 Merkle Root；

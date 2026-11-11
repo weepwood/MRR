@@ -2,6 +2,7 @@
 import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -9,7 +10,11 @@ import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
@@ -19,6 +24,7 @@ import { formatDateTime } from '@/utils/display-format'
 defineOptions({ name: 'LogsPage' })
 
 const detailVisible = ref(false)
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
 
@@ -132,72 +138,74 @@ function statusTagType(status: string | number) {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">Operation Logs</p>
-        <h2>日志管理</h2>
-        <p class="subtitle">按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。</p>
-      </div>
-      <el-button :loading="loading" @click="loadData">
-        <el-icon><Refresh /></el-icon>
-        刷新
-      </el-button>
-    </div>
+  <MrrPageShell>
+    <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
+      <template #actions>
+        <el-button :loading="loading" @click="loadData">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
-    <el-card shadow="never">
-      <el-form inline @submit.prevent>
-        <el-form-item label="关键字">
-          <el-input
-            v-model="query.keyword"
-            clearable
-            placeholder="Request ID / URI / 参数 / 审计目标"
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="用户">
-          <el-input v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="客户端 IP">
-          <el-input v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="请求 URI">
-          <el-input v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="方法">
-          <el-select v-model="query.method" clearable placeholder="全部" class="logs-method-select">
-            <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态码">
-          <el-select v-model="query.responseStatus" clearable placeholder="全部" class="logs-status-select">
-            <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="访问时间">
-          <el-date-picker
-            v-model="query.timeRange"
-            type="datetimerange"
-            :popper-options="rangePickerPopperOptions"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            format="YYYY-MM-DD HH:mm:ss"
-          />
-        </el-form-item>
-        <el-form-item>
-          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
+    <MrrDataTablePanel title="日志记录" :count="total">
+      <template #filters>
+        <el-form label-position="top" @submit.prevent>
+          <MrrFilterBar embedded layout="grid">
+            <el-form-item label="关键字" for="logs-keyword">
+              <el-input
+                id="logs-keyword"
+                v-model="query.keyword"
+                clearable
+                placeholder="Request ID / URI / 参数 / 审计目标"
+                @keyup.enter="handleSearch"
+              />
+            </el-form-item>
+            <el-form-item label="用户" for="logs-username">
+              <el-input id="logs-username" v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="客户端 IP" for="logs-client-ip">
+              <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="请求 URI" for="logs-request-uri">
+              <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
+            </el-form-item>
+            <el-form-item label="方法" for="logs-method">
+              <el-select id="logs-method" v-model="query.method" clearable placeholder="全部">
+                <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="状态码" for="logs-status">
+              <el-select id="logs-status" v-model="query.responseStatus" clearable placeholder="全部">
+                <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="访问时间" class="mrr-filter-bar__range">
+              <el-date-picker
+                v-model="query.timeRange"
+                type="datetimerange"
+                :popper-options="rangePickerPopperOptions"
+                range-separator="至"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD HH:mm:ss"
+              />
+            </el-form-item>
+            <template #actions>
+              <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
+                查询
+              </MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
+            </template>
+          </MrrFilterBar>
+        </el-form>
+      </template>
 
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
-      <el-table v-else :data="list" stripe class="logs-table">
+      <el-table v-else :data="list" stripe>
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
@@ -238,7 +246,7 @@ function statusTagType(status: string | number) {
         </el-table-column>
       </el-table>
 
-      <div class="pager">
+      <template #pagination>
         <el-pagination
           v-model:current-page="pageNum"
           v-model:page-size="pageSize"
@@ -248,11 +256,11 @@ function statusTagType(status: string | number) {
           @size-change="handleSearch"
           @current-change="loadData"
         />
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="接口访问审计详情" width="900px">
-      <el-descriptions v-if="currentLog" :column="2" border>
+    <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
+      <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
@@ -289,54 +297,16 @@ function statusTagType(status: string | number) {
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 20px;
+:global(.log-detail .el-descriptions__table) {
+  table-layout: fixed;
 }
 
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
-.pager {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.logs-method-select,
-.logs-status-select {
-  width: 140px;
-}
-
-.logs-table {
-  margin-top: 12px;
+:global(.log-detail .el-descriptions__cell) {
+  overflow-wrap: anywhere;
 }
 
 .detail-value,

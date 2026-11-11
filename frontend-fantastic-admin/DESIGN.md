@@ -153,7 +153,7 @@ CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配�
 | [MrrMetricCard](src/components/MrrMetricCard/index.vue) | 核心指标统一使用 label/value/note/icon/tone/valueTone/compactValue 与 extra 插槽；语义色和数值色取自[公共类型](src/components/MrrMetricCard/types.ts)，不复制同类摘要卡 CSS |
 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；计数不附加装饰状态点 |
 | [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | 组合 filters/toolbar/content/pagination，统一数量和分页区域 |
-| [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 组合筛选条件与 actions；embedded 变体用于已有数据面板，不再套第二层卡片 |
+| [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 组合筛选条件与 actions；embedded 变体用于已有数据面板，不再套第二层卡片；多条件表单可选 `layout="grid"`，默认 inline 保持既有行为 |
 | [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内/更多操作、禁用及可访问名称；`placement` 当前表示排序优先级，空间足够时低优先级操作也可直显，不能当作强制隐藏授权规则 |
 | [MrrStatusTag](src/components/MrrStatusTag/index.vue) | 复用状态文案和语义色，避免只有颜色没有含义 |
 | [charts](src/components/charts/index.ts) | 复用图表卡与图表适配层；页面不自行创建第二套实例、主题或尺寸轮询 |

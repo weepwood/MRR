@@ -5,17 +5,19 @@ const props = withDefaults(defineProps<{
   compact?: boolean
   embedded?: boolean
   focusRing?: boolean
+  layout?: 'inline' | 'grid'
 }>(), {
   compact: false,
   embedded: false,
   focusRing: true,
+  layout: 'inline',
 })
 
 const slots = useSlots()
 </script>
 
 <template>
-  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing }">
+  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--grid': props.layout === 'grid' }">
     <div class="mrr-filter-bar__fields">
       <slot />
     </div>
@@ -85,6 +87,53 @@ const slots = useSlots()
   margin-left: 0;
 }
 
+.mrr-filter-bar--grid {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mrr-filter-bar--grid .mrr-filter-bar__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mrr-space-3) var(--mrr-space-4);
+  align-items: end;
+}
+
+.mrr-filter-bar--grid :deep(.el-form-item) {
+  min-width: 0;
+  margin: 0;
+}
+
+.mrr-filter-bar--grid :deep(.el-form-item__label) {
+  margin-bottom: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-filter-bar--grid :deep(.el-input),
+.mrr-filter-bar--grid :deep(.el-select),
+.mrr-filter-bar--grid :deep(.el-date-editor) {
+  width: 100%;
+  min-width: 0;
+}
+
+.mrr-filter-bar--grid :deep(.mrr-filter-bar__range) {
+  grid-column: span 2;
+}
+
+.mrr-filter-bar--grid .mrr-filter-bar__actions {
+  justify-content: flex-end;
+  padding-left: 0;
+  border-left: 0;
+}
+
+@media (max-width: 1100px) {
+  .mrr-filter-bar--grid .mrr-filter-bar__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .mrr-filter-bar :deep(.el-input__wrapper),
 .mrr-filter-bar :deep(.el-select__wrapper) {
   min-height: var(--mrr-input-height);
@@ -110,6 +159,14 @@ const slots = useSlots()
 }
 
 @media (max-width: 760px) {
+  .mrr-filter-bar--grid .mrr-filter-bar__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mrr-filter-bar--grid :deep(.mrr-filter-bar__range) {
+    grid-column: auto;
+  }
+
   .mrr-filter-bar {
     flex-direction: column;
     align-items: stretch;

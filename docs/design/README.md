@@ -2,6 +2,8 @@
 
 本文连接产品、架构、数据、界面和交付设计，帮助开发者确定应阅读和更新哪一份文档，不再建立一套平行规范。
 
+UI 与交互专项的事实、首批统一范围及后续检查顺序见 [UI 一致性评估](ui-consistency-review.md)；视觉规则仍以对应的前端设计规范为准。
+
 核对日期：2026-11-09；产品版本 `0.8.0`；事实基线 `main` / `322552356bc2f39e2c1984174a127f83ed9c49ad`。关联 [Issue #554](https://github.com/weepwood/MRR/issues/554)，风险 P3，负责人：文档实施代理；分支 `codex/design-docs-consolidation`；worktree `D:/Project/CodexWorkTress/design-docs-consolidation/MRR`。
 
 ## 1. 按任务选择入口

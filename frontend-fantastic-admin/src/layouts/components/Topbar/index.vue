@@ -61,7 +61,6 @@ watch(scrollTop, (val, oldVal) => {
   overflow: hidden;
   background: var(--mrr-topbar-bg);
   border-bottom: 1px solid var(--mrr-shell-divider);
-  backdrop-filter: blur(18px) saturate(140%);
   transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
 
   &.mask {

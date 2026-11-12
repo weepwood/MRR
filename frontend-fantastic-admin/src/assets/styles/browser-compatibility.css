@@ -11,6 +11,7 @@
     --mrr-destructive-muted: var(--mrr-muted);
     --mrr-navigation-active: #eaf0fe;
     --mrr-navigation-active-border: rgb(37 99 235 / 22%);
+    --mrr-navigation-active-foreground: var(--mrr-foreground);
     --text-tertiary: var(--mrr-muted-foreground);
     --text-hint: var(--mrr-muted-foreground);
     --mrr-control-bg-disabled: var(--mrr-muted);
@@ -29,6 +30,7 @@
     --mrr-destructive-muted: var(--mrr-muted);
     --mrr-navigation-active: #1c2d4d;
     --mrr-navigation-active-border: rgb(96 165 250 / 36%);
+    --mrr-navigation-active-foreground: var(--mrr-foreground);
   }
 
   /*

@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
   orientation?: SliderRootProps['orientation']
   thumbAlignment?: SliderRootProps['thumbAlignment']
   tooltip?: boolean
+  ariaLabelledby?: string
   class?: HTMLAttributes['class']
 }>(), {
   defaultValue: () => [0],

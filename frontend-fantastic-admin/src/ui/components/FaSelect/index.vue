@@ -16,6 +16,7 @@ defineOptions({
 })
 
 const props = defineProps<{
+  id?: string
   disabled?: boolean
   options: {
     label: string
@@ -39,7 +40,7 @@ const selectedOption = computed({
 
 <template>
   <Select v-model="value" :disabled>
-    <SelectTrigger :class="cn('w-[200px]', props.class)">
+    <SelectTrigger :id="props.id" :class="cn('w-[200px]', props.class)">
       <SelectValue :placeholder="selectedOption?.label" />
     </SelectTrigger>
     <SelectContent>

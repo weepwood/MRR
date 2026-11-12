@@ -50,6 +50,8 @@ MRR 服务于医院内网的病案查询、影像调阅、数据管理和运维�
 
 [base.css](src/assets/styles/base.css) 的正文字体栈为 `Inter, "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif`。中文字体由 [fonts.css](src/assets/styles/fonts.css) 从本地 `/fonts/` 加载 400/500/700 字重；Inter 是否可用取决于运行环境，不能把字体栈名称当作该字体已随包交付的证明。不得为管理端引入外部字体 CDN。
 
+字体加载按 `unicode-range` 分区：常用界面字符使用同一原字体生成的三个小型子集，其余字符按需回退到原完整字库，字形、度量与字体家族保持。原完整文件不删除，新增界面字符即使未重新生成子集也仍可显示，只可能增加完整字库请求。更新与验证见[前端字体加载记录](../docs/engineering/frontend-font-loading.md)。
+
 | 层级 | 当前共享实现 | 事实来源 |
 | --- | --- | --- |
 | 页面标题 | 28px；760px 以下 24px；请求字重 650 | [page-header.css](src/assets/styles/components/page-header.css) |

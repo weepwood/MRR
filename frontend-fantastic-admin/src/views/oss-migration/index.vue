@@ -18,7 +18,7 @@ import {
   Upload as UploadFilled,
   CirclePlay as VideoPlay,
 } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
 import {
   cancelMigrationJob,
   createMigrationJob,
@@ -136,6 +136,9 @@ const logSize = ref(20)
 const logStatus = ref('')
 const logScanId = ref<number>()
 const selectedLogs = ref<MigrationLogRecord[]>([])
+const retryFeedback = ref<{ type: 'success' | 'warning' | 'error', message: string }>()
+let retryActive = true
+let retryAttempt: { submitted: boolean, cancelled: boolean } | undefined
 const bahInput = ref('')
 const uploadResult = ref<OssUploadBatchResult>()
 const uploadResultVisible = ref(false)
@@ -634,33 +637,95 @@ async function handleBahUpload() {
   }
 }
 
+function showRetryFeedback(type: 'success' | 'warning' | 'error', message: string) {
+  retryFeedback.value = { type, message }
+  ElMessage[type](message)
+}
+
+function invalidateRetryAttempt() {
+  retryActive = false
+  if (retryAttempt) {
+    retryAttempt.cancelled = true
+    // An already sent write must remain guarded until its outcome settles.
+    if (!retryAttempt.submitted) {
+      retryAttempt = undefined
+      loading.retry = false
+    }
+  }
+}
+onDeactivated(invalidateRetryAttempt)
+onBeforeUnmount(invalidateRetryAttempt)
+onActivated(() => { retryActive = true })
+
 async function handleRetryFailed() {
-  if (!failedLogScanIds.value.length) {
+  if (!retryActive || loading.retry) { return }
+  if (hasActiveJob.value || loading.logs) {
+    ElMessage.warning('请等待当前任务或日志读取结束后再操作')
+    return
+  }
+  const ids = [...failedLogScanIds.value]
+  if (!ids.length) {
     ElMessage.warning('请在迁移日志中选择永久失败记录')
     return
   }
-  try {
-    await ElMessageBox.confirm(
-      `将把 ${failedLogScanIds.value.length} 条永久失败记录重置为待迁移。请确保已经处理原图、权限或对象冲突，是否继续？`,
-      '确认重置失败记录',
-      { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },
-    )
-  }
-  catch {
+  if (ids.length > 1000 || ids.some(id => !Number.isInteger(id) || id <= 0 || id > 2147483647)) {
+    ElMessage.warning('请选择有效的失败记录，单次最多重置 1000 条')
     return
   }
-
+  const attempt = { submitted: false, cancelled: false }
+  retryAttempt = attempt
   loading.retry = true
+  const isCurrent = () => retryAttempt === attempt && !attempt.cancelled && retryActive
   try {
-    const response = await retryMigrationScans(failedLogScanIds.value)
-    ElMessage.success(`已重置 ${response.data?.updated ?? 0} 条记录，请重新执行试迁移`)
-    await refreshAll()
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '重置失败记录失败'))
+    try {
+      await ElMessageBox.confirm(
+        `将把本次选中的 ${ids.length} 条永久失败记录重置为待迁移。本次范围已固定，刷新列表不会扩大范围。请确保已经处理原图、权限或对象冲突，是否继续？`,
+        '确认重置失败记录',
+        { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },
+      )
+    }
+    catch { return }
+    if (!isCurrent()) { return }
+    if (hasActiveJob.value || loading.logs) {
+      ElMessage.warning('任务或日志状态已变化，请刷新后重新确认')
+      return
+    }
+    attempt.submitted = true
+    retryFeedback.value = undefined
+    try {
+      const response = await retryMigrationScans(ids)
+      if (!isCurrent()) { return }
+      const updated = response.data?.updated
+      if (typeof updated !== 'number' || !Number.isInteger(updated) || updated < 0 || updated > ids.length) {
+        showRetryFeedback('warning', '未取得有效的重置结果，请刷新日志核对后再操作。不要直接重复提交。')
+      }
+      else if (updated === 0) {
+        showRetryFeedback('warning', `本次 ${ids.length} 条记录均未重置，状态可能已变化，请刷新日志核对。`)
+      }
+      else if (updated < ids.length) {
+        showRetryFeedback('warning', `已重置 ${updated}/${ids.length} 条记录，其余状态可能已变化。请核对后再执行试迁移。`)
+      }
+      else {
+        showRetryFeedback('success', `已重置 ${updated}/${ids.length} 条记录，请重新执行试迁移。`)
+      }
+      await refreshAll()
+    }
+    catch (failure: unknown) {
+      if (!isCurrent()) { return }
+      const status = (failure as { response?: { status?: number } } | null)?.response?.status
+      if (status === 401 || status === 403) {
+        showRetryFeedback('error', '当前会话或权限不允许重置，请检查登录状态与管理权限。')
+      }
+      else {
+        showRetryFeedback('warning', '未确认重置结果，请先刷新日志核对。请求可能已生效，不要直接重复提交。')
+      }
+    }
   }
   finally {
-    loading.retry = false
+    if (retryAttempt === attempt) {
+      retryAttempt = undefined
+      loading.retry = false
+    }
   }
 }
 
@@ -1207,7 +1272,7 @@ onMounted(() => {
           </div>
           <el-button
             :icon="RotateCcw"
-            :disabled="!failedLogScanIds.length || hasActiveJob"
+            :disabled="!failedLogScanIds.length || hasActiveJob || loading.logs"
             :loading="loading.retry"
             @click="handleRetryFailed"
           >
@@ -1215,6 +1280,14 @@ onMounted(() => {
           </el-button>
         </div>
       </template>
+
+      <el-alert
+        v-if="retryFeedback"
+        :title="retryFeedback.message"
+        :type="retryFeedback.type"
+        :closable="false"
+        show-icon
+      />
 
       <el-form class="log-filter" inline>
         <el-form-item label="结果">

@@ -18,7 +18,7 @@ import {
   Upload as UploadFilled,
   CirclePlay as VideoPlay,
 } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
 import {
   cancelMigrationJob,
   createMigrationJob,
@@ -127,7 +127,16 @@ const jobTotal = ref(0)
 const jobPage = ref(1)
 const jobSize = ref(10)
 const currentJob = ref<MigrationJob>()
+const jobHistoryError = ref(false)
+const jobHistoryPage = ref<number>()
 const jobDetail = ref<MigrationJob>()
+const jobDetailId = ref<number>()
+const jobDetailError = ref(false)
+let historyGeneration = 0
+let detailGeneration = 0
+let jobReadsSuspended = false
+let jobReadsDisposed = false
+let resumeHistory = false
 const jobDrawerVisible = ref(false)
 const logs = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
@@ -141,7 +150,7 @@ const uploadResult = ref<OssUploadBatchResult>()
 const uploadResultVisible = ref(false)
 const autoRefresh = ref(true)
 const lastUpdatedAt = ref<Date>()
-const { startPolling, stopPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
+const { startPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
   currentJob,
   refreshAll,
   () => refreshOverview(true),
@@ -403,23 +412,31 @@ function resetRecordFilters() {
 }
 
 async function loadJobs() {
+  if (jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++historyGeneration
+  const requestedPage = jobPage.value
+  const requestedSize = jobSize.value
   loading.jobs = true
+  jobHistoryError.value = false
   try {
-    const response = await getMigrationJobs({ page: jobPage.value, size: jobSize.value })
-    jobs.value = response.data?.list ?? []
-    jobTotal.value = response.data?.total ?? 0
-    const active = jobs.value.find(job => ACTIVE_STATUSES.has(job.status ?? ''))
-    if (active) {
-      currentJob.value = active
-      startPolling()
+    const response = await getMigrationJobs({ page: requestedPage, size: requestedSize })
+    if (generation !== historyGeneration) { return }
+    if (!response.data || !Array.isArray(response.data.list)) {
+      throw new Error('任务列表响应为空')
     }
-    else if (currentJob.value && ACTIVE_STATUSES.has(currentJob.value.status ?? '')) {
-      stopPolling()
-      currentJob.value = undefined
+    jobs.value = response.data.list
+    jobTotal.value = response.data.total ?? 0
+    jobHistoryPage.value = requestedPage
+    // A history page cannot establish whether a global active job exists.
+    // Readiness and the existing job polling own currentJob.
+  }
+  catch {
+    if (generation === historyGeneration) {
+      jobHistoryError.value = true
     }
   }
   finally {
-    loading.jobs = false
+    if (generation === historyGeneration) { loading.jobs = false }
   }
 }
 
@@ -665,23 +682,69 @@ async function handleRetryFailed() {
 }
 
 async function showJobDetail(job: MigrationJob) {
-  if (job.id == null) {
-    return
-  }
-  loading.detail = true
+  if (job.id == null || jobReadsSuspended || jobReadsDisposed) { return }
+  jobDetailId.value = job.id
   jobDrawerVisible.value = true
+  await reloadJobDetail()
+}
+
+async function reloadJobDetail() {
+  const id = jobDetailId.value
+  if (id == null || !jobDrawerVisible.value || jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++detailGeneration
+  jobDetail.value = undefined
+  jobDetailError.value = false
+  loading.detail = true
   try {
-    const response = await getMigrationJob(job.id)
-    jobDetail.value = response.data ?? job
+    const response = await getMigrationJob(id)
+    if (generation !== detailGeneration) { return }
+    if (!response.data || response.data.id !== id) {
+      throw new Error('任务详情不匹配')
+    }
+    jobDetail.value = response.data
   }
-  catch (error: unknown) {
-    jobDetail.value = job
-    ElMessage.error(errorMessage(error, '加载任务详情失败'))
+  catch {
+    if (generation === detailGeneration) {
+      jobDetailError.value = true
+    }
   }
   finally {
-    loading.detail = false
+    if (generation === detailGeneration) { loading.detail = false }
   }
 }
+
+function clearJobDetail() {
+  detailGeneration++
+  jobDetailId.value = undefined
+  jobDetail.value = undefined
+  jobDetailError.value = false
+  loading.detail = false
+}
+
+watch(jobDrawerVisible, (visible) => {
+  if (!visible) { clearJobDetail() }
+}, { flush: 'sync' })
+
+onDeactivated(() => {
+  jobReadsSuspended = true
+  resumeHistory = loading.jobs
+  historyGeneration++
+  loading.jobs = false
+  jobDrawerVisible.value = false
+  clearJobDetail()
+})
+onActivated(() => {
+  jobReadsSuspended = false
+  if (resumeHistory) {
+    resumeHistory = false
+    void loadJobs()
+  }
+})
+onBeforeUnmount(() => {
+  jobReadsDisposed = true
+  historyGeneration++
+  clearJobDetail()
+})
 
 function resetLogFilters() {
   logStatus.value = ''
@@ -1137,6 +1200,13 @@ onMounted(() => {
         </div>
       </template>
 
+      <el-alert
+        v-if="jobHistoryError"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="jobHistoryPage == null ? '尚未取得任务历史，请点击刷新任务重试。' : `任务历史读取失败，当前仍显示上次成功读取的第 ${jobHistoryPage} 页。可点击刷新任务重试。`"
+      />
       <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
         <el-table-column prop="id" label="任务" width="80" />
         <el-table-column label="阶段" width="110">
@@ -1189,6 +1259,7 @@ onMounted(() => {
         <el-pagination
           v-model:current-page="jobPage"
           v-model:page-size="jobSize"
+          :disabled="loading.jobs"
           :page-sizes="[10, 20, 50]"
           :total="jobTotal"
           layout="total, sizes, prev, pager, next"
@@ -1344,7 +1415,14 @@ onMounted(() => {
     </el-dialog>
 
     <el-drawer v-model="jobDrawerVisible" title="迁移任务详情" size="460px">
+      <p v-if="jobDetailId != null">
+        当前查看任务 #{{ jobDetailId }}
+      </p>
       <div v-loading="loading.detail">
+        <el-alert v-if="jobDetailError" title="任务详情暂不可用，请重新加载后查看最新状态。" type="warning" :closable="false" show-icon />
+        <el-button v-if="jobDetailError" :loading="loading.detail" @click="reloadJobDetail">
+          重新加载详情
+        </el-button>
         <el-descriptions v-if="jobDetail" :column="1" border>
           <el-descriptions-item label="任务 ID">
             {{ jobDetail.id }}

@@ -14,7 +14,7 @@ import {
   ArrowUp as Top,
   Eye as View,
 } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import OssFolderIcon from './OssFolderIcon.vue'
 
@@ -32,6 +32,12 @@ const MAX_KEYS = 200
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff', 'webp'])
 
 const loading = ref(false)
+const directoryError = ref(false)
+let directoryGeneration = 0
+let previewGeneration = 0
+let disposed = false
+let suspended = false
+let reloadOnActivation = false
 const previewLoading = ref(false)
 const page = ref<OssBrowserPage>()
 const currentPrefix = ref(DEFAULT_ROOT_PREFIX)
@@ -142,25 +148,39 @@ function normalizeRequestedPrefix(value: string) {
 async function loadDirectory(
   prefix: string,
   continuationToken?: string,
-  options: { rememberFolder?: boolean, resetPageHistory?: boolean } = {},
+  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous' } = {},
 ) {
+  if (disposed || suspended) {
+    return
+  }
+  const generation = ++directoryGeneration
   const normalizedPrefix = normalizeRequestedPrefix(prefix)
+  // Navigation history describes only successfully displayed pages.
+  const folders = [...folderHistory.value]
+  const tokens = options.resetPageHistory === false ? [...pageTokenHistory.value] : []
   if (options.rememberFolder && currentPrefix.value !== normalizedPrefix) {
-    folderHistory.value.push(currentPrefix.value)
+    folders.push(currentPrefix.value)
   }
-  if (options.resetPageHistory !== false) {
-    pageTokenHistory.value = []
+  if (options.navigation === 'back') {
+    folders.pop()
   }
-
+  if (options.navigation === 'next') {
+    tokens.push(currentContinuationToken.value)
+  }
+  if (options.navigation === 'previous') {
+    tokens.pop()
+  }
   loading.value = true
-  selectedEntry.value = null
-  localFilter.value = ''
+  directoryError.value = false
   try {
     const response = await browseOssObjects({
       prefix: normalizedPrefix,
       continuationToken,
       maxKeys: MAX_KEYS,
     })
+    if (generation !== directoryGeneration) {
+      return
+    }
     if (!response.data) {
       throw new Error('OSS 目录响应为空')
     }
@@ -168,12 +188,22 @@ async function loadDirectory(
     currentPrefix.value = response.data.prefix
     addressInput.value = response.data.prefix
     currentContinuationToken.value = continuationToken
+    folderHistory.value = folders
+    pageTokenHistory.value = tokens
+    selectedEntry.value = null
+    localFilter.value = ''
   }
   catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '读取 OSS 目录失败'))
+    if (generation === directoryGeneration) {
+      directoryError.value = true
+      addressInput.value = currentPrefix.value
+      ElMessage.error(errorMessage(error, '读取 OSS 目录失败'))
+    }
   }
   finally {
-    loading.value = false
+    if (generation === directoryGeneration) {
+      loading.value = false
+    }
   }
 }
 
@@ -197,9 +227,10 @@ function handleEntryDoubleClick(entry: OssBrowserEntry) {
 }
 
 function goBack() {
-  const previous = folderHistory.value.pop()
+  if (loading.value) { return }
+  const previous = folderHistory.value[folderHistory.value.length - 1]
   if (previous) {
-    void loadDirectory(previous)
+    void loadDirectory(previous, undefined, { navigation: 'back' })
   }
 }
 
@@ -234,19 +265,18 @@ function jumpToBreadcrumb(item: BreadcrumbItem) {
 
 function nextPage() {
   const nextToken = page.value?.nextContinuationToken
-  if (!nextToken) {
+  if (loading.value || !nextToken) {
     return
   }
-  pageTokenHistory.value.push(currentContinuationToken.value)
-  void loadDirectory(currentPrefix.value, nextToken, { resetPageHistory: false })
+  void loadDirectory(currentPrefix.value, nextToken, { resetPageHistory: false, navigation: 'next' })
 }
 
 function previousPage() {
-  if (!pageTokenHistory.value.length) {
+  if (loading.value || !pageTokenHistory.value.length) {
     return
   }
-  const previousToken = pageTokenHistory.value.pop()
-  void loadDirectory(currentPrefix.value, previousToken, { resetPageHistory: false })
+  const previousToken = pageTokenHistory.value[pageTokenHistory.value.length - 1]
+  void loadDirectory(currentPrefix.value, previousToken, { resetPageHistory: false, navigation: 'previous' })
 }
 
 async function requestSignedUrl(entry: OssBrowserEntry) {
@@ -283,21 +313,64 @@ async function previewFile(entry = selectedEntry.value) {
   if (!entry || entry.directory || !isImage(entry)) {
     return
   }
+  if (disposed || suspended) { return }
+  const generation = ++previewGeneration
   previewEntry.value = entry
   previewUrl.value = ''
   previewVisible.value = true
   previewLoading.value = true
   try {
-    previewUrl.value = await requestSignedUrl(entry)
+    const url = await requestSignedUrl(entry)
+    if (generation === previewGeneration) {
+      previewUrl.value = url
+    }
   }
   catch (error: unknown) {
-    previewVisible.value = false
-    ElMessage.error(errorMessage(error, '加载 OSS 图片预览失败'))
+    if (generation === previewGeneration) {
+      previewVisible.value = false
+      ElMessage.error(errorMessage(error, '加载 OSS 图片预览失败'))
+    }
   }
   finally {
-    previewLoading.value = false
+    if (generation === previewGeneration) {
+      previewLoading.value = false
+    }
   }
 }
+
+function clearPreview() {
+  previewGeneration++
+  previewUrl.value = ''
+  previewEntry.value = undefined
+  previewLoading.value = false
+}
+
+watch(previewVisible, (visible) => {
+  if (!visible) { clearPreview() }
+}, { flush: 'sync' })
+
+onDeactivated(() => {
+  suspended = true
+  reloadOnActivation = loading.value
+  directoryGeneration++
+  loading.value = false
+  previewVisible.value = false
+  clearPreview()
+})
+
+onActivated(() => {
+  suspended = false
+  if (reloadOnActivation) {
+    reloadOnActivation = false
+    void loadDirectory(currentPrefix.value, currentContinuationToken.value, { resetPageHistory: false })
+  }
+})
+
+onBeforeUnmount(() => {
+  disposed = true
+  directoryGeneration++
+  clearPreview()
+})
 
 onMounted(() => {
   void loadDirectory(DEFAULT_ROOT_PREFIX)
@@ -321,8 +394,8 @@ onMounted(() => {
               <el-icon><InfoFilled /></el-icon>
             </button>
           </el-tooltip>
-          <el-tag :type="page?.configured ? 'success' : 'danger'">
-            {{ page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
+          <el-tag :type="directoryError ? 'warning' : page?.configured ? 'success' : 'info'">
+            {{ directoryError ? '目录读取失败' : loading ? '正在读取' : page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
           </el-tag>
           <el-button
             :icon="Refresh"
@@ -334,6 +407,14 @@ onMounted(() => {
         </div>
       </div>
     </template>
+
+    <el-alert
+      v-if="directoryError"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="page ? '读取失败，当前仍显示上次成功读取的目录。请重试原操作或刷新。' : '目录读取失败，请检查 OSS 服务状态后刷新重试。'"
+    />
 
     <div class="repository-summary">
       <div class="summary-item">
@@ -360,7 +441,7 @@ onMounted(() => {
 
     <div class="explorer-toolbar">
       <div class="navigation-actions">
-        <el-button :icon="ArrowLeft" circle :disabled="!canGoBack" title="返回" @click="goBack" />
+        <el-button :icon="ArrowLeft" circle :disabled="loading || !canGoBack" title="返回" @click="goBack" />
         <el-button :icon="Top" circle :disabled="!canGoUp" title="上一级" @click="goUp" />
       </div>
 
@@ -491,10 +572,10 @@ onMounted(() => {
         <div class="cursor-pager">
           <span>每次最多读取 {{ page?.maxKeys ?? MAX_KEYS }} 个对象，不统计整个 Bucket。</span>
           <div>
-            <el-button :disabled="!canPreviousPage" @click="previousPage">
+            <el-button :disabled="loading || !canPreviousPage" @click="previousPage">
               上一页
             </el-button>
-            <el-button type="primary" plain :disabled="!canNextPage" @click="nextPage">
+            <el-button type="primary" plain :disabled="loading || !canNextPage" @click="nextPage">
               下一页
             </el-button>
           </div>

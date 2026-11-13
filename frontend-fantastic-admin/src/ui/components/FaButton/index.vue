@@ -17,8 +17,8 @@ const props = defineProps<{
 </script>
 
 <template>
-  <Button :variant :size :disabled="props.disabled || props.loading" :class="props.class">
-    <FaIcon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" />
+  <Button :variant :size :disabled="props.disabled || props.loading" :aria-busy="props.loading || undefined" :data-variant="props.variant ?? 'default'" class="fa-button-control" :class="[props.class]">
+    <FaIcon v-if="loading" name="i-lucide:loader-circle" class="animate-spin" aria-hidden="true" />
     <slot />
   </Button>
 </template>

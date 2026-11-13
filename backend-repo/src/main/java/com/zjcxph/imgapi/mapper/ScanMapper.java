@@ -253,7 +253,7 @@ public interface ScanMapper {
 
     @Update("<script>UPDATE mr_scan SET migration_status = 'not_migrated', migration_attempts = 0, " +
             "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
-            "WHERE (oss_url IS NULL OR oss_url = '') AND id IN " +
+            "WHERE migration_status = 'failed' AND (oss_url IS NULL OR oss_url = '') AND id IN " +
             "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +
             "</script>")
     int resetMigrationFailures(@Param("ids") List<Integer> ids);

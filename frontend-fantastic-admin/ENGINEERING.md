@@ -74,7 +74,7 @@ src/
 ├── utils/
 │   ├── composables/          # 组合式函数
 │   └── ...
-└── views/                    # 页面组件 (文件系统路由)
+└── views/                    # 页面组件 (默认由 router/routes.ts 静态注册)
     ├── index.vue             # 首页/仪表盘
     ├── login.vue             # 登录页
     ├── records/index.vue     # 扫描记录管理
@@ -88,7 +88,7 @@ src/
 | 目录 | 职责 | 约束 |
 |------|------|------|
 | `api/modules/` | 每个后端领域一个文件 | 文件名与后端 API 对应，如 `records.ts` → `/api/v1/scan/*` |
-| `views/` | 每个路由一个目录 | 由 `vite-plugin-pages` 自动注册，目录名 kebab-case |
+| `views/` | 每个路由一个目录 | 默认由 `router/routes.ts` 静态表注册 (`routeBaseOn: 'frontend'`)；切换为 `filesystem` 时才由 `vite-plugin-pages` 生成，目录名 kebab-case |
 | `components/` | 业务复用组件 | 每个组件一个目录，`index.vue` 为入口 |
 | `ui/components/` | Fa* 通用 UI 组件 | 遵循框架组件设计规范 |
 | `store/modules/` | 每个领域一个 Store | 组合式 API (`defineStore('name', () => {})`) |
@@ -203,7 +203,7 @@ const emit = defineEmits<{ close: []; saved: [id: number] }>()
 
 ```typescript
 import type { PaginatedResult, ScanRecord, ScanRequest } from '../types'
-import { deleteRequest, getRequest, postRequest, putRequest } from '../index'
+import api, { deleteRequest, getRequest, postRequest, putRequest } from '../index'
 
 /** GET /api/v1/scan/page — 分页获取扫描记录 */
 export function getScanList(params: { page: number, size: number }) {
@@ -225,26 +225,28 @@ export function deleteScan(id: string | number) {
   return deleteRequest(`/api/v1/scan/${id}`)
 }
 
-/** POST /api/v1/scan/batch-download — blob 下载（不走 JSON 解包） */
+/** POST /api/v1/scan/batch-download — blob 下载（原始 api，响应不拆包） */
 export function batchDownloadRecords(ids: (string | number)[]) {
   return api.post('/api/v1/scan/batch-download', { ids }, { responseType: 'blob' })
 }
 ```
 
-### 4.2 响应解包约定
+### 4.2 响应约定
 
-Axios 拦截器已统一处理 `Result<T>` 的 `code/msg/data` 结构：
+Axios 拦截器会尝试识别响应中的业务码（`code` / `status`），**仅在命中错误条件时** reject 或触发跳转；其余情况把 `response.data` 整体**原样返回，不做拆包**，返回类型为 `ApiResult<T>`。业务数据在 `res.data`，`meta.requestId` 等同级字段可直接读取。
 
-- **`getRequest<T>`/`postRequest<T>`/`putRequest<T>`/`deleteRequest<T>`**: 自动解包 `Result.data`，返回 `Promise<ApiResult<T>>`
-- **`api.get`/`api.post` (raw)**: 仅用于 blob 二进制下载（设置 `responseType: 'blob'`）或需要 `skipGlobalError` 的特殊场景（如 auth 端点）
+- **`getRequest<T>`/`postRequest<T>`/`putRequest<T>`/`deleteRequest<T>`**：返回 `Promise<ApiResult<T>>`，调用方用 `res.data` 取业务数据
+- **`api.get`/`api.post` (raw)**：用于 blob 二进制下载（`responseType: 'blob'`）。Blob 解析不出业务码，因未命中错误条件而原样返回；需要读取响应头时使用 `getRawRequest`（`src/api/raw-response.ts`）
+- 命中 `code` 非 2xx、`status === 0`、401 或密码强制修改时，由拦截器统一 reject / 登出 / 跳转；`status === 1` 与 `UP/DOWN/WARNING/UNKNOWN` 状态串按原样放行。调用方只负责 `try/catch`
 
 ```typescript
-// ✅ 标准 JSON API：用类型安全封装 (自动解包 Result.data)
+// ✅ 标准 JSON API：类型安全封装返回完整 ApiResult
 const res = await getRequest<MyData>('/api/v1/resource')
-console.log(res.data)  // 这里已经是 MyData
+console.log(res.data)             // MyData | undefined
+console.log(res.meta?.requestId)  // 可用于诊断
 
-// ✅ Blob 下载：用原始 api.get (避免 JSON 解包损坏二进制)
-const res = await api.get<Blob>('/api/v1/export', { responseType: 'blob' })
+// ✅ Blob 下载：用原始 api.get（避免业务码解析影响二进制）
+const blob = await api.get<Blob>('/api/v1/export', { responseType: 'blob' })
 
 // ✅ Auth 端点：用 postRequest + skipGlobalError
 postRequest<LoginResponse>('/api/v1/auth/login', payload, { skipGlobalError: true })
@@ -365,6 +367,8 @@ export const useSomeStore = defineStore('some', () => {
 
 ### 6.1 路由定义 (`router/routes.ts`)
 
+默认配置为 `settings.app.routeBaseOn: 'frontend'`，路由以 `router/routes.ts` 的静态表为准；切换为 `'filesystem'` 时才由 `vite-plugin-pages` 依据 `src/views/` 生成（并过滤部分路径）。两种模式都在守卫中通过 `router.addRoute('layout', childRoute)` 动态注册。以下代码为节选，完整定义见 `router/routes.ts`。
+
 ```typescript
 // 常量路由 (无需登录)
 export const constantRoutes: RouteRecordRaw[] = [
@@ -372,27 +376,39 @@ export const constantRoutes: RouteRecordRaw[] = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/login.vue'),
-    meta: { title: '登录', constant: true },
+    meta: { title: '登录' },
   },
 ]
 
-// 系统路由 (始终存在)
+// 系统路由 (始终存在)：layout 容器 + 子路由，component 使用动态 import 懒加载
 export const systemRoutes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'index',
-    component: () => import('@/views/index.vue'),
-    meta: { title: '首页', icon: 'dashboard', auth: true },
+    name: 'layout',
+    component: () => import('@/layouts/index.vue'),
+    meta: { breadcrumb: false },
+    children: [
+      {
+        path: '',
+        name: 'home',
+        component: () => import('@/views/index.vue'),
+        meta: { icon: 'i-lucide:house' },
+      },
+    ],
   },
 ]
 
-// 异步路由 (权限过滤)
-export const asyncRoutes: RouteRecordRaw[] = [
+// 异步路由 (登录并按权限生成后注册到 'layout')
+export const asyncRoutes: Route.recordMainRaw[] = [
   {
-    path: '/records',
-    name: 'records',
-    component: () => import('@/views/records/index.vue'),
-    meta: { title: '扫描记录', icon: 'document', auth: ['record:read'] },
+    meta: { title: '系统', icon: 'i-lucide:settings' },
+    children: [
+      {
+        path: '/users',
+        component: () => import('@/views/users/index.vue'),
+        meta: { title: '用户管理', icon: 'i-lucide:user-round', auth: ['user:manage'], cache: true },
+      },
+    ],
   },
 ]
 ```
@@ -401,25 +417,28 @@ export const asyncRoutes: RouteRecordRaw[] = [
 
 ```typescript
 meta: {
-  title: string        // 页面标题 (必填)
+  title?: string | (() => string) // 页面标题
   icon?: string         // 菜单图标
-  constant?: boolean   // 是否常量路由 (无需权限)
-  auth?: string[]      // 所需权限 (满足任一即可访问)
-  layout?: false       // false 表示不使用主布局 (如登录页)
-  activeMenu?: string  // 高亮菜单项
-  sort?: number        // 菜单排序
+  auth?: string | string[] // 所需权限；数组满足任一即可访问，未声明表示登录即可访问
+  menu?: boolean        // 是否在菜单中显示
+  breadcrumb?: boolean  // 是否显示面包屑
+  cache?: boolean | string | string[] // 页面缓存 (配合 keepAlive)
+  noCache?: string | string[] // 不缓存的组件名
+  activeMenu?: string   // 高亮菜单项
+  link?: string         // 外链
 }
 ```
 
 ### 6.3 导航守卫
 
-`router/guards.ts` 中守卫执行顺序：
+`router/guards.ts` 中 `setupGuards` 的注册顺序：
 
-1. **`setupRoutes`** — 检查登录态 → 获取权限 → 生成路由表
-2. **`setupProgress`** — NProgress 加载条
-3. **`setupTitle`** — 动态文档标题
-4. **`setupKeepAlive`** — 页面缓存管理
-5. **`setupOther`** — 滚动到顶部
+1. **`setupRoutes`** — 外部调阅上下文 / 会话验证 → 按 `routeBaseOn` 生成并注册路由
+2. **`setupRedirectAuthChildrenRoute`** — 为父路由挑选首个有权限的子路由
+3. **`setupProgress`** — NProgress 加载条 (延迟 200ms)
+4. **`setupTitle`** — 动态文档标题 (`afterEach`)
+5. **`setupKeepAlive`** — 页面缓存管理 (`afterEach`)
+6. **`setupOther`** — 滚动到顶部 (`afterEach`)
 
 ---
 
@@ -474,23 +493,30 @@ const emit = defineEmits<{
 </script>
 ```
 
-### 7.4 自定义指令
+### 7.4 权限表达
 
-权限控制使用 `v-auth` 指令：
+仓库**没有** `v-auth` 自定义指令。统一使用 `useAuth()`（`src/utils/composables/useAuth.ts`）返回的 `auth()` / `authAll()`，配合 `v-if` 或 `:disabled` 控制按钮与操作入口：
 
 ```vue
-<template>
-  <!-- 有 record:delete 权限时渲染 -->
-  <el-button v-auth="'record:delete'" @click="handleDelete">
-    删除
-  </el-button>
+<script setup lang="ts">
+const { auth, authAll } = useAuth()
+const canDelete = computed(() => auth('record:delete'))
+const canManage = computed(() => auth(['record:manage', 'user:manage']))
+const canBatch = computed(() => authAll(['record:read', 'record:download']))
+</script>
 
-  <!-- 有任一权限时渲染 -->
-  <el-button v-auth="['record:manage', 'admin:all']">
-    管理
-  </el-button>
+<template>
+  <el-button v-if="canDelete" @click="handleDelete">删除</el-button>
+  <el-button v-if="canManage">管理</el-button>
+  <el-button v-if="canBatch">批量下载</el-button>
 </template>
 ```
+
+判定规则：会话未验证（`isSessionVerified`）一律拒绝；`ADMIN` 角色直通；`settings.app.enablePermission` 关闭时放行；其余按 `src/utils/permission.ts` 的权限继承表判定。`auth()` 传数组为「满足任一」，`authAll()` 要求全部满足。
+
+页面级拦截在 `src/App.vue`：`isAuth` 先经 `canRenderArchiveRoute(...)` 放行外部调阅 / 遗留档案路由，否则执行 `route.matched.every(item => auth(item.meta.auth ?? ''))`，不满足时渲染 `FaNotAllowed`；菜单过滤在 `store/modules/menu.ts`。`src/ui/components/FaAuth/` 组件存在但目前没有被页面引用。
+
+前端只负责可见性，**后端是唯一授权边界**；`auth()` 的结果不得作为跳过服务端鉴权的依据。
 
 ---
 
@@ -602,12 +628,12 @@ UnoCSS 原子类 (首选) → scoped CSS → 全局 CSS
               ▼
           Axios Instance (api/index.ts)
               │ 请求拦截器 → 注入 Token
-              │ 响应拦截器 → 解包 Result<T>
+              │ 响应拦截器 → 识别业务码，未命中错误则原样返回
               ▼
           后端 API
               │
               ▼
-          API Module ← 返回 data.data
+          API Module ← 返回 ApiResult<T>
               │
               ▼
           View / Store
@@ -681,19 +707,18 @@ const onSubmit = handleSubmit(async (values) => {
 ## 11. 错误处理规范
 
 ```typescript
-// API 层: 不吞异常, 向上抛出
-export async function getRecords() {
-  const { data } = await api.get('/api/v1/scan/page')
-  return data.data
+// API 层: 使用类型安全封装, 不吞异常
+export function getRecords() {
+  return getRequest<PaginatedResult<ScanRecord>>('/api/v1/scan/page')
 }
 
 // 视图层: 统一 try/catch 模式
 async function loadData() {
   loading.value = true
   try {
-    const res = await getRecords(page.value, pageSize.value)
-    tableData.value = res.list
-    total.value = res.total
+    const res = await getRecords()
+    tableData.value = res.data?.list ?? []
+    total.value = res.data?.total ?? 0
   } catch (e: any) {
     ElMessage.error(e?.message || '加载失败')
   } finally {
@@ -721,7 +746,7 @@ async function handleDelete(id: number) {
 ### 12.1 代码分割
 
 ```typescript
-// ✅ 正确: 路由懒加载 (已由 vite-plugin-pages 自动处理)
+// ✅ 正确: 路由懒加载 (router/routes.ts 中的动态 import；filesystem 模式由插件生成)
 
 // ✅ 正确: 组件异步加载
 const DetailDialog = defineAsyncComponent(() =>
@@ -806,6 +831,8 @@ import { Search, Edit, Delete } from 'lucide-vue-next'
 | `VITE_BUILD_MOCK` | test | true | 测试环境启用 Mock |
 | `VITE_BUILD_COMPRESS` | prod | gzip,brotli | 构建压缩 |
 | `VITE_BUILD_SOURCEMAP` | test/prod | false | Source Map |
+
+> 生产构建的 modern polyfill 由 `vite/plugins.ts` 固定开启（`modernPolyfills: true`），`scripts/verify-chrome86-build.mjs` 会校验产物中的 polyfill 内容。`.env.production` 中遗留的 `VITE_BUILD_MODERN_POLYFILLS` 声明没有任何代码读取点，**不生效也请勿依赖**；关闭 polyfill 会破坏 Chrome 86 基线。
 
 ---
 

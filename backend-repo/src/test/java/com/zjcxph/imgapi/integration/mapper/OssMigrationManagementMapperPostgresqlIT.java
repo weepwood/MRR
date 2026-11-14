@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.mapper.OssMigrationManagementMapper;
+import com.zjcxph.imgapi.mapper.ScanMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
@@ -33,6 +34,49 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
 
     @Autowired
     private OssMigrationManagementMapper mapper;
+
+    @Autowired
+    private ScanMapper scanMapper;
+
+    @Test
+    @DisplayName("失败重置只改变当前永久失败且无OSS对象的记录，重复请求不再更新")
+    void resetsOnlyCurrentPermanentFailures() {
+        String[] statuses = {"failed", "retry_wait", "migrating", "waiting_sjh",
+                "migrated", "not_migrated", null, "failed", "failed"};
+        for (int index = 0; index < statuses.length; index++) {
+            jdbcTemplate.update("""
+                    INSERT INTO app.mr_scan
+                        (id, brxh, bah, sjh, filename, pages, uploadflag, folder,
+                         migration_status, migration_attempts, migration_error_code,
+                         migration_next_retry_at, oss_url)
+                    VALUES (?, ?, '00995001', '55550001', ?, 1, 1, '25.03.15', ?, 7,
+                            'SYNTHETIC_ERROR', TIMESTAMP '2026-01-01 00:00:00', ?)
+                    """, 9501 + index, String.valueOf(9501 + index), "retry-synthetic-" + index + ".jpg",
+                    statuses[index], index == 7 ? "oss://synthetic-existing-object" : index == 8 ? "" : null);
+        }
+        List<Integer> ids = java.util.stream.IntStream.rangeClosed(9501, 9509).boxed().toList();
+
+        assertThat(scanMapper.resetMigrationFailures(ids)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT id FROM app.mr_scan
+                WHERE id BETWEEN 9501 AND 9509 AND migration_status = 'not_migrated'
+                  AND migration_attempts = 0 AND migration_error_code IS NULL
+                  AND migration_next_retry_at IS NULL
+                ORDER BY id
+                """, Integer.class)).containsExactly(9501, 9509);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM app.mr_scan
+                WHERE id BETWEEN 9502 AND 9508 AND migration_attempts = 7
+                  AND migration_error_code = 'SYNTHETIC_ERROR'
+                  AND migration_next_retry_at = TIMESTAMP '2026-01-01 00:00:00'
+                """, Integer.class)).isEqualTo(7);
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT migration_status FROM app.mr_scan
+                WHERE id BETWEEN 9502 AND 9508 ORDER BY id
+                """, String.class)).containsExactly("retry_wait", "migrating", "waiting_sjh",
+                "migrated", "not_migrated", null, "failed");
+        assertThat(scanMapper.resetMigrationFailures(ids)).isZero();
+    }
 
     @Test
     @DisplayName("待迁移和等待上架号列表支持精确条件筛选")

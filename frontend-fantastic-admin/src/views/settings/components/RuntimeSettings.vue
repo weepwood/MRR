@@ -3,6 +3,7 @@ import type { SettingSchema, SettingSchemaItem } from '@/api/modules/settings'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, saveSystemSettings } from '@/api/modules/settings'
+import { DIRECTORY_ROUTING_KEY } from './image-directory-routing'
 
 const schema = ref<SettingSchema>({ groups: [], items: [] })
 const booleanValues = reactive<Record<string, boolean>>({})
@@ -64,8 +65,9 @@ async function loadSettings() {
     if (!payload) {
       throw new Error('服务端未返回设置元数据')
     }
-    schema.value = payload
-    for (const item of payload.items) {
+    const items = payload.items.filter(item => item.key !== DIRECTORY_ROUTING_KEY)
+    schema.value = { items, groups: payload.groups.filter(group => items.some(item => item.group === group.key)) }
+    for (const item of items) {
       const effective = String(item.effectiveValue ?? '').trim()
       const override = String(item.overrideValue ?? '').trim()
       overrides[item.key] = override
@@ -80,7 +82,7 @@ async function loadSettings() {
         textValues[item.key] = effective
       }
     }
-    savedMap.value = Object.fromEntries(payload.items.map(item => [item.key, serializeOne(item)]))
+    savedMap.value = Object.fromEntries(items.map(item => [item.key, serializeOne(item)]))
   }
   catch (error: any) {
     ElMessage.error(error?.response?.data?.message || error?.message || '运行参数加载失败')

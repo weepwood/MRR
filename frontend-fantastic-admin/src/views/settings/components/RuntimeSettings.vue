@@ -3,6 +3,7 @@ import type { SettingSchema, SettingSchemaItem } from '@/api/modules/settings'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, saveSystemSettings } from '@/api/modules/settings'
+import { DIRECTORY_ROUTING_KEY } from './image-directory-routing'
 
 const schema = ref<SettingSchema>({ groups: [], items: [] })
 const booleanValues = reactive<Record<string, boolean>>({})
@@ -72,12 +73,13 @@ async function readSettings(attempt: number): Promise<boolean> {
   if (!payload || !Array.isArray(payload.items) || !Array.isArray(payload.groups)) {
     throw new Error('missing schema')
   }
+  const items = payload.items.filter(item => item.key !== DIRECTORY_ROUTING_KEY)
   const booleans: Record<string, boolean> = {}
   const numbers: Record<string, number> = {}
   const texts: Record<string, string> = {}
   const rawOverrides: Record<string, string> = {}
   const saved: Record<string, string> = {}
-  for (const item of payload.items) {
+  for (const item of items) {
     const effective = String(item.effectiveValue ?? '').trim()
     rawOverrides[item.key] = String(item.overrideValue ?? '').trim()
     if (item.type === 'boolean') {
@@ -94,7 +96,7 @@ async function readSettings(attempt: number): Promise<boolean> {
       saved[item.key] = effective
     }
   }
-  schema.value = payload
+  schema.value = { items, groups: payload.groups.filter(group => items.some(item => item.group === group.key)) }
   Object.assign(booleanValues, booleans)
   Object.assign(numberValues, numbers)
   Object.assign(textValues, texts)

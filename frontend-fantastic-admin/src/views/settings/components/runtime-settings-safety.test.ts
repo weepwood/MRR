@@ -168,6 +168,19 @@ describe('运行参数提交安全', () => {
     expect(api.saveSystemSettings).toHaveBeenCalledExactlyOnceWith({ accessLogCleanupBatchSize: '200' })
     expect(vm.synced).toBe(true)
   })
+  it('与目录规则组合后仍从分组、基线和批量保存排除其专属设置', async () => {
+    const payload = schema()
+    payload.data!.groups.push({ key: 'archive', label: '档案浏览' })
+    payload.data!.items.push({ ...payload.data!.items[0], key: 'imageDirectoryRoutingRules', group: 'archive', type: 'text', defaultValue: '[]', effectiveValue: '[]', overrideValue: '[]' })
+    vi.mocked(api.getSettingsSchema).mockResolvedValueOnce(payload)
+    const { vm } = await setup()
+    expect(vm.schema.items.map(item => item.key)).not.toContain('imageDirectoryRoutingRules')
+    expect(vm.schema.groups.map(group => group.key)).not.toContain('archive')
+    expect(vm.savedMap).not.toHaveProperty('imageDirectoryRoutingRules')
+    vm.numberValues.loginMaxAttempts = 10
+    expect(await vm.saveSettings()).toBe(true)
+    expect(api.saveSystemSettings).toHaveBeenCalledExactlyOnceWith({ loginMaxAttempts: '10' })
+  })
   it('恢复确认固定key与说明，并明确其他草稿会被丢弃', async () => {
     const { vm } = await setup()
     const item = vm.schema.items[0]

@@ -25,7 +25,7 @@ class SettingRegistryTest {
     }
 
     @Test
-    @DisplayName("注册表包含安全策略与运维两组共 11 个设置项")
+    @DisplayName("注册表包含安全策略与运维及档案浏览共 12 个设置项")
     void shouldRegisterExpectedKeys() {
         Map<String, SettingDefinition> byKey = registry.all().stream()
                 .collect(Collectors.toMap(SettingDefinition::key, Function.identity()));
@@ -42,7 +42,7 @@ class SettingRegistryTest {
                 SettingRegistry.ACCESS_LOG_RETENTION_DAYS,
                 SettingRegistry.ACCESS_LOG_CLEANUP_BATCH_SIZE,
                 SettingRegistry.ACCESS_LOG_CLEANUP_MAX_BATCHES);
-        assertThat(registry.all()).hasSize(11);
+        assertThat(registry.all()).hasSize(12);
     }
 
     @Test

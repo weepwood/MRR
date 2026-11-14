@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.Map;
 
@@ -26,7 +27,12 @@ import static org.mockito.Mockito.mock;
 @MybatisTest
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = "mybatis.configuration.map-underscore-to-camel-case=true")
+@TestPropertySource(properties = {
+        "mybatis.configuration.map-underscore-to-camel-case=true",
+        "spring.datasource.hikari.maximum-pool-size=2",
+        "spring.datasource.hikari.minimum-idle=0"
+})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ImageDirectoryRoutingPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired private SystemSettingMapper mapper;
 

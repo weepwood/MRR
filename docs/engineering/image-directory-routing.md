@@ -85,3 +85,5 @@ Issue #588，P1。分支 `codex/image-directory-routing`，专属工作区
 - 浏览器：`pnpm exec playwright test e2e/image-directory-routing.spec.ts --config .mrr-dev/routing-playwright.config.ts --project chromium --workers 1`，2 项功能用例和 1 项预热通过。任务端口 13081，沿用 admin 合成会话夹具并仅调整夹具 Origin；demo 模式关闭，全部服务响应使用合成数据拦截。
 - 浏览器覆盖优先级预览、重复条件、确认单键 PUT、DELETE 恢复、503 后禁止直接重试和重新加载恢复；查看了亮色、暗色、1024px 窄桌面截图，并断言操作不超出视口。390px 手机布局未作为本次验收（项目默认关闭移动端适配）。
 - 独立审查修复了 OSS 回退重复解析、KeepAlive 离页、重载确认防重、损坏原文判定四项问题；最终独立复跑 17 项前端单测并核对后端、PG16 与 E2E 报告，未发现剩余阻断。
+
+首轮 CI 的 963 项单测通过，但集成套件在后续空库迁移测试触发 PostgreSQL 连接数上限。新增测试现将自身 Hikari 池限制为最多 2 个连接、最小空闲 0，并在类结束后关闭自己的上下文，避免增加其他测试的驻留连接。独立检查确认只影响本测试；本地重跑路由持久化和空库迁移两项均通过。

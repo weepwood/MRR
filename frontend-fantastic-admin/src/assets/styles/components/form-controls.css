@@ -112,7 +112,7 @@
   border: 1px solid var(--mrr-control-border);
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
-  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease, box-shadow var(--mrr-motion-fast) ease;
 }
 
 .fa-input-control::placeholder,
@@ -152,7 +152,34 @@
   width: 16px;
   height: 16px;
   color: var(--mrr-muted-foreground);
-  transition: color 120ms ease, transform 120ms ease;
+  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-normal) var(--mrr-ease-out);
+}
+
+/* 与输入框共用节奏；颜色/明度反馈保留调用方定位和方向变换。 */
+.fa-button-control {
+  transition:
+    color var(--mrr-motion-fast) ease,
+    background-color var(--mrr-motion-fast) ease,
+    border-color var(--mrr-motion-fast) ease,
+    opacity var(--mrr-motion-fast) ease;
+}
+
+.fa-button-control:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
+/* 使用与 Element Plus 一致的语义前景，避免暗色主题主按钮黑字压在蓝底上。 */
+.fa-button-control[data-variant="default"] {
+  color: var(--mrr-primary-foreground);
+}
+
+.fa-button-control[data-variant="destructive"] {
+  color: var(--mrr-destructive-foreground);
+}
+
+.fa-button-control:not(:disabled):active {
+  opacity: 0.82;
 }
 
 .fa-select-trigger[data-state="open"] .fa-select-chevron {

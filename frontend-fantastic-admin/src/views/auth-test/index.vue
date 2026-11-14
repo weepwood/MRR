@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import ExternalArchiveTicketTester from './components/ExternalArchiveTicketTester.vue'
 import JwtLoginTester from './components/JwtLoginTester.vue'
+import OssDiagnosticsTester from './components/OssDiagnosticsTester.vue'
 import ProtectedApiTester from './components/ProtectedApiTester.vue'
 
 defineOptions({ name: 'AuthenticationApiTestPage' })
@@ -47,7 +48,7 @@ function record(event: AuthTestHistoryEvent) {
           </el-tooltip>
         </div>
         <p class="subtitle">
-          测试内部 JWT、受保护 API 和外部影像票据。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。
+          测试内部 JWT、受保护 API、外部影像票据及 OSS 只读接口。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。
         </p>
       </div>
       <el-tag type="warning" effect="plain">
@@ -90,6 +91,9 @@ function record(event: AuthTestHistoryEvent) {
       <el-tab-pane name="request" label="受保护接口调试">
         <ProtectedApiTester @record="record" />
       </el-tab-pane>
+      <el-tab-pane name="oss" label="OSS 检查">
+        <OssDiagnosticsTester v-if="activeTab === 'oss'" @record="record" />
+      </el-tab-pane>
       <el-tab-pane name="history" label="请求记录">
         <el-card shadow="never">
           <template #header>
@@ -118,6 +122,14 @@ function record(event: AuthTestHistoryEvent) {
             <el-table-column label="耗时" width="110">
               <template #default="{ row }">
                 {{ row.durationMs }} ms
+              </template>
+            </el-table-column>
+            <el-table-column label="检查结论" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.outcome" :type="row.outcome === 'passed' ? 'success' : row.outcome === 'warning' ? 'warning' : 'danger'" effect="plain">
+                  {{ row.outcome === 'passed' ? '通过' : row.outcome === 'warning' ? '需关注' : '未通过' }}
+                </el-tag>
+                <span v-else>—</span>
               </template>
             </el-table-column>
           </el-table>

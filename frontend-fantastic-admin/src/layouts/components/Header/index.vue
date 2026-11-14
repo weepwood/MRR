@@ -69,7 +69,6 @@ header {
   color: var(--text-primary);
   background: var(--mrr-navigation-bg);
   border-bottom: 1px solid var(--mrr-navigation-border);
-  backdrop-filter: blur(18px) saturate(140%);
   transition: background-color 220ms ease, border-color 220ms ease;
 
   .header-container {
@@ -132,7 +131,7 @@ header {
             }
 
             &.active {
-              color: var(--color-primary);
+              color: var(--mrr-navigation-active-foreground);
               background: var(--mrr-navigation-active);
               border-color: var(--mrr-navigation-active-border);
             }

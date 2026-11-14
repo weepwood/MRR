@@ -80,7 +80,7 @@ onUnmounted(() => {
   flex-direction: column;
   width: var(--g-main-sidebar-width);
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--mrr-navigation-bg-solid) 96%, var(--color-primary) 4%);
+  background: var(--mrr-navigation-hover);
   border-right: 1px solid var(--mrr-navigation-border);
   transition: background-color 220ms ease, color 220ms ease;
 
@@ -130,7 +130,7 @@ onUnmounted(() => {
 
       &.active .menu-item-container,
       .menu-item-container.active {
-        color: var(--color-primary) !important;
+        color: var(--mrr-navigation-active-foreground) !important;
         background: var(--mrr-navigation-active) !important;
         border-color: var(--mrr-navigation-active-border);
         box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 4%, transparent);

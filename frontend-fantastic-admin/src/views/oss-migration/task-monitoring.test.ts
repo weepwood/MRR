@@ -5,13 +5,19 @@ import { h, KeepAlive, nextTick, ref } from 'vue'
 import * as api from '@/api/modules/oss'
 import Page from './index.vue'
 
-const { start, stop, error } = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), error: vi.fn() }))
-vi.mock('./composables/useMigrationPolling', () => ({ useMigrationPolling: () => ({ startPolling: start, stopPolling: stop, startOverviewRefresh: vi.fn(), stopOverviewRefresh: vi.fn() }) }))
+const { start, stop, error, pollingMode } = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), error: vi.fn(), pollingMode: { real: false } }))
+vi.mock('./composables/useMigrationPolling', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./composables/useMigrationPolling')>()
+  return { useMigrationPolling: (...args: Parameters<typeof actual.useMigrationPolling>) => pollingMode.real
+    ? actual.useMigrationPolling(...args)
+    : { startPolling: start, stopPolling: stop, startOverviewRefresh: vi.fn(), stopOverviewRefresh: vi.fn() } }
+})
 vi.mock('@/composables/useTableActionLayout', () => ({ useTableActionLayout: () => ({ maxInlineActions: ref(1), actionColumnWidth: ref(120) }) }))
 vi.mock('element-plus', () => ({ ElMessage: { error, success: vi.fn(), warning: vi.fn() }, ElMessageBox: { confirm: vi.fn() } }))
 vi.mock('@/api/modules/oss', () => Object.fromEntries(['cancelMigrationJob', 'createMigrationJob', 'getMigrationJob', 'getMigrationJobs', 'getMigrationLogs', 'getMigrationReadiness', 'getMigrationStatistics', 'getPendingFolders', 'getPendingManagementRecords', 'getWaitingSjhRecords', 'retryMigrationScans', 'uploadByBah', 'uploadToOss'].map(name => [name, vi.fn()])))
 
 interface State {
+  autoRefresh: boolean
   currentJob?: MigrationJob
   jobs: MigrationJob[]
   jobPage: number
@@ -41,6 +47,7 @@ async function setup() {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  pollingMode.real = false
   vi.mocked(api.getMigrationReadiness).mockResolvedValue({ data: { activeJob: { id: 99, status: 'running' } } } as Awaited<ReturnType<typeof api.getMigrationReadiness>>)
   vi.mocked(api.getMigrationJobs).mockResolvedValue(history(1) as Awaited<ReturnType<typeof api.getMigrationJobs>>)
   vi.mocked(api.getMigrationStatistics).mockResolvedValue({ data: {} } as Awaited<ReturnType<typeof api.getMigrationStatistics>>)
@@ -48,7 +55,10 @@ beforeEach(() => {
   vi.mocked(api.getPendingManagementRecords).mockResolvedValue({ data: { list: [] } } as Awaited<ReturnType<typeof api.getPendingManagementRecords>>)
   vi.mocked(api.getMigrationLogs).mockResolvedValue({ data: { list: [] } } as Awaited<ReturnType<typeof api.getMigrationLogs>>)
 })
-afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
+afterEach(() => {
+  wrappers.splice(0).forEach(wrapper => wrapper.unmount())
+  vi.restoreAllMocks()
+})
 
 describe('oSS任务监控一致性', () => {
   it('历史任务页不清除readiness确认的当前活动任务，也不停止追踪', async () => {
@@ -189,5 +199,42 @@ describe('oSS任务监控一致性', () => {
     visible.value = true
     await flushPromises()
     expect(api.getMigrationJobs).toHaveBeenLastCalledWith({ page: 2, size: 10 })
+  })
+  it.each([
+    { autoRefresh: true, interrupted: false },
+    { autoRefresh: true, interrupted: true },
+    { autoRefresh: false, interrupted: false },
+    { autoRefresh: false, interrupted: true },
+  ])('真实轮询缓存恢复：自动刷新$autoRefresh，中断历史$interrupted', async ({ autoRefresh, interrupted }) => {
+    pollingMode.real = true
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    vi.mocked(api.getMigrationReadiness).mockResolvedValue({ data: {} } as Awaited<ReturnType<typeof api.getMigrationReadiness>>)
+    const visible = ref(true)
+    const parent = mount({ setup: () => () => h(KeepAlive, null, { default: () => visible.value ? h(Page) : h('div') }) }, { global: globalOptions })
+    wrappers.push(parent)
+    await flushPromises()
+    const vm = parent.findComponent(Page).vm as unknown as State
+    expect(vm.jobs[0]?.id).toBe(1)
+    vm.autoRefresh = autoRefresh
+    await nextTick()
+    const pending = deferred<ReturnType<typeof history>>()
+    let oldRead: Promise<void> | undefined
+    if (interrupted) {
+      vi.mocked(api.getMigrationJobs).mockReturnValueOnce(pending.promise as ReturnType<typeof api.getMigrationJobs>)
+      oldRead = vm.loadJobs()
+    }
+    visible.value = false
+    await nextTick()
+    vi.mocked(api.getMigrationJobs).mockClear().mockResolvedValue(history(2) as Awaited<ReturnType<typeof api.getMigrationJobs>>)
+    visible.value = true
+    await flushPromises()
+    const shouldRefresh = autoRefresh || interrupted
+    expect(api.getMigrationJobs).toHaveBeenCalledTimes(shouldRefresh ? 1 : 0)
+    expect(vm.jobs[0]?.id).toBe(shouldRefresh ? 2 : 1)
+    if (interrupted) {
+      pending.resolve(history(10))
+      await oldRead
+      expect(vm.jobs[0]?.id).toBe(2)
+    }
   })
 })

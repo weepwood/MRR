@@ -161,7 +161,6 @@ const { startPolling, startOverviewRefresh, stopOverviewRefresh } = useMigration
   pollingActive,
 )
 
-onActivated(() => { pollingActive.value = true })
 onDeactivated(() => { pollingActive.value = false })
 
 const loading = reactive({
@@ -805,9 +804,10 @@ onDeactivated(() => {
 })
 onActivated(() => {
   jobReadsSuspended = false
+  pollingActive.value = true
   if (resumeHistory) {
     resumeHistory = false
-    void loadJobs()
+    if (!loading.jobs) { void loadJobs() }
   }
 })
 onBeforeUnmount(() => {

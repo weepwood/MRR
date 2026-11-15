@@ -67,7 +67,7 @@ defineExpose({
           }" :class="cn('group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
-          })" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="handleClick($event, navigate)"
+          })" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="handleClick($event, navigate)"
         >
           <div
             :class="cn('relative z-10 inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {
@@ -123,7 +123,7 @@ defineExpose({
 .menu-item-container.active,
 .menu-item.active .menu-item-container {
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--mrr-navigation-active-foreground);
   background: var(--mrr-navigation-active);
   border-color: var(--mrr-navigation-active-border);
 }
@@ -133,6 +133,11 @@ defineExpose({
   color: currentcolor;
   transform-origin: center;
   transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+}
+
+.menu-item-container:focus-visible {
+  outline: 2px solid var(--mrr-navigation-active-foreground);
+  outline-offset: 2px;
 }
 
 .menu-item-container:hover .menu-item-container-icon {

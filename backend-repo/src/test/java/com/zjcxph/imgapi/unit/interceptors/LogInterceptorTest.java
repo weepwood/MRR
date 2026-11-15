@@ -113,6 +113,17 @@ class LogInterceptorTest {
     }
 
     @Test
+    void directoryRoutingAuditRecordsOnlyRegisteredKeyNotRules() throws Exception {
+        String body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(java.util.Map.of(
+                "value", "[{\"type\":\"exact\",\"value\":\"2026.06.05\",\"node\":\"ba03\"}]"));
+        Log savedLog = captureSavedLog(jsonRequest("PUT", "/api/v1/settings/imageDirectoryRoutingRules", body));
+        assertThat(savedLog.getAuditAction()).isEqualTo("SETTING_UPDATE");
+        assertThat(savedLog.getAuditTarget()).isEqualTo("imageDirectoryRoutingRules");
+        assertThat(savedLog.getAuditDescription()).contains("1 项敏感参数");
+        assertThat(savedLog.getRequestBody()).doesNotContain("2026.06.05", "ba03");
+    }
+
+    @Test
     void auditsSensitiveRuntimeSettingChangesFromBatchPut() throws Exception {
         Log savedLog = captureSavedLog(jsonRequest(
                 "PUT",

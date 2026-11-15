@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
+import ImageDirectoryRoutingSettings from './ImageDirectoryRoutingSettings.vue'
 
 const settings = defineModel<EffectiveSystemSettings>({ required: true })
 </script>
@@ -7,15 +8,23 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 <template>
   <section class="setting-section">
     <div class="setting-group">
-      <div class="group-heading"><strong>默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p></div>
+      <div class="group-heading">
+        <strong>默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p>
+      </div>
       <el-segmented v-model="settings.imageSource" :options="[{ label: '本地图片', value: 'local' }, { label: 'OSS 图片', value: 'oss' }]" class="full-width" />
       <el-alert class="image-source-hint" type="info" :closable="false" show-icon :title="settings.imageSource === 'local' ? '默认从本地图片服务器读取。' : '优先从 OSS 读取；签名失败时自动回退本地图片。'" />
     </div>
     <div class="setting-group">
-      <div class="group-heading"><strong>默认浏览方式</strong><p>进入影像档案袋时自动应用。</p></div>
+      <div class="group-heading">
+        <strong>默认浏览方式</strong><p>进入影像档案袋时自动应用。</p>
+      </div>
       <div class="control-grid">
-        <el-form-item label="影像列表"><el-segmented v-model="settings.archiveDefaultView" :options="[{ label: '缩略图', value: 'thumb' }, { label: '列表', value: 'list' }]" class="full-width" /></el-form-item>
-        <el-form-item label="预览模式"><el-segmented v-model="settings.archivePreviewMode" :options="[{ label: '单页', value: 'single' }, { label: '连续滚动', value: 'scroll' }]" class="full-width" /></el-form-item>
+        <el-form-item label="影像列表">
+          <el-segmented v-model="settings.archiveDefaultView" :options="[{ label: '缩略图', value: 'thumb' }, { label: '列表', value: 'list' }]" class="full-width" />
+        </el-form-item>
+        <el-form-item label="预览模式">
+          <el-segmented v-model="settings.archivePreviewMode" :options="[{ label: '单页', value: 'single' }, { label: '连续滚动', value: 'scroll' }]" class="full-width" />
+        </el-form-item>
         <el-form-item label="缩略图宽度">
           <div class="slider-control">
             <el-slider
@@ -28,12 +37,21 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
             <span class="slider-value">{{ settings.archiveThumbnailSize }} px</span>
           </div>
         </el-form-item>
-        <el-form-item label="首批渲染数量"><div class="number-control"><el-input-number v-model="settings.archivePreloadCount" :min="10" :max="100" :step="10" controls-position="right" /><span>张</span></div></el-form-item>
+        <el-form-item label="首批渲染数量">
+          <div class="number-control">
+            <el-input-number v-model="settings.archivePreloadCount" :min="10" :max="100" :step="10" controls-position="right" /><span>张</span>
+          </div>
+        </el-form-item>
       </div>
     </div>
+    <ImageDirectoryRoutingSettings />
     <div class="switch-list">
-      <div class="switch-row"><div><strong>自动适应预览区域</strong><p>完整显示图片；关闭后按原始尺寸浏览。</p></div><el-switch v-model="settings.archiveAutoFit" /></div>
-      <div class="switch-row"><div><strong>记住选择状态</strong><p>再次进入同一档案时恢复已选影像页。</p></div><el-switch v-model="settings.archiveRememberSelection" /></div>
+      <div class="switch-row">
+        <div><strong>自动适应预览区域</strong><p>完整显示图片；关闭后按原始尺寸浏览。</p></div><el-switch v-model="settings.archiveAutoFit" />
+      </div>
+      <div class="switch-row">
+        <div><strong>记住选择状态</strong><p>再次进入同一档案时恢复已选影像页。</p></div><el-switch v-model="settings.archiveRememberSelection" />
+      </div>
     </div>
   </section>
 </template>

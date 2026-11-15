@@ -117,6 +117,10 @@ public class SettingRegistry {
                 "单次清理任务的最大批次数。达到上限后剩余过期记录留待下次执行。",
                 false));
 
+        register(registered, new SettingDefinition(ImageDirectoryRoutingRules.KEY, "archive", SettingType.TEXT,
+                ImageDirectoryRoutingRules::defaultJson, null, ImageDirectoryRoutingRules.MAX_LENGTH,
+                List.of(), "", "目录路由规则", "精确目录优先于年月；留空恢复内置规则，空数组只走通用节点。",
+                SettingEffect.IMMEDIATE, true));
         this.definitions = Collections.unmodifiableMap(registered);
     }
 
@@ -149,6 +153,10 @@ public class SettingRegistry {
      * @throws BusinessException 值不符合类型或超出安全值域
      */
     public void validate(String key, String value) {
+        if (ImageDirectoryRoutingRules.KEY.equals(key)) {
+            ImageDirectoryRoutingRules.parse(value);
+            return;
+        }
         SettingDefinition definition = definitions.get(key);
         if (definition == null) {
             return;

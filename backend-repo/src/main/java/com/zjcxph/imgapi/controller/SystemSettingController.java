@@ -106,8 +106,20 @@ public class SystemSettingController {
         item.put("effect", definition.effect().name());
         item.put("sensitive", definition.sensitive());
         item.put("defaultValue", definition.defaultRawValue());
-        item.put("overrideValue", runtimeSettingStore.readOverride(definition.key()));
-        item.put("effectiveValue", runtimeSettingStore.resolveRaw(definition.key()));
+        if (com.zjcxph.imgapi.setting.ImageDirectoryRoutingRules.KEY.equals(definition.key())) {
+            String override = systemSettingService.getSetting(definition.key());
+            item.put("overrideValue", override);
+            item.put("effectiveValue", override == null || override.isBlank() ? definition.defaultRawValue() : override);
+            try {
+                com.zjcxph.imgapi.setting.ImageDirectoryRoutingRules.parse(override);
+                item.put("valid", true);
+            } catch (com.zjcxph.imgapi.exception.BusinessException exception) {
+                item.put("valid", false);
+            }
+        } else {
+            item.put("overrideValue", runtimeSettingStore.readOverride(definition.key()));
+            item.put("effectiveValue", runtimeSettingStore.resolveRaw(definition.key()));
+        }
         return item;
     }
 

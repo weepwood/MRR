@@ -4,6 +4,8 @@ import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.setting.ImageDirectoryRoutingRules;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -76,6 +77,12 @@ public class ImageUrlService {
                                  String brxh,
                                  String bah,
                                  String sjh) {
+        return buildImageUrl(folder, filename, brxh, bah, sjh,
+                folder == null || folder.isBlank() ? null : loadRoutingRules());
+    }
+
+    private String buildImageUrl(String folder, String filename, String brxh, String bah, String sjh,
+                                 ImageDirectoryRoutingRules routing) {
         if (filename == null || filename.isBlank()) {
             return null;
         }
@@ -91,7 +98,7 @@ public class ImageUrlService {
                     filename);
         }
         return joinUrl(
-                determineImageUrl(folder),
+                determineImageUrl(folder, routing),
                 extractYearMonth(folder),
                 folder,
                 folderKey + "-" + bah,
@@ -117,53 +124,57 @@ public class ImageUrlService {
      * OSS 模式下，记录未迁移、签名为空或签名失败时自动回退本地 URL。
      */
     public String buildPreferredImageUrl(Scan scan) {
-        String localUrl = buildImageUrl(scan);
         if (!isOssPreferred() || scan == null || scan.getOssUrl() == null || scan.getOssUrl().isBlank()) {
-            return localUrl;
+            return buildImageUrl(scan);
         }
         try {
             String signedUrl = ossService.generatePresignedUrl(scan.getOssUrl());
-            return signedUrl == null || signedUrl.isBlank() ? localUrl : signedUrl;
+            if (signedUrl != null && !signedUrl.isBlank()) {
+                return signedUrl;
+            }
         } catch (Exception exception) {
             logger.warn("生成 OSS 签名 URL 失败，回退本地图片: scan={}, reason={}",
                     scan.getId(), exception.getMessage());
-            return localUrl;
         }
+        return buildImageUrl(scan);
     }
 
     /**
      * 根据文件夹名（日期段）决定使用哪台本地图片服务器。
      */
     String determineImageUrl(String folder) {
+        return determineImageUrl(folder, folder == null || folder.isBlank() ? null : loadRoutingRules());
+    }
+
+    private String determineImageUrl(String folder, ImageDirectoryRoutingRules routing) {
         if (folder == null || folder.isBlank()) {
             return configuredOrFallback(imageProperties.getServerUrlDefault());
         }
-
-        Set<String> baImg03Exact = Set.of(
-                "2026.06.05", "2026.06.08", "2026.06.09"
-        );
-        if (baImg03Exact.contains(folder)) {
-            return configuredOrFallback(imageProperties.getServerUrlBa03());
+        String node = routing.nodeFor(folder);
+        String url = switch (node) {
+            case "default" -> imageProperties.getServerUrlDefault();
+            case "ba01" -> imageProperties.getServerUrlBa01();
+            case "ba02" -> imageProperties.getServerUrlBa02();
+            case "ba03" -> imageProperties.getServerUrlBa03();
+            default -> imageProperties.getUrl();
+        };
+        if (routing.inherited()) {
+            return configuredOrFallback(url);
         }
-
-        Set<String> baImg02YearMonth = Set.of(
-                "2025.08", "2025.09", "2025.10", "2025.11", "2025.12",
-                "2026.01", "2026.02", "2026.03", "2026.04", "2026.05", "2026.06"
-        );
-        String yearMonth = extractYearMonth(folder);
-        if (baImg02YearMonth.contains(yearMonth)) {
-            return configuredOrFallback(imageProperties.getServerUrlBa02());
+        if (url == null || url.isBlank()) {
+            throw new BusinessException(503, "目录路由目标节点未配置，请联系管理员");
         }
+        return url;
+    }
 
-        Set<String> baImg01YearMonth = Set.of(
-                "24.04", "24.05", "24.06", "24.07", "24.08", "24.09",
-                "24.10", "24.11", "25.07", "25.08"
-        );
-        if (baImg01YearMonth.contains(yearMonth)) {
-            return configuredOrFallback(imageProperties.getServerUrlBa01());
+    private ImageDirectoryRoutingRules loadRoutingRules() {
+        try {
+            return ImageDirectoryRoutingRules.parse(systemSettingService.getSetting(ImageDirectoryRoutingRules.KEY));
+        } catch (Exception exception) {
+            // 不记录覆盖值、底层异常或路径；配置故障不能默认为另一个影像节点。
+            logger.warn("目录路由配置不可用");
+            throw new BusinessException(503, "目录路由配置不可用，请联系管理员");
         }
-
-        return imageProperties.getUrl();
     }
 
     private String configuredOrFallback(String configuredUrl) {
@@ -207,14 +218,14 @@ public class ImageUrlService {
 
         boolean useOss = isOssPreferred();
         List<BAHDataResponseDTO> items = new ArrayList<>(scans.size());
+        ImageDirectoryRoutingRules routing = null;
         for (Scan scan : scans) {
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
             org.springframework.beans.BeanUtils.copyProperties(scan, dto);
             dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
             dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
 
-            String localUrl = buildImageUrl(scan);
-            String selectedUrl = localUrl;
+            String selectedUrl = null;
             String signedOssUrl = null;
             if (useOss && ossUrlResolver != null && scan.getOssUrl() != null && !scan.getOssUrl().isBlank()) {
                 try {
@@ -229,6 +240,13 @@ public class ImageUrlService {
                 }
             }
 
+            if (selectedUrl == null) {
+                if (routing == null && scan.getFolder() != null && !scan.getFolder().isBlank()) {
+                    routing = loadRoutingRules();
+                }
+                selectedUrl = buildImageUrl(scan.getFolder(), scan.getFilename(), scan.getBrxh(),
+                        scan.getBah(), scan.getSjh(), routing);
+            }
             dto.setImg_url(selectedUrl);
             dto.setOssUrl(signedOssUrl);
             items.add(dto);

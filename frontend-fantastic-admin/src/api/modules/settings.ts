@@ -50,6 +50,8 @@ export interface SettingSchemaItem {
   overrideValue: string | null
   /** 当前生效值 */
   effectiveValue: string
+  /** 目录路由原文是否通过后端严格校验；无效时仅允许恢复。 */
+  valid?: boolean
 }
 
 export interface SettingSchemaGroup {

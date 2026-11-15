@@ -15,6 +15,7 @@ UI 与交互专项的事实、首批统一范围及后续检查顺序见 [UI 一
 | 为什么这样划分系统和依赖 | [架构边界](../../ARCHITECTURE.md)、[ADR 索引](../adr/README.md) | 正式模块化单体、权限/隐私/存储和迁移约束 |
 | 具体怎么开发和验证 | [AGENTS](../../AGENTS.md)、[AI 开发治理](../engineering/ai-assisted-development-governance.md)、[前端工程](../../frontend-fantastic-admin/ENGINEERING.md)、[后端工程](../../backend-repo/ENGINEERING_GUIDE.md) | 风险、任务包、测试、独立审查和交付 |
 | 页面、组件和交互怎样保持一致 | [前端设计规范](../../frontend-fantastic-admin/DESIGN.md) | 当前令牌/组件来源、状态契约、兼容和视觉验收 |
+| 怎样集中查看组件外观与交互状态 | [UI 组件展示页](ui-components.md) | 登录后「帮助 → UI 组件」，使用本地合成示例，不替代真实环境验收 |
 | 首轮上线做什么、后续怎样分期 | [医院上线台账](../engineering/hospital-readiness-roadmap.md) | 固定基线、依赖、已交付进展与未知项 |
 | 现场怎样判定可用 | [医院副本验收包](../engineering/hospital-replica-acceptance.md)、[院内记录模板](../engineering/hospital-replica-acceptance-record.md) | 真实证据留院内；模板和仓库测试不是现场结论 |
 | 具体功能怎样使用、部署 | [用户手册](../../vitepress-doc/user-guide/index.md)、[内部架构说明](../../vitepress-doc/internal/architecture.md)、[发布基线](../../release-baseline.json) | 用户/运维说明与实际制品一致 |

@@ -167,7 +167,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
       &.active .menu-item-container {
         font-weight: 600;
-        color: var(--color-primary) !important;
+        color: var(--mrr-navigation-active-foreground) !important;
         background: var(--mrr-navigation-active) !important;
         border-color: var(--mrr-navigation-active-border);
       }
@@ -247,7 +247,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     :deep(.menu-item.active .menu-item-container),
     :deep(.sub-menu .menu-item.active .menu-item-container) {
       font-weight: 600;
-      color: var(--color-primary) !important;
+      color: var(--mrr-navigation-active-foreground) !important;
       background: var(--mrr-navigation-active) !important;
       border-color: var(--mrr-navigation-active-border);
     }

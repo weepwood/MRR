@@ -204,18 +204,29 @@ npm run docs:build
 
 确认用户站和内部站均显示 `v<VERSION>`。
 
-## 标签与自动发布
+## 验证与正式发布
 
-创建标签前必须确认目标提交已完成测试：
+正式入口是 Actions 的 `Release`（`release-on-version-bump.yml`）。修改 `VERSION` 或人工推送标签均不会自动发布。版本、基线和版本说明先通过 PR 合并，再确认目标提交的 `quality-gate.yml` main push 运行成功。
 
-```bash
-git tag v0.4.0
-git push origin v0.4.0
-```
+1. 记录最终 main 的完整 SHA，确认 `VERSION`、Maven revision、基线和 `release-notes/<VERSION>.md` 一致。
+2. 从 main 调度 `Release`，先保留 `dry_run=true`。工作流固定启动时的 SHA，执行完整候选验证和 Windows PostgreSQL 恢复演练，不创建标签或 Release。
+3. 试发布成功后，在 main 仍指向同一 SHA 时调度 `dry_run=false`。正式运行会重新构建和完整验证，不能将上一轮试发布产物直接作为正式发布文件。
+4. 全部验证成功后，发布 job 校验候选身份，创建不可移动的 `v<VERSION>` 标签，上传草稿并核验全部资产的摘要，最后公开 Release。
 
-工作流会校验标签必须严格等于 `v` 加 `VERSION`。例如 `VERSION=0.4.0` 时，`v0.4.1` 和 `0.4.0` 都会被拒绝。
+完整验证包含 PostgreSQL 16 集成测试、覆盖率门禁、前端生产构建、Chrome 86 静态兼容、全量 Mock E2E、最终 JAR 的真实登录/权限拒绝/导入/查询，以及同一候选 JAR 的 Windows PowerShell 5.1 恢复演练。它不替代医院现场、真实 Chrome 86、NAS/OSS 或生产数据规模验收。
 
-标签构建通过后，工作流创建 GitHub Release 并上传 Windows ZIP。
+### 发布文件与失败恢复
+
+公开 Release 必须包含以下四项；`release-candidate.json` 绑定完整源 SHA、run ID、构建 attempt，以及三个产品文件的大小和 SHA-256：
+
+- `MRR-v<VERSION>.zip`；
+- `MRR-v<VERSION>-standalone.jar`；
+- `MRR-v<VERSION>-standalone.jar.sha256`；
+- `release-candidate.json`。
+
+候选 Artifact 保留 1 天。验证失败时先修复并重新完整验收；上传中断时，在同一 run 内重跑失败的 publish job，复用原候选与构建 attempt，不重跑成功构建。已上传文件只有在摘要与原候选一致时才会保留并继续上传。禁止覆盖资产或移动标签；候选过期、标签指向其他提交、资产摘要不一致时必须停止处理。
+
+详细编排和边界见仓库内的 [分层 CI 与发布验收](https://github.com/weepwood/MRR/blob/main/docs/engineering/ci-tiered-verification.md)。
 
 ## 数据库发布规则
 

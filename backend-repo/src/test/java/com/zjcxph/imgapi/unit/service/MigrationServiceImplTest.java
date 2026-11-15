@@ -83,6 +83,42 @@ class MigrationServiceImplTest {
     }
 
     @Test
+    @DisplayName("失败重置在有活动任务时拒绝，不调用状态更新")
+    void retryRejectsActiveJob() {
+        MigrationJob active = new MigrationJob();
+        active.setId(9L);
+        when(migrationJobMapper.findLatestActive()).thenReturn(active);
+        assertThatThrownBy(() -> migrationService.retryFailedScans(List.of(1)))
+                .isInstanceOf(IllegalStateException.class);
+        verify(scanMapper, never()).resetMigrationFailures(any());
+    }
+
+    @Test
+    @DisplayName("失败重置拒绝空范围与超过1000条的范围")
+    void retryRejectsInvalidScope() {
+        assertThatThrownBy(() -> migrationService.retryFailedScans(null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> migrationService.retryFailedScans(List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> migrationService.retryFailedScans(java.util.Arrays.asList(null, null)))
+                .isInstanceOf(IllegalArgumentException.class);
+        List<Integer> tooMany = java.util.stream.IntStream.rangeClosed(1, 1001).boxed().toList();
+        assertThatThrownBy(() -> migrationService.retryFailedScans(tooMany))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(scanMapper, never()).resetMigrationFailures(any());
+    }
+
+    @Test
+    @DisplayName("失败重置去重后提交，并返回实际条件更新条数")
+    void retryDeduplicatesAndReportsActualUpdates() {
+        when(scanMapper.resetMigrationFailures(List.of(1, 2))).thenReturn(1);
+        assertThat(migrationService.retryFailedScans(java.util.Arrays.asList(1, null, 2, 1)))
+                .isEqualTo(1);
+        verify(scanMapper).resetMigrationFailures(List.of(1, 2));
+        verify(migrationTaskExecutor, never()).execute(any());
+    }
+
+    @Test
     @DisplayName("已有活动任务时复用任务，不重复启动线程")
     void reusesExistingActiveJob() {
         MigrationJob active = new MigrationJob();

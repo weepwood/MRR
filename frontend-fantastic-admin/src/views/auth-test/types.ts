@@ -4,6 +4,7 @@ export interface AuthTestHistoryEvent {
   path: string
   status: number
   durationMs: number
+  outcome?: 'passed' | 'warning' | 'failed'
 }
 
 export interface AuthTestHistoryItem extends AuthTestHistoryEvent {

@@ -49,12 +49,12 @@ a:active .mrr-icon-interactive,
 @keyframes mrr-status-pop {
   0% {
     opacity: 0;
-    transform: scale(0.82);
+    transform: scale(0.96);
   }
 
   65% {
     opacity: 1;
-    transform: scale(1.12);
+    transform: scale(1);
   }
 
   100% {
@@ -65,11 +65,11 @@ a:active .mrr-icon-interactive,
 
 @keyframes mrr-favorite-pop {
   0% {
-    transform: scale(0.8) rotate(-8deg);
+    transform: scale(0.96);
   }
 
   65% {
-    transform: scale(1.14) rotate(3deg);
+    transform: scale(1);
   }
 
   100% {
@@ -105,7 +105,11 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] *::after {
   scroll-behavior: auto !important;
   transition: none !important;
-  animation: none !important;
+
+  /* 保留 animationend，供抽屉/弹层完成关闭与焦点生命周期。 */
+  animation-duration: 1ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
 }
 
 :root[data-motion="off"] button:not(:disabled):hover .mrr-icon-interactive,
@@ -132,6 +136,7 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .save-status.dirty .status-dot,
 :root[data-motion="off"] .archive-folder-card:hover .folder-card-body,
 :root[data-motion="off"] .archive-folder-card:focus-visible .folder-card-body,
+:root[data-motion="off"] .el-button:active,
 :root[data-motion="off"] .history-favorite-button:active .bookmark-icon,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon:not(.is-switched) {
@@ -144,12 +149,52 @@ a:active .mrr-icon-interactive,
   transform: none !important;
 }
 
+/* 系统偏好停用空间动效；保留颜色、焦点和展开状态本身。 */
 @media (prefers-reduced-motion: reduce) {
-  .sub-menu .menu-item-container-icon {
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
   }
 
-  .sub-menu .menu-item-container:hover .menu-item-container-icon {
+  button:not(:disabled):hover .mrr-icon-interactive,
+  button:not(:disabled):active .mrr-icon-interactive,
+  a:hover .mrr-icon-interactive,
+  a:active .mrr-icon-interactive,
+  [role="button"]:hover .mrr-icon-interactive,
+  [role="button"]:active .mrr-icon-interactive,
+  .menu-item.active .menu-item-container-icon,
+  .menu-item-container:active .menu-item-container-icon,
+  .menu-item-container:hover .menu-leading-control-icon,
+  .menu-item-container:hover .menu-leading-control-arrow,
+  .sub-menu .menu-item-container:hover .menu-item-container-icon,
+  .dashboard-widget:active:not(.is-editing),
+  .dashboard-widget:hover .dashboard-widget__arrow,
+  .oss-folder-icon:hover .work-1,
+  .oss-folder-icon:hover .work-2,
+  .oss-folder-icon:hover .work-3,
+  .oss-folder-icon:hover .work-4,
+  .settings-nav-item:hover .nav-icon,
+  .settings-nav-item.active .nav-icon,
+  .settings-nav-item:hover .nav-arrow,
+  .settings-nav-item.active .nav-arrow,
+  .save-status.dirty .status-dot,
+  .archive-folder-card:hover .folder-card-body,
+  .archive-folder-card:focus-visible .folder-card-body,
+  .el-button:active,
+  .history-favorite-button:active .bookmark-icon,
+  .field-label--switchable:active .field-switch-icon,
+  .field-label--switchable:active .field-switch-icon:not(.is-switched) {
+    transform: none !important;
+  }
+
+  .history-tab-enter-from,
+  .history-tab-leave-to {
+    opacity: 1 !important;
     transform: none !important;
   }
 }

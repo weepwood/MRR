@@ -69,10 +69,6 @@ body {
   line-height: 1.5;
   color: var(--mrr-foreground);
   background-color: var(--mrr-app-shell-bg);
-  background-image:
-    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
-  background-size: 32px 32px;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

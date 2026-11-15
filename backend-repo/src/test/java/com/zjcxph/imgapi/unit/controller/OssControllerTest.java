@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.controller;
 
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.controller.OssController;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.req.MigrationRetryRequest;
@@ -10,6 +11,10 @@ import com.zjcxph.imgapi.dto.resp.OssUploadResult;
 import com.zjcxph.imgapi.entity.MigrationJob;
 import com.zjcxph.imgapi.service.MigrationService;
 import com.zjcxph.imgapi.service.OssService;
+import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.method.HandlerMethod;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +41,32 @@ class OssControllerTest {
 
     @InjectMocks
     private OssController controller;
+
+    @Test
+    @DisplayName("真实失败重置Handler保持无会话401、只读403和管理权限放行")
+    void retryEndpointRetainsPermissionBoundary() throws Exception {
+        HandlerMethod handler = new HandlerMethod(controller,
+                OssController.class.getMethod("retryFailedScans", MigrationRetryRequest.class));
+        AuthorizationInterceptor authorization = new AuthorizationInterceptor();
+        MockHttpServletRequest anonymous = new MockHttpServletRequest("POST", "/api/v1/oss/migration/retry");
+        MockHttpServletResponse denied = new MockHttpServletResponse();
+        assertThat(authorization.preHandle(anonymous, denied, handler)).isFalse();
+        assertThat(denied.getStatus()).isEqualTo(401);
+
+        AuthSession session = new AuthSession();
+        session.setUsername("synthetic-operator");
+        session.setRoleCode("OPERATOR");
+        session.setPermissions(List.of("record:read"));
+        MockHttpServletRequest readonly = new MockHttpServletRequest("POST", "/api/v1/oss/migration/retry");
+        readonly.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        MockHttpServletResponse forbidden = new MockHttpServletResponse();
+        assertThat(authorization.preHandle(readonly, forbidden, handler)).isFalse();
+        assertThat(forbidden.getStatus()).isEqualTo(403);
+
+        session.setPermissions(List.of("record:manage"));
+        assertThat(authorization.preHandle(readonly, new MockHttpServletResponse(), handler)).isTrue();
+        org.mockito.Mockito.verifyNoInteractions(migrationService, ossService);
+    }
 
     @Test
     @DisplayName("手工上传限制为 500 条")

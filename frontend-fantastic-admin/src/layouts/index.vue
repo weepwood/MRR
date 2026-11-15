@@ -178,7 +178,6 @@ onBeforeUnmount(() => {
     overflow: hidden;
     background: var(--mrr-navigation-bg);
     border-right: 1px solid var(--mrr-navigation-border);
-    backdrop-filter: blur(18px) saturate(140%);
     transition: width 220ms ease, transform 220ms ease, top 220ms ease, box-shadow 220ms ease;
   }
 
@@ -203,7 +202,6 @@ onBeforeUnmount(() => {
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
       background-color: var(--mrr-workspace-bg);
-      background-image: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-primary) 4%, transparent), transparent 26%);
     }
   }
 }

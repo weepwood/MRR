@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.SystemSetting;
+import com.zjcxph.imgapi.config.ImageProperties;
+import com.zjcxph.imgapi.setting.ImageDirectoryRoutingRules;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
@@ -38,15 +40,17 @@ public class SystemSettingServiceImpl implements SystemSettingService {
     private final DeveloperModeService developerModeService;
     private final DeveloperApiAccessService developerApiAccessService;
     private final SettingRegistry settingRegistry;
+    private final ImageProperties imageProperties;
 
     public SystemSettingServiceImpl(SystemSettingMapper systemSettingMapper,
                                     DeveloperModeService developerModeService,
                                     DeveloperApiAccessService developerApiAccessService,
-                                    SettingRegistry settingRegistry) {
+                                    SettingRegistry settingRegistry, ImageProperties imageProperties) {
         this.systemSettingMapper = systemSettingMapper;
         this.developerModeService = developerModeService;
         this.developerApiAccessService = developerApiAccessService;
         this.settingRegistry = settingRegistry;
+        this.imageProperties = imageProperties;
     }
 
     @Override
@@ -120,6 +124,26 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         // 注册表驱动的校验：负责类型与安全值域，未注册的键不受约束（保持既有设置键行为）。
         for (Map.Entry<String, String> entry : settings.entrySet()) {
             settingRegistry.validate(entry.getKey(), entry.getValue());
+            if (ImageDirectoryRoutingRules.KEY.equals(entry.getKey())) {
+                var routing = ImageDirectoryRoutingRules.parse(entry.getValue());
+                if (!routing.inherited()) {
+                    for (var rule : routing.rules()) {
+                        String url = switch (rule.node()) {
+                            case "default" -> imageProperties.getServerUrlDefault();
+                            case "ba01" -> imageProperties.getServerUrlBa01();
+                            case "ba02" -> imageProperties.getServerUrlBa02();
+                            case "ba03" -> imageProperties.getServerUrlBa03();
+                            default -> imageProperties.getUrl();
+                        };
+                        if (url == null || url.isBlank()) {
+                            throw new BusinessException(400, "目录路由目标节点未配置，请先核对部署配置");
+                        }
+                    }
+                    if (imageProperties.getUrl() == null || imageProperties.getUrl().isBlank()) {
+                        throw new BusinessException(400, "目录路由通用节点未配置，请先核对部署配置");
+                    }
+                }
+            }
         }
 
         if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {

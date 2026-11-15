@@ -28,6 +28,9 @@ interface OcrClassificationSettingsRef {
 }
 
 interface RuntimeSettingsRef {
+  canSave: boolean
+  statusLabel: string
+  synced: boolean
   saving: boolean
   isDirty: boolean
   saveSettings: () => Promise<boolean>
@@ -198,6 +201,10 @@ watch(() => ocrSettingsRef.value?.isDirty, (dirty) => {
   }
 })
 
+watch(() => runtimeSettingsRef.value?.synced, (synced) => {
+  if (!synced) { clearRuntimeSavedFeedback() }
+})
+
 watch(() => runtimeSettingsRef.value?.isDirty, (dirty) => {
   if (dirty) {
     clearRuntimeSavedFeedback()
@@ -324,14 +331,14 @@ void shellRef
             <div class="save-status" :class="{ dirty: runtimeSettingsRef?.isDirty }">
               <span class="status-dot" />
               <div>
-                <strong>{{ runtimeSettingsRef?.isDirty ? '运行参数修改待保存' : '运行参数已同步' }}</strong>
+                <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
                 <small>保存后立即生效，不需要重启服务。</small>
               </div>
             </div>
             <el-button
               :type="runtimeSavedRecently ? 'success' : 'primary'"
               :loading="runtimeSettingsRef?.saving"
-              :disabled="!runtimeSettingsRef?.isDirty"
+              :disabled="!runtimeSettingsRef?.canSave"
               @click="handleRuntimeSave"
             >
               <FaIcon

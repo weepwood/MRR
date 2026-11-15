@@ -21,7 +21,7 @@ test.describe('页面标题统一风格', () => {
     const archiveTitle = page.getByRole('heading', { name: '档案装箱管理' })
     await expect(archiveTitle).toBeVisible({ timeout: 20_000 })
     const archiveTitleSize = await archiveTitle.evaluate(node => window.getComputedStyle(node).fontSize)
-    expect(archiveTitleSize).toBe('28px')
+    expect(archiveTitleSize).toBe('26px')
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
     const recordsTitle = page.getByRole('heading', { name: '记录管理' })
@@ -85,7 +85,16 @@ test.describe('页面标题统一风格', () => {
       await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
       const header = page.locator(target.selector)
       await expect(header).toBeVisible({ timeout: 20_000 })
-      expect(await header.evaluate(node => window.getComputedStyle(node).backgroundImage)).not.toBe('none')
+      const style = await header.evaluate((node) => {
+        const style = window.getComputedStyle(node)
+        return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, borderWidth: style.borderTopWidth, borderStyle: style.borderTopStyle, borderRadius: Number.parseFloat(style.borderRadius), boxShadow: style.boxShadow }
+      })
+      expect(style.backgroundImage).toBe('none')
+      expect(style.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+      expect(style.borderWidth).toBe('1px')
+      expect(style.borderStyle).toBe('solid')
+      expect(style.borderRadius).toBeGreaterThan(0)
+      expect(style.boxShadow).toBe('none')
     }
   })
 })

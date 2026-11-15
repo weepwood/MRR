@@ -28,7 +28,8 @@ async function expectCustomFont(page: Page, context: BrowserContext, text: strin
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/**', route => route.fulfill({
+  // Vite also serves /src/api/*.ts; only intercept HTTP API endpoints.
+  await page.route('**/api/v1/**', route => route.fulfill({
     json: { code: 200, data: { enabled: false, serverTime: '2026-11-12T12:00:00Z' } },
   }))
   await page.goto('/login')

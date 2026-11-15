@@ -93,11 +93,12 @@ test.describe('无后端 Mock 模式', () => {
     await expect(header).toBeVisible()
     const plainStyle = await header.evaluate((node) => {
       const style = window.getComputedStyle(node)
-      return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius, boxShadow: style.boxShadow }
+      return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, borderRadius: style.borderRadius, boxShadow: style.boxShadow, borderWidth: style.borderTopWidth }
     })
     expect(plainStyle.backgroundImage).toBe('none')
     expect(Number.parseFloat(plainStyle.borderRadius) || 0).toBe(0)
     expect(plainStyle.boxShadow).toBe('none')
+    expect(plainStyle.borderWidth).toBe('0px')
 
     await page.evaluate(() => {
       const storageKey = 'MRR-ADMIN:app-settings'
@@ -111,11 +112,15 @@ test.describe('无后端 Mock 模式', () => {
     await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
     const cardStyle = await page.locator('.page-header').first().evaluate((node) => {
       const style = window.getComputedStyle(node)
-      return { backgroundImage: style.backgroundImage, borderRadius: Number.parseFloat(style.borderRadius), boxShadow: style.boxShadow }
+      return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, borderRadius: Number.parseFloat(style.borderRadius), boxShadow: style.boxShadow, borderWidth: style.borderTopWidth, borderStyle: style.borderTopStyle }
     })
-    expect(cardStyle.backgroundImage).not.toBe('none')
+    expect(cardStyle.backgroundImage).toBe('none')
+    expect(cardStyle.backgroundColor).not.toBe(plainStyle.backgroundColor)
+    expect(cardStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(cardStyle.borderWidth).toBe('1px')
+    expect(cardStyle.borderStyle).toBe('solid')
     expect(cardStyle.borderRadius).toBeGreaterThan(0)
-    expect(cardStyle.boxShadow).not.toBe('none')
+    expect(cardStyle.boxShadow).toBe('none')
   })
 
   test('主要页面卡片跟随统一圆角设置', async ({ page }) => {

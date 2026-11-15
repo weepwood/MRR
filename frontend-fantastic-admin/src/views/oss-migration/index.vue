@@ -144,11 +144,16 @@ const uploadResult = ref<OssUploadBatchResult>()
 const uploadResultVisible = ref(false)
 const autoRefresh = ref(true)
 const lastUpdatedAt = ref<Date>()
+const pollingActive = ref(true)
 const { startPolling, stopPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
   currentJob,
   refreshAll,
   () => refreshOverview(true),
+  pollingActive,
 )
+
+onActivated(() => { pollingActive.value = true })
+onDeactivated(() => { pollingActive.value = false })
 
 const loading = reactive({
   page: false,

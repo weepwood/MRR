@@ -8,10 +8,11 @@ import { cn } from '@/utils'
 const props = defineProps<SliderRootProps & {
   class?: HTMLAttributes['class']
   tooltip?: boolean
+  ariaLabelledby?: string
 }>()
 const emits = defineEmits<SliderRootEmits>()
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class', 'ariaLabelledby')
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
@@ -29,6 +30,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     </SliderTrack>
     <FaTooltip v-for="(val, key) in modelValue" :key="key" :text="val.toString()" disable-closing-trigger :disabled="!props.tooltip">
       <SliderThumb
+        :aria-labelledby="props.ariaLabelledby"
         class="block h-5 w-5 border-2 border-primary rounded-full bg-background ring-offset-background transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
       />
     </FaTooltip>

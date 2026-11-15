@@ -73,6 +73,13 @@ const nginxBrowserRoute: RouteRecordRaw = {
   },
 }
 
+const uiComponentsRoute: RouteRecordRaw = {
+  path: '/ui-components',
+  name: 'uiComponents',
+  component: () => import('@/views/ui-components/index.vue'),
+  meta: { title: 'UI 组件', icon: 'i-lucide:component', cache: false },
+}
+
 const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -324,6 +331,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         component: () => import('@/views/help/index.vue'),
         meta: { title: '帮助与文档', icon: 'i-lucide:book-open', cache: true },
       },
+      uiComponentsRoute,
     ],
   },
 ]
@@ -345,6 +353,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
   item => ![
     '/status',
     '/auth-test',
+    '/ui-components',
     '/data-relations',
     '/nginx-browser',
     '/operations-center',
@@ -363,6 +372,7 @@ const asyncRoutesByFilesystem = [
   monitoringFilesystemRoute,
   authenticationTestRoute,
   nginxBrowserRoute,
+  uiComponentsRoute,
 ]
 
 export {

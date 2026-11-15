@@ -622,7 +622,8 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
   border-bottom-color: var(--mrr-border);
 }
 
-.el-table {
+/* 按需加载的 Element Plus 及暗色样式晚于全局入口，桥接需保持更高优先级。 */
+body .el-table {
   --el-table-bg-color: var(--mrr-card);
   --el-table-tr-bg-color: var(--mrr-card);
   --el-table-header-bg-color: color-mix(in srgb, var(--mrr-muted) 64%, var(--mrr-card));

@@ -60,8 +60,8 @@ importers:
         specifier: ^3.14.2
         version: 3.14.2
       hotkeys-js:
-        specifier: ^4.0.8
-        version: 4.0.8
+        specifier: ^4.1.2
+        version: 4.1.2
       jszip:
         specifier: ^3.10.2
         version: 3.10.2
@@ -5077,8 +5077,8 @@ packages:
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
 
-  hotkeys-js@4.0.8:
-    resolution: {integrity: sha512-A0nu5ZU7cN8nEx3uGUHrv1WnJvjPFUw4Cfxj8pLyR5AIg14ACP4D0YZ+5JHAPjlvUbPbgok56+XTZWjscYCV4A==}
+  hotkeys-js@4.1.2:
+    resolution: {integrity: sha512-SXPG2KJ4AW0wyZwh7lBtBavfbunm78kcTqjc2b7TXe7bkyKwDJDlByXbMoGiNrhRkONfdzNg6KqRc3PKBj6tfQ==}
 
   html-encoding-sniffer@3.0.0:
     resolution: {integrity: sha512-oWv4T4yJ52iKrufjnyZPkrN0CH3QnrUqdB6In1g5Fe1mia8GmF36gnfNySxoZtxD5+NmYw1EElVXiBk93UeskA==}
@@ -13167,7 +13167,7 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  hotkeys-js@4.0.8: {}
+  hotkeys-js@4.1.2: {}
 
   html-encoding-sniffer@3.0.0:
     dependencies:

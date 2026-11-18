@@ -148,8 +148,22 @@ public class LogServiceImpl implements LogService {
             log.setAuditTarget(com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(log.getAuditTarget()));
         }
         log.setBah(null); log.setSjh(null); log.setPatientId(null);
-        log.setErrorMessage(log.getErrorMessage() == null ? null : "[ERROR MESSAGE OMITTED]");
+        log.setErrorMessage(storedErrorMessage(log.getErrorMessage()));
         return log;
+    }
+
+    /**
+     * 错误信息列只放行异常类名。
+     *
+     * <p>{@code LogInterceptor#formatError} 写入的本就是 {@code exception.getClass().getName()}，
+     * 旧实现却一律替换成占位符，导致运维无法区分空指针、SQL 异常与超时。
+     * 历史数据可能存过完整异常正文，因此只放行形如 {@code java.lang.IllegalStateException}
+     * 的类名，其余仍整体隐藏。</p>
+     */
+    private String storedErrorMessage(String value) {
+        if (value == null) return null;
+        return value.matches("[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+")
+                ? value : "[ERROR MESSAGE OMITTED]";
     }
 
 }

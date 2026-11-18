@@ -4,8 +4,8 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -19,9 +19,30 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
-import { formatDateTime } from '@/utils/display-format'
+import { readAuthStorage } from '@/utils/auth-storage'
+import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
+import { checkSessionPermission } from '@/utils/permission'
 
 defineOptions({ name: 'LogsPage' })
+
+const router = useRouter()
+const route = useRoute()
+/**
+ * 运行日志接口要求 system:manage 与 log:read 同时具备（后端 allMatch），
+ * 而 system:manage 的继承链不含 log:read，缺任一都会 403。
+ *
+ * 这里读会话凭据而不是 user store：后者在模块顶层 `import router from '@/router'`，
+ * 会把依赖构建期虚拟模块的路由表带进本页导入链，页面单测因此无法加载。
+ * checkSessionPermission 同时处理 ADMIN 角色，与后端放行一致。
+ *
+ * 会话凭据在进入本页时已确定，故只读一次；权限变更需重新登录后生效。
+ */
+const authSession = readAuthStorage()
+const canReadRuntimeLogs = computed(() => {
+  const roleCode = authSession.profile?.roleCode
+  return checkSessionPermission(roleCode, authSession.permissions, 'system:manage')
+    && checkSessionPermission(roleCode, authSession.permissions, 'log:read')
+})
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
@@ -92,7 +113,16 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
-  defaultQuery: { keyword: String(useRoute().query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+  defaultQuery: { keyword: String(route.query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+})
+
+/** 页面被缓存时从「运行日志」跳转过来不会重新 mount；跟随 requestId 重新检索。 */
+watch(() => route.query.requestId, (value) => {
+  // 缓存组件里 route 指向全局当前路由；离开本页后跳到别处的参数不应改动本页检索。
+  if (route.path !== '/logs') { return }
+  if (typeof value !== 'string' || !value) { return }
+  query.keyword = value
+  handleSearch()
 })
 
 async function openDetail(row: LogRecord) {
@@ -106,6 +136,13 @@ async function openDetail(row: LogRecord) {
   finally {
     detailVisible.value = true
   }
+}
+
+/** 访问日志只记录接口结果，异常原因在后端运行日志里；按同一个 Request ID 直接过去。 */
+function openRuntimeLogs(requestId?: string) {
+  if (!requestId || !canReadRuntimeLogs.value) { return }
+  detailVisible.value = false
+  void router.push({ path: '/runtime-logs', query: { requestId } })
 }
 
 function handleLogAction(action: string, row: LogRecord) {
@@ -262,7 +299,15 @@ function statusTagType(status: string | number) {
     <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
       <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request ID">
+          <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
+          <el-button
+            v-if="currentLog.requestId && canReadRuntimeLogs" link type="primary" class="detail-link"
+            @click="openRuntimeLogs(currentLog?.requestId)"
+          >
+            查看运行日志
+          </el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
         <el-descriptions-item label="请求方法">{{ currentLog.method || '-' }}</el-descriptions-item>
@@ -290,7 +335,11 @@ function statusTagType(status: string | number) {
           <span class="detail-value">{{ currentLog.auditDescription || '-' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="异常信息" :span="2">
-          <pre class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
+          <el-alert
+            v-if="isRedactedLogText(currentLog.errorMessage)" type="info" :closable="false" show-icon
+            title="该记录写入时异常正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的记录会显示异常类名。"
+          />
+          <pre v-else class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="User-Agent" :span="2">
           <span class="detail-value">{{ currentLog.userAgent || '-' }}</span>
@@ -312,6 +361,10 @@ function statusTagType(status: string | number) {
 .detail-value,
 .detail-pre {
   overflow-wrap: anywhere;
+}
+
+.detail-link {
+  margin-left: 8px;
 }
 
 .detail-pre {

@@ -8,6 +8,7 @@ import type {
 import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
   getSystemErrorOverview,
@@ -20,13 +21,22 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
-import { formatDateTime } from '@/utils/display-format'
+import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkPermission } from '@/utils/permission'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
 
 const userStore = useUserStore()
+const router = useRouter()
 const canManage = computed(() => checkPermission(userStore.permissions, 'system:error:manage'))
+/**
+ * 运行日志接口声明了 {@code {"system:manage", "log:read"}}，后端按 allMatch 校验，
+ * 两者缺一即 403；且 system:manage 的继承链不含 log:read，必须分别判断。
+ * 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。
+ */
+const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage')
+  && checkPermission(userStore.permissions, 'log:read'))
+const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
 const loading = ref(false)
 const error = ref('')
 const list = ref<SystemErrorEvent[]>([])
@@ -113,6 +123,26 @@ async function openDetail(row: SystemErrorEvent) {
   finally {
     detailLoading.value = false
   }
+}
+
+/**
+ * 错误组只保留指纹与最近一次摘要，真正的原因往往要看同一追踪编号的完整日志。
+ * 这里带条件跳转，运行日志页会直接按编号检索，不需要用户手动复制。
+ */
+function openRuntimeLogs(query: { errorId?: string, requestId?: string }) {
+  if (!canReadRuntimeLogs.value) { return }
+  const params: Record<string, string> = {}
+  if (query.errorId) { params.errorId = query.errorId }
+  if (query.requestId) { params.requestId = query.requestId }
+  if (!Object.keys(params).length) { return }
+  detailVisible.value = false
+  void router.push({ path: '/runtime-logs', query: params })
+}
+
+function openAccessLog(requestId?: string) {
+  if (!requestId || !canReadAccessLogs.value) { return }
+  detailVisible.value = false
+  void router.push({ path: '/logs', query: { requestId } })
 }
 
 async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
@@ -221,7 +251,14 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip />
+        <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="isRedactedLogText(row.messageSummary)" size="small" effect="plain" type="info">
+              旧记录正文未保存
+            </el-tag>
+            <span v-else>{{ row.messageSummary || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
           <template #default="{ row }">{{ row.requestId || '-' }}</template>
         </el-table-column>
@@ -281,6 +318,17 @@ onMounted(loadData)
     </el-card>
 
     <el-drawer v-model="detailVisible" title="运行错误详情" size="70%">
+      <div v-if="current && (canReadRuntimeLogs || canReadAccessLogs)" class="detail-links">
+        <el-button v-if="canReadRuntimeLogs" size="small" @click="openRuntimeLogs({ errorId: current?.errorId })">
+          查看同错误组日志
+        </el-button>
+        <el-button v-if="canReadRuntimeLogs && current?.requestId" size="small" @click="openRuntimeLogs({ requestId: current?.requestId })">
+          查看该请求全部日志
+        </el-button>
+        <el-button v-if="canReadAccessLogs && current?.requestId" size="small" @click="openAccessLog(current?.requestId)">
+          查看访问记录
+        </el-button>
+      </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <el-descriptions v-else-if="current" :column="2" border>
         <el-descriptions-item label="错误编号">{{ current.errorId }}</el-descriptions-item>
@@ -297,7 +345,11 @@ onMounted(loadData)
         <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
         <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="错误摘要" :span="2">
-          <pre class="detail-pre summary-pre">{{ current.messageSummary }}</pre>
+          <el-alert
+            v-if="isRedactedLogText(current.messageSummary)" type="info" :closable="false" show-icon
+            title="该记录写入时正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的日志会保留模板正文。"
+          />
+          <pre v-else class="detail-pre summary-pre">{{ current.messageSummary || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="脱敏堆栈" :span="2">
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>
@@ -315,6 +367,13 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.detail-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .page-header {

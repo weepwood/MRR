@@ -39,9 +39,18 @@ public class RuntimeLogController {
     @GetMapping
     public Result<Map<String, Object>> search(@RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to, @RequestParam(required = false) String level,
+            @RequestParam(required = false) String minLevel, @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String requestId, @RequestParam(required = false) String errorId,
             @RequestParam(required = false) String logger, @RequestParam(required = false) Instant cursorTime,
             @RequestParam(required = false) UUID cursorId, @RequestParam(defaultValue = "50") int size) {
-        return Result.success(queries.search(from, to, level, requestId, errorId, logger, cursorTime, cursorId, size));
+        return Result.success(queries.search(from, to, level, minLevel, keyword, requestId, errorId, logger,
+                cursorTime, cursorId, size));
+    }
+
+    /** 时间窗内的问题概览：级别计数、趋势、高频错误组与模块分布。 */
+    @GetMapping("/insights")
+    public Result<Map<String, Object>> insights(@RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to) {
+        return Result.success(queries.insights(from, to));
     }
 }

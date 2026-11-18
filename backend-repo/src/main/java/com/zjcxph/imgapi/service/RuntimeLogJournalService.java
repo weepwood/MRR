@@ -115,7 +115,7 @@ public class RuntimeLogJournalService {
                 UUID id = node.hasNonNull("event_id") ? UUID.fromString(node.get("event_id").asText())
                         : UUID.nameUUIDFromBytes((key + ":" + line.offset()).getBytes(StandardCharsets.UTF_8));
                 boolean privateFormat = node.path("privacy_version").asInt() == 1;
-                String message = privateFormat ? com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(node.path("message").asText()) : "[LEGACY MESSAGE OMITTED]";
+                String message = privateFormat ? com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredMessage(node.path("message").asText()) : "[LEGACY MESSAGE OMITTED]";
                 String stack = privateFormat ? com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredStack(node.path("stack_trace").asText()) : "";
                 rows.add(new Object[]{Timestamp.from(at), id, level, safe(node.path("logger_name").asText(), 255),
                         safe(node.path("requestId").asText(), 80), nullableSafe(node.path("errorId").asText(), 32), message, stack,

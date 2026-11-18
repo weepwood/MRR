@@ -1,16 +1,39 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useRoute } from 'vue-router'
 import RuntimeLogsPage from '../index.vue'
 
-const api = vi.hoisted(() => ({ getRuntimeLogs: vi.fn(), getRuntimeLogHealth: vi.fn(), getRuntimeLogFiles: vi.fn(), importRuntimeLog: vi.fn() }))
+const routeMock = vi.hoisted(() => ({ state: { path: '/runtime-logs', query: {} as Record<string, string> } }))
+const pushMock = vi.hoisted(() => vi.fn())
+const api = vi.hoisted(() => ({
+  getRuntimeLogs: vi.fn(),
+  getRuntimeLogInsights: vi.fn(),
+  getRuntimeLogHealth: vi.fn(),
+  getRuntimeLogFiles: vi.fn(),
+  importRuntimeLog: vi.fn(),
+}))
 vi.mock('@/api/modules/runtime-logs', () => api)
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
+vi.mock('vue-router', async () => {
+  const { reactive } = await import('vue')
+  const route = reactive(routeMock.state)
+  return { useRoute: () => route, useRouter: () => ({ push: pushMock }) }
+})
 vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
-vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 
 const firstRow = { occurred_at: '2026-11-01T00:00:00Z', event_id: '00000000-0000-4000-8000-000000000001', message_summary: 'synthetic first' }
 const secondRow = { ...firstRow, event_id: '00000000-0000-4000-8000-000000000002', message_summary: 'synthetic second' }
 const names = ['img-api.log.2026-11-01.0.gz', 'img-api.log.2026-11-02.0.gz', 'img-api.log.2026-11-03.0.gz']
+const insightFixture = {
+  range: { from: '2026-11-01T00:00:00Z', to: '2026-11-02T00:00:00Z', bucket: 'hour' },
+  counts: { ERROR: 3, WARN: 1 },
+  trend: [{ bucketStart: '2026-11-01T00:00:00Z', error: 3, warn: 1 }],
+  topErrors: [
+    { errorId: 'ERR-20261101-AAAA1111', level: 'ERROR', module: 'service', message: 'synthetic hot error', occurrenceCount: 5, lastSeenAt: '2026-11-01T00:00:00Z', status: 'OPEN' },
+  ],
+  topModules: [{ module: 'service', occurrences: 5, groups: 1 }],
+  unresolvedGroups: 1,
+}
 const stubs = {
   'AppEmpty': { props: ['description'], template: '<p class="empty">{{ description }}</p>' },
   'AppError': { props: ['message'], template: '<div class="query-error">{{ message }}<button @click="$emit(\'retry\')">重试查询</button></div>' },
@@ -25,6 +48,7 @@ const stubs = {
   'el-select': { name: 'ElSelect', props: ['modelValue'], emits: ['update:modelValue'], template: '<div><slot/></div>' },
   'el-option': { props: ['label'], template: '<span>{{ label }}</span>' },
   'el-date-picker': { name: 'ElDatePicker', props: ['modelValue'], emits: ['update:modelValue'], template: '<div />' },
+  'el-switch': { name: 'ElSwitch', props: ['modelValue'], emits: ['update:modelValue'], template: '<input class="auto-refresh-switch" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />' },
   'el-table': { props: ['data'], template: '<div class="rows">{{ (data || []).map(row => row.message_summary || row.file_name).join(",") }}</div>' },
   'el-table-column': true,
   'el-tag': true,
@@ -55,11 +79,15 @@ function fileSelect(wrapper: ReturnType<typeof mount>) {
 beforeEach(() => {
   vi.resetAllMocks()
   api.getRuntimeLogs.mockResolvedValue({ data: { list: [firstRow], hasMore: true } })
+  api.getRuntimeLogInsights.mockResolvedValue({ data: insightFixture })
   api.getRuntimeLogHealth.mockResolvedValue({ data: { pollAgeSeconds: 2, sources: [] } })
   api.getRuntimeLogFiles.mockResolvedValue({ data: names.map(fileName => ({ fileName, bytes: 120 })) })
   api.importRuntimeLog.mockResolvedValue({ data: null })
 })
-afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()))
+afterEach(() => {
+  vi.useRealTimers()
+  wrappers.splice(0).forEach(wrapper => wrapper.unmount())
+})
 
 describe('运行日志失败恢复', () => {
   it('健康读取失败不隐藏成功日志，也不丢弃成功文件清单', async () => {
@@ -198,5 +226,92 @@ describe('运行日志失败恢复', () => {
     await flushPromises()
     expect(api.importRuntimeLog).toHaveBeenCalledTimes(1)
     expect(api.getRuntimeLogHealth).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('运行日志问题定位', () => {
+  it('概览展示窗口计数，点击高频错误组按编号筛选并清掉互斥条件', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    expect(wrapper.find('.insight-stats').text()).toContain('3')
+    expect(api.getRuntimeLogInsights).toHaveBeenCalledWith({ from: expect.any(String), to: expect.any(String) })
+
+    // 编号是精确匹配：残留的关键词、模块、最低级别都会把它挡成空列表（例如 WARN 组撞上「ERROR 及以上」）。
+    await wrapper.find('input[placeholder="例如 超时、Connection refused"]').setValue('synthetic keyword')
+    await wrapper.find('input[placeholder="logger 名称包含匹配"]').setValue('synthetic.module')
+    wrapper.findComponent({ name: 'ElSelect' }).vm.$emit('update:modelValue', 'ERROR')
+    await flushPromises()
+
+    const hotRows = wrapper.findAll('.hot-row')
+    expect(hotRows).toHaveLength(1)
+    await hotRows[0]!.trigger('click')
+    await flushPromises()
+
+    const params = api.getRuntimeLogs.mock.calls.at(-1)![0]
+    expect(params.errorId).toBe('ERR-20261101-AAAA1111')
+    expect(params.keyword).toBeUndefined()
+    expect(params.requestId).toBeUndefined()
+    expect(params.logger).toBeUndefined()
+    expect(params.minLevel).toBeUndefined()
+  })
+
+  it('概览读取失败只降级概览，不阻挡原始日志查询', async () => {
+    api.getRuntimeLogInsights.mockRejectedValue(new Error('synthetic insight failure'))
+    const wrapper = openPage()
+    await flushPromises()
+    expect(wrapper.find('.rows').text()).toContain('synthetic first')
+    expect(wrapper.text()).toContain('问题概览读取失败')
+  })
+
+  it('时间范围超过24小时时提示正文检索限制', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const picker = wrapper.findAllComponents({ name: 'ElDatePicker' })[0]!
+    picker.vm.$emit('update:modelValue', ['2026-11-01T00:00:00Z', '2026-11-05T00:00:00Z'])
+    await flushPromises()
+    expect(wrapper.find('.filter-hint').exists()).toBe(true)
+  })
+
+  it('页面被缓存时，路由上的错误编号仍能带入并重新查询', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const route = useRoute() as unknown as { path: string, query: Record<string, string> }
+
+    route.query = { errorId: 'ERR-20261101-BBBB2222' }
+    await flushPromises()
+
+    const params = api.getRuntimeLogs.mock.calls.at(-1)![0]
+    expect(params.errorId).toBe('ERR-20261101-BBBB2222')
+    expect(params.keyword).toBeUndefined()
+    // 跳转来自错误中心，事件可能早于默认24小时窗口；应放宽到最近7天而不是给用户一个空列表。
+    expect(Date.parse(params.to) - Date.parse(params.from)).toBe(7 * 86400000)
+    expect(wrapper.find('.rows').exists()).toBe(true)
+
+    // 离开本页后，其他页面的同名字段不应改动这里的筛选。
+    const callsBeforeLeaving = api.getRuntimeLogs.mock.calls.length
+    route.path = '/logs'
+    route.query = { requestId: 'synthetic-other-page' }
+    await flushPromises()
+    expect(api.getRuntimeLogs.mock.calls.length).toBe(callsBeforeLeaving)
+  })
+
+  it('自动刷新只在首批跟看时触发，翻批后不把用户拉回第一页', async () => {
+    vi.useFakeTimers()
+    const wrapper = openPage()
+    await flushPromises()
+    const initialCalls = api.getRuntimeLogs.mock.calls.length
+
+    wrapper.findComponent({ name: 'ElSwitch' }).vm.$emit('update:modelValue', true)
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(10000)
+    await flushPromises()
+    expect(api.getRuntimeLogs.mock.calls.length).toBe(initialCalls + 1)
+
+    await button(wrapper, '下一批').trigger('click')
+    await flushPromises()
+    const afterNext = api.getRuntimeLogs.mock.calls.length
+    await vi.advanceTimersByTimeAsync(20000)
+    await flushPromises()
+    expect(api.getRuntimeLogs.mock.calls.length).toBe(afterNext)
   })
 })

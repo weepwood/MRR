@@ -106,14 +106,14 @@ class RuntimeLogJournalPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.runtime_log_event WHERE event_id IN (?,?) AND error_id IS NULL",Long.class,first,second)).isEqualTo(2);
         var queries = new com.zjcxph.imgapi.service.RuntimeLogQueryService(jdbc);
         var from = java.time.Instant.parse("2026-10-16T00:00:00Z"); var to = from.plusSeconds(172800);
-        var page = queries.search(from,to,null,null,null,"synthetic.cursor",null,null,1);
+        var page = queries.search(from,to,null,null,null,null,null,"synthetic.cursor",null,null,1);
         var rows = (java.util.List<java.util.Map<String,Object>>) page.get("list");
         assertThat(page.get("hasMore")).isEqualTo(true);
-        var next = queries.search(from,to,null,null,null,"synthetic.cursor",java.time.Instant.parse((String)rows.getFirst().get("occurred_at")),UUID.fromString((String)rows.getFirst().get("event_id")),1);
+        var next = queries.search(from,to,null,null,null,null,null,"synthetic.cursor",java.time.Instant.parse((String)rows.getFirst().get("occurred_at")),UUID.fromString((String)rows.getFirst().get("event_id")),1);
         var nextRows = (java.util.List<java.util.Map<String,Object>>) next.get("list");
         assertThat(nextRows).hasSize(1); assertThat(nextRows.getFirst().get("event_id")).isNotEqualTo(rows.getFirst().get("event_id"));
         assertThat(next.get("hasMore")).isEqualTo(false);
-        assertThatThrownBy(() -> queries.search(from,to,null,null,null,null,null,first,1)).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        assertThatThrownBy(() -> queries.search(from,to,null,null,null,null,null,null,null,first,1)).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
         jdbc.update("DELETE FROM app.runtime_log_event WHERE event_id IN (?,?)", first, second);
         jdbc.update("DELETE FROM app.runtime_log_source WHERE file_name='cursor.log'");
     }

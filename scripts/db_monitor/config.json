@@ -1,0 +1,31 @@
+{
+  "_说明": "轻量监控配置。密码不要写在这里，用 MRR_DB_DSN 环境变量或 pgpass.conf。",
+  "psql": "",
+  "dsn": "",
+  "dsn_env": "MRR_DB_DSN",
+  "out_dir": "C:\\MRR\\monitoring-data\\db-monitor",
+  "keep_days": 30,
+  "actuator_url": "http://127.0.0.1:18046/actuator/prometheus",
+  "alert": {
+    "event_log": true,
+    "event_source": "MRR-DB-Monitor",
+    "webhook_env": "MRR_ALERT_WEBHOOK",
+    "notify_recovery": true,
+    "repeat_after_minutes": 120
+  },
+  "thresholds": {
+    "connections_pct": { "warning": 80, "critical": 90 },
+    "cache_hit_pct": { "warning": 99, "critical": 95, "direction": "below" },
+    "connections_idle_in_tx": { "warning": 1, "critical": 5 },
+    "connections_waiting": { "warning": 1, "critical": 5 },
+    "longest_xact_seconds": { "warning": 300, "critical": 1800 },
+    "dead_tuple_ratio": { "warning": 0.2, "critical": 0.35 },
+    "bloat_max_ratio": { "warning": 0.3, "critical": 0.5, "min_bytes_metric": "bloat_max_bytes", "min_bytes": 1073741824 },
+    "disk_free_pct": { "warning": 15, "critical": 8, "direction": "below" },
+    "stmt_avg_latency_ms": { "warning": 500, "critical": 2000 },
+    "stmt_slow_1s": { "warning": 10, "critical": 30 },
+    "deadlocks_delta": { "warning": 1, "critical": 3 },
+    "temp_bytes_delta": { "warning": 209715200, "critical": 1073741824 },
+    "hikari_pending": { "warning": 1, "critical": 5 }
+  }
+}

@@ -141,16 +141,16 @@ defineExpose({
 }
 
 .menu-item-container:hover .menu-item-container-icon {
-  transform: scale(1.04);
+  transform: var(--mrr-motion-decor, scale(1.04));
 }
 
 .menu-item-container.active .menu-item-container-icon,
 .menu-item.active .menu-item-container-icon {
-  transform: scale(1.06);
+  transform: var(--mrr-motion-decor, scale(1.06));
 }
 
 .menu-item-container:active .menu-item-container-icon {
-  transform: scale(0.92);
+  transform: var(--mrr-motion-decor, scale(0.92));
 }
 
 .menu-leading-control {
@@ -184,9 +184,15 @@ defineExpose({
 
 .menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
+
+  /* 只有缩放是装饰；-3px 位移是箭头与图标的重合对位，必须保留。 */
   transform: scale(0.82) translateX(-3px) !important;
 }
 
+/*
+ * 展开箭头不是「图标 + 位移动效」：它用右边框 + 下边框拼出来，靠 rotate() 才成
+ * 箭头形状，rotate 本身就是形态，关动效时不能清零，所以不套 --mrr-motion-decor。
+ */
 .menu-item-container:hover .menu-leading-control-arrow {
   opacity: 1;
   transform: rotate(-45deg);

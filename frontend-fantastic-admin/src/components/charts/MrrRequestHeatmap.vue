@@ -508,7 +508,7 @@ onBeforeUnmount(hideTooltip)
   z-index: 2;
   border-color: var(--el-text-color-primary);
   filter: saturate(1.08);
-  transform: scale(1.18);
+  transform: var(--mrr-motion-decor, scale(1.18));
 }
 
 .heatmap-cell.is-outside {

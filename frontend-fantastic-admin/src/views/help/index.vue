@@ -239,7 +239,7 @@ onMounted(async () => {
 .documentation-card:hover {
   border-color: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 40%, var(--el-border-color));
   box-shadow: 0 12px 30px rgb(0 0 0 / 7%);
-  transform: translateY(-2px);
+  transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
 .documentation-card.is-unconfigured {

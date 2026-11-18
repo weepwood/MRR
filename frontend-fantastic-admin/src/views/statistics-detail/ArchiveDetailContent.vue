@@ -905,7 +905,7 @@ h2 {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
   box-shadow: 0 18px 42px rgb(15 23 42 / 14%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 11%, transparent);
-  transform: translateY(-4px);
+  transform: var(--mrr-motion-decor, translateY(-4px));
 }
 
 /*
@@ -921,7 +921,7 @@ h2 {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
   box-shadow: 0 18px 42px rgb(15 23 42 / 14%);
-  transform: translateY(-4px);
+  transform: var(--mrr-motion-decor, translateY(-4px));
 }
 
 .archive-folder-card:hover .folder-card-body::before,
@@ -934,20 +934,20 @@ h2 {
 .archive-folder-card:hover .folder-card-body::after,
 .archive-folder-card:focus-visible .folder-card-body::after {
   opacity: 1;
-  transform: translate(-8px, -8px) scale(1.08);
+  transform: var(--mrr-motion-decor, translate(-8px, -8px) scale(1.08));
 }
 
 .archive-folder-card:hover .folder-layer-back,
 .archive-folder-card:focus-visible .folder-layer-back {
   border-color: color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
   box-shadow: 0 8px 18px color-mix(in srgb, var(--folder-accent) 10%, transparent);
-  transform: translate(-5px, -4px) rotate(-2.6deg);
+  transform: var(--mrr-motion-decor, translate(-5px, -4px) rotate(-2.6deg));
 }
 
 .archive-folder-card:hover .folder-layer-middle,
 .archive-folder-card:focus-visible .folder-layer-middle {
   border-color: color-mix(in srgb, var(--folder-accent) 34%, var(--divider));
-  transform: translate(5px, -2px) rotate(1.6deg);
+  transform: var(--mrr-motion-decor, translate(5px, -2px) rotate(1.6deg));
 }
 
 .archive-folder-card.is-selected .folder-card-body {
@@ -1142,7 +1142,7 @@ h2 {
 
 .archive-folder-card:hover .folder-action span,
 .archive-folder-card:focus-visible .folder-action span {
-  transform: translateX(4px);
+  transform: var(--mrr-motion-decor, translateX(4px));
 }
 
 .pagination-wrapper {

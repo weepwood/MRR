@@ -879,8 +879,8 @@ function handleReset() {
   transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
-.theme-swatch:hover { box-shadow: 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs, 0 2px 6px rgb(0 0 0 / 12%)); transform: translateY(-1px); }
-.theme-swatch:active { transform: scale(0.94); }
+.theme-swatch:hover { box-shadow: 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs, 0 2px 6px rgb(0 0 0 / 12%)); transform: var(--mrr-motion-decor, translateY(-1px)); }
+.theme-swatch:active { transform: var(--mrr-motion-decor, scale(0.94)); }
 .theme-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--swatch-color); }
 .theme-swatch:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: 3px; }
 .custom-color { padding-left: var(--mrr-space-2); font-size: 12px; color: var(--mrr-muted-foreground); border-left: 1px solid var(--mrr-border); }

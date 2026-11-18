@@ -125,7 +125,7 @@ function toggleRecordNumber() {
 }
 
 .field-label--switchable:active .field-switch-icon:not(.is-switched) {
-  transform: scale(0.9);
+  transform: var(--mrr-motion-decor, scale(0.9));
 }
 
 .field-value {

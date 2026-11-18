@@ -3,6 +3,22 @@
  * --mrr-ease-out）。本文件只消费令牌，不重新定义，避免出现第二份来源。
  */
 
+/*
+ * 降级开关（不是设计令牌，唯一取值为 none）。
+ *
+ * 纯装饰的位移与缩放在声明处写成 transform: var(--mrr-motion-decor, <原值>)：
+ * 关闭动效时变量变成 none，这条装饰一次性失效，而承载状态的变换（旋转 180°、
+ * 展开箭头、选中加重）不套这个变量，因此永远不会被误清零。
+ *
+ * 为什么用变量而不是「全局清除清单」：失败方向不同。清单漏掉一条装饰，后果是
+ * 多一次位移（P3）；清单漏掉一条需要保留的状态，后果是状态被读反（P1，历史上
+ * 字段切换图标翻回未切换方向就是这样发生的）。同时清单写在全局文件里，离真正
+ * 写 transform 的地方很远，没人会记得回来补。
+ */
+:root[data-motion="off"] {
+  --mrr-motion-decor: none;
+}
+
 .mrr-icon-interactive {
   transform-origin: center;
   transition:
@@ -14,13 +30,13 @@
 button:not(:disabled):hover .mrr-icon-interactive,
 a:hover .mrr-icon-interactive,
 [role="button"]:hover .mrr-icon-interactive {
-  transform: scale(1.06);
+  transform: var(--mrr-motion-decor, scale(1.06));
 }
 
 button:not(:disabled):active .mrr-icon-interactive,
 a:active .mrr-icon-interactive,
 [role="button"]:active .mrr-icon-interactive {
-  transform: scale(0.92);
+  transform: var(--mrr-motion-decor, scale(0.92));
 }
 
 .mrr-icon-spin-once {
@@ -111,66 +127,26 @@ a:active .mrr-icon-interactive,
   animation-iteration-count: 1 !important;
 }
 
-:root[data-motion="off"] button:not(:disabled):hover .mrr-icon-interactive,
-:root[data-motion="off"] button:not(:disabled):active .mrr-icon-interactive,
-:root[data-motion="off"] a:hover .mrr-icon-interactive,
-:root[data-motion="off"] a:active .mrr-icon-interactive,
-:root[data-motion="off"] [role="button"]:hover .mrr-icon-interactive,
-:root[data-motion="off"] [role="button"]:active .mrr-icon-interactive,
-:root[data-motion="off"] .menu-item.active .menu-item-container-icon,
-:root[data-motion="off"] .menu-item-container:active .menu-item-container-icon,
-:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-icon,
-:root[data-motion="off"] .sub-menu .menu-item-container:hover .menu-item-container-icon,
-:root[data-motion="off"] .dashboard-widget:active:not(.is-editing),
-:root[data-motion="off"] .dashboard-widget:hover .dashboard-widget__arrow,
-:root[data-motion="off"] .oss-folder-icon:hover .work-1,
-:root[data-motion="off"] .oss-folder-icon:hover .work-2,
-:root[data-motion="off"] .oss-folder-icon:hover .work-3,
-:root[data-motion="off"] .oss-folder-icon:hover .work-4,
-:root[data-motion="off"] .settings-nav-item:hover .nav-icon,
-:root[data-motion="off"] .settings-nav-item.active .nav-icon,
-:root[data-motion="off"] .settings-nav-item:hover .nav-arrow,
-:root[data-motion="off"] .settings-nav-item.active .nav-arrow,
-:root[data-motion="off"] .save-status.dirty .status-dot,
-:root[data-motion="off"] .archive-folder-card:hover .folder-card-body,
-:root[data-motion="off"] .archive-folder-card:focus-visible .folder-card-body,
-:root[data-motion="off"] .el-button:active,
-:root[data-motion="off"] .history-favorite-button:active .bookmark-icon,
-:root[data-motion="off"] .field-label--switchable:active .field-switch-icon:not(.is-switched) {
-  transform: none !important;
-}
-
 /*
- * 例外：字段切换图标的 rotate(180deg) 是「已切换」这个状态本身，不是位移动画。
- * :active 上的 scale(0.9) 才是按压反馈。关动效只清缩放、必须保留 180°，
- * 否则按下瞬间图标翻回「未切换」方向，用户读到的是错误状态。
+ * 字段切换图标是唯一「装饰与状态共用一个 transform」的元素：按下时的 scale(0.9)
+ * 是装饰，rest 的 rotate(180deg) 是「已切换」这个状态本身。只保留旋转。
+ * 注意这条不能写成 transform: none —— 那样用户读到的就是未切换。
  */
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon.is-switched {
-  transform: rotate(180deg) !important;
-}
-
-/*
- * 例外：菜单展开箭头不是「图标 + 位移」，而是用右边框 + 下边框拼出，靠 rotate()
- * 才成箭头形状。把它的 transform 一并置为 none 只会剩一个「┘」残角，而且展开与
- * 收起不再有区别 —— 用户看到的就是一个不动的怪图案。
- * 关动效只去掉过渡（上面的 transition: none 已经覆盖），旋转必须保留。
- */
-:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow {
-  transform: rotate(-45deg) !important;
-}
-
-:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow.is-expanded {
-  transform: translateY(-1px) rotate(45deg) !important;
+  transform: rotate(180deg);
 }
 
 :root[data-motion="off"] .history-tab-enter-from,
 :root[data-motion="off"] .history-tab-leave-to {
   opacity: 1 !important;
-  transform: none !important;
 }
 
 /* 系统偏好停用空间动效；保留颜色、焦点和展开状态本身。 */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --mrr-motion-decor: none;
+  }
+
   *,
   *::before,
   *::after {
@@ -181,52 +157,13 @@ a:active .mrr-icon-interactive,
     animation-iteration-count: 1 !important;
   }
 
-  button:not(:disabled):hover .mrr-icon-interactive,
-  button:not(:disabled):active .mrr-icon-interactive,
-  a:hover .mrr-icon-interactive,
-  a:active .mrr-icon-interactive,
-  [role="button"]:hover .mrr-icon-interactive,
-  [role="button"]:active .mrr-icon-interactive,
-  .menu-item.active .menu-item-container-icon,
-  .menu-item-container:active .menu-item-container-icon,
-  .menu-item-container:hover .menu-leading-control-icon,
-  .sub-menu .menu-item-container:hover .menu-item-container-icon,
-  .dashboard-widget:active:not(.is-editing),
-  .dashboard-widget:hover .dashboard-widget__arrow,
-  .oss-folder-icon:hover .work-1,
-  .oss-folder-icon:hover .work-2,
-  .oss-folder-icon:hover .work-3,
-  .oss-folder-icon:hover .work-4,
-  .settings-nav-item:hover .nav-icon,
-  .settings-nav-item.active .nav-icon,
-  .settings-nav-item:hover .nav-arrow,
-  .settings-nav-item.active .nav-arrow,
-  .save-status.dirty .status-dot,
-  .archive-folder-card:hover .folder-card-body,
-  .archive-folder-card:focus-visible .folder-card-body,
-  .el-button:active,
-  .history-favorite-button:active .bookmark-icon,
-  .field-label--switchable:active .field-switch-icon:not(.is-switched) {
-    transform: none !important;
-  }
-
   /* 同 [data-motion="off"]：已切换图标的 180° 是状态，不能被清零。 */
   .field-label--switchable:active .field-switch-icon.is-switched {
-    transform: rotate(180deg) !important;
+    transform: rotate(180deg);
   }
 
   .history-tab-enter-from,
   .history-tab-leave-to {
     opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* 同 [data-motion="off"]：箭头靠 rotate() 成形，不能一起置为 none。 */
-  .menu-item-container:hover .menu-leading-control-arrow {
-    transform: rotate(-45deg) !important;
-  }
-
-  .menu-item-container:hover .menu-leading-control-arrow.is-expanded {
-    transform: translateY(-1px) rotate(45deg) !important;
   }
 }

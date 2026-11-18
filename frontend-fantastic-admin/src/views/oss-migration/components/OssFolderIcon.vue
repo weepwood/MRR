@@ -127,20 +127,20 @@
 }
 
 .oss-folder-icon:hover .work-4 {
-  transform: rotateX(-20deg);
+  transform: var(--mrr-motion-decor, rotateX(-20deg));
 }
 
 .oss-folder-icon:hover .work-3 {
-  transform: rotateX(-30deg);
+  transform: var(--mrr-motion-decor, rotateX(-30deg));
 }
 
 .oss-folder-icon:hover .work-2 {
-  transform: rotateX(-38deg);
+  transform: var(--mrr-motion-decor, rotateX(-38deg));
 }
 
 .oss-folder-icon:hover .work-1 {
   box-shadow: inset 0 0.0833em 0.1667em #fbbf24, inset 0 -0.0833em 0.1667em #d97706;
-  transform: rotateX(-46deg) translateY(0.0042em);
+  transform: var(--mrr-motion-decor, rotateX(-46deg) translateY(0.0042em));
 }
 
 .oss-folder-icon:hover .work-5 {

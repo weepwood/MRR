@@ -74,6 +74,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
           text
           circle
           :aria-label="action.label"
+          :aria-busy="action.loading ? 'true' : 'false'"
           :disabled="action.disabled"
           :loading="action.loading"
           class="mrr-table-actions__button"
@@ -222,7 +223,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 
 .mrr-table-actions__menu-loading {
   margin-left: auto;
-  animation: mrr-table-actions-spin 1s linear infinite;
+  animation: mrr-table-actions-spin var(--mrr-motion-loop) linear infinite;
 }
 
 @keyframes mrr-table-actions-spin {

@@ -309,6 +309,117 @@ if (fs.existsSync(browserNoticeCssPath)) {
   }
 }
 
+/*
+ * 动效时长纪律。
+ *
+ * tokens.css 已按语义分四档（press 100 / feedback 120 / move 180 / overlay 220）。
+ * 历史问题是这些时长只定义在 motion.css，作者在 tokens.css 里找不到，就各自编
+ * 140/160/200/220/240ms，全仓出现过 15 种时长。这里统计源码里仍然直接写死时间的
+ * transition / animation 声明，保持债务可见；不阻断构建，因为存量收敛需要逐处判断
+ * 语义归属，不适合按行号批量替换。
+ */
+const MOTION_DECLARATION = /(?:^|[;{])\s*(transition(?:-[a-z]+)?|animation(?:-[a-z]+)?)\s*:\s*([^;{}]+)/g
+const TIME_VALUE = /\b\d+(?:\.\d+)?m?s\b/
+
+const bareDurationSites = []
+for (const block of sourceBlocks) {
+  const text = stripCssComments(block.css)
+  for (const match of text.matchAll(MOTION_DECLARATION)) {
+    const value = match[2]
+    if (!TIME_VALUE.test(value) || value.includes('var(--mrr-motion')) {
+      continue
+    }
+    // motion.css 里 1ms 是刻意保留的 animationend 信号，不算裸时长。
+    if (value.replace(/\b1ms\b/g, '').match(TIME_VALUE) === null) {
+      continue
+    }
+    bareDurationSites.push({
+      file: path.relative(projectRoot, block.file),
+      line: text.slice(0, match.index).split('\n').length,
+      property: match[1],
+    })
+  }
+}
+if (bareDurationSites.length > 0) {
+  const samples = bareDurationSites
+    .slice(0, 6)
+    .map(site => `${site.file}:${site.line}（${site.property}）`)
+    .join('；')
+  console.warn(
+    `提示：源码中有 ${bareDurationSites.length} 处 transition / animation 直接写死时长，`
+    + `未使用 --mrr-motion-press / feedback / move / overlay：${samples}`
+    + `${bareDurationSites.length > 6 ? ' 等' : ''}。`,
+  )
+}
+
+/*
+ * 「假回退」检测。
+ *
+ * 同一条规则里先写静态值、再写含 var() 的 color-mix()，看起来像回退，实际不是：
+ * 含 var() 的声明不在解析阶段校验，Chrome 86 会在计算值阶段把该属性置为 unset，
+ * 前一条静态声明不会回来。真实有效的回退只有两种 —— 变量级重设（browser-compatibility.css
+ * 的 @supports not 块）或把增强值收进 @supports 内。
+ */
+const FAKE_FALLBACK_BLOCKS = /([^{}]+)\{([^{}]*)\}/g
+
+function findFakeFallbacks(css) {
+  const hits = []
+  for (const blockMatch of css.matchAll(FAKE_FALLBACK_BLOCKS)) {
+    const selector = blockMatch[1].trim()
+    if (!selector || selector.startsWith('@')) {
+      continue
+    }
+    const valuesByProperty = new Map()
+    for (const declaration of blockMatch[2].split(';')) {
+      const separator = declaration.indexOf(':')
+      if (separator < 1) {
+        continue
+      }
+      const property = declaration.slice(0, separator).trim()
+      const value = declaration.slice(separator + 1).trim()
+      if (property.startsWith('--')) {
+        continue
+      }
+      const list = valuesByProperty.get(property) ?? []
+      list.push({ value, index: blockMatch.index + blockMatch[2].indexOf(declaration) })
+      valuesByProperty.set(property, list)
+    }
+    for (const [property, list] of valuesByProperty) {
+      if (list.length < 2) {
+        continue
+      }
+      const last = list.at(-1)
+      const earlierStatic = list.slice(0, -1).some(item => !item.value.includes('color-mix(') && item.value !== '')
+      if (earlierStatic && last.value.includes('var(') && last.value.includes('color-mix(')) {
+        hits.push({
+          selector: selector.slice(0, 80),
+          property,
+          line: css.slice(0, last.index).split('\n').length,
+        })
+      }
+    }
+  }
+  return hits
+}
+
+const fakeFallbackSites = []
+for (const block of sourceBlocks) {
+  for (const hit of findFakeFallbacks(stripCssComments(block.css))) {
+    fakeFallbackSites.push({ ...hit, file: path.relative(projectRoot, block.file) })
+  }
+}
+if (fakeFallbackSites.length > 0) {
+  const samples = fakeFallbackSites
+    .slice(0, 6)
+    .map(site => `${site.file}:${site.line} ${site.property}`)
+    .join('；')
+  console.warn(
+    `提示：源码中有 ${fakeFallbackSites.length} 处「静态值 + 含 var() 的 color-mix()」双声明，`
+    + '在 Chrome 86 上前一条静态值不会生效（属性会被置为 unset，不是回退）：'
+    + `${samples}${fakeFallbackSites.length > 6 ? ' 等' : ''}。`,
+  )
+}
+
 if (failures.length) {
   console.error('Chrome 86 生产构建校验失败：')
   failures.forEach(message => console.error(`- ${message}`))

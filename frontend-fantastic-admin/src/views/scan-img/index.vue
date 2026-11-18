@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getBAHByIdCard } from '@/api/modules/search'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
+import { isMotionEnabled } from '@/utils/motion-preference'
 
 defineOptions({ name: 'ScanImgPage' })
 
@@ -223,7 +224,7 @@ function scrollActiveThumbIntoView(source: string = 'keyboard') {
   if (thumbsColumns.value > 1 && source !== 'keyboard') { return }
   if (container.scrollHeight <= container.clientHeight) { return }
   const targetTop = el.offsetTop - (container.clientHeight - el.clientHeight) / 2
-  container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+  container.scrollTo({ top: Math.max(0, targetTop), behavior: isMotionEnabled() ? 'smooth' : 'auto' })
 }
 
 // ==================== 键盘和滚轮 ====================
@@ -1180,7 +1181,7 @@ watch(idCardParam, async (newId) => {
   border: 4px solid var(--color-border);
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin var(--mrr-motion-loop) linear infinite;
 }
 
 @keyframes spin {
@@ -1238,7 +1239,7 @@ watch(idCardParam, async (newId) => {
   border: 4px solid var(--color-border);
   border-top: 4px solid var(--el-color-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin var(--mrr-motion-loop) linear infinite;
 }
 
 .download-status-content p {

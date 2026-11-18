@@ -791,11 +791,11 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    background-color var(--mrr-motion-fast) ease,
-    border-color var(--mrr-motion-fast) ease,
-    box-shadow var(--mrr-motion-fast) ease,
-    opacity var(--mrr-motion-fast) ease,
-    transform var(--mrr-motion-fast) var(--mrr-ease-out);
+    background-color var(--mrr-motion-feedback) ease,
+    border-color var(--mrr-motion-feedback) ease,
+    box-shadow var(--mrr-motion-feedback) ease,
+    opacity var(--mrr-motion-feedback) ease,
+    transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .dashboard-widget--color-blue {
@@ -950,7 +950,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget__arrow {
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .dashboard-widget:hover .dashboard-widget__arrow {

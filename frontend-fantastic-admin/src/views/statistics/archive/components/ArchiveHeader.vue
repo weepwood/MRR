@@ -504,16 +504,16 @@ onUnmounted(() => {
   border: 0;
   border-radius: var(--mrr-radius-sm);
   transition:
-    color var(--mrr-motion-fast) cubic-bezier(0.22, 1, 0.36, 1),
-    background-color var(--mrr-motion-fast) cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow var(--mrr-motion-fast) cubic-bezier(0.22, 1, 0.36, 1);
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .history-tab-enter-active,
 .history-tab-leave-active {
   transition:
-    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 180ms var(--mrr-ease-out),
+    transform 180ms var(--mrr-ease-out);
 }
 
 .history-tab-enter-from {
@@ -571,7 +571,7 @@ onUnmounted(() => {
   gap: 6px;
   padding: 5px 4px;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-fast) ease;
+  transition: background-color var(--mrr-motion-feedback) ease;
 }
 
 .history-item:hover {

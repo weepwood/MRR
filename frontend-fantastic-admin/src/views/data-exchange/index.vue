@@ -668,14 +668,16 @@ h2 {
 }
 
 /*
- * 数据集切换：浅灰底槽 + 白色滑块的分段控件。
+ * 数据集切换：浅灰底槽 + 卡面滑块的分段控件。
  * 圆角跟随全局「界面圆角」设置（--mrr-radius-lg），不写死 px。
+ * 滑块底色必须取 --mrr-card 而不是写死白色：暗色主题下白色滑块配
+ * --mrr-foreground 的浅色文字只有 1.04:1，选中的数据集完全读不出来。
  */
 .dataset-switch {
   --el-segmented-bg-color: var(--mrr-muted);
   --el-segmented-color: var(--mrr-muted-foreground);
   --el-segmented-padding: 4px;
-  --el-segmented-item-selected-bg-color: #fff;
+  --el-segmented-item-selected-bg-color: var(--mrr-card);
   --el-segmented-item-selected-color: var(--mrr-foreground);
   --el-segmented-item-hover-bg-color: rgb(15 23 42 / 4%);
   --el-segmented-item-active-bg-color: rgb(15 23 42 / 7%);

@@ -6,6 +6,7 @@ import { ElImageViewer } from 'element-plus'
 import { ArrowLeft, ArrowRight } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { TYPE_OPTIONS } from '../constants'
 import 'element-plus/es/components/image-viewer/style/css'
 
@@ -96,7 +97,7 @@ function syncCurrentPage(index: number) {
   if (!target) {
     return
   }
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  target.scrollIntoView({ behavior: isMotionEnabled() ? 'smooth' : 'auto', block: 'center' })
 }
 
 function imageUnavailable(imageUrl: string | undefined) {

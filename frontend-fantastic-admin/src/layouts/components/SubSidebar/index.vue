@@ -230,9 +230,9 @@ watch(() => menuStore.actived, (val, oldVal) => {
       font-size: 15px !important;
       opacity: 0.75;
       transition:
-        color var(--mrr-motion-normal) var(--mrr-ease-out),
-        opacity var(--mrr-motion-normal) var(--mrr-ease-out),
-        transform var(--mrr-motion-normal) var(--mrr-ease-out);
+        color var(--mrr-motion-move) var(--mrr-ease-out),
+        opacity var(--mrr-motion-move) var(--mrr-ease-out),
+        transform var(--mrr-motion-move) var(--mrr-ease-out);
     }
 
     :deep(.sub-menu .menu-item-container:hover .menu-item-container-icon) {

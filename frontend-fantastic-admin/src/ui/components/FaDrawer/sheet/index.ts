@@ -10,8 +10,12 @@ export { default as SheetHeader } from './SheetHeader.vue'
 export { default as SheetTitle } from './SheetTitle.vue'
 export { default as SheetTrigger } from './SheetTrigger.vue'
 
+/*
+ * 浮层进出时长对齐 --mrr-motion-overlay（220ms）。
+ * 这里是 UnoCSS 生成的动画类，读不到 CSS 变量，改令牌时必须同步改这两个值。
+ */
 export const sheetVariants = cva(
-  'fixed gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:animate-duration-300 data-[state=open]:animate-duration-500',
+  'fixed gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:animate-duration-220 data-[state=open]:animate-duration-220',
   {
     variants: {
       side: {

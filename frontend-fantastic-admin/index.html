@@ -7,6 +7,29 @@
     <link rel="apple-touch-icon" href="/pwa/icon-192.svg" />
     <link rel="stylesheet" href="/browser_upgrade/index.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <script>
+      /*
+       * 动效偏好必须在首帧之前写到根节点。
+       * 设置 store 的 watch 虽然是 immediate，但要等 Pinia 初始化、设置读回之后才执行，
+       * 关闭了动效的用户每次进入都会先看一遍入场动画。这里直接读本地缓存抢在渲染前设置。
+       * 读取失败（隐私模式、旧的或损坏的存储）时静默跳过，由 store 的 watch 兜底。
+       */
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('MRR-ADMIN:app-settings')
+          if (!raw) {
+            return
+          }
+          var saved = JSON.parse(raw)
+          if (saved && saved.app && saved.app.enableMotion === false) {
+            document.documentElement.dataset.motion = 'off'
+          }
+        }
+        catch (error) {
+          /* 使用默认值：开启动效 */
+        }
+      })()
+    </script>
     <meta name="application-name" content="MRR" />
     <meta name="theme-color" content="#0b63ce" />
     <meta name="mobile-web-app-capable" content="yes" />

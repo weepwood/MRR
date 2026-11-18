@@ -3,6 +3,7 @@ import type { ArchiveWallDensity } from '../composables/useArchiveLocalPreferenc
 import type { GalleryImage } from '../types'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { getTypeLabel } from '../constants'
 import 'element-plus/es/components/image-viewer/style/css'
 
@@ -122,7 +123,7 @@ function focusCard(index: number) {
   selectImage(nextIndex)
   nextTick(() => {
     cardRefs.value[nextIndex]?.focus({ preventScroll: true })
-    cardRefs.value[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+    cardRefs.value[nextIndex]?.scrollIntoView({ behavior: isMotionEnabled() ? 'smooth' : 'auto', block: 'nearest', inline: 'nearest' })
   })
 }
 

@@ -61,7 +61,7 @@ withDefaults(defineProps<{
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer var(--mrr-motion-loop-soft) infinite;
 }
 
 .skeleton-cards {
@@ -82,7 +82,7 @@ withDefaults(defineProps<{
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer var(--mrr-motion-loop-soft) infinite;
 }
 
 .skeleton-card-line {
@@ -91,7 +91,7 @@ withDefaults(defineProps<{
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer var(--mrr-motion-loop-soft) infinite;
 }
 
 .skeleton-card-line--short {
@@ -117,7 +117,7 @@ withDefaults(defineProps<{
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer var(--mrr-motion-loop-soft) infinite;
 }
 
 .skeleton-stat-value {
@@ -126,7 +126,7 @@ withDefaults(defineProps<{
   background: linear-gradient(90deg, var(--el-fill-color-light) 25%, var(--el-fill-color) 50%, var(--el-fill-color-light) 75%);
   background-size: 200% 100%;
   border-radius: 4px;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer var(--mrr-motion-loop-soft) infinite;
 }
 
 @keyframes shimmer {

@@ -121,7 +121,7 @@ onBeforeUnmount(() => {
 
 .logo-mark,
 .logo-toggle-icon {
-  transition: opacity var(--mrr-motion-fast) ease;
+  transition: opacity var(--mrr-motion-feedback) ease;
 }
 
 .logo-toggle-icon {

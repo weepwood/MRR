@@ -700,7 +700,7 @@ function handleReset() {
   padding-inline: var(--mrr-space-2);
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .appearance-tab[data-state="active"] {
@@ -813,7 +813,7 @@ function handleReset() {
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-fast) ease;
+  transition: border-color var(--mrr-motion-feedback) ease;
 }
 
 .corner-option:hover,
@@ -939,7 +939,7 @@ function handleReset() {
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-fast) ease;
+  transition: border-color var(--mrr-motion-feedback) ease;
 }
 
 .mode-option:hover,

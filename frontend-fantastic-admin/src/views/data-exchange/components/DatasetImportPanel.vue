@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
-import { ElMessage, ElMessageBox, genFileId } from 'element-plus'
+import { ElMessage, genFileId } from 'element-plus'
 import { Download, Info as InfoFilled, Upload as UploadFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   downloadDataExchangeTemplate,
   importDataExchangeFile,
 } from '@/api/modules/data-exchange'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { createCsvBlob, downloadBlob, downloadResponseBlob } from '@/utils/file-download'
 
 interface FieldDefinition {
@@ -95,7 +96,7 @@ async function commitImport() {
   }
 
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `将写入“${props.title}”：预计新增 ${result.value.insertedRows} 条、更新 ${result.value.updatedRows} 条、跳过重复 ${result.value.duplicateRows} 条。系统会在写入前再次执行完整校验。`,
       '确认正式导入',
       {

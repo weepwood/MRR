@@ -1,4 +1,4 @@
-import { ElMessageBox } from 'element-plus'
+import { actionDialog } from '@/ui/components/ActionDialog'
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
 
@@ -25,7 +25,7 @@ async function promptForUpdate(registration: ServiceWorkerRegistration): Promise
 
   updatePromptVisible = true
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       'MRR 已发布新版本，重新加载后即可完成更新。',
       '应用更新',
       {

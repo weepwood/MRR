@@ -13,6 +13,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+    ActionDialog: typeof import('./../ui/components/ActionDialog/index.vue')['default']
     AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
     AppError: typeof import('./../components/AppError/index.vue')['default']
     AppLoading: typeof import('./../components/AppLoading/index.vue')['default']
@@ -129,6 +130,7 @@ declare module 'vue' {
 // For TSX support
 declare global {
   const AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+  const ActionDialog: typeof import('./../ui/components/ActionDialog/index.vue')['default']
   const AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
   const AppError: typeof import('./../components/AppError/index.vue')['default']
   const AppLoading: typeof import('./../components/AppLoading/index.vue')['default']

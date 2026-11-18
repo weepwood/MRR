@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { SettingsSearchResult } from '../settings-search'
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { searchSettings } from '../settings-search'
 
 const emit = defineEmits<{
   select: [result: SettingsSearchResult]
 }>()
 
+const searchId = useId()
 const query = ref('')
 const noResults = computed(() => Boolean(query.value.trim()) && searchSettings(query.value).length === 0)
 
@@ -18,11 +19,12 @@ function selectResult(result: SettingsSearchResult) {
 
 <template>
   <div class="settings-search">
+    <label :for="searchId" class="settings-search-label">搜索设置</label>
     <el-autocomplete
+      :id="searchId"
       v-model="query"
       class="settings-search-input"
-      aria-label="搜索设置"
-      placeholder="搜索设置"
+      placeholder="例如水印、缩略图"
       value-key="title"
       :fetch-suggestions="searchSettings"
       :trigger-on-focus="false"
@@ -50,6 +52,7 @@ function selectResult(result: SettingsSearchResult) {
 </template>
 
 <style scoped>
+.settings-search-label { display: block; margin-bottom: var(--mrr-space-2); font-size: 12px; font-weight: 600; }
 .settings-search-input { width: 100%; }
 .settings-search-result { display: grid; padding-block: var(--mrr-space-1); line-height: 1.5; white-space: normal; }
 

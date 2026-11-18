@@ -27,7 +27,17 @@ public enum ResultCode {
     OSS_UNAUTHORIZED(2005, "OSS 访问凭据无效或权限不足", HttpStatus.BAD_GATEWAY),
     OSS_OBJECT_NOT_FOUND(2006, "OSS 对象不存在", HttpStatus.NOT_FOUND),
     OSS_INTEGRITY_MISMATCH(2007, "OSS 对象内容校验不一致", HttpStatus.CONFLICT),
-    OSS_OPERATION_FAILED(2008, "OSS 操作失败", HttpStatus.BAD_GATEWAY);
+    OSS_OPERATION_FAILED(2008, "OSS 操作失败", HttpStatus.BAD_GATEWAY),
+
+    // 受控只读数据库浏览（ADR-0007）。3001 同时覆盖「未登记」「未启用」「无表级权限」，
+    // 使用同一文案与状态码，避免调用方通过响应枚举出系统存在哪些表。
+    DB_BROWSE_TABLE_NOT_FOUND(3001, "资源不存在", HttpStatus.NOT_FOUND),
+    DB_BROWSE_PARAMETER_INVALID(3002, "请求参数错误", HttpStatus.BAD_REQUEST),
+    DB_BROWSE_FILTER_REQUIRED(3003, "该表必须提供过滤条件", HttpStatus.BAD_REQUEST),
+    DB_BROWSE_QUERY_TIMEOUT(3004, "查询超时，请缩小过滤范围", HttpStatus.GATEWAY_TIMEOUT),
+    DB_BROWSE_BUDGET_EXCEEDED(3005, "查询范围超出限制", HttpStatus.BAD_REQUEST),
+    DB_BROWSE_CURSOR_INVALID(3006, "分页游标无效，请重新查询", HttpStatus.BAD_REQUEST),
+    DB_BROWSE_DISABLED(3007, "资源不存在", HttpStatus.NOT_FOUND);
 
     private final int code;
     private final String message;

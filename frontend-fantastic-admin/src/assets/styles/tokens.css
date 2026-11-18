@@ -11,6 +11,15 @@
   --g-tabbar-height: 44px;
   --g-toolbar-height: 48px;
 
+  /*
+   * 等宽字体：表名、提交号、迁移版本等标识符。
+   * 必须显式点名 Consolas —— Windows 上「monospace」通用族会落到新宋体（NSimSun），
+   * 笔画细、字距宽，与正文 HarmonyOS Sans SC 明显不是一套
+   * （Chrome 实测该处 24 个字形全部命中 NSimSun）。
+   * 中文字体排在 Consolas 之后、通用族之前：Consolas 无汉字，缺字时才不会又退回宋体。
+   */
+  --mrr-font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Microsoft YaHei", "HarmonyOS Sans SC", monospace;
+
   /* 页面宽度 */
   --mrr-content-fluid: 1720px;
   --mrr-content-standard: 1440px;

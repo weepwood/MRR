@@ -281,6 +281,17 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/database-browse',
+        component: () => import('@/views/database-browse/index.vue'),
+        meta: {
+          title: '数据表浏览',
+          icon: 'i-lucide:table-2',
+          auth: ['system:db:browse'],
+          // 表格里是脱敏后的数据行，离开页面即丢弃，不做 KeepAlive 缓存。
+          cache: false,
+        },
+      },
+      {
         path: '/logs',
         component: () => import('@/views/logs/index.vue'),
         meta: { title: '日志管理', icon: 'i-lucide:file-search', auth: ['log:read'], cache: true },

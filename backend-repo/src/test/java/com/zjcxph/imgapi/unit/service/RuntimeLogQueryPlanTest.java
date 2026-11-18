@@ -101,4 +101,38 @@ class RuntimeLogQueryPlanTest {
         assertThat(RuntimeLogQueryPlan.bucket(Duration.ofHours(48))).isEqualTo("hour");
         assertThat(RuntimeLogQueryPlan.bucket(Duration.ofHours(49))).isEqualTo("day");
     }
+
+    @Test
+    @DisplayName("检索结果必须带线程名，否则异步与定时任务无法与 HTTP 线程区分")
+    void selectColumnsCarryThreadName() {
+        assertThat(RuntimeLogQueryPlan.SELECT_COLUMNS).contains("thread_name");
+    }
+
+    @Test
+    @DisplayName("线程名按包含匹配且转义 LIKE 通配符，避免输入被当成通配符")
+    void threadFilterEscapesLikeWildcards() {
+        var plan = RuntimeLogQueryPlan.search(FROM, TO, null, null, null, null, null, null,
+                "pool-2%_\\x", null, null, 50);
+
+        assertThat(plan.sql()).contains("thread_name ILIKE ? ESCAPE '\\'");
+        assertThat(plan.args()).contains("%pool-2\\%\\_\\\\x%");
+    }
+
+    @Test
+    @DisplayName("线程名为空串时不作为筛选条件")
+    void blankThreadIsIgnored() {
+        var plan = RuntimeLogQueryPlan.search(FROM, TO, null, null, null, null, null, null,
+                "   ", null, null, 50);
+
+        assertThat(plan.sql()).doesNotContain("thread_name ILIKE");
+    }
+
+    @Test
+    @DisplayName("过长线程名在进入 SQL 前被拒绝")
+    void rejectsOverlongThread() {
+        assertThatThrownBy(() -> RuntimeLogQueryPlan.search(FROM, TO, null, null, null, null, null, null,
+                "t".repeat(256), null, null, 50))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("线程");
+    }
 }

@@ -5,6 +5,8 @@ export interface RuntimeLogRow {
   event_id: string
   level: string
   logger_name: string
+  /** 产生该日志的线程名；旧数据与清洗失败时为空串。 */
+  thread_name: string
   request_id: string
   error_id: string
   message_summary: string

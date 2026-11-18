@@ -38,6 +38,7 @@ const keyword = ref('')
 // 级别用「最低级别」表达：排障关心的是 WARN 及以上，而不是精确某一个级别。
 const minLevel = ref('')
 const logger = ref('')
+const thread = ref('')
 const range = ref<[string, string] | null>([new Date(Date.now() - 86400000).toISOString(), new Date().toISOString()])
 const hasMore = ref(false)
 const cursor = ref<RuntimeLogRow | null>(null)
@@ -77,6 +78,7 @@ function currentFilters() {
     minLevel: minLevel.value || undefined,
     keyword: keyword.value.trim() || undefined,
     logger: logger.value.trim() || undefined,
+    thread: thread.value.trim() || undefined,
     errorId: errorId.value.trim() || undefined,
   }
 }
@@ -259,6 +261,7 @@ function clearAdditionalFilters() {
   errorId.value = ''
   keyword.value = ''
   logger.value = ''
+  thread.value = ''
   minLevel.value = ''
   detailVisible.value = false
 }
@@ -272,6 +275,7 @@ function resetFilters() {
   errorId.value = ''
   keyword.value = ''
   logger.value = ''
+  thread.value = ''
   minLevel.value = ''
   const now = Date.now()
   range.value = [new Date(now - 86400000).toISOString(), new Date(now).toISOString()]
@@ -307,6 +311,7 @@ watch(() => route.query, (query) => {
   requestId.value = nextRequest
   errorId.value = nextError
   keyword.value = ''
+  thread.value = ''
   // 从错误中心或旧访问记录跳过来时，事件往往早于默认的24小时窗口；
   // 编号检索走索引，放宽到最近7天可以避免「跳过来却是空列表」的死胡同。
   const now = Date.now()
@@ -453,6 +458,10 @@ onMounted(() => { void load(); void refreshHealth() })
             <el-option v-for="item in ['INFO', 'WARN', 'ERROR']" :key="item" :label="`${item} 及以上`" :value="item" />
           </el-select>
         </el-form-item>
+        <el-form-item label="线程" class="filter-thread">
+          <el-input v-model="thread" clearable placeholder="例如 scheduling、pool-2" />
+          <span class="filter-note">用于区分 HTTP 线程、线程池与定时任务</span>
+        </el-form-item>
         <el-form-item class="filter-actions">
           <MrrFilterActionButton action="search" :pending="loading" :busy="loading" native-type="submit" type="primary">
             查询日志
@@ -498,6 +507,11 @@ onMounted(() => { void load(); void refreshHealth() })
             </template>
           </el-table-column>
           <el-table-column prop="logger_name" label="模块" min-width="200" show-overflow-tooltip />
+          <el-table-column label="线程" min-width="150" show-overflow-tooltip>
+            <template #default="scope">
+              <span :class="scope.row.thread_name ? '' : 'thread-missing'">{{ scope.row.thread_name || '—' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="request_id" label="追踪编号" min-width="170" show-overflow-tooltip />
           <el-table-column label="正文" min-width="240" show-overflow-tooltip>
             <template #default="scope">
@@ -581,6 +595,13 @@ onMounted(() => { void load(); void refreshHealth() })
             复制
           </el-button>
         </div>
+        <div v-if="detail?.thread_name" class="detail-id">
+          <span>线程</span>
+          <code>{{ detail.thread_name }}</code>
+          <el-button link type="primary" @click="copyText(detail?.thread_name || '', '线程名已复制')">
+            复制
+          </el-button>
+        </div>
         <div v-if="detail?.error_id" class="detail-id">
           <span>错误编号</span>
           <code>{{ detail.error_id }}</code>
@@ -616,6 +637,7 @@ onMounted(() => { void load(); void refreshHealth() })
 .runtime-log-page { display: grid; gap: 18px; min-width: 0; }
 .runtime-logs-level { width: 140px; }
 .runtime-logs-files { width: 340px; }
+.thread-missing { color: var(--el-text-color-placeholder); }
 .page-header { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; }
 .page-header h2 { margin: 0; font-size: 26px; line-height: 1.25; }
 .page-header p { max-width: 72ch; margin: 8px 0 0; line-height: 1.6; color: var(--el-text-color-secondary); }
@@ -636,10 +658,13 @@ onMounted(() => { void load(); void refreshHealth() })
 .filter-keyword { grid-column: span 5; }
 .filter-logger { grid-column: span 4; }
 .filter-level { grid-column: span 3; }
-.filter-actions { grid-column: span 12; align-self: end; }
+.filter-thread { grid-column: span 4; }
+.filter-actions { grid-column: span 8; align-self: end; }
 .filter-actions :deep(.el-form-item__content) { justify-content: flex-end; }
 .filter-keyword :deep(.el-form-item__content) { flex-wrap: wrap; }
+.filter-thread :deep(.el-form-item__content) { flex-wrap: wrap; }
 .filter-hint { flex-basis: 100%; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--el-color-warning); }
+.filter-note { flex-basis: 100%; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--el-text-color-secondary); }
 .insight-card :deep(.el-card__body) { display: grid; gap: 16px; }
 .insight-body { display: grid; gap: 16px; }
 .insight-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -700,6 +725,7 @@ onMounted(() => { void load(); void refreshHealth() })
   .filter-request,
   .filter-keyword,
   .filter-logger,
+  .filter-thread,
   .filter-error,
   .filter-level { grid-column: span 3; }
   .filter-actions { grid-column: span 6; }
@@ -720,6 +746,7 @@ onMounted(() => { void load(); void refreshHealth() })
   .filter-keyword,
   .filter-request,
   .filter-logger,
+  .filter-thread,
   .filter-error,
   .filter-level,
   .filter-actions { grid-column: 1; }

@@ -41,9 +41,10 @@ public class RuntimeLogController {
             @RequestParam(required = false) Instant to, @RequestParam(required = false) String level,
             @RequestParam(required = false) String minLevel, @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String requestId, @RequestParam(required = false) String errorId,
-            @RequestParam(required = false) String logger, @RequestParam(required = false) Instant cursorTime,
+            @RequestParam(required = false) String logger, @RequestParam(required = false) String thread,
+            @RequestParam(required = false) Instant cursorTime,
             @RequestParam(required = false) UUID cursorId, @RequestParam(defaultValue = "50") int size) {
-        return Result.success(queries.search(from, to, level, minLevel, keyword, requestId, errorId, logger,
+        return Result.success(queries.search(from, to, level, minLevel, keyword, requestId, errorId, logger, thread,
                 cursorTime, cursorId, size));
     }
 

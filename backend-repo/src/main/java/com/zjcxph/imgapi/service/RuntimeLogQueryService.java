@@ -36,13 +36,19 @@ public class RuntimeLogQueryService {
 
     public RuntimeLogQueryService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
+    /** 不带线程筛选的入口；等价于 {@code thread=null}。 */
     public Map<String, Object> search(Instant from, Instant to, String level, String minLevel, String keyword,
             String requestId, String errorId, String logger, Instant cursorTime, UUID cursorId, int size) {
+        return search(from, to, level, minLevel, keyword, requestId, errorId, logger, null, cursorTime, cursorId, size);
+    }
+
+    public Map<String, Object> search(Instant from, Instant to, String level, String minLevel, String keyword,
+            String requestId, String errorId, String logger, String thread, Instant cursorTime, UUID cursorId, int size) {
         RuntimeLogQueryPlan plan = RuntimeLogQueryPlan.search(from, to, level, minLevel, keyword, requestId,
-                errorId, logger, cursorTime, cursorId, size);
+                errorId, logger, thread, cursorTime, cursorId, size);
         RowMapper<Map<String, Object>> mapper = (rs, n) -> {
             Map<String, Object> row = new LinkedHashMap<>();
-            for (String key : List.of("occurred_at", "event_id", "level", "logger_name", "request_id",
+            for (String key : List.of("occurred_at", "event_id", "level", "logger_name", "thread_name", "request_id",
                     "error_id", "message_summary", "stack_trace")) {
                 row.put(key, key.equals("occurred_at") ? rs.getTimestamp(key).toInstant().toString() : rs.getString(key));
             }

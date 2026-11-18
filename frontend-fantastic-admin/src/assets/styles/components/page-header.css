@@ -3,7 +3,6 @@
  *
  * 显式契约（不再做结构嗅探）：
  * - 业务页面标题容器统一使用 `.page-header`；
- * - 系统设置页沿用 `.settings-page > .page-header`（本身即 `.page-header`，无需特例）；
  * - 帮助中心使用 `.help-center > .help-header`；
  * - 共享组件 `MrrPageHeader` 使用 `.mrr-page-header`。
  *

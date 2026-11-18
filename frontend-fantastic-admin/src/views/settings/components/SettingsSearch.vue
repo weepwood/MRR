@@ -19,7 +19,10 @@ function selectResult(result: SettingsSearchResult) {
 
 <template>
   <div class="settings-search">
-    <label :for="searchId" class="settings-search-label">搜索设置</label>
+    <div class="settings-search-caption">
+      <label :for="searchId" class="settings-search-label">搜索设置</label>
+      <span role="status" class="settings-search-status">{{ noResults ? '未找到匹配的设置' : '' }}</span>
+    </div>
     <el-autocomplete
       :id="searchId"
       v-model="query"
@@ -45,18 +48,15 @@ function selectResult(result: SettingsSearchResult) {
         </div>
       </template>
     </el-autocomplete>
-    <div role="status" class="settings-search-status">
-      <span v-if="noResults">未找到匹配的设置</span>
-    </div>
   </div>
 </template>
 
 <style scoped>
-.settings-search-label { display: block; margin-bottom: var(--mrr-space-2); font-size: 12px; font-weight: 600; }
+.settings-search-caption { display: flex; gap: var(--mrr-space-2); justify-content: space-between; margin-bottom: var(--mrr-space-1); }
+.settings-search-label { font-size: 12px; font-weight: 600; }
 .settings-search-input { width: 100%; }
 .settings-search-result { display: grid; padding-block: var(--mrr-space-1); line-height: 1.5; white-space: normal; }
 
 .settings-search-result small,
 .settings-search-status { font-size: 12px; color: var(--mrr-muted-foreground); }
-.settings-search-status:not(:empty) { padding-top: var(--mrr-space-2); }
 </style>

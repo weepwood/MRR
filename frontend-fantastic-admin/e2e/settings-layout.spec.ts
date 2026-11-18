@@ -108,7 +108,7 @@ test.describe('系统设置分类布局', () => {
     await page.setViewportSize({ width: 1440, height: 720 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-    const frame = page.locator('.settings-workspace-frame')
+    const frame = page.locator('.settings-page')
     const shell = page.locator('.settings-shell')
     const sidebar = page.locator('.settings-sidebar')
     const content = page.locator('.settings-content')

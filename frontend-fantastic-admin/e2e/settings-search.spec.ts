@@ -34,8 +34,10 @@ test.describe('系统设置搜索', () => {
 
     const search = page.getByRole('textbox', { name: '搜索设置' })
     await search.fill('不存在的设置')
-    const emptyState = page.locator('.settings-sidebar').getByRole('status')
+    const emptyState = page.locator('.settings-header').getByRole('status')
+    const categories = page.getByRole('combobox', { name: '设置分类' })
     await expect(emptyState).toHaveText('未找到匹配的设置')
+    await expect(categories).toBeInViewport()
     await search.press('Enter')
     await expect(page).toHaveURL(/\/settings$/)
 
@@ -50,6 +52,15 @@ test.describe('系统设置搜索', () => {
     await expect(page).toHaveURL(/section=appearance/)
     await expect(page.getByText('色弱模式', { exact: true })).toBeVisible()
     await expect(page.getByText('主页、版权与其他', { exact: true })).toBeInViewport()
+    await expect(search).toBeInViewport()
+    await expect(categories).toBeInViewport()
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+    await page.locator('.settings-category-select').click()
+    await page.getByRole('option', { name: '系统信息', exact: true }).click()
+    await expect(page.getByRole('heading', { name: '系统信息', exact: true })).toBeInViewport()
+    await expect(page.getByRole('button', { name: '恢复默认', exact: true })).toBeInViewport()
+    await expect(page.getByRole('button', { name: '保存设置', exact: true })).toBeInViewport()
   })
 
   test.describe('匿名访问', () => {

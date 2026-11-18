@@ -1,6 +1,6 @@
 import type { EffectiveSystemSettings, SettingsSource } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -64,7 +64,6 @@ function isValidEmailAddress(value: string): boolean {
 export function useUnifiedSettings() {
   const route = useRoute()
   const router = useRouter()
-  const shellRef = ref<HTMLElement>()
   const activeSection = ref<SettingsSection>('system')
   const loading = ref(false)
   const saving = ref(false)
@@ -245,16 +244,9 @@ export function useUnifiedSettings() {
     await loadSettings(true)
   }
 
-  function focusSettingsWorkspace() {
-    if (window.innerWidth < 960) { return }
-    shellRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
-  }
-
   async function selectSection(section: SettingsSection) {
     activeSection.value = section
     await router.replace({ query: { ...route.query, section } })
-    await nextTick()
-    focusSettingsWorkspace()
   }
 
   watch(() => route.query.section, (value) => {
@@ -268,7 +260,6 @@ export function useUnifiedSettings() {
 
   return {
     settingsNavItems,
-    shellRef,
     activeSection,
     activeMeta,
     loading,

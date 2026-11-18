@@ -6,7 +6,6 @@ import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import directive from '@/utils/directive'
 import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
-import { installSettingsWorkspaceFocus } from '@/utils/settings-workspace-focus'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
 import { installUiSettingsSync } from '@/utils/ui-settings-sync'
 
@@ -24,7 +23,6 @@ import 'virtual:uno.css'
 // 全局样式
 import '@/assets/styles/globals.css'
 import '@/assets/styles/motion.css'
-import '@/assets/styles/pages/settings-navigation.css'
 import '@/assets/styles/pages/statistics-detail-typography.css'
 
 async function installOfflineIcons() {
@@ -39,7 +37,6 @@ function startApplication() {
   installArchiveUserIdRouting(router)
   installClipboardFallback()
   // 点击完整高度的设置工作区时，将其对齐到桌面视口顶部。
-  installSettingsWorkspaceFocus()
 
   const app = createApp(App)
   app.use(pinia)

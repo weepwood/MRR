@@ -4,7 +4,7 @@ import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Info as InfoFilled, KeyRound } from 'lucide-vue-next'
+import { KeyRound } from 'lucide-vue-next'
 import { nextTick } from 'vue'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -631,34 +631,19 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="账号与注册申请" icon="i-lucide:list" :count="total">
-      <template #title-suffix>
-        <el-tooltip
-          content="待审核账号必须由管理员明确通过后才能登录；注册时填写的密码不会展示给管理员。"
-          placement="top"
-          :show-after="200"
-        >
-          <button type="button" class="users-info-trigger" aria-label="账号与注册申请说明">
-            <el-icon><InfoFilled /></el-icon>
-          </button>
-        </el-tooltip>
-      </template>
-
+    <MrrDataTablePanel class="users-table-panel" title="">
       <template #filters>
         <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
           <div class="users-filter__field users-filter__keyword">
-            <label for="users-filter-keyword">关键词</label>
-            <el-input id="users-filter-keyword" v-model="filters.keyword" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
+            <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
           </div>
           <div class="users-filter__field users-filter__select">
-            <label for="users-filter-role">角色</label>
-            <el-select id="users-filter-role" v-model="filters.roleCode" clearable placeholder="全部角色">
+            <el-select id="users-filter-role" v-model="filters.roleCode" aria-label="角色" clearable placeholder="全部角色">
               <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
             </el-select>
           </div>
           <div class="users-filter__field users-filter__select">
-            <label for="users-filter-status">账号状态</label>
-            <el-select id="users-filter-status" v-model="filters.status" clearable placeholder="全部状态">
+            <el-select id="users-filter-status" v-model="filters.status" aria-label="账号状态" clearable placeholder="全部状态">
               <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
             </el-select>
           </div>
@@ -783,17 +768,19 @@ onMounted(loadData)
 
 <style scoped>
 /* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
-.users-filter__field { display: grid; gap: 6px; min-width: 0; }
-.users-filter__field label { font-size: 12px; line-height: 1.5; color: var(--mrr-muted-foreground); }
+.users-filter__field { display: grid; min-width: 0; }
 .users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
 .users-filter__select { flex: 0 1 190px; width: 190px; }
+:global(.users-table-panel .users-filter-bar.mrr-filter-bar--embedded) { border-bottom: 0 !important; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { align-self: flex-end; }
-.users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-4); padding-left: var(--mrr-space-4); }
-.users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { width: auto; margin: 0 var(--mrr-space-4); }
+.users-table-panel { --users-content-inline-inset: var(--mrr-space-4); }
+:global(.users-table-panel.el-card), .users-table-panel :deep(.el-card) { border-top: 0 !important; border-bottom: 0 !important; box-shadow: none; }
+.users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--users-content-inline-inset); padding-left: var(--users-content-inline-inset); }
+.users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { width: auto; margin-inline: var(--users-content-inline-inset); }
+.users-table-panel :deep(.el-pagination .el-pager li) { height: 30px; line-height: 30px; }
+.users-table-panel :deep(.el-card__header) { border-bottom: 0 !important; }
+.users-table-panel :deep(.mrr-data-table-panel__pagination) { border-top: 0 !important; }
 .users-filter-bar :deep(.el-input__wrapper.is-focus), .users-filter-bar :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--mrr-ring) inset; }
-.users-info-trigger { display: inline-flex; align-items: center; justify-content: center; padding: 4px; color: var(--mrr-muted-foreground); cursor: help; background: transparent; border: 0; border-radius: var(--mrr-radius-pill); }
-.users-info-trigger:hover, .users-info-trigger:focus-visible { color: var(--mrr-primary); }
-.users-info-trigger:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 2px; }
 :global(.el-message.users-query-success-notice) { transition: opacity var(--el-transition-duration), transform 0.4s, top 0.4s, bottom 0.4s, margin-top 0.4s; box-shadow: 0 8px 24px rgb(15 23 42 / 14%); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
@@ -813,5 +800,5 @@ onMounted(loadData)
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
 .acknowledge { margin-top: 16px; }
-@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .users-table-panel :deep(.mrr-data-table-panel__filters) { padding-right: var(--mrr-space-3); padding-left: var(--mrr-space-3); } .users-table-panel :deep(.mrr-data-table-panel__content > .el-table) { margin-right: var(--mrr-space-3); margin-left: var(--mrr-space-3); } .credential-actions { flex-direction: column; } }
+@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .users-table-panel { --users-content-inline-inset: var(--mrr-space-3); } .credential-actions { flex-direction: column; } }
 </style>

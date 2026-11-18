@@ -635,6 +635,22 @@ body .el-table {
   background: var(--mrr-card);
 }
 
+/* 圆角表格保留横向边界和列间分隔，移除容易在裁切时露出直角的左右外框。 */
+body .el-table--border::before,
+body .el-table--border::after {
+  display: none;
+}
+
+body .el-table--border .el-table__header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border.el-table--scrollable-y .el-table__header-wrapper tr > th.el-table__cell:nth-last-child(2),
+body .el-table--border .el-table__body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__footer-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr > td.el-table__cell:last-child {
+  border-right: 0;
+}
+
 .el-table th.el-table__cell {
   height: var(--mrr-table-header-height);
   padding-block: 7px;

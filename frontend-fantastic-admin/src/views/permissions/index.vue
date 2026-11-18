@@ -495,16 +495,11 @@ h2 { margin: 0; font-size: 28px; }
 
 .matrix-card :deep(.el-table) {
   box-sizing: border-box;
-  border: 1px solid var(--mrr-border);
+  border-block: 1px solid var(--mrr-border);
 }
 
-.matrix-card :deep(.el-table--border::before),
-.matrix-card :deep(.el-table--border::after),
 .matrix-card :deep(.el-table--border > .el-table__inner-wrapper::before),
 .matrix-card :deep(.el-table--border > .el-table__inner-wrapper::after) { display: none; }
-
-.matrix-card :deep(.el-table__header-wrapper tr > th.el-table__cell:last-child),
-.matrix-card :deep(.el-table__body-wrapper tr > td.el-table__cell:last-child) { border-right: 0; }
 
 .matrix-card :deep(.el-table__body-wrapper tr:last-child > td.el-table__cell),
 .matrix-card :deep(.el-table__fixed-body-wrapper tr:last-child > td.el-table__cell) { border-bottom: 0; }

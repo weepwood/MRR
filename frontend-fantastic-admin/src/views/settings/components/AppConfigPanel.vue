@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { Settings } from '#/global'
+import { useId } from 'vue'
 import settingsDefault from '@/settings.default'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/FaTabs/tabs'
 import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
+import { normalizeThemeColor, readableInkOn, themeColorPresets } from '@/utils/theme-color'
 
 defineOptions({ name: 'AppConfigPanel' })
 
@@ -14,9 +17,41 @@ const props = withDefaults(defineProps<{
 
 const settingsStore = useSettingsStore()
 const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
-const activeGroup = ref('theme')
+const activeGroup = ref<string | number>('theme')
 const importInput = ref<HTMLInputElement>()
+const radiusLabelId = useId()
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
+
+const appearanceGroups = [
+  { key: 'theme', label: '主题与页面样式', icon: 'i-lucide:paintbrush' },
+  { key: 'navigation', label: '导航与顶栏', icon: 'i-lucide:menu' },
+  { key: 'workspace', label: '工作区组件', icon: 'i-lucide:layout-dashboard' },
+  { key: 'other', label: '主页、版权与其他', icon: 'i-lucide:house' },
+]
+
+/** 当前主色，统一规范化后与预设比对，避免大小写或 `#RGB` 写法导致选中态丢失。 */
+const activeThemeColor = computed(() => normalizeThemeColor(settingsStore.settings.app.themeColor))
+
+/** 预设色块的墨色随底色深浅自动切换，自定义成亮黄/近白时对勾仍可见。 */
+function swatchInk(color: string): string {
+  return readableInkOn(color)
+}
+
+const navigationModes = [
+  { value: 'side', label: '双层侧栏' },
+  { value: 'head', label: '顶部导航' },
+  { value: 'single', label: '单侧栏' },
+] as const
+
+const radiusShapes = [
+  { value: 'round', label: '标准圆弧' },
+  { value: 'squircle', label: 'G2 连续曲线' },
+] as const
+
+/** 超椭圆圆角依赖 CSS corner-shape（Chrome/Edge 139+），不支持时保留圆弧。 */
+const supportsCornerShape = typeof CSS !== 'undefined'
+  && typeof CSS.supports === 'function'
+  && CSS.supports('corner-shape', 'squircle')
 
 const appRadius = computed<number[]>({
   get() {
@@ -26,6 +61,9 @@ const appRadius = computed<number[]>({
     settingsStore.settings.app.radius = value[0]
   },
 })
+
+/** 旧版本地配置可能没有该字段，统一按标准圆弧处理。 */
+const radiusShape = computed<'round' | 'squircle'>(() => settingsStore.settings.app.radiusShape === 'squircle' ? 'squircle' : 'round')
 
 watch(() => settingsStore.settings, () => {
   autoSaveState.value = 'saving'
@@ -70,7 +108,7 @@ function openGroup(group: string) {
   activeGroup.value = group
 }
 
-defineExpose({ autoSaveLabel, syncScopeDescription, openGroup })
+defineExpose({ openGroup })
 
 onBeforeUnmount(() => {
   if (autoSaveTimer) {
@@ -124,16 +162,15 @@ function handleReset() {
 
 <template>
   <div class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer }">
-    <div class="config-summary">
-      <div>
-        <strong>浏览器外观配置</strong>
+    <div class="config-summary" :class="{ 'config-summary--warning': settingsStore.uiSettingsSyncState === 'failed' }">
+      <div class="config-save-feedback" role="status">
+        <strong class="autosave-state">
+          <FaIcon :name="settingsStore.uiSettingsSyncState === 'failed' ? 'i-lucide:triangle-alert' : 'i-lucide:save'" aria-hidden="true" />
+          {{ autoSaveLabel }}
+        </strong>
         <p>{{ syncScopeDescription }}</p>
       </div>
       <div class="config-summary-actions">
-        <span class="autosave-state">
-          <FaIcon name="i-lucide:save" />
-          {{ autoSaveLabel }}
-        </span>
         <el-button @click="handleReset">
           <FaIcon name="i-lucide:rotate-cw" />
           恢复默认
@@ -148,28 +185,24 @@ function handleReset() {
         </el-button>
       </div>
     </div>
-    <div v-if="settingsStore.uiSettingsSyncState === 'local-only'" class="sync-notice">
-      <FaIcon name="i-lucide:info" />
-      <span>当前账号没有「系统管理」权限，外观修改仅在本机生效，不会影响其他终端。</span>
-    </div>
-    <div v-else-if="settingsStore.uiSettingsSyncState === 'failed'" class="sync-notice sync-notice--warning">
-      <FaIcon name="i-lucide:triangle-alert" />
-      <span>同步到全站失败，修改已保存在本机。请检查网络后重试。</span>
-    </div>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
-    <el-collapse v-model="activeGroup" accordion class="config-groups">
-      <el-collapse-item name="theme" data-settings-search-target="theme">
-        <template #title>
-          <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-lucide:paintbrush" /></span>
-            <div>
-              <strong>主题与页面样式</strong>
-              <small>颜色模式、圆角与页面标题展示</small>
-            </div>
-          </div>
-        </template>
-
+    <Tabs v-model="activeGroup">
+      <TabsList class="appearance-tabs" aria-label="外观设置分类">
+        <TabsTrigger
+          v-for="group in appearanceGroups"
+          :key="group.key"
+          :value="group.key"
+          :data-settings-search-target="group.key"
+          class="appearance-tab"
+        >
+          <span class="appearance-tab-label">
+            <FaIcon :name="group.icon" aria-hidden="true" />
+            {{ group.label }}
+          </span>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="theme" class="appearance-tab-content">
         <div class="config-section">
           <div class="setting-item setting-item--stack">
             <div class="label-copy">
@@ -181,7 +214,7 @@ function handleReset() {
               :list="[
                 { icon: 'i-lucide:sun', label: '明亮', value: 'light' },
                 { icon: 'i-lucide:moon', label: '暗黑', value: 'dark' },
-                { icon: 'i-lucide:sun-moon', label: '系统', value: '' },
+                { icon: 'i-lucide:sun-moon', label: '跟随系统', value: '' },
               ]"
               class="theme-tabs"
             />
@@ -192,19 +225,64 @@ function handleReset() {
               <strong>主题主色</strong>
               <small>菜单、主要按钮和选中状态会同步使用此颜色。</small>
             </div>
-            <el-color-picker
-              v-model="settingsStore.settings.app.themeColor"
-              color-format="hex"
-              :predefine="['#2563EB', '#0891B2', '#16803C', '#B45F06', '#7C3AED', '#DC2626']"
-            />
+            <div class="theme-colors" role="group" aria-label="主题主色">
+              <button
+                v-for="preset in themeColorPresets"
+                :key="preset.color"
+                type="button"
+                class="theme-swatch"
+                :style="{ '--swatch-color': preset.color, '--swatch-ink': swatchInk(preset.color) }"
+                :title="preset.label"
+                :aria-label="preset.label"
+                :aria-pressed="activeThemeColor === preset.color"
+                @click="settingsStore.settings.app.themeColor = preset.color"
+              >
+                <FaIcon v-if="activeThemeColor === preset.color" name="i-lucide:check" aria-hidden="true" />
+              </button>
+              <div class="custom-color">
+                <el-color-picker
+                  v-model="settingsStore.settings.app.themeColor"
+                  color-format="hex"
+                  aria-label="自定义主题主色"
+                />
+                <span>自定义</span>
+              </div>
+            </div>
           </div>
 
           <div class="setting-item">
             <div class="label-copy">
-              <strong>圆角系数</strong>
+              <strong :id="radiusLabelId">圆角系数</strong>
               <small>统一调整页面卡片与面板的圆角程度。</small>
             </div>
-            <FaSlider v-model="appRadius" :min="0" :max="1" :step="0.25" class="slider-field" />
+            <div class="radius-control">
+              <FaSlider v-model="appRadius" :aria-labelledby="radiusLabelId" :min="0" :max="1" :step="0.25" class="slider-field" />
+              <span class="radius-value">{{ settingsStore.settings.app.radius }}</span>
+            </div>
+          </div>
+
+          <div class="setting-item setting-item--stack">
+            <div class="label-copy">
+              <strong>圆角曲线</strong>
+              <small>G2 连续曲线的曲率平滑过渡，观感接近 iOS 图标；标准圆弧为等半径圆角。差异随圆角系数增大而更明显。开关、滑块与圆形图标不属于圆角矩形，两种模式下都保持标准圆弧。</small>
+            </div>
+            <div class="corner-options" role="group" aria-label="圆角曲线">
+              <button
+                v-for="shape in radiusShapes"
+                :key="shape.value"
+                type="button"
+                class="corner-option"
+                :aria-pressed="radiusShape === shape.value"
+                @click="settingsStore.settings.app.radiusShape = shape.value"
+              >
+                <span class="corner-preview" :class="`corner-preview--${shape.value}`" aria-hidden="true" />
+                {{ shape.label }}
+              </button>
+            </div>
+            <p v-if="!supportsCornerShape" class="corner-hint">
+              <FaIcon name="i-lucide:info" aria-hidden="true" />
+              当前浏览器未实现 CSS corner-shape，本机仍按标准圆弧绘制；设置会保存并对支持的浏览器生效。
+            </p>
           </div>
 
           <div class="setting-item setting-item--stack">
@@ -227,44 +305,32 @@ function handleReset() {
               <strong>动态效果</strong>
               <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.app.enableMotion" />
+            <FaSwitch v-model="settingsStore.settings.app.enableMotion" aria-label="动态效果" />
           </div>
         </div>
-      </el-collapse-item>
+      </TabsContent>
 
-      <el-collapse-item name="navigation" data-settings-search-target="navigation">
-        <template #title>
-          <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-lucide:menu" /></span>
-            <div>
-              <strong>导航与顶栏</strong>
-              <small>导航结构、点击方式与顶栏定位</small>
-            </div>
-          </div>
-        </template>
-
+      <TabsContent value="navigation" class="appearance-tab-content">
         <div class="config-section">
           <div v-if="settingsStore.mode === 'pc'" class="setting-item setting-item--stack">
             <div class="label-copy">
               <strong>导航栏模式</strong>
               <small>选择适合当前工作区的菜单布局。</small>
             </div>
-            <div class="menu-mode">
-              <FaTooltip text="侧边栏模式（含主导航）" :delay="500">
-                <button type="button" class="mode mode-side" :class="{ active: settingsStore.settings.menu.mode === 'side' }" @click="settingsStore.settings.menu.mode = 'side'">
+            <div class="menu-mode" role="group" aria-label="导航栏模式">
+              <button
+                v-for="item in navigationModes"
+                :key="item.value"
+                type="button"
+                class="mode-option"
+                :aria-pressed="settingsStore.settings.menu.mode === item.value"
+                @click="settingsStore.settings.menu.mode = item.value"
+              >
+                <span class="mode" :class="`mode-${item.value}`" aria-hidden="true">
                   <span class="mode-container" />
-                </button>
-              </FaTooltip>
-              <FaTooltip text="顶部模式" :delay="500">
-                <button type="button" class="mode mode-head" :class="{ active: settingsStore.settings.menu.mode === 'head' }" @click="settingsStore.settings.menu.mode = 'head'">
-                  <span class="mode-container" />
-                </button>
-              </FaTooltip>
-              <FaTooltip text="侧边栏模式（不含主导航）" :delay="500">
-                <button type="button" class="mode mode-single" :class="{ active: settingsStore.settings.menu.mode === 'single' }" @click="settingsStore.settings.menu.mode = 'single'">
-                  <span class="mode-container" />
-                </button>
-              </FaTooltip>
+                </span>
+                {{ item.label }}
+              </button>
             </div>
           </div>
 
@@ -282,6 +348,7 @@ function handleReset() {
                 ]"
                 :key="index"
                 :variant="settingsStore.settings.menu.mainMenuClickMode === item.value ? 'default' : 'outline'"
+                :aria-pressed="settingsStore.settings.menu.mainMenuClickMode === item.value"
                 size="sm"
                 @click="settingsStore.settings.menu.mainMenuClickMode = (item.value as any)"
               >
@@ -336,6 +403,7 @@ function handleReset() {
                 ]"
                 :key="index"
                 :variant="settingsStore.settings.topbar.mode === item.value ? 'default' : 'outline'"
+                :aria-pressed="settingsStore.settings.topbar.mode === item.value"
                 size="sm"
                 @click="settingsStore.settings.topbar.mode = (item.value as any)"
               >
@@ -344,19 +412,9 @@ function handleReset() {
             </div>
           </div>
         </div>
-      </el-collapse-item>
+      </TabsContent>
 
-      <el-collapse-item name="workspace" data-settings-search-target="workspace">
-        <template #title>
-          <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-lucide:layout-dashboard" /></span>
-            <div>
-              <strong>工作区组件</strong>
-              <small>标签栏、工具栏、主页与导航搜索</small>
-            </div>
-          </div>
-        </template>
-
+      <TabsContent value="workspace" class="appearance-tab-content">
         <div class="config-subsection">
           <div class="subsection-heading">
             <strong>标签栏</strong>
@@ -449,19 +507,9 @@ function handleReset() {
             </div>
           </div>
         </div>
-      </el-collapse-item>
+      </TabsContent>
 
-      <el-collapse-item name="other" data-settings-search-target="other">
-        <template #title>
-          <div class="collapse-title">
-            <span class="collapse-icon"><FaIcon name="i-lucide:ellipsis" /></span>
-            <div>
-              <strong>主页、版权与其他</strong>
-              <small>主页入口、版权信息和辅助功能</small>
-            </div>
-          </div>
-        </template>
-
+      <TabsContent value="other" class="appearance-tab-content">
         <div class="config-subsection">
           <div class="subsection-heading">
             <strong>主页</strong>
@@ -554,8 +602,8 @@ function handleReset() {
             </div>
           </div>
         </div>
-      </el-collapse-item>
-    </el-collapse>
+      </TabsContent>
+    </Tabs>
   </div>
 </template>
 
@@ -578,63 +626,49 @@ function handleReset() {
   justify-content: flex-start;
 }
 
-.app-config-panel--drawer .config-summary > div:first-child {
+.app-config-panel--drawer .config-save-feedback {
   flex-basis: auto;
-}
-
-.app-config-panel--drawer .autosave-state {
-  width: 100%;
 }
 
 .config-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  background: var(--el-fill-color-extra-light);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  margin-bottom: var(--mrr-space-4);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
 
-.config-summary > div:first-child {
-  flex: 1 1 260px;
+.config-save-feedback {
+  flex: 1 1 240px;
   min-width: 0;
 }
 
-.config-summary strong,
-.config-summary p {
-  display: block;
-}
-
-.config-summary strong {
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-}
-
-.config-summary p {
-  margin: 4px 0 0;
+.config-save-feedback p {
+  margin: var(--mrr-space-1) 0 0;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .autosave-state {
   display: inline-flex;
-  flex: 0 0 auto;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-color-primary);
+  font-size: 13px;
+  font-weight: 650;
 }
+
+.config-summary--warning .autosave-state { color: var(--mrr-destructive); }
 
 .config-summary-actions {
   display: flex;
   flex: 0 1 auto;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
   max-width: 100%;
@@ -645,90 +679,55 @@ function handleReset() {
   margin-left: 0;
 }
 
-.import-input {
-  display: none;
-}
+.import-input { display: none; }
 
-.sync-notice {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--el-text-color-regular);
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
-}
-
-.sync-notice--warning {
-  color: var(--el-color-warning);
-  background: var(--el-color-warning-light-9);
-  border-color: var(--el-color-warning-light-7);
-}
-
-.config-groups {
-  border: 1px solid var(--el-border-color-lighter);
+.appearance-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--mrr-space-1);
+  width: 100%;
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
 
-.config-groups :deep(.el-collapse-item__header) {
-  height: auto;
-  min-height: 66px;
-  padding: 10px 16px;
-  line-height: 1.4;
-  background: var(--el-bg-color);
+.app-config-panel--drawer .appearance-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.config-groups :deep(.el-collapse-item__content) {
-  padding: 0 16px 18px;
-}
-
-.config-groups :deep(.el-collapse-item__wrap) {
-  background: var(--el-bg-color);
-}
-
-.collapse-title {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.appearance-tab {
   min-width: 0;
-}
-
-.collapse-icon {
-  display: grid;
-  flex: 0 0 34px;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  font-size: 16px;
-  color: var(--el-color-primary);
-  background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
+  min-height: 38px;
+  padding-inline: var(--mrr-space-2);
+  border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
+  transition: background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease;
 }
 
-.collapse-title strong,
-.collapse-title small {
-  display: block;
+.appearance-tab[data-state="active"] {
+  font-weight: 600;
+  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
+  background: var(--mrr-card);
+  border-color: var(--mrr-border);
 }
 
-.collapse-title strong {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
+.appearance-tab :deep(.truncate) { white-space: normal; }
+
+.appearance-tab-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.collapse-title small {
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--el-text-color-secondary);
-}
+.appearance-tab-label :deep(svg) { flex-shrink: 0; }
+.appearance-tab-content { margin-top: var(--mrr-space-4); }
 
 .config-section {
   overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
 
@@ -739,7 +738,7 @@ function handleReset() {
 .setting-item {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px;
+  gap: var(--mrr-space-3) var(--mrr-space-5);
   align-items: center;
   justify-content: space-between;
   min-height: 66px;
@@ -747,7 +746,7 @@ function handleReset() {
 }
 
 .setting-item + .setting-item {
-  border-top: 1px solid var(--el-border-color-extra-light);
+  border-top: 1px solid var(--mrr-border);
 }
 
 .setting-item--stack {
@@ -785,9 +784,106 @@ function handleReset() {
   width: min(360px, 55%);
 }
 
-.slider-field {
-  width: min(360px, 48%);
+.radius-control {
+  display: flex;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  width: min(360px, 100%);
 }
+
+.slider-field { flex: 1; min-width: 0; }
+.radius-value { min-width: 4ch; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+
+.corner-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mrr-space-2);
+  width: min(320px, 100%);
+}
+
+.corner-option {
+  display: grid;
+  gap: var(--mrr-space-1);
+  place-items: center;
+  min-width: 0;
+  padding: var(--mrr-space-2);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  transition: border-color var(--mrr-motion-fast) ease;
+}
+
+.corner-option:hover,
+.corner-option[aria-pressed="true"] { border-color: var(--mrr-primary); }
+.corner-option[aria-pressed="true"] { color: var(--mrr-navigation-active-foreground, var(--mrr-primary)); }
+.corner-option:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: 2px; }
+
+/*
+ * 预览块沿用实际圆角基准，切换曲线时能直接看出差别。
+ * 尺寸刻意放大到 56px / 20px 半径：曲线差异只在「半径 / 尺寸」比例较大时
+ * 才可感知（12px 半径的大卡片上两者相差不到 1.5px），预览块太小等于看不到。
+ */
+.corner-preview {
+  width: 56px;
+  height: 56px;
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: 20px;
+}
+
+/*
+ * 两个预览块各自锁定曲线，不受全局开关影响，才能并排对比。
+ * 选择器带上 .corner-option 提高特异性，压过 corner-shape.css 里
+ * `:root[data-radius-shape="squircle"] *` 的默认值。
+ */
+@supports (corner-shape: squircle) {
+  .corner-option .corner-preview--squircle { corner-shape: squircle; }
+  :root[data-radius-shape="squircle"] .corner-option .corner-preview--round { corner-shape: round; }
+}
+
+.corner-hint {
+  display: flex;
+  flex-basis: 100%;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+}
+
+.theme-colors,
+.custom-color {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+.theme-swatch {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  color: var(--swatch-ink, white);
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 2px solid var(--mrr-card);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--mrr-border);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.theme-swatch:hover { box-shadow: 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs, 0 2px 6px rgb(0 0 0 / 12%)); transform: translateY(-1px); }
+.theme-swatch:active { transform: scale(0.94); }
+.theme-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--swatch-color); }
+.theme-swatch:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: 3px; }
+.custom-color { padding-left: var(--mrr-space-2); font-size: 12px; color: var(--mrr-muted-foreground); border-left: 1px solid var(--mrr-border); }
 
 .setting-item > :not(.label-copy) {
   max-width: 100%;
@@ -825,27 +921,39 @@ function handleReset() {
 }
 
 .menu-mode {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mrr-space-2);
+  width: min(300px, 100%);
 }
+
+.mode-option {
+  display: grid;
+  gap: var(--mrr-space-1);
+  place-items: center;
+  min-width: 0;
+  padding: var(--mrr-space-2);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  transition: border-color var(--mrr-motion-fast) ease;
+}
+
+.mode-option:hover,
+.mode-option[aria-pressed="true"] { border-color: var(--mrr-primary); }
+.mode-option[aria-pressed="true"] { color: var(--mrr-navigation-active-foreground, var(--mrr-primary)); }
+.mode-option:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: 2px; }
 
 .mode {
   position: relative;
   width: 64px;
+  max-width: 100%;
   height: 48px;
-  padding: 0;
-  cursor: pointer;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color);
+  background: var(--mrr-muted);
   border-radius: var(--mrr-radius-md);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.mode.active {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--el-color-primary) 18%, transparent);
 }
 
 .mode::before,
@@ -923,8 +1031,12 @@ function handleReset() {
   border-radius: 0 4px 4px 0;
 }
 
+@media (max-width: 1200px) {
+  .appearance-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 720px) {
-  .config-summary > div:first-child,
+  .config-save-feedback,
   .label-copy {
     flex-basis: auto;
   }
@@ -937,11 +1049,10 @@ function handleReset() {
 
   .theme-tabs,
   .title-style-tabs,
-  .slider-field {
+  .radius-control {
     width: 100%;
   }
 
-  .menu-mode,
   .button-options {
     justify-content: flex-start;
   }
@@ -953,10 +1064,6 @@ function handleReset() {
 
   .config-summary-actions :deep(.el-button) {
     flex: 1 1 140px;
-  }
-
-  .autosave-state {
-    width: 100%;
   }
 }
 </style>

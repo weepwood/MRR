@@ -177,7 +177,7 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
       </p>
     </div>
     <div class="routing-actions">
-      <span>目录规则单独保存，不随页面上方的系统设置保存。</span>
+      <span>目录规则需点击「保存目录规则」。</span>
       <el-button v-auth="'system:manage'" :disabled="!canRestore" @click="save(true)">
         恢复内置目录规则
       </el-button>

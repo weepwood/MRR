@@ -20,18 +20,18 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 <template>
   <SliderRoot
     :class="cn(
-      'relative flex w-full touch-none select-none items-center data-[orientation=vertical]:flex-col data-[orientation=vertical]:w-2 data-[orientation=vertical]:h-full',
+      'fa-slider relative flex w-full touch-none select-none items-center data-[orientation=vertical]:flex-col data-[orientation=vertical]:w-2 data-[orientation=vertical]:h-full',
       props.class,
     )"
     v-bind="forwarded"
   >
-    <SliderTrack class="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary data-[orientation=vertical]:w-2">
-      <SliderRange class="absolute h-full bg-primary data-[orientation=vertical]:w-full" />
+    <SliderTrack class="fa-slider__track relative h-2 w-full grow overflow-hidden rounded-full bg-secondary data-[orientation=vertical]:w-2">
+      <SliderRange class="fa-slider__range absolute h-full bg-primary data-[orientation=vertical]:w-full" />
     </SliderTrack>
     <FaTooltip v-for="(val, key) in modelValue" :key="key" :text="val.toString()" disable-closing-trigger :disabled="!props.tooltip">
       <SliderThumb
         :aria-labelledby="props.ariaLabelledby"
-        class="block h-5 w-5 border-2 border-primary rounded-full bg-background ring-offset-background transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
+        class="fa-slider__thumb block h-5 w-5 border-2 border-primary rounded-full bg-background ring-offset-background transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
       />
     </FaTooltip>
   </SliderRoot>

@@ -42,7 +42,7 @@ test('取消不提交，确认期间防重且固定提交内容', async ({ page 
 })
 
 for (const failure of ['write', 'read'] as const) {
-  test(`${failure}失败后侧栏不误报同步，GET核对恢复且不重复写`, async ({ page }, testInfo) => {
+  test(`${failure}失败后保存区不误报同步，GET核对恢复且不重复写`, async ({ page }, testInfo) => {
     let reads = 0
     let writes = 0
     await page.route(/\/api\/v1\/settings\/schema$/, async (route) => {
@@ -61,29 +61,29 @@ for (const failure of ['write', 'read'] as const) {
     await save.click()
     await page.getByRole('dialog', { name: '确认修改敏感配置' }).getByRole('button', { name: '确认保存', exact: true }).click()
     await expect(panel).toContainText(failure === 'write' ? '未能确认运行参数保存结果' : '运行参数已保存，但读取最新配置失败')
-    await expect(page.locator('.sidebar-save-card')).toContainText('运行参数待重新核对')
+    await expect(page.locator('.settings-actions')).toContainText('运行参数待重新核对')
     await expect(save).toBeDisabled()
     await expect(input).toHaveValue('10')
     await expect(page.getByRole('dialog', { name: '确认修改敏感配置' })).toBeHidden()
     await panel.screenshot({ path: testInfo.outputPath(`runtime-${failure}-failure.png`) })
     await panel.getByRole('button', { name: '重新加载', exact: true }).click()
     await page.getByRole('dialog', { name: '重新加载运行参数' }).getByRole('button', { name: '确认重新加载' }).click()
-    await expect(page.locator('.sidebar-save-card')).toContainText('运行参数已同步')
+    await expect(page.locator('.settings-actions')).toContainText('运行参数已同步')
     await expect(input).toBeEditable()
     expect(writes).toBe(1)
   })
 }
 
-test('首次加载失败侧栏保持未核对，重新读取后可编辑', async ({ page }) => {
+test('首次加载失败保存区保持未核对，重新读取后可编辑', async ({ page }) => {
   let reads = 0
   await page.route(/\/api\/v1\/settings\/schema$/, async (route) => {
     reads++
     await route.fulfill({ status: reads === 1 ? 503 : 200, json: { code: reads === 1 ? 503 : 200, data: reads === 1 ? null : schema() } })
   })
   const { panel, save, input } = await openRuntime(page)
-  await expect(page.locator('.sidebar-save-card')).toContainText('运行参数待重新核对')
+  await expect(page.locator('.settings-actions')).toContainText('运行参数待重新核对')
   await expect(save).toBeDisabled()
   await panel.getByRole('button', { name: '重新加载', exact: true }).click()
   await expect(input).toHaveValue('7')
-  await expect(page.locator('.sidebar-save-card')).toContainText('运行参数已同步')
+  await expect(page.locator('.settings-actions')).toContainText('运行参数已同步')
 })

@@ -28,6 +28,12 @@ declare namespace Settings {
      */
     radius?: number
     /**
+     * 圆角曲线
+     * @默认值 `'round'` 标准圆弧（G1 相切连续）
+     * @可选值 `'squircle'` G2 连续曲线（超椭圆），依赖浏览器支持 CSS `corner-shape`
+     */
+    radiusShape?: 'round' | 'squircle'
+    /**
      * 页面标题容器风格
      * @默认值 `'card'` 使用带背景和装饰的 Hero 卡片
      * @可选值 `'plain'` 标题直接位于页面内容层级

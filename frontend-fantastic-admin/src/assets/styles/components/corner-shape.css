@@ -1,0 +1,124 @@
+/*
+ * G2 连续圆角（超椭圆）的生效范围
+ *
+ * 由「界面外观 → 圆角曲线」写入 `data-radius-shape="squircle"`。圆角大小仍由
+ * border-radius 决定，corner-shape 只改变圆角内部的曲率：标准圆弧是 G1 相切
+ * 连续，squircle（等价 superellipse(2)）让曲率平滑过渡到 G2。
+ *
+ * 实现方式是「开关变量 + 子树继承」：`*` 统一读 `--mrr-corner`，需要退出的
+ * 元素（或其容器）把变量重置为 round，自己的伪元素与子元素会一起跟随，不必
+ * 逐个声明 corner-shape。这样退出规则只需要写一处。
+ *
+ * 为什么要退出：squircle 描述的是「圆角矩形」，形状不是圆角矩形的元素套上去
+ * 会被读成走形，而不是更柔和。三类元素必须保持标准圆弧：
+ *   1. 开关与滑块（Element Plus 的 .el-switch / .el-slider，reka-ui 的
+ *      .fa-switch / .fa-slider）——轨道端头是半圆，内部滑块与手柄是正圆，
+ *      超椭圆会把端头削平、把手柄压成圆角方块，部件与轨道的贴合也会出现
+ *      1px 缝隙；
+ *   2. 正圆与胶囊（圆点、头像、色块、圆形图标按钮、pill 标签与计数）——半径
+ *      本来就等于半边尺寸，超椭圆在四角各收一次，视觉上从圆变成了圆角方形；
+ *   3. 由正圆零件组成的复合控件（单选、复选、进度、步骤条、时间线、加载）。
+ *
+ * 项目里同时存在两套控件体系，必须都覆盖：Element Plus（.el-*）与 reka-ui
+ * 封装的 FaSwitch / FaSlider（类名由 UnoCSS 生成，另补语义类名 fa-switch /
+ * fa-slider 作为稳定锚点）。漏掉任一体系，用户就会在界面外观页看到「切到 G2
+ * 后开关端头削平、滑块手柄变圆角方块」。
+ *
+ * 仅 Chrome/Edge 139+ 实现 corner-shape；其他浏览器整块跳过（@supports 判定
+ * 为 false），保留 border-radius 的圆弧，属装饰性降级，不影响圆角大小、点击
+ * 区域与裁切范围。
+ */
+
+@supports (corner-shape: squircle) {
+  :root[data-radius-shape="squircle"] {
+    --mrr-corner: squircle;
+  }
+
+  /* 默认：圆角矩形统一按超椭圆绘制，伪元素与主体同形。 */
+  :root[data-radius-shape="squircle"] *,
+  :root[data-radius-shape="squircle"] *::before,
+  :root[data-radius-shape="squircle"] *::after {
+    corner-shape: var(--mrr-corner, round);
+  }
+
+  /*
+   * 1. 开关与滑块。Element Plus 用 .el-switch / .el-slider；reka-ui 封装的
+   *    FaSwitch / FaSlider 用新增的 .fa-switch / .fa-slider。变量在根节点重置，
+   *    轨道、手柄、滑块等子元素与伪元素会一起跟随。
+   */
+  :root[data-radius-shape="squircle"] :is(
+    .el-switch,
+    .el-slider,
+    .el-slider__stop,
+    .fa-switch,
+    .fa-slider
+  ) {
+    --mrr-corner: round;
+  }
+
+  /* 2. 由正圆零件组成的复合控件。 */
+  :root[data-radius-shape="squircle"] :is(
+    .el-radio,
+    .el-checkbox,
+    .el-rate,
+    .el-progress,
+    .el-steps,
+    .el-timeline,
+    .el-loading-spinner,
+    .el-image-viewer__btn
+  ) {
+    --mrr-corner: round;
+  }
+
+  /*
+   * 3. 几何圆形：圆点、头像、色块、加载指示与标记点。
+   * 命名兜底用属性子串选择器覆盖项目内散落的 *-dot / *avatar* / *swatch /
+   * *spinner / *-marker；新增这类元素沿用命名即可自动退出，无需再登记。
+   */
+  :root[data-radius-shape="squircle"] :is(
+    [class*="dot"],
+    [class*="avatar"],
+    [class*="swatch"],
+    [class*="spinner"],
+    [class*="-marker"],
+    .el-badge,
+    .bar-track,
+    .permission-count,
+    .environment-item-info,
+    .review-flow__steps b
+  ) {
+    --mrr-corner: round;
+  }
+
+  /* 4. 胶囊：端头是半圆，被超椭圆削平后与开关同样走形。 */
+  :root[data-radius-shape="squircle"] :is(
+    [class~="rounded-full"],
+    [class*="is-round"],
+    [class*="is-circle"],
+    .environment-badge,
+    .environment-status,
+    .environment-actions button,
+    .field-info-trigger,
+    .info-trigger
+  ) {
+    --mrr-corner: round;
+  }
+
+  /* 5. 弹出层箭头：45° 旋转的小方块，超椭圆会让斜边出现鼓包。 */
+  :root[data-radius-shape="squircle"] .el-popper__arrow {
+    --mrr-corner: round;
+  }
+
+  /*
+   * 6. 显式钩子：`data-corner="round"` 连同子树回归圆弧（用于没被命名兜底覆盖的
+   *    圆形零件）；`data-corner="squircle"` 反向恢复，供被排除容器内部仍要走 G2
+   *    的圆角矩形使用（排除是按子树继承的，嵌套时子元素会一起退出）。
+   */
+  :root[data-radius-shape="squircle"] [data-corner="round"] {
+    --mrr-corner: round;
+  }
+
+  :root[data-radius-shape="squircle"] [data-corner="squircle"] {
+    --mrr-corner: squircle;
+  }
+}

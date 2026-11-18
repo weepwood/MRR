@@ -51,11 +51,11 @@
   --mrr-table-header-height: 42px;
   --mrr-table-row-height: 46px;
 
-  /* MRR 品牌色 */
+  /* MRR 品牌色：运行时会按「主题主色」重新推导，这里的值对应默认主色 #2563EB 的明亮模式。 */
   --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-active: #1e40af;
-  --color-primary-deep: #1e3a8a;
+  --color-primary-hover: #1f55cc;
+  --color-primary-active: #1947ae;
+  --color-primary-deep: #11388c;
   --color-success: #16803c;
   --color-info: #087ea4;
   --color-warning: #b45f06;
@@ -175,3 +175,11 @@
     --color-border-strong: rgb(255 255 255 / 18%);
   }
 }
+
+/*
+ * G2 连续圆角（超椭圆）的生效范围见 components/corner-shape.css。
+ *
+ * 由「界面外观 → 圆角曲线」写入 `data-radius-shape="squircle"`；圆角大小仍由
+ * border-radius 决定，corner-shape 只改变圆角内部的曲率。开关与排除规则集中
+ * 放在那个文件里，令牌层不再参与形状决策。
+ */

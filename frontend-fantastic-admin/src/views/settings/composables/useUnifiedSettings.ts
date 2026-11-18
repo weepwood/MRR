@@ -1,6 +1,6 @@
-import type { EffectiveSystemSettings, SettingsSource } from '@/utils/system-settings'
+import type { EffectiveSystemSettings } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -8,9 +8,11 @@ import {
   createDefaultSystemSettings,
   isAllowedDocumentationUrl,
   loadEffectiveSystemSettings,
+  parseSystemSettings,
   serializeSystemSettings,
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
+import { describeSettingChanges } from '../settings-changes'
 
 export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'ocr' | 'security' | 'runtime' | 'developer' | 'department' | 'external-links' | 'appearance'
 
@@ -64,12 +66,9 @@ function isValidEmailAddress(value: string): boolean {
 export function useUnifiedSettings() {
   const route = useRoute()
   const router = useRouter()
-  const shellRef = ref<HTMLElement>()
   const activeSection = ref<SettingsSection>('system')
   const loading = ref(false)
   const saving = ref(false)
-  const settingsSource = ref<SettingsSource>('default')
-  const lastSyncedAt = ref('')
   const savedSnapshot = ref<Record<string, string>>({})
   const settings = ref<EffectiveSystemSettings>(createDefaultSystemSettings())
 
@@ -82,14 +81,15 @@ export function useUnifiedSettings() {
     'security',
     'developer',
   ].includes(activeSection.value))
-  const sourceMeta = computed(() => ({
-    server: { label: '服务器配置', type: 'success' as const },
-    local: { label: '本地缓存', type: 'warning' as const },
-    default: { label: '默认配置', type: 'info' as const },
-  })[settingsSource.value])
   const currentSnapshot = computed(() => serializeSystemSettings(settings.value))
   const changedKeys = computed(() => Object.keys(currentSnapshot.value).filter(key => currentSnapshot.value[key] !== savedSnapshot.value[key]))
   const isDirty = computed(() => changedKeys.value.length > 0)
+  /** 保存前复核用的可读变更清单（字段中文名 + 旧值 → 新值）。 */
+  const changedItems = computed(() => describeSettingChanges(
+    changedKeys.value,
+    currentSnapshot.value,
+    savedSnapshot.value,
+  ))
   const developerModeChanged = computed(() => changedKeys.value.some(key => [
     'developerModeEnabled',
     'developerModeAllowedSources',
@@ -100,12 +100,22 @@ export function useUnifiedSettings() {
     return settingsNavItems.some(item => item.key === value)
   }
 
-  function markAsSaved() {
-    savedSnapshot.value = { ...currentSnapshot.value }
+  /**
+   * 记录已保存状态。
+   * 保存成功后必须用「实际提交的快照」而不是实时表单值：请求在途时用户仍可继续
+   * 输入，用实时值会让这些未提交的改动被标记为已保存，静默丢失。
+   */
+  function markAsSaved(snapshot: Record<string, string> = currentSnapshot.value) {
+    savedSnapshot.value = { ...snapshot }
   }
 
-  function updateSyncTime() {
-    lastSyncedAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
+  /**
+   * 放弃未保存的修改，把表单还原到最近一次保存／加载时的快照。
+   * 设置页被 KeepAlive 缓存，离开再回来不会重新拉取设置，因此「放弃」必须自己回滚，
+   * 否则被放弃的值会留在表单里，并可能在下一次保存时写进系统数据库。
+   */
+  function discardUnsavedChanges() {
+    settings.value = parseSystemSettings({ ...savedSnapshot.value })
   }
 
   async function loadSettings(showMessage = false) {
@@ -113,9 +123,7 @@ export function useUnifiedSettings() {
     try {
       const result = await loadEffectiveSystemSettings()
       settings.value = result.settings
-      settingsSource.value = result.source
       markAsSaved()
-      updateSyncTime()
       if (showMessage) { ElMessage.success('设置已重新加载') }
     }
     finally {
@@ -182,24 +190,49 @@ export function useUnifiedSettings() {
     }
   }
 
-  async function handleSave(): Promise<boolean> {
-    if (!validateSettings() || !await confirmDeveloperModeEnable()) { return false }
+  /** 保存前列出本次修改，确认后才写入系统数据库。 */
+  async function confirmSaveChanges(): Promise<boolean> {
+    try {
+      await actionDialog.confirm(
+        '以下改动将写入系统数据库，保存后立即对全站生效。',
+        '确认保存设置',
+        {
+          confirmButtonText: '确认保存',
+          cancelButtonText: '返回修改',
+          details: changedItems.value,
+          detailsCaption: `共 ${changedItems.value.length} 项修改`,
+        },
+      )
+      return true
+    }
+    catch {
+      return false
+    }
+  }
+
+  async function handleSave(options: { confirmChanges?: boolean } = {}): Promise<boolean> {
+    // 页头按钮靠 loading 自禁用，但「离开前保存」与页头保存可以同时进入，需要显式互斥。
+    if (saving.value) { return false }
+    if (!validateSettings()) { return false }
+    if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
+    if (!await confirmDeveloperModeEnable()) { return false }
     saving.value = true
     const developerChangeRequested = developerModeChanged.value
+    // 提交内容固定在请求发出前，保存结果只认这份快照。
+    const payload = serializeSystemSettings(settings.value)
     try {
-      await saveSystemSettings(serializeSystemSettings(settings.value))
-      settingsSource.value = 'server'
-      writeLocalSystemSettings(settings.value)
+      await saveSystemSettings(payload)
+      const savedSettings = parseSystemSettings({ ...payload })
+      writeLocalSystemSettings(savedSettings)
       window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', {
         detail: {
-          ...settings.value,
-          systemAdminContactVisible: settings.value.systemAdminContactEnabled && settings.value.systemAdminPublicVisible,
+          ...savedSettings,
+          systemAdminContactVisible: savedSettings.systemAdminContactEnabled && savedSettings.systemAdminPublicVisible,
         },
       }))
-      markAsSaved()
-      updateSyncTime()
+      markAsSaved(payload)
       ElMessage.success(developerChangeRequested
-        ? `开发者模式配置已保存，当前状态：${settings.value.developerModeEnabled ? '启用' : '关闭'}`
+        ? `开发者模式配置已保存，当前状态：${payload.developerModeEnabled === 'true' ? '启用' : '关闭'}`
         : '系统设置已保存')
       return true
     }
@@ -245,16 +278,9 @@ export function useUnifiedSettings() {
     await loadSettings(true)
   }
 
-  function focusSettingsWorkspace() {
-    if (window.innerWidth < 960) { return }
-    shellRef.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
-  }
-
   async function selectSection(section: SettingsSection) {
     activeSection.value = section
     await router.replace({ query: { ...route.query, section } })
-    await nextTick()
-    focusSettingsWorkspace()
   }
 
   watch(() => route.query.section, (value) => {
@@ -268,20 +294,19 @@ export function useUnifiedSettings() {
 
   return {
     settingsNavItems,
-    shellRef,
     activeSection,
     activeMeta,
     loading,
     saving,
     settings,
-    sourceMeta,
-    lastSyncedAt,
     changedKeys,
+    changedItems,
     isDirty,
     isServerSettingSection,
     selectSection,
     handleSave,
     handleReload,
     handleReset,
+    discardUnsavedChanges,
   }
 }

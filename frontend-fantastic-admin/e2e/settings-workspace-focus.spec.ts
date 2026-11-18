@@ -1,33 +1,37 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('系统设置工作区聚焦', () => {
-  test('点击工作区内容后按框架结构对齐并保留上下间距', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 720 })
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+test('搜索保留原有页头，已在屏内的设置不滚动，屏外设置只定位一次', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 720 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-    const frame = page.locator('.settings-workspace-frame')
-    const shell = page.locator('.settings-shell')
-    await expect(frame).toBeVisible({ timeout: 20_000 })
-    await expect(shell).toBeVisible()
+  const hero = page.locator('.settings-page > .page-header')
+  const search = page.getByRole('textbox', { name: '搜索设置' })
+  await expect(hero.getByRole('heading', { name: '系统设置', exact: true })).toBeInViewport()
+  await expect(hero.getByText('统一管理系统标识', { exact: false })).toBeVisible()
+  await expect(search).toBeInViewport()
 
-    await expect.poll(async () => frame.evaluate(
-      element => element.getBoundingClientRect().top,
-    )).toBeGreaterThan(10)
-
-    await page.locator('.section-header').click()
-
-    await expect.poll(async () => frame.evaluate(
-      element => Math.abs(element.getBoundingClientRect().top),
-    )).toBeLessThanOrEqual(2)
-    await expect.poll(async () => frame.evaluate(
-      element => Math.abs(element.getBoundingClientRect().height - window.innerHeight),
-    )).toBeLessThanOrEqual(3)
-    await expect.poll(async () => shell.evaluate(
-      element => Math.abs(element.getBoundingClientRect().top - 10),
-    )).toBeLessThanOrEqual(2)
-    await expect.poll(async () => shell.evaluate(
-      element => Math.abs(element.getBoundingClientRect().bottom - (window.innerHeight - 10)),
-    )).toBeLessThanOrEqual(2)
+  await page.evaluate(() => {
+    let calls = 0
+    const scrollTo = window.scrollTo
+    document.documentElement.dataset.settingsScrollCalls = '0'
+    window.scrollTo = (...args) => {
+      document.documentElement.dataset.settingsScrollCalls = String(++calls)
+      Reflect.apply(scrollTo, window, args)
+    }
   })
+
+  await search.fill('系统名称')
+  await page.getByRole('option', { name: /系统标识.*系统信息/ }).click()
+  await expect(page.getByText('系统标识', { exact: true })).toBeFocused()
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await expect(page.locator('html')).toHaveAttribute('data-settings-scroll-calls', '0')
+
+  await search.fill('记住选择状态')
+  await page.getByRole('option', { name: /记住选择状态.*档案浏览/ }).click()
+  const result = page.getByText('记住选择状态', { exact: true })
+  await expect(result).toBeFocused()
+  await expect(result).toBeInViewport()
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
+  await expect(page.locator('html')).toHaveAttribute('data-settings-scroll-calls', '1')
 })

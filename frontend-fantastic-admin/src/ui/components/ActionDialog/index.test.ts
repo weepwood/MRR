@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest'
-import { actionDialog, ActionDialogCancelled, cancelActionDialogs, currentActionDialog, finishActionDialog } from './index'
+import { ACTION_DIALOG_EXTRA, actionDialog, ActionDialogCancelled, cancelActionDialogs, currentActionDialog, finishActionDialog } from './index'
 
 afterEach(cancelActionDialogs)
 
@@ -32,4 +32,21 @@ it('卸载时取消仍在显示和等待中的请求', async () => {
   cancelActionDialogs()
   await Promise.all([confirm, prompt])
   expect(currentActionDialog.value).toBeUndefined()
+})
+
+it('三选一确认区分确认、次要操作与取消', async () => {
+  const options = { extraButtonText: '放弃修改', confirmButtonText: '保存并离开' }
+
+  const extra = actionDialog.choose('当前有 2 项设置修改尚未保存', '有未保存的设置', options)
+  expect(currentActionDialog.value?.options).toMatchObject(options)
+  finishActionDialog(currentActionDialog.value!, ACTION_DIALOG_EXTRA)
+  await expect(extra).resolves.toBe('extra')
+
+  const confirmed = actionDialog.choose('当前有 2 项设置修改尚未保存', '有未保存的设置', options)
+  finishActionDialog(currentActionDialog.value!, '')
+  await expect(confirmed).resolves.toBe('confirm')
+
+  const cancelled = actionDialog.choose('当前有 2 项设置修改尚未保存', '有未保存的设置', options)
+  finishActionDialog(currentActionDialog.value!)
+  await expect(cancelled).resolves.toBe('cancel')
 })

@@ -10,7 +10,7 @@ import { expect, test as setup } from '@playwright/test'
  * `initialStartupTimeoutMs = 15000` 的启动看门狗，于是页面被「系统启动较慢」浮层覆盖，
  * 应用尚未挂载，用例便拿到空页面或始终停留在原地址而假失败。</p>
  *
- * <p>失败快照可直接印证这一点：`settings-layout` 只有看门狗浮层（`.settings-shell`
+ * <p>失败快照可直接印证这一点：`settings-layout` 只有看门狗浮层（设置分类目录
  * not found），`auth-storage-healing` 仅剩右上角通知区、`<html>` 仍带 `nprogress-busy`
  * 且 `toHaveURL` 始终停在 `/records`。也就是说失败属于测试基础设施的冷启动时序问题，
  * 而不是代码回归——同一服务预热后单 worker 复跑全部通过。</p>

@@ -6,9 +6,9 @@ import { readAuthStorage } from '@/utils/auth-storage'
 import { notify } from '@/utils/notification'
 import { merge } from '@/utils/object'
 import { checkSessionPermission } from '@/utils/permission'
+import { buildThemeColorScale, toCssVariables } from '@/utils/theme-color'
 
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
-const DEFAULT_THEME_COLOR = '#2563EB'
 
 /** 服务端存储键：全局界面外观与导航外链。与后端 SystemSettingController.UI_SETTINGS_KEY 保持一致。 */
 const UI_SETTINGS_SERVER_KEY = 'adminAppSettings'
@@ -43,7 +43,7 @@ const UI_SETTINGS_PUSH_DELAY_MS = 800
  * </p>
  */
 const UI_SETTINGS_PICK: Record<string, readonly string[]> = {
-  app: ['colorScheme', 'themeColor', 'radius', 'pageTitleStyle', 'enableMournMode', 'enableColorAmblyopiaMode', 'enableDynamicTitle', 'enableProgress'],
+  app: ['colorScheme', 'themeColor', 'radius', 'radiusShape', 'pageTitleStyle', 'enableMournMode', 'enableColorAmblyopiaMode', 'enableDynamicTitle', 'enableProgress'],
   layout: ['enableMobileAdaptation'],
   menu: ['mode', 'mainMenuClickMode', 'subMenuUniqueOpened', 'enableSubMenuCollapseButton', 'enableHotkeys', 'externalLinks'],
   topbar: ['mode'],
@@ -78,70 +78,15 @@ function collectUiSettings(source: RecursiveRequired<Settings.all>): Record<stri
   return collected
 }
 
-function normalizeThemeColor(value: unknown): string {
-  const color = String(value || '').trim()
-  return /^#[\dA-F]{6}$/i.test(color) ? color.toUpperCase() : DEFAULT_THEME_COLOR
-}
-
-function mixHexColor(source: string, target: string, sourceWeight: number): string {
-  const sourceValue = Number.parseInt(source.slice(1), 16)
-  const targetValue = Number.parseInt(target.slice(1), 16)
-  const channels = [16, 8, 0].map((shift) => {
-    const from = (sourceValue >> shift) & 0xFF
-    const to = (targetValue >> shift) & 0xFF
-    return Math.round(from * sourceWeight + to * (1 - sourceWeight))
-  })
-  return `#${channels.map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`
-}
-
-function toHslToken(color: string): string {
-  const value = Number.parseInt(color.slice(1), 16)
-  const red = ((value >> 16) & 0xFF) / 255
-  const green = ((value >> 8) & 0xFF) / 255
-  const blue = (value & 0xFF) / 255
-  const maximum = Math.max(red, green, blue)
-  const minimum = Math.min(red, green, blue)
-  const lightness = (maximum + minimum) / 2
-  const delta = maximum - minimum
-  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1))
-  let hue = 0
-  if (delta !== 0) {
-    if (maximum === red) {
-      hue = 60 * (((green - blue) / delta) % 6)
-    }
-    else if (maximum === green) {
-      hue = 60 * ((blue - red) / delta + 2)
-    }
-    else {
-      hue = 60 * ((red - green) / delta + 4)
-    }
-  }
-  if (hue < 0) {
-    hue += 360
-  }
-  return `${Math.round(hue)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
-}
-
-function applyThemeColor(value: unknown) {
-  const primary = normalizeThemeColor(value)
+/**
+ * 把主色写入根节点。
+ * 色阶的推导（hover/active/light-x 等）见 `@/utils/theme-color`：明亮与暗黑两套方向不同，
+ * 因此配色方案切换时必须重新推导，否则暗色下会残留浅色填充。
+ */
+function applyThemeColor(color: unknown, scheme: 'light' | 'dark') {
+  const variables = toCssVariables(buildThemeColorScale(color, scheme))
   const rootStyle = document.documentElement.style
-  const primaryHsl = toHslToken(primary)
-  const variables = {
-    '--color-primary': primary,
-    '--color-primary-hover': mixHexColor(primary, '#000000', 0.86),
-    '--color-primary-active': mixHexColor(primary, '#000000', 0.72),
-    '--color-primary-deep': mixHexColor(primary, '#000000', 0.58),
-    '--primary': primaryHsl,
-    '--ring': primaryHsl,
-    '--el-color-primary': primary,
-    '--el-color-primary-light-3': mixHexColor(primary, '#FFFFFF', 0.7),
-    '--el-color-primary-light-5': mixHexColor(primary, '#FFFFFF', 0.5),
-    '--el-color-primary-light-7': mixHexColor(primary, '#FFFFFF', 0.3),
-    '--el-color-primary-light-8': mixHexColor(primary, '#FFFFFF', 0.2),
-    '--el-color-primary-light-9': mixHexColor(primary, '#FFFFFF', 0.1),
-    '--el-color-primary-dark-2': mixHexColor(primary, '#000000', 0.8),
-  }
-  Object.entries(variables).forEach(([name, color]) => rootStyle.setProperty(name, color))
+  Object.entries(variables).forEach(([name, value]) => rootStyle.setProperty(name, value))
 }
 
 function normalizePageTitleStyle(value: unknown): 'plain' | 'card' {
@@ -244,7 +189,18 @@ export const useSettingsStore = defineStore(
       immediate: true,
     })
 
-    watch(() => settings.value.app.themeColor, applyThemeColor, {
+    // G2 连续圆角（超椭圆）通过根节点属性开启，生效范围见 components/corner-shape.css。
+    // 不支持的浏览器会忽略 corner-shape，仍按 border-radius 绘制标准圆弧。
+    watch(() => settings.value.app.radiusShape, (val) => {
+      document.documentElement.dataset.radiusShape = val === 'squircle' ? 'squircle' : 'round'
+    }, {
+      immediate: true,
+    })
+
+    watch([
+      () => settings.value.app.themeColor,
+      currentColorScheme,
+    ], ([color, scheme]) => applyThemeColor(color, scheme ?? 'light'), {
       immediate: true,
     })
 

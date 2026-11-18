@@ -209,7 +209,6 @@ const onSubmit = form.handleSubmit(async (values) => {
   flex-direction: column;
   gap: var(--mrr-space-3);
   padding: var(--mrr-space-4);
-  background: var(--mrr-card);
   background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card));
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
@@ -230,7 +229,6 @@ const onSubmit = form.handleSubmit(async (values) => {
   width: 30px;
   height: 30px;
   color: var(--mrr-primary);
-  background: var(--el-color-primary-light-9);
   background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card));
   border: 1px solid var(--el-color-primary-light-7);
   border-color: color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
@@ -420,6 +418,18 @@ const onSubmit = form.handleSubmit(async (values) => {
     flex-direction: column;
     gap: var(--mrr-space-2);
     align-items: flex-start;
+  }
+}
+
+/* Chrome 86 回退：登录字段分组卡是卡中卡，底色失效后与父级表单糊成一片。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .login-fields-card {
+    background: var(--mrr-card);
+  }
+
+  .login-fields-card__icon {
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-7);
   }
 }
 </style>

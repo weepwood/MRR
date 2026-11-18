@@ -901,11 +901,26 @@ h2 {
   transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
-.archive-folder-card:hover .folder-card-body,
-.archive-folder-card:focus-visible .folder-card-body {
+.archive-folder-card:hover .folder-card-body {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
   box-shadow: 0 18px 42px rgb(15 23 42 / 14%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 11%, transparent);
+  transform: translateY(-4px);
+}
+
+/*
+ * 键盘焦点改用 outline，不再借用 box-shadow。
+ *
+ * .folder-card-body 带 overflow: hidden，用 box-shadow 画的焦点环在多卡并列时会被相邻卡片
+ * 的层叠上下文裁掉；而且 box-shadow 只允许一条声明表达「投影 + 焦点环」，两者互相替换。
+ * 投影归投影、焦点归焦点，box-shadow 里因此不再出现 0 0 0 Npx 形式的替代品。
+ */
+.archive-folder-card:focus-visible .folder-card-body {
+  outline: 2px solid var(--folder-accent);
+  outline-offset: 3px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
+  border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
+  box-shadow: 0 18px 42px rgb(15 23 42 / 14%);
   transform: translateY(-4px);
 }
 
@@ -1169,6 +1184,88 @@ h2 {
 
   .folder-code-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/*
+ * Chrome 86 回退：档案袋是本站唯一用「表面」承载业务隐喻的地方，不能接受降级。
+ *
+ * 这里没有一处是「先静态值再 color-mix」的双声明——含 var() 的 color-mix 在 86 上
+ * 通过解析、赢得级联，再到计算值阶段把属性打成 unset，前一条静态声明不会回来。
+ * 因此回退只能写成独立的 @supports not 块：现代浏览器完全不读这里，86 读到的就是
+ * 下面这些实色，三张纸重新分成「主题浅底 / 中性灰底 / 卡面白底」三个可辨层级。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .folder-layer {
+    border: 1px solid var(--divider);
+  }
+
+  .folder-layer-back {
+    background: var(--folder-tint);
+  }
+
+  .folder-layer-middle {
+    background: var(--mrr-muted);
+  }
+
+  .folder-card-body {
+    background: var(--mrr-card);
+  }
+
+  /* 右上角的高光只是氛围，86 上直接不画，避免在实色卡面上留一块多余色斑。 */
+  .folder-card-body::after {
+    background: none;
+  }
+
+  .archive-folder-card:hover .folder-card-body,
+  .archive-folder-card:focus-visible .folder-card-body {
+    background: var(--mrr-card);
+    border-color: var(--folder-accent);
+    box-shadow: 0 18px 42px rgb(15 23 42 / 14%);
+  }
+
+  .archive-folder-card:hover .folder-layer-back,
+  .archive-folder-card:focus-visible .folder-layer-back {
+    border-color: var(--folder-accent);
+    box-shadow: 0 8px 18px rgb(15 23 42 / 10%);
+  }
+
+  .archive-folder-card:hover .folder-layer-middle,
+  .archive-folder-card:focus-visible .folder-layer-middle {
+    border-color: var(--folder-accent);
+  }
+
+  /* 选中态原本靠 3px 半透明环加重；86 上换成 outline，1px 边色差不再独自承担选中识别。 */
+  .archive-folder-card.is-selected .folder-card-body {
+    outline: 2px solid var(--folder-accent);
+    outline-offset: 3px;
+    box-shadow: 0 12px 30px rgb(15 23 42 / 11%);
+  }
+
+  .folder-selected-label {
+    background: var(--folder-tint);
+  }
+
+  .folder-selected-label i {
+    box-shadow: none;
+  }
+
+  .folder-code-block {
+    background: var(--mrr-card);
+    border: 1px solid var(--divider);
+  }
+
+  .folder-code-copyable:hover {
+    background: var(--mrr-muted);
+    border-color: var(--folder-accent);
+  }
+
+  .folder-footer {
+    border-top: 1px dashed var(--divider);
+  }
+
+  .folder-code-block:nth-child(-n+2) .folder-code-value {
+    color: var(--text-primary);
   }
 }
 </style>

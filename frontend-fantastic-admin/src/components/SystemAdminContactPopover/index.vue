@@ -139,7 +139,9 @@ onBeforeUnmount(() => {
 }
 
 .admin-contact__trigger:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--mrr-primary) 42%, transparent);
+  /* 纯文字链没有背景或边框可以提示焦点，outline 是唯一线索，因此必须走已带回退的 --mrr-ring；
+   * 自己写 color-mix 会让 86 上焦点完全不可见（键盘用户既停在这里又看不出来）。 */
+  outline: 2px solid var(--mrr-ring);
   outline-offset: 3px;
   border-radius: 3px;
 }
@@ -187,5 +189,13 @@ onBeforeUnmount(() => {
   color: var(--mrr-muted-foreground);
   background: var(--mrr-muted);
   border-radius: var(--mrr-radius-md);
+}
+
+/* Chrome 86 回退：卡片图标块在浮层里是唯一的强调色块，补实色避免退成透明描边框。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .contact-card__icon {
+    background: var(--mrr-tone-primary-soft);
+    border: 1px solid var(--mrr-tone-primary-border);
+  }
 }
 </style>

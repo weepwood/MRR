@@ -117,8 +117,15 @@ function selectResult(result: SettingsSearchResult) {
 }
 
 :global(.settings-search-popper .el-autocomplete-suggestion__list > [aria-selected="true"]) {
-  background: var(--mrr-navigation-hover);
   background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-popover));
   border-color: var(--mrr-primary);
+}
+
+/* Chrome 86 回退：选中项必须与 hover 项（--mrr-navigation-hover）区分开，
+ * 否则键盘上下移动时看不出当前落在哪一条。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  :global(.settings-search-popper .el-autocomplete-suggestion__list > [aria-selected="true"]) {
+    background: var(--mrr-tone-primary-soft);
+  }
 }
 </style>

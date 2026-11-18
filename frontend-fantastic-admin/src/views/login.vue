@@ -532,7 +532,7 @@ onBeforeUnmount(() => {
 .environment-status { display: inline-flex; flex: 0 0 auto; gap: var(--mrr-space-2); align-items: center; padding: 6px 10px; font-size: 11px; font-weight: 700; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-status .status-dot { width: 6px; height: 6px; }
 .environment-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
-.environment-group { min-width: 0; padding: var(--mrr-space-3); background: var(--mrr-card); background: color-mix(in srgb, var(--mrr-card) 68%, transparent); border: 1px solid var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 72%, transparent); border-radius: var(--mrr-radius-md); }
+.environment-group { min-width: 0; padding: var(--mrr-space-3); background: color-mix(in srgb, var(--mrr-card) 68%, transparent); border: 1px solid var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 72%, transparent); border-radius: var(--mrr-radius-md); }
 .environment-group--client { grid-column: 1 / -1; }
 .environment-group h3 { margin: 0 0 var(--mrr-space-3); font-size: 10px; font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
 .environment-group dl { display: grid; gap: 7px; margin: 0; }
@@ -553,7 +553,7 @@ onBeforeUnmount(() => {
 .environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 .environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
 .environment-actions button.is-primary:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--mrr-primary-foreground); background-color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
-:global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: var(--mrr-popover); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
+:global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
 .login-shell {
   align-self: center;
   display: grid;
@@ -681,5 +681,21 @@ onBeforeUnmount(() => {
   :global(.auth-mode-forward-leave-to),
   :global(.auth-mode-backward-enter-from),
   :global(.auth-mode-backward-leave-to) { transform: none; }
+}
+
+/*
+ * Chrome 86 回退：环境信息浮层是覆盖在登录页之上的浮层，底色失效会让页面内容透上来与列表文字重叠。
+ * 86 没有 backdrop-filter，一并退回不透明表面。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  :global(.login-environment-popper.el-popover) {
+    background: var(--mrr-popover);
+    border-color: var(--mrr-border);
+  }
+
+  .environment-group {
+    background: var(--mrr-card);
+    border-color: var(--mrr-border);
+  }
 }
 </style>

@@ -1109,9 +1109,7 @@ onUnmounted(() => {
   width: min(calc(100% - 32px), 1280px);
   min-height: 56px;
   padding: 9px 12px;
-  background: var(--surface);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
-  border: 1px solid var(--divider);
   border: 1px solid color-mix(in srgb, var(--divider) 82%, transparent);
   border-radius: var(--mrr-radius-xl);
   box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
@@ -1325,6 +1323,17 @@ onUnmounted(() => {
 
   .archive-wall-type-select {
     width: 148px;
+  }
+}
+
+/*
+ * Chrome 86 回退：底部工具条浮在档案墙之上，底色失效后透过来的卡片内容会与工具条文字重叠。
+ * 半透明 + backdrop-filter 是现代浏览器的效果，86 上退回不透明表面。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .archive-wall-toolbar {
+    background: var(--surface);
+    border: 1px solid var(--divider);
   }
 }
 </style>

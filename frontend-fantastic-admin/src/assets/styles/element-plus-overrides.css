@@ -900,3 +900,47 @@ body .el-descriptions__table {
     margin-inline: 12px;
   }
 }
+
+/*
+ * Chrome 86 回退：Element Plus 桥接层的分层实色底。
+ *
+ * 表格表头与行悬停走的是自定义属性（--el-table-header-bg-color 等），这些属性本身
+ * 在 86 能解析，但取值里的 color-mix() 在计算值阶段失效，最终 background 取 unset：
+ * 46px 大表会失去表头分区、逐行核对时容易串行。这里做变量级重设，改一处即生效。
+ * plain 按钮的悬停填充同理——失效后既无底色也无边框变化，等于没有悬停反馈。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  body .el-table {
+    --el-table-header-bg-color: var(--mrr-muted);
+    --el-table-row-hover-bg-color: var(--mrr-muted);
+  }
+
+  .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
+    background: var(--mrr-tone-danger-soft);
+  }
+
+  body .el-button--primary.is-plain {
+    border-color: var(--mrr-primary);
+  }
+
+  body .el-button--primary.is-plain:not(.is-disabled):hover {
+    background: var(--mrr-tone-primary-soft);
+    border-color: var(--mrr-primary);
+  }
+
+  body .el-button--danger.is-plain {
+    border-color: var(--mrr-destructive);
+  }
+
+  body .el-button--danger.is-plain:not(.is-disabled):hover {
+    border-color: var(--mrr-destructive);
+  }
+
+  .el-dialog__footer {
+    background: var(--mrr-card);
+  }
+
+  .el-button--danger:focus-visible {
+    border-color: var(--mrr-destructive);
+  }
+}

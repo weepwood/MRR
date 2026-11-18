@@ -155,4 +155,12 @@ const hasAside = computed(() => Boolean(slots.actions))
     width: 100%;
   }
 }
+
+/* Chrome 86 回退：页头图标胶囊是页面唯一的品牌色锚点，补实色避免退成透明线框。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-page-header__icon {
+    background: var(--mrr-tone-primary-soft);
+    border: 1px solid var(--mrr-tone-primary-border);
+  }
+}
 </style>

@@ -187,7 +187,9 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 .mrr-table-actions__button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--mrr-primary) 55%, transparent);
+  /* --mrr-ring 在 browser-compatibility.css 里已被重设为 var(--color-primary)，
+   * 这里不能再自算 color-mix，否则 86 上整条 outline 失效、键盘焦点完全不可见。 */
+  outline: 2px solid var(--mrr-ring);
   outline-offset: 2px;
 }
 
@@ -228,5 +230,29 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 
 @keyframes mrr-table-actions-spin {
   to { transform: rotate(360deg); }
+}
+
+/* Chrome 86 回退：4 个 tone 变体的底色在 86 上会整条失效，行内按钮只剩 16px 图标，
+ * 可点区域与操作类型都不再可辨。复用 tones.css 的 tone-soft（已有静态定义）。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-table-actions__button {
+    background: var(--mrr-muted);
+  }
+
+  .mrr-table-actions__button--primary {
+    background: var(--mrr-tone-primary-soft);
+  }
+
+  .mrr-table-actions__button--success {
+    background: var(--mrr-tone-success-soft);
+  }
+
+  .mrr-table-actions__button--warning {
+    background: var(--mrr-tone-warning-soft);
+  }
+
+  .mrr-table-actions__button--danger {
+    background: var(--mrr-tone-danger-soft);
+  }
 }
 </style>

@@ -87,7 +87,6 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   display: flex;
   justify-content: flex-end;
   padding: 13px 16px;
-  background: var(--mrr-card);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-top: 1px solid var(--mrr-shell-divider);
 }
@@ -110,6 +109,13 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
     padding-inline: var(--mrr-space-3);
+  }
+}
+
+/* Chrome 86 回退：分页条与表体之间的浅色分界靠底色承载，缺了会与最后一行粘在一起。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-data-table-panel__pagination {
+    background: var(--mrr-card);
   }
 }
 </style>

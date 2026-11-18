@@ -44,7 +44,6 @@ const slots = useSlots()
 }
 
 .mrr-filter-bar--focus-ring:focus-within {
-  border-color: var(--mrr-primary);
   border-color: color-mix(in srgb, var(--mrr-ring) 46%, var(--mrr-border));
   box-shadow: var(--mrr-shadow-xs), 0 0 0 3px color-mix(in srgb, var(--mrr-ring) 10%, transparent);
 }
@@ -191,6 +190,22 @@ const slots = useSlots()
 
   .mrr-filter-bar__actions :deep(.el-button) {
     flex: 1 1 120px;
+  }
+}
+
+/*
+ * Chrome 86 回退：焦点态必须保留焦点环——这里原本只有一条含 color-mix 的 box-shadow，
+ * 失效后连卡片自身的阴影都会一起消失，聚焦与失焦完全无从分辨。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-filter-bar--focus-ring:focus-within {
+    border-color: var(--mrr-primary);
+    box-shadow: var(--mrr-shadow-xs), var(--mrr-focus-ring);
+  }
+
+  .mrr-filter-bar :deep(.el-input__wrapper),
+  .mrr-filter-bar :deep(.el-select__wrapper) {
+    background: var(--mrr-muted);
   }
 }
 </style>

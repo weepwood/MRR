@@ -46,6 +46,10 @@ MRR 服务于医院内网的病案查询、影像调阅、数据管理和运维�
 
 回退优先用已有语义色或 Element Plus 同步色阶。不要为纯装饰逐处复制一套混色值。背景模糊和视图过渡只能作为增强；关闭增强后仍能完成任务。
 
+回退只认两种写法：**变量级重设**（在 [browser-compatibility.css](src/assets/styles/browser-compatibility.css) 的 `@supports not` 块里重设自定义属性）或**把增强值收进 `@supports (color: color-mix(...))`**。同一规则里「先写静态值、再写含 `var()` 的 `color-mix`」不是回退：含 `var()` 的声明不在解析阶段校验，86 会在计算值阶段把属性置为 `unset`，前一条静态声明不会回来。`border`、`box-shadow` 这类简写尤其危险——整条失效会连带丢掉 `border-style` 或投影，回退时必须重写完整简写而不是只改 `*-color`。
+
+组件内的表面色回退就近写在同文件的 `@supports not` 块里，选择器与上方规则保持一致，便于逐条对照；跨组件的通用表面仍集中在兼容层。焦点一律用 `outline`、投影一律用 `box-shadow`，两者不互相兼任。
+
 ## Typography
 
 ### 字体与实际字号

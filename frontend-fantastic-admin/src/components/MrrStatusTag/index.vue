@@ -43,6 +43,8 @@ const statusMeta = computed(() => {
 <style scoped>
 .mrr-status-tag {
   --mrr-status-color: var(--mrr-muted-foreground);
+  --mrr-status-soft: var(--mrr-tone-neutral-soft);
+  --mrr-status-border: var(--mrr-tone-neutral-border);
 
   display: inline-flex;
   gap: 5px;
@@ -68,17 +70,38 @@ const statusMeta = computed(() => {
 
 .mrr-status-tag--success {
   --mrr-status-color: var(--mrr-tone-success);
+  --mrr-status-soft: var(--mrr-tone-success-soft);
+  --mrr-status-border: var(--mrr-tone-success-border);
 }
 
 .mrr-status-tag--info {
   --mrr-status-color: var(--mrr-tone-info);
+  --mrr-status-soft: var(--mrr-tone-info-soft);
+  --mrr-status-border: var(--mrr-tone-info-border);
 }
 
 .mrr-status-tag--warning {
   --mrr-status-color: var(--mrr-tone-warning);
+  --mrr-status-soft: var(--mrr-tone-warning-soft);
+  --mrr-status-border: var(--mrr-tone-warning-border);
 }
 
 .mrr-status-tag--danger {
   --mrr-status-color: var(--mrr-destructive);
+  --mrr-status-soft: var(--mrr-tone-danger-soft);
+  --mrr-status-border: var(--mrr-tone-danger-border);
+}
+
+/*
+ * Chrome 86 回退：状态胶囊的底色是「这一行是什么状态」的唯一填充信号。
+ * 86 上 color-mix 失效后底色透明、描边退成 currentColor，四档只剩色相差别；
+ * 这里复用 tones.css 的 tone-soft / tone-border（它们在 browser-compatibility.css
+ * 已有静态定义），让胶囊恢复成四种可辨的浅色底。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-status-tag {
+    background: var(--mrr-status-soft);
+    border: 1px solid var(--mrr-status-border);
+  }
 }
 </style>

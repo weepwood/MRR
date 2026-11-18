@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import type { SettingsSearchResult } from '../settings-search'
-import { computed, ref, useId } from 'vue'
+import { computed, ref } from 'vue'
 import { searchSettings } from '../settings-search'
 
 const emit = defineEmits<{
   select: [result: SettingsSearchResult]
 }>()
 
-const searchId = useId()
 const query = ref('')
-const noResults = computed(() => Boolean(query.value.trim()) && searchSettings(query.value).length === 0)
+const searchActive = ref(false)
+const showEmptyState = computed(() => searchActive.value
+  && Boolean(query.value.trim()) && searchSettings(query.value).length === 0)
+
+function dismissEmptyState(event: KeyboardEvent) {
+  if (showEmptyState.value && !event.isComposing) {
+    searchActive.value = false
+  }
+}
 
 function selectResult(result: SettingsSearchResult) {
   query.value = ''
@@ -18,24 +25,25 @@ function selectResult(result: SettingsSearchResult) {
 </script>
 
 <template>
-  <div class="settings-search">
-    <div class="settings-search-caption">
-      <label :for="searchId" class="settings-search-label">搜索设置</label>
-      <span role="status" class="settings-search-status">{{ noResults ? '未找到匹配的设置' : '' }}</span>
-    </div>
+  <div class="settings-search" @keydown.esc="dismissEmptyState">
     <el-autocomplete
-      :id="searchId"
       v-model="query"
       class="settings-search-input"
+      aria-label="搜索设置"
       placeholder="例如水印、缩略图"
+      popper-class="settings-search-popper"
       value-key="title"
       :fetch-suggestions="searchSettings"
       :trigger-on-focus="false"
+      :show-arrow="false"
       :debounce="0"
       clearable
       fit-input-width
       highlight-first-item
       hide-loading
+      @focus="searchActive = true"
+      @input="searchActive = true"
+      @blur="searchActive = false"
       @select="selectResult($event as SettingsSearchResult)"
     >
       <template #prefix>
@@ -48,15 +56,69 @@ function selectResult(result: SettingsSearchResult) {
         </div>
       </template>
     </el-autocomplete>
+    <div role="status" class="settings-search-status">
+      <div v-if="showEmptyState" class="settings-search-empty">
+        <FaIcon name="i-lucide:search" class="settings-search-empty-icon" aria-hidden="true" />
+        <strong>未找到匹配的设置</strong>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.settings-search-caption { display: flex; gap: var(--mrr-space-2); justify-content: space-between; margin-bottom: var(--mrr-space-1); }
-.settings-search-label { font-size: 12px; font-weight: 600; }
+.settings-search { position: relative; }
 .settings-search-input { width: 100%; }
 .settings-search-result { display: grid; padding-block: var(--mrr-space-1); line-height: 1.5; white-space: normal; }
+.settings-search-result > span { font-weight: 600; }
 
-.settings-search-result small,
-.settings-search-status { font-size: 12px; color: var(--mrr-muted-foreground); }
+.settings-search-result small { font-size: 12px; color: var(--mrr-muted-foreground); }
+
+.settings-search-empty,
+:global(.settings-search-popper.el-autocomplete__popper.el-popper) {
+  background: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
+  border-color: color-mix(in srgb, var(--mrr-primary) 20%, var(--mrr-border));
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-md);
+}
+
+.settings-search-status {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + var(--mrr-space-3));
+  z-index: 1;
+  font-size: 13px;
+}
+
+.settings-search-empty {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  padding: var(--mrr-space-3);
+  color: var(--mrr-popover-foreground);
+}
+
+.settings-search-empty-icon { flex-shrink: 0; color: var(--mrr-muted-foreground); }
+
+:global(.settings-search-popper .el-autocomplete-suggestion__wrap) {
+  padding: var(--mrr-space-1);
+}
+
+:global(.settings-search-popper .el-autocomplete-suggestion__list > li) {
+  padding-inline: var(--mrr-space-3);
+  color: var(--mrr-popover-foreground);
+  border: 1px solid transparent;
+  border-radius: var(--mrr-radius-md);
+  transition: background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease;
+}
+
+:global(.settings-search-popper .el-autocomplete-suggestion__list > li:hover) {
+  background: var(--mrr-navigation-hover);
+}
+
+:global(.settings-search-popper .el-autocomplete-suggestion__list > [aria-selected="true"]) {
+  background: var(--mrr-navigation-hover);
+  background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-popover));
+  border-color: var(--mrr-primary);
+}
 </style>

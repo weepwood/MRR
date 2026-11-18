@@ -7,8 +7,9 @@
  * 3. browser-compatibility.css：最低浏览器版本的功能降级
  * 4. base.css：全局基础规则和视图过渡
  * 5. element-plus-overrides.css：Element Plus 统一外观与交互状态
- * 6. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
- * 7. 其余 components/：跨页面复用的业务组件样式
+ * 6. components/corner-shape.css：G2 连续圆角的生效范围与退出规则
+ * 7. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
+ * 8. 其余 components/：跨页面复用的业务组件样式
  */
 @import "./fonts.css";
 @import "./tokens.css";
@@ -16,6 +17,7 @@
 @import "./browser-compatibility.css";
 @import "./base.css";
 @import "./element-plus-overrides.css";
+@import "./components/corner-shape.css";
 @import "./components/form-controls.css";
 @import "./components/page-header.css";
 @import "./components/metric-card.css";

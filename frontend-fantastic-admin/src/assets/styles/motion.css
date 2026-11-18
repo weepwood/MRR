@@ -121,7 +121,6 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .menu-item.active .menu-item-container-icon,
 :root[data-motion="off"] .menu-item-container:active .menu-item-container-icon,
 :root[data-motion="off"] .menu-item-container:hover .menu-leading-control-icon,
-:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow,
 :root[data-motion="off"] .sub-menu .menu-item-container:hover .menu-item-container-icon,
 :root[data-motion="off"] .dashboard-widget:active:not(.is-editing),
 :root[data-motion="off"] .dashboard-widget:hover .dashboard-widget__arrow,
@@ -141,6 +140,20 @@ a:active .mrr-icon-interactive,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon,
 :root[data-motion="off"] .field-label--switchable:active .field-switch-icon:not(.is-switched) {
   transform: none !important;
+}
+
+/*
+ * 例外：菜单展开箭头不是「图标 + 位移」，而是用右边框 + 下边框拼出，靠 rotate()
+ * 才成箭头形状。把它的 transform 一并置为 none 只会剩一个「┘」残角，而且展开与
+ * 收起不再有区别 —— 用户看到的就是一个不动的怪图案。
+ * 关动效只去掉过渡（上面的 transition: none 已经覆盖），旋转必须保留。
+ */
+:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow {
+  transform: rotate(-45deg) !important;
+}
+
+:root[data-motion="off"] .menu-item-container:hover .menu-leading-control-arrow.is-expanded {
+  transform: translateY(-1px) rotate(45deg) !important;
 }
 
 :root[data-motion="off"] .history-tab-enter-from,
@@ -170,7 +183,6 @@ a:active .mrr-icon-interactive,
   .menu-item.active .menu-item-container-icon,
   .menu-item-container:active .menu-item-container-icon,
   .menu-item-container:hover .menu-leading-control-icon,
-  .menu-item-container:hover .menu-leading-control-arrow,
   .sub-menu .menu-item-container:hover .menu-item-container-icon,
   .dashboard-widget:active:not(.is-editing),
   .dashboard-widget:hover .dashboard-widget__arrow,
@@ -196,5 +208,14 @@ a:active .mrr-icon-interactive,
   .history-tab-leave-to {
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  /* 同 [data-motion="off"]：箭头靠 rotate() 成形，不能一起置为 none。 */
+  .menu-item-container:hover .menu-leading-control-arrow {
+    transform: rotate(-45deg) !important;
+  }
+
+  .menu-item-container:hover .menu-leading-control-arrow.is-expanded {
+    transform: translateY(-1px) rotate(45deg) !important;
   }
 }

@@ -1,4 +1,4 @@
-import type { EffectiveSystemSettings, SettingsSource } from '@/utils/system-settings'
+import type { EffectiveSystemSettings } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -11,6 +11,7 @@ import {
   serializeSystemSettings,
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
+import { describeSettingChanges } from '../settings-changes'
 
 export type SettingsSection = 'system' | 'login-support' | 'documentation' | 'archive' | 'ocr' | 'security' | 'runtime' | 'developer' | 'department' | 'external-links' | 'appearance'
 
@@ -67,8 +68,6 @@ export function useUnifiedSettings() {
   const activeSection = ref<SettingsSection>('system')
   const loading = ref(false)
   const saving = ref(false)
-  const settingsSource = ref<SettingsSource>('default')
-  const lastSyncedAt = ref('')
   const savedSnapshot = ref<Record<string, string>>({})
   const settings = ref<EffectiveSystemSettings>(createDefaultSystemSettings())
 
@@ -81,14 +80,15 @@ export function useUnifiedSettings() {
     'security',
     'developer',
   ].includes(activeSection.value))
-  const sourceMeta = computed(() => ({
-    server: { label: '服务器配置', type: 'success' as const },
-    local: { label: '本地缓存', type: 'warning' as const },
-    default: { label: '默认配置', type: 'info' as const },
-  })[settingsSource.value])
   const currentSnapshot = computed(() => serializeSystemSettings(settings.value))
   const changedKeys = computed(() => Object.keys(currentSnapshot.value).filter(key => currentSnapshot.value[key] !== savedSnapshot.value[key]))
   const isDirty = computed(() => changedKeys.value.length > 0)
+  /** 保存前复核用的可读变更清单（字段中文名 + 旧值 → 新值）。 */
+  const changedItems = computed(() => describeSettingChanges(
+    changedKeys.value,
+    currentSnapshot.value,
+    savedSnapshot.value,
+  ))
   const developerModeChanged = computed(() => changedKeys.value.some(key => [
     'developerModeEnabled',
     'developerModeAllowedSources',
@@ -103,18 +103,12 @@ export function useUnifiedSettings() {
     savedSnapshot.value = { ...currentSnapshot.value }
   }
 
-  function updateSyncTime() {
-    lastSyncedAt.value = new Date().toLocaleString('zh-CN', { hour12: false })
-  }
-
   async function loadSettings(showMessage = false) {
     loading.value = true
     try {
       const result = await loadEffectiveSystemSettings()
       settings.value = result.settings
-      settingsSource.value = result.source
       markAsSaved()
-      updateSyncTime()
       if (showMessage) { ElMessage.success('设置已重新加载') }
     }
     finally {
@@ -181,13 +175,34 @@ export function useUnifiedSettings() {
     }
   }
 
-  async function handleSave(): Promise<boolean> {
-    if (!validateSettings() || !await confirmDeveloperModeEnable()) { return false }
+  /** 保存前列出本次修改，确认后才写入系统数据库。 */
+  async function confirmSaveChanges(): Promise<boolean> {
+    try {
+      await actionDialog.confirm(
+        '以下改动将写入系统数据库，保存后立即对全站生效。',
+        '确认保存设置',
+        {
+          confirmButtonText: '确认保存',
+          cancelButtonText: '返回修改',
+          details: changedItems.value,
+          detailsCaption: `共 ${changedItems.value.length} 项修改`,
+        },
+      )
+      return true
+    }
+    catch {
+      return false
+    }
+  }
+
+  async function handleSave(options: { confirmChanges?: boolean } = {}): Promise<boolean> {
+    if (!validateSettings()) { return false }
+    if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
+    if (!await confirmDeveloperModeEnable()) { return false }
     saving.value = true
     const developerChangeRequested = developerModeChanged.value
     try {
       await saveSystemSettings(serializeSystemSettings(settings.value))
-      settingsSource.value = 'server'
       writeLocalSystemSettings(settings.value)
       window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', {
         detail: {
@@ -196,7 +211,6 @@ export function useUnifiedSettings() {
         },
       }))
       markAsSaved()
-      updateSyncTime()
       ElMessage.success(developerChangeRequested
         ? `开发者模式配置已保存，当前状态：${settings.value.developerModeEnabled ? '启用' : '关闭'}`
         : '系统设置已保存')
@@ -265,9 +279,8 @@ export function useUnifiedSettings() {
     loading,
     saving,
     settings,
-    sourceMeta,
-    lastSyncedAt,
     changedKeys,
+    changedItems,
     isDirty,
     isServerSettingSection,
     selectSection,

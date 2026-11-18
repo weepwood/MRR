@@ -54,7 +54,7 @@ const settingGroups: Partial<Record<SettingsSection, SettingGroup[]>> = {
     { title: '添加外部网站', keywords: '外链 添加网址', anchor: 'add-external-link' },
   ],
   'appearance': [
-    { title: '主题与页面样式', keywords: '主题主色 颜色主题 暗黑 深色模式 圆角系数 页面标题风格 动态效果', anchor: 'theme' },
+    { title: '主题与页面样式', keywords: '主题主色 颜色主题 暗黑 深色模式 圆角系数 圆角曲线 G2 连续曲线 超椭圆 squircle 页面标题风格 动态效果', anchor: 'theme' },
     { title: '导航与顶栏', keywords: '导航栏模式 主导航点击模式 次导航折叠 折叠按钮 导航快捷键 顶栏定位', anchor: 'navigation' },
     { title: '工作区组件', keywords: '标签栏 工具栏 面包屑 导航搜索 全屏 页面刷新 主题切换 快捷键', anchor: 'workspace' },
     { title: '主页、版权与其他', keywords: '主页名称 底部版权 备案号 权限控制 载入进度条 色弱模式 动态页面标题', anchor: 'other' },

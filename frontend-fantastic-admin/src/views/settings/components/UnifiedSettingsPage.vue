@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
-import { nextTick, onUnmounted, ref, useId, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
 import ArchiveSettings from './ArchiveSettings.vue'
@@ -39,8 +42,6 @@ interface RuntimeSettingsRef {
 }
 
 interface AppConfigPanelRef {
-  autoSaveLabel: string
-  syncScopeDescription: string
   openGroup: (group: string) => void
 }
 
@@ -67,8 +68,6 @@ const {
   loading,
   saving,
   settings,
-  sourceMeta,
-  lastSyncedAt,
   changedKeys,
   isDirty,
   isServerSettingSection,
@@ -79,7 +78,7 @@ const {
 } = useUnifiedSettings()
 
 async function openSearchResult(result: SettingsSearchResult) {
-  await selectSection(result.section)
+  await requestSection(result.section)
   await nextTick()
   if (activeSection.value !== result.section) { return }
 
@@ -93,8 +92,7 @@ async function openSearchResult(result: SettingsSearchResult) {
   const anchor = result.anchor
     ? content.querySelector<HTMLElement>(`[data-settings-search-target="${result.anchor}"]`)
     : undefined
-  const target = (result.section === 'appearance' ? anchor?.querySelector<HTMLElement>('[role="button"]') : anchor)
-    ?? sectionHeadingRef.value
+  const target = anchor ?? sectionHeadingRef.value
   if (!target) { return }
 
   target.focus({ preventScroll: true })
@@ -215,6 +213,74 @@ async function handleRuntimeSave() {
   }
 }
 
+/** 当前分类自管保存的配置面板是否有未保存修改（服务器配置区由 isDirty 统一判断）。 */
+function activePanelDirty(): boolean {
+  if (activeSection.value === 'ocr') { return Boolean(ocrSettingsRef.value?.isDirty) }
+  if (activeSection.value === 'runtime') { return Boolean(runtimeSettingsRef.value?.isDirty) }
+  if (activeSection.value === 'department') { return Boolean(departmentThemeRef.value?.isDirty) }
+  return false
+}
+
+const hasUnsavedChanges = computed(() => isDirty.value || activePanelDirty())
+
+const unsavedSummary = computed(() => {
+  if (isDirty.value) { return `当前有 ${changedKeys.value.length} 项设置修改尚未保存` }
+  return '当前分类的配置修改尚未保存'
+})
+
+async function saveUnsavedChanges(): Promise<boolean> {
+  // 用户已在离开提示里确认过保存意图，这里不再重复列出变更清单。
+  if (isDirty.value && !await handleSave({ confirmChanges: false })) {
+    return false
+  }
+  if (activeSection.value === 'ocr' && ocrSettingsRef.value?.isDirty) {
+    if (!await ocrSettingsRef.value.saveSettings()) { return false }
+  }
+  if (activeSection.value === 'runtime' && runtimeSettingsRef.value?.isDirty) {
+    if (!await runtimeSettingsRef.value.saveSettings()) { return false }
+  }
+  if (activeSection.value === 'department' && departmentThemeRef.value?.isDirty) {
+    await departmentThemeRef.value.saveThemes()
+    if (departmentThemeRef.value?.isDirty) { return false }
+  }
+  return true
+}
+
+/** 离开当前内容前确认：保存后再走、放弃修改，或留在原处（取消）。 */
+async function confirmLeavingUnsavedChanges(context: 'section' | 'page'): Promise<boolean> {
+  const consequence = context === 'section'
+    ? '切换分类后这些修改会丢失'
+    : '离开本页后这些修改会丢失'
+  const choice = await actionDialog.choose(
+    `${unsavedSummary.value}，${consequence}。是否先保存？`,
+    '有未保存的设置',
+    {
+      type: 'warning',
+      confirmButtonText: context === 'section' ? '保存并继续' : '保存并离开',
+      extraButtonText: '放弃修改',
+      cancelButtonText: '取消',
+    },
+  )
+  if (choice === 'cancel') { return false }
+  if (choice === 'extra') { return true }
+  return saveUnsavedChanges()
+}
+
+/**
+ * 切换设置分类：服务器配置共用同一份表单状态，切换分类不会丢修改，因此只在
+ * 当前分类由面板自管保存且存在未保存修改时提示，避免每次换分类都弹窗。
+ */
+async function requestSection(section: SettingsSection) {
+  if (section === activeSection.value) { return }
+  if (activePanelDirty() && !await confirmLeavingUnsavedChanges('section')) { return }
+  await selectSection(section)
+}
+
+onBeforeRouteLeave(async () => {
+  if (!hasUnsavedChanges.value) { return true }
+  return confirmLeavingUnsavedChanges('page')
+})
+
 watch(isDirty, (dirty) => {
   if (dirty) {
     clearSavedFeedback()
@@ -285,6 +351,19 @@ onUnmounted(() => {
         <el-button :disabled="loading || saving" @click="handleReset">
           <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
         </el-button>
+        <el-button
+          :type="savedRecently ? 'success' : 'primary'"
+          :loading="saving"
+          :disabled="loading || !isDirty"
+          @click="handleServerSave"
+        >
+          <FaIcon
+            :name="savedRecently ? 'i-lucide:check' : 'i-lucide:save'"
+            class="mrr-icon-interactive"
+            :class="{ 'mrr-status-pop': savedRecently }"
+          />
+          {{ savedRecently ? '已保存' : '保存设置' }}
+        </el-button>
       </div>
     </header>
 
@@ -299,13 +378,10 @@ onUnmounted(() => {
             class="settings-nav-item"
             :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
             :aria-current="activeSection === item.key ? 'true' : undefined"
-            @click="selectSection(item.key)"
+            @click="requestSection(item.key)"
           >
             <FaIcon :name="item.icon" class="nav-icon" aria-hidden="true" />
-            <span class="nav-copy">
-              <strong>{{ item.title }}</strong>
-              <small>{{ item.description }}</small>
-            </span>
+            <strong class="nav-title">{{ item.title }}</strong>
           </button>
         </nav>
 
@@ -313,7 +389,7 @@ onUnmounted(() => {
           :model-value="activeSection"
           class="settings-category-select"
           aria-label="设置分类"
-          @change="selectSection"
+          @change="(value: SettingsSection) => requestSection(value)"
         >
           <el-option
             v-for="item in settingsNavItems"
@@ -322,16 +398,6 @@ onUnmounted(() => {
             :value="item.key"
           />
         </el-select>
-
-        <div class="settings-source">
-          <div>
-            <span>配置状态</span>
-            <el-tag :type="sourceMeta.type" effect="light" round size="small">
-              {{ sourceMeta.label }}
-            </el-tag>
-          </div>
-          <p>最近同步：{{ lastSyncedAt || '尚未同步' }}</p>
-        </div>
       </aside>
 
       <div class="settings-panel">
@@ -349,7 +415,14 @@ onUnmounted(() => {
           </div>
         </header>
 
-        <div :key="activeSection" ref="contentRef" class="settings-content" role="region" :aria-labelledby="sectionHeadingId">
+        <div
+          :key="activeSection"
+          ref="contentRef"
+          class="settings-content"
+          role="region"
+          :aria-busy="isServerSettingSection ? loading : undefined"
+          :aria-labelledby="sectionHeadingId"
+        >
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
             <el-form :model="settings" label-position="top">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
@@ -367,30 +440,7 @@ onUnmounted(() => {
           <AppConfigPanel v-else ref="appConfigRef" />
         </div>
 
-        <div v-if="isServerSettingSection" class="settings-actions" :class="{ dirty: isDirty }">
-          <div class="save-status" :class="{ dirty: isDirty }">
-            <span class="status-dot" />
-            <div>
-              <strong>{{ isDirty ? `${changedKeys.length} 项修改待保存` : '所有设置已保存' }}</strong>
-              <small>{{ isDirty ? '保存后写入系统数据库。' : `当前使用${sourceMeta.label}。` }}</small>
-            </div>
-          </div>
-          <el-button
-            :type="savedRecently ? 'success' : 'primary'"
-            :loading="saving"
-            :disabled="loading || !isDirty"
-            @click="handleServerSave"
-          >
-            <FaIcon
-              :name="savedRecently ? 'i-lucide:check' : 'i-lucide:save'"
-              class="mrr-icon-interactive"
-              :class="{ 'mrr-status-pop': savedRecently }"
-            />
-            {{ savedRecently ? '已保存' : '保存设置' }}
-          </el-button>
-        </div>
-
-        <div v-else-if="activeSection === 'ocr'" class="settings-actions" :class="{ dirty: ocrSettingsRef?.isDirty }">
+        <div v-if="activeSection === 'ocr'" class="settings-actions" :class="{ dirty: ocrSettingsRef?.isDirty }">
           <div class="save-status" :class="{ dirty: ocrSettingsRef?.isDirty }">
             <span class="status-dot" />
             <div>
@@ -468,16 +518,6 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <div v-else class="settings-actions">
-          <div class="save-status">
-            <span class="status-dot" />
-            <div>
-              <strong>{{ appConfigRef?.autoSaveLabel ?? '界面外观自动保存' }}</strong>
-              <small>{{ appConfigRef?.syncScopeDescription ?? '界面外观同时保存在本机并同步到全站默认外观，本机折叠状态等个人偏好不受影响。' }}</small>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -496,15 +536,13 @@ onUnmounted(() => {
 }
 
 .section-header h3:focus,
-.settings-content :deep([data-settings-search-target]:focus),
-.settings-content :deep([data-settings-search-target] > [role="button"]:focus) {
-  outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
+.settings-content :deep([data-settings-search-target]:focus) {
+  outline: 2px solid var(--mrr-primary);
   outline-offset: 3px;
 }
 
 .section-header h3,
-.settings-content :deep([data-settings-search-target]),
-.settings-content :deep([data-settings-search-target] > [role="button"]) {
+.settings-content :deep([data-settings-search-target]) {
   scroll-margin-top: calc(var(--g-header-actual-height, 0px) + var(--g-toolbar-actual-height, 0px) + var(--g-tabbar-actual-height, 0px) + var(--mrr-space-4));
 }
 </style>

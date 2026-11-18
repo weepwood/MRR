@@ -191,14 +191,21 @@ test.describe('系统设置分类布局', () => {
     await expect(page).toHaveURL(/\/settings/)
     await expect(systemName).toHaveValue(`${originalName}-临时`)
 
-    // 放弃修改：直接离开，修改不写入服务器
+    // 放弃修改：直接离开，且返回后表单必须真的回滚。
     await userMenu.click()
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: '放弃修改', exact: true }).click()
     await expect(page).toHaveURL(/\/users/)
 
-    await openSettings(page, 'system')
+    /*
+     * 设置页被 KeepAlive 缓存，用 page.goto 重新打开会重建组件、绕开缓存，测不到
+     * 「放弃是否真的回滚」。这里走菜单返回同一实例，断言被放弃的值没有留下。
+     */
+    await page.locator('.sidebar-container a[href="/settings"]').first().click()
+    await expect(page).toHaveURL(/\/settings/)
+    await expect(page.locator('.settings-content[aria-busy="false"]')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('textbox', { name: '系统名称', exact: true })).toHaveValue(originalName)
+    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeDisabled()
   })
 
   test('保存设置先列出修改项，取消则不写入', async ({ page }) => {
@@ -240,6 +247,38 @@ test.describe('系统设置分类布局', () => {
     await systemName.fill(originalName)
     await saveButton.click()
     await dialog.getByRole('button', { name: '确认保存', exact: true }).click()
+    await expect(saveButton).toBeDisabled()
+  })
+
+  test('选择保存并离开会先写入服务器再跳转', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openSettings(page, 'system')
+
+    const systemName = page.getByRole('textbox', { name: '系统名称', exact: true })
+    await expect(systemName).toBeVisible({ timeout: 20_000 })
+    const originalName = await systemName.inputValue()
+    const editedName = `${originalName}-离开保存`
+    const saveButton = page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })
+
+    await systemName.fill(editedName)
+    await page.locator('.menu-item-container').filter({ hasText: '用户管理' }).first().click()
+    const dialog = page.getByRole('dialog', { name: '有未保存的设置' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: '保存并离开', exact: true }).click()
+    await expect(page).toHaveURL(/\/users/)
+
+    // 通过菜单回到同一缓存实例，值应已落库且不再处于待保存状态。
+    await page.locator('.sidebar-container a[href="/settings"]').first().click()
+    await expect(page.locator('.settings-content[aria-busy="false"]')).toBeVisible({ timeout: 20_000 })
+    await expect(systemName).toHaveValue(editedName)
+    await expect(saveButton).toBeDisabled()
+
+    // 还原初始值，避免影响同一 Mock 服务上的后续用例
+    await systemName.fill(originalName)
+    await saveButton.click()
+    await page.getByRole('dialog', { name: '确认保存设置' })
+      .getByRole('button', { name: '确认保存', exact: true })
+      .click()
     await expect(saveButton).toBeDisabled()
   })
 })

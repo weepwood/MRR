@@ -83,7 +83,9 @@
     [class*="-marker"],
     .el-badge,
     .bar-track,
-    .permission-count
+    .permission-count,
+    .environment-item-info,
+    .review-flow__steps b
   ) {
     --mrr-corner: round;
   }
@@ -96,7 +98,8 @@
     .environment-badge,
     .environment-status,
     .environment-actions button,
-    .field-info-trigger
+    .field-info-trigger,
+    .info-trigger
   ) {
     --mrr-corner: round;
   }
@@ -106,8 +109,16 @@
     --mrr-corner: round;
   }
 
-  /* 6. 显式退出钩子：任何元素加 data-corner="round" 即可连同子树回归圆弧。 */
+  /*
+   * 6. 显式钩子：`data-corner="round"` 连同子树回归圆弧（用于没被命名兜底覆盖的
+   *    圆形零件）；`data-corner="squircle"` 反向恢复，供被排除容器内部仍要走 G2
+   *    的圆角矩形使用（排除是按子树继承的，嵌套时子元素会一起退出）。
+   */
   :root[data-radius-shape="squircle"] [data-corner="round"] {
     --mrr-corner: round;
+  }
+
+  :root[data-radius-shape="squircle"] [data-corner="squircle"] {
+    --mrr-corner: squircle;
   }
 }

@@ -8,6 +8,7 @@ import {
   createDefaultSystemSettings,
   isAllowedDocumentationUrl,
   loadEffectiveSystemSettings,
+  parseSystemSettings,
   serializeSystemSettings,
   writeLocalSystemSettings,
 } from '@/utils/system-settings'
@@ -99,8 +100,22 @@ export function useUnifiedSettings() {
     return settingsNavItems.some(item => item.key === value)
   }
 
-  function markAsSaved() {
-    savedSnapshot.value = { ...currentSnapshot.value }
+  /**
+   * 记录已保存状态。
+   * 保存成功后必须用「实际提交的快照」而不是实时表单值：请求在途时用户仍可继续
+   * 输入，用实时值会让这些未提交的改动被标记为已保存，静默丢失。
+   */
+  function markAsSaved(snapshot: Record<string, string> = currentSnapshot.value) {
+    savedSnapshot.value = { ...snapshot }
+  }
+
+  /**
+   * 放弃未保存的修改，把表单还原到最近一次保存／加载时的快照。
+   * 设置页被 KeepAlive 缓存，离开再回来不会重新拉取设置，因此「放弃」必须自己回滚，
+   * 否则被放弃的值会留在表单里，并可能在下一次保存时写进系统数据库。
+   */
+  function discardUnsavedChanges() {
+    settings.value = parseSystemSettings({ ...savedSnapshot.value })
   }
 
   async function loadSettings(showMessage = false) {
@@ -196,23 +211,28 @@ export function useUnifiedSettings() {
   }
 
   async function handleSave(options: { confirmChanges?: boolean } = {}): Promise<boolean> {
+    // 页头按钮靠 loading 自禁用，但「离开前保存」与页头保存可以同时进入，需要显式互斥。
+    if (saving.value) { return false }
     if (!validateSettings()) { return false }
     if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
     if (!await confirmDeveloperModeEnable()) { return false }
     saving.value = true
     const developerChangeRequested = developerModeChanged.value
+    // 提交内容固定在请求发出前，保存结果只认这份快照。
+    const payload = serializeSystemSettings(settings.value)
     try {
-      await saveSystemSettings(serializeSystemSettings(settings.value))
-      writeLocalSystemSettings(settings.value)
+      await saveSystemSettings(payload)
+      const savedSettings = parseSystemSettings({ ...payload })
+      writeLocalSystemSettings(savedSettings)
       window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', {
         detail: {
-          ...settings.value,
-          systemAdminContactVisible: settings.value.systemAdminContactEnabled && settings.value.systemAdminPublicVisible,
+          ...savedSettings,
+          systemAdminContactVisible: savedSettings.systemAdminContactEnabled && savedSettings.systemAdminPublicVisible,
         },
       }))
-      markAsSaved()
+      markAsSaved(payload)
       ElMessage.success(developerChangeRequested
-        ? `开发者模式配置已保存，当前状态：${settings.value.developerModeEnabled ? '启用' : '关闭'}`
+        ? `开发者模式配置已保存，当前状态：${payload.developerModeEnabled === 'true' ? '启用' : '关闭'}`
         : '系统设置已保存')
       return true
     }
@@ -287,5 +307,6 @@ export function useUnifiedSettings() {
     handleSave,
     handleReload,
     handleReset,
+    discardUnsavedChanges,
   }
 }

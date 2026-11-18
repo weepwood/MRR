@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createDefaultSystemSettings, serializeSystemSettings } from '@/utils/system-settings'
 import { describeSettingChanges, formatSettingValue } from './settings-changes'
 
 describe('formatSettingValue', () => {
@@ -53,5 +54,17 @@ describe('describeSettingChanges', () => {
     const changes = describeSettingChanges(['organizationName'], { organizationName: '信息科' }, { organizationName: '' })
     expect(changes).toHaveLength(1)
     expect(changes[0]).toMatchObject({ before: '', after: '信息科' })
+  })
+
+  /*
+   * settingFields 是普通对象，新增设置项不会编译报错，只会静默回退成「英文键名」，
+   * 保存确认弹窗里就会出现 systemName 这样的字样。这里锁住键集合一致。
+   */
+  it('覆盖全部系统设置字段，新增字段不会回退为英文键名', () => {
+    const keys = Object.keys(serializeSystemSettings(createDefaultSystemSettings()))
+    const unmapped = keys.filter(key =>
+      describeSettingChanges([key], { [key]: '新值' }, { [key]: '旧值' })[0]?.label === key,
+    )
+    expect(unmapped).toEqual([])
   })
 })

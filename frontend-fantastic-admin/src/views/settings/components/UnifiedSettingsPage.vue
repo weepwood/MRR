@@ -75,6 +75,7 @@ const {
   handleSave,
   handleReload,
   handleReset,
+  discardUnsavedChanges,
 } = useUnifiedSettings()
 
 async function openSearchResult(result: SettingsSearchResult) {
@@ -223,16 +224,23 @@ function activePanelDirty(): boolean {
 
 const hasUnsavedChanges = computed(() => isDirty.value || activePanelDirty())
 
-const unsavedSummary = computed(() => {
+/** 内容区重置令牌：递增后自管保存的面板重新挂载，草稿随之丢弃。 */
+const panelResetToken = ref(0)
+
+/**
+ * 提示文案按作用域区分：切换分类只会丢当前分类面板的草稿，服务器配置区的修改会
+ * 一直保留在本页；离开页面则两类修改都会丢。
+ */
+function unsavedSummary(context: 'section' | 'page'): string {
+  if (context === 'section') { return '当前分类的配置修改尚未保存' }
+  if (isDirty.value && activePanelDirty()) {
+    return `当前有 ${changedKeys.value.length} 项设置修改，以及当前分类的配置修改尚未保存`
+  }
   if (isDirty.value) { return `当前有 ${changedKeys.value.length} 项设置修改尚未保存` }
   return '当前分类的配置修改尚未保存'
-})
+}
 
-async function saveUnsavedChanges(): Promise<boolean> {
-  // 用户已在离开提示里确认过保存意图，这里不再重复列出变更清单。
-  if (isDirty.value && !await handleSave({ confirmChanges: false })) {
-    return false
-  }
+async function savePanelChanges(): Promise<boolean> {
   if (activeSection.value === 'ocr' && ocrSettingsRef.value?.isDirty) {
     if (!await ocrSettingsRef.value.saveSettings()) { return false }
   }
@@ -246,13 +254,35 @@ async function saveUnsavedChanges(): Promise<boolean> {
   return true
 }
 
+async function saveUnsavedChanges(context: 'section' | 'page'): Promise<boolean> {
+  // 切换分类时服务器配置区的修改会保留，不顺手写库：这条路径没有经过变更清单确认。
+  // 用户已在离开提示里确认过保存意图，页面级保存也不再重复列出清单。
+  if (context === 'page' && isDirty.value && !await handleSave({ confirmChanges: false })) {
+    return false
+  }
+  return savePanelChanges()
+}
+
+/**
+ * 放弃修改必须真正回滚：设置页被 KeepAlive 缓存，离开再回来不会重新拉取设置，
+ * 只 return true 会把被放弃的值留在表单里，下一次保存就会写进系统数据库。
+ */
+function discardUnsavedChangesFor(context: 'section' | 'page') {
+  if (context === 'page' && isDirty.value) {
+    discardUnsavedChanges()
+  }
+  if (activePanelDirty()) {
+    panelResetToken.value += 1
+  }
+}
+
 /** 离开当前内容前确认：保存后再走、放弃修改，或留在原处（取消）。 */
 async function confirmLeavingUnsavedChanges(context: 'section' | 'page'): Promise<boolean> {
   const consequence = context === 'section'
-    ? '切换分类后这些修改会丢失'
+    ? '切换分类后该分类的配置修改会丢失'
     : '离开本页后这些修改会丢失'
   const choice = await actionDialog.choose(
-    `${unsavedSummary.value}，${consequence}。是否先保存？`,
+    `${unsavedSummary(context)}，${consequence}。是否先保存？`,
     '有未保存的设置',
     {
       type: 'warning',
@@ -262,8 +292,11 @@ async function confirmLeavingUnsavedChanges(context: 'section' | 'page'): Promis
     },
   )
   if (choice === 'cancel') { return false }
-  if (choice === 'extra') { return true }
-  return saveUnsavedChanges()
+  if (choice === 'extra') {
+    discardUnsavedChangesFor(context)
+    return true
+  }
+  return saveUnsavedChanges(context)
 }
 
 /**
@@ -276,7 +309,9 @@ async function requestSection(section: SettingsSection) {
   await selectSection(section)
 }
 
-onBeforeRouteLeave(async () => {
+onBeforeRouteLeave(async (to) => {
+  // 会话失效后跳登录页时不拦截：此时保存请求大概率会 401，拦下来只会卡住跳转。
+  if (to.name === 'login' || to.path.startsWith('/login')) { return true }
   if (!hasUnsavedChanges.value) { return true }
   return confirmLeavingUnsavedChanges('page')
 })
@@ -416,7 +451,7 @@ onUnmounted(() => {
         </header>
 
         <div
-          :key="activeSection"
+          :key="`${activeSection}-${panelResetToken}`"
           ref="contentRef"
           class="settings-content"
           role="region"

@@ -889,7 +889,7 @@ onBeforeUnmount(() => {
 .day-cell:hover {
   z-index: 1;
   opacity: 0.78;
-  transform: translateY(-2px) scaleY(1.08);
+  transform: var(--mrr-motion-decor, translateY(-2px) scaleY(1.08));
 }
 
 .track-labels {

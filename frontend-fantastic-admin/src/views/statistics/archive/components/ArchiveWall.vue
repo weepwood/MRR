@@ -332,7 +332,7 @@ onUnmounted(() => {
 .archive-wall-card:hover {
   border-color: var(--mrr-navigation-active-border);
   box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
-  transform: translateY(-1px);
+  transform: var(--mrr-motion-decor, translateY(-1px));
 }
 
 .archive-wall-card:focus-visible,
@@ -393,7 +393,7 @@ onUnmounted(() => {
 }
 
 .archive-wall-card:hover .archive-wall-image-stage img {
-  transform: scale(1.01);
+  transform: var(--mrr-motion-decor, scale(1.01));
 }
 
 .archive-wall-zoom-hint {

@@ -252,7 +252,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 .el-button:not(.is-disabled):not(.is-loading):active {
-  transform: translateY(1px);
+  transform: var(--mrr-motion-decor, translateY(1px));
 }
 
 .el-button:focus-visible {

@@ -508,7 +508,7 @@ onBeforeUnmount(() => {
   background: var(--mrr-card);
   border-color: var(--mrr-primary);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 8%), var(--mrr-shadow-xs);
-  transform: translateY(-1px);
+  transform: var(--mrr-motion-decor, translateY(-1px));
 }
 .environment-badge:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 3px; }
 .environment-badge[aria-expanded='true'] { border-color: color-mix(in srgb, var(--mrr-primary) 58%, var(--mrr-border)); }

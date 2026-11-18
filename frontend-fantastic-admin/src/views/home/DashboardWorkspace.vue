@@ -849,7 +849,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget:active:not(.is-editing) {
-  transform: translateY(1px);
+  transform: var(--mrr-motion-decor, translateY(1px));
 }
 
 .dashboard-widget:focus-visible {
@@ -955,7 +955,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget:hover .dashboard-widget__arrow {
   color: var(--widget-accent);
-  transform: translateX(2px);
+  transform: var(--mrr-motion-decor, translateX(2px));
 }
 
 .dashboard-widget__body {

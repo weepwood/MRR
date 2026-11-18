@@ -518,12 +518,12 @@ onUnmounted(() => {
 
 .history-tab-enter-from {
   opacity: 0;
-  transform: translateY(6px);
+  transform: var(--mrr-motion-decor, translateY(6px));
 }
 
 .history-tab-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: var(--mrr-motion-decor, translateY(-4px));
 }
 
 .history-filter-button:hover {
@@ -669,7 +669,7 @@ onUnmounted(() => {
 }
 
 .history-favorite-button:active .bookmark-icon {
-  transform: scale(0.86);
+  transform: var(--mrr-motion-decor, scale(0.86));
 }
 
 .history-favorite-button.is-favorite .bookmark-icon {

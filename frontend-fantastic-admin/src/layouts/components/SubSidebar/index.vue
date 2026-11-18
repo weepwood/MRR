@@ -236,7 +236,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     :deep(.sub-menu .menu-item-container:hover .menu-item-container-icon) {
-      transform: translateX(1px) scale(1.08);
+      transform: var(--mrr-motion-decor, translateX(1px) scale(1.08));
     }
 
     :deep(.menu-item-container:hover) {

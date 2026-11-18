@@ -141,10 +141,10 @@ CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配�
 三条必须遵守的边界：
 
 1. **状态只能由静态通道承载**：形状、方向、文字、颜色、图标语义、位置。动效只表达"状态发生变化"的过程；任一通道在动效全关后必须仍然完整，且截屏可判。据此 `reduced` 与 `off` 的差别是"装饰先降级、状态最后保留"，不是"少多少动效"。
-2. **关闭动效只允许清 `transition` 与 `animation-duration`，禁止写全局 `transform: none`**。白名单式逐条列举一旦漏项，失败方向是"状态误判"（字段切换图标的 `rotate(180deg)` 就是状态本身），而不是"少一个位移"。新增装饰性位移应打标记由降级规则统一清理，不再往名单里加选择器。
+2. **关闭动效只允许清 `transition` 与 `animation-duration`，禁止写全局 `transform: none`**。白名单式逐条列举一旦漏项，失败方向是"状态误判"（字段切换图标的 `rotate(180deg)` 就是状态本身），而不是"少一个位移"。装饰性位移与缩放在**声明处**写成 `transform: var(--mrr-motion-decor, <原值>)`，`[data-motion="off"]` 与 `prefers-reduced-motion: reduce` 只把这个变量置为 `none`：漏写一处最多多一次位移，永远不会连带状态。`src/assets/styles/motion.test.ts` 会扫全仓交互态，发现没套变量的 `transform` 直接失败。
 3. **焦点一律用 `outline`，投影一律用 `box-shadow`，两者不互兼**。`box-shadow` 画的焦点环会被 `overflow: hidden` 裁掉，也会覆盖元素原有投影；而 `outline` 在基线浏览器上最差只是变色，不会整条消失。
 
-关闭动效只允许去掉**过渡**，不允许把**用来成形的 `transform`** 一并清零。菜单展开指示器（`.menu-leading-control-arrow`）是用右边框 + 下边框加 `rotate(±45deg)` 拼出来的箭头，`transform` 就是它的形状：一旦被 `transform: none !important` 抹平，只剩一个「┘」残角，且展开/收起不再有区别。`data-motion="off"` 与 `prefers-reduced-motion: reduce` 两条路径都必须保留 `rotate(-45deg)` / `rotate(45deg)` 的终态，仅省略过渡。同类元素（用 transform 绘制而非仅仅做位移的）在加入共享 `transform: none` 列表前需逐个确认。
+**用来成形的 `transform` 既不套 `--mrr-motion-decor`，也不进任何清除清单。** 菜单展开指示器（`.menu-leading-control-arrow`）是用右边框 + 下边框加 `rotate(±45deg)` 拼出来的箭头，`transform` 就是它的形状；档案袋的叠层纸靠 `rotate(-1.4deg)/(0.8deg)` 才有前后关系；字段切换图标的 `rotate(180deg)` 是"已切换"这个状态本身。这类元素的 `transform` 一律原样保留，关闭动效只去掉过渡。判断口径：**把它清零之后，用户是否还能用截屏判断当前状态**——不能，就不能清零。
 
 共享 FaButton 按压仅改变明度，保留调用方的旋转、居中与圆角；键盘焦点独立描边，加载时禁用并提供 `aria-busy`。输入框和下拉箭头沿用 `--mrr-motion-feedback` / `--mrr-motion-move` 两档。状态确认动效不使用超过最终尺寸的弹跳。
 

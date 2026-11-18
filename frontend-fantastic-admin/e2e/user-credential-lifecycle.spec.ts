@@ -133,4 +133,62 @@ test.describe('用户凭据生命周期', () => {
     await page.getByText('我已通过安全方式保存或交付临时密码').click()
     await expect(page.getByRole('button', { name: '完成' })).toBeEnabled()
   })
+
+  test('禁用用户对话框仅在确认后提交，拒绝后保留账号状态并允许重试', async ({ page }) => {
+    const user = { id: 20, username: 'doctor.test', displayName: '测试医生', roleCode: 'DOCTOR', status: 'active' }
+    let attempts = 0
+    const retry = Promise.withResolvers<void>()
+
+    await page.addInitScript((profile) => {
+      localStorage.setItem('token', 'admin-token')
+      localStorage.setItem('profile', JSON.stringify(profile))
+      localStorage.setItem('permissions', JSON.stringify(profile.permissions))
+    }, adminProfile)
+    await page.route('**/api/v1/auth/me', route => route.fulfill({ json: { code: 200, data: adminProfile } }))
+    await page.route('**/api/v1/auth/users?*', route => route.fulfill({ json: { code: 200, data: { list: [user], total: 1 } } }))
+    await page.route('**/api/v1/auth/users/20', async (route) => {
+      expect(route.request().method()).toBe('DELETE')
+      attempts++
+      if (attempts === 1) {
+        await route.fulfill({ status: 403, json: { code: 403, message: '无权禁用此账号' } })
+        return
+      }
+      await retry.promise
+      await route.fulfill({ json: { code: 200 } })
+    })
+
+    await page.goto('/users')
+    const row = page.getByRole('row').filter({ hasText: '测试医生' })
+    const dialog = page.getByRole('dialog', { name: '禁用用户' })
+    const confirm = dialog.getByRole('button', { name: '确认禁用' })
+    async function openDisable() {
+      await row.getByRole('button', { name: '更多操作' }).click()
+      await page.getByRole('menuitem', { name: '禁用用户' }).click()
+      await expect(dialog.getByText(/测试医生.*无法登录/)).toBeVisible()
+    }
+
+    await openDisable()
+    await dialog.getByRole('button', { name: '取消', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await openDisable()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    expect(attempts).toBe(0)
+
+    await openDisable()
+    await confirm.click()
+    await expect(page.getByText('无权禁用此账号', { exact: true }).first()).toBeVisible()
+    await expect(row.getByText('启用', { exact: true })).toBeVisible()
+    await expect(confirm).toBeEnabled()
+
+    await confirm.click()
+    await expect.poll(() => attempts).toBe(2)
+    await expect(confirm).toBeDisabled()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeVisible()
+    retry.resolve()
+    await expect(dialog).toBeHidden()
+    await expect(row.getByText('禁用', { exact: true })).toBeVisible()
+    expect(attempts).toBe(2)
+  })
 })

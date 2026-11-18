@@ -79,6 +79,9 @@ const showResetLoading = ref(false)
 const resetTarget = ref<CredentialAwareUser | null>(null)
 const resetFormRef = ref()
 const resetForm = reactive({ administratorPassword: '', temporaryPasswordValidHours: 24 })
+const disableVisible = ref(false)
+const disableSaving = ref(false)
+const disableTarget = ref<CredentialAwareUser | null>(null)
 const maxQueryNoticeStack = 3
 const activeQueryNotices: Array<{ id: number, close: () => void, element: HTMLElement | null }> = []
 let queryNoticeId = 0
@@ -380,7 +383,7 @@ function handleUserAction(action: string, row: CredentialAwareUser) {
       openReset(row)
       break
     case 'disable':
-      void handleDisable(row)
+      openDisable(row)
       break
   }
 }
@@ -578,22 +581,28 @@ function closeCredentialResult() {
   credentialResult.value = null
 }
 
-async function handleDisable(row: CredentialAwareUser) {
-  if (!row.id || isSelf(row.id) || !isActive(row)) return
+function openDisable(row: CredentialAwareUser) {
+  if (disableVisible.value || disableSaving.value || !row.id || isSelf(row.id) || !isActive(row)) return
+  disableTarget.value = row
+  disableVisible.value = true
+}
+
+async function handleDisable() {
+  const row = disableTarget.value
+  if (!disableVisible.value || disableSaving.value || !row?.id) return
+  disableSaving.value = true
   try {
-    await ElMessageBox.confirm(
-      `确认禁用用户「${row.displayName || row.username}」吗？禁用后该用户将无法登录。`,
-      '禁用确认',
-      { confirmButtonText: '确认禁用', cancelButtonText: '取消', type: 'warning' },
-    )
     await apiUser.disableUser(row.id)
     const index = users.value.findIndex(item => item.id === row.id)
     if (index !== -1) users.value[index] = { ...users.value[index], status: 'disabled' }
+    disableVisible.value = false
     ElMessage.success('已禁用用户')
   }
   catch (err: any) {
-    if (err === 'cancel' || err === 'close') return
     ElMessage.error(err?.response?.data?.message || err?.message || '禁用操作失败')
+  }
+  finally {
+    disableSaving.value = false
   }
 }
 
@@ -750,6 +759,28 @@ onMounted(loadData)
         <el-form-item label="临时密码有效期"><el-input-number v-model="resetForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="resetVisible = false">取消</el-button><el-button type="danger" :icon="KeyRound" :loading="showResetLoading" :disabled="resetSaving" @click="handleResetPassword">确认重置</el-button></template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="disableVisible"
+      title="禁用用户"
+      width="min(480px, calc(100vw - 32px))"
+      :close-on-click-modal="!disableSaving"
+      :close-on-press-escape="!disableSaving"
+      :show-close="!disableSaving"
+      @closed="disableTarget = null"
+    >
+      <el-alert
+        v-if="disableTarget"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="`确认禁用用户「${disableTarget.displayName || disableTarget.username}」吗？禁用后该用户将无法登录。`"
+      />
+      <template #footer>
+        <el-button :disabled="disableSaving" @click="disableVisible = false">取消</el-button>
+        <el-button type="danger" :loading="disableSaving" @click="handleDisable">确认禁用</el-button>
+      </template>
     </el-dialog>
 
     <el-dialog v-model="credentialVisible" :title="credentialTitle" width="520px" :close-on-click-modal="false" :show-close="false" :close-on-press-escape="false">

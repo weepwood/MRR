@@ -4,8 +4,8 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -18,10 +18,18 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
+import { checkPermission } from '@/utils/permission'
 
 defineOptions({ name: 'LogsPage' })
+
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+// 运行日志页要求 system:manage；没有权限时不提供跳转，避免落到 403 页面。
+const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage'))
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
@@ -92,7 +100,16 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
-  defaultQuery: { keyword: String(useRoute().query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+  defaultQuery: { keyword: String(route.query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+})
+
+/** 页面被缓存时从「运行日志」跳转过来不会重新 mount；跟随 requestId 重新检索。 */
+watch(() => route.query.requestId, (value) => {
+  // 缓存组件里 route 指向全局当前路由；离开本页后跳到别处的参数不应改动本页检索。
+  if (route.path !== '/logs') { return }
+  if (typeof value !== 'string' || !value) { return }
+  query.keyword = value
+  handleSearch()
 })
 
 async function openDetail(row: LogRecord) {
@@ -106,6 +123,13 @@ async function openDetail(row: LogRecord) {
   finally {
     detailVisible.value = true
   }
+}
+
+/** 访问日志只记录接口结果，异常原因在后端运行日志里；按同一个 Request ID 直接过去。 */
+function openRuntimeLogs(requestId?: string) {
+  if (!requestId || !canReadRuntimeLogs.value) { return }
+  detailVisible.value = false
+  void router.push({ path: '/runtime-logs', query: { requestId } })
 }
 
 function handleLogAction(action: string, row: LogRecord) {
@@ -262,7 +286,15 @@ function statusTagType(status: string | number) {
     <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
       <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request ID">
+          <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
+          <el-button
+            v-if="currentLog.requestId && canReadRuntimeLogs" link type="primary" class="detail-link"
+            @click="openRuntimeLogs(currentLog?.requestId)"
+          >
+            查看运行日志
+          </el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
         <el-descriptions-item label="请求方法">{{ currentLog.method || '-' }}</el-descriptions-item>
@@ -316,6 +348,10 @@ function statusTagType(status: string | number) {
 .detail-value,
 .detail-pre {
   overflow-wrap: anywhere;
+}
+
+.detail-link {
+  margin-left: 8px;
 }
 
 .detail-pre {

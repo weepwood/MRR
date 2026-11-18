@@ -119,6 +119,7 @@ public class RuntimeLogJournalService {
                 String stack = privateFormat ? com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredStack(node.path("stack_trace").asText()) : "";
                 rows.add(new Object[]{Timestamp.from(at), id, level, safe(node.path("logger_name").asText(), 255),
                         safe(node.path("requestId").asText(), 80), nullableSafe(node.path("errorId").asText(), 32), message, stack,
+                        safeThreadName(node.path("thread_name").asText()),
                         key, line.offset(), !privateFormat || !Set.of("WARN", "ERROR").contains(level)});
             } catch (Exception e) { invalidLines++; unknownGap = true; }
         }
@@ -127,8 +128,8 @@ public class RuntimeLogJournalService {
         long rejected = invalidLines - rejectedBefore + batch.invalidLines();
         tx.executeWithoutResult(status -> {
             jdbc.execute("SET LOCAL statement_timeout='3s'");
-            jdbc.batchUpdate("INSERT INTO app.runtime_log_event(occurred_at,event_id,level,logger_name,request_id,error_id,message_summary,stack_trace,source_key,source_offset,projected) "
-                    + "VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING", rows);
+            jdbc.batchUpdate("INSERT INTO app.runtime_log_event(occurred_at,event_id,level,logger_name,request_id,error_id,message_summary,stack_trace,thread_name,source_key,source_offset,projected) "
+                    + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING", rows);
             for (Map<String, Object> row : jdbc.queryForList("SELECT * FROM app.runtime_log_event WHERE source_key=? AND NOT projected LIMIT 250", key)) project(row);
             jdbc.update("UPDATE app.runtime_log_source SET byte_offset=?,observed_bytes=?,state=?,invalid_lines=invalid_lines+?,failure_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE source_key=?",
                     batch.nextOffset(), safeSize(file), batch.complete() ? "COMPLETE" : "PENDING", rejected, key);
@@ -147,7 +148,9 @@ public class RuntimeLogJournalService {
         event.setProjectionEventId(String.valueOf(row.get("event_id")));
         event.setLevel(String.valueOf(row.get("level"))); event.setModule("runtime"); event.setLoggerName(logger);
         event.setMessageSummary(message); event.setStackTrace(String.valueOf(row.get("stack_trace")));
-        event.setRequestId((String) row.get("request_id")); event.setThreadName("journal");
+        event.setRequestId((String) row.get("request_id"));
+        // 线程名取采集时清洗过的真实值；旧数据为空串，页面显示占位，不再用固定值冒充。
+        event.setThreadName((String) row.get("thread_name"));
         LocalDateTime at = LocalDateTime.ofInstant(((Timestamp) row.get("occurred_at")).toInstant(), ZoneId.systemDefault());
         event.setFirstSeenAt(at); event.setLastSeenAt(at);
         String exceptionType = String.valueOf(row.get("stack_trace")).lines().findFirst().orElse(null);
@@ -237,5 +240,23 @@ public class RuntimeLogJournalService {
     private static long safeSize(Path file) { try { return Files.size(file); } catch (Exception e) { return 0; } }
     private static String nullableSafe(String value, int length) { String result = safe(value, length); return result.isBlank() ? null : result; }
     private static String safe(String value, int length) { return value != null && value.length() <= length && value.matches("[A-Za-z0-9_.$:-]*") ? value : ""; }
+
+    /**
+     * 线程名清洗。
+     *
+     * <p>线程名不含业务字段，但真实取值会带空格、括号与方括号（例如
+     * {@code RMI TCP Connection(3)-127.0.0.1}、{@code ForkJoinPool.commonPool-worker-1}），
+     * 沿用 {@link #safe} 的窄字符集会把大量正常线程名清成空；这里改为只排除控制字符，
+     * 长度上限与列宽一致。</p>
+     *
+     * <p>清洗失败返回空串而不是固定值：错误中心展示一个恒定值比留空更容易误导排查方向。</p>
+     */
+    static String safeThreadName(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        if (trimmed.isEmpty() || trimmed.length() > 160) return "";
+        for (int i = 0; i < trimmed.length(); i++) if (Character.isISOControl(trimmed.charAt(i))) return "";
+        return trimmed;
+    }
     private long databaseBytes() { Long value = jdbc.queryForObject("SELECT pg_total_relation_size('app.runtime_error_projection_receipt') + pg_total_relation_size('app.runtime_log_event') + COALESCE(SUM(pg_total_relation_size(inhrelid)),0) FROM pg_inherits WHERE inhparent='app.runtime_log_event'::regclass", Long.class); return value == null ? 0 : value; }
 }

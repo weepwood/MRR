@@ -33,7 +33,7 @@ public record RuntimeLogQueryPlan(String sql, List<Object> args) {
 
     /** 与 {@code event_id} 主键列一致的采样列，顺序决定前端字段名。 */
     public static final String SELECT_COLUMNS =
-            "occurred_at,event_id,level,logger_name,request_id,error_id,message_summary,stack_trace";
+            "occurred_at,event_id,level,logger_name,thread_name,request_id,error_id,message_summary,stack_trace";
 
     /** 时间范围归一化：缺省最近 24 小时，最长 31 天。 */
     public static Instant[] range(Instant from, Instant to) {
@@ -50,8 +50,15 @@ public record RuntimeLogQueryPlan(String sql, List<Object> args) {
         return span.toHours() <= 48 ? "hour" : "day";
     }
 
+    /** 不带线程筛选的入口；等价于 {@code thread=null}。 */
     public static RuntimeLogQueryPlan search(Instant from, Instant to, String level, String minLevel,
             String keyword, String requestId, String errorId, String logger,
+            Instant cursorTime, UUID cursorId, int size) {
+        return search(from, to, level, minLevel, keyword, requestId, errorId, logger, null, cursorTime, cursorId, size);
+    }
+
+    public static RuntimeLogQueryPlan search(Instant from, Instant to, String level, String minLevel,
+            String keyword, String requestId, String errorId, String logger, String thread,
             Instant cursorTime, UUID cursorId, int size) {
         Instant[] range = range(from, to);
         if (size < 1 || size > MAX_PAGE_SIZE) {
@@ -96,6 +103,12 @@ public record RuntimeLogQueryPlan(String sql, List<Object> args) {
         if (normalizedLogger != null) {
             sql.append(" AND logger_name ILIKE ? ESCAPE '\\'");
             args.add("%" + escapeLike(normalizedLogger) + "%");
+        }
+        // 线程名与模块同为自由文本，按包含匹配；排障时常用「scheduling」「pool-2」这类前缀。
+        String normalizedThread = normalizeText(thread, MAX_FILTER_LENGTH, "线程名称过长");
+        if (normalizedThread != null) {
+            sql.append(" AND thread_name ILIKE ? ESCAPE '\\'");
+            args.add("%" + escapeLike(normalizedThread) + "%");
         }
         if (cursorTime != null) {
             sql.append(" AND (occurred_at,event_id)<(?,?)");

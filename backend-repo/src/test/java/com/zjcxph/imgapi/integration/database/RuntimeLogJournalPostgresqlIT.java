@@ -135,4 +135,60 @@ class RuntimeLogJournalPostgresqlIT extends PostgresqlIntegrationTestSupport {
         jdbc.update("DELETE FROM app.runtime_log_event WHERE event_id=?", id);
         jdbc.update("DELETE FROM app.runtime_log_source WHERE file_name='journal.log'");
     }
+
+    /**
+     * 线程名是异步/定时任务排障的第一线索：编码器已写入文件，采集必须落到明细，
+     * 投影到错误组时也不能再用固定值覆盖。
+     */
+    @Test void threadNameSurvivesIngestAndProjection() throws Exception {
+        Path file = directory.resolve("thread.log");
+        UUID id = UUID.randomUUID();
+        Files.writeString(file, "{\"event_id\":\"" + id + "\",\"@timestamp\":\"2026-10-18T00:00:00Z\",\"level\":\"ERROR\","
+                + "\"logger_name\":\"synthetic.thread\",\"privacy_version\":1,\"thread_name\":\"scheduling-1\","
+                + "\"message\":\"synthetic failure\"}\n");
+        var tx = new DataSourceTransactionManager(jdbc.getDataSource());
+        try {
+            new RuntimeLogJournalService(jdbc, tx, realErrors, file.toString()).ingest();
+
+            assertThat(jdbc.queryForObject("SELECT thread_name FROM app.runtime_log_event WHERE event_id=?", String.class, id))
+                    .isEqualTo("scheduling-1");
+            assertThat(jdbc.queryForObject("SELECT thread_name FROM app.system_error_event WHERE logger_name='synthetic.thread'", String.class))
+                    .isEqualTo("scheduling-1");
+
+            var queries = new com.zjcxph.imgapi.service.RuntimeLogQueryService(jdbc);
+            var from = java.time.Instant.parse("2026-10-17T00:00:00Z");
+            var page = queries.search(from, from.plusSeconds(172800), null, null, null, null, null, "synthetic.thread",
+                    "scheduling", null, null, 10);
+            @SuppressWarnings("unchecked")
+            var rows = (java.util.List<java.util.Map<String, Object>>) page.get("list");
+            assertThat(rows).hasSize(1);
+            assertThat(rows.getFirst().get("thread_name")).isEqualTo("scheduling-1");
+        } finally {
+            jdbc.update("DELETE FROM app.runtime_log_event WHERE event_id=?", id);
+            jdbc.update("DELETE FROM app.system_error_event WHERE logger_name='synthetic.thread'");
+            jdbc.update("DELETE FROM app.runtime_log_source WHERE file_name='thread.log'");
+        }
+    }
+
+    /**
+     * 非法线程名必须丢弃而不是伪造：旧实现写入固定值 {@code journal}，
+     * 让错误中心展示一个看似有效、实际恒定的字段，比留空更误导。
+     */
+    @Test void unparsableThreadNameIsDroppedInsteadOfFaked() throws Exception {
+        Path file = directory.resolve("thread-invalid.log");
+        UUID id = UUID.randomUUID();
+        Files.writeString(file, "{\"event_id\":\"" + id + "\",\"@timestamp\":\"2026-10-18T00:00:00Z\",\"level\":\"WARN\","
+                + "\"logger_name\":\"synthetic.threadInvalid\",\"privacy_version\":1,"
+                + "\"thread_name\":\"" + "x".repeat(200) + "\",\"message\":\"synthetic\"}\n");
+        var tx = new DataSourceTransactionManager(jdbc.getDataSource());
+        try {
+            new RuntimeLogJournalService(jdbc, tx, mock(SystemErrorEventMapper.class), file.toString()).ingest();
+
+            assertThat(jdbc.queryForObject("SELECT thread_name FROM app.runtime_log_event WHERE event_id=?", String.class, id))
+                    .isEmpty();
+        } finally {
+            jdbc.update("DELETE FROM app.runtime_log_event WHERE event_id=?", id);
+            jdbc.update("DELETE FROM app.runtime_log_source WHERE file_name='thread-invalid.log'");
+        }
+    }
 }

@@ -236,7 +236,12 @@ describe('运行日志问题定位', () => {
     expect(wrapper.find('.insight-stats').text()).toContain('3')
     expect(api.getRuntimeLogInsights).toHaveBeenCalledWith({ from: expect.any(String), to: expect.any(String) })
 
+    // 编号是精确匹配：残留的关键词、模块、最低级别都会把它挡成空列表（例如 WARN 组撞上「ERROR 及以上」）。
     await wrapper.find('input[placeholder="例如 超时、Connection refused"]').setValue('synthetic keyword')
+    await wrapper.find('input[placeholder="logger 名称包含匹配"]').setValue('synthetic.module')
+    wrapper.findComponent({ name: 'ElSelect' }).vm.$emit('update:modelValue', 'ERROR')
+    await flushPromises()
+
     const hotRows = wrapper.findAll('.hot-row')
     expect(hotRows).toHaveLength(1)
     await hotRows[0]!.trigger('click')
@@ -246,6 +251,8 @@ describe('运行日志问题定位', () => {
     expect(params.errorId).toBe('ERR-20261101-AAAA1111')
     expect(params.keyword).toBeUndefined()
     expect(params.requestId).toBeUndefined()
+    expect(params.logger).toBeUndefined()
+    expect(params.minLevel).toBeUndefined()
   })
 
   it('概览读取失败只降级概览，不阻挡原始日志查询', async () => {

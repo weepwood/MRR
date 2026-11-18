@@ -235,22 +235,32 @@ async function copyText(text: string, message: string) {
 }
 function copyDetail() { void copyText(detailText(detail.value), '日志正文已复制') }
 function copyRequestId(value?: string) { void copyText(value || '', '追踪编号已复制') }
-/** 从概览或详情跳到原始日志：清掉互斥条件，避免「按错误组筛选」被旧关键词挡住。 */
+/**
+ * 从概览或详情跳到原始日志。
+ *
+ * <p>清空全部附加条件而不是只清关键词：编号是精确匹配，残留的「最低级别」或模块
+ * 会把结果挡成空列表——例如从概览点一个 WARN 错误组，而页面还停在「ERROR 及以上」。</p>
+ */
 function filterByError(value?: string) {
   if (!value) { return }
+  clearAdditionalFilters()
   errorId.value = value
-  requestId.value = ''
-  keyword.value = ''
-  detailVisible.value = false
   void load()
 }
 function filterByRequest(value?: string) {
   if (!value) { return }
+  clearAdditionalFilters()
   requestId.value = value
+  void load()
+}
+/** 编号是精确匹配，附加条件会把它挡成空列表，因此先全部清掉再设置目标编号。 */
+function clearAdditionalFilters() {
+  requestId.value = ''
   errorId.value = ''
   keyword.value = ''
+  logger.value = ''
+  minLevel.value = ''
   detailVisible.value = false
-  void load()
 }
 function openAccessLog(value?: string) {
   if (!value) { return }
@@ -713,7 +723,6 @@ onMounted(() => { void load(); void refreshHealth() })
   .filter-error,
   .filter-level,
   .filter-actions { grid-column: 1; }
-  .filter-actions :deep(.el-form-item__content) { justify-content: flex-start; }
   .insight-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hot-row { flex-wrap: wrap; }
   .hot-meta { flex-basis: 100%; }

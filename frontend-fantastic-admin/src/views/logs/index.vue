@@ -28,8 +28,10 @@ defineOptions({ name: 'LogsPage' })
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-// 运行日志页要求 system:manage；没有权限时不提供跳转，避免落到 403 页面。
-const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage'))
+// 运行日志接口要求 system:manage 与 log:read 同时具备（后端 allMatch 校验），
+// 且 system:manage 不继承 log:read；缺任一都会 403，因此不作为跳转入口展示。
+const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage')
+  && checkPermission(userStore.permissions, 'log:read'))
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')

@@ -29,8 +29,13 @@ defineOptions({ name: 'RuntimeErrorsPage' })
 const userStore = useUserStore()
 const router = useRouter()
 const canManage = computed(() => checkPermission(userStore.permissions, 'system:error:manage'))
-/** 运行日志页要求 system:manage，访问日志要求 log:read；没有权限就不显示跳转入口，避免落到 403。 */
-const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage'))
+/**
+ * 运行日志接口声明了 {@code {"system:manage", "log:read"}}，后端按 allMatch 校验，
+ * 两者缺一即 403；且 system:manage 的继承链不含 log:read，必须分别判断。
+ * 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。
+ */
+const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage')
+  && checkPermission(userStore.permissions, 'log:read'))
 const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
 const loading = ref(false)
 const error = ref('')

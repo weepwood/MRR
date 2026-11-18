@@ -271,11 +271,27 @@ if (toolchainOccurrences > 0) {
  * 同名属性覆盖。该策略对整体背景等已覆盖，但组件内部细节仍存在缺口，
  * 因此这里只统计并输出，不阻断构建，让遗留债务保持可见。
  */
+/*
+ * color-mix() 的兜底只认两种写法：变量级重设（browser-compatibility.css 的
+ * @supports not 块）或把增强值收进 @supports 内。「先写静态值、再写含 var() 的
+ * color-mix」不是回退，属已单独检测的「假回退」。
+ *
+ * 本项统计的是「未包在 @supports 里」的直接声明：其中多数属于已拍板接受降级的
+ * 装饰性混色，因此不阻断；但没有 @supports not 回退块的分块需要逐块确认。
+ */
 const directColorMixCount = (ungatedCss.match(/(^|[;{])(?!\s*--)[\w-]+\s*:[^;{}]*color-mix\(/g) || []).length
 if (directColorMixCount > 0) {
+  const chunksWithoutFallback = cssFiles
+    .filter((file) => {
+      const raw = fs.readFileSync(file, 'utf8')
+      return /color-mix\(/.test(stripAtSupportsBlocks(raw))
+        && !/@supports\s+not\s*\(\s*color\s*:\s*color-mix\(/.test(raw)
+    })
+    .map(file => path.relative(distDir, file))
   console.warn(
-    `提示：生产 CSS 中存在 ${directColorMixCount} 处直接使用 color-mix() 的属性声明，`
-    + '在 Chrome 86 上会整条失效，请确认已由兼容层覆盖或属于纯装饰降级。',
+    `提示：生产 CSS 中存在 ${directColorMixCount} 处未包在 @supports 内的 color-mix() 声明，`
+    + '在 Chrome 86 上会整条失效。除已确认的装饰性降级外，其余应由变量级重设或 @supports 承载。'
+    + `完全没有 @supports not 回退块的分块：${chunksWithoutFallback.join('、') || '（无）'}。`,
   )
 }
 

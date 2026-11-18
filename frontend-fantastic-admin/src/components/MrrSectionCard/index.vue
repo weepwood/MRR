@@ -66,7 +66,6 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card :deep(.el-card__header) {
   padding: 15px 18px;
-  background: var(--mrr-card);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-bottom-color: var(--mrr-border);
 }
@@ -168,6 +167,18 @@ const hasHeader = computed(() => Boolean(
   .mrr-section-card__actions {
     justify-content: flex-start;
     width: 100%;
+  }
+}
+
+/* Chrome 86 回退：卡头底色是分区标题与正文的分界，缺了标题行会与内容连成一片。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mrr-section-card :deep(.el-card__header) {
+    background: var(--mrr-card);
+  }
+
+  .mrr-section-card__icon {
+    background: var(--mrr-muted);
+    border: 1px solid var(--mrr-border);
   }
 }
 </style>

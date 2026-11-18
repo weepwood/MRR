@@ -497,7 +497,6 @@ onBeforeUnmount(hideTooltip)
   appearance: none;
   cursor: pointer;
   outline: none;
-  border: 1px solid var(--el-border-color-lighter);
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
   transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
@@ -518,34 +517,29 @@ onBeforeUnmount(hideTooltip)
 }
 
 /*
- * 热力图色阶靠 background 编码数据强度，属于「信息」而非「装饰」：
- * 一旦整条声明失效，除最高档外的所有格子都会变透明，图表在 Chrome 86 上失去意义。
- * 因此每档前置一条静态回退（Element Plus 的 light-* 色阶由 applyThemeColor 以 hex 同步写入，
- * 主色变化时依然正确）。其余纯装饰性混色不做回退，见 DESIGN.md「color-mix 降级边界」。
+ * 热力图色阶靠 background 编码数据强度，属于「信息」而非「装饰」：整条声明一旦失效，
+ * 除最高档外的格子都会变透明，图表在 Chrome 86 上失去意义。
+ * 回退写在文件末尾的 @supports not 块里，取 Element Plus 的 light-3/5/8 色阶——
+ * 这套色阶由 applyThemeColor() 以 hex 同步写入，主色变化时依然正确。
+ * 不用「先静态值再 color-mix」的双声明：含 var() 的 color-mix 在 86 上会把属性打成
+ * unset，前一条静态声明不会回来。其余纯装饰性混色不做回退，见 DESIGN.md「color-mix 降级边界」。
  */
 .level-0 {
-  background: var(--el-fill-color-light);
   background: color-mix(in srgb, var(--el-fill-color-light) 88%, transparent);
 }
 
 .level-1 {
-  background: var(--el-color-primary-light-8);
   background: color-mix(in srgb, var(--color-primary) 24%, var(--el-bg-color));
-  border-color: var(--el-color-primary-light-5);
   border-color: color-mix(in srgb, var(--color-primary) 16%, var(--el-border-color-lighter));
 }
 
 .level-2 {
-  background: var(--el-color-primary-light-5);
   background: color-mix(in srgb, var(--color-primary) 45%, var(--el-bg-color));
-  border-color: var(--el-color-primary-light-5);
   border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .level-3 {
-  background: var(--el-color-primary-light-3);
   background: color-mix(in srgb, var(--color-primary) 70%, var(--el-bg-color));
-  border-color: var(--el-color-primary-light-3);
   border-color: color-mix(in srgb, var(--color-primary) 48%, transparent);
 }
 
@@ -564,7 +558,6 @@ onBeforeUnmount(hideTooltip)
   padding: 13px 14px;
   color: var(--el-text-color-primary);
   pointer-events: none;
-  background: var(--el-bg-color-overlay);
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
@@ -631,6 +624,40 @@ onBeforeUnmount(hideTooltip)
   .heatmap-legend {
     justify-content: flex-end;
     width: 100%;
+  }
+}
+
+/*
+ * Chrome 86 回退：颜色在这里就是数据。
+ * 四档取 Element Plus 的 light-8 / light-5 / light-3 / primary 阶梯，档位差等于数据差；
+ * 格子描边与浮层底色一并给出静态值，避免整屏格子只剩最高档可辨。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .heatmap-cell {
+    border: 1px solid var(--el-border-color-lighter);
+  }
+
+  .level-0 {
+    background: var(--el-fill-color-light);
+  }
+
+  .level-1 {
+    background: var(--el-color-primary-light-8);
+    border-color: var(--el-color-primary-light-5);
+  }
+
+  .level-2 {
+    background: var(--el-color-primary-light-5);
+    border-color: var(--el-color-primary-light-5);
+  }
+
+  .level-3 {
+    background: var(--el-color-primary-light-3);
+    border-color: var(--el-color-primary-light-3);
+  }
+
+  .heatmap-tooltip {
+    background: var(--el-bg-color-overlay);
   }
 }
 </style>

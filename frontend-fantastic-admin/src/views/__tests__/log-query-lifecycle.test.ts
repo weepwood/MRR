@@ -5,7 +5,9 @@ import LogsPage from '../logs/index.vue'
 
 const api = vi.hoisted(() => ({ searchSystemLogs: vi.fn(), searchImageAuditLogs: vi.fn(), getImageAuditAnalytics: vi.fn(), getLogById: vi.fn(), exportImageAuditLogs: vi.fn() }))
 vi.mock('@/api/modules/logs', () => api)
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
+// 访问日志页新增了「查看运行日志」跳转，需要 useRouter；path 与真实路由一致，
+// 避免页面的「仅在本页时跟随 query」守卫把用例挡掉。
+vi.mock('vue-router', () => ({ useRoute: () => ({ path: '/logs', query: {} }), useRouter: () => ({ push: vi.fn() }) }))
 const stubs = {
   'AppError': { props: ['message'], template: '<p class="list-error">{{ message }}</p>' },
   'AppLoading': true,

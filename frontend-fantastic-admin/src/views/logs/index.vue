@@ -18,20 +18,31 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
-import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { readAuthStorage } from '@/utils/auth-storage'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
-import { checkPermission } from '@/utils/permission'
+import { checkSessionPermission } from '@/utils/permission'
 
 defineOptions({ name: 'LogsPage' })
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
-// 运行日志接口要求 system:manage 与 log:read 同时具备（后端 allMatch 校验），
-// 且 system:manage 不继承 log:read；缺任一都会 403，因此不作为跳转入口展示。
-const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage')
-  && checkPermission(userStore.permissions, 'log:read'))
+/**
+ * 运行日志接口要求 system:manage 与 log:read 同时具备（后端 allMatch），
+ * 而 system:manage 的继承链不含 log:read，缺任一都会 403。
+ *
+ * 这里读会话凭据而不是 user store：后者在模块顶层 `import router from '@/router'`，
+ * 会把依赖构建期虚拟模块的路由表带进本页导入链，页面单测因此无法加载。
+ * checkSessionPermission 同时处理 ADMIN 角色，与后端放行一致。
+ *
+ * 会话凭据在进入本页时已确定，故只读一次；权限变更需重新登录后生效。
+ */
+const authSession = readAuthStorage()
+const canReadRuntimeLogs = computed(() => {
+  const roleCode = authSession.profile?.roleCode
+  return checkSessionPermission(roleCode, authSession.permissions, 'system:manage')
+    && checkSessionPermission(roleCode, authSession.permissions, 'log:read')
+})
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')

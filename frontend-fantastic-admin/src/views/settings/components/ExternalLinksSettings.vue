@@ -10,6 +10,7 @@ const draft = reactive({
   title: '',
   url: '',
 })
+const externalLinkUrlPlaceholder = 'https://example.com'
 
 const externalLinks = computed(() => settingsStore.settings.menu.externalLinks)
 
@@ -130,7 +131,7 @@ function openExternalLink(url: string) {
           <el-input
             v-model="draft.url"
             clearable
-            placeholder="https://example.com"
+            :placeholder="externalLinkUrlPlaceholder"
             @keyup.enter="addExternalLink"
           >
             <template #prefix>

@@ -8,7 +8,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
   <section class="setting-section">
     <div class="setting-group">
       <div class="group-heading">
-        <strong>系统标识</strong>
+        <strong data-settings-search-target="identity" tabindex="-1">系统标识</strong>
         <p>系统名称会用于浏览器标题、登录页和主要品牌区域。</p>
       </div>
       <div class="control-grid">

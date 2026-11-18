@@ -210,7 +210,7 @@
     grid-template-columns: 1fr;
   }
 
-  .mrr-metric-card .el-card__body {
+  .mrr-metric-card:not(.mrr-metric-card--no-icon) .el-card__body {
     grid-template-columns: 46px minmax(0, 1fr);
   }
 

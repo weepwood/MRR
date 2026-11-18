@@ -5,12 +5,13 @@ import type {
   DashboardWidgetPreference,
   DashboardWidgetSize,
 } from './dashboard-widgets'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useUserStore } from '@/store/modules/user'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { hasPermission } from '@/utils/session'
 import {
   createDefaultWidgetPreferences,
@@ -445,7 +446,7 @@ function handleWidgetCommand(command: unknown, widget: DashboardWidgetView) {
 
 async function resetDashboard() {
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       '将恢复默认的小组件内容、颜色、大小、显示状态和排列顺序。',
       '恢复默认布局',
       {

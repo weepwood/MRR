@@ -13,10 +13,12 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+    ActionDialog: typeof import('./../ui/components/ActionDialog/index.vue')['default']
     AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
     AppError: typeof import('./../components/AppError/index.vue')['default']
     AppLoading: typeof import('./../components/AppLoading/index.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
+    ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
     ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']
     ElButton: typeof import('element-plus/es')['ElButton']
@@ -129,10 +131,12 @@ declare module 'vue' {
 // For TSX support
 declare global {
   const AccountButton: typeof import('./../components/AccountButton/index.vue')['default']
+  const ActionDialog: typeof import('./../ui/components/ActionDialog/index.vue')['default']
   const AppEmpty: typeof import('./../components/AppEmpty/index.vue')['default']
   const AppError: typeof import('./../components/AppError/index.vue')['default']
   const AppLoading: typeof import('./../components/AppLoading/index.vue')['default']
   const ElAlert: typeof import('element-plus/es')['ElAlert']
+  const ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
   const ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
   const ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']
   const ElButton: typeof import('element-plus/es')['ElButton']

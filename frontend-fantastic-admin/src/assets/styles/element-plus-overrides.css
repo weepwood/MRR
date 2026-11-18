@@ -622,7 +622,8 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
   border-bottom-color: var(--mrr-border);
 }
 
-.el-table {
+/* 按需加载的 Element Plus 及暗色样式晚于全局入口，桥接需保持更高优先级。 */
+body .el-table {
   --el-table-bg-color: var(--mrr-card);
   --el-table-tr-bg-color: var(--mrr-card);
   --el-table-header-bg-color: color-mix(in srgb, var(--mrr-muted) 64%, var(--mrr-card));
@@ -632,6 +633,22 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
   font-size: 13px;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
+}
+
+/* 圆角表格保留横向边界和列间分隔，移除容易在裁切时露出直角的左右外框。 */
+body .el-table--border::before,
+body .el-table--border::after {
+  display: none;
+}
+
+body .el-table--border .el-table__header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border.el-table--scrollable-y .el-table__header-wrapper tr > th.el-table__cell:nth-last-child(2),
+body .el-table--border .el-table__body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__footer-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr > td.el-table__cell:last-child {
+  border-right: 0;
 }
 
 .el-table th.el-table__cell {
@@ -776,8 +793,7 @@ body .el-pagination {
 }
 
 /* ===== Dialogs, forms and tabs ===== */
-body .el-dialog,
-body .el-message-box {
+body .el-dialog {
   overflow: hidden;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);

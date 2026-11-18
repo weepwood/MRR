@@ -7,6 +7,10 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.nio.file.Files;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +22,31 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ArchiveExportJobOwnershipTest {
+
+    @TempDir Path directory;
+
+    @Test
+    void refusesAnExistingFileBeyondTheCurrentBudgetWithoutDeletingIt() throws Exception {
+        Path file = Files.write(directory.resolve("synthetic.zip"), new byte[11]);
+        var properties = new ArchiveExportProperties();
+        properties.setMaxFileBytes(10);
+        var repository = mock(ArchiveExportJobRepository.class);
+        var files = mock(ArchiveExportTempFileManager.class);
+        var job = new ArchiveExportJob();
+        job.setId("synthetic-job");
+        job.setOwnerUserId(1L);
+        job.setStatus("SUCCESS");
+        job.setFormat("ZIP");
+        job.setFilePath(file.toString());
+        job.setOutputBytes(10L);
+        when(repository.findById(job.getId())).thenReturn(Optional.of(job));
+        when(files.requireManagedFile(file.toString())).thenReturn(file);
+        var service = new ArchiveExportJobService(mock(ArchiveExportService.class), repository, files, properties, Runnable::run);
+        assertThatThrownBy(() -> service.requireDownloadFile(session(1L, "synthetic-user"), job.getId()))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("分批");
+        assertThat(Files.size(file)).isEqualTo(11);
+        assertThat(job.getStatus()).isEqualTo("SUCCESS");
+    }
 
     @Test
     void sameUsernameCannotAccessTaskOwnedByDifferentUserId() {

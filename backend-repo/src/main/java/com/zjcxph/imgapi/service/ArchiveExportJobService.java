@@ -12,10 +12,12 @@ import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository.RecoveryCursor;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -123,6 +125,10 @@ public class ArchiveExportJobService {
         if (summary.itemCount() == 0) {
             throw new BusinessException(404, "未找到可导出的影像");
         }
+        long estimatedBytes = estimateBytes(summary.itemCount(), summary.estimatedBytes());
+        if (estimatedBytes > properties.getMaxFileBytes()) {
+            throw new BusinessException(413, "预计导出文件超过单文件配额，请减少选页并分批导出");
+        }
 
         ArchiveExportJob job = new ArchiveExportJob();
         job.setId(UUID.randomUUID().toString());
@@ -135,7 +141,7 @@ public class ArchiveExportJobService {
         job.setSjh(sjh);
         job.setScanIds(scanIds);
         job.setPlannedCount(summary.itemCount());
-        job.setEstimatedBytes(estimateBytes(summary.itemCount(), summary.estimatedBytes()));
+        job.setEstimatedBytes(estimatedBytes);
         job.setSourceSummary(ids.isEmpty() ? "" : String.join(",", selected.sourceSummary()));
         job.setFileName(buildFileName(job));
         job.setIdempotencyKey(idempotencyKey);
@@ -199,7 +205,11 @@ public class ArchiveExportJobService {
         if (!"SUCCESS".equals(job.getStatus())) {
             throw new BusinessException(409, "导出任务尚未完成");
         }
-        return tempFileManager.requireManagedFile(job.getFilePath());
+        Path file = tempFileManager.requireManagedFile(job.getFilePath());
+        if (Files.size(file) > properties.getMaxFileBytes()) {
+            throw new BusinessException(413, "导出文件超过当前单文件配额，请减少选页并分批导出");
+        }
+        return file;
     }
 
     public ArchiveExportJob requireOwned(AuthSession session, String id) {
@@ -410,7 +420,7 @@ public class ArchiveExportJobService {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
             logger.error("Archive export job failed: jobId={}", id, exception);
-            if (repository.markFailed(id, "病案导出失败，请使用任务编号联系管理员", LocalDateTime.now()) == 0
+            if (repository.markFailed(id, publicFailureMessage(exception), LocalDateTime.now()) == 0
                     && repository.isCancelRequested(id)) {
                 repository.markCancelled(id, LocalDateTime.now());
             }
@@ -428,6 +438,15 @@ public class ArchiveExportJobService {
                 MDC.put("requestId", previousRequestId);
             }
         }
+    }
+
+    private String publicFailureMessage(Exception exception) {
+        Throwable cause = NestedExceptionUtils.getMostSpecificCause(exception);
+        if (cause instanceof ExportSizeLimitOutputStream.LimitExceededException
+                || (cause instanceof BusinessException business && business.getCode() == 413)) {
+            return ExportSizeLimitOutputStream.LIMIT_MESSAGE;
+        }
+        return "病案导出失败，请使用任务编号联系管理员";
     }
 
     private void cleanupFailedOutput(String id, Path output) {
@@ -464,14 +483,12 @@ public class ArchiveExportJobService {
 
     private long estimateBytes(int itemCount, long known) {
         if (known > 0) {
-            return Math.min(known, properties.getMaxFileBytes());
+            return known;
         }
         try {
-            return Math.min(
-                    Math.multiplyExact(itemCount, properties.getFallbackBytesPerImage()),
-                    properties.getMaxFileBytes());
+            return Math.multiplyExact(itemCount, properties.getFallbackBytesPerImage());
         } catch (ArithmeticException exception) {
-            return properties.getMaxFileBytes();
+            return Long.MAX_VALUE;
         }
     }
 

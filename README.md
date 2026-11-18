@@ -8,7 +8,7 @@
 
 MRR 面向医疗机构的病案扫描、归档、检索、调阅、导出、统计、数据治理和运维场景。系统以患者、病案主档、扫描图片、实体档案位置和多来源文件为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、运行诊断与 Windows 原生部署能力。
 
-> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.8.0**，正式标签为 `v0.8.0`。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
+> 根目录 [`VERSION`](VERSION) 是唯一产品版本源，当前值为 **0.9.0**，目标正式标签为 `v0.9.0`；发布内容见 [0.9.0 发布说明](release-notes/0.9.0.md)。正式版本、数据库兼容范围和回滚条件以 [`release-baseline.json`](release-baseline.json) 为准。
 
 ## 项目定位
 
@@ -32,8 +32,10 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 影像档案袋 | 按病案号、上架号或身份证查询，分类浏览、全屏预览、选择、打印、ZIP/PDF 导出 |
 | 异步导出 | 后台生成 ZIP/PDF、进度、取消、重新下载、临时文件过期和 Range 续传 |
 | 多来源图片 | OSS 或非 OSS 优先；Nginx、NAS/HTTP、本地目录降级读取 |
-| OSS 迁移 | 从 Nginx 原图迁移，按上架号分组，等待补齐、失败重试、校验和任务管理 |
-| 文件浏览 | 只读 OSS 浏览器；只读 Nginx 浏览器，支持 default、BA01、BA02、BA03 节点 |
+| OSS 迁移 | Nginx 原图迁移、等待补齐、失败重置确认、任务分页监控与恢复 |
+| 文件浏览 | 只读 OSS/Nginx 浏览；OSS 支持失败导航重试与过期预览隔离 |
+| 目录路由与设置 | 精确目录/年月节点规则、命中预览、恢复内置规则；敏感运行参数确认与核对 |
+| 界面验收 | 登录后组件展示、主题/状态示例及 OSS 只读测试摘要 |
 | 外部调阅 | HMAC-SHA256 Ticket、有效期、nonce、来源 IP 校验和外部访问审计 |
 | 账号与权限 | JWT、RBAC、管理员建号、自助注册审核、首次改密、重置密码和账号状态 |
 | 审计与监控 | 操作日志、图片访问审计、接口响应分析、Actuator、服务状态和数据库诊断 |
@@ -120,7 +122,7 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
 
 - JDK 21+
-- 仓库自带 Maven Wrapper 3.10.0（以 Wrapper 配置为准），无需全局 Maven
+- 仓库自带 Maven Wrapper 3.10.1（以 Wrapper 配置为准），无需全局 Maven
 - PostgreSQL 16+
 - Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0
@@ -332,6 +334,7 @@ npm run docs:build
 
 ## 文档入口
 
+- [项目设计导航：产品、架构、界面与验收](docs/design/README.md)
 - [用户手册](vitepress-doc/user-guide/index.md)
 - [日志、审计与运行错误](vitepress-doc/user-guide/logs.md)
 - [系统架构](vitepress-doc/internal/architecture.md)

@@ -2,6 +2,7 @@
 import type { Menu } from '@/types/global'
 import { useFocus } from '@vueuse/core'
 import hotkeys from 'hotkeys-js'
+import { pinyin } from 'pinyin-pro'
 import Breadcrumb from '@/layouts/components/Breadcrumb/index.vue'
 import BreadcrumbItem from '@/layouts/components/Breadcrumb/item.vue'
 import { resolveRoutePath } from '@/utils'
@@ -47,11 +48,21 @@ function getResultBreadcrumbs(item: listTypes) {
   })
 }
 
+const titleInitials = computed(() => new Map(sourceList.value.map(item => [
+  item,
+  pinyin(getResultTitle(item), { pattern: 'first', toneType: 'none', type: 'array' })
+    .join('')
+    .replace(/\s+/g, '')
+    .toLowerCase(),
+])))
+
 const resultList = computed(() => {
   const keyword = searchInput.value.trim()
   if (!keyword) {
     return sourceList.value
   }
+
+  const initials = /^[a-z]+$/i.test(keyword) ? keyword.toLowerCase() : ''
 
   return sourceList.value.filter((item) => {
     const titleMatches = item.title
@@ -64,31 +75,35 @@ const resultList = computed(() => {
     })
 
     return titleMatches || pathMatches || breadcrumbMatches
+      || Boolean(initials && titleInitials.value.get(item)?.startsWith(initials))
   })
 })
 
-watch(() => isShow.value, (val) => {
-  if (val) {
-    searchInput.value = ''
-    actived.value = 0
-    // 当搜索显示的时候绑定上、下、回车快捷键，隐藏的时候再解绑。另外当 input 处于 focus 状态时，采用 vue 来绑定键盘事件
-    hotkeys('up', keyUp)
-    hotkeys('down', keyDown)
-    hotkeys('enter', keyEnter)
-    hotkeys('esc', (e) => {
-      if (settingsStore.settings.navSearch.enableHotkeys) {
-        e.preventDefault()
-        isShow.value = false
-      }
-    })
+watch(isShow, (show, _wasShown, onCleanup) => {
+  if (!show) {
+    return
   }
-  else {
+
+  searchInput.value = ''
+  actived.value = 0
+  // 输入框聚焦时由模板处理按键，其余情况使用全局快捷键。
+  const closeSearch = (event: KeyboardEvent) => {
+    if (settingsStore.settings.navSearch.enableHotkeys) {
+      event.preventDefault()
+      isShow.value = false
+    }
+  }
+  hotkeys('up', keyUp)
+  hotkeys('down', keyDown)
+  hotkeys('enter', keyEnter)
+  hotkeys('esc', closeSearch)
+  onCleanup(() => {
     hotkeys.unbind('up', keyUp)
     hotkeys.unbind('down', keyDown)
     hotkeys.unbind('enter', keyEnter)
-    hotkeys.unbind('esc')
-  }
-})
+    hotkeys.unbind('esc', closeSearch)
+  })
+}, { immediate: true })
 watch(() => resultList.value, () => {
   actived.value = 0
   handleScroll()
@@ -96,16 +111,6 @@ watch(() => resultList.value, () => {
 
 onMounted(() => {
   initSourceList()
-  hotkeys('command+k, ctrl+k', (e) => {
-    if (settingsStore.settings.navSearch.enableHotkeys) {
-      e.preventDefault()
-      isShow.value = true
-    }
-  })
-})
-
-onUnmounted(() => {
-  hotkeys.unbind('command+k, ctrl+k')
 })
 
 function initSourceList() {
@@ -202,7 +207,7 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
         <div class="h-full w-20 flex-center flex-shrink-0 pl-4">
           <FaIcon name="i-lucide:search" class="size-5 text-foreground/30" />
         </div>
-        <input ref="searchInputRef" v-model="searchInput" placeholder="搜索页面，支持标题、URL模糊查询" class="h-full min-w-0 w-full border-0 rounded-md bg-transparent pl-4 text-base text-foreground focus-outline-none placeholder-foreground/30" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter">
+        <input ref="searchInputRef" v-model="searchInput" aria-label="搜索页面" placeholder="搜索页面标题、URL 或拼音首字母" class="h-full min-w-0 w-full border-0 rounded-md bg-transparent pl-4 text-base text-foreground focus-outline-none placeholder-foreground/30" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter">
         <div v-if="settingsStore.mode === 'mobile'" class="h-full w-14 flex-center border-s">
           <FaIcon name="i-lucide:x" class="size-4" @click="isShow = false" />
         </div>

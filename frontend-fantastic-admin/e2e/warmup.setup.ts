@@ -31,8 +31,11 @@ import { expect, test as setup } from '@playwright/test'
 const AUTHENTICATED_ROUTES = [
   '/',
   '/records',
+  '/oss-browser',
+  '/oss-migration',
   '/ocr-batches',
   '/archive',
+  '/archive/embed',
   '/archive-boxes',
   '/settings',
   '/settings?section=archive',

@@ -1,3 +1,5 @@
+import type { AxiosRequestConfig } from 'axios'
+import { ARCHIVE_EXPORT_MAX_BYTES, ArchiveExportBudgetError, requireArchiveExportBlob } from '@/utils/archive-export-budget'
 import api, { getRequest, postRequest } from '../index'
 
 export type ArchiveExportMode = 'CLIENT_PDF' | 'BACKEND_STREAM' | 'BACKEND_JOB'
@@ -92,37 +94,60 @@ export function cancelArchiveExportJob(id: string) {
   return postRequest<ArchiveExportJob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}/cancel`)
 }
 
+async function downloadWithinBudget(request: (config: AxiosRequestConfig) => Promise<Blob>): Promise<Blob> {
+  const controller = new AbortController()
+  let exceeded = false
+  try {
+    const blob = await request({
+      responseType: 'blob',
+      timeout: 1000 * 60 * 10,
+      retry: false,
+      signal: controller.signal,
+      onDownloadProgress: ({ loaded, total }) => {
+        if (loaded > ARCHIVE_EXPORT_MAX_BYTES || (total !== undefined && total > ARCHIVE_EXPORT_MAX_BYTES)) {
+          exceeded = true
+          controller.abort()
+        }
+      },
+    })
+    if (exceeded) {
+      throw new ArchiveExportBudgetError()
+    }
+    return requireArchiveExportBlob(blob)
+  }
+  catch (error: unknown) {
+    if (exceeded) {
+      throw new ArchiveExportBudgetError()
+    }
+    throw error
+  }
+}
+
 export function downloadArchiveExportJob(id: string, range?: string): Promise<Blob> {
-  return api.get<Blob, Blob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}/download`, {
+  return downloadWithinBudget(config => api.get<Blob, Blob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}/download`, {
+    ...config,
     headers: range ? { Range: range } : undefined,
-    responseType: 'blob',
-    timeout: 0,
-  })
+  }))
 }
 
 export function downloadArchiveZip(bah?: string, sjh?: string): Promise<Blob> {
-  return api.get<Blob, Blob>('/api/v1/archive-exports/zip', {
+  return downloadWithinBudget(config => api.get<Blob, Blob>('/api/v1/archive-exports/zip', {
+    ...config,
     params: { bah: bah || undefined, sjh: sjh || undefined },
-    responseType: 'blob',
-    timeout: 1000 * 60 * 10,
-  })
+  }))
 }
 
 export function downloadArchivePdf(bah?: string, sjh?: string): Promise<Blob> {
-  return api.get<Blob, Blob>('/api/v1/archive-exports/pdf', {
+  return downloadWithinBudget(config => api.get<Blob, Blob>('/api/v1/archive-exports/pdf', {
+    ...config,
     params: { bah: bah || undefined, sjh: sjh || undefined },
-    responseType: 'blob',
-    timeout: 1000 * 60 * 10,
-  })
+  }))
 }
 
 export function downloadSelectedImagesPdf(ids: Array<string | number>): Promise<Blob> {
-  return api.post<Blob, Blob>(
+  return downloadWithinBudget(config => api.post<Blob, Blob>(
     '/api/v1/archive-exports/pdf/selection',
     { ids: ids.map(String) },
-    {
-      responseType: 'blob',
-      timeout: 1000 * 60 * 10,
-    },
-  )
+    config,
+  ))
 }

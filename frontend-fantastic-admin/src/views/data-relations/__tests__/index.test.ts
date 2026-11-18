@@ -1,5 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import DataRelationWorkbenchPage from '../index.vue'
 
 const apiMocks = vi.hoisted(() => ({
@@ -75,15 +77,18 @@ const overview = {
 function mountPage() {
   return mount(DataRelationWorkbenchPage, {
     global: {
+      components: { MrrPageHeader, MrrPageShell },
       directives: {
         loading: {},
       },
       stubs: {
+        'FaIcon': true,
         'el-alert': {
           props: ['title'],
           template: '<div class="el-alert">{{ title }}</div>',
         },
         'el-button': {
+          emits: ['click'],
           template: '<button @click="$emit(\'click\')"><slot /></button>',
         },
         'el-card': {
@@ -185,5 +190,18 @@ describe('dataRelationWorkbenchPage', () => {
 
     expect(wrapper.text()).toContain('第一阶段仅提供只读检查和修复预览')
     expect(wrapper.text()).toContain('修复预览')
+  })
+
+  it('preserves header refresh and check actions through the shared header slot', async () => {
+    apiMocks.runDataQualityChecks.mockResolvedValue({ code: 200, data: { running: false } })
+    const wrapper = mountPage()
+    await flushPromises()
+    const header = wrapper.findComponent(MrrPageHeader)
+    await header.findAll('button').find(button => button.text() === '刷新')!.trigger('click')
+    await flushPromises()
+    expect(apiMocks.getDataRelationOverview).toHaveBeenCalledTimes(2)
+    await header.findAll('button').find(button => button.text() === '执行检查')!.trigger('click')
+    await flushPromises()
+    expect(apiMocks.runDataQualityChecks).toHaveBeenCalledTimes(1)
   })
 })

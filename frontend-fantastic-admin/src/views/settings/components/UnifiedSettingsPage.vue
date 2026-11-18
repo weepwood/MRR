@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SettingsSearchResult } from '../settings-search'
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
@@ -11,6 +12,7 @@ import LoginSupportSettings from './LoginSupportSettings.vue'
 import OcrClassificationSettings from './OcrClassificationSettings.vue'
 import RuntimeSettings from './RuntimeSettings.vue'
 import SecuritySettings from './SecuritySettings.vue'
+import SettingsSearch from './SettingsSearch.vue'
 import SystemInfoSettings from './SystemInfoSettings.vue'
 
 defineOptions({ name: 'UnifiedSettingsPage' })
@@ -28,6 +30,9 @@ interface OcrClassificationSettingsRef {
 }
 
 interface RuntimeSettingsRef {
+  canSave: boolean
+  statusLabel: string
+  synced: boolean
   saving: boolean
   isDirty: boolean
   saveSettings: () => Promise<boolean>
@@ -36,12 +41,15 @@ interface RuntimeSettingsRef {
 interface AppConfigPanelRef {
   autoSaveLabel: string
   syncScopeDescription: string
+  openGroup: (group: string) => void
 }
 
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const runtimeSettingsRef = ref<RuntimeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
+const contentRef = ref<HTMLElement>()
+const sectionHeadingRef = ref<HTMLElement>()
 const savedRecently = ref(false)
 const departmentSavedRecently = ref(false)
 const ocrSavedRecently = ref(false)
@@ -69,6 +77,24 @@ const {
   handleReload,
   handleReset,
 } = useUnifiedSettings()
+
+async function openSearchResult(result: SettingsSearchResult) {
+  await selectSection(result.section)
+  if (activeSection.value !== result.section) { return }
+
+  if (result.section === 'appearance' && result.anchor) {
+    appConfigRef.value?.openGroup(result.anchor)
+    await nextTick()
+  }
+
+  const anchor = result.anchor
+    ? contentRef.value?.querySelector<HTMLElement>(`[data-settings-search-target="${result.anchor}"]`)
+    : undefined
+  const target = (result.section === 'appearance' ? anchor?.querySelector<HTMLElement>('[role="button"]') : anchor)
+    ?? sectionHeadingRef.value
+  target?.focus({ preventScroll: true })
+  target?.scrollIntoView({ block: 'center', behavior: 'auto' })
+}
 
 function clearSavedFeedback() {
   savedRecently.value = false
@@ -198,6 +224,10 @@ watch(() => ocrSettingsRef.value?.isDirty, (dirty) => {
   }
 })
 
+watch(() => runtimeSettingsRef.value?.synced, (synced) => {
+  if (!synced) { clearRuntimeSavedFeedback() }
+})
+
 watch(() => runtimeSettingsRef.value?.isDirty, (dirty) => {
   if (dirty) {
     clearRuntimeSavedFeedback()
@@ -254,6 +284,7 @@ void shellRef
     <div ref="shellRef" class="settings-workspace-frame">
       <div class="settings-shell">
         <aside class="settings-sidebar">
+          <SettingsSearch @select="openSearchResult" />
           <nav class="settings-nav" aria-label="设置分类">
             <button
               v-for="item in settingsNavItems"
@@ -324,14 +355,14 @@ void shellRef
             <div class="save-status" :class="{ dirty: runtimeSettingsRef?.isDirty }">
               <span class="status-dot" />
               <div>
-                <strong>{{ runtimeSettingsRef?.isDirty ? '运行参数修改待保存' : '运行参数已同步' }}</strong>
+                <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
                 <small>保存后立即生效，不需要重启服务。</small>
               </div>
             </div>
             <el-button
               :type="runtimeSavedRecently ? 'success' : 'primary'"
               :loading="runtimeSettingsRef?.saving"
-              :disabled="!runtimeSettingsRef?.isDirty"
+              :disabled="!runtimeSettingsRef?.canSave"
               @click="handleRuntimeSave"
             >
               <FaIcon
@@ -397,13 +428,15 @@ void shellRef
           </div>
         </aside>
 
-        <main class="settings-content">
+        <main ref="contentRef" class="settings-content">
           <header class="section-header">
             <span class="section-icon" :class="{ danger: activeSection === 'developer' && settings.developerModeEnabled }">
               <FaIcon :name="activeMeta.icon" />
             </span>
             <div>
-              <h3>{{ activeMeta.title }}</h3>
+              <h3 ref="sectionHeadingRef" tabindex="-1">
+                {{ activeMeta.title }}
+              </h3>
               <p>{{ activeMeta.description }}</p>
             </div>
           </header>
@@ -430,3 +463,12 @@ void shellRef
 </template>
 
 <style scoped src="./unified-settings.css"></style>
+
+<style scoped>
+.section-header h3:focus,
+.settings-content :deep([data-settings-search-target]:focus),
+.settings-content :deep([data-settings-search-target] > [role="button"]:focus) {
+  outline: 2px solid var(--mrr-primary);
+  outline-offset: 3px;
+}
+</style>

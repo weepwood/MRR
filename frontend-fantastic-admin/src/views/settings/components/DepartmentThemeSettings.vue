@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { ArchiveDepartmentTheme, ArchiveDepartmentThemeHistory } from '@/utils/archive-department-theme'
 import dayjs from 'dayjs'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
 import { getDepartments } from '@/api/modules/statistics'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import {
   addArchiveDepartmentThemeHistoryToLocal,
   ARCHIVE_DEPARTMENT_THEME_PRESETS,
@@ -63,7 +64,7 @@ function removeDepartmentTheme(id: number) {
 }
 
 function resetToAutomaticThemes() {
-  ElMessageBox.confirm(
+  actionDialog.confirm(
     '恢复自动配色将清空所有已配置的科室颜色，确定继续？',
     '确认恢复',
     { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' },

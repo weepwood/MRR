@@ -9,7 +9,7 @@ import type {
 } from '@/api/modules/oss'
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   CircleX as CircleClose,
   FileText as Document,
@@ -18,7 +18,7 @@ import {
   Upload as UploadFilled,
   CirclePlay as VideoPlay,
 } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
 import {
   cancelMigrationJob,
   createMigrationJob,
@@ -37,6 +37,7 @@ import {
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { useMigrationPolling } from './composables/useMigrationPolling'
 
 defineOptions({ name: 'OssMigrationPage' })
@@ -127,7 +128,16 @@ const jobTotal = ref(0)
 const jobPage = ref(1)
 const jobSize = ref(10)
 const currentJob = ref<MigrationJob>()
+const jobHistoryError = ref(false)
+const jobHistoryPage = ref<number>()
 const jobDetail = ref<MigrationJob>()
+const jobDetailId = ref<number>()
+const jobDetailError = ref(false)
+let historyGeneration = 0
+let detailGeneration = 0
+let jobReadsSuspended = false
+let jobReadsDisposed = false
+let resumeHistory = false
 const jobDrawerVisible = ref(false)
 const logs = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
@@ -136,16 +146,23 @@ const logSize = ref(20)
 const logStatus = ref('')
 const logScanId = ref<number>()
 const selectedLogs = ref<MigrationLogRecord[]>([])
+const retryFeedback = ref<{ type: 'success' | 'warning' | 'error', message: string }>()
+let retryActive = true
+let retryAttempt: { submitted: boolean, cancelled: boolean } | undefined
 const bahInput = ref('')
 const uploadResult = ref<OssUploadBatchResult>()
 const uploadResultVisible = ref(false)
 const autoRefresh = ref(true)
 const lastUpdatedAt = ref<Date>()
-const { startPolling, stopPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
+const pollingActive = ref(true)
+const { startPolling, startOverviewRefresh, stopOverviewRefresh } = useMigrationPolling(
   currentJob,
   refreshAll,
   () => refreshOverview(true),
+  pollingActive,
 )
+
+onDeactivated(() => { pollingActive.value = false })
 
 const loading = reactive({
   page: false,
@@ -403,23 +420,31 @@ function resetRecordFilters() {
 }
 
 async function loadJobs() {
+  if (jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++historyGeneration
+  const requestedPage = jobPage.value
+  const requestedSize = jobSize.value
   loading.jobs = true
+  jobHistoryError.value = false
   try {
-    const response = await getMigrationJobs({ page: jobPage.value, size: jobSize.value })
-    jobs.value = response.data?.list ?? []
-    jobTotal.value = response.data?.total ?? 0
-    const active = jobs.value.find(job => ACTIVE_STATUSES.has(job.status ?? ''))
-    if (active) {
-      currentJob.value = active
-      startPolling()
+    const response = await getMigrationJobs({ page: requestedPage, size: requestedSize })
+    if (generation !== historyGeneration) { return }
+    if (!response.data || !Array.isArray(response.data.list)) {
+      throw new Error('任务列表响应为空')
     }
-    else if (currentJob.value && ACTIVE_STATUSES.has(currentJob.value.status ?? '')) {
-      stopPolling()
-      currentJob.value = undefined
+    jobs.value = response.data.list
+    jobTotal.value = response.data.total ?? 0
+    jobHistoryPage.value = requestedPage
+    // A history page cannot establish whether a global active job exists.
+    // Readiness and the existing job polling own currentJob.
+  }
+  catch {
+    if (generation === historyGeneration) {
+      jobHistoryError.value = true
     }
   }
   finally {
-    loading.jobs = false
+    if (generation === historyGeneration) { loading.jobs = false }
   }
 }
 
@@ -503,7 +528,7 @@ async function handleStartJob() {
   const scopeText = jobForm.folder ? `目录 ${jobForm.folder}` : '全部待迁移记录'
   const countText = jobForm.mode === 'full' ? '当前快照内全部记录' : `最多 ${jobForm.limit} 条`
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `将创建${modeLabel(jobForm.mode)}任务，范围为${scopeText}，处理${countText}。单个文件失败不会阻塞后续记录，是否开始？`,
       '确认创建迁移任务',
       { confirmButtonText: '创建任务', cancelButtonText: '取消', type: 'warning' },
@@ -543,7 +568,7 @@ async function handleCancelJob() {
     return
   }
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       '取消会在当前图片处理完成后停止。已经成功迁移的图片不会回滚，是否继续？',
       '安全取消迁移任务',
       { confirmButtonText: '安全取消', cancelButtonText: '继续运行', type: 'warning' },
@@ -590,7 +615,7 @@ async function handleManualUpload() {
     return
   }
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `将立即手工上传选中的 ${ids.length} 张图片。手工上传只用于小规模验证，是否继续？`,
       '确认手工上传',
       { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'warning' },
@@ -634,54 +659,163 @@ async function handleBahUpload() {
   }
 }
 
+function showRetryFeedback(type: 'success' | 'warning' | 'error', message: string) {
+  retryFeedback.value = { type, message }
+  ElMessage[type](message)
+}
+
+function invalidateRetryAttempt() {
+  retryActive = false
+  if (retryAttempt) {
+    retryAttempt.cancelled = true
+    // An already sent write must remain guarded until its outcome settles.
+    if (!retryAttempt.submitted) {
+      retryAttempt = undefined
+      loading.retry = false
+    }
+  }
+}
+onDeactivated(invalidateRetryAttempt)
+onBeforeUnmount(invalidateRetryAttempt)
+onActivated(() => { retryActive = true })
+
 async function handleRetryFailed() {
-  if (!failedLogScanIds.value.length) {
+  if (!retryActive || loading.retry) { return }
+  if (hasActiveJob.value || loading.logs) {
+    ElMessage.warning('请等待当前任务或日志读取结束后再操作')
+    return
+  }
+  const ids = [...failedLogScanIds.value]
+  if (!ids.length) {
     ElMessage.warning('请在迁移日志中选择永久失败记录')
     return
   }
-  try {
-    await ElMessageBox.confirm(
-      `将把 ${failedLogScanIds.value.length} 条永久失败记录重置为待迁移。请确保已经处理原图、权限或对象冲突，是否继续？`,
-      '确认重置失败记录',
-      { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },
-    )
-  }
-  catch {
+  if (ids.length > 1000 || ids.some(id => !Number.isInteger(id) || id <= 0 || id > 2147483647)) {
+    ElMessage.warning('请选择有效的失败记录，单次最多重置 1000 条')
     return
   }
-
+  const attempt = { submitted: false, cancelled: false }
+  retryAttempt = attempt
   loading.retry = true
+  const isCurrent = () => retryAttempt === attempt && !attempt.cancelled && retryActive
   try {
-    const response = await retryMigrationScans(failedLogScanIds.value)
-    ElMessage.success(`已重置 ${response.data?.updated ?? 0} 条记录，请重新执行试迁移`)
-    await refreshAll()
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '重置失败记录失败'))
+    try {
+      await actionDialog.confirm(
+        `将把本次选中的 ${ids.length} 条永久失败记录重置为待迁移。本次范围已固定，刷新列表不会扩大范围。请确保已经处理原图、权限或对象冲突，是否继续？`,
+        '确认重置失败记录',
+        { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },
+      )
+    }
+    catch { return }
+    if (!isCurrent()) { return }
+    if (hasActiveJob.value || loading.logs) {
+      ElMessage.warning('任务或日志状态已变化，请刷新后重新确认')
+      return
+    }
+    attempt.submitted = true
+    retryFeedback.value = undefined
+    try {
+      const response = await retryMigrationScans(ids)
+      if (!isCurrent()) { return }
+      const updated = response.data?.updated
+      if (typeof updated !== 'number' || !Number.isInteger(updated) || updated < 0 || updated > ids.length) {
+        showRetryFeedback('warning', '未取得有效的重置结果，请刷新日志核对后再操作。不要直接重复提交。')
+      }
+      else if (updated === 0) {
+        showRetryFeedback('warning', `本次 ${ids.length} 条记录均未重置，状态可能已变化，请刷新日志核对。`)
+      }
+      else if (updated < ids.length) {
+        showRetryFeedback('warning', `已重置 ${updated}/${ids.length} 条记录，其余状态可能已变化。请核对后再执行试迁移。`)
+      }
+      else {
+        showRetryFeedback('success', `已重置 ${updated}/${ids.length} 条记录，请重新执行试迁移。`)
+      }
+      await refreshAll()
+    }
+    catch (failure: unknown) {
+      if (!isCurrent()) { return }
+      const status = (failure as { response?: { status?: number } } | null)?.response?.status
+      if (status === 401 || status === 403) {
+        showRetryFeedback('error', '当前会话或权限不允许重置，请检查登录状态与管理权限。')
+      }
+      else {
+        showRetryFeedback('warning', '未确认重置结果，请先刷新日志核对。请求可能已生效，不要直接重复提交。')
+      }
+    }
   }
   finally {
-    loading.retry = false
+    if (retryAttempt === attempt) {
+      retryAttempt = undefined
+      loading.retry = false
+    }
   }
 }
 
 async function showJobDetail(job: MigrationJob) {
-  if (job.id == null) {
-    return
-  }
-  loading.detail = true
+  if (job.id == null || jobReadsSuspended || jobReadsDisposed) { return }
+  jobDetailId.value = job.id
   jobDrawerVisible.value = true
+  await reloadJobDetail()
+}
+
+async function reloadJobDetail() {
+  const id = jobDetailId.value
+  if (id == null || !jobDrawerVisible.value || jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++detailGeneration
+  jobDetail.value = undefined
+  jobDetailError.value = false
+  loading.detail = true
   try {
-    const response = await getMigrationJob(job.id)
-    jobDetail.value = response.data ?? job
+    const response = await getMigrationJob(id)
+    if (generation !== detailGeneration) { return }
+    if (!response.data || response.data.id !== id) {
+      throw new Error('任务详情不匹配')
+    }
+    jobDetail.value = response.data
   }
-  catch (error: unknown) {
-    jobDetail.value = job
-    ElMessage.error(errorMessage(error, '加载任务详情失败'))
+  catch {
+    if (generation === detailGeneration) {
+      jobDetailError.value = true
+    }
   }
   finally {
-    loading.detail = false
+    if (generation === detailGeneration) { loading.detail = false }
   }
 }
+
+function clearJobDetail() {
+  detailGeneration++
+  jobDetailId.value = undefined
+  jobDetail.value = undefined
+  jobDetailError.value = false
+  loading.detail = false
+}
+
+watch(jobDrawerVisible, (visible) => {
+  if (!visible) { clearJobDetail() }
+}, { flush: 'sync' })
+
+onDeactivated(() => {
+  jobReadsSuspended = true
+  resumeHistory = loading.jobs
+  historyGeneration++
+  loading.jobs = false
+  jobDrawerVisible.value = false
+  clearJobDetail()
+})
+onActivated(() => {
+  jobReadsSuspended = false
+  pollingActive.value = true
+  if (resumeHistory) {
+    resumeHistory = false
+    if (!loading.jobs) { void loadJobs() }
+  }
+})
+onBeforeUnmount(() => {
+  jobReadsDisposed = true
+  historyGeneration++
+  clearJobDetail()
+})
 
 function resetLogFilters() {
   logStatus.value = ''
@@ -1137,6 +1271,13 @@ onMounted(() => {
         </div>
       </template>
 
+      <el-alert
+        v-if="jobHistoryError"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="jobHistoryPage == null ? '尚未取得任务历史，请点击刷新任务重试。' : `任务历史读取失败，当前仍显示上次成功读取的第 ${jobHistoryPage} 页。可点击刷新任务重试。`"
+      />
       <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
         <el-table-column prop="id" label="任务" width="80" />
         <el-table-column label="阶段" width="110">
@@ -1189,6 +1330,7 @@ onMounted(() => {
         <el-pagination
           v-model:current-page="jobPage"
           v-model:page-size="jobSize"
+          :disabled="loading.jobs"
           :page-sizes="[10, 20, 50]"
           :total="jobTotal"
           layout="total, sizes, prev, pager, next"
@@ -1207,7 +1349,7 @@ onMounted(() => {
           </div>
           <el-button
             :icon="RotateCcw"
-            :disabled="!failedLogScanIds.length || hasActiveJob"
+            :disabled="!failedLogScanIds.length || hasActiveJob || loading.logs"
             :loading="loading.retry"
             @click="handleRetryFailed"
           >
@@ -1215,6 +1357,14 @@ onMounted(() => {
           </el-button>
         </div>
       </template>
+
+      <el-alert
+        v-if="retryFeedback"
+        :title="retryFeedback.message"
+        :type="retryFeedback.type"
+        :closable="false"
+        show-icon
+      />
 
       <el-form class="log-filter" inline>
         <el-form-item label="结果">
@@ -1344,7 +1494,14 @@ onMounted(() => {
     </el-dialog>
 
     <el-drawer v-model="jobDrawerVisible" title="迁移任务详情" size="460px">
+      <p v-if="jobDetailId != null">
+        当前查看任务 #{{ jobDetailId }}
+      </p>
       <div v-loading="loading.detail">
+        <el-alert v-if="jobDetailError" title="任务详情暂不可用，请重新加载后查看最新状态。" type="warning" :closable="false" show-icon />
+        <el-button v-if="jobDetailError" :loading="loading.detail" @click="reloadJobDetail">
+          重新加载详情
+        </el-button>
         <el-descriptions v-if="jobDetail" :column="1" border>
           <el-descriptions-item label="任务 ID">
             {{ jobDetail.id }}

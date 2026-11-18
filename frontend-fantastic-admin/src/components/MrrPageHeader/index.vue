@@ -50,6 +50,7 @@ const hasAside = computed(() => Boolean(slots.actions))
  */
 .mrr-page-header {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-6);
   align-items: flex-start;
   justify-content: space-between;
@@ -58,6 +59,7 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__main {
   display: flex;
+  flex: 1 1 auto;
   gap: 14px;
   align-items: flex-start;
   min-width: 0;
@@ -79,6 +81,7 @@ const hasAside = computed(() => Boolean(slots.actions))
 
 .mrr-page-header__copy {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mrr-page-header__eyebrow {
@@ -134,6 +137,7 @@ const hasAside = computed(() => Boolean(slots.actions))
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+  max-width: 100%;
   padding-top: 2px;
 }
 

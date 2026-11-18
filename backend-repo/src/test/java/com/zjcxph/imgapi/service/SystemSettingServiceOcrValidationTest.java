@@ -38,7 +38,7 @@ class SystemSettingServiceOcrValidationTest {
     @BeforeEach
     void setUp() {
         service = new SystemSettingServiceImpl(mapper, developerModeService, developerApiAccessService,
-                new SettingRegistry(new LogRetentionProperties()));
+                new SettingRegistry(new LogRetentionProperties()), new com.zjcxph.imgapi.config.ImageProperties());
     }
 
     @Test

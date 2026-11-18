@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.config.ArchiveExportProperties;
+import com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream;
 import com.zjcxph.imgapi.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -99,29 +99,7 @@ public class ArchiveExportTempFileManager {
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING,
                 StandardOpenOption.WRITE);
-        return new FilterOutputStream(delegate) {
-            private long written;
-
-            @Override
-            public void write(int value) throws IOException {
-                ensureCapacity(1);
-                super.write(value);
-                written++;
-            }
-
-            @Override
-            public void write(byte[] bytes, int offset, int length) throws IOException {
-                ensureCapacity(length);
-                out.write(bytes, offset, length);
-                written += length;
-            }
-
-            private void ensureCapacity(int increment) throws IOException {
-                if (increment < 0 || written > properties.getMaxFileBytes() - increment) {
-                    throw new IOException("导出文件超过单文件配额");
-                }
-            }
-        };
+        return new ExportSizeLimitOutputStream(delegate, properties.getMaxFileBytes());
     }
 
     public Path requireManagedFile(String filePath) throws IOException {

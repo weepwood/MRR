@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { RuntimeLogRow } from '@/api/modules/runtime-logs'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getRuntimeLogFiles, getRuntimeLogHealth, getRuntimeLogs, importRuntimeLog } from '@/api/modules/runtime-logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -15,21 +15,29 @@ import { formatDateTime } from '@/utils/display-format'
 const route = useRoute()
 const { auth } = useAuth()
 let queryVersion = 0
+let statusVersion = 0
+let disposed = false
 const loading = ref(false)
 const error = ref('')
+const statusLoading = ref(false)
+const healthError = ref('')
+const filesError = ref('')
 const rows = ref<RuntimeLogRow[]>([])
 const health = ref<Record<string, unknown>>({})
 const files = ref<{ fileName: string, bytes: number }[]>([])
 const selectedFiles = ref<string[]>([])
 const historyRange = ref<[string, string] | null>(null)
 const importing = ref(false)
+const importMessage = ref('')
+const importError = ref('')
 const requestId = ref(String(route.query.requestId || ''))
 const level = ref('')
 const logger = ref('')
 const errorId = ref('')
-const range = ref<[string, string]>([new Date(Date.now() - 86400000).toISOString(), new Date().toISOString()])
+const range = ref<[string, string] | null>([new Date(Date.now() - 86400000).toISOString(), new Date().toISOString()])
 const hasMore = ref(false)
 const cursor = ref<RuntimeLogRow | null>(null)
+let retryCursor: RuntimeLogRow | null = null
 const detail = ref<RuntimeLogRow | null>(null)
 const detailVisible = ref(false)
 function bytes(value: unknown) { return typeof value === 'number' && Number.isFinite(value) ? `${(value / 1024 / 1024).toFixed(1)} MB` : '未知' }
@@ -56,18 +64,27 @@ function currentFilters() { return { from: range.value?.[0], to: range.value?.[1
 const filtersChanged = computed(() => JSON.stringify(appliedFilters.value) !== JSON.stringify(currentFilters()))
 const gap = computed(() => Boolean(health.value.unknownGap) || Number(health.value.invalidLines || 0) > 0)
 
-async function load(reset = true) {
+async function load(reset = true, targetCursor: RuntimeLogRow | null = cursor.value) {
+  if (disposed) { return }
   const version = ++queryVersion
   loading.value = true
   error.value = ''
-  if (reset) { cursor.value = null }
+  const pageCursor = reset ? null : targetCursor
+  retryCursor = pageCursor
   try {
-    if (reset) { appliedFilters.value = currentFilters() }
-    const result = await getRuntimeLogs({ ...appliedFilters.value, cursorTime: cursor.value?.occurred_at, cursorId: cursor.value?.event_id, size: 50 })
+    if (reset) {
+      if (!range.value) {
+        const now = Date.now()
+        range.value = [new Date(now - 86400000).toISOString(), new Date(now).toISOString()]
+      }
+      appliedFilters.value = currentFilters()
+    }
+    const result = await getRuntimeLogs({ ...appliedFilters.value, cursorTime: pageCursor?.occurred_at, cursorId: pageCursor?.event_id, size: 50 })
     if (version !== queryVersion) { return }
     if (!Array.isArray(result.data?.list)) { throw new Error('日志响应格式异常') }
     rows.value = result.data.list
     hasMore.value = result.data?.hasMore || false
+    cursor.value = pageCursor
   }
   catch (exception) {
     if (version === queryVersion) { error.value = exception instanceof Error ? exception.message : '运行日志读取失败' }
@@ -77,22 +94,68 @@ async function load(reset = true) {
   }
 }
 async function refreshHealth() {
-  try {
-    const [status, inventory] = await Promise.all([getRuntimeLogHealth(), getRuntimeLogFiles()])
-    health.value = status.data || {}
-    files.value = inventory.data || []
-  }
-  catch (exception) { error.value = exception instanceof Error ? exception.message : '采集状态读取失败' }
+  if (disposed) { return }
+  const version = ++statusVersion
+  const isCurrent = () => !disposed && version === statusVersion
+  statusLoading.value = true
+  await Promise.all([
+    (async () => {
+      try {
+        const status = await getRuntimeLogHealth()
+        if (!isCurrent()) { return }
+        health.value = status.data || {}
+        healthError.value = ''
+      }
+      catch (exception) {
+        if (isCurrent()) { healthError.value = exception instanceof Error ? exception.message : '请求失败' }
+      }
+    })(),
+    (async () => {
+      try {
+        const inventory = await getRuntimeLogFiles()
+        if (!isCurrent()) { return }
+        if (!Array.isArray(inventory.data)) { throw new Error('文件清单响应格式异常') }
+        files.value = inventory.data
+        filesError.value = ''
+      }
+      catch (exception) {
+        if (isCurrent()) { filesError.value = exception instanceof Error ? exception.message : '请求失败' }
+      }
+    })(),
+  ])
+  if (isCurrent()) { statusLoading.value = false }
 }
 async function importFile() {
-  if (!selectedFiles.value.length) { return }
+  if (disposed || importing.value || statusLoading.value || filesError.value || !selectedFiles.value.length) { return }
+  const selection = [...selectedFiles.value]
   importing.value = true
-  try { for (const name of selectedFiles.value) { await importRuntimeLog(name) } selectedFiles.value = []; await refreshHealth() }
-  catch { ElMessage.error('补录登记失败，请检查所选文件和导入权限') }
-  finally { importing.value = false }
+  importMessage.value = ''
+  importError.value = ''
+  let registered = 0
+  try {
+    for (const name of selection) {
+      await importRuntimeLog(name)
+      if (disposed) { return }
+      registered++
+      selectedFiles.value = selectedFiles.value.filter(file => file !== name)
+    }
+    importMessage.value = `已登记 ${registered} 个文件，后台将按批次处理；登记成功不代表已完成入库`
+    ElMessage.success('补录登记成功')
+  }
+  catch {
+    if (!disposed) { importError.value = `已登记 ${registered} 个文件，剩余 ${selection.length - registered} 个未确认登记；请检查文件和导入权限后重试` }
+  }
+  finally {
+    if (!disposed) { importing.value = false; await refreshHealth() }
+  }
 }
-function next() { cursor.value = rows.value[rows.value.length - 1] || null; void load(false) }
+function next() {
+  if (loading.value || !hasMore.value || !rows.value.length) { return }
+  void load(false, rows.value[rows.value.length - 1]!)
+}
+function retryQuery() { void load(false, retryCursor) }
 function showDetail(row: RuntimeLogRow) { detail.value = row; detailVisible.value = true }
+onScopeDispose(() => { disposed = true; queryVersion++; statusVersion++ })
 onMounted(() => { void load(); void refreshHealth() })
 </script>
 
@@ -100,10 +163,11 @@ onMounted(() => { void load(); void refreshHealth() })
   <div class="page-shell runtime-log-page mrr-content-enter">
     <div class="page-header">
       <div><h2>运行日志</h2><p>通过追踪编号检查已脱敏的后端日志；默认最近24小时，单次范围最多31天。</p></div>
-      <el-button :loading="loading" @click="load()">
+      <el-button :loading="loading" @click="load(false, null)">
         刷新日志
       </el-button>
     </div>
+    <el-alert v-if="healthError" :title="`采集状态读取失败：${healthError}；页面中的采集指标与来源保留上次成功结果，请刷新状态重试`" type="error" :closable="false" show-icon />
     <el-alert v-if="gap" title="日志存在缺口或无法确认完整性，请检查采集状态" type="warning" :closable="false" show-icon />
     <el-alert v-if="health.failureCode || health.status === 'UNAVAILABLE'" title="日志采集暂不可用，业务请求仍保持服务；请检查数据库及磁盘" type="error" :closable="false" show-icon />
     <el-alert v-if="health.auditHmacConfigured === false" title="审计检索密钥尚未配置，编号只会隐藏，无法通过摘要检索；请由管理员配置独立密钥" type="warning" :closable="false" show-icon />
@@ -142,7 +206,7 @@ onMounted(() => { void load(); void refreshHealth() })
         </el-form-item>
       </el-form>
       <el-alert v-if="filtersChanged" title="筛选已修改，点击查询后生效；下一批沿用已提交条件" type="info" :closable="false" />
-      <AppError v-if="error" :message="error" @retry="load()" />
+      <AppError v-if="error" :message="error" @retry="retryQuery" />
       <AppEmpty v-else-if="!loading && !rows.length" description="所选条件下没有已入库的日志；可检查采集延迟或调整时间范围" />
       <div v-else class="results-table">
         <div class="results-heading">
@@ -151,7 +215,7 @@ onMounted(() => { void load(); void refreshHealth() })
             <span>当前批次 {{ rows.length }} 条，每批最多 50 条</span>
           </div>
           <div class="log-pagination">
-            <el-button :disabled="!cursor || loading" @click="load()">
+            <el-button :disabled="!cursor || loading" @click="load(false, null)">
               回到首批
             </el-button>
             <el-button type="primary" plain :disabled="!hasMore || loading" @click="next">
@@ -192,29 +256,32 @@ onMounted(() => { void load(); void refreshHealth() })
             <strong>采集与补录</strong>
             <span>查看来源状态，按需登记服务端历史日志文件</span>
           </div>
-          <el-button :loading="importing" @click="refreshHealth">
+          <el-button :loading="statusLoading" @click="refreshHealth">
             刷新状态
           </el-button>
         </div>
       </template>
+      <el-alert v-if="filesError" :title="`日志文件清单读取失败：${filesError}；文件选择暂不可用，请刷新状态重试`" type="error" :closable="false" show-icon />
       <p class="collector-description">
         长期数据库日志不自动删除。补录仅限服务端日志目录中的文件，后台按批次处理。
       </p>
       <el-form v-if="auth('system:log:import')" inline class="import-form" @submit.prevent="importFile">
         <el-form-item label="轮转日期">
-          <el-date-picker v-model="historyRange" type="daterange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
+          <el-date-picker v-model="historyRange" :disabled="importing" type="daterange" :popper-options="rangePickerPopperOptions" value-format="YYYY-MM-DD" start-placeholder="开始日期" end-placeholder="结束日期" />
         </el-form-item>
         <el-form-item label="历史文件">
-          <el-select v-model="selectedFiles" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" class="runtime-logs-files">
+          <el-select v-model="selectedFiles" :disabled="importing || statusLoading || Boolean(filesError)" multiple :multiple-limit="20" placeholder="选择固定目录中的文件" class="runtime-logs-files">
             <el-option v-for="file in selectableFiles" :key="file.fileName" :label="file.fileName" :value="file.fileName" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button native-type="submit" :loading="importing" :disabled="!selectedFiles.length">
+          <el-button native-type="submit" :loading="importing" :disabled="!selectedFiles.length || statusLoading || Boolean(filesError)">
             登记补录
           </el-button>
         </el-form-item>
       </el-form>
+      <el-alert v-if="importMessage" :title="importMessage" type="success" :closable="false" show-icon />
+      <el-alert v-if="importError" :title="importError" type="error" :closable="false" show-icon />
       <p class="collector-note">
         轮转日期筛选仅匹配文件名日期；每批最多20个文件，每文件解压上限128MB。旧格式正文默认隐藏，保留安全元数据；失败会显示明确缺口。
       </p>

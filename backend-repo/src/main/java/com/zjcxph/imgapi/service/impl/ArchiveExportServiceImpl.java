@@ -10,6 +10,7 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.dto.resp.ArchiveExportSummary;
+import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.ArchiveExportCancelledException;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -17,9 +18,11 @@ import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ScanService;
 import com.zjcxph.imgapi.storage.ImageStorage;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +56,12 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
 
     private final ScanService scanService;
     private final ImageStorage imageStorage;
+    private ArchiveExportProperties exportProperties = new ArchiveExportProperties();
+
+    @Autowired
+    void configureExportLimits(ArchiveExportProperties exportProperties) {
+        this.exportProperties = exportProperties;
+    }
 
     public ArchiveExportServiceImpl(ScanService scanService, ImageStorage imageStorage) {
         this.scanService = scanService;
@@ -119,7 +128,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
         int completed = 0;
 
-        try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
+        try (ZipOutputStream zip = new ZipOutputStream(new ExportSizeLimitOutputStream(outputStream, exportProperties.getMaxFileBytes()))) {
             for (PathDO item : export.items()) {
                 ensureNotCancelled(effectiveProgress);
                 String entryName = uniqueEntryName(item, usedEntryNames);
@@ -157,7 +166,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         validateExportArguments(export, outputStream);
         ExportProgress effectiveProgress = progress == null ? ExportProgress.NONE : progress;
 
-        try (PdfDocument pdf = new PdfDocument(new PdfWriter(outputStream))) {
+        try (PdfDocument pdf = new PdfDocument(new PdfWriter(new ExportSizeLimitOutputStream(outputStream, exportProperties.getMaxFileBytes())))) {
             int written = 0;
             for (PathDO item : export.items()) {
                 ensureNotCancelled(effectiveProgress);

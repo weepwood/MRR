@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessageBox } from 'element-plus'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { createExternalLinkId, normalizeExternalLinkUrl } from '@/utils/external-links'
 import { notify } from '@/utils/notification'
 
@@ -71,7 +71,7 @@ function addExternalLink() {
 
 async function removeExternalLink(index: number, title: string) {
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `确定从“其他”菜单中移除“${title}”吗？`,
       '移除外部链接',
       {
@@ -108,7 +108,9 @@ function openExternalLink(url: string) {
           <FaIcon name="i-lucide:circle-plus" />
         </div>
         <div>
-          <h4>添加外部网站</h4>
+          <h4 data-settings-search-target="add-external-link" tabindex="-1">
+            添加外部网站
+          </h4>
           <p>添加后会出现在单栏左侧导航的“其他”一级菜单中，并在新标签页打开。</p>
         </div>
       </header>

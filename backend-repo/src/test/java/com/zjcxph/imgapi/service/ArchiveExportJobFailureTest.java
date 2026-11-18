@@ -3,10 +3,13 @@ package com.zjcxph.imgapi.service;
 import com.zjcxph.imgapi.config.ArchiveExportProperties;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.ArchiveExportJob;
+import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.repository.ArchiveExportJobRepository;
 import com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +27,70 @@ import static org.mockito.Mockito.*;
 
 class ArchiveExportJobFailureTest {
     @TempDir Path directory;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ZIP", "PDF"})
+    void actualOutputLimitHasAnActionableSafeFailureAndCleansPartialOutput(String format) throws Exception {
+        var properties = new ArchiveExportProperties();
+        properties.setTempDirectory(directory.toString());
+        properties.setMaxFileBytes(10);
+        var files = new ArchiveExportTempFileManager(properties);
+        files.initialize();
+        var repository = mock(ArchiveExportJobRepository.class);
+        var exporter = mock(ArchiveExportService.class);
+        var job = cancellableJob("PENDING");
+        job.setFormat(format);
+        job.setScope("WHOLE_ARCHIVE"); job.setBah("123"); job.setSjh("");
+        var image = new PathDO("synthetic", "page.jpg", "1", "123");
+        image.setFileSize(1L);
+        when(exporter.prepareArchive("123", "")).thenReturn(new ArchiveExportService.BatchZipExport(List.of(image)));
+        when(repository.findById(job.getId())).thenReturn(Optional.of(job));
+        when(repository.markProcessing(eq(job.getId()), any(), any(), any())).thenReturn(1);
+        when(repository.updatePlan(eq(job.getId()), anyInt(), anyLong(), any())).thenReturn(1);
+        when(repository.setOutputFile(eq(job.getId()), anyString())).thenAnswer(call -> {
+            job.setFilePath(call.getArgument(1)); return 1;
+        });
+        when(repository.markFailed(eq(job.getId()), anyString(), any())).thenAnswer(call -> {
+            job.setStatus("FAILED"); return 1;
+        });
+        doAnswer(call -> { call.<java.io.OutputStream>getArgument(1).write(new byte[11]); return null; })
+                .when(exporter).writeBatchZip(any(), any(), any());
+        doAnswer(call -> {
+            try { call.<java.io.OutputStream>getArgument(1).write(new byte[11]); }
+            catch (java.io.IOException failure) { throw new java.io.IOException("synthetic-private-detail", new RuntimeException(failure)); }
+            return null;
+        }).when(exporter).writeBatchPdf(any(), any(), any());
+        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
+
+        ReflectionTestUtils.invokeMethod(service, "runJob", job.getId());
+
+        verify(repository).markFailed(eq(job.getId()), contains("分批"), any());
+        verify(repository, never()).markSuccess(anyString(), anyLong(), anyString(), any());
+        assertThat(Path.of(job.getFilePath())).doesNotExist();
+    }
+
+    @Test
+    void aLargerWorkerPlanKeepsQuotaFailureActionableAndDoesNotOpenOutput() throws Exception {
+        var properties = new ArchiveExportProperties();
+        properties.setTempDirectory(directory.toString());
+        properties.setMaxFileBytes(10);
+        var files = spy(new ArchiveExportTempFileManager(properties));
+        files.initialize();
+        var repository = mock(ArchiveExportJobRepository.class);
+        var exporter = mock(ArchiveExportService.class);
+        var job = cancellableJob("PENDING");
+        job.setScope("WHOLE_ARCHIVE"); job.setBah("123"); job.setSjh("");
+        var image = new PathDO("synthetic", "page.jpg", "1", "123");
+        image.setFileSize(11L);
+        when(exporter.prepareArchive("123", "")).thenReturn(new ArchiveExportService.BatchZipExport(List.of(image)));
+        when(repository.findById(job.getId())).thenReturn(Optional.of(job));
+        when(repository.markProcessing(eq(job.getId()), any(), any(), any())).thenReturn(1);
+        when(repository.updatePlan(eq(job.getId()), anyInt(), anyLong(), any())).thenReturn(1);
+        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
+        ReflectionTestUtils.invokeMethod(service, "runJob", job.getId());
+        verify(repository).markFailed(eq(job.getId()), contains("分批"), any());
+        verify(files, never()).openOutput(any());
+    }
 
     @Test
     void cancellationBetweenReadAndClaimDoesNotRetainAWorkerFlag() {

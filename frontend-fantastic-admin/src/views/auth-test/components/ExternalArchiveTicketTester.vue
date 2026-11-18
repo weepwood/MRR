@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 import { Copy as CopyDocument, WandSparkles as MagicStick, Send as Promotion, RefreshCw as Refresh, Settings as Setting } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import {
   createExternalArchiveSignature,
@@ -549,9 +550,10 @@ onMounted(() => {
             <strong>{{ item.label }}</strong>
             <span>{{ item.detail }}</span>
           </div>
-          <el-tag :type="item.ok ? 'success' : 'danger'" effect="plain">
-            {{ item.ok ? '通过' : '待处理' }}
-          </el-tag>
+          <MrrStatusTag
+            :status="item.ok ? 'success' : '待处理'"
+            :label="item.ok ? '通过' : '待处理'"
+          />
         </div>
       </div>
 
@@ -873,13 +875,13 @@ onMounted(() => {
 .config-header strong,
 .config-header span,
 .check-item strong,
-.check-item span {
+.check-item > div > span {
   display: block;
 }
 
 .card-header span,
 .config-header span,
-.check-item span,
+.check-item > div > span,
 .response-summary span,
 .status-meta {
   font-size: 13px;

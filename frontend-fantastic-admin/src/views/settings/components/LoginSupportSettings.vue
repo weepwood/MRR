@@ -9,7 +9,7 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
   <section class="setting-section">
     <div class="setting-group">
       <div class="group-heading">
-        <strong>登录页展示</strong>
+        <strong data-settings-search-target="login-copy" tabindex="-1">登录页展示</strong>
         <p>安全字段、登录按钮和认证错误保持固定，只允许修改展示性内容。</p>
       </div>
       <div class="control-grid">
@@ -49,7 +49,7 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 
     <div class="setting-group">
       <div class="group-heading">
-        <strong>系统管理员与技术支持</strong>
+        <strong data-settings-search-target="support-contact" tabindex="-1">系统管理员与技术支持</strong>
         <p>优先填写信息科或运维组的值班联系方式，不建议公开个人手机号。</p>
       </div>
       <div class="switch-list">

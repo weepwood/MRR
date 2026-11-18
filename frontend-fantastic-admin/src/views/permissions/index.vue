@@ -14,7 +14,6 @@ const loading = ref(false)
 const saving = ref(false)
 const roles = ref<AuthRole[]>([])
 const editingCode = ref<string | null>(null)
-const viewMode = ref<'cards' | 'matrix'>('cards')
 const defMap = new Map(permissionDefs.map(def => [def.value, def]))
 const editForm = reactive({
   name: '',
@@ -218,173 +217,172 @@ onMounted(loadPermissions)
           按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。
         </p>
       </div>
-      <div class="header-actions">
-        <el-segmented
-          v-model="viewMode"
-          aria-label="权限展示方式"
-          :options="[{ label: '按角色查看', value: 'cards' }, { label: '按权限对比', value: 'matrix' }]"
-        />
-      </div>
     </header>
 
     <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
 
-    <el-card v-if="viewMode === 'matrix' && sortedRoles.length" shadow="never" class="matrix-card">
-      <el-table v-loading="loading" :data="permissionDefs" stripe border>
-        <el-table-column label="权限" min-width="230" fixed>
-          <template #default="{ row }">
-            <div class="matrix-permission">
-              <strong>{{ row.shortLabel }}</strong>
-              <span>{{ row.value }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-for="role in sortedRoles"
-          :key="role.code"
-          :label="role.name || role.code!"
-          min-width="120"
-          align="center"
-        >
-          <template #default="{ row }">
-            <span
-              class="matrix-dot"
-              :class="roleHasPermission(role, row.value)"
-              :title="roleHasPermission(role, row.value) === 'direct' ? '直接授权' : roleHasPermission(role, row.value) === 'inherited' ? '继承获得' : '无权限'"
+    <div v-else v-loading="loading" class="permission-views">
+      <section class="permission-section">
+        <div class="roles-grid">
+          <el-card
+            v-for="role in sortedRoles"
+            :key="role.code"
+            shadow="never"
+            class="role-card"
+            :class="{ admin: isAdminRole(role.code) }"
+          >
+            <template v-if="editingCode !== role.code">
+              <div class="role-header">
+                <div>
+                  <div class="role-name-row">
+                    <strong>{{ role.name || role.code }}</strong>
+                    <span class="permission-count">{{ rolePermCount(role) }} 项权限</span>
+                    <el-tag size="small" effect="plain">
+                      {{ role.code }}
+                    </el-tag>
+                    <el-tooltip
+                      v-if="isAdminRole(role.code)"
+                      content="管理员自动拥有全部权限，不可修改。"
+                      placement="top"
+                      :show-after="200"
+                    >
+                      <button type="button" class="info-trigger" aria-label="管理员权限说明">
+                        <el-icon><InfoFilled /></el-icon>
+                      </button>
+                    </el-tooltip>
+                  </div>
+                </div>
+                <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
+                  编辑
+                </el-button>
+              </div>
+              <p v-if="role.description" class="role-description">
+                {{ role.description }}
+              </p>
+              <div class="permission-groups">
+                <section v-for="[category, defs] in permsByCategory(viewDirectPermsFor(role))" :key="category">
+                  <span class="category-label">{{ category }}</span>
+                  <div class="permission-tags">
+                    <el-tooltip
+                      v-for="def in defs"
+                      :key="def.value"
+                      :content="def.label + (def.children.length ? `；继承 ${getAllChildren(def.value).map(permLabel).join('、')}` : '')"
+                    >
+                      <el-tag size="small" :type="def.children.length ? 'primary' : 'info'">
+                        {{ def.shortLabel }}
+                      </el-tag>
+                    </el-tooltip>
+                  </div>
+                </section>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="role-edit-form">
+                <div class="role-header">
+                  <div class="edit-fields">
+                    <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
+                    <el-tag size="small" effect="plain">
+                      {{ role.code }}
+                    </el-tag>
+                  </div>
+                </div>
+                <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
+
+                <div class="edit-section">
+                  <span class="category-label">直接权限</span>
+                  <div class="permission-tags">
+                    <el-tag
+                      v-for="permission in editDirectPerms"
+                      :key="permission"
+                      size="small"
+                      closable
+                      @close="removePermission(permission)"
+                    >
+                      {{ permLabel(permission) }}
+                    </el-tag>
+                    <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
+                  </div>
+                </div>
+
+                <div v-if="editInheritedPerms.length" class="edit-section">
+                  <span class="category-label">继承权限</span>
+                  <div class="permission-tags">
+                    <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
+                      {{ permLabel(permission) }}
+                    </el-tag>
+                  </div>
+                </div>
+
+                <el-select
+                  class="permission-select"
+                  placeholder="搜索或选择要添加的权限"
+                  filterable
+                  model-value=""
+                  @change="addPermission"
+                >
+                  <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
+                    <el-option
+                      v-for="option in group.options"
+                      :key="option.value"
+                      :value="option.value"
+                      :disabled="isImpliedBy(option.value)"
+                      :label="`${option.shortLabel} · ${option.value}`"
+                    />
+                  </el-option-group>
+                </el-select>
+
+                <div class="edit-actions">
+                  <el-button size="small" @click="cancelEdit">
+                    取消
+                  </el-button>
+                  <el-button size="small" type="primary" :loading="saving" @click="saveEdit(role.code!)">
+                    保存
+                  </el-button>
+                </div>
+              </div>
+            </template>
+          </el-card>
+        </div>
+      </section>
+
+      <section class="permission-section">
+        <el-card shadow="never" class="matrix-card">
+          <el-table :data="permissionDefs" stripe border>
+            <el-table-column label="权限" min-width="230" fixed>
+              <template #default="{ row }">
+                <div class="matrix-permission">
+                  <strong>{{ row.shortLabel }}</strong>
+                  <span>{{ row.value }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column
+              v-for="role in sortedRoles"
+              :key="role.code"
+              :label="role.name || role.code!"
+              min-width="120"
+              align="center"
             >
-              <span v-if="roleHasPermission(role, row.value) === 'direct'">✓</span>
-              <span v-else-if="roleHasPermission(role, row.value) === 'inherited'">•</span>
-            </span>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="matrix-legend">
-        <span><i class="legend direct" />直接授权</span>
-        <span><i class="legend inherited" />继承获得</span>
-        <span><i class="legend none" />无权限</span>
-      </div>
-    </el-card>
-
-    <div v-else v-loading="loading" class="roles-grid">
-      <el-card
-        v-for="role in sortedRoles"
-        :key="role.code"
-        shadow="never"
-        class="role-card"
-        :class="{ admin: isAdminRole(role.code) }"
-      >
-        <template v-if="editingCode !== role.code">
-          <div class="role-header">
-            <div>
-              <div class="role-name-row">
-                <strong>{{ role.name || role.code }}</strong>
-                <span class="permission-count">{{ rolePermCount(role) }} 项权限</span>
-                <el-tag size="small" effect="plain">
-                  {{ role.code }}
-                </el-tag>
-                <el-tooltip
-                  v-if="isAdminRole(role.code)"
-                  content="管理员自动拥有全部权限，不可修改。"
-                  placement="top"
-                  :show-after="200"
+              <template #default="{ row }">
+                <span
+                  class="matrix-dot"
+                  :class="roleHasPermission(role, row.value)"
+                  :title="roleHasPermission(role, row.value) === 'direct' ? '直接授权' : roleHasPermission(role, row.value) === 'inherited' ? '继承获得' : '无权限'"
                 >
-                  <button type="button" class="info-trigger" aria-label="管理员权限说明">
-                    <el-icon><InfoFilled /></el-icon>
-                  </button>
-                </el-tooltip>
-              </div>
-            </div>
-            <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
-              编辑
-            </el-button>
+                  <span v-if="roleHasPermission(role, row.value) === 'direct'">✓</span>
+                  <span v-else-if="roleHasPermission(role, row.value) === 'inherited'">•</span>
+                </span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="matrix-legend">
+            <span><i class="legend direct" />直接授权</span>
+            <span><i class="legend inherited" />继承获得</span>
+            <span><i class="legend none" />无权限</span>
           </div>
-          <p v-if="role.description" class="role-description">
-            {{ role.description }}
-          </p>
-          <div class="permission-groups">
-            <section v-for="[category, defs] in permsByCategory(viewDirectPermsFor(role))" :key="category">
-              <span class="category-label">{{ category }}</span>
-              <div class="permission-tags">
-                <el-tooltip
-                  v-for="def in defs"
-                  :key="def.value"
-                  :content="def.label + (def.children.length ? `；继承 ${getAllChildren(def.value).map(permLabel).join('、')}` : '')"
-                >
-                  <el-tag size="small" :type="def.children.length ? 'primary' : 'info'">
-                    {{ def.shortLabel }}
-                  </el-tag>
-                </el-tooltip>
-              </div>
-            </section>
-          </div>
-        </template>
-
-        <template v-else>
-          <div class="role-edit-form">
-            <div class="role-header">
-              <div class="edit-fields">
-                <el-input v-model="editForm.name" size="small" placeholder="角色名称" />
-                <el-tag size="small" effect="plain">
-                  {{ role.code }}
-                </el-tag>
-              </div>
-            </div>
-            <el-input v-model="editForm.description" size="small" placeholder="角色描述" />
-
-            <div class="edit-section">
-              <span class="category-label">直接权限</span>
-              <div class="permission-tags">
-                <el-tag
-                  v-for="permission in editDirectPerms"
-                  :key="permission"
-                  size="small"
-                  closable
-                  @close="removePermission(permission)"
-                >
-                  {{ permLabel(permission) }}
-                </el-tag>
-                <span v-if="!editDirectPerms.length" class="empty-text">暂无直接权限</span>
-              </div>
-            </div>
-
-            <div v-if="editInheritedPerms.length" class="edit-section">
-              <span class="category-label">继承权限</span>
-              <div class="permission-tags">
-                <el-tag v-for="permission in editInheritedPerms" :key="permission" size="small" type="info" effect="plain">
-                  {{ permLabel(permission) }}
-                </el-tag>
-              </div>
-            </div>
-
-            <el-select
-              class="permission-select"
-              placeholder="搜索或选择要添加的权限"
-              filterable
-              model-value=""
-              @change="addPermission"
-            >
-              <el-option-group v-for="group in groupedOptions" :key="group.label" :label="group.label">
-                <el-option
-                  v-for="option in group.options"
-                  :key="option.value"
-                  :value="option.value"
-                  :disabled="isImpliedBy(option.value)"
-                  :label="`${option.shortLabel} · ${option.value}`"
-                />
-              </el-option-group>
-            </el-select>
-
-            <div class="edit-actions">
-              <el-button size="small" @click="cancelEdit">
-                取消
-              </el-button>
-              <el-button size="small" type="primary" :loading="saving" @click="saveEdit(role.code!)">
-                保存
-              </el-button>
-            </div>
-          </div>
-        </template>
-      </el-card>
+        </el-card>
+      </section>
     </div>
   </div>
 </template>
@@ -413,7 +411,6 @@ onMounted(loadPermissions)
 
 .info-trigger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 
-.header-actions,
 .role-header,
 .role-name-row,
 .permission-tags,
@@ -421,7 +418,6 @@ onMounted(loadPermissions)
 .matrix-legend span,
 .edit-fields { display: flex; align-items: center; }
 
-.header-actions,
 .role-name-row,
 .permission-tags,
 .matrix-legend,
@@ -433,6 +429,10 @@ h2 { margin: 0; font-size: 28px; }
 
 .subtitle,
 .role-description { margin: 8px 0 0; color: var(--text-secondary); }
+
+.permission-views { display: grid; gap: 24px; min-width: 0; }
+
+.permission-section { min-width: 0; }
 
 .roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; align-items: start; }
 
@@ -493,6 +493,17 @@ h2 { margin: 0; font-size: 28px; }
 .matrix-card :deep(.el-table),
 .matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-card); }
 
+.matrix-card :deep(.el-table) {
+  box-sizing: border-box;
+  border-block: 1px solid var(--mrr-border);
+}
+
+.matrix-card :deep(.el-table--border > .el-table__inner-wrapper::before),
+.matrix-card :deep(.el-table--border > .el-table__inner-wrapper::after) { display: none; }
+
+.matrix-card :deep(.el-table__body-wrapper tr:last-child > td.el-table__cell),
+.matrix-card :deep(.el-table__fixed-body-wrapper tr:last-child > td.el-table__cell) { border-bottom: 0; }
+
 .matrix-card :deep(.el-table td.el-table__cell) { padding-block: 4px; }
 
 .matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--mrr-radius-md); }
@@ -515,8 +526,6 @@ h2 { margin: 0; font-size: 28px; }
 
 @media (max-width: 760px) {
   .page-header { flex-direction: column; }
-
-  .header-actions { justify-content: space-between; width: 100%; }
 
   .roles-grid { grid-template-columns: 1fr; }
 }

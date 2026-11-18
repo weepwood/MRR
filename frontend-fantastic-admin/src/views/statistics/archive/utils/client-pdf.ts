@@ -1,3 +1,5 @@
+import { requireArchiveExportSize } from '@/utils/archive-export-budget'
+
 export interface ClientPdfImage {
   blob: Blob
   width: number
@@ -116,11 +118,12 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   }
 
   const objectCount = 2 + images.length * 3
-  const offsets = new Array<number>(objectCount + 1).fill(0)
+  const offsets = Array.from<number>({ length: objectCount + 1 }).fill(0)
   const parts: BlobPart[] = []
   let byteLength = 0
 
   const appendBytes = (bytes: Uint8Array) => {
+    requireArchiveExportSize(byteLength + bytes.byteLength)
     const copy = new Uint8Array(bytes.byteLength)
     copy.set(bytes)
     parts.push(copy.buffer)
@@ -128,6 +131,7 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   }
   const appendText = (text: string) => appendBytes(encodeText(text))
   const appendBlob = (blob: Blob) => {
+    requireArchiveExportSize(byteLength + blob.size)
     parts.push(blob)
     byteLength += blob.size
   }
@@ -138,8 +142,21 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
   const endObject = () => appendText('endobj\n')
 
   appendBytes(new Uint8Array([
-    0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A,
-    0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A,
+    0x25,
+    0x50,
+    0x44,
+    0x46,
+    0x2D,
+    0x31,
+    0x2E,
+    0x34,
+    0x0A,
+    0x25,
+    0xE2,
+    0xE3,
+    0xCF,
+    0xD3,
+    0x0A,
   ]))
 
   beginObject(1)
@@ -200,9 +217,13 @@ export async function createPdfFromImageUrls(
   onProgress?: (completed: number, total: number) => void,
 ): Promise<Blob> {
   const preparedImages: ClientPdfImage[] = []
+  let preparedBytes = 0
   for (let index = 0; index < imageUrls.length; index += 1) {
     const imageBlob = await fetchImageBlob(imageUrls[index])
-    preparedImages.push(await convertToJpeg(imageBlob))
+    const image = await convertToJpeg(imageBlob)
+    preparedBytes += image.blob.size
+    requireArchiveExportSize(preparedBytes)
+    preparedImages.push(image)
     onProgress?.(index + 1, imageUrls.length)
   }
   return buildPdfBlob(preparedImages)

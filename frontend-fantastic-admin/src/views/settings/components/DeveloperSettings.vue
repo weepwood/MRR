@@ -15,7 +15,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
     <div class="setting-row">
       <div>
-        <strong>兼容旧版影像档案袋调用</strong>
+        <strong data-settings-search-target="legacy-archive" tabindex="-1">兼容旧版影像档案袋调用</strong>
         <p>允许白名单中的旧系统无 Token 读取影像档案袋；不会开放其他后台接口。</p>
       </div>
       <el-switch v-model="settings.developerModeEnabled" inline-prompt active-text="启用" inactive-text="关闭" />
@@ -23,7 +23,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
     <div class="setting-row danger-row">
       <div>
-        <strong>登录后跳过 API 业务权限</strong>
+        <strong data-settings-search-target="developer-api" tabindex="-1">登录后跳过 API 业务权限</strong>
         <p>白名单来源中的已登录用户可调用受保护 API；仍需有效账号和 Token，审计记录继续使用真实用户身份。</p>
       </div>
       <el-switch
@@ -46,7 +46,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
     <div class="trusted-sources-card">
       <div class="trusted-sources-heading">
         <div>
-          <strong>允许访问的客户端 IP / 网段</strong>
+          <strong data-settings-search-target="trusted-sources" tabindex="-1">允许访问的客户端 IP / 网段</strong>
           <p>请求必须先经过本机 Nginx。后端只在确认代理来源可信后，才读取 X-Forwarded-For 或 X-Real-IP。</p>
         </div>
         <el-tag type="info" effect="plain">

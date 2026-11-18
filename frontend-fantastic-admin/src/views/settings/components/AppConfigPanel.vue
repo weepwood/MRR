@@ -66,7 +66,11 @@ const syncScopeDescription = computed(() => {
   }
 })
 
-defineExpose({ autoSaveLabel, syncScopeDescription })
+function openGroup(group: string) {
+  activeGroup.value = group
+}
+
+defineExpose({ autoSaveLabel, syncScopeDescription, openGroup })
 
 onBeforeUnmount(() => {
   if (autoSaveTimer) {
@@ -155,7 +159,7 @@ function handleReset() {
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
     <el-collapse v-model="activeGroup" accordion class="config-groups">
-      <el-collapse-item name="theme">
+      <el-collapse-item name="theme" data-settings-search-target="theme">
         <template #title>
           <div class="collapse-title">
             <span class="collapse-icon"><FaIcon name="i-lucide:paintbrush" /></span>
@@ -228,7 +232,7 @@ function handleReset() {
         </div>
       </el-collapse-item>
 
-      <el-collapse-item name="navigation">
+      <el-collapse-item name="navigation" data-settings-search-target="navigation">
         <template #title>
           <div class="collapse-title">
             <span class="collapse-icon"><FaIcon name="i-lucide:menu" /></span>
@@ -342,7 +346,7 @@ function handleReset() {
         </div>
       </el-collapse-item>
 
-      <el-collapse-item name="workspace">
+      <el-collapse-item name="workspace" data-settings-search-target="workspace">
         <template #title>
           <div class="collapse-title">
             <span class="collapse-icon"><FaIcon name="i-lucide:layout-dashboard" /></span>
@@ -447,7 +451,7 @@ function handleReset() {
         </div>
       </el-collapse-item>
 
-      <el-collapse-item name="other">
+      <el-collapse-item name="other" data-settings-search-target="other">
         <template #title>
           <div class="collapse-title">
             <span class="collapse-icon"><FaIcon name="i-lucide:ellipsis" /></span>

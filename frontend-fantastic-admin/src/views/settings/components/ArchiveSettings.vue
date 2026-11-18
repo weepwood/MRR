@@ -9,14 +9,14 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
   <section class="setting-section">
     <div class="setting-group">
       <div class="group-heading">
-        <strong>默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p>
+        <strong data-settings-search-target="image-source" tabindex="-1">默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p>
       </div>
       <el-segmented v-model="settings.imageSource" :options="[{ label: '本地图片', value: 'local' }, { label: 'OSS 图片', value: 'oss' }]" class="full-width" />
       <el-alert class="image-source-hint" type="info" :closable="false" show-icon :title="settings.imageSource === 'local' ? '默认从本地图片服务器读取。' : '优先从 OSS 读取；签名失败时自动回退本地图片。'" />
     </div>
     <div class="setting-group">
       <div class="group-heading">
-        <strong>默认浏览方式</strong><p>进入影像档案袋时自动应用。</p>
+        <strong data-settings-search-target="archive-view" tabindex="-1">默认浏览方式</strong><p>进入影像档案袋时自动应用。</p>
       </div>
       <div class="control-grid">
         <el-form-item label="影像列表">
@@ -47,10 +47,10 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
     <ImageDirectoryRoutingSettings />
     <div class="switch-list">
       <div class="switch-row">
-        <div><strong>自动适应预览区域</strong><p>完整显示图片；关闭后按原始尺寸浏览。</p></div><el-switch v-model="settings.archiveAutoFit" />
+        <div><strong data-settings-search-target="archive-auto-fit" tabindex="-1">自动适应预览区域</strong><p>完整显示图片；关闭后按原始尺寸浏览。</p></div><el-switch v-model="settings.archiveAutoFit" />
       </div>
       <div class="switch-row">
-        <div><strong>记住选择状态</strong><p>再次进入同一档案时恢复已选影像页。</p></div><el-switch v-model="settings.archiveRememberSelection" />
+        <div><strong data-settings-search-target="archive-selection" tabindex="-1">记住选择状态</strong><p>再次进入同一档案时恢复已选影像页。</p></div><el-switch v-model="settings.archiveRememberSelection" />
       </div>
     </div>
   </section>

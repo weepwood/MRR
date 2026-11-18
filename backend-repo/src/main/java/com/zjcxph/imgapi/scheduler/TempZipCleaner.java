@@ -44,7 +44,8 @@ public class TempZipCleaner {
                     // 只删除超过一天的文件
                     if (Duration.between(fileLastModifiedTime, now).compareTo(FILE_AGE_LIMIT) > 0) {
                         Files.deleteIfExists(filePath);
-                        logger.warn("删除临时文件: " + file.getName());
+                        // 用模板而不是字符串拼接：参数不会进入日志正文，文件名里的编号无需依赖脱敏兜底。
+                        logger.warn("删除临时文件: {}", file.getName());
                     }
                 } catch (Exception e) {
                     // 处理可能发生的异常，比如权限问题等

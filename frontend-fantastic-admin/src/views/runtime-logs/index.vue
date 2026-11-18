@@ -10,7 +10,7 @@ import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
-import { formatDateTime } from '@/utils/display-format'
+import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 
 const route = useRoute()
 const { auth } = useAuth()
@@ -155,6 +155,20 @@ function next() {
 }
 function retryQuery() { void load(false, retryCursor) }
 function showDetail(row: RuntimeLogRow) { detail.value = row; detailVisible.value = true }
+function detailText(row: RuntimeLogRow | null) {
+  return [row?.message_summary ?? '', row?.stack_trace ?? ''].filter(Boolean).join('\n')
+}
+async function copyDetail() {
+  const text = detailText(detail.value).trim()
+  if (!text) { return }
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('日志正文已复制')
+  }
+  catch {
+    ElMessage.error('复制失败，请手动选择文本')
+  }
+}
 onScopeDispose(() => { disposed = true; queryVersion++; statusVersion++ })
 onMounted(() => { void load(); void refreshHealth() })
 </script>
@@ -162,7 +176,7 @@ onMounted(() => { void load(); void refreshHealth() })
 <template>
   <div class="page-shell runtime-log-page mrr-content-enter">
     <div class="page-header">
-      <div><h2>运行日志</h2><p>通过追踪编号检查已脱敏的后端日志；默认最近24小时，单次范围最多31天。</p></div>
+      <div><h2>运行日志</h2><p>通过追踪编号检查后端日志；正文保留原始模板，只抹除编号、令牌、连接串与路径，默认最近24小时，单次范围最多31天。</p></div>
       <el-button :loading="loading" @click="load(false, null)">
         刷新日志
       </el-button>
@@ -238,7 +252,14 @@ onMounted(() => { void load(); void refreshHealth() })
           </el-table-column>
           <el-table-column prop="logger_name" label="模块" min-width="200" show-overflow-tooltip />
           <el-table-column prop="request_id" label="追踪编号" min-width="170" show-overflow-tooltip />
-          <el-table-column prop="message_summary" label="摘要" min-width="240" show-overflow-tooltip />
+          <el-table-column label="正文" min-width="240" show-overflow-tooltip>
+            <template #default="scope">
+              <el-tag v-if="isRedactedLogText(scope.row.message_summary)" size="small" effect="plain" type="info">
+                旧记录正文未保存
+              </el-tag>
+              <span v-else>{{ (scope.row as RuntimeLogRow).message_summary || '—' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="90" align="center">
             <template #default="scope">
               <el-button link type="primary" @click="showDetail(scope.row as RuntimeLogRow)">
@@ -299,7 +320,20 @@ onMounted(() => { void load(); void refreshHealth() })
       </el-collapse>
     </el-card>
     <el-drawer v-model="detailVisible" title="日志详情" size="min(760px, 92vw)">
-      <pre class="log-detail" v-text="`${detail?.message_summary ?? ''}\n${detail?.stack_trace ?? ''}`" />
+      <div class="detail-toolbar">
+        <el-tag v-if="detail" size="small" effect="light" :type="levelType(detail.level)">
+          {{ detail.level }}
+        </el-tag>
+        <span class="detail-meta">{{ formatDateTime(detail?.occurred_at) }} · {{ detail?.logger_name || '未知模块' }}</span>
+        <el-button link type="primary" :disabled="!detailText(detail)" @click="copyDetail">
+          复制正文
+        </el-button>
+      </div>
+      <el-alert
+        v-if="isRedactedLogText(detail?.message_summary)" type="info" :closable="false" show-icon
+        title="该记录写入时正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的日志会保留模板正文。"
+      />
+      <pre class="log-detail" v-text="detailText(detail) || '该事件没有正文。'" />
     </el-drawer>
   </div>
 </template>
@@ -338,6 +372,8 @@ onMounted(() => { void load(); void refreshHealth() })
 .import-form :deep(.el-form-item) { margin-bottom: 12px; }
 .collector-note { margin: 4px 0 16px; font-size: 12px; line-height: 1.6; color: var(--el-text-color-secondary); }
 .log-detail { max-height: 440px; overflow: auto; font-family: Consolas, monospace; overflow-wrap: anywhere; white-space: pre-wrap; }
+.detail-toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.detail-meta { font-size: 12px; line-height: 1.5; color: var(--el-text-color-secondary); overflow-wrap: anywhere; }
 
 @media (max-width: 1080px) {
   .filter-form { grid-template-columns: repeat(6, minmax(0, 1fr)); }

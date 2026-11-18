@@ -59,6 +59,24 @@ class LogServiceImplTest {
             assertThat(logService.getLogById(1L)).isSameAs(log);
             assertThat(logService.getLogById(2L)).isNull();
         }
+
+        @Test
+        @DisplayName("getLogById — 只放行异常类名，历史完整异常正文仍隐藏")
+        void getLogById_keepsExceptionClassNameOnly() {
+            Log className = new Log();
+            className.setId(3L);
+            className.setErrorMessage("java.lang.IllegalStateException");
+            when(logMapper.findById(3L)).thenReturn(className);
+
+            Log freeText = new Log();
+            freeText.setId(4L);
+            freeText.setErrorMessage("查询病案 12345678 失败");
+            when(logMapper.findById(4L)).thenReturn(freeText);
+
+            // 错误信息列此前恒为占位符，运维无法区分空指针与超时；类名本身不含业务字段。
+            assertThat(logService.getLogById(3L).getErrorMessage()).isEqualTo("java.lang.IllegalStateException");
+            assertThat(logService.getLogById(4L).getErrorMessage()).isEqualTo("[ERROR MESSAGE OMITTED]");
+        }
     }
 
     @Nested

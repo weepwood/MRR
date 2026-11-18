@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Nginx 入口 | 请求编号、状态、上游耗时和入口审计文件 | 可记录未到应用的请求；与应用日志分别核查 |
 | 应用访问审计 | `LogInterceptor` → `AsyncLogServiceImpl` → `app.access_log`；按用户、接口、请求编号等查询，影像访问统计与受控导出 | 当前为内存缓冲和重试，不保证数据库持续故障、强制退出时不丢失 |
-| 运行日志 | `PrivateJsonLogEncoder` → 脱敏 JSON 文件 → `RuntimeLogJournalService` → 月分区明细与来源断点 | `app.runtime-logs.enabled` 默认关闭；启用前须副本验收。正文只允许审核模板，不展开任意参数或异常消息 |
+| 运行日志 | `PrivateJsonLogEncoder` → 脱敏 JSON 文件 → `RuntimeLogJournalService` → 月分区明细与来源断点 | `app.runtime-logs.enabled` 默认关闭；启用前须副本验收。正文保留 SLF4J 模板与框架 logger 正文，敏感值就地脱敏；参数与异常消息不展开，无参数的未知自由文本仍整体隐藏 |
 | 运行错误中心 | WARN/ERROR 聚合、错误编号、追踪编号、处理状态；新日志链路使用同一事件流投影 | 聚合不能替代原始事件；旧格式补录不重新累计无法可靠关联的历史错误 |
 | 查询诊断 | 通过 Request ID 关联访问、病案查询阶段和当前只读探测 | 无日志不等于请求未到达；当前探测不能重建过去数据库状态 |
 

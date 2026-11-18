@@ -54,7 +54,9 @@ public class SystemErrorEventService {
         if (loggerName != null && loggerName.startsWith(SELF_LOGGER_PREFIX)) {
             return;
         }
-        String formattedMessage = com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(loggingEvent.getMessage());
+        String formattedMessage = com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(loggerName,
+                loggingEvent.getMessage(),
+                loggingEvent.getArgumentArray() != null && loggingEvent.getArgumentArray().length > 0);
         if (loggerName != null
                 && loggerName.endsWith("GlobalExceptionHandler")
                 && formattedMessage != null
@@ -161,7 +163,7 @@ public class SystemErrorEventService {
 
     private SystemErrorEvent privateRead(SystemErrorEvent event) {
         if (event == null) return null;
-        event.setMessageSummary(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeMessage(event.getMessageSummary()));
+        event.setMessageSummary(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredMessage(event.getMessageSummary()));
         event.setStackTrace(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredStack(event.getStackTrace()));
         event.setThreadName("[HIDDEN]");
         return event;

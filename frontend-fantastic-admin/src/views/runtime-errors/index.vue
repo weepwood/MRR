@@ -20,7 +20,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
-import { formatDateTime } from '@/utils/display-format'
+import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkPermission } from '@/utils/permission'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
@@ -221,7 +221,14 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip />
+        <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="isRedactedLogText(row.messageSummary)" size="small" effect="plain" type="info">
+              旧记录正文未保存
+            </el-tag>
+            <span v-else>{{ row.messageSummary || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
           <template #default="{ row }">{{ row.requestId || '-' }}</template>
         </el-table-column>
@@ -297,7 +304,11 @@ onMounted(loadData)
         <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
         <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="错误摘要" :span="2">
-          <pre class="detail-pre summary-pre">{{ current.messageSummary }}</pre>
+          <el-alert
+            v-if="isRedactedLogText(current.messageSummary)" type="info" :closable="false" show-icon
+            title="该记录写入时正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的日志会保留模板正文。"
+          />
+          <pre v-else class="detail-pre summary-pre">{{ current.messageSummary || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="脱敏堆栈" :span="2">
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>

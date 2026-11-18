@@ -19,7 +19,7 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
-import { formatDateTime } from '@/utils/display-format'
+import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -290,7 +290,11 @@ function statusTagType(status: string | number) {
           <span class="detail-value">{{ currentLog.auditDescription || '-' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="异常信息" :span="2">
-          <pre class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
+          <el-alert
+            v-if="isRedactedLogText(currentLog.errorMessage)" type="info" :closable="false" show-icon
+            title="该记录写入时异常正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的记录会显示异常类名。"
+          />
+          <pre v-else class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="User-Agent" :span="2">
           <span class="detail-value">{{ currentLog.userAgent || '-' }}</span>

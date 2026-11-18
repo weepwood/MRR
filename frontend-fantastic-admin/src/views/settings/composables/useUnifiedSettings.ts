@@ -1,8 +1,9 @@
 import type { EffectiveSystemSettings, SettingsSource } from '@/utils/system-settings'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import {
   createDefaultSystemSettings,
   isAllowedDocumentationUrl,
@@ -169,7 +170,7 @@ export function useUnifiedSettings() {
   async function confirmDeveloperModeEnable() {
     if (!developerModeChanged.value || !settings.value.developerModeEnabled || savedDeveloperModeEnabled.value) { return true }
     try {
-      await ElMessageBox.confirm(
+      await actionDialog.confirm(
         '启用后，只有配置的 IP 或网段才能通过本机 Nginx 以只读方式打开影像档案袋。请确认可信来源范围没有配置过大。',
         '确认启用开发者模式',
         { type: 'warning', confirmButtonText: '确认启用', cancelButtonText: '取消' },
@@ -214,7 +215,7 @@ export function useUnifiedSettings() {
 
   async function handleReset() {
     try {
-      await ElMessageBox.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
+      await actionDialog.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
         type: 'warning',
         confirmButtonText: '确认恢复',
         cancelButtonText: '取消',
@@ -231,7 +232,7 @@ export function useUnifiedSettings() {
   async function handleReload() {
     if (isDirty.value) {
       try {
-        await ElMessageBox.confirm('重新加载会丢弃当前未保存修改，是否继续？', '重新加载设置', {
+        await actionDialog.confirm('重新加载会丢弃当前未保存修改，是否继续？', '重新加载设置', {
           type: 'warning',
           confirmButtonText: '继续加载',
           cancelButtonText: '取消',

@@ -5,7 +5,8 @@ import * as api from '@/api/modules/settings'
 import RuntimeSettings from './RuntimeSettings.vue'
 
 const { confirm, success, error, info } = vi.hoisted(() => ({ confirm: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessageBox: { confirm }, ElMessage: { success, error, info } }))
+vi.mock('element-plus', () => ({ ElMessage: { success, error, info } }))
+vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm } }))
 vi.mock('@/api/modules/settings', () => ({ getSettingsSchema: vi.fn(), saveSystemSettings: vi.fn(), deleteSetting: vi.fn() }))
 
 function schema() {

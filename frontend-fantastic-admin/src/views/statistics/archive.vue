@@ -4,11 +4,12 @@ import type { GalleryImage, ViewMode } from './archive/types'
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import type { IdCardArchiveCase } from '@/api/modules/search'
 import type { ArchivePreviewMode, EffectiveSystemSettings } from '@/utils/system-settings'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { FileText as Document, Download, Printer } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ScanQueryDiagnostics from '@/components/ScanQueryDiagnostics/index.vue'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
 import {
   createDefaultSystemSettings,
@@ -264,7 +265,7 @@ function isJobRunning(job: ArchiveExportJob | null): boolean {
 
 async function confirmCancel(label: string): Promise<boolean> {
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `${label}正在后台生成，确定取消当前任务吗？`,
       '取消导出任务',
       {

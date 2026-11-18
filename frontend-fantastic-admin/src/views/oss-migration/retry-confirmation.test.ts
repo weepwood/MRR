@@ -5,7 +5,8 @@ import * as api from '@/api/modules/oss'
 import Page from './index.vue'
 
 const { confirm, success, warning, error } = vi.hoisted(() => ({ confirm: vi.fn(), success: vi.fn(), warning: vi.fn(), error: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessage: { success, warning, error }, ElMessageBox: { confirm } }))
+vi.mock('element-plus', () => ({ ElMessage: { success, warning, error } }))
+vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm } }))
 vi.mock('./composables/useMigrationPolling', () => ({ useMigrationPolling: () => ({ startPolling: vi.fn(), stopPolling: vi.fn(), startOverviewRefresh: vi.fn(), stopOverviewRefresh: vi.fn() }) }))
 vi.mock('@/composables/useTableActionLayout', () => ({ useTableActionLayout: () => ({ maxInlineActions: ref(1), actionColumnWidth: ref(120) }) }))
 vi.mock('@/api/modules/oss', () => Object.fromEntries(['cancelMigrationJob', 'createMigrationJob', 'getMigrationJob', 'getMigrationJobs', 'getMigrationLogs', 'getMigrationReadiness', 'getMigrationStatistics', 'getPendingFolders', 'getPendingManagementRecords', 'getWaitingSjhRecords', 'retryMigrationScans', 'uploadByBah', 'uploadToOss'].map(name => [name, vi.fn()])))

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ActionDialog from '@/ui/components/ActionDialog/index.vue'
 import { archiveAccessMode, canRenderArchiveRoute } from '@/views/statistics/archive/access-mode'
 import Provider from './ui/provider/index.vue'
 
@@ -81,6 +82,7 @@ onBeforeUnmount(() => {
     </RouterView>
     <FaBackToTop />
     <FaNotification />
+    <ActionDialog />
     <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
   </Provider>
 </template>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { DirectoryRule } from './image-directory-routing'
-import { ElMessageBox } from 'element-plus'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, setSetting } from '@/api/modules/settings'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { DIRECTORY_ROUTING_KEY, parseDirectoryRules, previewDirectoryRule, routingNodes, validateDirectoryRules } from './image-directory-routing'
 
 const rules = ref<DirectoryRule[]>([])
@@ -70,7 +70,7 @@ async function load() {
 async function confirm(message: string, title: string) {
   const attempt = generation
   try {
-    await ElMessageBox.confirm(message, title, { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
+    await actionDialog.confirm(message, title, { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
     return isCurrent(attempt)
   }
   catch { return false }

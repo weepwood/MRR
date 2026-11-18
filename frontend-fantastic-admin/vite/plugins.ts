@@ -58,7 +58,7 @@ export default function createVitePlugins(mode: string, isBuild = false) {
         'pinia',
       ],
       resolvers: [
-        // Element Plus API 按需自动导入（ElMessage、ElMessageBox 等）
+        // Element Plus API 按需自动导入（ElMessage 等）
         ElementPlusResolver(),
       ],
       dts: isBuild ? false : './src/types/auto-imports.d.ts',

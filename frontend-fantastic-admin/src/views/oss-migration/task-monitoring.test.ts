@@ -13,7 +13,8 @@ vi.mock('./composables/useMigrationPolling', async (importOriginal) => {
     : { startPolling: start, stopPolling: stop, startOverviewRefresh: vi.fn(), stopOverviewRefresh: vi.fn() } }
 })
 vi.mock('@/composables/useTableActionLayout', () => ({ useTableActionLayout: () => ({ maxInlineActions: ref(1), actionColumnWidth: ref(120) }) }))
-vi.mock('element-plus', () => ({ ElMessage: { error, success: vi.fn(), warning: vi.fn() }, ElMessageBox: { confirm: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { error, success: vi.fn(), warning: vi.fn() } }))
+vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm: vi.fn() } }))
 vi.mock('@/api/modules/oss', () => Object.fromEntries(['cancelMigrationJob', 'createMigrationJob', 'getMigrationJob', 'getMigrationJobs', 'getMigrationLogs', 'getMigrationReadiness', 'getMigrationStatistics', 'getPendingFolders', 'getPendingManagementRecords', 'getWaitingSjhRecords', 'retryMigrationScans', 'uploadByBah', 'uploadToOss'].map(name => [name, vi.fn()])))
 
 interface State {

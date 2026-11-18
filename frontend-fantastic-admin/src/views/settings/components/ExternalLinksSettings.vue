@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessageBox } from 'element-plus'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { createExternalLinkId, normalizeExternalLinkUrl } from '@/utils/external-links'
 import { notify } from '@/utils/notification'
 
@@ -71,7 +71,7 @@ function addExternalLink() {
 
 async function removeExternalLink(index: number, title: string) {
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `确定从“其他”菜单中移除“${title}”吗？`,
       '移除外部链接',
       {

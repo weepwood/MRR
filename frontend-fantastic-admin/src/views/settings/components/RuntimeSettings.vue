@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { SettingSchema, SettingSchemaItem } from '@/api/modules/settings'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, saveSystemSettings } from '@/api/modules/settings'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { DIRECTORY_ROUTING_KEY } from './image-directory-routing'
 
 const schema = ref<SettingSchema>({ groups: [], items: [] })
@@ -125,7 +126,7 @@ async function loadSettings(): Promise<boolean> {
   try {
     if (isDirty.value) {
       try {
-        await ElMessageBox.confirm('重新加载会丢弃本页所有未保存的运行参数修改，是否继续？', '重新加载运行参数', { type: 'warning', confirmButtonText: '确认重新加载', cancelButtonText: '取消' })
+        await actionDialog.confirm('重新加载会丢弃本页所有未保存的运行参数修改，是否继续？', '重新加载运行参数', { type: 'warning', confirmButtonText: '确认重新加载', cancelButtonText: '取消' })
       }
       catch { return false }
     }
@@ -154,7 +155,7 @@ async function saveSettings(): Promise<boolean> {
   try {
     if (sensitiveLabels.length > 0) {
       try {
-        await ElMessageBox.confirm(
+        await actionDialog.confirm(
           `本次保存 ${items.length} 项修改，包含 ${sensitiveLabels.length} 项敏感配置：${sensitiveLabels.join('、')}。保存后立即影响所有用户，无需重启服务。`,
           '确认修改敏感配置',
           { type: 'warning', confirmButtonText: '确认保存', cancelButtonText: '取消' },
@@ -192,7 +193,7 @@ async function clearOverride(item: SettingSchemaItem) {
   saving.value = true
   try {
     try {
-      await ElMessageBox.confirm(
+      await actionDialog.confirm(
         `将删除「${label}」的数据库覆盖，恢复配置默认值（${defaultLabel}）。重新读取会丢弃本页其他未保存修改。`,
         '恢复配置默认',
         { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消' },

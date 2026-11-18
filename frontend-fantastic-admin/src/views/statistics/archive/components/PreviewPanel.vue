@@ -2,12 +2,12 @@
 import type { ArchiveFitMode } from '../composables/useArchiveLocalPreferences'
 import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
-import { ElImageViewer, ElMessageBox } from 'element-plus'
+import { ElImageViewer } from 'element-plus'
 import { ArrowLeft, ArrowRight } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { TYPE_OPTIONS } from '../constants'
 import 'element-plus/es/components/image-viewer/style/css'
-import 'element-plus/es/components/message-box/style/css'
 
 defineOptions({ name: 'PreviewPanel' })
 
@@ -143,7 +143,7 @@ async function confirmType() {
   }
   const label = TYPE_OPTIONS.find(item => item.value === pendingType.value)?.label || '所选分类'
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `确认将当前影像分类切换为“${label}”吗？`,
       '确认分类变更',
       { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' },

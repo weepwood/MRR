@@ -10,7 +10,7 @@ import type {
   PermissionMatrix,
   ReadinessSnapshot,
 } from '@/api/modules/operations'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -29,6 +29,7 @@ import {
   savePermissionMatrixSnapshot,
 } from '@/api/modules/operations'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { formatDateTime as formatTime } from '@/utils/display-format'
 import { hasAnyPermission, hasPermission } from '@/utils/session'
 
@@ -297,7 +298,7 @@ async function loadPermissions() {
 }
 
 async function savePermissionSnapshot() {
-  const version = await ElMessageBox.prompt('请输入权限矩阵版本名称', '保存权限版本', {
+  const version = await actionDialog.prompt('请输入权限矩阵版本名称', '保存权限版本', {
     confirmButtonText: '保存',
     cancelButtonText: '取消',
     inputPlaceholder: '例如 v0.7.0-before',
@@ -327,7 +328,7 @@ async function loadMaintenance(refresh = false) {
 }
 
 async function enableMaintenance() {
-  const reason = await ElMessageBox.prompt('请输入本次维护原因', '进入主动维护模式', {
+  const reason = await actionDialog.prompt('请输入本次维护原因', '进入主动维护模式', {
     confirmButtonText: '进入维护模式',
     cancelButtonText: '取消',
     inputPlaceholder: '例如：数据库升级、批量数据修复',
@@ -350,11 +351,16 @@ async function enableMaintenance() {
 }
 
 async function disableMaintenance() {
-  await ElMessageBox.confirm(
-    '关闭主动维护模式不会绕过数据库、磁盘、Nginx 或 OSS 故障导致的自动降级。是否继续？',
-    '退出主动维护模式',
-    { type: 'warning', confirmButtonText: '确认退出', cancelButtonText: '取消' },
-  )
+  try {
+    await actionDialog.confirm(
+      '关闭主动维护模式不会绕过数据库、磁盘、Nginx 或 OSS 故障导致的自动降级。是否继续？',
+      '退出主动维护模式',
+      { type: 'warning', confirmButtonText: '确认退出', cancelButtonText: '取消' },
+    )
+  }
+  catch {
+    return
+  }
   loading.maintenance = true
   try {
     maintenance.value = await disableMaintenanceMode()

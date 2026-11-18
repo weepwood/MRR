@@ -69,3 +69,56 @@ test('prioritizes serious issues, shows both read-only reasons and fits narrow s
   await expect(page).toHaveURL(/tab=diagnostics/)
   await expect(page.getByRole('button', { name: '开始全面体检' })).toBeVisible()
 })
+
+test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请求', async ({ page }) => {
+  let enabled = false
+  let enables = 0
+  let disables = 0
+  await page.route(overviewUrl, route => route.fulfill({
+    json: { code: 200, data: snapshot(enabled ? 'READ_ONLY_MAINTENANCE' : 'READ_WRITE') },
+  }))
+  await page.route('**/api/v1/operations/readiness', route => route.fulfill({
+    json: { code: 200, data: snapshot(enabled ? 'READ_ONLY_MAINTENANCE' : 'READ_WRITE').readiness },
+  }))
+  await page.route('**/api/v1/operations/maintenance', route => route.fulfill({ json: { code: 200, data: { enabled } } }))
+  await page.route('**/api/v1/operations/maintenance/enable', async (route) => {
+    enables++
+    expect(route.request().postDataJSON()).toEqual({ reason: '演练维护' })
+    enabled = true
+    await route.fulfill({ json: { code: 200, data: { enabled, reason: '演练维护' } } })
+  })
+  await page.route('**/api/v1/operations/maintenance/disable', async (route) => {
+    disables++
+    enabled = false
+    await route.fulfill({ json: { code: 200, data: { enabled } } })
+  })
+
+  await page.goto('/operations-center?tab=maintenance')
+  await expect(page.getByText('主动维护模式未启用')).toBeVisible()
+  await page.getByRole('button', { name: '进入维护模式', exact: true }).click()
+  const enableDialog = page.getByRole('dialog', { name: '进入主动维护模式' })
+  const reason = enableDialog.getByRole('textbox', { name: '请输入本次维护原因' })
+  await expect(enableDialog).toHaveClass(/\bel-overlay-dialog\b/)
+  await expect(reason).toBeFocused()
+  await reason.press('Enter')
+  await expect(enableDialog.getByText('维护原因不能为空')).toBeVisible()
+  expect(enables).toBe(0)
+  await reason.fill(' 演练维护 ')
+  await reason.press('Enter')
+  await expect(page.getByText('主动维护模式已启用')).toBeVisible()
+  expect(enables).toBe(1)
+
+  const exit = page.getByRole('button', { name: '退出主动维护', exact: true })
+  const disableDialog = page.getByRole('dialog', { name: '退出主动维护模式' })
+  await exit.click()
+  await expect(disableDialog).toHaveClass(/\bel-overlay-dialog\b/)
+  await page.keyboard.press('Escape')
+  await expect(disableDialog).toBeHidden()
+  await expect(exit).toBeFocused()
+  expect(disables).toBe(0)
+
+  await exit.click()
+  await disableDialog.getByRole('button', { name: '确认退出' }).click()
+  await expect(page.getByText('主动维护模式未启用')).toBeVisible()
+  expect(disables).toBe(1)
+})

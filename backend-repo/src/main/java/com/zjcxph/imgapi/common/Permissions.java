@@ -33,6 +33,8 @@ public final class Permissions {
     public static final String SYSTEM_ERROR_READ = "system:error:read";
     public static final String SYSTEM_MANAGE = "system:manage";
     public static final String SYSTEM_READ = "system:read";
+    /** 受控只读数据库浏览（ADR-0007）。与 {@link #SYSTEM_READ} 分离，监控查看者不自动获得数据行访问。 */
+    public static final String SYSTEM_DB_BROWSE = "system:db:browse";
     public static final String TEST_READ = "test:read";
 
     public static final List<String> ALL_PERMISSIONS = List.of(
@@ -62,6 +64,7 @@ public final class Permissions {
             SYSTEM_ERROR_READ,
             SYSTEM_MANAGE,
             SYSTEM_READ,
+            SYSTEM_DB_BROWSE,
             TEST_READ
     );
 

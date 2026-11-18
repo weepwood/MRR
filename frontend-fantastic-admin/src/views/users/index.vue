@@ -641,7 +641,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="">
+    <MrrDataTablePanel class="users-table-panel" title="用户列表" :count="total">
       <template #filters>
         <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
           <div class="users-filter__field users-filter__keyword">

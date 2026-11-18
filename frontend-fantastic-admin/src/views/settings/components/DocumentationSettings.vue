@@ -39,7 +39,7 @@ function openPreview(value: string) {
   <section class="setting-section">
     <div class="setting-group">
       <div class="group-heading">
-        <strong>帮助中心文档入口</strong>
+        <strong data-settings-search-target="help-links" tabindex="-1">帮助中心文档入口</strong>
         <p>文档不再强制打包进单体 JAR。可以填写独立文档服务器、Nginx 路径或其他 HTTP(S) 地址。</p>
       </div>
 

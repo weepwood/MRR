@@ -7,12 +7,30 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 <template>
   <section class="setting-section">
     <div class="switch-list">
-      <div class="switch-row"><div><strong>显示访问水印</strong><p>在档案页面显示用户 ID 与访问时间。</p></div><el-switch v-model="settings.archiveWatermarkEnabled" /></div>
-      <div class="switch-row"><div><strong>允许显示完整身份证号</strong><p>允许在患者管理表中查看完整身份证号；默认关闭。</p></div><el-switch v-model="settings.patientIdCardRevealEnabled" /></div>
-      <div class="switch-row"><div><strong>允许复制身份证号</strong><p>允许点击身份证号后复制完整号码；默认关闭。</p></div><el-switch v-model="settings.patientIdCardCopyEnabled" /></div>
+      <div class="switch-row">
+        <div>
+          <strong data-settings-search-target="watermark" tabindex="-1">显示访问水印</strong>
+          <p>在档案页面显示用户 ID 与访问时间。</p>
+        </div>
+        <el-switch v-model="settings.archiveWatermarkEnabled" />
+      </div>
+      <div class="switch-row">
+        <div>
+          <strong data-settings-search-target="id-card-display" tabindex="-1">允许显示完整身份证号</strong>
+          <p>允许在患者管理表中查看完整身份证号；默认关闭。</p>
+        </div>
+        <el-switch v-model="settings.patientIdCardRevealEnabled" />
+      </div>
+      <div class="switch-row">
+        <div>
+          <strong data-settings-search-target="id-card-copy" tabindex="-1">允许复制身份证号</strong>
+          <p>允许点击身份证号后复制完整号码；默认关闭。</p>
+        </div>
+        <el-switch v-model="settings.patientIdCardCopyEnabled" />
+      </div>
     </div>
     <div class="control-grid">
-      <el-form-item label="水印透明度">
+      <el-form-item label="水印透明度" data-settings-search-target="watermark-opacity" tabindex="-1">
         <div class="slider-control">
           <el-slider
             v-model="settings.archiveWatermarkOpacity"
@@ -23,7 +41,11 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
           <span class="slider-value">{{ settings.archiveWatermarkOpacity }}%</span>
         </div>
       </el-form-item>
-      <el-form-item label="每日允许 IP 切换次数"><div class="number-control"><el-input-number v-model="settings.archiveIpMaxChanges" :min="0" :max="20" controls-position="right" /><span>次</span></div></el-form-item>
+      <el-form-item label="每日允许 IP 切换次数" data-settings-search-target="archive-ip-limit" tabindex="-1">
+        <div class="number-control">
+          <el-input-number v-model="settings.archiveIpMaxChanges" :min="0" :max="20" controls-position="right" /><span>次</span>
+        </div>
+      </el-form-item>
     </div>
   </section>
 </template>

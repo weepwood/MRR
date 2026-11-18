@@ -108,7 +108,9 @@ function openExternalLink(url: string) {
           <FaIcon name="i-lucide:circle-plus" />
         </div>
         <div>
-          <h4>添加外部网站</h4>
+          <h4 data-settings-search-target="add-external-link" tabindex="-1">
+            添加外部网站
+          </h4>
           <p>添加后会出现在单栏左侧导航的“其他”一级菜单中，并在新标签页打开。</p>
         </div>
       </header>

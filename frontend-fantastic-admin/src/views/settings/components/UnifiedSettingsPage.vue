@@ -93,17 +93,16 @@ async function openSearchResult(result: SettingsSearchResult) {
   const anchor = result.anchor
     ? content.querySelector<HTMLElement>(`[data-settings-search-target="${result.anchor}"]`)
     : undefined
-  const target = result.section === 'appearance' ? anchor?.querySelector<HTMLElement>('[role="button"]') : anchor
-  if (!target) {
-    content.scrollTop = 0
-    sectionHeadingRef.value?.focus({ preventScroll: true })
-    return
-  }
+  const target = (result.section === 'appearance' ? anchor?.querySelector<HTMLElement>('[role="button"]') : anchor)
+    ?? sectionHeadingRef.value
+  if (!target) { return }
 
   target.focus({ preventScroll: true })
   const bounds = target.getBoundingClientRect()
-  content.scrollTop += bounds.top - content.getBoundingClientRect().top
-    - (content.clientHeight - bounds.height) / 2
+  const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 16
+  if (bounds.top < margin || bounds.bottom > window.innerHeight - 16) {
+    window.scrollTo({ top: window.scrollY + bounds.top - margin, behavior: 'auto' })
+  }
 }
 
 function clearSavedFeedback() {
@@ -262,18 +261,36 @@ onUnmounted(() => {
 
 <template>
   <div class="settings-page">
-    <header class="settings-header">
-      <div class="settings-title">
-        <h2>系统设置</h2>
-        <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
-          开发者模式已启用
-        </el-tag>
+    <header class="page-header">
+      <div class="header-title">
+        <div>
+          <p class="eyebrow">
+            System Settings
+          </p>
+          <div class="title-line">
+            <h2>系统设置</h2>
+            <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
+              开发者模式已启用
+            </el-tag>
+          </div>
+          <p class="subtitle">
+            统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。
+          </p>
+        </div>
       </div>
-      <SettingsSearch class="settings-page-search" @select="openSearchResult" />
+      <div v-if="isServerSettingSection" class="header-actions">
+        <el-button :disabled="loading || saving" @click="handleReload">
+          <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
+        </el-button>
+        <el-button :disabled="loading || saving" @click="handleReset">
+          <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
+        </el-button>
+      </div>
     </header>
 
-    <div class="settings-shell">
-      <aside class="settings-sidebar">
+    <div class="settings-layout">
+      <aside class="settings-sidebar" aria-label="设置目录">
+        <SettingsSearch @select="openSearchResult" />
         <nav class="settings-nav" aria-label="设置分类">
           <button
             v-for="item in settingsNavItems"
@@ -330,17 +347,9 @@ onUnmounted(() => {
               <p>{{ activeMeta.description }}</p>
             </div>
           </div>
-          <div v-if="isServerSettingSection" class="header-actions">
-            <el-button :disabled="loading || saving" @click="handleReload">
-              <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
-            </el-button>
-            <el-button :disabled="loading || saving" @click="handleReset">
-              <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
-            </el-button>
-          </div>
         </header>
 
-        <div :key="activeSection" ref="contentRef" class="settings-content" tabindex="0" role="region" :aria-labelledby="sectionHeadingId">
+        <div :key="activeSection" ref="contentRef" class="settings-content" role="region" :aria-labelledby="sectionHeadingId">
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
             <el-form :model="settings" label-position="top">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
@@ -491,5 +500,11 @@ onUnmounted(() => {
 .settings-content :deep([data-settings-search-target] > [role="button"]:focus) {
   outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
   outline-offset: 3px;
+}
+
+.section-header h3,
+.settings-content :deep([data-settings-search-target]),
+.settings-content :deep([data-settings-search-target] > [role="button"]) {
+  scroll-margin-top: calc(var(--g-header-actual-height, 0px) + var(--g-toolbar-actual-height, 0px) + var(--g-tabbar-actual-height, 0px) + var(--mrr-space-4));
 }
 </style>

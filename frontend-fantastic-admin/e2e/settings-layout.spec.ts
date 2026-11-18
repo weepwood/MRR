@@ -5,7 +5,7 @@ test.describe('系统设置分类布局', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-    await expect(page.locator('.settings-shell')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('.settings-tabs')).toHaveCount(0)
 
     for (const label of ['系统信息', '登录与支持', '档案浏览', '访问安全', '开发者模式', '科室档案袋配色', '界面外观']) {
@@ -104,36 +104,20 @@ test.describe('系统设置分类布局', () => {
     await expect(page.locator('.section-header').getByRole('heading', { name: '登录与支持' })).toBeVisible({ timeout: 20_000 })
   })
 
-  test('桌面端仅滚动右侧内容并保持左侧分类导航可见', async ({ page }) => {
+  test('分类内容以独立设置组铺在页面中并使用页面滚动', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 720 })
-    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+    await page.goto('/settings?section=archive', { waitUntil: 'domcontentloaded' })
 
-    const frame = page.locator('.settings-page')
-    const shell = page.locator('.settings-shell')
-    const sidebar = page.locator('.settings-sidebar')
     const content = page.locator('.settings-content')
-    await expect(frame).toBeVisible({ timeout: 20_000 })
-    await expect(shell).toBeVisible()
-    await expect(sidebar).toBeVisible()
-    await expect(content).toHaveCSS('overflow-y', 'auto')
+    await expect(page.locator('.settings-page > .page-header')).toBeInViewport()
+    await expect(page.getByRole('navigation', { name: '设置分类' })).toBeInViewport()
+    await expect(content).toHaveCSS('overflow-y', 'visible')
+    await expect(content.getByText('默认图片来源', { exact: true })).toBeVisible()
+    await expect(content.getByText('默认浏览方式', { exact: true })).toBeVisible()
+    await expect(content.getByRole('heading', { name: '目录路由规则' })).toBeVisible()
 
-    await page.locator('.settings-nav-item').filter({ hasText: '界面外观' }).click()
-    await page.getByText('工作区组件', { exact: true }).click()
-    await page.getByText('主页、版权与其他', { exact: true }).click()
-    await expect.poll(async () => content.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true)
-
-    const initialSidebarBox = await sidebar.boundingBox()
-    expect(initialSidebarBox).not.toBeNull()
-    await content.evaluate(element => element.scrollTo({ top: element.scrollHeight, behavior: 'auto' }))
-    await expect.poll(() => content.evaluate(element => element.scrollTop)).toBeGreaterThan(100)
-
-    const finalSidebarBox = await sidebar.boundingBox()
-    expect(finalSidebarBox).not.toBeNull()
-    expect(Math.abs(finalSidebarBox!.y - initialSidebarBox!.y)).toBeLessThanOrEqual(1)
-    expect(Math.abs(
-      (finalSidebarBox!.y + finalSidebarBox!.height)
-      - (initialSidebarBox!.y + initialSidebarBox!.height),
-    )).toBeLessThanOrEqual(1)
-    await expect(sidebar).toBeInViewport()
+    await page.getByRole('button', { name: '保存设置', exact: true }).scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
+    expect(await content.evaluate(element => element.scrollTop)).toBe(0)
   })
 })

@@ -104,10 +104,7 @@ onBeforeUnmount(() => {
           <SubSidebar />
         </div>
         <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 backdrop-blur-sm transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
-        <div
-          class="main-container pb-[var(--g-main-container-padding-bottom)]"
-          :class="{ 'main-container--settings': routeInfo.path === '/settings' }"
-        >
+        <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
             <RouterView v-slot="{ Component, route }">
@@ -205,17 +202,6 @@ onBeforeUnmount(() => {
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
       background-color: var(--mrr-workspace-bg);
-    }
-
-    &.main-container--settings {
-      height: calc(100vh - var(--g-header-actual-height));
-      height: calc(100dvh - var(--g-header-actual-height));
-      min-height: 0;
-
-      .main {
-        flex: 1 1 0;
-        min-height: 0;
-      }
     }
   }
 }

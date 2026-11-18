@@ -126,7 +126,7 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
   <section class="routing-settings" aria-labelledby="directory-routing-title">
     <div class="routing-heading">
       <div>
-        <h4 id="directory-routing-title">
+        <h4 id="directory-routing-title" data-settings-search-target="directory-routing" tabindex="-1">
           目录路由规则
         </h4><p>精确目录优先于年月；未命中使用通用节点。目录名称保持原样，24.04 与 2024.04 分别匹配。</p>
       </div>

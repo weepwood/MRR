@@ -165,7 +165,7 @@ onMounted(loadSettings)
       </div>
       <div class="switch-row">
         <div>
-          <strong>启用本地 OCR</strong>
+          <strong data-settings-search-target="ocr-switches" tabindex="-1">启用本地 OCR</strong>
           <p>默认关闭。启用后才允许创建单病案 OCR 和智能分类任务。</p>
         </div>
         <el-switch v-model="settings.ocrEnabled" />
@@ -181,7 +181,7 @@ onMounted(loadSettings)
 
     <div class="setting-group">
       <div class="group-heading">
-        <strong>OCR 引擎与资源限制</strong>
+        <strong data-settings-search-target="ocr-engine" tabindex="-1">OCR 引擎与资源限制</strong>
         <p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p>
       </div>
       <el-form class="control-grid" label-position="top" @submit.prevent>
@@ -223,7 +223,7 @@ onMounted(loadSettings)
 
     <div class="setting-group">
       <div class="group-heading">
-        <strong>OCR 字典与分类规则</strong>
+        <strong data-settings-search-target="ocr-rules" tabindex="-1">OCR 字典与分类规则</strong>
         <p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p>
       </div>
       <ClassificationRules />

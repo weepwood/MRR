@@ -112,7 +112,7 @@
   border: 1px solid var(--mrr-control-border);
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
-  transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease, box-shadow var(--mrr-motion-fast) ease;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .fa-input-control::placeholder,
@@ -152,16 +152,16 @@
   width: 16px;
   height: 16px;
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-normal) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 /* 与输入框共用节奏；颜色/明度反馈保留调用方定位和方向变换。 */
 .fa-button-control {
   transition:
-    color var(--mrr-motion-fast) ease,
-    background-color var(--mrr-motion-fast) ease,
-    border-color var(--mrr-motion-fast) ease,
-    opacity var(--mrr-motion-fast) ease;
+    color var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) ease,
+    border-color var(--mrr-motion-feedback) ease,
+    opacity var(--mrr-motion-feedback) ease;
 }
 
 .fa-button-control:focus-visible {

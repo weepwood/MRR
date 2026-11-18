@@ -2,6 +2,7 @@
 import type { HTMLAttributes } from 'vue'
 import { useElementSize, useScroll } from '@vueuse/core'
 import { cn } from '@/utils'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { ScrollArea, ScrollBar } from './scroll-area'
 
 defineOptions({
@@ -80,16 +81,18 @@ onMounted(() => {
 })
 
 function scrollTo(scrollNumber: number) {
+  // JS 的 behavior 选项不受 CSS scroll-behavior 约束，必须在这里单独读取开关。
+  const behavior = isMotionEnabled() ? 'smooth' : 'auto'
   if (props.horizontal) {
     scrollAreaRef.value?.el?.viewportElement?.scrollTo({
       left: scrollNumber,
-      behavior: 'smooth',
+      behavior,
     })
   }
   else {
     scrollAreaRef.value?.el?.viewportElement?.scrollTo({
       top: scrollNumber,
-      behavior: 'smooth',
+      behavior,
     })
   }
 }

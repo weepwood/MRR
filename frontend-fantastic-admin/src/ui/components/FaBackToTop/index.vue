@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTimeoutFn } from '@vueuse/core'
+import { isMotionEnabled } from '@/utils/motion-preference'
 
 defineOptions({
   name: 'BackTop',
@@ -53,7 +54,8 @@ function handleMouseleave() {
 function handleBackToTop() {
   show.value && document.documentElement.scrollTo({
     top: 0,
-    behavior: 'smooth',
+    // 空间动效开关对 CSS 的 scroll-behavior 生效，但 JS 的 behavior 选项不受其约束。
+    behavior: isMotionEnabled() ? 'smooth' : 'auto',
   })
 }
 </script>

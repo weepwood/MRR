@@ -98,7 +98,7 @@ function toggleRecordNumber() {
   cursor: pointer;
   background: transparent;
   border: 0;
-  transition: color var(--mrr-motion-fast) ease;
+  transition: color var(--mrr-motion-feedback) ease;
 }
 
 .field-label--switchable:hover,
@@ -113,7 +113,7 @@ function toggleRecordNumber() {
 
 .field-switch-icon {
   transform-origin: center;
-  transition: transform var(--mrr-motion-normal) var(--mrr-ease-out);
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .field-switch-icon.is-switched {

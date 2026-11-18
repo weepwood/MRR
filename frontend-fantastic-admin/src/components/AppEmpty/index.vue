@@ -21,9 +21,12 @@ function handleAction() {
 </script>
 
 <template>
-  <div class="app-empty mrr-content-enter">
-    <div class="app-empty-icon mrr-status-pop" :class="icon" />
-    <p class="app-empty-text">{{ description }}</p>
+  <!-- 空态是查询结果的一部分，需要被读屏播报；AppError 用 role="alert"，空态用 status 更轻。 -->
+  <div class="app-empty mrr-content-enter" role="status" aria-live="polite">
+    <div class="app-empty-icon mrr-status-pop" :class="icon" aria-hidden="true" />
+    <p class="app-empty-text">
+      {{ description }}
+    </p>
     <el-button v-if="actionText" type="primary" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
     </el-button>

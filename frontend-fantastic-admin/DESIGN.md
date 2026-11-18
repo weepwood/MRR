@@ -130,11 +130,19 @@ CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配�
 
 ### 动效边界
 
-沿用 [motion.css](src/assets/styles/motion.css) 与现有设置开关，快速/普通过渡令牌分别为 120/180ms。当前全局动态效果默认开启，由应用设置写入 `data-motion`；关闭时停用相应动画。系统 `prefers-reduced-motion: reduce` 会缩短共享 CSS 动效，并由 `isMotionEnabled()` 停止登录、主题切换和设置滚动的 JS 空间动效。共享关闭路径保留 1ms 的动画结束信号以完成浮层生命周期；不能使用 `animation: none` 让抽屉关闭或搜索聚焦失去回调。局部组件仍需逐项核验。
+沿用 [tokens.css](src/assets/styles/tokens.css) 的动效令牌与现有设置开关。时长按**语义**分档，不按快慢分档：`--mrr-motion-press` 100ms（仅几何属性）、`--mrr-motion-feedback` 120ms（颜色/透明度/边框/阴影）、`--mrr-motion-move` 180ms（位移/展开/内容入场）、`--mrr-motion-overlay` 220ms（抽屉/对话框/弹出菜单，上限 220ms），另加循环组 `--mrr-motion-loop` 1s（spinner）与 `--mrr-motion-loop-soft` 1.5s（shimmer）。曲线统一 `--mrr-ease-out`。**新写的过渡必须引用令牌，不写裸时长**；颜色类不得低于 120ms，再低读起来像闪烁。UnoCSS 生成的动画类（如 `ui/components/FaDrawer/sheet/index.ts` 的 `animate-duration-*`）读不到 CSS 变量，改令牌时必须同步改类名字符串。
+
+当前全局动态效果默认开启，由应用设置写入 `data-motion`，并在 `index.html` 的首帧内联脚本里按本地缓存预置，避免关闭动效的用户每次进入仍播一遍入场动画。系统 `prefers-reduced-motion: reduce` 会缩短共享 CSS 动效，并由 `isMotionEnabled()` 停止登录、主题切换、设置滚动与平滑滚动的 JS 空间动效——**CSS 的 `scroll-behavior` 管不住 JS 的 `behavior: 'smooth'`，所有 `scrollTo` / `scrollIntoView` 都必须自己读一次开关**。共享关闭路径保留 1ms 的动画结束信号以完成浮层生命周期；不能使用 `animation: none` 让抽屉关闭或搜索聚焦失去回调。
+
+三条必须遵守的边界：
+
+1. **状态只能由静态通道承载**：形状、方向、文字、颜色、图标语义、位置。动效只表达"状态发生变化"的过程；任一通道在动效全关后必须仍然完整，且截屏可判。据此 `reduced` 与 `off` 的差别是"装饰先降级、状态最后保留"，不是"少多少动效"。
+2. **关闭动效只允许清 `transition` 与 `animation-duration`，禁止写全局 `transform: none`**。白名单式逐条列举一旦漏项，失败方向是"状态误判"（字段切换图标的 `rotate(180deg)` 就是状态本身），而不是"少一个位移"。新增装饰性位移应打标记由降级规则统一清理，不再往名单里加选择器。
+3. **焦点一律用 `outline`，投影一律用 `box-shadow`，两者不互兼**。`box-shadow` 画的焦点环会被 `overflow: hidden` 裁掉，也会覆盖元素原有投影；而 `outline` 在基线浏览器上最差只是变色，不会整条消失。
 
 关闭动效只允许去掉**过渡**，不允许把**用来成形的 `transform`** 一并清零。菜单展开指示器（`.menu-leading-control-arrow`）是用右边框 + 下边框加 `rotate(±45deg)` 拼出来的箭头，`transform` 就是它的形状：一旦被 `transform: none !important` 抹平，只剩一个「┘」残角，且展开/收起不再有区别。`data-motion="off"` 与 `prefers-reduced-motion: reduce` 两条路径都必须保留 `rotate(-45deg)` / `rotate(45deg)` 的终态，仅省略过渡。同类元素（用 transform 绘制而非仅仅做位移的）在加入共享 `transform: none` 列表前需逐个确认。
 
-共享 FaButton 按压仅改变明度，保留调用方的旋转、居中与圆角；键盘焦点独立描边，加载时禁用并提供 `aria-busy`。输入框和下拉箭头沿用 120/180ms 令牌。状态确认动效不使用超过最终尺寸的弹跳。
+共享 FaButton 按压仅改变明度，保留调用方的旋转、居中与圆角；键盘焦点独立描边，加载时禁用并提供 `aria-busy`。输入框和下拉箭头沿用 `--mrr-motion-feedback` / `--mrr-motion-move` 两档。状态确认动效不使用超过最终尺寸的弹跳。
 
 菜单展开、页签和页面切换应保留状态识别，不增加涟漪或不必要的离场叠加。主线侧栏子目录点击不播放涟漪。路由加载沿用顶部 2px 进度条，延迟 200ms 显示以避免快速请求闪现，不显示新的全局转圈反馈。改变全局动效策略应单独评估，不通过文档更新静默修改产品行为。
 

@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AppEmpty from '../AppEmpty/index.vue'
 
-describe('AppEmpty', () => {
+describe('appEmpty', () => {
   it('renders default description', () => {
     const wrapper = mount(AppEmpty)
     expect(wrapper.find('.app-empty-text').text()).toBe('暂无数据')
@@ -19,6 +19,14 @@ describe('AppEmpty', () => {
       global: { stubs: { 'el-button': { template: '<button class="el-button"><slot /></button>' } } },
     })
     expect(wrapper.find('.el-button').exists()).toBe(true)
+  })
+
+  it('以 status 角色播报空态，图标不参与读屏', () => {
+    const wrapper = mount(AppEmpty)
+    const root = wrapper.find('.app-empty')
+    expect(root.attributes('role')).toBe('status')
+    expect(root.attributes('aria-live')).toBe('polite')
+    expect(wrapper.find('.app-empty-icon').attributes('aria-hidden')).toBe('true')
   })
 
   it('emits action on button click', async () => {

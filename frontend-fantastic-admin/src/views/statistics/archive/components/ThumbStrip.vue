@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GalleryImage, ViewMode } from '../types'
+import { isMotionEnabled } from '@/utils/motion-preference'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
 
@@ -87,7 +88,7 @@ function scrollToIndex(index: number, smooth = true) {
     }
     const top = target.offsetTop - (container.clientHeight - target.clientHeight) / 2
     const scrollTop = Math.max(0, top)
-    if (smooth && 'scrollBehavior' in document.documentElement.style) {
+    if (smooth && isMotionEnabled() && 'scrollBehavior' in document.documentElement.style) {
       container.scrollTo({ top: scrollTop, behavior: 'smooth' })
     }
     else {

@@ -28,6 +28,26 @@
   --mrr-space-8: 32px;
 
   /*
+   * 动效时长按「语义」分档，不再按「快/慢」分档。
+   * 语义缺失是历史上出现 15 种时长（140/160/200/220/240ms…）的直接原因：
+   * 作者要表达的场景（按压、反馈、位移、浮层）在令牌里找不到对应项，就自己编一个数。
+   *
+   * - press     100ms  仅限几何属性（位移、缩放）。颜色类不得低于 feedback。
+   * - feedback  120ms  颜色、透明度、边框、阴影等即时反馈。
+   * - move      180ms  元素位移、展开收起、页面内容入场。
+   * - overlay   220ms  浮层进出（抽屉、对话框、弹出菜单），上限 220ms。
+   * - loop      1s     持续循环（spinner）。
+   * - loop-soft 1.5s   低频循环（shimmer 骨架）。
+   */
+  --mrr-motion-press: 100ms;
+  --mrr-motion-feedback: 120ms;
+  --mrr-motion-move: 180ms;
+  --mrr-motion-overlay: 220ms;
+  --mrr-motion-loop: 1s;
+  --mrr-motion-loop-soft: 1.5s;
+  --mrr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /*
    * 全局圆角体系。
    * --radius 由“系统设置 → 应用配置 → 全局界面圆角”实时写入，
    * MRR 页面、Element Plus 控件和影像档案袋共享同一圆角基准。
@@ -94,7 +114,6 @@
   --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 22%, transparent);
   --mrr-topbar-bg: var(--mrr-navigation-bg-solid);
   --mrr-workspace-bg: #f3f5f8;
-  --mrr-canvas-bg: #fff;
   --mrr-shell-divider: rgb(15 23 42 / 7%);
   --mrr-shell-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 10px 32px rgb(15 23 42 / 4%);
 
@@ -120,7 +139,6 @@
   --mrr-shadow-sm: 0 4px 10px rgb(15 23 42 / 7%);
   --mrr-shadow-md: 0 12px 28px rgb(15 23 42 / 11%);
   --mrr-shadow-lg: 0 24px 56px rgb(15 23 42 / 16%);
-  --mrr-shadow-card: none;
   --mrr-shadow-dialog: var(--mrr-shadow-lg);
 
   /* focus-visible ring */
@@ -158,7 +176,6 @@
     --mrr-navigation-active-foreground: color-mix(in srgb, var(--color-primary) 40%, #fff);
     --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 36%, transparent);
     --mrr-workspace-bg: #10151f;
-    --mrr-canvas-bg: #151b25;
     --mrr-shell-divider: rgb(255 255 255 / 7%);
     --mrr-shell-shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 14px 40px rgb(0 0 0 / 18%);
     --mrr-shadow-xs: 0 1px 2px rgb(0 0 0 / 22%);

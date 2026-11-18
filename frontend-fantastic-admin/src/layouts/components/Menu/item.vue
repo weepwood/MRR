@@ -112,7 +112,7 @@ defineExpose({
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  transition: color var(--mrr-motion-fast) ease, background-color var(--mrr-motion-fast) ease, border-color var(--mrr-motion-fast) ease;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .menu-item-container:hover {
@@ -132,7 +132,7 @@ defineExpose({
   flex: 0 0 auto;
   color: currentcolor;
   transform-origin: center;
-  transition: color var(--mrr-motion-fast) ease, transform var(--mrr-motion-fast) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .menu-item-container:focus-visible {
@@ -165,7 +165,7 @@ defineExpose({
   position: absolute;
   inset: 0;
   margin: auto;
-  transition: opacity var(--mrr-motion-normal) var(--mrr-ease-out), transform var(--mrr-motion-normal) var(--mrr-ease-out);
+  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .menu-leading-control-arrow {

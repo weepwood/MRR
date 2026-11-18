@@ -87,6 +87,20 @@ describe('mrrTableActions', () => {
     expect(wrapper.emitted('select')).toEqual([['edit']])
   })
 
+  it('加载中的操作向读屏声明 busy', () => {
+    const wrapper = mountActions({
+      actions: [{
+        key: 'export',
+        label: '导出',
+        icon: 'i-lucide:download',
+        loading: true,
+        placement: 'inline',
+      }],
+    })
+
+    expect(wrapper.find('[aria-label="导出"]').attributes('aria-busy')).toBe('true')
+  })
+
   it('通过显式检查器过滤不可见和无权限操作', () => {
     const wrapper = mountActions({
       actions: [

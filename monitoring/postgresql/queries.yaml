@@ -114,8 +114,11 @@ mrr_pg_bloat:
 mrr_pg_maintenance:
   query: |
     SELECT
-        coalesce(max(CASE WHEN n_live_tup + n_dead_tup > 0
-                          THEN n_dead_tup::numeric / (n_live_tup + n_dead_tup) END), 0)::double precision
+        -- 无死元组下限时，小表（配置表、字典表被整表 UPDATE）会出现
+        -- 「0 活元组 / 7 死元组 = 100%」，导致告警长期常亮。这里与
+        -- tables_needing_vacuum 使用同一个 1 万条下限，两者口径一致。
+        coalesce(max(CASE WHEN n_dead_tup > 10000
+                          THEN n_dead_tup::numeric / NULLIF(n_live_tup + n_dead_tup, 0) END), 0)::double precision
                                                                                         AS dead_tuple_ratio,
         coalesce(max(extract(epoch FROM now() - coalesce(last_autovacuum, last_vacuum))), -1)::double precision
                                                                                         AS max_vacuum_age_seconds,
@@ -129,7 +132,7 @@ mrr_pg_maintenance:
   metrics:
     - dead_tuple_ratio:
         usage: "GAUGE"
-        description: "死元组占比最高的表的死元组比例（0-1）"
+        description: "死元组超过 1 万的表中，死元组占比最高者的比例（0-1）；无满足条件的表时为 0"
     - max_vacuum_age_seconds:
         usage: "GAUGE"
         description: "最近一次 vacuum/autovacuum 距今最长秒数，-1 表示从未执行"

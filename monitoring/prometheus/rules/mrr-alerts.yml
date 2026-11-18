@@ -178,8 +178,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 单表死元组占比超过 20%
-          description: autovacuum 跟不上写入，扫描成本与索引膨胀会持续上升。
+          summary: 单表死元组占比超过 20%（死元组数超过 1 万）
+          description: autovacuum 跟不上写入，扫描成本与索引膨胀会持续上升。指标已按死元组数 1 万下限过滤，小表不参与判定。
           runbook_url: monitoring/postgresql/diagnostics/03-bloat-and-vacuum.sql
 
       - alert: MrrPgTableBloatHigh

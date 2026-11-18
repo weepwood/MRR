@@ -895,9 +895,17 @@ body .el-descriptions__table {
 }
 
 @media (max-width: 640px) {
+  /*
+   * 窄屏弹窗定位。
+   *
+   * 不能用固定 `margin-inline`：各页面用 `width="min(900px, 92vw)"` 指定宽度，
+   * 而 `vw` 含垂直滚动条宽度，容器实际可用宽度比 `100vw` 少约 10px。此时
+   * 「92vw + 左右各 12px」会超出容器，弹窗内出现 4px 横向滚动条。
+   * 改为 auto 居中：宽度被 `max-width` 约束时也只会变小，不会溢出。
+   */
   .el-dialog {
     max-width: calc(100vw - 24px);
-    margin-inline: 12px;
+    margin-inline: auto;
   }
 }
 

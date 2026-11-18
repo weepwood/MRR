@@ -21,9 +21,10 @@ for (const theme of ['light', 'dark']) {
     const status = bar.getByRole('combobox', { name: '账号状态', exact: true })
     for (const width of [1440, 768, 375]) {
       await page.setViewportSize({ width, height: 900 })
+      // 筛选栏改为用控件自身的 aria-label 提供可访问名称，页面上没有可见 <label>，
+      // 因此不再点击标签，而是验证每个控件都能按名称被定位到（无障碍关联仍在）。
       for (const name of ['关键词', '角色', '账号状态']) {
-        await bar.locator('label').filter({ hasText: name }).click()
-        await expect(bar.getByLabel(name, { exact: true })).toBeFocused()
+        await expect(bar.getByLabel(name, { exact: true })).toBeVisible()
       }
       await keyword.focus()
       await page.keyboard.press('Tab')

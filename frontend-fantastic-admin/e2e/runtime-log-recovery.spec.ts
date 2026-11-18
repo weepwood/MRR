@@ -6,6 +6,16 @@ const files = fileNames.map(fileName => ({ fileName, bytes: 120 }))
 const health = { pollAgeSeconds: 1, auditHmacConfigured: true, sources: [], backlog: { pending_files: 2, pending_raw_bytes: 128 } }
 const first = { occurred_at: '2026-11-01T00:00:00Z', event_id: '00000000-0000-4000-8000-000000000001', level: 'WARN', logger_name: 'synthetic', request_id: 'synthetic-request', error_id: '', message_summary: 'synthetic first', stack_trace: '' }
 const second = { ...first, event_id: '00000000-0000-4000-8000-000000000002', message_summary: 'synthetic second' }
+// 运行日志页的首批加载会同时请求 /insights。它必须单独应答，否则会被当成列表请求
+// 混进 requests 数组，把后续「请求参数逐条对比」的断言整体错位。
+const insight = {
+  range: { from: '2026-11-01T00:00:00Z', to: '2026-11-02T00:00:00Z', bucket: 'hour' },
+  counts: { ERROR: 0, WARN: 1 },
+  trend: [],
+  topErrors: [],
+  topModules: [],
+  unresolvedGroups: 0,
+}
 const success = (route: Route, data: unknown) => route.fulfill({ json: { code: 200, message: 'success', data } })
 const failure = (route: Route) => route.fulfill({ status: 503, json: { code: 503, message: 'synthetic unavailable' } })
 
@@ -24,6 +34,7 @@ test('暗色窄屏文件清单失败不隐藏日志或健康信息，单独刷�
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/health')) { return success(route, { ...health, unknownGap: true }) }
     if (path.endsWith('/files')) { return unavailable ? failure(route) : success(route, files) }
+    if (path.endsWith('/insights')) { return success(route, insight) }
     return success(route, { list: [first], hasMore: false })
   })
   await openPage(page, 'dark')
@@ -50,6 +61,7 @@ test('补录部分成功保留未确认文件，重试不重复登记成功文�
       return success(route, health)
     }
     if (path.endsWith('/files')) { return success(route, files) }
+    if (path.endsWith('/insights')) { return success(route, insight) }
     if (path.endsWith('/imports')) {
       const name = route.request().postDataJSON().fileName as string
       registered.push(name)
@@ -85,6 +97,7 @@ test('翻批重试沿用原时间和游标，编辑中的筛选由显式查询�
     const url = new URL(route.request().url())
     if (url.pathname.endsWith('/health')) { return success(route, health) }
     if (url.pathname.endsWith('/files')) { return success(route, files) }
+    if (url.pathname.endsWith('/insights')) { return success(route, insight) }
     const params = Object.fromEntries(url.searchParams)
     requests.push(params)
     if (params.cursorId && !failed) { failed = true; return failure(route) }
@@ -115,6 +128,7 @@ test('清空时间后查询显示固定的最近24小时，下一批继续使用
     const url = new URL(route.request().url())
     if (url.pathname.endsWith('/health')) { return success(route, health) }
     if (url.pathname.endsWith('/files')) { return success(route, files) }
+    if (url.pathname.endsWith('/insights')) { return success(route, insight) }
     const params = Object.fromEntries(url.searchParams)
     requests.push(params)
     return success(route, { list: [params.cursorId ? second : first], hasMore: !params.cursorId })

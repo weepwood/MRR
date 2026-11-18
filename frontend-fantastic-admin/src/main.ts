@@ -22,7 +22,6 @@ import 'virtual:svg-icons-register'
 import '@unocss/reset/tailwind-compat.css'
 import 'virtual:uno.css'
 // 全局样式
-import 'element-plus/es/components/message-box/style/css'
 import '@/assets/styles/globals.css'
 import '@/assets/styles/motion.css'
 import '@/assets/styles/pages/settings-navigation.css'

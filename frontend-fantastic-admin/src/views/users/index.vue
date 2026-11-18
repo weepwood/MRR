@@ -3,7 +3,7 @@
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { KeyRound } from 'lucide-vue-next'
 import { nextTick } from 'vue'
 import apiUser from '@/api/modules/user'
@@ -18,6 +18,7 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -450,7 +451,7 @@ async function handleApprove() {
 async function handleReject(row: CredentialAwareUser) {
   if (!row.id || !isPending(row)) return
   try {
-    const { value } = await ElMessageBox.prompt(
+    const { value } = await actionDialog.prompt(
       `请输入拒绝「${row.displayName || row.username}」注册申请的原因。`,
       '拒绝注册申请',
       {
@@ -468,7 +469,7 @@ async function handleReject(row: CredentialAwareUser) {
     ElMessage.success('注册申请已拒绝')
   }
   catch (err: any) {
-    if (err === 'cancel' || err === 'close') return
+    if (err instanceof ActionDialogCancelled) return
     ElMessage.error(err?.response?.data?.message || err?.message || '拒绝操作失败')
   }
 }

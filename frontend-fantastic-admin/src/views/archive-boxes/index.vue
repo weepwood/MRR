@@ -9,7 +9,7 @@ import type {
 } from '@/api/modules/archive-boxes'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus, RefreshCw as Refresh, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
@@ -26,6 +26,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { actionDialog } from '@/ui/components/ActionDialog'
 
 defineOptions({ name: 'ArchiveBoxesPage' })
 
@@ -359,7 +360,7 @@ async function removeRecord(row: ArchiveBoxRecord) {
   }
 
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `确定删除上架号 ${normalizeText(row.sjh)} 的装箱记录吗？`,
       '删除装箱记录',
       {

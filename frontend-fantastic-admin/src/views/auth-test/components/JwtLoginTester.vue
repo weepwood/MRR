@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { AuthTestHistoryEvent } from '../types'
 import type { AuthTestResult } from '@/api/modules/auth-test'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Copy as CopyDocument, KeyRound as Key, RefreshCw as Refresh, LogOut as SwitchButton, Eye as View } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import { useUserStore } from '@/store/modules/user'
+import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
 
 const emit = defineEmits<{
   record: [event: AuthTestHistoryEvent]
@@ -190,7 +191,7 @@ async function testLogout() {
   }
   try {
     if (tokenIsCurrent.value) {
-      await ElMessageBox.confirm(
+      await actionDialog.confirm(
         '测试 Token 与当前后台会话相同。继续后当前 Token 会被撤销，需要重新登录。',
         '确认测试注销',
         { type: 'warning', confirmButtonText: '继续注销', cancelButtonText: '取消' },
@@ -209,7 +210,7 @@ async function testLogout() {
     }
   }
   catch (error: unknown) {
-    if (error !== 'cancel' && error !== 'close') {
+    if (!(error instanceof ActionDialogCancelled)) {
       ElMessage.error((error as Error).message || '注销接口测试失败')
     }
   }

@@ -729,15 +729,17 @@ async function loadData() {
 // 视图层: 写入操作需用户确认
 async function handleDelete(id: number) {
   try {
-    await ElMessageBox.confirm('确认删除?', '提示', { type: 'warning' })
-    await deleteRecord(id)
-    ElMessage.success('删除成功')
-    await loadData()
+    await actionDialog.confirm('确定删除这条记录吗？', '删除记录', { type: 'warning', confirmButtonText: '删除' })
   } catch {
-    // 用户取消不做处理
+    return
   }
+  await deleteRecord(id)
+  ElMessage.success('删除成功')
+  await loadData()
 }
 ```
+
+从 `@/ui/components/ActionDialog` 导入 `actionDialog`。确认后继续请求，关闭或取消时 Promise 拒绝。
 
 ---
 

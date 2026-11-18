@@ -191,4 +191,50 @@ test.describe('用户凭据生命周期', () => {
     await expect(row.getByText('禁用', { exact: true })).toBeVisible()
     expect(attempts).toBe(2)
   })
+
+  test('拒绝注册申请使用 Dialog，空白原因和取消均不提交', async ({ page }) => {
+    const applicant = { id: 21, username: 'applicant.test', displayName: '测试申请人', status: 'pending' }
+    let submissions = 0
+    await page.addInitScript((profile) => {
+      localStorage.setItem('token', 'admin-token')
+      localStorage.setItem('profile', JSON.stringify(profile))
+      localStorage.setItem('permissions', JSON.stringify(profile.permissions))
+    }, adminProfile)
+    await page.route('**/api/v1/auth/me', route => route.fulfill({ json: { code: 200, data: adminProfile } }))
+    await page.route('**/api/v1/auth/users?*', route => route.fulfill({ json: { code: 200, data: { list: [applicant], total: 1 } } }))
+    await page.route('**/api/v1/auth/users/21/registration/reject', async (route) => {
+      submissions++
+      expect(route.request().postDataJSON()).toEqual({ rejectReason: '第一行\n第二行' })
+      await route.fulfill({ json: { code: 200, data: { ...applicant, status: 'rejected' } } })
+    })
+
+    await page.goto('/users')
+    const row = page.getByRole('row').filter({ hasText: '测试申请人' })
+    const dialog = page.getByRole('dialog', { name: '拒绝注册申请' })
+    const reason = dialog.getByPlaceholder('拒绝原因将保存在审核记录中')
+    async function openReject() {
+      await row.getByRole('button', { name: '拒绝申请' }).click()
+      await expect(dialog).toHaveClass(/\bel-overlay-dialog\b/)
+      await expect(reason).toBeFocused()
+    }
+
+    await openReject()
+    await reason.fill('   ')
+    await dialog.getByRole('button', { name: '确认拒绝' }).click()
+    await expect(dialog.getByText('拒绝原因不能为空')).toBeVisible()
+    await dialog.getByRole('button', { name: '取消', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    expect(submissions).toBe(0)
+
+    await openReject()
+    await expect(reason).toHaveValue('')
+    await reason.fill(' 第一行')
+    await reason.press('Enter')
+    await expect(reason).toHaveValue(' 第一行\n')
+    await reason.fill(' 第一行\n第二行 ')
+    expect(submissions).toBe(0)
+    await dialog.getByRole('button', { name: '确认拒绝' }).click()
+    await expect(row.getByText('已拒绝', { exact: true })).toBeVisible()
+    expect(submissions).toBe(1)
+  })
 })

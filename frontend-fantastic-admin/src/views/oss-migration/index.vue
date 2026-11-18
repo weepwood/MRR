@@ -9,7 +9,7 @@ import type {
 } from '@/api/modules/oss'
 import type { MigrationLogRecord, MigrationStatistics, OssUploadResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   CircleX as CircleClose,
   FileText as Document,
@@ -37,6 +37,7 @@ import {
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import { useMigrationPolling } from './composables/useMigrationPolling'
 
 defineOptions({ name: 'OssMigrationPage' })
@@ -527,7 +528,7 @@ async function handleStartJob() {
   const scopeText = jobForm.folder ? `目录 ${jobForm.folder}` : '全部待迁移记录'
   const countText = jobForm.mode === 'full' ? '当前快照内全部记录' : `最多 ${jobForm.limit} 条`
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `将创建${modeLabel(jobForm.mode)}任务，范围为${scopeText}，处理${countText}。单个文件失败不会阻塞后续记录，是否开始？`,
       '确认创建迁移任务',
       { confirmButtonText: '创建任务', cancelButtonText: '取消', type: 'warning' },
@@ -567,7 +568,7 @@ async function handleCancelJob() {
     return
   }
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       '取消会在当前图片处理完成后停止。已经成功迁移的图片不会回滚，是否继续？',
       '安全取消迁移任务',
       { confirmButtonText: '安全取消', cancelButtonText: '继续运行', type: 'warning' },
@@ -614,7 +615,7 @@ async function handleManualUpload() {
     return
   }
   try {
-    await ElMessageBox.confirm(
+    await actionDialog.confirm(
       `将立即手工上传选中的 ${ids.length} 张图片。手工上传只用于小规模验证，是否继续？`,
       '确认手工上传',
       { confirmButtonText: '开始上传', cancelButtonText: '取消', type: 'warning' },
@@ -699,7 +700,7 @@ async function handleRetryFailed() {
   const isCurrent = () => retryAttempt === attempt && !attempt.cancelled && retryActive
   try {
     try {
-      await ElMessageBox.confirm(
+      await actionDialog.confirm(
         `将把本次选中的 ${ids.length} 条永久失败记录重置为待迁移。本次范围已固定，刷新列表不会扩大范围。请确保已经处理原图、权限或对象冲突，是否继续？`,
         '确认重置失败记录',
         { confirmButtonText: '确认重置', cancelButtonText: '取消', type: 'warning' },

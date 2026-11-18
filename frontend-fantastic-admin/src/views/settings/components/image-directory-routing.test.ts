@@ -7,7 +7,8 @@ import ImageDirectoryRoutingSettings from './ImageDirectoryRoutingSettings.vue'
 import RuntimeSettings from './RuntimeSettings.vue'
 
 const { confirm } = vi.hoisted(() => ({ confirm: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessageBox: { confirm }, ElMessage: { error: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { error: vi.fn() } }))
+vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm } }))
 vi.mock('@/api/modules/settings', () => ({ getSettingsSchema: vi.fn(), setSetting: vi.fn(), deleteSetting: vi.fn(), saveSystemSettings: vi.fn() }))
 const builtIn = [{ type: 'exact' as const, value: '2026.06.05', node: 'ba03' }]
 function schema(override: string | null = null) {

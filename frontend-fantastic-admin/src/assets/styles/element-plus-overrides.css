@@ -777,8 +777,7 @@ body .el-pagination {
 }
 
 /* ===== Dialogs, forms and tabs ===== */
-body .el-dialog,
-body .el-message-box {
+body .el-dialog {
   overflow: hidden;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);

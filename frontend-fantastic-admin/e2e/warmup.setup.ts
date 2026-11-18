@@ -35,6 +35,7 @@ const AUTHENTICATED_ROUTES = [
   '/oss-migration',
   '/ocr-batches',
   '/archive',
+  '/archive/embed',
   '/archive-boxes',
   '/settings',
   '/settings?section=archive',

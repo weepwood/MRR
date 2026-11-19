@@ -348,9 +348,11 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 /* 用 .el-select .el-select__wrapper 提高优先级：EP 按需样式注入晚于本文件，
- * 单类选择器会被其自带的 4px 圆角覆盖，导致控件不响应 --mrr-control-radius 令牌。 */
+ * 单类选择器会被其自带的 4px 圆角与 --el-fill-color-blank 底色覆盖，导致控件
+ * 不响应 --mrr-control-radius / --mrr-control-bg 令牌（与输入框底色不一致）。 */
 .el-select .el-select__wrapper {
   padding-block: 4px;
+  background: var(--mrr-control-bg);
   border-radius: var(--mrr-control-radius);
 }
 
@@ -442,6 +444,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 .el-input.is-disabled .el-input__wrapper,
+.el-select .el-select__wrapper.is-disabled,
 .el-select__wrapper.is-disabled,
 .el-textarea.is-disabled .el-textarea__inner,
 .el-input-number.is-disabled {

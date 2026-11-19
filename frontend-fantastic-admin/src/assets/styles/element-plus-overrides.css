@@ -635,10 +635,57 @@ body .el-table {
   background: var(--mrr-card);
 }
 
-/* 圆角表格保留横向边界和列间分隔，移除容易在裁切时露出直角的左右外框。 */
+/*
+ * 圆角表格的外框。
+ *
+ * Element Plus 用绝对定位的矩形线段拼出 `el-table--border` 外框：顶边是
+ * .el-table__inner-wrapper::after、底边是 ::before、左右是本元素的
+ * ::before/::after，固定列另有 border-*-patch。圆角表格走 overflow: hidden
+ * 的圆角裁切路径，这些直线段的两端在四角圆弧区域被裁掉，表现为四角边框
+ * 缺一截，且全局圆角（--radius）越大越明显。
+ *
+ * 解法是改由元素自身 border 绘制外框——自身 border 天然跟随 border-radius
+ * 弯曲——矩形线段与贴边的单元格边框全部退场，避免四角缺边或与外框叠成
+ * 2px。这里只依赖 border 与 display，不涉及 color-mix，Chrome 86 可用。
+ */
+body .el-table--border {
+  border: 1px solid var(--el-table-border-color);
+}
+
+/* Element Plus 默认 .el-table--fit 会清掉元素的 bottom/right border，这里恢复。 */
+body .el-table--border.el-table--fit {
+  border-right: 1px solid var(--el-table-border-color);
+  border-bottom: 1px solid var(--el-table-border-color);
+}
+
 body .el-table--border::before,
-body .el-table--border::after {
+body .el-table--border::after,
+body .el-table--border .el-table__inner-wrapper::before,
+body .el-table--border .el-table__inner-wrapper::after {
   display: none;
+}
+
+/*
+ * 最后一行的下边框与外框相邻，交给外框绘制，避免叠成 2px。
+ * 有 footer 时例外：body 与 footer 的分隔线正是 body 末行 td 的
+ * border-bottom（footer 单元格没有 border-top），不能用外框替代，
+ * 用 :not(.has-footer) 保留它（简单选择器的 :not() Chrome 86 可用）。
+ */
+body .el-table--border:not(.has-footer) .el-table__body-wrapper tr:last-child td.el-table__cell,
+body .el-table--border .el-table__footer-wrapper tr:last-child td.el-table__cell {
+  border-bottom: 0;
+}
+
+/* 固定列布局的边框补丁是同样的矩形线段，外框已由元素 border 覆盖。 */
+body .el-table--border .el-table__border-left-patch,
+body .el-table--border .el-table__border-right-patch,
+body .el-table--border .el-table__border-bottom-patch {
+  display: none;
+}
+
+/* 滚动条占位列的右边框与外框相邻，同样交给外框绘制。 */
+body .el-table--border .el-table__cell.gutter {
+  border-right: 0;
 }
 
 body .el-table--border .el-table__header-wrapper tr > th.el-table__cell:last-child,

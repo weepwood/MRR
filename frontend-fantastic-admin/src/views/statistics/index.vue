@@ -476,7 +476,7 @@ onMounted(refreshAll)
           @change="handleDateRangeChange"
         />
         <div class="search-actions">
-          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" type="primary" @click="handleListSearch">
+          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" @click="handleListSearch">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="listLoading" :busy="listLoading" @click="resetListSearch">

@@ -431,7 +431,7 @@ onMounted(loadDashboard)
                 placeholder="输入 archive_id、病案号或上架号"
                 @keyup.enter="searchArchives"
               />
-              <MrrFilterActionButton action="search" :pending="searchLoading" :busy="searchLoading" type="primary" @click="searchArchives">
+              <MrrFilterActionButton action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
                 查询
               </MrrFilterActionButton>
             </div>

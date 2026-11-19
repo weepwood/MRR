@@ -4,8 +4,8 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -19,30 +19,11 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
-import { readAuthStorage } from '@/utils/auth-storage'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
-import { checkSessionPermission } from '@/utils/permission'
 
 defineOptions({ name: 'LogsPage' })
 
-const router = useRouter()
 const route = useRoute()
-/**
- * 运行日志接口要求 system:manage 与 log:read 同时具备（后端 allMatch），
- * 而 system:manage 的继承链不含 log:read，缺任一都会 403。
- *
- * 这里读会话凭据而不是 user store：后者在模块顶层 `import router from '@/router'`，
- * 会把依赖构建期虚拟模块的路由表带进本页导入链，页面单测因此无法加载。
- * checkSessionPermission 同时处理 ADMIN 角色，与后端放行一致。
- *
- * 会话凭据在进入本页时已确定，故只读一次；权限变更需重新登录后生效。
- */
-const authSession = readAuthStorage()
-const canReadRuntimeLogs = computed(() => {
-  const roleCode = authSession.profile?.roleCode
-  return checkSessionPermission(roleCode, authSession.permissions, 'system:manage')
-    && checkSessionPermission(roleCode, authSession.permissions, 'log:read')
-})
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
@@ -136,13 +117,6 @@ async function openDetail(row: LogRecord) {
   finally {
     detailVisible.value = true
   }
-}
-
-/** 访问日志只记录接口结果，异常原因在后端运行日志里；按同一个 Request ID 直接过去。 */
-function openRuntimeLogs(requestId?: string) {
-  if (!requestId || !canReadRuntimeLogs.value) { return }
-  detailVisible.value = false
-  void router.push({ path: '/runtime-logs', query: { requestId } })
 }
 
 function handleLogAction(action: string, row: LogRecord) {
@@ -301,12 +275,6 @@ function statusTagType(status: string | number) {
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">
           <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
-          <el-button
-            v-if="currentLog.requestId && canReadRuntimeLogs" link type="primary" class="detail-link"
-            @click="openRuntimeLogs(currentLog?.requestId)"
-          >
-            查看运行日志
-          </el-button>
         </el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>

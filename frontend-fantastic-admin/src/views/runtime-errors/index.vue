@@ -29,13 +29,7 @@ defineOptions({ name: 'RuntimeErrorsPage' })
 const userStore = useUserStore()
 const router = useRouter()
 const canManage = computed(() => checkPermission(userStore.permissions, 'system:error:manage'))
-/**
- * 运行日志接口声明了 {@code {"system:manage", "log:read"}}，后端按 allMatch 校验，
- * 两者缺一即 403；且 system:manage 的继承链不含 log:read，必须分别判断。
- * 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。
- */
-const canReadRuntimeLogs = computed(() => checkPermission(userStore.permissions, 'system:manage')
-  && checkPermission(userStore.permissions, 'log:read'))
+/** 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。 */
 const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
 const loading = ref(false)
 const error = ref('')
@@ -125,24 +119,36 @@ async function openDetail(row: SystemErrorEvent) {
   }
 }
 
-/**
- * 错误组只保留指纹与最近一次摘要，真正的原因往往要看同一追踪编号的完整日志。
- * 这里带条件跳转，运行日志页会直接按编号检索，不需要用户手动复制。
- */
-function openRuntimeLogs(query: { errorId?: string, requestId?: string }) {
-  if (!canReadRuntimeLogs.value) { return }
-  const params: Record<string, string> = {}
-  if (query.errorId) { params.errorId = query.errorId }
-  if (query.requestId) { params.requestId = query.requestId }
-  if (!Object.keys(params).length) { return }
-  detailVisible.value = false
-  void router.push({ path: '/runtime-logs', query: params })
-}
-
 function openAccessLog(requestId?: string) {
   if (!requestId || !canReadAccessLogs.value) { return }
   detailVisible.value = false
   void router.push({ path: '/logs', query: { requestId } })
+}
+
+/** 概览指标卡点击即套用对应筛选；再点一次同条件视为取消。 */
+function applyMetricFilter(filter: { status?: string, level?: string }) {
+  const key = 'status' in filter ? 'status' : 'level'
+  const value = filter[key as 'status' | 'level']
+  query[key as 'status' | 'level'] = query[key as 'status' | 'level'] === value ? '' : (value ?? '')
+  handleSearch()
+}
+
+/** 表格里的模块名点击即按该模块筛选，再点同值取消。 */
+function filterByModule(module?: string) {
+  if (!module) { return }
+  query.module = query.module.trim() === module ? '' : module
+  handleSearch()
+}
+
+async function copyText(text: string, message: string) {
+  if (!text.trim()) { return }
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(message)
+  }
+  catch {
+    ElMessage.error('复制失败，请手动选择文本')
+  }
 }
 
 async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
@@ -196,10 +202,16 @@ onMounted(loadData)
     </div>
 
     <section class="mrr-metric-grid mrr-metric-grid--four">
-      <MrrMetricCard label="待处理错误组" :value="loading || error ? '—' : overview.openGroups" value-tone="danger" :note="`ERROR ${overview.errorGroups} 组`" />
+      <button type="button" class="metric-action" title="点击筛选待处理错误组" @click="applyMetricFilter({ status: 'OPEN' })">
+        <MrrMetricCard label="待处理错误组" :value="loading || error ? '—' : overview.openGroups" value-tone="danger" :note="`ERROR ${overview.errorGroups} 组 · WARN ${overview.warnGroups} 组`" />
+      </button>
       <MrrMetricCard label="近24小时活跃错误组" :value="loading || error ? '—' : overview.recentOccurrences" note="按最后发生时间统计" />
-      <MrrMetricCard label="累计错误组" :value="loading || error ? '—' : overview.totalGroups" :note="`累计 ${overview.totalOccurrences} 次`" />
-      <MrrMetricCard label="已解决" :value="loading || error ? '—' : overview.resolvedGroups" value-tone="success" :note="`处理中 ${overview.acknowledgedGroups} 组`" />
+      <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
+        <MrrMetricCard label="累计错误组" :value="loading || error ? '—' : overview.totalGroups" :note="`累计 ${overview.totalOccurrences} 次 · 点击查看全部`" />
+      </button>
+      <button type="button" class="metric-action" title="点击筛选已解决错误组" @click="applyMetricFilter({ status: 'RESOLVED' })">
+        <MrrMetricCard label="已解决" :value="loading || error ? '—' : overview.resolvedGroups" value-tone="success" :note="`处理中 ${overview.acknowledgedGroups} 组`" />
+      </button>
     </section>
 
     <el-card shadow="never">
@@ -250,7 +262,13 @@ onMounted(loadData)
             <el-tag :type="levelTagType(row.level)">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <button type="button" class="module-filter" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
+              {{ row.module || '-' }}
+            </button>
+          </template>
+        </el-table-column>
         <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tag v-if="isRedactedLogText(row.messageSummary)" size="small" effect="plain" type="info">
@@ -318,20 +336,19 @@ onMounted(loadData)
     </el-card>
 
     <el-drawer v-model="detailVisible" title="运行错误详情" size="70%">
-      <div v-if="current && (canReadRuntimeLogs || canReadAccessLogs)" class="detail-links">
-        <el-button v-if="canReadRuntimeLogs" size="small" @click="openRuntimeLogs({ errorId: current?.errorId })">
-          查看同错误组日志
-        </el-button>
-        <el-button v-if="canReadRuntimeLogs && current?.requestId" size="small" @click="openRuntimeLogs({ requestId: current?.requestId })">
-          查看该请求全部日志
-        </el-button>
-        <el-button v-if="canReadAccessLogs && current?.requestId" size="small" @click="openAccessLog(current?.requestId)">
+      <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
+        <el-button size="small" @click="openAccessLog(current?.requestId)">
           查看访问记录
         </el-button>
       </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <el-descriptions v-else-if="current" :column="2" border>
-        <el-descriptions-item label="错误编号">{{ current.errorId }}</el-descriptions-item>
+        <el-descriptions-item label="错误编号">
+          <code class="detail-code">{{ current.errorId }}</code>
+          <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
+            复制
+          </el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(current.status)">{{ statusLabel(current.status) }}</el-tag>
         </el-descriptions-item>
@@ -341,7 +358,12 @@ onMounted(loadData)
         <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
         <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
         <el-descriptions-item label="线程">{{ current.threadName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID" :span="2">{{ current.requestId || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request ID" :span="2">
+          <code class="detail-code">{{ current.requestId || '-' }}</code>
+          <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
+            复制
+          </el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
         <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="错误摘要" :span="2">
@@ -374,6 +396,41 @@ onMounted(loadData)
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+/* 指标卡与模块名都承担「点击筛选」交互，外观退成卡片但语义是按钮。 */
+.metric-action {
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-md, 8px);
+}
+
+.metric-action:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.module-filter {
+  padding: 0;
+  font: inherit;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.module-filter:hover {
+  color: var(--el-color-primary);
+  text-decoration: underline;
+}
+
+.detail-code {
+  font-family: Consolas, "Courier New", monospace;
+  overflow-wrap: anywhere;
 }
 
 .page-header {

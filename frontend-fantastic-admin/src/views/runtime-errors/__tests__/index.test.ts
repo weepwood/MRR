@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   searchSystemErrors: vi.fn(),
   getSystemErrorOverview: vi.fn(),
   getSystemErrorDetail: vi.fn(),
+  listSystemErrorModules: vi.fn(),
 }))
 vi.mock('@/api/modules/system-errors', () => api)
 vi.mock('vue-router', async () => {
@@ -94,6 +95,7 @@ beforeEach(() => {
   api.searchSystemErrors.mockResolvedValue({ data: { list: [rowFixture], total: 1 } })
   api.getSystemErrorOverview.mockResolvedValue({ data: overviewFixture })
   api.getSystemErrorDetail.mockResolvedValue({ data: rowFixture })
+  api.listSystemErrorModules.mockResolvedValue({ data: ['controller', 'storage'] })
 })
 
 afterEach(() => {
@@ -153,6 +155,37 @@ describe('运行错误中心', () => {
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'handler' }))
 
     await (state.filterByModule as (module?: string) => void)('handler')
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
+  })
+
+  it('模块下拉挂载时拉取去重模块名，失败静默保留手输能力', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    expect(api.listSystemErrorModules).toHaveBeenCalledTimes(1)
+    expect(setupState(wrapper).moduleOptions).toEqual(['controller', 'storage'])
+
+    // 检索失败不阻断筛选：选项清空，allow-create 仍可手输
+    api.listSystemErrorModules.mockRejectedValueOnce(new Error('synthetic modules error'))
+    await (setupState(wrapper).loadModules as () => Promise<void>)()
+    await flushPromises()
+    expect(setupState(wrapper).moduleOptions).toEqual([])
+  })
+
+  it('选中模块下拉即触发检索，清空后不再发送该参数', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    const queryState = state.query as { module: string }
+    const handleSearch = state.handleSearch as () => Promise<void>
+
+    queryState.module = 'storage'
+    await handleSearch()
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'storage' }))
+
+    queryState.module = ''
+    await handleSearch()
+    await flushPromises()
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
   })
 

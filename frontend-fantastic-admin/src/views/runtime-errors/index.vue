@@ -11,6 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
   getSystemErrorOverview,
+  listSystemErrorModules,
   searchSystemErrors,
 } from '@/api/modules/system-errors'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -57,6 +58,19 @@ const query = reactive({
   module: '',
   range: '',
 })
+
+/** 模块筛选项：去重后的已有模块名；拉取失败不阻断筛选（下拉仍可手输）。 */
+const moduleOptions = ref<string[]>([])
+
+async function loadModules() {
+  try {
+    const response = await listSystemErrorModules()
+    moduleOptions.value = Array.isArray(response.data) ? response.data : []
+  }
+  catch {
+    moduleOptions.value = []
+  }
+}
 
 /** 时间范围 → 后端 since 参数（本地时区 ISO 格式，后端 LocalDateTime 解析）。 */
 function rangeStart(range: string) {
@@ -146,6 +160,7 @@ function handleVisibilityChange() {
 
 onMounted(() => {
   void loadData()
+  void loadModules()
   refreshTimer = setInterval(() => {
     if (!document.hidden) { void fetchData(true) }
   }, REFRESH_INTERVAL_MS)
@@ -260,7 +275,18 @@ function levelTagType(level: string) {
           />
         </el-form-item>
         <el-form-item label="模块">
-          <el-input v-model="query.module" clearable placeholder="controller / storage" @keyup.enter="handleSearch" />
+          <el-select
+            v-model="query.module"
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            placeholder="选择或输入模块"
+            class="runtime-errors-module"
+            @change="handleSearch"
+          >
+            <el-option v-for="moduleName in moduleOptions" :key="moduleName" :label="moduleName" :value="moduleName" />
+          </el-select>
         </el-form-item>
         <el-form-item label="级别">
           <el-select v-model="query.level" clearable placeholder="全部" class="runtime-errors-level">
@@ -496,6 +522,10 @@ function levelTagType(level: string) {
 
 .runtime-errors-keyword {
   width: 300px;
+}
+
+.runtime-errors-module {
+  width: 180px;
 }
 
 .runtime-errors-level {

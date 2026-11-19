@@ -176,6 +176,15 @@ public interface SystemErrorEventMapper {
     SystemErrorEvent findById(@Param("id") long id);
 
     @Select("""
+            SELECT DISTINCT module
+            FROM system_error_event
+            WHERE module IS NOT NULL AND module <> ''
+            ORDER BY module
+            LIMIT 500
+            """)
+    List<String> listModules();
+
+    @Select("""
             SELECT COUNT(*) AS "totalGroups",
                    COALESCE(SUM(occurrence_count), 0) AS "totalOccurrences",
                    COUNT(*) FILTER (WHERE status = 'OPEN') AS "openGroups",

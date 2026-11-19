@@ -60,6 +60,11 @@ public class SystemErrorController {
         return Result.<SystemErrorOverviewDTO>success().data(service.overview());
     }
 
+    @GetMapping("/modules")
+    public Result<List<String>> modules() {
+        return Result.<List<String>>success().data(service.listModules());
+    }
+
     @GetMapping("/{id}")
     public Result<SystemErrorEvent> detail(@PathVariable long id) {
         SystemErrorEvent event = service.findById(id);

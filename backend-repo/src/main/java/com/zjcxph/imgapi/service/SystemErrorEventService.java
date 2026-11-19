@@ -177,6 +177,11 @@ public class SystemErrorEventService {
         return mapper.overview();
     }
 
+    /** 错误中心模块筛选项：去重后的模块名，量级小（模块=logger 一级前缀），可直接全量返回。 */
+    public List<String> listModules() {
+        return mapper.listModules();
+    }
+
     public boolean updateStatus(long id, String status, String username) {
         String normalizedStatus = normalizeAllowed(status, ALLOWED_STATUSES, "处理状态");
         return mapper.updateStatus(id, normalizedStatus, normalize(username)) > 0;

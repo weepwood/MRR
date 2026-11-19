@@ -3,9 +3,10 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
-import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -24,11 +25,23 @@ import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 defineOptions({ name: 'LogsPage' })
 
 const route = useRoute()
+const router = useRouter()
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
+
+async function copyText(text: string, message: string) {
+  if (!text.trim()) { return }
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(message)
+  }
+  catch {
+    ElMessage.error('复制失败，请手动选择文本')
+  }
+}
 
 const methodOptions = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 const statusOptions = [
@@ -67,11 +80,11 @@ interface LogsQuery {
   timeRange: string[]
 }
 
-const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, loadData } = useCrudList<
+const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
-  fetchApi: async (params, { isCurrent }) => {
+  fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Record<string, any> = { page, size }
     if (keyword?.trim()) apiParams.keyword = keyword.trim()
@@ -89,6 +102,8 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       return await searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
     }
     catch (e: unknown) {
+      // 静默轮询失败返回 undefined：useCrudList 保留现有列表，不进空态/错误态。
+      if (silent) { return undefined }
       const msg = e instanceof Error ? e.message : '加载日志记录失败'
       if (isCurrent()) error.value = msg
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
@@ -105,6 +120,60 @@ watch(() => route.query.requestId, (value) => {
   query.keyword = value
   handleSearch()
 })
+
+/** 30 秒静默轮询：页面隐藏时跳过，重新可见立即补一次；失败保留旧数据。 */
+const REFRESH_INTERVAL_MS = 30_000
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+const lastRefreshedAt = ref('')
+
+function updateLastRefreshed() {
+  lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+}
+
+async function refresh() {
+  await loadData()
+  updateLastRefreshed()
+}
+
+async function silentRefresh() {
+  if (document.hidden) { return }
+  await loadData({ silent: true })
+  updateLastRefreshed()
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = setInterval(() => { void silentRefresh() }, REFRESH_INTERVAL_MS)
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer !== undefined) {
+    clearInterval(refreshTimer)
+    refreshTimer = undefined
+  }
+}
+
+function handleVisibilityChange() {
+  if (!document.hidden) { void silentRefresh() }
+}
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  startAutoRefresh()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  stopAutoRefresh()
+})
+
+/** 失败请求（≥400）通常伴随后端异常；带 Request ID 跳运行错误中心按编号检索。 */
+function openRelatedErrors(row: LogRecord) {
+  const requestId = row.requestId || currentLog.value?.requestId
+  if (!requestId) { return }
+  detailVisible.value = false
+  void router.push({ path: '/runtime-errors', query: { requestId } })
+}
 
 async function openDetail(row: LogRecord) {
   try {
@@ -152,10 +221,13 @@ function statusTagType(status: string | number) {
   <MrrPageShell>
     <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
       <template #actions>
-        <el-button :loading="loading" @click="loadData">
-          <el-icon><Refresh /></el-icon>
-          刷新
-        </el-button>
+        <div class="header-actions">
+          <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
+          <el-button :loading="loading" @click="refresh">
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </div>
       </template>
     </MrrPageHeader>
 
@@ -220,8 +292,19 @@ function statusTagType(status: string | number) {
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.requestId || '-' }}</template>
+        <el-table-column prop="requestId" label="Request ID" min-width="170" show-overflow-tooltip>
+          <template #default="{ row }">
+            <template v-if="row.requestId">
+              <span>{{ row.requestId }}</span>
+              <el-button
+                link type="primary" class="copy-link" aria-label="复制 Request ID"
+                @click="copyText(row.requestId, 'Request ID 已复制')"
+              >
+                <el-icon><CopyIcon /></el-icon>
+              </el-button>
+            </template>
+            <template v-else>-</template>
+          </template>
         </el-table-column>
         <el-table-column prop="username" label="用户" min-width="120">
           <template #default="{ row }">{{ row.username || '-' }}</template>
@@ -265,7 +348,7 @@ function statusTagType(status: string | number) {
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSearch"
-          @current-change="loadData"
+          @current-change="handlePageChange"
         />
       </template>
     </MrrDataTablePanel>
@@ -275,6 +358,18 @@ function statusTagType(status: string | number) {
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">
           <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
+          <el-button
+            v-if="currentLog.requestId" link type="primary" class="detail-link"
+            @click="copyText(currentLog.requestId, 'Request ID 已复制')"
+          >
+            复制
+          </el-button>
+          <el-button
+            v-if="Number(currentLog.responseStatus) >= 400 && currentLog.requestId" link type="warning" class="detail-link"
+            @click="openRelatedErrors(currentLog)"
+          >
+            查看相关运行错误
+          </el-button>
         </el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
@@ -318,6 +413,23 @@ function statusTagType(status: string | number) {
 </template>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.auto-refresh-note {
+  font-size: 12px;
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
+}
+
+.copy-link {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 :global(.log-detail .el-descriptions__table) {
   table-layout: fixed;
 }

@@ -6,8 +6,8 @@ import type {
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
   getSystemErrorOverview,
@@ -26,6 +26,7 @@ defineOptions({ name: 'RuntimeErrorsPage' })
 
 const userStore = useUserStore()
 const router = useRouter()
+const route = useRoute()
 /** 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。 */
 const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
 const loading = ref(false)
@@ -122,6 +123,18 @@ function resetFilters() {
   page.value = 1
   void loadData()
 }
+
+/**
+ * 承接日志管理页「查看相关运行错误」的跳转：/runtime-errors?requestId=xxx
+ * 关键字检索覆盖 request_id 模糊匹配。页面被缓存时跳转不重新 mount，
+ * 与日志管理页同款：跟随 query 变化重新检索。
+ */
+watch(() => route.query.requestId, (value) => {
+  if (route.path !== '/runtime-errors') { return }
+  if (typeof value !== 'string' || !value) { return }
+  query.keyword = value
+  handleSearch()
+})
 
 /** 30 秒静默轮询：页面隐藏时暂停，重新可见立即补一次。 */
 const REFRESH_INTERVAL_MS = 30_000

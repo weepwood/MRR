@@ -4,13 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import RuntimeErrorsPage from '../index.vue'
 
 const pushMock = vi.hoisted(() => vi.fn())
+/** mock 的路由对象（reactive），供测试修改 query 模拟日志管理页跳转。 */
+const routeState = vi.hoisted(() => ({ route: null as { path: string, query: Record<string, unknown> } | null }))
 const api = vi.hoisted(() => ({
   searchSystemErrors: vi.fn(),
   getSystemErrorOverview: vi.fn(),
   getSystemErrorDetail: vi.fn(),
 }))
 vi.mock('@/api/modules/system-errors', () => api)
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: pushMock }) }))
+vi.mock('vue-router', async () => {
+  const { reactive } = await import('vue')
+  const route = reactive({ path: '/runtime-errors', query: {} as Record<string, unknown> })
+  routeState.route = route
+  return { useRouter: () => ({ push: pushMock }), useRoute: () => route }
+})
 vi.mock('@/store/modules/user', () => ({
   useUserStore: () => ({ permissions: ['system:error:read', 'log:read'] }),
 }))
@@ -147,6 +154,16 @@ describe('运行错误中心', () => {
 
     await (state.filterByModule as (module?: string) => void)('handler')
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
+  })
+
+  it('承接日志管理页跳转：requestId 查询参数自动填入关键字检索', async () => {
+    openPage()
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenCalledTimes(1)
+
+    routeState.route!.query = { requestId: 'req-from-logs-001' }
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-from-logs-001' }))
   })
 
   it('详情弹窗带 Request ID 时可跳转访问日志', async () => {

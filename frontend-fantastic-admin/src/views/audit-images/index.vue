@@ -185,6 +185,7 @@ const {
   loadData: loadListData,
   resetFilters: resetListFilters,
   handleSizeChange,
+  handlePageChange,
 } = useCrudList<LogRecord, AuditQuery>({
   fetchApi: async (params, { isCurrent }) => {
     error.value = ''
@@ -326,7 +327,7 @@ onMounted(loadData)
     <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
         <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
-        <el-button :loading="loading || analyticsLoading" @click="loadData"><el-icon><Refresh /></el-icon>刷新</el-button>
+        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
       </template>
     </MrrPageHeader>
 
@@ -372,7 +373,7 @@ onMounted(loadData)
           </template>
         </el-table-column>
       </el-table>
-      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="loadListData" /></template>
+      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">

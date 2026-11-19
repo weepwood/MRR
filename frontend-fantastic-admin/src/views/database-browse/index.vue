@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DbBrowseColumnView, DbBrowsePage, DbBrowseTableSchema, DbBrowseTableSummary } from '@/api/modules/database-browse'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getBrowseRows, getBrowseSchema, getBrowseTables } from '@/api/modules/database-browse'
+import { describeBrowseError, getBrowseRows, getBrowseSchema, getBrowseTables } from '@/api/modules/database-browse'
 
 defineOptions({ name: 'DatabaseBrowsePage' })
 
@@ -71,16 +71,18 @@ function buildFilter(): string | undefined {
   return parts.length ? parts.join(',') : undefined
 }
 
-/** 错误按业务码给可执行提示；3007 单独处理成「功能未开启」，不显示成「没有数据」。 */
+/**
+ * 错误按业务码给可执行提示；3007 单独处理成「功能未开启」，不显示成「没有数据」。
+ *
+ * <p>业务码的提取统一交给 describeBrowseError：HTTP 非 2xx 时请求层抛的是 AxiosError，
+ * code 是字符串 ERR_BAD_REQUEST，业务码只在 response.data 里，直接读 error.code 会漏判。</p>
+ */
 function describeError(error: unknown): string {
-  const code = (error as { code?: number } | undefined)?.code
-  switch (code) {
-    case 3003: return '该表必须提供过滤条件后才会返回数据'
-    case 3004: return '查询超时，请缩小过滤范围后重试'
-    case 3006: return '分页游标已失效，请从第一页重新查询'
-    case 3007: return '该功能未开启，请联系管理员'
-    default: return (error as Error | undefined)?.message || '请求失败，请稍后重试'
-  }
+  return describeBrowseError(error).message
+}
+
+function isFeatureDisabled(error: unknown): boolean {
+  return describeBrowseError(error).featureDisabled
 }
 
 async function loadTables() {
@@ -91,7 +93,7 @@ async function loadTables() {
   }
   catch (error) {
     errorMessage.value = describeError(error)
-    featureDisabled.value = (error as { code?: number } | undefined)?.code === 3007
+    featureDisabled.value = isFeatureDisabled(error)
   }
   finally {
     loading.value = false
@@ -129,7 +131,7 @@ async function fetchRows(target: FetchTarget) {
   }
   catch (error) {
     errorMessage.value = describeError(error)
-    featureDisabled.value = (error as { code?: number } | undefined)?.code === 3007
+    featureDisabled.value = isFeatureDisabled(error)
   }
   finally {
     loading.value = false

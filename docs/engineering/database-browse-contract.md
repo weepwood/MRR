@@ -51,7 +51,7 @@
 
 | 配置项 | 默认 | 说明 |
 | --- | --- | --- |
-| `app.operations.db-browse-enabled` | `false` | 功能总开关 |
+| `app.operations.db-browse-enabled` | `true` | 功能总开关；2026-11-19 由 `false` 修订为默认开启，可用环境变量 `APP_OPERATIONS_DB_BROWSE_ENABLED=false` 显式关闭 |
 
 实现要求：Controller **常驻注册**，开关在 Service 层判定。不要用 `@ConditionalOnProperty(matchIfMissing = true)` 让整个 Bean 消失——项目已确认这种路径会落到 `ResourceHttpRequestHandler`，返回 500 而不是 404，前端无法区分「功能关闭」与「后端故障」。
 

@@ -61,7 +61,7 @@ public class DatabaseBrowseService {
     public DatabaseBrowseService(DbBrowseRegistry registry,
                                  DatabaseBrowseRepository repository,
                                  ObjectMapper objectMapper,
-                                 @Value("${app.operations.db-browse-enabled:false}") boolean enabled) {
+                                 @Value("${app.operations.db-browse-enabled:true}") boolean enabled) {
         this.registry = registry;
         this.repository = repository;
         this.objectMapper = objectMapper;

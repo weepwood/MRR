@@ -5,6 +5,10 @@ import LogsPage from '../logs/index.vue'
 
 const api = vi.hoisted(() => ({ searchSystemLogs: vi.fn(), searchImageAuditLogs: vi.fn(), getImageAuditAnalytics: vi.fn(), getLogById: vi.fn(), exportImageAuditLogs: vi.fn() }))
 vi.mock('@/api/modules/logs', () => api)
+// MrrUserSearchSelect 依赖用户检索接口；真实模块会经由 api/index → user store →
+// route store → router/routes.ts 引入 virtual:generated-pages（vitest 无该插件），
+// 必须在此 mock 掐断依赖链。
+vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
 // 访问日志页新增了「查看运行日志」跳转，需要 useRouter；path 与真实路由一致，
 // 避免页面的「仅在本页时跟随 query」守卫把用例挡掉。
 vi.mock('vue-router', () => ({ useRoute: () => ({ path: '/logs', query: {} }), useRouter: () => ({ push: vi.fn() }) }))

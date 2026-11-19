@@ -307,11 +307,6 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
-        path: '/runtime-logs',
-        component: () => import('@/views/runtime-logs/index.vue'),
-        meta: { title: '运行日志', icon: 'i-lucide:terminal', auth: ['system:manage'], cache: true },
-      },
-      {
         path: '/audit-images',
         component: () => import('@/views/audit-images/index.vue'),
         meta: { title: '病案图片访问审计', icon: 'i-lucide:eye', auth: ['log:read'], cache: true },

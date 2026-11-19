@@ -17,6 +17,7 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import MrrUserSearchSelect from '@/components/MrrUserSearchSelect/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -185,6 +186,7 @@ const {
   loadData: loadListData,
   resetFilters: resetListFilters,
   handleSizeChange,
+  handlePageChange,
 } = useCrudList<LogRecord, AuditQuery>({
   fetchApi: async (params, { isCurrent }) => {
     error.value = ''
@@ -326,17 +328,17 @@ onMounted(loadData)
     <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
         <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
-        <el-button :loading="loading || analyticsLoading" @click="loadData"><el-icon><Refresh /></el-icon>刷新</el-button>
+        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
       </template>
     </MrrPageHeader>
 
     <el-form label-position="top" @submit.prevent>
       <MrrFilterBar layout="grid">
         <el-form-item label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="用户" for="audit-username"><el-input id="audit-username" v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
         <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" clearable placeholder="全部"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" clearable placeholder="全部"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" clearable placeholder="全部访问类型"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" clearable placeholder="全部状态码"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="访问时间" class="mrr-filter-bar__range"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
         <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
       </MrrFilterBar>
@@ -372,7 +374,7 @@ onMounted(loadData)
           </template>
         </el-table-column>
       </el-table>
-      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="loadListData" /></template>
+      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">

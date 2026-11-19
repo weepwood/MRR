@@ -31,7 +31,7 @@ async function expectControlsInside(page: Page, selector: string, container = '.
   }), container), { timeout: 3000 }).toEqual([])
 }
 
-for (const path of ['/logs', '/runtime-logs', '/patients', '/records', '/data-exchange', '/statistics-detail', '/auth-test']) {
+for (const path of ['/logs', '/patients', '/records', '/data-exchange', '/statistics-detail', '/auth-test']) {
   test(`${path} 窄屏控件与分页不被工作区裁切`, async ({ page }) => {
     await prepare(page, 375)
     await page.goto(path)

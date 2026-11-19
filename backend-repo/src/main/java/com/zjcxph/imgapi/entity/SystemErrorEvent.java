@@ -22,6 +22,8 @@ public class SystemErrorEvent {
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
     private Long occurrenceCount;
+    /** 最近 24 小时发生次数（由 recent_seen_at 数组统计，非持久化列，最多统计最近 50 次）。 */
+    private Long recent24hCount;
     private String status;
     private String acknowledgedBy;
     private LocalDateTime resolvedAt;

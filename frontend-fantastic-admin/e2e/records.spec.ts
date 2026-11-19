@@ -42,18 +42,42 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
 
 test('编辑筛选不会把旧游标用于新条件，提交查询后从头读取', async ({ page }) => {
   const requests: { afterId: string | null, bah?: string }[] = []
-  await page.route('**/api/v1/scan/cursor/condition?**', async route => {
+  await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
     const url = new URL(route.request().url())
     requests.push({ afterId: url.searchParams.get('afterId'), bah: route.request().postDataJSON().bah })
     await route.fulfill({ json: { code: 200, data: { list: [{ id: 100, bah: '123', filename: 'synthetic.jpg' }], hasMore: true, nextCursorId: 100, size: 20 } } })
   })
   await page.goto('/records')
   await expect(page.getByRole('cell', { name: '123', exact: true })).toBeVisible()
-  await page.getByLabel('病案号', { exact: true }).fill('456')
+  await expect(page.locator('label[for="records-bah"]')).toBeVisible()
+  await page.getByLabel('病案号', { exact: true }).fill('000456')
+  await expect(page.getByText('筛选条件已修改', { exact: false })).toBeVisible()
+  await expect(page.locator('.records-query-context')).toContainText('已提交条件：全部记录')
   await page.getByRole('button', { name: '下一批', exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1]).toEqual({ afterId: '100', bah: undefined })
   await page.getByRole('button', { name: '查询', exact: true }).click()
   await expect.poll(() => requests.length).toBe(3)
-  expect(requests[2]).toEqual({ afterId: '0', bah: '456' })
+  expect(requests[2]).toEqual({ afterId: '0', bah: '000456' })
+  await expect(page.locator('.records-query-context')).toContainText('病案号：000456')
+  await expect(page.getByText('筛选条件已修改', { exact: false })).toHaveCount(0)
 })
+
+for (const theme of ['light', 'dark']) {
+  test(`${theme} 主题下查询面板在宽窄屏保持可读`, async ({ page }) => {
+    await page.addInitScript((scheme) => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+        app: { colorScheme: scheme, pageTitleStyle: 'card' },
+        layout: { enableMobileAdaptation: true },
+      }))
+    }, theme)
+    await page.goto('/records')
+    await expect(page.getByRole('heading', { name: '扫描记录', exact: true })).toBeVisible()
+    for (const width of [1366, 375]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.locator('.records-query-context')).toBeVisible()
+      await expect(page.locator('label[for="records-bah"]')).toBeVisible()
+      await expect.poll(() => page.locator('.records-page').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+    }
+  })
+}

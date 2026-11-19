@@ -661,7 +661,7 @@ onMounted(loadData)
             </el-select>
           </div>
           <template #actions>
-            <el-button type="primary" :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
+            <el-button :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
             <el-button :aria-busy="dataLoadingAction === 'reset'" :aria-disabled="dataLoadingAction === 'reset'" @click="resetFilters"><FaIcon :name="dataLoadingAction === 'reset' ? 'i-lucide:loader-circle' : 'i-lucide:rotate-ccw'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'reset' }" />重置</el-button>
             <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
           </template>
@@ -673,11 +673,11 @@ onMounted(loadData)
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
       <el-table v-else :data="users" row-key="id">
-        <el-table-column prop="username" label="用户名" min-width="150">
+        <el-table-column prop="username" label="用户名" min-width="130" show-overflow-tooltip>
           <template #default="{ row }"><div class="user-identity"><span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span><strong>{{ row.username }}</strong></div></template>
         </el-table-column>
-        <el-table-column prop="displayName" label="显示名称" min-width="130" />
-        <el-table-column label="申请信息" min-width="230">
+        <el-table-column prop="displayName" label="显示名称" min-width="110" show-overflow-tooltip />
+        <el-table-column label="申请信息" min-width="130">
           <template #default="{ row }">
             <div v-if="row.appliedAt || row.contactInfo || row.applyRemark" class="application-info">
               <span v-if="row.contactInfo">{{ row.contactInfo }}</span>
@@ -688,10 +688,10 @@ onMounted(loadData)
             <span v-else class="no-perm">管理员创建</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" min-width="120"><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
-        <el-table-column label="凭据状态" min-width="150"><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
+        <el-table-column label="角色" min-width="100" show-overflow-tooltip><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
+        <el-table-column label="凭据状态" min-width="140" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
         <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" min-width="165"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" min-width="150" show-overflow-tooltip><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
         <el-table-column
           v-if="canManage"
           label="操作"

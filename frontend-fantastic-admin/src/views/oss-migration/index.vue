@@ -1169,7 +1169,7 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item class="filter-actions" label="操作">
-          <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" type="primary" @click="loadRecords">
+          <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" @click="loadRecords">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="loading.records" :busy="loading.records" @click="resetRecordFilters">
@@ -1385,7 +1385,7 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item>
-          <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" type="primary" @click="loadLogs">
+          <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">

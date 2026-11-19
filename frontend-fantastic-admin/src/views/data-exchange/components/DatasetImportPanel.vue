@@ -313,7 +313,7 @@ function today() {
         <el-table v-if="result.errors.length" :data="result.errors" max-height="280" border>
           <el-table-column prop="rowNumber" label="行号" width="80" />
           <el-table-column prop="field" label="字段" width="150" />
-          <el-table-column prop="message" label="问题" min-width="280" />
+          <el-table-column prop="message" label="问题" min-width="280" show-overflow-tooltip />
           <el-table-column prop="value" label="原值（敏感值已脱敏）" min-width="190" show-overflow-tooltip />
         </el-table>
         <p v-if="result.errorsTruncated" class="truncated-tip">

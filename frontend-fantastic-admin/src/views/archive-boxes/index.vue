@@ -518,7 +518,7 @@ onMounted(refreshAll)
             </el-select>
           </div>
           <template #actions>
-            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
@@ -626,7 +626,7 @@ onMounted(refreshAll)
             </el-input>
           </div>
           <template #actions>
-            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="searchBoxes">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="searchBoxes">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetBoxSearch">

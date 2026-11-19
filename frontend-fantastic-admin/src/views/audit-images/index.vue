@@ -17,6 +17,7 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import MrrUserSearchSelect from '@/components/MrrUserSearchSelect/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -334,7 +335,7 @@ onMounted(loadData)
     <el-form label-position="top" @submit.prevent>
       <MrrFilterBar layout="grid">
         <el-form-item label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="用户" for="audit-username"><el-input id="audit-username" v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" /></el-form-item>
+        <el-form-item label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
         <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
         <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" clearable placeholder="全部"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" clearable placeholder="全部"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>

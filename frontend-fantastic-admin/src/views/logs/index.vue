@@ -17,6 +17,7 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import MrrUserSearchSelect from '@/components/MrrUserSearchSelect/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -245,7 +246,12 @@ function statusTagType(status: string | number) {
               />
             </el-form-item>
             <el-form-item label="用户" for="logs-username">
-              <el-input id="logs-username" v-model="query.username" clearable placeholder="用户名" @keyup.enter="handleSearch" />
+              <MrrUserSearchSelect
+                id="logs-username"
+                v-model="query.username"
+                placeholder="搜索已存在用户名"
+                @update:model-value="handleSearch"
+              />
             </el-form-item>
             <el-form-item label="客户端 IP" for="logs-client-ip">
               <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />

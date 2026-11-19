@@ -10,12 +10,14 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/modules/logs', () => api)
+vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
 
 const stubs = {
   'AuditAnalytics': { props: ['analytics', 'loading'], template: '<div class="audit-analytics" :data-count="analytics.totalAccesses" :data-loading="loading" />' },
   'AppEmpty': true,
   'AppError': { props: ['message'], template: '<p class="list-error">{{ message }}</p>' },
   'AppLoading': true,
+  'MrrUserSearchSelect': { props: ['modelValue', 'id', 'placeholder'], emits: ['update:modelValue'], template: '<input class="user-search-stub" />' },
   'el-alert': { template: '<div><slot name="title"/><slot/></div>' },
   'el-button': { template: '<button><slot/></button>' },
   'el-card': { template: '<section><slot name="header"/><slot/></section>' },

@@ -15,6 +15,7 @@ vi.mock('vue-router', () => ({
 }))
 vi.mock('@vueuse/core', () => ({ useMediaQuery: () => ({ value: false }) }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
 
 const rowFixture = {
   id: 1,
@@ -54,6 +55,11 @@ const stubs = {
   'MrrFilterBar': { template: '<div class="filter-bar"><slot /><slot name="actions" /></div>' },
   'MrrFilterActionButton': { props: ['action'], template: '<button :data-action="action" @click="$emit(\'click\')"><slot /></button>' },
   'MrrTableActions': { props: ['actions'], template: '<div class="table-actions" />' },
+  'MrrUserSearchSelect': {
+    props: ['modelValue', 'id', 'placeholder'],
+    emits: ['update:modelValue'],
+    template: '<input class="user-search-stub" :value="modelValue" />',
+  },
   'el-button': { props: ['link', 'loading'], template: '<button class="el-button-stub" @click="$emit(\'click\')"><slot /></button>' },
   'el-form': { template: '<form><slot /></form>' },
   'el-form-item': { props: ['label'], template: '<div><slot /></div>' },

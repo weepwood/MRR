@@ -76,6 +76,7 @@ for (const theme of ['light', 'dark']) {
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).fill(archive.bah)
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).press('Enter')
     await expect(page.getByText('合成布局示例', { exact: true }).last()).toBeVisible()
+    await expect(page.locator('.archive-detail-stack .mrr-status-tag--success').filter({ hasText: '一致' })).toHaveCount(1)
     await expect.poll(() => page.locator('.relation-workbench').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
     await page.getByRole('tab', { name: '检查与异常', exact: true }).click()
     await page.locator('.quality-stack').getByRole('button', { name: /更多/ }).click()

@@ -26,6 +26,7 @@ import {
 import AppError from '@/components/AppError/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
@@ -142,7 +143,7 @@ function issueEntityId(issue: DataQualityIssue) {
 }
 
 function relationTagType(status: RelationCoverage['status']) {
-  if (status === 'UNKNOWN') return 'info'
+  if (status === 'UNKNOWN') return 'neutral'
   if (status === 'HEALTHY') return 'success'
   if (status === 'WARNING' || status === 'LEGACY') return 'warning'
   return 'danger'
@@ -151,7 +152,7 @@ function relationTagType(status: RelationCoverage['status']) {
 function comparisonTagType(status: ComparisonStatus) {
   if (status === 'EXACT') return 'success'
   if (status === 'FORMAT_ONLY' || status === 'NO_CANONICAL') return 'warning'
-  if (status === 'MISSING') return 'info'
+  if (status === 'MISSING') return 'neutral'
   return 'danger'
 }
 
@@ -361,9 +362,7 @@ onMounted(loadDashboard)
                   <strong>{{ relation.label }}</strong>
                   <code>{{ relation.tableName }}</code>
                 </div>
-                <el-tag :type="relationTagType(relation.status)" effect="light">
-                  {{ relation.status }}
-                </el-tag>
+                <MrrStatusTag :label="relation.status" :tone="relationTagType(relation.status)" />
               </div>
               <p>{{ relation.relation }}</p>
               <div class="coverage-row">
@@ -414,9 +413,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="级别" width="100">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="异常数量" width="130">
@@ -573,9 +570,7 @@ onMounted(loadDashboard)
                   <el-table-column prop="sourceValue" label="来源值" min-width="150" />
                   <el-table-column label="判断" width="140">
                     <template #default="{ row }">
-                      <el-tag :type="comparisonTagType(row.status)">
-                        {{ comparisonLabel(row.status) }}
-                      </el-tag>
+                      <MrrStatusTag :label="comparisonLabel(row.status) || row.status" :tone="comparisonTagType(row.status)" />
                     </template>
                   </el-table-column>
                 </el-table>
@@ -641,9 +636,7 @@ onMounted(loadDashboard)
                   <strong>检查规则结果</strong>
                   <span>关联、编号、文件元数据、重复扫描和迁移一致性</span>
                 </div>
-                <el-tag v-if="qualitySummary?.running" type="warning">
-                  检查运行中
-                </el-tag>
+                <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
               </div>
             </template>
             <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
@@ -657,9 +650,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="严重程度" width="120">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="异常数" width="120">
@@ -700,9 +691,7 @@ onMounted(loadDashboard)
             <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
               <el-table-column label="级别" width="95">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity === 'CRITICAL' ? '严重' : '警告' }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="规则" min-width="250">

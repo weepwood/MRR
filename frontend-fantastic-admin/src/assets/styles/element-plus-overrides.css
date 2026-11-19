@@ -1022,3 +1022,151 @@ body .el-descriptions__table {
     border-color: var(--mrr-destructive);
   }
 }
+
+/*
+ * 圆角桥接：Element Plus 的按需样式可能在全局样式之后注入。
+ * 通过控件级变量与更具体的选择器保持尺寸变体，同时保留组合控件的接缝。
+ * 不在内部内容节点（如 el-tag__content）画背景或圆角。
+ */
+body .el-input,
+body .el-textarea {
+  --el-input-border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small {
+  --el-input-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large {
+  --el-input-border-radius: var(--mrr-radius-lg);
+}
+
+body .el-input .el-input__wrapper,
+body .el-textarea .el-textarea__inner,
+body .el-select .el-select__wrapper,
+body .el-date-editor.el-input__wrapper {
+  border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small .el-input__wrapper,
+body .el-select--small .el-select__wrapper,
+body .el-date-editor.el-range-editor--small {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large .el-input__wrapper,
+body .el-select--large .el-select__wrapper,
+body .el-date-editor.el-range-editor--large {
+  border-radius: var(--mrr-radius-lg);
+}
+
+/* 拼接输入框的内部相邻边必须为直角，外缘由 EP 读取同一输入圆角变量。 */
+body .el-input-group--prepend > .el-input__wrapper {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-input-group--append > .el-input__wrapper {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-input-number {
+  --el-border-radius-base: var(--mrr-control-radius);
+
+  border-radius: var(--el-border-radius-base);
+}
+
+body .el-input-number--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-input-number--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-radio-group {
+  --el-border-radius-base: var(--mrr-control-radius);
+}
+
+body .el-radio-button--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-radio-button--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-tag {
+  --el-tag-border-radius: var(--mrr-radius-sm);
+
+  border-radius: var(--el-tag-border-radius);
+}
+
+/* 胶囊和正圆是明确的几何变体，不跟随矩形控件圆角。 */
+body .el-tag.is-round {
+  border-radius: var(--el-tag-border-radius-rounded);
+}
+
+body .el-button.is-round {
+  border-radius: var(--mrr-radius-pill);
+}
+
+body .el-button.is-circle {
+  border-radius: 50%;
+}
+
+body .el-checkbox {
+  --el-checkbox-border-radius: min(4px, var(--mrr-radius-sm));
+}
+
+body .el-checkbox .el-checkbox__inner {
+  border-radius: var(--el-checkbox-border-radius);
+}
+
+/* 其他直接使用 Element Plus 局部固定圆角的控件。 */
+body .el-pagination {
+  --el-pagination-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-pagination .btn-prev,
+body .el-pagination .btn-next,
+body .el-pagination .el-pager li {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-message-box {
+  border-radius: var(--mrr-radius-dialog);
+}
+
+/* 卡片式页签按方向保留与内容区相邻的直角。 */
+body .el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) var(--mrr-control-radius) 0 0;
+}
+
+body .el-tabs--left.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) 0 0 var(--mrr-control-radius);
+}
+
+body .el-tabs--right.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 var(--mrr-control-radius) var(--mrr-control-radius) 0;
+}
+
+body .el-tabs--bottom.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 0 var(--mrr-control-radius) var(--mrr-control-radius);
+}
+
+/* 按钮组保留相邻边为直角，即使使用 round 变体也是如此。 */
+body .el-button-group > .el-button:first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-button-group > .el-button:last-child:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-button-group > .el-button:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}

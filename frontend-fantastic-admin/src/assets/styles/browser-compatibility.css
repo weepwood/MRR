@@ -15,6 +15,8 @@
     --text-tertiary: var(--mrr-muted-foreground);
     --text-hint: var(--mrr-muted-foreground);
     --mrr-control-bg-disabled: var(--mrr-muted);
+    --mrr-control-bg: var(--mrr-muted);
+    --mrr-control-bg-hover: var(--mrr-muted);
     --mrr-control-border-hover: var(--mrr-border);
     --mrr-focus-ring: 0 0 0 3px rgb(37 99 235 / 30%);
     --mrr-danger-focus-ring: 0 0 0 3px rgb(209 60 60 / 22%);

@@ -630,11 +630,11 @@ onMounted(refreshAll)
 }
 
 .search-type {
-  flex: 0 0 150px;
+  flex: 0 0 190px;
 }
 
 .search-year {
-  flex: 0 0 160px;
+  flex: 0 0 190px;
 }
 
 .search-date {

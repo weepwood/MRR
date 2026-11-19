@@ -133,29 +133,10 @@ const slots = useSlots()
   }
 }
 
-.mrr-filter-bar :deep(.el-input__wrapper),
-.mrr-filter-bar :deep(.el-select__wrapper) {
-  min-height: var(--mrr-input-height);
-  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
-  border-radius: var(--mrr-control-radius);
-}
-
-.mrr-filter-bar :deep(.el-input--small .el-input__wrapper),
-.mrr-filter-bar :deep(.el-select--small .el-select__wrapper) {
-  min-height: var(--mrr-input-height);
-  border-radius: var(--mrr-radius-sm);
-}
-
-.mrr-filter-bar :deep(.el-input--large .el-input__wrapper),
-.mrr-filter-bar :deep(.el-select--large .el-select__wrapper) {
-  min-height: var(--mrr-input-height);
-  border-radius: var(--mrr-radius-lg);
-}
-
-.mrr-filter-bar :deep(.el-input__wrapper.is-focus),
-.mrr-filter-bar :deep(.el-select__wrapper.is-focused) {
-  background: var(--mrr-card);
-}
+/*
+ * 控件底色 / 最小高度 / 焦点态背景此前在此用 color-mix 局部覆盖；现已统一提升到
+ * tokens.css 的 --mrr-control-bg（含 Chrome 86 静态回退），此处不再重复定义。
+ */
 
 @media (max-width: 760px) {
   .mrr-filter-bar--grid .mrr-filter-bar__fields {
@@ -196,16 +177,12 @@ const slots = useSlots()
 /*
  * Chrome 86 回退：焦点态必须保留焦点环——这里原本只有一条含 color-mix 的 box-shadow，
  * 失效后连卡片自身的阴影都会一起消失，聚焦与失焦完全无从分辨。
+ * （控件底色的回退已随全局令牌移至 browser-compatibility.css。）
  */
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
   .mrr-filter-bar--focus-ring:focus-within {
     border-color: var(--mrr-primary);
     box-shadow: var(--mrr-shadow-xs), var(--mrr-focus-ring);
-  }
-
-  .mrr-filter-bar :deep(.el-input__wrapper),
-  .mrr-filter-bar :deep(.el-select__wrapper) {
-    background: var(--mrr-muted);
   }
 }
 </style>

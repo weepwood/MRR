@@ -140,9 +140,11 @@
   --surface-alt: var(--mrr-secondary);
   --divider: var(--mrr-border);
 
-  /* 控件表面与交互 */
-  --mrr-control-bg: var(--mrr-background);
-  --mrr-control-bg-hover: var(--mrr-background);
+  /* 控件表面与交互
+   * 控件底色全局统一为筛选栏同款灰调（对齐用户管理页下拉），hover 加深一档；
+   * 此前筛选栏内用局部 color-mix 覆盖、表单区用纯底色，造成两套观感。 */
+  --mrr-control-bg: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-muted) 26%, var(--mrr-card));
   --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 82%, var(--mrr-card));
   --mrr-control-border: var(--mrr-input);
   --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 22%, var(--mrr-input));
@@ -175,8 +177,6 @@
 
     --scrollbar-color: 240 3.7% 15.9%;
     --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
-    --mrr-control-bg: color-mix(in srgb, var(--mrr-card) 88%, white 2%);
-    --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-card) 84%, white 4%);
     --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
     --mrr-control-border: var(--mrr-input);
     --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));

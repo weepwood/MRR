@@ -469,16 +469,16 @@ onBeforeUnmount(() => {
       </template>
 
       <div class="filter-grid">
-        <el-input v-model="filters.bah" class="filter-bah" clearable placeholder="病案号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.sjh" class="filter-sjh" clearable placeholder="上架号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.keyword" class="filter-keyword" clearable placeholder="患者姓名、病人 ID、科室、设备或负责人"
+        <el-input v-model="filters.bah" class="filter-bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+        <el-input v-model="filters.sjh" class="filter-sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
+        <el-input v-model="filters.keyword" class="filter-keyword" clearable aria-label="综合筛选" placeholder="患者姓名、病人 ID、科室、设备或负责人"
           @keyup.enter="handleSearch" />
-        <el-select v-model="filters.type" class="filter-type" clearable placeholder="全部类型" @change="handleSearch">
+        <el-select v-model="filters.type" class="filter-type" clearable aria-label="档案类型" placeholder="全部类型" @change="handleSearch">
           <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
         <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
           start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD" />
-        <el-select v-model="sortKey" class="filter-sort" @change="handleSearch">
+        <el-select v-model="sortKey" class="filter-sort" aria-label="排序方式" @change="handleSearch">
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
         <div class="filter-actions">
@@ -735,7 +735,7 @@ h2 {
 
 .filter-type,
 .filter-sort {
-  flex: 0 0 170px;
+  flex: 0 0 190px;
 }
 
 .filter-date {

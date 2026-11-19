@@ -347,8 +347,11 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   border-radius: var(--mrr-radius-lg);
 }
 
+/* 用 .el-select .el-select__wrapper 提高优先级：EP 按需样式注入晚于本文件，
+ * 单类选择器会被其自带的 4px 圆角覆盖，导致控件不响应 --mrr-control-radius 令牌。 */
 .el-select .el-select__wrapper {
   padding-block: 4px;
+  border-radius: var(--mrr-control-radius);
 }
 
 .el-input__wrapper:hover,

@@ -665,8 +665,13 @@ body .el-table--border .el-table__inner-wrapper::after {
   display: none;
 }
 
-/* 最后一行的下边框与外框相邻，交给外框绘制，避免叠成 2px。 */
-body .el-table--border .el-table__body-wrapper tr:last-child td.el-table__cell,
+/*
+ * 最后一行的下边框与外框相邻，交给外框绘制，避免叠成 2px。
+ * 有 footer 时例外：body 与 footer 的分隔线正是 body 末行 td 的
+ * border-bottom（footer 单元格没有 border-top），不能用外框替代，
+ * 用 :not(.has-footer) 保留它（简单选择器的 :not() Chrome 86 可用）。
+ */
+body .el-table--border:not(.has-footer) .el-table__body-wrapper tr:last-child td.el-table__cell,
 body .el-table--border .el-table__footer-wrapper tr:last-child td.el-table__cell {
   border-bottom: 0;
 }

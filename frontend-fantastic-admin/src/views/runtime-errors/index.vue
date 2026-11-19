@@ -2,9 +2,8 @@
 import type {
   SystemErrorEvent,
   SystemErrorOverview,
-  SystemErrorStatus,
 } from '@/api/modules/system-errors'
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
+/* eslint-disable vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -13,7 +12,6 @@ import {
   getSystemErrorDetail,
   getSystemErrorOverview,
   searchSystemErrors,
-  updateSystemErrorStatus,
 } from '@/api/modules/system-errors'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -28,7 +26,6 @@ defineOptions({ name: 'RuntimeErrorsPage' })
 
 const userStore = useUserStore()
 const router = useRouter()
-const canManage = computed(() => checkPermission(userStore.permissions, 'system:error:manage'))
 /** 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。 */
 const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
 const loading = ref(false)
@@ -40,7 +37,6 @@ const size = ref(20)
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const current = ref<SystemErrorEvent | null>(null)
-const updatingId = ref<number | null>(null)
 
 const overview = ref<SystemErrorOverview>({
   totalGroups: 0,
@@ -56,7 +52,6 @@ const overview = ref<SystemErrorOverview>({
 const query = reactive({
   keyword: '',
   level: '',
-  status: '',
   module: '',
 })
 
@@ -69,7 +64,6 @@ async function loadData() {
       size: size.value,
       keyword: query.keyword.trim() || undefined,
       level: query.level || undefined,
-      status: query.status || undefined,
       module: query.module.trim() || undefined,
     }
     const [pageResult, overviewResult] = await Promise.all([
@@ -98,7 +92,6 @@ function handleSearch() {
 function resetFilters() {
   query.keyword = ''
   query.level = ''
-  query.status = ''
   query.module = ''
   page.value = 1
   void loadData()
@@ -125,11 +118,9 @@ function openAccessLog(requestId?: string) {
   void router.push({ path: '/logs', query: { requestId } })
 }
 
-/** 概览指标卡点击即套用对应筛选；再点一次同条件视为取消。 */
-function applyMetricFilter(filter: { status?: string, level?: string }) {
-  const key = 'status' in filter ? 'status' : 'level'
-  const value = filter[key as 'status' | 'level']
-  query[key as 'status' | 'level'] = query[key as 'status' | 'level'] === value ? '' : (value ?? '')
+/** 指标卡点击即按级别套用筛选；再点同卡视为取消。 */
+function applyLevelFilter(level: string) {
+  query.level = query.level === level ? '' : level
   handleSearch()
 }
 
@@ -151,37 +142,19 @@ async function copyText(text: string, message: string) {
   }
 }
 
-async function changeStatus(row: SystemErrorEvent, status: SystemErrorStatus) {
-  if (!canManage.value) return
-  updatingId.value = row.id
-  try {
-    await updateSystemErrorStatus(row.id, status)
-    ElMessage.success('处理状态已更新')
-    await loadData()
-    if (current.value?.id === row.id) {
-      const response = await getSystemErrorDetail(row.id)
-      current.value = response.data ?? current.value
-    }
-  }
-  finally {
-    updatingId.value = null
-  }
+/**
+ * 摘要展示统一口径：正文为占位符（历史整体脱敏）或为空时，
+ * 回退显示异常类型——这是该记录上始终有值、最能说明问题的字段，
+ * 不再渲染「正文未保存」之类的解释性标签。
+ */
+function summaryDisplay(row: SystemErrorEvent) {
+  const summary = row.messageSummary || ''
+  if (!summary.trim() || isRedactedLogText(summary)) { return row.exceptionType || '-' }
+  return summary
 }
 
 function levelTagType(level: string) {
   return level === 'ERROR' ? 'danger' : 'warning'
-}
-
-function statusTagType(status: string) {
-  if (status === 'RESOLVED') return 'success'
-  if (status === 'ACKNOWLEDGED') return 'warning'
-  return 'danger'
-}
-
-function statusLabel(status: string) {
-  if (status === 'RESOLVED') return '已解决'
-  if (status === 'ACKNOWLEDGED') return '处理中'
-  return '待处理'
 }
 
 onMounted(loadData)
@@ -202,15 +175,15 @@ onMounted(loadData)
     </div>
 
     <section class="mrr-metric-grid mrr-metric-grid--four">
-      <button type="button" class="metric-action" title="点击筛选待处理错误组" @click="applyMetricFilter({ status: 'OPEN' })">
-        <MrrMetricCard label="待处理错误组" :value="loading || error ? '—' : overview.openGroups" value-tone="danger" :note="`ERROR ${overview.errorGroups} 组 · WARN ${overview.warnGroups} 组`" />
+      <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
+        <MrrMetricCard label="ERROR 错误组" :value="loading || error ? '—' : overview.errorGroups" value-tone="danger" note="点击仅看 ERROR" />
+      </button>
+      <button type="button" class="metric-action" title="点击仅看 WARN 错误组" @click="applyLevelFilter('WARN')">
+        <MrrMetricCard label="WARN 错误组" :value="loading || error ? '—' : overview.warnGroups" value-tone="warning" note="点击仅看 WARN" />
       </button>
       <MrrMetricCard label="近24小时活跃错误组" :value="loading || error ? '—' : overview.recentOccurrences" note="按最后发生时间统计" />
       <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
         <MrrMetricCard label="累计错误组" :value="loading || error ? '—' : overview.totalGroups" :note="`累计 ${overview.totalOccurrences} 次 · 点击查看全部`" />
-      </button>
-      <button type="button" class="metric-action" title="点击筛选已解决错误组" @click="applyMetricFilter({ status: 'RESOLVED' })">
-        <MrrMetricCard label="已解决" :value="loading || error ? '—' : overview.resolvedGroups" value-tone="success" :note="`处理中 ${overview.acknowledgedGroups} 组`" />
       </button>
     </section>
 
@@ -232,13 +205,6 @@ onMounted(loadData)
           <el-select v-model="query.level" clearable placeholder="全部" class="runtime-errors-level">
             <el-option label="ERROR" value="ERROR" />
             <el-option label="WARN" value="WARN" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" clearable placeholder="全部" class="runtime-errors-status">
-            <el-option label="待处理" value="OPEN" />
-            <el-option label="处理中" value="ACKNOWLEDGED" />
-            <el-option label="已解决" value="RESOLVED" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -269,55 +235,18 @@ onMounted(loadData)
             </button>
           </template>
         </el-table-column>
-        <el-table-column prop="messageSummary" label="错误摘要" min-width="360" show-overflow-tooltip>
+        <el-table-column label="错误摘要" min-width="360" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag v-if="isRedactedLogText(row.messageSummary)" size="small" effect="plain" type="info">
-              旧记录正文未保存
-            </el-tag>
-            <span v-else>{{ row.messageSummary || '-' }}</span>
+            <span>{{ summaryDisplay(row as SystemErrorEvent) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
           <template #default="{ row }">{{ row.requestId || '-' }}</template>
         </el-table-column>
         <el-table-column prop="occurrenceCount" label="次数" width="90" align="right" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" :width="canManage ? 250 : 90" fixed="right" align="center">
+        <el-table-column label="操作" width="90" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row as SystemErrorEvent)">详情</el-button>
-            <template v-if="canManage">
-              <el-button
-                v-if="row.status === 'OPEN'"
-                link
-                type="warning"
-                :loading="updatingId === row.id"
-                @click="changeStatus(row as SystemErrorEvent, 'ACKNOWLEDGED')"
-              >
-                标记处理中
-              </el-button>
-              <el-button
-                v-if="row.status !== 'RESOLVED'"
-                link
-                type="success"
-                :loading="updatingId === row.id"
-                @click="changeStatus(row as SystemErrorEvent, 'RESOLVED')"
-              >
-                解决
-              </el-button>
-              <el-button
-                v-else
-                link
-                type="danger"
-                :loading="updatingId === row.id"
-                @click="changeStatus(row as SystemErrorEvent, 'OPEN')"
-              >
-                重新打开
-              </el-button>
-            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -335,7 +264,7 @@ onMounted(loadData)
       </div>
     </el-card>
 
-    <el-drawer v-model="detailVisible" title="运行错误详情" size="70%">
+    <el-dialog v-model="detailVisible" title="运行错误详情" width="880px" top="5vh">
       <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
         <el-button size="small" @click="openAccessLog(current?.requestId)">
           查看访问记录
@@ -349,15 +278,14 @@ onMounted(loadData)
             复制
           </el-button>
         </el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="statusTagType(current.status)">{{ statusLabel(current.status) }}</el-tag>
+        <el-descriptions-item label="级别">
+          <el-tag :type="levelTagType(current.level)">{{ current.level }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="级别">{{ current.level }}</el-descriptions-item>
         <el-descriptions-item label="累计次数">{{ current.occurrenceCount }}</el-descriptions-item>
+        <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
         <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
         <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="线程">{{ current.threadName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="线程" :span="2">{{ current.threadName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID" :span="2">
           <code class="detail-code">{{ current.requestId || '-' }}</code>
           <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
@@ -367,19 +295,13 @@ onMounted(loadData)
         <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
         <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="错误摘要" :span="2">
-          <el-alert
-            v-if="isRedactedLogText(current.messageSummary)" type="info" :closable="false" show-icon
-            title="该记录写入时正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的日志会保留模板正文。"
-          />
-          <pre v-else class="detail-pre summary-pre">{{ current.messageSummary || '-' }}</pre>
+          <pre class="detail-pre summary-pre">{{ summaryDisplay(current) }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="脱敏堆栈" :span="2">
+        <el-descriptions-item label="异常堆栈" :span="2">
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="处理人">{{ current.acknowledgedBy || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="解决时间">{{ formatDateTime(current.resolvedAt) }}</el-descriptions-item>
       </el-descriptions>
-    </el-drawer>
+    </el-dialog>
   </div>
 </template>
 
@@ -466,7 +388,7 @@ onMounted(loadData)
 
 .detail-pre {
   box-sizing: border-box;
-  max-height: 460px;
+  max-height: 420px;
   margin: 0;
   padding: 12px;
   overflow: auto;
@@ -490,10 +412,6 @@ onMounted(loadData)
 
 .runtime-errors-level {
   width: 130px;
-}
-
-.runtime-errors-status {
-  width: 140px;
 }
 
 .runtime-errors-table {

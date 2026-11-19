@@ -8,12 +8,11 @@ const api = vi.hoisted(() => ({
   searchSystemErrors: vi.fn(),
   getSystemErrorOverview: vi.fn(),
   getSystemErrorDetail: vi.fn(),
-  updateSystemErrorStatus: vi.fn(),
 }))
 vi.mock('@/api/modules/system-errors', () => api)
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: pushMock }) }))
 vi.mock('@/store/modules/user', () => ({
-  useUserStore: () => ({ permissions: ['system:error:read', 'system:error:manage', 'log:read'] }),
+  useUserStore: () => ({ permissions: ['system:error:read', 'log:read'] }),
 }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 
@@ -33,6 +32,7 @@ const rowFixture = {
   level: 'ERROR',
   module: 'handler',
   messageSummary: 'synthetic error message',
+  exceptionType: 'java.lang.IllegalStateException',
   requestId: 'req-synthetic-001',
   occurrenceCount: 6,
   status: 'OPEN',
@@ -63,10 +63,9 @@ const stubs = {
   'el-table': { props: ['data'], template: '<div class="rows">{{ (data || []).map(row => row.errorId).join(",") }}<slot /></div>' },
   'el-table-column': true,
   'el-pagination': true,
-  'el-drawer': { props: ['modelValue', 'title'], template: '<div v-if="modelValue" class="drawer"><slot /></div>' },
+  'el-dialog': { props: ['modelValue', 'title'], template: '<div v-if="modelValue" class="dialog"><slot /></div>' },
   'el-descriptions': { template: '<div class="descriptions"><slot /></div>' },
   'el-descriptions-item': { props: ['label'], template: '<div class="desc-item" :data-label="label"><slot /></div>' },
-  'el-alert': { props: ['title'], template: '<p role="alert">{{ title }}</p>' },
 }
 
 const wrappers: ReturnType<typeof mount>[] = []
@@ -95,18 +94,28 @@ afterEach(() => {
 })
 
 describe('运行错误中心', () => {
-  it('概览指标卡点击即套用状态筛选，再次点击同卡取消', async () => {
+  it('页面只读：不出现处理状态操作与状态筛选', () => {
+    const wrapper = openPage()
+    expect(wrapper.text()).not.toContain('标记处理中')
+    expect(wrapper.text()).not.toContain('解决')
+    expect(wrapper.text()).not.toContain('重新打开')
+    expect(wrapper.text()).not.toContain('待处理')
+    expect(wrapper.text()).not.toContain('旧记录正文未保存')
+  })
+
+  it('概览指标卡点击即按级别筛选，再次点击同卡取消', async () => {
     const wrapper = openPage()
     await flushPromises()
     expect(api.searchSystemErrors).toHaveBeenCalledTimes(1)
 
-    await wrapper.find('[title="点击筛选待处理错误组"]').trigger('click')
+    await wrapper.find('[title="点击仅看 ERROR 错误组"]').trigger('click')
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'OPEN' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: 'ERROR' }))
 
-    await wrapper.find('[title="点击筛选待处理错误组"]').trigger('click')
+    await wrapper.find('[title="点击仅看 ERROR 错误组"]').trigger('click')
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ status: undefined }))
+    // 取消后条件清空，loadData 把空串规范化为 undefined（不发送该参数）
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: undefined }))
   })
 
   it('模块点击筛选切换查询条件，再次点击同值取消', async () => {
@@ -118,15 +127,12 @@ describe('运行错误中心', () => {
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'handler' }))
 
     await (state.filterByModule as (module?: string) => void)('handler')
-    // 取消后条件清空，loadData 把空串规范化为 undefined（不发送该参数）
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
   })
 
-  it('详情抽屉带 Request ID 时可跳转访问日志；不再提供运行日志跳转', async () => {
+  it('详情弹窗带 Request ID 时可跳转访问日志', async () => {
     const wrapper = openPage()
     await flushPromises()
-    expect(wrapper.text()).not.toContain('查看同错误组日志')
-    expect(wrapper.text()).not.toContain('查看该请求全部日志')
 
     await (setupState(wrapper).openDetail as (row: typeof rowFixture) => Promise<void>)(rowFixture)
     await flushPromises()
@@ -136,12 +142,24 @@ describe('运行错误中心', () => {
     expect(pushMock).toHaveBeenCalledWith({ path: '/logs', query: { requestId: 'req-synthetic-001' } })
   })
 
-  it('详情展示真实线程名与可复制的编号', async () => {
+  it('详情弹窗展示真实线程名与可复制的编号', async () => {
     const wrapper = openPage()
     await flushPromises()
     await (setupState(wrapper).openDetail as (row: typeof rowFixture) => Promise<void>)(rowFixture)
     await flushPromises()
     expect(wrapper.text()).toContain('http-nio-18045-exec-1')
     expect(wrapper.text()).toContain('ERR-20261119-AAAA1111')
+  })
+
+  it('摘要为整体脱敏占位或为空时回退显示异常类型', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const summaryDisplay = setupState(wrapper).summaryDisplay as (row: { messageSummary?: string, exceptionType?: string }) => string
+    expect(summaryDisplay({ messageSummary: '[MESSAGE OMITTED]', exceptionType: 'org.springframework.web.servlet.resource.NoResourceFoundException' }))
+      .toBe('org.springframework.web.servlet.resource.NoResourceFoundException')
+    expect(summaryDisplay({ messageSummary: '', exceptionType: 'x.XException' })).toBe('x.XException')
+    expect(summaryDisplay({ messageSummary: '', exceptionType: undefined })).toBe('-')
+    expect(summaryDisplay({ messageSummary: '真实正文', exceptionType: 'x.XException' })).toBe('真实正文')
+    expect(wrapper.text()).not.toContain('旧记录正文未保存')
   })
 })

@@ -49,7 +49,7 @@ test('编辑筛选不会把旧游标用于新条件，提交查询后从头读�
   })
   await page.goto('/records')
   await expect(page.getByRole('cell', { name: '123', exact: true })).toBeVisible()
-  await page.getByPlaceholder('输入病案号').fill('456')
+  await page.getByLabel('病案号', { exact: true }).fill('456')
   await page.getByRole('button', { name: '下一批', exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1]).toEqual({ afterId: '100', bah: undefined })

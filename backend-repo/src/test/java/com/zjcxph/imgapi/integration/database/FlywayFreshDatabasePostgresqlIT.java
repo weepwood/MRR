@@ -84,7 +84,22 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
                     .isEqualTo("app.mr_scan");
             assertThat(singleString(statement, "SELECT to_regclass('app.mr_archive')::text"))
                     .isEqualTo("app.mr_archive");
+            assertRuntimeLogJournalDropped(statement);
         }
+    }
+
+    /**
+     * ADR-0008：journal 三表应已删除，而错误中心投影防重的收据表必须保留。
+     *
+     * <p>用 {@code to_regclass} 断言：表存在时返回带 schema 的名字，不存在时返回 NULL，
+     * 两种结果都能精确区分。</p>
+     */
+    private static void assertRuntimeLogJournalDropped(Statement statement) throws SQLException {
+        assertThat((Object) singleString(statement, "SELECT to_regclass('app.runtime_log_event')::text")).isNull();
+        assertThat((Object) singleString(statement, "SELECT to_regclass('app.runtime_log_source')::text")).isNull();
+        assertThat((Object) singleString(statement, "SELECT to_regclass('app.runtime_log_capacity_sample')::text")).isNull();
+        assertThat(singleString(statement, "SELECT to_regclass('app.runtime_error_projection_receipt')::text"))
+                .isEqualTo("app.runtime_error_projection_receipt");
     }
 
     private static void createProbeData(String jdbcUrl) throws SQLException {

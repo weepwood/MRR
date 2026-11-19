@@ -42,6 +42,17 @@ const useLeadingExpandIndicator = computed(() => {
     && !rootMenu.isMenuPopup
 })
 
+/**
+ * 运行错误中心角标：近 24 小时活跃 ERROR 错误组数。
+ * 只挂在叶子菜单项上，子菜单容器不重复显示。
+ */
+const badgeStore = useRuntimeErrorsBadgeStore()
+const badgeCount = computed(() => {
+  return !props.subMenu && props.item.path === '/runtime-errors'
+    ? badgeStore.recentErrorGroups
+    : 0
+})
+
 defineExpose({
   ref: itemRef,
 })
@@ -91,6 +102,9 @@ defineExpose({
             >
               {{ typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title }}
             </span>
+            <span v-if="badgeCount > 0" class="menu-error-badge" :title="`近 24 小时 ${badgeCount} 组 ERROR 错误`">
+              {{ badgeCount > 99 ? '99+' : badgeCount }}
+            </span>
           </div>
           <i
             v-if="subMenu && !useLeadingExpandIndicator && !(rootMenu.isMenuPopup && level === 0)" :class="cn('relative ms-1 w-[10px] after:absolute before:absolute after:h-[1.5px] after:w-[6px] before:h-[1.5px] before:w-[6px] after:bg-current before:bg-current after:transition-transform-200 before:transition-transform-200 after:content-empty before:content-empty after:-translate-y-[1px] before:-translate-y-[1px]', {
@@ -138,6 +152,19 @@ defineExpose({
 .menu-item-container:focus-visible {
   outline: 2px solid var(--mrr-navigation-active-foreground);
   outline-offset: 2px;
+}
+
+.menu-error-badge {
+  flex: 0 0 auto;
+  min-width: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: #fff;
+  text-align: center;
+  background: var(--el-color-danger);
+  border-radius: 9px;
 }
 
 .menu-item-container:hover .menu-item-container-icon {

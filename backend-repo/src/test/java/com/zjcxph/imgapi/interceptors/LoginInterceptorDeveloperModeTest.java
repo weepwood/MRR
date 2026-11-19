@@ -53,7 +53,7 @@ class LoginInterceptorDeveloperModeTest {
     void revocationStoreFailureRejectsAuthenticationWithoutLoadingPatientOrUserData() throws Exception {
         String token = JwtUtil.getToken("synthetic-user");
         when(tokenBlacklist.isRevoked(anyString())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("SYNTHETIC-PRIVATE-DATA"));
-        var request = new MockHttpServletRequest("GET", "/api/v1/runtime-logs");
+        var request = new MockHttpServletRequest("GET", "/api/v1/statistics/dashboard");
         request.addHeader("Authorization", "Bearer " + token);
         var response = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();

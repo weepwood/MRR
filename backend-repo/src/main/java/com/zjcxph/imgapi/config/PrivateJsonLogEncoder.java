@@ -15,10 +15,6 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
     public byte[] headerBytes() { return null; }
     public byte[] footerBytes() { return null; }
     public byte[] encode(ILoggingEvent event) {
-        if (com.zjcxph.imgapi.utils.RuntimeLogContext.ingesting()) {
-            com.zjcxph.imgapi.utils.RuntimeLogContext.SUPPRESSED.incrementAndGet();
-            return new byte[0];
-        }
         try {
             var row = new LinkedHashMap<String, Object>();
             var identity = com.zjcxph.imgapi.utils.RuntimeLogIdentity.of(event);

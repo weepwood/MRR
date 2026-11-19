@@ -32,5 +32,4 @@ interface ImportMetaEnv {
    * 是否开启代理
    */
   readonly VITE_OPEN_PROXY: boolean
-  readonly VITE_BUILD_MOCK: boolean
 }

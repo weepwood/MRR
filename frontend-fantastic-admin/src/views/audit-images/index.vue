@@ -338,7 +338,7 @@ onMounted(loadData)
         <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" clearable placeholder="全部"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" clearable placeholder="全部"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="访问时间" class="mrr-filter-bar__range"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
-        <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" type="primary" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
+        <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
       </MrrFilterBar>
     </el-form>
 

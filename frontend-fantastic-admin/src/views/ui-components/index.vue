@@ -83,7 +83,7 @@ function resetExamples() {
           <div class="gallery-preview">
             <BasicExamples v-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
             <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
-            <FeedbackExamples v-else-if="['feedback', 'overlays'].includes(example.id)" :example="example.id" />
+            <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
             <TokenExamples v-else />
           </div>
         </article>

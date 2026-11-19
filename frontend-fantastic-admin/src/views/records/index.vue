@@ -2,7 +2,6 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElNotification } from 'element-plus'
 import { Download } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
@@ -13,6 +12,7 @@ import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'RecordsPage' })
 
@@ -62,11 +62,7 @@ const appliedQuery = ref({ ...query })
 const unapplied = computed(() => JSON.stringify(query) !== JSON.stringify(appliedQuery.value))
 watch(unapplied, (changed) => {
   if (changed) {
-    ElNotification.info({
-      title: '筛选条件已修改',
-      message: '点击“查询”后生效；翻页仍使用上次已提交条件',
-      duration: 4500,
-    })
+    notify.info('筛选条件已修改', { description: '点击“查询”后生效；翻页仍使用上次已提交条件', duration: 4500 })
   }
 })
 const cursors = ref<number[]>([0])
@@ -152,7 +148,7 @@ function handleRecordAction(action: string, row: ScanRecord) {
 
 async function handleBatchDownload() {
   if (!selectedRows.value.length) {
-    ElMessage.warning('请先选择要下载的记录')
+    notify.warning('请先选择要下载的记录')
     return
   }
 
@@ -166,10 +162,10 @@ async function handleBatchDownload() {
     link.download = `scan-batch-${Date.now()}.zip`
     link.click()
     URL.revokeObjectURL(url)
-    ElMessage.success('批量下载已开始')
+    notify.success('批量下载已开始')
   }
   catch (error: any) {
-    ElMessage.error(error?.message || '批量下载失败')
+    notify.error(error?.message || '批量下载失败')
   }
   finally {
     downloading.value = false

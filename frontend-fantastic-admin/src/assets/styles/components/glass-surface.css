@@ -1,88 +1,31 @@
 /*
- * VS Code-inspired glass for selected utility overlays.
- * Keep this opt-in; dialogs that show credentials remain opaque.
+ * 实用浮层表面（外观设置面板 / 遮罩 / 导航搜索）。
+ * 毛玻璃与背景模糊（backdrop-filter）已在生产 UI 整体下线：所有浮层表面均为
+ * 不透明令牌色，遮罩只保留半透明压暗、不再模糊底层内容（包括侧栏）。
+ * 该效果仅保留在「UI 组件」展示页作为演示（views/ui-components）。
  */
 body .mrr-vscode-glass {
   color: var(--mrr-foreground);
-  background-color: #f7f9fc;
-  border: 1px solid rgb(255 255 255 / 76%);
-  box-shadow:
-    0 28px 80px rgb(15 23 42 / 22%),
-    0 8px 24px rgb(15 23 42 / 10%),
-    inset 0 1px 0 rgb(255 255 255 / 86%);
-  backdrop-filter: blur(26px) saturate(150%);
-}
-
-:root.dark body .mrr-vscode-glass {
-  background-color: #171e2a;
-  border-color: rgb(255 255 255 / 14%);
-  box-shadow:
-    0 32px 88px rgb(0 0 0 / 48%),
-    0 8px 28px rgb(0 0 0 / 32%),
-    inset 0 1px 0 rgb(255 255 255 / 9%);
-}
-
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  body .mrr-vscode-glass {
-    background-color: rgb(247 249 252 / 80%);
-  }
-
-  :root.dark body .mrr-vscode-glass {
-    background-color: rgb(23 30 42 / 80%);
-  }
+  background-color: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
+  box-shadow: var(--mrr-shadow-lg);
 }
 
 body .mrr-vscode-overlay,
 body .el-overlay.mrr-vscode-overlay {
-  background-color: rgb(15 23 42 / 50%);
+  background-color: rgb(15 23 42 / 40%);
 }
 
-@supports (backdrop-filter: blur(1px)) {
-  body .mrr-vscode-overlay,
-  body .el-overlay.mrr-vscode-overlay {
-    background-color: rgb(15 23 42 / 22%);
-    backdrop-filter: blur(5px);
-  }
-}
-
-/* Give navigation search its own restrained frosted-glass treatment. */
+/* 导航搜索浮层与遮罩同样保持实底、无模糊。 */
 body .mrr-vscode-search-overlay,
 body .el-overlay.mrr-vscode-search-overlay {
   background-color: rgb(15 23 42 / 28%);
-  backdrop-filter: none;
 }
 
 body .mrr-vscode-search {
-  background-color: #f7f9fc;
-  border-color: rgb(148 163 184 / 22%);
-  box-shadow:
-    0 28px 80px rgb(15 23 42 / 22%),
-    0 8px 24px rgb(15 23 42 / 10%);
-  backdrop-filter: none;
-}
-
-:root.dark body .mrr-vscode-search {
-  background-color: #171e2a;
-  border-color: rgb(255 255 255 / 12%);
-  box-shadow:
-    0 32px 88px rgb(0 0 0 / 48%),
-    0 8px 28px rgb(0 0 0 / 32%);
-}
-
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  body .mrr-vscode-search-overlay,
-  body .el-overlay.mrr-vscode-search-overlay {
-    background-color: rgb(15 23 42 / 16%);
-  }
-
-  body .mrr-vscode-search {
-    background-color: rgb(247 249 252 / 72%);
-    backdrop-filter: blur(22px) saturate(145%);
-  }
-
-  :root.dark body .mrr-vscode-search {
-    background-color: rgb(23 30 42 / 72%);
-  }
+  background-color: var(--mrr-popover);
+  border-color: var(--mrr-border);
+  box-shadow: var(--mrr-shadow-lg);
 }
 
 body .mrr-vscode-glass .el-dialog__header,

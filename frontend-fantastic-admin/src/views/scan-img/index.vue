@@ -1096,7 +1096,6 @@ watch(idCardParam, async (newId) => {
   border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
-  backdrop-filter: blur(4px);
 }
 
 /* ==================== 类型选择器 ==================== */
@@ -1157,7 +1156,6 @@ watch(idCardParam, async (newId) => {
   border-radius: var(--mrr-radius-2xl);
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   opacity: 0.9;
-  backdrop-filter: blur(4px);
 }
 
 /* ==================== 状态 ==================== */
@@ -1171,7 +1169,6 @@ watch(idCardParam, async (newId) => {
   justify-content: center;
   color: var(--color-text-muted);
   background: var(--color-bg-warm);
-  backdrop-filter: blur(2px);
 }
 
 .spinner {

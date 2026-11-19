@@ -222,23 +222,14 @@ function handleMouseleave() {
   color: var(--mrr-popover-foreground);
 
   /*
-   * 浮层底色：静态值即最终形态，半透明版本只在不支持 color-mix() 的浏览器上被跳过。
-   * 不能写成「background: var(--mrr-popover); background: color-mix(...)」的两行回退：
-   * Chrome 86 没有 color-mix()，但含 var() 的声明不在解析阶段校验，会在计算值阶段
-   * 失效并把 background 置为 unset（透明），前一条静态声明不会回来 —— 弹层整层透明，
-   * 菜单文字直接压在页面内容上。正确做法是把增强版收进 @supports 内。
+   * 浮层底色：不透明令牌色。毛玻璃（backdrop-filter）已在生产 UI 整体下线，
+   * 半透明底在没有模糊衬托时会让下层文字透出，故一并移除（效果仅在
+   * 「UI 组件」展示页演示）。
    */
   background: var(--mrr-popover);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
   box-shadow: var(--mrr-shadow-md);
-  backdrop-filter: blur(16px) saturate(135%);
-}
-
-@supports (color: color-mix(in srgb, red 50%, transparent)) {
-  .saas-popup-menu {
-    background: color-mix(in srgb, var(--mrr-popover) 96%, transparent);
-  }
 }
 
 .saas-popup-menu :deep(.menu-item-container) {

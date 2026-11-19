@@ -103,7 +103,7 @@ onBeforeUnmount(() => {
           <MainSidebar />
           <SubSidebar />
         </div>
-        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 backdrop-blur-sm transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
+        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">

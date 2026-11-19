@@ -46,8 +46,10 @@ function resetExamples() {
 
     <div class="gallery-layout">
       <aside class="gallery-directory" aria-label="组件目录">
-        <label for="gallery-search" class="gallery-label">查找组件</label>
-        <FaInput id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" class="gallery-search" />
+        <div class="gallery-search">
+          <FaIcon name="i-lucide:search" class="gallery-search-icon" aria-hidden="true" />
+          <FaInput id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" aria-label="查找组件" class="gallery-search-input" />
+        </div>
         <nav class="gallery-categories" aria-label="组件分类">
           <button
             v-for="item in categories" :key="item.id" type="button"
@@ -106,15 +108,24 @@ function resetExamples() {
   min-width: 0;
 }
 
-.gallery-label {
-  display: block;
-  margin-bottom: var(--mrr-space-2);
-  font-size: 13px;
-  font-weight: 500;
+.gallery-search {
+  position: relative;
 }
 
-.gallery-search {
+.gallery-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: var(--mrr-muted-foreground);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.gallery-search-input {
   width: 100%;
+  padding-left: 30px;
 }
 
 .gallery-categories {

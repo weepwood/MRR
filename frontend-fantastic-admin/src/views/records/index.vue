@@ -110,13 +110,8 @@ const summaryCards = computed(() => [
     icon: 'i-lucide:contact-round',
   },
   {
-    label: '读取方式',
-    value: '游标',
-    note: '按完整编号筛选；未执行全表总数统计',
-    tone: 'teal' as MetricTone,
-    icon: 'i-lucide:database',
-  },
-  {
+    // 「读取方式：游标」是常量枚举，占指标卡位会稀释真指标的信噪比；
+    // 读取方式说明保留在筛选栏下方提示文案中。
     label: '已选记录',
     value: selectedRows.value.length,
     note: '可用于批量打包下载',

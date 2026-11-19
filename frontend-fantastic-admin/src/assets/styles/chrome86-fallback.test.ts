@@ -123,6 +123,38 @@ describe('chrome 86 color-mix 回退契约', () => {
     expect(css).toMatch(/@supports not \(color: color-mix\([^)]*\)\) \{[^@]*--el-table-header-bg-color:\s*var\(--mrr-muted\)/)
   })
 
+  it('工作台 widget 着色底面带静态回退', () => {
+    const { covering } = notBlockAwareness('views/home/DashboardWorkspace.vue')
+    for (const selector of [
+      '.dashboard-widget--color-blue',
+      '.dashboard-widget--color-green',
+      '.dashboard-widget--color-orange',
+      '.dashboard-widget--color-red',
+      '.dashboard-widget__icon, .widget-manager-item__icon',
+      '.pin-badge',
+    ]) {
+      expect(covering.has(selector)).toBe(true)
+    }
+  })
+
+  it('帮助页文档卡与注册页审核条带静态回退', () => {
+    const help = notBlockAwareness('views/help/index.vue')
+    expect(help.covering.has('.documentation-card')).toBe(true)
+    expect(help.covering.has('.card-icon')).toBe(true)
+
+    const register = notBlockAwareness('components/AccountForm/RegisterForm.vue')
+    expect(register.covering.has('.review-flow')).toBe(true)
+    expect(register.covering.has('.form-section')).toBe(true)
+  })
+
+  it('危险模式徽标与安全标识块带静态回退', () => {
+    const badge = notBlockAwareness('layouts/components/Logo/index.vue')
+    expect(badge.covering.has('.developer-mode-badge')).toBe(true)
+
+    const mark = notBlockAwareness('views/password/change-required.vue')
+    expect(mark.covering.has('.security-mark')).toBe(true)
+  })
+
   it('焦点环不自己算混色，走已带回退的 --mrr-ring', () => {
     for (const file of ['components/MrrTableActions/index.vue', 'components/SystemAdminContactPopover/index.vue']) {
       const css = read(file)

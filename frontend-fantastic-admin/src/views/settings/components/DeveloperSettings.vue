@@ -107,6 +107,17 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 .trusted-sources-card { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
 
+/* Chrome 86 回退：警示区与危险区的边界色是「这里的设置有风险」的唯一提示。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .setting-row {
+    border-color: var(--mrr-tone-warning-border);
+  }
+
+  .danger-row {
+    border-color: var(--mrr-tone-danger-border);
+  }
+}
+
 .trusted-sources-heading { display: flex; gap: var(--mrr-space-4); align-items: flex-start; justify-content: space-between; }
 
 .trusted-sources-card :deep(.el-textarea__inner) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.6; }

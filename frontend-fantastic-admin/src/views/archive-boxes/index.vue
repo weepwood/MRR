@@ -162,6 +162,9 @@ const metricCards = computed<MetricCard[]>(() => [
   },
 ])
 
+/* 空库/空筛态下数值指标全零时收纳指标区，为表格让出首屏（N5）。 */
+const hasMetricActivity = computed(() => metricCards.value.some(card => Number(card.value) > 0))
+
 function statusMeta(status?: string) {
   return statusOptions.find(item => item.value === status)
     ?? { value: 'OTHER' as const, label: status || '未知', type: 'info' as const }
@@ -447,7 +450,7 @@ onMounted(refreshAll)
       </div>
     </header>
 
-    <section class="mrr-metric-grid">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid">
       <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"

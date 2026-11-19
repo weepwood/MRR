@@ -89,7 +89,8 @@ public final class RuntimeErrorSanitizer {
      * 否则运维拿到 {@code [MESSAGE OMITTED]} 无法判断任何故障。这里对自由文本逐类脱敏：
      * 令牌、敏感键值、身份证、手机号、连接串、绝对路径与长编号。</p>
      *
-     * <p>本方法必须幂等：{@code RuntimeLogJournalService} 在写入文件与采集入库时各调用一次。</p>
+     * <p>本方法必须幂等：{@code PrivateJsonLogEncoder} 在写文件时调用一次，错误中心读取
+     * 历史存量时可能再次调用。</p>
      */
     public static String sanitizeLogMessage(String value) {
         if (value == null || value.isBlank()) {

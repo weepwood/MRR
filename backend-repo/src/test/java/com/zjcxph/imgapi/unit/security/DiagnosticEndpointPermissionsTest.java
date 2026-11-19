@@ -3,7 +3,6 @@ package com.zjcxph.imgapi.unit.security;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.controller.OperationsDiagnosticsController;
 import com.zjcxph.imgapi.controller.QueryDiagnosticsController;
-import com.zjcxph.imgapi.controller.RuntimeLogController;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
@@ -37,17 +36,6 @@ class DiagnosticEndpointPermissionsTest {
         }
         assertThat(new AuthorizationInterceptor().preHandle(request(List.of("system:manage","record:read")),new MockHttpServletResponse(),handler)).isTrue();
         verifyNoInteractions(service);
-    }
-
-    @Test void importingLogsNeedsIndependentImportPermission() throws Exception {
-        var journal=mock(RuntimeLogJournalService.class);
-        var controller=new RuntimeLogController(journal,mock(RuntimeLogQueryService.class));
-        var handler=new HandlerMethod(controller,RuntimeLogController.class.getMethod("importFile",RuntimeLogController.ImportRequest.class));
-        var response=new MockHttpServletResponse();
-        assertThat(new AuthorizationInterceptor().preHandle(request(List.of("system:manage","log:read")),response,handler)).isFalse();
-        assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(new AuthorizationInterceptor().preHandle(request(List.of("system:manage","log:read","system:log:import")),new MockHttpServletResponse(),handler)).isTrue();
-        verifyNoInteractions(journal);
     }
 
     @Test

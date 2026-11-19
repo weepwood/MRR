@@ -41,7 +41,6 @@ class DbBrowseRegistryTest {
             "migration_job",
             "image_migration_log",
             "flyway_history",
-            "runtime_log_source",
             "availability_period",
             "permission_matrix_snapshot",
             "ocr_lexicon_set",

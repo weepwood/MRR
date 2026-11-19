@@ -79,6 +79,8 @@ watch(() => routeInfo.path, () => {
 
 onMounted(() => {
   eventBus.on('global-hotkeys-intro-toggle', toggleHotkeysIntro)
+  // 运行错误中心角标轮询：有 system:error:read 权限的会话才开始拉取。
+  useRuntimeErrorsBadgeStore().start()
 })
 
 onBeforeUnmount(() => {

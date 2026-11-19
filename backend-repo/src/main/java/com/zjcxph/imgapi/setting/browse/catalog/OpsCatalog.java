@@ -37,7 +37,6 @@ public final class OpsCatalog {
                 OpsCatalog::migrationJobTable,
                 OpsCatalog::imageMigrationLogTable,
                 OpsCatalog::flywayHistoryTable,
-                OpsCatalog::runtimeLogSourceTable,
                 OpsCatalog::availabilityPeriodTable,
                 OpsCatalog::permissionMatrixSnapshotTable
         );
@@ -373,34 +372,6 @@ public final class OpsCatalog {
                         DbBrowseColumn.dateTime("installed_on", "执行时间", true),
                         DbBrowseColumn.number("execution_time", "耗时(ms)", true, false),
                         DbBrowseColumn.bool("success", "是否成功")
-                ))
-                .build();
-    }
-
-    private static DbBrowseTable runtimeLogSourceTable() {
-        return DbBrowseTable.builder()
-                .key("runtime_log_source")
-                .schemaName("app")
-                .tableName("runtime_log_source")
-                .label("运行日志采集源")
-                .description("运行日志文件的采集进度：读到哪个文件、偏移量、状态与无效行数；文件名不含目录")
-                .enabled(true)
-                .requiredPermissions(List.of(Permissions.SYSTEM_READ))
-                .keyColumns(List.of("source_key"))
-                .orderableColumns(Set.of("source_key"))
-                .maxPageSize(100)
-                .requireFilter(false)
-                .estimateRowCount(true)
-                .personalData(false)
-                .columns(List.of(
-                        DbBrowseColumn.text("source_key", "采集源标识", true, true),
-                        DbBrowseColumn.text("file_name", "文件名", true, false, 255),
-                        DbBrowseColumn.number("byte_offset", "已读偏移", false, false),
-                        DbBrowseColumn.number("observed_bytes", "文件大小", false, false),
-                        DbBrowseColumn.text("state", "状态", true, false),
-                        DbBrowseColumn.text("failure_code", "失败代码", true, false),
-                        DbBrowseColumn.number("invalid_lines", "无效行数", true, false),
-                        DbBrowseColumn.dateTime("updated_at", "更新时间", true)
                 ))
                 .build();
     }

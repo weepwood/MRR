@@ -56,6 +56,33 @@ class RuntimeErrorHistoryPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void listModulesReturnsDedupedSortedNamesWithoutBlankValues() {
+        String fingerprintA=UUID.randomUUID().toString();
+        String fingerprintB=UUID.randomUUID().toString();
+        String fingerprintC=UUID.randomUUID().toString();
+        var eventA=event(fingerprintA,LocalDateTime.now(),"synthetic-modules-a");
+        var eventB=event(fingerprintB,LocalDateTime.now(),"synthetic-modules-b");
+        eventB.setModule("synthetic-alpha");
+        var eventC=event(fingerprintC,LocalDateTime.now(),"synthetic-modules-c");
+        eventC.setModule("");
+        try {
+            mapper.upsert(eventA);
+            mapper.upsert(eventB);
+            mapper.upsert(eventC);
+            // 同指纹重复 upsert 不产生重复模块名。
+            mapper.upsert(event(fingerprintA,LocalDateTime.now().plusSeconds(1),"synthetic-modules-a"));
+            java.util.List<String> modules=mapper.listModules();
+            assertThat(modules).containsSubsequence("synthetic","synthetic-alpha");
+            assertThat(modules.stream().noneMatch(String::isBlank)).isTrue();
+        } finally {
+            jdbc.update("DELETE FROM app.system_error_event WHERE fingerprint IN (?,?,?)",fingerprintA,fingerprintB,fingerprintC);
+            jdbc.update("DELETE FROM app.runtime_error_projection_receipt WHERE event_id IN (CAST(? AS UUID),CAST(? AS UUID),CAST(? AS UUID))",
+                    eventA.getProjectionEventId(),eventB.getProjectionEventId(),eventC.getProjectionEventId());
+        }
+    }
+
     private SystemErrorEvent event(String fingerprint,LocalDateTime at,String requestId) {
         var event=new SystemErrorEvent();event.setProjectionEventId(UUID.randomUUID().toString());event.setFingerprint(fingerprint);event.setErrorId(RuntimeErrorSanitizer.newErrorId());
         event.setFirstSeenAt(at);event.setLastSeenAt(at);event.setLevel("ERROR");event.setLoggerName("synthetic");

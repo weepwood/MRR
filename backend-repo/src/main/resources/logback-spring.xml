@@ -9,8 +9,8 @@
     <!-- 日志文件路径 -->
     <springProperty scope="context" name="LOG_FILE" source="logging.file.name" defaultValue="img-api.log"/>
     
-    <springProperty scope="context" name="BUFFER_CAP" source="app.runtime-logs.buffer-cap" defaultValue="3GB"/>
-    <springProperty scope="context" name="BUFFER_DAYS" source="app.runtime-logs.buffer-days" defaultValue="30"/>
+    <springProperty scope="context" name="BUFFER_CAP" source="app.file-log.buffer-cap" defaultValue="3GB"/>
+    <springProperty scope="context" name="BUFFER_DAYS" source="app.file-log.buffer-days" defaultValue="30"/>
     <!-- 控制台输出 - JSON格式（生产环境） -->
     <springProfile name="prod,test">
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
@@ -35,8 +35,8 @@
         </rollingPolicy>
     </appender>
     
-    <!-- 异步日志 appender（提升性能） -->
-    <appender name="ASYNC_FILE" class="com.zjcxph.imgapi.config.ObservableAsyncLogAppender">
+    <!-- 异步日志 appender（提升性能）；ADR-0008 后使用标准 AsyncAppender -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="FILE_JSON"/>
         <queueSize>512</queueSize>
         <discardingThreshold>0</discardingThreshold>

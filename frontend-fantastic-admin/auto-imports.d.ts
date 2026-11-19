@@ -82,6 +82,7 @@ declare global {
   const useRoute: typeof import('vue-router').useRoute
   const useRouteStore: typeof import('./src/store/modules/route').useRouteStore
   const useRouter: typeof import('vue-router').useRouter
+  const useRuntimeErrorsBadgeStore: typeof import('./src/store/modules/runtimeErrorsBadge').useRuntimeErrorsBadgeStore
   const useSettingsStore: typeof import('./src/store/modules/settings').useSettingsStore
   const useSlots: typeof import('vue').useSlots
   const useTabbar: typeof import('./src/utils/composables/useTabbar').default

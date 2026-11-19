@@ -441,7 +441,7 @@ onMounted(refreshAll)
         />
         <el-select
           v-model="listSearchType"
-          placeholder="类型筛选"
+          placeholder="全部类型"
           clearable
           class="search-type"
           @change="handleListSearch"
@@ -456,7 +456,7 @@ onMounted(refreshAll)
         </el-select>
         <el-select
           v-model="listSearchYear"
-          placeholder="快速选择年份"
+          placeholder="全部年份"
           clearable
           class="search-year"
           @change="handleYearChange"
@@ -644,11 +644,11 @@ onMounted(refreshAll)
 }
 
 .search-type {
-  flex: 0 0 150px;
+  flex: 0 0 190px;
 }
 
 .search-year {
-  flex: 0 0 160px;
+  flex: 0 0 190px;
 }
 
 .search-date {

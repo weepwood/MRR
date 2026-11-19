@@ -62,13 +62,14 @@ class RuntimeErrorHistoryPostgresqlIT extends PostgresqlIntegrationTestSupport {
         String fingerprintA=UUID.randomUUID().toString();
         String fingerprintB=UUID.randomUUID().toString();
         String fingerprintC=UUID.randomUUID().toString();
+        var eventA=event(fingerprintA,LocalDateTime.now(),"synthetic-modules-a");
+        var eventB=event(fingerprintB,LocalDateTime.now(),"synthetic-modules-b");
+        eventB.setModule("synthetic-alpha");
+        var eventC=event(fingerprintC,LocalDateTime.now(),"synthetic-modules-c");
+        eventC.setModule("");
         try {
-            mapper.upsert(event(fingerprintA,LocalDateTime.now(),"synthetic-modules-a"));
-            var eventB=event(fingerprintB,LocalDateTime.now(),"synthetic-modules-b");
-            eventB.setModule("synthetic-alpha");
+            mapper.upsert(eventA);
             mapper.upsert(eventB);
-            var eventC=event(fingerprintC,LocalDateTime.now(),"synthetic-modules-c");
-            eventC.setModule("");
             mapper.upsert(eventC);
             // 同指纹重复 upsert 不产生重复模块名。
             mapper.upsert(event(fingerprintA,LocalDateTime.now().plusSeconds(1),"synthetic-modules-a"));
@@ -77,7 +78,8 @@ class RuntimeErrorHistoryPostgresqlIT extends PostgresqlIntegrationTestSupport {
             assertThat(modules.stream().noneMatch(String::isBlank)).isTrue();
         } finally {
             jdbc.update("DELETE FROM app.system_error_event WHERE fingerprint IN (?,?,?)",fingerprintA,fingerprintB,fingerprintC);
-            jdbc.update("DELETE FROM app.runtime_error_projection_receipt WHERE event_id IN (?,?,?)",fingerprintA,fingerprintB,fingerprintC);
+            jdbc.update("DELETE FROM app.runtime_error_projection_receipt WHERE event_id IN (CAST(? AS UUID),CAST(? AS UUID),CAST(? AS UUID))",
+                    eventA.getProjectionEventId(),eventB.getProjectionEventId(),eventC.getProjectionEventId());
         }
     }
 

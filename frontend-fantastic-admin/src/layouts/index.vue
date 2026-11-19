@@ -52,6 +52,22 @@ const isToolbarHide = computed(() => {
     })
 })
 
+const sidebar = useTemplateRef('sidebar')
+const isMobileSidebarOpen = computed(() => settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse)
+
+function closeMobileSidebar(event: KeyboardEvent) {
+  if (isMobileSidebarOpen.value) {
+    event.stopPropagation()
+    settingsStore.toggleSidebarCollapse()
+  }
+}
+
+watch(isMobileSidebarOpen, (open) => {
+  if (!open && sidebar.value?.contains(document.activeElement)) {
+    document.getElementById('mrr-mobile-sidebar-toggle')?.focus()
+  }
+})
+
 const isLink = computed(() => !!routeInfo.meta.link)
 
 function toggleHotkeysIntro() {
@@ -101,11 +117,11 @@ onBeforeUnmount(() => {
     <div id="app-main">
       <Header />
       <div class="wrapper">
-        <div class="sidebar-container" :class="{ show: settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }">
+        <div id="mrr-sidebar" ref="sidebar" class="sidebar-container" :class="{ show: isMobileSidebarOpen }" @keydown.esc="closeMobileSidebar">
           <MainSidebar />
           <SubSidebar />
         </div>
-        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
+        <button type="button" aria-label="关闭侧栏导航" tabindex="-1" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': isMobileSidebarOpen }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
@@ -129,9 +145,11 @@ onBeforeUnmount(() => {
 <style scoped>
 [data-mode="mobile"] {
   .sidebar-container {
+    visibility: hidden;
     transform: translateX(calc((var(--g-main-sidebar-width) + var(--g-sub-sidebar-width)) * -1));
 
     &.show {
+      visibility: visible;
       box-shadow: 20px 0 48px rgb(15 23 42 / 18%);
       transform: translateX(0);
     }

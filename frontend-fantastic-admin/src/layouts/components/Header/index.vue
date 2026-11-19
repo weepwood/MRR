@@ -21,28 +21,28 @@ const { switchTo } = useMenu()
         <component :is="useSlots('header-after-logo')" />
         <FaScrollArea :scrollbar="false" mask horizontal gradient-color="var(--mrr-navigation-bg-solid)" class="menu-container h-full flex-1 overscroll-contain">
           <!-- 顶部模式 -->
-          <div class="menu h-full flex of-hidden transition-all">
+          <nav aria-label="主导航" class="menu h-full flex of-hidden transition-all">
             <template v-for="(item, index) in menuStore.allMenus" :key="index">
               <div
                 class="menu-item relative transition-all" :class="{
                   active: index === menuStore.actived,
                 }"
               >
-                <div
-                  v-if="item.children && item.children.length !== 0" class="menu-item-container relative w-full flex cursor-pointer items-center justify-between gap-1" :class="{
+                <button
+                  v-if="item.children && item.children.length !== 0" type="button" aria-controls="mrr-sub-navigation" :aria-pressed="index === menuStore.actived" class="mrr-navigation-control menu-item-container relative w-full flex cursor-pointer items-center justify-between gap-1" :class="{
                     active: index === menuStore.actived,
                   }" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="switchTo(index)"
                 >
-                  <div class="inline-flex flex-1 items-center justify-center gap-2">
+                  <span class="inline-flex flex-1 items-center justify-center gap-2">
                     <FaIcon v-if="item.meta?.icon" :name="item.meta?.icon" class="menu-item-container-icon" />
                     <span class="w-full flex-1 truncate">
                       {{ typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title }}
                     </span>
-                  </div>
-                </div>
+                  </span>
+                </button>
               </div>
             </template>
-          </div>
+          </nav>
         </FaScrollArea>
         <component :is="useSlots('header-after-menu')" />
         <div class="account-slot flex-center">
@@ -117,7 +117,7 @@ header {
             color: var(--text-secondary);
             border: 1px solid transparent;
             border-radius: var(--mrr-radius-md);
-            transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+            transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
             &:hover {
               color: var(--text-primary);

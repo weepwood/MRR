@@ -37,11 +37,11 @@ function getUseId(obj: object): string {
 const activeIndex = ref<MenuInjection['activeIndex']>(props.value)
 const items = ref<MenuInjection['items']>({})
 const subMenus = ref<MenuInjection['subMenus']>({})
-const openedMenus = ref<MenuInjection['openedMenus']>(props.defaultOpeneds.slice(0))
-const mouseInMenu = ref<MenuInjection['mouseInMenu']>([])
+const mouseInMenu = ref<MenuInjection['mouseInMenu']>('')
 const isMenuPopup = computed<MenuInjection['isMenuPopup']>(() => {
   return props.mode === 'horizontal' || (props.mode === 'vertical' && props.collapse)
 })
+const openedMenus = ref<MenuInjection['openedMenus']>(isMenuPopup.value ? [] : [...props.defaultOpeneds])
 
 // 解析传入的 menu 数据，并保存到 items 和 subMenus 对象中
 function initItems(menu: MenuProps['menu'], parentPaths: string[] = []) {
@@ -75,16 +75,9 @@ const openMenu: MenuInjection['openMenu'] = (index, indexPath) => {
   openedMenus.value.push(index)
 }
 const closeMenu: MenuInjection['closeMenu'] = (index) => {
-  if (Array.isArray(index)) {
-    nextTick(() => {
-      closeMenu(index.at(-1)!)
-      if (index.length > 1) {
-        closeMenu(index.slice(0, -1))
-      }
-    })
-    return
-  }
-  openedMenus.value = openedMenus.value.filter(item => item !== index)
+  openedMenus.value = openedMenus.value.filter(item =>
+    item !== index && (!isMenuPopup.value || !subMenus.value[item]?.indexPath.includes(index)),
+  )
 }
 
 function setSubMenusActive(index: string) {

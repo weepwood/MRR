@@ -26,11 +26,22 @@ import { getCurrentScope, onMounted, onScopeDispose, reactive, ref } from 'vue'
  * ```
  */
 interface CrudListOptions<T, Q extends Record<string, any>> {
-  fetchApi: (params: Q & { page: number, size: number }, context: { isCurrent: () => boolean }) => Promise<ApiResult<PaginatedResult<T>> | PaginatedResult<T>>
+  fetchApi: (params: Q & { page: number, size: number }, context: CrudFetchContext) => Promise<CrudFetchResult<T>>
   defaultQuery: Q
   immediate?: boolean
   defaultPageSize?: number
 }
+
+interface CrudFetchContext {
+  isCurrent: () => boolean
+  /**
+   * 静默刷新（自动轮询）标记。静默请求失败时 fetchApi 可返回 undefined，
+   * 列表保留现有数据不进入空态/错误态，轮询下一轮再尝试。
+   */
+  silent: boolean
+}
+
+type CrudFetchResult<T> = ApiResult<PaginatedResult<T>> | PaginatedResult<T> | undefined
 
 export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOptions<T, Q>) {
   const list = ref<T[]>([]) as Ref<T[]>
@@ -50,25 +61,29 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
     })
   }
 
-  async function loadData() {
+  async function loadData(options?: { silent?: boolean }) {
     if (disposed) { return }
+    const silent = options?.silent === true
     const token = ++generation
     const isCurrent = () => !disposed && token === generation
-    loading.value = true
+    if (!silent) { loading.value = true }
     try {
       const params = {
         ...query,
         page: pageNum.value,
         size: pageSize.value,
       } as Q & { page: number, size: number }
-      const res = await opts.fetchApi(params, { isCurrent })
+      const res = await opts.fetchApi(params, { isCurrent, silent })
       if (!isCurrent()) { return }
+      // 静默刷新失败（fetchApi 返回 undefined）：保留现有列表，等待下一轮轮询。
+      if (res === undefined) { return }
       const pageData = ('data' in res ? res.data : res) as PaginatedResult<T> | undefined
       list.value = pageData?.list ?? []
       total.value = pageData?.total ?? 0
     }
     catch (error) {
-      if (isCurrent()) { throw error }
+      // 静默刷新不抛错也不清数据，失败静默保留旧值。
+      if (isCurrent() && !silent) { throw error }
     }
     finally {
       if (isCurrent()) { loading.value = false }

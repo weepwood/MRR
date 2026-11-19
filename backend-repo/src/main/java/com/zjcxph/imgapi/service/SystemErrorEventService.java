@@ -133,6 +133,7 @@ public class SystemErrorEventService {
             String level,
             String status,
             String module,
+            LocalDateTime since,
             int page,
             int size
     ) {
@@ -141,6 +142,7 @@ public class SystemErrorEventService {
                 normalizeAllowed(level, ALLOWED_LEVELS, "日志级别"),
                 normalizeAllowed(status, ALLOWED_STATUSES, "处理状态"),
                 normalize(module),
+                since,
                 size,
                 (page - 1) * size
         );
@@ -148,12 +150,13 @@ public class SystemErrorEventService {
         return events;
     }
 
-    public long count(String keyword, String level, String status, String module) {
+    public long count(String keyword, String level, String status, String module, LocalDateTime since) {
         return mapper.count(
                 normalize(keyword),
                 normalizeAllowed(level, ALLOWED_LEVELS, "日志级别"),
                 normalizeAllowed(status, ALLOWED_STATUSES, "处理状态"),
-                normalize(module)
+                normalize(module),
+                since
         );
     }
 
@@ -165,12 +168,18 @@ public class SystemErrorEventService {
         if (event == null) return null;
         event.setMessageSummary(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredMessage(event.getMessageSummary()));
         event.setStackTrace(com.zjcxph.imgapi.config.PrivateJsonLogEncoder.safeStoredStack(event.getStackTrace()));
-        event.setThreadName("[HIDDEN]");
+        // 线程名不含业务字段（ADR-0002 口径：真实取值带空格括号属正常），展示真实值比 [HIDDEN]
+        // 更利于排障——HTTP 线程、线程池与定时任务的区分正是线程名的价值，伪造占位反而误导。
         return event;
     }
 
     public SystemErrorOverviewDTO overview() {
         return mapper.overview();
+    }
+
+    /** 错误中心模块筛选项：去重后的模块名，量级小（模块=logger 一级前缀），可直接全量返回。 */
+    public List<String> listModules() {
+        return mapper.listModules();
     }
 
     public boolean updateStatus(long id, String status, String username) {
@@ -181,8 +190,8 @@ public class SystemErrorEventService {
     @PreDestroy
     public void destroy() {
         accepting = false;
-        // 关闭线程不发起数据库I/O；已产生的脱敏文件是恢复来源。
-        if (!pending.isEmpty()) System.err.println("运行错误事件未确认数量: " + pending.size() + "；可从脱敏日志文件恢复");
+        // 内存队列不做持久化；进程关闭时未确认事件丢失，可人工查看脱敏日志文件 img-api.log 核对。
+        if (!pending.isEmpty()) System.err.println("运行错误事件未确认数量: " + pending.size() + "；可人工查看脱敏日志文件核对");
     }
 
     private String resolveModule(String loggerName) {

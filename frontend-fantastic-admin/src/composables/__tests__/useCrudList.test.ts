@@ -79,4 +79,43 @@ describe('cRUD列表请求归属', () => {
     }
     finally { scope.stop() }
   })
+
+  it('静默刷新不置 loading，上下文带 silent 标记', async () => {
+    const fetchApi = vi.fn().mockResolvedValue(result('first'))
+    const scope = effectScope()
+    const list = scope.run(() => useCrudList({ fetchApi, defaultQuery: {}, immediate: false }))!
+    try {
+      await list.loadData()
+      expect(list.loading.value).toBe(false)
+
+      const silentPromise = list.loadData({ silent: true })
+      expect(list.loading.value).toBe(false)
+      await silentPromise
+      expect(fetchApi.mock.calls[1][1].silent).toBe(true)
+      expect(list.list.value).toEqual(['first'])
+    }
+    finally { scope.stop() }
+  })
+
+  it('静默失败（fetchApi 返回 undefined 或抛错）保留现有数据且不抛出', async () => {
+    const fetchApi = vi.fn()
+      .mockResolvedValueOnce(result('first'))
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('silent failure'))
+    const scope = effectScope()
+    const list = scope.run(() => useCrudList({ fetchApi, defaultQuery: {}, immediate: false }))!
+    try {
+      await list.loadData()
+      expect(list.list.value).toEqual(['first'])
+
+      await list.loadData({ silent: true })
+      expect(list.list.value).toEqual(['first'])
+      expect(list.total.value).toBe(1)
+
+      await list.loadData({ silent: true })
+      expect(list.list.value).toEqual(['first'])
+      expect(list.loading.value).toBe(false)
+    }
+    finally { scope.stop() }
+  })
 })

@@ -21,12 +21,15 @@ const props = withDefaults(
   },
 )
 
-// 用于缓存对象到 ID 的映射
+// useId 只能在组件上下文中调用；异步菜单更新的 watcher 中不可直接调用。
+// 每个菜单实例先取得前缀，再为无路径节点分配稳定且互不重复的 ID。
+const idPrefix = useId()
+let nextId = 0
 const idMap = new WeakMap<object, string>()
 // 获取对象的唯一 ID，如果已存在则返回缓存的 ID，否则生成新的
 function getUseId(obj: object): string {
   if (!idMap.has(obj)) {
-    idMap.set(obj, useId())
+    idMap.set(obj, `__mrr_menu_${idPrefix}_${nextId++}`)
   }
   return idMap.get(obj)!
 }

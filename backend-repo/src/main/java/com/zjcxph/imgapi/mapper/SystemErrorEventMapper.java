@@ -20,17 +20,22 @@ public interface SystemErrorEventMapper {
             INSERT INTO system_error_event (
                 error_id, error_ids, fingerprint, level, module, logger_name, exception_type,
                 message_summary, stack_trace, request_id, thread_name,
-                first_seen_at, last_seen_at, occurrence_count, status
+                first_seen_at, last_seen_at, occurrence_count, status, recent_seen_at
             ) SELECT
                 #{errorId}, ARRAY[#{errorId}]::VARCHAR(32)[], #{fingerprint}, #{level}, #{module}, #{loggerName}, #{exceptionType},
                 #{messageSummary}, #{stackTrace}, #{requestId}, #{threadName},
-                #{firstSeenAt}, #{lastSeenAt}, 1, 'OPEN'
+                #{firstSeenAt}, #{lastSeenAt}, 1, 'OPEN', ARRAY[#{lastSeenAt}]::TIMESTAMP WITHOUT TIME ZONE[]
             FROM receipt WHERE TRUE
             ON CONFLICT (fingerprint) DO UPDATE SET
                 error_ids = CASE
                     WHEN CARDINALITY(system_error_event.error_ids) >= 50
                         THEN system_error_event.error_ids[2:50] || EXCLUDED.error_ids
                     ELSE system_error_event.error_ids || EXCLUDED.error_ids
+                END,
+                recent_seen_at = CASE
+                    WHEN CARDINALITY(system_error_event.recent_seen_at) >= 50
+                        THEN system_error_event.recent_seen_at[2:50] || EXCLUDED.recent_seen_at
+                    ELSE system_error_event.recent_seen_at || EXCLUDED.recent_seen_at
                 END,
                 level = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.level ELSE system_error_event.level END,
                 module = CASE WHEN EXCLUDED.last_seen_at >= system_error_event.last_seen_at THEN EXCLUDED.module ELSE system_error_event.module END,
@@ -75,12 +80,15 @@ public interface SystemErrorEventMapper {
                    occurrence_count AS occurrenceCount,
                    status,
                    acknowledged_by AS acknowledgedBy,
-                   resolved_at AS resolvedAt
+                   resolved_at AS resolvedAt,
+                   (SELECT COUNT(*) FROM UNNEST(recent_seen_at) AS recent_seen
+                    WHERE recent_seen >= NOW() - INTERVAL '24 hours') AS recent24hCount
             FROM system_error_event
             <where>
                 <if test="level != null">AND level = #{level}</if>
                 <if test="status != null">AND status = #{status}</if>
                 <if test="module != null">AND module ILIKE '%' || #{module} || '%'</if>
+                <if test="since != null">AND last_seen_at &gt;= #{since}</if>
                 <if test="keyword != null">
                     AND (
                         error_id ILIKE '%' || #{keyword} || '%'
@@ -105,6 +113,7 @@ public interface SystemErrorEventMapper {
             @Param("level") String level,
             @Param("status") String status,
             @Param("module") String module,
+            @Param("since") java.time.LocalDateTime since,
             @Param("limit") int limit,
             @Param("offset") int offset
     );
@@ -117,6 +126,7 @@ public interface SystemErrorEventMapper {
                 <if test="level != null">AND level = #{level}</if>
                 <if test="status != null">AND status = #{status}</if>
                 <if test="module != null">AND module ILIKE '%' || #{module} || '%'</if>
+                <if test="since != null">AND last_seen_at &gt;= #{since}</if>
                 <if test="keyword != null">
                     AND (
                         error_id ILIKE '%' || #{keyword} || '%'
@@ -138,7 +148,8 @@ public interface SystemErrorEventMapper {
             @Param("keyword") String keyword,
             @Param("level") String level,
             @Param("status") String status,
-            @Param("module") String module
+            @Param("module") String module,
+            @Param("since") java.time.LocalDateTime since
     );
 
     @Select("""
@@ -173,7 +184,9 @@ public interface SystemErrorEventMapper {
                    COUNT(*) FILTER (WHERE level = 'ERROR') AS "errorGroups",
                    COUNT(*) FILTER (WHERE level = 'WARN') AS "warnGroups",
                    COUNT(*) FILTER (WHERE last_seen_at >= NOW() - INTERVAL '24 hours')
-                       AS "recentOccurrences"
+                       AS "recentOccurrences",
+                   COUNT(*) FILTER (WHERE level = 'ERROR'
+                       AND last_seen_at >= NOW() - INTERVAL '24 hours') AS "recentErrorGroups"
             FROM system_error_event
             """)
     SystemErrorOverviewDTO overview();

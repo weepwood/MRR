@@ -42,12 +42,15 @@ public class SystemErrorController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String module
+            @RequestParam(required = false) String module,
+            @RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+            java.time.LocalDateTime since
     ) {
         PaginationUtils.validatePageParams(page, size);
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        List<SystemErrorEvent> list = service.search(keyword, level, status, module, page, safeSize);
-        long total = service.count(keyword, level, status, module);
+        List<SystemErrorEvent> list = service.search(keyword, level, status, module, since, page, safeSize);
+        long total = service.count(keyword, level, status, module, since);
         return Result.<PageResult<SystemErrorEvent>>success()
                 .data(PageResult.of(list, total, page, safeSize));
     }

@@ -118,6 +118,25 @@ describe('运行错误中心', () => {
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: undefined }))
   })
 
+  it('时间范围筛选映射为 since 参数，取消后不再发送', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    const queryState = state.query as { range: string }
+    const handleSearch = state.handleSearch as () => Promise<void>
+
+    queryState.range = '24h'
+    await handleSearch()
+    await flushPromises()
+    expect(api.searchSystemErrors.mock.lastCall?.[0]?.since).toEqual(expect.any(String))
+
+    queryState.range = ''
+    await handleSearch()
+    await flushPromises()
+    // 取消后条件清空，loadData 把空值规范化为 undefined（不发送该参数）
+    expect(api.searchSystemErrors.mock.lastCall?.[0]?.since).toBeUndefined()
+  })
+
   it('模块点击筛选切换查询条件，再次点击同值取消', async () => {
     const wrapper = openPage()
     await flushPromises()

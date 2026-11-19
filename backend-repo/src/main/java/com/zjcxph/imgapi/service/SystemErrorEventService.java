@@ -133,6 +133,7 @@ public class SystemErrorEventService {
             String level,
             String status,
             String module,
+            LocalDateTime since,
             int page,
             int size
     ) {
@@ -141,6 +142,7 @@ public class SystemErrorEventService {
                 normalizeAllowed(level, ALLOWED_LEVELS, "日志级别"),
                 normalizeAllowed(status, ALLOWED_STATUSES, "处理状态"),
                 normalize(module),
+                since,
                 size,
                 (page - 1) * size
         );
@@ -148,12 +150,13 @@ public class SystemErrorEventService {
         return events;
     }
 
-    public long count(String keyword, String level, String status, String module) {
+    public long count(String keyword, String level, String status, String module, LocalDateTime since) {
         return mapper.count(
                 normalize(keyword),
                 normalizeAllowed(level, ALLOWED_LEVELS, "日志级别"),
                 normalizeAllowed(status, ALLOWED_STATUSES, "处理状态"),
-                normalize(module)
+                normalize(module),
+                since
         );
     }
 

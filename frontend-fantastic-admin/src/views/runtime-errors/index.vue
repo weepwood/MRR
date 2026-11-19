@@ -6,7 +6,7 @@ import type {
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
@@ -37,6 +37,7 @@ const size = ref(20)
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const current = ref<SystemErrorEvent | null>(null)
+const lastRefreshedAt = ref<Date | null>(null)
 
 const overview = ref<SystemErrorOverview>({
   totalGroups: 0,
@@ -53,11 +54,28 @@ const query = reactive({
   keyword: '',
   level: '',
   module: '',
+  range: '',
 })
 
-async function loadData() {
-  loading.value = true
-  error.value = ''
+/** 时间范围 → 后端 since 参数（本地时区 ISO 格式，后端 LocalDateTime 解析）。 */
+function rangeStart(range: string) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const format = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  const now = new Date()
+  if (range === 'today') {
+    const startOfDay = new Date(now)
+    startOfDay.setHours(0, 0, 0, 0)
+    return format(startOfDay)
+  }
+  if (range === '24h') { return format(new Date(now.getTime() - 24 * 3600 * 1000)) }
+  if (range === '7d') { return format(new Date(now.getTime() - 7 * 24 * 3600 * 1000)) }
+  return undefined
+}
+
+const since = computed(() => rangeStart(query.range))
+
+async function fetchData(silent = false) {
+  if (!silent) { loading.value = true }
   try {
     const params = {
       page: page.value,
@@ -65,6 +83,7 @@ async function loadData() {
       keyword: query.keyword.trim() || undefined,
       level: query.level || undefined,
       module: query.module.trim() || undefined,
+      since: since.value,
     }
     const [pageResult, overviewResult] = await Promise.all([
       searchSystemErrors(params),
@@ -75,13 +94,19 @@ async function loadData() {
     if (overviewResult.data) {
       overview.value = overviewResult.data
     }
+    lastRefreshedAt.value = new Date()
   }
   catch (exception: unknown) {
-    error.value = exception instanceof Error ? exception.message : '加载运行错误失败'
+    // 静默刷新失败时保留已展示的数据，不打断浏览。
+    if (!silent) { error.value = exception instanceof Error ? exception.message : '加载运行错误失败' }
   }
   finally {
-    loading.value = false
+    if (!silent) { loading.value = false }
   }
+}
+
+function loadData() {
+  return fetchData(false)
 }
 
 function handleSearch() {
@@ -93,9 +118,31 @@ function resetFilters() {
   query.keyword = ''
   query.level = ''
   query.module = ''
+  query.range = ''
   page.value = 1
   void loadData()
 }
+
+/** 30 秒静默轮询：页面隐藏时暂停，重新可见立即补一次。 */
+const REFRESH_INTERVAL_MS = 30_000
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+
+function handleVisibilityChange() {
+  if (!document.hidden) { void fetchData(true) }
+}
+
+onMounted(() => {
+  void loadData()
+  refreshTimer = setInterval(() => {
+    if (!document.hidden) { void fetchData(true) }
+  }, REFRESH_INTERVAL_MS)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  if (refreshTimer !== undefined) { clearInterval(refreshTimer) }
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 
 async function openDetail(row: SystemErrorEvent) {
   detailVisible.value = true
@@ -156,8 +203,6 @@ function summaryDisplay(row: SystemErrorEvent) {
 function levelTagType(level: string) {
   return level === 'ERROR' ? 'danger' : 'warning'
 }
-
-onMounted(loadData)
 </script>
 
 <template>
@@ -168,10 +213,13 @@ onMounted(loadData)
         <h2>运行错误中心</h2>
         <p class="subtitle">集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。</p>
       </div>
-      <el-button :loading="loading" @click="loadData">
-        <el-icon><Refresh /></el-icon>
-        刷新
-      </el-button>
+      <div class="header-actions">
+        <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
+        <el-button :loading="loading" @click="loadData">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </div>
     </div>
 
     <section class="mrr-metric-grid mrr-metric-grid--four">
@@ -205,6 +253,13 @@ onMounted(loadData)
           <el-select v-model="query.level" clearable placeholder="全部" class="runtime-errors-level">
             <el-option label="ERROR" value="ERROR" />
             <el-option label="WARN" value="WARN" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="时间范围">
+          <el-select v-model="query.range" clearable placeholder="全部" class="runtime-errors-range" @change="handleSearch">
+            <el-option label="今天" value="today" />
+            <el-option label="近 24 小时" value="24h" />
+            <el-option label="近 7 天" value="7d" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -244,6 +299,13 @@ onMounted(loadData)
           <template #default="{ row }">{{ row.requestId || '-' }}</template>
         </el-table-column>
         <el-table-column prop="occurrenceCount" label="次数" width="90" align="right" />
+        <el-table-column prop="recent24hCount" label="近24h" width="90" align="right">
+          <template #default="{ row }">
+            <span :class="{ 'recent-hot': (row.recent24hCount ?? 0) >= 10 }" :title="`最近 24 小时发生 ${row.recent24hCount ?? 0} 次（最多统计最近 50 次）`">
+              {{ row.recent24hCount ?? 0 }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="90" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row as SystemErrorEvent)">详情</el-button>
@@ -355,6 +417,19 @@ onMounted(loadData)
   overflow-wrap: anywhere;
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.auto-refresh-note {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -414,6 +489,16 @@ onMounted(loadData)
   width: 130px;
 }
 
+.runtime-errors-range {
+  width: 140px;
+}
+
+/* 频次热的错误组用数据编码色提示；纯色声明，Chrome 86 安全。 */
+.recent-hot {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
+
 .runtime-errors-table {
   margin-top: 12px;
 }
@@ -421,6 +506,10 @@ onMounted(loadData)
 @media (max-width: 720px) {
   .page-header {
     flex-direction: column;
+  }
+
+  .header-actions {
+    align-items: flex-start;
   }
 }
 /* stylelint-enable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */

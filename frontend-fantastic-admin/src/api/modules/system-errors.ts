@@ -19,6 +19,8 @@ export interface SystemErrorEvent {
   firstSeenAt: string
   lastSeenAt: string
   occurrenceCount: number
+  /** 最近 24 小时发生次数（最多统计最近 50 次）。 */
+  recent24hCount?: number
   status: SystemErrorStatus
   acknowledgedBy?: string
   resolvedAt?: string
@@ -33,6 +35,8 @@ export interface SystemErrorOverview {
   errorGroups: number
   warnGroups: number
   recentOccurrences: number
+  /** 近 24 小时仍活跃的 ERROR 错误组数，供菜单角标使用。 */
+  recentErrorGroups?: number
 }
 
 export interface SystemErrorQuery {
@@ -42,6 +46,8 @@ export interface SystemErrorQuery {
   level?: string
   status?: string
   module?: string
+  /** 按最后发生时间过滤的起始点，本地时区 ISO 格式（yyyy-MM-ddTHH:mm:ss）。 */
+  since?: string
 }
 
 export function searchSystemErrors(params: SystemErrorQuery) {

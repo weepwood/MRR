@@ -224,6 +224,17 @@ async function handlePrevious() {
 .review-flow__steps .is-current b { color: var(--mrr-primary-foreground); background: var(--color-info); border-color: var(--color-info); }
 .form-section { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .form-section--remark { gap: var(--mrr-space-2); }
+
+/*
+ * Chrome 86 回退：审核流程条与表单分区是登录/注册页上的实色分层底，
+ * 失效后会与页面底色融为一体。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .review-flow { background: var(--mrr-tone-info-soft); border-color: var(--mrr-tone-info-border); }
+  .review-flow__icon { background: var(--mrr-tone-info-soft); border-color: var(--mrr-tone-info-border); }
+  .review-flow__steps { border-top-color: var(--mrr-tone-info-border); }
+  .form-section { background: var(--mrr-muted); }
+}
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); min-width: 0; padding-bottom: 18px; }
 .field-item :deep(.fa-input__wrapper), .field-item :deep(input), .field-item :deep(textarea) { width: 100%; }

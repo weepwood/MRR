@@ -58,6 +58,13 @@ const summaryData = ref<SummaryData>({
   byType: [],
 })
 const dateSummaryData = ref<DateStatItem[]>([])
+
+/* 空库/空时间范围内数值指标全零时收纳指标区，为图表让出首屏（N5）。 */
+const hasMetricActivity = computed(() => [
+  summaryData.value.total?.totalRecords,
+  summaryData.value.total?.totalPages,
+  summaryData.value.uniqueBAHCount,
+].some(value => Number(value ?? 0) > 0))
 const statisticsListData = ref<StatisticsListResult>({
   total: 0,
   size: 100,
@@ -344,7 +351,7 @@ onMounted(refreshAll)
       </el-button>
     </div>
 
-    <section class="mrr-metric-grid" aria-label="核心统计指标">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid" aria-label="核心统计指标">
       <MrrMetricCard
         label="总记录数"
         icon="i-lucide:layout-grid"
@@ -594,6 +601,13 @@ onMounted(refreshAll)
   background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
+}
+
+/* Chrome 86 回退：趋势摘要块的分层底失效后会与卡面融为一体。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .trend-summary > div {
+    background: var(--mrr-muted);
+  }
 }
 
 .trend-summary span,

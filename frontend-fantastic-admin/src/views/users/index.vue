@@ -125,6 +125,9 @@ const summaryCards = computed(() => [
   },
 ])
 
+/* 空库/空筛态下指标区全部为零时收纳，为表格让出首屏（N5）。 */
+const hasMetricActivity = computed(() => summaryCards.value.some(card => Number(card.value) > 0))
+
 const editRules = {
   roleCode: [{ required: true, message: '请选择角色', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
@@ -609,15 +612,15 @@ async function handleDisable() {
 
 function credentialStatus(row: CredentialAwareUser) {
   const status = normalizeStatus(row.status)
-  if (status === 'pending') return { label: '等待审核', type: 'warning' as const }
-  if (status === 'rejected') return { label: '申请未通过', type: 'danger' as const }
-  if (status === 'disabled') return { label: '账号已禁用', type: 'info' as const }
-  if (!row.mustChangePassword) return { label: '正常', type: 'success' as const }
+  if (status === 'pending') return { label: '等待审核', tone: 'warning' as const }
+  if (status === 'rejected') return { label: '申请未通过', tone: 'danger' as const }
+  if (status === 'disabled') return { label: '账号已禁用', tone: 'neutral' as const }
+  if (!row.mustChangePassword) return { label: '正常', tone: 'success' as const }
   const expiresAt = row.temporaryPasswordExpiresAt ? new Date(row.temporaryPasswordExpiresAt) : null
   if (expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
-    return { label: '临时密码已过期', type: 'danger' as const }
+    return { label: '临时密码已过期', tone: 'danger' as const }
   }
-  return { label: row.passwordResetAt ? '密码已重置' : '待修改初始密码', type: 'warning' as const }
+  return { label: row.passwordResetAt ? '密码已重置' : '待修改初始密码', tone: 'warning' as const }
 }
 
 function formatDateTime(value?: string) {
@@ -637,7 +640,7 @@ onMounted(loadData)
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
     />
 
-    <section class="mrr-metric-grid">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
@@ -686,7 +689,7 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column label="角色" min-width="120"><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
-        <el-table-column label="凭据状态" min-width="150"><template #default="{ row }"><el-tag :type="credentialStatus(row).type" effect="light" round>{{ credentialStatus(row).label }}</el-tag></template></el-table-column>
+        <el-table-column label="凭据状态" min-width="150"><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
         <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" min-width="165"><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
         <el-table-column
@@ -817,6 +820,13 @@ onMounted(loadData)
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+
+/* Chrome 86 回退：头像块的浅色底失效后缩写文字会裸浮在表格底色上。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .user-avatar {
+    background: var(--mrr-tone-primary-soft);
+  }
+}
 .application-info { display: grid; gap: 3px; min-width: 0; }
 .application-info span { font-size: 12px; color: var(--mrr-foreground); }
 .application-info small { overflow: hidden; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }

@@ -287,6 +287,40 @@ onMounted(async () => {
   border-radius: var(--mrr-radius-xl);
 }
 
+/*
+ * Chrome 86 回退：文档卡的着色底面与悬停描边是该卡「属于哪个系统入口」的
+ * 分层信号；图标块的浅色底若失效，图标只剩裸字形浮在卡面上。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .documentation-card {
+    background: var(--mrr-card);
+  }
+
+  .documentation-card:hover {
+    border-color: var(--card-accent);
+  }
+
+  .card-icon {
+    background: var(--mrr-tone-neutral-soft);
+  }
+
+  .documentation-card--primary .card-icon {
+    background: var(--mrr-tone-primary-soft);
+  }
+
+  .documentation-card--success .card-icon {
+    background: var(--mrr-tone-success-soft);
+  }
+
+  .documentation-card--warning .card-icon {
+    background: var(--mrr-tone-warning-soft);
+  }
+
+  .documentation-card--info .card-icon {
+    background: var(--mrr-tone-info-soft);
+  }
+}
+
 .card-content h2 {
   margin: 2px 0 10px;
   font-size: 19px;

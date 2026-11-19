@@ -17,7 +17,9 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
@@ -263,51 +265,56 @@ function levelTagType(level: string) {
       </button>
     </section>
 
-    <el-card shadow="never">
-      <el-form inline @submit.prevent>
-        <el-form-item label="关键字">
-          <el-input
-            v-model="query.keyword"
-            clearable
-            placeholder="错误编号 / Request ID / 异常 / 消息"
-            class="runtime-errors-keyword"
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="模块">
-          <el-select
-            v-model="query.module"
-            clearable
-            filterable
-            allow-create
-            default-first-option
-            placeholder="选择或输入模块"
-            class="runtime-errors-module"
-            @change="handleSearch"
-          >
-            <el-option v-for="moduleName in moduleOptions" :key="moduleName" :label="moduleName" :value="moduleName" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="级别">
-          <el-select v-model="query.level" clearable placeholder="全部" class="runtime-errors-level">
-            <el-option label="ERROR" value="ERROR" />
-            <el-option label="WARN" value="WARN" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="时间范围">
-          <el-select v-model="query.range" clearable placeholder="全部" class="runtime-errors-range" @change="handleSearch">
-            <el-option label="今天" value="today" />
-            <el-option label="近 24 小时" value="24h" />
-            <el-option label="近 7 天" value="7d" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
+    <MrrDataTablePanel title="运行错误组" :count="total" class="runtime-errors-panel">
+      <template #filters>
+        <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
+        <MrrFilterBar embedded>
+          <div class="runtime-errors-filter__field runtime-errors-filter__keyword">
+            <el-input
+              id="runtime-errors-keyword"
+              v-model="query.keyword"
+              clearable
+              aria-label="关键字"
+              placeholder="错误编号 / Request ID / 异常 / 消息"
+              @keyup.enter="handleSearch"
+            />
+          </div>
+          <div class="runtime-errors-filter__field runtime-errors-filter__select">
+            <el-select
+              id="runtime-errors-module"
+              v-model="query.module"
+              clearable
+              filterable
+              allow-create
+              default-first-option
+              aria-label="模块"
+              placeholder="全部模块"
+              @change="handleSearch"
+            >
+              <el-option v-for="moduleName in moduleOptions" :key="moduleName" :label="moduleName" :value="moduleName" />
+            </el-select>
+          </div>
+          <div class="runtime-errors-filter__field runtime-errors-filter__select">
+            <el-select id="runtime-errors-level" v-model="query.level" clearable aria-label="级别" placeholder="全部级别">
+              <el-option label="ERROR" value="ERROR" />
+              <el-option label="WARN" value="WARN" />
+            </el-select>
+          </div>
+          <div class="runtime-errors-filter__field runtime-errors-filter__select">
+            <el-select id="runtime-errors-range" v-model="query.range" clearable aria-label="时间范围" placeholder="全部时间" @change="handleSearch">
+              <el-option label="今天" value="today" />
+              <el-option label="近 24 小时" value="24h" />
+              <el-option label="近 7 天" value="7d" />
+            </el-select>
+          </div>
+          <template #actions>
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton>
+          </template>
+        </MrrFilterBar>
+      </template>
 
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
@@ -352,7 +359,7 @@ function levelTagType(level: string) {
         </el-table-column>
       </el-table>
 
-      <div class="pager">
+      <template #pagination>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="size"
@@ -362,8 +369,8 @@ function levelTagType(level: string) {
           @size-change="handleSearch"
           @current-change="loadData"
         />
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="运行错误详情" width="880px" top="5vh">
       <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
@@ -494,12 +501,6 @@ function levelTagType(level: string) {
   color: var(--el-text-color-secondary);
 }
 
-.pager {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
 .detail-pre {
   box-sizing: border-box;
   max-height: 420px;
@@ -520,30 +521,33 @@ function levelTagType(level: string) {
   max-height: 180px;
 }
 
-.runtime-errors-keyword {
-  width: 300px;
+.runtime-errors-filter__field {
+  display: grid;
+  min-width: 0;
 }
 
-.runtime-errors-module {
-  width: 180px;
+.runtime-errors-filter__keyword {
+  flex: 1 1 320px;
+  min-width: 260px;
 }
 
-.runtime-errors-level {
-  width: 130px;
+.runtime-errors-filter__select {
+  flex: 0 1 190px;
+  width: 190px;
 }
 
-.runtime-errors-range {
-  width: 140px;
+@media (max-width: 760px) {
+  .runtime-errors-filter__keyword,
+  .runtime-errors-filter__select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 /* 频次热的错误组用数据编码色提示；纯色声明，Chrome 86 安全。 */
 .recent-hot {
   color: var(--el-color-danger);
   font-weight: 600;
-}
-
-.runtime-errors-table {
-  margin-top: 12px;
 }
 
 @media (max-width: 720px) {

@@ -260,12 +260,12 @@ function statusTagType(status: string | number) {
               <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="方法" for="logs-method">
-              <el-select id="logs-method" v-model="query.method" clearable placeholder="全部">
+              <el-select id="logs-method" v-model="query.method" clearable placeholder="全部请求方法">
                 <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
               </el-select>
             </el-form-item>
             <el-form-item label="状态码" for="logs-status">
-              <el-select id="logs-status" v-model="query.responseStatus" clearable placeholder="全部">
+              <el-select id="logs-status" v-model="query.responseStatus" clearable placeholder="全部状态码">
                 <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>

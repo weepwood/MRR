@@ -10,6 +10,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
@@ -204,33 +205,34 @@ function typeLabel(value: unknown) {
     </section>
 
     <el-card shadow="never">
-      <el-form inline @submit.prevent>
-        <el-form-item label="病案号">
-          <el-input v-model="query.bah" clearable placeholder="输入病案号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="病人序号">
-          <el-input v-model="query.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="上架号">
-          <el-input v-model="query.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="扫描人员">
-          <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="query.btype" clearable placeholder="全部类型" class="records-type-select">
+      <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
+      <MrrFilterBar embedded class="records-filter-bar">
+        <div class="records-filter__field">
+          <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+        </div>
+        <div class="records-filter__field">
+          <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" placeholder="病人序号" @keyup.enter="handleSearch" />
+        </div>
+        <div class="records-filter__field">
+          <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
+        </div>
+        <div class="records-filter__field">
+          <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" placeholder="扫描人员工号" @keyup.enter="handleSearch" />
+        </div>
+        <div class="records-filter__field">
+          <el-select id="records-btype" v-model="query.btype" clearable aria-label="类型" placeholder="全部类型">
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item>
+        </div>
+        <template #actions>
           <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
             重置
           </MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
+        </template>
+      </MrrFilterBar>
 
       <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
@@ -395,8 +397,18 @@ h2 {
   margin-top: 16px;
 }
 
-.records-type-select {
-  width: 180px;
+.records-filter__field {
+  display: grid;
+  flex: 0 1 190px;
+  width: 190px;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .records-filter__field {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .records-table {

@@ -46,7 +46,6 @@ const AUTHENTICATED_ROUTES = [
   '/statistics-detail',
   '/auth-test',
   '/logs',
-  '/runtime-logs',
   '/help',
 ] as const
 

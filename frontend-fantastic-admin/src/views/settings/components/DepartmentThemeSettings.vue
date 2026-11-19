@@ -446,6 +446,13 @@ onMounted(() => {
   border-radius: var(--mrr-radius-lg);
 }
 
+/* Chrome 86 回退：预览卡的着色描边是「选中哪个文件夹主题」的状态信号。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .archive-theme-preview {
+    border-color: var(--folder-accent);
+  }
+}
+
 .archive-theme-preview i {
   position: absolute;
   top: 0;

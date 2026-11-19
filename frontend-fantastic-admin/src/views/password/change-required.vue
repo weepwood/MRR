@@ -181,6 +181,14 @@ async function logout() {
 .status-dot { width: 7px; height: 7px; background: var(--color-warning); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning) 15%, transparent); }
 .password-card { align-self: center; width: min(620px, 100%); padding: clamp(28px, 5vw, 48px); margin: var(--mrr-space-6) auto; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-2xl); box-shadow: var(--mrr-shadow-md); }
 .security-mark { display: grid; width: 52px; height: 52px; font-size: 25px; color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 12%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-warning) 22%, var(--mrr-border)); border-radius: var(--mrr-radius-xl); place-items: center; }
+
+/* Chrome 86 回退：安全标识块的警示底色不能失效成透明线框。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .security-mark {
+    background: var(--mrr-tone-warning-soft);
+    border-color: var(--mrr-tone-warning-border);
+  }
+}
 .card-heading { margin: var(--mrr-space-5) 0; }
 .card-heading > span { font-size: 11px; font-weight: 750; color: var(--color-warning); text-transform: uppercase; letter-spacing: 0.1em; }
 .card-heading h1 { margin: var(--mrr-space-2) 0 0; font-size: clamp(25px, 4vw, 32px); letter-spacing: -0.03em; }

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { examples } from '../src/views/ui-components/catalog'
 
 async function openGallery(page: Page, theme = 'light') {
   await page.addInitScript(theme => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
@@ -14,7 +15,7 @@ async function openGallery(page: Page, theme = 'light') {
 
 test('目录支持搜索、分类、无匹配恢复与重置', async ({ page }) => {
   await openGallery(page)
-  await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(9)
+  await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(examples.length)
   await page.getByRole('button', { name: /表单与选择/ }).click()
   await expect(page.getByRole('heading', { name: '输入与筛选', exact: true })).toBeVisible()
   await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(2)
@@ -23,7 +24,7 @@ test('目录支持搜索、分类、无匹配恢复与重置', async ({ page }) 
   await page.getByLabel('查找组件', { exact: true }).fill('不存在的组件')
   await expect(page.getByText('没有匹配的组件，试试其他名称或分类。')).toBeVisible()
   await page.getByRole('button', { name: '显示全部组件' }).click()
-  await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(9)
+  await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(examples.length)
 })
 
 test('真实控件可编辑，禁用和加载按钮不可执行，示例不写业务数据', async ({ page }) => {

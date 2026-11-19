@@ -13,6 +13,7 @@ import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
@@ -20,10 +21,10 @@ import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'RecordsPage' })
 
-const migrationStatusMap: Record<string, { label: string, type: string }> = {
-  not_migrated: { label: '未迁移', type: 'info' },
-  migrated: { label: '已迁移', type: 'success' },
-  verified: { label: '已验证', type: 'success' },
+const migrationStatusMap: Record<string, { label: string, tone: 'neutral' | 'success' }> = {
+  not_migrated: { label: '未迁移', tone: 'neutral' },
+  migrated: { label: '已迁移', tone: 'success' },
+  verified: { label: '已验证', tone: 'success' },
 }
 
 // 业务状态（非 CRUD 通用部分）
@@ -280,13 +281,11 @@ function typeLabel(value: unknown) {
         <el-table-column prop="folder" label="目录" min-width="130" show-overflow-tooltip />
         <el-table-column prop="migrationStatus" label="迁移状态" min-width="96">
           <template #default="{ row }">
-            <el-tag
+            <MrrStatusTag
               v-if="row.migrationStatus"
-              :type="(migrationStatusMap[row.migrationStatus]?.type || 'info') as any"
-              size="small"
-            >
-              {{ migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus }}
-            </el-tag>
+              :label="migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus"
+              :tone="migrationStatusMap[row.migrationStatus]?.tone || 'neutral'"
+            />
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
@@ -354,13 +353,11 @@ function typeLabel(value: unknown) {
           {{ currentRecord.folder || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="迁移状态">
-          <el-tag
+          <MrrStatusTag
             v-if="currentRecord.migrationStatus"
-            :type="(migrationStatusMap[currentRecord.migrationStatus]?.type || 'info') as any"
-            size="small"
-          >
-            {{ migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus }}
-          </el-tag>
+            :label="migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus"
+            :tone="migrationStatusMap[currentRecord.migrationStatus]?.tone || 'neutral'"
+          />
           <span v-else>-</span>
         </el-descriptions-item>
         <el-descriptions-item label="文件大小">

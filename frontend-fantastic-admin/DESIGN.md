@@ -186,9 +186,13 @@ G2 只适用于「圆角矩形」。开关、滑块、正圆（头像、色块�
 | `--mrr-radius-xl` | 14px | 已有内层分组、指标图标等内嵌区域 |
 | `--mrr-radius-dialog` | 12px | 对话框 |
 | `--mrr-radius-2xl` | 18px | 既有全页或登录外壳 |
-| `--mrr-radius-pill` | 999px | 胶囊和状态标签 |
+| `--mrr-radius-pill` | 999px | 胶囊与圆头按钮；普通状态标签使用 `--mrr-radius-sm` |
 
 这些是指定设置下的派生值；实际公式及上下限见 [tokens.css](src/assets/styles/tokens.css)。不得把表格数值复制成新的 CSS 常量。圆形使用 50%，不以非等比例缩放改变方形图标或按钮的几何形状。
+
+Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/assets/styles/element-plus-overrides.css)对输入/下拉/日期范围、数字输入、分段单选、标签、分页、确认消息框和卡片式页签采用控件级变量或更高优先级。普通/小/大控件分别使用 control/sm/lg 令牌；拼接输入、数字步进器和按钮组仅外缘有圆角，内部接缝保持直角。复选框方形边角最大 4px，圆形按钮、`round` 胶囊、开关与单选圆点保持其几何形状。浏览器真实渲染、三档圆角和交互见 [圆角回归](e2e/radius-consistency.spec.ts)；这不等于所有历史页面或 Chrome 86 真机已核验。
+
+状态与普通标签职责不同：只读业务状态优先使用 `MrrStatusTag` 并显式保持业务文案和色调；`el-tag` 继续承载分类、计数、可关闭项及指定 round/effect/size 的标签。`el-tag__content` 是标签内部文字容器而非独立组件，不为它额外绘制圆角背景。扫描记录迁移状态及数据关系工作台的健康、检查级别和对比状态已使用共享状态组件，其他页面的状态标签应逐页核对语义、权限和交互后迁移，不按标签名称全站机械替换。组件目录展示两者的用途。
 
 单行输入、选择、日期范围和数字输入使用 `--mrr-input-height`（33px），普通/紧凑/大型按钮共用 `--mrr-control-height`，图标按钮保持同高同宽。登录注册区域沿用局部 `--auth-input-height`（38px）；多行输入和多选标签允许按内容增高。以 [form-controls.css](src/assets/styles/components/form-controls.css) 及组件实际尺寸为准。
 

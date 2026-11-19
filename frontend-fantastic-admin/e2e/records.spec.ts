@@ -35,9 +35,28 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('cell', { name: 'E2E-2026-001' })).toBeVisible({ timeout: 20_000 })
 
+  await expect(page.locator('.records-table .mrr-status-tag--success')).toHaveText('已验证')
   await page.getByRole('button', { name: '详情' }).click()
 
-  await expect(page.getByRole('dialog', { name: '记录详情' })).toContainText('synthetic-record.pdf', { timeout: 20_000 })
+  const detail = page.getByRole('dialog', { name: '记录详情' })
+  await expect(detail).toContainText('synthetic-record.pdf', { timeout: 20_000 })
+  await expect(detail.locator('.mrr-status-tag--success')).toHaveText('已验证')
+})
+
+test('迁移状态保留已知文案、未知值和缺失值', async ({ page }) => {
+  const statuses = ['not_migrated', 'migrated', 'verified', 'future_status', null]
+  await page.route('**/api/v1/scan/cursor/condition?**', route => route.fulfill({
+    json: { code: 200, data: { list: statuses.map((status, index) => ({ id: index + 1, bah: `SYN-${index}`, migrationStatus: status })), hasMore: false } },
+  }))
+  await page.goto('/records')
+  const table = page.locator('.records-table')
+  for (const [index, label] of ['未迁移', '已迁移', '已验证', 'future_status'].entries()) {
+    const row = table.locator('tbody tr').filter({ hasText: `SYN-${index}` })
+    await expect(row.locator('.mrr-status-tag')).toHaveText(label)
+  }
+  const missing = table.locator('tbody tr').filter({ hasText: 'SYN-4' })
+  await expect(missing.locator('.mrr-status-tag')).toHaveCount(0)
+  await expect(missing.locator('.text-muted')).toHaveText('-')
 })
 
 test('编辑筛选不会把旧游标用于新条件，提交查询后从头读取', async ({ page }) => {

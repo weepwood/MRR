@@ -183,6 +183,7 @@ describe('dataRelationWorkbenchPage', () => {
     expect(wrapper.text()).toContain('98.75%')
     expect(wrapper.text()).toContain('200,000')
     expect(wrapper.text()).toContain('扫描记录')
+    expect(wrapper.find('.relation-card .mrr-status-tag--warning').text()).toBe('WARNING')
     expect(wrapper.text()).toContain('患者记录')
     expect(wrapper.text()).toContain('扫描记录主档关联缺失（估算）')
   })

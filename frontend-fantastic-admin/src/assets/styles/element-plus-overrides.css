@@ -535,6 +535,23 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   border-color: var(--mrr-border);
 }
 
+/*
+ * ===== Messages and notifications =====
+ * notify() 统一走 ElMessage（顶部居中）；此段让消息/通知与全站圆角、阴影令牌一致。
+ * EP 按需样式注入晚于本文件，需 body 前缀提权（与上方桥接惯例相同）。
+ */
+body .el-message {
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  box-shadow: var(--mrr-shadow-md);
+}
+
+body .el-notification {
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-lg);
+}
+
 @media (max-width: 760px) {
   body .el-date-range-picker {
     max-width: calc(100vw - 32px);

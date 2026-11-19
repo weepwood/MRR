@@ -46,15 +46,17 @@ function resetExamples() {
 
     <div class="gallery-layout">
       <aside class="gallery-directory" aria-label="组件目录">
-        <label for="gallery-search" class="gallery-label">查找组件</label>
-        <FaInput id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" class="gallery-search" />
+        <div class="gallery-search">
+          <FaIcon name="i-lucide:search" class="gallery-search-icon" aria-hidden="true" />
+          <FaInput id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" aria-label="查找组件" class="gallery-search-input" />
+        </div>
         <nav class="gallery-categories" aria-label="组件分类">
           <button
             v-for="item in categories" :key="item.id" type="button"
             :aria-pressed="category === item.id" class="gallery-category"
             @click="category = item.id"
           >
-            <FaIcon :name="item.icon" aria-hidden="true" />
+            <FaIcon :name="item.icon" class="gallery-category-icon" aria-hidden="true" />
             <span>{{ item.label }}</span>
             <span class="gallery-category-count">{{ item.id === 'all' ? examples.length : examples.filter(example => example.category === item.id).length }}</span>
           </button>
@@ -83,7 +85,7 @@ function resetExamples() {
           <div class="gallery-preview">
             <BasicExamples v-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
             <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
-            <FeedbackExamples v-else-if="['feedback', 'overlays'].includes(example.id)" :example="example.id" />
+            <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
             <TokenExamples v-else />
           </div>
         </article>
@@ -106,15 +108,24 @@ function resetExamples() {
   min-width: 0;
 }
 
-.gallery-label {
-  display: block;
-  margin-bottom: var(--mrr-space-2);
-  font-size: 13px;
-  font-weight: 500;
+.gallery-search {
+  position: relative;
 }
 
-.gallery-search {
+.gallery-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: var(--mrr-muted-foreground);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.gallery-search-input {
   width: 100%;
+  padding-left: 30px;
 }
 
 .gallery-categories {
@@ -127,7 +138,7 @@ function resetExamples() {
   display: flex;
   gap: var(--mrr-space-2);
   align-items: center;
-  min-height: 38px;
+  min-height: var(--mrr-control-height-compact);
   padding: var(--mrr-space-2) var(--mrr-space-3);
   text-align: left;
   cursor: pointer;
@@ -140,16 +151,26 @@ function resetExamples() {
   background: var(--mrr-navigation-hover);
 }
 
+/* 选中态与系统设置页目录（settings-nav-item.active）保持同一形态。 */
 .gallery-category[aria-pressed="true"] {
-  font-weight: 700;
-  color: var(--mrr-foreground);
-  background: var(--mrr-accent);
+  font-weight: 600;
+  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
+  background: var(--mrr-card);
   border-color: var(--mrr-border);
 }
 
 .gallery-category:focus-visible {
-  outline: 2px solid var(--mrr-primary);
-  outline-offset: 2px;
+  outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
+  outline-offset: 0;
+}
+
+.gallery-category-icon {
+  font-size: 16px;
+  color: var(--mrr-muted-foreground);
+}
+
+.gallery-category[aria-pressed="true"] .gallery-category-icon {
+  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
 }
 
 .gallery-category-count {

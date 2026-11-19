@@ -16,6 +16,7 @@ export const examples = [
   { id: 'table', category: 'data', title: '筛选与数据面板', description: '组合筛选、结果、状态和行操作，体验本地查询与翻页。', components: ['MrrDataTablePanel', 'MrrSectionCard', 'MrrFilterBar', 'MrrTableActions', 'MrrStatusTag', 'ElPagination'] },
   { id: 'feedback', category: 'feedback', title: '加载、空态与错误', description: '主动切换状态，体验错误重试和空态恢复入口。', components: ['AppLoading', 'AppEmpty', 'AppError', 'FaProgress', 'ElAlert'] },
   { id: 'overlays', category: 'feedback', title: '对话框、抽屉与气泡', description: '检查浮层、关闭行为和键盘操作；确认只更新示例反馈。', components: ['FaModal', 'FaDrawer', 'FaPopover'] },
+  { id: 'glass', category: 'feedback', title: '毛玻璃与背景模糊（演示）', description: 'backdrop-filter 毛玻璃效果仅供设计比较；生产 UI 当前统一使用不透明表面。', components: ['backdrop-filter'] },
   { id: 'tokens', category: 'tokens', title: '颜色、圆角与排版', description: '直接读取当前设计令牌；外观跟随全站设置。', components: ['tokens.css', 'MrrPageShell', 'MrrPageHeader'] },
 ] as const
 

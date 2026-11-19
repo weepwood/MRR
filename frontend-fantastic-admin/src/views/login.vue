@@ -495,11 +495,10 @@ onBeforeUnmount(() => {
   color: var(--mrr-muted-foreground);
   text-align: left;
   cursor: pointer;
-  background: color-mix(in srgb, var(--mrr-card) 90%, transparent);
+  background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-pill);
   box-shadow: var(--mrr-shadow-xs);
-  backdrop-filter: blur(12px);
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 .environment-badge:hover,
@@ -553,7 +552,7 @@ onBeforeUnmount(() => {
 .environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 .environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
 .environment-actions button.is-primary:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--mrr-primary-foreground); background-color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
-:global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: color-mix(in srgb, var(--mrr-popover) 88%, transparent); border-color: color-mix(in srgb, var(--mrr-border) 78%, transparent); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); backdrop-filter: blur(18px) saturate(145%); }
+:global(.login-environment-popper.el-popover) { padding: 18px; color: var(--mrr-popover-foreground); background: var(--mrr-popover); border-color: var(--mrr-border); border-radius: var(--mrr-radius-lg); box-shadow: var(--mrr-shadow-lg); }
 .login-shell {
   align-self: center;
   display: grid;
@@ -684,18 +683,7 @@ onBeforeUnmount(() => {
 }
 
 /*
- * Chrome 86 回退：环境信息浮层是覆盖在登录页之上的浮层，底色失效会让页面内容透上来与列表文字重叠。
- * 86 没有 backdrop-filter，一并退回不透明表面。
+ * 环境信息浮层底色为不透明令牌色（毛玻璃已在生产 UI 下线），86 与现代浏览器表现一致，
+ * 无需额外回退。
  */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  :global(.login-environment-popper.el-popover) {
-    background: var(--mrr-popover);
-    border-color: var(--mrr-border);
-  }
-
-  .environment-group {
-    background: var(--mrr-card);
-    border-color: var(--mrr-border);
-  }
-}
 </style>

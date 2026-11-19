@@ -50,7 +50,7 @@ function search(reset = false) {
               <FaInput :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
             </div>
             <template #actions>
-              <FaButton type="submit">
+              <FaButton type="submit" variant="outline">
                 查询示例
               </FaButton>
               <FaButton type="button" variant="outline" @click="search(true)">

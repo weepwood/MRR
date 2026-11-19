@@ -62,6 +62,23 @@ const slots = useSlots()
   box-shadow: none;
 }
 
+/*
+ * embedded（无标签）模式下字段允许拉伸填满所在行：换行后的次行控件不再
+ * 以固定宽度孤零零靠左（N4「差半个字段」观感），而是与首行一样铺满行宽。
+ * 单个次行字段由上限约束，避免被拉成整行长的超大控件。
+ */
+.mrr-filter-bar--embedded .mrr-filter-bar__fields > :deep(*) {
+  flex-grow: 1;
+  max-width: 460px;
+}
+
+@media (max-width: 760px) {
+  /* 窄屏下字段已是整行宽，解除上限避免被压成 460px。 */
+  .mrr-filter-bar--embedded .mrr-filter-bar__fields > :deep(*) {
+    max-width: 100%;
+  }
+}
+
 .mrr-filter-bar__fields {
   display: flex;
   flex: 1 1 auto;

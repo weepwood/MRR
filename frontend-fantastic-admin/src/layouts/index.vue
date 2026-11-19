@@ -201,6 +201,7 @@ onBeforeUnmount(() => {
       padding: clamp(18px, 2vw, 28px);
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
+
       /* overflow: clip 同样裁剪内容，但不产生滚动容器——页面内 position: sticky
        * 才能相对窗口滚动生效（如 UI 组件页左侧目录）。Chrome 86 不支持 clip，
        * 回退到 hidden，sticky 失效为既有状态。 */

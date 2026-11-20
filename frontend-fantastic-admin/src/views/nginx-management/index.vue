@@ -72,8 +72,12 @@ function fmtSize(value?: number | null) {
   if (value == null) {
     return '-'
   }
-  if (value < 1024) return `${value} B`
-  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
+  if (value < 1024) {
+    return `${value} B`
+  }
+  if (value < 1024 ** 2) {
+    return `${(value / 1024).toFixed(1)} KB`
+  }
   return `${(value / 1024 ** 2).toFixed(1)} MB`
 }
 
@@ -156,9 +160,19 @@ watch(activeTab, (tab) => {
     void loadLogs()
   }
 })
-watch(logType, () => { if (activeTab.value === 'logs') void loadLogs() })
-watch(logLineCount, () => { if (activeTab.value === 'logs') void loadLogs() })
-onMounted(() => { void loadStatus() })
+watch(logType, () => {
+  if (activeTab.value === 'logs') {
+    void loadLogs()
+  }
+})
+watch(logLineCount, () => {
+  if (activeTab.value === 'logs') {
+    void loadLogs()
+  }
+})
+onMounted(() => {
+  void loadStatus()
+})
 </script>
 
 <template>
@@ -410,8 +424,8 @@ onMounted(() => { void loadStatus() })
 }
 
 .card-value.small {
-  overflow-wrap: anywhere;
   font-size: 19px;
+  overflow-wrap: anywhere;
 }
 
 .card-foot {
@@ -437,8 +451,8 @@ onMounted(() => { void loadStatus() })
 
 .workspace-title .el-tag {
   display: inline-flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
 }
 
 .config-toolbar {
@@ -506,8 +520,8 @@ onMounted(() => { void loadStatus() })
 .log-empty,
 .empty-state {
   display: grid;
-  place-items: center;
   gap: 10px;
+  place-items: center;
   min-height: 180px;
   font-size: 13px;
   color: var(--el-text-color-placeholder);
